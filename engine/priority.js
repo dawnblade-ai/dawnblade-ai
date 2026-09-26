@@ -202,8 +202,15 @@ function speedAllowed(g, i){
   /* Action speed: the turn-player's own open window. CR 7.6.3a puts the
      resolution step here too — "the turn-player may play attacks", which
      is how a chain grows a second link. */
+  /* AND ONLY ON AN EMPTY STACK (v4.66). A card played at action speed now
+     RESTS on the stack as a layer at the table (CR 7.1, and CR 4.2.2 for a
+     card that is not an attack), and while it waits the only thing either
+     seat may do is respond at instant speed. Without this the turn-player
+     could play a second action on top of their own first — an attack
+     answering their own attack. Nothing reached this before v4.66: the
+     table's stack was always empty in these two steps. */
   if(g.phase === "action" && (g.step === "layer" || g.step === "resolution") && i === g.turnPlayer)
-    return ["action","instant"];
+    return (g.stack || []).length ? ["instant"] : ["action","instant"];
   return ["instant"];
 }
 const canAct = (g,i) => speedAllowed(g,i).length > 0;

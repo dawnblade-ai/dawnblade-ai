@@ -72,8 +72,8 @@ test("the family is THREE cards and nine records — pinned as a SET", () => {
     "Widowmaker|1", "Widowmaker|2", "Widowmaker|3",
     "Wreck Havoc|1", "Wreck Havoc|2", "Wreck Havoc|3",
   ], "a fourth card printing this family is a deliberate edit — the third "
-   + "(Release the Tension) prints the NARROWER 'from arsenal' form and is "
-   + "deliberately refused, so a new record must be read before it is counted");
+   + "(Release the Tension) prints the NARROWER 'from arsenal' form, read since "
+   + "v4.69 with its zone, so a new record must be read before it is counted");
 });
 
 test("and it is LIVE in two precon lists, not latent", () => {
@@ -103,14 +103,16 @@ test("THE THREE PRINTED WORDINGS, driven through classifyClause", () => {
     assert.ok(r && r.status === "run", w + " no longer reads: " + JSON.stringify(r));
     assert.equal(r.noDrx, true, w + " must carry the field the boards read");
   }
-  /* AND THE NARROWER ONE REFUSES — the load-bearing half. Read by the
-     anchor above it would bar a defence reaction from the HAND too, which
-     is STRONGER than printed, the direction that steals games. Release the
-     Tension is a REAL pool card rather than a synthetic near-miss, which is
-     rarer and better (v4.18). */
-  assert.equal(bar("defense reactions can't be played from arsenal this chain link"), null,
-    "the 'from arsenal' wording is NARROWER than the anchor: reading it here bars "
-    + "a defence reaction played from HAND, which Release the Tension never says");
+  /* AND THE NARROWER ONE READS WITH ITS ZONE (v4.69) — refused until then,
+     because read as `true` it bars a defence reaction from the HAND too,
+     which is STRONGER than printed. So the load-bearing half is now that it
+     is NOT `true`: the value is the zone, and `drxBarWhy` asks where the
+     card is being played from. */
+  const narrow = bar("defense reactions can't be played from arsenal this chain link");
+  assert.ok(narrow && narrow.status === "run", "the 'from arsenal' wording no longer reads");
+  assert.equal(narrow.noDrx, "arsenal",
+    "the 'from arsenal' wording must carry its ZONE — `true` bars the HAND as well, "
+    + "which Release the Tension never says");
 });
 
 test("an OP would have been wrong rather than merely different", () => {
@@ -134,15 +136,20 @@ test("both records of the family set fx.noDrx, and the clause reads `run`", {ski
         nm + "|" + p + "'s first clause still reports " + fx.clauses[0].st
         + " — a clause that is READ must not report as a no-op");
     }
-  /* AND THE THIRD CARD KEEPS THE HONEST FLAG v3.41 BUILT FOR EXACTLY THIS.
-     Its head (the +N{p} grant) parses, so the tier is `full` and says so
-     truthfully; the quoted rider has no reader and `tools/audit.js` names
-     it. Neither hidden. */
+  /* AND THE THIRD CARD GRANTS IT RATHER THAN CARRYING IT (v4.69). The bar
+     is a quoted ability handed to "your next arrow attack", so it rides on
+     the pump — never on Release the Tension itself, which is a non-attack
+     and opens no link. Its rider is READ now, so the v3.41 flag that named
+     it as unread must have gone: a flag that outlives its gap is a report
+     that lies in the other direction. */
   for(const p of [1, 2, 3]){
     const fx = P.fxParse(H.card("Release the Tension", p));
-    assert.equal(!!fx.noDrx, false, "Release the Tension must NOT carry the bar");
-    assert.ok((fx.quotedUnread || []).some(q => /from arsenal/.test(q)),
-      "its unread rider must still be reported by name (v3.41)");
+    assert.equal(!!fx.noDrx, false, "Release the Tension must NOT carry the bar itself");
+    const op = fx.ops.find(o => o[0] === "buffNext");
+    assert.ok(op, "the pump no longer reads");
+    assert.deepEqual(op[3], {noDrx: "arsenal"}, "the bar does not ride on the grant");
+    assert.ok(!(fx.quotedUnread || []).some(q => /from arsenal/.test(q)),
+      "the rider is read, and is still reported as unread");
   }
 });
 
@@ -172,27 +179,50 @@ test("drxBarWhy refuses every way it should", {skip}, () => {
   const wm = H.card("Widowmaker", 2);
   const dr = H.card("Put in Context", 3);
   const plain = H.card("Snatch", 1);
+  /* IT ASKS THE LINK AND THE ZONE (v4.69), because a granted bar lives on
+     `pend` rather than on the card, and the narrow one names a zone. */
+  const link = card => ({card});
 
-  assert.ok(P.drxBarWhy(wm, dr), "the live case must bar");
-  assert.match(P.drxBarWhy(wm, dr), /Widowmaker/,
+  assert.ok(P.drxBarWhy(link(wm), dr, "hand"), "the live case must bar");
+  assert.ok(P.drxBarWhy(link(wm), dr, "arsenal"), "…from EVERY zone — Widowmaker names none");
+  assert.match(P.drxBarWhy(link(wm), dr, "hand"), /Widowmaker/,
     "the refusal must NAME the card that closed the window — in a training sim "
     + "the feed is the lesson (v3.60, v4.24)");
-  assert.match(P.drxBarWhy(wm, dr), /Put in Context/, "and the card being refused");
+  assert.match(P.drxBarWhy(link(wm), dr, "hand"), /Put in Context/, "and the card being refused");
 
   /* A CALLER THAT SAYS NOTHING BARS NOTHING — weaker than printed and
      visible, never the reverse (v3.24). */
-  assert.equal(P.drxBarWhy(null, dr), null, "no open link, no bar");
-  assert.equal(P.drxBarWhy(undefined, dr), null, "no open link, no bar");
+  assert.equal(P.drxBarWhy(null, dr, "hand"), null, "no open link, no bar");
+  assert.equal(P.drxBarWhy(undefined, dr, "hand"), null, "no open link, no bar");
   /* a plain attack on the link bars nothing */
-  assert.equal(P.drxBarWhy(plain, dr), null, "Snatch prints no such restriction");
+  assert.equal(P.drxBarWhy(link(plain), dr, "hand"), null, "Snatch prints no such restriction");
   /* AND ONLY A DEFENCE REACTION IS BARRED. An INSTANT played in the defence
      window is not a defence reaction, and the printed line does not name
      it. Ask for the refusal, not only the match (v3.98). */
-  assert.equal(P.drxBarWhy(wm, plain), null, "an attack card is not a defence reaction");
+  assert.equal(P.drxBarWhy(link(wm), plain, "hand"), null, "an attack card is not a defence reaction");
   const inst = H.card("Energy Potion", 0);
   assert.ok(inst && !P.isDR(inst), "fixture: Energy Potion must not be a defence reaction");
-  assert.equal(P.drxBarWhy(wm, inst), null,
+  assert.equal(P.drxBarWhy(link(wm), inst, "hand"), null,
     "an instant is not a defence reaction — barring it reads a word the card never prints");
+});
+
+test("A GRANTED bar on the link: the ARSENAL is barred and the HAND is not (v4.69)", {skip}, () => {
+  /* Release the Tension's shape, on the link its arrow opens. BOTH HALVES —
+     a reader that ignores the zone passes the arsenal half perfectly, and
+     the hand half is the one the refusal existed to protect (v4.60). */
+  H.db(); P.fxReset();
+  const dr = H.card("Put in Context", 3);
+  const arrow = {name: "Some Arrow", tt: "Ranger Action - Arrow Attack", ty: ["Ranger", "Action", "Attack"],
+                 power: 3, tx: "", kw: [], gkw: []};
+  const pend = {card: arrow, noDrx: [{from: "arsenal", src: "Release the Tension"}]};
+  const why = P.drxBarWhy(pend, dr, "arsenal");
+  assert.ok(why, "the granted bar does not close the arsenal door");
+  assert.match(why, /Release the Tension/, "the refusal must name the card that GRANTED the bar");
+  assert.match(why, /Some Arrow/, "…and the attack it rides on");
+  assert.equal(P.drxBarWhy(pend, dr, "hand"), null,
+    "the granted bar closed the HAND door — stronger than printed, the direction that steals games");
+  assert.equal(P.drxBarWhy(pend, dr), null, "a door that names no zone gets no narrow bar (v3.24)");
+  assert.equal(P.drxBarWhy({card: arrow}, dr, "arsenal"), null, "control: the same arrow with no grant bars nothing");
 });
 
 test("`drxBarred` and `drxBarWhy` are the only readers of the field", () => {
@@ -201,7 +231,16 @@ test("`drxBarred` and `drxBarWhy` are the only readers of the field", () => {
      mirror the no-mirror rule exists to stop. */
   for(const f of ["engine/judge.js", "index.html", "engine/effects.js",
                   "engine/sparring.js", "engine/prompts.js"]){
-    const src = codeOf(read(f));
+    let src = codeOf(read(f));
+    /* effects.js CARRIES a granted bar (v4.69) — stamps its source on the
+       buffQ entry, moves it onto the collecting attack's `pend`, and names
+       it in the feed — and must never DECIDE on one. So what it may touch
+       is a RIDER's field, and nothing it reads is the link's or the card's. */
+    if(f === "engine/effects.js"){
+      assert.ok(!/\b(?:fx|pend|link)\.noDrx\b/.test(src),
+        "effects.js reads the bar off the card or the link — only drxBarWhy decides");
+      src = src.replace(/\b(?:rider|r|op\[3\])\.noDrx\b/g, "");
+    }
     assert.ok(!/\.noDrx\b/.test(src), f + " reads fx.noDrx directly — ask drxBarWhy");
     assert.ok(!/can.?.?t be played .{0,12}this.{0,2} chain link/i.test(src),
       f + " spells the printed phrase itself — the parser is the one reader");
@@ -322,7 +361,7 @@ test("the bar follows the OPEN LINK, so it expires with the link", {skip}, () =>
   assert.equal(J.legal(swapped, act, w.foe), null,
     "the bar outlived the card that printed it — it is being banked somewhere");
   const closed = {...w.n, pend: null};
-  assert.equal(P.drxBarWhy(closed.pend && closed.pend.card, w.dr), null,
+  assert.equal(P.drxBarWhy(closed.pend, w.dr, "hand"), null,
     "with no open link there is nothing to bar");
 });
 
@@ -380,9 +419,11 @@ test("the trainer asks the SAME body at both of its doors", () => {
      the HAND one "bit" only on `slicecensus`'s width pin, which is a
      coincidental bite and no better. So what is pinned is the RETURN being
      reached from the bar, with nothing between the two. */
-  for(const [nm, body, v] of [["playRx", hand, "drxBar"], ["playRxA", ars, "drxBarA"]]){
-    assert.match(body, new RegExp("DawnParser\\.drxBarWhy\\(s\\.pend && s\\.pend\\.card,\\s*c\\)"),
-      nm + " does not ask the shared reader — a rule on one board is v3.01's defect");
+  for(const [nm, body, v, zone] of [["playRx", hand, "drxBar", "hand"], ["playRxA", ars, "drxBarA", "arsenal"]]){
+    /* AND EACH DOOR NAMES ITS OWN ZONE (v4.69) — a door that names the wrong
+       one hands Release the Tension's arsenal bar to the hand, or drops it. */
+    assert.match(body, new RegExp("DawnParser\\.drxBarWhy\\(s\\.pend,\\s*c,\\s*\"" + zone + "\"\\)"),
+      nm + " does not ask the shared reader with its own zone — a rule on one board is v3.01's defect");
     assert.match(body, new RegExp("const " + v + " = DawnParser\\.drxBarWhy\\([^;]*\\);\\s*"
                                + "if\\(" + v + "\\) return L\\(s, " + v + "\\);"),
       nm + " reads the bar and does not REFUSE on it — the call surviving is not "
@@ -422,9 +463,88 @@ test("SYNTHETIC: a link that prints the bar refuses at both doors", {skip}, () =
   const wm = H.card("Widowmaker", 2);
   const dr = H.card("Put in Context", 3);
   const pend = {card: wm};
-  assert.ok(P.drxBarWhy(pend && pend.card, dr),
+  assert.ok(P.drxBarWhy(pend, dr, "hand") && P.drxBarWhy(pend, dr, "arsenal"),
     "the body the trainer's doors call does not bar a synthetic Widowmaker link");
-  assert.equal(P.drxBarWhy(null, dr), null,
+  assert.equal(P.drxBarWhy(null, dr, "hand"), null,
     "and with the fabricated swing (no card) it bars nothing — which is the "
     + "whole reason the trainer's half is latent");
+});
+
+/* ============================================================
+   RELEASE THE TENSION, DRIVEN AT THE TABLE (v4.69)
+   ============================================================ */
+
+/* Azalea decks Release the Tension AND Widowmaker, Dorinthea decks Put in
+   Context — so both seats hold cards a ladder game can deal them. The cards
+   are spliced in at the window (the stated fixture decision above); the
+   grant, the declaration, the stack and the reaction step are all real. */
+function tensionWindow(atkName, atkPitch){
+  let g = table("drxprobe2", /azalea/i, /dorinthea/i);
+  while(g.arsenalFor != null) g = J.reduce(g, {t: "arsenal", uid: null}, g.arsenalFor).state;
+  const seat = g.turnPlayer, foe = 1 - seat;
+  const rtt = {...H.card("Release the Tension", 1), uid: 9101};
+  const atk = {...H.card(atkName, atkPitch), uid: 9102};
+  const drA = {...H.card("Put in Context", 3), uid: 9103};
+  const drH = {...H.card("Put in Context", 3), uid: 9104};
+  let sides = g.sides.slice();
+  sides[seat] = {...g.sides[seat], res: 9, ap: 2, hand: [rtt, atk, ...g.sides[seat].hand]};
+  sides[foe]  = {...g.sides[foe],  res: 9, hand: [drH, ...g.sides[foe].hand], arsenal: drA};
+  g = {...g, sides};
+  let n = H.drain(settle(J.reduce(g, {t: "play", uid: rtt.uid, from: "hand"}, seat).state, rtt.uid));
+  assert.ok(n.sides[seat].grave.some(c => c.uid === rtt.uid), "fixture: Release the Tension never resolved");
+  const granted = (n.sides[seat].buffQ || []).find(b => b.rider && b.rider.noDrx);
+  let k = 0;
+  n = H.drain(settle(J.reduce(n, {t: "play", uid: atk.uid, from: "hand"}, seat).state, atk.uid));
+  while(n.step !== "reaction" && k++ < 30){
+    if(n.priority == null) break;
+    n = J.reduce(n, {t: "pass"}, n.priority).state;
+  }
+  assert.equal(n.step, "reaction", "fixture: never reached the reaction step");
+  if(n.priority === seat) n = J.reduce(n, {t: "pass"}, seat).state;
+  assert.equal(n.priority, foe, "fixture: the defender never got the window");
+  assert.equal(n.pend && n.pend.card && n.pend.card.name, atkName, "fixture: the wrong card is on the open link");
+  return {n, seat, foe, granted, drA, drH};
+}
+
+test("RELEASE THE TENSION: the arrow's link bars the ARSENAL and not the HAND", {skip}, () => {
+  const w = tensionWindow("Searing Shot", 1);
+  assert.ok(w.granted, "the grant never reached buffQ with its bar");
+  assert.equal(w.granted.src, "Release the Tension", "the entry does not name the card that granted the bar");
+  const fromArs = J.legal(w.n, {t: "play", uid: w.drA.uid, from: "arsenal"}, w.foe);
+  assert.ok(fromArs, "a defence reaction from ARSENAL is still legal — the granted bar has no reader");
+  assert.match(fromArs, /Release the Tension/, "the refusal must name the card that granted the bar");
+  assert.equal(J.legal(w.n, {t: "play", uid: w.drH.uid, from: "hand"}, w.foe), null,
+    "the HAND was barred too — stronger than printed, which is what the refusal existed to stop");
+  assert.ok(!(w.n.sides[w.seat].buffQ || []).some(b => b.rider && b.rider.noDrx),
+    "the grant was not SPENT by the arrow that took it — it would bar the next link too");
+  assert.deepEqual(INV.errors(w.n), [], "the fixture's board is broken");
+});
+
+test("…and an attack the grant does not name leaves the arsenal OPEN, and the grant waiting", {skip}, () => {
+  /* BOTH HALVES (v3.45). A bar that lands on whatever attacks next passes
+     the drill above perfectly — the printed line names the next ARROW. */
+  const w = tensionWindow("Snatch", 1);
+  assert.equal(J.legal(w.n, {t: "play", uid: w.drA.uid, from: "arsenal"}, w.foe), null,
+    "a non-arrow attack collected the arrow's bar — v2.30's arrow buff on a sword");
+  assert.ok((w.n.sides[w.seat].buffQ || []).some(b => b.rider && b.rider.noDrx),
+    "the grant was spent by an attack it does not name — a qualified grant WAITS (v2.30)");
+});
+
+test("SYNTHETIC: a card that prints the NARROW bar on itself bars its own link by zone", {skip}, () => {
+  /* LATENT, AND MEASURED: no pool card prints "…from arsenal this chain
+     link" as its OWN line — Release the Tension grants it — so the card-level
+     narrow bar has no claimant, and a sabotage that ignored its zone came
+     back SILENT against every real fixture (v3.73: a synthetic is what sees
+     a latent path). `fxParse` forwards whatever `classifyClause` says, so the
+     day upstream prints one it must bar the arsenal and leave the hand. */
+  H.db(); P.fxReset();
+  const syn = {name: "Narrow Bar Synthetic", pitch: 1, cost: 0, power: 4, def: 3,
+               tt: "Generic Action - Attack", ty: ["Generic", "Action", "Attack"],
+               tx: "Defense reactions can't be played from arsenal this chain link.", kw: [], gkw: []};
+  assert.equal(P.fxParse(syn).noDrx, "arsenal", "fixture: the narrow line no longer reads on a card");
+  const dr = H.card("Put in Context", 3);
+  assert.ok(P.drxBarWhy({card: syn}, dr, "arsenal"), "its own narrow bar does not close the arsenal");
+  assert.equal(P.drxBarWhy({card: syn}, dr, "hand"), null,
+    "its own narrow bar closed the HAND — the zone was ignored");
+  P.fxReset();
 });

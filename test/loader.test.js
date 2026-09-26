@@ -117,12 +117,15 @@ test("the loader in index.html maps every field exactly as cards.js does", () =>
      the reminder to bump DATA_VER belongs, because a warm cache written
      under the old schema will not carry it. `ty` is the standing example:
      a warm sage-v10 cache has it on no card at all. */
+  /* +`cx` AT v4.72 (DATA_VER sage-v14): the X count of a printed "XX" cost,
+     which `toNum` reads as no cost at all — Ice Eternal's price was not in
+     the record. */
   /* +`hz` AT v3.34 (DATA_VER sage-v12): `played_horizontally`, which is the
      database saying a card is a SPLIT card. A warm sage-v11 cache has it on
      no card, and without it both split cards silently keep running BOTH
      halves for free with no choice offered. */
   assert.deepEqual(Object.keys(a).sort(),
-    ["c", "d", "gkw", "hp", "hz", "int", "kw", "n", "p", "pr", "prs", "pw", "tt", "tx", "ty"],
+    ["c", "cx", "d", "gkw", "hp", "hz", "int", "kw", "n", "p", "pr", "prs", "pw", "tt", "tx", "ty"],
     "the card shape changed — mirror it in BOTH files and bump DATA_VER");
 });
 

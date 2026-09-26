@@ -170,8 +170,57 @@
    v4.26's own finding that is still open: a bump that is forgotten fails no
    drill. Declaring the prompt's field set as a ledger the digest could cover
    is its own piece of work; until then every prompt-shape change is a bump by
-   hand, and this line is where it is recorded. */
-const WIRE_V = 12;
+   hand, and this line is where it is recorded.
+
+   12 -> 13 AT v4.64: every live PICK prompt gains `charge` (Roaring Beam's
+   charge made as an effect — the answer is CREDITED as a charge, not just
+   moved into the soul). `buildPrompt` writes it on every pick, `false` when
+   unset, so a v12 peer and a v13 peer hash differently the moment ANY pick
+   sheet opens. The same case as the bump above, by hand for the same
+   reason.
+
+   13 -> 14 AT v4.65: the GAME gains a top-level key, `deckFlip` — Topsy
+   Turvy's "until end of turn, a card put on top of a deck goes to the
+   bottom instead". It is absent unless the card was activated, so it ships
+   as part of the game object and the zone digest cannot see it, which is
+   the same blind spot as a prompt field. A v13 peer carries the key through
+   and never reads it: every deck-top put lands on TOP there and on the
+   BOTTOM here, and the first one desyncs the pair on a field neither can
+   act on. (v4.06's `costTax` added a game key of the same kind and did not
+   bump; later bumps have since covered it, and this line is where the rule
+   is now written down.) */
+/* AND AT v4.69 THE HAZARD ABOVE STOPPED BEING THE ONLY GUARD. The blind
+   spot is real — a forgotten bump for a shape change inside a whole-shipped
+   value still fails no drill — but the handshake now compares the RELEASE
+   as well as the card data (`lobby.buildId`), and `decode`'s one caller is
+   net.js, on the far side of that handshake. So two peers that could differ
+   in a prompt's shape are two releases, and they are refused before a
+   snapshot crosses. A forgotten bump is now a missing second guard rather
+   than a desync, which is why the prompt-field ledger v4.59 proposed is not
+   built: the release comparison covers every shape, including the ones no
+   ledger would have listed. Bump by hand anyway — it is cheap, and it is the
+   only guard a same-release dev pair has. */
+/* 14 -> 15 AT v4.66: `stack` gains a layer KIND — a play held there until
+   both seats pass (`{k: "play", card, zone, decl, res, …}`), carrying a whole
+   card and its settled declarations. `stack` is a game key that ships whole,
+   so the digest cannot see it; a v14 peer holds no such layer and resolves
+   every play on the spot, so the two diverge on the first play either seat
+   could answer. By hand, for the same reason as the two bumps above. */
+/* 15 -> 16 AT v4.69: `pend` gains `noDrx` (a granted "defense reactions
+   can't be played from arsenal this chain link", Release the Tension's) and a
+   `buffQ` entry gains `src`, the card that granted it. Both are opt-in and
+   both sit inside whole-shipped values, so by hand — and, since this same
+   version, behind a handshake that already refuses two releases. */
+/* 16 -> 17 AT v4.71: a pick prompt may carry `xPay` (Beckoning Haunt's X,
+   paid per pip when the pick settles it). Opt-in, inside a whole-shipped
+   value — by hand, behind a handshake that already refuses two releases. */
+/* 17 -> 18 AT v4.72: `pending` gains a KIND (`xval`, Ice Eternal's X,
+   declared before the payment) and the game a declaration, `_x`, which also
+   rides in a held play's `decl` (`judge.HELD_DECL`). A v17 peer answers no
+   `xval` and plays the card with X unset — so its mint creates NONE where
+   ours creates X — and the pair desyncs on the first Ice Eternal. Whole-
+   shipped values again: by hand, behind the release handshake. */
+const WIRE_V = 18;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

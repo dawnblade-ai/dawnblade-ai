@@ -414,8 +414,34 @@ test(gate("exactly ONE pool record moves, and every sibling is unchanged"), () =
      arsenal turn and the type-filtered destroy landed, so `full` 751 -> 754
      and `part` 35 -> 32 with `none` untouched. Three records this time,
      because that card is decked at three pitches — and the audit's
-     UNIQUE-card count moves by one with it (397 -> 398 full, 8 -> 7 part). */
-  assert.deepEqual(tiers, {full: 754, none: 11, part: 32});
+     UNIQUE-card count moves by one with it (397 -> 398 full, 8 -> 7 part).
+     RE-PINNED AGAIN AT v4.63, after reading the diff: Plasma Barrel Shot
+     went `part` -> `full` when its steam line got a reader and its
+     hand-written powCard retired, so `full` 754 -> 755 and `part` 32 -> 31
+     with `none` untouched. One record (398 -> 399 full, 7 -> 6 part).
+     RE-PINNED AGAIN AT v4.64, after reading the diff: Roaring Beam went
+     `part` -> `full` when its soul gate, its return to hand and its charge
+     made as an effect each got a reader, so `full` 755 -> 756 and `part`
+     31 -> 30. One record (399 -> 400 full, 6 -> 5 part). RE-PINNED
+     AGAIN AT v4.65, after reading the diff: Topsy Turvy went `part` ->
+     `full` when its deck-top replacement got a reader, and with it a
+     powCard, so `full` 756 -> 757 and `part` 30 -> 29. One record
+     (400 -> 401 full, 5 -> 4 part). RE-PINNED AGAIN AT v4.71, after
+     reading the diff: Beckoning Haunt went `part` -> `full` when its X cost
+     was coupled to the aura it returns, so `full` 757 -> 758 and `part`
+     29 -> 28. One record (401 -> 402 full, 4 -> 3 part). RE-PINNED AGAIN
+     AT v4.72, after reading the diff: Ice Eternal went `part` -> `full`
+     when its free X was declared before the payment and its fused rider
+     read, so `full` 758 -> 759 and `part` 28 -> 27. One record (402 -> 403
+     full, 3 -> 2 part). RE-PINNED AGAIN AT v4.73, after reading the diff:
+     Walk in My Shoes went `part` -> `full` when its crush rider's
+     turn-scoped halving got a reader, so `full` 759 -> 760 and `part`
+     27 -> 26. One record (403 -> 404 full, 2 -> 1 part). RE-PINNED AGAIN
+     AT v4.74, after reading the diff: Jack Be Quick went `part` -> `full`
+     when its steal got a reader and an owner, so `full` 760 -> 761 and
+     `part` 26 -> 25. One record (404 -> 405 full, 1 -> 0 part) — every
+     deck card in the pool now reads in full. */
+  assert.deepEqual(tiers, {full: 761, none: 11, part: 25});
   assert.deepEqual([...carriers.allyDiesOrPhantasm], ["Silent Stilettos"]);
   /* PINNED BOTH SIDES (v4.17) — pinning the new trigger alone cannot see
      a record LEAVING one of the others, which is what merging two

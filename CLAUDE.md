@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.62
+**Current version:** v4.75
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3029 drills** at v4.62.
+This is `node --test "test/*.test.js"` — **3189 drills** at v4.75.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -859,6 +859,364 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### SPELLVOID X — THE CARD ANSWERED ITS OWN REFUSAL (v4.75)
+
+> *"**Spellvoid X**, where X is the number of chain links you control."*
+> — MASK OF THE SWARMING CLAW, Fai's Head piece
+
+Refused since v2.32 because *"the chain belongs to the ATTACKER rather than
+to the hero being hit"*. **That is true, and it is exactly what the printed
+"you CONTROL" answers**: a chain link is controlled by the player whose
+attack it is, and every link on a chain is the turn-player's. So X counts
+the wearer's own links while they are attacking, and is 0 on the opponent's
+turn.
+
+**WHEN A REFUSAL'S REASON IS A FACT, CHECK WHETHER THE CARD ALREADY STATES
+IT.** A true premise is not the same thing as an unreadable card. Here the
+printed text supplied the missing half of the reasoning.
+
+- **`parser.linksControlled(g, seat)` is the one reader.** It counts the
+  resolved `kind:"atk"` links on the strip (an arcane entry is not a link,
+  v4.39), plus one for a `pend` the seat declared. The attack being answered
+  is a link from its declaration (CR 7.2) and joins the strip only when it
+  resolves (v3.99).
+- **The count is the caller's answer, and never stored in the parse**
+  (`name|pitch` memo, v3.39). `arcaneSoaks(sd, {links})` offers it, and a
+  caller that says nothing gets 0.
+- **One spelling of the where-clause.** `SPELLVOID_X` is read by the clause
+  reader and by `spellvoidX`, and a printed `Spellvoid N` is never an X.
+
+Measured: no tier moves (the line was already a `noop`); the ladder is
+byte-identical because `defaultPicks` wears the Blade Beckoner Helm (1) over
+the Mask (0), which is the fifth loadout-shaped zero; 8 sabotages, 8 bite.
+
+**A GENERATED REPORT IS NOT DOCUMENTATION.** `tools/crindex.js` read
+`SWEEP.md` as docs, and that report cites CR rules inside a category label
+printed once per broken card. So the index's rule total moved with the
+POOL's health (63 → 61 the day the last "no schedule" card was built).
+v4.02 excluded the index's own report by name; the family is recognised by
+its `Generated` header now, and the set is pinned. **Ask what a corpus
+READS, not what it found**: the reports cite nothing today, so a citation
+check passes with them included.
+
+### A CONTROL CHANGE, OWNERSHIP FIRST (v4.74)
+
+> *"When this hits a hero, {u} an ally they control, then steal it until
+> the end of this action phase."* — JACK BE QUICK, Briar's
+
+**THE POOL'S ONLY CONTROL CHANGE, AND THE LAST DECK CARD.** With it every
+deck card in the pool reads in full: audit **405 full / 0 part**, and `npm
+run gaps` reports 0 unfinished.
+
+**THE RECORD SAID WHAT WOULD GO WRONG, SO THAT WAS BUILT FIRST.** Moving the
+entry without its OWNER is a card that works until it dies, then files into
+the thief's graveyard (v3.23). So the owner is stamped twice: on the board
+ENTRY (`owner`, for the return) and on the CARD (`_owner`, which survives
+any exit).
+
+| | |
+|---|---|
+| the pick | the STEALER chooses among THEIR living allies; one is taken on the spot (v4.68) |
+| the move | untapped, both stamps, and its counters bag travels with it |
+| the return | `effects.returnStolen`, step (0) of `beginEndPhase`: "this ACTION phase" is over before the end phase begins. It comes home TAPPED if it swung, and only its own controller's untap step lifts that (CR 4.4.3d) |
+| a death | `damageAlly` and `sweepArena`, the two ally-death sites, file into the OWNER's graveyard and strip the stamp |
+| every other exit | `STOLEN-CARD-OFF-BOARD`: a stamp found anywhere but a board is a site that filed it wrongly, CAUGHT by the judges rather than trusted to a census of every board exit |
+
+**A CARD STOLEN BACK GOES HOME**, stamps stripped: two Jacks on one ally
+return it to its owner, not to a third party.
+
+**THE WIRE NEEDED NOTHING.** Entry fields ship verbatim and `_owner` is an
+underscore stamp (an instance key), so the round trip keeps both and the
+hashes agree. `report.js` names a stolen entry, or a report reads like a
+zone bug.
+
+**MEASURED, AND RARE ON PURPOSE.** In 84 Briar games Jack attacked 33 times
+and 23 hits found no ally to take. Only Gravy Bones fields allies, and in
+60 Briar v Gravy games there was one steal, handed back, with no
+violations. So the ladder is byte-identical and no route counter was added:
+a number that reads ~0 because of the matchup is about the matchup (v4.24,
+v4.52). The whole cycle is driven by drills and a Briar scene instead.
+**23 sabotages, 23 bite.** Two first-pass silences were my fixtures: no
+near-miss dropped the untap alone, and the entry-shape fixture tripped the
+other half of its own check (v3.62).
+
+### A HALVING THAT STARTS AND ENDS MID-GAME (v4.73)
+
+> *"Crush - When this deals 4 or more damage to a hero, until the end of
+> their next turn, the base {p} and {d} of attack action cards they control
+> are halved, rounded up."* — WALK IN MY SHOES, Lyath's
+
+**THE LAST OF TWELVE CRUSH RIDERS, REFUSED FOR THIRTY-FOUR VERSIONS**, and
+the reason was good: `build.halveCard` halves Lyath's own cards once, at the
+DEAL, because thirty readers of a base value is thirty chances to miss one
+(v3.78). **The build keeps that argument rather than dropping it.** The value
+still lives ON THE CARD, so every reader (the declaration, `defendValue`, the
+`pumped` base, Crush the Weak's threshold, the policy, the display) sees it
+without being told. What is new is only that `effects.restampHalving`
+re-stamps the victim's attack action cards at the two moments the window
+changes: when the crush pushes it, and when their end phase drops it.
+
+**"UNTIL" IS NOT "DURING".** The other four next-turn riders are ARMED and do
+nothing until their turn. This one is live at the crush, so the entry rides
+`nextTurn` for its END alone: armed at their turn start, dropped in step (7)
+of their end phase.
+
+**THE COUNT IS DERIVED OFF THE SCHEDULE, NEVER BANKED.** Two crushes quarter,
+and the first to close leaves the second standing. Nested ceilings compose,
+so neither the order two windows opened in nor Lyath's own deal-time halving
+in a mirror can change the answer. `_unhalvedPow`/`_unhalvedDef` hold the
+value before any window, are opt-in (v3.58), and leave with the last window.
+
+**AND THE TRAINER NEVER ARMED SEAT 1.** `armNextTurn` was called at seat 0's
+turn start only, so an entry aimed at the dummy never armed and so never
+EXPIRED. That was harmless while every kind waited on a swing the dummy
+fabricates, and would have been a PERMANENT halving here. `foeBegin` arms it
+now.
+
+**EVERY ZONE IS STAMPED, AND THAT IS STATED** (`halving-reads-every-zone`):
+the CR's "control" reaches the chain and the defenders, and a card in a hand
+is held. Lyath's own static has always read the same way. A card minted
+mid-window is not stamped, and that is unobservable: the pool's only attack
+action card an effect creates is Crouching Tiger, which prints 0 power and
+no defence (pinned as a premise).
+
+### A FREE X, DECLARED BEFORE THE PAYMENT (v4.72)
+
+> *"Create X Frostbite tokens under target hero's control. Then if this was
+> fused, deal arcane damage to that hero equal to the number of Frostbites
+> they control."* — ICE ETERNAL, cost **XX**
+
+**THE RECORD SAID "NOTHING MODELS AN X COST" AND THE CARD WAS FREE.** The
+database carries no number for `XX`, so `cost: null` read as 0. Reading the
+mint alone would have shipped X Frostbites for nothing. That is v4.71's
+Beckoning Haunt one route over. **When a record refuses a PAYLOAD, check
+what the COST reads as first.**
+
+**X IS A CARD FIELD AND A DECLARATION, NEVER A PARSE.** `cx` counts the X in
+the printed cost on both loaders (`DATA_VER` `sage-v14`). The number is the
+player's, declared as an `xval` **pending** before the payment (a cost is
+never a queued prompt, v3.34), and it rides on the STATE as `_x`, never on
+the action. So a crafted `play` carrying its own `x` is still asked.
+`costCtx.x` hands it to every `effCost` reader. The bound is what the seat
+could raise, never counting the card being paid for. `_x` is in `HELD_DECL`
+and is cleared on commit, cancel and resolution. **An Action clears
+`HELD_DECL` twice**, so the "commit keeps `_x`" sabotage is silent against
+Ice Eternal, and a synthetic X **instant** is what reaches it.
+
+**AN UNDECLARED X MINTS NONE.** Inert, never free (v2.04).
+
+**"THEN IF THIS WAS FUSED" IS `way:fused`, A LATE GATE**, because its payload
+(`arcaneCount`) counts every Frostbite the target controls **after** the
+mint. The main loop runs before the ops (v3.60) and would count the board
+without them. A `then if` whose gate is not fusion refuses.
+
+**THE POLICY ANSWERS THE LARGEST X, AND IT COSTS FUSION, MEASURED.** Fused
+plays went 10 of 21 → 1 of 20, because maximum X pitches the Ice card the
+reveal needed. Recorded rather than tuned: weighing the two is a judgement
+about the hand `sparring.js` does not make. `WIRE_V` 17 → 18.
+
+### AN X THE CHOICE SETTLES, AND AN X NOTHING CHARGED (v4.71)
+
+Beckoning Haunt's *"{x}{x}{r}, destroy this: Return target aura with cost X
+…"* reads now: X is the chosen aura's cost (Blaze's shape, v3.39). **And
+`parseHeroPower` used to read `{x}{x}{r}` as cost 1**, so the X pips are
+counted (`x`, stamped `_xPips` by all three builders) and COUPLED: X pips
+with no settling pick refuse, and so does a pick that settles an unpriced X.
+**`parser.abPickBound(sd, ab, ctx)` is the one reader of what is
+affordable**, asked by both boards' legality with the game's half of the
+fixed cost. The queue site bounds the sheet off the resolving powCard, and
+the answer charges X per pip, never pitching the aura it returned. The class
+word before "(non-)attack action card" is now a closed vocabulary
+(`ACTION_CLASSES`: wizard, runeblade), after "target" read as one. Choices
+made at resolution rather than activation are recorded as
+`activation-choices-at-resolution`.
+
+### A GRANTED BAR RIDES ON THE PUMP AND ASKS THE ZONE (v4.70)
+
+Release the Tension grants its next arrow *"Defense reactions can't be played
+from arsenal this chain link."* `noDrx` is `true` (every zone) or the zone
+NAME, `parser.quotedStatic` reads the static rider beside the on-hit
+`quotedRider` (not a widening of it), the collecting arrow carries it onto
+`pend.noDrx`, and **`drxBarWhy(link, card, from)` is asked by all three doors
+with their own zone**. The narrow bar never closes the hand; that is the
+half v4.60's refusal protected, and a drill drives it. The grant's feed line
+now names what its rider does (`riderWords`); it used to say "goes again if
+it hits" for every rider.
+
+### THE SAME CARDS IS NOT THE SAME GAME (v4.69)
+
+Both table handshakes compared `DATA_VER` alone while net.js's refusal said
+*"check APP_VER / DATA_VER"*. Replaying sixteen v4.68 logs on v4.67 from the
+same opening, **2 of 16 diverged**, with the same card data and the same
+`WIRE_V`. **`lobby.buildId(appVer, dataVer)` is the one spelling** and the
+trainer hands the same `TABLE_BUILD` to both handshakes
+(`test/buildid.test.js`). **When a message names what it checks, check it
+checks that.** It also means a forgotten `WIRE_V` bump can no longer desync
+two releases, which is why v4.59's prompt-field ledger is not built.
+
+### A CHOICE OF ONE IS CONFIRMED ON THE SPOT (v4.68)
+
+v3.55's rule (*a sheet offering one forced choice is a tap that teaches
+nothing*) lived only in `ctrPut`'s fast path. Measured: **114 pick sheets in
+210 games** were a mandatory choice among one card, 108 of them Fai's.
+`prompts.promptForcedSel` is the reader, and both boards' `openPrompt`
+confirm a forced sheet through the one `applyAnswer`, with the rest of the
+queue behind it. **`buildPrompt` answering null is NOT the same thing** — that
+SKIPS the spec, so the printed move never happens.
+
+**FORCED MEANS A MANDATORY `pick` OVER EXACTLY ONE CARD.** Two cards for two
+deck slots is an ORDER (v4.59), and an optional pick over one card is the
+printed "you may" — both still ask. **A drill about a SHEET needs two legal
+candidates now**; a drill about a WRITER can take the forced answer, because
+it reaches the same writer. `test/forcedpick.test.js` holds both halves and
+pins the trainer's call as a whole conditional (v4.55).
+
+**JACK BE QUICK'S STEAL WAS RECORDED, NOT BUILT** (`control-change-steal`,
+open). Nothing moved an object between SIDES, and a stolen ally is
+controlled by one seat and owned by the other — half-building it files a
+dead ally into the wrong graveyard (v3.23). **BUILT AT v4.74** with the
+ownership first — see "A CONTROL CHANGE, OWNERSHIP FIRST".
+
+### A DRILL THAT BUILDS AN UNREACHABLE STATE CAN DECIDE A RULE (v4.67)
+
+v4.23 fixed the order of Hyper Driver's clock and Crankshaft's put as
+tick-first, and the reasoning held for exactly one state: a Driver ON THE
+BOARD WITH NO COUNTERS. Its drill built that state, and no game can reach it
+(every steam remover in the pool removes from its own permanent). At ONE
+counter, which a game reaches every third boost, tick-first destroyed the
+Driver. **When an order, a default or a tie-break is justified by a fixture,
+ask whether a game can reach that fixture** — and pin the premise that says
+it can't, so the day it can, the choice is re-measured.
+
+### A PLAY WAITS FOR THE OTHER SEAT (v4.66)
+
+**THE TABLE HOLDS A PLAY AT ACTION SPEED ON THE STACK** until both seats pass
+(CR 7.1.2, CR 4.2.2). The old ledger record called the distinction one "no
+card in this pool asks about". Measured, 12 of 319 same-action damage events
+in 210 games hit a seat holding an instant prevention with no window to
+play it.
+
+- **`execute` is deferred whole, never split.** `judge.holdPlay` lifts the
+  card onto the stack, parks the settled declarations (`HELD_DECL`) and
+  locks the seat's floating resources on the layer; `resolveHeld` puts them
+  back and calls `commitPlay` again. When you add a declaration that rides
+  on the state into `execute`, **add it to `HELD_DECL`** or a held play
+  drops it.
+- **An unusable window resolves at once**, and `someoneCanRespond` asks
+  `legal` as each seat. Not an approximation: a seat that cannot act can
+  only pass.
+- **Action speed needs an empty stack** (`priority.speedAllowed`) and
+  `endTurn` refuses over a waiting card.
+- **The census counts the stack**, lifted cards only. An activation's piece
+  never leaves its zone.
+- **Drills that read the board after a play call `H.drain`** — real precons
+  carry instant gear, so most plays at the table now wait. Asserting on the
+  board without draining reads a card that has not resolved yet.
+- **A probe for a window needs a seat that can use it.** The old probe drove
+  an opening hand with no answer in it, and stayed green through the build.
+
+**STILL COLLAPSED, AND RECORDED:** instants and reactions resolve on play;
+when-this-attacks triggers have no window of their own; leftover floating
+resources wait with the held card. `instant-speed-plays-resolve-on-play`.
+
+### A REPLACEMENT OVER A ZONE MOVE IS ONE READER EVERY WRITER ASKS (v4.65)
+
+> *"Until end of turn, if one or more cards would be put on top of a deck,
+> instead they're put on the bottom."* — TOPSY TURVY, Arakni's Head
+
+**"A DECK" NAMES NO SEAT, SO IT IS GAME STATE** — `game.deckFlip`, `costTax`'s
+shape (v4.06), and `parser.deckTopTo(game)` is the ONE reader. Every writer
+that puts a card on top of a deck asks it: `moveCards`, `moveFoe`,
+`foeHandToDeck`, and the opt/reorder application. **Opt is a writer because
+the printing says so** — SAZ005 reads *"PUT THEM ON THE TOP"*.
+`test/topsy.test.js` censuses front-inserts across the engine and the trainer,
+so a new writer that forgets the question fails a drill (v4.21: fix the
+family). Every writer is driven with the flip set AND unset, because a writer
+that ignores the flag passes one half and a writer that always sends cards
+down passes the other.
+
+**A VALUE RESOLVED MID-CHAIN RESTARTS THE CHAIN.** The first draft put
+`const _to = …` between two `else if` branches of `moveCards`; the statement
+ended the chain, and every arsenal and board move fell through to the final
+list write as well — thirteen drills red. **Resolve a value ABOVE the chain
+that branches on it.**
+
+**A NEW TOP-LEVEL GAME KEY IS A `WIRE_V` BUMP** (13 → 14). The zone digest
+cannot see a key inside the game object, which is the prompt-field blind spot
+one layer out; `costTax` went unbumped at v4.06 and the rule is written in
+`wire.js`'s header now. **And `report.js` names it** under `turnMods`, because
+a card that went to the bottom reads as a bug when nobody says why.
+
+**THE FEED NAMES WHERE THE CARDS WENT, NOT WHERE THE SPEC AIMED THEM** — the
+one drill in the file that reads prose, because the state is identical either
+way (v3.60). The ladder is byte-identical because `defaultPicks` wears Prey
+Spotters (1 defence) over Topsy Turvy (0), which is pinned as a premise.
+
+### A CHARGE IS WHAT IT CREDITS, NOT WHERE THE CARD WENT (v4.64)
+
+> *"If there are no cards in your soul, return this to its owner's hand,
+> then **charge** your soul. (Put a card from your hand under your hero.)"*
+> — ROARING BEAM, SBL032
+
+**CHARGE AS AN EFFECT IS MANDATORY AND COMES AFTER**; charge as a cost is
+refusable and comes before (v4.33). The printing settled it. It is a pick,
+hand → soul, queued behind the return — so the card just returned may be the
+one charged, which is what the printed *"then"* says.
+
+**`creditCharge` IS THE ONE BODY** for what makes a card in the soul a
+CHARGE — `hist.charged`, the feed line, the charged card's own *"when this is
+charged"* trigger. The cost route and the effect route each move the card
+their own way and both call it. **A card that reached the soul without being
+credited is a charge nothing can see.** (Halo of Illumination prints *"put a
+card from your hand into your soul"* without the word, and is deliberately
+NOT credited: whether that counts as charging is not sourced here.)
+
+**"UNDO THE PUSH MADE ABOVE" WAS BELOW.** Transcend's filter ran before the
+graveyard push it undid, so a transcended card sat in the hand as Inner Chi
+AND in the graveyard — two zones, two uids, invisible to the census. Both
+"instead of the graveyard" cases are a SKIP at the push now. **When a comment
+says a step happens above, check the line numbers.**
+
+### A PARAPHRASE THAT DROPPED THE GATE, AND THE BOARD THAT NEVER ASKED (v4.63)
+
+> *"Action - {r}{r}: If this has no steam counters, put a steam counter on
+> it. Go again"* — PLASMA BARREL SHOT, Dash's
+
+**FOURTEEN VERSIONS OF A POWCARD WRITTEN BY HAND.** `equipPiece` built this
+ability as `"Put a steam counter on this. Go again."` because nothing read
+the printed line — and the paraphrase DROPPED the printed gate, which
+`effects.js` and `judge.abCostWhy` then each re-imposed off a `_buildSteam`
+stamp. Two records of one printed condition (v3.61), both hand-written. The
+line reads now and the stamp is gone; audit **398 → 399** `full`.
+
+**A PRONOUN WHOSE ANTECEDENT IS THE GATE IS READ WHOLE.** The if/when
+handler splits on the first comma and hands *"put a steam counter on IT"*
+over alone, and the pool prints that pronoun meaning three OTHER objects. So
+the reader sits ABOVE the handler and reads both halves at once — `ctrSrc`
+behind `noCtr:<K>` — and the pronoun alone still refuses. v2.33's trap,
+answered by reading rather than guessing.
+
+**`ctrSrc` IS NOT `ctrSelf`, AND `abSourceUid` IS THE ONE ANSWER TO "WHICH
+PERMANENT IS THIS".** One stamps a card ENTERING the arena; the other puts a
+counter on the piece a resolving ability BELONGS to, found back off its
+`gp`/`bp` uid — the match `execute` had written inline three times. It
+answers the piece's real uid, never a sliced prefix (v4.49). `runOps` takes
+the resolving card as an OPT-IN fourth argument that only `execute` passes,
+so a rider or a leave payout refuses rather than guessing.
+
+**AND RETIRING THE STAMP FOUND A ONE-BOARD RULE (v3.01).** v4.49 put the
+paid-no-op refusal in `judge.abCostWhy` and wrote that both boards call it —
+the trainer's `tryPlay` never did, and still charged {r}{r} for a log line.
+`parser.abCtrGateFails` is the one reader now, asked by both, off the same
+`fx.conds` the condition loop resolves. **When you retire a stamp, grep for
+every reader of it AND for every board that should have been one.**
+
+**THREE DEAD HALVES IN A NAMED SHAPE.** `parseHeroPower`'s fourth shape first
+asked for a `noCtr:` gate, a present gate and no on-hit flag beside *"every
+op is `ctrSrc`"* — and `ctrSrc` has one emitter, which always carries that
+gate, while an ungated run is accepted by the ordinary guard anyway. All
+three came back SILENT and are deleted (v4.11); the premise is a drill.
 
 ### TURN IT OVER, THEN TAKE IT IF IT IS WHAT YOU FEARED (v4.62)
 
@@ -4620,9 +4978,11 @@ dominated.
 **THE ORDER OF TWO TRIGGERS ON ONE BOOST IS A DECISION, SAID OUT LOUD.**
 Crankshaft and Big Bertha PUT a steam counter on a Hyper Driver and the
 Driver's clock REMOVES one; both fire on one event and CR 4.1.8a gives
-the order to the controller, which this project does not model. The clock
-ticks FIRST, because one running after them would spend the counter they
-just placed and destroy the permanent they were refilling.
+the order to the controller, which this project does not model. **v4.23
+ticked the clock FIRST and was wrong** (corrected v4.67): its reasoning held
+only for a Driver on the board with NO counters, which no game can reach.
+At one counter, tick-first destroys the Driver before the put lands, so the
+put goes first. See v4.67.
 
 **"WHEN THIS HAS NONE" IS A TRIGGER, NOT A STANDING STATE TEST**, so it
 is asked at the removal that could have emptied the bag — which is what
@@ -7053,9 +7413,9 @@ v3.98's qualifier census one tool over.
 **THE `prose` BUCKET IS WHERE THE UNBUILT RULES LIVE**, and it went 6 → 4
 because the approximation ledger's drills reached two of them. A rule cited
 only in documentation is one this project has written ABOUT and never
-encoded; the layer-step window (CR 7.1.2) is the worked example, and it is
-`drill-only` now — pinned by a probe that asserts the deviation and fails
-the day it is built.
+encoded; the layer-step window (CR 7.1.2) was the worked example — it sat
+in `drill-only`, pinned by a probe asserting the deviation, until v4.66
+BUILT it and moved it to `guarded`.
 
 **AND WRITING THAT DRILL MOVED THE INDEX.** Its first draft spelled two
 section pointers in a header comment — prose, in a file the scan classifies
@@ -7218,9 +7578,10 @@ desync), and `report.js`'s `seat()`. The symmetry ledger moved 39 → 40,
 deliberately: a field arriving is as deliberate an edit as one leaving.
 
 **THREE OF THE FIVE STILL REFUSED** at v3.29 — the two RESTRICTIONS
-landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
-halves base {p} and {d} for a turn. Claiming it would file a card `full`
-that does nothing.
+landed in v3.30 (below), and **ONE still refused**: Walk in My Shoes
+halves base {p} and {d} for a turn. Claiming it would have filed a card
+`full` that did nothing. **BUILT AT v4.73** — see "A HALVING THAT STARTS
+AND ENDS MID-GAME".
 
 ### THE FACE OF AN ARSENAL PUT IS THE CALLER'S ANSWER (v3.69)
 
@@ -10576,14 +10937,12 @@ Omitting it means the hero, always a legal choice (CR 1.4.5a).
 
 Still deliberately not modelled, and each is honest rather than hidden:
 
-- **the layer-step window (CR 7.1.2)**. An attack goes straight onto the
-  chain; in the CR it sits on the stack first and both seats may respond
-  before it becomes a chain link. Needs the stack/queue, which
-  `priority.js` already has hooks for (`queueEmpty`). **The window itself
-  is not lost** — the ATTACK step immediately after opens an equivalent
-  instant window for both seats, verified in a driven game, so what is
-  missing is the distinction between "on the stack" and "on the chain",
-  which no Phase 1 rule asks about.
+- ~~**the layer-step window (CR 7.1.2)**~~ **BUILT AT v4.66.** The claim
+  here was that the attack step's window is equivalent and "no Phase 1
+  rule asks about" the difference. Measured, it was not equivalent: a
+  when-this-attacks trigger and a non-attack's damage had ALREADY landed
+  by then. See "A PLAY WAITS FOR THE OTHER SEAT". What is still collapsed
+  is `instant-speed-plays-resolve-on-play` (stated).
 - **the START phase is passed through, not skipped.** `P.endTurn` leaves
   the incoming seat in `phase:"start"` and `endPhaseAfterArsenal` moves
   them on in the same breath, so no state ever RESTS there. That is
@@ -12869,15 +13228,16 @@ it carded effects only once the engine can actually read them.
   followed at v4.04 and it was real.** `effects.isInertia` matched the
   token by NAME; `parser.isHandWipe` reads its printed clause now, the
   token reports `full`, and the pinned token set went 8 -> 7.
-- **Ice Eternal is the pool's only X-cost card and is deliberately unbuilt.** Its
-  printed cost is `XX`; nothing here models an X cost, so `create X ... tokens` is
-  REFUSED rather than read as one. Creating a single token for a card that charges
-  for X is quietly weaker than printed — which coverage reads as `full`, and the
-  fairness sweep is one-sided against the other direction.
-- **`Spellvoid X` (Mask of the Swarming Claw) is refused for the same reason** —
-  "where X is the number of chain links you control", and the chain belongs to the
-  attacker rather than to the hero being hit. The piece keeps its printed Arcane
-  Barrier 1. **PLAIN spellvoid and plain arcane barrier are LIVE and the
+- ~~**Ice Eternal is the pool's only X-cost card and is deliberately unbuilt.**~~
+  **BUILT AT v4.72.** The record's reason was true and hid the sharper defect:
+  the printed `XX` carries no number in the database, so `effCost` priced the
+  card at ZERO. X is a card field (`cx`), declared before the payment as an
+  `xval` pending, and an undeclared X creates nothing. See "A FREE X,
+  DECLARED BEFORE THE PAYMENT".
+- ~~**`Spellvoid X` (Mask of the Swarming Claw) is refused on its own reason**~~ —
+  **READ AT v4.75.** The reason was true and the card answers it: "you CONTROL"
+  means the wearer's own links, so X counts them on the wearer's turn and is 0 on
+  the opponent's. See "SPELLVOID X — THE CARD ANSWERED ITS OWN REFUSAL". **PLAIN spellvoid and plain arcane barrier are LIVE and the
   keyword ledger said otherwise until v4.02**: both were `inert-dummy` on a
   reason naming a training prop retired at v2.71, while `parser.arcaneSoaks`
   has offered them at the point arcane damage is dealt, from the SHARED

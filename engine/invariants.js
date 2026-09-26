@@ -126,6 +126,30 @@ function check(game){
       err("ARSENAL-SHAPE", "sides[" + si + "].arsenal is an array — it holds ONE card or null");
   });
 
+  /* ---- a stolen card is on a board, or it has gone home (v4.74) ------
+     Jack Be Quick moves an ally to the thief's board and stamps the card
+     with its OWNER. Every exit from a board must file it into the owner's
+     zones and strip the stamp; a stamp found anywhere but a board is a site
+     that filed it into the THIEF's graveyard — the defect the steal was
+     recorded rather than half-built for, caught here rather than trusted
+     to a census of every exit. And a board entry naming its own side as
+     owner is a steal that never went anywhere. */
+  sides.forEach((sd, si) => {
+    for(const z of LIST_ZONES){
+      if(z === "board" || !Array.isArray(sd[z])) continue;
+      for(const c of sd[z]) if(c && c._owner != null)
+        err("STOLEN-CARD-OFF-BOARD", "\"" + nameOf(c) + "\" still carries its owner (seat " + c._owner +
+            ") in sides[" + si + "]." + z + " — it left the board without going home", String(uidOf(c)));
+    }
+    if(sd.arsenal && sd.arsenal._owner != null)
+      err("STOLEN-CARD-OFF-BOARD", "\"" + nameOf(sd.arsenal) + "\" still carries its owner in sides[" + si + "].arsenal",
+          String(uidOf(sd.arsenal)));
+    for(const b of (Array.isArray(sd.board) ? sd.board : []))
+      if(b && b.owner != null && (b.owner === si || !b.card || b.card._owner !== b.owner))
+        err("STOLEN-ENTRY-SHAPE", "a board entry in sides[" + si + "] names owner " + b.owner +
+            " — an owner stamp is only ever the OTHER seat, on the entry and its card alike", String(b.uid));
+  });
+
   /* ---- a card exists in exactly one zone ----------------------------
      This is the crumbling-aura bug (v2.16): auras were filtered off the
      board into the graveyard, then the board was rebuilt from the
@@ -142,6 +166,17 @@ function check(game){
     const card = entry && (entry.card || entry);
     const uid = uidOf(card);
     if(uid != null) all.push({uid, zone: "chain", idx: i, name: nameOf(card)});
+  });
+  /* AND SO IS THE STACK (v4.66). A card played at action speed now rests
+     there as a layer at the table, having left its hand, arsenal,
+     graveyard or banished zone — so it is in no side zone either. Only a
+     LIFTED card counts: an activation leaves its piece where it is, and
+     counting that piece here as well would report every held swing as a
+     card in two zones. */
+  (game.stack || []).forEach((l, i) => {
+    if(!(l && l.k === "play" && l.lifted)) return;
+    const uid = uidOf(l.card);
+    if(uid != null) all.push({uid, zone: "stack", idx: i, name: nameOf(l.card)});
   });
   const byUid = new Map();
   for(const rec of all){

@@ -1,12 +1,12 @@
 {
- "generated": "2026-09-23T14:05:46.038Z",
- "appVer": "4.62",
- "dataVer": "sage-v13",
+ "generated": "2026-09-26T21:59:30.121Z",
+ "appVer": "4.75",
+ "dataVer": "sage-v14",
  "dbCount": 797,
  "poolUnique": 405,
  "tiers": {
-  "full": 398,
-  "part": 7,
+  "full": 405,
+  "part": 0,
   "none": 0
  },
  "heroes": {
@@ -2351,7 +2351,7 @@
     "ice fusion",
     "specialization"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -2365,17 +2365,14 @@
     },
     {
      "t": "Create X Frostbite tokens under target hero's control",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Then if this was fused, deal arcane damage to that hero equal to the number of Frostbites they control.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "Create X Frostbite tokens under target hero's control",
-    "Then if this was fused, deal arcane damage to that hero equal to the number of Frostbites they control."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Iyslander Specialization\nIce Fusion\nCreate X Frostbite tokens under target hero's control. Then if this was fused, deal arcane damage to that hero equal to the number of Frostbites they control.",
@@ -2551,24 +2548,22 @@
    "mentions": [
     "guardwell"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Action - {x}{x}{r}, destroy this: Return target aura with cost X from your graveyard to your hand.",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "Guardwell",
      "st": "noop"
     }
    ],
-   "skipped": [
-    "Action - {x}{x}{r}, destroy this: Return target aura with cost X from your graveyard to your hand."
-   ],
+   "skipped": [],
    "weaponCost": null,
-   "eqAbility": null,
+   "eqAbility": "destroy: Return target aura with cost X from your graveyard to your hand [XX+1r]",
    "tx": "Action - {x}{x}{r}, destroy this: Return target aura with cost X from your graveyard to your hand.\nGuardwell",
    "flags": []
   },
@@ -3603,7 +3598,7 @@
    "mentions": [
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -3613,7 +3608,7 @@
     },
     {
      "t": "Action - {r}{r}: If this has no steam counters, put a steam counter on it",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "Go again",
@@ -3624,9 +3619,7 @@
      "st": "run"
     }
    ],
-   "skipped": [
-    "Action - {r}{r}: If this has no steam counters, put a steam counter on it"
-   ],
+   "skipped": [],
    "weaponCost": {
     "cost": 0,
     "addRust": false,
@@ -6133,9 +6126,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Your next arrow attack this turn gets +3{p} and \"Defense reactions can't be played from arsenal this chain link.\"\nGo again",
-   "flags": [
-    "granted ability in quotes has NO reader: \"defense reactions can't be played from arsenal this chain link.\" — the head parses, this does not"
-   ]
+   "flags": []
   },
   "ridge rider shot|1": {
    "name": "Ridge Rider Shot",
@@ -9402,24 +9393,22 @@
    "mentions": [
     "arcane barrier"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Instant - Destroy this: Until end of turn, if one or more cards would be put on top of a deck, instead they're put on the bottom.",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "Arcane Barrier 1",
      "st": "noop"
     }
    ],
-   "skipped": [
-    "Instant - Destroy this: Until end of turn, if one or more cards would be put on top of a deck, instead they're put on the bottom."
-   ],
+   "skipped": [],
    "weaponCost": null,
-   "eqAbility": null,
+   "eqAbility": "destroy: Until end of turn, if one or more cards would be put on top of a deck, instead they're put on the bottom",
    "tx": "Instant - Destroy this: Until end of turn, if one or more cards would be put on top of a deck, instead they're put on the bottom.\nArcane Barrier 1",
    "flags": []
   },
@@ -11536,7 +11525,7 @@
    "mentions": [
     "charge"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -11546,12 +11535,10 @@
     },
     {
      "t": "If there are no cards in your soul, return this to its owner's hand, then charge your soul.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If there are no cards in your soul, return this to its owner's hand, then charge your soul."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Create a Courage token.\nIf there are no cards in your soul, return this to its owner's hand, then charge your soul.",
@@ -12033,9 +12020,9 @@
     "go again",
     "steal"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
-   "playable": false,
+   "playable": true,
    "clauses": [
     {
      "t": "When this attacks, you may banish a Nimblism from your graveyard",
@@ -12047,18 +12034,14 @@
     },
     {
      "t": "When this hits a hero, {u} an ally they control, then steal it until the end of this action phase.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When this hits a hero, {u} an ally they control, then steal it until the end of this action phase."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this attacks, you may banish a Nimblism from your graveyard. If you do, this gets +1{p} and go again.\nWhen this hits a hero, {u} an ally they control, then steal it until the end of this action phase.",
    "flags": [
-    "unreviewed keyword: \"steal\"",
-    "untap {u} — not parsed (see ledger)",
     "text mentions go again but no clause parses it"
    ]
   },
@@ -14098,7 +14081,7 @@
    "mentions": [
     "crush"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -14108,12 +14091,10 @@
     },
     {
      "t": "Crush - When this deals 4 or more damage to a hero, until the end of their next turn, the base {p} and {d} of attack action cards they control are halved, rounded up.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "Crush - When this deals 4 or more damage to a hero, until the end of their next turn, the base {p} and {d} of attack action cards they control are halved, rounded up."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "If this has {p} greater than its base, it gets +1{p}.\nCrush - When this deals 4 or more damage to a hero, until the end of their next turn, the base {p} and {d} of attack action cards they control are halved, rounded up.",

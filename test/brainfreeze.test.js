@@ -41,10 +41,10 @@ const FOE_HAND = () => [
    "you MAY reveal" was being taken without being paid — and it is why
    these fixtures name the card they reveal rather than letting a scan of
    the hand decide. `reveal` is the uid to hand over, or null to decline. */
-function play(hand, reveal){
+function play(hand, reveal, foeHand){
   H.db();
   let g = H.state({name: "Iyslander", res: 9, ap: 3, hand, deck: [{uid: "d1", name: "F"}]},
-                  {name: "Them", hand: FOE_HAND(), deck: [{uid: "d2", name: "Bottom"}]},
+                  {name: "Them", hand: foeHand || FOE_HAND(), deck: [{uid: "d2", name: "Bottom"}]},
                   {actor: 0, turnPlayer: 0, seed: "bf"});
   g = {...g, phase: "action", step: "layer", priority: 0, passed: [], turn: 4};
   let n = J.reduce(g, {t: "play", uid: "bf1", from: "hand"}, 0).state;
@@ -109,16 +109,37 @@ test("'an action card' reads the STRUCTURED array — a defence reaction is not 
 
 /* ---- DRIVEN ------------------------------------------------------------ */
 
+/* TWO LEGAL CHOICES, so the sheet has something to ask (v4.68): over ONE
+   mandatory candidate there is nothing to decide and it is confirmed on
+   the spot — the drill after this one holds that half. */
+const ZERO_TWO = {uid: "f4", name: "Zero Two", cost: 0, pitch: 2, tt: "Generic Action", ty: ["Generic", "Action"]};
+
 test("fused: the chosen card leaves their hand and becomes their next draw", {skip}, () => {
   const bf = {...H.card("Brain Freeze", 3), uid: "bf1"};
   const ice = {...H.card("Ice Bolt", 1), uid: "ice"};      /* an Ice card to reveal */
-  let n = play([bf, ice], "ice");
+  let n = play([bf, ice], "ice", [...FOE_HAND(), ZERO_TWO]);
   assert.equal(n.prompt && n.prompt.tag, "pick", "fused, so the rider asks");
-  assert.deepEqual(n.prompt.cards.map(c => c.name), ["Zero Action"],
-    "only the legal choice is offered — the filter is the rule, not a hint");
+  assert.deepEqual(n.prompt.cards.map(c => c.name), ["Zero Action", "Zero Two"],
+    "only the legal choices are offered — the filter is the rule, not a hint");
   n = answer(n);
+  assert.deepEqual(n.sides[1].hand.map(c => c.name), ["Costly Action", "Spider Trap", "Zero Two"],
+    "it left their hand, and the card NOT chosen stayed");
+  assert.equal(n.sides[1].deck[0].name, "Zero Action", "and is on TOP of their deck");
+  assert.deepEqual(INV.errors(n), [], "one card, one zone");
+});
+
+test("fused, ONE legal choice: no sheet, and the card still moves (v4.68)", {skip}, () => {
+  /* A cross-seat pick over the other seat's hidden hand, with the filter
+     leaving exactly one card: a mandatory choice among one is not a
+     decision, so it is confirmed on the spot — and the card the printed
+     line moves still MOVES, which is why `buildPrompt` could not simply
+     answer null here (that SKIPS the spec). */
+  const bf = {...H.card("Brain Freeze", 3), uid: "bf1"};
+  const ice = {...H.card("Ice Bolt", 1), uid: "ice"};
+  const n = play([bf, ice], "ice");
+  assert.ok(!n.prompt, "a sheet offering the only legal card is a tap that teaches nothing");
   assert.deepEqual(n.sides[1].hand.map(c => c.name), ["Costly Action", "Spider Trap"],
-    "it left their hand");
+    "the only legal card left their hand anyway");
   assert.equal(n.sides[1].deck[0].name, "Zero Action", "and is on TOP of their deck");
   assert.deepEqual(INV.errors(n), [], "one card, one zone");
 });

@@ -122,7 +122,7 @@ function inDefendStep(card){
 /* Resolve a play all the way through its payment. */
 /* Every card in the pool that prints boost is asked, so the census
    records that it saw the question rather than merely tolerating it. */
-const boostsAsked = [], splitsAsked = [], chargesAsked = [];
+const boostsAsked = [], splitsAsked = [], chargesAsked = [], xAsked = [];
 
 function settle(n){
   for(let i = 0; i < 12 && J.pendingOf(n); i++){
@@ -159,6 +159,15 @@ function settle(n){
     if(p.kind === "charge"){
       chargesAsked.push(p.card.name);
       n = J.reduce(n, {t: "charge", uid: null}, p.seat).state;
+      continue;
+    }
+    /* X IS DECLARED BEFORE THE PAYMENT (v4.72), and declared as ZERO here
+       for `addPay`'s reason below — the census is about where the PLAYED
+       card lands, and X = 0 is the branch that creates nothing extra.
+       Recorded, so a census that stopped being asked cannot pass. */
+    if(p.kind === "xval"){
+      xAsked.push(p.card.name);
+      n = J.reduce(n, {t: "xval", x: 0}, p.seat).state;
       continue;
     }
     /* An optional additional cost is DECLINED here: the census is about
@@ -273,6 +282,11 @@ test("a card played in an open window lands in the zone its TYPE sends it to", {
     ["Beaming Bravado", "Bolt of Courage", "Engulfing Light",
      "Light the Way", "Take Flight", "V of the Vanguard"],
     "every card printing charge must be asked the question");
+  /* THE FREE X (v4.72). Beckoning Haunt's X is an ACTIVATION's and settled
+     by its pick, so it never reaches a play census; the one card PLAYED
+     with an X in its printed cost is the one that must be asked. */
+  assert.deepEqual([...new Set(xAsked)].sort(), ["Ice Eternal"],
+    "every card printing an X cost must be asked to declare X");
 });
 
 test("anything printing defence, bar a defence reaction, can be declared", {skip}, () => {

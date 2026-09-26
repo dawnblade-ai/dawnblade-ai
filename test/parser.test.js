@@ -567,14 +567,20 @@ test("classifyClause — a crush rider is the CARD'S OWN payload, not one card's
   assert.equal(
     cc("Crush - When this deals 4 or more damage to a hero, they can't play attack action cards with 5 or less base {p} during their next action phase.")
       .ops[0][2][0][2], 5, "and it is not a literal 3");
-  /* AN UNREADABLE PAYLOAD STILL REFUSES THE WHOLE CLAUSE, and one of the
-     five still is: Walk in My Shoes halves base {p} AND base {d} for a whole
-     turn, which is a modifier on every attack action card they control
-     rather than a cap or a gate. A noop would hide it again — which is
-     precisely what one did for twelve cards. */
+  /* THE FIFTH IS BUILT (v4.73). Walk in My Shoes refused here for
+     thirty-four versions because a whole-turn halving had nowhere to live;
+     it lives on the CARD now, re-stamped as its window opens and closes. */
+  assert.deepEqual(
+    cc("Crush - When this deals 4 or more damage to a hero, until the end of their next turn, the base {p} and {d} of attack action cards they control are halved, rounded up.").ops,
+    [["crushRider", 4, [["foeNextTurn", "halveBase", 0]]]], "Walk in My Shoes' turn-scoped halving");
+  /* AN UNREADABLE PAYLOAD STILL REFUSES THE WHOLE CLAUSE — that property
+     outlived the card that used to carry it here, so a SYNTHETIC near-miss
+     carries it now (v3.73): the same sentence rounded DOWN is a different
+     card, and no reader claims it. A noop would hide it, which is precisely
+     what one did for twelve cards. */
   assert.equal(
-    cc("Crush - When this deals 4 or more damage to a hero, until the end of their next turn, the base {p} and {d} of attack action cards they control are halved, rounded up."),
-    null, "a whole-turn halving with nowhere to live — say so by refusing");
+    cc("Crush - When this deals 4 or more damage to a hero, until the end of their next turn, the base {p} and {d} of attack action cards they control are halved, rounded down."),
+    null, "an unreadable crush payload was claimed rather than refused");
 });
 
 test("classifyClause — target-attack pump folds into self (the reaction pump)", () => {

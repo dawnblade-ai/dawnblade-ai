@@ -408,6 +408,26 @@ function quotedOnHit(txt){
   return r ? r.ops : null;
 }
 
+/* A GRANTED ABILITY THAT IS A STATIC RESTRICTION, NOT A TRIGGER (v4.69).
+   `quotedRider` is an ON-HIT reader by construction — it requires
+   `sub.onHit` — and Release the Tension grants its arrow attack "Defense
+   reactions can't be played from arsenal this chain link", which fires on
+   nothing: it holds for as long as that link is open. So it is a second,
+   narrow reader beside the first rather than a widening of it, and it
+   answers only for the one static the engine has a reader for (`noDrx`,
+   `drxBarWhy`'s field). Anything else stays unread and the card keeps
+   `fx.quotedUnread`, which is the honest report (v3.41).
+
+   MEASURED BEFORE BUILDING: over the pinned pool, exactly TWO records'
+   quoted riders were unread, and this is one of them — the other is
+   Display Loyalty's attacks-trigger, a different family. */
+function quotedStatic(txt){
+  const q = quotedText(txt);
+  if(q == null) return null;
+  const sub = classifyClause(q);
+  return sub && sub.status === "run" && sub.noDrx ? {noDrx: sub.noDrx} : null;
+}
+
 /* THE PICK SHAPES, NAMED ONCE. Each is matched twice — against the
    lowercased clause for the shape, and against the raw clause to recover
    the subject's printed capitalisation (see `cased` inside
@@ -886,6 +906,96 @@ function classifyClause(raw){
     return R([["hitCounter", ORDINAL[m[1]], +m[2]]]);
   if(/^at the beginning of your end phase, if this hasn'?t hit this turn, remove all \+\d+\s*\{p\} counters from it$/.test(c))
     return R([["wipePowIfIdle"]]);
+  /* ---- "IF THIS HAS NO <K> COUNTERS, PUT A <K> COUNTER ON IT" (v4.63) --
+     > "Action - {r}{r}: If this has no steam counters, put a steam
+     >  counter on it. Go again"             — PLASMA BARREL SHOT, Dash's
+
+     The pool's only record of the shape, and for fourteen versions its
+     powCard was WRITTEN BY HAND in `build.equipPiece` — cost, text and
+     all — because nothing here read a word of it (`classifyClause`
+     answered null for the whole line and for each half). v3.58's
+     inline-reader shape, left standing and recorded
+     (`steam-build-powcard-handwritten`).
+
+     IT IS A WHOLE-CLAUSE READER, ABOVE THE if/when HANDLER, AND THE
+     REASON IS "IT". That handler splits on the first comma and hands the
+     payload over alone, where "put a steam counter on IT" has no
+     antecedent — the pool prints that pronoun meaning the ARROW that was
+     put (Crow's Nest), the TOKEN just created (Spectral Manifestations)
+     and the SWORD sharpened (Edict of Steel's reminder). Inside this one
+     sentence the gate's subject is the only noun before it, so "it" is
+     THIS, and the only place that can see both halves at once is here.
+     v2.33's Bull's Eye Bracers trap, answered by reading the sentence
+     whole rather than guessing the pronoun.
+
+     `ctrSrc` IS NOT `ctrSelf`. That one stamps counters on a card that
+     is ENTERING the arena, applied at the board-placement site; this one
+     puts them on a permanent that is ALREADY THERE — the piece the
+     resolving ability belongs to, found back off its `gp`/`bp` uid by
+     `abSourceUid`. Two events, two ops (v3.40's rule).
+
+     THE GATE IS A CONDITION, NOT A PROPERTY OF THE OP, so `execute`'s
+     condition loop is what decides whether it runs — which is the
+     machinery every other printed "if" already rides on, and what lets
+     the legality (`abCtrGateFails`) read the SAME parse rather than a
+     stamp. Both kinds go through the closed `CTR_KINDS` vocabulary in
+     the GUARD (v3.57): an unknown kind falls through to refuse. */
+  if((m=c.match(/^if this has no ([a-z+{}0-9-]+) counters?, put (a|an|one|two|three|four|five|six|\d+) ([a-z+{}0-9-]+) counters? on (?:it|this)$/))
+     && CTR_KINDS[m[1]] && CTR_KINDS[m[3]]){
+    const cn = CTR_WORDS[m[2]] != null ? CTR_WORDS[m[2]] : parseInt(m[2], 10);
+    if(cn > 0) return R([["ctrSrc", {kind: CTR_KINDS[m[3]], n: cn, label: m[3]}]],
+                        {cond: "noCtr:" + CTR_KINDS[m[1]]});
+  }
+  /* ---- "UNTIL END OF TURN, IF ONE OR MORE CARDS WOULD BE PUT ON TOP OF A
+     DECK, INSTEAD THEY'RE PUT ON THE BOTTOM" (v4.65) — TOPSY TURVY, Arakni's
+     Head piece, the pool's only replacement effect over a ZONE MOVE.
+
+     IT IS ONE OP AND IT IS GAME STATE. "A deck" names no seat, so it covers
+     BOTH decks — Hyper Inflation's `costTax` shape (v4.06) rather than a side
+     grant — and `parser.deckTopTo` is the ONE reader every writer that puts
+     a card on top of a deck asks. The window is printed ("until end of
+     turn") and is swept at the end phase of whichever turn it was made in;
+     the card is an Instant, so that can be the opponent's.
+
+     READ WHOLE, ABOVE THE if/when HANDLER: the clause OPENS with its window,
+     and the "if … instead" inside it is the replacement's own shape rather
+     than a gate on a payload. Both apostrophe spellings read (v3.36). */
+  if(/^until end of turn, if one or more cards would be put on top of a deck, instead (?:they'?re|they are) put on the bottom$/.test(c))
+    return R([["deckFlip", 1]]);
+  /* "THEN IF …" (v4.72) — ICE ETERNAL, the pool's only clause that opens
+     with "Then": "Then if this was fused, deal arcane damage to that hero
+     equal to the number of Frostbites they control."
+
+     THE LEADING "THEN" DEFEATED THE HANDLER BELOW, AND THE GATE WENT WITH
+     IT. Measured: "then if this was fused, draw a card" answered an
+     UNCONDITIONAL draw — a loose matcher claimed the payload and the
+     condition vanished, which is the one shape the fairness sweep cannot
+     see (v3.57). Latent only because Ice Eternal's payload had no reader;
+     building that reader without this would have shipped a free fused
+     rider (v3.72: a source makes a latent defect reachable).
+
+     "THEN" ORDERS THE PAYLOAD AFTER THE SENTENCE BEFORE IT, and `execute`
+     answers `fx.conds` BEFORE it runs `fx.ops` (v3.60) — so the gate rides
+     as a LATE condition (`way:`), the one pass that runs after the ops,
+     and the Frostbites the first sentence created are there to be counted.
+     Only a gate that pass can answer is accepted; anything else REFUSES
+     rather than dropping its condition. */
+  if(m = c.match(/^then (if [^,:]+[,:] ?.+)$/)){
+    const inner = classifyClause(cased(/^then (if [^,:]+[,:] ?.+)$/, 1, m[1]));
+    if(!inner || inner.status !== "run" || inner.cond !== "fused" || inner.onHit) return null;
+    return Object.assign({}, inner, {cond: "way:fused"});
+  }
+  /* "DEAL ARCANE DAMAGE TO THAT HERO EQUAL TO THE NUMBER OF <TOKENS> THEY
+     CONTROL" (v4.72) — the amount is a COUNT of a named permanent on the
+     damaged hero's board, taken when the op runs. "That hero" is the target
+     the sentence before named, which on this card is the opponent — the
+     same reading the token under "target hero's control" gets. The NAME
+     keeps its printed capitalisation (v3.53) and the plural is dropped;
+     `runOps` counts board entries by that name. */
+  if(m = c.match(/^deal arcane damage to (?:that hero|them) equal to the number of ([a-z][a-z' -]*?)s they control$/)){
+    const nm = cased(/^deal arcane damage to (?:that hero|them) equal to the number of ([A-Za-z][A-Za-z' -]*?)s they control$/i, 1, m[1]);
+    return R([["arcaneCount", {name: nm.charAt(0).toUpperCase() + nm.slice(1), side: "foe"}]]);
+  }
   if(m=c.match(/^(?:if|when|while) ([^,:]+)[,:] ?(.+)$/)){
     /* THE RECURSION CARRIES THE RAW TAIL (v4.22). `m` was matched against
        `c`, which is LOWERCASED — so recursing on `m[2]` hands the inner
@@ -1114,6 +1224,12 @@ function classifyClause(raw){
       if(!/^(?:this|it)\b/.test(cond)) return null;
       return Object.assign(rest,{onHit:true, heroOnly: /\bhits?\s+(?:a\s+)?(?:marked\s+)?hero\b|\bhits?\s+them\b/.test(cond)});
     }
+    /* "IF THERE ARE NO CARDS IN YOUR SOUL" (v4.64) — Roaring Beam, the
+       pool's only record, asked at the moment the card resolves. The
+       SOUL is the charged cards under the hero, `sd.soul`, and nothing
+       else; "your hero's soul" is the same zone spelled the long way
+       (v4.48's two charge spellings). */
+    if(/^there are no cards in your (?:hero'?s? )?soul$/.test(cond)) return Object.assign(rest,{cond:"soulEmpty"});
     if(/another attack action card this turn/.test(cond)) return Object.assign(rest,{cond:"atk"});
     if(/another non-attack action card this turn/.test(cond)) return Object.assign(rest,{cond:"non"});
     if(/6 or more \{p\}[^.]*pitch zone/.test(cond)) return Object.assign(rest,{cond:"pitch6"});
@@ -1860,11 +1976,37 @@ function classifyClause(raw){
      text one level up. Like Chokeslam it lasts the whole phase. */
   if(m=c.match(/^they can'?t play attack action cards with (\d+) or less base \{p\} during their next action phase$/))
     return R([["foeNextTurn", "noSmallAtk", +m[1]]]);
+  /* WALK IN MY SHOES — the fifth of the five, and the only one whose
+     window opens NOW rather than at their next turn: "UNTIL the end of
+     their next turn" covers the rest of this turn too. So the entry rides
+     the same `nextTurn` schedule for its END alone (armed at their turn,
+     dropped at their end phase) and `effects.restampHalving` applies it
+     the moment it is pushed.
+
+     THE WHOLE PRINTED SHAPE OR NOTHING (v2.29): the subject is attack
+     action cards, both symbols are named, and the rounding is printed —
+     a variant rounding DOWN, or halving {p} alone, refuses rather than
+     reading as this one. */
+  if(/^until the end of their next turn, the base \{p\} and \{d\} of attack action cards they control are halved, rounded up$/.test(c))
+    return R([["foeNextTurn", "halveBase", 0]]);
 
   if(/^they put a card from their hand on top of their deck$/.test(c))
     return R([["foeHandToDeck", 1]]);
   if(m=c.match(/^put a -(\d+)\{d\} counter on (?:target |an )?equipment they control$/))
     return R([["foeGearDef", -(+m[1])]]);
+  /* JACK BE QUICK — THE POOL'S ONLY CONTROL CHANGE (v4.74), measured over
+     797 records: nothing else prints "steal" or "gain control". Read WHOLE,
+     untap and steal and the window together, because each half alone is a
+     different card: an untap with no steal hands THEIR ally a fresh
+     attack, and a steal with no window keeps it forever. The window is
+     "this ACTION PHASE", which ends before the end phase begins —
+     `effects.beginEndPhase`'s step (0) hands it back.
+
+     WHICH ALLY IS THE STEALER'S CHOICE, so the op opens a pick among the
+     opponent's living allies rather than naming one; one candidate is
+     confirmed on the spot (v4.68). */
+  if(/^\{u\} an ally they control, then steal it until the end of this action phase$/.test(c))
+    return R([["stealAlly", 1]]);
   if(/^destroy a card in their arsenal$/.test(c))
     return R([["foeArsDestroy", 1]]);
   /* ---- TURN IT OVER, THEN TAKE IT IF IT IS WHAT YOU FEARED (v4.62) ----
@@ -2116,9 +2258,15 @@ function classifyClause(raw){
     return R([["payOrLose", +m[1], cost]]);
   }
   /* the clash block reads this off the card and applies it to the block */
-  /* THE PARAMETRISED PRINTING IS REFUSED WITH THE REST OF THE X FAMILY
-     (Ice Eternal), because the chain belongs to the ATTACKER rather than
-     to the hero being hit. The piece keeps its printed Arcane Barrier 1.
+  /* THE PARAMETRISED PRINTING READS AT v4.75. It was refused on the
+     grounds that "the chain belongs to the attacker rather than to the
+     hero being hit" — which is true, and is exactly what the printed "YOU
+     CONTROL" answers: a chain link is controlled by the player whose
+     attack it is (every link on a chain is the turn-player's), so X is
+     the Mask-wearer's links while they are the one attacking, and 0 on
+     the opponent's turn. `linksControlled` counts it off the game at the
+     moment the arcane damage is dealt — never in the parse, which is
+     memoized on `name|pitch` (v3.39) — and `arcaneSoaks` offers it.
 
      THE REASON HERE USED TO READ "the dummy throws only fists" — a
      training prop retired at v2.71, and false twice over: PLAIN spellvoid
@@ -2126,8 +2274,8 @@ function classifyClause(raw){
      from the shared body, so both boards pay it), and at the table seat 1
      plays a real hero deck. A noop must describe the clause in front of it
      (v3.16) and its reason must describe a world that still exists. */
-  if(/^spellvoid x, where x is the number of chain links you control$/.test(c))
-    return NOOP("X is refused, as Ice Eternal's is — the chain belongs to the attacker, not to the hero being hit");
+  if(SPELLVOID_X.test(c))
+    return NOOP("X is the number of chain links you control, counted when the arcane damage is dealt");
   /* RUST IS A CLOCK, AND IT IS THE CARD'S OWN NUMBER (v3.17).
      This was a NOOP reading "the end phase already destroys it at 3
      counters" — a reason that named a payload living in ONE board's end
@@ -2427,9 +2575,13 @@ function classifyClause(raw){
      paid, and the "if a 6+ card is discarded this way" riders hanging off
      that discard then read an unrelated graveyard instead. Ordered BEFORE
      the plain draw so the compound form is claimed by the compound rule. */
+  /* ONE RULE, NOT TWO (v4.70). A second compound rule stood here spelling
+     only "…discard N random cards", and every string it matched the rule
+     above matches first — its optional "cards at" group empty — so it could
+     never answer. `npm run anchors` listed it among the fifteen never
+     reached; asked why, it is dead by CONSTRUCTION rather than by the pool,
+     which is v4.11's dead rules code. The subsumption is a drill. */
   if(m=c.match(/draws? (a|an|one|two|three|\d+) cards?,? (?:then |and (?:then )?)discards? (a|an|one|two|three|\d+) (?:cards? at )?random(?: cards?)?/))
-    return R([["draw",num(m[1])],["discardRandom",num(m[2])]]);
-  if(m=c.match(/draws? (a|an|one|two|three|\d+) cards?,? (?:then |and (?:then )?)discards? (a|an|one|two|three|\d+) random cards?/))
     return R([["draw",num(m[1])],["discardRandom",num(m[2])]]);
   if(m=c.match(/^discards? (a|an|one|two|three|\d+) random cards?$/)) return R([["discardRandom",num(m[1])]]);
   /* THE SAME BUG AS THE COMMENT ABOVE, ONE WORDING OVER (v3.60). The
@@ -2579,7 +2731,9 @@ function classifyClause(raw){
        the rider is simply absent — the pump still lands, and the audit
        still reports the clause honestly. */
     const ro = quotedRider(c);
-    const rider = ro ? (ro.heroOnly ? {onHitHero: ro.ops} : {onHit: ro.ops}) : null;
+    /* …OR A STATIC ONE (v4.69), which rides on the same entry and lands on
+       the collecting attack's LINK rather than in its on-hit list. */
+    const rider = ro ? (ro.heroOnly ? {onHitHero: ro.ops} : {onHit: ro.ops}) : quotedStatic(c);
     const op = ["buffNext", +m[3]];
     if(q || rider) op[2] = q || null;
     if(rider) op[3] = rider;
@@ -2857,6 +3011,30 @@ function classifyClause(raw){
   /* RULING (Under Loop): on hit it recycles instead of hitting the graveyard,
      and the combat chain stays open. Written as the bare payload so the
      if/when handler above applies the onHit wrapper itself. */
+  /* ---- "RETURN THIS TO ITS OWNER'S HAND, THEN CHARGE YOUR SOUL" (v4.64) --
+     > "Create a Courage token. If there are no cards in your soul, return
+     >  this to its owner's hand, then CHARGE your soul. (Put a card from
+     >  your hand under your hero.)"         — ROARING BEAM, SBL032, Boltyn's
+
+     The database prints no reminder text and the SBL032 face does, and it
+     settles what "charge" means as an EFFECT — every other charge in the
+     pool is an additional COST (v4.33), paid before the card resolves.
+     Here it happens after, and nothing makes it optional: a card from your
+     hand goes under your hero. TWELFTH time reading the printing first.
+
+     "THEN" IS LOAD-BEARING. The card goes to the hand FIRST, so it is one
+     of the cards the charge may take — a player whose hand is otherwise
+     empty charges Roaring Beam itself. So the two are ONE reading in
+     printed order, never two clauses, and the charge is a PICK queued
+     behind the return: prompts drain at the tail of `execute`, by which
+     time the card is back in hand.
+
+     THE WHOLE SENTENCE OR NOTHING (v2.29). Measured over 797 records, it
+     is the pool's only "return this to … hand" and its only charge as an
+     effect; a bare half of either would be vocabulary with no claimant,
+     which is dead rules code that reads like a rule (v4.52). */
+  if(/^return this to (?:its owner'?s?|your) hand, then charge your (?:hero'?s? )?soul$/.test(c))
+    return R([["returnSelf", 1], ["charge", 1]]);
   if(/^put (?:it|this) on the bottom of (?:its owner'?s?|your) deck$/.test(c))
     return R([["bottomSelf",1]]);
   /* RULING 2026-07-25: transcend flips the card over — it BECOMES Inner Chi
@@ -2985,18 +3163,35 @@ function classifyClause(raw){
      {x}{x}{r} cost; `optFilter` cannot consume "with cost x", so the whole
      subject fails to read and the clause stays unclaimed. Reading it as a
      bare "aura" would drop a printed restriction — the v3.31 shape, and
-     the direction that steals games. X-costs are refused across this
-     engine on purpose (Ice Eternal); this is that refusal arriving through
-     the subject reader rather than as a special case. */
+     the direction that steals games. X-costs were refused across this
+     engine on purpose until v4.71/v4.72 built both kinds; this was that
+     refusal arriving through the subject reader rather than as a special
+     case. */
+  /* …AND AT v4.71 IT READS, BECAUSE X IS SETTLED BY THE CHOICE. "Target
+     aura with cost X" against an {x}{x}{r} cost is Blaze's shape (v3.39):
+     the player picks an aura and X is that aura's own printed cost, so no
+     number is ever asked for. `xOf` names what X is read off; the cost's
+     own X pips ride on the powCard (`_xPips`), and `parseHeroPower`
+     refuses a line whose pips and whose coupling do not come together —
+     an X cost with nothing to settle it would be read as FREE.
+
+     "TARGET" IS PRINTED AND IS NOT PART OF THE SUBJECT. The graveyard-to-
+     deck reader above consumes it in its own pattern; this one captured
+     it, and `optFilter` read it as a CLASS. */
   if(m=c.match(RX_GY_HAND)){
-    const filter = pickSubject(cased(RX_GY_HAND, 2, m[2]));
+    let sub = cased(RX_GY_HAND, 2, m[2]).replace(/^target\s+/i, "");
+    const xm = sub.match(/^(.+?) with cost x$/i);
+    if(xm) sub = xm[1];
+    const filter = pickSubject(sub);
     if(!filter) return null;
     const may = !!m[1];
-    return R([["pickPrompt", {zone:"grave", to:"hand", filter,
+    return R([["pickPrompt", Object.assign({zone:"grave", to:"hand", filter,
       min: may ? 0 : 1, max:1,
-      title: may ? "Return a card from your graveyard to your hand?"
-                 : "Return a card from your graveyard to your hand",
-      hint: may ? "Optional — choose none to decline." : undefined}]]);
+      title: xm ? "Return an aura from your graveyard — X is its cost"
+         : may ? "Return a card from your graveyard to your hand?"
+               : "Return a card from your graveyard to your hand",
+      hint: xm ? "Only what you can pay for is offered." : may ? "Optional — choose none to decline." : undefined},
+      xm ? {xOf: "cost"} : {})]]);
   }
   /* THE DECK SEARCH — see RX_DECK_SEARCH's header for why the disposition
      is anchored and why the shuffle is the price of looking.
@@ -3409,8 +3604,16 @@ function classifyClause(raw){
      printed TYPE — is the whole of what either wording can reach here, and
      an INSTANT played in the defence window is not a defence reaction and
      is correctly untouched. */
-  if(/^defense reaction(?: card)?s can'?t be played (?:to )?this(?:'s)? chain link$/.test(c))
-    return R([["noop", "static — read in the reaction window, off fx.noDrx"]], {noDrx: true});
+  /* …AND AT v4.69 THE NARROW WORDING READS, WITH ITS ZONE AS A VALUE.
+     Release the Tension is the claimant the note above was waiting for, so
+     the zone stops being vocabulary with no reader: `noDrx` is `true` for a
+     bar on every zone and the ZONE NAME for a bar on one, and `drxBarWhy`
+     asks the zone the defence reaction is being played FROM. The narrow
+     form still cannot bar the hand — that is the half the refusal existed
+     to protect, and a drill drives it. */
+  if(m = c.match(/^defense reaction(?: card)?s can'?t be played (?:(from arsenal) )?(?:to )?this(?:'s)? chain link$/))
+    return R([["noop", "static — read in the reaction window, off fx.noDrx"]],
+             {noDrx: m[1] ? "arsenal" : true});
   /* TWO `enterCounters` RULES STOOD HERE AND THE OP WAS DEAD (v4.23).
      `runOps` stashed it as `_enterCounters` and NOTHING read that field,
      ever — while the verse count the clause describes was recovered by a
@@ -3460,9 +3663,13 @@ function classifyClause(raw){
        one-sided against and coverage reads as `full` because the clause was
        consumed. Refusing leaves it a visible gap until X-costs exist. It is
        the only X card in the pool, so this costs nothing else. */
-    if(m[1]==="x") return null;
+    /* …AND FROM v4.72 IT READS AS "X", NOT AS A NUMBER. The X cost exists
+       now (`cx` on the card, declared through the `xval` pending), so the
+       quantity is resolved in `runOps` off the DECLARED X — and a token op
+       carrying "X" with nothing declared creates NONE. An X nothing paid
+       for is inert, never free (v2.04). */
     const QTY = {a:1, an:1, one:1, two:2, three:3};
-    const qty = QTY[m[1]]!=null ? QTY[m[1]] : +m[1];
+    const qty = m[1]==="x" ? "X" : QTY[m[1]]!=null ? QTY[m[1]] : +m[1];
     /* WHOSE BOARD. Two printed shapes say "the opponent's", and they are
        read separately because they are different sentences:
 
@@ -3814,6 +4021,17 @@ const JAB_KILL = /^destroy the (.+?)$/i;
    So a third word appearing in this position must be a deliberate edit
    here rather than something the reader quietly claims. */
 const CARD_CLASSES = /^(?:assassin|shadow)$/;
+/* …AND THE CLASS BEFORE "(NON-)ATTACK ACTION CARD" IS CLOSED TOO (v4.71).
+   v3.39 consumed ANY leading word there as a class, so "TARGET attack
+   action card" read as a card of class "target" — a filter matching
+   nothing, which is an unpayable cost or an empty pick dressed as a legal
+   one, and "a RED attack action card" would read a pitch as a class the
+   same way. v4.09 closed the bare-"card" branch above for exactly this
+   reason and left this one open. MEASURED over the pinned pool and every
+   powCard the builders make: the words printed in this position are
+   `wizard` and `runeblade`, nothing else — so a third is a deliberate edit
+   here, and until then it refuses (weaker than printed and visible). */
+const ACTION_CLASSES = /^(?:wizard|runeblade)$/;
 
 /* A FILTER WHOSE BOUND ONLY ONE QUEUE SITE CAN RESOLVE (v3.92).
    `costLtDrac` is supplied by the `hits` optional-cost site out of the
@@ -3939,7 +4157,7 @@ function optFilter(phrase){
   let cls = null;
   if(!CLS_SUBJECTS.test(low)){
     const cm2 = low.match(/^([a-z]+) (.+)$/);
-    if(cm2 && CLS_SUBJECTS.test(cm2[2])){ cls = cm2[1]; low = cm2[2]; }
+    if(cm2 && CLS_SUBJECTS.test(cm2[2]) && ACTION_CLASSES.test(cm2[1])){ cls = cm2[1]; low = cm2[2]; }
     /* AND A CLASS MAY QUALIFY A BARE "CARD" (v4.09) — "an ASSASSIN
        card". The bare subject still refuses on its own; what makes this
        one readable is the class, so the vocabulary is closed and the
@@ -5908,7 +6126,7 @@ function fxParse(card){
        played to this chain link" is a CARD FACT read by `drxBarWhy` at the
        play, so without this line the clause reports `run` and bars nothing
        — v4.01's no-op blind spot arriving through the front door. */
-    if(r.noDrx) fx.noDrx = true;
+    if(r.noDrx) fx.noDrx = r.noDrx;
     /* A DROPPED QUOTED ABILITY MUST NOT REPORT AS READ (v3.40).
 
        `quotedOnHit` returns null on a payload it cannot read, and v3.10
@@ -6435,7 +6653,7 @@ function fxParse(card){
     if(cl.st !== "run") return;
     const low = levelIdiom(clean(cl.t).toLowerCase().replace(/\.$/,"").replace(/^-\s*/,""));
     const q = quotedText(low);
-    if(q == null || quotedOnHit(low)) return;
+    if(q == null || quotedOnHit(low) || quotedStatic(low)) return;
     /* A QUOTED ABILITY THE AURA-WEAPON GRANT CONSUMED HAS A READER
        (v3.84). This flag asks exactly one question — "is there a reader
        for this quoted ability" — and `auraWeaponGrant` is one: it hands
@@ -7322,6 +7540,21 @@ function parseHeroPower(tx, allowDestroy){
   const csym = (costStr.match(/\{c\}/gi)||[]).length;
   const cost = dm ? +dm[1] : rsym + csym;
   const eff = classifyClause(m[4]);
+  /* AN X PIP IS PAID PER X, AND X MUST BE SETTLED BY THE PAYLOAD (v4.71).
+     The count above sees no digit and no {r} in "{x}{x}", so Beckoning
+     Haunt's "{x}{x}{r}" read as COST 1 — X silently FREE. Latent only
+     because its payload refused; reading the payload without this would
+     have shipped the free X, which is Enigma's {c} story (v4.54) one
+     symbol over.
+
+     So the pips are COUNTED (`x`) and COUPLED: a cost with X pips is read
+     only when its payload is a pick whose choice settles X (`xOf`), and a
+     payload that settles an X nothing charges is refused too. Measured:
+     the pool prints exactly ONE activation cost with {x}. */
+  const xsym = (costStr.match(/\{x\}/gi)||[]).length;
+  const xPick = !!(eff && eff.status === "run"
+    && (eff.ops || []).some(o => o[0] === "pickPrompt" && o[1] && o[1].xOf));
+  if(!!xsym !== xPick) return null;
   /* THE ARSENAL PUT IS THE ONE CONDITIONAL SHAPE THIS READER ACCEPTS (v2.34).
      Bull's Eye Bracers and Death Dealer both print "If you have no cards in
      your arsenal, you may put an arrow card ... into your arsenal", so
@@ -7358,18 +7591,37 @@ function parseHeroPower(tx, allowDestroy){
      v2.04 fixed. The two readers ask the same question, so the offer and
      the resolution cannot disagree. */
   const _jabM = m[4].trim().match(JAB_HEAD);
+  /* THE SELF-COUNTER FILL IS THE FOURTH (v4.63) — "If this has no steam
+     counters, put a steam counter on it". Its reader is `classifyClause`'s
+     own whole-clause rule, which answers with the gate as a CONDITION, and
+     that is exactly what the guard below refuses by design. A NAMED shape,
+     never a relaxation: the powCard carries the ability's whole printed
+     line and `execute` re-reads it, so the gate is honoured by the
+     condition loop, and the legality asks the same parse
+     (`abCtrGateFails`). Accepted only when every op the clause emits is a
+     `ctrSrc` — the one shape measured, on the one pool record that prints
+     it — and THAT IS THE WHOLE TEST. The first draft also asked for a
+     `noCtr:` gate, a present gate and no on-hit flag, and all three came
+     back SILENT under sabotage: `ctrSrc` has exactly one emitter, the
+     whole-clause rule, which always carries that gate and never an on-hit
+     one, and an UNGATED run is accepted by the ordinary guard below anyway.
+     A guard that cannot refuse anything is dead code that reads like a rule
+     (v4.11), so the PREMISE is a drill instead (test/steamline.test.js) and
+     a second emitter fails a test rather than quietly reaching this door. */
+  const ctrFill = !!(eff && eff.status === "run" && eff.ops.every(o => o[0] === "ctrSrc"));
   const arsPut = ARS_PUT.test(m[4]) || CYC_BOTTOM.test(m[4].trim()) || ARS_TURN.test(m[4].trim())
-              || !!(_jabM && optFilter(_jabM[1].trim()));
+              || !!(_jabM && optFilter(_jabM[1].trim())) || ctrFill;
   if(!arsPut && (!eff || eff.status!=="run" || eff.cond || eff.onHit)) return null;
   const after = t.slice(m.index + m[0].length);
   const ga = /^\.?\s*go again/i.test(after);
   return Object.assign({cost, ga, sd:!!sd, kind, eff:m[4].trim(),
     label:(sd?"destroy: ":(m[1]?"once/turn: ":""))+m[4].trim()
-          +(cost?" ["+cost+(csym?"c":"r")+"]":"")+(ga?" · go again":"")},
+          +(xsym ? " [" + "X".repeat(xsym) + (cost ? "+" + cost + "r" : "") + "]"
+                 : cost?" ["+cost+(csym?"c":"r")+"]":"")+(ga?" · go again":"")},
     /* OPT-IN, like every other named cost this reader answers (v3.58): a
        key present on every ability would churn the drills that `deepEqual`
        this shape for no card that can read it. */
-    csym ? {chi: csym} : {});
+    csym ? {chi: csym} : {}, xsym ? {x: xsym} : {});
 }
 /* ---- A CARD IN YOUR HAND WITH AN ACTIVATED ABILITY -------------------
    `parseHeroPower` deliberately REFUSES a discard/banish/sacrifice cost —
@@ -7581,7 +7833,9 @@ const chiCeiling = (sd, self) => !sd ? 0 : chiFloating(sd)
    less {h} than your opponent") is outside this pool, and it prints the
    grant in its text rather than relying on the index.
 
-   AN "X" AMOUNT IS REFUSED, exactly as Ice Eternal's is. Mask of the
+   AN "X" AMOUNT IS REFUSED here. (It used to say "exactly as Ice
+   Eternal's is" — that X is a declared COST and reads from v4.72; this
+   one is a live count, which is a different question.) Mask of the
    Swarming Claw prints "Spellvoid X, where X is the number of chain links
    you control" — a dynamic value, and the chain in question belongs to
    whoever is attacking rather than to the frozen hero, so guessing it
@@ -7599,19 +7853,44 @@ const kwAmount = (c, kw) => {
 };
 const arcaneBarrier = c => kwAmount(c, "arcane barrier");
 const spellvoid     = c => kwAmount(c, "spellvoid");
+/* SPELLVOID X (v4.75) — Mask of the Swarming Claw, the pool's only
+   printing. ONE spelling of the printed where-clause, asked by the clause
+   reader (so the line is accounted for) and by `spellvoidX` (so the soak
+   is offered): two copies of one pattern is v3.41's `quotedText`. */
+const SPELLVOID_X = /^spellvoid x, where x is the number of chain links you control$/;
+function spellvoidX(c){
+  if(!c || kwAmount(c, "spellvoid") !== null) return false;
+  return String(c.tx || "").split(/\n+/).some(l => SPELLVOID_X.test(clean(l).toLowerCase().replace(/\.\s*$/, "")));
+}
+/* HOW MANY CHAIN LINKS A SEAT CONTROLS, NOW. A chain link is controlled by
+   the player whose ATTACK it is, and one chain is one turn-player's: the
+   links already resolved are on the display strip (`kind:"atk"` — arcane
+   entries are not links), and the attack being answered is a chain link
+   from the moment it is declared (CR 7.2) but joins the strip only when
+   `linkPayload` resolves it (v3.99), so it is counted off `pend`. */
+function linksControlled(g, seat){
+  if(!g) return 0;
+  const p = g.pend;
+  const mine = p ? (p.by == null ? g.turnPlayer === seat : p.by === seat) : g.turnPlayer === seat;
+  if(!mine) return 0;
+  return (g.chain || []).filter(l => l && l.kind === "atk").length + (p ? 1 : 0);
+}
 
 /* Every piece of iron this side is wearing that could soak an arcane hit,
    with what it would cost. A DESTROYED piece protects nothing — equipment
    wears rather than leaving, so the flag has to be read here the same way
    `exposedZones` reads it. Returned as data so the prompt layer can offer
    them without knowing a single card name. */
-function arcaneSoaks(sd){
+function arcaneSoaks(sd, o){
   const out = [];
   for(const p of ((sd && sd.gear) || [])){
     if(!p || p.destroyed) continue;
     const ab = arcaneBarrier(p);
     if(ab) out.push({uid: p.uid, name: p.name, kind: "barrier", amount: ab, cost: ab});
-    const sv = spellvoid(p);
+    /* X IS THE CALLER'S ANSWER (v4.75): the links this seat controls, off
+       the game. A caller that says nothing gets 0, and a Spellvoid 0 is
+       not offered — weaker than printed and visible. */
+    const sv = spellvoidX(p) ? ((o && o.links) || 0) : spellvoid(p);
     if(sv) out.push({uid: p.uid, name: p.name, kind: "spellvoid", amount: sv, cost: 0});
   }
   /* A TOTAL ORDER, ties broken on uid. An unordered list is a desync
@@ -7800,7 +8079,12 @@ function effCost(c,sd,o){
      still a tax. `costTax` is the GAME's (v4.06), beside the two side
      taxes, and it reaches every caller because all of them ask `costCtx`
      (v3.96, v4.00). */
-  return Math.max(0,(c.cost||0)-runeRed(c)*runeCount(sd)-boardRed(c,sd)-costOffFor(c,sd)-dyn)
+  /* AN X COST IS PART OF THE PRINTED COST (v4.72) — Ice Eternal's "XX" is
+     `cx` 2, and X is the DECLARED value riding on the game (`costCtx`), so
+     it is inside the floor like any printed cost, where a discount can
+     reach it. A caller that says nothing prices X at 0. */
+  const xPart = (c && c.cx) ? c.cx * (o.x || 0) : 0;
+  return Math.max(0,(c.cost||0)+xPart-runeRed(c)*runeCount(sd)-boardRed(c,sd)-costOffFor(c,sd)-dyn)
        + frostCount(sd) + nextTurnTax(sd) + (o.costTax || 0);
 }
 
@@ -7832,6 +8116,9 @@ function costCtx(g, seat){
              long as the op has existed: a no-op wearing a number (v3.55),
              with a feed line telling the player it had worked. */
           costTax: +(g.costTax || 0),
+          /* THE DECLARED X (v4.72), settled by the `xval` pending before the
+             payment and stripped with the other declarations after it. */
+          x: +(g._x || 0),
           foeMarked: !!(g.pend && (((g.sides || [])[1 - i]) || {}).marked)};
 }
 
@@ -9114,13 +9401,38 @@ function rxAllowed(c, win){
    the other end). The site still exists on that board, because a rule
    that lives on one board is this project's recurring defect (v3.01),
    and it is drilled with a synthetic `pend` (v3.73). */
-function drxBarred(atkCard){
-  return !!(atkCard && fxParse(atkCard).noDrx);
+/* THE LINK, NOT THE CARD, AND THE ZONE IT IS PLAYED FROM (v4.69).
+
+   Two sources can close the window, and only one of them is printed on the
+   card on the link. Widowmaker prints its own bar; Release the Tension
+   GRANTS one to "your next arrow attack", so the bar rides on the pump to
+   whichever arrow collects it and lands on that attack's `pend` as
+   `noDrx: [{from, src}]` — "this chain link" is `pend`'s lifetime either way.
+
+   AND THE ZONE IS THE CALLER'S ANSWER (v3.24): the granted bar names the
+   ARSENAL, so the question is where the defence reaction is being played
+   FROM. A caller that says nothing gets no narrow bar — weaker than printed
+   and visible — and the unconditional one bars every zone as before.
+
+   Answers `{src}` — the card the refusal should name — or null. */
+function drxBarred(link, from){
+  if(!link) return null;
+  const own = link.card ? fxParse(link.card).noDrx : null;
+  if(own === true || (own && own === from)) return {src: link.card.name, from: own === true ? null : own};
+  for(const b of link.noDrx || [])
+    if(b && (b.from == null || b.from === from)) return {src: b.src || link.card && link.card.name, from: b.from};
+  return null;
 }
-function drxBarWhy(atkCard, c){
-  if(!c || !isDR(c) || !drxBarred(atkCard)) return null;
-  return c.name + " is a defence reaction, and " + atkCard.name
-       + " says none can be played to this chain link.";
+function drxBarWhy(link, c, from){
+  if(!c || !isDR(c)) return null;
+  const bar = drxBarred(link, from);
+  if(!bar) return null;
+  const onto = link.card && bar.src !== link.card.name ? " on " + link.card.name : "";
+  return bar.from
+    ? c.name + " is in an arsenal, and " + bar.src + onto
+      + " says no defence reaction can be played from arsenal to this chain link."
+    : c.name + " is a defence reaction, and " + bar.src + onto
+      + " says none can be played to this chain link.";
 }
 
 /* ---- WHAT COSTS AN ACTION POINT (CR 8.1.1 / 8.1.6) ------------------
@@ -9294,6 +9606,25 @@ const abFlipUp = ab => !!(ab && ab._flipUp);
    would be a second record of one fact (v3.61) and the one that drifts is
    the one nobody reads. `gyFirstGaKw` three lines up reads its own answer
    the same way. */
+/* THE PICK A LEGALITY ASKS ABOUT, WITH ITS X BOUND (v4.71). Beckoning
+   Haunt's X is the chosen aura's cost and is paid once per X pip, so an
+   aura the seat cannot pay for is not a legal choice — Blaze's `arcLe`
+   (v3.39), in resources rather than counters. What the seat can raise is
+   the floating pool plus the hand's pitch, less the FIXED part of the cost
+   the activation charges first; `ctx` is the game's half of that cost
+   (v3.96), and a caller that supplies none gets the side's alone. Both
+   boards ask this, so the refusal and the sheet cannot disagree about which
+   auras are affordable. A pick with no X answers exactly `abPickSpec`. */
+const handPitch = sd => ((sd && sd.hand) || []).reduce((t, c) => t + ((c && c.pitch) || 0), 0);
+function abPickBound(sd, ab, ctx){
+  const spec = abPickSpec(ab);
+  if(!spec || !spec.xOf) return spec;
+  const per = (ab && ab._xPips) || 0;
+  const fixed = effCost(ab, sd || {}, ctx);
+  const avail = ((sd && sd.res) || 0) + handPitch(sd) - fixed;
+  const bound = per > 0 ? Math.floor(Math.max(0, avail) / per) : -1;
+  return Object.assign({}, spec, {filter: Object.assign({}, spec.filter || {}, {costLe: bound})});
+}
 function abPickSpec(ab){
   /* THE NAME IS THE MEMO KEY, so `fxParse` throws without one — and this is
      reached from `judge.legal`, a surface fed by JSON off a wire whose
@@ -9304,6 +9635,88 @@ function abPickSpec(ab){
   const op = (fx.ops || []).find(o => o[0] === "pickPrompt" && o[1]);
   return op ? op[1] : null;
 }
+/* ---- WHERE A CARD "PUT ON TOP OF A DECK" ACTUALLY GOES (v4.65) --------
+   Topsy Turvy prints a REPLACEMENT: "if one or more cards would be put on
+   top of a deck, instead they're put on the bottom". So every writer that
+   puts a card on top of a deck asks this, and there is one answer — the
+   moment one writer asks and another does not, the replacement holds for
+   Memorial Ground and not for an opt, which is two rules for one event
+   (v3.17: the event is one body, or it is not an event). The census of
+   writers is a drill (test/topsy.test.js), so a sixth arriving fails it
+   rather than quietly putting a card on top under the flip.
+
+   OPT IS ONE OF THEM, AND THE PRINTING IS WHY. SAZ005 prints opt's reminder
+   text — "(Look at the top 2 cards of your deck. You may PUT THEM ON THE
+   TOP and/or bottom in any order.)" — so a card kept on top is a card PUT
+   on top. Spire Sniping's "put them BACK in any order" is the same event.
+   The CR site is unreachable from this sandbox; the printing is not. */
+const deckTopTo = game => (game && game.deckFlip) ? "deckBottom" : "deckTop";
+/* ---- WHICH PERMANENT IS "THIS" FOR A RESOLVING ABILITY (v4.63) --------
+   An equipment ability resolves as a powCard keyed `"gp"+uid` and an arena
+   permanent's as `"bp"+uid` (v2.71's namespacing, so neither collides with
+   a real card) — so when its text says "this", the object meant is the
+   PIECE, and the counter bag is keyed by the piece's uid, not the powCard's.
+   `execute` has matched the powCard back to its piece inline at three sites
+   (`("gp"+x.uid) === card.uid`); this is that match as ONE reader, matched
+   the same way, because a real uid is a NUMBER and slicing the prefix off
+   would hand back a string that looks right and keys differently in a
+   `find` (v4.49's own first draft).
+
+   Anything else answers its OWN uid: a card asking about itself — the
+   `aim` condition's reading (v3.72). A powCard whose piece is gone answers
+   null, which every caller treats as "nothing to put a counter on". */
+function abSourceUid(sd, card){
+  if(!card) return null;
+  const u = card.uid;
+  if(typeof u === "string" && /^gp/.test(u)){
+    const e = ((sd && sd.gear) || []).find(x => x && ("gp" + x.uid) === u);
+    return e ? e.uid : null;
+  }
+  if(typeof u === "string" && /^bp/.test(u)){
+    const e = ((sd && sd.board) || []).find(x => x && ("bp" + x.uid) === u);
+    return e ? e.uid : null;
+  }
+  return u == null ? null : u;
+}
+/* ---- A PAID ABILITY WHOSE WHOLE PAYLOAD SITS BEHIND A GATE IT FAILS -----
+   (v4.63, the legality v4.49 wrote against a hand-written stamp.)
+
+   Plasma Barrel Shot's steam line prints "IF THIS HAS NO STEAM COUNTERS,
+   put a steam counter on it" — so activating it with one already there
+   charges {r}{r} and the action point to do nothing. v2.04's mirror: an
+   unpayable cost is rightly INERT, a PAID cost that does nothing is the
+   player losing value for a play the rules should have refused first
+   (v3.11, v4.49).
+
+   IT READS THE SAME PARSE `execute` RESOLVES, so the offer and the
+   resolution cannot disagree about when the gate is met — which is the
+   whole reason the `_buildSteam` stamp it replaces is gone. Answers the
+   printed LABEL of the first failing kind, or null.
+
+   DELIBERATELY NARROW: only a parse with NO unconditional op and every
+   gate a `noCtr:` one. Anything wider is a judgement about whether a
+   partly-live payload is "nothing", which is not this reader's to make.
+   The go again rides as a keyword and is not a payload — it returns the
+   action point and never the resources. The name is the memo key, so an
+   unnamed ability answers null rather than throwing (`abPickSpec`'s
+   reason: this is reached from `judge.legal`). */
+function abCtrGateFails(sd, ab){
+  if(!ab || typeof ab.name !== "string") return null;
+  const fx = fxParse(ab);
+  const cs = fx.conds || [];
+  if((fx.ops || []).length || !cs.length) return null;
+  if(!cs.every(x => /^noCtr:/.test(x.cond) && x.op && x.op[0] === "ctrSrc")) return null;
+  const u = abSourceUid(sd, ab);
+  if(u == null) return null;
+  const bag = ((sd && sd.counters) || {})[u] || {};
+  const held = cs.filter(x => (bag[x.cond.slice(6)] || 0) > 0);
+  if(held.length !== cs.length) return null;
+  return ctrLabel(held[0].cond.slice(6));
+}
+/* A COUNTER KIND'S PRINTED SPELLING — `CTR_KINDS` read backwards, so the
+   feed says "+1{p}" where the bag says `pow`. One table, two directions:
+   a second hand-written list of labels is how the two drift. */
+const ctrLabel = k => Object.keys(CTR_KINDS).find(w => CTR_KINDS[w] === k) || k;
 /* THE CHI AN ACTIVATION COSTS (v4.54), or 0. One reader, for the reason
    `abSoulCost` and its siblings each have one: a cost read in one place
    and re-derived in another is two descriptions of one price (v3.79,
@@ -9497,8 +9910,8 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         crankCost, fusionOffer, chargeOffer,
         isRunechant, runeCount, isAura, auraCount, isFrostbite, frostCount,
         isFrailty, frailtyCount,
-        arcaneBarrier, spellvoid, arcaneSoaks,
+        arcaneBarrier, spellvoid, spellvoidX, linksControlled, arcaneSoaks,
         ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
-        chiValue, chiSum, chiFloating, chiCeiling, abChiCost, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, isCloaked, boardEntryNamed, isEphemeral, isHandWipe, gyFirstGaKw,
+        chiValue, chiSum, chiFloating, chiCeiling, abChiCost, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, boardEntryNamed, isEphemeral, isHandWipe, gyFirstGaKw,
         CARD_OVERRIDES};
 });

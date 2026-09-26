@@ -187,7 +187,21 @@ function play(g, limit, opts){
            kept so a future rewording of either is still counted. */
         if(/goes down|dies|died/i.test(line))     events.push(["death", line]);
         if(/\bGold\b.*\bcreated\b|Gold token/i.test(line)) events.push(["gold", line]);
-        if(/\bcrush\b/i.test(line))              events.push(["crush", line]);
+        /* CRUSH FIRING, NOT THE WORD (v4.66). This read `/\bcrush\b/i` and
+           so counted every PITCH of Cartilage Crush or Crush the Weak, every
+           wall line naming one, and the arsenal grant that SAYS "has crush"
+           — v4.46's `tap` defect, in the block where a number means a
+           feature FIRED (v4.17). It moved 909 -> 947 at v4.66 for no reason
+           but a new feed line naming more cards. The event is the rider
+           running: `linkPayload` hands its ops to `runOps` under the source
+           "<card> — crush", so every payoff line is spelled "— crush:", and
+           the two refusals beside it say "crushed an ally" and "Crush
+           lands, but". */
+        if(/ — crush:|crushed an ally|Crush lands, but/.test(line)) events.push(["crush", line]);
+        /* A PLAY WAITING ON THE STACK (v4.66) — a window opened because a
+           seat COULD answer it. Counted where `judge.holdPlay` says so; a
+           play nobody can answer resolves at once and prints nothing. */
+        if(/is on the stack — either seat may answer/.test(line)) events.push(["held", line]);
         /* THE REACTION WINDOW (v4.03). `sparring.js` contained the word
            "reaction" exactly once, in a comment, so the whole reaction
            step had ZERO coverage — 20 attack reactions and 15 defence
@@ -369,6 +383,14 @@ function play(g, limit, opts){
            invisible there. The phrase is the engine's own (v3.81) and
            test/ward.test.js pins the two spellings against each other. */
         if(/destroys itself — ward soaks/.test(line)) events.push(["ward", line]);
+        /* WALK IN MY SHOES' HALVING, OPENED (v4.73). The last crush rider
+           of twelve, and the one `crush` above cannot tell apart — every
+           rider prints " — crush:", so this spells the EVENT the halving
+           alone prints (v3.81, v4.46). It counts windows OPENED; the close
+           is a line in their end phase and a game that ends mid-window
+           never prints it, which is a fact about the game rather than the
+           route. test/walkinmyshoes.test.js pins the two spellings together. */
+        if(/are halved, rounded up, until the end of their next turn/.test(line)) events.push(["halve", line]);
         /* v4.37 — a DESTROY-COST sheet answered. Both outcomes are
            counted, because the seat DECLINES by standing rule (v4.24: a
            price this policy cannot weigh is not no price), so a counter

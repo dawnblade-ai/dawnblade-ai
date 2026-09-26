@@ -1,3 +1,962 @@
+## v4.75 — Spellvoid X counts the links its wearer controls
+
+> *"**Spellvoid X**, where X is the number of chain links you control."*
+> — MASK OF THE SWARMING CLAW, Fai's Head piece
+
+**REFUSED SINCE v2.32, ON A TRUE REASON THAT THE CARD ANSWERS ITSELF.** The
+record said *"the chain belongs to the ATTACKER rather than to the hero
+being hit"*, so reading X would mean inventing whose chain it is. That is
+true, and the printed words **"you control"** settle it. A chain link is
+controlled by the player whose attack it is, and every link on a chain is
+the turn-player's. So X is the wearer's own links while they are attacking,
+and 0 on the opponent's turn. Arcane damage reaches a hero on either
+turn, since an opponent's instant can burn them in the middle of their own
+swing. That is the case in which the Mask is worth more than its printed
+Arcane Barrier 1.
+
+- **`parser.linksControlled(game, seat)`** is the one reader. It counts the
+  resolved attack links on the strip, where an arcane entry is not a link
+  (v4.39). The attack being answered is a chain link from its declaration
+  (CR 7.2) but joins the strip only when it resolves (v3.99), so it is
+  counted off `pend`.
+- **The count is the game's**, taken when the arcane damage is dealt, and
+  never stored in the parse, because `fxParse` memoizes on `name|pitch`
+  (v3.39).
+- **`arcaneSoaks` takes it as the caller's answer.** A caller that says
+  nothing gets 0, and a Spellvoid 0 is not offered: weaker than printed,
+  and visible.
+- **One spelling of the where-clause** (`SPELLVOID_X`), read by the clause
+  reader and by `spellvoidX`. A different X (*"the number of cards in your
+  hand"*) is not a link count, and a printed `Spellvoid N` is never an X.
+- The noop's reason is written in the player's voice (v4.24).
+
+Measured:
+- **No tier moves.** The line was already accounted for as a `noop`, so the
+  audit diff is one timestamp line and no floor was repinned.
+- The approximation record `spellvoid-x` (stated) is **closed** as
+  `spellvoid-x-read`, with its probe turned round to drive an arcane hit
+  into a wearer holding one link.
+- **The ladder is byte-identical at three seeds on both sides.** That
+  result is about the LOADOUT: `defaultPicks` gives Fai the Blade Beckoner
+  Helm (printed defence 1) over the Mask (0), so no driven game wears it.
+  This is the fifth time that has happened (the Hood, the Gun, the
+  Stilettos, the Robe, now this). The accept path is driven end to end
+  instead, by `test/spellvoidx.test.js` (7 drills).
+- **8 sabotages, 8 bite.** One needed a unique revert anchor on the second
+  attempt, and the harness said so rather than reporting SILENT (v4.37).
+
+### AND THE CR INDEX WAS COUNTING A REPORT'S POPULATION
+
+Regenerating `SWEEP.md` for this release took **"Ruled but not built" to 0
+cards**. Every card built this cycle left its WRONG block, and so did the
+rules for continuous and delayed effects. Those two were cited only by
+`failstates.js`'s *"no schedule to fire on"* category label, which is
+printed once per broken card, so
+`tools/crindex.js` counted them as documentation for exactly as long as
+some card was broken.
+
+v4.02 excluded the index's own report by name and left the family.
+**Generated reports are recognised by their header now** (`AUDIT.md`,
+`CARD_PROGRESS.md`, `CR-INDEX.md`, `STACK.md`, `SWEEP.md`), none is read,
+and the set is pinned: rule total **63 → 61**, prose **4 → 2**. The drill
+asks what the corpus READS rather than what it found, because the reports
+cite nothing today and the v4.02-shaped sabotage was silent against a
+citation check (v4.58's census with nothing to report). 3 sabotages, 3
+bite. And the drill's first draft named the two rules in a comment, which
+put them straight back into the index. That is v4.02's own trap, so the
+prose was reworded.
+
+## v4.74 — a control change, ownership first
+
+> *"When this hits a hero, {u} an ally they control, then steal it until
+> the end of this action phase."* — JACK BE QUICK, Briar's
+
+**EVERY DECK CARD IN THE POOL NOW READS IN FULL.** This was the last one:
+audit **405 full / 0 part**, and `npm run gaps` reports 0 unfinished.
+
+**THE POOL'S ONLY CONTROL CHANGE**, measured over 797 records. It was
+recorded rather than half-built at v4.68, and the record named what would
+go wrong: moving the entry without its OWNER is a card that works until it
+dies, then files into the thief's graveyard (v3.23). So the ownership was
+built first.
+
+- **The pick** is the stealer's, among the opponent's LIVING allies. One is
+  taken on the spot (v4.68), two open a sheet, none says so.
+- **The move** is untapped, per the printed `{u}`. The owner is stamped on
+  the board entry (`owner`) and the card (`_owner`), and the ally's
+  counters travel with it.
+- **The return** is `effects.returnStolen`, at step (0) of the end phase:
+  "this action phase" is over before the end phase begins. The ally comes
+  home TAPPED if it swung for the thief, so its owner cannot swing it next
+  turn, because only its own controller's untap step lifts a tap (CR
+  4.4.3d).
+- **A death while stolen** files into the OWNER's graveyard, through both
+  ally-death sites (`damageAlly`, `sweepArena`).
+- **Every other exit is caught by the judges.** `STOLEN-CARD-OFF-BOARD`
+  flags a stamp found anywhere but a board, and `STOLEN-ENTRY-SHAPE` flags
+  an entry owned by its own side.
+- **A card stolen back goes home**, with its stamps stripped.
+
+The wire needed nothing: entry fields ship as they are, `_owner` is an
+instance stamp, and the round-trip hashes agree. The bug report names a
+stolen entry. The keyword ledger's `steal` and `{u}` are `live`.
+
+Measured:
+- **1 record moves, `part` → `full`**, and the floor was repinned after
+  reading the diff.
+- The approximation record `control-change-steal` is **closed** as
+  `control-change-steal-built`, with its probe turned round to drive the
+  whole cycle.
+- Over 84 Briar games, Jack attacked 33 times and 23 hits found no ally.
+  Over 60 Briar v Gravy Bones games there was ONE steal, handed back, with
+  no violations. The ladder is byte-identical at three seeds on both sides,
+  so no route counter was added: its ~0 would be about the matchup (v4.24).
+- **23 sabotages, 23 bite.** Two first-pass silences were my fixtures, and
+  one sabotage could not be applied because its revert text was not unique.
+  A Briar scene fails against a steal that never goes home.
+
+**AND THE GAPS DOSSIER DRILL REQUIRED AN UNFINISHED CARD**, so a complete
+pool failed it. It now asks both states: with none unfinished, the report
+must say 0, and a finished card asked for by name must be refused.
+
+## v4.73 — a halving that starts and ends mid-game
+
+> *"Crush - When this deals 4 or more damage to a hero, until the end of
+> their next turn, the base {p} and {d} of attack action cards they control
+> are halved, rounded up."* — WALK IN MY SHOES, Lyath's
+
+**THE LAST OF TWELVE CRUSH RIDERS.** It refused from v3.29 on a stated
+reason: `build.halveCard` halves Lyath's own cards once, at the DEAL,
+because thirty readers of a base value is thirty chances to miss one
+(v3.78). A halving that starts and ends mid-game looked like the shape that
+argument ruled out.
+
+**THE BUILD KEEPS THE ARGUMENT.** The value still lives on the CARD, exactly
+as the deal leaves it, so every reader sees it without being told.
+`effects.restampHalving` re-stamps the victim's attack action cards at the
+two moments the window changes: when the crush pushes it, and when their
+end phase drops it.
+
+- **"Until" is not "during".** The other four next-turn riders are armed
+  and wait. This one is live at the crush, so its `nextTurn` entry
+  schedules only the END.
+- **The count is derived off the schedule.** Two crushes quarter, and the
+  first to close leaves the second standing. Nested ceilings compose, so
+  the order windows open in, and Lyath's own deal-time halving in a mirror,
+  cannot change the answer.
+- **Attack action cards only**, off the structured array. A non-attack, a
+  defence reaction (*"Reaction"* contains *"action"*, v2.44) and a weapon
+  keep their numbers. Rounded up, so a 1 stays 1.
+- **The stamp is opt-in** (`_unhalvedPow`/`_unhalvedDef`) and leaves with
+  the last window.
+
+**THE TRAINER NEVER ARMED SEAT 1.** `armNextTurn` ran at your turn start
+only, so any entry aimed at the dummy never armed and so never expired.
+That was harmless while every kind waited on a swing the dummy fabricates.
+This one would have been a PERMANENT halving. `foeBegin` arms it now, and
+the dummy's lingering effects expire at its end phase like yours.
+
+**RECORDED:** `halving-reads-every-zone` (stated). The CR's "control" reaches
+the chain and the defenders; a card in a hand is held. Lyath's own static
+has always read every zone the same way. A card minted mid-window is not
+stamped, which is unobservable: the pool's only attack action card an
+effect creates is Crouching Tiger, which prints nothing a halving moves.
+`crush-halving-rider` is closed as `crush-halving-rider-read`, with its
+probe turned round.
+
+Measured:
+- **1 record moves, `part` → `full`** (403 → 404 full, 2 → 1 part). The
+  floor was repinned after reading the diff. Jack Be Quick is now the only
+  deck card that does not read in full, and it is recorded.
+- A new `halve` route counter reads **30 in 630 games**, spelled on the
+  line only this rider prints, because `crush` counts every rider on one
+  shared prefix.
+- At three seeds on both sides: refusals 0, violations 0, stalls 3.
+  Lyath went 5·3·4 → 4·3·6; the intervals overlap, so this is noise
+  (v4.40). Every other hero moved within the band.
+- **21 sabotages, 21 bite.** A Lyath scene fails against a halving that
+  waits for their turn.
+
+## v4.72 — a free X, declared before the payment
+
+> *"Create X Frostbite tokens under target hero's control. Then if this was
+> fused, deal arcane damage to that hero equal to the number of Frostbites
+> they control."* — ICE ETERNAL, cost **XX**, Iyslander's
+
+**THE POOL'S ONLY FREE-X CARD, REFUSED FOR SEVENTY VERSIONS — AND THE
+RECORDED REASON NAMED THE WRONG HALF.** `x-cost` said nothing here models an
+X cost, so the mint was refused rather than read as one. True, and it hid
+the sharper defect: the printed cost is `XX`, the database carries **no
+number** for it, and `effCost` read `cost: null` as **0**. Reading the mint
+alone would have shipped a card that makes X Frostbites for nothing. v4.71's
+Beckoning Haunt was the same free X one route over. This is the diagnostic
+from the cost end again.
+
+**X IS A CARD FIELD, CHARGED ONCE PER X.** `cx` counts the X in the printed
+cost, on both copies of the loader (`cards.js` and the phone's `mapDbCard`,
+v2.48). It is opt-in, so a card with no X carries no field (v3.58).
+`DATA_VER` → `sage-v14`. `effCost` adds `cx * x`. The declared X is the
+game's half of the cost (`costCtx.x`, off `g._x`), so every reader that
+already asks `costCtx` prices it (v3.96).
+
+**THE QUESTION COMES BEFORE THE PAYMENT.** A cost cannot be a queued prompt
+(v3.34), so X is a `pending` (`xval`, `PENDING_KINDS` +1). The order is
+**xval → pay → fuse**. The bound is what the seat could raise:
+`floor((res + payCeiling − base) / cx)`, never counting the card being paid
+for. `legal` accepts only a whole number in range, because `reduce` is fed
+by JSON off a wire (v2.04). The answer rides on the **state**, never the
+action, so a crafted `play` carrying its own `x` is still asked. The
+trainer's `xpick` mode offers the same bound. `_x` is in `HELD_DECL`
+(v4.66) and is cleared on commit, cancel and resolution, or the next X card
+skips the question.
+
+**AN UNDECLARED X CREATES NONE.** The mint carries the letter and the play
+decides the number. A state that reaches the op with no declaration makes
+no tokens: inert, never free (v2.04).
+
+**"THEN IF THIS WAS FUSED" IS A LATE GATE.** The rider counts every
+Frostbite the target controls, **after** the mint. Answered in the main
+condition loop it would count the board before the tokens land. It is
+`way:fused`, answered by `thisWayMet` in the late pass (v3.60), and the
+payload is `arcaneCount`: count a named token under the same seat the mint
+targeted. The reader is narrow on purpose. A `then if` whose gate is not
+fusion refuses rather than being answered as fusion (v2.29). An unfused play
+says so in the feed.
+
+**TWO SMALL FEED FIXES FROM DRIVING IT.** The fusion offer read *"a ice
+card"*, and now reads *"an ice card"*. The unfused rider now says it did not
+fire, where before it was silent.
+
+**THE POLICY ANSWERS WITH THE LARGEST X.** v4.24's decline does not apply:
+the seat has already chosen to play the card, and X = 0 is a card spent for
+nothing. **It costs fusion, and that is measured rather than changed.**
+Maximum X pitches the Ice card that fusion would have revealed, so fused
+Ice Eternals went **10 of 21 → 1 of 20**. Weighing X against the reveal is a
+judgement about the hand this policy does not make.
+
+Measured: **1 record moves, `part` → `full`** (402 → 403 full, 3 → 2 part),
+and the floor was repinned after reading the diff. `WIRE_V` **17 → 18** for
+the new pending kind and the `_x` declaration. The approximation record
+`x-cost` is **closed** as `x-cost-declared`, with its probe turned round.
+`spellvoid-x` keeps its own reason, which no longer borrows this card's. At
+three seeds on both sides: refusals 0, violations 0, stalls 3 on both.
+Iyslander went 16.0 → 17.7, but the intervals overlap, so this is noise
+(v4.40). **23 sabotages, 23 bite.** One was silent on the first pass
+because an Action clears `HELD_DECL` twice; a synthetic X instant now
+reaches it. A new Iyslander scene fails against a free X.
+
+## v4.71 — an X the choice settles, and an X nothing charged
+
+> *"Action - {x}{x}{r}, destroy this: Return target aura with cost X from
+> your graveyard to your hand."* — BECKONING HAUNT, Viserai's Arms piece
+
+**HANDOFF CALLED IT THE CHEAPEST X CARD, AND IT WAS.** X is the returned
+aura's own printed cost, so the pick settles it and nobody names a number.
+That is Blaze's shape (v3.39), in resources instead of counters. The sheet
+offers only the auras the seat can pay for, and the answer charges X once
+per `{x}` pip, pitching on demand but never pitching the aura it just
+returned.
+
+**READING IT FOUND A FREE X FIRST.** The v3.79/v4.43 diagnostic, run from
+the cost end: handed `{x}{x}{r}` with a payload it could read,
+`parseHeroPower` answered **cost 1**. The `{x}` pips were never counted.
+It was latent only because the payload refused, so reading the payload on
+its own would have shipped the aura back for `{r}`. This is Enigma's `{c}`
+(v4.54) one symbol over. The pips are counted now (`x`) and **coupled**: X
+pips with no pick to settle them refuse, and so does a pick that settles an
+X the cost never prices. Measured: the pool prints exactly one activation
+cost with `{x}`.
+
+**TWO FACTS, TWO PLACES, BOTH NAMED.** The pips are a COST, so they are
+stamped on the powCard (`_xPips`) by all three builders (v3.63's rule, sixth
+outing). The coupling lives in the PAYLOAD (`xOf: "cost"`), so it is read.
+`parser.abPickBound(sd, ab, ctx)` is the one reader of which auras are
+affordable, asked by `judge.abCostWhy` and the trainer's `tryPlay` with the
+game's half of the fixed cost (v3.96). So an activation with nothing
+affordable is refused by name before the chest is destroyed (v4.59's rule).
+At resolution, the queue site bounds the sheet the same way, off the
+resolving powCard (v4.63's opt-in `srcCard`). An unaffordable answer off a
+wire is inert, never free (v2.04).
+
+**"TARGET" WAS READ AS A CLASS.** The graveyard-to-hand reader captured
+*"target aura"* whole, and `optFilter`'s leading-class branch took any word
+as a class. So *"target"* built a filter matching nothing, and so would a
+pitch colour (*"a red attack action card"*). v4.09 closed the bare-"card"
+branch for exactly this and left this one open. **Measured over the pool
+and every powCard: `wizard` and `runeblade` are the only words in that
+position**, so `ACTION_CLASSES` is closed to them and 0 records move.
+
+**AND THE CHOICE IS MADE AT RESOLUTION, WHICH IS NOW RECORDED.** Every
+activation pick in the pool opens when the ability resolves, not when it is
+activated. Since v4.66 the table holds an Action-speed activation on the
+stack, so the other seat answers before the target (and, here, X) is chosen.
+`activation-choices-at-resolution`, `stated`, with a driven probe. Declaring
+at activation needs the choice as a pending before payment, across every
+activation pick.
+
+### THE DEAD ANCHORS, ASKED v4.48's QUESTION
+
+All fifteen of `npm run anchors`' never-reached readers already carry a
+reason in `test/anchors.test.js`, except two listed without one:
+
+- **the second draw-then-discard-random rule was dead by CONSTRUCTION.**
+  Every string it matched, the rule above matches first, so it could never
+  answer. Deleted; the subsumption is a drill over the wordings it was
+  written for (0 of 797 records move);
+- **the standalone random discard is printed once, inside an ADDITIONAL
+  COST** that the cost reader claims first. It is a latent reader with a
+  correct anchor, the `{t} your hero` shape, and is named now.
+
+### `npm run gaps` HAS NO FAMILY LEFT
+
+Beckoning Haunt was the last card in "pick from a zone". The three unfinished
+cards are unclustered (Ice Eternal, Jack Be Quick, Walk in My Shoes). The
+drill that asked for the largest family's members had recorded why it would
+rot, and it did. `tools/gaps.js` now hands its `FAMILIES` over when
+required, and each pattern is held against the printed clause of a card that
+left it by being built. The report's own drill asks that every bucket it
+prints lists as many cards as it counts.
+
+### MEASURED
+
+- **exactly 1 record moves, `part` → `full`** (audit **401 → 402 full,
+  4 → 3 part**), floor repinned after reading the diff;
+- **the ladder at three seeds is inside the band on every hero** (Viserai
+  15.7 → 14.7 with overlapping intervals, NOISE), stalls 3 unchanged. The
+  route is LIVE: across Viserai's 28 legs at seed 0 he activates the piece
+  **18 times and X is always 0**, because every aura he decks costs 0.
+  The drills drive X = 1 and X = 2;
+- approx ledger **41 → 42 records, 16 → 17 stated**; `x-cost` narrows to
+  the free X (Ice Eternal); `WIRE_V` **16 → 17** (a pick's `xPay`);
+- **15 sabotages, 15 bite** after one fixture fix: the legality drill's
+  numbers never crossed a multiple of the pip count, so a bound that forgot
+  the fixed `{r}` came back SILENT (v3.62);
+- **3128 drills**, 0 fail, 5 skipped.
+
+## v4.70 — the arsenal door, and only the arsenal door
+
+> *"Your next arrow attack this turn gets +3{p} and **\"Defense reactions
+> can't be played from arsenal this chain link.\"**"* — RELEASE THE TENSION,
+> Azalea's
+
+**v4.60 REFUSED THIS ON PURPOSE AND RECORDED WHAT IT WAITED ON.** Read by
+the unconditional anchor Widowmaker and Wreck Havoc use, the bar would close
+the HAND door too, which is stronger than printed. And the rider reader,
+`quotedRider`, is an ON-HIT reader by construction, while this rider fires on
+nothing: it holds for as long as the link is open.
+`drx-bar-from-arsenal-unread` stayed `stated` with a probe asserting the
+refusal. **That probe went red the day this landed**, which is its job
+(v4.02).
+
+**BOTH HALVES WERE ANSWERED NARROWLY:**
+
+| the record said | built as |
+|---|---|
+| the zone must not be a parameter with no claimant (v4.11) | it has one now: `noDrx` is `true` (every zone) or the zone NAME |
+| `quotedRider` would need widening for four grant families | it isn't. `parser.quotedStatic` is a second, narrow reader beside it, answering only for the one static the engine can read |
+
+**THE BAR RIDES ON THE PUMP AND LANDS ON THE LINK.** The grant is a `buffQ`
+entry like any qualified pump; its rider carries `noDrx`, and `runOps` stamps
+the granting card's name on the entry as `src`. The arrow that collects it
+carries the bar onto its `pend` as `noDrx: [{from, src}]`. "This chain link"
+is `pend`'s lifetime, so nothing is swept. A non-arrow attack leaves the
+grant waiting (v2.30), and the arrow that takes it SPENDS it.
+
+**`drxBarWhy(link, card, from)` ASKS THE LINK AND THE ZONE.** All three doors
+(`judge.legal`, the trainer's `playRx` and `playRxA`) name their own zone. A
+door that names none gets no narrow bar, which is weaker than printed and
+visible (v3.24). The refusal names the card that granted the bar and the
+arrow it rides on.
+
+**AND THE FEED LINE NAMED THE WRONG ABILITY FOR EVERY RIDER.** `runOps`'
+grant line read *", and it goes again if it hits"* whatever the rider was.
+That was true of Warrior's Valor and false of Yo Ho Ho!'s Gold, both Loot
+cards, Weave Lightning's fused go again, and this bar. The Loot cards also
+printed *"+0"*. `riderWords` names what the rider carries and says *"a
+granted ability"* for anything else rather than guessing.
+
+**THE LADDER IS BYTE-IDENTICAL, AND THAT IS THE POLICY.** Measured across
+the 60 legs Azalea sits in at seed 0: Release the Tension is played **13
+times and the bar lands 0 times**. After it, the policy plays Take Aim,
+Scout the Periphery or Drop the Anchor, never an arrow in the same turn, so
+the grant expires unspent. The table drills drive the arrow directly, both
+halves, plus the non-arrow control.
+
+**ONE SABOTAGE CAME BACK SILENT, AND IT WAS A LATENT PATH.** A card printing
+the narrow bar on ITSELF has no pool claimant, so ignoring the zone there
+failed nothing. A synthetic card that prints it is the drill (v3.73). Two
+more could not be applied at first because their revert anchors were not
+unique; the harness said so rather than reporting them SILENT (v4.37).
+
+### MEASURED
+
+- **no tier moves**; the audit's flagged-card count goes **15 → 14**
+  (Release the Tension leaves), and the pool's unread quoted riders go
+  **4 → 1** (Display Loyalty's attacks-trigger, a different family);
+- approx ledger **17 → 16 stated, 18 → 19 closed**
+  (`drx-bar-from-arsenal-read`);
+- `WIRE_V` **15 → 16** by hand (`pend.noDrx`, a `buffQ` entry's `src`);
+- **12 sabotages, 12 bite** after the synthetic drill and two re-anchors;
+- **3113 drills**, 0 fail, 5 skipped.
+
+## v4.69 — the same cards is not the same game
+
+**THE REFUSAL MESSAGE AND THE COMPARISON DISAGREED.** net.js's handshake
+refuses a build mismatch with *"check APP_VER / DATA_VER on both clients"*,
+and both callers handed it `DATA_VER` alone — as did the lobby's HELLO,
+the check that runs first. So two phones one release apart agreed on every
+card, were seated together, and had nothing to say when they came apart.
+
+**MEASURED BY REPLAYING, NOT ARGUED.** Sixteen v4.68 self-play games were
+recorded as action logs and replayed on the v4.67 reducer from the same
+opening state. **2 of 16 diverge**, both at Fai's one-card pick, which v4.68
+confirms on the spot and v4.67 opens as a sheet. Same `DATA_VER`, same
+`WIRE_V`: nothing either handshake compared could tell them apart. And that
+is not a quirk of one version. Every release changes a rule, so any two
+releases can do this.
+
+**`lobby.buildId(appVer, dataVer)` IS THE ONE SPELLING** of what "the same
+build" means at a table, and the trainer builds it once (`TABLE_BUILD`)
+and hands the SAME value to both handshakes. A belt that checks something
+different from its braces is how the message and the comparison came apart
+in the first place. The lobby's fault now names both builds and says to
+reload both pages.
+
+**AND IT DISCHARGES MOST OF A HANDOFF ITEM.** v4.59 recorded that a
+forgotten `WIRE_V` bump for a shape change inside a whole-shipped value
+(a prompt field, a layer kind, a game key) fails no drill, and proposed a
+prompt-field ledger the digest could cover. With the release in the
+handshake, two peers whose shapes could differ are two releases, refused
+before a snapshot crosses, and `decode`'s only caller is on the far side of
+that handshake. That covers every shape, including ones no ledger would
+list. So the ledger is not built. A same-release dev pair still leans on
+the hand bump, and `wire.js`'s header says so.
+
+### MEASURED
+
+- **no pool record's parse or tier moves**, and no rules changed;
+- **5 sabotages, 5 applied, 5 bite**: `buildId` dropping the release, the
+  trainer's `TABLE_BUILD` reverting to `DATA_VER`, each handshake site
+  reverting to `DATA_VER` on its own, and the lobby never comparing;
+- **3105 drills**, 0 fail, 5 skipped.
+
+## v4.68 — a choice of one is not a choice
+
+**THE MEASUREMENT CAME FIRST, AND IT WAS LOPSIDED.** Over 210 driven games,
+**114 pick sheets** were a MANDATORY choice among exactly **one** card.
+**108** of them were Fai's hero ability over a graveyard holding a single
+Phoenix Flame. v3.55's rule says a sheet offering one forced choice is a tap
+that teaches nothing, and until now that rule lived only in `ctrPut`'s own
+fast path.
+
+**`buildPrompt` COULD NOT APPLY IT.** Answering null there SKIPS the spec, so
+the card the printed line moves would never move. The rule is a reader
+instead: `prompts.promptForcedSel`. Both boards' `openPrompt` ask it and
+confirm a forced sheet through the one `applyAnswer` a Confirm tap reaches,
+with the rest of the queue behind it. So the payout, the feed line and the
+drain are the same body either way.
+
+**WHAT IS FORCED, BOTH DIRECTIONS:**
+
+| sheet | forced? | why |
+|---|---|---|
+| mandatory pick, one candidate | **yes** | nothing to decide |
+| mandatory pick, two candidates | no | a choice |
+| two cards for two slots onto a deck | no | the ORDER is the answer (v4.59) |
+| optional pick (`min: 0`), one candidate | no | the printed "you may" is the decision |
+| modal, pay, opt, target, alloc, soak | no | only a `pick` |
+
+**NO `filters` GUARD, AND THAT IS MEASURED.** A sheet naming two targets
+cannot reach the reader with one candidate, because `buildPrompt` refuses it
+as unsatisfiable (v4.59). A sheet naming ONE target over one card is exactly
+the forced case. The first draft carried the guard anyway; it could not
+express a bug, so it is deleted and the premise is a drill (v4.11).
+
+**SEVEN DRILLS NEEDED A SECOND CANDIDATE, AND NONE WAS WEAKENED.** Where a
+drill was about the SHEET (Brain Freeze's filter, Halo of Illumination's
+rider, Cold Snap handing the choice to the caster), it got a second legal
+card so there is still something to ask. Where a drill was about the WRITER
+(Topsy Turvy's four deck-top routes, Scuttle Toes' untap), the forced answer
+reaches the same writer and the drill's positional assertions still bite in
+both directions. Brain Freeze gained a drill for the forced half on the real
+card, a cross-seat pick over the other seat's hand.
+
+**THE LADDER IS BYTE-IDENTICAL AT THREE SEEDS ON BOTH SIDES**, and that is
+the policy: `judge.autoAnswer` already took index 0 of a one-card sheet. What
+moves is the table a PERSON sits at, which no ladder number can see.
+
+**FOR THE UI PASS:** a one-card mandatory pick no longer opens a sheet on
+either board. The card moves and the feed says so.
+
+### JACK BE QUICK IS RECORDED, NOT BUILT
+
+> *"When this hits a hero, {u} an ally they control, then **steal** it until
+> the end of this action phase."* — JACK BE QUICK, Briar's
+
+**`control-change-steal`, `open`, with a driven probe.** Measured over 797
+records it is the pool's only control-changing card. Nothing moves an object
+between SIDES today: the census, `invariants.js`, the wire's side ledger and
+every `act`/`foe` helper assume a permanent's side is fixed. A stolen ally
+must be CONTROLLED by one seat and OWNED by the other (it goes to its owner's
+graveyard if it dies), untapped, able to attack for the thief, and handed
+back at the end of the action phase. Moving the entry across without the
+owner is v3.23's worst case: a card that works until it dies and then files
+into the wrong graveyard.
+
+The probe drives the real card into a hero with an ally on the defender's
+board and asserts the ally never left. A simulated steal turns it red, which
+is the record's job (v4.02). Ledger **40 → 41**, open **5 → 6**.
+
+### MEASURED
+
+- **no pool record's parse or tier moves**; the audit diff is one timestamp;
+- **the ladder at three seeds is byte-identical on both sides**, stalls 3
+  (v4.64's two Boltyn v Gravy draws plus the Enigma v Gravy one);
+- **8 sabotages, 8 applied, 8 bite**: forced over many, forced over an
+  optional pick, judge never forcing, judge re-queuing the forced spec (a
+  target pick that moves nothing then fires forever), the trainer never
+  forcing, the trainer dropping the queue, the wrong index, and a simulated
+  steal against the Jack Be Quick probe;
+- **3099 drills**, 0 fail, 5 skipped.
+
+## v4.67 — refill it before the clock ticks
+
+> *"Once per turn, when you boost a card, remove a steam counter from this and
+> gain {r}."* — HYPER DRIVER · *"When this is banished from boosting, put a
+> steam counter on a Hyper Driver you control."* — CRANKSHAFT, BIG BERTHA
+
+**MEASURING TRIGGER ORDER FOUND A WRONG ORDER.** The plan for CR 4.1.8a was
+to measure first, and a generic collision counter cannot tell an order that
+DECIDES something from one that does not. So the families were taken one at
+a time. The boost pair is the one the code already named — and it was wrong.
+
+**v4.23 TICKED FIRST, AND ITS OWN DRILL IS WHY.** It reasoned that a clock
+running after Crankshaft would spend the counter just placed and destroy the
+Driver. That is true of exactly one state, a Driver **on the board with no
+counters**, and the drill built that state. No game can reach it. The Driver
+enters with 3, and every steam remover in the pool (Boom Grenade, Golden Cog,
+Hyper Driver, Plasma Barrel Shot) removes from **its own** permanent. So only
+the Driver's clock can empty it, and "when this has none" destroys it at once.
+
+| counters | tick first | put first |
+|---|---|---|
+| **1** | 1 → 0, **destroyed**, the put finds nothing | 1 → 2 → **1, survives** |
+| 2+ | same | same |
+| resources | {r} | {r} |
+
+Driven, the old order destroyed Dash's only Hyper Driver on any boost at one
+counter, and told Crankshaft *"You control nothing that can take a steam
+counter."* Put-first is weakly dominant in every reachable state, which is
+v4.23's reprieve argument applied correctly: the order a player would always
+choose. WEAKER than printed, so the one-sided sweep was blind.
+
+**THE PREMISE IS A DRILL.** The four steam removers are pinned as a set, each
+removing "from it" or "from this". A card that takes a steam counter off
+another permanent fails, because then zero is reachable and the order has to
+be re-measured. So is **Dash decking ONE Hyper Driver**: a second would put
+Crankshaft's put behind a sheet that drains after the tick, which this
+version does not build.
+
+**THE LADDER IS BYTE-IDENTICAL**, because the policy declines boost (v4.24).
+84 Dash games reached the collision zero times. The scene and the drill drive
+it instead.
+
+### THE REST OF THE ORDER QUESTION, MEASURED
+
+`simultaneous-trigger-order` stays `open` with the census written in. Only
+two end-phase pairs change an outcome, and both are already records:
+Inertia against a heave (`heave-window`) and ward spends
+(`ward-spend-order`).
+
+**AND ONE QUESTION IS NOT ABOUT ORDER AT ALL.** Arakni's brood step returns
+an Agent and then lets Arakni become one again in the same end phase. Can a
+trigger fire for a hero who wasn't the hero when that end phase began?
+That's about which triggers exist at the event, and nothing here sources an
+answer. It is recorded as waiting on a ruling rather than decided.
+
+## v4.66 — a play waits for the other seat
+
+> **CR 7.1.2** — the attack goes on the stack as a layer, and players get
+> priority before it becomes a chain link. **CR 4.2.2** — the top layer
+> resolves when all players pass in succession.
+
+**THE LEDGER SAID NO CARD ASKED, AND THAT WAS MEASURED FALSE.**
+`layer-step-window` (open since v2.45) argued that the attack step's window
+was equivalent, so "on the stack" versus "on the chain" was a distinction
+"no card in this pool asks about". Driven over 210 games: **319 plays dealt
+damage inside the action that played them, and 12 of those landed on a seat
+holding an instant prevention it never had a window to play.** Oasis Respite
+against Photon Splicing and Emeritus Scolding, Toe the Line against Arcane
+Twining, Oasis Respite against Viserai's Runechants and Briar's Path of Same
+Ends, whose go again is gated on that very damage. The attack step's window
+opened AFTER the damage. It was not equivalent.
+
+**THE TABLE NOW HOLDS A PLAY ON THE STACK.** Everything played at action
+speed rests there: an attack, a non-attack action, a weapon, ally or aura
+attack, and an `Action -` ability. It resolves when both seats pass, so the
+other seat always gets its window first. `judge.holdPlay` is the one body.
+
+**THE WHOLE `execute` IS DEFERRED, NOT SPLIT.** It interleaves every cost
+with the resolution across two thousand lines of shared locals, and a split
+through the middle of that is a rewrite no drill could certify. So the play
+is held instead:
+
+| held on the layer | why |
+|---|---|
+| the card, LIFTED out of hand/arsenal/graveyard/banish | it is on the stack. `invariants.js` censuses the stack now, or a held card is in no zone |
+| the settled declarations (`_half`, `_doBoost`, `_addPaid`, `_fuseUid`, `_chargeUids`) | a charge chosen at play is paid at resolution |
+| the seat's floating resources | or they are spent twice in the window |
+
+`resolveHeld` puts everything back and calls `commitPlay` again, which runs
+`execute` exactly as before. An activation leaves its piece where it is and
+is not lifted.
+
+**A WINDOW NOBODY CAN USE RESOLVES AT ONCE, AND THAT IS NOT AN
+APPROXIMATION.** A seat with no legal action can only pass, so the window has
+one outcome, and this produces it. `someoneCanRespond` asks **`legal` itself,
+as each seat**. A drill proves affordability counts: an instant the defender
+cannot pay for opens nothing, and the same hand with one resource does.
+
+**ACTION SPEED NEEDS AN EMPTY STACK** — `priority.speedAllowed`, so the
+turn-player cannot stack a second attack on their own first. `endTurn` is
+refused over a waiting card, because CR 4.3.4 ends the phase only on an
+empty stack. Nothing reached either rule before: the table's stack was
+always empty in the action phase.
+
+**THE POLICY PASSES, AND NOT BECAUSE IT WAS TOLD TO.** `sparring.act`
+proposes only at action speed and in the reaction step, and a waiting card
+leaves both seats an instant-speed window in neither. A guard saying so came
+back SILENT under sabotage and was deleted (v4.11); the premise is a drill.
+**The ladder's win counts are byte-identical at three seeds**, which is what
+proves the hold is transparent to a seat that never answers. The table held
+**9,317** plays in 630 games, about 15 a game, because most decks carry an
+instant gear ability.
+
+**WHAT IS STILL COLLAPSED IS RECORDED**, as `instant-speed-plays-resolve-on-play`
+(stated, with a driven probe):
+- an instant or reaction resolves on the spot, so the answer itself can't be answered;
+- a when-this-attacks trigger has no window of its own;
+- floating resources left over after the held card's cost wait with it.
+
+The ledger moves to **40 records: 17 stated · 5 open · 18 closed**, and
+CR 7.1.2 moves from `drill-only` to `guarded` (51 guarded).
+
+### A PROBE THAT STAYED GREEN THROUGH ITS OWN BUILD
+
+The old probe drove an opening hand and asserted the attack reached the
+chain in one action. It still passed after the build, because an opening
+hand held no instant-speed answer and an unusable window resolves at once.
+**A probe for a window needs a seat that can use it.** The turned-round
+probe hands the defender Oasis Respite.
+
+### TWO COUNTERS THAT MEASURED WORDS
+
+- **`crush` read `/\bcrush\b/i`**, so it counted every pitch of Cartilage
+  Crush or Crush the Weak and the arsenal grant that SAYS "has crush". It
+  moved 909 → 947 here for no reason but a new line naming more cards. It
+  spells the rider running now (`— crush:`) and reads **232**. v4.46's
+  `tap` defect, one counter over.
+- **`held`** is new and counts windows that opened. Both phrases are pinned
+  against the engine's own, both ways (v3.81).
+
+### FOR THE UI PHASE
+
+**A HUMAN PASSES OFTEN NOW.** The CR gives the player who played a card
+priority first, so a seat holding any instant ability is asked to pass after
+its own play. Online clients default to passing your own priority unless you
+hold it. That is a UI setting (the engine stays CR-exact), and it is the
+first thing the table UI will want.
+
+`WIRE_V` **14 → 15** — a held layer is a new shape inside `stack`, which
+ships whole. **16 sabotages, 16 bite**, after the first pass came back with
+three silent. One was a fixture that refused the second attack for its COST
+rather than its speed (the locked resources left nothing to pitch). The other
+two were dead guards, deleted: the policy's pass and a `delete` that
+`commitPlayBoosted` already does.
+
+## v4.65 — nothing goes back on top
+
+> *"Instant - Destroy this: Until end of turn, if one or more cards would be
+> put on top of a deck, instead they're put on the bottom."*
+> — TOPSY TURVY, PEN276, Arakni's Head
+
+**THE POOL'S ONLY REPLACEMENT EFFECT OVER A ZONE MOVE.** The line read nothing,
+so `parseHeroPower` refused it and `build.equipPiece` built the piece no
+powCard at all — v3.47's shape, ninth outing: reading the payload is what
+creates the route. Audit **400 → 401** unique cards `full`, **5 → 4** `part`;
+pool records **756 → 757 / 30 → 29 / 11**; ability-only pieces **33 → 34**.
+
+**"A DECK" NAMES NO SEAT, SO IT IS GAME STATE** — Hyper Inflation's `costTax`
+shape (v4.06). `game.deckFlip` holds the source's name and is absent
+otherwise; `parser.deckTopTo(game)` is the ONE reader and answers `deckTop`
+or `deckBottom`. The reader is anchored on the whole printed sentence, so
+*"your deck"*, a different destination and a missing window all refuse.
+
+**EVERY WRITER ASKS, AND EACH IS DRIVEN BOTH WAYS** — flip set and unset,
+because a writer that ignores the flag passes the unset half and one that
+always sends cards down passes the set half:
+
+| writer | card |
+|---|---|
+| `moveCards`' deck-top branch | Memorial Ground, Crown of Dichotomy |
+| `moveFoe` | Brain Freeze (their card, their deck) |
+| `foeHandToDeck` | Boulder Drop's crush rider |
+| the opt / reorder application | every opt, Spire Sniping |
+
+**OPT IS A WRITER, AND THE PRINTING IS WHY.** SAZ005's reminder text reads
+*"you may PUT THEM ON THE TOP and/or bottom in any order"*, so a card kept on
+top is a card PUT there, and Spire Sniping's *"put them BACK"* is the same
+event. Under the flip every card looked at goes to the bottom. Their relative
+order there is a STATED approximation — the player would choose it — and it is
+measured as unobservable: no pool record reads the bottom of a deck.
+
+**A CENSUS OF FRONT-INSERTS.** `test/topsy.test.js` scans the engine and the
+trainer for every assignment to a `deck` whose new array does not start with a
+spread of a deck, and requires `deckTopTo` within the lines above it — so a
+fifth writer arriving without the question fails a drill. Its reach is stated
+(a literal array on the right-hand side), and the opt branch, which builds its
+array in a variable, is pinned by name.
+
+### A VALUE RESOLVED MID-CHAIN RESTARTS THE CHAIN
+
+The first draft of `moveCards` put `const _to = …` between the `board` branch
+and the `deckBottom` one. A declaration cannot sit inside an `else if` chain,
+so the chain RESTARTED there — and every arsenal and board move fell through
+to the final `else` and wrote a list zone as well. **Thirteen drills went
+red** (reload, the arsenal face-up family, three Azalea scenes). The value is
+resolved once, above the chain, and every branch reads it. A sabotage that
+reintroduces the split bites three drills.
+
+### THE FEED SAYS WHERE THE CARDS WENT
+
+The shared pick line printed `→ deckTop` beside *"…to the bottom instead"*,
+and v4.59's *"On top of the deck: A first, then B"* would have claimed a draw
+order for cards that went down. Both name the RESOLVED destination now. Game
+state is identical either way, so this is the one drill in the file that reads
+prose, with v3.60's reason written beside it.
+
+### THE WINDOW, THE WIRE, THE REPORT
+
+- **Cleared at the beginning of the end phase** (step 8c), outside step 8's
+  `held` gate beside `costTax`, so it expires every turn (v4.07). The end of
+  the turn and the start of its end phase cannot be told apart in this pool:
+  no end-phase step puts a card on top of a deck.
+- **`WIRE_V` 13 → 14.** A new top-level game key ships inside the game object,
+  which the zone digest cannot see. `costTax` added one at v4.06 without a
+  bump; the rule is written down in `wire.js`'s header now. A round-trip drill
+  proves the key rides and that two peers disagreeing about it hash apart.
+- **The bug report names it** under `turnMods`, with `costTax` — a card sent
+  to the bottom reads as a bug when nobody says the replacement is live.
+
+### THE LADDER CANNOT SEE IT, AND THAT IS THE LOADOUT
+
+Byte-identical at three seeds on both sides. `defaultPicks` ranks by printed
+defence, so Arakni's head goes to Prey Spotters (1) over Topsy Turvy (0) —
+v4.43's Hood, fifth outing. The premise is a drill, and an Arakni scene drives
+the activation, both seats' writers and the expiry.
+
+**20 SABOTAGES, 20 BITE.** The first pass had one silent, and it was the feed
+line above. The scene's first draft was wrong before the engine was: the
+helper answers a prompt that is already OPEN, and a queued pick needs
+`c.open` first — without it the pick never happened and the scene reported the
+deck unchanged.
+
+## v4.64 — return it, then charge
+
+> *"Create a Courage token.*
+> *If there are no cards in your soul, return this to its owner's hand, then
+> **charge** your soul. (Put a card from your hand under your hero.)"*
+> — ROARING BEAM, SBL032, Boltyn's
+
+**THE HANDOFF'S SECOND ITEM, AND IT WAS THREE READERS, NOT ONE.** The head-end
+diagnostic (v3.79, v4.43) answered **null** for the gate, for the return and
+for the charge, each alone — so none of the three was the blocker and all of
+them were. Measured over 797 records, Roaring Beam is the pool's ONLY claimant
+of every one of them. Audit **399 → 400** unique cards `full`, **6 → 5**
+`part`; pool records **755 → 756 / 31 → 30 / 11**.
+
+**THE PRINTING SETTLED WHAT "CHARGE" MEANS AS AN EFFECT** — twelfth time
+reading the card first has paid. The database carries no reminder text; the
+SBL032 face prints *"(Put a card from your hand under your hero.)"*. Every
+other charge in the pool is an additional COST, settled before the card
+resolves and refusable (v4.33). This one happens AFTER and prints no *"you
+may"*, so it is a **mandatory pick, hand → soul**, queued behind the return.
+
+**"THEN" IS LOAD-BEARING.** The card is back in the hand before the charge
+asks, so it is one of the cards that may be charged — a player whose hand is
+otherwise empty charges Roaring Beam itself. Prompts drain at the tail of
+`execute`, by which time the card has been filed into the hand, so the order
+falls out of the queue rather than being arranged.
+
+### ONE BODY CREDITS BOTH ROUTES A CARD IS CHARGED
+
+The cost route has recorded `hist.charged`, written the feed line and fired
+the charged card's own *"when this is charged to your soul"* trigger since
+v4.41. An effect charge that only MOVED the card would leave "if you've
+charged this turn" false and Banneret of Salvation's trigger silent — a card
+in the soul that was never charged. **`creditCharge`** is that half, extracted
+unchanged; the cost route and `applyAnswer` both call it, and each keeps its
+own zone move. The pick spec carries `charge: true` (sixth field to prove
+v2.34's rule — dropped, the card moves and is never credited).
+
+**AND THE LADDER SAYS IT FIRES**: `hitnext` **2 → 7** over 630 games — Banneret
+charged by Roaring Beam and its trigger arming — and the `charge` field
+arrived in `test/speccensus.test.js` on the existing 34 legs with no leg
+written, so Boltyn really plays the card into an empty soul in a driven game.
+
+### BUILDING IT ON THE FILING SITE FOUND TRANSCEND'S DEFECT
+
+`execute` said *"undo the grave push made above"* — and **the push was
+below**. The filter ran against a graveyard that did not yet hold the card;
+twenty lines further down it was filed anyway. **Driven: A Drop in the Ocean
+left Inner Chi in the hand AND itself in the graveyard** — one card in two
+zones under two uids (Inner Chi is minted fresh), which `invariants.js`
+cannot see, because it censuses by uid.
+
+Both "instead of the graveyard" cases are a **skip at the push** now, never an
+undo of it, and a drill drives the transcended card with an unmet-gate control
+beside it (a filing site that never files passes the positive half perfectly).
+
+**`returnSelf` IS `transcend`'s SHAPE** — stashed, because the card has not
+reached the zone it is leaving when its own ops run — **keyed by uid**, so a
+stash can only ever match the card that set it, and **cleared with the
+resolution**, which a drill drives with a stale stash naming the same card.
+`runOps` needs the resolving card to know what "this" is, so it uses v4.63's
+opt-in fourth argument and refuses without one.
+
+### MEASURED
+
+- **exactly 1 pool record's parse moves**; `runOps`' vocabulary **92 → 94**;
+  the condition census **53 → 54** (`soulEmpty`); the second-person ledger
+  **52 → 54** — both new literals are the charge sheet's title and hint,
+  prompt text addressed to the asked seat (the case that ledger records as
+  correct), while the feed half names the seat;
+- **`WIRE_V` 12 → 13** by hand: every pick prompt now carries `charge`, so
+  two peers on either side hash differently the moment any pick sheet opens
+  (v4.59's case). A drill asserts the field survives the round trip;
+- **the ladder at three seeds on both sides**: every hero's wins inside the
+  band (Gravy 28 → 27, Lyath 14 → 13, everyone else identical), and **stalls
+  1 → 3** — both new ones Boltyn v Gravy, one per chair, and both **genuine
+  draws**, driven rather than assumed (v4.58): both decks and both hands
+  empty, both heroes at 1 life, Boltyn's weapon swinging for 0 without a
+  charge, the turn counter advancing at ~9 steps a turn. CR 4.5.3 has no
+  deck-out loss (v3.80);
+- **17 sabotages, 17 applied, 17 bite** — one needed rewriting before it
+  could be applied, because its revert anchor was `return n;` and the file
+  holds dozens (v4.36, v4.37: the harness said so rather than reporting it
+  SILENT). And one bug was mine before the engine's: the first draft compared
+  `n._returnSelf === card.uid`, which is `undefined === undefined` for a card
+  with no uid, and **unfiled every uid-less fixture in the suite** —
+  `asinstant.test.js` caught it by asking where its card went.
+
+## v4.63 — the Gun's second line is read, not paraphrased
+
+> *"Action - {r}{r}: If this has no steam counters, put a steam counter on
+> it. Go again"* — PLASMA BARREL SHOT, Dash's
+
+**THE POOL'S CHEAPEST REMAINING `part` DECK CARD, AND THE HANDOFF'S FIRST
+ITEM.** For fourteen versions `build.equipPiece` wrote this ability BY HAND —
+`"Action - {r}{r}: Put a steam counter on this. Go again."`, cost 2, a
+`_buildSteam` stamp, a `_steamFor` uid — because `classifyClause` answered
+null for the whole line and for each half. v3.58's inline-reader shape (a
+card special-cased by its own words), recorded as
+`steam-build-powcard-handwritten`. Audit **398 → 399** unique cards `full`,
+**7 → 6** `part`; pool records **754 → 755 / 32 → 31 / 11**.
+
+**AND THE PARAPHRASE DROPPED THE PRINTED GATE.** "Put a steam counter on
+this" says nothing about *"if this has no steam counters"*, so `effects.js`
+re-imposed the gate off the stamp and `judge.abCostWhy` refused off the stamp
+too — **two records of one printed condition** (v3.61), both written by the
+same hand that wrote the text. The stamp is gone; both read the parse.
+
+### THE THREE READERS THE RECORD NAMED
+
+| reader | what it reads |
+|---|---|
+| `classifyClause` — a WHOLE-CLAUSE rule above the if/when handler | *"if this has no \<K\> counters, put \<N\> \<K\> counters on it"* → `ctrSrc` behind a `noCtr:<K>` gate |
+| `parseHeroPower` — a FOURTH NAMED conditional shape | a run whose every op is `ctrSrc` |
+| `equipPiece` — a weapon's non-attack activation line | handed to the ordinary builder instead of the whole text |
+
+**WHOLE, BECAUSE OF "IT".** The if/when handler splits on the first comma and
+hands the payload over alone, where *"put a steam counter on IT"* has no
+antecedent — and the pool prints that pronoun meaning three OTHER objects
+(Crow's Nest's arrow, Spectral Manifestations' token, Edict of Steel's
+sword). Inside this sentence the gate's subject is the only noun before it.
+v2.33's Bull's Eye Bracers trap, answered by reading the sentence whole
+rather than guessing the pronoun; the pronoun ALONE still refuses.
+
+**`ctrSrc` IS NOT `ctrSelf`** (v3.40: two events, two records). `ctrSelf`
+stamps a card ENTERING the arena, applied at the board-placement site;
+`ctrSrc` puts counters on a permanent ALREADY THERE — the piece the resolving
+ability belongs to, found back off its `gp`/`bp` uid by
+**`parser.abSourceUid`**, which is the inline `("gp"+x.uid) === card.uid`
+match `execute` has written at three sites, as one reader. It answers the
+piece's REAL uid (a number), never the sliced prefix — v4.49's own first
+draft keyed a counter by a string that looked right and found nothing.
+
+**`runOps` TAKES THE RESOLVING CARD AS AN OPT-IN FOURTH ARGUMENT** (v3.58),
+and only `execute` passes it. A rider, a leave payout or an attack's ops
+riding to resolution pass nothing, and `ctrSrc` there refuses with a feed
+line rather than guessing which permanent "it" meant.
+
+**BOTH KINDS ARE READ OFF THE LINE AND BOTH GO THROUGH THE CLOSED `CTR_KINDS`
+VOCABULARY IN THE GUARD** (v3.55, v3.57). The one pool record prints *"a"*
+and *"steam"* twice, so a hardcoded 1 or a gate that copied the put's kind is
+SILENT against it — a synthetic printing *"no aim counters … two +1{p}
+counters"* is what sees both (v3.32, v3.73).
+
+### RETIRING THE STAMP FOUND A ONE-BOARD RULE (v3.01)
+
+v4.49 put the paid-no-op refusal in `judge.abCostWhy` and wrote that *"both
+boards call it"*. **The trainer's `tryPlay` never did** — it has its own
+mirrored checks for every other activation cost and not this one — so a
+second activation there still charged {r}{r} and the action point for a log
+line. `parser.abCtrGateFails` is the one reader now and both boards ask it,
+off the same `fx.conds` `execute`'s condition loop resolves, so the refusal
+and the resolution cannot disagree about when the gate is met.
+
+**IT IS DELIBERATELY NARROW**: a parse with NO unconditional op and EVERY
+gate a `noCtr:` one that the source already fails. A second gate still live,
+or an unconditional draw beside the gate, is a play and is not refused.
+The feed names the counter by its PRINTED spelling (`parser.ctrLabel`,
+`CTR_KINDS` read backwards), so a `pow` counter says *"+1{p}"*.
+
+### WHAT THE SABOTAGE PASS FOUND
+
+**22 written, 22 applied. 16 of the first 20 bit, and all four silences
+were mine** — and a fifth turned up in the second pass, of the same kind as
+the fourth. Three were fixtures that could not express the bug (v3.62): the
+one pool record puts ONE counter on an EMPTY bag behind ONE gate with NO
+other payload, so "set" and "add" agree, "any gate held" and "every gate
+held" agree, and an unconditional op is never there to be ignored — three
+synthetics see them now. **The fourth was a guard that could not refuse
+anything**: `parseHeroPower`'s named shape first asked for a `noCtr:` gate,
+a present gate and no on-hit flag beside "every op is `ctrSrc`" — and
+`ctrSrc` has exactly one emitter, which always carries that gate, while an
+ungated run is accepted by the ordinary guard anyway. Three dead halves,
+deleted (v4.11), and the PREMISE is a drill: every `ctrSrc` the pool emits,
+over records AND equipment powCards, rides behind a `noCtr:` gate.
+
+### MEASURED
+
+- **exactly 1 pool record's parse moves** (Plasma Barrel Shot, `part` →
+  `full`) and **0** whole-record `parseHeroPower` answers move — its whole
+  text still matches the SWING line first, which is why `equipPiece` hands
+  the ability line over explicitly;
+- **the ladder is BYTE-IDENTICAL**, run on both sides rather than reasoned
+  about (v4.43) — and that is about the LOADOUT: `defaultPicks` takes the 2H
+  Talishar, so a driven game never wears the Gun (v4.49's own finding). The
+  route is driven by `test/steamline.test.js`, the ledger probe and a new
+  Dash scene that runs the whole cycle — build, swing, build again;
+- `condcensus`'s *"a condition only a powCard emits"* pin moved **[] →
+  [`noCtr:steam`]**, which is exactly the reach it said the powCard legs were
+  kept for; `runOps`' vocabulary **91 → 92**; the approximation ledger
+  **17 → 16 stated, 16 → 17 closed**, the record renamed
+  `steam-build-powcard-read` with its probe turned round (v4.02);
+- `npm run gaps` said one of its two remaining `pick` gaps was Crown of
+  Dichotomy, which v4.59 built — corrected. **A sentence that states a gap
+  outlives the gap unless somebody re-derives it** (v4.17).
+
 ## v4.62 — turn it over, then take it if it is what you feared
 
 > *"Defense reaction cards can't be played this chain link.*

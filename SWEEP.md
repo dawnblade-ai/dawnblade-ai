@@ -1,6 +1,6 @@
 # The Sweep
 
-Generated 2026-09-23 from `tools/audit.json`.
+Generated 2026-09-26 from `tools/audit.json`.
 The card stack is empty — every pool card has a ruling. These are the
 axes it never covered.
 
@@ -8,8 +8,8 @@ axes it never covered.
 |---|---|---|
 | Hero abilities | 2 heroes, 2 unread clauses | never charged by the stack |
 | Tokens | 2 | 1 barely named in the trainer |
-| Ruled but not built | 7 cards | understood ≠ built |
-| **Fail states** | 37 entries, 0 break a rule | how cards go *wrong* at the table |
+| Ruled but not built | 0 cards | understood ≠ built |
+| **Fail states** | 31 entries, 0 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -38,13 +38,6 @@ At the beginning of your end phase, destroy this.
 
 Cards whose ruling exists but which still do not resolve in full.
 
-- **Ice Eternal** (part, 2/4 unread)
-- **Beckoning Haunt** (part, 1/2 unread)
-- **Jack Be Quick** (part, 1/3 unread)
-- **Plasma Barrel Shot** (part, 1/4 unread)
-- **Roaring Beam** (part, 1/2 unread)
-- **Topsy Turvy** (part, 1/2 unread)
-- **Walk in My Shoes** (part, 1/2 unread)
 
 ## 4. Fail states — how cards go WRONG at the table
 
@@ -60,37 +53,11 @@ can be overruled. Same discipline as the mention count.
 | category | entries |
 |---|---|
 | Keyword filed as no-op — but the trainer names it (verify) | 28 |
-| Unread, effect unknown | 4 |
-| No schedule to fire on | 3 |
-| Choice never offered | 2 |
-| Ability inert — cost not modelled | 2 |
-| Earned value denied | 2 |
-| Displayed total is wrong | 1 |
+| Unread, effect unknown | 2 |
 | Keyword filed as no-op, but it has meaning | 1 |
 
-### WRONG — 9 entries
+### WRONG — 3 entries
 
-- **Ice Eternal** (3) · tier `part` · iyslander
-  - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
-    > Then if this was fused, deal arcane damage to that hero equal to the number of Frostbites they control.
-  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 0 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
-    > Ice Fusion
-  - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
-    > Create X Frostbite tokens under target hero's control
-- **Jack Be Quick** (1) · tier `part` · briar
-  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
-    > When this hits a hero, {u} an ally they control, then steal it until the end of this action phase.
-- **Plasma Barrel Shot** · tier `part` · dash
-  - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
-    > Action - {r}{r}: If this has no steam counters, put a steam counter on it
-- **Roaring Beam** (2) · tier `part` · boltyn
-  - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
-    > If there are no cards in your soul, return this to its owner's hand, then charge your soul.
-- **Topsy Turvy** · tier `part` · arakni
-  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
-    > Instant - Destroy this: Until end of turn, if one or more cards would be put on top of a deck, instead they're put on the bottom.
-  - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
-    > Instant - Destroy this: Until end of turn, if one or more cards would be put on top of a deck, instead they're put on the bottom.
 - **Uphold Tradition** · tier `full` · enigma
   - *Keyword filed as no-op, but it has meaning* — The parser records "Cloaked" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it only 2 time(s). Your ruling describes real behaviour: CLOAKED - EQUIPPED FACE DOWN - SHOW CARD BACK ON THE PLAYERS BOARD INSTANT ABILITY - ALWAYS ACTIVE - COST 1 RESOURCE - POP UP - SHOW AURAS IN PLAY - SELECT 1 - ADD A +1 ATTACK POWER COUNTER TO IT
     > Cloaked
@@ -100,11 +67,6 @@ can be overruled. Same discipline as the mention count.
 - **Iyslander** · tier `hero` · iyslander
   - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
     > Essence of Ice
-- **Walk in My Shoes** (2) · tier `part` · lyath
-  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
-    > Crush - When this deals 4 or more damage to a hero, until the end of their next turn, the base {p} and {d} of attack action cards they control are halved, rounded up.
-  - *Earned value denied* — This penalty lands on the OPPONENT, so skipping it denies the player a payoff and spares the opponent a cost.
-    > Crush - When this deals 4 or more damage to a hero, until the end of their next turn, the base {p} and {d} of attack action cards they control are halved, rounded up.
 
 ### LOST VALUE — 28 entries
 
@@ -129,13 +91,6 @@ can be overruled. Same discipline as the mention count.
 - **Barnacle** (2) · tier `full` · gravy
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Watery Grave" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 14 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: Because gravy can often play allies from the grave - they must be turned face down when they die so they can not be used infinitely. allow the player to check their own faced down cards but not their opponents update - g
     > Watery Grave
-- **Beckoning Haunt** · tier `part` · viserai
-  - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
-    > Action - {x}{x}{r}, destroy this: Return target aura with cost X from your graveyard to your hand.
-  - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
-    > Action - {x}{x}{r}, destroy this: Return target aura with cost X from your graveyard to your hand.
-  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
-    > Action - {x}{x}{r}, destroy this: Return target aura with cost X from your graveyard to your hand.
 - **Boom Grenade** (1) · tier `full` · dash
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Crank" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 3 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: crank - this takes place after it enters with a steam counter - the player should get a pop up if they want to 'crank' - if they do - remove the steam counter and give the player an action point. it is destroyed at start
     > Crank
@@ -160,6 +115,9 @@ can be overruled. Same discipline as the mention count.
 - **Entwine Lightning** (1) · tier `full` · briar
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Lightning Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 0 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: similar to ice fusion - fusion pop up will show the cards in hand that have the 'lightning' talent in the players hand - they choose one and the opponent will get a pop up to see it - if they are able to do so the card h
     > Lightning Fusion
+- **Ice Eternal** (3) · tier `full` · iyslander
+  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 0 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
+    > Ice Fusion
 - **Limpit, Hop-a-long** (2) · tier `full`
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Watery Grave" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 14 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: Because gravy can often play allies from the grave - they must be turned face down when they die so they can not be used infinitely. allow the player to check their own faced down cards but not their opponents update - g
     > Watery Grave

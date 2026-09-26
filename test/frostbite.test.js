@@ -245,16 +245,20 @@ test("a DESTROYED piece leaves its zone exposed", {skip}, () => {
 
 /* ---- WHAT IS DELIBERATELY NOT BUILT ----------------------------------- */
 
-test("Ice Eternal's X is REFUSED, not quietly read as one", {skip}, () => {
+test("Ice Eternal's X is READ as X — never quietly as one (the refusal came due, v4.72)", {skip}, () => {
+  /* THIS DRILL ASSERTED THE REFUSAL FOR SEVENTY VERSIONS, and it carried
+     the reason in its own text: reading X as 1 creates ONE Frostbite for a
+     card that charges for X of them. v4.72 built the declaration (a pending
+     before the payment, `_x` riding into `execute`), so the reason stopped
+     being true and this drill went red — which is what a recorded refusal
+     is FOR (v3.38). The property it protected is kept: the parse carries
+     the LETTER, so nothing downstream can mistake it for a count. */
   const ie = tok("Ice Eternal");
-  assert.equal(ie.cost, null, "its printed cost is XX — nothing here models an X cost");
+  assert.equal(ie.cost, null, "its printed cost is XX — the database carries no number for it");
   const r = P.classifyClause("create x frostbite tokens under target hero's control");
-  assert.equal(r, null,
-    "reading X as 1 would create ONE Frostbite for a card that charges for X of them: " +
-    "quietly WEAKER than printed, the direction the fairness sweep is one-sided against " +
-    "and coverage reads as `full` because the clause was consumed. It stays a visible gap.");
-  assert.ok(!P.fxParse(ie).ops.some(o => o[0] === "token"),
-    "so the card creates nothing at all rather than the wrong thing");
+  assert.ok(r && r.status === "run", "the X mint stopped reading");
+  assert.equal(r.ops[0][2], "X", "X was read as a number — the parse cannot know X, the play decides it");
+  assert.notEqual(r.ops[0][2], 1, "X read as ONE — the pre-v4.72 defect this drill was written against");
 });
 
 /* ---- THE OTHER EXPIRY ------------------------------------------------- */

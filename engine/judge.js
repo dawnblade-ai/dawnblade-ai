@@ -154,7 +154,7 @@ const abWindow = ab => PR.abWindow(ab);
    ONE BODY, BOTH BRANCHES, and the same three readers the trainer asks —
    a cost read in one place and re-derived in another is two descriptions
    of one price (v3.79, v3.86). */
-function abCostWhy(sd, ab){
+function abCostWhy(sd, ab, ctx){
   const _sc = PR.abSoulCost(ab);
   if(_sc && (sd.soul || []).length < _sc)
     return ab.name + " costs " + _sc + " from the soul, and " + sd.name
@@ -202,13 +202,11 @@ function abCostWhy(sd, ab){
     return ab.name + " costs " + (/^[aeiou]/i.test(_sub) ? "an " : "a ") + _sub
          + " discarded, and " + sd.name + " holds none";
   }
-  /* ---- A PAID COST THAT RESOLVES TO NOTHING (v4.49) ------------------
+  /* ---- A PAID COST THAT RESOLVES TO NOTHING (v4.49, re-read v4.63) ---
      Plasma Barrel Shot's steam-build ability prints "Action - {r}{r}: IF
-     THIS HAS NO STEAM COUNTERS, put a steam counter on it" and
-     `effects.js` honours that gate at RESOLUTION — it logs "It already
-     carries a steam counter" and puts nothing. So activating it with a
-     counter already on the piece charged {r}{r} AND the action point for
-     a log line.
+     THIS HAS NO STEAM COUNTERS, put a steam counter on it" — so activating
+     it with a counter already on the piece charged {r}{r} AND the action
+     point for a log line.
 
      v2.04 SETTLED THE OPPOSITE CASE AND THIS IS ITS MIRROR. An UNPAYABLE
      cost is deliberately INERT rather than free; a PAID cost that does
@@ -217,16 +215,14 @@ function abCostWhy(sd, ab){
      that reason (v3.11), and `fuzz.test.js` holds the property it rests
      on: `legal` and `reduce` must agree.
 
-     THE LEGALITY ASKS WHAT THE RESOLUTION ASKS, and no card text is read
-     here — `equipPiece` stamps `_steamFor` and `effects.js` reads the same
-     counter bag, so the two cannot disagree about when the gate is met.
-     Whether the printed clause itself is READ is a separate and open
-     question (`steam-build-powcard-handwritten` in tools/approx.js): the
-     powCard's text is hand-written by `equipPiece`, which is v3.58's
-     inline-reader shape, and the real payload has no parser reader at all. */
-  if(ab._buildSteam && (((sd.counters || {})[ab._steamFor] || {}).steam || 0) > 0)
-    return ab.name.replace(" — build steam", "")
-         + " already carries a steam counter — building another does nothing";
+     IT ASKS THE PARSE NOW, NOT A STAMP. Until v4.63 this read `_buildSteam`
+     and `_steamFor` off a powCard `equipPiece` wrote BY HAND, because the
+     printed line had no reader; `parser.abCtrGateFails` reads the same
+     `fx.conds` `execute`'s condition loop resolves, so the refusal and the
+     resolution cannot disagree about when the printed gate is met. */
+  { const _g = PR.abCtrGateFails(sd, ab);
+    if(_g) return ab.name.replace(/ — ability$/, "")
+         + " already carries a " + _g + " counter — its ability does nothing while it does"; }
   /* ---- AND A PICK WITH NOTHING TO CHOOSE (v4.59) ---------------------
      `buildPrompt` answers null on an empty candidate pool — a prompt
      politely declining to show nothing — and that is right THERE and wrong
@@ -248,9 +244,16 @@ function abCostWhy(sd, ab){
      Blaze's own by-name refusal (v3.39) stays, because it asks the SHARPER
      question: what the energy pool can afford, which no candidate scan
      knows. */
-  const _pk = PR.abPickSpec(ab);
+  /* …WITH ITS X BOUND (v4.71). Beckoning Haunt's X is the chosen aura's
+     cost, so an aura the seat cannot pay for is not a choice at all —
+     `abPickBound` is the one reader, and `ctx` is the game's half of the
+     fixed cost (v3.96) its callers already hold. */
+  const _pk = PR.abPickBound(sd, ab, ctx);
   if(_pk && !PM.promptPickAskable(PM.promptPickPool(sd, _pk), _pk)){
     const _zw = PM.promptZoneWord(_pk.zone || "hand");
+    if(_pk.xOf && PM.promptPickAskable(PM.promptPickPool(sd, PR.abPickSpec(ab)), PR.abPickSpec(ab)))
+      return ab.name + ": nothing in " + GM.sp(sd) + " " + _zw
+           + " has a cost X that " + sd.name + " can pay " + (ab._xPips || 0) + " times";
     return _pk.filters
       ? ab.name + " needs BOTH its targets, and " + GM.sp(sd) + " " + _zw
         + " cannot supply them"
@@ -294,6 +297,7 @@ const ACTIONS = [
   "charge",      /* {uid|null}   put that card into your soul, or decline   */
   "addPay",      /* {yes}        pay an optional additional cost, or decline */
   "split",       /* {half}       declare which half of a split card is played */
+  "xval",        /* {x}          declare X for a card whose cost prints X (v4.72) */
   "defend",      /* {uid}        toggle a defender (hand card or gear)    */
   "pass",        /*              pass priority — CR 4.2.2                 */
   "arsenal",     /* {uid|null}   end-phase step (b); null leaves it empty */
@@ -329,7 +333,7 @@ const ACTIONS = [
 
    Exported so a board can be held to covering all of them rather than to
    remembering — the next kind added walks into the same fallback. */
-const PENDING_KINDS = ["pay", "boost", "addPay", "split", "fuse", "charge"];
+const PENDING_KINDS = ["pay", "boost", "addPay", "split", "fuse", "charge", "xval"];
 const PROMPT_ACTIONS = ["promptSel", "promptChoose", "promptConfirm", "promptDecline",
                         "promptTakeBack"];
 
@@ -486,6 +490,11 @@ function openPrompt(g){
   const [p, ...rest] = q;
   const live = PM.buildPrompt(g, p);
   if(!live) return openPrompt({...g, promptQ: rest});
+  /* NOTHING TO DECIDE (v4.68) — one mandatory candidate is confirmed on the
+     spot, through the same `applyAnswer` a Confirm tap reaches, which then
+     drains the rest of the queue. See `prompts.promptForcedSel`. */
+  const forced = PM.promptForcedSel(live);
+  if(forced) return withEffects({...g, promptQ: rest}, (fx, s) => fx.applyAnswer(s, {...live, sel: forced}));
   return {...g, promptQ: rest, prompt: live};
 }
 
@@ -809,6 +818,17 @@ function legal(g, a, seat){
     return null;
   }
   if(a.t === "split") return "nothing is asking which half";
+  /* X IS AN INTEGER THE SEAT CAN PAY FOR (v4.72). The bound is carried on
+     the pending — computed when the question was asked, off the same
+     ceiling a payment would reach — so a wire answer past it is refused
+     rather than opening a payment nobody can finish. */
+  if(p && p.kind === "xval"){
+    if(a.t !== "xval") return "declare X for " + p.card.name + " first";
+    if(!Number.isInteger(a.x) || a.x < 0 || a.x > p.max)
+      return "X must be a whole number from 0 to " + p.max;
+    return null;
+  }
+  if(a.t === "xval") return "nothing is asking for X";
   if(p && p.kind === "addPay"){
     /* NO SEAT TEST HERE. A `pending` belongs to ONE seat and the general
        gate above this block already refuses the other with "Opponent is
@@ -963,6 +983,11 @@ function legal(g, a, seat){
     if(seat !== g.turnPlayer) return "not your turn";
     if(g.phase !== "action") return "not in the action phase";
     if(g.chainOpen) return "the combat chain is still open";
+    /* A CARD WAITING ON THE STACK (v4.66) is the same objection one zone
+       over: CR 4.3.4 ends the phase only "when the stack is EMPTY", so
+       ending the turn over a card that has not resolved would throw the
+       card away. Passing is what lets it resolve. */
+    if((g.stack || []).length) return "a card is still on the stack — pass to let it resolve";
     if(!P.hasPriority(g, seat)) return "you do not hold priority";
     return null;
   }
@@ -1079,7 +1104,7 @@ function legal(g, a, seat){
       /* THE SOUL BANISH (v3.74), THE FLIP (v3.99) AND THE NAMED BOARD
          PERMANENT (v3.86) — one body, because the GEAR branch below has
          to ask exactly the same three and asked none of them. */
-      { const why = abCostWhy(sd, ab); if(why) return why; }
+      { const why = abCostWhy(sd, ab, PR.costCtx(g, seat)); if(why) return why; }
       const gate = PR.fxParse(ab).activateIf;
       if(gate && !E.activateIfOk({...g, actor: seat}, gate, ab))
         return ab.name + " can't be activated — " + gate.why;
@@ -1193,7 +1218,7 @@ function legal(g, a, seat){
            `heroRec.tx` (v3.48, v4.46). */
         if(PR.tapsToActivate(b.card.tx || "") && b.spent)
           return b.card.name + " is tapped until your end phase";
-        { const why = abCostWhy(sd, ab); if(why) return why; }
+        { const why = abCostWhy(sd, ab, PR.costCtx(g, seat)); if(why) return why; }
         const bgate = PR.fxParse(ab).activateIf;
         if(bgate && !E.activateIfOk({...g, actor: seat}, bgate, b))
           return b.card.name + " can't be activated — " + bgate.why;
@@ -1306,7 +1331,7 @@ function legal(g, a, seat){
       if((sd.weaponUsed || {})[ab.uid]) return piece.name + "'s ability is spent this turn";
       /* THE COSTS PAID OUT OF SOMEWHERE THE POWCARD CANNOT SEE (v3.99).
          This branch asked NONE of them until now — see `abCostWhy`. */
-      { const why = abCostWhy(sd, ab); if(why) return why; }
+      { const why = abCostWhy(sd, ab, PR.costCtx(g, seat)); if(why) return why; }
       const gate = PR.fxParse(ab).activateIf;
       if(gate && !E.activateIfOk({...g, actor: seat}, gate, piece))
         return piece.name + " can't be activated — " + gate.why;
@@ -1508,7 +1533,7 @@ function playableWhy(g, seat, c, win, zone){
      function, so the policy inherits the rule and cannot propose a
      refusal (its own contract). */
   if(open.indexOf("defense-reaction") >= 0){
-    const barred = PR.drxBarWhy(g.pend && g.pend.card, c);
+    const barred = PR.drxBarWhy(g.pend, c, zone);
     if(barred) return barred;
   }
 
@@ -1792,6 +1817,10 @@ function settle(g){
    pop plus the handoff; the effects port gives it a payload. */
 function resolveLayer(g){
   const top = g.stack[g.stack.length - 1];
+  /* A HELD PLAY (v4.66) resolves by running the card, which hands out its
+     own priority — `commitPlay` resets it for a non-attack and
+     `declareAttack` opens the attack step for an attack. */
+  if(top && top.k === "play") return resolveHeld(g);
   let n = P.reset({...g, stack: g.stack.slice(0, -1)});
 
   /* A RESOLVED LAYER'S EFFECT HAS TO LAND SOMEWHERE (v4.03), and until now
@@ -2195,6 +2224,7 @@ function reduce(g, a, seat){
     case "payConfirm":n = doPayConfirm(n, seat); break;
     case "payCancel": n = doPayCancel(n, seat); break;
     case "split":     n = doSplit(n, a, seat); break;
+    case "xval":      n = doXval(n, a, seat); break;
     case "addPay":    n = doAddPay(n, a, seat); break;
     case "boost":     n = doBoost(n, a, seat); break;
     case "fuse":      n = doFuse(n, a, seat); break;
@@ -2236,6 +2266,27 @@ function doPlay(g, a, seat){
         c0.name + " is a split card — " + at(g, seat).name + " declares "
         + hs.map(h => h.name).join(" or ")
         + (PR.hasKw(c0, "meld") ? ", or melds both." : "."));
+    }
+  }
+  /* HOW MUCH IS X? (v4.72) — declared before the payment for the reason
+     the split half is: the price depends on it, so a player cannot be asked
+     to pitch before they have said what they are paying for. Ice Eternal
+     prints "XX", and its whole effect is X Frostbites.
+
+     THE BOUND IS WHAT THE SEAT COULD RAISE — the floating pool plus every
+     pitch value in hand but this card's own, less the price at X = 0 (a
+     tax still applies) — divided by the X count. It rides on the pending
+     so the answer is checked against the bound the question was asked
+     with. X = 0 is always offered: the card is legal to play for nothing. */
+  {
+    const sdx = at(g, seat);
+    const cx0 = zone === "arsenal" ? sdx.arsenal : (sdx[zone] || [])[find(sdx[zone] || [], a.uid)];
+    if(cx0 && cx0.cx && g._x == null){
+      const base = effCost(cx0, sdx, PR.costCtx(g, seat));
+      const max = Math.max(0, Math.floor(((sdx.res || 0) + payCeiling(sdx, cx0) - base) / cx0.cx));
+      return say({...g, pending: {kind: "xval", seat, card: cx0, from: zone,
+                                  target: a.target, max, per: cx0.cx}},
+        cx0.name + " costs X " + cx0.cx + " times — " + sdx.name + " declares X (0 to " + max + ").");
     }
   }
   /* CR 1.4.5 — the attack-target, resolved now and carried through the
@@ -2493,7 +2544,15 @@ function doPayCancel(g, seat){
      which shipped in v2.18 because the field was written as a top-level
      game key and the side kept its old value. */
   let n = put(g, seat, s => ({...s, paySel: []}));
-  return say({...n, pending: null}, "Payment cancelled.");
+  /* AND THE DECLARATIONS GO WITH IT (v4.72). A split card's half and an X
+     card's X are settled BEFORE the payment and ride on the state; left
+     there after a cancel, the next play of that card skips its question
+     and uses the old answer. Latent for the half (both split cards cost 0,
+     so no payment ever opens for them) and REACHABLE for X, whose whole
+     cost is 2X. Nothing has been spent, so nothing is kept. */
+  n = {...n, pending: null};
+  for(const k of HELD_DECL) delete n[k];
+  return say(n, "Payment cancelled.");
 }
 
 function doPayConfirm(g, seat){
@@ -2577,9 +2636,9 @@ function commitPlayBoosted(g, card, zone, seat, window, target, doBoost, addPaid
                          card, zone, seat, window, target);
   if(out && (out._doBoost !== undefined || out._addPaid !== undefined
           || out._half !== undefined || out._fuseUid !== undefined
-          || out._chargeUids !== undefined)){
+          || out._chargeUids !== undefined || out._x !== undefined)){
     const n = {...out}; delete n._doBoost; delete n._addPaid; delete n._half;
-    delete n._fuseUid; delete n._chargeUids; return n;
+    delete n._fuseUid; delete n._chargeUids; delete n._x; return n;
   }
   return out;
 }
@@ -2692,7 +2751,8 @@ function maybeFuse(g, card, zone, seat, window, target){
   return say({...g, pending: {kind: "fuse", seat, card, from: zone, window, target,
                               types: offer.types, uids: offer.uids}},
     card.name + " has " + offer.types.join("/") + " fusion — " + at(g, seat).name
-    + " may reveal a " + offer.types.join("/") + " card from hand.");
+    + " may reveal " + (/^[aeiou]/i.test(offer.types[0] || "") ? "an " : "a ")
+    + offer.types.join("/") + " card from hand.");
 }
 
 function doFuse(g, a, seat){
@@ -2746,6 +2806,16 @@ function doSplit(g, a, seat){
   return doPlay(n, {t: "play", uid: p.card.uid, from: p.from, target: p.target, half}, seat);
 }
 
+/* X rides to `execute` on the state, like the split half — `effCost`
+   reads it through `costCtx` and the token op reads it for the quantity. */
+function doXval(g, a, seat){
+  const p = g.pending;
+  const n = say({...g, pending: null, _x: a.x}, at(g, seat).name + " declares X = " + a.x + ".");
+  /* The answer rides on the STATE (`_x`), never on the action — so a play
+     arriving off a wire with an `x` of its own is still asked. */
+  return doPlay(n, {t: "play", uid: p.card.uid, from: p.from, target: p.target}, seat);
+}
+
 function doAddPay(g, a, seat){
   const p = g.pending;
   const n = {...g, pending: null};
@@ -2775,7 +2845,135 @@ function doBoost(g, a, seat){
   return commitPlayBoosted(n, p.card, p.from, seat, p.window, p.target, !!a.yes);
 }
 
+/* ---- A CARD PLAYED AT ACTION SPEED RESTS ON THE STACK (v4.66) ----------
+   CR 7.1.2 puts an attack on the stack as a layer before it becomes a
+   chain link, and CR 4.2.2 resolves a layer only when both seats have
+   passed on it — so at a real table the opponent always gets a window
+   between a card being PLAYED and it RESOLVING. This board resolved every
+   play on the spot, which the approximation ledger recorded as a
+   distinction "no card in this pool asks about".
+
+   MEASURED, THAT WAS FALSE. Over 210 driven games, 319 plays dealt damage
+   inside the action that played them, and 12 of those landed on a seat
+   holding an instant prevention it never had a window to play: Oasis
+   Respite against Photon Splicing and Emeritus Scolding, Toe the Line
+   against Arcane Twining, Oasis Respite against Viserai's Runechants and
+   Briar's Path of Same Ends — whose go again is gated on that very damage.
+
+   THE WHOLE `execute` IS DEFERRED, NOT SPLIT. It interleaves every cost
+   with the resolution across two thousand lines of shared locals, and a
+   play/resolve split through the middle of that is a rewrite with no
+   drill able to say it changed nothing. So the play is HELD: its settled
+   declarations (`HELD_DECL`) ride on the layer, a card from a zone leaves
+   that zone for the stack, and the seat's floating resources are locked
+   on the layer — which is what stops them being spent twice in the
+   window. When both seats pass, `resolveHeld` puts it all back and calls
+   this function again, which then runs `execute` exactly as before.
+
+   WHEN NOBODY CAN RESPOND, IT RESOLVES AT ONCE, and that is not an
+   approximation: a seat with no legal action can only pass, so the one
+   outcome of the window is the one this produces. It is also what keeps
+   the change invisible to every game in which neither seat holds an
+   instant-speed answer. */
+const HELD_DECL = ["_half", "_doBoost", "_addPaid", "_fuseUid", "_chargeUids", "_x"];
+const HELD_LIFT = {hand: 1, arsenal: 1, grave: 1, banish: 1};
+/* WHICH PLAYS WAIT: everything at ACTION speed. A card played in the
+   action window, a weapon swing, an ally's or an aura's attack, and an
+   activated ability printed `Action -`. An instant or a reaction resolves
+   on the spot, and that IS a stated approximation — a response to a
+   response — because the window those are played in stays open after
+   them anyway (`P.reset` hands priority straight back). */
+const heldSpeed = (card, zone, window) =>
+  window === "action" ||
+  (window == null && (zone === "weapon" || zone === "ally" || zone === "aura" ||
+    ((zone === "hero" || zone === "board") && PR.abWindow(card) === "action")));
+
+function holdPlay(g, card, zone, seat, window, target){
+  const sd = at(g, seat);
+  const lifted = !!HELD_LIFT[zone];
+  const decl = {};
+  let n = {...g};
+  /* CAPTURED, NOT CLEARED: every play reaches here through
+     `commitPlayBoosted`, which strips these off whatever it returns. */
+  for(const k of HELD_DECL) if(n[k] !== undefined) decl[k] = n[k];
+  n = put(n, seat, s => {
+    const o = {...s, res: 0};
+    if(lifted){
+      if(zone === "arsenal") o.arsenal = null;
+      else o[zone] = (s[zone] || []).filter(c => !(c && c.uid === card.uid));
+    }
+    return o;
+  });
+  const shown = String(card.name || "").replace(/ — (?:ability|hero power)$/, "");
+  const layer = {k: "play", label: shown + " (on the stack)", seat, card, zone, window,
+                 target: target || null, decl, res: sd.res || 0, lifted};
+  n = {...n, stack: [...(n.stack || []), layer],
+           featured: {card, chip: "ON THE STACK"}};
+  n = P.give(n, seat);
+  if(!someoneCanRespond(n)) return resolveHeld(n);
+  return say(n, shown + " is on the stack — either seat may answer at instant speed before it resolves.");
+}
+
+/* CAN EITHER SEAT DO ANYTHING BUT PASS? Asked of `legal` itself, so the
+   window opens exactly when a legal answer exists and never on a guess.
+   Each seat is asked as though it held priority, because the question is
+   whether its turn in the window could be anything but a pass. */
+function someoneCanRespond(g){
+  for(const s of [0, 1]){
+    const h = {...g, priority: s, passed: [false, false]};
+    const sd = at(h, s);
+    const cands = [];
+    for(const z of ["hand", "grave", "banish"])
+      for(const c of (sd[z] || [])) if(c && c.uid != null) cands.push({t: "play", uid: c.uid, from: z});
+    if(sd.arsenal) cands.push({t: "play", uid: sd.arsenal.uid, from: "arsenal"});
+    for(const x of (sd.gear || [])) if(x){
+      cands.push({t: "activate", uid: x.uid});
+      if(x.pow) cands.push({t: "activate", uid: "gp" + x.uid});
+    }
+    for(const b of (sd.board || [])) if(b && b.uid != null) cands.push({t: "activate", uid: b.uid});
+    cands.push({t: "activate", from: "hero", uid: "hpow"});
+    for(const c of (sd.hand || [])) if(c && c.uid != null) cands.push({t: "activate", from: "hand", uid: c.uid});
+    for(const a of cands){
+      let why;
+      try { why = legal(h, a, s); } catch(e){ why = "threw"; }
+      if(why == null) return true;
+    }
+  }
+  return false;
+}
+
+/* THE HELD PLAY RESOLVES: the card goes back where `execute` expects to
+   splice it from, the locked resources come back to pay for it, and the
+   declarations ride in on the state exactly as they did when it was
+   played. `_resolvingHeld` stops `commitPlay` holding it a second time. */
+function resolveHeld(g){
+  const L = g.stack[g.stack.length - 1];
+  let n = {...g, stack: g.stack.slice(0, -1)};
+  let parked = null;
+  n = put(n, L.seat, s => {
+    const o = {...s, res: (s.res || 0) + (L.res || 0)};
+    if(L.lifted){
+      if(L.zone === "arsenal"){ parked = s.arsenal || null; o.arsenal = L.card; }
+      else o[L.zone] = [...(s[L.zone] || []), L.card];
+    }
+    return o;
+  });
+  n = {...n, ...L.decl, _resolvingHeld: true};
+  let out = commitPlay(n, L.card, L.zone, L.seat, L.window, L.target);
+  out = {...out};
+  delete out._resolvingHeld;
+  for(const k of HELD_DECL) delete out[k];
+  /* A CARD PUT INTO THE ARSENAL WHILE THIS WAITED is put back. Only an
+     instant-speed answer could have done that, and `execute` empties the
+     arsenal when a card is played from it — so without this the answer's
+     card would silently leave the game. */
+  if(parked && !at(out, L.seat).arsenal) out = put(out, L.seat, s => ({...s, arsenal: parked}));
+  return out;
+}
+
 function commitPlay(g, card, zone, seat, window, target){
+  if(!g._resolvingHeld && heldSpeed(card, zone, window))
+    return holdPlay(g, card, zone, seat, window, target);
   /* A WEAPON SWING IS AN ATTACK even though a weapon's printed type line
      says Weapon, not Attack. The trainer says the same thing as
      `isAttack(card) || from==="weapon"`. */

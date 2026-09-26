@@ -104,6 +104,25 @@ const {advValue} = A;
 const {buildPrompt, applyPrompt, promptReady, promptFilter} = PR;
 const rngRoll = R.roll, rngInt = R.int, rngShuffle = R.shuffle;
 
+/* WHAT A GRANT'S RIDER DOES, IN THE WORDS THE FEED USES (v4.69). The line
+   read ", and it goes again if it hits" for EVERY rider — true of Warrior's
+   Valor and false of Yo Ho Ho!'s Gold, the Loot cards' discard and destroy,
+   Weave Lightning's fused go again and Release the Tension's bar. In a
+   training sim the feed is the lesson (v3.60), so a line that names the
+   wrong ability teaches the wrong card. Pure, and it names only what the
+   rider carries; anything else is "a granted ability" rather than a guess. */
+function riderWords(r){
+  if(!r) return "";
+  if(r.noDrx) return r.noDrx === true
+    ? ", and no defence reaction can be played to its chain link"
+    : ", and no defence reaction can be played from arsenal to its chain link";
+  if(r.gaIf === "fused") return ", and it goes again if it was fused";
+  const hit = [...(r.onHit || []), ...(r.onHitHero || [])];
+  if(hit.length === 1 && hit[0][0] === "ga" && !(r.condOnHit || []).length)
+    return ", and it goes again if it hits";
+  return ", and a granted ability";
+}
+
 /* THE CONTEXT. Every name here is a closure the moved bodies call and
    that this module cannot own: the logger, the actor helpers, the card
    database, the uid counters, the hero build and the trainer’s own
@@ -794,7 +813,7 @@ function makeEffects(ctx){
        {r}. `buildPrompt` drops anything they cannot afford and returns
        null when there is nothing worth asking, so a hero with no iron
        never sees a sheet. */
-    const soaks = P.arcaneSoaks(sd());
+    const soaks = P.arcaneSoaks(sd(), {links: P.linksControlled(n, seat)});
     if(left > 0 && soaks.length){
       /* NO `avail` ON THE SPEC — buildPrompt works it out from the live
          state when the sheet is actually raised. Three Runechants queue
@@ -860,7 +879,40 @@ function makeEffects(ctx){
     return {...n, actor: was};
   };
 
-  const runOps = (s, ops, srcName) => {
+  /* ---- WHAT A CHARGE CREDITS, WHOEVER PUT THE CARD THERE (v4.64) ------
+     One body for the two routes a card is charged: the additional COST
+     (v4.33, settled in `execute`) and the EFFECT (Roaring Beam, a pick
+     answered in `applyAnswer`). The zone move is each route's own — the
+     cost moves the card itself, the pick's is `moveCards` — and everything
+     that makes it a CHARGE rather than a card that merely reached the soul
+     is here, so the two cannot disagree about it.
+
+     THE FEED NAMES THE CARD (v2.83) — it left a hidden hand for a zone both
+     players can read, so the charge is public.
+
+     "WHEN THIS IS CHARGED TO YOUR SOUL" (v4.41) is `boostBanish`'s site one
+     cost over (v3.56): the CHARGED card's own trigger. Banneret of
+     Salvation is the pool's only record and it is Boltyn's, who decks three
+     cards that print the charge — so the card and its enabler are in the
+     same box, which is the sign v3.54 names that the loop was designed. IT
+     IS THE CHARGED CARD'S TEXT, NOT THE PLAYED CARD'S: read off the card
+     being PLAYED it would fire whenever Banneret pays for something else,
+     which is the opposite card. IT FIRES PER CHARGED CARD, because two
+     cards charged is two triggers. */
+  const creditCharge = (s, picked) => {
+    let n = s;
+    actMut(n).hist = {...act(n).hist, charged:(act(n).hist.charged||0)+1};
+    n = L(n, `${sv(act(n), "charge")} ${picked.name} into ${sp(act(n))} hero's soul (Charge).`);
+    const _cs = fxParse(picked).chargeSoul;
+    if(_cs && _cs.length) n = runOps(n, _cs, picked.name);
+    return n;
+  };
+  /* `srcCard` IS OPT-IN (v4.63), and only `execute` passes it: it is the
+     card RESOLVING, which is what a "this" in its own payload names. Every
+     other caller — a prompt's rider, a leave payout, an attack's ops riding
+     to resolution — passes nothing, and an op that needs it refuses with a
+     feed line rather than guessing which permanent was meant. */
+  const runOps = (s, ops, srcName, srcCard) => {
     let n = {...s};
     ops.forEach(op=>{
       const [k,v] = op;
@@ -992,7 +1044,15 @@ function makeEffects(ctx){
          their turn would fire immediately, which is a turn early. */
       else if(k==="foeNextTurn"){
         foeMut(n).nextTurn = [...(foe(n).nextTurn||[]), {kind:v, amt:op[2]||0, ready:false}];
-        n = L(n, `${srcName}: ${sv(foe(n), "feel")} it next turn.`);
+        /* A HALVING IS LIVE THE MOMENT IT IS PUSHED (v4.73) — "UNTIL the
+           end of their next turn" includes the rest of this one, so the
+           entry schedules only the END. Every other kind waits, armed. */
+        if(v === "halveBase"){
+          const fs = foeMut(n);
+          Object.assign(fs, restampHalving(fs));
+          n = L(n, `${srcName}: the base power and defence of ${sp(foe(n))} attack action cards are halved, rounded up, until the end of their next turn.`);
+        } else
+          n = L(n, `${srcName}: ${sv(foe(n), "feel")} it next turn.`);
       }
       else if(k==="foeHandToDeck"){
         /* WHICH card is an approximation and always was: the printed text
@@ -1001,8 +1061,14 @@ function makeEffects(ctx){
         if(!foe(n).hand.length){ n = L(n, `${srcName}: ${sp(foe(n))} hand is empty.`); return; }
         const top = foe(n).hand[foe(n).hand.length-1];
         foeMut(n).hand = foe(n).hand.slice(0,-1);
-        foeMut(n).deck = [top, ...foe(n).deck];
-        n = L(n, `${srcName}: ${top.name} is forced from ${sp(foe(n))} hand back on top of their deck.`);
+        /* A DECK-TOP PUT ASKS `deckTopTo` (v4.65) — Topsy Turvy. */
+        if(P.deckTopTo(n) === "deckBottom"){
+          foeMut(n).deck = [...foe(n).deck, top];
+          n = L(n, `${srcName}: ${top.name} is forced from ${sp(foe(n))} hand — and nothing may be put on top of a deck this turn, so it goes to the bottom.`);
+        } else {
+          foeMut(n).deck = [top, ...foe(n).deck];
+          n = L(n, `${srcName}: ${top.name} is forced from ${sp(foe(n))} hand back on top of their deck.`);
+        }
       }
       else if(k==="foeGearDef"){
         /* A -1{d} COUNTER SITS ON THE PIECE, so it travels between turns
@@ -1278,6 +1344,17 @@ function makeEffects(ctx){
          before the fix, five arcane through arcane-ward 3 AND shield 3
          dealt five. `arcaneHit` is where every one of them now applies. */
       else if(k==="arcane"){ const total=v+act(n).amp; actMut(n).amp=0; n=arcaneHit(n, 1-actorOf(n), total, srcName); }
+      /* "ARCANE DAMAGE EQUAL TO THE NUMBER OF <TOKENS> THEY CONTROL" (v4.72)
+         — Ice Eternal's fused rider. Counted when the op RUNS, which the late
+         pass puts after the tokens the card just created, then dealt as an
+         ordinary arcane op so every prevention and the amp apply (v4.35). */
+      else if(k==="arcaneCount"){
+        const who = v && v.side === "self" ? act(n) : foe(n);
+        const cnt = (who.board || []).filter(b => b && b.card && b.card.name === (v && v.name)).length;
+        if(!cnt){ n = L(n, `${srcName}: ${who.name} controls no ${v && v.name} — no arcane is dealt.`); return; }
+        n = L(n, `${srcName}: ${cnt} ${v.name}${cnt === 1 ? "" : "s"} under ${who.name}'s control.`);
+        n = runOps(n, [["arcane", cnt]], srcName, srcCard);
+      }
       /* The damage that SURVIVED a soak prompt, landing on the hero that
          was asked — the actor at prompt-confirm time is the threatened
          side (promptConfirm borrows `p.side`). That is the whole reason it
@@ -1314,11 +1391,17 @@ function makeEffects(ctx){
            names that one card and the qualifier is a CONDITION on it
            rather than a restriction on which card the grant waits for.
            OPT-IN, so every existing entry keeps its shape (v3.58). */
+        /* A STATIC RIDER (v4.69) NAMES ITS SOURCE ON THE ENTRY. Release the
+           Tension's bar lands on another card's link, and the refusal it
+           produces there must name the card that granted it — so the name
+           is stamped here, where it is known, and opt-in so every other
+           entry keeps its shape (v3.58). */
         if(op[2] || op[3]){
           actMut(n).buffQ = [...(act(n).buffQ||[]),
-            Object.assign({amt:v, q:op[2]||null, rider:op[3]||null}, op[4] ? {once:true} : {})];
+            Object.assign({amt:v, q:op[2]||null, rider:op[3]||null}, op[4] ? {once:true} : {},
+                          op[3] && op[3].noDrx ? {src: srcName} : {})];
           const who = op[2] ? P.qualLabel(op[2]).replace(/^an? /, "") : "attack";
-          n=L(n,`Next ${who} +${v}${op[3]?", and it goes again if it hits":""}.`); }
+          n=L(n,`Next ${who}${v ? " +" + v : ""}${riderWords(op[3])}.`); }
         else { actMut(n).buffNext+=v; n=L(n,`Next attack +${v}.`); }
       }
       /* ---- THE DELAYED ON-HIT GRANT (v4.41) --------------------------
@@ -1631,6 +1714,13 @@ function makeEffects(ctx){
            entirely. `enterWithCounters` is the one body, and the seat is
            the RECIPIENT's rather than the actor's, because a token can be
            minted under the opponent's control. */
+        /* AN "X" QUANTITY IS THE DECLARED X (v4.72) — Ice Eternal's, settled
+           by the `xval` pending and riding on the state beside the split
+           half. Nothing declared creates NONE: an X nobody paid for is
+           inert, never free (v2.04). */
+        const _q = op[2] === "X" ? (Number.isInteger(n._x) ? n._x : 0) : (op[2] || 1);
+        if(!(_q > 0)){ n = L(n, `${srcName}: X is 0 — no ${rec.name} is created.`); return; }
+        op = [op[0], op[1], _q].concat(op.slice(3));
         const _tseat = side === "foe" ? 1 - actorOf(n) : actorOf(n), _minted = [];
         for(let i=0;i<(op[2]||1);i++){
           const tok = {...rec, uid:"tok"+tokSeq()};
@@ -1798,6 +1888,19 @@ function makeEffects(ctx){
           title: spec.title || `Choose one of ${sp(foe(n))} cards`,
           hint: spec.hint || ""}];
       }
+      /* A CONTROL CHANGE (v4.74) — Jack Be Quick. The candidates are THEIR
+         living allies, offered as cards, and the move is performed by
+         `applyAnswer`'s cross-seat branch — the same split `foePick` keeps,
+         because `prompts.js` moves cards within ONE side. */
+      else if(k==="stealAlly"){
+        const allies = (foe(n).board || []).filter(b => b && b.card && G.isAlly(b) && G.allyLife(b) > 0);
+        if(!allies.length){ n = L(n, `${srcName}: ${sp(foe(n))} side of the arena holds no ally to steal.`); return; }
+        n.promptQ = [...(n.promptQ||[]), {
+          tag:"pick", side:actorOf(n), src:srcName, cards:allies.map(b => b.card), min:1, max:1,
+          moveFoe:{from:"board", to:"steal"},
+          title:`${srcName} — steal which of ${sp(foe(n))} allies?`,
+          hint:"It is untapped, and yours until the end of this action phase."}];
+      }
       else if(k==="pickPrompt"){
         const spec = {tag:"pick", side:actorOf(n), src:srcName, ...v};
         /* A BOUND THAT DEPENDS ON THE GAME IS SUPPLIED AT THE QUEUE SITE
@@ -1814,6 +1917,24 @@ function makeEffects(ctx){
           const held = ((act(n).counters.hero||{})[v.ctrSpend]) || 0;
           spec.filter = Object.assign({}, spec.filter, {arcLe: held});
           spec.ctrHeld = held;
+        }
+        /* …AND AN X PAID IN RESOURCES (v4.71), the same rule one currency
+           over. Beckoning Haunt's X is the chosen aura's cost, paid once per
+           {x} pip; the pips ride on the RESOLVING powCard, which only
+           `execute` hands this function (v4.63's opt-in fourth argument).
+           The fixed part is already paid, so the bound is the floating pool
+           plus the hand's pitch. A pick that settles an X nothing prices is
+           refused rather than read as free (v2.04). */
+        if(v && v.xOf){
+          const per = (srcCard && srcCard._xPips) || 0;
+          if(!(per > 0)){ n = L(n, `${srcName}: X has no price to settle — nothing is returned.`); return; }
+          const avail = (act(n).res || 0) + P.handPitch(act(n));
+          spec.filter = Object.assign({}, spec.filter, {costLe: Math.floor(avail / per)});
+          /* THE PARSE'S NAME FOR IT DOES NOT TRAVEL: a spec only carries
+             fields `buildPrompt` reads (v2.34, `test/speccensus.test.js`),
+             and `xPay` is the one it reads. */
+          spec.xPay = {per, of: v.xOf};
+          delete spec.xOf;
         }
         n.promptQ = [...(n.promptQ||[]), spec];
       }
@@ -1853,6 +1974,47 @@ function makeEffects(ctx){
          by a uid whose permanent never arrives if the play is refused
          further down. */
       else if(k==="ctrSelf"){ n._ctrSelf = v; }
+      /* ---- "RETURN THIS TO ITS OWNER'S HAND" (v4.64) -------------------
+         Roaring Beam. STASHED, NOT APPLIED — `transcend`'s shape exactly:
+         the card has not reached the zone it is leaving when its own ops
+         run, so `execute` files it into the HAND instead of the graveyard
+         at the one site that files it. Only the resolving card can be
+         "this", so a caller that did not name one refuses. */
+      else if(k==="returnSelf"){
+        if(!srcCard){ n = L(n, `${srcName}: nothing to return.`); return; }
+        n._returnSelf = srcCard.uid;
+      }
+      /* ---- CHARGE, AS AN EFFECT (v4.64) ---------------------------------
+         "(Put a card from your hand under your hero.)" — SBL032's reminder
+         text. Every other charge in the pool is an additional COST, settled
+         before the card resolves (v4.33); this one is MANDATORY and
+         happens after, so it is a PICK out of the hand into the soul,
+         queued — never inline — so the card has finished resolving and,
+         for Roaring Beam, is already back in the hand it may be charged
+         from. `charge: true` rides on the spec so `applyAnswer` credits the
+         charge through the same body the cost site uses (`creditCharge`):
+         `hist.charged` for "if you've charged this turn", and the charged
+         card's OWN "when this is charged to your soul" trigger. */
+      else if(k==="charge"){
+        n.promptQ = [...(n.promptQ||[]), {tag:"pick", side:actorOf(n), src:srcName,
+          zone:"hand", to:"soul", min:1, max:1, charge:true,
+          title:"Charge your soul",
+          hint:"Put a card from your hand under your hero."}];
+      }
+      /* ---- A COUNTER ON THE PERMANENT THE ABILITY BELONGS TO (v4.63) ----
+         Plasma Barrel Shot: "…put a steam counter on it", where "it" is the
+         Gun. NOT `ctrSelf`, which stamps a card ENTERING the arena at the
+         board-placement site; this piece is already there, so the counter
+         lands now, in the one `counters` bag keyed by the piece's uid —
+         which is what the swing's `needSteam` cost spends. */
+      else if(k==="ctrSrc"){
+        const u = P.abSourceUid(act(n), srcCard);
+        if(u == null){ n = L(n, `${srcName}: nothing to put a counter on.`); return; }
+        const cur = (act(n).counters||{})[u] || {};
+        actMut(n).counters = {...(act(n).counters||{}), [u]: {...cur, [v.kind]: (cur[v.kind]||0) + v.n}};
+        const _pn = String(srcName||"").replace(/ — ability$/, "");
+        n = L(n, `${_pn}: ${v.n === 1 ? "a" : v.n} ${v.label} counter${v.n === 1 ? "" : "s"} on it.`);
+      }
       /* RULING (Under Loop): recycles on hit instead of hitting the graveyard;
          the combat chain stays open either way. */
       else if(k==="bottomSelf"){
@@ -2179,6 +2341,15 @@ function makeEffects(ctx){
           n = L(n, `${act(n).name}: every ${who} gets +${amt}{p} `
                  + (op[3] === "chain" ? "for the rest of this combat chain." : "this turn."));
         }
+      }
+      /* TOPSY TURVY (v4.65) — "until end of turn, if one or more cards
+         would be put on top of a deck, instead they're put on the bottom".
+         GAME STATE, because "a deck" names no seat; the value is the
+         source's NAME so the end-phase sweep can say what ended. Every
+         deck-top writer asks `parser.deckTopTo`. */
+      else if(k==="deckFlip"){
+        n.deckFlip = srcName || "a replacement";
+        n = L(n, `${String(srcName||"").replace(/ — ability$/, "")}: until end of turn, a card that would be put on top of a deck is put on the bottom instead.`);
       }
       else if(k==="costTax"){ n.costTax = (n.costTax||0)+v; n = L(n, `Cards cost ${n.costTax} more for the rest of this turn.`); }
       else if(k==="dracNext"){ actMut(n).dracNext = true; n = L(n, "Your next attack this chain counts as Draconic."); }
@@ -3207,24 +3378,7 @@ function makeEffects(ctx){
         chargedWay.push({pitch: picked.pitch, ty: picked.ty || []});
         actMut(n).soul = [picked, ...act(n).soul];
         actMut(n).hand = act(n).hand.filter(c2 => c2.uid !== picked.uid);
-        actMut(n).hist = {...act(n).hist, charged:(act(n).hist.charged||0)+1};
-        /* THE FEED NAMES THE CARD (v2.83) — it left a hidden hand for a
-           zone both players can read, so the charge is public. */
-        n = L(n, `${sv(act(n), "charge")} ${picked.name} into ${sp(act(n))} hero's soul (Charge).`);
-        /* ---- "WHEN THIS IS CHARGED TO YOUR SOUL" (v4.41) -------------
-           `boostBanish`'s site one cost over (v3.56): the CHARGED card's
-           own trigger, fired at the one place a card goes to the soul as
-           an additional cost. Banneret of Salvation is the pool's only
-           record and it is Boltyn's, who decks three cards that print the
-           charge — so the card and its enabler are in the same box, which
-           is the sign v3.54 names that the loop was designed.
-
-           IT IS THE CHARGED CARD'S TEXT, NOT THE PLAYED CARD'S (v3.56):
-           read off the card being PLAYED it would fire whenever Banneret
-           pays for something else, which is the opposite card. IT FIRES
-           PER CHARGED CARD, because two cards charged is two triggers. */
-        const _cs = fxParse(picked).chargeSoul;
-        if(_cs && _cs.length) n = runOps(n, _cs, picked.name);
+        n = creditCharge(n, picked);
       }
     }
     n._chgWay = chargedWay;
@@ -3292,6 +3446,11 @@ function makeEffects(ctx){
        left to accumulate it is the NEXT card's condition reading a
        discard it never caused. */
     n._tookWay = [];
+    /* A RETURN-TO-HAND IS THIS CARD'S (v4.64). Left from a resolution
+       that never reached the filing site it would send the NEXT card
+       home; it is keyed by uid besides, so it could only ever match
+       the card that set it. */
+    delete n._returnSelf;
     n._kwGrant = [];        // cleared with _discWay, and for the same reason
     /* A KEYWORD THE ARSENAL STAMPED ON THIS CARD (v3.71). Azalea's hero
        ability grants dominate to an ARROW it turns face up, and the grant
@@ -3471,6 +3630,16 @@ function makeEffects(ctx){
            v3.57's rule, read from the other end: when you build a source,
            ask which conditions it just made reachable. */
         : cond==="aim" ? ((act(n).counters[card.uid]||{}).aim||0) > 0
+        /* "IF THIS HAS NO <K> COUNTERS" (v4.63) — Plasma Barrel Shot's steam
+           line. "This" is the PIECE the ability belongs to, found back off
+           the powCard's `gp`/`bp` uid by `abSourceUid`, which is the same
+           reader `ctrSrc` puts the counter with and `abCtrGateFails` refuses
+           with — three sites, one answer to "which permanent". A powCard
+           whose piece is gone has nothing to ask, and answers FALSE. */
+        : /^noCtr:/.test(cond) ? (() => {
+            const u = P.abSourceUid(act(n), card);
+            return u != null && (((act(n).counters||{})[u]||{})[cond.slice(6)]||0) === 0;
+          })()
         : /^auras\d+$/.test(cond) ? (act(n).board||[]).filter(b=>b.kind==="aura").length >= +cond.slice(5)
         : cond==="hasArsenal" ? !!act(n).arsenal
         : cond==="seismic" ? (act(n).board||[]).some(b=>/seismic surge/i.test((b.card&&b.card.name)||""))
@@ -3497,6 +3666,8 @@ function makeEffects(ctx){
            asks about the SPECIFIC card just charged as THIS card's own cost
            (chargedWay is filled above, before this loop runs). */
         : cond==="charged" ? (act(n).hist.charged||0)>0
+        /* "IF THERE ARE NO CARDS IN YOUR SOUL" (v4.64) — Roaring Beam. */
+        : cond==="soulEmpty" ? (act(n).soul||[]).length === 0
         /* "IF A YELLOW CARD IS CHARGED THIS WAY" asks whether AT LEAST ONE
            was (v4.56) — the article is "a", and with a multi charge the
            answer is a membership test over what the cost paid rather than
@@ -3560,6 +3731,7 @@ function makeEffects(ctx){
         isDraconic:"this isn't Draconic",
         pitchOverBase:"nothing in your pitch zone beats its base power",
         charged:"you didn't charge your hero's soul this turn",
+        soulEmpty:`${sp(act(n))} hero's soul already holds a card`,
         fused:"no qualifying card in hand to reveal for Fusion",
         /* NAMED, NOT SECOND-PERSON. These reach `L`, which writes the feed
            BOTH seats read — so the subject is the trap card the message
@@ -3580,6 +3752,9 @@ function makeEffects(ctx){
         || (/^board:/.test(cond) ? `no ${cond.replace(/^board:/, "").replace(/\b[a-z]/g, ch => ch.toUpperCase())} on ${sp(act(n))} board` : null)
         || (/^surgeOver(\d+)$/.test(cond) ? `didn't deal more than ${cond.match(/\d+/)[0]} damage` : null)
         || (/^chargedPitch(\d)$/.test(cond) ? `the card charged this way wasn't the right colour` : null)
+        /* the counter's PRINTED spelling, never the bag key — "+1{p}" reads
+           as `pow` inside the engine and nobody at the table says that. */
+        || (/^noCtr:/.test(cond) ? `it already carries a ${P.ctrLabel(cond.slice(6))} counter` : null)
         || (dracN!=null ? `only ${dracLinks} Draconic chain link${dracLinks===1?"":"s"}, needs ${dracN}` : cond);
       if(!met){ n = L(n, `${card.name}: condition not met (${why}).`); return; }
       if(instead){ insteadKinds.add(op[0]);
@@ -3587,7 +3762,7 @@ function makeEffects(ctx){
       if(op[0]==="ga") ga = true;
       else if(op[0]==="self" && attacking) n._condSelf = (n._condSelf||0)+op[1];
       else if(op[0]==="piercing" && attacking) n._condPierce = (n._condPierce||0)+op[1];
-      else n = runOps(n,[op],card.name);
+      else n = runOps(n,[op],card.name,card);
     });
     /* ---- "ANOTHER" MUST NOT COUNT THE CARD ASKING (v4.58) -------------
        Colour is pitch: red 1, yellow 2, blue 3. This used to run 460 lines
@@ -3650,7 +3825,12 @@ function makeEffects(ctx){
         if(!/^way:/.test(cond)) continue;
         if(!thisWayMet(cond, {disc: nn._discWay, dmg: nn._dmgWay, ars: nn._arsWay,
                               took: nn._tookWay, fused})){
-          nn = L(nn, `${card.name}: nothing matching happened this way — the bonus skips.`);
+          /* A fusion gate says what it asked (v4.72): "nothing matching
+             happened this way" is the right line for a discard or a hit
+             and a riddle for a card that was simply not fused. */
+          nn = L(nn, cond === "way:fused"
+            ? `${card.name} was not fused — its rider does not fire.`
+            : `${card.name}: nothing matching happened this way — the bonus skips.`);
           continue;
         }
         if(op[0] === "ga"){ grantGa(); nn = L(nn, `${card.name}: it happened this way — go again.`); }
@@ -3767,6 +3947,12 @@ function makeEffects(ctx){
          rides as `condOnHit` entries, the shape `fx.condOnHit` already
          uses, and is re-checked at the hit rather than at declaration. */
       const qRiderCond = _qr.reduce((a2,b)=>a2.concat(b.rider.condOnHit||[]), []);
+      /* AND A STATIC ONE LANDS ON THE LINK (v4.69). Release the Tension's
+         "defense reactions can't be played from arsenal this chain link" is
+         about the chain link THIS attack opens, so it rides into `pend` —
+         whose lifetime is that link — and `drxBarWhy` reads it there. */
+      const qNoDrx = _qr.filter(b=>b.rider.noDrx)
+        .map(b=>({from: b.rider.noDrx === true ? null : b.rider.noDrx, src: b.src || null}));
       if(qRider.length) n = L(n, `${card.name} carries a granted ability into the chain.`);
       /* AND A RIDER CAN GRANT GO AGAIN ON A FACT ABOUT THE PLAY (v4.13).
          Weave Lightning's "if it's FUSED, it gets go again" is about the
@@ -4016,23 +4202,33 @@ function makeEffects(ctx){
            engine never expired. It is LIVE in Dash's deck.
 
            AFTER THE BANISH AND THE CHAIN INCREMENT, because the clause is
-           printed about a boost that has HAPPENED — and BEFORE the
-           banished card's own trigger, which is a decision rather than an
-           accident. Both fire on one event, and CR 4.1.8a gives the
-           ORDER to the controller (this project models no trigger
-           ordering, so one has to be picked and said out loud). Ticking
-           first is the order a controller would choose every time:
-           Crankshaft and Big Bertha exist to PUT a steam counter on a
-           Hyper Driver, and a clock that ran after them would spend the
-           counter they just placed and destroy the permanent they were
-           refilling. The total {r} is identical either way — one per
-           counter — so the only thing the order decides is whether the
-           card the deck is built around survives.
+           printed about a boost that has HAPPENED — and AFTER the banished
+           card's own trigger (v4.67), which is a decision rather than an
+           accident. Both fire on one event and CR 4.1.8a gives the ORDER to
+           the controller, so one has to be picked and said out loud.
+
+           v4.23 PICKED THE WRONG ONE, AND ITS OWN DRILL IS WHY. It ticked
+           first, reasoning that a clock running after Crankshaft would spend
+           the counter just placed and destroy the Driver — true of the one
+           state its drill built, a Driver ON THE BOARD WITH NO COUNTERS, and
+           that state is unreachable: the Driver enters with 3, and every
+           steam remover in the pool removes from ITS OWN permanent, so only
+           this clock can empty a Driver and the "when this has none" it
+           triggers destroys it at once. In every state a game can reach the
+           order matters at exactly ONE counter — tick first and the Driver
+           empties and is destroyed before the put can land; put first and it
+           goes 1 -> 2 -> 1 and survives — and the {r} is identical either
+           way. So putting first is the order a controller would choose every
+           time (v4.23's reprieve argument, applied correctly), and it is
+           what a boost at one counter was costing Dash: the card the deck is
+           built around. Measured unreachable on the ladder only because the
+           policy declines boost (v4.24). A second Driver would put the put
+           behind a sheet that drains after this line; Dash decks ONE, and a
+           drill says so.
 
            AND AN EMPTY BAG DOES NOT SPEND THE ALLOWANCE (`ctrClock`
            continues before the latch), so a tick that found nothing can
            still fire on a later boost the same turn. */
-        n = ctrClock(n, "boost");
         /* "WHEN THIS IS BANISHED FROM BOOSTING, …" (v3.56) — a trigger that
            fires from the DECK, on a card its controller never played.
            Three pool records print it and their payload has read since
@@ -4052,6 +4248,7 @@ function makeEffects(ctx){
           n = runOps(n, bb, top.name);
           declNote += ` ${top.name}'s boost trigger fires.`;
         }
+        n = ctrClock(n, "boost");
       }
       /* MANDIBLE CLAW'S RIDER IS THE PARSER'S NOW (v3.58). It used to be
          an inline regex here — one card special-cased by name, with the
@@ -4205,7 +4402,7 @@ function makeEffects(ctx){
          and that this play IS an attack), so the answer travels with the
          link rather than being re-derived over there — v3.24's rule about
          an argument threaded through two call sites. */
-      n.pend = {card, from, by: actorOf(n), defCap: _cap || null, total, ga, _qCtx: qCtx, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perChainHit"&&o[0]!=="perEquipDef"&&o[0]!=="piercing"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider, ...smRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:[...(fx.condOnHit||[]), ...qRiderCond], chargedWay, fused, lateConds:fx.conds.filter(x=>isLateCond(x.cond)), lateOps:[...fx.ops.filter(o=>o[0]==="perEquipDef"||o[0]==="piercing"), ...(_pierce ? [["piercing", _pierce]] : [])], runeOnHit};
+      n.pend = {card, from, by: actorOf(n), defCap: _cap || null, total, ga, _qCtx: qCtx, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perChainHit"&&o[0]!=="perEquipDef"&&o[0]!=="piercing"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider, ...smRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:[...(fx.condOnHit||[]), ...qRiderCond], ...(qNoDrx.length ? {noDrx: qNoDrx} : {}), chargedWay, fused, lateConds:fx.conds.filter(x=>isLateCond(x.cond)), lateOps:[...fx.ops.filter(o=>o[0]==="perEquipDef"||o[0]==="piercing"), ...(_pierce ? [["piercing", _pierce]] : [])], runeOnHit};
       n.stack = [{k:"atk", label:`${card.name} — attack ${total}`}];
       /* ---- "WHEN THIS ATTACKS A HERO, …" FIRES AT DECLARATION (v3.46) --
          An attacks-trigger goes on the stack ABOVE the attack that
@@ -4375,7 +4572,6 @@ function makeEffects(ctx){
       n._declared = {card, total, declNote};
       return n;
     } else {
-      if(card._buildSteam){ const tgt=card._steamFor, cur=(act(n).counters[tgt]||{}); if((cur.steam||0)===0){ actMut(n).counters={...act(n).counters,[tgt]:{...cur,steam:1}}; n=L(n,`${card.name.replace(" — build steam","")}: steam counter built.`); } else n=L(n,"It already carries a steam counter."); }
       if(fx.addCost && fx.addCost.discard && act(n).hand.length){
         n = payAddCost(n, card, fx).game;
       }
@@ -4402,7 +4598,7 @@ function makeEffects(ctx){
          spent — and `judge.legal`'s `rxTargetWhy` refuses an illegal
          target before the card ever leaves the hand, so the only way to
          reach that refusal is a stale action off the wire. */
-      n = runOps(n, _rxRoute ? [] : fx.ops.filter(o=>!insteadKinds.has(o[0]) && !preRan.has(o)), card.name);
+      n = runOps(n, _rxRoute ? [] : fx.ops.filter(o=>!insteadKinds.has(o[0]) && !preRan.has(o)), card.name, card);
       /* ---- "IF THIS DEALS DAMAGE, YOU MAY {t} YOUR HERO" (v3.91) -----
          Turn to Mindfire, and the offer can only be made once the card's
          own ops have run — `_dmgWay` is set inside `arcaneHit`'s
@@ -4599,9 +4795,33 @@ function makeEffects(ctx){
         }
       }
       if(fx.onHit.length) n = L(n, `${card.name}: on-hit clauses need an attack — skipped.`);
-      /* RULING: a transcended card returns to hand as Inner Chi instead of
-         going to the graveyard — undo the grave push made above. */
-      if(n._transcended){ delete n._transcended; actMut(n).grave = act(n).grave.filter(x=>x.uid!==card.uid); }
+      /* RULING: a transcended card returns to hand as Inner Chi INSTEAD of
+         going to the graveyard.
+
+         THIS USED TO "UNDO THE GRAVE PUSH MADE ABOVE" — AND THE PUSH WAS
+         BELOW (v4.64). The filter ran against a graveyard that did not yet
+         hold the card, and the push twenty lines further down then filed
+         it anyway: driven, A Drop in the Ocean left Inner Chi in the hand
+         AND itself in the graveyard. One card, two zones — under two uids,
+         so the census could not see it (Inner Chi is minted fresh). Found
+         by building the second "instead of the graveyard" on the same
+         site, Roaring Beam's return to hand. So both are SKIPS at the push
+         now, never an undo of it: `_offGrave` is read where the card is
+         filed. */
+      /* `!= null` FIRST: a card with no uid would otherwise match an
+         unset stash, `undefined === undefined`, and never be filed —
+         which is exactly what the first draft did to every uid-less
+         fixture in the suite. */
+      const _ret = n._returnSelf != null && n._returnSelf === card.uid;
+      const _offGrave = !!n._transcended || _ret;
+      if(n._transcended) delete n._transcended;
+      if(_ret){
+        delete n._returnSelf;
+        if(from === "hand" || from === "arsenal"){
+          actMut(n).hand = [...act(n).hand, card];
+          n = L(n, `${card.name} returns to ${sp(act(n))} hand.`);
+        }
+      }
       if(fx.perm){
         /* RULING: several auras scrub themselves at the top of your next turn
            (Booze!, Goon Beatdown, Pyroglyphic Protection). Carry the schedule
@@ -4629,7 +4849,7 @@ function makeEffects(ctx){
            for verse exactly as it does for steam, so there is one storage
            and one reader — the same deletion v3.82 made of `sd.rune`. */
         actMut(n).board=[...act(n).board,{card,kind:fx.perm,spent:false,uid:card.uid,sd:_sd,susp:_susp}]; if(fx.perm==="aura") actMut(n).hist={...act(n).hist, aura:(act(n).hist.aura||0)+1}; n=L(n,`${card.name} enters play (${fx.perm})${_susp?` with ${_susp} suspense counters — it pays out when it leaves`:""}.`); }
-      else if(from==="hand"||from==="arsenal") actMut(n).grave=[...gy(n.turn, card),...act(n).grave];
+      else if((from==="hand"||from==="arsenal") && !_offGrave) actMut(n).grave=[...gy(n.turn, card),...act(n).grave];
       else if(from==="grave"||from==="banish") actMut(n).banish=[card,...act(n).banish];
       actMut(n).hist = {...act(n).hist, non:act(n).hist.non+1};
       n = briarLightning(n);
@@ -5021,6 +5241,15 @@ function makeEffects(ctx){
   const applyAnswer = (s, prompt) => {
     const p = prompt;
     if(!p || !promptReady(p)) return s;
+    /* AN X THE SEAT CANNOT PAY IS NOT AN ANSWER (v4.71). The queue site
+       bounds the sheet to what is affordable, so no sheet a board renders
+       can reach this; it is here because `reduce` is fed by JSON off a
+       wire (v2.04) — an unpayable cost is INERT, never free. */
+    if(p.tag === "pick" && p.xPay){
+      const ch = (p.cards || [])[(p.sel || [])[0]];
+      const sdP = (s.sides || [])[p.side || 0] || {};
+      if(ch && p.xPay.per * (ch.cost || 0) > (sdP.res || 0) + P.handPitch(sdP)) return s;
+    }
     const r = applyPrompt({...s, prompt:null}, p);
     let n = r.game;
     n.prompt = null;
@@ -5058,6 +5287,21 @@ function makeEffects(ctx){
     if(r.pay > 0){
       if(act(n).res < r.pay){ const paid = autoPitch(n, r.pay, null); if(paid) n = paid; }
       const ps = actMut(n); ps.res = Math.max(0, ps.res - r.pay);
+    }
+    /* …AND THE X THE CHOICE SETTLED (v4.71). Beckoning Haunt: X is the
+       returned aura's printed cost, paid once per {x} pip, pitching on
+       demand (RULING 2026-08-01) — and never pitching the aura it just
+       returned, which is in the hand by now. The guard at the top of this
+       function has already refused an answer the seat cannot pay. */
+    if(p.tag === "pick" && p.xPay && (r.picked || []).length){
+      const chosen = r.picked[0];
+      const amt = p.xPay.per * ((chosen && chosen.cost) || 0);
+      if(amt > 0){
+        if(act(n).res < amt){ const paid = autoPitch(n, amt, chosen.uid); if(paid) n = paid; }
+        const ps = actMut(n); ps.res = Math.max(0, ps.res - amt);
+      }
+      n = L(n, `${String(p.src || "").replace(/ — ability$/, "")}: X is ${(chosen && chosen.cost) || 0}`
+             + ` — ${amt} paid for ${chosen.name}.`);
     }
     /* THE TAP IS PAID BEFORE THE RIDER RUNS (v3.33), for the reason
        Frostbite's order is a whole ruling: the permanent that pays is
@@ -5359,6 +5603,14 @@ function makeEffects(ctx){
        IT FIRES ONLY WHEN A CARD ACTUALLY MOVED. An empty hand puts
        nothing, and a reward for a cost that was not paid is the
        free-ability bug v2.04 fixed. */
+    /* ---- A CHARGE MADE AS AN EFFECT (v4.64) ---------------------------
+       The pick moved the card into the soul; `creditCharge` is what makes
+       that a CHARGE — the same body the additional-cost route calls, so
+       "if you've charged this turn" and Banneret's own trigger read one
+       record whichever route put the card there. Only a card that MOVED
+       is credited: an empty hand charges nothing and triggers nothing. */
+    if(p.tag === "pick" && p.charge && (r.picked||[]).length)
+      for(const got of r.picked) n = creditCharge(n, got);
     if(p.tag === "pick" && p.classRider && (r.picked||[]).length){
       const got = r.picked[0];
       if(promptFilter({ty: p.classRider.cls})(got)){
@@ -5470,7 +5722,39 @@ function makeEffects(ctx){
        and this performs it — the same split the freeze stamp above keeps.
        The actor is borrowed to the asked side for this whole body, so the
        hand being reached into is `foe`. */
-    if(p.tag === "pick" && p.moveFoe && (r.picked||[]).length){
+    /* THE STEAL (v4.74). The entry crosses to the thief's board UNTAPPED
+       ("{u} an ally they control, then steal it"), carrying who OWNS it —
+       on the entry for the return, and on the card as `_owner` so a stolen
+       card that leaves the board anywhere but home is an error the judges
+       can see (`STOLEN-CARD-OFF-BOARD`). Its counters travel with it: they
+       are the object's, keyed by uid on whichever side holds it.
+
+       A CARD STOLEN BACK GOES HOME rather than being owned by the thief —
+       two Jacks on one ally hand it to its owner, not to a third party. */
+    if(p.tag === "pick" && p.moveFoe && p.moveFoe.to === "steal" && (r.picked||[]).length){
+      const got = r.picked[0];
+      const ent = (foe(n).board || []).find(b => b && b.card && b.card.uid === got.uid);
+      if(ent && G.isAlly(ent)){
+        const me = actorOf(n);
+        const owner = ent.owner != null ? ent.owner : 1 - me;
+        const card = Object.assign({}, ent.card);
+        const moved = Object.assign({}, ent, {spent: false});
+        if(owner === me){ delete moved.owner; delete card._owner; }
+        else { moved.owner = owner; card._owner = owner; }
+        moved.card = card;
+        const bag = ((foe(n).counters || {})[ent.uid]);
+        const fs = foeMut(n);
+        fs.board = (fs.board || []).filter(b => b !== ent);
+        if(bag){ fs.counters = Object.assign({}, fs.counters); delete fs.counters[ent.uid]; }
+        const ms = actMut(n);
+        ms.board = [...(ms.board || []), moved];
+        if(bag) ms.counters = Object.assign({}, ms.counters || {}, {[ent.uid]: bag});
+        n = L(n, owner === me
+          ? `${sv(act(n), "take")} ${card.name} back — it is ${sp(act(n))} own again.`
+          : `${sv(act(n), "take")} control of ${card.name}, untapped, until the end of this action phase.`);
+      }
+    }
+    else if(p.tag === "pick" && p.moveFoe && (r.picked||[]).length){
       const got  = r.picked[0];
       /* THE SPEC'S OWN FIELDS, READ. `moveFoe` has carried `{from, to}`
          since v3.03 and this body ignored both, moving hand -> deck top
@@ -5483,7 +5767,10 @@ function makeEffects(ctx){
          rather than at the queue site is that the queue site was already
          telling the truth. */
       const from = p.moveFoe.from || "hand";
-      const to   = p.moveFoe.to   || "deckTop";
+      /* A DECK-TOP PUT ASKS `deckTopTo` (v4.65) — Topsy Turvy's replacement
+         sends it to the bottom, and the feed line below says where it went. */
+      const _to0 = p.moveFoe.to || "deckTop";
+      const to   = _to0 === "deckTop" ? P.deckTopTo(n) : _to0;
       if(((foe(n)[from])||[]).some(x => x.uid === got.uid)){
         const fs = foeMut(n);
         fs[from] = (fs[from]||[]).filter(x => x.uid !== got.uid);
@@ -7380,6 +7667,112 @@ function resolveInertia(game, seat){
    that one because `tickSuspense` returns early when nothing is
    suspended — piggybacking there would arm nothing on most turns, which
    is the quiet half of "a schedule is written per board". */
+/* A HALVING THAT STARTS AND ENDS MID-GAME (v4.73) — Walk in My Shoes.
+
+   "Until the end of their next turn, the base {p} and {d} of attack
+   action cards they control are halved, rounded up."
+
+   v3.78 halves Lyath's own cards ONCE, AT THE DEAL, and its whole safety
+   argument is that the deal is one place: thirty readers of a card's base
+   value is thirty chances to miss one. This keeps that argument rather
+   than abandoning it. The value lives on the CARD, exactly as the deal
+   leaves it, so every reader — the declaration, `defendValue`, the
+   `pumped` base, Crush the Weak's threshold, phantasm's popper, the
+   sparring policy, the display — sees the halved number without being
+   told. What is new is only that it is RE-STAMPED at the two moments the
+   window changes: when the crush pushes it, and when their end phase
+   drops it.
+
+   THE COUNT IS DERIVED, NEVER BANKED (`runeCount`'s rule, v2.23): the
+   number of live halvings is the number of `halveBase` entries on the
+   side's own schedule, so two crushes quarter and the first to expire
+   leaves one halving standing. Nested ceilings compose — ceil(ceil(p/2)/2)
+   is ceil(p/4) — so the order two windows opened in cannot matter, and
+   neither can Lyath's own deal-time halving in a mirror: `_unhalvedPow`
+   holds the value BEFORE any window, which for a Lyath deck is already
+   the dealt half.
+
+   OPT-IN (v3.58): the stamp is written only where a value MOVES and is
+   deleted when the last window closes, so a card no window touched keeps
+   its exact shape.
+
+   EVERY ZONE THE SIDE HOLDS, and that is the stated approximation
+   (`halving-reads-every-zone`): the CR's "cards they control" are the
+   ones on the chain or defending, and a card in hand or deck is held
+   rather than controlled. Lyath's deal-time static already reads every
+   zone the same way (v3.78), and the observable difference is a card
+   whose power is read while it sits in a hand or a graveyard. */
+const HALVE_ZONES = ["deck","hand","pitch","grave","banish","soul","board","gear"];
+function halveN(v, k){
+  let x = v;
+  for(let i = 0; i < k; i++) x = Math.ceil(x / 2);
+  return x;
+}
+function restampCard(c, k){
+  if(!c || !P.isAtkActionCard(c)) return c;
+  const pw = c._unhalvedPow != null ? c._unhalvedPow : c.power;
+  const df = c._unhalvedDef != null ? c._unhalvedDef : c.def;
+  const out = Object.assign({}, c);
+  delete out._unhalvedPow; delete out._unhalvedDef;
+  if(typeof pw === "number" && pw > 0){
+    const h = halveN(pw, k);
+    out.power = h;
+    if(h !== pw) out._unhalvedPow = pw;
+  }
+  if(typeof df === "number" && df > 0){
+    const h = halveN(df, k);
+    out.def = h;
+    if(h !== df) out._unhalvedDef = df;
+  }
+  return out;
+}
+function restampHalving(sd){
+  const k = ((sd && sd.nextTurn) || []).filter(e => e && e.kind === "halveBase").length;
+  const out = {};
+  for(const z of HALVE_ZONES){
+    if(Array.isArray(sd[z])) out[z] = sd[z].map(x =>
+      (x && x.card) ? Object.assign({}, x, {card: restampCard(x.card, k)}) : restampCard(x, k));
+  }
+  if(sd.arsenal) out.arsenal = restampCard(sd.arsenal, k);
+  return out;
+}
+
+/* HAND BACK EVERY STOLEN PERMANENT (v4.74). An entry carrying `owner` on
+   a board that is not its owner's crosses back, with its owner stamps
+   stripped and its counters bag moved with it. It keeps its TAP: a stolen
+   ally that attacked for the thief comes home tapped, and only its own
+   controller's untap step (CR 4.4.3d) lifts that. Pure — both boards call
+   it through `beginEndPhase`. */
+function returnStolen(game){
+  const sides = (game.sides || []).slice();
+  const msgs = [];
+  let moved = false;
+  for(let i = 0; i < sides.length; i++){
+    const sd = sides[i] || {};
+    const away = (sd.board || []).filter(b => b && b.owner != null && b.owner !== i);
+    if(!away.length) continue;
+    moved = true;
+    const from = Object.assign({}, sd, {board: (sd.board || []).filter(b => away.indexOf(b) < 0)});
+    const bags = {};
+    if(from.counters){
+      from.counters = Object.assign({}, from.counters);
+      for(const b of away) if(from.counters[b.uid]){ bags[b.uid] = from.counters[b.uid]; delete from.counters[b.uid]; }
+    }
+    sides[i] = from;
+    for(const b of away){
+      const o = b.owner;
+      const home = Object.assign({}, sides[o]);
+      const card = Object.assign({}, b.card); delete card._owner;
+      const ent = Object.assign({}, b, {card}); delete ent.owner;
+      home.board = [...(home.board || []), ent];
+      if(bags[b.uid]) home.counters = Object.assign({}, home.counters || {}, {[b.uid]: bags[b.uid]});
+      sides[o] = home;
+      msgs.push(card.name + " returns to " + sp(home) + " control.");
+    }
+  }
+  return moved ? {game: Object.assign({}, game, {sides}), msgs} : {game, msgs};
+}
+
 function armNextTurn(game, seat){
   const sides = (game.sides || []).slice();
   const sd = Object.assign({}, sides[seat]);
@@ -8223,7 +8616,15 @@ function sweepArena(game, seat, when){
       + (pay.length ? " It pays out as it goes." : ""));
   }
   sd.board = kept;
-  sd.grave = [...dying.map(b => Object.assign({}, b.card, {_gy: game.turn})), ...(sd.grave || [])];
+  /* A STOLEN PERMANENT DIES INTO ITS OWNER'S GRAVEYARD (v4.74). Its
+     controller's trigger is paid above — CR's "when this dies" belongs to
+     whoever controls it — but the card goes home. */
+  const away = b => b.owner != null && b.owner !== seat;
+  sd.grave = [...dying.filter(b => !away(b)).map(b => Object.assign({}, b.card, {_gy: game.turn})), ...(sd.grave || [])];
+  for(const b of dying.filter(away)){
+    const c = Object.assign({}, b.card, {_gy: game.turn}); delete c._owner;
+    sides[b.owner] = Object.assign({}, sides[b.owner], {grave: [c, ...((sides[b.owner] || {}).grave || [])]});
+  }
 
   /* WHAT THE DEPARTING CARD WAS HOLDING UP GOES WITH IT. `arcShield` and
      `lifeLock` are side fields rather than properties of the card, so
@@ -8572,6 +8973,10 @@ function thisWayMet(cond, trace){
      opposing SEAT, so arcane in this engine never reaches an ally. If a
      route to one is ever built, this gate needs the target back. */
   if(cond === "way:dealtFused") return (t.dmg||0) > 0 && !!t.fused;
+  /* "THEN IF THIS WAS FUSED" (v4.72) — Ice Eternal. The gate is a fact about
+     the PLAY, and it is late only because the printed "then" orders its
+     payload after the card's own ops (the Frostbites it counts). */
+  if(cond === "way:fused") return !!t.fused;
   /* AN UNKNOWN `way:` ANSWERS FALSE — a condition added to the parser and
      forgotten here leaves the card weaker than printed and visible, which
      is the safe direction (v3.26's rule, and this function is NAMED so
@@ -8674,6 +9079,16 @@ function beginEndPhase(game, seat, db){
   let n = game;
   const msgs = [], ops = [], fired = [];
   const nameOf = i => ((n.sides||[])[i]||{}).name || "seat " + i;
+
+  /* (0) WHAT WAS STOLEN GOES HOME (v4.74). Jack Be Quick's steal lasts
+     "until the end of this ACTION phase", which ends before the end phase
+     begins — so this runs ahead of every beginning-of-end-phase trigger,
+     and ahead of step (a)'s ally recovery, which is then the OWNER's. */
+  {
+    const r = returnStolen(n);
+    n = r.game;
+    for(const m of r.msgs) msgs.push(m);
+  }
 
   /* (1) INERTIA — destroy the token, then hand and arsenal to the bottom. */
   {
@@ -8890,8 +9305,14 @@ function beginEndPhase(game, seat, db){
     if(live.length){
       const sides = n.sides.slice();
       sides[seat] = Object.assign({}, sd, {nextTurn: (sd.nextTurn||[]).filter(e => e && !e.ready)});
+      /* A HALVING ENDS HERE (v4.73), and its cards are re-stamped off
+         what is LEFT on the schedule — a second window opened by a later
+         crush still holds. */
+      const halved = live.some(e => e.kind === "halveBase");
+      if(halved) sides[seat] = Object.assign({}, sides[seat], restampHalving(sides[seat]));
       n = Object.assign({}, n, {sides});
       msgs.push(nameOf(seat) + ": " + live.length + " lingering effect(s) expire with the turn.");
+      if(halved) msgs.push(nameOf(seat) + ": attack action cards are back to their full base power and defence.");
     }
   }
 
@@ -8989,6 +9410,23 @@ function beginEndPhase(game, seat, db){
   if(n.costTax){
     msgs.push("The inflation subsides \u2014 cards cost their printed price again.");
     n = Object.assign({}, n, {costTax: 0});
+  }
+  /* (8c) TOPSY TURVY'S WINDOW CLOSES (v4.65). "Until end of turn", and the
+     card is an INSTANT, so the turn it ends with is whichever one it was
+     made in — this runs at every turn's end phase, both boards, so the
+     seat does not matter. The key is DELETED rather than zeroed: absent is
+     the default state, so an unused table carries nothing extra.
+     CLEARED AT THE BEGINNING OF THE END PHASE rather than at its close, and
+     that is MEASURED rather than assumed: no end-phase step puts a card on
+     top of a deck (Inertia's wipe and CR 4.4.3c's pitch return both go to
+     the BOTTOM), so the two moments cannot be told apart in this pool. It
+     sits outside step (8)'s `held` gate on purpose, beside `costTax`, so it
+     expires on every turn and not only on one where a side grant does
+     (v4.07). */
+  if(n.deckFlip){
+    msgs.push("The replacement ends \u2014 a card put on top of a deck stays on top again.");
+    n = Object.assign({}, n);
+    delete n.deckFlip;
   }
 
   /* (9) THE BROOD — ARAKNI'S AGENTS OF CHAOS (v3.76) ------------------
@@ -9232,6 +9670,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, jabTargets, CTX_KEYS, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, pendPumped, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
+return {makeEffects, jabTargets, CTX_KEYS, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, restampHalving, returnStolen, pendPumped, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

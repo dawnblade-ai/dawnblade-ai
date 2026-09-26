@@ -241,7 +241,22 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      carries the measurement and the probe asserts the deviation. */
   /* 37 -> 38 AT v4.59: `multi-target-pick-all-or-nothing`. */
   /* 38 -> 39 AT v4.60: `drx-bar-from-arsenal-unread`. */
-  assert.equal(Object.keys(APPROX).length, 39, "record count moved");
+  /* 39 holds AT v4.63: `steam-build-powcard-handwritten` was BUILT and is
+     `steam-build-powcard-read` — renamed, closed, probe turned round. */
+  /* 39 -> 40 AT v4.66: `layer-step-window` was built and renamed
+     `play-held-on-the-stack`, and `instant-speed-plays-resolve-on-play`
+     records what the table stack still collapses. */
+  /* 40 -> 41 AT v4.68: `control-change-steal`, Jack Be Quick. */
+  /* 41 -> 42 AT v4.71: `activation-choices-at-resolution`. */
+  /* 42 holds AT v4.72: `x-cost` was BUILT and is `x-cost-declared` —
+     renamed, closed, probe turned round. */
+  /* 42 -> 43 AT v4.73: `crush-halving-rider` was BUILT and is
+     `crush-halving-rider-read`, and `halving-reads-every-zone` records what
+     both halvings stamp. */
+  /* 43 holds AT v4.74: `control-change-steal` was BUILT and is
+     `control-change-steal-built` — renamed, closed, probe turned round.
+     43 holds AT v4.75: `spellvoid-x` was BUILT and is `spellvoid-x-read`. */
+  assert.equal(Object.keys(APPROX).length, 43, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -264,6 +279,16 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      wording of the family v4.60 built. Read by the unconditional anchor it
      would bar a defence reaction from the HAND too, which is stronger than
      printed, so it refuses and the card keeps the `quotedUnread` flag. */
+  /* 17 -> 16 AT v4.63: `steam-build-powcard-handwritten` was BUILT — its
+     probe went RED the moment the three readers landed, which is the
+     reversal a `stated` record exists to force (v4.02). */
+  /* 16 -> 17 AT v4.66: `instant-speed-plays-resolve-on-play` — what the
+     table stack still collapses, recorded the version it was built. */
+  /* 17 -> 16 stated, 18 -> 19 closed AT v4.69: `drx-bar-from-arsenal-unread`
+     was BUILT and is `drx-bar-from-arsenal-read`, its probe turned round. */
+  /* 16 -> 17 AT v4.71: `activation-choices-at-resolution`. */
+  /* 17 -> 18 AT v4.73: `halving-reads-every-zone`. */
+  /* 18 -> 17 AT v4.75: `spellvoid-x` was BUILT and is `spellvoid-x-read`. */
   assert.equal(n("stated"), 17, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
@@ -297,8 +322,20 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      the one turn that wall is ever raised. So Brothers in Arms' +2{d}, built
      at v4.53 for this exact wall, was unreachable there. Second cycle running
      in which a record's own stated reason was narrower than the defect. */
-  assert.equal(n("open"),    6, "open count moved");
-  assert.equal(n("closed"), 16, "closed count moved");
+  /* 6 -> 5 AT v4.66: `layer-step-window` was BUILT and is
+     `play-held-on-the-stack`, closed with its probe turned round. */
+  /* 5 -> 6 AT v4.68: `control-change-steal`, recorded rather than
+     half-built (HANDOFF's call). */
+  /* 6 -> 5 AT v4.72: `x-cost` was BUILT — the free X is declared before
+     the payment — and its probe went red the moment the mint read X. */
+  /* 5 -> 4 AT v4.73: `crush-halving-rider` was BUILT. 4 -> 3 AT v4.74:
+     `control-change-steal` was BUILT. */
+  assert.equal(n("open"),    3, "open count moved");
+  /* 16 -> 17 AT v4.63: `steam-build-powcard-read`. 17 -> 18 AT v4.66:
+     `play-held-on-the-stack`. 19 -> 20 AT v4.72: `x-cost-declared`.
+     20 -> 21 AT v4.73: `crush-halving-rider-read`. 21 -> 22 AT v4.74:
+     `control-change-steal-built`. 22 -> 23 AT v4.75: `spellvoid-x-read`. */
+  assert.equal(n("closed"), 23, "closed count moved");
 });
 
 /* ============================================================
@@ -460,32 +497,87 @@ probe("trainer-blocks-wall-no-defends-body", () => {
     "…and the family-specific pause it replaces is gone");
 });
 
-probe("layer-step-window", () => {
-  /* CHECK YOUR OWN FIXTURE (v3.82, and this one bit). The first draft drove
-     `effects.execute` and asserted `stack` was empty — but `stack` is the
-     TRAINER's representation of the chain display, so it came back holding
-     an `{k:"atk"}` layer and the probe reported the deviation closed. The
-     question is about the TABLE's turn structure, so it has to be asked of
-     `judge.reduce`. */
-  let g = table();
-  while(g.arsenalFor != null) g = J.reduce(g, {t:"arsenal", uid:null}, g.arsenalFor).state;
-  assert.equal(g.step, "layer", "a fresh action phase no longer opens in the layer step");
-  const seat = g.turnPlayer;
-  const c = g.sides[seat].hand.find(x => PR.isAttack(x));
-  assert.ok(c, "fixture: the opening hand holds no attack");
-  let n = J.reduce(g, {t:"play", uid:c.uid, from:"hand"}, seat).state;
-  n = settle(n, c.uid);
-  /* THE DEVIATION, DRIVEN: one action took the step from `layer` to
-     `attack` with the card already a chain link and nothing on the stack.
-     In the CR it would rest as a layer first and both seats could respond
-     before it became one. */
-  assert.equal(n.step, "attack",
-    "declaring an attack no longer goes straight to the attack step — a layer " +
-    "window may have been built, and the record must move");
-  assert.equal((n.chainCards || []).length, 1, "the attack is not on the chain");
-  assert.deepEqual(n.stack || [], [],
-    "the attack now rests on the stack as a layer — CR 7.1.2 is BUILT and the " +
-    "ledger record must be deleted");
+/* BUILT AT v4.66, AND THE PROBE IS TURNED ROUND. It was `layer-step-window`,
+   `open`, and asserted the DEVIATION — one action took the step from `layer`
+   to `attack` with nothing on the stack. It stayed green through the build
+   because its fixture (an opening hand) held no instant-speed answer, and a
+   window nobody can use resolves at once: CR-identical, and invisible to that
+   probe. What tells the two engines apart is a seat that CAN answer. */
+const stackTable = (defHand) => {
+  H.db();
+  const c = (nm, p, uid) => ({...H.card(nm, p), uid});
+  return {...H.state({res: 9, ap: 1, hand: [c("Raging Onslaught", 1, "atk")]},
+                     {res: 9, hand: defHand.map((x, i) => c(x[0], x[1], "d" + i))},
+                     {turn: 3, actor: 0, turnPlayer: 0}),
+          phase: "action", step: "layer", priority: 0, passed: [false, false],
+          stack: [], chain: [], chainCards: []};
+};
+probe("play-held-on-the-stack", () => {
+  let n = J.reduce(stackTable([["Oasis Respite", 1]]), {t: "play", uid: "atk", from: "hand"}, 0).state;
+  const top = (n.stack || [])[n.stack.length - 1];
+  assert.ok(top && top.k === "play" && top.card.uid === "atk",
+    "an attack the defender could answer went straight to the chain — the layer step regressed");
+  assert.equal((n.chainCards || []).length, 0, "…and it is not a chain link yet");
+  assert.ok(!n.sides[0].hand.some(x => x.uid === "atk"), "…and it has left the hand for the stack");
+  /* THE WINDOW IS REAL: the defender answers BEFORE it resolves. */
+  n = J.reduce(n, {t: "pass"}, 0).state;
+  assert.equal(n.priority, 1, "the defender never got priority over the waiting card");
+  assert.equal(J.legal(n, {t: "play", uid: "d0", from: "hand"}, 1), null,
+    "the defender's instant is not playable in the window");
+  /* CONTROL: with nothing to answer it, it resolves at once — the one
+     outcome a window nobody can use has. */
+  const quiet = J.reduce(stackTable([]), {t: "play", uid: "atk", from: "hand"}, 0).state;
+  assert.equal(quiet.step, "attack", "an unanswerable play waited anyway");
+  assert.deepEqual(quiet.stack || [], []);
+});
+
+/* THE HALVES STILL COLLAPSED (v4.66). An instant resolves on the spot, so
+   the probe plays one while the other seat holds an instant-speed answer
+   and finds nothing on the stack afterwards. The day instants are held,
+   this goes red and the record must move. */
+probe("instant-speed-plays-resolve-on-play", () => {
+  const g = stackTable([["Oasis Respite", 1]]);
+  const c = {...H.card("Oasis Respite", 1), uid: "mine"};
+  const g2 = J.put(g, 0, s => ({...s, hand: [c, ...s.hand]}));
+  const out = J.reduce(g2, {t: "play", uid: "mine", from: "hand"}, 0);
+  assert.equal(out.error, null, "fixture: the instant was refused — " + out.error);
+  assert.deepEqual(out.state.stack || [], [],
+    "an INSTANT now rests on the stack — the response-to-a-response half is built " +
+    "and the record must move");
+});
+
+/* THE POOL'S ONLY CONTROL CHANGE (v4.68). Driven: Jack Be Quick hits a
+   hero whose side holds an ally, and the ally is still theirs afterwards.
+   The day the steal is built this goes red and the record must move. */
+/* BUILT AT v4.74, AND THE PROBE IS TURNED ROUND — it asserted the ally
+   stayed with its controller, and went red the moment the steal landed.
+   It now drives the whole CYCLE the record named as the hard part: the
+   ally crosses UNTAPPED, owned by the other seat, and goes home at the end
+   of the action phase. */
+probe("control-change-steal-built", () => {
+  H.db();
+  const c = (nm, p, uid) => ({...H.card(nm, p), uid});
+  const ally = {...c("Swabbie", 2, "al"), life: 3};
+  let g = {...H.state({res: 9, ap: 1, hand: [c("Jack Be Quick", 1, "jbq")]},
+                      {hand: [], board: [{card: ally, kind: "ally", spent: true, uid: "al", life: 3}]},
+                      {turn: 3, actor: 0, turnPlayer: 0}),
+           phase: "action", step: "layer", priority: 0, passed: [false, false],
+           stack: [], chain: [], chainCards: []};
+  const hp = g.sides[1].hp;
+  let n = H.drain(J.reduce(g, {t: "play", uid: "jbq", from: "hand"}, 0).state);
+  for(let i = 0; i < 20 && n.step !== "resolution" && n.priority != null; i++){
+    if(n.prompt){ n = J.reduce(n, J.autoAnswer(n), n.prompt.side || 0).state; continue; }
+    n = J.reduce(n, {t: "pass"}, n.priority).state;
+  }
+  assert.ok(n.sides[1].hp < hp, "fixture: Jack Be Quick never HIT the hero, so its clause was never reached");
+  const took = n.sides[0].board.find(b => b.uid === "al");
+  assert.ok(took, "the ally never reached the thief's board");
+  assert.equal(took.owner, 1, "the stolen entry does not say who OWNS it");
+  assert.equal(took.spent, false, "\"{u} an ally they control\" — it crossed tapped");
+  assert.ok(!n.sides[1].board.some(b => b.uid === "al"), "…and it is still on its owner's board too");
+  const home = E.beginEndPhase(n, 0).game;
+  assert.ok(home.sides[1].board.some(b => b.uid === "al" && b.owner == null),
+    "the end of the action phase did not hand it back");
 });
 
 /* CR 4.1.8a hands the order of simultaneous triggers to the turn-player.
@@ -703,32 +795,28 @@ probe("multi-target-pick-all-or-nothing", () => {
   assert.ok(!kept.destroyed, "the piece was destroyed by a refused activation");
 });
 
-probe("drx-bar-from-arsenal-unread", () => {
-  /* DRIVEN, and it asserts the DEVIATION, so it goes RED the day the narrower
-     wording is read — which is what a `stated` record is for (v4.02).
-
-     THREE HALVES, because a probe that only checks the refusal cannot tell a
-     deliberate narrowing from a reader that is simply broken: the two
-     unconditional wordings must still READ, the narrow one must NOT, and the
-     card must still report its rider unread so nothing claims it works. */
-  assert.equal(PR.classifyClause(
-    "defense reactions can't be played from arsenal this chain link"), null,
-    "the 'from arsenal' wording now reads — this record is stale, and the thing "
-    + "to check is whether the ZONE is carried or whether the bar has quietly "
-    + "widened onto the HAND door too");
+probe("drx-bar-from-arsenal-read", () => {
+  /* TURNED ROUND AT v4.69: it asserts the BUILD now, in the three halves the
+     stated probe asked about — the narrow wording reads WITH ITS ZONE (never
+     `true`, which would bar the hand), the unconditional one is unchanged,
+     and the card's grant carries the bar where the rider was unread. */
+  const narrow = PR.classifyClause("defense reactions can't be played from arsenal this chain link");
+  assert.equal(narrow && narrow.noDrx, "arsenal",
+    "the 'from arsenal' wording regressed — refused again, or widened onto the HAND door");
   const yes = PR.classifyClause("defense reactions can't be played to this chain link");
-  assert.equal(yes && yes.noDrx, true,
-    "the unconditional wording stopped reading — the deviation this record "
-    + "describes is no longer the narrow one");
+  assert.equal(yes && yes.noDrx, true, "the unconditional wording stopped reading");
   const db = H.db();
   if(!db) return;
   PR.fxReset();
   const rt = C.resolveEntry(db, {name: "Release the Tension", p: 1, code: null, q: 1});
   const fx = PR.fxParse(rt);
-  assert.equal(!!fx.noDrx, false, "Release the Tension now carries the bar");
-  assert.ok((fx.quotedUnread || []).some(q => /from arsenal/.test(q)),
-    "its unread rider is no longer reported — the gap has gone quiet, which is "
-    + "worse than the gap (v3.41)");
+  const op = fx.ops.find(o => o[0] === "buffNext");
+  assert.deepEqual(op && op[3], {noDrx: "arsenal"}, "the grant no longer carries the bar");
+  const dr = C.resolveEntry(db, {name: "Put in Context", p: 3, code: null, q: 1});
+  const link = {card: {name: "Arrow", tt: "Ranger Action - Arrow Attack", power: 3, tx: ""},
+                noDrx: [{from: "arsenal", src: "Release the Tension"}]};
+  assert.ok(PR.drxBarWhy(link, dr, "arsenal"), "the granted bar no longer closes the arsenal");
+  assert.equal(PR.drxBarWhy(link, dr, "hand"), null, "the granted bar closes the HAND — stronger than printed");
 });
 
 probe("heave-window", () => {
@@ -937,29 +1025,82 @@ probe("trainer-attack-target", () => {
    ============================================================ */
 
 /* An X cost and an X quantity are refused rather than guessed. */
-probe("x-cost", () => {
+probe("activation-choices-at-resolution", () => {
+  /* DRIVEN AT THE TABLE, and it asserts the DEVIATION: Beckoning Haunt's
+     activation is HELD on the stack for the other seat's window with no
+     target and no X chosen, and the pick opens only once it resolves. The
+     day the choice is declared at activation, the held layer carries it
+     (or a sheet opens first) and this goes red. */
+  const db = H.db();
+  if(!db) return;
+  const B = require("../engine/build.js");
+  const cc = (nm, p, uid) => ({...C.resolveEntry(db, {name: nm, p, code: null, q: 1}), uid});
+  const haunt = cc("Beckoning Haunt", 0, 41); B.equipPiece(haunt);
+  let g = {...H.state({res: 9, ap: 1, gear: [haunt],
+                       grave: [cc("Waning Vengeance", 1, "wv"), cc("Malefic Incantation", 1, "mi")]},
+                      {res: 9, hand: [cc("Oasis Respite", 1, "oas")]},
+                      {turn: 3, actor: 0, turnPlayer: 0}),
+           phase: "action", step: "layer", priority: 0, passed: [false, false],
+           stack: [], chain: [], chainCards: []};
+  const n = J.reduce(g, {t: "activate", uid: 41, from: "gear"}, 0).state;
+  const layer = (n.stack || []).find(l => l && l.k === "play");
+  assert.ok(layer, "the activation was not held for the other seat's window — re-measure this record");
+  assert.ok(!n.prompt, "a sheet opened at ACTIVATION — the choice is declared now; this record is stale");
+  assert.ok(!JSON.stringify(layer.decl || {}).match(/"(?:wv|mi)"/),
+    "the held layer carries a chosen target — declared at activation; this record is stale");
+  const r = H.drain(n);
+  assert.ok(r.prompt && r.prompt.tag === "pick", "the pick no longer opens when the ability resolves");
+});
+
+/* CLOSED AT v4.72 — the probe turned round (v4.02). It asserted the
+   refusal for seventy versions; it now DRIVES the declaration at the table
+   and asserts the declared X is what the mint creates. */
+probe("x-cost-declared", () => {
   const ice = byName("Ice Eternal")[0];
   assert.ok(ice, "Ice Eternal left the pool");
-  const fx = PR.fxParse(ice);
-  const mints = (fx.ops || []).filter(o => o[0] === "token");
-  assert.deepEqual(mints, [],
-    "an X quantity is now read as a token mint — either X costs are BUILT (delete " +
-    "the record) or a card is being created for free");
-  assert.notEqual(fx.tier, "full", "Ice Eternal reports fully scripted with an unread X");
+  H.db();
+  const ie = {...H.card("Ice Eternal", 3), uid: "ie"};
+  assert.equal(ie.cx, 2, "the X count on the printed cost stopped being carried");
+  const g = {...H.state({res: 4, ap: 1, hand: [ie]}, {hand: []}, {turn: 3, actor: 0, turnPlayer: 0}),
+             phase: "action", step: "layer", priority: 0, passed: [false, false],
+             stack: [], chain: [], chainCards: []};
+  const r = J.reduce(g, {t: "play", uid: "ie", from: "hand"}, 0);
+  assert.ok(!r.error, String(r.error));
+  assert.equal(r.state.pending && r.state.pending.kind, "xval",
+    "no X was asked for — a free X is being read as something");
+  const n = H.drain(J.reduce(r.state, {t: "xval", x: 2}, 0).state);
+  assert.equal(n.sides[1].board.filter(b => /frostbite/i.test(b.card.name)).length, 2,
+    "the declared X is not what the mint creates");
+  assert.equal(n.sides[0].res, 0, "X = 2 was not charged twice");
 });
 
 /* Mask of the Swarming Claw's parametrised spellvoid is refused; the
    piece keeps its printed Arcane Barrier. DRIVEN through `arcaneSoaks`,
    which is the one reader that offers a soak. */
-probe("spellvoid-x", () => {
+/* BUILT AT v4.75, AND THE PROBE IS TURNED ROUND. The old probe asked
+   `arcaneSoaks(sd)` with no game at all — so X read 0 and the piece offered
+   its barrier alone whatever the engine did. It PASSED against the build,
+   which is v2.80's hand-written state answering its own question, and it
+   is DRIVEN now: an arcane hit through `runOps` on the Mask-wearer's turn,
+   with one link resolved and one being answered. */
+probe("spellvoid-x-read", () => {
   const mask = byName("Mask of the Swarming Claw")[0];
   assert.ok(mask, "Mask of the Swarming Claw left the pool");
-  const sd = S.makeSide({id:0});
-  sd.gear = [{...mask, uid:5}];
-  const soaks = PR.arcaneSoaks(sd);
-  const kinds = soaks.map(s => s.kind).sort();
-  assert.deepEqual(kinds, ["barrier"],
-    "the piece now offers a spellvoid soak — X is being read, and the record must move");
+  H.db();
+  const hit = (turnPlayer, by) => {
+    /* ONE floating resource, so the paid barrier is offerable in both
+       halves — with none, a sheet holding only an unaffordable barrier is
+       never raised, and the negative half reads like nothing at all. */
+    let g = H.state({hp: 20, gear: [{...mask, uid: "mk"}], res: 1, hand: []}, {hp: 20, res: 9},
+                    {turn: 3, actor: 1, turnPlayer});
+    g = {...g, pend: {by, total: 3, card: {name: "Probe Swing"}}, chain: [{kind: "atk"}, {kind: "arc"}]};
+    const q = (H.runOps(g, [["arcane", 3]], "Probe Bolt").promptQ || []).find(p => p.tag === "soak");
+    return q ? q.options.map(o => o.kind + " " + o.amount).sort() : [];
+  };
+  assert.deepEqual(hit(0, 0), ["barrier 1", "spellvoid 2"],
+    "on the wearer's own turn X is the links they control — one resolved, one being answered");
+  assert.deepEqual(hit(1, 1), ["barrier 1"],
+    "on the OPPONENT's turn the wearer controls no chain link, so X is 0 and nothing is offered");
   /* THE OTHER HALF: plain spellvoid and plain arcane barrier are LIVE.
      The keyword ledger called both `inert-dummy` until v4.02, on a reason
      — "the dummy deals only physical" — that named a training prop
@@ -975,33 +1116,57 @@ probe("spellvoid-x", () => {
 
 /* Walk in My Shoes' crush rider halves the opponent's base values for a
    turn and has no reader — so it arms no next-turn entry. */
-probe("steam-build-powcard-handwritten", () => {
-  /* A `stated` PROBE ASSERTS THE DEVIATION, so it goes red the day the
-     clause is read (v4.02). Both halves: the payload genuinely has NO
-     reader (which is why the hand-written powCard is there), and the
-     BEHAVIOUR is nonetheless right — the printed gate is enforced. */
-  for(const t of ["put a steam counter on this", "put a steam counter on it",
-                  "if this has no steam counters, put a steam counter on it"])
-    assert.equal(PR.classifyClause(t), null,
-      "`" + t + "` has a reader now — the hand-written powCard can go");
-  assert.equal(PR.parseHeroPower(
-    "Action - {r}{r}: If this has no steam counters, put a steam counter on it. Go again",
-    true), null, "parseHeroPower reads the line now — build the powCard from it");
+probe("steam-build-powcard-read", () => {
+  /* A `closed` PROBE ASSERTS THE THING IS **BUILT**, so it goes red when it
+     REGRESSES (v4.02). The `stated` probe this replaces asserted the three
+     readers were missing and went red the moment v4.63 built them — which
+     is the whole point of the two directions.
 
-  /* AND IT IS ONE CARD. `needSteam` is what makes `equipPiece` write the
-     piece, so the set is the measurement the record rests on. */
+     THE WHOLE SENTENCE READS, AS A GATE AND AN OP. */
+  assert.deepEqual(PR.classifyClause("if this has no steam counters, put a steam counter on it"),
+    {status: "run", ops: [["ctrSrc", {kind: "steam", n: 1, label: "steam"}]], cond: "noCtr:steam"});
+  /* AND THE PRONOUN ALONE STILL REFUSES — the pool prints "on it" meaning
+     three OTHER objects (Crow's Nest's arrow, a created token, a sharpened
+     sword), so a bare reading would guess. `on this` has no claimant and
+     no reader, which is v4.52's rule about unclaimed vocabulary. */
+  for(const t of ["put a steam counter on this", "put a steam counter on it"])
+    assert.equal(PR.classifyClause(t), null, "`" + t + "` must not be read without its gate");
+  const pw = PR.parseHeroPower(
+    "Action - {r}{r}: If this has no steam counters, put a steam counter on it. Go again", true);
+  assert.ok(pw && pw.cost === 2 && pw.ga === true && pw.kind === "action",
+    "parseHeroPower answers the printed line: cost 2, go again, action speed");
+
+  /* IT IS STILL ONE CARD — the measurement the named shape rests on. */
   const steam = pool().filter(c => { const wc = PR.weaponCost(c.tx || "");
     return !!(wc && wc.needSteam); }).map(c => c.name).sort();
-  assert.deepEqual(steam, ["Plasma Barrel Shot"],
-    "the set of `needSteam` records moved — the hand-written powCard now serves more than one card");
+  assert.deepEqual(steam, ["Plasma Barrel Shot"], "the set of `needSteam` records moved");
 
-  /* THE CLAUSE IS REPORTED UNREAD, which is the whole of what makes this
-     honest rather than hidden. */
+  /* THE CARD REPORTS FINISHED, and the powCard is the ordinary builder's —
+     no hand-written text and no stamp for anything to read instead. */
   PR.fxReset();
-  const fx = PR.fxParse(pool().find(c => c.name === "Plasma Barrel Shot"));
-  assert.equal(fx.tier, "part", "the card reports unfinished");
-  const cl = (fx.clauses || []).find(x => /put a steam counter/i.test(x.t));
-  assert.ok(cl && cl.st === "skip", "and its steam-build clause reads `skip`");
+  const card = one("Plasma Barrel Shot");
+  assert.equal(PR.fxParse(card).tier, "full", "the card reads in full");
+  const gr = {...card, uid: 41}; BL.equipPiece(gr);
+  assert.ok(gr.powCard, "the piece has its ability");
+  assert.equal(gr.powCard._buildSteam, undefined, "no hand-written stamp");
+  assert.equal(gr.powCard.tx, "If this has no steam counters, put a steam counter on it. Go again",
+    "the powCard carries the PRINTED line, cost prefix stripped");
+
+  /* DRIVEN, BOTH HALVES OF THE GATE, through the real reducer. */
+  H.db(); PR.fxReset();
+  const g0 = {...H.state({res: 20, ap: 9, gear: [gr], counters: {}}, {},
+                         {turn: 3, actor: 0, turnPlayer: 0}),
+              stack: [], chain: [], boostChain: 0,
+              phase: "action", step: "layer", priority: 0, passed: []};
+  let out = J.reduce(g0, {t: "activate", uid: "gp41"}, 0);
+  assert.ok(!out.error, "the first activation is legal: " + out.error);
+  assert.equal(((out.state.sides[0].counters || {})[41] || {}).steam, 1,
+    "and it puts the counter on the GUN, keyed by the piece's uid");
+  const again = {...out.state,
+    sides: out.state.sides.map((s, i) => i === 0 ? {...s, weaponUsed: {}, ap: 9} : s)};
+  out = J.reduce(again, {t: "activate", uid: "gp41"}, 0);
+  assert.ok(out.error && /already carries a steam counter/.test(out.error),
+    "a second is refused BEFORE it is paid, off the same parse");
 });
 
 probe("charged-this-way-count", () => {
@@ -1064,15 +1229,16 @@ probe("charged-this-way-count", () => {
     "perChargedLight"), 1, "only the Light card counts");
 });
 
-probe("crush-halving-rider", () => {
-  /* THE FIRST DRAFT PASSED VACUOUSLY. It read `(fx.crush && fx.crush.ops)`
-     and filtered for a halve op — but Walk in My Shoes sets no `fx.crush`
-     AT ALL, so the filter ran over `[]` and the assertion held whatever
-     the engine did. ASK FOR THE REFUSAL (v3.98), and carry the control
-     that tells a working reader from a dead one.
-
-     MEASURED over the pinned pool: twelve cards print a `Crush -` rider,
-     ELEVEN are read, and this is the one that refuses. */
+/* BUILT AT v4.73, AND THE PROBE IS TURNED ROUND. It asserted that Walk in
+   My Shoes was the one refused crush rider of twelve; the day the rider
+   read, that went red — which is the reversal an `open` record exists to
+   force (v4.02). It now asserts the whole family READS, and drives the
+   halving through `runOps` so a parse that armed nothing cannot pass. */
+probe("crush-halving-rider-read", () => {
+  /* THE FIRST DRAFT OF THE OLD PROBE PASSED VACUOUSLY — it filtered an
+     `fx.crush` the card did not set. Ask the clause STATUS, and carry the
+     control. MEASURED over the pinned pool: twelve cards print a `Crush -`
+     rider and all twelve are read now. */
   const rows = [];
   const seen = new Set();
   for(const c of pool()){
@@ -1081,16 +1247,40 @@ probe("crush-halving-rider", () => {
     rows.push({name:c.name, st:cl.st, armed: !!PR.fxParse(c).crush});
   }
   assert.equal(rows.length, 12, "the number of pool cards printing a Crush rider moved");
-  const refused = rows.filter(r => r.st !== "run").map(r => r.name);
-  assert.deepEqual(refused, ["Walk in My Shoes"],
-    "the set of REFUSED crush riders moved — if this one was built, the record " +
-    "must move; if another joined it, that is a regression");
-  /* THE CONTROL: a reader that refused everything would pass the line above
-     perfectly. Boulder Drop's rider is read and armed. */
-  const ctrl = rows.find(r => r.name === "Boulder Drop");
-  assert.ok(ctrl && ctrl.st === "run" && ctrl.armed,
-    "the control crush rider stopped being read — this probe can no longer tell " +
-    "a refusal from a dead reader");
+  assert.deepEqual(rows.filter(r => r.st !== "run").map(r => r.name), [],
+    "a crush rider stopped being read");
+  const wims = rows.find(r => r.name === "Walk in My Shoes");
+  assert.ok(wims && wims.armed, "Walk in My Shoes' rider reads but arms no crush payload");
+  /* DRIVEN: the rider's op halves THEIR attack action card NOW, and not
+     their non-attack. A parse that armed an op nothing runs passes above. */
+  const swing = {name:"Probe Swing", tt:"Generic Action - Attack", ty:["Generic","Action","Attack"],
+                 tx:"", kw:[], power:6, def:3, pitch:1, cost:0, uid:"ps"};
+  const other = {name:"Probe Rite", tt:"Generic Action", ty:["Generic","Action"],
+                 tx:"", kw:[], def:3, pitch:1, cost:0, uid:"pr"};
+  const g = H.runOps(H.state({}, {hand:[swing, other]}, {turn:3}),
+                     (PR.fxParse(H.card("Walk in My Shoes", 2)).crush || {}).ops || [], "Walk in My Shoes");
+  const hand = g.sides[1].hand;
+  assert.deepEqual([hand[0].power, hand[0].def], [3, 2], "their attack action card was not halved on the spot");
+  assert.equal(hand[1].def, 3, "a NON-attack action card was halved — the card names attack action cards");
+});
+
+/* A halving of cards a hero CONTROLS stamps every zone that hero holds.
+   The deviation: a card sitting in a HAND is halved, where the CR's
+   "control" reaches the chain and the defenders. Goes RED the day the
+   halving is narrowed to controlled zones — and then this record moves. */
+probe("halving-reads-every-zone", () => {
+  const swing = {name:"Probe Held", tt:"Generic Action - Attack", ty:["Generic","Action","Attack"],
+                 tx:"", kw:[], power:6, def:3, pitch:1, cost:0, uid:"ph"};
+  const sd = H.side({hand:[swing], deck:[{...swing, uid:"pd"}], nextTurn:[{kind:"halveBase", amt:0, ready:false}]});
+  const out = E.restampHalving(sd);
+  assert.equal(out.hand[0].power, 3, "a card in HAND is no longer halved — the record must move");
+  assert.equal(out.deck[0].power, 3, "a card in the DECK is no longer halved — the record must move");
+  /* the minted-card half: the pool's only attack action card an effect
+     creates prints nothing a halving can move. */
+  const tiger = H.card("Crouching Tiger", 0);
+  assert.ok(PR.isAtkActionCard(tiger));
+  assert.ok(!(tiger.power > 1) && !(tiger.def > 1),
+    "Crouching Tiger now prints a value a halving would move — a card minted mid-window is not stamped");
 });
 
 /* Surge is evaluated as `amp > 0` rather than as the arcane damage

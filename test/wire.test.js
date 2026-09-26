@@ -320,7 +320,20 @@ test("WIRE_V moves when the payload shape moves, and only then", () => {
      cannot see it. v4.56 bumped for the same kind of change and said so; what
      is still open is that a FORGOTTEN bump of that kind fails no drill, which
      is the half of v4.26's finding this pin cannot reach. */
-  assert.equal(W.WIRE_V, 12,
+  /* 12 -> 13 AT v4.64, and again the digest does not move: the PICK prompt
+     gained `charge`, inside the same whole-shipped value. Recorded in
+     wire.js's header, where every bump of this kind is. */
+  /* 13 -> 14 AT v4.65: the GAME gained a top-level key (`deckFlip`, Topsy
+     Turvy's replacement). A game key ships inside the game object, which
+     this digest does not cover either, so again it does not move. */
+  /* 14 -> 15 AT v4.66: a held play is a new layer KIND inside `stack`,
+     which ships whole — outside this digest, again. */
+  /* 15 -> 16 AT v4.69: `pend.noDrx` and a `buffQ` entry's `src` — inside
+     whole-shipped values again, so the digest does not move. */
+  /* 16 -> 17 AT v4.71: a pick prompt's `xPay` — whole-shipped again. */
+  /* 17 -> 18 AT v4.72: a pending KIND (`xval`) and a game declaration
+     (`_x`) — both inside whole-shipped values, so the digest holds. */
+  assert.equal(W.WIRE_V, 18,
     "WIRE_V moved — if the payload shape moved with it, update the digest below " +
     "in the same edit and say what changed in the header");
   assert.equal(h, 1095617619,

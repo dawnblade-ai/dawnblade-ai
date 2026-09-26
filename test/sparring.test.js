@@ -658,6 +658,13 @@ test("the route counter spells what the FEED spells", {skip: false}, () => {
     "…and effects.js must still print it when a reaction becomes a layer");
   assert.match(sp, /layer resolves/,
     "the layer counter must spell the phrase judge prints");
+  /* v4.66 — the crush counter spells the RIDER running, never the word,
+     and the held-play counter spells the line `judge.holdPlay` prints. */
+  assert.match(sp, / — crush:/, "the crush counter must spell the rider's source line");
+  assert.match(ef, /pc\.name \+ " — crush"/, "…and linkPayload must still run the rider under it");
+  assert.match(sp, /is on the stack — either seat may answer/,
+    "the held counter must spell the line judge prints");
+  assert.match(jd, /is on the stack — either seat may answer/, "…and judge must still print it");
   assert.match(jd, /the layer" : "A layer"/,
     "…and judge.js must still print the word `layer` when one resolves " +
     "(CR 4.2.2). Naming the card alone is what zeroed this counter once.");

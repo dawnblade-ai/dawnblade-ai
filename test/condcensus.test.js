@@ -127,8 +127,17 @@ test("the emitted SET is pinned, so a new condition is a deliberate edit", {skip
   /* A CENSUS THAT QUIETLY STOPPED FINDING ANYTHING would pass by finding
      nothing, which is the failure mode this whole file guards against. */
   const {conds} = poolConds();
-  assert.equal(conds.size, 53,
-    "53 distinct conditions across the pool. A 54th is fine — add it here AND " +
+  /* 53 -> 54 AT v4.64: `soulEmpty` — Roaring Beam's "if there are no
+     cards in your soul", the pool's only claimant, answered in the main
+     loop off `sd.soul`. (v4.63's `noCtr:steam` is not in this count: it
+     lives only on an equipment POWCARD, which this card-level census never
+     parses — the reverse-direction drill below is the one that sees it.)
+     54 -> 55 AT v4.72: `way:fused` — Ice Eternal's "Then if this was fused,
+     …", a gate on a rider that must be answered AFTER the card's own ops
+     have minted the tokens it counts, so it is a `way:` condition answered
+     by `thisWayMet` in the late pass rather than by the main loop. */
+  assert.equal(conds.size, 55,
+    "55 distinct conditions across the pool. A 56th is fine — add it here AND " +
     "give it an evaluator, which is the whole point of this file. It went 48 -> 49 " +
     "at v3.97 (`way:dealtFused`) and 49 -> 51 at v3.99 (`hasGa` and `chainLinkGe4` — " +
     "two keyword-gated lines whose gate the loose matchers were eating): this drill " +
@@ -151,7 +160,7 @@ test("the emitted SET is pinned, so a new condition is a deliberate edit", {skip
   /* spot checks, so the count cannot be met by a scan that
      collected the wrong thing */
   for(const c of ["auras3", "way:dealtFused", "chargedPitch2", "hasGa", "chainLinkGe4",
-                  "drac2", "drac3", "drac4"])
+                  "drac2", "drac3", "drac4", "soulEmpty"])
     assert.ok(conds.has(c), c + " must be in the census");
 });
 
@@ -474,8 +483,14 @@ test("every condition the main loop ANSWERS has an emitter, or is pinned", {skip
      so. The day a powCard emits one on its own this fails and somebody
      re-reads the reach, which is what a premise-as-a-drill buys (v4.44)
      over a sentence nothing checks (v3.41). */
+  /* AND AT v4.63 IT DID. Plasma Barrel Shot's steam line is read now, and
+     "if this has no steam counters" is a gate that lives ONLY on the
+     equipment powCard — the card's own parse files the activation line
+     `noop` (the powCard is its reader), so the card leg can never see it.
+     That is exactly the reach this sentence said the legs were kept for,
+     and it is why the pin was a SET rather than "empty forever". */
   const cardLeg = allEmittedConds({card: 1});
-  assert.deepEqual([...emitted].filter(c => !cardLeg.has(c)).sort(), [],
+  assert.deepEqual([...emitted].filter(c => !cardLeg.has(c)).sort(), ["noCtr:steam"],
     "a condition only a powCard emits — the legs now carry the census");
   /* THE DEEP WALK DOES CARRY ONE, so it is not redundant: `way:took` lives
      inside a GRANTED ability's rider (v3.95), which a top-level `fx.conds`

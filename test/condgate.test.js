@@ -158,7 +158,7 @@ test("FUSED rides on `pend` — it is a declaration-time fact", {skip}, () => {
      at RESOLUTION, and the per-resolution trace is gone by then.) */
   const fs = require("fs"), path = require("path");
   const src = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8");
-  assert.match(src, /condOnHit:\[\.\.\.\(fx\.condOnHit\|\|\[\]\), \.\.\.qRiderCond\], chargedWay, fused,/,
+  assert.match(src, /condOnHit:\[\.\.\.\(fx\.condOnHit\|\|\[\]\), \.\.\.qRiderCond\],[^\n]{0,80} chargedWay, fused,/,
     "the declaration folds it onto the link");
   assert.match(src, /cond==="fused" \? !!n\.pend\.fused/, "and the hit-time gate reads it from there");
 });

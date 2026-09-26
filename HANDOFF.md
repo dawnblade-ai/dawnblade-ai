@@ -41,6 +41,29 @@ before starting new work.
 
 ### 1 · The seven unfinished deck cards — cheapest first
 
+> **PROGRESS (this thread):** Plasma Barrel Shot **DONE at v4.63**, Roaring
+> Beam **DONE at v4.64**, Topsy Turvy **DONE at v4.65** — audit 401 full /
+> 4 part. The four left are the RECORD / LEAVE rows below. §2's layer step
+> **BUILT at v4.66** (`play-held-on-the-stack`, closed). Trigger order
+> MEASURED at v4.67 — it found the boost pair in the wrong order (fixed);
+> the record stays open with the census, and Arakni's same-end-phase brood
+> cycle waits on a RULING (see the ledger's `simultaneous-trigger-order`).
+> Jack Be Quick **RECORDED at v4.68** (`control-change-steal`, open, driven
+> probe). §3's one-card pick sheets **DONE at v4.68** — measured at 114 per
+> 210 games, now confirmed on the spot on both boards. §3's wire digest
+> **DISCHARGED at v4.69** by putting the release in the table handshake.
+> §3's Release the Tension bar **BUILT at v4.70**. Beckoning Haunt **BUILT at
+> v4.71** (X settled by the choice; a free-X defect in `parseHeroPower` found
+> and closed on the way), and §3's dead anchors asked v4.48's question: one
+> deleted as dead by construction, one named. Ice Eternal **BUILT at
+> v4.72** (a free X declared before the payment; its `XX` had been priced at
+> ZERO). Walk in My Shoes **BUILT at v4.73** (the halving lives on the
+> card, re-stamped when its window opens and closes). Jack Be Quick **BUILT
+> at v4.74** (ownership first: the owner is stamped on the entry and the
+> card, the end phase hands it back, and a death goes to the owner's
+> graveyard). **Every deck card in the pool now reads in full: audit 405
+> full / 0 part, `npm run gaps` reports 0 unfinished.**
+
 Each is in exactly one precon. That makes every one of them LIVE; none is
 latent.
 
@@ -49,10 +72,10 @@ latent.
 | **Plasma Barrel Shot** | Dash | *"Action - {r}{r}: If this has no steam counters, put a steam counter on it. Go again"* | the steam-build powCard is **written by hand** in `equipPiece`. `classifyClause` reads neither the put, nor the gate, nor the whole line (`steam-build-powcard-handwritten`, stated) | **DO FIRST.** It needs three readers and no machinery (`ctrPut` exists; `abCostWhy` already refuses the paid no-op). The handwritten powCard retires, and the record's probe goes red, which is its job |
 | **Roaring Beam** | Boltyn | *"If there are no cards in your soul, return this to its owner's hand, then **charge** your soul."* | unmeasured. Run the v3.79/v4.43 diagnostic FIRST: hand `classifyClause` each half separately. Likely candidates are a card returning ITSELF to hand at resolution (instead of the graveyard) and charge as an EFFECT, where every current charge is a COST | **SECOND.** Drive it before scoping it. "then charge" may charge THIS card, back from the hand it just reached, so read the printing before booking the question |
 | **Topsy Turvy** | Arakni (Head) | *"Instant - Destroy this: Until end of turn, if one or more cards would be put on top of a deck, instead they're put on the bottom."* | a **replacement effect**, turn-windowed and naming *"a deck"*, so it covers BOTH seats and is game state rather than side state | **THIRD.** Census every deck-top WRITER before building (v4.21: fix the family). `moveCards`' deckTop branch, Brain Freeze's `foePick`, Boulder Drop's crush rider, Crown of Dichotomy, and whatever the census adds. The expiry needs a step-(8) sweep **counted by `held`** (v4.07). A game key means a `WIRE_V` bump (v4.26) |
-| **Jack Be Quick** | Briar | *"When this hits a hero, {u} an ally they control, then **steal** it until the end of this action phase."* | a **control change**. Nothing moves an object between SIDES today, and the census, `invariants.js` and the wire all assume a permanent's side is fixed | **RECORD, DON'T BUILD** unless you have a whole version for it. Open an approx record with a driven probe (v4.02). Half-building a control change is v3.23's worst case |
-| **Walk in My Shoes** | Lyath | Crush: *"…until the end of their next turn, the base {p} and {d} of attack action cards they control are halved, rounded up."* | `crush-halving-rider`, open. `build.halveCard` halves at the DEAL on purpose (v3.78: thirty base-value readers is thirty chances to miss one). A halving that STARTS mid-game and ENDS is the shape that argument ruled out | **LEAVE REFUSED** until someone designs a single base-value choke point. The refusal is honest and visible |
+| **Jack Be Quick** | Briar | *"When this hits a hero, {u} an ally they control, then **steal** it until the end of this action phase."* | `control-change-steal-built`, closed | **BUILT AT v4.74.** Ownership first: `owner` on the entry and `_owner` on the card, `effects.returnStolen` at step (0) of the end phase, the two ally-death sites file to the owner, and `STOLEN-CARD-OFF-BOARD` catches any other exit |
+| **Walk in My Shoes** | Lyath | Crush: *"…until the end of their next turn, the base {p} and {d} of attack action cards they control are halved, rounded up."* | `crush-halving-rider-read`, closed | **BUILT AT v4.73.** The deal-time argument was kept rather than dropped: the value still lives on the CARD, so every reader sees it untold, and `effects.restampHalving` re-stamps the victim's attack action cards when the crush opens the window and when their end phase closes it. Every zone is stamped (`halving-reads-every-zone`, stated) |
 | **Beckoning Haunt** | Viserai (Chest) | *"Action - {x}{x}{r}, destroy this: Return target aura with cost X from your graveyard to your hand."* | `x-cost`, open. No X machinery exists | **LEAVE REFUSED**, but note it is the cheapest X card: X is COUPLED to the choice (the aura's printed cost), which is Blaze's v3.39 shape. There, X was settled by the pick and no number was ever asked for. If X gets built, build it here first |
-| **Ice Eternal** | Iyslander | *"Create X Frostbite tokens under target hero's control"* plus a fused rider | `x-cost`, with a FREE X (`XX`), which is the hard kind | **LEAVE REFUSED**. A free X needs a number prompt; reading one token would be weaker than printed and would read `full` |
+| **Ice Eternal** | Iyslander | *"Create X Frostbite tokens under target hero's control"* plus a fused rider | `x-cost`, with a FREE X (`XX`), which is the hard kind | **BUILT AT v4.72.** The record hid the sharper defect: `XX` carries no number, so the card priced at 0. X is a card field (`cx`), asked as an `xval` pending before the payment, and the fused rider is a late `way:fused` gate over `arcaneCount`. `x-cost-declared`, closed |
 
 ### 2 · The CR items — the thread's actual goal, and the two left open
 
@@ -89,14 +112,16 @@ CR dictates"*. Two `open` records are pure CR fidelity:
   offering one forced choice is a tap that teaches nothing"*), but it is
   a behaviour change on both boards. **Measure first**: count one-card
   pick sheets in 210 games, then decide.
-- **The prompt-shape wire digest (v4.59).** Every prompt-shape change is
-  still a `WIRE_V` bump BY HAND, and a forgotten bump fails no drill.
-  Declaring the prompt's field set as a ledger the digest covers closes
-  v4.26's half that is still open.
-- **`drx-bar-from-arsenal-unread`** (Release the Tension ×3). The fix
-  is to widen `quotedRider`, which requires `sub.onHit` by construction,
-  to carry a static restriction. Four grant families share that shape,
-  so census them before widening (v4.21).
+- ~~**The prompt-shape wire digest (v4.59).**~~ **DISCHARGED AT v4.69
+  another way.** Looking at the handshake found that it compared
+  `DATA_VER` alone, so two RELEASES could be seated together (measured: 2
+  of 16 replayed games diverge between v4.67 and v4.68). The build
+  identity carries the release now, which covers every shape a ledger
+  would have listed and more. The hand bump stays as the second guard.
+- ~~**`drx-bar-from-arsenal-unread`**~~ **BUILT AT v4.70** without
+  widening `quotedRider`: a second narrow reader (`quotedStatic`) beside it,
+  the zone as a value on `noDrx`, and every door naming its zone. Now
+  `drx-bar-from-arsenal-read`, closed.
 - **The 15 dead anchors** in `npm run anchors`. Each is a lead, not a
   finding (v4.50). Ask v4.48's question of each one: does the pool print
   a near-miss, and does something ELSE read it wrongly?
@@ -595,8 +620,9 @@ Banneret of Salvation**, whose Solflare rider is the same shape.
   amount; the ledger says `partial` and the engine approximates it as
   `amp > 0` (`surge-approximated` in `tools/approx.js`).
 
-Spellvoid was checked and is already correctly `partial`: the plain form
-is live and the X printing is refused, recorded as `spellvoid-x`.
+Spellvoid is `live` as of v4.75: the plain form since v4.02, and the X
+printing reads now (`spellvoid-x-read`, closed). "Chain links you control"
+are the wearer's own links, so X is 0 on the opponent's turn.
 
 ### TWO RULINGS STILL WANTED FROM THE USER
 

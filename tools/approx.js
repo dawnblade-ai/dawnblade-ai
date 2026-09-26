@@ -95,25 +95,86 @@ const APPROX = {
 
 /* ---- A. THE RULES MACHINE — the two-player question ---------------- */
 
-"layer-step-window": {
-  status:"open", cr:"CR 7.1.2", board:"both", since:"v2.45", swept:"v4.02",
-  claim:"An attack goes straight onto the combat chain. In the CR it sits on the "+
-        "stack as a layer first, and both seats may respond before it becomes a "+
-        "chain link.",
-  why:"Needs the stack/queue, which priority.js already has hooks for "+
-      "(`queueEmpty`, `passOutcome`'s `resolve-layer`). The WINDOW itself is not "+
-      "lost — the ATTACK step immediately after opens an equivalent instant "+
-      "window for both seats — so what is missing is the distinction between "+
-      "'on the stack' and 'on the chain', which no card in this pool asks about."},
+"play-held-on-the-stack": {
+  status:"closed", cr:"CR 7.1.2", board:"table", since:"v2.45", swept:"v4.66",
+  claim:"A card played at action speed (an attack, a non-attack action, a weapon, "+
+        "ally or aura attack, an `Action -` ability) RESTS on the stack as a layer at "+
+        "the table and resolves only when both seats have passed on it (CR 7.1.2, CR "+
+        "4.2.2), so the opponent always gets a window between a card being played and "+
+        "it resolving. BUILT AT v4.66; this record was `layer-step-window`.",
+  why:"THE OLD RECORD SAID NO CARD ASKED, AND THAT WAS MEASURED FALSE. Over 210 driven "+
+      "games, 319 plays dealt damage inside the action that played them and 12 landed on "+
+      "a seat holding an instant prevention it never had a window to play — Oasis Respite "+
+      "against Photon Splicing and Emeritus Scolding, Toe the Line against Arcane Twining, "+
+      "Oasis Respite against Viserai's Runechants and Briar's Path of Same Ends (whose go "+
+      "again is gated on that very damage). The attack step's window came AFTER the damage "+
+      "had landed, so it was not equivalent. THE WHOLE `execute` IS DEFERRED, NOT SPLIT: "+
+      "it interleaves every cost with the resolution across two thousand lines of shared "+
+      "locals, so `judge.holdPlay` parks the settled declarations on the layer, lifts a "+
+      "card out of its zone onto the stack (where the census sees it), and locks the "+
+      "seat's floating resources with it; `resolveHeld` puts everything back and runs the "+
+      "card exactly as before. WHEN NOBODY CAN ANSWER IT RESOLVES AT ONCE, and that is not "+
+      "an approximation: a seat with no legal action can only pass. `someoneCanRespond` "+
+      "asks `legal` itself, as each seat, so the window opens exactly when an answer exists."},
+
+"instant-speed-plays-resolve-on-play": {
+  status:"stated", cr:"CR 4.2.2", board:"table", since:"v4.66", swept:"v4.66",
+  claim:"Three halves of the stack are still collapsed at the table. An INSTANT or a "+
+        "REACTION resolves the moment it is played, so the other seat can answer the card "+
+        "it answered but not the answer itself. A when-this-attacks trigger resolves as "+
+        "the attack becomes a chain link, with no window of its own. And while an "+
+        "action-speed play waits on the stack, its controller's FLOATING resources wait "+
+        "with it, so any left over after its cost cannot pay for an answer in that window.",
+  why:"The first two are responses to responses, and the window each is played in stays "+
+      "open after it — `P.reset` hands priority straight back — so the line of play they "+
+      "cost is the rarer one. The third is the price of deferring `execute` whole rather "+
+      "than splitting it: the exact cost is charged inside `execute`, and reserving a "+
+      "second reading of it here would be v3.80's three-cost-readers bug. It is weaker "+
+      "than printed and visible, since a seat can still pitch for an answer. Built "+
+      "together, the first two are a real stack of resolving LAYERS rather than of held "+
+      "plays, which is `execute`'s play/resolve split."},
 
 "simultaneous-trigger-order": {
-  status:"open", cr:"CR 4.1.8a", board:"both", since:"v2.45", swept:"v4.02",
+  status:"open", cr:"CR 4.1.8a", board:"both", since:"v2.45", swept:"v4.67",
   claim:"Simultaneous triggers resolve in a fixed printed order. CR 4.1.8a hands "+
         "the order to the turn-player.",
   why:"`beginEndPhase` is six steps in a fixed order and the order is load-bearing "+
       "for reasons that are NOT the CR's (rust before the idle wipe before the "+
       "gear sweep — specific readers first). Letting a player reorder them would "+
-      "need a prompt in a phase where CR 4.4.1 gives nobody priority."},
+      "need a prompt in a phase where CR 4.4.1 gives nobody priority. "+
+      "MEASURED AT v4.67, FAMILY BY FAMILY, because a generic instrument cannot "+
+      "tell an order that DECIDES something from one that does not. BOOST: "+
+      "Hyper Driver's clock and Crankshaft/Big Bertha's put fire on one boost, "+
+      "and v4.23 fixed the order as tick-first on the strength of a Driver with "+
+      "NO counters — unreachable, since every steam remover in the pool removes "+
+      "from its own permanent. At ONE counter tick-first destroyed the Driver; "+
+      "put-first is weakly dominant in every reachable state and is now the "+
+      "order (drilled, with the premise pinned). END PHASE: the only step pair "+
+      "whose order changes an outcome is Inertia against a heave, recorded as "+
+      "`heave-window`; ward spends are `ward-spend-order`. ONE OPEN QUESTION IS "+
+      "NOT AN ORDER AT ALL: Arakni's brood step returns an Agent and then lets "+
+      "Arakni become one again IN THE SAME END PHASE. Whether a trigger can fire "+
+      "for a hero who was not the hero when that end phase began is a question "+
+      "about which triggers EXIST at the event, and nothing here sources an "+
+      "answer — it waits on a ruling rather than a guess."},
+
+"control-change-steal-built": {
+  status:"closed", cr:null, board:"both", since:"v4.68", swept:"v4.74",
+  claim:"Jack Be Quick's \"{u} an ally they control, then steal it until the end "+
+        "of this action phase\" is BUILT. The stealer picks among the opponent's "+
+        "living allies; the entry crosses to their board UNTAPPED, stamped with its "+
+        "OWNER on the entry and on the card; `effects.returnStolen` hands it back at "+
+        "step (0) of the end phase, tapped if it attacked; and an ally that dies "+
+        "while stolen is filed into its owner's graveyard.",
+  why:"Until v4.74 this record was `open` and the card was recorded rather than "+
+      "half-built, for a reason it named: moving the entry across without the "+
+      "owner is a card that works until it dies and then files into the wrong "+
+      "graveyard (v3.23). The two ally-death sites (`damageAlly`, `sweepArena`) "+
+      "route to the owner, and the judges carry `STOLEN-CARD-OFF-BOARD` for every "+
+      "other exit — a stamp found anywhere but a board is a site that filed it "+
+      "home wrongly. Measured: over 797 records it is the pool's ONLY control "+
+      "change, and inside the one window it lasts the stolen ally cannot be "+
+      "attacked (it is the thief's) and nothing Briar decks destroys an ally."},
 
 "prevention-target-and-source": {
   status:"stated", cr:null, board:"both", since:"v3.67", swept:"v4.36",
@@ -341,50 +402,80 @@ const APPROX = {
 
 /* ---- B. CARD SEMANTICS -------------------------------------------- */
 
-"x-cost": {
-  status:"open", cr:null, board:"both", since:"v2.32", swept:"v4.02",
-  claim:"An X cost or an X quantity is REFUSED rather than read. Ice Eternal "+
-        "prints cost XX and 'create X Frostbite tokens'.",
-  why:"Creating ONE token for a card that charges for X is quietly weaker than "+
-      "printed — which coverage reads as `full` and the one-sided fairness sweep "+
-      "cannot see. Refusing leaves it a visible gap. Blaze's 'remove X energy "+
-      "counters' is NOT this shape (v3.39): X is settled by the card the player "+
-      "picks, so the coupling lives in the filter and no X machinery is needed."},
+"x-cost-declared": {
+  status:"closed", cr:null, board:"both", since:"v2.32", swept:"v4.72",
+  claim:"Both X costs in the pool are BUILT. Beckoning Haunt's X is COUPLED to the "+
+        "aura it returns (v4.71): the pick settles it and the sheet offers only "+
+        "what the seat can pay. Ice Eternal's X is FREE (v4.72): the player "+
+        "DECLARES it before the payment — judge's `xval` pending, the trainer's "+
+        "`xpick` mode — every value up to what the seat could raise is offered, "+
+        "`effCost` prices it off the card's `cx`, and the declared X decides how "+
+        "many Frostbites the mint creates.",
+  why:"Until v4.72 this record was `open` and REFUSED the free X, for a reason it "+
+      "carried in its own text: creating ONE token for a card that charges for X "+
+      "is quietly weaker than printed, which coverage reads as `full` and the "+
+      "one-sided fairness sweep cannot see. Refusing kept it a visible gap; the "+
+      "declaration is what removed the reason. The property it protected is kept "+
+      "— the parse carries the LETTER X, and a mint with no declared X creates "+
+      "NONE, so an X nothing paid for is inert rather than free (v2.04)."},
 
-"spellvoid-x": {
-  status:"stated", cr:null, board:"both", since:"v2.32", swept:"v4.02",
+"activation-choices-at-resolution": {
+  status:"stated", cr:"CR 1.4.5", board:"both", since:"v2.17", swept:"v4.71",
+  claim:"The target (and, for Beckoning Haunt, the X) of an ACTIVATED ability is "+
+        "chosen when it RESOLVES, through the pick sheet its payload queues. In the "+
+        "CR both are declared when the ability is activated, before anyone may "+
+        "respond. Recorded at v4.71, when an X cost made the choice part of the "+
+        "PRICE: the fixed part is paid on activation and X when the pick settles it.",
+  why:"Every activation pick in the pool works this way (Fai, Halo of "+
+      "Illumination, Hope Merchant's Hood, Crown of Dichotomy, Blaze, and now "+
+      "Beckoning Haunt), and the legality asks the same pool the sheet will, so "+
+      "an activation with no legal choice is refused before its cost is paid "+
+      "(v4.59). What differs is observable only in the window between: since "+
+      "v4.66 the table holds an Action-speed activation on the stack, so the "+
+      "other seat answers without knowing the target, and the controller "+
+      "chooses after seeing that answer. Declaring at activation needs the "+
+      "choice as a PENDING before payment (boost's and fusion's shape), which "+
+      "is its own piece of work across every activation pick."},
+
+"spellvoid-x-read": {
+  status:"closed", cr:null, board:"both", since:"v2.32", swept:"v4.75",
   claim:"Mask of the Swarming Claw's 'Spellvoid X, where X is the number of chain "+
-        "links you control' is refused; the piece keeps its printed Arcane "+
-        "Barrier 1.",
-  why:"Same refusal as Ice Eternal's, plus the chain belongs to the ATTACKER "+
-      "rather than to the hero being hit. NOTE — THE NOOP'S OWN REASON WAS STALE "+
-      "and is corrected at v4.02: it read 'the dummy throws only fists', a "+
-      "training prop retired at v2.71, while plain spellvoid and arcane barrier "+
-      "have been paid at the point arcane damage is dealt (`arcaneSoaks`) for "+
-      "versions."},
+        "links you control' is READ: `parser.linksControlled` counts the links the "+
+        "wearer controls at the moment arcane damage is dealt, and `arcaneSoaks` "+
+        "offers a Spellvoid of that size beside the printed Arcane Barrier 1.",
+  why:"Until v4.75 this was refused on the grounds that the chain belongs to the "+
+      "ATTACKER rather than to the hero being hit. That is true, and it is exactly "+
+      "what the printed 'you control' answers: every link on a chain is the "+
+      "turn-player's, so X is the wearer's links on their own turn and 0 on the "+
+      "opponent's. The attack being answered is a link from its declaration (CR 7.2) "+
+      "and joins the display strip only when it resolves, so it is counted off "+
+      "`pend`. The count is taken off the game, never stored in the parse."},
 
-"steam-build-powcard-handwritten": {
-  status:"stated", cr:null, board:"both", since:"v4.49", swept:"v4.49",
-  claim:"Plasma Barrel Shot's steam-build ability is a powCard `build.js` writes "+
-        "BY HAND — cost, text and all — rather than one `parseHeroPower` read off "+
-        "the printed line. Its real clause reads `skip`.",
-  why:"THE PAYLOAD HAS NO READER AT ALL, which is why the hand-written piece is "+
-      "there: measured, `classifyClause` answers null for \"put a steam counter on "+
-      "this\", for \"put a steam counter on it\" and for the whole gated line, and "+
-      "`parseHeroPower` refuses the line for its condition. Building it properly "+
-      "needs THREE readers — a self-subject for `ctrPut`, a new `noSteam` "+
-      "condition, and a second conditional shape in `parseHeroPower`, which this "+
-      "file's own rule says not to relax. So it is v3.58's inline-reader shape "+
-      "left standing on purpose, and it is one card: Plasma Barrel Shot is the "+
-      "pool's only `needSteam` record.\n"+
-      "WHAT IS NOT WRONG is the behaviour. The printed gate (\"if this has NO "+
-      "steam counters\") is honoured by `effects.js` at resolution, and v4.49 made "+
-      "it a LEGALITY too in `abCostWhy` — before that the ability charged {r}{r} "+
-      "and an action point to log \"it already carries a steam counter\", which is "+
-      "v2.04's rule inverted: an unpayable cost is rightly INERT, a PAID cost that "+
-      "does nothing is the player losing value for a play the rules should have "+
-      "refused. So the gap is that the CLAUSE is unread and the card reports "+
-      "`part` — honest, visible, and the tier says so."},
+"steam-build-powcard-read": {
+  status:"closed", cr:null, board:"both", since:"v4.49", swept:"v4.63",
+  claim:"Plasma Barrel Shot's steam-build ability is built by the ordinary "+
+        "ability builder off its OWN printed line. BUILT AT v4.63: the hand-"+
+        "written powCard `build.js` carried from v4.49 is gone, the clause "+
+        "reads, and the card reports `full`.",
+  why:"WHAT THE RECORD SAID, AND WHAT ASKING THE ENGINE FOUND. It was "+
+      "`steam-build-powcard-handwritten` (stated): the payload had no reader, "+
+      "so `equipPiece` wrote the powCard by hand — cost, text and all, and "+
+      "the text it wrote DROPPED THE PRINTED GATE (\"Put a steam counter on "+
+      "this\"), which `effects.js` then re-imposed by reading a `_buildSteam` "+
+      "stamp. Two records of one printed condition (v3.61). Its three named "+
+      "readers are built: a whole-clause rule reads \"if this has no <K> "+
+      "counters, put a <K> counter on it\" — WHOLE, because the handler that "+
+      "splits on the first comma hands \"on it\" over with no antecedent — "+
+      "as `ctrSrc` behind a `noCtr:<K>` gate; `parseHeroPower` accepts that as "+
+      "a fourth NAMED conditional shape; and `equipPiece` hands a weapon's "+
+      "non-attack activation line to the ordinary builder.\n"+
+      "AND RETIRING THE STAMP FOUND A ONE-BOARD RULE (v3.01). v4.49 wrote the "+
+      "paid-no-op refusal into `judge.abCostWhy` and said both boards call it; "+
+      "the TRAINER's `tryPlay` never did, so a second activation there still "+
+      "charged {r}{r} for a log line. `parser.abCtrGateFails` is the one "+
+      "reader now, both boards ask it, and it reads the same `fx.conds` the "+
+      "condition loop resolves, so the refusal and the resolution cannot "+
+      "disagree about the gate."},
 
 "charged-this-way-count": {
   status:"closed", cr:null, board:"both", since:"v4.48", swept:"v4.56",
@@ -413,15 +504,35 @@ const APPROX = {
       "ARRAY. Second recorded refusal this project has discharged by asking "+
       "which of its two stated halves was actually the blocker."},
 
-"crush-halving-rider": {
-  status:"open", cr:null, board:"both", since:"v3.29", swept:"v4.02",
-  claim:"Walk in My Shoes' crush rider halves the base {p} and {d} of the "+
-        "opponent's cards for a turn, and has no reader.",
-  why:"The other four next-turn crush riders landed at v3.29 (two debuffs) and "+
-      "v3.30 (two restrictions). This one needs Lyath's halving (v3.78) aimed at "+
-      "the OTHER seat for one turn — `halveCard` runs once at the DEAL, which is "+
-      "the whole of its safety argument, so a turn-scoped halving is a different "+
-      "mechanism rather than the same one pointed elsewhere."},
+"crush-halving-rider-read": {
+  status:"closed", cr:null, board:"both", since:"v3.29", swept:"v4.73",
+  claim:"All twelve crush riders in the pool are read. Walk in My Shoes' rider "+
+        "halves the base {p} and {d} of the opponent's attack action cards from "+
+        "the crush to the end of their next turn: `effects.restampHalving` "+
+        "re-stamps their cards when the window opens and when it closes.",
+  why:"Until v4.73 this record was `open`, and its reason was that `halveCard` "+
+      "runs once at the DEAL, which is the whole of its safety argument (thirty "+
+      "base-value readers is thirty chances to miss one). The build keeps that "+
+      "argument: the value still lives on the CARD, so every reader sees it "+
+      "untold, and only the two moments the window changes re-stamp it. The "+
+      "count is derived off the side's own `nextTurn` schedule, so two crushes "+
+      "quarter and nested ceilings compose in either order."},
+
+"halving-reads-every-zone": {
+  status:"stated", cr:null, board:"both", since:"v3.78", swept:"v4.73",
+  claim:"A halving of the base {p} and {d} of cards a hero CONTROLS is applied to "+
+        "the card objects in every zone that hero holds — hand, deck, arsenal, "+
+        "graveyard, banish, pitch, soul — not only to the cards on the chain or "+
+        "defending.",
+  why:"Lyath's own static (v3.78) and Walk in My Shoes (v4.73) both stamp the "+
+      "card rather than threading a flag through every reader of a base value, "+
+      "and a card in a hand is held rather than controlled. The observable "+
+      "difference is a card whose power is read while it sits in a hidden or "+
+      "resting zone — a discard or reveal asking for 6 or more {p} (Kayo's "+
+      "family) reads the halved number. A card minted during a window is not "+
+      "stamped; the pool's only attack action card an effect creates is "+
+      "Crouching Tiger, which prints 0 power and no defence, so that half is "+
+      "unobservable and pinned as a premise."},
 
 "surge-approximated": {
   status:"stated", cr:null, board:"both", since:"v3.70", swept:"v4.02",
@@ -619,30 +730,24 @@ const APPROX = {
       "change v3.23 says is worse than the honest gap. Crown of Dichotomy is the "+
       "pool's only multi-target pick, so nothing else is waiting on it."},
 
-"drx-bar-from-arsenal-unread": {
-  status:"stated", cr:"CR 8.1.3a", board:"both", since:"v4.60", swept:"v4.60",
+"drx-bar-from-arsenal-read": {
+  status:"closed", cr:"CR 8.1.3a", board:"both", since:"v4.60", swept:"v4.69",
   claim:"Release the Tension x3 grants \"Defense reactions can't be played FROM "+
-        "ARSENAL this chain link\" as a quoted ability on your next arrow attack, "+
-        "and that narrower form is deliberately REFUSED. v4.60 built the two "+
-        "unconditional wordings (Widowmaker, Wreck Havoc); this one still reads "+
-        "nothing, and the card keeps `fx.quotedUnread` so the audit names it.",
-  why:"READING IT WITH THE UNCONDITIONAL ANCHOR WOULD BE STRONGER THAN PRINTED. "+
-      "The clause restricts one ZONE; taken by the reader v4.60 built it would bar "+
-      "a defence reaction played from the HAND as well, which the card never says — "+
-      "the direction that steals games, and v2.30's arrow-buff-on-a-sword one "+
-      "restriction over. So the anchor stops short of it and the refusal is visible. "+
-      "AND THE ZONE IS NOT CARRIED AS A PARAMETER, on purpose: with only the two "+
-      "unconditional records reading, a `zone` field on the bar would have no "+
-      "claimant, which is dead rules code that reads like a rule (v4.11, v4.52). "+
-      "WHAT IT WAITS ON IS `quotedRider`, NOT THE ZONE. That body requires "+
-      "`sub.onHit` — it is an ON-HIT reader by construction — and this rider is a "+
-      "static restriction, so carrying it means widening the rider shape for all "+
-      "FOUR grant families that share it (`buffQ`, `gaNextQ`, `instantNextQ`, "+
-      "`costOff`). That is its own piece of work with its own blast radius, and "+
-      "half-building it is worse than the honest gap (v3.23). "+
-      "IT IS LIVE RATHER THAN LATENT: Azalea decks Release the Tension AND "+
-      "Widowmaker, so one hero holds both halves of the family and the narrow one "+
-      "is the half that does nothing."}
+        "ARSENAL this chain link\" as a quoted ability on your next arrow attack. "+
+        "BUILT AT v4.69: the narrow wording reads with its ZONE as a value "+
+        "(`noDrx: \"arsenal\"`), rides on the pump as a static rider "+
+        "(`parser.quotedStatic`), lands on the collecting arrow's `pend`, and "+
+        "`drxBarWhy(link, card, from)` asks the zone the defence reaction is played "+
+        "from — so the arsenal is barred and the HAND is not.",
+  why:"Recorded at v4.60 as `stated` with a probe asserting the refusal, which went "+
+      "RED the day the reader landed — the reversal a `stated` record exists to force "+
+      "(v4.02). The two things it named were both answered narrowly: the ZONE became a "+
+      "parameter because it finally had a claimant (v4.11's objection was about "+
+      "vocabulary with none), and `quotedRider` was NOT widened — a second reader "+
+      "for the one static the engine can read sits beside it, so the four grant "+
+      "families' on-hit shape is untouched. Measured before building: exactly two "+
+      "pool records carried an unread quoted rider, and the other (Display "+
+      "Loyalty's attacks-trigger) is a different family."}
 
 };
 

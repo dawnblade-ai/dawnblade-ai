@@ -188,7 +188,12 @@ test("which SOURCE FILE each slice reads is pinned, or the resolver is unwatched
   const by = {};
   for(const r of census()) by[r.f] = (by[r.f] || 0) + 1;
   assert.deepEqual(by, {
-    "index.html": 16,
+    /* 16 -> 17 AT v4.73, READ FIRST: `walkinmyshoes.test.js` slices the
+       trainer's `foeBegin`, bounded at `foeStep` — its next declaration, the
+       safe form — to pin that seat 1's turn start ARMS its `nextTurn`
+       schedule. Only one board seats the dummy, so the claim is about the
+       trainer's source by construction. */
+    "index.html": 17,
     "engine/build.js": 1,
     /* +2 AT v4.59, READ FIRST: `dichotomy.test.js` pins that `buildPrompt`
        names the new `filters` field (v2.34's rule, ninth field) and that
@@ -232,7 +237,13 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        branch rather than at the function — at the declaration it read the
        `opt` branch too (13,303 chars for a claim about one field), which is
        a bound too wide reading exactly like a drill that passes (v4.57). */
-    "dichotomy.test.js engine/prompts.js 11759",
+    /* 11,759 -> 11,931 AT v4.64, READ FIRST: still the pick branch, bounded
+       at the next variant; the growth is the `charge` field Roaring Beam's
+       effect-charge rides on, inserted beside `classRider`. */
+    /* 11,931 -> 12,276 AT v4.71, READ FIRST: still the pick branch; the
+       growth is Beckoning Haunt's `xPay`, beside the counter cost it
+       twins. */
+    "dichotomy.test.js engine/prompts.js 12276",
     /* 8,550 -> 9,523 AT v4.60, and now THREE files take the same slice —
        `playRx`, anchored on its own declaration and bounded at `playRxA`, the
        next one, which is the safe form. READ FIRST (v4.57: a pin edited
@@ -242,20 +253,36 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        trainer function in the comment beside it (`foeSwing` -> `foeVanilla`,
        see test/actor.test.js). The anchors still bound the body all three
        drills name. */
-    "dorinthea.test.js index.html 9523",
-    "drx.test.js index.html 9523",
+    /* 9,523 -> 9,516 AT v4.69, READ FIRST: `playRx`'s bar call became
+       `drxBarWhy(s.pend, c, "hand")` — the link and the door's zone rather
+       than the link's card — seven characters shorter. Same body, same
+       anchors. */
+    "dorinthea.test.js index.html 9516",
+    "drx.test.js index.html 9516",
     "phasebar.test.js index.html 15953",
     "phasebar.test.js index.html 62489",
-    "priority.test.js index.html 16557",
-    "priority.test.js index.html 16557",
-    "priority.test.js index.html 9523"
+    /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
+       `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
+       `abPickBound` in the pick legality it extends. */
+    /* 17,784 -> 18,579 AT v4.72, READ FIRST: still `tryPlay` ->
+       `confirmPay`; the growth is the X declaration (`xpick`), inserted
+       after the split-card declaration it mirrors. The signature is
+       unchanged — the answer rides on the state as `_x` — so every anchor on
+       `tryPlay` still finds the body it names. */
+    "priority.test.js index.html 18579",
+    "priority.test.js index.html 18579",
+    "priority.test.js index.html 9516"
   ], /* 15,440 -> 16,557 AT v4.59, READ FIRST (v4.57: a pin edited without
         being read is a guard switched off). Both rows are
         `tryPlay` -> `confirmPay` — anchored on the body's own declaration and
         bounded at the NEXT one, which is the safe form — and the growth is
         v4.59's new activation legality, inserted INTO `tryPlay` beside the
         four costs it sits with. The anchors still bound the body the drill
-        names, which is the question this census exists to ask. */
+        names, which is the question this census exists to ask.
+        16,557 -> 17,343 AT v4.63, READ FIRST, and it is the same shape: the
+        trainer's `tryPlay` gained the paid-no-op refusal judge had carried
+        alone since v4.49 (`parser.abCtrGateFails`), inserted beside the
+        pick legality. Still `tryPlay` -> `confirmPay`. */
      "a slice over 8,000 characters moved — read it before repinning, and check "
    + "the anchors still bound the body the drill NAMES (v4.57)");
 });

@@ -78,12 +78,17 @@ const ATOMS = [
                                                         flag: "soul"},
   {rx: /^remove (?:x|a|an|\d+) [a-z]+ counters? from [a-z]+$/i, flag: "ctr"},
   {rx: /^turn this face-?up$/i,                         flag: "flipUp"},
+  /* AN X COST, READ AT v4.71 — Beckoning Haunt's "{x}{x}{r}". It left the
+     latent rows below when its X became SETTLED BY THE CHOICE (the chosen
+     aura's cost); `x` is the pip count `parseHeroPower` now carries, and
+     the fixed `{r}` still counts into `cost`. The reader refuses X pips
+     with no coupled pick, so a free X is not reachable through here. */
+  {rx: /^(\{x\})+(\{r\})*$/i,                           flag: "x"},
   /* LATENT — printed, and this reader refuses the whole line. Each is an
      honest gap rather than a half-read cost: weaker than printed and
      visible in the audit (v2.29). */
   {rx: /^\{t\} your hero$/i,                            latent: "a tap of the HERO, not the permanent"},
   {rx: /^discard this$/i,                               latent: "a card in HAND paying for its own ability"},
-  {rx: /^(\{x\})+(\{r\})*$/i,                           latent: "an X cost (tools/approx.js: x-cost)"},
   {rx: /^put (?:a|an|\d+) [a-z]+ counters? on this$/i,  latent: "a counter PUT as a price"},
 ];
 /* TWO ATOMS ARE DESCRIBED BY A GENERAL SIBLING AND STILL REFUSE, AND THAT
@@ -212,14 +217,13 @@ test("every non-latent atom has a pool claimant, and the set is pinned", () => {
       (r.latent ? latent : claimed).add(r.latent || r.flag || r.reader);
     }
   assert.deepEqual([...claimed].sort(),
-    ["chi","cost","destroyBoard","discardCost","ctr","flipUp","sd","soul","tapsToActivate"].sort(),
+    ["chi","cost","destroyBoard","discardCost","ctr","flipUp","sd","soul","tapsToActivate","x"].sort(),
     "the cost readers the pool reaches");
   assert.deepEqual([...latent].sort(), [
     "a card in HAND paying for its own ability",
     "a counter PUT as a price",
     "a tap of the HERO, not the permanent",
-    "an X cost (tools/approx.js: x-cost)",
-  ].sort(), "and the ones it prints and this reader refuses");
+  ].sort(), "and the ones it prints and this reader refuses (the X cost left at v4.71)");
 });
 
 /* ============================================================
