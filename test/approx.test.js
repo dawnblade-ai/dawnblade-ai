@@ -953,13 +953,19 @@ probe("attack-ops-at-resolution", () => {
      what a `stated` record's probe is for — closing part of a gap turns
      it RED and the record has to be updated rather than left to rot
      (v4.02). */
-  assert.equal(rows.length, 15,
+  /* 15 -> 13 AND 7 -> 5 AT v4.78: Hyper Inflation and Pick Up the Point
+     left the same way — `costTax` and `pickPrompt` joined `DECL_OPS`,
+     because each is late in a way the SAME chain link can see. The three
+     left carry a next-attack grant, which is late but not OBSERVABLY late:
+     the next attack cannot be declared until this one resolves, and none of
+     the three prints phantasm, so each always resolves. The set below is
+     named for that reason rather than dropped. */
+  assert.equal(rows.length, 13,
     "the number of bare when-this-attacks ATTACK cards with a payload moved");
-  assert.equal(lateRows.length, 7,
+  assert.equal(lateRows.length, 5,
     "the number whose payload rides to RESOLUTION moved");
   assert.deepEqual(observable.map(r => r.name).sort(),
-    ["Brand with Cinderclaw", "Fire Tenet: Strike First", "Hyper Inflation",
-     "Pick Up the Point", "Teklo Trebuchet 2000"],
+    ["Brand with Cinderclaw", "Fire Tenet: Strike First", "Teklo Trebuchet 2000"],
     "the set of cards whose payload is OBSERVABLY late moved. Down means one " +
     "was moved to declaration and the ledger must say so; up is a regression. " +
     "(Two more are late and carry only a `noop`, which is not observable.)");

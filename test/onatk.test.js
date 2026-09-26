@@ -101,17 +101,24 @@ test("the allow-list is PINNED, and it is an allow-list", {skip}, () => {
      A kind arriving here is a deliberate edit with a reason, because
      moving an op into a moment nothing has checked it in is exactly how
      a timing fix becomes a new bug. */
-  assert.deepEqual([...P.DECL_OPS].sort(), ["arcane", "rune"]);
+  /* +costTax +pickPrompt AT v4.78 — each late in a way the SAME chain
+     link can see (Hyper Inflation taxes the defender's reactions; Pick Up
+     the Point's dagger is a Danger Digits target in this reaction step). */
+  assert.deepEqual([...P.DECL_OPS].sort(), ["arcane", "costTax", "pickPrompt", "rune"]);
 
-  /* AND THE KINDS THAT STAY BEHIND REALLY DO. `buffNext` fired here is
-     taken by THIS attack — a self-pump the card does not print. */
+  /* AND THE KINDS THAT STAY BEHIND REALLY DO. `buffNext` is held back
+     because moving it buys NOTHING observable (v4.78): it grants the NEXT
+     attack, which cannot be declared until this one resolves. The reason
+     this comment used to give — "taken by THIS attack" — was true of the
+     pre-run, which runs before `pend` is built, and measured it no longer
+     holds at the `fx.onAtk` site. */
   const probe = {name: "OnAtk Buff Probe", pitch: 1, cost: 0, power: 4,
                  tt: "Generic Attack Action", ty: ["Generic", "Attack", "Action"], kw: [], gkw: [],
                  tx: "When this attacks, your next attack this turn gets +3{p}."};
   const fx = P.fxParse(probe);
   assert.deepEqual(fx.onAtk || [], [],
-    "`buffNext` was routed to declaration — the grant is then taken by the attack that " +
-    "made it, which is a self-pump the card never prints");
+    "`buffNext` was routed to declaration — an allow-list only grows with a reason, and " +
+    "this kind's timing is not observable (see the header in parser.js)");
   assert.ok((fx.ops || []).some(o => o[0] === "buffNext"), "…and it must still be read at all");
 });
 
@@ -187,4 +194,46 @@ test("DRIVEN: a swing at an ALLY still fires it — a bare trigger has no target
   assert.equal(out.state.sides[1].hp, 18,
     "the trigger did not fire against an ally — its printed text names no target, so " +
     "gating it on the hero is weaker than printed");
+});
+
+/* ============================================================
+   C. TWO PAYLOADS THE SAME CHAIN LINK CAN SEE (v4.78)
+   ============================================================ */
+
+test("Hyper Inflation's tax is live BEFORE the defender reacts", {skip}, () => {
+  /* "When this attacks, cards cost {r} more to play this turn" names no
+     seat, so it prices the defender's reactions on this very link. Fired at
+     resolution, a Sigil of Suffering (printed cost 0) was played for free. */
+  const hi = {...card("Hyper Inflation", 1), uid: "hi"};
+  let g = H.state({res: 9, hand: [hi], ap: 1}, {hp: 20},
+                  {actor: 0, turnPlayer: 0, turn: 3, seed: "onatk"});
+  g = H.execute(g, hi, "hand", 0, {attacking: true, isAttack: true, target: "hero"});
+  assert.ok(g.pend, "the attack is the live link");
+  assert.equal(g.costTax, 1, "the tax waited for the attack to resolve");
+  assert.ok(!((g.pend.ops || []).some(o => o[0] === "costTax")), "the tax also rides to resolution — charged twice");
+  const sig = card("Sigil of Suffering", 1);
+  assert.equal(P.effCost(sig, g.sides[1], P.costCtx(g)), (sig.cost || 0) + 1,
+    "the defender's reaction is not taxed on this link");
+});
+
+test("Pick Up the Point's dagger arrives in time to be jabbed on this link", {skip}, () => {
+  /* The retrieve sheet opens at declaration (still before the defend step),
+     so the dagger is equipped while the attack is the live link — and a
+     dagger "that isn't on the active chain link" is exactly what Danger
+     Digits targets in this reaction step. */
+  const E = require("../engine/effects.js");
+  const pu = {...card("Pick Up the Point", 1), uid: "pu"};
+  const mark = {...card("Mark of the Huntsman", 0), uid: "mk"};
+  let g = H.state({res: 9, hand: [pu], ap: 1, grave: [mark]}, {hp: 20},
+                  {actor: 0, turnPlayer: 0, turn: 3, seed: "onatk"});
+  g = H.execute(g, pu, "hand", 0, {attacking: true, isAttack: true, target: "hero"});
+  if(!g.prompt) g = J.openPrompt(g);
+  assert.equal(g.prompt && g.prompt.tag, "pick", "the retrieve sheet waited for resolution");
+  assert.ok(g.pend, "…and it is asked while the attack is still the live link");
+  g = J.reduce(g, {t: "promptSel", i: 0}, 0).state;
+  g = J.reduce(g, {t: "promptConfirm"}, 0).state;
+  assert.ok(g.pend, "answering the sheet closed the link");
+  assert.deepEqual(g.sides[0].gear.map(x => x.name), ["Mark of the Huntsman"]);
+  assert.equal(E.jabTargets(g.sides[0], {tt: "dagger"}, g.pend.card.uid).length, 1,
+    "the retrieved dagger is not a legal jab target inside this link");
 });

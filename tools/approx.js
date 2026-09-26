@@ -343,7 +343,7 @@ const APPROX = {
       "decked-out solo game still ends — the CR's way."},
 
 "attack-ops-at-resolution": {
-  status:"stated", cr:"CR 7.2", board:"both", since:"v3.88", swept:"v4.02",
+  status:"stated", cr:"CR 7.2", board:"both", since:"v3.88", swept:"v4.78",
   claim:"On an ATTACK card a bare \"when this attacks\" payload rides to "+
         "RESOLUTION with `pend.ops`. The printed trigger fires on DECLARATION.",
   why:"MEASURED BY DRIVING (v4.03 — the first version of this record counted op "+
@@ -379,7 +379,16 @@ const APPROX = {
       "its header names why each remaining kind stays behind. Measured after: "+
       "15 cards carry a payload, 7 still hold it at resolution, and FIVE are "+
       "observably late — Brand with Cinderclaw, Fire Tenet, Hyper Inflation, "+
-      "Pick Up the Point and Teklo Trebuchet 2000."},
+      "Pick Up the Point and Teklo Trebuchet 2000. AND TWO MORE MOVED AT v4.78, the two a "+
+      "single chain link can see: `costTax` (Hyper Inflation taxes the DEFENDER's "+
+      "reactions on this link) and `pickPrompt` (Pick Up the Point's retrieved dagger "+
+      "is a Danger Digits target in this link's reaction step). THE THREE LEFT ARE NOT "+
+      "OBSERVABLY LATE, measured: each grants the NEXT attack (`buffNext`, `dracNext`), "+
+      "which cannot be declared until this one resolves, and none prints phantasm, so "+
+      "each always resolves. The deviation stands as stated because moving them buys "+
+      "nothing, not because it is unsafe — `fx.onAtk` fires after `pend` is built, so "+
+      "the old worry (the grant taken by its own attack) no longer holds, and that was "+
+      "checked by routing one there and driving it."},
 
 "trainer-priority-machine": {
   status:"stated", cr:"CR 4.2-4.4, 7.x", board:"trainer", since:"v2.27", swept:"v4.02",
