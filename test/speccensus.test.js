@@ -198,7 +198,13 @@ test("every spec field that reaches prompts.js is pinned", () => {
     "ctrHeld", "ctrSpend", "ctrStamp", "destroyUid", "elseOps", "equipStamp",
     "faceUp", "filter", "hint", "jab", "lateGa", "max", "min", "moveFoe", "n",
     "ops", "optional", "options", "playThisTurn", "shuffleAfter", "side", "spendCtr",
-    "src", "tag", "tapHero", "tapUid", "taps", "title", "to", "xPay", "zone",
+    "src", "tag", "tapHero", "tapUid", "taps", "title", "to", "wayRider", "xPay", "zone",
+  /* +wayRider v4.77 — what waits on a deferred arcane hit LANDING ("…if
+     damage is dealt this way", surge, Turn to Mindfire's tap). It arrived
+     on the same 34 legs with no leg written, so a hero wearing an arcane
+     barrier really is hit by one of those cards in a driven game — which is
+     why their riders being answered FALSE against a barrier was a live
+     defect, not a latent one. */
   /* +xPay v4.71 — Beckoning Haunt's X, paid once per {x} pip for the aura
      the pick returns. It arrived on the same 34 legs with no leg written,
      so Viserai really does activate the piece in a driven game. The parse's

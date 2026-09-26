@@ -1,6 +1,6 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-09-26T22:23:09.181Z · app v4.76 · data sage-v14 · db 797 records
+Generated 2026-09-26T22:46:49.742Z · app v4.77 · data sage-v14 · db 797 records
 
 ## Summary
 
@@ -65,7 +65,7 @@ Generated 2026-09-26T22:23:09.181Z · app v4.76 · data sage-v14 · db 797 recor
 | spellvoid | live — v4.75 — LIVE in both printings. Plain Spellvoid N is offered by arcaneSoaks at the point arcane damage is dealt, on both boards (Halo of Illumination and Spellbane Aegis print it, v4.02). Mask of the Swarming Claw's 'Spellvoid X, where X is the number of chain links you control' reads too: parser.linksControlled counts the wearer's links at the moment of the hit, so X is 0 on the opponent's turn (tools/approx.js: spellvoid-x-read) | Halo of Illumination, Mask of the Swarming Claw |
 | steal | live — v4.74 — Jack Be Quick, the pool's ONLY control change (797 records, nothing else prints steal or gain control). `stealAlly` opens a pick among the opponent's living allies; the entry crosses to the thief's board UNTAPPED, stamped with its OWNER on the entry and the card; `effects.returnStolen` hands it back at step (0) of the end phase — the action phase is over — tapped if it attacked; a death while stolen files into the OWNER's graveyard, and `STOLEN-CARD-OFF-BOARD` catches any exit that does not | Jack Be Quick |
 | stealth | live — RULED 2026-07-25: does nothing alone — a qualifier other cards test for | Art of Desire: Body, Art of Desire: Mind, Infect, Mark of the Black Widow, Mark of the Funnel Web, Mark the Prey, Reaper's Call |
-| surge | partial — v3.70 - PARTIAL, and the record said unreviewed. classifyClause reads the Surge dash line into a surgeOverN condition and effects evaluates it; Aether Quickening and Open the Flood Gates both read full. It is partial rather than live because the condition is APPROXIMATED as amp>0 rather than the damage actually dealt - partial counts as built for an upside and never for a drawback (v3.00) | Aether Quickening, Open the Flood Gates |
+| surge | live — v4.77 - LIVE. The Surge dash line is a late `way:dealtOverN` condition answered off the arcane damage that actually LANDED, after every prevention; it was approximated as amp>0 before the damage (tools/approx.js: surge-dealt-read). A hit deferred into an arcane-barrier sheet is answered when that sheet is. Aether Quickening and Open the Flood Gates, both Blaze's. | Aether Quickening, Open the Flood Gates |
 | suspense | live — RULED 2026-07-25: enters with 2 counters (same on every suspense card), ticks at the beginning of the turn, destroyed at 0 and the `when this leaves the arena` payload fires then | Act of Glory, Edge of Their Seats, Tension in the Air, The Suspense is Killing Me |
 | temper | live — -1 per block, destroyed at 0 | Basalt Boots, Gauntlets of Unity, Helm of Unity, Knucklehead, Mournful Casket, Steelbraid Buckler, Stonewall Impasse |
 | the crowd boos | live — RULED 2026-07-25: leaves a per-turn booed state; the boo itself does nothing and Reviled is a static talent | Booze!, Concealed Object, Goon Beatdown, Mocking Blow, Prime the Crowd, Villainous Pose |

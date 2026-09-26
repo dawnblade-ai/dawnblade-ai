@@ -289,7 +289,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 16 -> 17 AT v4.71: `activation-choices-at-resolution`. */
   /* 17 -> 18 AT v4.73: `halving-reads-every-zone`. */
   /* 18 -> 17 AT v4.75: `spellvoid-x` was BUILT and is `spellvoid-x-read`. */
-  assert.equal(n("stated"), 17, "stated count moved");
+  /* 17 -> 16 AT v4.77: `surge-approximated` was BUILT and is `surge-dealt-read`. */
+  assert.equal(n("stated"), 16, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -334,8 +335,9 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 16 -> 17 AT v4.63: `steam-build-powcard-read`. 17 -> 18 AT v4.66:
      `play-held-on-the-stack`. 19 -> 20 AT v4.72: `x-cost-declared`.
      20 -> 21 AT v4.73: `crush-halving-rider-read`. 21 -> 22 AT v4.74:
-     `control-change-steal-built`. 22 -> 23 AT v4.75: `spellvoid-x-read`. */
-  assert.equal(n("closed"), 23, "closed count moved");
+     `control-change-steal-built`. 22 -> 23 AT v4.75: `spellvoid-x-read`.
+     23 -> 24 AT v4.77: `surge-dealt-read`. */
+  assert.equal(n("closed"), 24, "closed count moved");
 });
 
 /* ============================================================
@@ -1286,21 +1288,22 @@ probe("halving-reads-every-zone", () => {
 /* Surge is evaluated as `amp > 0` rather than as the arcane damage
    actually dealt. The observable: a side holding an amp with NO damage
    dealt this turn satisfies the condition. */
-probe("surge-approximated", () => {
-  const names = new Set();
-  for(const c of pool()){
-    const fx = PR.fxParse(c);
-    for(const cd of (fx.conds || [])) if(/^surgeOver/.test(String(cd.cond))) names.add(c.name);
-  }
-  assert.ok(names.size, "no pool card emits a surgeOver condition any more");
-  /* the approximation itself: the condition reads `amp`, never a damage record */
-  const src = fs.readFileSync(path.join(X.ROOT, "engine", "effects.js"), "utf8");
-  const i = src.indexOf("surgeOver");
-  assert.ok(i > 0, "effects.js no longer answers surgeOver");
-  const window = src.slice(i, i + 400);
-  assert.ok(/amp/.test(window),
-    "surge is no longer answered off `amp` — it may be reading the damage dealt, " +
-    "in which case the approximation is closed and the record must move");
+/* CLOSED AT v4.77, and the probe DRIVES the card rather than scanning for
+   the word `amp`. Aether Quickening (pitch 3) deals 2 and surges above 2:
+   with an amp of 1 into a ward of 1, two land and it must NOT surge — the
+   case the `amp > 0` prediction got wrong. The positive control is the same
+   card with no ward, or a probe that refused every surge would pass. */
+probe("surge-dealt-read", () => {
+  H.db();
+  const AQ = {...H.card("Aether Quickening", 3), uid: "aq"};
+  const go = ward => {
+    let g = H.state({hp: 20, res: 5, ap: 1, hand: [AQ], amp: 1}, {hp: 20, res: 0, hand: [], ward},
+                    {turn: 3, actor: 0, turnPlayer: 0, phase: "action"});
+    g = H.execute(g, AQ, "hand", 0, {});
+    return {ap: g.sides[0].ap, hp: g.sides[1].hp};
+  };
+  assert.deepEqual(go(1), {ap: 0, hp: 18}, "two landed and it surged anyway — the amp is being read, not the damage");
+  assert.deepEqual(go(0), {ap: 1, hp: 17}, "three landed and it did not surge");
 });
 
 /* A forced pitch or discard with no printed choice is auto-picked rather

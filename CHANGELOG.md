@@ -1,3 +1,98 @@
+## v4.77 — damage is judged when it LANDS
+
+> *"Deal 2 arcane damage to target hero. **Surge** - If this deals more than
+> 2 damage, it gets **go again**."* — AETHER QUICKENING, Blaze's
+
+**THREE DEFECTS, ONE SHAPE: a question about damage, asked before the damage
+had landed.** All six cards involved read `tier: full`, and they sit in
+three precons.
+
+### 1. Surge read a prediction
+
+Surge was evaluated as *"is an amp held?"*, BEFORE the arcane op ran. An amp
+whose extra point a ward or a barrier then prevented surged anyway, which is
+stronger than printed. Surge is now a late **`way:dealtOverN`** condition,
+answered off the damage that LANDED, after every prevention. It uses the
+trace `arcaneHit` records inside its `left > 0` branch, so CR 7.5.5's
+*prevented is not dealt* governs it without being restated.
+
+Measured, Aether Quickening (pitch 3) with an amp of 1:
+
+| into | before | now |
+|---|---|---|
+| nothing | 3 land, go again | 3 land, go again |
+| a ward of 1 | 2 land, **go again** | 2 land, no go again |
+| an Arcane Barrier, paid | 2 land, **go again** | 2 land, no go again |
+
+### 2. A hit deferred into a barrier sheet had not landed yet
+
+When the hero being hit can pay for an Arcane Barrier, `arcaneHit` DEFERS the
+damage into their soak answer. The late *"…this way"* pass then asked what
+had been dealt, and the answer was **0**. So every rider that waits on its own
+damage read FALSE against any hero wearing a barrier, **even one who then
+declined it**:
+
+- Aether Icevein ×6 and Polar Cap ×2 (Iyslander)
+- Aether Quickening, Open the Flood Gates and Turn to Mindfire (Blaze)
+- Path of Same Ends ×2 (Briar)
+
+Driven on the old engine: Path of Same Ends lost its go again, and Turn to
+Mindfire never offered its tap. These were weaker than printed, so the
+one-sided fairness sweep could not see them. **`test/speccensus.test.js`
+proved it live**: the new field reached `prompts.js` on its 34 driven legs
+with no leg written, so a barrier-wearer really is hit by these cards in a
+driven game.
+
+The conditions now ride on the sheet the damage waits on (`wayRider`), and
+`applyAnswer` settles them when the sheet is answered.
+
+- **The rider belongs to the dealer**, so the dealer's seat is borrowed and
+  handed back. That is v3.46's inversion, one answer over.
+- **Go again lands where it still can.** For an attack whose trigger fired at
+  declaration, it goes on the live `pend`. For a non-attack that has already
+  settled, it is the action point itself (CR 5.3.5, which v3.93's late grant
+  rests on).
+- **One place words a miss** (`wayMissLine`), so the immediate and deferred
+  passes cannot disagree. A surge miss now says *"didn't deal more than N
+  damage"* in the player's words.
+
+### 3. A soak sheet that lapsed took its damage with it
+
+`buildPrompt` binds a soak's options at BUILD time, so a sheet worth asking
+when it was queued can be worth nothing when it is drained. Three Runechants
+queue three soaks, and paying for the first spends the hero's only resource.
+The second and third then offer nothing, `buildPrompt` answers null, and the
+drain skipped them. **Two points of arcane damage never landed.** That is
+stronger than printed for the hero being hit, and it steals games.
+`buildPrompt`'s own soak comment named the three-Runechant case while
+guarding its other half, an unpayable barrier being offered.
+
+`prompts.promptLapse` is the one reader. A lapsed soak resolves as its
+default answer (take it all) through the same `applyAnswer` a Confirm
+reaches, on **both** boards' drains. Measured: the `pay` sheet never builds
+null, and no other variant carries a payload in its answer.
+
+### What is pinned, and what is not built
+
+- **Two premises are drills.** No `way:` gate in the pool carries `instead`,
+  because a late gate cannot replace an op that already ran. And every card
+  whose rider waits on its own damage deals exactly ONE arcane instance,
+  which is why the rider needs no "already landed" field. The first draft
+  had one, and it could only ever read 0 (v4.11), so it was deleted.
+- **Recorded, not built: source attribution.** `arcaneHit` credits the trace
+  whoever's damage it is, so a Runechant popping inside an attack's own
+  resolution could count as the attack's "dealt this way". It is latent and
+  measured: both late-pass sites run before any other arcane source in
+  `execute`.
+
+### The rest
+
+- **The approximation record closes.** `surge-approximated` (stated) is now
+  `surge-dealt-read` (closed). Its probe drives the card instead of grepping
+  for the word `amp`. The keyword ledger's `surge` is `live`.
+- **`WIRE_V` 18 → 19**, because a soak prompt carries a new field.
+- **14 new drills. 13 sabotages, 13 bite.**
+
 ## v4.76 — Dawnblade, a fan-made Silver Age format
 
 **THE GAME NAMES ITSELF.** Dawnblade is now declared a fan-made sub-format

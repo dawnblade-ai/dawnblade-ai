@@ -120,7 +120,7 @@ test("all three keyword gates read `instead`, not just the one that broke", () =
      "this chain link, instead it gains +6{p}.", "reprise"],
     ["High Tide - If there are 2 or more blue cards in your pitch zone, " +
      "instead it gains +6{p}.", "pitchBlue2"],
-    ["Surge - If this deals more than 3 damage, instead it gains +6{p}.", "surgeOver3"]
+    ["Surge - If this deals more than 3 damage, instead it gains +6{p}.", "way:dealtOver3"]
   ];
   for (const [tx, cond] of gates) {
     const fx = P.fxParse(mk("Target weapon attack gains +4{p}.\n" + tx));
