@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.77
+**Current version:** v4.78
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3207 drills** at v4.77.
+This is `node --test "test/*.test.js"` — **3209 drills** at v4.78.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,21 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A RECORDED REASON FOR HOLDING A KIND BACK CAN GO STALE TOO (v4.78)
+
+`DECL_OPS` (v4.08) is a pinned allow-list with a reason beside every kind it
+refuses. Two of those reasons had gone stale, and asking again moved two
+cards (Hyper Inflation's tax, Pick Up the Point's retrieve, both Arakni's) to
+declaration, because a single chain link can observe each. A third reason
+(*"`buffNext` fired here is taken by THIS attack"*) was stale in its
+MECHANISM: it was written when these ops pre-ran before `pend` existed.
+**Routed there and driven**, the grant waited for the next attack. It stays
+out for the truer reason: moving it is unobservable.
+
+**When you keep a thing out of an allow-list, re-check the reason at the
+site it is about, not at the site it was written for.** v3.69's rule (ask
+the engine, not the record), applied to a list's own header.
 
 ### DAMAGE IS JUDGED WHEN IT LANDS (v4.77)
 

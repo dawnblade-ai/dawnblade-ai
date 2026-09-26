@@ -135,17 +135,36 @@ const ORDINAL = {first:1, second:2, third:3, fourth:4, fifth:5};
      draw · discardRandom · eachArsPut · reveal · revPitch ·
      revColorPitch · payOrLose      already fire at declaration, through
                                     `execute`'s pre-run and `declOps`
-     buffNext                       a next-attack grant fired here is
-                                    taken by THIS attack — a self-pump
-                                    the card does not print
-     pickPrompt                     opens a sheet the caller has not
-                                    finished draining (`openPrompt` runs
-                                    at the tail of `execute`)
-     costTax · dracNext             BUILT at v4.06 as bugs; moving them
-                                    is its own call, and `dracNext` needs
-                                    the source excluded from its own
-                                    grant first
+     buffNext · dracNext            NOT OBSERVABLY LATE, measured at
+                                    v4.78. Each grants the NEXT attack,
+                                    which cannot be declared until this
+                                    one resolves, and none of the three
+                                    cards printing them (Fire Tenet:
+                                    Strike First, Teklo Trebuchet 2000,
+                                    Brand with Cinderclaw) prints
+                                    phantasm, so each always resolves.
+                                    (The old reason here — "taken by THIS
+                                    attack" — was true of the PRE-RUN,
+                                    which runs before `pend` is built;
+                                    `fx.onAtk` fires after it, so it no
+                                    longer holds. What keeps them out now
+                                    is that moving them buys nothing.)
      noop                           nothing to fire
+
+   AND TWO JOINED AT v4.78, because each is late in a way the SAME CHAIN
+   LINK can see — both in Arakni's own list:
+
+     costTax     Hyper Inflation's "cards cost {r} more to play this turn"
+                 names no seat, so it taxes the DEFENDER's reactions on this
+                 very link. Fired at resolution, the defender reacted
+                 untaxed.
+     pickPrompt  Pick Up the Point's retrieve. A dagger equipped at
+                 declaration is a legal target for Danger Digits' jab in
+                 this link's reaction step ("a dagger that isn't on the
+                 active chain link"); retrieved at resolution it arrives
+                 after the only window it could be used in. The sheet is
+                 queued like any other and drained at the tail of `execute`,
+                 still before the defend step.
 
    Both members touch nothing the attack does and nothing touches them:
    an arcane resolves against the defending hero and a token mint lands on
@@ -153,7 +172,7 @@ const ORDINAL = {first:1, second:2, third:3, fourth:4, fifth:5};
    `atkTrigAt` is captured at the top of `execute`, so a Runechant minted
    here is NOT in the firing set and cannot pop for the attack that made
    it (v2.23). */
-const DECL_OPS = new Set(["arcane", "rune"]);
+const DECL_OPS = new Set(["arcane", "rune", "costTax", "pickPrompt"]);
 
 /* ---- ONE IDIOM, TWO SPELLINGS (v3.00) --------------------------------
 

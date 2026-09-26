@@ -1,3 +1,44 @@
+## v4.78 — two "when this attacks" payloads fire when it attacks
+
+> *"When this attacks, cards cost {r} more to play this turn."*
+> — HYPER INFLATION, Arakni's
+>
+> *"When this attacks, you may retrieve a dagger from your graveyard."*
+> — PICK UP THE POINT, Arakni's
+
+**CR 7.2 puts a "when this attacks" trigger at DECLARATION.** v4.08 moved two
+op kinds there (`arcane`, `rune`), behind the pinned allow-list `DECL_OPS`,
+and recorded why each of the rest stayed behind. Two of those reasons did not
+survive being asked again. **Each card is late in a way the SAME chain link
+can see, and both are in Arakni's own list:**
+
+| card | fired at resolution, so | fired at declaration |
+|---|---|---|
+| Hyper Inflation | the defender's reactions on this link were **untaxed**, even though the card names no seat | a Sigil of Suffering (printed 0) costs 1 |
+| Pick Up the Point | the retrieved dagger arrived after the reaction step | Danger Digits can jab with it in this link's reaction step (*"a dagger that isn't on the active chain link"*) |
+
+`pickPrompt`'s recorded worry, that the sheet would open before its caller
+finished draining, was checked. The sheet is queued like any other and
+drained at the tail of `execute`, still before the defend step.
+
+**AND THE REASON GIVEN FOR `buffNext` WAS STALE.** The allow-list's header
+said a next-attack grant fired at declaration *"is taken by THIS attack"*.
+That was true of the PRE-RUN, which runs before `pend` is built. `fx.onAtk`
+fires after it. **Routed there and driven**, the grant waited for the next
+attack and this one's total did not move. So the three cards left late
+(Brand with Cinderclaw, Fire Tenet: Strike First, Teklo Trebuchet 2000) stay
+late for a truer reason: **it buys nothing**. Each grants the NEXT attack,
+which cannot be declared until this one resolves, and none prints phantasm,
+so each always resolves. An allow-list only grows with a reason.
+
+Measured:
+- **No tiers move.** The ledger's `attack-ops-at-resolution` probe went RED
+  as it should (payloads 15 → 13, late 7 → 5, observably late 5 → 3), and the
+  record now says why the three that remain are not observable.
+- **The ladder at three seeds on both sides moves ±1 per hero**, inside the
+  band (median 3), with Arakni's total unchanged: NOISE.
+- **4 sabotages, 4 bite.**
+
 ## v4.77 — damage is judged when it LANDS
 
 > *"Deal 2 arcane damage to target hero. **Surge** - If this deals more than

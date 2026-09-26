@@ -66,7 +66,10 @@ test("Hyper Inflation prints a tax, and the tax is charged", {skip}, () => {
   const hyper = card("Hyper Inflation", 1);
   assert.match(String(hyper.tx), /cards cost \{r\} more to play this turn/i,
     "fixture: Hyper Inflation no longer prints the tax");
-  assert.deepEqual(P.fxParse(hyper).ops, [["costTax", 1]],
+  /* IN `fx.onAtk` SINCE v4.78 — the printed trigger fires at DECLARATION
+     (CR 7.2), which is what lets the tax price the defender's reactions on
+     the same chain link. */
+  assert.deepEqual(P.fxParse(hyper).onAtk, [["costTax", 1]],
     "the parser stopped reading the clause");
 
   /* THE VICTIM IS A CARD WITH A PRINTED COST, and its cost is read the
