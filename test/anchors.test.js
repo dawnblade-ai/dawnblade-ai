@@ -118,8 +118,12 @@ test("`runOps`'s vocabulary and what the pool emits are pinned both ways", {skip
      record that every deck-top put asks through `parser.deckTopTo`.
      95 -> 96 AT v4.72: `arcaneCount`, Ice Eternal's fused rider — arcane
      equal to a count of named tokens under the target's control, counted
-     when the rider RESOLVES because the same card just made them. */
-  assert.equal(r.dispatched, 96, "runOps's op vocabulary moved");
+     when the rider RESOLVES because the same card just made them.
+     96 -> 97 AT v4.74: `stealAlly`, Jack Be Quick's steal — the pool's only
+     control change, a pick among the opponent's living allies whose answer
+     moves the entry across with its owner stamped. (v4.73's halving is not a
+     kind: it is a `foeNextTurn` VALUE, so it moved nothing here.) */
+  assert.equal(r.dispatched, 97, "runOps's op vocabulary moved");
   /* DISPATCHED WITH NO EMITTER — the `perBoost` shape. Three have a
      producer that is not the parser and are named for it; two have none
      anywhere and are latent readers whose printed wording the pool only

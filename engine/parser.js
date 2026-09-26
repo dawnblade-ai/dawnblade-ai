@@ -1994,6 +1994,19 @@ function classifyClause(raw){
     return R([["foeHandToDeck", 1]]);
   if(m=c.match(/^put a -(\d+)\{d\} counter on (?:target |an )?equipment they control$/))
     return R([["foeGearDef", -(+m[1])]]);
+  /* JACK BE QUICK — THE POOL'S ONLY CONTROL CHANGE (v4.74), measured over
+     797 records: nothing else prints "steal" or "gain control". Read WHOLE,
+     untap and steal and the window together, because each half alone is a
+     different card: an untap with no steal hands THEIR ally a fresh
+     attack, and a steal with no window keeps it forever. The window is
+     "this ACTION PHASE", which ends before the end phase begins —
+     `effects.beginEndPhase`'s step (0) hands it back.
+
+     WHICH ALLY IS THE STEALER'S CHOICE, so the op opens a pick among the
+     opponent's living allies rather than naming one; one candidate is
+     confirmed on the spot (v4.68). */
+  if(/^\{u\} an ally they control, then steal it until the end of this action phase$/.test(c))
+    return R([["stealAlly", 1]]);
   if(/^destroy a card in their arsenal$/.test(c))
     return R([["foeArsDestroy", 1]]);
   /* ---- TURN IT OVER, THEN TAKE IT IF IT IS WHAT YOU FEARED (v4.62) ----

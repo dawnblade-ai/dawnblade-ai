@@ -286,7 +286,17 @@ function damageAlly(game, side, uid, amount){
     msgs.push(killed.card.name + " takes " + amount + " and goes down" +
       (wg ? " — face-down in the graveyard, so it will not be replayed." : "."));
     sd.board = sd.board.filter(b => !b._dead);
-    sd.grave = [Object.assign({}, killed.card, {_fd: true}), ...(sd.grave || [])];
+    /* A STOLEN ALLY DIES INTO ITS OWNER'S GRAVEYARD (v4.74) — control
+       changed, ownership did not. Filed to the thief's, it is a card that
+       works until it dies and then lands in the wrong graveyard, which is
+       v3.23's worst case and the reason the steal waited to be built. */
+    const dead = Object.assign({}, killed.card, {_fd: true});
+    if(killed.owner != null && killed.owner !== side && sides[killed.owner]){
+      delete dead._owner;
+      sides[killed.owner] = Object.assign({}, sides[killed.owner],
+        {grave: [dead, ...(sides[killed.owner].grave || [])]});
+    } else
+      sd.grave = [dead, ...(sd.grave || [])];
   } else {
     const now = (sd.board.find(b => b.uid === uid) || {});
     msgs.push("Ally takes " + amount + (now.life != null ? " — " + now.life + " life left." : "."));

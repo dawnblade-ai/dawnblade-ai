@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.73
+**Current version:** v4.74
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3166 drills** at v4.73.
+This is `node --test "test/*.test.js"` — **3182 drills** at v4.74.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -860,6 +860,47 @@ CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
 
+### A CONTROL CHANGE, OWNERSHIP FIRST (v4.74)
+
+> *"When this hits a hero, {u} an ally they control, then steal it until
+> the end of this action phase."* — JACK BE QUICK, Briar's
+
+**THE POOL'S ONLY CONTROL CHANGE, AND THE LAST DECK CARD.** With it every
+deck card in the pool reads in full: audit **405 full / 0 part**, and `npm
+run gaps` reports 0 unfinished.
+
+**THE RECORD SAID WHAT WOULD GO WRONG, SO THAT WAS BUILT FIRST.** Moving the
+entry without its OWNER is a card that works until it dies, then files into
+the thief's graveyard (v3.23). So the owner is stamped twice: on the board
+ENTRY (`owner`, for the return) and on the CARD (`_owner`, which survives
+any exit).
+
+| | |
+|---|---|
+| the pick | the STEALER chooses among THEIR living allies; one is taken on the spot (v4.68) |
+| the move | untapped, both stamps, and its counters bag travels with it |
+| the return | `effects.returnStolen`, step (0) of `beginEndPhase`: "this ACTION phase" is over before the end phase begins. It comes home TAPPED if it swung, and only its own controller's untap step lifts that (CR 4.4.3d) |
+| a death | `damageAlly` and `sweepArena`, the two ally-death sites, file into the OWNER's graveyard and strip the stamp |
+| every other exit | `STOLEN-CARD-OFF-BOARD`: a stamp found anywhere but a board is a site that filed it wrongly, CAUGHT by the judges rather than trusted to a census of every board exit |
+
+**A CARD STOLEN BACK GOES HOME**, stamps stripped: two Jacks on one ally
+return it to its owner, not to a third party.
+
+**THE WIRE NEEDED NOTHING.** Entry fields ship verbatim and `_owner` is an
+underscore stamp (an instance key), so the round trip keeps both and the
+hashes agree. `report.js` names a stolen entry, or a report reads like a
+zone bug.
+
+**MEASURED, AND RARE ON PURPOSE.** In 84 Briar games Jack attacked 33 times
+and 23 hits found no ally to take. Only Gravy Bones fields allies, and in
+60 Briar v Gravy games there was one steal, handed back, with no
+violations. So the ladder is byte-identical and no route counter was added:
+a number that reads ~0 because of the matchup is about the matchup (v4.24,
+v4.52). The whole cycle is driven by drills and a Briar scene instead.
+**23 sabotages, 23 bite.** Two first-pass silences were my fixtures: no
+near-miss dropped the untap alone, and the entry-shape fixture tripped the
+other half of its own check (v3.62).
+
 ### A HALVING THAT STARTS AND ENDS MID-GAME (v4.73)
 
 > *"Crush - When this deals 4 or more damage to a hero, until the end of
@@ -991,10 +1032,11 @@ candidates now**; a drill about a WRITER can take the forced answer, because
 it reaches the same writer. `test/forcedpick.test.js` holds both halves and
 pins the trainer's call as a whole conditional (v4.55).
 
-**JACK BE QUICK'S STEAL IS RECORDED, NOT BUILT** (`control-change-steal`,
-open). Nothing moves an object between SIDES, and a stolen ally is
+**JACK BE QUICK'S STEAL WAS RECORDED, NOT BUILT** (`control-change-steal`,
+open). Nothing moved an object between SIDES, and a stolen ally is
 controlled by one seat and owned by the other — half-building it files a
-dead ally into the wrong graveyard (v3.23).
+dead ally into the wrong graveyard (v3.23). **BUILT AT v4.74** with the
+ownership first — see "A CONTROL CHANGE, OWNERSHIP FIRST".
 
 ### A DRILL THAT BUILDS AN UNREACHABLE STATE CAN DECIDE A RULE (v4.67)
 

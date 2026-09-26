@@ -267,6 +267,45 @@ module.exports = [
     "the pump reaches the open link": 1,
     "and the cost is a graveyard banish, not a hand one": "grave"
   }
+},
+
+{
+  name: "Jack Be Quick steals an ally for the rest of the action phase, and it goes home tapped",
+  why: "v4.74 — the pool's only control change, recorded rather than " +
+       "half-built at v4.68 because moving the entry without its OWNER is a " +
+       "card that works until it dies and then files into the wrong " +
+       "graveyard (v3.23). The steal crosses the ally UNTAPPED with its " +
+       "owner stamped on the entry and the card, and step (0) of the end " +
+       "phase hands it back — tapped, if it swung for the thief.",
+  run(c){
+    const jbq = c.card("Jack Be Quick", 1, "jbq"), sw = c.card("Swabbie", 2, "sw");
+    let g = Object.assign(c.state({res: 9, ap: 2, hand: [jbq], board: []},
+      {hp: 20, res: 0, hand: [], board: [{card: sw, kind: "ally", uid: "sw", spent: true, life: sw.life}]},
+      {turn: 3, actor: 0, turnPlayer: 0}),
+      {phase: "action", step: "layer", priority: 0, passed: [false, false], stack: [], chain: [], chainCards: []});
+    const settle = n => { for(let i = 0; i < 60 && n.priority != null && (n.pend || n.step !== "layer"); i++)
+      n = c.reduce(n, {t: "pass"}, n.priority); return n; };
+    g = settle(c.H.drain(c.reduce(g, {t: "play", uid: "jbq", from: "hand"}, 0)));
+    const took = g.sides[0].board.find(b => b.uid === "sw");
+    const hpBefore = g.sides[1].hp;
+    g = settle(c.H.drain(c.reduce(g, {t: "activate", uid: "sw", target: "hero"}, 0)));
+    const back = c.E.beginEndPhase(g, 0).game;
+    const home = back.sides[1].board.find(b => b.uid === "sw");
+    return {
+      "the ally is on the thief's board":     !!took,
+      "…untapped, and owned by the other seat": took ? [took.spent, took.owner] : null,
+      "it swings at its owner for its 7":     hpBefore - g.sides[1].hp,
+      "the end phase hands it back":          !!home,
+      "…tapped, and unstamped":               home ? [home.spent, home.owner === undefined] : null
+    };
+  },
+  want: {
+    "the ally is on the thief's board": true,
+    "…untapped, and owned by the other seat": [false, 1],
+    "it swings at its owner for its 7": 7,
+    "the end phase hands it back": true,
+    "…tapped, and unstamped": [true, true]
+  }
 }
 
 ];

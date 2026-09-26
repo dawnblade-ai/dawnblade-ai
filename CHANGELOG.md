@@ -1,3 +1,56 @@
+## v4.74 — a control change, ownership first
+
+> *"When this hits a hero, {u} an ally they control, then steal it until
+> the end of this action phase."* — JACK BE QUICK, Briar's
+
+**EVERY DECK CARD IN THE POOL NOW READS IN FULL.** This was the last one:
+audit **405 full / 0 part**, and `npm run gaps` reports 0 unfinished.
+
+**THE POOL'S ONLY CONTROL CHANGE**, measured over 797 records. It was
+recorded rather than half-built at v4.68, and the record named what would
+go wrong: moving the entry without its OWNER is a card that works until it
+dies, then files into the thief's graveyard (v3.23). So the ownership was
+built first.
+
+- **The pick** is the stealer's, among the opponent's LIVING allies. One is
+  taken on the spot (v4.68), two open a sheet, none says so.
+- **The move** is untapped, per the printed `{u}`. The owner is stamped on
+  the board entry (`owner`) and the card (`_owner`), and the ally's
+  counters travel with it.
+- **The return** is `effects.returnStolen`, at step (0) of the end phase:
+  "this action phase" is over before the end phase begins. The ally comes
+  home TAPPED if it swung for the thief, so its owner cannot swing it next
+  turn, because only its own controller's untap step lifts a tap (CR
+  4.4.3d).
+- **A death while stolen** files into the OWNER's graveyard, through both
+  ally-death sites (`damageAlly`, `sweepArena`).
+- **Every other exit is caught by the judges.** `STOLEN-CARD-OFF-BOARD`
+  flags a stamp found anywhere but a board, and `STOLEN-ENTRY-SHAPE` flags
+  an entry owned by its own side.
+- **A card stolen back goes home**, with its stamps stripped.
+
+The wire needed nothing: entry fields ship as they are, `_owner` is an
+instance stamp, and the round-trip hashes agree. The bug report names a
+stolen entry. The keyword ledger's `steal` and `{u}` are `live`.
+
+Measured:
+- **1 record moves, `part` → `full`**, and the floor was repinned after
+  reading the diff.
+- The approximation record `control-change-steal` is **closed** as
+  `control-change-steal-built`, with its probe turned round to drive the
+  whole cycle.
+- Over 84 Briar games, Jack attacked 33 times and 23 hits found no ally.
+  Over 60 Briar v Gravy Bones games there was ONE steal, handed back, with
+  no violations. The ladder is byte-identical at three seeds on both sides,
+  so no route counter was added: its ~0 would be about the matchup (v4.24).
+- **23 sabotages, 23 bite.** Two first-pass silences were my fixtures, and
+  one sabotage could not be applied because its revert text was not unique.
+  A Briar scene fails against a steal that never goes home.
+
+**AND THE GAPS DOSSIER DRILL REQUIRED AN UNFINISHED CARD**, so a complete
+pool failed it. It now asks both states: with none unfinished, the report
+must say 0, and a finished card asked for by name must be refused.
+
 ## v4.73 — a halving that starts and ends mid-game
 
 > *"Crush - When this deals 4 or more damage to a hero, until the end of

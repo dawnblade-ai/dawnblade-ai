@@ -1888,6 +1888,19 @@ function makeEffects(ctx){
           title: spec.title || `Choose one of ${sp(foe(n))} cards`,
           hint: spec.hint || ""}];
       }
+      /* A CONTROL CHANGE (v4.74) — Jack Be Quick. The candidates are THEIR
+         living allies, offered as cards, and the move is performed by
+         `applyAnswer`'s cross-seat branch — the same split `foePick` keeps,
+         because `prompts.js` moves cards within ONE side. */
+      else if(k==="stealAlly"){
+        const allies = (foe(n).board || []).filter(b => b && b.card && G.isAlly(b) && G.allyLife(b) > 0);
+        if(!allies.length){ n = L(n, `${srcName}: ${sp(foe(n))} side of the arena holds no ally to steal.`); return; }
+        n.promptQ = [...(n.promptQ||[]), {
+          tag:"pick", side:actorOf(n), src:srcName, cards:allies.map(b => b.card), min:1, max:1,
+          moveFoe:{from:"board", to:"steal"},
+          title:`${srcName} — steal which of ${sp(foe(n))} allies?`,
+          hint:"It is untapped, and yours until the end of this action phase."}];
+      }
       else if(k==="pickPrompt"){
         const spec = {tag:"pick", side:actorOf(n), src:srcName, ...v};
         /* A BOUND THAT DEPENDS ON THE GAME IS SUPPLIED AT THE QUEUE SITE
@@ -5709,7 +5722,39 @@ function makeEffects(ctx){
        and this performs it — the same split the freeze stamp above keeps.
        The actor is borrowed to the asked side for this whole body, so the
        hand being reached into is `foe`. */
-    if(p.tag === "pick" && p.moveFoe && (r.picked||[]).length){
+    /* THE STEAL (v4.74). The entry crosses to the thief's board UNTAPPED
+       ("{u} an ally they control, then steal it"), carrying who OWNS it —
+       on the entry for the return, and on the card as `_owner` so a stolen
+       card that leaves the board anywhere but home is an error the judges
+       can see (`STOLEN-CARD-OFF-BOARD`). Its counters travel with it: they
+       are the object's, keyed by uid on whichever side holds it.
+
+       A CARD STOLEN BACK GOES HOME rather than being owned by the thief —
+       two Jacks on one ally hand it to its owner, not to a third party. */
+    if(p.tag === "pick" && p.moveFoe && p.moveFoe.to === "steal" && (r.picked||[]).length){
+      const got = r.picked[0];
+      const ent = (foe(n).board || []).find(b => b && b.card && b.card.uid === got.uid);
+      if(ent && G.isAlly(ent)){
+        const me = actorOf(n);
+        const owner = ent.owner != null ? ent.owner : 1 - me;
+        const card = Object.assign({}, ent.card);
+        const moved = Object.assign({}, ent, {spent: false});
+        if(owner === me){ delete moved.owner; delete card._owner; }
+        else { moved.owner = owner; card._owner = owner; }
+        moved.card = card;
+        const bag = ((foe(n).counters || {})[ent.uid]);
+        const fs = foeMut(n);
+        fs.board = (fs.board || []).filter(b => b !== ent);
+        if(bag){ fs.counters = Object.assign({}, fs.counters); delete fs.counters[ent.uid]; }
+        const ms = actMut(n);
+        ms.board = [...(ms.board || []), moved];
+        if(bag) ms.counters = Object.assign({}, ms.counters || {}, {[ent.uid]: bag});
+        n = L(n, owner === me
+          ? `${sv(act(n), "take")} ${card.name} back — it is ${sp(act(n))} own again.`
+          : `${sv(act(n), "take")} control of ${card.name}, untapped, until the end of this action phase.`);
+      }
+    }
+    else if(p.tag === "pick" && p.moveFoe && (r.picked||[]).length){
       const got  = r.picked[0];
       /* THE SPEC'S OWN FIELDS, READ. `moveFoe` has carried `{from, to}`
          since v3.03 and this body ignored both, moving hand -> deck top
@@ -7692,6 +7737,42 @@ function restampHalving(sd){
   return out;
 }
 
+/* HAND BACK EVERY STOLEN PERMANENT (v4.74). An entry carrying `owner` on
+   a board that is not its owner's crosses back, with its owner stamps
+   stripped and its counters bag moved with it. It keeps its TAP: a stolen
+   ally that attacked for the thief comes home tapped, and only its own
+   controller's untap step (CR 4.4.3d) lifts that. Pure — both boards call
+   it through `beginEndPhase`. */
+function returnStolen(game){
+  const sides = (game.sides || []).slice();
+  const msgs = [];
+  let moved = false;
+  for(let i = 0; i < sides.length; i++){
+    const sd = sides[i] || {};
+    const away = (sd.board || []).filter(b => b && b.owner != null && b.owner !== i);
+    if(!away.length) continue;
+    moved = true;
+    const from = Object.assign({}, sd, {board: (sd.board || []).filter(b => away.indexOf(b) < 0)});
+    const bags = {};
+    if(from.counters){
+      from.counters = Object.assign({}, from.counters);
+      for(const b of away) if(from.counters[b.uid]){ bags[b.uid] = from.counters[b.uid]; delete from.counters[b.uid]; }
+    }
+    sides[i] = from;
+    for(const b of away){
+      const o = b.owner;
+      const home = Object.assign({}, sides[o]);
+      const card = Object.assign({}, b.card); delete card._owner;
+      const ent = Object.assign({}, b, {card}); delete ent.owner;
+      home.board = [...(home.board || []), ent];
+      if(bags[b.uid]) home.counters = Object.assign({}, home.counters || {}, {[b.uid]: bags[b.uid]});
+      sides[o] = home;
+      msgs.push(card.name + " returns to " + sp(home) + " control.");
+    }
+  }
+  return moved ? {game: Object.assign({}, game, {sides}), msgs} : {game, msgs};
+}
+
 function armNextTurn(game, seat){
   const sides = (game.sides || []).slice();
   const sd = Object.assign({}, sides[seat]);
@@ -8535,7 +8616,15 @@ function sweepArena(game, seat, when){
       + (pay.length ? " It pays out as it goes." : ""));
   }
   sd.board = kept;
-  sd.grave = [...dying.map(b => Object.assign({}, b.card, {_gy: game.turn})), ...(sd.grave || [])];
+  /* A STOLEN PERMANENT DIES INTO ITS OWNER'S GRAVEYARD (v4.74). Its
+     controller's trigger is paid above — CR's "when this dies" belongs to
+     whoever controls it — but the card goes home. */
+  const away = b => b.owner != null && b.owner !== seat;
+  sd.grave = [...dying.filter(b => !away(b)).map(b => Object.assign({}, b.card, {_gy: game.turn})), ...(sd.grave || [])];
+  for(const b of dying.filter(away)){
+    const c = Object.assign({}, b.card, {_gy: game.turn}); delete c._owner;
+    sides[b.owner] = Object.assign({}, sides[b.owner], {grave: [c, ...((sides[b.owner] || {}).grave || [])]});
+  }
 
   /* WHAT THE DEPARTING CARD WAS HOLDING UP GOES WITH IT. `arcShield` and
      `lifeLock` are side fields rather than properties of the card, so
@@ -8990,6 +9079,16 @@ function beginEndPhase(game, seat, db){
   let n = game;
   const msgs = [], ops = [], fired = [];
   const nameOf = i => ((n.sides||[])[i]||{}).name || "seat " + i;
+
+  /* (0) WHAT WAS STOLEN GOES HOME (v4.74). Jack Be Quick's steal lasts
+     "until the end of this ACTION phase", which ends before the end phase
+     begins — so this runs ahead of every beginning-of-end-phase trigger,
+     and ahead of step (a)'s ally recovery, which is then the OWNER's. */
+  {
+    const r = returnStolen(n);
+    n = r.game;
+    for(const m of r.msgs) msgs.push(m);
+  }
 
   /* (1) INERTIA — destroy the token, then hand and arsenal to the bottom. */
   {
@@ -9571,6 +9670,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, jabTargets, CTX_KEYS, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, restampHalving, pendPumped, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
+return {makeEffects, jabTargets, CTX_KEYS, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, restampHalving, returnStolen, pendPumped, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

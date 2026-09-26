@@ -253,6 +253,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 42 -> 43 AT v4.73: `crush-halving-rider` was BUILT and is
      `crush-halving-rider-read`, and `halving-reads-every-zone` records what
      both halvings stamp. */
+  /* 43 holds AT v4.74: `control-change-steal` was BUILT and is
+     `control-change-steal-built` — renamed, closed, probe turned round. */
   assert.equal(Object.keys(APPROX).length, 43, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
@@ -324,12 +326,14 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      half-built (HANDOFF's call). */
   /* 6 -> 5 AT v4.72: `x-cost` was BUILT — the free X is declared before
      the payment — and its probe went red the moment the mint read X. */
-  /* 5 -> 4 AT v4.73: `crush-halving-rider` was BUILT. */
-  assert.equal(n("open"),    4, "open count moved");
+  /* 5 -> 4 AT v4.73: `crush-halving-rider` was BUILT. 4 -> 3 AT v4.74:
+     `control-change-steal` was BUILT. */
+  assert.equal(n("open"),    3, "open count moved");
   /* 16 -> 17 AT v4.63: `steam-build-powcard-read`. 17 -> 18 AT v4.66:
      `play-held-on-the-stack`. 19 -> 20 AT v4.72: `x-cost-declared`.
-     20 -> 21 AT v4.73: `crush-halving-rider-read`. */
-  assert.equal(n("closed"), 21, "closed count moved");
+     20 -> 21 AT v4.73: `crush-halving-rider-read`. 21 -> 22 AT v4.74:
+     `control-change-steal-built`. */
+  assert.equal(n("closed"), 22, "closed count moved");
 });
 
 /* ============================================================
@@ -543,7 +547,12 @@ probe("instant-speed-plays-resolve-on-play", () => {
 /* THE POOL'S ONLY CONTROL CHANGE (v4.68). Driven: Jack Be Quick hits a
    hero whose side holds an ally, and the ally is still theirs afterwards.
    The day the steal is built this goes red and the record must move. */
-probe("control-change-steal", () => {
+/* BUILT AT v4.74, AND THE PROBE IS TURNED ROUND — it asserted the ally
+   stayed with its controller, and went red the moment the steal landed.
+   It now drives the whole CYCLE the record named as the hard part: the
+   ally crosses UNTAPPED, owned by the other seat, and goes home at the end
+   of the action phase. */
+probe("control-change-steal-built", () => {
   H.db();
   const c = (nm, p, uid) => ({...H.card(nm, p), uid});
   const ally = {...c("Swabbie", 2, "al"), life: 3};
@@ -559,9 +568,14 @@ probe("control-change-steal", () => {
     n = J.reduce(n, {t: "pass"}, n.priority).state;
   }
   assert.ok(n.sides[1].hp < hp, "fixture: Jack Be Quick never HIT the hero, so its clause was never reached");
-  assert.ok(n.sides[1].board.some(b => b.uid === "al"),
-    "the ally left its controller — a steal has been built and the record must move");
-  assert.ok(!n.sides[0].board.some(b => b.uid === "al"), "…and it is not on the thief's board");
+  const took = n.sides[0].board.find(b => b.uid === "al");
+  assert.ok(took, "the ally never reached the thief's board");
+  assert.equal(took.owner, 1, "the stolen entry does not say who OWNS it");
+  assert.equal(took.spent, false, "\"{u} an ally they control\" — it crossed tapped");
+  assert.ok(!n.sides[1].board.some(b => b.uid === "al"), "…and it is still on its owner's board too");
+  const home = E.beginEndPhase(n, 0).game;
+  assert.ok(home.sides[1].board.some(b => b.uid === "al" && b.owner == null),
+    "the end of the action phase did not hand it back");
 });
 
 /* CR 4.1.8a hands the order of simultaneous triggers to the turn-player.

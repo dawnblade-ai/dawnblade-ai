@@ -1,14 +1,14 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-09-26T15:13:15.456Z · app v4.73 · data sage-v14 · db 797 records
+Generated 2026-09-26T15:27:56.812Z · app v4.74 · data sage-v14 · db 797 records
 
 ## Summary
 
 | | count |
 |---|---|
 | Unique cards in pool (name\|pitch) | 405 |
-| Fully scripted | 404 |
-| Partially scripted | 1 |
+| Fully scripted | 405 |
+| Partially scripted | 0 |
 | Text-only (nothing parsed) | 0 |
 | Cards with audit flags | 14 |
 
@@ -22,7 +22,7 @@ Generated 2026-09-26T15:13:15.456Z · app v4.73 · data sage-v14 · db 797 recor
 | `{p}` | live — power / pitch pips — pump parser reads +N{p} and the +1/2/3{p} shorthand | 127 |
 | `{r}` | live — resource — costs and gains | 53 |
 | `{t}` | live — TAP cost symbol. AUDIT FINDING 2026-07-22: no pool text spells the word 'tap', so tap detection keys on {t} and never on the word. Charged by the ROUTE, per source: an ally's attack (v3.44), a weapon swing (v2.46 weaponCost.taps), an equipment or item ability (tapsToActivate + perTurnCleared), a triggered `you may {t} this` (v3.33), and a HERO's own ability (v3.48). RULING (user, 2026-08-25): a tapped hero cannot be tapped again to pay a cost, and is otherwise unaffected. 14 of the pool's 17 {t} cards enforce it; the 3 that do not have no reader for the ability's PAYLOAD | 13 |
-| `{u}` | partial — UNTAP — BUILT v3.47 for Scuttle Toes (`{u} target ally you control`), which buys a second ally attack now that allies tap to attack. Jack Be Quick still refuses: its {u} untaps an OPPOSING ally and then steals it, and nothing models a control change | 2 |
+| `{u}` | live — UNTAP — BUILT v3.47 for Scuttle Toes (`{u} target ally you control`), which buys a second ally attack now that allies tap to attack, and v4.74 for Jack Be Quick, whose {u} untaps an OPPOSING ally as it steals it (`stealAlly`) | 2 |
 | `{x}` | display — variable X cost (Beckoning Haunt) — no parsed ops | 1 |
 
 ## Printed keywords in pool
@@ -63,7 +63,7 @@ Generated 2026-09-26T15:13:15.456Z · app v4.73 · data sage-v14 · db 797 recor
 | solflare | pending — v4.21 — the DTD055 printing carries no reminder text either, so the keyword is a name for Banneret of Salvation's own line: 'When this is charged to your hero's soul, the next time you hit this turn, gain 1{h}.' The prefix was eaten and the card granted the 1{h} UNCONDITIONALLY ON PLAY at `tier: full`; it REFUSES now (v2.29) and reads `none`, which is the number improving. A RECORDED REFUSAL IS A DEBT (v3.38): the tail already reads on its own as [['life',1]], so what it waits on is a 'when this is charged to your soul' TRIGGER and a next-hit SCHEDULE — neither of which exists | Banneret of Salvation |
 | specialization | info — hero-locked card (normalized from '<Hero> Specialization') | Crow's Nest, Ice Eternal, Knucklehead, V of the Vanguard |
 | spellvoid | partial — v4.02 — the same stale `inert-dummy` as arcane barrier: plain Spellvoid N is offered by arcaneSoaks at the point arcane damage is dealt, on both boards (Halo of Illumination and Spellbane Aegis print it). PARTIAL for the parametrised printing — Mask of the Swarming Claw's 'Spellvoid X, where X is the number of chain links you control' is refused with the rest of the X family, so the piece keeps its printed Arcane Barrier 1 (tools/approx.js: spellvoid-x) | Halo of Illumination, Mask of the Swarming Claw |
-| steal | unreviewed — Arakni package | Jack Be Quick |
+| steal | live — v4.74 — Jack Be Quick, the pool's ONLY control change (797 records, nothing else prints steal or gain control). `stealAlly` opens a pick among the opponent's living allies; the entry crosses to the thief's board UNTAPPED, stamped with its OWNER on the entry and the card; `effects.returnStolen` hands it back at step (0) of the end phase — the action phase is over — tapped if it attacked; a death while stolen files into the OWNER's graveyard, and `STOLEN-CARD-OFF-BOARD` catches any exit that does not | Jack Be Quick |
 | stealth | live — RULED 2026-07-25: does nothing alone — a qualifier other cards test for | Art of Desire: Body, Art of Desire: Mind, Infect, Mark of the Black Widow, Mark of the Funnel Web, Mark the Prey, Reaper's Call |
 | surge | partial — v3.70 - PARTIAL, and the record said unreviewed. classifyClause reads the Surge dash line into a surgeOverN condition and effects evaluates it; Aether Quickening and Open the Flood Gates both read full. It is partial rather than live because the condition is APPROXIMATED as amp>0 rather than the damage actually dealt - partial counts as built for an upside and never for a drawback (v3.00) | Aether Quickening, Open the Flood Gates |
 | suspense | live — RULED 2026-07-25: enters with 2 counters (same on every suspense card), ticks at the beginning of the turn, destroyed at 0 and the `when this leaves the arena` payload fires then | Act of Glory, Edge of Their Seats, Tension in the Air, The Suspense is Killing Me |
@@ -179,15 +179,6 @@ When this attacks a marked hero, the attack gets go again.”
 
 The fix for any of these is always to teach `classifyClause`/`fxParse`, never to special-case the card.
 
-### Jack Be Quick (pitch 1) — part · [briar]
-- type: Generic Action - Attack · printed: Go again, Steal
-- ▶ When this attacks, you may banish a Nimblism from your graveyard
-- ▶ If you do, this gets +1{p} and go again.
-- — When this hits a hero, {u} an ally they control, then steal it until the end of this action phase.
-- 🚩 unreviewed keyword: "steal"
-- 🚩 untap {u} — not parsed (see ledger)
-- 🚩 text mentions go again but no clause parses it
-
 ## Flags on otherwise fully-scripted cards
 
 - **Bolt'n Boots** (pitch 0): granted go-again with no parsed grant path · text mentions go again but no clause parses it
@@ -195,6 +186,7 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - **Cosmo, Scroll of Ancestral Tapestry** (pitch 0): granted go-again with no parsed grant path · text mentions go again but no clause parses it
 - **Display Loyalty** (pitch 1): granted ability in quotes has NO reader: "when this attacks a hero, create a fealty token." — the head parses, this does not
 - **Frailty Trap** (pitch 1): text mentions go again but no clause parses it
+- **Jack Be Quick** (pitch 1): text mentions go again but no clause parses it
 - **Jittery Bones** (pitch 3): text mentions go again but no clause parses it
 - **Lair of the Spider** (pitch 1): text mentions go again but no clause parses it
 - **Light the Way** (pitch 1): text mentions go again but no clause parses it

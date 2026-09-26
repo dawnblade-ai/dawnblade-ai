@@ -64,7 +64,10 @@ function seat(sd){
     arsenal: nm(sd.arsenal),
     board: list(sd.board).map(b => ((b.card && b.card.name) || b.name || "?")
       + (b.kind ? " [" + b.kind + "]" : "") + (b.life != null ? " life " + b.life : "")
-      + (b.spent ? " (spent)" : "") + (b.sd ? " [dies:" + b.sd + "]" : "")),
+      + (b.spent ? " (spent)" : "") + (b.sd ? " [dies:" + b.sd + "]" : "")
+      /* v4.74 — a STOLEN permanent says whose it is, or the report shows
+         seat 1's ally on seat 0's board and reads like a zone bug. */
+      + (b.owner != null ? " [stolen from seat " + b.owner + "]" : "")),
     gear: list(sd.gear).map(gr => gr.name + (gr.destroyed ? " (destroyed)" : "")
       + " d" + (GM.gearDef ? GM.gearDef(gr) : (gr.curDef != null ? gr.curDef : gr.def))),
     grave: list(sd.grave).map(c => c.name + (c._gy != null ? " _gy" + c._gy : "")),

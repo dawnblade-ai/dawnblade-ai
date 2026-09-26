@@ -436,8 +436,12 @@ test(gate("exactly ONE pool record moves, and every sibling is unchanged"), () =
      full, 3 -> 2 part). RE-PINNED AGAIN AT v4.73, after reading the diff:
      Walk in My Shoes went `part` -> `full` when its crush rider's
      turn-scoped halving got a reader, so `full` 759 -> 760 and `part`
-     27 -> 26. One record (403 -> 404 full, 2 -> 1 part). */
-  assert.deepEqual(tiers, {full: 760, none: 11, part: 26});
+     27 -> 26. One record (403 -> 404 full, 2 -> 1 part). RE-PINNED AGAIN
+     AT v4.74, after reading the diff: Jack Be Quick went `part` -> `full`
+     when its steal got a reader and an owner, so `full` 760 -> 761 and
+     `part` 26 -> 25. One record (404 -> 405 full, 1 -> 0 part) — every
+     deck card in the pool now reads in full. */
+  assert.deepEqual(tiers, {full: 761, none: 11, part: 25});
   assert.deepEqual([...carriers.allyDiesOrPhantasm], ["Silent Stilettos"]);
   /* PINNED BOTH SIDES (v4.17) — pinning the new trigger alone cannot see
      a record LEAVING one of the others, which is what merging two

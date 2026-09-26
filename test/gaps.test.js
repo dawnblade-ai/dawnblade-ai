@@ -118,8 +118,21 @@ test("the dossier answers for one card", {skip}, () => {
   /* NOT the `needs:` line, which is indented identically — matching it
      picked up prose, and `out.includes(...)` then passed against the
      report's own header while the real assertion failed. */
-  const listed = run().match(/^      (?!needs:)(\S.*)$/m);
-  assert.ok(listed, "the report must list at least one unfinished card");
+  /* AND AT v4.74 THERE IS NOTHING LEFT TO PICK. Jack Be Quick was the last
+     deck card that did not read in full, so the report lists no unfinished
+     card at all — and a drill that REQUIRED one would demand the pool
+     regress. Both states are asked now: with an unfinished card the dossier
+     must name it and print its clause; with none, the report must SAY none,
+     and a finished card asked for by name must be refused rather than
+     dressed up as a gap. */
+  const report = run();
+  const listed = report.match(/^      (?!needs:)(\S.*)$/m);
+  if(!listed){
+    assert.match(report, / 0 unfinished /, "the report lists no card and does not say the pool is complete");
+    assert.match(run("Jack Be Quick"), /no unfinished card matching/,
+      "a card that reads in full was reported as a gap");
+    return;
+  }
   const first = listed[1].split(" · ")[0].replace(/\*$/, "").replace(/ p\d$/, "").trim();
   const out = run(first.slice(0, 12));
   assert.ok(out.includes(first), "the dossier must name the card it was asked for: " + first);

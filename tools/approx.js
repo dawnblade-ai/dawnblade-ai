@@ -158,23 +158,23 @@ const APPROX = {
       "about which triggers EXIST at the event, and nothing here sources an "+
       "answer — it waits on a ruling rather than a guess."},
 
-"control-change-steal": {
-  status:"open", cr:null, board:"both", since:"v4.68", swept:"v4.68",
-  claim:"Jack Be Quick prints \"When this hits a hero, {u} an ally they control, "+
-        "then steal it until the end of this action phase\" and the clause reads "+
-        "nothing: the ally stays with its controller. It is the pool's ONLY "+
-        "control-changing card (measured over 797 records: no other prints steal "+
-        "or gain control), decked by Briar alone.",
-  why:"WEAKER than printed and visible, which is the safe direction for an "+
-      "unbuilt card (v2.29). What it needs is not a reader but a model: nothing "+
-      "moves an object between SIDES today, and the zone census, `invariants.js`, "+
-      "the wire's side ledger and every `act`/`foe` helper assume a permanent's "+
-      "side is fixed. A stolen ally has to be CONTROLLED by one seat and OWNED by "+
-      "the other (it goes to its owner's graveyard if it dies), untapped, able to "+
-      "attack for the thief, and handed back at the end of the action phase. "+
-      "Half-building that — moving the entry across without the owner — is v3.23's "+
-      "worst case: a card that works until it dies, and then files into the wrong "+
-      "graveyard."},
+"control-change-steal-built": {
+  status:"closed", cr:null, board:"both", since:"v4.68", swept:"v4.74",
+  claim:"Jack Be Quick's \"{u} an ally they control, then steal it until the end "+
+        "of this action phase\" is BUILT. The stealer picks among the opponent's "+
+        "living allies; the entry crosses to their board UNTAPPED, stamped with its "+
+        "OWNER on the entry and on the card; `effects.returnStolen` hands it back at "+
+        "step (0) of the end phase, tapped if it attacked; and an ally that dies "+
+        "while stolen is filed into its owner's graveyard.",
+  why:"Until v4.74 this record was `open` and the card was recorded rather than "+
+      "half-built, for a reason it named: moving the entry across without the "+
+      "owner is a card that works until it dies and then files into the wrong "+
+      "graveyard (v3.23). The two ally-death sites (`damageAlly`, `sweepArena`) "+
+      "route to the owner, and the judges carry `STOLEN-CARD-OFF-BOARD` for every "+
+      "other exit — a stamp found anywhere but a board is a site that filed it "+
+      "home wrongly. Measured: over 797 records it is the pool's ONLY control "+
+      "change, and inside the one window it lasts the stolen ally cannot be "+
+      "attacked (it is the thief's) and nothing Briar decks destroys an ally."},
 
 "prevention-target-and-source": {
   status:"stated", cr:null, board:"both", since:"v3.67", swept:"v4.36",

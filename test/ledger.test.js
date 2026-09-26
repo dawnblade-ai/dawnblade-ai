@@ -87,7 +87,9 @@ const names = k => (engine.match(new RegExp(k.replace(/[^a-z0-9]/gi, "."), "gi")
    the parenthetical the database omits: "(This can't be defended by more
    than 1 ACTION card.)" — so it is `parser.defCap`'s third source, and
    its counted set is neither sibling's. */
-const UNBUILT = ["solflare", "steal"];
+/* "steal" LEFT AT v4.74 — Jack Be Quick's control change was BUILT
+   (`stealAlly`), so its entry is `live` and says so. */
+const UNBUILT = ["solflare"];
 
 test("the ledger's unbuilt set is a LEDGER — moving one is a deliberate edit", () => {
   const claim = entries.filter(([, v]) => /pending|unreviewed/.test(v.status)).map(([k]) => k).sort();
