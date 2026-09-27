@@ -153,14 +153,16 @@ test("DRIVEN: with an ally, BOTH halves of the cost are paid and the payload lan
     "a payable cost was refused");
   const s = J.reduce(g, {t: "activate", uid: 901, from: "gear"}, 0).state;
 
-  assert.deepEqual(s.sides[0].grave.map(c => c.name), ["Barnacle"],
+  /* THE CROWN IS IN THE GRAVEYARD TOO SINCE v4.79 — a destroyed piece is
+     filed by the end of the resolution that destroyed it. */
+  assert.deepEqual(s.sides[0].grave.map(c => c.name).sort(), ["Barnacle", "Carrion Crown"],
     "the ally was not discarded — the ability is FREE (v2.04)");
   assert.ok(!s.sides[0].hand.some(c => /Barnacle/.test(c.name)),
     "…and it is still in hand, so the card was copied rather than moved");
-  assert.equal(s.sides[0].grave[0]._gy, s.turn,
+  assert.equal(s.sides[0].grave.find(c => c.name === "Barnacle")._gy, s.turn,
     "the discarded card is not turn-stamped — every \"…this turn\" clause goes wrong (v3.54)");
 
-  assert.equal((s.sides[0].gear || []).find(x => x.uid === 901).destroyed, true,
+  assert.ok(H.filed(s.sides[0], 901),
     "the piece survived its own printed cost — the drawback is free");
 
   assert.ok(s.sides[0].hand.some(c => /Wounding Blow/.test(c.name)),

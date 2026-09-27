@@ -191,7 +191,11 @@ test("Spellvoid destroys the permanent and costs no resources", {skip}, () => {
      intention, and this file's whole subject is the gap between a
      prevention being decided and it being applied. */
   assert.equal(g.sides[1].gear.filter(x => !x.destroyed).length, 0);
-  assert.equal(g.sides[1].gear.length, 1, "and it WEARS rather than leaving the zone");
+  /* AND IT LEAVES THE ZONE (v4.79). Until then a destroyed piece sat in the
+     gear zone flagged until its controller's end phase; it is filed to the
+     graveyard the moment it is destroyed now, as the CR files any destroyed
+     permanent. */
+  assert.ok(H.filed(g.sides[1], "gh"), "and it is filed to the graveyard, turn-stamped");
 });
 
 test("a barrier costs its FULL number even to prevent less", {skip}, () => {

@@ -310,7 +310,7 @@ test("driven at the table: activate, shuffle three back, draw three", {skip}, ()
   assert.equal(g.sides[0].hand.length, 4, "one kept plus three drawn — the hand size holds");
   assert.equal(g.sides[0].deck.length, before, "three in, three out");
   assert.ok(g.rng.n > rngBefore, "THE DECK WAS SHUFFLED — a dropped store repeats the next one");
-  assert.equal(g.sides[0].gear.find(x => x.uid === a.pc.uid).destroyed, true,
+  assert.ok(H.filed(g.sides[0], a.pc.uid),
     "'Destroy this' is the cost — collecting the redraw without paying it is the v2.04 bug");
   assert.deepEqual(INV.errors(g), []);
   assert.match(said(g), /3 cards back into your deck — shuffled/);
@@ -372,7 +372,7 @@ test("DECLINING shuffles nothing and draws nothing (v2.04)", {skip}, () => {
     "not even the shuffle — a cost that was not paid buys nothing");
   assert.equal(g.rng.n, a.g.rng.n, "and the seeded stream is untouched");
   assert.equal(g.sides[0].hand.length, 4, "the hand is exactly as it was");
-  assert.equal(g.sides[0].gear.find(x => x.uid === a.pc.uid).destroyed, true,
+  assert.ok(H.filed(g.sides[0], a.pc.uid),
     "the Hood is still spent — the cost was paid at activation, not at the answer");
 });
 

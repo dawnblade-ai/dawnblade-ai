@@ -322,7 +322,7 @@ test("DRIVEN: BOTH ANSWERS — pay marks and destroys, decline does neither", {s
   H.db();
   const yes = answer(swung(), "pay");
   assert.equal(yes.sides[1].marked, true, "the mark lands");
-  assert.equal(yes.sides[0].gear[0].destroyed, true, "and the printed price is paid");
+  assert.ok(H.filed(yes.sides[0], 900), "and the printed price is paid — the dagger is in the graveyard");
 
   const no = answer(swung(), "decline");
   assert.equal(no.sides[1].marked, false, "declining marks nobody");

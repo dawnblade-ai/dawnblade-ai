@@ -284,8 +284,7 @@ test(gate("PAYING spends 3, destroys the piece and gains the action point"), () 
   n = out.state;
   assert.equal(n.sides[0].res, res0 - 3, "three resources left the pool");
   assert.equal(n.sides[0].ap, ap0 + 1, "and the printed action point arrived (CR 5.3.5 — a GAIN)");
-  const piece = (n.sides[0].gear || []).find(c => c && c.uid === 41);
-  assert.ok(piece && piece.destroyed, "the piece is destroyed — the printed drawback landed");
+  assert.ok(H.filed(n.sides[0], 41), "the piece is destroyed and filed — the printed drawback landed");
   assert.deepEqual(INV.errors(n), [], "the board is clean");
 });
 

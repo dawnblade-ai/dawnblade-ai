@@ -109,7 +109,7 @@ module.exports = [
       "the price is the piece, not resources":     sheet && sheet.cost,
       "…and the sheet names which piece":          sheet && sheet.destroyUid,
       "paying gains the printed action point":     paid.sides[0].ap,
-      "…and spends the iron":                      !!paid.sides[0].gear[0].destroyed,
+      "…and spends the iron":                      !!sheet && c.H.filed(paid.sides[0], sheet.destroyUid),
       "declining gains nothing":                   no.sides[0].ap,
       "…and keeps the iron (v2.04)":               !!no.sides[0].gear[0].destroyed
     };

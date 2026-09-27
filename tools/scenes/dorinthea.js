@@ -103,7 +103,7 @@ module.exports = [
       "the point is already spent when it opens":   hit.sides[0].ap,
       "paying hands the action point back":         paid.sides[0].ap,
       "…and the chain link is marked go again":     paid.chain.map(l => l.ga),
-      "…and the iron is destroyed":                 !!paid.sides[0].gear[0].destroyed,
+      "…and the iron is destroyed":                 c.H.filed(paid.sides[0], "g9"),
       "nothing leaks onto the next attack":         paid._gaGrant === undefined,
       "declining keeps the iron":                   !!declined.sides[0].gear[0].destroyed,
       "…and the point stays spent":                 declined.sides[0].ap

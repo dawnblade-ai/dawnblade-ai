@@ -539,7 +539,7 @@ module.exports = [
       "with no piece worn, nothing is offered":  !bare.prompt,
       "paying spends the three":                 offered.sides[0].res - paid.sides[0].res,
       "…gains the printed action point":         paid.sides[0].ap - offered.sides[0].ap,
-      "…and the printed DESTROY lands":          !!piece(paid).destroyed,
+      "…and the printed DESTROY lands":          c.H.filed(paid.sides[0], 41),
       "declining costs nothing":                 offered.sides[0].res - kept.sides[0].res,
       "…and keeps the piece":                    !piece(kept).destroyed
     };

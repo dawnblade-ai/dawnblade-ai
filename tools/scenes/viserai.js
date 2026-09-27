@@ -138,8 +138,7 @@ module.exports = [
       "none survives to pop on the next swing": P.runeCount(sd),
       "the printed prevention lands":           sd.awd,
       "…carrying its printed window":           sd.awdTurn,
-      "and the piece shatters too":             (sd.gear || [])
-                                                 .some(x => /Runebleed/.test(x.name) && x.destroyed),
+      "and the piece shatters too":             c.H.filed(sd, robe.uid),
       /* AN INSTANT COSTS NO ACTION POINT (CR 8.1.6). */
       "action points spent":                    withRune.sides[0].ap - sd.ap,
       "the board is clean":                     require("../../engine/invariants.js").errors(n).length
@@ -197,8 +196,10 @@ module.exports = [
       "the piece has an ability at all":      !!gr.powCard,
       "deck top, attack tapped first":        a.sides[0].deck.map(x => x.name).slice(0, 2).join(" then "),
       "deck top, non-attack tapped first":    b.sides[0].deck.map(x => x.name).slice(0, 2).join(" then "),
-      "cards left in the graveyard":          a.sides[0].grave.length,
-      "the Crown is destroyed by its cost":   !!a.sides[0].gear.find(x => x.uid === 41).destroyed,
+      /* the Crown itself is filed there too the moment its cost destroys
+         it (v4.79), so the targets are counted apart from it */
+      "targets left in the graveyard":        a.sides[0].grave.filter(x => x.uid !== 41).length,
+      "the Crown is destroyed by its cost":   c.H.filed(a.sides[0], 41),
       "resources left of 9":                  a.sides[0].res,
       "one type only — refused":              String(c.J.legal(half, {t: "activate", uid: 41, from: "gear"}, 0) || "ALLOWED")
                                                 .replace(/^.*needs BOTH/, "needs BOTH")
@@ -208,7 +209,7 @@ module.exports = [
     "the piece has an ability at all": true,
     "deck top, attack tapped first": "Arcanic Shockwave then Malefic Incantation",
     "deck top, non-attack tapped first": "Malefic Incantation then Arcanic Shockwave",
-    "cards left in the graveyard": 0,
+    "targets left in the graveyard": 0,
     "the Crown is destroyed by its cost": true,
     "resources left of 9": 8,
     "one type only — refused": "needs BOTH its targets, and your graveyard cannot supply them"

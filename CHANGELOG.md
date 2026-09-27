@@ -1,3 +1,65 @@
+## v4.79 — a destroyed piece goes to the graveyard when it is destroyed
+
+> *"When this hits a hero, you may choose to destroy this and mark them."*
+> — MARK OF THE HUNTSMAN, Arakni's
+>
+> *"When this attacks, you may retrieve a dagger from your graveyard."*
+> — PICK UP THE POINT, Arakni's
+
+**The CR files a destroyed permanent immediately. Since v3.54 this engine
+filed destroyed GEAR at its controller's end phase**, and recorded that as an
+approximation (`gear-sweep-timing`) whose observable difference "needs both a
+destroy and a retrieve inside one turn cycle". Arakni's own list is that turn
+cycle. The Mark destroys itself to mark a hero, and Pick Up the Point retrieves
+a dagger from the graveyard. With the Mark still sitting in the gear zone, the
+retrieve found an empty graveyard every time the loop was played inside one
+turn, which is the only way it can be played.
+
+**v3.54's reason was about WALLS, and it still holds there.** The trainer
+declares its gear defenders as INDICES into `gear`, so removing a piece while
+that wall is declared renumbers the defenders underneath it. So the sweep is
+kept exactly where an index is held and nowhere else:
+
+| | filed |
+|---|---|
+| a piece destroyed by a card, an ability, a cost or a sheet's answer | when that resolution ends (`execute` and `applyAnswer`) |
+| a defender worn to nothing, a Ward-bearing piece spent in combat | when the wall is released: judge's `strike`, the trainer's `resolveStack` and `finishBlock` |
+| a piece whose seat still holds a declared wall | at the release, or at the end phase as the net |
+
+`effects.fileDestroyedGear` is the one body, and `sweepGear` still does the
+filing and the turn stamp. Its guards make it safe to call at any moment, so
+the call sites are where it is also useful.
+
+**The record's own probe could never have gone red.** Its "deviation" half
+asserted that a hand-built state still had the piece in `gear`, so the fixture
+was answering its own question (v4.36's inert probe). The closed record,
+`gear-filed-when-destroyed`, drives a real answer through `applyAnswer`, and
+drives the wall exception too. Ledger: stated 16 → 15, closed 24 → 25.
+
+**Driving the loop at the table found a defect in v4.78.** Pick Up the Point's
+retrieve is QUEUED at declaration, but nothing opens the queue until the
+damage step: judge's `declareAttack` never drains it, and v4.78's drill opened
+it by hand. So the dagger still arrives too late to be jabbed on this link, and
+Jack Be Quick's printed +1{p} lands after the damage it was meant to raise.
+Recorded here and fixed in v4.80.
+
+Measured:
+- **No tiers move.** The audit diff is its timestamp line, and CR-INDEX moves
+  line numbers only.
+- **The ladder is byte-identical at three seeds on both sides.** The policy
+  declines every price that is the permanent itself (v4.24), so a driven game
+  rarely destroys a piece it could retrieve.
+- **Every drill that asserted "destroyed but still equipped" was repinned**
+  to where the card GOES. `test/helpers/judged.js` gains `filed` and
+  `banished`, so a regression to a flag left sitting in `gear` fails rather
+  than passing as "destroyed". 14 drill files and 8 scenes moved. One scene
+  picked a graveyard card by POSITION and now picks it by uid, because the
+  destroyed piece is filed in front of it.
+- **10 sabotages, 10 bite:** each wrapper, each guard, the def-layer seat,
+  each combat tail, the trainer's order, and `hitWatch`'s own `!w.destroyed`,
+  which needed a second half driven straight at `linkPayload`, because a
+  destroyed piece no longer survives to reach it through `reduce`.
+
 ## v4.78 — two "when this attacks" payloads fire when it attacks
 
 > *"When this attacks, cards cost {r} more to play this turn."*

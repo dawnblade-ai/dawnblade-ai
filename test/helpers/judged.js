@@ -115,4 +115,15 @@ function drain(g){
   return n;
 }
 
-module.exports = { hasDb, db, card, tok, side, state, fx, runOps, execute, RNG, J, drain };
+/* WHERE A DESTROYED PIECE IS (v4.79). A destroyed permanent is FILED by the
+   end of the resolution that destroyed it — out of `gear`, into the
+   graveyard, turn-stamped — unless a declared wall holds its index. This asks
+   exactly that, both halves, so a regression to a flag left sitting in `gear`
+   fails rather than passing as "destroyed". `banished` is the banish-zone twin
+   (v3.79: a banished piece is out of the game, never in a graveyard). */
+const inZone = (z, uid) => (z || []).some(x => x && x.uid === uid);
+const filed = (sd, uid) => !inZone(sd && sd.gear, uid)
+  && (sd.grave || []).some(x => x && x.uid === uid && x._gy != null);
+const banished = (sd, uid) => !inZone(sd && sd.gear, uid) && inZone(sd && sd.banish, uid);
+
+module.exports = { hasDb, db, card, tok, side, state, fx, runOps, execute, RNG, J, drain, filed, banished };

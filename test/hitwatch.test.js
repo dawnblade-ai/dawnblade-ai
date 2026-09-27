@@ -291,11 +291,13 @@ test("DRIVEN: a swing blocked to nothing did not HIT, so nothing goes off", {ski
 
 test("DRIVEN: a piece already destroyed holds nothing", {skip}, () => {
   H.db();
-  /* A DESTROYED PERMANENT IS SPENT (v3.54, v4.15). Gear is MARKED rather
-     than spliced, so `destroyed` is the only thing separating a live
-     watcher from one that has already gone off — and `sweepGear` does not
-     file it until the end phase, so it is still in the array for the rest
-     of the turn. */
+  /* A DESTROYED PERMANENT IS SPENT (v3.54, v4.15). Gear is MARKED where it
+     is destroyed and FILED once the resolution ends (v4.79), so a destroyed
+     piece reaches this scan only in the window between the two — or off a
+     wire, which is where this state comes from. Both halves are driven:
+     through `reduce`, where the declaration's own tail files it first, and
+     straight at `linkPayload`, where nothing has, so `!w.destroyed` is the
+     only thing refusing it. */
   const piece = {name: "Split Probe G", pitch: 0, uid: "g1", cost: null, power: null,
     tt: "Mechanologist Equipment - Chest", ty: ["Mechanologist", "Equipment", "Chest"],
     kw: [], def: 2, curDef: 2, destroyed: true,
@@ -309,10 +311,23 @@ test("DRIVEN: a piece already destroyed holds nothing", {skip}, () => {
   assert.ok(!r.error, String(r.error));
   n = settle(r.state);
   assert.equal(n.sides[1].hp, 15, "5 from the swing and nothing from the dead piece");
+
+  /* THE HALF WHERE THE GUARD IS THE ONLY REFUSAL: the link's payload
+     driven directly, with the destroyed piece still in the array. */
+  const g = H.state({name: "Dash", res: 9, ap: 1, gear: [piece]}, {name: "Them", hp: 20},
+                    {actor: 0, turnPlayer: 0, seed: "z", turn: 3});
+  const atk = mk("Jump Start", 1, "a2");
+  const out = J.withEffects(g, (fx, s) => {
+    s = Object.assign({}, s, {chain: [], stack: [], pend: {card: atk, from: "hand", total: 5,
+      ops: [], onHit: [], onHitHero: [], ga: false, by: 0, lateConds: []}});
+    const res = fx.linkPayload(s, {total: 5, pumps: 0, heroHit: true});
+    return res.game || res;
+  });
+  assert.equal(out.sides[1].hp, 20, "linkPayload deals no damage of its own — and the dead piece adds none");
   P.fxReset();
 });
 
-test("DRIVEN: a watcher in the GEAR zone fires too, and is MARKED rather than spliced", {skip}, () => {
+test("DRIVEN: a watcher in the GEAR zone fires too, and is FILED once the link resolves", {skip}, () => {
   H.db();
   /* THE GEAR HALF IS LATENT AND IS DRILLED ANYWAY (v3.73). Measured over
      the pool: exactly one record sets `hitWatch` and it is Boom Grenade,
@@ -324,11 +339,12 @@ test("DRIVEN: a watcher in the GEAR zone fires too, and is MARKED rather than sp
      assumed", and a reader that ignores a zone is reading the shape
      wrong whether or not anything notices today.
 
-     AND THE DESTROY TAKES THE OTHER BRANCH. A gear piece is MARKED
-     (v3.54): this fires in the DAMAGE step with the wall still declared,
+     AND THE DESTROY TAKES THE OTHER BRANCH. A gear piece is MARKED where
+     it fires (v3.54): this is the DAMAGE step with the wall still declared,
      and the trainer's wall is INDICES into `gear`, so a splice here
-     renumbers the defenders underneath it. `sweepGear` files it at the
-     end phase. Asserting only that it fired would pass against a splice. */
+     renumbers the defenders underneath it. Once the link resolves and the
+     wall is released, `fileDestroyedGear` files it (v4.79) — which is what
+     the CR does with any destroyed permanent, and what a retrieve reads. */
   const piece = {name: "Split Probe E", pitch: 0, uid: "g1", cost: null, power: null,
     tt: "Mechanologist Equipment - Chest", ty: ["Mechanologist", "Equipment", "Chest"],
     kw: [], def: 2, curDef: 2,
@@ -342,8 +358,7 @@ test("DRIVEN: a watcher in the GEAR zone fires too, and is MARKED rather than sp
   assert.ok(!r.error, String(r.error));
   n = settle(r.state);
   assert.equal(n.sides[1].hp, 11, "5 from the swing and 4 from the piece");
-  assert.equal(n.sides[0].gear.length, 1, "the piece is still IN the array");
-  assert.equal(n.sides[0].gear[0].destroyed, true, "and marked, not spliced");
+  assert.ok(H.filed(n.sides[0], "g1"), "and the piece is in the graveyard, turn-stamped (v4.79)");
   P.fxReset();
 });
 

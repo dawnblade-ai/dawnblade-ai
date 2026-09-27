@@ -60,9 +60,9 @@ function slotOf(c){
    adds them up, so the loadout rule in `build.js` and the runtime equip
    in `effects.js` cannot disagree about whether a hand is free.
 
-   A DESTROYED PIECE HOLDS NOTHING. `sweepGear` files it into the
-   graveyard at the beginning of its controller's end phase (v3.54), so
-   between the destroy and the sweep it is still in the array — and Mark
+   A DESTROYED PIECE HOLDS NOTHING. It is filed into the graveyard when the
+   resolution that destroyed it ends (v4.79), so inside that resolution —
+   or while a declared wall holds it — it is still in the array; and Mark
    of the Huntsman destroys ITSELF to mark a hero, which is exactly the
    card that frees Arakni's hand for a Graphene Chelicera. Counting a
    destroyed dagger would refuse the equip the loop is designed around. */

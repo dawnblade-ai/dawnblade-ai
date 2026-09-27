@@ -101,7 +101,7 @@ test("activating it sets the flag, on EITHER turn, and the end phase ends it", {
   const out = J.reduce(g, {t: "activate", uid: "gp77"}, 0);
   assert.ok(!out.error, "legal: " + out.error);
   assert.ok(out.state.deckFlip, "the replacement is live");
-  assert.ok(out.state.sides[0].gear[0].destroyed, "the piece paid for it");
+  assert.ok(H.filed(out.state.sides[0], 77), "the piece paid for it — and is filed at once (v4.79)");
   /* "UNTIL END OF TURN" — swept at whichever turn's end phase comes next,
      whose seat does not matter. */
   for(const seat of [0, 1]){

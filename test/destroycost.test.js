@@ -178,7 +178,7 @@ test("driven: a random 6+ discard offers the piece; paying spends it", {skip}, (
   const paid = unwrap(J.withEffects({...n, promptQ: [], prompt: PM.promptChoose(sheet, "pay")},
     (fx, m) => fx.applyAnswer(m, m.prompt)));
   assert.equal(paid.sides[0].ap, 2, "the printed reward");
-  assert.equal(paid.sides[0].gear[0].destroyed, true, "and the printed price");
+  assert.ok(H.filed(paid.sides[0], "g1"), "and the printed price — filed (v4.79)");
 });
 
 test("driven: DECLINING pays nothing and collects nothing — v2.04", {skip}, () => {
@@ -265,7 +265,7 @@ test("driven: paying hands the point back and marks the link — CR 5.3.5", {ski
   assert.equal(paid.sides[0].ap, 1, "CR 5.3.5 — go again is a GAIN of one action point");
   assert.deepEqual(paid.chain.map(l => l.ga), [true],
     "and the link is marked, so the chain display agrees with what happened");
-  assert.equal(paid.sides[0].gear[0].destroyed, true, "the iron is spent");
+  assert.ok(H.filed(paid.sides[0], "g9"), "the iron is spent — filed (v4.79)");
   assert.equal(paid._gaGrant, undefined, "and nothing is left to leak onto the next attack");
 });
 
