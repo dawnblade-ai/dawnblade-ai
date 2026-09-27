@@ -115,6 +115,29 @@ function drain(g){
   return n;
 }
 
+/* ONE MOVE AT THE TABLE (v4.80): a live sheet is answered the way the seat
+   policy would answer it (`judge.autoAnswer`), otherwise whoever holds
+   priority passes. A sheet queued by an attack's DECLARATION opens at the
+   declaration now (CR 7.2), so a drill that only ever passes is refused by
+   the first such sheet — `legal` freezes both seats until it is answered.
+   `answerAll` answers every live sheet and nothing else. Both return the
+   state unchanged when there is nothing they may do. */
+function move(g){
+  if(g.prompt){
+    const a = J.autoAnswer(g);
+    const out = a ? J.reduce(g, a, g.prompt.side || 0) : {error: "no answer"};
+    return out.error ? g : out.state;
+  }
+  if(g.priority == null) return g;
+  const out = J.reduce(g, {t: "pass"}, g.priority);
+  return out.error ? g : out.state;
+}
+function answerAll(g){
+  let n = g;
+  for(let i = 0; i < 24 && n.prompt; i++){ const m = move(n); if(m === n) break; n = m; }
+  return n;
+}
+
 /* WHERE A DESTROYED PIECE IS (v4.79). A destroyed permanent is FILED by the
    end of the resolution that destroyed it — out of `gear`, into the
    graveyard, turn-stamped — unless a declared wall holds its index. This asks
@@ -126,4 +149,4 @@ const filed = (sd, uid) => !inZone(sd && sd.gear, uid)
   && (sd.grave || []).some(x => x && x.uid === uid && x._gy != null);
 const banished = (sd, uid) => !inZone(sd && sd.gear, uid) && inZone(sd && sd.banish, uid);
 
-module.exports = { hasDb, db, card, tok, side, state, fx, runOps, execute, RNG, J, drain, filed, banished };
+module.exports = { hasDb, db, card, tok, side, state, fx, runOps, execute, RNG, J, drain, move, answerAll, filed, banished };

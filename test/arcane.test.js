@@ -268,7 +268,12 @@ test("three Runechants are three separate threats, not one pooled hit", {skip}, 
   const n = out.state;
 
   assert.equal(P.runeCount(n.sides[0]), 0, "all three pop");
-  const soaks = (n.promptQ || []).filter(p => p.tag === "soak");
+  /* THE FIRST IS ALREADY BEING ASKED (v4.80). A sheet queued by the
+     declaration opens at the declaration, so one soak is live and two wait
+     behind it. Until v4.80 all three sat in the queue until the damage step,
+     which this drill could not see because it only counted the queue. */
+  assert.equal(n.prompt && n.prompt.tag, "soak", "the first soak is asked in the attack step");
+  const soaks = [n.prompt, ...(n.promptQ || [])].filter(p => p && p.tag === "soak");
   assert.equal(soaks.length, 3,
     "Pyroglyphic prevents per SOURCE and Arcane Barrier triggers per threat, so three " +
     "Runechants are three 1-point threats a hero may answer three times. Pooling them " +
