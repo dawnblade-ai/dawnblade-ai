@@ -2115,6 +2115,11 @@ function strike(g){
      nothing that keys off a hit may fire. The log must not claim one. */
   if(total > 0){ n = {...n, hitSeq: (n.hitSeq || 0) + 1, lastDmg: total}; }
 
+  /* THE WALL IS RELEASED ABOVE, so a piece this link destroyed — worn to
+     nothing by `gearBlockApply`, or a Ward spent by `preventDamage` — is
+     filed now, as the CR files any destroyed permanent (v4.79). */
+  n = withEffects(n, (fx, st) => fx.fileDestroyedGear(st));
+
   return openPrompt(winCheck(n, atk));
 }
 

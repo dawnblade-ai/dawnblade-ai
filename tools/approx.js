@@ -298,15 +298,21 @@ const APPROX = {
       "RESOURCES), which is the same cheapest-first argument `ward-spend-order` "+
       "records."},
 
-"gear-sweep-timing": {
-  status:"stated", cr:"CR 4.4.3", board:"both", since:"v3.54", swept:"v4.02",
-  claim:"A destroyed piece of gear is filed to the graveyard at the beginning of "+
-        "its controller's end phase. The CR files a destroyed permanent immediately.",
-  why:"It is a SWEEP rather than an inline move because the trainer's wall holds "+
-      "`blockG` as INDICES into `gear`, so removing an entry while a wall is "+
-      "declared renumbers the defenders underneath it — and `gearBlockApply` "+
-      "destroys a battleworn piece during exactly that resolution. The observable "+
-      "difference needs a destroy AND a retrieve inside one turn cycle."},
+"gear-filed-when-destroyed": {
+  status:"closed", cr:"CR 4.4.3", board:"both", since:"v3.54", swept:"v4.79",
+  claim:"A destroyed piece of gear is filed to the graveyard (or banish) by the end "+
+        "of the resolution that destroyed it, as the CR files any destroyed "+
+        "permanent. It used to wait for its controller's end phase. BUILT AT "+
+        "v4.79: `effects.fileDestroyedGear`, at the tail of `execute` and "+
+        "`applyAnswer` and wherever a combat wall is released.",
+  why:"v3.54 filed at the end phase because the trainer's wall holds `blockG` as "+
+      "INDICES into `gear`, and said the observable difference needs a destroy "+
+      "AND a retrieve inside one turn cycle. Arakni's deck is that cycle: Mark of "+
+      "the Huntsman destroys itself and Pick Up the Point retrieves a dagger, so "+
+      "the retrieve found an empty graveyard every time the loop was played in "+
+      "one turn. The wall reason still holds and is kept exactly: a seat whose "+
+      "declared wall holds indices keeps its array until the wall is released, "+
+      "which is inside the same combat step."},
 
 "heave-window": {
   status:"stated", cr:"CR 4.4.1", board:"both", since:"v3.32", swept:"v4.02",

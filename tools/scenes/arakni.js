@@ -261,10 +261,10 @@ module.exports = [
     return {
       "the piece builds an ability":        !!gear[0].powCard,
       "the sheet offers both daggers":      (sheet && sheet.cards || []).length,
-      "the Arms piece pays with itself":    !!gz(gear[0].uid).destroyed,
+      "the Arms piece pays with itself":    c.H.filed(m.sides[0], gear[0].uid),
       "the defending hero takes the jab":   20 - m.sides[1].hp,
-      "the chosen dagger is destroyed":     !!gz(gear[1].uid).destroyed,
-      "the other dagger is untouched":      !!gz(gear[2].uid).destroyed,
+      "the chosen dagger is destroyed":     c.H.filed(m.sides[0], gear[1].uid),
+      "the other dagger is still equipped": gz(gear[2].uid).uid === gear[2].uid && !gz(gear[2].uid).destroyed,
       "and its own on-hit ability is offered": !!m.prompt && m.prompt.src
     };
   },
@@ -274,7 +274,7 @@ module.exports = [
     "the Arms piece pays with itself":    true,
     "the defending hero takes the jab":   1,
     "the chosen dagger is destroyed":     true,
-    "the other dagger is untouched":      false,
+    "the other dagger is still equipped": true,
     "and its own on-hit ability is offered": "Mark of the Huntsman"
   }
 },
@@ -462,7 +462,7 @@ module.exports = [
       "a sheet is offered instead":         !!offered.prompt && offered.prompt.tag,
       "and its price is the dagger itself": offered.prompt && offered.prompt.destroyUid,
       "paying marks them":                  paid.sides[1].marked,
-      "…and pays the printed price":        !!paid.sides[0].gear[0].destroyed,
+      "…and pays the printed price":        c.H.filed(paid.sides[0], 950),
       "declining marks nobody":             kept.sides[1].marked,
       "…and keeps the dagger":              !!kept.sides[0].gear[0].destroyed
     };
@@ -500,12 +500,15 @@ module.exports = [
     /* THEIR card, forced from hand onto their deck (Boulder Drop's rider). */
     const theirs = c.ops(on, [["foeHandToDeck", 1]], "scene");
     /* MY card, picked from my graveyard onto my deck (Memorial Ground's). */
-    const mine = c.answer(c.open(Object.assign({}, on,
-      {promptQ: [{tag: "pick", side: 0, src: "scene", zone: "grave", to: "deckTop", min: 1, max: 1}]})), 0);
+    /* PICKED BY UID, NEVER BY POSITION (v4.79): the destroyed piece is filed
+       at once, so the graveyard holds Topsy Turvy itself in front of gy1. */
+    const sheet = c.open(Object.assign({}, on,
+      {promptQ: [{tag: "pick", side: 0, src: "scene", zone: "grave", to: "deckTop", min: 1, max: 1}]}));
+    const mine = c.answer(sheet, ((sheet.prompt || {}).cards || []).findIndex(x => x.uid === "gy1"));
     const ended = c.E.beginEndPhase(on, 0, c.H.db()).game;
     const last = sd => (sd.deck[sd.deck.length - 1] || {}).uid;
     return {
-      "activating it destroys the piece":        !!on.sides[0].gear[0].destroyed,
+      "activating it destroys the piece":        c.H.filed(on.sides[0], 77),
       "their forced put lands on the bottom":    last(theirs.sides[1]),
       "…not on top":                             theirs.sides[1].deck[0].uid,
       "my pick lands on the bottom too":         last(mine.sides[0]),

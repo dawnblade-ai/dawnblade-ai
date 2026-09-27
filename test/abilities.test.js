@@ -89,7 +89,10 @@ test("the cost is really paid, and it cannot be activated twice", {skip}, () => 
      genuinely unreachable here, and asserting it would be asserting a
      branch no pool card takes. What IS reachable is that the printed cost
      was paid and the ability is gone. */
-  assert.equal(n.sides[0].gear.find(x => x.uid === pc.uid).destroyed, true,
+  /* A DESTROYED PIECE IS FILED THE MOMENT IT IS DESTROYED (v4.79), so the
+     cost is asserted where the card GOES — out of the gear zone and into a
+     turn-stamped graveyard — rather than on a flag left behind. */
+  assert.ok(H.filed(n.sides[0], pc.uid),
     "'Destroy this' is the cost — collecting the {r} without paying it is the v2.04 bug");
   assert.ok(J.legal(n, {t: "activate", uid: pc.uid}, 0),
     "and it cannot be activated a second time");

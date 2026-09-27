@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.78
+**Current version:** v4.79
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3209 drills** at v4.78.
+This is `node --test "test/*.test.js"` — **3217 drills** at v4.79.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,39 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A DESTROYED PIECE IS FILED WHEN IT IS DESTROYED (v4.79)
+
+v3.54 filed destroyed gear at the controller's end phase and stated it as an
+approximation whose observable difference *"needs a destroy AND a retrieve
+inside one turn cycle"*. **Arakni's deck is that cycle**: Mark of the Huntsman
+destroys itself, and Pick Up the Point retrieves a dagger from the graveyard,
+which was empty every time the loop was played inside one turn.
+
+**v3.54's reason was about WALLS and it is kept exactly.** The trainer's
+`blockG` is INDICES into `gear`, so `effects.fileDestroyedGear` spares a seat
+with a declared wall (either board, uniformly) and the seat the trainer's
+`{k:"def", gi}` layers point into. Every other destroyed piece is filed by the
+end of the resolution that destroyed it: at the tail of `execute` and
+`applyAnswer` (wrappers, so no return inside either body is missed), and
+where each board releases a combat wall: judge's `strike`, the trainer's
+`resolveStack` and `finishBlock`. The end-phase sweep stays as the net.
+
+**A DRILL THAT READ `.destroyed` OFF THE GEAR ZONE WAS ASSERTING THE
+APPROXIMATION**, not the rule. Fourteen files did. `test/helpers/judged.js`'s
+`filed` and `banished` ask where the card GOES, so a regression to a flag left
+in `gear` fails. **And a scene that picks a graveyard card by POSITION broke**,
+because the destroyed piece is now filed in front of it. Pick by uid.
+
+**THE RECORD'S PROBE COULD NEVER HAVE GONE RED** (v4.36's inert probe, again):
+its deviation half asserted a hand-built state. When you close a record, read
+its probe as though it were new.
+
+**AND DRIVING THE LOOP AT THE TABLE FOUND v4.78's CLAIM FALSE.** A prompt
+queued at declaration is not opened until `strike`, because
+`judge.declareAttack` never drains the queue, and v4.78's drill drained it by
+hand (`if(!g.prompt) g = J.openPrompt(g)`). **A drill that supplies the step it
+is testing proves the step's consumer, not the step.** Fixed at v4.80.
 
 ### A RECORDED REASON FOR HOLDING A KIND BACK CAN GO STALE TOO (v4.78)
 
@@ -8375,9 +8408,12 @@ read is untouched, and `effects.sweepGear` does the filing at one point
 where no wall can be live. **When a change removes something from an
 array, ask who is holding an INDEX into it.**
 
-**WHEN it happens is a STATED APPROXIMATION** — the CR files immediately,
+~~**WHEN it happens is a STATED APPROXIMATION** — the CR files immediately,
 this files at the beginning of the controller's end phase. The observable
-difference is a destroy and a retrieve inside one turn cycle.
+difference is a destroy and a retrieve inside one turn cycle.~~ **CLOSED AT
+v4.79.** Arakni's deck IS that turn cycle, so a piece is filed when the
+resolution that destroyed it ends, and only a seat whose wall still holds an
+index waits. See "A DESTROYED PIECE IS FILED WHEN IT IS DESTROYED".
 
 **THE ORDER INSIDE `beginEndPhase` IS LOAD-BEARING.** It runs after rust
 (which sets `destroyed` this turn) and after the idle wipe (which reads

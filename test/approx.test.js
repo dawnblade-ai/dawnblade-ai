@@ -255,7 +255,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      both halvings stamp. */
   /* 43 holds AT v4.74: `control-change-steal` was BUILT and is
      `control-change-steal-built` — renamed, closed, probe turned round.
-     43 holds AT v4.75: `spellvoid-x` was BUILT and is `spellvoid-x-read`. */
+     43 holds AT v4.75: `spellvoid-x` was BUILT and is `spellvoid-x-read`.
+     43 holds AT v4.79: `gear-sweep-timing` is `gear-filed-when-destroyed`. */
   assert.equal(Object.keys(APPROX).length, 43, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
@@ -290,7 +291,10 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 17 -> 18 AT v4.73: `halving-reads-every-zone`. */
   /* 18 -> 17 AT v4.75: `spellvoid-x` was BUILT and is `spellvoid-x-read`. */
   /* 17 -> 16 AT v4.77: `surge-approximated` was BUILT and is `surge-dealt-read`. */
-  assert.equal(n("stated"), 16, "stated count moved");
+  /* 16 -> 15 AT v4.79: `gear-sweep-timing` was BUILT and is
+     `gear-filed-when-destroyed` — and its probe could never have gone red,
+     because its deviation half asserted a hand-built state (v4.36). */
+  assert.equal(n("stated"), 15, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -336,8 +340,9 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      `play-held-on-the-stack`. 19 -> 20 AT v4.72: `x-cost-declared`.
      20 -> 21 AT v4.73: `crush-halving-rider-read`. 21 -> 22 AT v4.74:
      `control-change-steal-built`. 22 -> 23 AT v4.75: `spellvoid-x-read`.
-     23 -> 24 AT v4.77: `surge-dealt-read`. */
-  assert.equal(n("closed"), 24, "closed count moved");
+     23 -> 24 AT v4.77: `surge-dealt-read`. 24 -> 25 AT v4.79:
+     `gear-filed-when-destroyed`. */
+  assert.equal(n("closed"), 25, "closed count moved");
 });
 
 /* ============================================================
@@ -748,25 +753,34 @@ probe("prevention-is-per-damage-type", () => {
   assert.equal(over.sides[1].hp, 16, "2 from the pool and 3 from the aura, and the other 4 land");
 });
 
-/* The CR files a destroyed permanent immediately; this files it at the
-   beginning of the controller's end phase. DRIVEN: the piece is still in
-   `gear` after being destroyed, and reaches the graveyard only when
-   `beginEndPhase` runs. */
-probe("gear-sweep-timing", () => {
-  const piece = {uid:7, name:"Probe Helm", def:2, curDef:0, destroyed:true,
-                 tt:"Generic Equipment - Head", ty:["Generic","Equipment"], tx:"", kw:[]};
-  const g = H.state({gear:[piece], grave:[]}, {});
-  assert.equal(g.sides[0].gear.length, 1, "fixture: the piece must start in gear");
-  assert.equal(g.sides[0].grave.length, 0, "fixture: the graveyard must start empty");
-  const swept = E.sweepGear(g, 0);
-  assert.equal(swept.game.sides[0].gear.length, 0, "the sweep did not file the piece");
-  assert.equal(swept.game.sides[0].grave.length, 1, "the piece did not reach the graveyard");
-  /* THE DEVIATION: nothing files it at the moment of destruction. A
-     destroyed piece sitting in `gear` is what makes the wall's indices
-     survive the resolution that destroyed it. */
-  const inPlace = H.state({gear:[piece], grave:[]}, {});
-  assert.equal(inPlace.sides[0].gear.length, 1,
-    "gear is now filed at the moment of destruction — the record must move");
+/* CLOSED AT v4.79. The CR files a destroyed permanent immediately, and so
+   does this — by the end of the resolution that destroyed it. DRIVEN: a
+   `pay` sheet whose price is the piece itself (Mark of the Huntsman's
+   shape, v3.93) is answered through `applyAnswer`, and the piece is in the
+   graveyard, turn-stamped, when the answer returns. The residual is the one
+   v3.54 was about — a seat whose declared wall holds INDICES keeps its
+   array until the wall is released — and it is asserted too, because a
+   filing that ignored the wall would renumber the defenders underneath it.
+
+   AND THE PROBE THIS REPLACES COULD NEVER GO RED. Its "deviation" half
+   asserted that a hand-built state still had the piece in `gear` — the
+   fixture answering its own question, v4.36's inert probe exactly, so the
+   record would have survived the build that closed it. */
+probe("gear-filed-when-destroyed", () => {
+  const piece = uid => ({uid, name:"Probe Legs " + uid, def:1, curDef:1,
+                 tt:"Generic Equipment - Legs", ty:["Generic","Equipment","Legs"], tx:"", kw:[]});
+  const pay = g => {
+    const live = PM.buildPrompt(g, {tag:"pay", side:0, src:"Probe", cost:0, avail:0, ops:[], destroyUid:7});
+    assert.ok(live, "fixture: the sheet must build");
+    return H.fx(g, (fx, s) => fx.applyAnswer(s, PM.promptChoose(live, "pay")));
+  };
+  const now = pay(H.state({gear:[piece(7)], grave:[]}, {}, {turn:5}));
+  assert.ok(!now.sides[0].gear.some(x => x.uid === 7), "the destroyed piece is still in `gear` — the record must move back");
+  assert.equal((now.sides[0].grave.find(x => x.uid === 7) || {})._gy, 5, "…and it is in the graveyard, turn-stamped");
+  /* THE RESIDUAL: a wall holding indices keeps the array whole */
+  const walled = pay(H.state({gear:[piece(7), piece(8)], blockG:[1], grave:[]}, {}, {turn:5}));
+  assert.deepEqual(walled.sides[0].gear.map(x => x.uid), [7, 8], "a walled seat's gear was renumbered");
+  assert.equal(walled.sides[0].gear[0].destroyed, true, "…and the price is still paid, as a mark");
 });
 
 /* CR 4.4.1 gives nobody priority in the end phase, so heave is offered at

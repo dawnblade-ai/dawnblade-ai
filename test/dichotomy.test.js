@@ -390,7 +390,7 @@ test("DRIVEN: the whole cost is paid and the sheet asks for one of each", {skip}
   const s = J.reduce(board([ATK1(), NON1()]), ACT, 0).state;
   assert.equal(s.sides[0].res, 8, "the printed {r} was not charged");
   assert.equal(s.sides[0].ap, 0, "CR 8.1.1 — an activated ability costs the action point");
-  assert.equal((s.sides[0].gear || []).find(x => x.uid === 41).destroyed, true,
+  assert.ok(H.filed(s.sides[0], 41),
     "the piece survived its own printed cost — the drawback is free");
   assert.ok(s.prompt, "no sheet opened, so the ability was paid for and did nothing");
   assert.equal(s.prompt.tag, "pick");
@@ -420,8 +420,10 @@ test("DRIVEN: the TAP ORDER is the deck order — the printed \"in any order\"",
   /* AND BOTH CARDS LEFT THE GRAVEYARD. A card in two zones is what
      `invariants.js` catches; a card in NONE falls out of the census
      silently (v2.45), so the zone count is asserted on both sides. */
+  /* …AND THE CROWN IS WHAT IS THERE, filed by the resolution that destroyed
+     it (v4.79) — the only card the graveyard may hold after the answer. */
   for(const s of [a, b]){
-    assert.deepEqual(s.sides[0].grave.map(c => c.name), []);
+    assert.deepEqual(s.sides[0].grave.map(c => c.name), ["Crown of Dichotomy"]);
     assert.equal(s.sides[0].deck.length, 3);
   }
   /* AND THE FEED SAYS WHICH ONE IS ON TOP, because the order is the whole

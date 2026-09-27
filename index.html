@@ -806,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "4.78"; /* v4.78 - Hyper Inflation's tax and Pick Up the Point's retrieve fire when the attack is declared, where CR 7.2 puts them. See CHANGELOG.md. */
+window.APP_VER = "4.79"; /* v4.79 - a destroyed piece of gear is filed to the graveyard when it is destroyed, not at the end phase. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -4756,6 +4756,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     n = L(n, `Blocked ${dh+dg+drx}, took ${through}.${drNames.length?` (${drNames.join(", ")} as defense reaction${drNames.length>1?"s":""}.)`:""}`);
     if(act(n).hp<=5 && act(n).hp>0 && !n.flags.p5) n = L({...n, flags:{...n.flags, p5:true}}, "On the ropes — every block counts now.");
     if(act(n).hp<=0){ n.over={win:false}; return L(n,`You hit the boards. ${foe(n).name} remains standing.`); }
+    /* the wall is released above, so a piece it wore to nothing is filed
+       now rather than at the end phase (v4.79) */
+    n = _EFX.fileDestroyedGear(n);
     /* THE CHAIN LINK IS OVER, NOT THE TURN (v2.71). This used to go
        straight to `newTurn`, which is what made seat 1's turn exactly one
        attack long: go again could never chain a second link, and an

@@ -398,14 +398,14 @@ test("DRIVEN: the Runechant is destroyed, the piece shatters, the ward lands",
   const n = J.reduce(t.g, {t: "activate", uid: t.robe.uid}, 0).state;
   /* ASSERT ON ZONES, LIFE AND COUNTERS — never on the feed (v2.45). */
   assert.equal(n.sides[0].board.length, 0, "the Runechant left the arena");
-  assert.equal(n.sides[0].grave[0].name, "Runechant", "it reached the graveyard");
-  assert.equal(n.sides[0].grave[0]._gy, n.turn,
+  const rune = n.sides[0].grave.find(c => c.name === "Runechant");
+  assert.ok(rune, "it reached the graveyard");
+  assert.equal(rune._gy, n.turn,
     "TURN-STAMPED, or the whole \"…this turn\" family goes quietly wrong (v3.54)");
   assert.equal(n.sides[0].awd, 1, "the printed 1 arcane prevention landed");
   assert.equal(n.sides[0].awdTurn, 1,
     "and it carries its printed window, so the end phase expires it (v4.07)");
-  assert.equal((n.sides[0].gear || []).some(x =>
-    /Runebleed/.test(x.name) && x.destroyed), true, "the piece shattered too");
+  assert.ok(H.filed(n.sides[0], t.robe.uid), "the piece shattered too — and was filed (v4.79)");
   assert.deepEqual(INV.errors(n), [], "the board is clean");
 });
 

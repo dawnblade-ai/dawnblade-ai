@@ -112,7 +112,7 @@ test("the sheet offers ONLY what the seat can pay X for, after the fixed {r}", {
   const n = activate(table(3));
   assert.deepEqual(offered(n), ["Malefic Incantation", "Waning Vengeance"],
     "an aura the seat cannot pay X for was offered — the choice would be refused after the cost is paid");
-  assert.ok(n.sides[0].gear[0].destroyed, "destroy this is paid on activation");
+  assert.ok(H.filed(n.sides[0], 41), "destroy this is paid on activation — and filed (v4.79)");
 });
 
 test("the answer RETURNS the aura and CHARGES X per pip", {skip}, () => {

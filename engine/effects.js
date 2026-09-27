@@ -207,8 +207,9 @@ function makeEffects(ctx){
       .filter(({w, px}) => px && px.trigger === trigger
                         && !(px.taps && (act(n).weaponUsed||{})[w.uid])
                         /* A DESTROYED PIECE CANNOT PAY AGAIN. It is marked
-                           rather than spliced until the end-phase sweep
-                           (v3.54), so it is still sitting in the zone. */
+                           where it is destroyed and filed when the
+                           resolution ends (v4.79), so inside that
+                           resolution it is still sitting in the zone. */
                         && !w.destroyed
                         && (!ok || ok(px, w)));
     for(const {w, px} of watchers)
@@ -775,8 +776,9 @@ function makeEffects(ctx){
         mut().grave = [...gy(n.turn, pick.card), ...((n.sides[seat] || {}).grave || [])];
       } else {
         /* MARKED, NOT SPLICED (v3.54): a wall may be declared out of the
-           gear zone by INDEX on one board and by uid on the other, and
-           `sweepGear` files it at the end phase where no wall can be live. */
+           gear zone by INDEX on one board and by uid on the other.
+           `fileDestroyedGear` files it once the resolution ends, sparing a
+           seat whose wall still holds an index (v4.79). */
         mut().gear = ((n.sides[seat] || {}).gear || [])
           .map(x => x && x.uid === pick.uid ? {...x, destroyed: true} : x);
       }
@@ -2690,6 +2692,11 @@ function makeEffects(ctx){
      it. Nothing else in this body may read `opts`: the moment a card's
      EFFECT depends on the caller, there are two engines again. */
   const execute = (s,card,from,idx,opts) => {
+    /* A DESTROYED PIECE GOES TO THE GRAVEYARD NOW (v4.79) — see
+       `fileDestroyedGear`. One wrapper, so no return below can skip it. */
+    return fileDestroyedGear(executeInner(s, card, from, idx, opts));
+  };
+  const executeInner = (s,card,from,idx,opts) => {
     /* WAS THIS ATTACK AIMED AT A HERO? (CR 1.4.5, v3.46) — the caller's
        answer, like the wall and `heroHit`. It is a DIFFERENT question from
        `heroHit`: an attacks-trigger fires when the attack is DECLARED,
@@ -3073,8 +3080,9 @@ function makeEffects(ctx){
        argument: the trainer's `blockG` holds INDICES into `gear`, so
        removing an entry while a wall is declared renumbers the defenders
        underneath it — and this is an INSTANT, playable during exactly
-       that block. `sweepGear` files it at a point where no wall can be
-       live, and BANISH is its second destination. */
+       that block. `fileDestroyedGear` files it once the resolution ends
+       and no wall holds an index into this seat's gear (v4.79), and BANISH
+       is its second destination. */
     if(P.abSelfBanish(card)){
       const _bu = card._banishGear;
       actMut(n).gear = act(n).gear.map(x => x.uid === _bu
@@ -5301,6 +5309,9 @@ function makeEffects(ctx){
   }
 
   const applyAnswer = (s, prompt) => {
+    return fileDestroyedGear(applyAnswerInner(s, prompt));     /* v4.79 */
+  };
+  const applyAnswerInner = (s, prompt) => {
     const p = prompt;
     if(!p || !promptReady(p)) return s;
     /* AN X THE SEAT CANNOT PAY IS NOT AN ANSWER (v4.71). The queue site
@@ -5386,7 +5397,8 @@ function makeEffects(ctx){
        rather than spliced, for `sweepGear`'s reason (v3.54): a wall
        declared as INDICES into `gear` renumbers underneath a removal, and
        Refraction Bolters' trigger fires in the DAMAGE step, with the wall
-       still declared. The end-phase sweep files it to the graveyard. */
+       still declared. `applyAnswer`'s own tail files it to the graveyard
+       (v4.79), sparing only a seat whose wall is still declared. */
     if(r.destroy != null){
       const piece = (act(n).gear||[]).find(x => x && x.uid === r.destroy);
       if(piece){
@@ -6980,9 +6992,9 @@ function makeEffects(ctx){
     }
     /* THE PRINTED DRAWBACK, AND IT LANDS. Reading the head without it
        files an unbounded repeatable jab (v4.25's rule, one card over).
-       A destroyed gear piece is MARKED and filed by `sweepGear` at the
-       end phase (v3.54); a board permanent leaves the arena now and pays
-       out what it printed on the way (v4.29). */
+       A destroyed gear piece is MARKED here and filed once the resolution
+       ends (v4.79); a board permanent leaves the arena now and pays out
+       what it printed on the way (v4.29). */
     if(ent.where === "gear"){
       actMut(n).gear = (act(n).gear || [])
         .map(x => x && x.uid === ent.uid ? {...x, destroyed: true} : x);
@@ -7397,10 +7409,12 @@ function makeEffects(ctx){
             actMut(n).grave = [...gy(n.turn, ent.card), ...act(n).grave];
             n = payLeave(n, ent.card, actorOf(n));
           } else {
-            /* A GEAR PIECE IS MARKED, NOT SPLICED (v3.54): a wall
+            /* A GEAR PIECE IS MARKED HERE, NOT SPLICED (v3.54): a wall
                declared as INDICES into `gear` renumbers underneath a
                removal, and this fires in the DAMAGE step with the wall
-               still declared. `sweepGear` files it at the end phase. */
+               still declared. It is FILED once the link has resolved and
+               the wall is released — `fileDestroyedGear`, at the tail of
+               `strike` and `resolveStack` (v4.79). */
             actMut(n).gear = (act(n).gear || []).map(x =>
               x && x.uid === w.uid ? {...x, destroyed: true} : x);
           }
@@ -7563,6 +7577,9 @@ function makeEffects(ctx){
        GAME is the caller's (CR 7.6.3 hands priority back to the
        turn-player); the trainer's wrapper says `mode:"act"`. */
     n.stack = []; n.pend = null;
+    /* the wall is released with the stack, so a piece it wore to nothing is
+       filed now rather than at the end phase (v4.79) */
+    n = fileDestroyedGear(n);
     return openPrompt(winCheck(n));
   };
 
@@ -7604,9 +7621,56 @@ function makeEffects(ctx){
                   `${sp(act(n))} winter`);
   }
 
+  /* ---- A DESTROYED PIECE GOES TO THE GRAVEYARD NOW (v4.79) ---------
+     The CR files a destroyed permanent IMMEDIATELY. v3.54 filed destroyed
+     gear at the controller's end phase instead, as a SWEEP, because the
+     trainer holds its walls as INDICES into `gear` — so removing a piece
+     while a wall is declared renumbers the defenders underneath it.
+
+     THAT REASON COVERS WALLS, AND THE DEFECT WAS NOT IN A WALL. Mark of the
+     Huntsman destroys ITSELF to mark a hero (v4.37), and Pick Up the Point
+     retrieves "a dagger from your graveyard" — both Arakni's, the loop v3.54
+     itself called designed. With the Mark sitting in `gear` until the end
+     phase, the retrieve found an empty graveyard every turn the loop was
+     played in one turn, which is the only way it can be played. The
+     attacker's own gear is never in a wall.
+
+     SO THE SWEEP STAYS WHERE AN INDEX IS HELD, and only there: a seat with
+     a declared wall (`blockG`, indices on the trainer, uids at the table —
+     spared on both, uniformly) or the seat whose gear the trainer's `def`
+     stack layers point into (`gi`). Every other destroyed piece is filed by
+     the end of the resolution that destroyed it, turn-stamped by
+     `sweepGear`, the one body. Run at the tail of the two shared entry
+     points — `execute` and `applyAnswer` — so neither board restates it.
+
+     AND AT THE THREE PLACES A WALL IS RELEASED, because a combat step
+     destroys gear outside both: a defender worn to nothing by
+     `gearBlockApply`, a Ward-bearing piece spent by `preventDamage`. Each
+     board releases its own wall — judge's `strike`, the trainer's
+     `resolveStack` (the player attacking) and `finishBlock` (the player
+     blocking) — so each calls this once the declaration is cleared, and it
+     is EXPOSED for that reason. The guards above make it safe to call at
+     any moment; the call sites are where it is also USEFUL. */
+  function fileDestroyedGear(s){
+    if(!s || !s.sides) return s;
+    let n = s;
+    const giHeld = (n.stack || []).some(l => l && l.k === "def" && l.gi != null);
+    const defSeat = n.pend && n.pend.by != null ? 1 - n.pend.by : 1 - actorOf(n);
+    for(const seat of [0, 1]){
+      const sd = n.sides[seat];
+      if(!sd || !(sd.gear || []).some(g => g && g.destroyed)) continue;
+      if((sd.blockG || []).length) continue;
+      if(giHeld && seat === defSeat) continue;
+      const r = sweepGear(n, seat);
+      n = r.game;
+      r.msgs.forEach(m => { n = L(n, m); });
+    }
+    return n;
+  }
+
   return {runOps, execute, afterDefenders, defendsTriggers, resolveClash, resolveStack, afterDiscard, payAddCost, fileAttack, allyDeath,
           linkPumps, linkPayload, attackRx, preventDamage, autoPitch, applyAnswer,
-          activateHandAbility, foeTurnIce, takeInstantNext,
+          activateHandAbility, foeTurnIce, takeInstantNext, fileDestroyedGear,
           /* `applyDefMod` IS NO LONGER EXPOSED (v4.57). It was exposed at
              v4.53 for exactly one outside caller — `index.html`'s
              `confirmDefPay`, the trainer's own pause for one of the four
@@ -8301,8 +8365,9 @@ function defendValue(defSide, card, opts){
    was read into a prompts.js filter by `optFilter`, and two matchers for
    one subject is where the drift starts (v3.53).
 
-   A DESTROYED PIECE IS NOT A TARGET. It is marked rather than spliced
-   until the end-phase sweep (v3.54), so it is still sitting in the zone.
+   A DESTROYED PIECE IS NOT A TARGET. It is marked where it is destroyed
+   and filed when the resolution ends (v4.79), so inside that resolution it
+   is still sitting in the zone.
 
    AND THE EXCLUSION IS STRUCTURAL, NOT A PRINTED FIELD. "Isn't on the
    active chain link" is the card the attack was declared with, so the
@@ -8958,13 +9023,14 @@ function settleIntellect(game, seat){
    existing wear and display read is untouched, and the FILING happens at
    one point where no wall can be live.
 
-   WHEN it happens is a STATED APPROXIMATION: the CR files a destroyed
-   permanent immediately, and this files it at the beginning of the
-   controller's end phase. The observable difference is a piece destroyed
-   and retrieved within the same turn, which needs both a destroy and a
-   retrieve in one turn cycle. Recorded rather than hidden — and the
-   alternative was an inline move that can renumber a live wall, which is
-   a rules bug in a place no card text would explain.
+   WHEN IT HAPPENS STOPPED BEING THE END PHASE AT v4.79. v3.54 stated it as
+   an approximation — the CR files a destroyed permanent immediately —
+   whose observable difference "needs both a destroy and a retrieve in one
+   turn cycle". Arakni's deck is that turn cycle: Mark of the Huntsman
+   destroys itself and Pick Up the Point retrieves a dagger. So this body
+   is now called by `fileDestroyedGear` at the end of every resolution and
+   wherever a combat wall is released, and the end-phase call below is the
+   net for the one piece that can still be waiting — gear held by a wall.
 
    Pure, seat-relative, and returns `{game, msgs, moved}` — the same
    contract `sweepArena` keeps, so both boards get it through
@@ -9094,12 +9160,14 @@ function sweepGear(game, seat){
   me.grave = [...destroyed.map(g => Object.assign({}, g, {_gy: game.turn})), ...(sd.grave || [])];
   if(banished.length) me.banish = [...banished.map(g => Object.assign({}, g)), ...(sd.banish || [])];
   sides[seat] = me;
-  const who = ((game.sides || [])[seat] || {}).name || ("seat " + seat);
+  /* THE POSSESSIVE IS `game.sp`, never a hand-rolled `'s` (v4.22): seat 0
+     is literally named "You", and the old line read "You's graveyard". */
+  const whose = G.sp((game.sides || [])[seat] || {name: "seat " + seat});
   return {
     game: Object.assign({}, game, {sides}),
     msgs: gone.map(g => g._banished
-      ? `${g.name} is banished — it is out of ${who}'s game for good.`
-      : `${g.name} is destroyed — it goes to ${who}'s graveyard.`),
+      ? `${g.name} is banished — it is out of ${whose} game for good.`
+      : `${g.name} is destroyed — it goes to ${whose} graveyard.`),
     moved: gone.map(g => g.uid)};
 }
 
@@ -9344,7 +9412,12 @@ function beginEndPhase(game, seat, db){
      the idle wipe reads `gear` by uid to find the counters it clears, so
      filing before that silently stops it finding a piece that rusted
      through in the same end phase. Specific readers first, the generic
-     sweep last — the same rule step (2) states for Frostbite. */
+     sweep last — the same rule step (2) states for Frostbite.
+
+     SINCE v4.79 THIS IS NO LONGER WHERE MOST GEAR IS FILED — a piece is
+     filed when the resolution that destroyed it ends. This step files what
+     the end phase itself destroys (rust, above) and is the net for anything
+     a declared wall was still holding. */
   {
     const sg = sweepGear(n, seat);
     n = sg.game;

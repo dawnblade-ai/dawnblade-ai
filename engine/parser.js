@@ -8353,9 +8353,9 @@ function wardValue(c){
    and this asks it for the same number. Two readers of one printed value
    is where the drift starts, so there is one.
 
-   A DESTROYED GEAR PIECE CARRIES NOTHING. `sweepGear` files it at the end
-   phase (v3.54's index hazard), so it is still in the array while this
-   scan runs — the same guard `auraAttackOf` and `gearDef` keep.
+   A DESTROYED GEAR PIECE CARRIES NOTHING. It is filed when the resolution
+   that destroyed it ends (v4.79), so it can still be in the array while
+   this scan runs — the same guard `auraAttackOf` and `gearDef` keep.
 
    THE ORDER IS STABLE, because two peers and a replay must destroy the
    same permanent, and it is a TOTAL order — a ranking that leaves ties
@@ -8428,8 +8428,8 @@ function auraAttackOf(card, sd, o){
   if(!(w > 0)) return null;                  /* no ward, no weapon */
   if(o.yourTurn !== true) return null;       /* "during your turn" */
   /* A DESTROYED PIECE GRANTS NOTHING — `gearDef` already answers 0 for
-     one and `sweepGear` files it at the end phase, so it is still in the
-     array while the grant is being asked for. */
+     one, and it is filed only when the resolution that destroyed it ends
+     (v4.79), so it can still be in the array while the grant is asked. */
   const g = (sd.gear || [])
     .map(x => (x && !x.destroyed) ? auraWeaponGrant(x) : null)
     .find(Boolean);

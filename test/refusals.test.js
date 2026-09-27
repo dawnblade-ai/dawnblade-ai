@@ -112,9 +112,11 @@ test("DRIVEN: it prevents 2, spends the soul, and the piece is banished", {skip}
   const n = H.execute(g, rt.powCard, "hero", 0, {});
   assert.equal(n.sides[0].ward, 2, "the prevention pool — built v3.67");
   assert.equal(n.sides[0].soul.length, 0, "the soul card is spent");
-  const mark = n.sides[0].gear.find(x => x.uid === rt.uid);
-  assert.equal(mark.destroyed, true);
-  assert.equal(mark._banished, true, "marked, not spliced — v3.54's index hazard");
+  /* FILED AT ONCE (v4.79) — out of the gear zone and into BANISH the
+     moment the ability resolves. v3.54 marked it and left the filing to
+     the end phase, for a wall holding INDICES into `gear`; no wall is
+     declared here, so nothing is holding one. */
+  assert.ok(H.banished(n.sides[0], rt.uid), "the piece is banished — gone from the gear zone");
 });
 
 test("DRIVEN: an EMPTY soul is inert, and the piece is NOT spent", {skip}, () => {
@@ -146,6 +148,8 @@ test("DRIVEN: the sweep files it to BANISH, never the graveyard", {skip}, () => 
   const g = H.state({gear: [rt], res: 9, ap: 1, hand: [], soul: [soul]}, {hp: 20, hand: []},
                     {actor: 0, turnPlayer: 0, turn: 3, builds: [b, {}]});
   const n = H.execute(g, rt.powCard, "hero", 0, {});
+  assert.ok(H.banished(n.sides[0], rt.uid) && !(n.sides[0].grave || []).some(x => x.uid === rt.uid),
+    "filed at once (v4.79), to BANISH");
   const out = E.beginEndPhase(n, 0, H.db()).game;
   assert.ok(!out.sides[0].gear.some(x => x.uid === rt.uid), "it has left the gear zone");
   assert.ok((out.sides[0].banish || []).some(x => x.uid === rt.uid), "and it is in banish");

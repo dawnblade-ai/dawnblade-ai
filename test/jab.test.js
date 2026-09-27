@@ -244,8 +244,8 @@ test("DRIVEN: the powCard exists and the Arms piece pays with itself", {skip}, (
   const st = board({gear: [dagger(50)]});
   assert.ok(st.dd.powCard, "reading the PAYLOAD is what creates the route (v3.47)");
   const n = activate(st);
-  assert.equal((n.sides[0].gear.find(x => x.uid === st.dd.uid) || {}).destroyed, true,
-    "the printed cost destroys the source");
+  assert.ok(H.filed(n.sides[0], st.dd.uid),
+    "the printed cost destroys the source — and a destroyed piece is filed at once (v4.79)");
 });
 
 test("DRIVEN: ONE candidate just happens — no sheet (v3.55)", {skip}, () => {
@@ -254,8 +254,7 @@ test("DRIVEN: ONE candidate just happens — no sheet (v3.55)", {skip}, () => {
   const n = activate(board({gear: [dagger(50)]}));
   assert.ok(!n.prompt, "nothing to ask");
   assert.equal(n.sides[1].hp, 19, "the jab lands anyway");
-  assert.equal((n.sides[0].gear.find(x => x.uid === 50) || {}).destroyed, true,
-    "…and the printed drawback lands with it");
+  assert.ok(H.filed(n.sides[0], 50), "…and the printed drawback lands with it");
 });
 
 test("DRIVEN: TWO candidates open a sheet, and only the CHOSEN one is destroyed", {skip}, () => {
@@ -267,8 +266,9 @@ test("DRIVEN: TWO candidates open a sheet, and only the CHOSEN one is destroyed"
   assert.equal(n.sides[1].hp, 20, "and nothing resolves until it is answered");
   const m = pick(n, 1);
   assert.equal(m.sides[1].hp, 19);
-  assert.equal((m.sides[0].gear.find(x => x.uid === 51) || {}).destroyed, true, "the chosen one");
-  assert.ok(!(m.sides[0].gear.find(x => x.uid === 50) || {}).destroyed, "…and only it");
+  assert.ok(H.filed(m.sides[0], 51), "the chosen one");
+  assert.ok((m.sides[0].gear.find(x => x.uid === 50) || {destroyed: true}).destroyed !== true,
+    "…and only it — the other dagger is still equipped");
 });
 
 test("DRIVEN: the SWINGING weapon is excluded — the printed restriction", {skip}, () => {
@@ -315,7 +315,7 @@ test("DRIVEN: the FICTION fires, and it fires BEFORE the destroy", {skip}, () =>
   assert.ok(n.prompt, "Mark's own on-hit ability is offered");
   assert.equal(n.prompt.src, "Mark of the Huntsman");
   assert.equal(n.prompt.destroyUid, 60, "…and it is the dagger that jabbed");
-  assert.equal((n.sides[0].gear.find(x => x.uid === 60) || {}).destroyed, true,
+  assert.ok(H.filed(n.sides[0], 60),
     "the drawback still lands — the offer is queued, the destroy is not");
 });
 
@@ -352,14 +352,15 @@ test("DRIVEN: a fully prevented jab does NOT hit (CR 7.5.5)", {skip}, () => {
   assert.equal(warded.sides[1].hp, 20, "the ward eats it");
   assert.ok(!warded.prompt, "so nothing hit, and nothing fires");
   assert.match((warded.feed || []).map(f => f.t || f).join(" | "), /did not hit/i);
-  assert.equal((warded.sides[0].gear.find(x => x.uid === 60) || {}).destroyed, true,
+  assert.ok(H.filed(warded.sides[0], 60),
     "…and the drawback lands regardless — the card does not condition it");
 });
 
 test("DRIVEN: a board permanent leaves the ARENA and reaches the graveyard", {skip}, () => {
   /* `jabTargets` covers both zones, and the destroy has to know which:
-     a gear piece is MARKED for the end-phase sweep (v3.54) and a board
-     permanent leaves now and pays out what it printed (v4.29). LATENT —
+     a gear piece is filed by `fileDestroyedGear` once the resolution
+     ends (v4.79) and a board permanent leaves now and pays out what it
+     printed (v4.29). LATENT —
      both pool Daggers are Weapons — so the fixture is synthetic (v3.73). */
   const ally = {uid: 70, name: "Probe Ally Dagger", tt: "Assassin Ally - Dagger",
                 ty: ["Assassin", "Ally", "Dagger"], power: 1, life: 2, cost: 1,
