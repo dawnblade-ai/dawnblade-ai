@@ -163,8 +163,11 @@ const ORDINAL = {first:1, second:2, third:3, fourth:4, fifth:5};
                  this link's reaction step ("a dagger that isn't on the
                  active chain link"); retrieved at resolution it arrives
                  after the only window it could be used in. The sheet is
-                 queued like any other and drained at the tail of `execute`,
-                 still before the defend step.
+                 queued like any other. v4.78 said it was "drained at the
+                 tail of `execute`" — false for an attack, whose branch
+                 stops at `_declared` before that tail — so until v4.80 it
+                 opened at the damage step. Both boards drain the
+                 declaration's queue at the declaration now.
 
    Both members touch nothing the attack does and nothing touches them:
    an arcane resolves against the defending hero and a token mint lands on

@@ -1,3 +1,63 @@
+## v4.80 — a "when this attacks" sheet is asked when it attacks
+
+> *"When this attacks, you may banish a Nimblism from your graveyard. If you
+> do, this gets +1{p} and go again."* — JACK BE QUICK, Briar's
+
+**CR 7.2 resolves a "when this attacks" trigger in the attack step, before
+anyone defends.** The ops have fired there since v4.08, but the SHEETS they
+queue did not open there. `execute`'s attack branch stops at `_declared`
+(v2.73) and never reaches its own `openPrompt`, and neither board drained the
+queue after declaring. At the table the sheets waited for `strike`; in the
+trainer they waited for `resolveStack`. **Both drain after the damage**, so
+every declaration-time sheet was answered after the damage it could change:
+
+| card | before v4.80 | now |
+|---|---|---|
+| Jack Be Quick (Briar) | +1{p} added to a link that had already dealt its damage | 4 damage and go again |
+| Jittery Bones (Gravy Bones) | printed go again lost: action point 0 | action point kept |
+| Fire that Burns Within (Fai) | +2{p} after the damage | on the swing |
+| Pick Up the Point (Arakni) | dagger arrived after the reaction step, which was v4.78's whole reason for moving it | equipped before anyone defends |
+| a Runechant's or a when-this-attacks arcane's **soak** | the defender was asked after the attack it resolves ahead of | asked in the attack step |
+
+**Measured over one ladder seed, 218 sheets now open in the attack step.** By
+source: 106 Beaten Trackers, 24 Runechant soaks, 19 Jittery Bones, 16 Pick Up
+the Point, 14 Golden Tipple, 12 Flamecall Awakening, 9 Runic Fellingsong, and
+16 more across four cards.
+
+**v4.78'S DRILL DRAINED THE QUEUE BY HAND.** It called `execute`, then
+`if(!g.prompt) g = J.openPrompt(g)`, so it proved the sheet's consumer and
+never the step that should have opened it. v4.78's CHANGELOG line *"drained
+at the tail of `execute`, still before the defend step"* was false for an
+attack. It was found by v4.79's Mark-and-retrieve drill, which drove the
+table and saw the sheet open at the damage step. The drill drives
+`judge.reduce` now.
+
+- **The table:** `judge.declareAttack` ends with `openPrompt(settle(n))`.
+  While the sheet is live, `legal` freezes both seats except the one being
+  asked, and `applyAnswer` drains the rest of the queue behind it.
+- **The trainer:** `resolvePlay` pauses on a non-empty queue with
+  `_declPending`, the twin of v4.57's `_wallPending`, and `openPrompt`
+  resumes the new `afterDeclare` once the queue empties. So the dummy
+  decides its blocks against the LIVE total (`pend.total`), with the
+  answered +{p} already on it.
+- **And the trainer had no freeze under a live sheet.** `tryPlay`,
+  `activateInstant`, `endTurn` and `closeChain` all acted underneath one,
+  which mattered little while every sheet opened after a card had fully
+  resolved. A declaration's sheet opens with the attack half-declared, so
+  all four now refuse, which is `judge.legal`'s rule.
+
+Measured:
+- **No tiers move** (the audit diff is its timestamp).
+- **The ladder at three seeds on both sides moves ±2 per hero**, inside
+  the band (median 3): NOISE. Refusals 0, violations 0, stalls 3 → 3.
+- **Six existing drills broke, and each was right to.** Five walked a real
+  precon through the attack step with passes alone, which a live sheet now
+  refuses, so `test/helpers/judged.js` gains `move` (answer a live sheet as
+  the policy would, else pass) and `answerAll`. The sixth counted three
+  Runechant soaks in the QUEUE, and the first one is live now.
+- **8 sabotages, 8 bite**: both drains, the drain's order, the live total,
+  the resume's marker delete, and the trainer's freezes.
+
 ## v4.79 — a destroyed piece goes to the graveyard when it is destroyed
 
 > *"When this hits a hero, you may choose to destroy this and mark them."*

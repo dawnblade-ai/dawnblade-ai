@@ -207,8 +207,9 @@ function toDefendStep(g){
       n = J.reduce(n, {t: "paySel", uid: pc.uid}, p.seat).state;
     } else n = J.reduce(n, {t: "payConfirm"}, p.seat).state;
   }
-  for(let i = 0; i < 6 && n.step !== "defend" && n.priority != null; i++)
-    n = J.reduce(n, {t: "pass"}, n.priority).state;
+  /* `H.move` answers a sheet the declaration opened (v4.80) before passing */
+  for(let i = 0; i < 12 && n.step !== "defend" && (n.priority != null || n.prompt); i++)
+    n = H.move(n);
   return n;
 }
 
@@ -543,7 +544,7 @@ test("CR 7.3.2a — an attack on an ally cannot be blocked, and never touches th
 
 test("targeting the hero with an ally on the board still works normally", {skip}, () => {
   const {g, atk, seat, def} = withAlly("hero-hit");
-  let n = H.drain(J.reduce(g, {t: "play", uid: atk.uid, from: "hand", target: "hero"}, seat).state);
+  let n = H.answerAll(H.drain(J.reduce(g, {t: "play", uid: atk.uid, from: "hand", target: "hero"}, seat).state));
   assert.equal(n.pend.target.kind, "hero");
   n = J.reduce(n, {t: "pass"}, n.priority).state;
   n = J.reduce(n, {t: "pass"}, n.priority).state;
@@ -866,8 +867,8 @@ test("an action DOES cost an action point, and none is left for a second", {skip
   const out = J.reduce(g, {t: "play", uid: c.uid, from: "hand"}, seat);
   assert.equal(out.error, null);
   let n = out.state;
-  for(let i = 0; i < 24 && n.priority != null && !(n.pend && n.pend.dealt != null); i++)
-    n = J.reduce(n, {t: "pass"}, n.priority).state;
+  for(let i = 0; i < 24 && (n.priority != null || n.prompt) && !(n.pend && n.pend.dealt != null); i++)
+    n = H.move(n);
   assert.ok(n.pend && n.pend.dealt != null, "the link never reached its damage step");
   /* Read go again off the LINK, not off a fresh parse: a card can be
      granted it by its own resolution, and the point follows what actually

@@ -3159,7 +3159,22 @@ function declareAttack(g, card, seat, fromZone, target, declared){
   n = say(n, GM.sv(at(n, seat), fromWeapon ? "swing" : "attack")
     + (fromWeapon ? " " : " with ") + card.name + " for " + total + ".");
   if(declared && declared.declNote && declared.declNote.trim()) n = say(n, declared.declNote.trim());
-  return settle(n);
+  /* A SHEET QUEUED BY THE DECLARATION IS ASKED AT THE DECLARATION (v4.80).
+     CR 7.2 puts a "when this attacks" trigger on the stack above the attack,
+     so it resolves in the attack step, before anyone declares a defender.
+     `execute`'s attack branch returns before its own `openPrompt` (it stops
+     at `_declared`, v2.73), and nothing here drained the queue either, so
+     every such sheet waited for `strike` and was answered AFTER the damage
+     it could change: Jack Be Quick's printed +1{p} landed on a link that
+     had already dealt its damage, its go again leaked onto the NEXT card
+     (v3.93's leak), and Pick Up the Point's dagger arrived too late to be
+     jabbed on this link, which is the reason v4.78 moved it. v4.78's drill
+     drained the queue by hand, so it proved the consumer and not the step.
+
+     `settle` first, so the sheet opens on a canonical state; while it is
+     live `legal` freezes both seats except its answer, and `applyAnswer`
+     drains the rest of the queue behind it. */
+  return openPrompt(settle(n));
 }
 
 /* ---- defenders (CR 7.3.2) ---------------------------------------------

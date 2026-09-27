@@ -269,8 +269,12 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        after the split-card declaration it mirrors. The signature is
        unchanged — the answer rides on the state as `_x` — so every anchor on
        `tryPlay` still finds the body it names. */
-    "priority.test.js index.html 18579",
-    "priority.test.js index.html 18579",
+    /* 18,579 -> 18,911 AT v4.80, READ FIRST: still `tryPlay` ->
+       `confirmPay`; the growth is `tryPlay`'s new first line, refusing a
+       play while a sheet is live, and its comment. Same signature, same
+       anchors, so the slice still bounds the body it names. */
+    "priority.test.js index.html 18911",
+    "priority.test.js index.html 18911",
     "priority.test.js index.html 9516"
   ], /* 15,440 -> 16,557 AT v4.59, READ FIRST (v4.57: a pin edited without
         being read is a guard switched off). Both rows are

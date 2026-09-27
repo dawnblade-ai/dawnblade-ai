@@ -611,9 +611,10 @@ function makeEffects(ctx){
      nothing in the rules asks for.
 
      THE HIT IS DEFERRED WHEN THERE IS SOMETHING TO ASK. Prompts are
-     queued and drained after the action resolves, so applying the damage
-     here and asking afterwards would offer the prevention AFTER the
-     damage it prevents. The remaining damage therefore rides out on the
+     queued and drained after the action resolves — for an ATTACK's
+     declaration, at the declaration (v4.80), still ahead of its damage —
+     so applying the damage here and asking afterwards would offer the
+     prevention AFTER the damage it prevents. The remaining damage therefore rides out on the
      prompt's answer as `arcTaken`. That is also what puts the trigger
      above the damage on the stack, which is where the CR puts it. */
   /* "YOU HAVE DEALT ARCANE DAMAGE THIS TURN" — CREDITED WHERE IT LANDS.

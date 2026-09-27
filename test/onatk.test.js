@@ -220,15 +220,26 @@ test("Pick Up the Point's dagger arrives in time to be jabbed on this link", {sk
   /* The retrieve sheet opens at declaration (still before the defend step),
      so the dagger is equipped while the attack is the live link — and a
      dagger "that isn't on the active chain link" is exactly what Danger
-     Digits targets in this reaction step. */
+     Digits targets in this reaction step.
+
+     DRIVEN THROUGH THE TABLE (v4.80). This drill used to call `execute`
+     and then `if(!g.prompt) g = J.openPrompt(g)` — it opened the queue BY
+     HAND, so it proved the sheet's consumer and never the step. At the
+     table nothing opened it until `strike`, after the damage. A drill that
+     supplies the step it is testing cannot see that step missing. */
   const E = require("../engine/effects.js");
   const pu = {...card("Pick Up the Point", 1), uid: "pu"};
   const mark = {...card("Mark of the Huntsman", 0), uid: "mk"};
-  let g = H.state({res: 9, hand: [pu], ap: 1, grave: [mark]}, {hp: 20},
+  let g = H.state({res: 9, hand: [pu], ap: 1, grave: [mark]}, {hp: 20, hand: [], deck: [{uid: "t1", name: "T"}]},
                   {actor: 0, turnPlayer: 0, turn: 3, seed: "onatk"});
-  g = H.execute(g, pu, "hand", 0, {attacking: true, isAttack: true, target: "hero"});
-  if(!g.prompt) g = J.openPrompt(g);
-  assert.equal(g.prompt && g.prompt.tag, "pick", "the retrieve sheet waited for resolution");
+  g = {...g, phase: "action", step: "layer", priority: 0, passed: []};
+  const played = J.reduce(g, {t: "play", uid: "pu", from: "hand"}, 0);
+  assert.equal(played.error, null, played.error);
+  g = played.state;
+  for(let i = 0; i < 6 && !g.prompt && g.priority != null; i++) g = J.reduce(g, {t: "pass"}, g.priority).state;
+  assert.equal(g.prompt && g.prompt.tag, "pick", "the retrieve sheet never opened");
+  assert.equal(g.step, "attack", "…and it opens in the ATTACK step, before anyone defends (CR 7.2)");
+  assert.equal(g.sides[1].hp, 20, "…with no damage dealt yet");
   assert.ok(g.pend, "…and it is asked while the attack is still the live link");
   g = J.reduce(g, {t: "promptSel", i: 0}, 0).state;
   g = J.reduce(g, {t: "promptConfirm"}, 0).state;

@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.79
+**Current version:** v4.80
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3217 drills** at v4.79.
+This is `node --test "test/*.test.js"` — **3224 drills** at v4.80.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,29 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A "WHEN THIS ATTACKS" SHEET IS ASKED WHEN IT ATTACKS (v4.80)
+
+The ops fire at declaration (v4.08), but the SHEETS they queue did not open
+there. `execute`'s attack branch stops at `_declared` (v2.73), before its own
+`openPrompt`, and neither board drained the queue after declaring. So Jack Be
+Quick's +1{p}, Jittery Bones' go again, Fire that Burns Within's +2{p}, Pick
+Up the Point's retrieve and every Runechant soak were answered AFTER the
+damage they change. **218 sheets per ladder seed.**
+
+- **Table:** `declareAttack` ends `openPrompt(settle(n))`.
+- **Trainer:** `resolvePlay` pauses with `_declPending` (`_wallPending`'s
+  twin, v4.57), and `openPrompt` resumes `afterDeclare`. The dummy measures
+  `pend.total`, so an answered pump is on the swing it blocks.
+- **The trainer now freezes under a live sheet** (`tryPlay`,
+  `activateInstant`, `endTurn`, `closeChain`), as `judge.legal` always did.
+
+**WHEN AN EFFECT QUEUES A SHEET, ASK WHICH CALLER DRAINS IT, ON EACH BOARD.**
+"Prompts drain at the tail of `execute`" is true of every branch but the one
+that returns early, and an attack's is the one that does. v4.78 wrote the
+sentence and its drill drained the queue by hand. Drills that walk a real
+precon through the attack step now use `H.move`, which answers a live sheet
+before passing.
 
 ### A DESTROYED PIECE IS FILED WHEN IT IS DESTROYED (v4.79)
 
