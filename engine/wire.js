@@ -226,7 +226,13 @@
    resolution trace (`_dmgDeferred`). A v18 peer drops the rider and answers
    those gates FALSE against a barrier-wearer, so the pair desyncs on the
    first one. Whole-shipped values: by hand, behind the release handshake. */
-const WIRE_V = 19;
+/* 19 -> 20 AT v4.81: a pick prompt carries `discard` — a chosen discard's
+   continuation (whose card asked, the ops printed after it, the conditions
+   and cost rider that read it) — and the game a trace (`_discDeferred`). A
+   v19 peer drops the continuation, so the draw after Portside Exchange's
+   discard, and the Gold it pays for a yellow card, never happen on one side
+   of the pair. Whole-shipped values: by hand, behind the release handshake. */
+const WIRE_V = 20;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

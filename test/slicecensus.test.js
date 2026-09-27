@@ -243,7 +243,10 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
     /* 11,931 -> 12,276 AT v4.71, READ FIRST: still the pick branch; the
        growth is Beckoning Haunt's `xPay`, beside the counter cost it
        twins. */
-    "dichotomy.test.js engine/prompts.js 12276",
+    /* 12,276 -> 12,746 AT v4.81, READ FIRST: still `buildPrompt`'s pick
+       branch, bounded at the next variant; the growth is the opt-in
+       `discard` field (a chosen discard's continuation). */
+    "dichotomy.test.js engine/prompts.js 12746",
     /* 8,550 -> 9,523 AT v4.60, and now THREE files take the same slice —
        `playRx`, anchored on its own declaration and bounded at `playRxA`, the
        next one, which is the safe form. READ FIRST (v4.57: a pin edited

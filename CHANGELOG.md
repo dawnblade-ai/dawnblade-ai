@@ -1,3 +1,80 @@
+## v4.81 — a discard with no randomness is the discarder's choice
+
+> *"Discard a card, then draw a card. If a yellow card is discarded this
+> way, create a Gold token."* — PORTSIDE EXCHANGE, Gravy Bones'
+
+**"Discard a card" prints no randomness, so WHICH card is a decision, and
+it belongs to whoever discards.** The engine made that decision itself on
+both boards: `selfDiscard` and `foeDiscard` took the back of the hand. Every
+card that pays out on the card discarded therefore paid out by accident:
+
+| card | the choice decides |
+|---|---|
+| Portside Exchange | a Gold token, only for a YELLOW discard |
+| Jittery Bones · Washed Up Wave (the discard mode) | go again / +2{d}, only with WATERY GRAVE |
+| Gravy Bones' own ability | "draw a card, then discard a card": which ally goes to the graveyard to be replayed |
+| Loot the Hold · Short Shrift · Pummel · Winter's Bite · Aether Icevein | "they discard": the OPPONENT picks what they lose |
+
+**The discard is now a pick sheet addressed to the discarder**, carrying the
+effect's CONTINUATION:
+
+- whose card asked for the discard (`by`);
+- the ops printed after it, so "…then draw a card" cannot run before the card
+  it follows is chosen (`runOps` halts the list there);
+- the "…this way" conditions that read the discard (`way:discardPitchN`,
+  `way:took`), held by `execute` and by `linkPayload`'s on-hit loop;
+- a modal cost's "if that card has watery grave" rider.
+
+When it is answered, `effects.discardChosen` files the cards as a DISCARD
+(`gyDisc`: turn-stamped and marked) and runs the shared discard event at the
+discarder's seat. The continuation then runs back at the seat whose card
+asked for it.
+
+**A hand no bigger than the discard is not a choice** (v3.55), so it keeps
+its immediate path and no sheet opens.
+
+**Who answers for a seat with nobody in it.** `prompts.promptDiscardDefault`
+is the one body: the back of the hand, the engine's old answer, so the ladder
+measures the route rather than a new policy. `judge.autoAnswer` asks it, and
+so does the trainer's dummy. Without the trainer's branch, the PLAYER would
+have been asked which of the dummy's cards it throws away.
+
+**Two paths into the graveyard never stamped a discard.** A forced
+`foeDiscard` filed its card with no `_gy`, and every optional discard COST
+(Golden Tipple, Fire that Burns Within) went through `moveCards` with no
+stamp and no discard event. So a card the opponent made you discard never
+read as "discarded this turn" (v3.62: a new path into a graveyard must stamp
+the turn). Both are now discards.
+
+**The record this replaces was wrong three ways** (`auto-pitch-discard`):
+- it said "trainer", and the op is shared;
+- it said "lowest advisor value", and the op took the back of the hand;
+- its probe drove `discardRandom`, which is random and asks nobody on any
+  build, so it could never have gone red.
+
+It is now `chosen-discard-asked` (closed) plus `cost-discard-auto-picked`
+(stated): an activation COST that prints "discard …" (Carrion Crown, the five
+Agents) still takes the first match, because a cost needs a pending declared
+before its payment, not a queued sheet (v3.34).
+
+**And the first ladder run moved `crush` 236 → 264 for nothing**: the sheet's
+line was spelled "<src>: …", which is the payoff form the counter counts, so
+every deferred crush discard was counted twice. Reworded, and back to 236.
+**Count the event, not the line that mentions it** (v4.66).
+
+**Driving Golden Tipple found the next defect:** "draw a card AND create a
+Gold token" parses as the draw alone. The plain draw matcher is unanchored,
+and it also drops Fire that Burns Within's +2{p}, Rising Sun's put-back and
+Art of Desire's trigger. That is v4.82.
+
+Measured:
+- **No tiers move.**
+- **The ladder at three seeds moves one game in 630** (Fai 37 → 36, Bravo
+  32 → 33): NOISE. Refusals 0, violations 0, stalls 3 → 3.
+- `WIRE_V` 19 → 20, because a live prompt gained a field.
+- **13 sabotages, 13 bite.** One was silent on the first pass (the optional
+  cost's marker) until a Golden Tipple drill was written.
+
 ## v4.80 — a "when this attacks" sheet is asked when it attacks
 
 > *"When this attacks, you may banish a Nimblism from your graveyard. If you

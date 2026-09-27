@@ -559,6 +559,14 @@ function autoAnswer(g){
        `want` cannot be null here: `buildPrompt` refuses to build an
        unsatisfiable sheet, which is drilled — so this asks for it rather than
        inventing a fallback for a state that cannot exist. */
+    /* A CHOSEN DISCARD (v4.81) is answered the way the engine used to make
+       it — the back of the hand — by the one body both boards' seat-1
+       answers share, so the ladder measures the route and not a new policy. */
+    if(p.discard && (p.min || 0) > 0){
+      const want = PM.promptDiscardDefault(p);
+      for(const i of want) if((p.sel || []).indexOf(i) < 0) return {t: "promptSel", i};
+      return {t: "promptConfirm"};
+    }
     if(p.filters){
       const want = PM.promptMatchAssign(p.cards || [], p.filters);
       if(want) for(const ci of want)

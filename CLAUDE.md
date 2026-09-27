@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.80
+**Current version:** v4.81
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3224 drills** at v4.80.
+This is `node --test "test/*.test.js"` — **3235 drills** at v4.81.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,30 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A DISCARD WITH NO RANDOMNESS IS THE DISCARDER'S CHOICE (v4.81)
+
+`selfDiscard`/`foeDiscard` took the back of the hand on both boards, so
+Portside Exchange's Gold, Jittery Bones' go again and "they discard a card"
+were all decided by the engine. With a real choice (a hand bigger than the
+discard) the op now queues a pick addressed to the DISCARDER and HALTS the op
+list. What follows rides on the sheet as `discard: {by, self, rest, conds,
+costRider}` and runs back at `by` once `discardChosen` has filed the cards
+(`gyDisc`, afterDiscard at the discarder).
+
+- **A condition that reads a discard waits for it**: `execute`'s
+  `runWayConds` and `linkPayload`'s on-hit loop hand `way:discardPitchN` and
+  `way:took` to the sheet (`attachDiscardRider`), and a modal cost's rider
+  goes the same way. v4.77's `wayRider` shape, one trace over.
+- **The seat policy keeps the old answer** (`promptDiscardDefault`), so the
+  ladder measures the route, not a new policy.
+- **COSTS are not this.** An activation discard cost is paid before
+  resolution and needs a pending, not a sheet (`cost-discard-auto-picked`,
+  stated).
+
+**WHEN YOU MAKE A CHOICE ASK, GREP FOR WHO ANSWERED IT BEFORE.** The trainer
+answers seat 1's `soak` and `pay` sheets itself. A discard sheet addressed to
+the dummy would otherwise have been put to the PLAYER.
 
 ### A "WHEN THIS ATTACKS" SHEET IS ASKED WHEN IT ATTACKS (v4.80)
 
