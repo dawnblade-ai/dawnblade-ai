@@ -2046,6 +2046,21 @@ function makeEffects(ctx){
           title: spec.title || `${srcName} — take it?`,
           hint: spec.hint || "Optional. Decline and nothing resolves."}];
       }
+      /* A MANDATORY CHOICE BETWEEN PRINTED MODES, QUEUED FROM AN EFFECT
+         (v4.82) — Stroke of Foresight's "on the top OR bottom of your
+         deck". `mayOffer` above is the OPTIONAL one-mode twin; this one has
+         no Decline, because the card prints no "you may". Each mode's ops
+         run through `applyAnswer` at the chooser's seat, so a mode that
+         queues a pick opens it next (v3.20: `applyAnswer` ends in
+         `openPrompt`). Fewer than two modes is not a choice (v3.55). */
+      else if(k==="modalPrompt"){
+        const spec = v || {};
+        if(!spec.options || spec.options.length < 2){ n = L(n, `${srcName}: nothing to choose between.`); return; }
+        n.promptQ = [...(n.promptQ||[]), {
+          tag:"modal", side:actorOf(n), src:srcName, options: spec.options,
+          title: spec.title || `${srcName} — choose one`,
+          hint: spec.hint || ""}];
+      }
       else if(k==="foePick"){
         const spec = v || {};
         const zone = spec.zone || "hand";
@@ -2123,13 +2138,19 @@ function makeEffects(ctx){
       }
       /* RULING: the card flips and BECOMES Inner Chi, returning to hand
          instead of the graveyard. Inner Chi is a real database card. */
+      /* STASHED, NOT APPLIED (v4.82) — `_selfDestruct`'s shape. Transcend
+         is printed LAST on every card that carries it, and it is what the
+         card does INSTEAD of going to the graveyard, so the flip happens
+         where the card is filed. It used to mint Inner Chi here, and
+         `execute`'s condition loop runs before the card's ops (v3.60), so
+         the feed said "transcends" before the card was even played — and
+         Rising Sun, Setting Moon's "draw a card, then put a card from your
+         hand on the bottom of your deck" offered the Chi it had not made
+         yet as the card to put back. */
       else if(k==="transcend"){
         const chi = resolveEntry(db, {name:"Inner Chi", p:0, code:null, q:1});
         if(!chi.resolved){ n = L(n, `${srcName}: Inner Chi not found in the database.`); return; }
-        actMut(n).hand = [...act(n).hand, {...chi, uid:"chi"+tokSeq()}];
         n._transcended = true;
-        actMut(n).hist = {...act(n).hist, trans:(act(n).hist.trans||0)+1};
-        n = L(n, `${srcName} transcends — it flips to Inner Chi and returns to your hand.`);
       }
       /* RULING (Reaping Blade): the hero ahead on life can't gain any */
       else if(k==="lifeLock"){ actMut(n).lifeLock = true; n = L(n, "Life-gain locked while a hero is ahead on life."); }
@@ -2237,12 +2258,32 @@ function makeEffects(ctx){
           title:`Freeze one of ${sp(sd)} objects`,
           hint:`It cannot be played or activated until the start of your next turn.`}];
       }
-      /* the dummy has a real deck, so banishing off its top is a real cost */
+      /* BANISHED CARDS GO TO THE BANISHED ZONE (v4.82). This used to slice
+         the card off their deck and file it NOWHERE — a card in no zone,
+         which `invariants.js` cannot see (a card in TWO zones is an error;
+         one in none falls out of the census silently, v4.23). The zone is
+         public, and Art of Desire's own trigger asks what was banished.
+
+         "WHENEVER THIS BANISHES A RED CARD, …" rides on the op as `op[2]`,
+         paired by `fxParse` with the card's own banish (the only thing that
+         can make "this" banish anything). It is answered off the banished
+         card's printed PITCH, and it is the attacker's: the actor here is
+         the seat whose swing hit. */
       else if(k==="foeBanishTop"){
         const take = foe(n).deck.slice(0,v);
         if(!take.length){ n = L(n, `${srcName}: ${sp(foe(n))} deck is empty.`); return; }
         foeMut(n).deck = foe(n).deck.slice(take.length);
+        foeMut(n).banish = [...take, ...(foe(n).banish || [])];
         n = L(n, `${srcName}: ${take.map(c=>c.name).join(", ")} banished off the top of ${sp(foe(n))} deck (${foe(n).deck.length} left).`);
+        const rider = op[2];
+        if(rider && (rider.ops || []).length){
+          take.forEach(c => {
+            if((c.pitch || 0) === rider.pitch){
+              n = L(n, `${srcName}: ${c.name} is ${rider.word} — it pays out.`);
+              n = runOps(n, rider.ops, srcName);
+            } else n = L(n, `${srcName}: ${c.name} is not ${rider.word} — nothing more.`);
+          });
+        }
       }
       else if(k==="firstAtkBuff"){
         /* a standing buff on the turn's FIRST attack only */
@@ -5024,7 +5065,23 @@ function makeEffects(ctx){
          fixture in the suite. */
       const _ret = n._returnSelf != null && n._returnSelf === card.uid;
       const _offGrave = !!n._transcended || _ret;
-      if(n._transcended) delete n._transcended;
+      if(n._transcended){
+        delete n._transcended;
+        const chi = resolveEntry(db, {name:"Inner Chi", p:0, code:null, q:1});
+        const chiUid = "chi" + tokSeq();
+        actMut(n).hand = [...act(n).hand, {...chi, uid: chiUid}];
+        actMut(n).hist = {...act(n).hist, trans:(act(n).hist.trans||0)+1};
+        n = L(n, `${card.name} transcends — it flips to Inner Chi and returns to ${sp(act(n))} hand.`);
+        /* A HAND CHOICE THIS CARD PRINTED BEFORE THE TRANSCEND IS MADE FROM
+           THE HAND AS IT STOOD THEN. The sheet opens after the resolution,
+           so the Chi is excluded by uid — `notUid`, the filter key v3.20
+           built for "another". Scoped to picks out of the HAND that this
+           card queued and that carry no exclusion of their own. */
+        n.promptQ = (n.promptQ || []).map(q =>
+          (q && q.tag === "pick" && q.src === card.name && (q.zone || "hand") === "hand" && !q.cards
+             && !(q.filter && q.filter.notUid != null))
+            ? {...q, filter: {...(q.filter || {}), notUid: chiUid}} : q);
+      }
       if(_ret){
         delete n._returnSelf;
         if(from === "hand" || from === "arsenal"){
@@ -6551,6 +6608,13 @@ function makeEffects(ctx){
        board. The arithmetic is `parser.rxPump`, which knows that a gated
        bonus may REPLACE the printed one rather than stack with it. */
     const fired = [];
+    /* ONE PAYLOAD CAN BE SEVERAL OPS UNDER ONE GATE — Stroke of Foresight's
+       reprise draws, then puts a card back (v4.82) — and each op is its own
+       `fx.conds` entry. The gate is ONE event, so it is announced once; the
+       feed printed "Reprise — 1 card from hand met the attack." twice the
+       first time a two-op payload was read. `fired` still records every
+       entry, because `rxPump` counts entries rather than gates. */
+    const said = new Set(), once = (cond, fn) => { if(!said.has(cond)){ said.add(cond); fn(); } };
     (fx.conds || []).forEach(({cond, op}) => {
       /* ONE LIST, TWO READERS (v3.89) — `execute` skips exactly these and
          this is where they are answered. A condition in the list with no
@@ -6558,17 +6622,17 @@ function makeEffects(ctx){
       if(RX_CONDS.indexOf(cond) < 0) return;
       if(cond === "reprise"){
         const fromHand = o.handBlockers || 0;
-        if(!fromHand){ n = L(n, `${c.name}: reprise needs a card from hand to have met the attack — none did.`); return; }
+        if(!fromHand){ once(cond, () => { n = L(n, `${c.name}: reprise needs a card from hand to have met the attack — none did.`); }); return; }
         fired.push(cond);
+        once(cond, () => { n = L(n, `Reprise — ${fromHand} card${fromHand > 1 ? "s" : ""} from hand met the attack.`); });
         if(op[0] !== "self") n = runOps(n, [op], c.name);
-        n = L(n, `Reprise — ${fromHand} card${fromHand > 1 ? "s" : ""} from hand met the attack.`);
         return;
       }
       if(cond === "charged"){
-        if(!(act(n).hist.charged > 0)){ n = L(n, `${c.name}: no charge to the soul this turn.`); return; }
+        if(!(act(n).hist.charged > 0)){ once(cond, () => { n = L(n, `${c.name}: no charge to the soul this turn.`); }); return; }
         fired.push(cond);
+        once(cond, () => { n = L(n, `${c.name}: charged this turn — the bonus is live.`); });
         if(op[0] !== "self") n = runOps(n, [op], c.name);
-        n = L(n, `${c.name}: charged this turn — the bonus is live.`);
       }
       /* "IF IT IS DEFENDED BY AN ATTACK ACTION CARD" (v3.91) — Agile
          Engagement. WHICH CARDS DEFEND is the caller's answer (v3.11,
@@ -6580,10 +6644,10 @@ function makeEffects(ctx){
          visible, which is the safe direction. */
       if(cond === "defAtkAction"){
         const hit = (o.defenders || []).some(x => isAtkActionCard(x));
-        if(!hit){ n = L(n, `${c.name}: no attack action card is defending — no bonus.`); return; }
+        if(!hit){ once(cond, () => { n = L(n, `${c.name}: no attack action card is defending — no bonus.`); }); return; }
         fired.push(cond);
+        once(cond, () => { n = L(n, `${c.name}: an attack action card defends — the bonus is live.`); });
         if(op[0] !== "self") n = runOps(n, [op], c.name);
-        n = L(n, `${c.name}: an attack action card defends — the bonus is live.`);
       }
     });
     const {pump, replaced} = rxPump(eff, fired);

@@ -149,8 +149,19 @@ const drive = () => {
      and Enigma v Dash is the first that reaches it (Re-Charge! is Dash's).
      It brings NO other field with it, which is why the pinned set below is
      unchanged at 38 — a widening that moved the pin would be a fixture
-     change wearing a fix's clothes. */
-  { const r = T.leg(E[8], E[3], "spec-8-3", 0); legs++; if(r && r.threw) threw++; }
+     change wearing a fix's clothes.
+
+     AND IT MOVED AGAIN AT v4.82, for the same kind of reason. Anchoring the
+     plain draw stopped Art of Desire drawing a free card on every attack and
+     gave Golden Tipple its Gold, so the games moved again and Enigma v Dash
+     STOPPED reaching the sheet — measured, that leg then contributed no
+     field the other 33 did not. It is REPLACED rather than kept, because a
+     leg whose recorded job is done by nothing is a comment that is no
+     longer true. Enigma v Boltyn is now the first pairing outside the ring
+     that reaches it: Astral Etchings, Enigma's own, over three candidates.
+     Still ONE leg for ONE field, so the count and the pinned set both
+     stand. */
+  { const r = T.leg(E[8], E[11], "spec-8-11", 0); legs++; if(r && r.threw) threw++; }
   /* AND THE 34th IS THE SAME RULE A SECOND TIME (v4.59). Generalising the
      activation-pick legality means Fai's hero ability is refused when his
      graveyard holds no Phoenix Flame — three resources and his once-per-turn

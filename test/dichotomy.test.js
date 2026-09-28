@@ -743,7 +743,7 @@ test("a `filters` prompt survives the wire, which is what the bump is ABOUT", ()
      `xval` pending and the `_x` declaration). */
   /* 18 -> 19 AT v4.77 (a soak prompt's `wayRider`). 19 -> 20 AT v4.81 (a
      pick prompt's `discard`). */
-  assert.equal(W.WIRE_V, 20, "the bump moved — say what changed in wire.js's header");
+  assert.equal(W.WIRE_V, 21, "the bump moved — say what changed in wire.js's header");
   const g = H.state({grave: [RATK("a1"), RNON("n1")], res: 9, ap: 1}, {}, {actor: 0, turn: 3});
   g.prompt = sheet([RATK("a1"), RNON("n1")]);
   assert.ok(g.prompt && g.prompt.filters, "fixture: the sheet carries the field");

@@ -335,7 +335,9 @@ test("WIRE_V moves when the payload shape moves, and only then", () => {
      (`_x`) — both inside whole-shipped values, so the digest holds. */
   /* 18 -> 19 AT v4.77: a soak prompt's `wayRider` — whole-shipped again. */
   /* 19 -> 20 AT v4.81: a pick prompt's `discard` — whole-shipped again. */
-  assert.equal(W.WIRE_V, 20,
+  /* 20 -> 21 AT v4.82: `foeBanishTop`'s colour trigger, inside
+     `pend.onHitHero` — whole-shipped again, so the digest holds. */
+  assert.equal(W.WIRE_V, 21,
     "WIRE_V moved — if the payload shape moved with it, update the digest below " +
     "in the same edit and say what changed in the header");
   assert.equal(h, 1095617619,
