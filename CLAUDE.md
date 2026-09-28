@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.81
+**Current version:** v4.82
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3235 drills** at v4.81.
+This is `node --test "test/*.test.js"` — **3254 drills** at v4.82.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,29 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A MATCHER ANCHORED AT NEITHER END ANSWERS FOR EVERY SENTENCE IT APPEARS IN (v4.82)
+
+The plain draw was `c.match(/draw … cards?/)` and sat above every payload
+reader, so "draw a card AND create a Gold token", "…and this gets +2{p}",
+"…then put a card … on the bottom" and Art of Desire's whole "whenever this
+banishes a red card, draw a card and gain 1{h}" all read as a bare draw.
+Every one was `tier: full`. **Anchor the loose rule itself** rather than
+writing a fourth compound rule above it: three earlier fixes each stopped it
+stealing one wording and left it free to steal the next.
+
+- **`RX_DRAW_THEN`** sends the tail back through `classifyClause`; an
+  unreadable tail, or one with its own schedule, refuses the whole sentence.
+- **The put-back** is a hand pick; "top or bottom" is `modalPrompt` first.
+- **Art of Desire's trigger rides on its banish** (`foeBanishTop[2]`), which
+  now files the card into the banished zone instead of into no zone.
+- **Transcend stashes and flips at the filing**, so the feed reads in printed
+  order and a hand pick the card queued excludes the fresh Chi (`notUid`).
+
+**WHEN YOU ANCHOR A LOOSE RULE, CENSUS WHAT IT WAS ANSWERING.** Instrument
+the rule's `return`, parse the pool, and read every sentence that reaches it
+(`drawcensus`, one scratch script): the census is what found the dropped
+trigger, the lost banish and the transcend order.
 
 ### A DISCARD WITH NO RANDOMNESS IS THE DISCARDER'S CHOICE (v4.81)
 

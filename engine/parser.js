@@ -80,11 +80,14 @@ const KW_VOCAB_SRC = "crush|stealth|dominate|go again|piercing|intimidate|blade 
    the day the pool prints a prefix that reaches the loose matchers
    ungated, which is how these two should have been found. */
 const KW_PREFIX = new Set(["lightning flow", "solflare"]);
-/* A PRINTED COLOUR IS A PRINTED PITCH VALUE, and it is one map with two
-   readers (v4.12): `revColorPitch`'s reveal-and-pitch op, and the
-   next-attack pump Flying High gates on its own colour. Two copies of a
-   three-entry table is still the no-mirror rule broken inside one file
-   — the shape that makes a sabotage silent (v3.41's `quotedText`). */
+/* A PRINTED COLOUR IS A PRINTED PITCH VALUE, and it is one map (v4.12):
+   `revColorPitch`'s reveal-and-pitch op, the next-attack pump Flying High
+   gates on its own colour, the "discarded this way" and "charged this way"
+   colour gates, and Art of Desire's banish trigger (v4.82). Two copies of a
+   three-entry table is still the no-mirror rule broken inside one file —
+   the shape that makes a sabotage silent (v3.41's `quotedText`) — and the
+   sentence above said "two readers" while two more gates carried their own
+   copy inline. v4.82 retired both copies. */
 const COLOR_PITCH = {red: 1, yellow: 2, blue: 3};
 const KW_VOCAB = new RegExp("^(?:" + KW_VOCAB_SRC + ")$", "i");
 const hasGA = c => (c.kw||[]).some(k=>/go again/i.test(k)) || /\bgo again\b/i.test(c.tx||"");
@@ -526,6 +529,18 @@ const RX_DECK_SEARCH = /^(you may )?search your deck for (.+), reveal it, put it
    is invented and a restricted wording ("shuffle any number of RED cards")
    carries its printed filter rather than dropping it. */
 const RX_SHUF_DRAW = /^shuffle any number of (.+) from your hand into your deck,? then (.+)$/;
+/* "DRAW A CARD AND <SOMETHING>" IS TWO EFFECTS (v4.82). The plain-draw rule
+   was unanchored, so it consumed the whole sentence and returned the draw
+   ALONE — Golden Tipple's Gold token, Fire that Burns Within's +2{p} and
+   two printed put-backs all silently gone, every one of them `tier: full`.
+   The tail goes back through `classifyClause` (one reader per payload), and
+   an unreadable tail REFUSES THE WHOLE SENTENCE (v2.29): reading the draw
+   and dropping the rest is the defect itself, not a cheap approximation. */
+const RX_DRAW_THEN = /^draw (a|an|one|two|three|\d+) cards?,? (?:and then|then|and) (.+)$/;
+/* "PUT A CARD FROM YOUR HAND ON THE BOTTOM OF YOUR DECK" (v4.82). A pick
+   out of the hand, and the printed "top OR bottom" is the player's choice
+   of destination, so it is a mode ahead of the pick rather than a guess. */
+const RX_PUT_BACK = /^put (a|an|one|two|three|\d+) cards? from your hand on (?:the )?(top or bottom|bottom|top) of your deck$/;
 
 /* PUTTING COUNTERS ON A PERMANENT YOU CONTROL.
 
@@ -1287,7 +1302,7 @@ function classifyClause(raw){
        where the damage lands so that rule governs it without restating. */
     if(/^damage is dealt this way$/.test(cond)) return Object.assign(rest,{cond:"way:dealt"});
     if(m=cond.match(/^an? (yellow|blue|red) card is discarded this way$/))
-      return Object.assign(rest,{cond:"way:discardPitch" + ({red:1, yellow:2, blue:3})[m[1]]});
+      return Object.assign(rest,{cond:"way:discardPitch" + COLOR_PITCH[m[1]]});
     if(/6 or more \{p\}[^.]*discard/.test(cond)) return Object.assign(rest,{cond:"discard6"});
     /* THE OTHER PRINTED ORDER (v3.58). Every other card in the pool says
        "a card WITH 6 or more {p} IS DISCARDED"; Mandible Claw says
@@ -1556,7 +1571,7 @@ function classifyClause(raw){
        yellow is pitch 2, red is pitch 1 throughout this engine. */
     if(/you'?(?:ve| have) charged this turn/.test(cond)) return Object.assign(rest,{cond:"charged"});
     if(m=cond.match(/^an? (red|yellow|blue) card (?:is|was) charged this way$/))
-      return Object.assign(rest,{cond:"chargedPitch"+({red:1,yellow:2,blue:3}[m[1]])});
+      return Object.assign(rest,{cond:"chargedPitch" + COLOR_PITCH[m[1]]});
     /* FUSION — CR: paying the additional cost (revealing a matching card
        from hand) makes the played card "fused". Some cards gate their
        rider on fusion ALONE ("if it was fused, …"); others gate on fusion
@@ -2590,6 +2605,38 @@ function classifyClause(raw){
     if(m[1] === "deals" && !/\b(this|it)$/.test(subj)) return null;
     return R([["dmg",+m[2]]]);
   }
+  /* PUTTING A CARD BACK (v4.82) — Rising Sun, Setting Moon and Stroke of
+     Foresight, both printed as the tail of a draw. Every card in the hand
+     is a legal choice, so the filter is empty: that is the faithful
+     reading of "a card from your hand", not an unpinned subject (v3.53
+     refuses a bare "card" where the subject IS the restriction). With an
+     empty hand `buildPrompt` answers null and the sheet skips itself, and
+     with exactly one card the choice is confirmed on the spot (v4.68).
+
+     "TOP OR BOTTOM" IS A MODE, then the pick. The two orders offer the same
+     outcomes — any card, either end — and choosing the end first is what
+     lets the pick carry a destination rather than the answer inventing
+     one. */
+  if(m=c.match(RX_PUT_BACK)){
+    const k = num(m[1]);
+    const one = k === 1 ? "a card" : k + " cards";
+    const pick = to => ["pickPrompt", {zone: "hand", to, filter: {}, min: k, max: k,
+      title: `Put ${one} from your hand on the ${to === "deckTop" ? "top" : "bottom"} of your deck`,
+      hint: to === "deckTop" ? "It is the next card you draw." : "It goes under everything else."}];
+    if(m[2] === "top or bottom") return R([["modalPrompt", {
+      title: `Top or bottom of your deck?`,
+      hint: `Then choose ${one} from your hand to put there.`,
+      options: [{label: `Put ${one} from your hand on top of your deck`, ops: [pick("deckTop")]},
+                {label: `Put ${one} from your hand on the bottom of your deck`, ops: [pick("deckBottom")]}]}]]);
+    return R([pick(m[2] === "top" ? "deckTop" : "deckBottom")]);
+  }
+  /* "WHENEVER THIS BANISHES A RED CARD, …" (v4.82) is read by `fxParse`,
+     which pairs it with the card's own banish — the only thing that can
+     make "this" banish anything. Refused HERE so no loose payload rule
+     below claims it: the unanchored draw once did, and with that anchored
+     the unanchored life-gain rule would, filing Art of Desire's 1{h} on
+     every attack with the trigger gone. */
+  if(/^whenever this banishes /.test(c)) return null;
   /* "DRAW A CARD THEN DISCARD A RANDOM CARD" IS TWO OPS, AND ONLY THE
      FIRST WAS READ. The match below is unanchored, so it consumed the
      clause, returned [["draw",1]] and filed it `run` — tier `full`, with
@@ -2678,7 +2725,39 @@ function classifyClause(raw){
       title:"Shuffle any number of cards back?",
       hint:"They go into your deck, it is shuffled, and you draw that many — what you put back can come off the top again."}]]);
   }
-  if(m=c.match(/draw (a|an|one|two|three|\d+) cards?/)) return R([["draw",num(m[1])]]);
+  /* ANCHORED (v4.82). This rule was `c.match(/draw … cards?/)` with no
+     anchor at either end, and it sat above every payload reader below it —
+     so it answered for ANY sentence containing "draw a card". Measured
+     over the pool, five shapes were read as a bare draw:
+
+       "draw a card and create a Gold token"          Golden Tipple ×3
+       "draw a card and this gets +2{p}"               Fire that Burns Within
+       "draw a card, then put a card … on the bottom"  Rising Sun, Setting Moon
+       "draw a card, then put a card … top or bottom"  Stroke of Foresight ×3
+       "whenever this banishes a red card, draw a card and gain 1{h}"
+                                                       Art of Desire ×2
+
+     Every one read `tier: full`, because the clause WAS consumed (v4.18's
+     pair of blindnesses: coverage counts consumption, and three of the five
+     are WEAKER than printed, which the one-sided sweep does not look for).
+     The last is worse than weaker: its trigger went with the rest, so Art
+     of Desire drew a card on EVERY attack whatever it banished.
+
+     v2.29's rule and v3.60's, fourth time for this one matcher: the three
+     compound draw rules above were each written to stop it stealing one
+     wording, and each left it free to steal the next. Anchoring the rule
+     itself is what ends that — a sentence it does not read whole now falls
+     to a reader that does, or refuses. */
+  if(m=c.match(/^draw (a|an|one|two|three|\d+) cards?$/)) return R([["draw",num(m[1])]]);
+  if(m=c.match(RX_DRAW_THEN)){
+    const tail = classifyClause(cased(RX_DRAW_THEN, 2, m[2]));
+    /* THE TAIL MUST BE A PLAIN PAYLOAD. A tail carrying its own schedule or
+       gate ("…and when this hits, …") is a different sentence, and the
+       draw would take none of it. */
+    if(!tail || tail.status !== "run" || !(tail.ops || []).length
+       || Object.keys(tail).some(k => k !== "status" && k !== "ops")) return null;
+    return R([["draw",num(m[1])], ...tail.ops]);
+  }
   if(m=c.match(/gains? (\d+)\s*(?:\{r\}|resource)/)) return R([["res",+m[1]]]);
   /* Bare pip costs: "Gain {r}{r}" is two resources — count the symbols. */
   if(m=c.match(/gains? ((?:\{r\})+)/)) return R([["res",m[1].split("{r}").length-1]]);
@@ -6415,6 +6494,41 @@ function fxParse(card){
       if(!/^if it is fused, it (?:gets|gains) go again\.?$/i
            .test(levelIdiom(String(fx.clauses[ri].t || "").toLowerCase().trim()))) continue;
       op[3] = Object.assign({}, op[3] || {}, {gaIf: "fused"});
+      fx.clauses[ri].st = "run";
+      break;
+    }
+  }
+
+  /* ---- "WHENEVER THIS BANISHES A RED CARD, …" (v4.82) -------------
+     Art of Desire prints its trigger in two sentences:
+
+       "When this hits a hero, banish the top card of their deck.
+        Whenever this banishes a red card, draw a card and gain 1{h}."
+
+     The second sentence was read by the unanchored plain draw as a bare
+     [["draw",1]] in `fx.ops` — so the card, an ATTACK, drew a card at every
+     resolution whatever it banished or whether it hit at all, and the 1{h}
+     was never gained. `tier: full`.
+
+     THE ONLY THING THAT CAN MAKE "THIS" BANISH IS THE CARD'S OWN BANISH, so
+     the trigger rides on that op as its third element and is answered off
+     the banished card's printed pitch, where the op runs (effects.js). It
+     runs AFTER the clause loop for v4.13's reason: it MUTATES an op the
+     loop produced. Measured: the pool's two records put the banish in
+     `onHitHero`; a card whose banish is anywhere else is not paired, and
+     its trigger keeps `classifyClause`'s refusal — weaker and visible. */
+  {
+    const bop = [...(fx.onHitHero || []), ...(fx.onHit || [])].find(o => o[0] === "foeBanishTop" && !o[2]);
+    if(bop) for(let ri = 0; ri < (fx.clauses || []).length; ri++){
+      const bm = levelIdiom(String(fx.clauses[ri].t || "").toLowerCase().trim().replace(/\.$/, ""))
+        .match(/^whenever this banishes an? (red|yellow|blue) card, (.+)$/);
+      if(!bm) continue;
+      const pay = classifyClause(bm[2]);
+      /* AN UNREADABLE PAYLOAD REFUSES (v2.29), and so does one that
+         carries its own schedule: the trigger IS the schedule. */
+      if(!pay || pay.status !== "run" || !(pay.ops || []).length
+         || Object.keys(pay).some(k => k !== "status" && k !== "ops")) break;
+      bop[2] = {pitch: COLOR_PITCH[bm[1]], word: bm[1], ops: pay.ops};
       fx.clauses[ri].st = "run";
       break;
     }

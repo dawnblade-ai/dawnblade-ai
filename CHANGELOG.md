@@ -1,3 +1,90 @@
+## v4.82 — "draw a card AND …" is two effects
+
+> *"When this attacks, you may discard a yellow card. If you do, draw a card
+> and create a Gold token."* — GOLDEN TIPPLE, Gravy Bones'
+
+**The plain-draw rule was unanchored at both ends**, and it sat above every
+payload reader below it, so it answered for ANY sentence containing "draw a
+card" and returned the draw ALONE. Measured over the pinned pool, five
+shapes lost the rest of their sentence:
+
+| card | what was dropped |
+|---|---|
+| Golden Tipple ×3 | its Gold token |
+| Fire that Burns Within | its +2{p} |
+| Rising Sun, Setting Moon | "then put a card from your hand on the bottom of your deck" |
+| Stroke of Foresight ×3 | "…on the top or bottom of your deck" |
+| Art of Desire: Body · Mind | the TRIGGER itself — "whenever this banishes a red card" — so it drew a card on every attack, and never gained its 1{h} |
+
+**Every one read `tier: full`**, because the clause WAS consumed. Three are
+weaker than printed (the direction the one-sided sweep does not look in);
+Art of Desire was stronger, a free card every swing, with no twin for
+`COND-BYPASSED` to compare against because the gate vanished rather than
+being duplicated (v3.57).
+
+**THE FIX IS THE ANCHOR, NOT A FOURTH COMPOUND RULE.** Three rules above it
+were each written to stop it stealing one wording (v2.29's random discard,
+v3.60's chosen one, v4.43's shuffle-and-redraw) and each left it free to
+steal the next. Anchored, a sentence it does not read whole falls to a
+reader that does, or refuses:
+
+- `RX_DRAW_THEN` reads "draw N … and/then <tail>" by sending the tail back
+  through `classifyClause`. **An unreadable tail refuses the whole
+  sentence** (v2.29), and so does a tail carrying its own schedule.
+- **The put-back** is a pick out of the hand to `deckTop`/`deckBottom`, with
+  an empty filter because every card in the hand is a legal choice. **"Top
+  or bottom" is a MODE, then the pick** — `modalPrompt`, the mandatory twin
+  of v4.62's `mayOffer`.
+- **Art of Desire's trigger rides on its own banish** (`foeBanishTop`'s
+  third element), paired in `fxParse` after the clause loop (v4.13's shape),
+  and is answered off the banished card's printed pitch. The sentence is
+  refused in `classifyClause`, or the unanchored life-gain rule claims it
+  next.
+
+**AND `foeBanishTop` FILED THE CARD INTO NO ZONE.** It sliced the card off
+the opponent's deck and put it nowhere — a card in NO zone, which the
+census cannot see (v4.23). It goes to their banished zone now.
+
+### Transcend happens where the card is filed
+
+Building Rising Sun's put-back found that its transcend ran FIRST:
+`execute`'s condition loop runs before a card's ops (v3.60), so the feed
+said *"transcends"* before *"plays"*, and the sheet offered the Inner Chi the
+card had not made yet as the card to put back — an extra option the
+printing does not give. Transcend is printed LAST on all five cards and is
+what the card does *instead of the graveyard*, so the op only STASHES now
+(`_selfDestruct`'s shape) and the flip happens at the filing, where v4.64
+already reads `_transcended`. A hand pick the same card queued excludes the
+fresh Chi by uid — `notUid`, the filter key v3.20 built for "another".
+
+### A gate is announced once
+
+Stroke of Foresight's reprise is two ops under one gate, and the feed printed
+*"Reprise — 1 card from hand met the attack."* twice. `attackRx` announces
+each condition once, ahead of its payload.
+
+### Measured
+
+- **3254 drills** (19 new in `test/drawthen.test.js`), 0 fail, 5 skipped;
+  107 scenes; babel compile clean; `crindex --check` clean; fairness clean.
+- **The audit moves nothing but its timestamp** — every affected card
+  already read `full`, which is how this hid.
+- **The ladder, 3 seeds both sides:** no hero moves more than one game in its
+  mean, all inside the band (median 3); stalls 3 → 3; 0 refusals, 0
+  violations. The policy declines Golden Tipple's optional cost, so the new
+  Gold is driven by the drills rather than the ladder (v4.24).
+- **13 sabotages, 13 bite.**
+- **Pins moved, each read first:** `runOps`'s vocabulary 97 → 98
+  (`modalPrompt`); `WIRE_V` 20 → 21 (the banish's trigger rides inside
+  `pend.onHitHero`); `test/arscycle.test.js`'s near-miss was the very
+  sentence that now reads, so it asks the property it protected (the cycle
+  anchor does not claim a HAND put-back); and `test/speccensus.test.js`
+  lost `ctrStamp` again — v4.58's case — so its named leg is now Enigma v
+  Boltyn (Astral Etchings) in place of Enigma v Dash, which had stopped
+  contributing anything.
+- `COLOR_PITCH`'s comment said "one map with two readers" while two more
+  gates carried their own copy inline; both copies are retired.
+
 ## v4.81 — a discard with no randomness is the discarder's choice
 
 > *"Discard a card, then draw a card. If a yellow card is discarded this

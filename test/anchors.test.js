@@ -122,8 +122,11 @@ test("`runOps`'s vocabulary and what the pool emits are pinned both ways", {skip
      96 -> 97 AT v4.74: `stealAlly`, Jack Be Quick's steal — the pool's only
      control change, a pick among the opponent's living allies whose answer
      moves the entry across with its owner stamped. (v4.73's halving is not a
-     kind: it is a `foeNextTurn` VALUE, so it moved nothing here.) */
-  assert.equal(r.dispatched, 97, "runOps's op vocabulary moved");
+     kind: it is a `foeNextTurn` VALUE, so it moved nothing here.)
+     97 -> 98 AT v4.82: `modalPrompt`, a MANDATORY choice between printed
+     modes queued by an effect — Stroke of Foresight's "on the top OR bottom
+     of your deck". `mayOffer` is its optional one-mode twin. */
+  assert.equal(r.dispatched, 98, "runOps's op vocabulary moved");
   /* DISPATCHED WITH NO EMITTER — the `perBoost` shape. Three have a
      producer that is not the parser and are named for it; two have none
      anywhere and are latent readers whose printed wording the pool only

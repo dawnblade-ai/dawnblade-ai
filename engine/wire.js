@@ -232,7 +232,13 @@
    v19 peer drops the continuation, so the draw after Portside Exchange's
    discard, and the Gold it pays for a yellow card, never happen on one side
    of the pair. Whole-shipped values: by hand, behind the release handshake. */
-const WIRE_V = 20;
+/* 20 -> 21 AT v4.82: `foeBanishTop` carries Art of Desire's colour trigger
+   as its third element, and it rides to the hit inside `pend.onHitHero`,
+   which ships whole; a queued `modal` can now come from an effect
+   (`modalPrompt`, Stroke of Foresight's top-or-bottom). A v20 peer holds
+   the banish without its trigger and draws nothing on a red card, so the
+   pair desyncs on the first hit. Whole-shipped values: by hand. */
+const WIRE_V = 21;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

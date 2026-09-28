@@ -67,8 +67,22 @@ test("…and it is still narrow: an unrelated conditional ability is refused", (
      passes would pass just as well against a guard deleted outright. */
   assert.equal(P.parseHeroPower(
     "Action - {r}: If you control an aura, draw two cards and gain 3 life"), null);
+  /* THE SECOND HALF USED AN UNREADABLE PAYLOAD AS ITS NEAR-MISS, AND v4.82
+     GAVE IT A READER. "Put a card from your HAND on the bottom of your
+     deck" is Rising Sun, Setting Moon's put-back, so the line now reads —
+     v3.47's shape, reading the payload creates the route. What the drill
+     was protecting is that the cycle anchor, which reads "…from your
+     ARSENAL on the bottom…", does not claim a HAND put-back; so that is
+     what it asks now, and the refusal half moves to a payload genuinely
+     unread. */
   assert.equal(P.parseHeroPower(
-    "Action - 0: Put a card from your hand on the bottom of your deck"), null);
+    "Action - 0: Put a card from your arsenal into your soul"), null);
+  const hand = P.parseHeroPower("Action - 0: Put a card from your hand on the bottom of your deck");
+  assert.ok(hand && hand.kind === "action", "the hand put-back reads as an ordinary ability now");
+  const ops = P.classifyClause("put a card from your hand on the bottom of your deck").ops;
+  assert.equal(ops[0][0], "pickPrompt", "…a pick");
+  assert.equal(ops[0][1].zone, "hand", "…out of the HAND — not the arsenal cycle");
+  assert.equal(ops.some(o => o[0] === "arsCycle"), false);
 });
 
 test("the anchor cannot claim Iyslander's arsenal line", {skip}, () => {
