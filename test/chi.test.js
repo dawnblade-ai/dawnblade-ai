@@ -353,18 +353,21 @@ test("the pool's token-with-counters census — and the near-miss that is a diff
      on the powCard `build.js` makes out of her printed line, so a census
      stopping at the pool sees none of it — which is why the drills above
      DRIVE her ability rather than reading a count here. */
-  assert.deepEqual([...new Set(withCtr)], [],
-    "no POOL record creates a token with counters; hers is on a powCard");
-  assert.deepEqual([...new Set(withExtra)], ["Frost Spike"],
-    "and the fifth slot's only pool claimant is still the exposed-zone placement");
-  /* AND THE NEAR-MISS IS A DIFFERENT PRINTED SHAPE, already read: Spectral
-     Manifestations says "create a Spectral Shield token, THEN if you
-     control no other Illusionist auras, put three +1{p} counters on it" —
-     a gated `ctrPut`, not a counter the creation carries. */
+  /* SPECTRAL MANIFESTATIONS JOINED AT v4.83, AND THIS DRILL HAD PINNED ITS
+     BUG. It said the card's "…then if you control no other Illusionist
+     auras, put three +1{p} counters on it" was "already read" as a gated
+     `ctrPut`, and asserted only that the mint was a BARE token — which was
+     the defect: the generic token rule stopped at the comma and the
+     counters were read by nothing. They ride on the mint now, as the
+     creator's override (hers, v4.54) with the printed gate beside it. */
+  assert.deepEqual([...new Set(withCtr)], ["Spectral Manifestations"],
+    "one POOL record creates a token with counters; hers is on a powCard");
+  assert.deepEqual([...new Set(withExtra)].sort(), ["Frost Spike", "Spectral Manifestations"],
+    "and the fifth slot's pool claimants are the exposed-zone placement and the gated counters");
   const sm = P.fxParse(rec(pool.find(r => r.name === "Spectral Manifestations")));
   assert.equal(sm.tier, "full");
-  assert.ok((sm.ops || []).some(o => o[0] === "token" && !o[4]),
-    "its mint is a bare token and its counters are a separate clause");
+  const mint = (sm.ops || []).find(o => o[0] === "token");
+  assert.deepEqual(mint[4].ctrIf, {noOther: "illusionist"}, "the gate rides with the counters");
   P.fxReset();
 });
 

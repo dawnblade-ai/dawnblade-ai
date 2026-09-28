@@ -1,3 +1,62 @@
+## v4.83 — three sentences an unanchored match had half-read
+
+v4.82 anchored the plain draw and then did what v4.21 says to do next: census
+the family. The census instruments every `c.match` inside `classifyClause`
+and records, for each pool clause that reads `run`, whether the match that
+produced it covered the whole sentence. Most of what it reports is a target
+or a window that another reader handles on purpose. Three were real, and
+every one read `tier: full`:
+
+| card | printed | was read as |
+|---|---|---|
+| Aether Spindle ×2 (Iyslander's) | "Opt X, where X is the damage dealt by this" | **opt 1**, always: the rule said `m[1]==="x" ? 1` |
+| Spectral Manifestations ×3 (Enigma's) | "Create a Spectral Shield token, then if you control no other Illusionist auras, put three +1{p} counters on it" | a bare Shield: the token rule stopped at the comma |
+| The Suspense is Killing Me ×2 (Lyath's) | "Your first attack each turn gets +1{p}" (a standing static on an aura) | an op that fired ONCE, when the aura was played |
+
+- **Aether Spindle's X is what it dealt.** The clause is a `way:dealt` gate
+  whose op takes its number from `_dmgWay` (v3.62). That also carries it
+  through an arcane-barrier sheet via v4.77's `wayRider`, because X isn't
+  known until the sheet is answered. `dealtX` is the one body the late pass
+  and the settled sheet share. Four dealt opts four, one prevented opts
+  three, all prevented opts nothing (CR 7.5.5). An X the reader cannot
+  count now refuses, and an opt that reaches `runOps` uncounted opts none.
+- **Spectral Manifestations' counters ride on the mint**, as the creator's
+  override (`ctr`, which Enigma's own hero ability uses since v4.54). The
+  printed gate `ctrIf.noOther` sits beside it and is asked of the
+  recipient's board after the mint, leaving out the token just made; that
+  exclusion is what "other" says. The class is matched on the structured
+  type array, so a Runechant (a Runeblade aura) does not count. **And the
+  generic token rule now reads its tail whole**: after the last "token" the
+  pool prints only a control phrase, an exposed-zone placement or a counter
+  clause, and anything else refuses (v4.82's rule, one reader over).
+- **The Suspense is Killing Me is a board static.** `fx.firstAtk` is read at
+  every attack's declaration, off the attacker's board, while `hist.atk` is
+  0 (it counts attacks that have resolved this turn). It applies on every
+  turn the aura stays in the arena, and two copies grant +2.
+  `firstAtkBuff` had no emitter left and its case is deleted (v4.11).
+
+**AND A DRILL HAD PINNED ONE OF THE BUGS.** `test/chi.test.js` said
+Manifestations' counters were "already read" as a gated `ctrPut`, and its
+assertion was that the mint is a BARE token, which was the defect.
+v3.13's rule: a guard that pins an anomaly legitimises it.
+
+### Measured
+
+- **3266 drills** (12 new in `test/censusfinds.test.js`), 0 fail, 5 skipped;
+  107 scenes; babel, crindex and fairness clean; coverage floor holds.
+- **The audit moves nothing but its timestamp.**
+- **The ladder, 3 seeds both sides:** Enigma 12·14·13 → 16·14·14. The
+  direction fits her Shields now carrying their counters, but the intervals
+  touch at 14, so it is NOISE by the standing rule (v4.40). Everyone else is
+  inside the band. **Stalls 3 → 2**, and the longest game went from 1,278
+  turns (Enigma v Gravy Bones) to 397.
+- **12 sabotages, 12 bite.**
+- **Pins moved, each read first:**
+  - `runOps`'s vocabulary 98 → 97 (`firstAtkBuff` left);
+  - `fx.firstAtk` joined the fx census;
+  - waydealt's one-instance premise gained Aether Spindle, which deals one;
+  - chi.test's token-with-counters census gained Spectral Manifestations.
+
 ## v4.82 — "draw a card AND …" is two effects
 
 > *"When this attacks, you may discard a yellow card. If you do, draw a card

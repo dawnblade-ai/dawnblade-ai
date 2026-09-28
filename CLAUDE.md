@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.82
+**Current version:** v4.83
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3254 drills** at v4.82.
+This is `node --test "test/*.test.js"` — **3266 drills** at v4.83.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,24 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### THE UNANCHORED-MATCH CENSUS, RUN ONCE (v4.83)
+
+Instrument every `c.match` in `classifyClause`, parse the pool, and for each
+clause that reads `run` compare the match that produced it with the whole
+sentence. Most leftovers are legitimate (a target, a window, a sentence a
+whole-card reader claims later). Three were not: **Aether Spindle's "opt X"
+read as opt 1** (`m[1]==="x" ? 1`), **Spectral Manifestations' gated counters
+dropped** at the token rule's comma, and **The Suspense is Killing Me's
+standing "first attack each turn" fired once on play**. All `tier: full`.
+
+- **An X the engine counts off an event is a `way:` gate** whose op takes the
+  number from the trace (`dealtX`), so an arcane barrier's sheet carries it.
+- **A standing static on a permanent is a card fact read where it applies**
+  (`fx.firstAtk`, at the declaration), never an op fired on play.
+- **A drill that asserts a card's parse can be asserting its bug.**
+  `chi.test.js` pinned Manifestations' bare mint as "already read"; v3.13's
+  rule, a guard that pins an anomaly legitimises it.
 
 ### A MATCHER ANCHORED AT NEITHER END ANSWERS FOR EVERY SENTENCE IT APPEARS IN (v4.82)
 

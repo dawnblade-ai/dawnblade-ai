@@ -114,13 +114,18 @@ test("every `fx.*` field the pool emits is pinned", () => {
     "boostBanish", "bottomOnDiscard", "chargeCost", "chargeSoul", "clash",
     "clashReveal", "clauses", "condOnHit", "condOnLeave", "conds", "crush",
     "ctrTick", "daggerJab", "deckFaceUp", "defDebuff", "defGrant", "defLimit",
-    "defSelf", "dr", "emptyDies", "fusionCost", "ga", "gaQ", "gyFirstGa",
+    "defSelf", "dr", "emptyDies", "firstAtk", "fusionCost", "ga", "gaQ", "gyFirstGa",
     "handAbility", "handWipe", "hitCounter", "hitWatch", "lifeTie", "millCost", "modes",
     "noDrx", "noEquipDefend", "onAtk", "onAtkHero", "onDeath", "onDestroy", "onHit",
     "onHitHero", "onLeave", "ops", "optCost", "payCost", "perm", "playIf",
     "playable", "powFormula", "quotedUnread", "rustDestroy", "self", "selfQ",
     "tapCost", "tier", "wipePowIfIdle",
   ]);
+  /* +firstAtk v4.83 — The Suspense is Killing Me's "your first attack
+     each turn gets +1{p}", a STANDING static on an aura. It was an op,
+     `firstAtkBuff`, that fired once when the aura was PLAYED, so "each
+     turn" held for the turn it arrived. Read by `execute`'s declaration
+     off every permanent on the attacker's board, while `hist.atk` is 0. */
   /* +lifeTie v4.51 — Line Crossers' static: "if you have the same {h} as a
      hero, it also counts as you having more {h} than them, and them having
      less {h} than you." Read as a property of the PERMANENT (`wardValue`'s
