@@ -104,11 +104,13 @@ let legs = 0, threw = 0;
    field leaving this set is a consumer that stopped obeying its spec
    (v3.53). The rest are the sheet's alone: a title, a hint, a stamp that
    rides onto the card the answer moves. */
-const ANSWER_READS = ["amount", "by", "cards", "cost", "destroyUid", "elseOps",
+const ANSWER_READS = ["amount", "by", "cards", "cost", "destroyUid", "discard", "elseOps",
                       "filter", "max", "min", "ops", "options",
                       "side", "spendCtr", "src", "tag", "tapHero", "tapUid", "taps",
                       "to", "zone"];
 /* -optional v4.44: it was here for two comments' sake and nothing reads it. */
+/* +discard v4.81: `applyPrompt` reads it to leave the move's line to
+   `effects.discardChosen`, which names the seat and the card. */
 /* +spendCtr v4.48: THE REACH LIMIT v4.42 RECORDED IS DISCHARGED. That
    version's one silent sabotage named crank's own `pay` prompt as a spec
    site "32 legs never reach", and wrote down that the honest widening is
@@ -195,10 +197,14 @@ test("every spec field that reaches prompts.js is pinned", () => {
   drive();
   assert.deepEqual([...reached].sort(), [
     "amount", "arsStamp", "avail", "banStamp", "by", "cards", "charge", "cost", "costRider",
-    "ctrHeld", "ctrSpend", "ctrStamp", "destroyUid", "elseOps", "equipStamp",
+    "ctrHeld", "ctrSpend", "ctrStamp", "destroyUid", "discard", "elseOps", "equipStamp",
     "faceUp", "filter", "hint", "jab", "lateGa", "max", "min", "moveFoe", "n",
     "ops", "optional", "options", "playThisTurn", "shuffleAfter", "side", "spendCtr",
     "src", "tag", "tapHero", "tapUid", "taps", "title", "to", "wayRider", "xPay", "zone",
+  /* +discard v4.81 — a chosen discard's continuation (whose card asked, the
+     ops printed after the discard, and what reads it). It arrived on the same
+     34 legs with no leg written, so a non-random discard with a real choice
+     happens in driven games — the engine used to make that choice itself. */
   /* +wayRider v4.77 — what waits on a deferred arcane hit LANDING ("…if
      damage is dealt this way", surge, Turn to Mindfire's tap). It arrived
      on the same 34 legs with no leg written, so a hero wearing an arcane

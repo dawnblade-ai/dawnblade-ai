@@ -57,7 +57,9 @@ module.exports = [
     const g = Object.assign({}, c.state({hand: [big, {...big, uid: 101}], res: 9, ap: 1,
       board: [], deck: [{uid: "d1", name: "T"}]}, {}, {actor: 0, turnPlayer: 0, turn: 3}),
       {builds: [{mightOnFirst6Discard: true}, {}], phase: "action"});
-    const once  = c.ops(g, [["selfDiscard", 1]], "probe");
+    /* TWO CARDS IN HAND IS A CHOICE (v4.81), so each discard opens the
+       discarder's sheet and the scene answers it — the route a player takes. */
+    const once  = c.answer(c.open(c.ops(g, [["selfDiscard", 1]], "probe")), 0);
     const twice = c.ops(once, [["selfDiscard", 1]], "probe");
     const mights = s => (s.sides[0].board || []).filter(b => /might/i.test(b.card.name)).length;
     return {"one Might after the first discard": mights(once),

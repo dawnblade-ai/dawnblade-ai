@@ -418,6 +418,13 @@ function buildPrompt(game, spec){
          CHOSEN: this module runs no effects, so returning it as `ops`
          would hand it to runOps, which would aim it at the source. */
       jab: spec.jab || null,
+      /* A CHOSEN DISCARD (v4.81) — the continuation of the effect that asked
+         for it: whose card it is (`by`), the ops printed after the discard,
+         and the "…this way" conditions that read it. Data, never ops: this
+         module runs no effects, and `applyAnswer` stamps the discard and runs
+         the rest at the controller's seat. OPT-IN, so no other pick changes
+         shape (v3.58). */
+      ...(spec.discard ? {discard: spec.discard} : {}),
       /* A CROSS-SEAT MOVE, and it is DATA for the same reason `arsStamp`
          is: this module moves cards within ONE side, so a pick whose
          candidates came from the other seat reports the choice and the
@@ -891,6 +898,20 @@ function promptLapse(game, spec){
           title: spec.amount + " arcane incoming", hint: "Nothing left to spend — it lands in full."};
 }
 
+/* THE ANSWER A SEAT WITH NOBODY IN IT GIVES TO A CHOSEN DISCARD (v4.81).
+   Before v4.81 the engine answered every non-random discard itself, with
+   the cards at the BACK of the hand ("so a discard is not silently the
+   player's best card"). The choice is the discarder's now, and a policy
+   that reads no card text keeps that same answer, so the ladder measures
+   the route rather than a new judgement about which card to throw away.
+   Both boards' seat-1 answers call this one body. */
+function promptDiscardDefault(prompt){
+  const n = (prompt && prompt.cards || []).length, want = (prompt && prompt.min) || 0;
+  const sel = [];
+  for(let i = Math.max(0, n - want); i < n; i++) sel.push(i);
+  return sel;
+}
+
 /* Can this be confirmed as it stands? */
 function promptReady(prompt){
   if(!prompt) return false;
@@ -1098,7 +1119,10 @@ function applyPrompt(game, prompt){
        the bottom, and a line saying "→ deckTop" beside the one saying
        "to the bottom instead" is the feed contradicting itself. */
     const _dest = prompt.to === "deckTop" ? P.deckTopTo(game) : prompt.to;
-    out.msgs.push(picked.map(c=>c.name).join(", ") +
+    /* A DISCARD SAYS SO ITSELF (v4.81) — `effects.discardChosen` names the
+       seat and the card and counts what is left, so a second line here
+       would announce the same move twice in two voices. */
+    if(!prompt.discard) out.msgs.push(picked.map(c=>c.name).join(", ") +
       (prompt.to ? " → " + _dest
                  : prompt.zone ? " revealed" : " chosen") +
       (prompt.zone ? " from " + prompt.zone : "") + ".");
@@ -1265,5 +1289,6 @@ return {PROMPT_ZONES, promptZoneWord, promptZone, promptSideZone, promptFilter,
         promptMatchSet, promptMatchAssign,
         promptPickPool, promptPickAskable, buildPrompt,
         promptToggleSel, promptChoose, promptDecline, promptTakeBack, promptReady, promptForcedSel, promptLapse,
+        promptDiscardDefault,
         moveCards, applyPrompt};
 });

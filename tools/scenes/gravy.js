@@ -120,7 +120,9 @@ module.exports = [
        allowed. */
     const broke = c.J.legal(g0, {t: "activate", from: "hero", uid: "hpow"}, 0);
     const hand0 = withGold.sides[0].hand.length;
-    const n = c.reduce(withGold, {t: "activate", from: "hero", uid: "hpow"}, 0);
+    /* "…then discard a card" is HIS choice since v4.81 — the sheet opens,
+       and the scene answers it, which is the route a player takes. */
+    const n = c.answer(c.reduce(withGold, {t: "activate", from: "hero", uid: "hpow"}, 0), 0);
     const gv = n.sides[0].grave;
     return {
       "the cost names the card it destroys": c.P.abDestroyBoard(b0.b.HPOW),

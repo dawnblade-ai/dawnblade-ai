@@ -256,8 +256,10 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 43 holds AT v4.74: `control-change-steal` was BUILT and is
      `control-change-steal-built` — renamed, closed, probe turned round.
      43 holds AT v4.75: `spellvoid-x` was BUILT and is `spellvoid-x-read`.
-     43 holds AT v4.79: `gear-sweep-timing` is `gear-filed-when-destroyed`. */
-  assert.equal(Object.keys(APPROX).length, 43, "record count moved");
+     43 holds AT v4.79: `gear-sweep-timing` is `gear-filed-when-destroyed`.
+     43 -> 44 AT v4.81: `auto-pitch-discard` split into `chosen-discard-asked`
+     (built) and `cost-discard-auto-picked` (the cost half, stated). */
+  assert.equal(Object.keys(APPROX).length, 44, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -294,6 +296,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 16 -> 15 AT v4.79: `gear-sweep-timing` was BUILT and is
      `gear-filed-when-destroyed` — and its probe could never have gone red,
      because its deviation half asserted a hand-built state (v4.36). */
+  /* 15 holds AT v4.81: `auto-pitch-discard` left (closed as
+     `chosen-discard-asked`) and `cost-discard-auto-picked` arrived. */
   assert.equal(n("stated"), 15, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
@@ -341,8 +345,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      20 -> 21 AT v4.73: `crush-halving-rider-read`. 21 -> 22 AT v4.74:
      `control-change-steal-built`. 22 -> 23 AT v4.75: `spellvoid-x-read`.
      23 -> 24 AT v4.77: `surge-dealt-read`. 24 -> 25 AT v4.79:
-     `gear-filed-when-destroyed`. */
-  assert.equal(n("closed"), 25, "closed count moved");
+     `gear-filed-when-destroyed`. 25 -> 26 AT v4.81: `chosen-discard-asked`. */
+  assert.equal(n("closed"), 26, "closed count moved");
 });
 
 /* ============================================================
@@ -1328,16 +1332,41 @@ probe("surge-dealt-read", () => {
 
 /* A forced pitch or discard with no printed choice is auto-picked rather
    than prompted. DRIVEN: a forced discard opens no sheet. */
-probe("auto-pitch-discard", () => {
-  const c1 = {uid:1, name:"Probe A", power:6, pitch:1, tt:"Generic Attack Action",
-              ty:["Generic","Attack","Action"], tx:"", kw:[]};
-  const c2 = {uid:2, name:"Probe B", power:1, pitch:3, tt:"Generic Attack Action",
-              ty:["Generic","Attack","Action"], tx:"", kw:[]};
-  const g = H.state({hand:[c1, c2], grave:[]}, {});
-  const n = H.runOps(g, [["discardRandom", 1]], "probe");
-  assert.equal(n.sides[0].hand.length, 1, "the forced discard did not happen");
-  assert.deepEqual(n.promptQ || [], [],
-    "a forced discard now queues a prompt — the record is closed and must move");
+/* CLOSED AT v4.81, and the probe it replaces drove `discardRandom` — the
+   one discard that is RANDOM, which asks nobody on any build, so it could
+   never have gone red (v4.36's inert probe, again). */
+probe("chosen-discard-asked", () => {
+  const c = (u, p) => ({uid:u, name:"Probe " + u, power:3, pitch:p, tt:"Generic Action - Attack",
+                        ty:["Generic","Action","Attack"], tx:"", kw:[]});
+  const mine = H.runOps(H.state({hand:[c(1,1), c(2,2)]}, {}), [["selfDiscard", 1], ["draw", 1]], "probe");
+  const q = (mine.promptQ || [])[0];
+  assert.ok(q && q.tag === "pick" && q.discard && q.side === 0, "a chosen discard no longer asks the discarder");
+  assert.deepEqual(q.discard.rest, [["draw", 1]], "…and the draw printed after it rides on the sheet");
+  assert.equal(mine.sides[0].hand.length, 2, "nothing is discarded before the answer");
+  const theirs = H.runOps(H.state({}, {hand:[c(3,1), c(4,2)]}), [["foeDiscard", 1]], "probe");
+  assert.equal(((theirs.promptQ || [])[0] || {}).side, 1, "\"they discard\" is asked of THEM");
+});
+
+/* STATED AT v4.81 — the cost half. DRIVEN: Carrion Crown with two allies in
+   hand discards the first without asking. */
+probe("cost-discard-auto-picked", () => {
+  const db = H.db();
+  if(!db) return;
+  const PRx = require("../engine/parser.js");
+  const cc = C.resolveEntry(db, {name: "Carrion Crown", p: 0, code: null, q: 1});
+  const pw = PRx.parseHeroPower(cc.tx, true);
+  const pc = {name: "Carrion Crown — ability", pitch: 0, cost: 0, power: null, def: null,
+    tt: "Equipment Ability", kw: ["Go again"], gkw: [], tx: "Draw a card. Go again",
+    sd: true, _discardCost: pw.discardCost.filter, _discardSubject: pw.discardCost.subject, uid: "gp901"};
+  const ally = u => Object.assign({}, C.resolveEntry(db, {name: "Barnacle", p: 2, code: null, q: 1}), {uid: u});
+  let g = H.state({gear: [Object.assign({}, cc, {uid: 901, pow: pw, powCard: pc})],
+                   hand: [ally(501), ally(502)], deck: [{uid: 600, name: "T", pitch: 1}], res: 9, ap: 1},
+                  {hp: 20}, {actor: 0, turnPlayer: 0, turn: 3});
+  g = Object.assign(g, {phase: "action", step: "layer", priority: 0, passed: []});
+  const s = H.J.reduce(g, {t: "activate", uid: 901, from: "gear"}, 0).state;
+  assert.ok(s.sides[0].grave.some(c => c.uid === 501),
+    "the cost no longer takes the FIRST ally — it asks which one, and the record must move");
+  assert.ok(!(s.prompt && s.prompt.discard), "…with no sheet");
 });
 
 /* EVERY pool DECK card reads something. The probe is turned round. */

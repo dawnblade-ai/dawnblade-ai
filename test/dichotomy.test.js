@@ -339,7 +339,9 @@ test("`filters` is a spec field `buildPrompt` NAMES (v2.34, ninth field)", () =>
   /* < 12,000 -> < 12,500 AT v4.71, READ FIRST: still the pick branch,
      bounded at the next variant; the growth is Beckoning Haunt's `xPay`
      field, inserted beside the counter cost it is the twin of. */
-  assert.ok(body.length > 200 && body.length < 12500, "re-anchor this slice");
+  /* < 12,500 -> < 13,000 AT v4.81, READ FIRST: still the pick branch; the
+     growth is the chosen discard's `discard` field, opt-in beside `jab`. */
+  assert.ok(body.length > 200 && body.length < 13000, "re-anchor this slice");
   assert.match(body, /\bfilters,/, "`buildPrompt` must put `filters` on the prompt");
   const s = sheet([RATK("a1"), RNON("n1")]);
   assert.deepEqual(s.filters, FILT, "and it must arrive on the live prompt");
@@ -739,8 +741,9 @@ test("a `filters` prompt survives the wire, which is what the bump is ABOUT", ()
   /* 15 -> 16 AT v4.69 (`pend.noDrx`, a `buffQ` entry's `src`). */
   /* 16 -> 17 AT v4.71 (a pick prompt's `xPay`). 17 -> 18 AT v4.72 (the
      `xval` pending and the `_x` declaration). */
-  /* 18 -> 19 AT v4.77 (a soak prompt's `wayRider`). */
-  assert.equal(W.WIRE_V, 19, "the bump moved — say what changed in wire.js's header");
+  /* 18 -> 19 AT v4.77 (a soak prompt's `wayRider`). 19 -> 20 AT v4.81 (a
+     pick prompt's `discard`). */
+  assert.equal(W.WIRE_V, 20, "the bump moved — say what changed in wire.js's header");
   const g = H.state({grave: [RATK("a1"), RNON("n1")], res: 9, ap: 1}, {}, {actor: 0, turn: 3});
   g.prompt = sheet([RATK("a1"), RNON("n1")]);
   assert.ok(g.prompt && g.prompt.filters, "fixture: the sheet carries the field");

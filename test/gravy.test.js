@@ -70,7 +70,12 @@ function table(o){
   return {g: Object.assign({}, g, {sides}), b0: b0.b};
 }
 
-const use = (g, seat) => J.reduce(g, {t: "activate", from: "hero", uid: "hpow"}, seat == null ? 0 : seat);
+/* The ability's "then discard a card" is HIS choice (v4.81), so a sheet
+   opens; these drills are about the cost, and answer it the default way. */
+const use = (g, seat) => {
+  const out = J.reduce(g, {t: "activate", from: "hero", uid: "hpow"}, seat == null ? 0 : seat);
+  return out.error ? out : {...out, state: H.answerAll(out.state)};
+};
 
 /* ---- 1. THE READER ------------------------------------------------- */
 

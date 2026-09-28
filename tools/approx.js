@@ -563,14 +563,35 @@ const APPROX = {
       "declined or not. Those conditions now ride on the sheet (`wayRider`) and are "+
       "settled in `applyAnswer`."},
 
-"auto-pitch-discard": {
-  status:"stated", cr:null, board:"trainer", since:"v2.04", swept:"v4.02",
-  claim:"Where a card forces a pitch or a discard with no printed choice, the "+
-        "trainer auto-picks the lowest advisor-valued card rather than prompting.",
-  why:"A prompt for every forced discard is a tap that teaches nothing (v3.55's "+
-      "rule about a single forced choice), and the prompt machinery exists for "+
-      "the cards that print a real CHOICE. The advisor value is the same ranking "+
-      "the coach shows, so the pick is at least explicable."},
+"chosen-discard-asked": {
+  status:"closed", cr:null, board:"both", since:"v2.04", swept:"v4.81",
+  claim:"A discard that prints no randomness is the DISCARDER's choice, asked on a "+
+        "sheet addressed to them, with the rest of the effect riding on it. BUILT "+
+        "AT v4.81. It used to be made by the engine — the back of the hand — on "+
+        "BOTH boards, for every non-random discard an EFFECT prints.",
+  why:"This was `auto-pitch-discard`, and it was wrong in three ways. It said "+
+      "'trainer' and the op is shared. It said the pick was the lowest advisor "+
+      "value, and `selfDiscard`/`foeDiscard` took the back of the hand. And its "+
+      "reason — 'a prompt for every forced discard is a tap that teaches nothing' "+
+      "— is v3.55's rule about ONE forced choice, which a hand of several cards "+
+      "is not: Portside Exchange's Gold, Jittery Bones' go again and Washed Up "+
+      "Wave's +2{d} all pay out on WHICH card, and 'they discard a card' is the "+
+      "opponent's decision. Its probe drove `discardRandom`, which is random and "+
+      "asks nobody either way, so it could never have gone red."},
+
+"cost-discard-auto-picked": {
+  status:"stated", cr:null, board:"both", since:"v4.09", swept:"v4.81",
+  claim:"An activation COST that prints 'discard <subject>' (Carrion Crown's ally, "+
+        "the five Agents of Chaos' Assassin card) takes the FIRST matching card in "+
+        "hand rather than asking which; a non-random additional-cost discard takes "+
+        "the lowest-valued card (no pool claimant — Savage Feast's is random); and a "+
+        "payment made from a sheet pitches with `autoPitch` rather than asking which "+
+        "cards to pitch.",
+  why:"A cost cannot be a queued prompt (v3.34): it is paid before the card "+
+      "resolves, so asking needs a PENDING declared before the payment — fusion's "+
+      "and charge's shape (`_fuseUid`, `_chargeUids`), one per cost route. v4.81 "+
+      "built the EFFECT half, where a sheet can wait for the answer; this half is "+
+      "its own piece of work across three routes."},
 
 "pool-deck-complete": {
   status:"closed", cr:null, board:"both", since:"v3.79", swept:"v4.44",

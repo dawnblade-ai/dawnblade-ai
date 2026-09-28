@@ -421,6 +421,106 @@ function makeEffects(ctx){
     return {...n, actor: was};
   }
 
+  /* ---- A CHOSEN DISCARD (v4.81) ------------------------------------
+     A discard that prints no randomness is the DISCARDER's choice. The
+     engine used to make it for them — the back of the hand — on both boards,
+     so a printed decision was never offered and every card that pays out on
+     WHICH card was discarded paid out by accident.
+
+     `queueDiscard` asks. The sheet is addressed to the seat that discards,
+     and carries the effect's CONTINUATION: whose card asked (`by`), the ops
+     printed after the discard, and whatever "…this way" condition or modal
+     cost rider reads it (attached by the caller that knows about them —
+     `attachDiscardRider`). `discardChosen` is the one body that puts the
+     chosen cards into the graveyard, turn-stamped as a discard (`gyDisc`),
+     and runs the shared discard event at the discarder's seat.
+
+     A HAND NO BIGGER THAN THE DISCARD IS NOT A CHOICE, and the ops keep
+     their immediate path for it — a sheet with nothing to decide is a tap
+     that teaches nothing (v3.55). */
+  function queueDiscard(s, seat, want, src, rest, self){
+    const who = (s.sides || [])[seat] || {};
+    let n = {...s, promptQ: [...(s.promptQ || []), {
+      tag: "pick", side: seat, src, zone: "hand", to: "grave", min: want, max: want,
+      title: want === 1 ? "Discard a card" : "Discard " + want + " cards",
+      hint: src + " — the card does not say at random, so which one is the discarder's call.",
+      discard: {by: actorOf(s), self: !!self, rest: rest || [], conds: [], costRider: null}}]};
+    n._discDeferred = (n._discDeferred || 0) + 1;
+    /* THE LINE DOES NOT OPEN "<src>:" — that form is the payoff's own, and
+       `tools/selfplay.js` counts a crush by it (" — crush:"), so a sheet line
+       spelled the same way counted every deferred crush discard twice
+       (236 -> 264 on the ladder the first time it ran). The discard itself,
+       when it is made, is the event. */
+    return L(n, `${sv(who, "choose")} ${want === 1 ? "a card" : want + " cards"} to discard for ${src}.`);
+  }
+  /* The last queued discard sheet this card asked for, merged with `patch`
+     — conditions append, a cost rider replaces. Null when there is none, so
+     the caller knows the fact it holds is already true and answers it now. */
+  function attachDiscardRider(s, src, by, patch){
+    const q = s.promptQ || [];
+    for(let i = q.length - 1; i >= 0; i--){
+      const sp2 = q[i];
+      if(!(sp2 && sp2.tag === "pick" && sp2.discard && sp2.src === src && sp2.discard.by === by)) continue;
+      const D = sp2.discard;
+      const next = {...D, conds: [...D.conds, ...(patch.conds || [])],
+                    costRider: patch.costRider || D.costRider};
+      return {...s, promptQ: q.map((x, j) => j === i ? {...x, discard: next} : x)};
+    }
+    return null;
+  }
+  function discardChosen(s, seat, cards, src){
+    if(!cards || !cards.length) return s;
+    const was = actorOf(s);
+    let n = {...s, actor: seat};
+    const ids = new Set(cards.map(c => c.uid));
+    actMut(n).hand = (act(n).hand || []).filter(c => !ids.has(c.uid));
+    actMut(n).grave = [...gyDisc(n.turn, ...cards), ...(act(n).grave || []).filter(c => !ids.has(c.uid))];
+    n = L(n, `${src}: ${sv(act(n), "discard")} ${cards.map(c => c.name).join(", ")} — ${act(n).hand.length} left in hand.`);
+    n = afterDiscard(n, cards, {random: false});
+    return {...n, actor: was};
+  }
+  /* "IF THAT CARD HAS <KEYWORD>, …" — the modal cost rider (v3.90), asked of
+     the cards the cost consumed. One body for the two moments it can be
+     answered: at the modal's own answer, or at the discard sheet the modal
+     opened (v4.81). Go again is left on `_gaGrant` for the caller to fold. */
+  function settleCostRider(s, src, cr, took){
+    let n = s;
+    const hit = took.some(c => P.printedKw(c, cr.kw));
+    if(!took.length) return L(n, `${src}: nothing was spent — the bonus does not apply.`);
+    if(!hit) return L(n, `${src}: ${took.map(c=>c.name).join(", ")} has no ${cr.kw} — no bonus.`);
+    n = L(n, `${src}: ${took.map(c=>c.name).join(", ")} has ${cr.kw} — the bonus is live.`);
+    const dbuff = defBuffOf(cr.ops);
+    if(dbuff){
+      const dsrc = defenderByUid(act(n), cr.uid);
+      if(dsrc) n = applyDefMod(n, actorOf(n), dsrc, dbuff, src);
+    }
+    const rest = (cr.ops || []).filter(o => o[0] !== "defBuff");
+    if(rest.length) n = runOps(n, rest, src);
+    return n;
+  }
+  /* THE CONTINUATION, AT THE SEAT WHOSE CARD ASKED (the actor on entry). */
+  function settleDiscardRider(s, D, got, src){
+    let n = s;
+    const trace = D.self ? {disc: got} : {took: got};
+    if(D.self) n._costWay = [...got];
+    if((D.rest || []).length) n = runOps(n, D.rest, src);
+    for(const {cond, op} of (D.conds || [])){
+      if(!thisWayMet(cond, trace)){ n = L(n, wayMissLine(src, cond)); continue; }
+      if(op[0] === "ga") n._gaGrant = true;
+      else n = runOps(n, [op], src);
+    }
+    if(D.costRider) n = settleCostRider(n, src, D.costRider, got);
+    if(n._gaGrant){
+      /* ON THE LINK WHILE IT HAS NOT DEALT ITS DAMAGE, otherwise the action
+         point itself (CR 5.3.5) — `settleLateGa`'s reason. */
+      if(n.pend && n.pend.by === actorOf(n) && n.pend.dealt == null){
+        n = {...n, pend: {...n.pend, ga: true}}; delete n._gaGrant;
+        n = L(n, `${src}: go again.`);
+      } else n = settleLateGa(n);
+    }
+    return n;
+  }
+
   const afterDiscard = (s, taken, opts) => {
     let n = s;
     const b = bAct(n);
@@ -953,7 +1053,13 @@ function makeEffects(ctx){
      feed line rather than guessing which permanent was meant. */
   const runOps = (s, ops, srcName, srcCard) => {
     let n = {...s};
-    ops.forEach(op=>{
+    /* A CHOSEN DISCARD HALTS THE LIST (v4.81). When the discarder has a real
+       choice the discard becomes a sheet, and everything printed AFTER it
+       ("…then draw a card") rides on that sheet as its continuation, so it
+       cannot run before the card it follows has been chosen. */
+    let _halt = false;
+    ops.forEach((op, _oi)=>{
+      if(_halt) return;
       const [k,v] = op;
       if(k==="draw"){ const take=act(n).deck.slice(0,v); actMut(n).hand=[...act(n).hand,...take]; actMut(n).deck=act(n).deck.slice(v); if(take.length) n=L(n,`Drew ${take.length}.`); }
       /* AT RANDOM, AND SEEDED. Two peers and a replay must discard the SAME
@@ -1009,8 +1115,21 @@ function makeEffects(ctx){
           hint:`${srcName}: pay ${v}, or take what it prints. Pitching is on demand.`}];
       }
       /* The mirror of `foeDiscard`, for a payload resolving at the asked
-         side's own actor. Same selection rule: the cards at the back of
-         the hand, so a discard is not silently the player's best card. */
+         side's own actor. With a real choice the discarder is ASKED (v4.81,
+         below); only a hand no bigger than the discard takes it all here. */
+      else if(k==="selfDiscard" && act(n).hand.length > Math.max(1,v)){
+        /* THE DISCARDER CHOOSES (v4.81). "Discard a card" prints no
+           randomness, so WHICH card is the player's decision — and for three
+           of this op's claimants the choice is the whole card: Portside
+           Exchange mints a Gold only if the discard was YELLOW, Jittery
+           Bones and Washed Up Wave pay out only if it has WATERY GRAVE, and
+           Gravy Bones' own ability is how he gets an ally into the
+           graveyard to replay. The engine used to take the back of the
+           hand. With nothing to decide (a hand no bigger than the discard)
+           the body below still runs at once. */
+        n = queueDiscard(n, actorOf(n), Math.max(1,v), srcName, ops.slice(_oi + 1), true);
+        _halt = true;
+      }
       else if(k==="selfDiscard"){
         const take = act(n).hand.slice(-Math.max(1,v));
         if(!take.length) n = L(n, `${srcName}: ${sp(act(n))} hand is already empty.`);
@@ -1315,12 +1434,24 @@ function makeEffects(ctx){
         n = L(n, `${srcName}: ${hit.card.name} is destroyed.`);
         n = payLeave(n, hit.card, 1 - actorOf(n));
       }
+      else if(k==="foeDiscard" && foe(n).hand.length > Math.max(1,v)){
+        /* "THEY DISCARD A CARD" IS THEIR CHOICE (v4.81) — the sheet is
+           addressed to the OPPONENT, and what the card prints after it (Loot
+           the Hold's "if they do, create a Gold token") rides on it and runs
+           back at this seat. */
+        n = queueDiscard(n, 1 - actorOf(n), Math.max(1,v), srcName, ops.slice(_oi + 1), false);
+        _halt = true;
+      }
       else if(k==="foeDiscard"){
         const take = foe(n).hand.slice(-Math.max(1,v));
         if(!take.length) n = L(n, `${srcName}: ${sp(foe(n))} hand is already empty.`);
         else {
           foeMut(n).hand = foe(n).hand.slice(0, foe(n).hand.length-take.length);
-          foeMut(n).grave = [...take, ...foe(n).grave];
+          /* A NEW PATH INTO A GRAVEYARD MUST STAMP THE TURN (v4.81 — this
+             one never did). `gyDisc` is what answers "…discarded this turn",
+             and a card the opponent made you discard is still a card you
+             discarded. */
+          foeMut(n).grave = [...gyDisc(n.turn, ...take), ...foe(n).grave];
           /* WHAT THIS RESOLUTION TOOK FROM THE OPPONENT (v3.95), beside
              `_discWay` ("what this resolution discarded", which is the
              ACTOR's own) and `_dmgWay`. Loot the Hold prints "they discard
@@ -3512,6 +3643,7 @@ function makeEffects(ctx){
     }
     n._dmgWay  = 0;         // and so is the damage trace, for the same reason again
     n._dmgDeferred = 0;     // …and how many of this card's hits wait on a soak sheet (v4.77)
+    n._discDeferred = 0;    // …and how many of its discards wait on the discarder's choice (v4.81)
     n._arsWay  = 0;         // …and the cross-seat arsenal count (v3.88)
     n._costWay = [];        // …and what an optional cost consumed (v3.90)
     /* IS THIS CARD GOING TO RESOLVE ONTO THE LINK? (v3.89) Two routes
@@ -3892,6 +4024,13 @@ function makeEffects(ctx){
       for(const {cond, op} of fx.conds){
         if(!/^way:/.test(cond)) continue;
         if(/^way:dealt/.test(cond) && (nn._dmgDeferred || 0) > 0){ held.push({cond, op}); continue; }
+        /* …AND A DISCARD THAT WAITS ON ITS DISCARDER'S CHOICE (v4.81) has not
+           happened either: "if a yellow card is discarded this way" is asked
+           of the card the sheet names, when it names it. */
+        if(/^way:(discardPitch|took)/.test(cond) && (nn._discDeferred || 0) > 0){
+          const hd = attachDiscardRider(nn, card.name, actorOf(nn), {conds: [{cond, op}]});
+          if(hd){ nn = L(hd, `${card.name}: that waits on which card is discarded.`); continue; }
+        }
         if(!thisWayMet(cond, {disc: nn._discWay, dmg: nn._dmgWay, ars: nn._arsWay,
                               took: nn._tookWay, fused})){
           nn = L(nn, wayMissLine(card.name, cond));
@@ -5350,6 +5489,18 @@ function makeEffects(ctx){
        seat 0. Handed back before `winCheck`/`openPrompt`. */
     const pSide = p.side || 0, pWasActor = n.actor || 0;
     n = {...n, actor: pSide};
+    /* A CHOSEN DISCARD HAS BEEN CHOSEN (v4.81). `applyPrompt` moved the
+       cards; `discardChosen` makes the move a DISCARD (the `gyDisc` stamp and
+       the shared discard event, at this — the discarder's — seat), and the
+       continuation runs back at the seat whose card asked for it. An
+       optional discard COST carries the same marker with nothing to
+       continue, so it is stamped and credited the same way. */
+    if(p.tag === "pick" && p.discard && (r.picked || []).length){
+      n = discardChosen(n, pSide, r.picked, p.src || "");
+      n = {...n, actor: p.discard.by != null ? p.discard.by : pSide};
+      n = settleDiscardRider(n, p.discard, r.picked, p.src || "");
+      n = {...n, actor: pSide};
+    }
     /* PAY IT, OR PITCH FOR IT. `Math.max(0, …)` alone silently FORGIVES an
        unaffordable payment, which was harmless while every `pay` spec was
        built with an `avail` of seat 0's floating resources — you could never select more than
@@ -5524,6 +5675,7 @@ function makeEffects(ctx){
         _ops = _ops.filter(o => o[0] !== "defBuff");
       }
     }
+    const _dd0 = n._discDeferred || 0;        /* a mode's discard may ask in turn (v4.81) */
     if(_ops.length) n = runOps(n, _ops, p.src || "prompt");
     /* A DEFERRED HIT HAS LANDED — ANSWER WHAT WAITED ON IT (v4.77). */
     if(p.tag === "soak" && p.wayRider){
@@ -5643,28 +5795,22 @@ function makeEffects(ctx){
        the same field Shred moves the other way. Running it as a generic
        `defBuff` would hand the number to a defence REACTION being played,
        which is a different card entirely. */
-    if(p.tag === "modal" && p.costRider && p.choice !== "decline"){
-      const cr = p.costRider;
-      const took = (n._costWay || []);
-      const hit = took.some(c => P.printedKw(c, cr.kw));
-      if(!took.length) n = L(n, `${p.src}: nothing was spent — the bonus does not apply.`);
-      else if(!hit) n = L(n, `${p.src}: ${took.map(c=>c.name).join(", ")} has no ${cr.kw} — no bonus.`);
-      else {
-        n = L(n, `${p.src}: ${took.map(c=>c.name).join(", ")} has ${cr.kw} — the bonus is live.`);
-        const dbuff = defBuffOf(cr.ops);
-        if(dbuff){
-          const src = defenderByUid(act(n), cr.uid);
-          if(src) n = applyDefMod(n, actorOf(n), src, dbuff, p.src || "");
-        }
-        const rest = (cr.ops || []).filter(o => o[0] !== "defBuff");
-        if(rest.length) n = runOps(n, rest, p.src || "");
-        /* GO AGAIN GOES TO THE LINK AS WELL AS THE LOCAL (v3.62). `pend`
-           was built at declaration and carries its own copy of `ga`; a
-           grant that set only `_gaGrant` here is invisible to the
-           resolution the chain link actually runs on — and this sheet is
-           answered AFTER the attack is on the chain. */
-        if(n._gaGrant && n.pend){ n.pend = {...n.pend, ga: true}; delete n._gaGrant; }
-      }
+    /* THE DISCARD MODE ASKS WHICH CARD (v4.81), and "that card" is the one
+       the discarder names — so the rider rides on that sheet and is asked
+       when it is answered. Otherwise the cost was paid here, and the rider
+       is asked now. */
+    const _crDeferred = p.tag === "modal" && p.costRider && p.choice !== "decline"
+      && (n._discDeferred || 0) > _dd0
+      && attachDiscardRider(n, p.src || "", actorOf(n), {costRider: p.costRider});
+    if(_crDeferred) n = _crDeferred;
+    else if(p.tag === "modal" && p.costRider && p.choice !== "decline"){
+      n = settleCostRider(n, p.src || "", p.costRider, n._costWay || []);
+      /* GO AGAIN GOES TO THE LINK AS WELL AS THE LOCAL (v3.62). `pend`
+         was built at declaration and carries its own copy of `ga`; a
+         grant that set only `_gaGrant` here is invisible to the
+         resolution the chain link actually runs on — and this sheet is
+         answered AFTER the attack is on the chain. */
+      if(n._gaGrant && n.pend){ n.pend = {...n.pend, ga: true}; delete n._gaGrant; }
     }
     /* SHRED'S DEBUFF, WHEN A SHEET WAS OPENED (v3.89). The other landing
        site is `attackRx`'s single-defender path; one body serves both, so
@@ -7074,6 +7220,7 @@ function makeEffects(ctx){
        "when this hits". Driven before this gate existed, Infecting Shot
        created its Bloodrot Pox off a hit on Barnacle — an ALLY. */
     const heroHit = info.heroHit != null ? info.heroHit : (total > 0);
+    const _dd0 = n._discDeferred || 0;       /* a discard the on-hit ops defer (v4.81) */
     if(total>0) n = runOps(n, n.pend.onHit, pc.name);
     else if(n.pend.onHit.length) n = L(n, "Fully blocked — on-hit effects fizzle.");
     const _oh = n.pend.onHitHero || [];
@@ -7207,6 +7354,12 @@ function makeEffects(ctx){
            IT IS READ AFTER `pend.onHit` HAS RUN — the granted ability's
            own first op is what sets the trace, and this loop sits below
            that call for exactly that reason (v3.60's sequencing). */
+        /* A DISCARD THE ON-HIT OPS DEFERRED HAS NOT HAPPENED YET (v4.81) —
+           Loot the Hold's "if they do" is asked when they choose. */
+        if(/^way:(discardPitch|took)/.test(cond) && (n._discDeferred || 0) > _dd0){
+          const hd = attachDiscardRider(n, pc.name, actorOf(n), {conds: [{cond, op}]});
+          if(hd){ n = L(hd, `${pc.name}: that waits on which card is discarded.`); return; }
+        }
         const met = /^way:/.test(cond)
             ? thisWayMet(cond, {disc: n._discWay, dmg: n._dmgWay, ars: n._arsWay, took: n._tookWay})
           : cond==="charged" ? (act(n).hist.charged||0)>0
@@ -8527,6 +8680,11 @@ function optCostSpec(oc, card, side, leaving){
       : "Optional — choose none to decline. The rider only resolves if you pay."
   };
   if(oc.kind !== "reveal") spec.to = (oc.kind === "banish" ? "banish" : "grave");
+  /* A DISCARD COST IS STILL A DISCARD (v4.81). `moveCards` files the card
+     unstamped, so an optional discard never read as "discarded this turn"
+     and never reached the shared discard event. The marker has nothing to
+     continue — the rider is `ops`, as it always was. */
+  if(oc.kind === "discard") spec.discard = {by: side, self: true, rest: [], conds: [], costRider: null};
   /* "IT" IS THE CARD THAT MOVED (v3.92) — a STAMP the answer applies, not
      ops, for `arsStamp`'s reason (v2.34): this module runs no effects, so
      returning it as ops hands it to `runOps`, which applies it to the

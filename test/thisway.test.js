@@ -75,7 +75,18 @@ test("the colour is read off the line and carries the `way:` prefix", () => {
 
 const mk = (n, p, u) => Object.assign({}, H.card(n, p), {uid: u, pitch: p});
 
-function play(lastInHand){
+/* THE DISCARD IS THE PLAYER'S CHOICE (v4.81) — "Discard a card" prints no
+   randomness, so a sheet asks which one, and these drills name it. Until
+   v4.81 the engine took the back of the hand, and a drill could only choose
+   by arranging the hand. */
+function discardByUid(n, uid){
+  assert.ok(n.prompt && n.prompt.discard, "the discard sheet did not open");
+  const i = (n.prompt.cards || []).findIndex(c => c.uid === uid);
+  assert.ok(i >= 0, uid + " is not offered");
+  n = J.reduce(n, {t: "promptSel", i}, n.prompt.side).state;
+  return J.reduce(n, {t: "promptConfirm"}, n.prompt.side).state;
+}
+function play(lastInHand, pick){
   H.db();
   const src = Object.assign({}, H.card("Portside Exchange", 3), {uid: "pe1"});
   let g = H.state({name: "Gravy Bones", res: 9, ap: 3,
@@ -85,7 +96,8 @@ function play(lastInHand){
                   {name: "Them", deck: [{uid: "d2", name: "T2"}]},
                   {actor: 0, turnPlayer: 0, seed: "pe", turn: 4});
   g = {...g, phase: "action", step: "layer", priority: 0, passed: []};
-  return J.reduce(g, {t: "play", uid: "pe1", from: "hand"}, 0).state;
+  const n = H.drain(J.reduce(g, {t: "play", uid: "pe1", from: "hand"}, 0).state);
+  return discardByUid(n, pick || lastInHand.uid);
 }
 
 test("driven: the card is ACTUALLY discarded, and the draw happens", {skip}, () => {
@@ -160,14 +172,14 @@ test("the trace is CLEARED with the resolution", {skip}, () => {
                   {actor: 0, turnPlayer: 0, seed: "pe2", turn: 4});
   g = {...g, phase: "action", step: "layer", priority: 0, passed: []};
 
-  /* first play discards the YELLOW (selfDiscard takes from the end of hand) */
-  let n = J.reduce(g, {t: "play", uid: "pe1", from: "hand"}, 0).state;
+  /* the first play discards the YELLOW, chosen */
+  let n = discardByUid(H.drain(J.reduce(g, {t: "play", uid: "pe1", from: "hand"}, 0).state), "y1");
   const golds1 = (n.sides[0].board || []).filter(b => b && b.card && /gold/i.test(b.card.name)).length;
   assert.equal(golds1, 1, "the first play earns its token");
 
   /* second play now has no yellow left to discard */
   n = {...n, phase: "action", step: "layer", priority: 0, passed: []};
-  n = J.reduce(n, {t: "play", uid: "pe2", from: "hand"}, 0).state;
+  n = discardByUid(H.drain(J.reduce(n, {t: "play", uid: "pe2", from: "hand"}, 0).state), "r1");
   const golds2 = (n.sides[0].board || []).filter(b => b && b.card && /gold/i.test(b.card.name)).length;
   assert.equal(golds2, 1,
     "and the SECOND play earns nothing — a leaked trace would mint a " +
