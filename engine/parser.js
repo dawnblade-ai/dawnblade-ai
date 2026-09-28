@@ -540,6 +540,13 @@ const RX_DRAW_THEN = /^draw (a|an|one|two|three|\d+) cards?,? (?:and then|then|a
 /* "PUT A CARD FROM YOUR HAND ON THE BOTTOM OF YOUR DECK" (v4.82). A pick
    out of the hand, and the printed "top OR bottom" is the player's choice
    of destination, so it is a mode ahead of the pick rather than a guess. */
+/* "CREATE N RUNECHANTS", ONE SPELLING (v4.84). Two readers of the one
+   printed phrase — the plain create, and Mauvrion Skies' rider count — were
+   each written with their own copy, differing only in the order of the
+   alternation. Two copies of one pattern is the shape that makes a sabotage
+   silent (v3.41's `quotedText`), and `npm run unanchored` reported them as
+   two families of one sentence shape. */
+const RX_RUNE_MAKE = /create (a|an|one|two|three|\d+) runechants?/;
 /* v4.83: a token created with a CONDITIONAL counter, and the only tails the
    generic token rule may leave behind it. */
 const RX_TOKEN_THEN_CTR = /^create an? (.+?) token, then if you control no other ([a-z]+) auras, put (a|an|one|two|three|four|five|six|\d+) ([a-z+{}0-9-]+) counters? on it$/;
@@ -1037,7 +1044,15 @@ function classifyClause(raw){
     const nm = cased(/^deal arcane damage to (?:that hero|them) equal to the number of ([A-Za-z][A-Za-z' -]*?)s they control$/i, 1, m[1]);
     return R([["arcaneCount", {name: nm.charAt(0).toUpperCase() + nm.slice(1), side: "foe"}]]);
   }
-  if(m=c.match(/^(?:if|when|while) ([^,:]+)[,:] ?(.+)$/)){
+  /* `WHENEVER` IS `WHEN`'S SPELLING OF THE SAME TRIGGER (v4.84), and the
+     handler knew only `when`. So every "Whenever …" sentence fell through
+     to the loose payload rules below: Teklovossen's "Whenever this attacks
+     a hero, they discard a card" read as a bare discard with its trigger
+     and its HERO gate gone, and three hero passives read as a loose token
+     or Runechant op nothing used. Found by `npm run unanchored`, which
+     sees `.test(c)` rules as well as `c.match` ones. Measured: exactly
+     four records' parse moves (v3.33), and no deck card. */
+  if(m=c.match(/^(?:if|when(?:ever)?|while) ([^,:]+)[,:] ?(.+)$/)){
     /* THE RECURSION CARRIES THE RAW TAIL (v4.22). `m` was matched against
        `c`, which is LOWERCASED — so recursing on `m[2]` hands the inner
        call text whose printed capitalisation is already gone, and every
@@ -1055,7 +1070,7 @@ function classifyClause(raw){
 
        MEASURED over all 797 records: exactly ONE record's parse moves,
        and it is the card this was found on. */
-    const cond=m[1], rest=classifyClause(cased(/^(?:if|when|while) [^,:]+[,:] ?(.+)$/, 1, m[2]));
+    const cond=m[1], rest=classifyClause(cased(/^(?:if|when(?:ever)?|while) [^,:]+[,:] ?(.+)$/, 1, m[2]));
     if(!rest) return null;
     /* A noop inner is already accounted for elsewhere (a keyword the engine
        carries, a cost the reader applies). It does nothing either way, so pass
@@ -2635,12 +2650,11 @@ function classifyClause(raw){
     return R([pick(m[2] === "top" ? "deckTop" : "deckBottom")]);
   }
   /* "WHENEVER THIS BANISHES A RED CARD, …" (v4.82) is read by `fxParse`,
-     which pairs it with the card's own banish — the only thing that can
-     make "this" banish anything. Refused HERE so no loose payload rule
-     below claims it: the unanchored draw once did, and with that anchored
-     the unanchored life-gain rule would, filing Art of Desire's 1{h} on
-     every attack with the trigger gone. */
-  if(/^whenever this banishes /.test(c)) return null;
+     which pairs it with the card's own banish. v4.82 refused it here by
+     name, so no loose payload rule below could claim it; from v4.84 the
+     if/when handler reads `whenever` and refuses the unknown trigger
+     itself, which made that line unreachable, and it is deleted rather
+     than kept as a rule that reads like one (v4.11). */
   /* "DRAW A CARD THEN DISCARD A RANDOM CARD" IS TWO OPS, AND ONLY THE
      FIRST WAS READ. The match below is unanchored, so it consumed the
      clause, returned [["draw",1]] and filed it `run` — tier `full`, with
@@ -2894,7 +2908,7 @@ function classifyClause(raw){
        bare boolean is spent in the attack branch alone, so it needs no
        atom to say what it already cannot reach. */
     const o=[full ? ["gaNext", full] : ["gaNext"]];
-    const rn = c.match(/create (a|an|one|two|three|\d+) runechants?/);
+    const rn = c.match(RX_RUNE_MAKE);
     if(rn) o.push(["runeHitNext", num(rn[1])]);
     /* A GRANTED ABILITY CAN RIDE WITH GO AGAIN TOO (v3.42) — Avast Ye!:
        "Your next Pirate ally attack this turn gets go again and \"When
@@ -3001,7 +3015,7 @@ function classifyClause(raw){
     return R(ops);
   }
   if(m=c.match(/\bamp (\d+)/)) return R([["amp",+m[1]]]);
-  if(m=c.match(/create (a|an|\d+|one|two|three) runechants?/)) return R([["rune",num(m[1])]]);
+  if(m=c.match(RX_RUNE_MAKE)) return R([["rune",num(m[1])]]);
   /* RULING: opt X — look at the top X, then put them back on top or bottom
      in any order. The trainer reorders by advisor value and says so. */
   /* ---- TAPPING A HERO (v3.48) ---------------------------------------

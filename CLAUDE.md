@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.83
+**Current version:** v4.84
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3266 drills** at v4.83.
+This is `node --test "test/*.test.js"` — **3271 drills** at v4.84.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,17 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### `npm run unanchored` — THE CENSUS, STANDING (v4.84)
+
+The census below, promoted: a `vm`-realm copy of `parser.js` with every
+`c.match(` and `.test(c)` in `classifyClause` wrapped. Seeing the `.test(c)`
+rules is what found the tenth defect: **the if/when handler did not know
+`whenever`**, so every "Whenever …" sentence fell to a loose payload rule
+(Teklovossen's discard lost its trigger and hero gate). `when(?:ever)?` now,
+with exactly four records' parse moving. 72 sentences in 16 families are
+pinned, each with its reason. **A family arriving is a rule that has started
+to swallow sentences: read them before pinning.**
 
 ### THE UNANCHORED-MATCH CENSUS, RUN ONCE (v4.83)
 
@@ -10289,6 +10300,11 @@ keyword level. Answer one, then teach the parser and re-run the audit.
    that never fires, or an existing one the pool has started to reach, both
    show up as a move in its pinned set; `test/anchors.test.js` runs it, so
    `npm test` carries the claim and the report is for reading the leads.
+6b4. **UNANCHORED** (`npm run unanchored`) after any PARSER change: every
+   pool clause that reads `run`, and whether the match that produced it
+   covered the sentence. A leftover is a LEAD; `test/unanchored.test.js`
+   pins the set by family, with the reason each is accounted for. Ten live
+   defects came from this one question (v4.82 to v4.84).
 6c. **PLAY IT** (`npm run play`) after any rules change — 210 self-play
    games in about 20 seconds. **A WIN COUNT IS ONE SAMPLE**: the ladder is
    reproducible and not repeatable, and a hero moves by a median of 6 on an

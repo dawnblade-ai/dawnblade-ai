@@ -17,6 +17,7 @@
     "gaps": "node tools/gaps.js",
     "scenes": "node tools/scenes.js",
     "eight": "node tools/cup8.js",
-    "anchors": "node tools/anchors.js"
+    "anchors": "node tools/anchors.js",
+    "unanchored": "node tools/unanchored.js"
   }
 }

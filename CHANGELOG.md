@@ -1,3 +1,76 @@
+## v4.84 — the unanchored-match census, standing
+
+`npm run unanchored` asks one question of every pool clause that reads
+`run`: which match produced the answer, and did it cover the sentence? v4.82
+and v4.83 asked it by hand and found **nine live defects**, every one
+`tier: full`. It is standing now (v4.42: a census run by hand is one somebody
+forgets to run), and its first standing run found a tenth.
+
+**HOW IT SEES.** A private copy of `parser.js`, compiled in its own `vm`
+realm, has every `c.match(` and `.test(c)` inside `classifyClause` wrapped:
+100 match sites and 93 test sites. The realm keeps the wrapper off this
+process's `RegExp.prototype`. Seeing `.test(c)` rules as well is what
+found the tenth; v4.83's scratch version wrapped `c.match` alone.
+
+### The tenth: `whenever` was not `when`
+
+The if/when handler read `^(?:if|when|while)` and nothing else, so every
+**"Whenever …"** sentence fell through to the loose payload rules:
+
+- **Teklovossen's** *"Whenever this attacks a hero, they discard a card"*
+  read as a bare discard, with its trigger and its HERO gate gone. It is
+  latent: nothing can equip it (v4.50).
+- **Iyslander's, Lyath's and Viserai's** passives read as a loose token or
+  Runechant op, a reading nothing used, since `build.js` reads all three
+  through its own passive readers.
+
+`when(?:ever)?` now. Measured: **exactly four records' parse moves, and no
+deck card**. The three heroes' records now refuse the clause
+(Iyslander `part` → `none`, Viserai `full` → `none`), which is over-reporting
+corrected rather than a loss. v4.82's by-name refusal of "whenever this
+banishes" became unreachable and is deleted (v4.11).
+
+### And one pattern, spelled once
+
+The plain "create N Runechants" and Mauvrion Skies' rider count were two
+copies of one regex, differing only in the order of the alternation. The
+census reported them as two families of one sentence shape. `RX_RUNE_MAKE`
+is the one spelling (v3.41).
+
+### What is pinned
+
+**72 sentences in 16 families**, each family with the reason it is accounted
+for:
+- a target phrase the caller routes;
+- an `instead` payload;
+- an extraction that runs after the decision;
+- a whole-card reader that claims the sentence first.
+
+A sentence ARRIVING is a rule that has started to swallow one; one LEAVING
+is a reading that became whole. The pool is frozen by the Dawnblade format,
+so the set moves only when the parser does. A premise is pinned beside it:
+every opponent discard in the pool is ONE card, because the loose discard
+rule reads no count.
+
+### Measured
+
+- **3271 drills** (5 new in `test/unanchored.test.js`), 0 fail, 5 skipped;
+  107 scenes; babel, crindex and fairness clean; the audit moves nothing but
+  its timestamp.
+- **The ladder is IDENTICAL** at 3 seeds on both sides, as it should be: the
+  heroes' records are not what they play from, and Teklovossen is
+  unreachable.
+- **6 sabotages, 6 bite**:
+  - the handler forgetting `whenever`;
+  - the plain draw unanchored again;
+  - the Runechant regex copied again;
+  - `covers` always true;
+  - `.test` sites not wrapped;
+  - nothing wrapped at all.
+- **Pins moved, each read first:** the whole-pool tier pin (`full` 760,
+  `part` 24, `none` 13) and the heroes-reading-nothing set 4 → 6, both
+  because of the two hero records above.
+
 ## v4.83 — three sentences an unanchored match had half-read
 
 v4.82 anchored the plain draw and then did what v4.21 says to do next: census

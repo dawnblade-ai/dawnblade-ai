@@ -1435,7 +1435,15 @@ probe("pool-deck-complete", () => {
      line and `build.js` built her no powCard at all (v3.47, seventh
      outing). The {c} cost read ZERO beside it, so reading the payload
      alone would have shipped a free Spectral Shield every turn. */
-  assert.equal(none.hero.length, 4,
+  /* 4 -> 6 AT v4.84, AND BOTH ARE A CORRECTION RATHER THAN A LOSS. Iyslander's
+     and Viserai's passives open "Whenever …", which the if/when handler did
+     not know, so a LOOSE token/runechant rule claimed each whole sentence and
+     dropped its trigger. The handler reads `whenever` now, the trigger is
+     one `classifyClause` has no condition for, and the clause refuses —
+     while `build.js` reads both passives through its own readers, as it
+     always did. The heroes' play is untouched; their record stopped
+     reporting a reading nothing used. */
+  assert.equal(none.hero.length, 6,
     "the set of HEROES reading nothing moved. Exactly ONE is now an Agent of " +
     "Chaos — Trap-Door, refusing on its PAYLOAD (a deck search) rather than on " +
     "the cost; the rest are Arakni's own base form and heroes whose whole " +
