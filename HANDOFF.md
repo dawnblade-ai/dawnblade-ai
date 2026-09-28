@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.83
+# Handoff — Dawnblade, at v4.83 (plan item 1 done at v4.84)
 
 **Written 2026-09-28. Every number below was re-derived this session, with
 the command that produces it.** Re-derive before you quote one; this file
@@ -57,7 +57,11 @@ Every one of those cards read `tier: full` before its fix.
 
 ## THE PLAN — IN ORDER, WITH THE REASON FOR THE ORDER
 
-### 1. Promote the unanchored-match census to a standing drill
+### 1. ~~Promote the unanchored-match census to a standing drill~~ — DONE at v4.84
+
+`npm run unanchored` and `test/unanchored.test.js`. Its first standing run
+found a tenth defect (the if/when handler did not know `whenever`). What
+follows is the original note, kept for the recipe.
 
 v4.82 and v4.83 found **nine live defects** with one scratch script: it
 instruments every `c.match` inside `classifyClause`, parses the pool, and

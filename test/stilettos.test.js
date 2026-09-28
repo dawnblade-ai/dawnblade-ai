@@ -439,8 +439,16 @@ test(gate("exactly ONE pool record moves, and every sibling is unchanged"), () =
      AT v4.74, after reading the diff: Jack Be Quick went `part` -> `full`
      when its steal got a reader and an owner, so `full` 760 -> 761 and
      `part` 26 -> 25. One record (404 -> 405 full, 1 -> 0 part) — every
-     deck card in the pool now reads in full. */
-  assert.deepEqual(tiers, {full: 761, none: 11, part: 25});
+     deck card in the pool now reads in full.
+     RE-PINNED AGAIN AT v4.84, after reading the diff, and this time two
+     HERO records move DOWN: Iyslander `part` -> `none` and Viserai `full`
+     -> `none`, so `full` 761 -> 760, `part` 25 -> 24, `none` 11 -> 13. The
+     if/when handler learned `whenever`, and their passives ("Whenever you
+     play an Ice card during an opponent's turn, create a Frostbite…") stop
+     being claimed by a LOOSE token/runechant rule that dropped the trigger.
+     They are read by `build.js`'s own passive readers, so the old tier was
+     over-reporting, and the deck cards are untouched (405 / 0 / 0). */
+  assert.deepEqual(tiers, {full: 760, none: 13, part: 24});
   assert.deepEqual([...carriers.allyDiesOrPhantasm], ["Silent Stilettos"]);
   /* PINNED BOTH SIDES (v4.17) — pinning the new trigger alone cannot see
      a record LEAVING one of the others, which is what merging two
