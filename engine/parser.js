@@ -540,6 +540,10 @@ const RX_DRAW_THEN = /^draw (a|an|one|two|three|\d+) cards?,? (?:and then|then|a
 /* "PUT A CARD FROM YOUR HAND ON THE BOTTOM OF YOUR DECK" (v4.82). A pick
    out of the hand, and the printed "top OR bottom" is the player's choice
    of destination, so it is a mode ahead of the pick rather than a guess. */
+/* v4.83: a token created with a CONDITIONAL counter, and the only tails the
+   generic token rule may leave behind it. */
+const RX_TOKEN_THEN_CTR = /^create an? (.+?) token, then if you control no other ([a-z]+) auras, put (a|an|one|two|three|four|five|six|\d+) ([a-z+{}0-9-]+) counters? on it$/;
+const RX_TOKEN_TAIL = /^(?:under (?:their|the attacking hero'?s?|target hero'?s?) control|in .*\bexposed\b.* zones?|with (?:a|an|one|two|three|four|five|six|\d+) [a-z+{}0-9-]+ counters?)$/;
 const RX_PUT_BACK = /^put (a|an|one|two|three|\d+) cards? from your hand on (?:the )?(top or bottom|bottom|top) of your deck$/;
 
 /* PUTTING COUNTERS ON A PERMANENT YOU CONTROL.
@@ -3032,7 +3036,19 @@ function classifyClause(raw){
      to any permanent would hand a weapon a second swing, which is the
      Sledge/Scorpio distinction (v2.46) undone from the other end. */
   if(/^\{u\} target ally you control$/.test(c)) return R([["untapAlly",1]]);
-  if(m=c.match(/^opt (\d+|x)\b/)) return R([["opt", m[1]==="x"?1:+m[1]]]);
+  /* "OPT X, WHERE X IS THE DAMAGE DEALT BY THIS" (v4.83) — Aether Spindle.
+     This rule read `m[1]==="x" ? 1`, so X was ONE whatever the card dealt:
+     four damage opted one card, and a hit prevented to nothing still opted
+     one. `tier: full`, because the clause was consumed. X is the damage the
+     card's own arcane actually DEALT — `_dmgWay`, recorded where the damage
+     lands (v3.62) — so it is a `way:dealt` gate (nothing dealt, nothing to
+     opt) whose op takes its number from the trace. That also carries it
+     through an arcane-barrier sheet, where the damage is not known until the
+     sheet is answered (v4.77's `wayRider`). Any other X refuses: an X this
+     reader cannot count is not a 1. */
+  if(/^opt x, where x is the damage dealt by this$/.test(c)) return R([["opt", "dealt"]], {cond: "way:dealt"});
+  if(m=c.match(/^opt (\d+)\b/)) return R([["opt", +m[1]]]);
+  if(/^opt x\b/.test(c)) return null;
   /* "LOOK AT THE TOP N CARDS OF YOUR DECK, THEN PUT THEM BACK IN ANY
      ORDER" — Spire Sniping, and it is NOT opt (v3.71).
 
@@ -3593,9 +3609,15 @@ function classifyClause(raw){
   if(/^put (?:a|an|one) card from your hand into your (?:hero'?s? )?soul$/.test(c))
     return R([["pickPrompt", {zone:"hand", to:"soul", min:1, max:1,
       title:"Put a card into your soul"}]]);
-  /* "Your first attack each turn gets +1{p}" — a standing buff while in play */
-  if(/^your first attack each turn gets \+(\d+)\s*\{p\}$/.test(c))
-    return R([["firstAtkBuff", +c.match(/\+(\d+)/)[1]]]);
+  /* "YOUR FIRST ATTACK EACH TURN GETS +1{p}" IS A STANDING STATIC (v4.83) —
+     The Suspense is Killing Me, an aura that stays in the arena for as long
+     as its suspense counters last. It read as an op, `firstAtkBuff`, which
+     fired ONCE, when the aura was PLAYED — so the printed "each turn" held
+     for exactly the turn it arrived. A CARD FACT, not an op (`noDrx`'s
+     shape, v4.60): `fx.firstAtk` is read off the board at every attack's
+     declaration, and applies while the attack is the turn's first. */
+  if(m=c.match(/^your first attack each turn gets \+(\d+)\s*\{p\}$/))
+    return R([["noop", "static — read off the arena at the turn's first attack"]], {firstAtk: +m[1]});
   if(/^intimidate target hero$/.test(c)) return NOOP("live — the dummy loses a card at random when this attacks");
   /* RULING 2026-07-25 (Ninja / Crouching Tiger) — a card minted straight into
      the banished zone, playable that turn. Written generically off the name in
@@ -3751,6 +3773,23 @@ function classifyClause(raw){
      stronger than printed in both directions — see `frailtyCount` for the
      debuff's real scope, and `selfPayOr` for the escape hatch Bloodrot
      prints and the tick never offered. */
+  /* "CREATE A SPECTRAL SHIELD TOKEN, THEN IF YOU CONTROL NO OTHER
+     ILLUSIONIST AURAS, PUT THREE +1{p} COUNTERS ON IT" (v4.83) — Spectral
+     Manifestations, Enigma's. The generic rule below stopped at the comma
+     and minted a bare Shield: the counters, which are the Shield's power as
+     a Cosmo weapon and its go again (v3.84), were dropped. `tier: full`.
+
+     The counters ride as the creator's override spec (v4.54's `ctr`, which
+     Enigma's own hero ability already uses) with the GATE beside it:
+     `ctrIf.noOther` is the printed class, asked of the recipient's board at
+     the mint, excluding the token just made — which is what "OTHER" says.
+     The class is a word read off the line, never a name in the engine. */
+  if(m=c.match(RX_TOKEN_THEN_CTR)){
+    const cn = CTR_WORDS[m[3]] != null ? CTR_WORDS[m[3]] : parseInt(m[3], 10);
+    if(!CTR_KINDS[m[4]] || !(cn > 0)) return null;
+    return R([["token", m[1].trim(), 1, "self",
+               {ctr: {kind: CTR_KINDS[m[4]], n: cn, label: m[4]}, ctrIf: {noOther: m[2]}}]]);
+  }
   /* RULING: a token is a card — put one copy on the correct player's board.
      "under their control" sends it to the opponent instead.
      (Runechant is handled above; Frostbite falls through here.) */
@@ -3769,6 +3808,14 @@ function classifyClause(raw){
        quantity is resolved in `runOps` off the DECLARED X — and a token op
        carrying "X" with nothing declared creates NONE. An X nothing paid
        for is inert, never free (v2.04). */
+    /* WHAT FOLLOWS THE TOKEN MUST BE READ WHOLE (v4.83). The terminator
+       above accepts a bare comma, so "create a Spectral Shield token, THEN
+       if …" minted the Shield and dropped the rest of the sentence — v4.82's
+       unanchored draw, one rule over. After the last "token(s)" the pool
+       prints only a control phrase, an exposed-zone placement or a counter
+       clause, each read below; anything else refuses. */
+    const _tail = (c.match(/tokens?((?:\s.*|,.*)?)$/) || [])[1] || "";
+    if(_tail.trim() && !RX_TOKEN_TAIL.test(_tail.trim())) return null;
     const QTY = {a:1, an:1, one:1, two:2, three:3};
     const qty = m[1]==="x" ? "X" : QTY[m[1]]!=null ? QTY[m[1]] : +m[1];
     /* WHOSE BOARD. Two printed shapes say "the opponent's", and they are
@@ -6228,6 +6275,9 @@ function fxParse(card){
        play, so without this line the clause reports `run` and bars nothing
        — v4.01's no-op blind spot arriving through the front door. */
     if(r.noDrx) fx.noDrx = r.noDrx;
+    /* v4.83, the same rule a third time: a board static the declaration
+       reads, forwarded or it is a noop that does nothing. */
+    if(r.firstAtk) fx.firstAtk = (fx.firstAtk || 0) + r.firstAtk;
     /* A DROPPED QUOTED ABILITY MUST NOT REPORT AS READ (v3.40).
 
        `quotedOnHit` returns null on a payload it cannot read, and v3.10

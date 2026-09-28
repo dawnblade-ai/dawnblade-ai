@@ -401,6 +401,13 @@ function makeEffects(ctx){
      CR 5.3.5's "gains 1 action point", which is what v3.93's late grant
      already rests on. A non-attack settled its point long before the sheet
      was answered. */
+  /* "…X, WHERE X IS THE DAMAGE DEALT BY THIS" (v4.83). The op carries the
+     word `dealt` in its amount slot, and the two places that hold the trace
+     — the late pass and a settled arcane-barrier sheet — hand the number
+     in. One body, so the two cannot count it differently. */
+  function dealtX(op, dealt){
+    return op && op[1] === "dealt" ? [op[0], Math.max(0, dealt || 0), ...op.slice(2)] : op;
+  }
   function settleWayRider(s, R, through){
     if(!R) return s;
     const was = actorOf(s);
@@ -414,7 +421,7 @@ function makeEffects(ctx){
         else actMut(n).ap = act(n).ap + 1;
         n = L(n, `${R.card}: its damage landed — go again.`);
       }
-      else n = runOps(n, [op], R.card);
+      else n = runOps(n, [dealtX(op, dealt)], R.card);
     }
     if(R.tapSpec && dealt > 0 && !act(n).heroTapped)
       n = {...n, promptQ: [...(n.promptQ||[]), R.tapSpec]};
@@ -1926,7 +1933,26 @@ function makeEffects(ctx){
            Specter is the one pool record that prints both shapes on
            different cards — a spec that ADDED would give a token minted
            this way its own counter as well as the creator's. */
-        for(const tok of _minted) n = enterWithCounters(n, tok, tok.uid, _tseat, (where && where.ctr) || null);
+        /* "…THEN IF YOU CONTROL NO OTHER ILLUSIONIST AURAS" (v4.83) —
+           Spectral Manifestations. Asked AFTER the mint, of the recipient's
+           board, leaving out the tokens this op just made: that is what
+           "other" says. The class is the printed word, matched against the
+           STRUCTURED type array (v2.44), and a permanent counts only if that
+           array also says Aura. Not met, the creator's counters are simply
+           not placed — the token keeps whatever it prints itself. */
+        let _ctr = (where && where.ctr) || null;
+        if(_ctr && where.ctrIf && where.ctrIf.noOther){
+          const cls = String(where.ctrIf.noOther).toLowerCase(), made = new Set(_minted.map(t => t.uid));
+          const others = ((n.sides[_tseat] || {}).board || []).filter(b => b && b.card && !made.has(b.card.uid)
+            && (b.card.ty || []).some(t => String(t).toLowerCase() === cls)
+            && (b.card.ty || []).some(t => String(t).toLowerCase() === "aura"));
+          if(others.length){
+            const cw = String(where.ctrIf.noOther);
+            n = L(n, `${srcName}: ${others[0].card.name} is another ${cw[0].toUpperCase() + cw.slice(1)} aura — no counters.`);
+            _ctr = null;
+          }
+        }
+        for(const tok of _minted) n = enterWithCounters(n, tok, tok.uid, _tseat, _ctr);
         /* THE "SITS IDLE" NOTE IS GONE (v2.74) and it had to go. It read
            "pays no costs and takes no action phase, so anything that taxes
            those sits idle" — true of the training prop it was written for,
@@ -1940,6 +1966,11 @@ function makeEffects(ctx){
            than opened inline: opt only touches the deck, so it is safe to ask
            after the action finishes resolving. */
         if(!act(n).deck.length){ n = L(n, `${srcName}: deck is empty — nothing to opt.`); return; }
+        /* A NUMBER OR NOTHING (v4.83). "Opt X" whose X is the damage dealt
+           arrives as the word `dealt` and is resolved by whoever holds the
+           trace (`dealtX`); one that reaches here unresolved opts NONE —
+           an X nobody counted is not a 1. */
+        if(!(typeof v === "number" && v > 0)){ n = L(n, `${srcName}: nothing to opt.`); return; }
         const looked = Math.min(v, act(n).deck.length);
         n.promptQ = [...(n.promptQ||[]), {tag:"opt", n:looked, src:srcName}];
         /* BLAZE, CLAUSE 1 (v3.39) — "Whenever you opt, put energy
@@ -2285,11 +2316,9 @@ function makeEffects(ctx){
           });
         }
       }
-      else if(k==="firstAtkBuff"){
-        /* a standing buff on the turn's FIRST attack only */
-        if((act(n).hist.atk||0)===0){ actMut(n).buffNext += v; n = L(n, `First attack this turn will carry +${v}.`); }
-        else n = L(n, `${srcName}: you've already attacked this turn — no first-attack bonus.`);
-      }
+      /* `firstAtkBuff` IS GONE (v4.83). It fired once, when The Suspense is
+         Killing Me was PLAYED, for a line that prints "each turn"; the
+         static is `fx.firstAtk` now, read at the attack's declaration. */
       /* DIRECT DAMAGE GOES THROUGH THE ONE CHOKE POINT TOO (v4.35) —
          v2.74's sentence one prevention family over. That version made
          `arcaneHit` the single place arcane damage lands, because a bare
@@ -4078,7 +4107,7 @@ function makeEffects(ctx){
           continue;
         }
         if(op[0] === "ga"){ grantGa(); nn = L(nn, `${card.name}: it happened this way — go again.`); }
-        else nn = runOps(nn, [op], card.name);
+        else nn = runOps(nn, [dealtX(op, nn._dmgWay || 0)], card.name);
       }
       if(held.length){
         const h = holdWayRider(nn, {conds: held});
@@ -4293,7 +4322,20 @@ function makeEffects(ctx){
         smBuff = _sm; smRider = [["ga"]];
         n = L(n, `${card.name} strikes from stealth at a marked hero — +${_sm} power, and go again if it lands.`);
       }
-      const bonus = (fx.self||0)+(n._condSelf||0)+act(n).buffNext+qBuff+arsPow+banPow+payPenalty+frailPen+smBuff;
+      /* "YOUR FIRST ATTACK EACH TURN GETS +1{p}" (v4.83) — a STANDING static
+         on a permanent in the arena, read here, at the declaration. `hist.atk`
+         counts attacks that have RESOLVED this turn (`linkPayload`), so it is
+         0 exactly while this attack is the turn's first. Two copies are two
+         grants. Weapon swings and ally attacks are attacks too, and they come
+         through this line. */
+      let faBuff = 0;
+      if((act(n).hist.atk || 0) === 0){
+        for(const b of (act(n).board || [])){
+          const f = b && b.card ? (P.fxParse(b.card).firstAtk || 0) : 0;
+          if(f > 0){ faBuff += f; n = L(n, `${b.card.name}: the first attack this turn gets +${f}{p}.`); }
+        }
+      }
+      const bonus = (fx.self||0)+(n._condSelf||0)+act(n).buffNext+qBuff+arsPow+banPow+payPenalty+frailPen+smBuff+faBuff;
       /* CAPTURED HERE BECAUSE ITS SIBLING IS DELETED BELOW (v4.20).
          `_condPierce` is the condition loop's collector for a piercing
          grant, and `_condSelf` is cleared a few lines down — long before

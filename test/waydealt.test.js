@@ -221,7 +221,10 @@ test("PREMISE: every card whose rider waits on its own damage deals exactly ONE 
     const arc = [...(fx.ops || []), ...(fx.onAtk || []), ...(fx.onAtkHero || [])].filter(o => o[0] === "arcane").length;
     found.set(c.name, Math.max(found.get(c.name) || 0, arc));
   }
+  /* +Aether Spindle v4.83: "opt X, where X is the damage dealt by this" is
+     a `way:dealt` gate whose X is the trace — and it deals one instance. */
   assert.deepEqual([...found.keys()].sort(),
-    ["Aether Icevein", "Aether Quickening", "Open the Flood Gates", "Path of Same Ends", "Polar Cap", "Turn to Mindfire"]);
+    ["Aether Icevein", "Aether Quickening", "Aether Spindle", "Open the Flood Gates", "Path of Same Ends",
+     "Polar Cap", "Turn to Mindfire"]);
   for(const [nm, k] of found) assert.equal(k, 1, nm + " deals " + k + " arcane instances");
 });

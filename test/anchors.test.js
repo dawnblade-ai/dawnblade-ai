@@ -125,8 +125,12 @@ test("`runOps`'s vocabulary and what the pool emits are pinned both ways", {skip
      kind: it is a `foeNextTurn` VALUE, so it moved nothing here.)
      97 -> 98 AT v4.82: `modalPrompt`, a MANDATORY choice between printed
      modes queued by an effect — Stroke of Foresight's "on the top OR bottom
-     of your deck". `mayOffer` is its optional one-mode twin. */
-  assert.equal(r.dispatched, 98, "runOps's op vocabulary moved");
+     of your deck". `mayOffer` is its optional one-mode twin.
+     98 -> 97 AT v4.83: `firstAtkBuff` LEFT. The Suspense is Killing Me's
+     "your first attack each turn" is a standing static read at the
+     declaration (`fx.firstAtk`), so the op that fired it once on play had
+     no emitter and its case was deleted rather than kept (v4.11). */
+  assert.equal(r.dispatched, 97, "runOps's op vocabulary moved");
   /* DISPATCHED WITH NO EMITTER — the `perBoost` shape. Three have a
      producer that is not the parser and are named for it; two have none
      anywhere and are latent readers whose printed wording the pool only
