@@ -207,7 +207,11 @@ test("which SOURCE FILE each slice reads is pinned, or the resolver is unwatched
        (its cost line asks `payCost`) and `confirmPay` (the need it checks
        is `payCost`'s, where it used to price an ally's attack at the ally's
        PLAY cost). Both anchored on a declaration, bounded at the next. */
-    "index.html": 24,
+    /* 24 -> 25 AT v4.87, READ FIRST: `handtax.test.js` takes the trainer's
+       `activateHand`, bounded at `closeChain`, its next declaration, to pin
+       that the hand-ability door asks the discard question and raises the
+       tax. A closure inside `Battle`, so a source scan, and it says so. */
+    "index.html": 25,
     "engine/build.js": 1,
     /* +2 AT v4.59, READ FIRST: `dichotomy.test.js` pins that `buildPrompt`
        names the new `filters` field (v2.34's rule, ninth field) and that

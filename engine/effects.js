@@ -3096,11 +3096,7 @@ function makeEffects(ctx){
        and an equipment ability arrive here as their `powCard`. A token
        that leaves the arena ceases to exist, so nothing is filed to a
        graveyard, exactly as `popRunechants` documents. */
-    const froze = frostCount(act(n));
-    if(froze){
-      actMut(n).board = act(n).board.filter(b => !isFrostbite(b));
-      n = L(n, `Frostbite bites — ${card.name} cost ${froze} more, and ${froze>1?`all ${froze} Frostbites shatter`:`the Frostbite shatters`}.`);
-    }
+    n = frostShatter(n, card.name);
     // move the card out of its zone
     if(from==="hand"){ actMut(n).hand = act(n).hand.filter((_,i)=>i!==idx); }
     if(from==="arsenal"){ actMut(n).arsenal = null; }
@@ -5306,9 +5302,12 @@ function makeEffects(ctx){
      returns null rather than a partial payment when the cost cannot be
      reached — the caller must be able to tell "paid" from "could not",
      because forgiving an unaffordable payment hands out the effect free. */
+  /* `keepUid` may be a LIST (v4.87): a hand ability keeps the card whose
+     ability it is AND the card declared for its discard cost. */
   const autoPitch = (s, cost, keepUid) => {
     let n = {...s};
-    const spendable = () => act(n).hand.filter(h=>h.uid!==keepUid);
+    const keep = [].concat(keepUid);
+    const spendable = () => act(n).hand.filter(h=>keep.indexOf(h.uid) < 0);
     while(act(n).res < cost && spendable().length){
       const pool = spendable();
       const p = pool.map(h=>({h,v:advValue(h,n,{runeDmg:bAct(n).runeDmg})})).sort((a,b)=>a.v-b.v || a.h.uid-b.h.uid)[0].h;
@@ -5364,6 +5363,19 @@ function makeEffects(ctx){
          name for four dozen versions against a map it already had, and
          the trainer kept a SECOND record of the same fact. v3.69: a
          recorded reason is only as good as the day it was measured. */
+  /* FROSTBITE SHATTERS WHEN ITS CONTROLLER PLAYS A CARD OR ACTIVATES AN
+     ABILITY (v2.74), and it is ONE body (v4.87): `execute` called it
+     inline, so an ability that never passes through `execute` — a hand
+     ability — left the token standing to tax the next card instead. All of
+     them go, not one (RULING, user 2026-08-14). The TAX is charged by the
+     caller before this runs, which is the whole ruling of v2.74: the play
+     that destroys a Frostbite is the play it taxes. */
+  function frostShatter(n, name){
+    const froze = frostCount(act(n));
+    if(!froze) return n;
+    actMut(n).board = act(n).board.filter(b => !isFrostbite(b));
+    return L(n, `Frostbite bites — ${name} cost ${froze} more, and ${froze>1?`all ${froze} Frostbites shatter`:`the Frostbite shatters`}.`);
+  }
   /* Pays the printed cost, runs what `runOps` can run, and lands the
      defence buff on the card itself. `{game, why}` — `why` is set when
      nothing happened, so a caller can report a refusal rather than
@@ -5372,7 +5384,18 @@ function makeEffects(ctx){
     const fx = fxParse(c), ha = fx.handAbility;
     if(!ha) return {game: s, why: c.name + " prints no ability to activate"};
     if(!handAbilityOK(s, c)) return {game: s, why: c.name + "'s ability can't be activated right now"};
+    /* AN ABILITY PAYS ITS TAXES (v4.87). The printed cost is a discard,
+       so nothing priced this activation and Frostbite — "cards AND
+       ABILITIES cost you an additional {r} to activate … when you play a
+       card or activate an ability, destroy Frostbite" — neither taxed it
+       nor shattered. Both boards raise the resources first (a payment at
+       the table, the instant-speed pitch on the trainer), so reaching here
+       short is a stale action off the wire: INERT, never free (v2.04). */
+    const tax = P.handAbilityTax(c, act(s), P.costCtx(s, actorOf(s)));
+    if(act(s).res < tax)
+      return {game: s, why: `${c.name}'s ability costs ${tax} to activate and ${act(s).name} ${sv(act(s), "hold")} ${act(s).res}`};
     let n = {...s};
+    if(tax){ actMut(n).res = act(n).res - tax; n = frostShatter(n, c.name + "'s ability"); }
     if(ha.oncePerTurn) actMut(n).hist = {...act(n).hist, handAb: {...(act(n).hist.handAb || {}), [c.uid]: 1}};
     const dbuff = defBuffOf(ha.ops);
     const rest  = ha.ops.filter(o => o[0] !== "defBuff");
@@ -5383,16 +5406,25 @@ function makeEffects(ctx){
       actMut(n).grave = [...gyDisc(n.turn, c), ...act(n).grave];
       n = L(n, `${c.name} is discarded to pay for its own ability.`);
     } else {
-      /* "Discard a card" is the player's choice, and the standing
-         approximation is to auto-pick the lowest advisor value rather than
-         prompt (CLAUDE.md, known approximations). A card already declared
-         as a defender is committed and is not available to spend. */
+      /* "Discard a card" is the player's choice, and since v4.87 both
+         boards ASK it (`discCostChoice`, below). The lowest advisor value
+         is what remains of the old approximation: the answer when there
+         was nothing to choose, or a declared uid that cannot pay. A card
+         already declared as a defender is committed and is not available
+         to spend. */
       const pool = act(n).hand
         .filter(h => h.uid !== c.uid && (act(n).blockH || []).indexOf(h.uid) < 0)
         .map(h => ({h, v: advValue(h, n, {runeDmg: bAct(n).runeDmg})}))
         .sort((a, b) => a.v - b.v);
       if(!pool.length) return {game: s, why: c.name + ": nothing spare in hand to discard"};
-      const pick = pool[0].h;
+      /* THE DECLARED CARD, IF THERE IS ONE (v4.87) — asked before the
+         activation on both boards, off `discCostChoice`, exactly as an
+         equipment's discard cost is (v4.85). Re-derived against the pool
+         because `reduce` is fed by JSON off a wire: a uid that cannot pay
+         falls back to the old pick. */
+      const want = n._discCostUid;
+      delete n._discCostUid;
+      const pick = ((want != null) && (pool.find(x => x.h.uid === want) || {}).h) || pool[0].h;
       paid = [pick];
       actMut(n).hand = act(n).hand.filter(x => x.uid !== pick.uid);
       actMut(n).grave = [...gyDisc(n.turn, pick), ...act(n).grave];

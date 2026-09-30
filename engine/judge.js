@@ -787,6 +787,9 @@ function legal(g, a, seat){
     if(a.t === "paySel"){
       if(find(at(g, seat).hand, a.uid) < 0) return "card is not in hand";
       if(a.uid === p.card.uid) return "a card cannot pitch for itself";
+      /* …nor the card already declared for a discard cost (v4.87): pitched,
+         the cost it was named for has nothing left to spend. */
+      if(g._discCostUid != null && a.uid === g._discCostUid) return "that card is already spent on the discard";
       return null;
     }
     if(a.t === "payConfirm"){
@@ -1089,6 +1092,20 @@ function legal(g, a, seat){
         return "no " + want + "-speed window for " + c.name;
       /* CR 8.1.6 — an instant costs no action point. */
       if(want !== "instant" && !(sd.ap > 0)) return "no action point left";
+      /* AND ITS TAXES (v4.87): Frostbite prints "abilities cost you an
+         additional {r} to activate", and the printed cost is a discard, so
+         the tax is the whole of what must be raised. The card itself cannot
+         pitch for its own ability. */
+      const _hat = PR.handAbilityTax(c, sd, PR.costCtx(g, seat));
+      /* A "Discard a card" cost KEEPS one card back from the pitch: the
+         cheapest one that could be discarded, or the payment spends the
+         card the cost needs and the activation resolves to nothing. */
+      const _keep = ha.cost === "card"
+        ? Math.min(...(sd.hand || []).filter(h => h.uid !== c.uid && (sd.blockH || []).indexOf(h.uid) < 0)
+                                      .map(h => h.pitch || 0).concat([Infinity]))
+        : 0;
+      if(_hat && _hat > sd.res + payCeiling(sd, c) - (isFinite(_keep) ? _keep : 0))
+        return c.name + "'s ability costs " + _hat + " to activate and you cannot raise it";
       return null;
     }
     /* ---- THE HERO'S OWN ACTIVATED ABILITY (v3.39) -------------------
@@ -2457,6 +2474,17 @@ function doActivate(g, a, seat){
   const sd = at(g, seat);
   if(a.from === "hand"){
     const c = sd.hand[find(sd.hand, a.uid)];
+    /* WHICH CARD RALLY'S "Discard a card:" SPENDS (v4.87), the same
+       question an equipment's discard cost asks (v4.85), and then a
+       PAYMENT when a tax is owed — the pending re-enters here through
+       `doPayConfirm`, as the discard answer re-enters through
+       `doDiscCost`, so both questions are asked of one route. */
+    { const q = askDiscCost(g, seat, c, a); if(q) return q; }
+    const _hat = PR.handAbilityTax(c, sd, PR.costCtx(g, seat));
+    if(_hat > sd.res)
+      return say({...g, pending: {kind: "pay", seat, card: c, from: "handAbility", need: _hat, target: null}},
+        c.name + "'s ability costs " + _hat + " to activate and " + sd.name + " holds " + sd.res
+        + " — pitch, or cancel.");
     const out = withEffects({...g, actor: seat}, (fx, s) => {
       const r = fx.activateHandAbility(s, c);
       return r.why ? say(s, r.why + ".") : r.game;
@@ -2617,6 +2645,10 @@ function doPayConfirm(g, seat){
     paySel: []}));
   n = say(n, "Pitched " + pitched.map(c => c.name).join(", ") + " for " + gained + ".");
   n = {...n, pending: null};
+  /* A HAND ABILITY'S TAX WAS THE PAYMENT (v4.87): it goes back through the
+     activation, which finds the resources raised and resolves. Never
+     through `maybeCharge`, which would PLAY the card the ability is on. */
+  if(p.from === "handAbility") return doActivate(n, {t: "activate", uid: p.card.uid, from: "hand"}, seat);
   /* A weapon swing never boosts (boost is printed on attack ACTIONS), but
      this asks rather than assuming — `boostable` reads the keyword, and a
      predicate that reads the card cannot be wrong about a card. */

@@ -806,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "4.86"; /* v4.86 - each cost tax reaches only what it prints, and an ally attack is priced off its own line. See CHANGELOG.md. */
+window.APP_VER = "4.87"; /* v4.87 - a hand ability pays Frostbite's tax and asks which card its discard spends. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -4207,7 +4207,8 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     const pk = g.mode === "discpick" && g.discPick;
     if(!pk || (pk.uids||[]).indexOf(uid) < 0) return;
     setG(s => s.mode === "discpick" ? {...s, mode:pk.back||"act", discPick:null, _discCostUid:uid} : s);
-    tryPlay(pk.card, pk.from, pk.idx);
+    if(pk.redo === "hand") activateHand(pk.card);
+    else tryPlay(pk.card, pk.from, pk.idx);
   };
   const cancelDiscCost = () => setG(s => s.mode === "discpick" && s.discPick
     ? {...s, mode:s.discPick.back||"act", discPick:null} : s);
@@ -4253,7 +4254,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      adds only the trainer's own busy-modes, which are not a rule about
      the ability: a sheet is open, so nothing else may start. */
   const handAbilityOK = (s, c) => {
-    if(["pay","arsenal","boostpick","fusepick","chargepick"].indexOf(s.mode) >= 0) return false;
+    if(["pay","arsenal","boostpick","fusepick","chargepick","discpick"].indexOf(s.mode) >= 0) return false;
     return DawnEffects.handAbilityOK(s, c);
   };
   /* THE PAYMENT, THE OPS **AND** THE DEFENCE BUFF ARE ALL SHARED (v4.53).
@@ -4265,9 +4266,33 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      judge refuse Rally the Coast Guard by name. `activateHandAbility`
      lands it now, so there is nothing here to route. */
   const activateHand = c => setG(s=>{
-    if(["pay","arsenal","boostpick","fusepick","chargepick"].indexOf(s.mode) >= 0) return s;
+    if(["pay","arsenal","boostpick","fusepick","chargepick","discpick"].indexOf(s.mode) >= 0) return s;
+    /* WHICH CARD "Discard a card:" SPENDS (v4.87) — Rally the Coast
+       Guard's, asked through the one reader both boards ask
+       (`discCostChoice`), and answered by `confirmDiscCost`, which comes
+       back HERE rather than through `tryPlay` (`redo`), because this is
+       an ability on a card in hand and `tryPlay` would PLAY the card. */
+    if(s._discCostUid == null){
+      const _dcq = DawnPrompts.discCostChoice(c, act(s));
+      if(_dcq) return L({...s, mode:"discpick", discPick:{card:c, from:"hand", idx:null, uids:_dcq, back:s.mode,
+                                                          name:c.name, sub:"card", redo:"hand"}},
+        `${c.name}'s ability costs a discard — which card?`);
+    }
+    /* AND ITS TAXES (v4.87): Frostbite prints "abilities cost you an
+       additional {r} to activate". Raised at instant speed the way
+       `activateInstant` raises an instant ability's cost — `autoPitch`,
+       sparing the card itself and the card declared for the discard. */
+    const _hat = DawnParser.handAbilityTax(c, act(s), costCtx(s, actorOf(s)));
+    const s0 = s;
+    if(act(s).res < _hat){
+      const paid = autoPitch(s, _hat, [c.uid, s._discCostUid]);
+      if(!paid) return L(s, `${c.name}'s ability costs ${_hat} to activate — not enough in hand to pitch for it.`);
+      s = paid;
+    }
     const r = _EFX.activateHandAbility(s, c);
-    if(r.why) return L(s, r.why + ".");
+    /* A REFUSAL KEEPS THE PITCH IN HAND: nothing is spent for a play
+       that did not happen (v4.49), and a stale declared discard goes too. */
+    if(r.why){ const back = {...s0}; delete back._discCostUid; return L(back, r.why + "."); }
     return winCheck(openPrompt(r.game));
   });
   /* AN ALLY ATTACKS THROUGH THE ONE COMBAT PATH (v3.44).

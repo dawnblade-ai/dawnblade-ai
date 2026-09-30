@@ -1,3 +1,53 @@
+## v4.87 — a hand ability is an activation, and it pays like one
+
+> *"Instant - Discard this: Amp 1"* — ARCANE TWINING
+> *"Once per Turn Instant - Discard a card: This gets +3{d}. Activate this
+> only while this card is defending."* — RALLY THE COAST GUARD
+
+Five pool cards carry an activated ability on a card in HAND. Each prints a
+discard and no resource cost, so nothing ever priced the activation. That is
+v4.86's shape one route over: `effCost` never sees this activation, exactly
+as it never saw an ally's attack.
+
+- **Frostbite neither taxed it nor shattered.** Frostbite prints "cards AND
+  ABILITIES cost you an additional {r} to … activate", and "when you play a
+  card or activate an ability, destroy Frostbite". So the token survived to
+  tax the next card instead. `parser.handAbilityTax` is `costTaxes` with the
+  hand-ability route: Frostbite's tax, never Hyper Inflation's (an
+  activation, not a card played) and never the first-action tax (all five
+  are instants).
+- **The shatter is one body** (`effects.frostShatter`). `execute` did it
+  inline, which is why a route that never passes through `execute` skipped
+  it.
+- **At the table a tax opens a payment**, whose answer goes back through the
+  activation, never `maybeCharge` (which would PLAY the card). The card
+  cannot pitch for its own ability, and a card named for the discard cannot
+  pitch at all.
+- **Rally's "Discard a card" asks which card**, through v4.85's reader
+  (`discCostChoice`), both boards. It never offers Rally itself or a card
+  already in the wall. Under a tax, the legality keeps the cheapest
+  discardable card back, so the payment cannot spend the card the cost
+  needs.
+- **On the trainer**, the tax is raised at instant speed the way
+  `activateInstant` raises one, sparing the card and the declared discard,
+  and a refusal returns the pitched cards. `autoPitch` takes a LIST of uids
+  to keep.
+
+### Measured
+
+- **3306 drills** (11 new in `test/handtax.test.js`), 0 fail, 5 skipped;
+  107 scenes; babel, crindex and fairness clean.
+- **The ladder is IDENTICAL** at 3 seeds on both sides. The policy never
+  activates a hand ability, so neither the tax nor the question is on its
+  path, and `execute`'s shatter moved without changing.
+- **19 sabotages, 19 bite.** Three needed a better fixture first:
+  - `activateHandAbility`'s own guard is only reachable off the wire (both
+    boards refuse first), so it is driven directly;
+  - the own-card near-miss put Rally in the wall, where a second guard
+    excluded it first (v3.62);
+  - one revert anchor was not unique (v4.37).
+- **Ledger:** `activation-discard-cost-asked` names Rally now.
+
 ## v4.86 — each cost tax taxes what it prints
 
 Three cards put a tax on a cost, and each prints WHICH payments it reaches:
