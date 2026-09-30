@@ -594,8 +594,9 @@ const APPROX = {
   status:"closed", cr:null, board:"both", since:"v4.09", swept:"v4.85",
   claim:"WAS: an activation cost that prints 'discard <subject>' (Carrion Crown's "+
         "ally, the five Agents of Chaos' Assassin card) took the FIRST matching card "+
-        "in hand. IS: when two different cards could pay, the seat is asked which, "+
-        "before the payment, on both boards.",
+        "in hand, and Rally the Coast Guard's hand ability ('Discard a card:') the "+
+        "lowest-valued. IS: when two different cards could pay, the seat is asked "+
+        "which, before the payment, on both boards (the hand ability since v4.87).",
   why:"CLOSED AT v4.85. `prompts.discCostChoice` is the one reader; judge asks it as "+
       "a `discost` PENDING (the `xval` shape, v4.72) and the trainer as `discpick`, "+
       "and the answer rides on the state as `_discCostUid` into `execute`, which "+

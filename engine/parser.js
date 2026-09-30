@@ -8289,7 +8289,7 @@ function markRed(c){
    — it is equipped — so pricing one is always pricing its attack. The
    structured array, never `tt` (v2.39). */
 function isActivation(c, route){
-  if(route === "ally" || route === "aura") return true;
+  if(route === "ally" || route === "aura" || route === "handAbility") return true;
   return !!c && (/\b(?:Hero|Equipment|Arena) Ability$/.test(c.tt || "")
                  || (c.ty || []).indexOf("Weapon") >= 0);
 }
@@ -8300,9 +8300,22 @@ function isActivation(c, route){
    action card. */
 function isActionPaid(c, route){
   if(route === "ally" || route === "aura") return true;
+  /* A HAND ABILITY (v4.87) is an activation of the card's printed
+     "<Instant|Action> - …" line, and its window is the one it prints. */
+  if(route === "handAbility"){
+    const ha = c && fxParse(c).handAbility;
+    return !!ha && ha.kind !== "instant";
+  }
   if(!c) return false;
   if(isActivation(c)) return !c._instant && !c._attackRx;
   return (c.ty || []).indexOf("Action") >= 0;
+}
+/* WHAT A HAND ABILITY'S ACTIVATION OWES (v4.87). "Instant - Discard this:
+   Amp 1" prints no resource cost, so nothing priced it and Frostbite —
+   "cards AND ABILITIES cost you an additional {r} to activate" — was never
+   charged. It is the taxes alone, through the one reader. */
+function handAbilityTax(c, sd, o){
+  return (c && fxParse(c).handAbility) ? costTaxes(c, sd, o, "handAbility") : 0;
 }
 /* The taxes, added AFTER the floor (a discount cannot take a cost below
    zero, and a tax on a free card is still a tax, v4.06). */
@@ -10153,7 +10166,7 @@ const fxReset = () => FXMEMO.clear();
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter,
   PER_COUNT, DEF_PER, perCountKey, chainHits, pickSubject, attackQual, markRed, costCtx, qualMatches, abWindow, defCap, defCounts, isBlockCard,
         nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, isActionCard, costOffFor, heaveOf,
-        classifyClause, fxParse, fxReset, playableFromZone, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost, isActivation, isActionPaid, costTaxes,
+        classifyClause, fxParse, fxReset, playableFromZone, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost, isActivation, isActionPaid, costTaxes, handAbilityTax,
         DECL_OPS, dracLinks, weaponCost, payTrigger, OFFER_TRIGGERS, allyAttack, auraWeaponGrant, wardValue, wardBearers, wardTotal, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, drxBarred, drxBarWhy, rxPump,
         idleCounterWipes, rustedThrough,
         isAtkActionCard, phantasmPops, zonePow, pow6, kwGated, hasKwNow, printedKw,

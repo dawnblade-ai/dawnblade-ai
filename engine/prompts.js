@@ -926,8 +926,15 @@ function promptDiscardDefault(prompt){
    auto-pick took, which is the answer a seat with nobody in it keeps. */
 function discCostChoice(ab, sd){
   const f = P.abDiscardCost(ab);
-  if(!f) return null;
-  const pass = promptFilter(f), seen = new Set(), uids = [];
+  /* AND A HAND ABILITY'S "Discard a card:" (v4.87) — Rally the Coast
+     Guard's, the pool's only one. Any card may pay except the card whose
+     ability it is and a card already declared as a defender, the pool
+     `activateHandAbility` picks from. "Discard THIS" is no choice. */
+  const ha = !f && ab && ab.tx ? P.fxParse(ab).handAbility : null;
+  if(!f && !(ha && ha.cost === "card")) return null;
+  const pass = f ? promptFilter(f)
+                 : (c => c.uid !== ab.uid && ((sd && sd.blockH) || []).indexOf(c.uid) < 0);
+  const seen = new Set(), uids = [];
   for(const c of ((sd && sd.hand) || [])){
     if(!c || !pass(c)) continue;
     const k = (c.name || "") + "|" + (c.pitch || 0);
