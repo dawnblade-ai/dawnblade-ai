@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.83 (plan item 1 done at v4.84)
+# Handoff — Dawnblade, at v4.83 (updated through v4.85)
 
 **Written 2026-09-28. Every number below was re-derived this session, with
 the command that produces it.** Re-derive before you quote one; this file
@@ -22,11 +22,11 @@ where things stand and what is next.
 
 | measure | value | command |
 |---|---|---|
-| version | v4.83, live on GitHub Pages | `grep APP_VER index.html` |
-| drills | 3266 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
+| version | v4.85, live on GitHub Pages | `grep APP_VER index.html` |
+| drills | 3285 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
 | pool coverage | **405 of 405** unique cards read in full · 0 part · 0 none | `npm run audit`, top of `AUDIT.md` |
 | unfinished cards | 0, and 0 one clause away | `npm run gaps` |
-| approximation ledger | 44 records: 26 closed · **15 stated · 3 open** | `node tools/approx.js` |
+| approximation ledger | 45 records: 27 closed · **15 stated · 3 open** | `node tools/approx.js` |
 | CR rules cited | 61 distinct · 51 guarded · 3 unguarded (section pointers, pinned) | `node tools/crindex.js` |
 | fail states | 0 UNFAIR · 3 WRONG (all known, below) | `npm run sweep` |
 | scenes | 107 passing | `npm run scenes` |
@@ -95,10 +95,15 @@ thing is unbuilt or unobservable, go and ask the engine.* Four stated records
 have gone false in the last two weeks. The ones most likely to be wrong
 today:
 
-- **`cost-discard-auto-picked`** (v4.81). An activation cost's discard (the
-  five Agents of Chaos, Carrion Crown) is still picked by the engine. It
-  needs a *pending* before the payment rather than a sheet, which is the
-  `xval` pending's shape (v4.72).
+- ~~**`cost-discard-auto-picked`**~~ The activation half was **built at
+  v4.85** (`activation-discard-cost-asked`, closed). What is left is a
+  non-random additional-cost discard (no pool card) and a payment made from
+  a sheet.
+- **Hyper Inflation's tax reaches abilities** (found at v4.85). It prints
+  *"cards cost {r} more to play"*, and `effCost` adds it to an activated
+  ability and a weapon swing as well. Frostbite prints *"cards and
+  abilities"*, so the two taxes differ. Also ask whether Cartilage Crush's
+  *"first action"* tax should reach an instant.
 - **`instant-speed-plays-resolve-on-play`** (table). An instant or reaction
   resolves the moment it is played. v4.66 built the stack window for plays
   at action speed; the reaction half is the remaining collapse.

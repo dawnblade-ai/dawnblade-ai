@@ -476,7 +476,10 @@ test("every pending kind judge can open has a branch at the table", () => {
      +xval AT v4.72: Ice Eternal's free X is DECLARED before the payment,
      so the payment can be told what it is paying for — and the answer is
      a NUMBER, one button per value the seat could raise. */
-  assert.deepEqual([...kinds].sort(), ["addPay", "boost", "charge", "fuse", "pay", "split", "xval"]);
+  /* +discost AT v4.85: an activation's "Discard an Assassin card:" (the
+     Agents) or "Discard an ally," (Carrion Crown) asks WHICH card before
+     the payment — one button per card that could pay. */
+  assert.deepEqual([...kinds].sort(), ["addPay", "boost", "charge", "discost", "fuse", "pay", "split", "xval"]);
   const strip = t => t.replace(/\/\*[\s\S]*?\*\//g, "");
   const htm = strip(fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8"));
   const i = htm.indexOf("const kindIs = k =>");

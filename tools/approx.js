@@ -580,18 +580,29 @@ const APPROX = {
       "asks nobody either way, so it could never have gone red."},
 
 "cost-discard-auto-picked": {
-  status:"stated", cr:null, board:"both", since:"v4.09", swept:"v4.81",
-  claim:"An activation COST that prints 'discard <subject>' (Carrion Crown's ally, "+
-        "the five Agents of Chaos' Assassin card) takes the FIRST matching card in "+
-        "hand rather than asking which; a non-random additional-cost discard takes "+
-        "the lowest-valued card (no pool claimant — Savage Feast's is random); and a "+
-        "payment made from a sheet pitches with `autoPitch` rather than asking which "+
-        "cards to pitch.",
+  status:"stated", cr:null, board:"both", since:"v4.09", swept:"v4.85",
+  claim:"A non-random ADDITIONAL-cost discard takes the lowest-valued card rather "+
+        "than asking (no pool claimant: Savage Feast's is random), and a payment made "+
+        "from a sheet pitches with `autoPitch` rather than asking which cards to pitch.",
   why:"A cost cannot be a queued prompt (v3.34): it is paid before the card "+
-      "resolves, so asking needs a PENDING declared before the payment — fusion's "+
-      "and charge's shape (`_fuseUid`, `_chargeUids`), one per cost route. v4.81 "+
-      "built the EFFECT half, where a sheet can wait for the answer; this half is "+
-      "its own piece of work across three routes."},
+      "resolves, so asking needs a PENDING declared before the payment. v4.81 built "+
+      "the EFFECT half and v4.85 the ACTIVATION half (`activation-discard-cost-"+
+      "asked`); these two remain, one with no pool card to reach it and one a "+
+      "payment asked from inside an answer."},
+
+"activation-discard-cost-asked": {
+  status:"closed", cr:null, board:"both", since:"v4.09", swept:"v4.85",
+  claim:"WAS: an activation cost that prints 'discard <subject>' (Carrion Crown's "+
+        "ally, the five Agents of Chaos' Assassin card) took the FIRST matching card "+
+        "in hand. IS: when two different cards could pay, the seat is asked which, "+
+        "before the payment, on both boards.",
+  why:"CLOSED AT v4.85. `prompts.discCostChoice` is the one reader; judge asks it as "+
+      "a `discost` PENDING (the `xval` shape, v4.72) and the trainer as `discpick`, "+
+      "and the answer rides on the state as `_discCostUid` into `execute`, which "+
+      "re-derives it because `reduce` is fed by JSON off a wire. Two copies of one "+
+      "card are one choice and a single payer is none (v3.55). The policy answers "+
+      "the first candidate, which is the old pick. THE PROBE IS TURNED ROUND: it "+
+      "asserted the first ally was taken, and asserts the question now."},
 
 "pool-deck-complete": {
   status:"closed", cr:null, board:"both", since:"v3.79", swept:"v4.44",

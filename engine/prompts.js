@@ -912,6 +912,31 @@ function promptDiscardDefault(prompt){
   return sel;
 }
 
+/* WHICH CARD AN ACTIVATION'S DISCARD COST SPENDS (v4.85). The Agents of
+   Chaos print "Discard an Assassin card:" and Carrion Crown "Discard an
+   ally, destroy this:", and `execute` took the FIRST matching card in hand.
+   A cost is paid before the ability resolves, so this is not a sheet (a
+   queued prompt opens after resolution, v3.34): it is a question asked
+   BEFORE the payment, the `xval` pending's shape (v4.72).
+
+   IT ASKS ONLY WHEN THERE IS A CHOICE. Two copies of one card are the same
+   card for this purpose, so candidates are one per printed identity
+   (name and pitch), and fewer than two is no question (v3.55). The uids
+   come back in HAND ORDER, so the first is exactly the card the old
+   auto-pick took, which is the answer a seat with nobody in it keeps. */
+function discCostChoice(ab, sd){
+  const f = P.abDiscardCost(ab);
+  if(!f) return null;
+  const pass = promptFilter(f), seen = new Set(), uids = [];
+  for(const c of ((sd && sd.hand) || [])){
+    if(!c || !pass(c)) continue;
+    const k = (c.name || "") + "|" + (c.pitch || 0);
+    if(seen.has(k)) continue;
+    seen.add(k); uids.push(c.uid);
+  }
+  return uids.length >= 2 ? uids : null;
+}
+
 /* Can this be confirmed as it stands? */
 function promptReady(prompt){
   if(!prompt) return false;
@@ -1289,6 +1314,6 @@ return {PROMPT_ZONES, promptZoneWord, promptZone, promptSideZone, promptFilter,
         promptMatchSet, promptMatchAssign,
         promptPickPool, promptPickAskable, buildPrompt,
         promptToggleSel, promptChoose, promptDecline, promptTakeBack, promptReady, promptForcedSel, promptLapse,
-        promptDiscardDefault,
+        promptDiscardDefault, discCostChoice,
         moveCards, applyPrompt};
 });

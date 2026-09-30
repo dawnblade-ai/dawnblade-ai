@@ -806,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "4.84"; /* v4.84 - the census of half-read sentences is standing, and "whenever" reads as "when". See CHANGELOG.md. */
+window.APP_VER = "4.85"; /* v4.85 - attack-reaction abilities work in the trainer's reaction window, and a discard cost asks which card. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -3273,6 +3273,19 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      prompt (those drain after the card has resolved). Boost is the
      precedent on both boards: pause, ask, then re-enter the play with the
      answer. `_addPaid` is the same seam judge.js threads to `execute`. */
+  /* THE TRAINER'S WALL, AS A REACTION READS IT (v4.85). Defenders are
+     `{k:"def"}` layers on the stack — a gear block carries `gi`, a hand
+     block the card's uid — and the dummy is the defender, because on this
+     board only the player attacks into the reaction window. Two routes
+     ask it: a reaction CARD (`playRx`) and an activated attack-reaction
+     ABILITY (`resolvePlay`), which is the `handBlockers`/`defenders` pair
+     `execute` hands to `attackRx` on both (v3.89). One reader, or the
+     second route re-derives the wall and the two drift. */
+  const rxWall = n => ({
+    handBlockers: n.stack.filter(l=>l.k==="def" && l.gi==null).length,
+    defenders: n.stack.filter(l=>l.k==="def").map(l =>
+      l.gi != null ? opp(n).gear[l.gi]
+                   : (opp(n).hand.find(x=>x.uid===l.uid) || null)).filter(Boolean)});
   const playRx = (i, addPaid) => setG(s=>{
     /* THE WINDOW IS `speedAllowed`'S QUESTION NOW (v2.37) — the first consumer
        moved off `mode`/`bphase`, which is roadmap item 1's last step.
@@ -3394,14 +3407,11 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
          here, judge.js on `blockH`. A shared body that read either one is
          a body the other board cannot call, which is exactly how phantasm
          came to be inert at the table for three versions. */
-      const handBlockers = n.stack.filter(l=>l.k==="def" && l.gi==null).length;
       /* AND WHICH CARDS THEY ARE (v3.89) — Shred targets one of them, and
          a body both boards call cannot go looking for either seat's
-         representation of the wall (v3.00). The trainer files defenders
-         as `{k:"def"}` stack layers carrying the card. */
-      const defenders = n.stack.filter(l=>l.k==="def").map(l =>
-        l.gi != null ? opp(n).gear[l.gi]
-                     : (opp(n).hand.find(x=>x.uid===l.uid) || null)).filter(Boolean);
+         representation of the wall (v3.00). `rxWall` is this board's one
+         reader of it, shared with the ACTIVATED route (v4.85). */
+      const {handBlockers, defenders} = rxWall(n);
       const rx = _EFX.attackRx(n, c, {handBlockers, defenders});
       if(rx.why) return L(n, rx.why);
       n = rx.game;
@@ -3617,6 +3627,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
 
   const activateInstant = (card, from, idx) => setG(s=>{
     if(s.over || s.prompt) return s;           /* a live sheet stops the game (v4.80) */
+    if(s.mode === "discpick") return s;        /* …and so does a cost's question (v4.85) */
     /* CR 8.1.6 — an instant is legal in any window where you hold
        priority. Asked of priority.js, never restated: in the DEFEND step
        the turn-player holds it (CR 7.3.3), so this correctly refuses
@@ -3682,7 +3693,13 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     /* the two things `execute` used to do on the way in, and neither is
        anything a card does: close the payment sheet, and put the board
        back in its action phase */
-    let n = execute({...s, mode:"act", pending:null}, card, from, idx);
+    /* …EXCEPT AN ACTIVATED ATTACK REACTION (v4.85), which is played in the
+       reaction window and leaves it open: the attack it reacted to is
+       still on the stack, and `mode:"act"` there hands the player an
+       action phase with a live link. It is handed the wall too, the pair
+       `playRx` hands a reaction card, out of the same reader. */
+    const _arx = !!(card && card._attackRx);
+    let n = execute({...s, mode:_arx?"stack":"act", pending:null}, card, from, idx, _arx ? rxWall(s) : undefined);
     /* THE DECLARED HALF IS SPENT (v3.34). It rode in on the state, like
        `_doBoost` and `_addPaid`; leaving it there would play the next
        split card as whatever the last one chose, without asking. */
@@ -3839,7 +3856,17 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        It mattered little while every sheet opened after a card had fully
        resolved; a declaration's sheet opens with the attack half-declared. */
     if(s.prompt) return s;
-    if(s.over||s.mode==="block"||s.mode==="arsenal"||s.mode==="stack"||s.mode==="boostpick"||s.mode==="fusepick"||s.mode==="chargepick"||s.mode==="splitpick"||s.mode==="xpick"||s.mode==="rxaddpay"||s.mode==="foeturn") return s;
+    /* THE REACTION WINDOW IS `stack`, AND AN ACTIVATED ATTACK REACTION IS
+       PLAYED IN IT (v4.85). This guard refused every tap there, so the
+       `_attackRx` legality further down — written for exactly that mode —
+       was unreachable, and Prey Spotters, Stalker's Steps, Bolt'n Boots,
+       Danger Digits and Boltyn's own ability were DEAD on this board in
+       the one window they are legal in: `heroPowWindowOK` and the gear
+       tile offered them there (v3.74) and the tap did nothing. Found
+       driving the page at phone dimensions; no drill could reach it, since
+       `tryPlay` is a closure inside `Battle`. Every other play is still
+       refused here, so the reaction window keeps its own doors. */
+    if(s.over||s.mode==="block"||s.mode==="arsenal"||(s.mode==="stack"&&!(card&&card._attackRx))||s.mode==="boostpick"||s.mode==="fusepick"||s.mode==="chargepick"||s.mode==="splitpick"||s.mode==="xpick"||s.mode==="discpick"||s.mode==="rxaddpay"||s.mode==="foeturn") return s;
     if(s.inspect){ setZoom(card); return s; }
     if(s.mode==="pay"){
       if(from!=="hand" || (s.pending&&s.pending.from==="hand"&&s.pending.idx===idx)) return s;
@@ -3850,9 +3877,11 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        CR 8.1.2a — an attack reaction "can only be played/activated by a
        player who controls the attack during the Reaction Step of combat";
        CR 8.1.3a says the same for a defense reaction and the player whose
-       hero is the attack-target. tryPlay is only ever reached in the action
-       phase (block/stack return above), which is neither, so the card is
-       refused here and told which window it belongs to. 23 pool cards used
+       hero is the attack-target. A reaction CARD only reaches tryPlay in
+       the action phase (block/stack return above; the one tap let through in
+       `stack` is an activated ability, whose powCard is no reaction card),
+       which is neither window, so the card is refused here and told which
+       window it belongs to. 23 pool cards used
        to be playable straight out of the action phase — Reduce to Runechant
        minting a runechant on your own turn, the Warrior reprise reactions
        swinging with no attack to react to. playRx/playRxA are the legal
@@ -4089,6 +4118,23 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       if(_aa.taps && _b.spent) return L(s, `${card.name} is tapped until your end phase.`);
       if(_aa.oncePerTurn && act(s).weaponUsed["ally"+card.uid]) return L(s, `${card.name} has already attacked this turn.`);
     }
+    /* WHICH CARD THE DISCARD COST SPENDS (v4.85) — asked after every
+       legality above, so a refused activation is never asked a question it
+       cannot use, and before the payment, because a cost is paid before
+       the ability resolves (judge's `discost` pending, the same shape as
+       `xpick`). `DawnPrompts.discCostChoice` is the one reader both boards
+       ask; it answers null unless two DIFFERENT cards could pay. The answer
+       rides on the state as `_discCostUid`, and the confirm re-enters
+       here, so every gate above is asked again of the same state.
+       `back` is the mode it was asked from: an Agent's ability is asked in
+       the reaction window, and cancelling must not close that window. */
+    if(s._discCostUid == null){
+      const _dcq = DawnPrompts.discCostChoice(card, act(s));
+      if(_dcq) return L({...s, mode:"discpick", discPick:{card, from, idx, uids:_dcq, back:s.mode,
+                                                          name:card.name.replace(/ — ability$/, ""),
+                                                          sub:card._discardSubject||"card"}},
+        `${card.name.replace(/ — ability$/, "")} costs a discard — which ${card._discardSubject||"card"}?`);
+    }
     /* THE ATTACK'S COST IS NOT THE CARD'S. An ally's `.cost` is what it
        cost to DEPLOY; its attack prints its own. */
     const cost = from==="ally" ? ((DawnParser.allyAttack(card)||{}).cost || 0)
@@ -4101,7 +4147,11 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        is the same question on the other board. */
     const _chiShort = Math.max(0, DawnParser.abChiCost(card) - DawnParser.chiFloating(act(s)));
     if(act(s).res>=cost && _chiShort<=0) return maybeCharge(s,card,from,idx);
-    const pn = {...s, mode:"pay", pending:{card,from,idx}, log:[`Pitch ${cost-act(s).res} more for ${card.name}.`,...s.log].slice(0,LOG_KEEP)};
+    /* `back` IS WHERE A CANCELLED PAYMENT RETURNS (v4.85): an activated
+       attack reaction is paid for inside the reaction window, and
+       cancelling it must leave the attack there, not hand the player an
+       action phase with a live link on the stack. */
+    const pn = {...s, mode:"pay", pending:{card,from,idx,back:s.mode==="stack"?"stack":"act"}, log:[`Pitch ${cost-act(s).res} more for ${card.name}.`,...s.log].slice(0,LOG_KEEP)};
     actMut(pn).paySel = [];
     return pn;
   });
@@ -4134,7 +4184,23 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
   /* A CANCELLED PAYMENT TAKES ITS DECLARATIONS WITH IT (v4.72) — the half
      and X are settled before the payment, and left behind they answer the
      next play of that card without asking. */
-  const cancelPay = () => setG(s=>{ const n = {...s, mode:"act", pending:null}; youMut(n).paySel = []; delete n._half; delete n._x; return n; });
+  /* …AND SO DOES THE DISCARD DECLARED FOR A COST (v4.85), and the payment
+     returns to the window it opened from — the reaction window, for an
+     activated attack reaction. */
+  const cancelPay = () => setG(s=>{ const n = {...s, mode:(s.pending&&s.pending.back)||"act", pending:null}; youMut(n).paySel = []; delete n._half; delete n._x; delete n._discCostUid; return n; });
+  /* THE DISCARD, DECLARED (v4.85) — confirmX's re-entry, so there is one
+     description of what activating does. The pick is read off the RENDERED
+     state rather than captured inside an updater, and the two updaters run
+     in order: the first restores the window and records the answer, the
+     second is `tryPlay` asking every gate again of that state. */
+  const confirmDiscCost = uid => {
+    const pk = g.mode === "discpick" && g.discPick;
+    if(!pk || (pk.uids||[]).indexOf(uid) < 0) return;
+    setG(s => s.mode === "discpick" ? {...s, mode:pk.back||"act", discPick:null, _discCostUid:uid} : s);
+    tryPlay(pk.card, pk.from, pk.idx);
+  };
+  const cancelDiscCost = () => setG(s => s.mode === "discpick" && s.discPick
+    ? {...s, mode:s.discPick.back||"act", discPick:null} : s);
 
   /* THE ACTIVATED ABILITY OF A CARD IN THE ARENA — `build.boardPow`
      (v2.35, SHARED at v4.47).
@@ -5315,6 +5381,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
               {g.mode==="xpick" && g.xPick && <div className="statusline">
                 <b>{g.xPick.name}</b> costs X {g.xPick.per} times — how much is X? You can pay up to X = {g.xPick.max}.
               </div>}
+              {g.mode==="discpick" && g.discPick && <div className="statusline">
+                <b>{g.discPick.name}</b> costs a discard — which {g.discPick.sub}?<button onClick={cancelDiscCost}>✕ cancel</button>
+              </div>}
               {g.mode==="rxaddpay" && g.rxAdd && <div className="statusline">
                 <b>{g.rxAdd.name}</b> — pay <b>{g.rxAdd.cost}</b> more as an additional cost? You have {you(g).res} floating.
               </div>}
@@ -5508,6 +5577,17 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
         </>) : g.mode==="xpick" ? (<>
           {Array.from({length: ((g.xPick&&g.xPick.max)||0) + 1}, (_, x) =>
             <button key={x} className={"a"+(g.xPick&&x===g.xPick.max?" go":"")} onClick={()=>confirmX(x)}>X = {x}{x ? " · pay "+(x*((g.xPick&&g.xPick.per)||1)) : ""}</button>)}
+        </>) : g.mode==="discpick" ? (<>
+          {/* ONE BUTTON PER CARD THAT COULD PAY (v4.85), off
+              `discCostChoice`, the one reader both boards ask. Two copies
+              of one card are one button; two printings of one NAME are
+              told apart by colour, or the buttons read the same. */}
+          {(g.discPick?.uids||[]).map(u => {
+            const c = you(g).hand.find(x=>x.uid===u);
+            const twin = c && (g.discPick.uids||[]).some(v => v !== u && ((you(g).hand.find(x=>x.uid===v)||{}).name === c.name));
+            return <button key={u} className="a go" onClick={()=>confirmDiscCost(u)}>
+              Discard {c ? c.name : "card"}{twin ? " ("+(["","red","yellow","blue"][c.pitch]||"pitch "+c.pitch)+")" : ""}</button>;
+          })}
         </>) : g.mode==="rxaddpay" ? (<>
           <button className="a go" onClick={()=>confirmRxAdd(true)}>Pay {g.rxAdd?g.rxAdd.cost:0} more</button>
           <button className="a" onClick={()=>confirmRxAdd(false)}>Decline</button>
@@ -6674,6 +6754,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
   const fuse   = kindIs("fuse");
   const charge = kindIs("charge");
   const xval   = kindIs("xval");
+  const discost = kindIs("discost");
   const theirPay  = g.pending && g.pending.seat !== mySeat;
   const myArsStep = g.phase === "end" && g.arsenalFor === mySeat;
   const defending = DawnPriority.canDeclareDefenders(g, mySeat);
@@ -7204,6 +7285,18 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
              payment, because the price is X twice over; one button per value
              the seat can pay, so a choice the rules would refuse is never
              offered (a dead control reads as a broken screen, v2.83). */
+          /* WHICH CARD A DISCARD COST SPENDS (v4.85) — one button per card
+             that could pay, off `discCostChoice`, the one reader both boards
+             ask. No Cancel, for boost's reason: nothing is spent until the
+             ability resolves, and the question is which card, not whether. */
+          : discost ? <>
+              {(discost.uids||[]).map(u => {
+                const c = (me.hand||[]).find(x=>x.uid===u);
+                const twin = c && (discost.uids||[]).some(v => v !== u && (((me.hand||[]).find(x=>x.uid===v)||{}).name === c.name));
+                return <button key={u} className="a go" onClick={()=>fire({t:"discost",uid:u})}>
+                  Discard {c ? c.name : "card"}{twin ? " ("+(["","red","yellow","blue"][c.pitch]||"pitch "+c.pitch)+")" : ""}</button>;
+              })}
+            </>
           : xval ? <>
               {Array.from({length: (xval.max||0) + 1}, (_, x) =>
                 <button key={x} className={"a"+(x===xval.max?" go":"")} onClick={()=>fire({t:"xval",x})}>X = {x}{x ? " · pay "+(x*(xval.per||1)) : ""}</button>)}
