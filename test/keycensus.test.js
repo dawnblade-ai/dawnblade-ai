@@ -384,7 +384,12 @@ test("every trainer `effCost` call passes the game's half of the cost", {skip}, 
      TRUSTS. */
   const calls = [...stripSrc(TRAINER).matchAll(/[^.\w]effCost\(([^;]{0,160})/g)]
     .map(m => m[1].split("\n")[0]);
-  assert.ok(calls.length >= 6, "the trainer reads effCost in several places");
+  /* 6+ -> 4+ AT v4.86, READ FIRST: the pay sheet, its chip and
+     `confirmPay` each read `effCost` for a pending payment, and all three
+     priced an ally's ATTACK at the ally's PLAY cost. They ask `payCost`
+     now, which is one `effCost` call (with the context) and the ally
+     route beside it — three readers became one, which is the point. */
+  assert.ok(calls.length >= 4, "the trainer reads effCost in several places");
   const bare = calls.filter(a => !/costCtx\(/.test(a));
   assert.deepEqual(bare, [],
     "every effCost call must name the cost context, or the two boards quote " +

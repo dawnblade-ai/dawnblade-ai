@@ -243,7 +243,8 @@ test("the trainer asks the one reader, after every legality and before the payme
   assert.ok(ask > 0, "tryPlay never asks which card the discard cost spends");
   assert.ok(ask > TRY.indexOf("DawnParser.abDiscardCost(card)"),
     "asked before the refusal for an unpayable cost — a refused activation would be asked a question");
-  assert.ok(ask < TRY.indexOf("const cost = from===\"ally\""),
+  assert.ok(TRY.indexOf("const cost = payCost(s, card, from);") > 0, "tryPlay's cost line moved — re-anchor this drill");
+  assert.ok(ask < TRY.indexOf("const cost = payCost(s, card, from);"),
     "asked after the payment opens — the cost is settled before the payment");
   assert.match(TRY, /if\(s\._discCostUid == null\)\{/, "the question must be asked once, not again after it is answered");
   assert.match(TRY, /s\.mode==="discpick"\|\|/, "a tap during the question plays a card");

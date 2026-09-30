@@ -3020,7 +3020,13 @@ function makeEffects(ctx){
         n = L(n, `${act(s).name}: ${_chi} Chi spent — a Chi pays for Chi `
                + "and resource costs alike; a resource point pays only its own.");
       } }
-    exSide.res = act(s).res - (_allyCost != null ? _allyCost : effCost(card, act(s), _costO));
+    /* A BOARD ATTACK PAYS ITS TAXES TOO (v4.86). It is priced off its own
+       printed line, never `effCost`, so the taxes that reach an activated
+       ability were never added — and Frostbite, destroyed below by the very
+       activation it prints a tax on, went free. `costTaxes` with the route
+       named is the one reader; judge's `boardAtkCost` asks the same. */
+    exSide.res = act(s).res - (_allyCost != null ? _allyCost + P.costTaxes(card, act(s), _costO, from)
+                                                 : effCost(card, act(s), _costO));
     exSide.paySel = [];
     /* THE OPTIONAL ADDITIONAL COST IS CHARGED HERE, beside the resource
        cost, because that is what "as an additional cost to play this"
@@ -3059,7 +3065,11 @@ function makeEffects(ctx){
         exSide.costOff = off.slice(0, i).concat(off.slice(i + 1));
         n = L(n, `${card.name} cost ${off[i].amt} less — that grant is spent.`);
       } }
-    if(P.nextTurnTax(act(s)) > 0)
+    /* …AND IT IS SPENT ONLY BY WHAT IT TAXED (v4.86). Cartilage Crush
+       prints "their first ACTION", so an instant or a reaction neither pays
+       it nor spends it; spent by one, the action it was waiting for went
+       free. The predicate is `costTaxes`' own. */
+    if(P.nextTurnTax(act(s)) > 0 && P.isActionPaid(card, from))
       exSide.nextTurn = (act(s).nextTurn || []).map((e, i, arr) =>
         (e && e.ready && !e.spent && e.kind === "firstActionTax"
          && arr.findIndex(x => x && x.ready && !x.spent && x.kind === "firstActionTax") === i)

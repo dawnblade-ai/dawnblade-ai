@@ -1,3 +1,65 @@
+## v4.86 — each cost tax taxes what it prints
+
+Three cards put a tax on a cost, and each prints WHICH payments it reaches:
+
+| card | prints | engine did |
+|---|---|---|
+| Frostbite | "cards **and abilities** cost you an additional {r} to play or activate" | skipped an ally's or an aura's ATTACK, and was destroyed by it anyway |
+| Hyper Inflation | "**cards** cost {r} more to **play** this turn" | taxed activated abilities and weapon swings too |
+| Cartilage Crush | "their first **action** … costs an additional {r} to play or activate" | taxed, and was SPENT by, an instant or a reaction |
+
+**Found at v4.85, driving the trainer.** Hyper Inflation made Arakni pitch
+1 for Prey Spotters, whose printed cost is 0. Asking the same question of
+the other two taxes found the rest: all three read `tier: full`, because the
+clauses ARE consumed. What was wrong was the payment they reached.
+
+- **`parser.costTaxes(c, sd, o, route)` is the one reader.** `effCost` adds
+  its answer after the floor, as before. Two predicates decide it:
+  - `isActivation`: a powCard (typed `<Hero|Equipment|Arena> Ability` by the
+    three builders) or a WEAPON, which is equipped and never played;
+  - `isActionPaid`: an action card off the STRUCTURED array ("Reaction"
+    contains "action", v2.44), or an ability whose window is neither instant
+    nor attack reaction.
+- **An ally's or an aura's attack names its route.** It is priced off its
+  own printed line and never through `effCost` (v3.44, v3.84), so the
+  caller says so, the way it says what the wall is. `effects.execute`
+  charges with it, and judge's `boardAtkCost` is the one reader for `legal`,
+  `doActivate` and the policy's `boardAttackOf`.
+- **The first-action tax is spent only by what it taxed.** The spend site
+  asks `isActionPaid`, so an instant played first no longer uses it up.
+
+Driven: Swabbie's attack under a Frostbite paid 2, the printed cost, and
+destroyed the Frostbite. It pays 3 now, and a seat holding only 2 is
+refused with the taxed number.
+
+### And a trainer payment priced at the wrong number
+
+The trainer's pay sheet, its chip and `confirmPay` priced every pending
+payment with `effCost`. For an ally's ATTACK that is the ally's PLAY cost
+(v3.44):
+- Swabbie's attack (2) asked for 3;
+- Limpit's (1) read "covered ✓" at 0, then charged 1 into an empty pool,
+  which is `NEGATIVE-RES` (v3.80's three-cost-readers shape, on the one
+  route that never read `effCost`).
+
+`payCost` is the one trainer reader now, and all four sites ask it.
+
+### Measured
+
+- **3295 drills** (10 new in `test/costtaxes.test.js`), 0 fail, 5 skipped;
+  107 scenes; babel, crindex and fairness clean.
+- **The ladder moves inside the band** at 3 seeds on both sides: no hero by
+  more than one win a seed against a band of median 3, and 0 refusals, 0
+  violations, 2 stalls on both sides. `allyatk` 277 → 272, which is taxed
+  ally attacks.
+- **15 sabotages, 15 bite.** One was silent on the first pass, and it was my
+  fixture: the end-anchor near-miss put a dash before the word, so the
+  pattern's `\b` refused it with or without the anchor (v3.62).
+- **Pins moved, each read first:** the slice census (two new trainer slices;
+  `tryPlay` 21,350 → 21,232 as its cost line became one call), the trainer
+  `effCost` census (6+ → 4+, three readers became one), and `actcost`'s ally
+  branch (it asks `boardAtkCost` now).
+
 ## v4.85 — the Agents' abilities, on the trainer and at the table
 
 Two defects, and one family of cards sits in both of them: Arakni's Agents

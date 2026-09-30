@@ -8263,6 +8263,56 @@ function markRed(c){
   return /^\d+$/.test(m[1]) ? +m[1] : (m[1].match(/\{r\}/g) || []).length;
 }
 
+/* ---- WHICH TAXES A PAYMENT OWES (v4.86) --------------------------------
+   Three cards tax a cost, and each prints WHICH payments it reaches:
+
+     Frostbite          "Cards AND ABILITIES cost you an additional {r} to
+                         play or activate"                   — both
+     Hyper Inflation    "CARDS cost {r} more to PLAY this turn" — a card
+                         played, never an ability activated
+     Cartilage Crush    "their first ACTION during their next turn costs
+                         an additional {r} to play or activate" — an action,
+                         card or ability, and never an instant or a reaction
+
+   `effCost` added all three to everything it priced, so Hyper Inflation
+   taxed Prey Spotters' free ability (found driving the trainer, v4.85), and
+   an ally's or an aura's ATTACK — which is an activated ability priced off
+   its own printed line and never through `effCost` (v3.44, v3.84) — paid
+   none of them: a Frostbite was destroyed by the attack it never taxed.
+
+   `route` is the caller's answer for the two routes `effCost` cannot see,
+   exactly as the wall and the chain are (v3.24): "ally" and "aura" name an
+   activated attack, printed "Action - …: Attack" on every one. Everything
+   else is read off the object being paid for. */
+/* AN ACTIVATION, NOT A PLAY. A powCard is typed "<Hero|Equipment|Arena>
+   Ability" by the three builders (`build.js`), and a WEAPON is never played
+   — it is equipped — so pricing one is always pricing its attack. The
+   structured array, never `tt` (v2.39). */
+function isActivation(c, route){
+  if(route === "ally" || route === "aura") return true;
+  return !!c && (/\b(?:Hero|Equipment|Arena) Ability$/.test(c.tt || "")
+                 || (c.ty || []).indexOf("Weapon") >= 0);
+}
+/* AN ACTION, CARD OR ABILITY. An ability is an action unless its window is
+   the instant or the attack reaction (`_instant`, `_attackRx`, the flags
+   `abWindow` reads); a card is one when its STRUCTURED type says Action —
+   "Reaction" contains "action" (v2.44), and a Defense Reaction is not an
+   action card. */
+function isActionPaid(c, route){
+  if(route === "ally" || route === "aura") return true;
+  if(!c) return false;
+  if(isActivation(c)) return !c._instant && !c._attackRx;
+  return (c.ty || []).indexOf("Action") >= 0;
+}
+/* The taxes, added AFTER the floor (a discount cannot take a cost below
+   zero, and a tax on a free card is still a tax, v4.06). */
+function costTaxes(c, sd, o, route){
+  o = o || {};
+  return frostCount(sd)
+       + (isActionPaid(c, route) ? nextTurnTax(sd) : 0)
+       + (isActivation(c, route) ? 0 : (o.costTax || 0));
+}
+
 function effCost(c,sd,o){
   o = o || {};
   /* AND WHAT A BANISH-RIDER STAMPED ON THE CARD ITSELF (v3.92) — Rising
@@ -8285,7 +8335,7 @@ function effCost(c,sd,o){
      reach it. A caller that says nothing prices X at 0. */
   const xPart = (c && c.cx) ? c.cx * (o.x || 0) : 0;
   return Math.max(0,(c.cost||0)+xPart-runeRed(c)*runeCount(sd)-boardRed(c,sd)-costOffFor(c,sd)-dyn)
-       + frostCount(sd) + nextTurnTax(sd) + (o.costTax || 0);
+       + costTaxes(c, sd, o);
 }
 
 /* WHAT THE GAME CONTRIBUTES TO A COST, IN ONE PLACE (v3.96).
@@ -10103,7 +10153,7 @@ const fxReset = () => FXMEMO.clear();
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter,
   PER_COUNT, DEF_PER, perCountKey, chainHits, pickSubject, attackQual, markRed, costCtx, qualMatches, abWindow, defCap, defCounts, isBlockCard,
         nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, isActionCard, costOffFor, heaveOf,
-        classifyClause, fxParse, fxReset, playableFromZone, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
+        classifyClause, fxParse, fxReset, playableFromZone, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost, isActivation, isActionPaid, costTaxes,
         DECL_OPS, dracLinks, weaponCost, payTrigger, OFFER_TRIGGERS, allyAttack, auraWeaponGrant, wardValue, wardBearers, wardTotal, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, drxBarred, drxBarWhy, rxPump,
         idleCounterWipes, rustedThrough,
         isAtkActionCard, phantasmPops, zonePow, pow6, kwGated, hasKwNow, printedKw,
