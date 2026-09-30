@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.83 (updated through v4.85)
+# Handoff — Dawnblade, at v4.83 (updated through v4.86)
 
 **Written 2026-09-28. Every number below was re-derived this session, with
 the command that produces it.** Re-derive before you quote one; this file
@@ -22,8 +22,8 @@ where things stand and what is next.
 
 | measure | value | command |
 |---|---|---|
-| version | v4.85, live on GitHub Pages | `grep APP_VER index.html` |
-| drills | 3285 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
+| version | v4.86, live on GitHub Pages | `grep APP_VER index.html` |
+| drills | 3295 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
 | pool coverage | **405 of 405** unique cards read in full · 0 part · 0 none | `npm run audit`, top of `AUDIT.md` |
 | unfinished cards | 0, and 0 one clause away | `npm run gaps` |
 | approximation ledger | 45 records: 27 closed · **15 stated · 3 open** | `node tools/approx.js` |
@@ -99,11 +99,9 @@ today:
   v4.85** (`activation-discard-cost-asked`, closed). What is left is a
   non-random additional-cost discard (no pool card) and a payment made from
   a sheet.
-- **Hyper Inflation's tax reaches abilities** (found at v4.85). It prints
-  *"cards cost {r} more to play"*, and `effCost` adds it to an activated
-  ability and a weapon swing as well. Frostbite prints *"cards and
-  abilities"*, so the two taxes differ. Also ask whether Cartilage Crush's
-  *"first action"* tax should reach an instant.
+- ~~**Hyper Inflation's tax reaches abilities**~~ **Fixed at v4.86**, with
+  Frostbite and Cartilage Crush: `parser.costTaxes` is the one reader of
+  which payments a tax reaches.
 - **`instant-speed-plays-resolve-on-play`** (table). An instant or reaction
   resolves the moment it is played. v4.66 built the stack window for plays
   at action speed; the reaction half is the remaining collapse.

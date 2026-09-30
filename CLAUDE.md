@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.85
+**Current version:** v4.86
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3285 drills** at v4.85.
+This is `node --test "test/*.test.js"` — **3295 drills** at v4.86.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,18 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A TAX READS WHICH PAYMENTS IT REACHES (v4.86)
+
+Frostbite prints "cards **and abilities**", Hyper Inflation "**cards** …
+to **play**", Cartilage Crush "their first **action**". `effCost` added all
+three to everything, and an ally's or an aura's attack (priced off its own
+line, never `effCost`) paid none: Frostbite was destroyed by an activation
+it never taxed. `parser.costTaxes(c, sd, o, route)` is the one reader, with
+`isActivation` and `isActionPaid` beside it, and the ally/aura route is the
+caller's answer. **When a cost has two readers, a tax added to one is a tax
+the other does not charge**: v3.44 correctly kept the ally attack off
+`effCost`, and every tax written after that missed it.
 
 ### A BUTTON OFFERED, AND A GUARD ABOVE IT THAT REFUSED THE TAP (v4.85)
 

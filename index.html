@@ -806,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "4.85"; /* v4.85 - attack-reaction abilities work in the trainer's reaction window, and a discard cost asks which card. See CHANGELOG.md. */
+window.APP_VER = "4.86"; /* v4.86 - each cost tax reaches only what it prints, and an ally attack is priced off its own line. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -3850,6 +3850,17 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     setG(s => { if(s.mode==="xpick" && s.xPick){ pick = s.xPick; return {...s, mode:"act", xPick:null, _x:x}; } return s; });
     if(pick) tryPlay(pick.card, pick.from, pick.idx);
   };
+  /* WHAT A PLAY OR AN ACTIVATION COSTS ON THIS BOARD, IN ONE PLACE (v4.86).
+     An ally's ATTACK prints its own cost (v3.44), and the pay sheet, its
+     chip and `confirmPay` all priced it with `effCost` — the ally's PLAY
+     cost. Swabbie's attack (2) asked for 3, and Limpit's (1) read "covered"
+     at 0 and then charged 1 into an empty pool: `NEGATIVE-RES`, v3.80's
+     three-cost-readers bug on the one route that did not read `effCost`.
+     The taxes an activated ability owes ride on it (`costTaxes`, the reader
+     `effects.execute` charges with). */
+  const payCost = (s, card, from) => from==="ally"
+    ? ((DawnParser.allyAttack(card)||{}).cost || 0) + DawnParser.costTaxes(card, act(s), costCtx(s, actorOf(s)), "ally")
+    : effCost(card, act(s), costCtx(s, actorOf(s)));
   const tryPlay = (card,from,idx,half) => setG(s=>{
     /* A LIVE SHEET STOPS THE GAME (v4.80) — `judge.legal`'s rule, which this
        board never had: nothing is played until the question is answered.
@@ -4137,8 +4148,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     }
     /* THE ATTACK'S COST IS NOT THE CARD'S. An ally's `.cost` is what it
        cost to DEPLOY; its attack prints its own. */
-    const cost = from==="ally" ? ((DawnParser.allyAttack(card)||{}).cost || 0)
-                               : effCost(card, act(s), costCtx(s, actorOf(s)));
+    const cost = payCost(s, card, from);
     /* AND THE SHEET OPENS FOR A CHI COST TOO (v4.54). Asked only of the
        resources this LIVELOCKS: a seat holding enough {r} and an
        unpitched Inner Chi is allowed to activate (the ceiling counts the
@@ -4158,7 +4168,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
   const confirmPay = () => setG(s=>{
     if(!s.pending) return s;
     const gain = you(s).paySel.reduce((a,i)=>a+(you(s).hand[i].pitch||0),0);
-    const need = effCost(s.pending.card, you(s), costCtx(s, 0))-you(s).res;
+    const need = payCost(s, s.pending.card, s.pending.from)-you(s).res;
     if(gain<need) return L(s,`Selected pitch ${gain}, need ${need}.`);
     /* AND A CHI COST ASKS A SECOND QUESTION OF THE SAME SELECTION (v4.54):
        not only how much was pitched but how much of it is Chi. RE-DERIVED
@@ -5070,7 +5080,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
   const handGear = you(g).gear.map((gr,i)=>({gr,i})).filter(x=>["1h","2h","off","qvr"].includes(slotOf(x.gr).z));
   const armor = you(g).gear.map((gr,i)=>({gr,i})).filter(x=>!["1h","2h","off","qvr"].includes(slotOf(x.gr).z));
   const is2H = handGear[0] && slotOf(handGear[0].gr).z==="2h";
-  const featured = (g.mode==="stack" && g.pend) ? {card:g.pend.card, chip:"ON THE STACK — "+g.pend.total} : (g.mode==="boostpick" && g.pending) ? {card:g.pending.card, chip:"BOOST? — banish the top card"} : (g.mode==="fusepick" && g.pending) ? {card:g.pending.card, chip:"FUSION? — reveal a "+g.pending.types.join("/")+" card"} : (g.mode==="chargepick" && g.pending) ? {card:g.pending.card, chip:"CHARGE? — a card from hand to your soul"} : (g.mode==="pay" && g.pending) ? {card:g.pending.card, chip:"PAYING — PITCH "+Math.max(0,effCost(g.pending.card, you(g), costCtx(g, 0))-you(g).res)+" MORE"}
+  const featured = (g.mode==="stack" && g.pend) ? {card:g.pend.card, chip:"ON THE STACK — "+g.pend.total} : (g.mode==="boostpick" && g.pending) ? {card:g.pending.card, chip:"BOOST? — banish the top card"} : (g.mode==="fusepick" && g.pending) ? {card:g.pending.card, chip:"FUSION? — reveal a "+g.pending.types.join("/")+" card"} : (g.mode==="chargepick" && g.pending) ? {card:g.pending.card, chip:"CHARGE? — a card from hand to your soul"} : (g.mode==="pay" && g.pending) ? {card:g.pending.card, chip:"PAYING — PITCH "+Math.max(0,payCost(g, g.pending.card, g.pending.from)-you(g).res)+" MORE"}
     : g.featured;
   const prevLinks = g.chain.slice(0,-1).reverse();
   const gearBtn = (gr,i,extra,st) => {
@@ -5363,7 +5373,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                   </div>
                 </div>
               </div>
-              {g.mode==="pay" && (()=>{const sel=you(g).paySel.reduce((a,i)=>a+(you(g).hand[i].pitch||0),0); const need=Math.max(0,effCost(g.pending.card, you(g), costCtx(g, 0))-you(g).res-sel); return <div className="statusline">Paying <b>{g.pending.card.name}</b> — pitch below · {need>0?<span>need <b>{need}</b> more</span>:<span>covered ✓</span>}<button onClick={cancelPay}>✕ cancel</button></div>;})()}
+              {g.mode==="pay" && (()=>{const sel=you(g).paySel.reduce((a,i)=>a+(you(g).hand[i].pitch||0),0); const need=Math.max(0,payCost(g, g.pending.card, g.pending.from)-you(g).res-sel); return <div className="statusline">Paying <b>{g.pending.card.name}</b> — pitch below · {need>0?<span>need <b>{need}</b> more</span>:<span>covered ✓</span>}<button onClick={cancelPay}>✕ cancel</button></div>;})()}
               {g.mode==="block" && <div className="statusline">{g.bphase==="defend" ? <span>Tap hand &amp; equipment to defend — incoming <b>{g.incoming}</b></span> : <span>Reaction step — instants from floating <b>{you(g).res}</b></span>}</div>}
               {g.mode==="stack" && <div className="statusline">Priority — react from floating <b>{you(g).res}</b> or pass</div>}
               {g.mode==="arsenal" && (()=>{ const off = DawnEffects.heaveOffer(g, 0); return (

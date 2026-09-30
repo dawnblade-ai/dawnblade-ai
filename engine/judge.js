@@ -1277,8 +1277,12 @@ function legal(g, a, seat){
       const win = P.speedAllowed(g, seat);
       if(win.indexOf("action") < 0) return "no action-speed window — " + _route + " cannot attack here";
       if(!(sd.ap > 0)) return "no action point left";
-      if((aa.cost || 0) > sd.res + payCeiling(sd, null))
-        return b.card.name + " costs " + aa.cost + " to attack and you cannot raise it";
+      /* WITH ITS TAXES (v4.86) — an ally's or an aura's attack is an
+         activated ability, which Frostbite and a first-action tax reach;
+         `boardAtkCost` is the one reader all three sites ask. */
+      const _abc = boardAtkCost(g, seat, b.card, aa, _route === "an ally" ? "ally" : "aura");
+      if(_abc > sd.res + payCeiling(sd, null))
+        return b.card.name + " costs " + _abc + " to attack and you cannot raise it";
       return null;
     }
     /* ---- WHICH OF THE PIECE'S ROUTES DID THE ACTION NAME? (v4.49) -----
@@ -1606,15 +1610,24 @@ const targets = (g, defIdx, heroCard) => GM.attackTargets(g, defIdx, heroCard);
    Asking JUDGE is in contract (the policy already asks `legal`,
    `pendingOf`, `paySum` and `autoAnswer`), and it keeps one reader:
    judge asks the parser, the policy asks judge. */
+/* WHAT A BOARD ATTACK COSTS, TAXES AND ALL (v4.86). The attack prints its
+   own cost (never the card's PLAY cost, v3.44), and it is an activated
+   ability, so the taxes that reach an ability reach it: `parser.costTaxes`
+   with the route named, because `effCost` cannot tell an ally's attack
+   from the ally being played. ONE reader for `legal`, `doActivate` and the
+   policy's view, or the three disagree (v3.80). */
+function boardAtkCost(g, seat, card, aa, route){
+  return ((aa && aa.cost) || 0) + PR.costTaxes(card, at(g, seat), PR.costCtx(g, seat), route);
+}
 const boardAttackOf = (g, seat, uid) => {
   const sd = at(g, seat);
   const b = (sd.board || []).find(x => x && x.uid === uid);
   if(!b) return null;
   const ally = PR.allyAttack(b.card);
-  if(ally) return {cost: ally.cost || 0, power: +b.card.power || 0, kind: "ally"};
+  if(ally) return {cost: boardAtkCost(g, seat, b.card, ally, "ally"), power: +b.card.power || 0, kind: "ally"};
   const aura = PR.auraAttackOf(b.card, sd, {yourTurn: seat === g.turnPlayer,
                                             discount: bOf(g, seat).auraDiscount});
-  return aura ? {cost: aura.cost || 0, power: aura.power || 0, kind: "aura"} : null;
+  return aura ? {cost: boardAtkCost(g, seat, b.card, aura, "aura"), power: aura.power || 0, kind: "aura"} : null;
 };
 /* ---- AND WHAT CAN IT DO THAT IS NOT AN ATTACK? (v4.47) ---------------
 
@@ -2524,9 +2537,10 @@ function doActivate(g, a, seat){
       const aa = _ally || _aura || {cost: 0};
       const route = _ally ? "ally" : _aura ? "aura" : "ally";
       const target = targetOf(g, seat, a.target);
-      if((aa.cost || 0) > sd.res)
-        return say({...g, pending: {kind: "pay", seat, card: b.card, from: route, need: aa.cost, target}},
-          b.card.name + " costs " + aa.cost + " to attack and " + sd.name
+      const _abc = boardAtkCost(g, seat, b.card, aa, route);   /* v4.86 */
+      if(_abc > sd.res)
+        return say({...g, pending: {kind: "pay", seat, card: b.card, from: route, need: _abc, target}},
+          b.card.name + " costs " + _abc + " to attack and " + sd.name
           + " holds " + sd.res + " — pitch, or cancel.");
       return commitPlay(g, b.card, route, seat, null, target);
     }

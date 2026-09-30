@@ -203,7 +203,11 @@ test("which SOURCE FILE each slice reads is pinned, or the resolver is unwatched
        `playRx` (both reaction routes read the wall out of `rxWall`). The
        trainer is a closure inside `Battle`, so each is a source scan and
        says so; the behaviour was driven on the page at phone dimensions. */
-    "index.html": 22,
+    /* 22 -> 24 AT v4.86, READ FIRST: `costtaxes.test.js` takes `tryPlay`
+       (its cost line asks `payCost`) and `confirmPay` (the need it checks
+       is `payCost`'s, where it used to price an ally's attack at the ally's
+       PLAY cost). Both anchored on a declaration, bounded at the next. */
+    "index.html": 24,
     "engine/build.js": 1,
     /* +2 AT v4.59, READ FIRST: `dichotomy.test.js` pins that `buildPrompt`
        names the new `filters` field (v2.34's rule, ninth field) and that
@@ -256,6 +260,9 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
     /* 12,276 -> 12,746 AT v4.81, READ FIRST: still `buildPrompt`'s pick
        branch, bounded at the next variant; the growth is the opt-in
        `discard` field (a chosen discard's continuation). */
+    /* +costtaxes AT v4.86: `tryPlay` -> `confirmPay`, the same body the
+       rows below take, for the claim that its cost line asks `payCost`. */
+    "costtaxes.test.js index.html 21232",
     "dichotomy.test.js engine/prompts.js 12746",
     /* 8,550 -> 9,523 AT v4.60, and now THREE files take the same slice —
        `playRx`, anchored on its own declaration and bounded at `playRxA`, the
@@ -275,7 +282,7 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        ACTIVATED route asks too, so the body is shorter by the two
        declarations it no longer carries. Same anchors. `rxability.test.js`
        takes the same slice to pin that the destructure is there. */
-    "discost.test.js index.html 21350",
+    "discost.test.js index.html 21232",
     "dorinthea.test.js index.html 9305",
     "drx.test.js index.html 9305",
     "phasebar.test.js index.html 15953",
@@ -292,6 +299,9 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        `confirmPay`; the growth is `tryPlay`'s new first line, refusing a
        play while a sheet is live, and its comment. Same signature, same
        anchors, so the slice still bounds the body it names. */
+    /* 21,350 -> 21,232 AT v4.86, READ FIRST: still `tryPlay` ->
+       `confirmPay`; its two-line cost ternary became one `payCost` call,
+       the reader the pay sheet and `confirmPay` now share. */
     /* 18,911 -> 21,350 AT v4.85, READ FIRST: still `tryPlay` ->
        `confirmPay`. The growth is two things inserted into the body: the
        opening guard's comment (an activated attack reaction is let through
@@ -301,10 +311,10 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        `tryPlay` in `stack` (an activated ability, never a reaction card).
        Same signature, same anchors; `discost.test.js` and
        `rxability.test.js` take the same slice for claims of their own. */
-    "priority.test.js index.html 21350",
-    "priority.test.js index.html 21350",
+    "priority.test.js index.html 21232",
+    "priority.test.js index.html 21232",
     "priority.test.js index.html 9305",
-    "rxability.test.js index.html 21350",
+    "rxability.test.js index.html 21232",
     "rxability.test.js index.html 9305"
   ], /* 15,440 -> 16,557 AT v4.59, READ FIRST (v4.57: a pin edited without
         being read is a guard switched off). Both rows are

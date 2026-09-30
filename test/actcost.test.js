@@ -175,7 +175,14 @@ test("all three activation branches ask effCost, and the ALLY one does not", {sk
   assert.match(body, /const ab = piece\.powCard;[\s\S]{0,120}const acost = effCost\(ab, sd, PR\.costCtx\(g, seat\)\)/,
     "the equipment-ability branch");
   assert.match(body, /const cost = effCost\(piece, sd, PR\.costCtx\(g, seat\)\);/, "the weapon branch");
-  assert.match(body, /aa\.cost/, "and the ally branch keeps the printed ability cost");
+  /* THE ALLY BRANCH PRICES THE ATTACK'S OWN LINE, WITH ITS TAXES (v4.86).
+     It never read `effCost` and still does not; what changed is that the
+     taxes an activated ability owes are added by `boardAtkCost`, the one
+     reader `legal`, `doActivate` and the policy's view all ask. */
+  assert.match(body, /const _abc = boardAtkCost\(g, seat, b\.card, aa, route\);/,
+    "and the ally branch keeps the printed ability cost, taxed through the one reader");
+  assert.match(src, /function boardAtkCost\(g, seat, card, aa, route\)\{\n  return \(\(aa && aa\.cost\) \|\| 0\) \+ PR\.costTaxes\(card, at\(g, seat\), PR\.costCtx\(g, seat\), route\);/,
+    "the board attack's cost is its printed line plus `costTaxes` — never `effCost`, which reads the PLAY cost");
   assert.doesNotMatch(body, /effCost\(b\.card/, "…never effCost");
   /* NO SITE MAY BUILD THE OPTS BY HAND. A second inline literal is the
      no-mirror rule broken inside one file, and it is how these three
