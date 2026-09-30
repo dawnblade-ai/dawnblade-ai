@@ -298,6 +298,7 @@ const ACTIONS = [
   "addPay",      /* {yes}        pay an optional additional cost, or decline */
   "split",       /* {half}       declare which half of a split card is played */
   "xval",        /* {x}          declare X for a card whose cost prints X (v4.72) */
+  "discost",     /* {uid}        which card an activation's discard cost spends (v4.85) */
   "defend",      /* {uid}        toggle a defender (hand card or gear)    */
   "pass",        /*              pass priority — CR 4.2.2                 */
   "arsenal",     /* {uid|null}   end-phase step (b); null leaves it empty */
@@ -333,7 +334,7 @@ const ACTIONS = [
 
    Exported so a board can be held to covering all of them rather than to
    remembering — the next kind added walks into the same fallback. */
-const PENDING_KINDS = ["pay", "boost", "addPay", "split", "fuse", "charge", "xval"];
+const PENDING_KINDS = ["pay", "boost", "addPay", "split", "fuse", "charge", "xval", "discost"];
 const PROMPT_ACTIONS = ["promptSel", "promptChoose", "promptConfirm", "promptDecline",
                         "promptTakeBack"];
 
@@ -842,6 +843,16 @@ function legal(g, a, seat){
     return null;
   }
   if(a.t === "xval") return "nothing is asking for X";
+  /* WHICH CARD THE DISCARD COST SPENDS (v4.85). The candidates ride on the
+     pending, taken off `discCostChoice` when the question was asked, so a
+     wire answer naming anything else is refused rather than paying with a
+     card the cost cannot spend. */
+  if(p && p.kind === "discost"){
+    if(a.t !== "discost") return "choose which card " + p.card.name + " discards first";
+    if((p.uids || []).indexOf(a.uid) < 0) return "that card is not one the cost can spend";
+    return null;
+  }
+  if(a.t === "discost") return "nothing is asking which card to discard";
   if(p && p.kind === "addPay"){
     /* NO SEAT TEST HERE. A `pending` belongs to ONE seat and the general
        gate above this block already refuses the other with "Opponent is
@@ -2243,6 +2254,7 @@ function reduce(g, a, seat){
     case "payCancel": n = doPayCancel(n, seat); break;
     case "split":     n = doSplit(n, a, seat); break;
     case "xval":      n = doXval(n, a, seat); break;
+    case "discost":   n = doDiscCost(n, a, seat); break;
     case "addPay":    n = doAddPay(n, a, seat); break;
     case "boost":     n = doBoost(n, a, seat); break;
     case "fuse":      n = doFuse(n, a, seat); break;
@@ -2457,6 +2469,7 @@ function doActivate(g, a, seat){
        `effCost` here would disagree with the charge in the other
        direction. Each read asks what its own charge site asks. */
     const ab = bOf(g, seat).HPOW;
+    { const q = askDiscCost(g, seat, ab, a); if(q) return q; }
     const acost = effCost(ab, sd, PR.costCtx(g, seat));
     if(acost > sd.res || chiShort(sd, ab) > 0)   /* v4.54 — see `chiShort` */
       return say({...g, pending: {kind: "pay", seat, card: ab, from: "hero", need: acost, target: null}},
@@ -2499,6 +2512,7 @@ function doActivate(g, a, seat){
          reason that version made `uid === "hpow"` the discriminator. */
       if(!_ally && !_aura){
         const ab = BD.boardPow(b);
+        { const q = askDiscCost(g, seat, ab, a); if(q) return q; }
         const bcost = effCost(ab, sd, PR.costCtx(g, seat));
         if(bcost > sd.res || chiShort(sd, ab) > 0)   /* v4.54 — see `chiShort` */
           return say({...g, pending: {kind: "pay", seat, card: ab, from: "board",
@@ -2530,7 +2544,9 @@ function doActivate(g, a, seat){
      the "hero" zone is not a list and nothing splices it. */
   /* THE SAME SPLIT, AND THE SAME ROUTE (v3.83) — see `legal`. */
   if(_abUid || !PR.isWeapon(piece)){
-    const ab = piece.powCard, acost = effCost(ab, sd, PR.costCtx(g, seat));   /* v3.80 — see doActivate's hero branch */
+    const ab = piece.powCard;
+    { const q = askDiscCost(g, seat, ab, a); if(q) return q; }
+    const acost = effCost(ab, sd, PR.costCtx(g, seat));   /* v3.80 — see doActivate's hero branch */
     if(acost > sd.res || chiShort(sd, ab) > 0)   /* v4.54 — see `chiShort` */
       return say({...g, pending: {kind: "pay", seat, card: ab, from: "hero", need: acost, target: null}},
         ab.name + " costs " + acost + " and " + sd.name + " holds " + sd.res + " — pitch, or cancel.");
@@ -2826,6 +2842,27 @@ function doSplit(g, a, seat){
 
 /* X rides to `execute` on the state, like the split half — `effCost`
    reads it through `costCtx` and the token op reads it for the quantity. */
+/* AN ACTIVATION'S DISCARD COST ASKS WHICH CARD (v4.85) — `xval`'s shape,
+   on the activation route. Asked before the payment decision, because the
+   cost is paid when the ability resolves and a queued sheet opens after
+   that (v3.34). Only with a real choice (`discCostChoice`: two different
+   cards that could pay), and only once: the answer rides on the STATE as
+   `_discCostUid`, so re-entering `doActivate` finds it and goes on. */
+function askDiscCost(g, seat, ab, a){
+  if(g._discCostUid != null) return null;
+  const uids = PM.discCostChoice(ab, at(g, seat));
+  if(!uids) return null;
+  return say({...g, pending: {kind: "discost", seat, card: ab, act: {...a}, uids}},
+    ab.name + " costs a discard — which " + (ab._discardSubject || "card") + "?");
+}
+function doDiscCost(g, a, seat){
+  const p = g.pending;
+  const c = (at(g, seat).hand || []).find(x => x && x.uid === a.uid);
+  const n = say({...g, pending: null, _discCostUid: a.uid},
+    at(g, seat).name + " will discard " + (c ? c.name : "that card") + " to pay for " + p.card.name + ".");
+  return doActivate(n, p.act, seat);
+}
+
 function doXval(g, a, seat){
   const p = g.pending;
   const n = say({...g, pending: null, _x: a.x}, at(g, seat).name + " declares X = " + a.x + ".");
@@ -2893,7 +2930,7 @@ function doBoost(g, a, seat){
    outcome of the window is the one this produces. It is also what keeps
    the change invisible to every game in which neither seat holds an
    instant-speed answer. */
-const HELD_DECL = ["_half", "_doBoost", "_addPaid", "_fuseUid", "_chargeUids", "_x"];
+const HELD_DECL = ["_half", "_doBoost", "_addPaid", "_fuseUid", "_chargeUids", "_x", "_discCostUid"];
 const HELD_LIFT = {hand: 1, arsenal: 1, grave: 1, banish: 1};
 /* WHICH PLAYS WAIT: everything at ACTION speed. A card played in the
    action window, a weapon swing, an ally's or an aura's attack, and an
@@ -2911,9 +2948,14 @@ function holdPlay(g, card, zone, seat, window, target){
   const lifted = !!HELD_LIFT[zone];
   const decl = {};
   let n = {...g};
-  /* CAPTURED, NOT CLEARED: every play reaches here through
-     `commitPlayBoosted`, which strips these off whatever it returns. */
+  /* CAPTURED, AND CLEARED HERE (v4.85). A PLAY reaches here through
+     `commitPlayBoosted`, which strips these off whatever it returns; an
+     ACTIVATION calls `commitPlay` directly and strips nothing, so a
+     declaration it carries (`_discCostUid`) sat on the state while the
+     ability waited, for any other resolution in the window to spend. The
+     layer carries it now, so the state lets it go. */
   for(const k of HELD_DECL) if(n[k] !== undefined) decl[k] = n[k];
+  for(const k of HELD_DECL) delete n[k];
   n = put(n, seat, s => {
     const o = {...s, res: 0};
     if(lifted){

@@ -1,3 +1,107 @@
+## v4.85 — the Agents' abilities, on the trainer and at the table
+
+Two defects, and one family of cards sits in both of them: Arakni's Agents
+of Chaos print *"Attack Reaction - Discard an Assassin card: …"*, which is
+an attack-reaction ability with a discard cost.
+
+### A dead button in the one window it is legal in (trainer)
+
+`tryPlay` opened by returning on `s.mode === "stack"`, which is the
+trainer's reaction window. The `_attackRx` legality further down was written
+for exactly that mode, so it was unreachable. Every attack-reaction
+**ability** was dead on the board a player uses:
+
+- Prey Spotters, Stalker's Steps, Bolt'n Boots and Danger Digits;
+- Boltyn's own hero ability;
+- the Agents.
+
+v3.74 fixed the half that OFFERS them: `heroPowWindowOK` and the gear tile
+enable them in `stack`. The tap then reached a guard that refused it in
+silence.
+
+**Found by driving the page at phone dimensions.** Prey Spotters peeked
+*"tap again — attack reaction"*, and the second tap did nothing. No drill
+could reach it: `tryPlay` is a closure inside `Battle`. The drill beside it
+said so in as many words: *"what it cannot prove is that the tap reaches it
+on a phone… recorded as unvalidated rather than reported as shipped."* That
+record came due.
+
+- **The guard lets one tap through.** An activated attack reaction is
+  admitted in `stack`, and every other tap there is still refused, so the
+  reaction window keeps its own doors (`playRx`, `playRxA`).
+- **The window survives the resolution.** `resolvePlay` entered `execute` at
+  `mode:"act"`, which would hand the player an action phase with a live link
+  on the stack. An activated reaction keeps `stack`.
+- **It is handed the wall.** `rxWall` is the one reader of the trainer's
+  declared defenders, and both reaction routes ask it: the reaction card and
+  the activated ability (v3.89's `handBlockers`/`defenders` pair).
+- **A cancelled payment returns to the window it opened from.**
+
+Driven after the fix, at 393×852: the dummy is marked, Prey Spotters is
+filed, the reaction layer sits on the stack, and the link resolves. The
+judges are silent.
+
+### Which card a discard cost spends (both boards)
+
+`cost-discard-auto-picked` (v4.81) recorded that an activation's discard
+cost took the FIRST matching card in hand. That covers Carrion Crown's ally
+and the five Agents' Assassin card. A cost is paid before the ability
+resolves, so the answer is a **pending** rather than a sheet: the `xval`
+shape (v4.72), asked before the payment.
+
+- **`prompts.discCostChoice` is the one reader**, and both boards ask it. It
+  answers only when two DIFFERENT cards could pay. Two copies of one card are
+  one choice, one name at two pitches is two, and one payer is none (v3.55).
+- **At the table** it is the `discost` pending (`PENDING_KINDS` seven →
+  eight). A wire answer naming a card outside the candidates is refused.
+- **On the trainer** it is `discpick`. The answer re-enters `tryPlay`, so
+  every legality is asked again of the same state.
+- **The answer rides on the state as `_discCostUid`.** `execute` re-derives
+  it: a uid that is not in hand, or does not pay, falls back to the first
+  card that does, because `reduce` is fed by JSON off a wire (v2.04).
+- **It is a held declaration** (`HELD_DECL`). And `holdPlay` now clears
+  the declarations it captures: an ACTIVATION reaches it without passing
+  `commitPlayBoosted`, which strips them off every other play. So the
+  answer sat on the state while the ability waited on the stack.
+- **The policy answers the first candidate**, which is the card the engine
+  took before, so the ladder measures the route (v4.81's rule).
+
+Driven on the phone: Gravy Bones with Oysten and Barnacle in hand. The
+Crown asked *"which ally?"*, Barnacle (the second in hand order, which the
+old pick never took) was discarded, and the Crown resolved.
+
+The ledger record is **split**. `activation-discard-cost-asked` is closed,
+with its probe turned round. `cost-discard-auto-picked` stays stated for
+the two halves left: a non-random additional-cost discard (no pool card
+reaches it) and a payment made from a sheet. **Its old probe could not have
+gone red**: it held two Barnacles, which are no choice, so it would have
+stayed green through the build.
+
+### And one found on the way
+
+Hyper Inflation prints *"**cards** cost {r} more to **play**"*, and `effCost`
+adds the tax to an activated ability and a weapon swing too. The probe paid
+1 for Prey Spotters, whose cost is 0. Frostbite prints *"cards **and
+abilities**"*, so the two taxes genuinely differ. Recorded for the next
+version rather than folded in here.
+
+### Measured
+
+- **3285 drills** (12 new in `test/discost.test.js`, 1 in
+  `test/rxability.test.js`, 1 ledger probe), 0 fail, 5 skipped; 107 scenes; babel, crindex
+  and fairness clean.
+- **The ladder is IDENTICAL** at 3 seeds on both sides (630 games, 0
+  refusals, 0 violations, 2 stalls). The policy answers the old pick.
+- **Ledger:** 45 records, 27 closed, 15 stated, 3 open.
+- **19 sabotages, 19 bite.** Four of the first pass were my fixtures:
+  - `execute`'s own clear is redundant on the HELD path, so the unheld
+    Agent route has to assert it;
+  - `holdPlay`'s clear needed a fixture where the ability actually waits;
+  - a trainer scan matched a name that survives `null &&` (v4.55);
+  - one revert anchor was not unique (v4.37).
+- **Pins moved, each read first:** the slice census (five new trainer slices,
+  `tryPlay` 18,911 → 21,350, `playRx` 9,516 → 9,305) and the ledger counts.
+
 ## v4.84 — the unanchored-match census, standing
 
 `npm run unanchored` asks one question of every pool clause that reads

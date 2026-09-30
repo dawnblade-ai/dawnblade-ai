@@ -397,6 +397,47 @@ test("THE TRAINER ASKS `abWindow` AND REFUSES THE WRONG WINDOW", {skip: false}, 
   assert.equal(inst._attackRx, false);
 });
 
+test("…AND THE TAP REACHES IT: the reaction window is a door, not a wall (v4.85)", () => {
+  /* THE HALF THE DRILL ABOVE SAID IT COULD NOT PROVE. `tryPlay` opened by
+     returning on `s.mode==="stack"` — so the `_attackRx` legality above,
+     written for exactly that mode, was unreachable, and every attack-
+     reaction ABILITY was dead on this board in the one window it is legal
+     in. Driven on the page at phone dimensions: Prey Spotters peeked "tap
+     again — attack reaction", and the second tap did nothing. Found by
+     taking that recorded "unvalidated" at its word (v3.41).
+
+     A SOURCE SCAN, because `tryPlay` is a closure inside `Battle`. What it
+     pins is the WHOLE conditional (v4.55): a bare mention of `_attackRx`
+     in the guard line survives `&& false`. */
+  const fs = require("fs");
+  const src = fs.readFileSync(require("path").join(__dirname, "..", "index.html"), "utf8");
+  const tp = src.slice(src.indexOf("const tryPlay = (card,from,idx,half)"), src.indexOf("const confirmPay = () => setG"));
+  const guard = tp.split("\n").find(l => /if\(s\.over\|\|s\.mode==="block"/.test(l));
+  assert.ok(guard, "tryPlay's opening guard moved — re-anchor this drill");
+  assert.ok(guard.includes('(s.mode==="stack"&&!(card&&card._attackRx))'),
+    "the reaction window refuses an activated attack reaction again — the door is dead");
+  assert.ok(!/\|\|s\.mode==="stack"\|\|/.test(guard),
+    "a bare stack refusal came back beside the exemption");
+  /* and it still refuses every OTHER tap there, or the window loses its doors */
+  assert.ok(/s\.mode==="stack"&&/.test(guard), "the stack refusal was deleted rather than narrowed");
+
+  /* THE WINDOW SURVIVES THE RESOLUTION. `resolvePlay` entered `execute` at
+     `mode:"act"`, which hands the player an action phase with a live link
+     on the stack; an activated reaction keeps `stack`, and is handed the
+     wall out of the reader `playRx` asks. */
+  const rp = src.slice(src.indexOf("function resolvePlay(s, card, from, idx){"), src.indexOf("function afterDeclare(n){"));
+  assert.match(rp, /const _arx = !!\(card && card\._attackRx\);/);
+  assert.match(rp, /execute\(\{\.\.\.s, mode:_arx\?"stack":"act", pending:null\}, card, from, idx, _arx \? rxWall\(s\) : undefined\)/,
+    "the reaction window closes under the ability, or it resolves with no wall");
+  const rx = src.slice(src.indexOf("const playRx = (i, addPaid) => setG"), src.indexOf("const playRxA = () => setG"));
+  assert.match(rx, /const \{handBlockers, defenders\} = rxWall\(n\);/,
+    "the reaction CARD route re-derives the wall — two readers of one fact");
+  /* AND A CANCELLED PAYMENT RETURNS TO THE WINDOW IT OPENED FROM. */
+  assert.match(tp, /pending:\{card,from,idx,back:s\.mode==="stack"\?"stack":"act"\}/);
+  assert.match(src, /const cancelPay = \(\) => setG\(s=>\{ const n = \{\.\.\.s, mode:\(s\.pending&&s\.pending\.back\)\|\|"act"/,
+    "cancelling a reaction's payment hands the player an action phase over a live link");
+});
+
 test("THE CREDIT IS CONDITIONAL — the clauses that refuse stay `skip`", {skip}, () => {
   /* `fxParse` marks the "Attack Reaction - …" clause read because
      `parseHeroPower` reads it, exactly as it does for `handAbility`. Made

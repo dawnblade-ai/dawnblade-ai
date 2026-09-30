@@ -259,7 +259,9 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      43 holds AT v4.79: `gear-sweep-timing` is `gear-filed-when-destroyed`.
      43 -> 44 AT v4.81: `auto-pitch-discard` split into `chosen-discard-asked`
      (built) and `cost-discard-auto-picked` (the cost half, stated). */
-  assert.equal(Object.keys(APPROX).length, 44, "record count moved");
+  /* 44 -> 45 AT v4.85: `activation-discard-cost-asked`, split off
+     `cost-discard-auto-picked` when the activation half was built. */
+  assert.equal(Object.keys(APPROX).length, 45, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -346,7 +348,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      `control-change-steal-built`. 22 -> 23 AT v4.75: `spellvoid-x-read`.
      23 -> 24 AT v4.77: `surge-dealt-read`. 24 -> 25 AT v4.79:
      `gear-filed-when-destroyed`. 25 -> 26 AT v4.81: `chosen-discard-asked`. */
-  assert.equal(n("closed"), 26, "closed count moved");
+  /* 26 -> 27 AT v4.85: `activation-discard-cost-asked`, built. */
+  assert.equal(n("closed"), 27, "closed count moved");
 });
 
 /* ============================================================
@@ -1347,9 +1350,31 @@ probe("chosen-discard-asked", () => {
   assert.equal(((theirs.promptQ || [])[0] || {}).side, 1, "\"they discard\" is asked of THEM");
 });
 
-/* STATED AT v4.81 — the cost half. DRIVEN: Carrion Crown with two allies in
-   hand discards the first without asking. */
+/* STATED AT v4.81, NARROWED AT v4.85 — what is left of the cost half.
+   DRIVEN: a non-random additional-cost discard takes a card without asking.
+   Synthetic, because no pool card prints the shape (Savage Feast's is
+   random), and that is why it is left: nothing a match deals reaches it. */
 probe("cost-discard-auto-picked", () => {
+  const db = H.db();
+  if(!db) return;
+  const at = (uid, name, pitch, power) => ({uid, name, pitch, cost: 0, power, def: 2,
+    tt: "Generic Action - Attack", ty: ["Generic", "Action", "Attack"], kw: [], tx: ""});
+  const c = Object.assign(at(77, "Probe Additional Discard", 1, 3),
+    {tx: "As an additional cost to play this, discard a card."});
+  const g = H.state({hand: [c, at(1, "Probe Keep A", 1, 5), at(2, "Probe Keep B", 3, 1)], res: 9, ap: 1},
+                    {hp: 20}, {actor: 0, turnPlayer: 0, turn: 3});
+  const out = H.execute(g, c, "hand", 0), n = out.game || out;
+  assert.equal(n.sides[0].grave.filter(x => /Probe Keep/.test(x.name)).length, 1,
+    "fixture: the additional cost was not paid at all");
+  assert.ok(!n.pending && !n.prompt && !(n.promptQ || []).length,
+    "the additional-cost discard ASKS now — the record must move");
+});
+
+/* CLOSED AT v4.85 — the activation half. The probe is turned round: it
+   asserted Carrion Crown took the first of two allies, and asserts the
+   seat is ASKED now. Two DIFFERENT allies, because two copies of one card
+   are no choice (v3.55) and the old fixture held two Barnacles. */
+probe("activation-discard-cost-asked", () => {
   const db = H.db();
   if(!db) return;
   const PRx = require("../engine/parser.js");
@@ -1358,15 +1383,15 @@ probe("cost-discard-auto-picked", () => {
   const pc = {name: "Carrion Crown — ability", pitch: 0, cost: 0, power: null, def: null,
     tt: "Equipment Ability", kw: ["Go again"], gkw: [], tx: "Draw a card. Go again",
     sd: true, _discardCost: pw.discardCost.filter, _discardSubject: pw.discardCost.subject, uid: "gp901"};
-  const ally = u => Object.assign({}, C.resolveEntry(db, {name: "Barnacle", p: 2, code: null, q: 1}), {uid: u});
+  const ally = (n, u) => Object.assign({}, C.resolveEntry(db, {name: n, p: 2, code: null, q: 1}), {uid: u});
   let g = H.state({gear: [Object.assign({}, cc, {uid: 901, pow: pw, powCard: pc})],
-                   hand: [ally(501), ally(502)], deck: [{uid: 600, name: "T", pitch: 1}], res: 9, ap: 1},
+                   hand: [ally("Barnacle", 501), ally("Swabbie", 502)], deck: [{uid: 600, name: "T", pitch: 1}], res: 9, ap: 1},
                   {hp: 20}, {actor: 0, turnPlayer: 0, turn: 3});
   g = Object.assign(g, {phase: "action", step: "layer", priority: 0, passed: []});
   const s = H.J.reduce(g, {t: "activate", uid: 901, from: "gear"}, 0).state;
-  assert.ok(s.sides[0].grave.some(c => c.uid === 501),
-    "the cost no longer takes the FIRST ally — it asks which one, and the record must move");
-  assert.ok(!(s.prompt && s.prompt.discard), "…with no sheet");
+  assert.equal(s.pending && s.pending.kind, "discost", "the cost took an ally without asking which");
+  assert.deepEqual(s.pending.uids, [501, 502]);
+  assert.equal(s.sides[0].hand.length, 2, "an ally left the hand before the question was answered");
 });
 
 /* EVERY pool DECK card reads something. The probe is turned round. */

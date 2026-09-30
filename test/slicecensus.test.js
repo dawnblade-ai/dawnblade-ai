@@ -193,7 +193,17 @@ test("which SOURCE FILE each slice reads is pinned, or the resolver is unwatched
        safe form — to pin that seat 1's turn start ARMS its `nextTurn`
        schedule. Only one board seats the dummy, so the claim is about the
        trainer's source by construction. */
-    "index.html": 17,
+    /* 17 -> 22 AT v4.85, READ FIRST: five new trainer slices, every one
+       anchored on a declaration and bounded at the next (the safe form).
+       `discost.test.js` takes `tryPlay` (the discard question sits after
+       every legality and before the payment) and `confirmDiscCost` (the
+       answer re-enters `tryPlay`); `rxability.test.js` takes `tryPlay`
+       (its opening guard now admits an activated attack reaction in the
+       reaction window), `resolvePlay` (the window survives the ability) and
+       `playRx` (both reaction routes read the wall out of `rxWall`). The
+       trainer is a closure inside `Battle`, so each is a source scan and
+       says so; the behaviour was driven on the page at phone dimensions. */
+    "index.html": 22,
     "engine/build.js": 1,
     /* +2 AT v4.59, READ FIRST: `dichotomy.test.js` pins that `buildPrompt`
        names the new `filters` field (v2.34's rule, ninth field) and that
@@ -260,8 +270,14 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        `drxBarWhy(s.pend, c, "hand")` — the link and the door's zone rather
        than the link's card — seven characters shorter. Same body, same
        anchors. */
-    "dorinthea.test.js index.html 9516",
-    "drx.test.js index.html 9516",
+    /* 9,516 -> 9,305 AT v4.85, READ FIRST: still `playRx` -> `playRxA`;
+       the wall it hands `attackRx` moved into `rxWall`, the one reader the
+       ACTIVATED route asks too, so the body is shorter by the two
+       declarations it no longer carries. Same anchors. `rxability.test.js`
+       takes the same slice to pin that the destructure is there. */
+    "discost.test.js index.html 21350",
+    "dorinthea.test.js index.html 9305",
+    "drx.test.js index.html 9305",
     "phasebar.test.js index.html 15953",
     "phasebar.test.js index.html 62489",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
@@ -276,9 +292,20 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        `confirmPay`; the growth is `tryPlay`'s new first line, refusing a
        play while a sheet is live, and its comment. Same signature, same
        anchors, so the slice still bounds the body it names. */
-    "priority.test.js index.html 18911",
-    "priority.test.js index.html 18911",
-    "priority.test.js index.html 9516"
+    /* 18,911 -> 21,350 AT v4.85, READ FIRST: still `tryPlay` ->
+       `confirmPay`. The growth is two things inserted into the body: the
+       opening guard's comment (an activated attack reaction is let through
+       in the reaction window, where every tap used to be refused), and the
+       discard-cost question placed after the last legality and before the
+       cost, and the `isRx` refusal's comment saying which tap now reaches
+       `tryPlay` in `stack` (an activated ability, never a reaction card).
+       Same signature, same anchors; `discost.test.js` and
+       `rxability.test.js` take the same slice for claims of their own. */
+    "priority.test.js index.html 21350",
+    "priority.test.js index.html 21350",
+    "priority.test.js index.html 9305",
+    "rxability.test.js index.html 21350",
+    "rxability.test.js index.html 9305"
   ], /* 15,440 -> 16,557 AT v4.59, READ FIRST (v4.57: a pin edited without
         being read is a guard switched off). Both rows are
         `tryPlay` -> `confirmPay` — anchored on the body's own declaration and

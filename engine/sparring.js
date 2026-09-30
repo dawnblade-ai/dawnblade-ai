@@ -238,6 +238,12 @@ function payAction(g, seat, p, o){
      reads no card text. Weighing X against the resources a later play
      might want is a judgement about the hand this policy does not make. */
   if(p.kind === "xval") return {t: "xval", x: p.max || 0};
+  /* WHICH CARD A DISCARD COST SPENDS (v4.85) — the FIRST candidate, which
+     `discCostChoice` returns in hand order: exactly the card the engine
+     took before the question existed, so the ladder measures the route
+     rather than a new judgement about which card to lose (v4.81's rule for
+     the chosen discard, one cost over). */
+  if(p.kind === "discost") return {t: "discost", uid: (p.uids || [])[0]};
   /* ---- A CHI COST ASKS A SECOND QUESTION OF THE SAME PITCH (v4.54) ---
      Enigma's ability prints "{c}{c}{c}", and a Chi pays a {c} cost where
      a resource point does not. `pitchPick` ranks on printed pitch, so a

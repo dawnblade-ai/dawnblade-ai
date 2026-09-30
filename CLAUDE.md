@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.84
+**Current version:** v4.85
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3271 drills** at v4.84.
+This is `node --test "test/*.test.js"` — **3285 drills** at v4.85.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,27 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A BUTTON OFFERED, AND A GUARD ABOVE IT THAT REFUSED THE TAP (v4.85)
+
+`tryPlay` returned on `mode === "stack"` before it read anything, so its own
+`_attackRx` legality (written for that mode) was unreachable. Every
+attack-reaction ABILITY was dead on the trainer in the only window it is
+legal in, while v3.74's `heroPowWindowOK` enabled the button there. **Found
+by driving the page at phone dimensions**; the drill beside it had recorded
+the tap as "unvalidated rather than reported as shipped", and that record
+came due. The guard lets `_attackRx` through, `resolvePlay` keeps the
+window, and `rxWall` is the one reader of the wall both reaction routes ask.
+
+**WHEN YOU FIX WHERE A CONTROL IS OFFERED, DRIVE THE TAP.** An enabled
+button in front of a silent guard reads exactly like a working one in every
+source scan.
+
+**AN ACTIVATION'S DISCARD COST ASKS WHICH CARD**, as a pending before the
+payment (`discost` at the table, `discpick` on the trainer, the `xval`
+shape). `prompts.discCostChoice` is the one reader, and it asks only when
+two different cards could pay. `holdPlay` clears the declarations it
+captures, because an activation reaches it without `commitPlayBoosted`.
 
 ### `npm run unanchored` — THE CENSUS, STANDING (v4.84)
 

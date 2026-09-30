@@ -3257,7 +3257,16 @@ function makeEffects(ctx){
     { const _dc = P.abDiscardCost(card);
       if(_dc){
         const _hand = act(n).hand || [];
-        const _i = _hand.findIndex(PR.promptFilter(_dc));
+        /* THE DECLARED CARD, IF THERE IS ONE (v4.85) — asked before the
+           payment on both boards (`discCostChoice`) and riding on the state
+           as `_discCostUid`, like `_x`. Re-derived here because `reduce` is
+           fed by JSON off a wire (v2.04): a declared uid that is not in the
+           hand, or does not pay, falls back to the first card that does,
+           which is the answer when there was nothing to choose. */
+        const _pass = PR.promptFilter(_dc), _want = n._discCostUid;
+        let _i = _want != null ? _hand.findIndex(c => c && c.uid === _want && _pass(c)) : -1;
+        if(_i < 0) _i = _hand.findIndex(_pass);
+        delete n._discCostUid;
         if(_i < 0)
           return L(n, `${card.name} — ${sv(act(n), "hold")} no ${card._discardSubject||"card"} to discard. Nothing happens.`);
         const _paid = _hand[_i];
