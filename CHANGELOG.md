@@ -61,8 +61,17 @@ its first assertion and drives the tap on a synthetic copy of the swing line
 
 `tools/phone/deadtap.js` clicked "Pitch & play" without pitching anything,
 so nine of fifteen heroes never reached the reaction window: their sweep
-covered one window of two while reporting clean. It pitches now. That is its
-third recorded fault of its own.
+covered one window of two while reporting clean. It pitches now. Two more of
+its own faults turned up driving it:
+
+- **A tap can open a sheet** (Bull's Eye Bracers asks "Put an arrow face up
+  in your arsenal?"), and every later tap is then refused by `sheetFirst`,
+  correctly. The probe never answered it, so it stalled until timeout. It
+  declines, then confirms: on a `pick`, "Choose none" only clears the
+  selection.
+- **It gave up on the first attack it tried.** The cheapest is not always
+  playable from hand (an arrow is played from the arsenal), so it tries up
+  to four now and names them when none lands.
 
 **The v4.88 sweep, as promised there:** fifteen heroes, **no dead tap and no
 page error**. The action phase was swept for all fifteen; the reaction

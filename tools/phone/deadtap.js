@@ -17,7 +17,7 @@
      NODE_PATH="$SCRATCH/node_modules" node tools/phone/deadtap.js Lyath
      NODE_PATH="$SCRATCH/node_modules" sh tools/phone/sweep.sh   # all fifteen
 
-   IT FOUND FIVE DEFECTS AT v4.88 AND HAD THREE OF ITS OWN, all kept
+   IT FOUND FIVE DEFECTS AT v4.88 AND HAD FOUR OF ITS OWN, all kept
    here as the reason for the code that fixes them:
 
    - React state is read from `#root`'s CURRENT tree. A DOM node's fiber
@@ -26,6 +26,8 @@
    - Rebuild the page (`serve.sh <dir> refresh`) after every edit. A sweep
      run against a copy older than the fix reports the fixed defect, and
      reads exactly like a fix that did not work.
+   - A tap can open a SHEET, and every tap after it is then refused by
+     `sheetFirst`. It answers an open sheet before the next tap (v4.89).
    - It must PITCH to pay for the attack it plays. Clicking the confirm
      alone left nine of fifteen heroes short of the reaction window, so
      their sweep covered one window of two while reporting clean (v4.89).
@@ -115,15 +117,36 @@ const EXE = process.env.PW_CHROMIUM || "/opt/pw-browsers/chromium";
                   + label.padEnd(6) + JSON.stringify(t).slice(0, 70)
                   + (dead ? "" : "  -> " + after.mode + " | " + String(after.log0).slice(0, 90)));
       if(after && (after.mode === "pay" || after.mode === "discpick")){ await click(/cancel/i); await p.waitForTimeout(300); }
+      /* A TAP CAN OPEN A SHEET (Bull's Eye Bracers asks "Put an arrow face
+         up in your arsenal?"), and every later tap is then refused by
+         `sheetFirst` — correctly, and uselessly for a sweep. So the sheet
+         is answered the cheapest way the board offers before the next
+         tap. Without this the probe stalled until its timeout (v4.89). */
+      /* DECLINE, THEN CONFIRM: on a `pick` "Choose none" only clears the
+         selection and Confirm is what ends the sheet, so one regex for both
+         re-clicks "Choose none" forever (it is first in the DOM). */
+      for(let k = 0; k < 3; k++){
+        const st = await state(); if(!st || !st.prompt) break;
+        await click(/^Decline|^Choose none|^Skip/i); await p.waitForTimeout(300);
+        await click(/^Confirm|^OK$|^Place none/i); await p.waitForTimeout(400);
+      }
     }
   };
   if(!s || s.mode !== "act"){ console.log("NOACT", hero, s && s.mode); await b.close(); return; }
   await sweep("act");
   s = await state();
   if(s.mode === "act"){
-    const atk = s.hand.filter(c => /Attack/.test(c.tt || "") && !/Reaction/.test(c.tt || "") && (c.cost || 0) <= s.res + 3)
-                      .sort((a, c) => (a.cost || 0) - (c.cost || 0))[0];
-    if(atk){
+    /* TRY EACH ATTACK IN TURN, cheapest first. The cheapest is not always
+       playable from hand — an arrow is played from the arsenal — and a probe
+       that gives up on the first candidate reports NOSTACK for a hand that
+       held a perfectly good swing. */
+    const cands = s.hand.filter(c => /Attack/.test(c.tt || "") && !/Reaction/.test(c.tt || "") && (c.cost || 0) <= s.res + 3)
+                        .sort((a, c) => (a.cost || 0) - (c.cost || 0)).slice(0, 4);
+    if(!cands.length) console.log("NOATTACK");
+    let tried = [];
+    for(const atk of cands){
+      s = await state(); if(!s || s.mode !== "act") break;
+      tried.push(atk.name);
       const l = p.locator(`text="${atk.name}"`).first();
       await l.click().catch(() => {}); await p.waitForTimeout(300); await l.click().catch(() => {}); await p.waitForTimeout(600);
       /* GET THE ATTACK ONTO THE CHAIN. A payment needs cards PITCHED first —
@@ -133,7 +156,7 @@ const EXE = process.env.PW_CHROMIUM || "/opt/pw-browsers/chromium";
          fifteen heroes never reached the reaction window and reported
          NOSTACK: a limit of the probe, not the page. */
       for(let i = 0; i < 10; i++){
-        s = await state(); if(s.mode === "stack") break;
+        s = await state(); if(s.mode === "stack" || s.mode === "act") break;
         if(s.mode === "pay"){
           const pitch = s.hand.filter(c => c.name !== atk.name).map(c => c.name);
           for(const nm of pitch.slice(0, 3)){
@@ -141,14 +164,17 @@ const EXE = process.env.PW_CHROMIUM || "/opt/pw-browsers/chromium";
             await h.click().catch(() => {}); await p.waitForTimeout(200); await h.click().catch(() => {}); await p.waitForTimeout(250);
           }
           await click(/^Pitch & play/i); await p.waitForTimeout(500);
-          s = await state(); if(s.mode === "pay"){ await click(/cancel/i); break; }
+          s = await state(); if(s.mode === "pay"){ await click(/cancel/i); await p.waitForTimeout(300); break; }
           continue;
         }
         await click(/^No boost|^Decline|^No charge|^No reveal|^Confirm|^Skip/i); await p.waitForTimeout(400);
       }
       s = await state();
-      if(s.mode === "stack") await sweep("stack"); else console.log("NOSTACK", atk.name, s.mode);
-    } else console.log("NOATTACK");
+      if(s.mode === "stack") break;
+    }
+    s = await state();
+    if(s.mode === "stack") await sweep("stack");
+    else if(cands.length) console.log("NOSTACK", tried.join(" / "), s.mode);
   }
   console.log("ERRS", JSON.stringify(errs.slice(0, 3)));
   await b.close();
