@@ -275,12 +275,9 @@ function rxTargetWhy(g, sd, ab, want){
     if(jb && !E.jabTargets(sd, jb.filter, (g.pend && g.pend.card || {}).uid).length)
       return ab.name + " targets a " + jb.sub + " off the active chain link, and "
            + sd.name + " controls none"; }
-  const q = PR.fxParse(ab).selfQ || PR.fxParse(ab).gaQ;
-  if(!q) return null;
-  const tgt = g.pend && g.pend.card;
-  if(PR.qualMatches(q, tgt, {pumped: E.pendPumped(g), atk: true})) return null;
-  return ab.name + " targets " + PR.qualLabel(q) + " — "
-       + (tgt ? tgt.name : "this attack") + " isn't one";
+  /* the qualifier half is `effects.rxNoTargetWhy`, the ONE reader the
+     card route and both of the trainer's doors ask too (v4.88) */
+  return E.rxNoTargetWhy(g, ab);
 }
 
 /* Every action a seat can take. Serializable by construction: a uid, a
@@ -1548,13 +1545,17 @@ function playableWhy(g, seat, c, win, zone){
 
      Only the attack window: `pend` is the attack being reacted to, and a
      DEFENCE reaction answers a swing that does not live there. */
+  /* THE ONE READER, AND IT ASKS THE WHOLE QUESTION (v4.88). This asked
+     `selfQ` alone, so a MODAL card — Pummel, whose restrictions ride on
+     `fx.modes` — and a go-again-only target — Run Through, on `gaQ` —
+     were legal against any attack: Pummel left the hand, paid 2 and did
+     nothing, and Run Through queued its "next sword attack" +3 off a
+     target it never had. It also asked without `pumped`/`atk`, the link
+     facts `attackRx` and the ability branch answer, so the three could
+     disagree about one card. `effects.rxNoTargetWhy` is all of them. */
   if(open.indexOf("attack-reaction") >= 0 && PR.isAR(c)){
-    const q = PR.fxParse(c).selfQ;
-    if(q && !PR.qualMatches(q, g.pend && g.pend.card)){
-      const want = PR.qualLabel(q);
-      return c.name + " targets " + want + " — "
-           + ((g.pend && g.pend.card) ? g.pend.card.name : "this attack") + " isn't one";
-    }
+    const why = E.rxNoTargetWhy(g, c);
+    if(why) return why;
   }
 
   /* AND THE LINK ITSELF CAN CLOSE THE DEFENCE WINDOW (v4.60).

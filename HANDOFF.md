@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.83 (updated through v4.87)
+# Handoff — Dawnblade, at v4.83 (updated through v4.88)
 
 **Written 2026-09-28. Every number below was re-derived this session, with
 the command that produces it.** Re-derive before you quote one; this file
@@ -22,8 +22,8 @@ where things stand and what is next.
 
 | measure | value | command |
 |---|---|---|
-| version | v4.87, live on GitHub Pages | `grep APP_VER index.html` |
-| drills | 3306 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
+| version | v4.88, live on GitHub Pages | `grep APP_VER index.html` |
+| drills | 3322 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
 | pool coverage | **405 of 405** unique cards read in full · 0 part · 0 none | `npm run audit`, top of `AUDIT.md` |
 | unfinished cards | 0, and 0 one clause away | `npm run gaps` |
 | approximation ledger | 45 records: 27 closed · **15 stated · 3 open** | `node tools/approx.js` |
@@ -112,6 +112,18 @@ today:
   chosen when it resolves, not when it is activated.
 
 ### 4. Then the fun part: graphics, UI and UX
+
+**Start from the dead-tap sweep (v4.88).** It is in the repo as
+`tools/phone/` — `serve.sh` builds the real page against a scratch directory
+with no network at run time, `deadtap.js` sweeps one hero, `sweep.sh` all
+fifteen. It sweeps ⚡ tiles only; weapon tiles, hand cards and the arsenal
+tile go through the same doors and are the obvious widening. Its attack
+pick is a heuristic, so an opening holding only arrows reports `NOSTACK`:
+a limit of the probe, not a defect. It found one display bug it did not fix: on the lower "YOU" screen the peek preview
+renders ABOVE the viewport (its box measured at top −367, once, by a probe
+that scrolled the tile into view the way a flick does), so a gear tile's
+first tap shows nothing. `PeekDock`'s measurement assumes the hand rail is on
+screen. That belongs to the UI pass.
 
 The user's stated direction is to *finish the engine, then dive into the
 graphics and UI and UX and fun stuff*. The engine is at the point where every

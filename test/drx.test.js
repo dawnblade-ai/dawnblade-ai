@@ -405,8 +405,11 @@ test("the POLICY inherits the rule and proposes no refusal", {skip}, () => {
 const HTML = codeOf(read("index.html"));
 const DOOR_HAND = HTML.slice(HTML.indexOf("const playRx = (i, addPaid) => setG"),
                              HTML.indexOf("const playRxA = () => setG"));
+/* bounded at `playArsenalInstant`, its real neighbour — the old bound,
+   `playFoeTurnRx`, read that whole second door too and still called itself
+   the next declaration (v4.57; found at v4.88, when this door grew) */
 const DOOR_ARS  = HTML.slice(HTML.indexOf("const playRxA = () => setG"),
-                             HTML.indexOf("const playFoeTurnRx"));
+                             HTML.indexOf("const playArsenalInstant = () => setG"));
 
 test("the trainer asks the SAME body at both of its doors", () => {
   const hand = DOOR_HAND, ars = DOOR_ARS;
@@ -436,8 +439,10 @@ test("the trainer asks the SAME body at both of its doors", () => {
 });
 
 test("and the trainer's half is LATENT — measured, not assumed", () => {
-  /* Both doors are only reachable in `mode:"block"`, which `foeSwing`
-     enters with the swing FABRICATED as the [3,4,5] escalation — no card,
+  /* Both doors' DEFENCE branches are only reachable in `mode:"block"` —
+     the arsenal door opens in `stack` too since v4.88, for the ATTACKER's
+     reactions, where this bar is never asked — and `foeVanilla`
+     enters `block` with the swing FABRICATED as the [3,4,5] escalation — no card,
      so nothing can print the restriction. The same measurement from the
      other end is that both doors already hand `defendValue` a null
      attacking card. The site exists anyway (v3.01) and is drilled with a

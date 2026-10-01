@@ -266,7 +266,7 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        `discard` field (a chosen discard's continuation). */
     /* +costtaxes AT v4.86: `tryPlay` -> `confirmPay`, the same body the
        rows below take, for the claim that its cost line asks `payCost`. */
-    "costtaxes.test.js index.html 21232",
+    "costtaxes.test.js index.html 22716",
     "dichotomy.test.js engine/prompts.js 12746",
     /* 8,550 -> 9,523 AT v4.60, and now THREE files take the same slice —
        `playRx`, anchored on its own declaration and bounded at `playRxA`, the
@@ -286,9 +286,9 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        ACTIVATED route asks too, so the body is shorter by the two
        declarations it no longer carries. Same anchors. `rxability.test.js`
        takes the same slice to pin that the destructure is there. */
-    "discost.test.js index.html 21232",
-    "dorinthea.test.js index.html 9305",
-    "drx.test.js index.html 9305",
+    "discost.test.js index.html 22716",
+    "dorinthea.test.js index.html 9905",
+    "drx.test.js index.html 9905",
     "phasebar.test.js index.html 15953",
     "phasebar.test.js index.html 62489",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
@@ -303,6 +303,11 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        `confirmPay`; the growth is `tryPlay`'s new first line, refusing a
        play while a sheet is live, and its comment. Same signature, same
        anchors, so the slice still bounds the body it names. */
+    /* 21,232 -> 21,696 AT v4.88, READ FIRST: still `tryPlay` ->
+       `confirmPay`; the growth is the opening guard admitting an INSTANT
+       ability in the reaction window beside the attack-reaction one, and
+       its comment. `playRx` 9,305 -> 9,357 is the same version's
+       `sheetFirst` line at its head. Same anchors in both. */
     /* 21,350 -> 21,232 AT v4.86, READ FIRST: still `tryPlay` ->
        `confirmPay`; its two-line cost ternary became one `payCost` call,
        the reader the pay sheet and `confirmPay` now share. */
@@ -315,11 +320,11 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        `tryPlay` in `stack` (an activated ability, never a reaction card).
        Same signature, same anchors; `discost.test.js` and
        `rxability.test.js` take the same slice for claims of their own. */
-    "priority.test.js index.html 21232",
-    "priority.test.js index.html 21232",
-    "priority.test.js index.html 9305",
-    "rxability.test.js index.html 21232",
-    "rxability.test.js index.html 9305"
+    "priority.test.js index.html 22716",
+    "priority.test.js index.html 22716",
+    "priority.test.js index.html 9905",
+    "rxability.test.js index.html 22716",
+    "rxability.test.js index.html 9905"
   ], /* 15,440 -> 16,557 AT v4.59, READ FIRST (v4.57: a pin edited without
         being read is a guard switched off). Both rows are
         `tryPlay` -> `confirmPay` — anchored on the body's own declaration and

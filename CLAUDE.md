@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.87
+**Current version:** v4.88
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3306 drills** at v4.87.
+This is `node --test "test/*.test.js"` — **3322 drills** at v4.88.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,32 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### THE TRAINER HAS NO ORACLE, SO EVERY DOOR IS A RULE (v4.88)
+
+The table dims every control off `judge.legal`; the trainer's controls each
+call their own `setG` door. A dead-tap sweep (tap every lit control at phone
+dimensions, flag any tap that changes nothing and says nothing) found instant
+abilities dead in the reaction window and nine doors with no live-sheet
+guard. `sheetFirst` is the one guard and `test/sheetdoors.test.js` holds
+every door in `Battle` to it. **When you add a trainer control, add its door
+to that census**: an unguarded door is a play the table refuses.
+
+**AND READ REACT STATE FROM THE ROOT.** A DOM node's fiber can be the stale
+alternate, so a probe that reads state through one reports live taps as
+dead. Walk `#root`'s `__reactContainer$…` current tree instead.
+
+**A PRINTED TARGET IS ONE READER, ASKED BEFORE ANYTHING MOVES.** Four sites
+asked whether an attack reaction had a legal target and each asked a
+different piece: `judge.legal` asked `selfQ` alone, so Pummel (its
+restrictions ride on `fx.modes`) and Run Through (on `gaQ`) were LEGAL at
+the table against an attack they cannot target, and were spent for nothing.
+`effects.rxNoTargetWhy` is the one reader now, asked by `judge.legal`,
+`rxTargetWhy`, `attackRx` and all three trainer doors
+(`test/rxtarget.test.js`). **A target qualifier lives on `selfQ`, `gaQ` OR
+`fx.modes`, so a check that names one of them is a check that misses the
+others.** And a sparring drill was passing because of it: its "unrestricted"
+reaction was Two Sides to the Blade.
 
 ### A HAND ABILITY IS AN ACTIVATION TOO (v4.87)
 

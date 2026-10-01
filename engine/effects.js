@@ -6670,11 +6670,11 @@ function makeEffects(ctx){
        and `boosted` do — an absent one answers NO, which leaves the
        reaction with no legal target rather than a free grant. */
     const qo = {pumped: pendPumped(s), atk: true};
-    if(fx.selfQ && !qualMatches(fx.selfQ, pend.card, qo)){
-      const want = P.qualLabel(fx.selfQ);
-      return {game: s, pump: 0,
-              why: `${c.name} targets ${want} — ${pend.card.name} isn't one.`};
-    }
+    /* `rxNoTargetWhy` IS THE ONE READER (v4.88), and every door asks it
+       BEFORE the card moves; answered here too, because `reduce` is fed by
+       JSON off a wire (v2.04) and a crafted play reaches this body. */
+    { const why = rxNoTargetWhy(s, c);
+      if(why) return {game: s, pump: 0, why: why + "."}; }
     let n = {...s};
     /* A MODAL REACTION: THE BOARD PICKS THE MODE (v3.12). "Choose 1;" was
        being SUMMED — Pummel granted +8 where it prints +4 — and the fix
@@ -6691,9 +6691,8 @@ function makeEffects(ctx){
        instead, the same call v2.04 made for unpayable costs. */
     let mode = null;
     if(fx.modes && fx.modes.length){
+      /* never null past the reader above, which asks the same `find` */
       mode = fx.modes.find(md => md.q && qualMatches(md.q, pend.card, qo)) || null;
-      if(!mode) return {game: s, pump: 0,
-        why: `${c.name}: no mode of it can target ${pend.card.name}.`};
       n = L(n, `${c.name}: ${mode.label}.`);
     }
     const eff = mode ? Object.assign({}, fx, {self: mode.self, ops: mode.ops}) : fx;
@@ -10074,6 +10073,47 @@ function pendPumped(s){
   return ((p.total || 0) + rxPumpTotal(s)) > (p.card.power || 0);
 }
 
+/* DOES THIS ATTACK REACTION HAVE A LEGAL TARGET ON THE OPEN LINK? (v4.88)
+
+   A printed target is a LEGALITY, refused before the card leaves the hand
+   or the ability's cost is paid (v3.11). Four sites asked it, and each
+   asked a different piece of the question:
+
+   | site | asked |
+   |---|---|
+   | `attackRx` | `selfQ` — then the modes, AFTER the card had moved |
+   | `judge.legal`, a card | `selfQ` alone, and without `pumped`/`atk` |
+   | `judge.rxTargetWhy`, an ability | `selfQ || gaQ`, with both |
+   | the trainer's doors | `selfQ` alone; an ABILITY not at all |
+
+   So Pummel (a MODAL card, its restrictions on `fx.modes`) played into an
+   attack neither mode names left the hand at the table, paid 2 and did
+   nothing, and Run Through ("target SWORD attack gets go again", on
+   `gaQ` alone) was legal against any attack and queued its "next sword
+   attack" +3 off a target it never had. Driven, both boards.
+
+   ONE READER, the question judge's ability branch already asked, with
+   the modes beside it: a modal card has a legal target when ANY mode it
+   can READ matches (an unreadable mode is never selectable — v3.12), a
+   single-target card when its qualifier does. `pumped` and `atk` are the
+   qualifier atoms that are facts about the link rather than printed
+   fields (v3.43, v3.63), so every asker answers them the same way.
+   Returns the refusal without a closing mark, as `legal` does; a board
+   that speaks in sentences adds its own. */
+function rxNoTargetWhy(s, c){
+  if(!c) return null;
+  const fx = P.fxParse(c);
+  const tgt = s && s.pend && s.pend.card;
+  const qo = {pumped: pendPumped(s), atk: true};
+  if(fx.modes && fx.modes.length){
+    if(tgt && fx.modes.some(md => md.q && P.qualMatches(md.q, tgt, qo))) return null;
+    return c.name + ": no mode of it can target " + (tgt ? tgt.name : "this attack");
+  }
+  const q = fx.selfQ || fx.gaQ;
+  if(!q || (tgt && P.qualMatches(q, tgt, qo))) return null;
+  return c.name + " targets " + P.qualLabel(q) + " — " + (tgt ? tgt.name : "this attack") + " isn't one";
+}
+
 function soakPolicy(live, sd){
   if(!live || !live.options) return [];
   const lethal = ((sd && sd.hp) || 0) - (live.amount || 0) <= 0;
@@ -10144,6 +10184,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, jabTargets, CTX_KEYS, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, restampHalving, returnStolen, pendPumped, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
+return {makeEffects, jabTargets, CTX_KEYS, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, restampHalving, returnStolen, pendPumped, rxNoTargetWhy, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

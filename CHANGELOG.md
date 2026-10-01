@@ -1,3 +1,137 @@
+## v4.88 — every trainer door, the instant window, and a target is a legality
+
+The table dims every control off `judge.legal`, so a button there cannot
+disagree with the rule. The trainer has no single oracle: each control calls
+its own `setG` door. v4.85 found one of those doors dead by driving the page,
+so this version drove **all of them**.
+
+### The dead-tap sweep
+
+A scratch Playwright script (`phone/deadtap2.js`, at 393×852) plays each of
+the fifteen heroes. It taps every lit ⚡ tile and the hero-power button in the
+action phase, and again in the player's own reaction window. It flags any tap
+that changes nothing AND says nothing.
+
+**Its first version had the defect it was built to find.** It read React
+state through a DOM node's fiber, which can be the stale alternate when the
+node persists across renders, so it reported live taps as dead. It walks the
+root's CURRENT tree now. Two "findings" were the instrument, and a third was
+a re-sweep run against a page copy older than the fix (v4.09: check your own
+fixture by asking the file).
+
+What it found once it could see:
+
+- **An INSTANT ability was dead in the player's own reaction window.** The
+  hero abilities of Enigma, Fai and Lyath, and Fai's Blood Scent. CR 8.1.6
+  makes an instant legal whenever you hold priority, and `heroPowWindowOK`
+  enables the button there, but `tryPlay`'s opening guard let only an
+  ATTACK-REACTION ability through (v4.85's door, one window short). It
+  admits an instant ability now, and `resolvePlay` keeps the window open.
+- **Everything else that window refuses, it refused in silence.** Lyath's
+  Stand Strong is ACTION speed, so the refusal is right; the tile stayed lit
+  and the tap did nothing. A weapon swing, an ally attack and every other
+  action-speed ability shared the line. It says why now.
+- **A live sheet swallowed taps in silence.** v4.80 gave this board
+  `judge.legal`'s rule (nothing starts while a question is open) in four
+  doors, and those four returned `s` unchanged while every tile stayed lit.
+- **Nine more doors had no guard at all:**
+  - `playRx`, `playRxA` (the reaction doors);
+  - the arsenal instant and the opponent's-turn window;
+  - the hand ability, and moving from defend to react;
+  - the arsenal step's three actions;
+  - PASS — RESOLVE.
+
+  So a card could be played here, under an open question, that the table
+  refuses. That is v3.01's one-board shape.
+- **The attacker's arsenal had no door.** CR 8.1.2a lets the player who
+  controls the attack play an attack reaction in the reaction step, from the
+  arsenal as from the hand. `playRxA` answered the DEFENDING window alone,
+  so in `stack` the arsenal tile fell through to `tryPlay` and was refused
+  in silence. The table has offered it since `sparring.reaction` looked at
+  the arsenal. It is the hand door's attack branch now, refusing before the
+  card moves.
+
+### One guard, every door
+
+`sheetFirst` refuses and **names what is waiting** ("Answer the open question
+first — Opt 2"). Every door in `Battle` opens with it. The answers to a
+question already on screen are exempt: the sheet's own controls, the
+pre-payment modes, and the payment itself.
+
+`test/sheetdoors.test.js` is the census. It finds every `setG` door in
+`Battle`, pins the guarded set and the answer set as a partition in both
+directions, and requires the guard to come first. So a door added without it
+fails by name.
+
+### A printed target is a legality — on both boards, from one reader
+
+> *"Choose 1; Target club or hammer weapon attack gets +4{p}. Target attack
+> action card with cost 2 or more gets +4{p} …"* — PUMMEL
+> *"Target sword attack gets go again."* — RUN THROUGH
+
+Building the arsenal door meant copying the hand door's target check, and
+that check asked `fx.selfQ` alone. **Four sites asked the target question
+and each asked a different piece:**
+
+| site | asked |
+|---|---|
+| `attackRx` | `selfQ`, then the modes — after the card had moved |
+| `judge.legal`, a card | `selfQ` alone, without the link's `pumped`/`atk` |
+| `judge.rxTargetWhy`, an ability | `selfQ \|\| gaQ`, with both |
+| the trainer's doors | `selfQ` alone; an ABILITY not at all |
+
+Driven at the table: **Pummel played into an attack neither of its modes
+names was LEGAL**, left the hand, paid 2 and did nothing. Its restrictions
+ride on `fx.modes`, so `selfQ` is empty. **Run Through** (`gaQ` alone) was
+legal against any attack and queued its "next sword attack" +3 off a target
+it never had. On the trainer the same plays were refused by `attackRx`
+AFTER the card had moved, and an attack-reaction ABILITY (Stalker's Steps,
+Bolt'n Boots, Boltyn's) paid its cost first.
+
+`effects.rxNoTargetWhy(game, card)` is the one reader: a modal card has a
+target when any mode it can read matches, a single-target card when its
+qualifier does. Every asker asks it before anything moves. `attackRx` asks
+too, because `reduce` is fed by JSON off a wire. And both trainer doors
+returned `attackRx`'s refusal on the state AFTER the move, so a refused card
+was spent anyway; they return on the untouched state now.
+
+**AND A DRILL WAS PASSING BECAUSE OF THE BUG.** `sparring.test.js` used Two
+Sides to the Blade as *"a reaction with no target restriction"* against a
+plain Generic attack. Both of its modes are restricted, so it had no legal
+target. Night's Embrace, a standing grant that names no target, is the
+fixture now, and Two Sides is the refused control (v3.31's rule: when a fix
+breaks a drill, read the fixture first).
+
+`test/rxtarget.test.js` drives the reader (modes, `gaQ`, `pumped`, no
+link) and the table, and censuses every asker.
+
+### Two dead bridge aliases
+
+`qualMatches` and `attackQual` were lifted into the trainer's bare names
+and nothing called either. Removed (v4.47's `parseHeroPower`, again).
+
+### Measured
+
+- **3322 drills** (5 in `test/sheetdoors.test.js`, 11 in
+  `test/rxtarget.test.js`), 0 fail, 5 skipped; 107 scenes; babel clean.
+- **The ladder at three seeds, both sides:** one game in 630 moves (Arakni
+  +1, Dorinthea −1), inside a band of median 3. The route's evidence is the
+  counter it REMOVES: `reaction` 805 → 802, three reactions with no legal
+  target refused instead of spent. 0 refusals, 0 violations, stalls 2
+  unchanged.
+- **20 sabotages, 20 bite.** Two needed a second pass: a revert anchor that
+  was not unique (`return s;`), and a window check pinned as a bare call,
+  which survives `false &&` (v4.00). It is pinned as a whole statement now.
+- **Pins moved, each read first:** the v4.85 door drill (the reaction
+  window's refusal is its own statement now, and it speaks), the v4.80 and
+  v4.57 guard drills (the new spelling), the dorinthea target pin (the one
+  reader), and the slice census (`tryPlay` 21,232 → 22,716, `playRx`
+  9,305 → 9,905). `drx.test.js`'s arsenal-door slice was bounded at
+  `playFoeTurnRx` and read the whole of `playArsenalInstant` while calling
+  itself the next declaration; it is bounded at its real neighbour now.
+- **Re-swept on the fixed page:** Lyath clean in both windows (Stand Strong now names its
+  refusal). The fifteen-hero result is recorded with v4.89.
+
 ## v4.87 — a hand ability is an activation, and it pays like one
 
 > *"Instant - Discard this: Amp 1"* — ARCANE TWINING
