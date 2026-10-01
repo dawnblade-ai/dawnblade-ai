@@ -159,13 +159,17 @@ test("the trainer freezes while a sheet is live, as `judge.legal` does", {skip: 
   /* A declaration's sheet opens with the attack half-declared, so a card
      played or a turn ended underneath it would run the dummy's defend step
      against a state nothing expected. Four entry points, one rule. */
-  for(const [anchor, guard] of [
-    ["  const tryPlay = (card,from,idx,half) => setG(s=>{", "if(s.prompt) return s;"],
-    ["  const activateInstant = (card, from, idx) => setG(s=>{", "if(s.over || s.prompt) return s;"],
-    ["  const endTurn = () => setG(s=>{", "if(s.over||s.mode!==\"act\"||s.prompt) return s;"],
-    ["  const closeChain = () => setG(s=>{", "if(s.mode!==\"act\" || !s.chainOpen || s.prompt) return s;"]]){
+  /* THE GUARD IS `sheetFirst` SINCE v4.88, which says what is waiting
+     rather than returning in silence, and `test/sheetdoors.test.js` holds
+     EVERY door to it. These four are the ones v4.80 guarded, kept here as
+     that version's own claim. */
+  const G = "{ const _w = sheetFirst(s); if(_w) return _w; }";
+  for(const anchor of ["  const tryPlay = (card,from,idx,half) => setG(s=>{",
+                       "  const activateInstant = (card, from, idx) => setG(s=>{",
+                       "  const endTurn = () => setG(s=>{",
+                       "  const closeChain = () => setG(s=>{"]){
     const b = body(anchor);
-    assert.ok(b.indexOf(guard) >= 0 && b.indexOf(guard) < 80, anchor.trim() + " does not open by refusing a live sheet");
+    assert.ok(b.indexOf(G) >= 0 && b.indexOf(G) < 100, anchor.trim() + " does not open by refusing a live sheet");
   }
 });
 

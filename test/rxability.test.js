@@ -414,12 +414,23 @@ test("…AND THE TAP REACHES IT: the reaction window is a door, not a wall (v4.8
   const tp = src.slice(src.indexOf("const tryPlay = (card,from,idx,half)"), src.indexOf("const confirmPay = () => setG"));
   const guard = tp.split("\n").find(l => /if\(s\.over\|\|s\.mode==="block"/.test(l));
   assert.ok(guard, "tryPlay's opening guard moved — re-anchor this drill");
-  assert.ok(guard.includes('(s.mode==="stack"&&!(card&&card._attackRx))'),
-    "the reaction window refuses an activated attack reaction again — the door is dead");
-  assert.ok(!/\|\|s\.mode==="stack"\|\|/.test(guard),
-    "a bare stack refusal came back beside the exemption");
-  /* and it still refuses every OTHER tap there, or the window loses its doors */
-  assert.ok(/s\.mode==="stack"&&/.test(guard), "the stack refusal was deleted rather than narrowed");
+  /* WIDENED AT v4.88 to an INSTANT ability as well (CR 8.1.6): the
+     dead-tap sweep found Enigma's and Fai's hero abilities enabled in this
+     window and refused by this line. Both flags are pinned, because
+     dropping either one kills a door the other does not reach. */
+  /* …AND THE REFUSAL LEFT THE SILENT GUARD FOR A STATEMENT OF ITS OWN
+     (v4.88), because it SPEAKS now: a weapon swing, an ally attack or an
+     action-speed ability refused in this window stays lit on its tile,
+     and a silent return there was a dead tap (Lyath's Stand Strong). */
+  const stk = tp.split("\n").find(l => /s\.mode==="stack" && !\(card/.test(l));
+  assert.ok(stk, "the reaction window's own refusal moved — re-anchor this drill");
+  assert.ok(stk.includes('if(!s.over && !s.inspect && s.mode==="stack" && !(card&&(card._attackRx||card._instant)))'),
+    "the reaction window refuses an activated attack reaction or instant again — the door is dead");
+  const stkNext = tp.split("\n")[tp.split("\n").indexOf(stk) + 1];
+  assert.match(stkNext, /^\s*return L\(s, `\$\{card \? card\.name : "That"\} is action speed — this is the reaction step\./,
+    "the reaction window refuses in SILENCE again — a lit tile that does nothing");
+  assert.ok(!/s\.mode==="stack"/.test(guard),
+    "a silent stack refusal came back in the opening guard");
 
   /* THE WINDOW SURVIVES THE RESOLUTION. `resolvePlay` entered `execute` at
      `mode:"act"`, which hands the player an action phase with a live link
@@ -427,7 +438,9 @@ test("…AND THE TAP REACHES IT: the reaction window is a door, not a wall (v4.8
      wall out of the reader `playRx` asks. */
   const rp = src.slice(src.indexOf("function resolvePlay(s, card, from, idx){"), src.indexOf("function afterDeclare(n){"));
   assert.match(rp, /const _arx = !!\(card && card\._attackRx\);/);
-  assert.match(rp, /execute\(\{\.\.\.s, mode:_arx\?"stack":"act", pending:null\}, card, from, idx, _arx \? rxWall\(s\) : undefined\)/,
+  assert.match(rp, /const _inRx = s\.mode === "stack" \|\| !!\(s\.pending && s\.pending\.back === "stack"\);/,
+    "an instant activated in the reaction window must keep it — read off the mode or the paused payment");
+  assert.match(rp, /execute\(\{\.\.\.s, mode:\(_arx\|\|_inRx\)\?"stack":"act", pending:null\}, card, from, idx, _arx \? rxWall\(s\) : undefined\)/,
     "the reaction window closes under the ability, or it resolves with no wall");
   const rx = src.slice(src.indexOf("const playRx = (i, addPaid) => setG"), src.indexOf("const playRxA = () => setG"));
   assert.match(rx, /const \{handBlockers, defenders\} = rxWall\(n\);/,

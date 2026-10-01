@@ -806,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "4.87"; /* v4.87 - a hand ability pays Frostbite's tax and asks which card its discard spends. See CHANGELOG.md. */
+window.APP_VER = "4.88"; /* v4.88 - every trainer door says why it refuses, instant abilities and arsenal reactions work in the reaction window, and a reaction with no legal target is refused before it is spent. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -1477,7 +1477,6 @@ var norm = DawnParser.norm, isAttack = DawnParser.isAttack, isArrow = DawnParser
     playableFromZone = DawnParser.playableFromZone,
     rxPump = DawnParser.rxPump,
     isInstantT = DawnParser.isInstantT, costsAP = DawnParser.costsAP,
-    attackQual = DawnParser.attackQual, qualMatches = DawnParser.qualMatches,
     abWindow = DawnParser.abWindow,
     isRunechant = DawnParser.isRunechant, runeCount = DawnParser.runeCount,
     wardTotal = DawnParser.wardTotal,
@@ -3286,7 +3285,27 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     defenders: n.stack.filter(l=>l.k==="def").map(l =>
       l.gi != null ? opp(n).gear[l.gi]
                    : (opp(n).hand.find(x=>x.uid===l.uid) || null)).filter(Boolean)});
+  /* A LIVE SHEET STOPS THE GAME ON EVERY DOOR, AND EVERY DOOR SAYS SO
+     (v4.88). v4.80 gave this board `judge.legal`'s rule — nothing starts
+     while a question is open — in four doors. The dead-tap sweep, tapping
+     every lit ⚡ at phone dimensions, found the rest: the reaction doors,
+     the arsenal instant, the opponent's-turn window, the hand ability, the
+     defend-to-react step, the arsenal step and PASS — RESOLVE had no guard
+     at all, so a card could be played here that the table refuses (v3.01);
+     and the four that had one returned in SILENCE while every tile stayed
+     lit, which reads as a broken screen rather than as a rule (v2.83).
+
+     ONE BODY, and it names what is waiting. `test/sheetdoors.test.js`
+     holds every door in `Battle` to asking it, or to a pinned reason for
+     not needing to. */
+  const sheetFirst = s => {
+    if(!s.prompt) return null;
+    const what = String(s.prompt.title || s.prompt.src || "the sheet").trim();
+    /* a title that is itself a question keeps its own mark */
+    return L(s, `Answer the open question first — ${what}${/[.?!]$/.test(what) ? "" : "."}`);
+  };
   const playRx = (i, addPaid) => setG(s=>{
+    { const _w = sheetFirst(s); if(_w) return _w; }
     /* THE WINDOW IS `speedAllowed`'S QUESTION NOW (v2.37) — the first consumer
        moved off `mode`/`bphase`, which is roadmap item 1's last step.
 
@@ -3353,10 +3372,11 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        Only the attack window: `s.pend` is the attack being reacted to, and
        a defense reaction is answering the opponent's swing, which does not
        live there. */
-    if(inAtk && fx.selfQ && !qualMatches(fx.selfQ, s.pend && s.pend.card)){
-      const want = DawnParser.qualLabel(fx.selfQ);
-      return L(s, `${c.name} targets ${want} — ${s.pend&&s.pend.card ? s.pend.card.name : "this attack"} isn't one.`);
-    }
+    /* …AND IT IS ONE READER NOW (v4.88), `DawnEffects.rxNoTargetWhy` —
+       this asked `selfQ` alone, so a MODAL card (Pummel) and a
+       go-again-only target (Run Through) were refused only by `attackRx`,
+       after the card had left the hand and paid. */
+    if(inAtk){ const _tw = DawnEffects.rxNoTargetWhy(s, c); if(_tw) return L(s, _tw + "."); }
     /* AND THE LINK CAN CLOSE THIS WINDOW ALTOGETHER (v4.60). Widowmaker
        and Wreck Havoc print "defense reactions can't be played to this
        chain link", and until v4.60 the clause was a `noop` with no reader
@@ -3413,7 +3433,13 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
          reader of it, shared with the ACTIVATED route (v4.85). */
       const {handBlockers, defenders} = rxWall(n);
       const rx = _EFX.attackRx(n, c, {handBlockers, defenders});
-      if(rx.why) return L(n, rx.why);
+      /* REFUSED ON THE STATE BEFORE THE CARD LEFT THE HAND (v4.88). The
+         refusal `attackRx` answers — a modal card none of whose modes can
+         target this attack — is a LEGALITY, and `n` has already paid the
+         cost and filed the card. Returned on `n`, Pummel swung into an
+         attack neither of its modes names was spent for a log line;
+         `judge.legal` refuses the same play before anything moves (v3.11). */
+      if(rx.why) return L(s, rx.why);
       n = rx.game;
       return L(n, `${c.name} on the stack (+${rx.pump}). ${foe(n).name} passes back.`);
     }
@@ -3438,6 +3464,35 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     return L(n, `${c.name} played at instant speed — +${dv} defense.`);
   });
   const playRxA = () => setG(s=>{
+    { const _w = sheetFirst(s); if(_w) return _w; }
+    /* THE ATTACKER'S WINDOW HAS AN ARSENAL TOO (v4.88). CR 8.1.2a lets the
+       player who controls the attack play an attack reaction in the
+       reaction step, and a card set face down at the end of the last turn
+       is played from the arsenal exactly as one in hand is. This door
+       answered the DEFENDING window alone, so in `stack` the arsenal tile
+       fell through to `tryPlay`, which refused in silence: an attack
+       reaction or an instant held in the arsenal could never be played in
+       the one window it exists for. The table has offered it since
+       `sparring.reaction` looked at the arsenal — v3.01's one-board shape,
+       found by the dead-tap sweep. The body is the hand door's attack
+       branch, and it refuses before anything moves. */
+    if(s.mode === "stack" && act(s).arsenal){
+      const c = act(s).arsenal, fx = fxParse(c);
+      if(!rxAllowed(c, "attack-reaction")) return L(s, isRx(c)
+        ? `${c.name} is a defense reaction — this is the attacking player's window.`
+        : `${c.name} isn't a reaction or an instant — it can't be played in the reaction step.`);
+      { const _tw = DawnEffects.rxNoTargetWhy(s, c); if(_tw) return L(s, _tw + "."); }
+      const cost = c.cost||0;
+      if(act(s).res < cost) return L(s, `${c.name} costs ${cost} — float resources before the window opens.`);
+      let n = {...s};
+      const ars = actMut(n);
+      ars.res = act(s).res - cost;
+      ars.arsenal = null;
+      ars.grave = [...gy(s.turn, c),...act(s).grave];
+      const rx = _EFX.attackRx(n, c, rxWall(n));
+      if(rx.why) return L(s, rx.why);
+      return L(rx.game, `${c.name} from arsenal on the stack (+${rx.pump}). ${foe(rx.game).name} passes back.`);
+    }
     if(s.mode!=="block" || s.bphase!=="react" || !act(s).arsenal) return s;
     const c = act(s).arsenal; const fx = fxParse(c);
     if(!rxAllowed(c, "defense-reaction")) return L(s, isAR(c)
@@ -3468,6 +3523,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     return L(n, `${c.name} fired from arsenal — +${dv} defense.`);
   });
   const playArsenalInstant = () => setG(s=>{
+    { const _w = sheetFirst(s); if(_w) return _w; }
     /* "IF IT'S NOT YOUR TURN" IS THE WHOLE CLAUSE, NOT ONE STEP OF IT
        (v2.71). This was gated on the reaction step of an incoming swing,
        which is a window that exists only if the opponent attacks — so on
@@ -3547,6 +3603,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      beside it, because there is no room to pause for a payment sheet in an
      instant window. */
   const playFoeTurnRx = i => setG(s=>{
+    { const _w = sheetFirst(s); if(_w) return _w; }
     if(s.mode!=="foeturn") return s;
     if(!DawnPriority.speedAllowed(s,0).includes("instant")) return s;
     const c = act(s).hand[i]; if(!c) return s;
@@ -3584,8 +3641,8 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     return winCheck(L(n, `${c.name} played at instant speed on ${foe(n).name}'s turn.`));
   });
   /* CR 4.3.4 — both players pass in succession and the phase ends. */
-  const foePassWindow = () => setG(s => s.mode!=="foeturn" ? s
-    : foeEnd(L(s, `You pass — ${opp(s).name} may end their turn.`)));
+  const foePassWindow = () => setG(s => sheetFirst(s) || (s.mode!=="foeturn" ? s
+    : foeEnd(L(s, `You pass — ${opp(s).name} may end their turn.`))));
   /* ---- AN INSTANT-SPEED ABILITY, IN AN INSTANT-SPEED WINDOW (v2.71) ----
      Spellfire Cloak prints "Activate this ability only during an
      opponent's turn" and had NO ROUTE AT ALL. Tapping gear while
@@ -3626,7 +3683,8 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
   };
 
   const activateInstant = (card, from, idx) => setG(s=>{
-    if(s.over || s.prompt) return s;           /* a live sheet stops the game (v4.80) */
+    if(s.over) return s;
+    { const _w = sheetFirst(s); if(_w) return _w; }   /* a live sheet stops the game (v4.80), and says so (v4.88) */
     if(s.mode === "discpick") return s;        /* …and so does a cost's question (v4.85) */
     /* CR 8.1.6 — an instant is legal in any window where you hold
        priority. Asked of priority.js, never restated: in the DEFEND step
@@ -3671,8 +3729,8 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      `resolveStack` returns with the link resolved and the stack empty; CR
      7.6.3 hands priority back to the turn-player, which in this board's
      vocabulary is `mode:"act"`. The module no longer says so itself. */
-  const resolveStack = () => setG(s => s.mode!=="stack" || !s.pend ? s
-    : {..._EFX.resolveStack(s), mode:"act"});
+  const resolveStack = () => setG(s => sheetFirst(s) || (s.mode!=="stack" || !s.pend ? s
+    : {..._EFX.resolveStack(s), mode:"act"}));
 
   /* ---- PLAY A CARD, THEN RUN THE TURN STRUCTURE (v2.73) ----------------
      THE SPLIT THIS WRAPPER EXISTS FOR. `execute` used to call
@@ -3699,7 +3757,10 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        action phase with a live link. It is handed the wall too, the pair
        `playRx` hands a reaction card, out of the same reader. */
     const _arx = !!(card && card._attackRx);
-    let n = execute({...s, mode:_arx?"stack":"act", pending:null}, card, from, idx, _arx ? rxWall(s) : undefined);
+    /* …AND SO DOES AN INSTANT ACTIVATED THERE (v4.88): the window it was
+       activated in, read off the mode or off the payment that paused it. */
+    const _inRx = s.mode === "stack" || !!(s.pending && s.pending.back === "stack");
+    let n = execute({...s, mode:(_arx||_inRx)?"stack":"act", pending:null}, card, from, idx, _arx ? rxWall(s) : undefined);
     /* THE DECLARED HALF IS SPENT (v3.34). It rode in on the state, like
        `_doBoost` and `_addPaid`; leaving it there would play the next
        split card as whatever the last one chose, without asking. */
@@ -3866,7 +3927,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        board never had: nothing is played until the question is answered.
        It mattered little while every sheet opened after a card had fully
        resolved; a declaration's sheet opens with the attack half-declared. */
-    if(s.prompt) return s;
+    { const _w = sheetFirst(s); if(_w) return _w; }
     /* THE REACTION WINDOW IS `stack`, AND AN ACTIVATED ATTACK REACTION IS
        PLAYED IN IT (v4.85). This guard refused every tap there, so the
        `_attackRx` legality further down — written for exactly that mode —
@@ -3877,7 +3938,19 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        driving the page at phone dimensions; no drill could reach it, since
        `tryPlay` is a closure inside `Battle`. Every other play is still
        refused here, so the reaction window keeps its own doors. */
-    if(s.over||s.mode==="block"||s.mode==="arsenal"||(s.mode==="stack"&&!(card&&card._attackRx))||s.mode==="boostpick"||s.mode==="fusepick"||s.mode==="chargepick"||s.mode==="splitpick"||s.mode==="xpick"||s.mode==="discpick"||s.mode==="rxaddpay"||s.mode==="foeturn") return s;
+    /* …AND AN INSTANT ABILITY TOO (v4.88). CR 8.1.6 makes an instant
+       legal whenever its controller holds priority, which includes the
+       player's own reaction window, and `heroPowWindowOK` says so — so
+       Enigma's and Fai's hero abilities and Fai's Blood Scent were enabled
+       there and refused in silence by this line. The dead-tap sweep found
+       them, driving every lit ⚡ at phone dimensions. */
+    /* …AND WHAT IT STILL REFUSES THERE, IT SAYS (v4.88). A weapon swing, an
+       ALLY attack or an action-speed ability waits for the link to resolve,
+       and the tile that offers it stays lit — so a silent return here was
+       a dead tap (Lyath's Stand Strong, found by the sweep). */
+    if(!s.over && !s.inspect && s.mode==="stack" && !(card&&(card._attackRx||card._instant)))
+      return L(s, `${card ? card.name : "That"} is action speed — this is the reaction step. Pass to resolve the chain link first.`);
+    if(s.over||s.mode==="block"||s.mode==="arsenal"||s.mode==="boostpick"||s.mode==="fusepick"||s.mode==="chargepick"||s.mode==="splitpick"||s.mode==="xpick"||s.mode==="discpick"||s.mode==="rxaddpay"||s.mode==="foeturn") return s;
     if(s.inspect){ setZoom(card); return s; }
     if(s.mode==="pay"){
       if(from!=="hand" || (s.pending&&s.pending.from==="hand"&&s.pending.idx===idx)) return s;
@@ -3986,6 +4059,13 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        `rxAllowed` makes. */
     if(card._attackRx && !(s.mode==="stack" && s.pend && s.pend.by===actorOf(s)))
       return L(s, `${card.name} is an attack reaction — declare an attack first, then use it before the damage step.`);
+    /* AND ITS PRINTED TARGET IS A LEGALITY HERE TOO (v4.88). `judge.legal`
+       has refused "target attack with stealth" off a stealthless swing
+       since v3.63 (`rxTargetWhy`); this board asked nothing, so Stalker's
+       Steps, Bolt'n Boots and Boltyn's own ability paid their cost and were
+       refused by `attackRx` afterwards — a lost Legs piece for a play the
+       rules never allowed (v3.11). The ONE reader, asked of the same link. */
+    if(card._attackRx){ const _tw = DawnEffects.rxNoTargetWhy(s, card); if(_tw) return L(s, _tw + "."); }
     /* ---- A TAPPED HERO CANNOT PAY {t} AGAIN (v3.48, on this board at
        v3.99) --------------------------------------------------------
        RULING (user, 2026-08-25): "when tapped it mainly means it cannot
@@ -4266,6 +4346,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      judge refuse Rally the Coast Guard by name. `activateHandAbility`
      lands it now, so there is nothing here to route. */
   const activateHand = c => setG(s=>{
+    { const _w = sheetFirst(s); if(_w) return _w; }
     if(["pay","arsenal","boostpick","fusepick","chargepick","discpick"].indexOf(s.mode) >= 0) return s;
     /* WHICH CARD "Discard a card:" SPENDS (v4.87) — Rally the Coast
        Guard's, asked through the one reader both boards ask
@@ -4312,7 +4393,8 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      again) and every next-attack grant that names it — which is what
      makes Avast Ye! and Yo Ho Ho! real cards. */
   const closeChain = () => setG(s=>{
-    if(s.mode!=="act" || !s.chainOpen || s.prompt) return s;   /* a live sheet stops the game (v4.80) */
+    { const _w = sheetFirst(s); if(_w) return _w; }   /* a live sheet stops the game (v4.80), and says so (v4.88) */
+    if(s.mode!=="act" || !s.chainOpen) return s;
     const hEntry = s.chain.length ? [{turn:s.turn, links:s.chain}, ...(s.chainHist||[])].slice(0,8) : (s.chainHist||[]);
     /* A GRANT THAT PRINTS "THIS COMBAT CHAIN" EXPIRES WITH IT (v3.87) —
        the same shared body judge.closeChain calls, because a schedule
@@ -4341,7 +4423,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      moment a second hero can bank a resource during your turn.
      =================================================================== */
   const endTurn = () => setG(s=>{
-    if(s.over||s.mode!=="act"||s.prompt) return s;   /* a live sheet stops the game (v4.80) */
+    if(s.over) return s;
+    { const _w = sheetFirst(s); if(_w) return _w; }   /* a live sheet stops the game (v4.80), and says so (v4.88) */
+    if(s.mode!=="act") return s;
     let n = L({...s}, "— End phase (CR 4.4). No priority. —");
 
     /* Beginning-of-end-phase triggers, ahead of (a). */
@@ -4408,6 +4492,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     return n;
   }
   const pickArsenal = idx => setG(s=>{
+    { const _w = sheetFirst(s); if(_w) return _w; }
     if(s.mode!=="arsenal") return s;
     let n = {...s};
     const arSide = youMut(n);
@@ -4415,13 +4500,14 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     arSide.hand = you(s).hand.filter((_,i)=>i!==idx);
     return afterArsenal(L(n,`${you(n).arsenal.name} set face down in arsenal.`));
   });
-  const skipArsenal = () => setG(s=> s.mode==="arsenal" ? afterArsenal(L(s,"(b) Arsenal left empty — nothing set.")) : s);
+  const skipArsenal = () => setG(s=> sheetFirst(s) || (s.mode==="arsenal" ? afterArsenal(L(s,"(b) Arsenal left empty — nothing set.")) : s));
   /* HEAVE — THE ARSENAL SET THAT PAYS (v3.32). The gate, the payment, the
      face-up put and the mint all live in `DawnEffects.heave`; this is the
      trainer's half of the CHOICE, and judge.js asks the identical body
      from its own arsenal pause. A rule restated here would be a second
      description of it. */
   const doHeave = () => setG(s=>{
+    { const _w = sheetFirst(s); if(_w) return _w; }
     if(s.mode!=="arsenal") return s;
     const off = DawnEffects.heaveOffer(s, 0);
     if(!off) return L(s, "Nothing in hand can be heaved right now.");
@@ -4787,7 +4873,8 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
   const toggleBlock = (kind,v) => setG(s=>{
     /* `s.prompt` — see `takeIt`: while a sheet raised off this wall is live
        the wall is final (v4.57). */
-    if(s.mode!=="block" || s.bphase!=="defend" || s.prompt) return s;
+    { const _w = sheetFirst(s); if(_w) return _w; }
+    if(s.mode!=="block" || s.bphase!=="defend") return s;
     if(kind==="h"){
       const c = you(s).hand.find(x=>x.uid===v);
       if(!c || c.def==null) return s;
@@ -4813,6 +4900,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     return L(n, `${gr.name} ${on?"raised":"lowered"} — ${gearDef(gr)} defence.`);
   });
   const moveToReact = () => setG(s=>{
+    { const _w = sheetFirst(s); if(_w) return _w; }
     if(s.mode!=="block" || s.bphase!=="defend") return s;
     const dh = you(s).blockH.map(u=>you(s).hand.find(x=>x.uid===u)).filter(Boolean).reduce((a,c)=>a+(c.def||0),0);
     const dg = you(s).blockG.reduce((a,i)=>a+gearDef(you(s).gear[i]),0);
@@ -4915,7 +5003,8 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        comment is what the guard is protecting — "this is the moment the wall
        is FINAL", so a defender must not be withdrawn after a sheet was built
        from it. */
-    if(s.mode!=="block" || s.prompt) return s;
+    { const _w = sheetFirst(s); if(_w) return _w; }
+    if(s.mode!=="block") return s;
     const bcards = act(s).blockH.map(u=>act(s).hand.find(x=>x.uid===u)).filter(Boolean);
     /* EVERY "WHEN THIS DEFENDS" TRIGGER, OUT OF THE ONE BODY (v4.57).
 
@@ -5546,7 +5635,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                 }}/>
                 <div className="arscol">
                   <div className="slot clip-sm" style={{width:"100%"}}>{you(g).arsenal
-                    ? <button style={{padding:0,width:"100%"}} onClick={()=> g.mode==="foeturn" ? playArsenalInstant() : g.mode==="block" ? (g.bphase==="react"&&playRxA()) : g.inspect?setZoom(you(g).arsenal):tryPlay(you(g).arsenal,"arsenal",0)}><CardFrame card={you(g).arsenal} className="sm"/></button>
+                    ? <button style={{padding:0,width:"100%"}} onClick={()=> g.mode==="foeturn" ? playArsenalInstant() : g.mode==="block" ? (g.bphase==="react"&&playRxA()) : g.inspect?setZoom(you(g).arsenal) : g.mode==="stack" ? playRxA() : tryPlay(you(g).arsenal,"arsenal",0)}><CardFrame card={you(g).arsenal} className="sm"/></button>
                     : "arsenal"}</div>
                   <span className="zlbl">Arsenal</span>
                 </div>

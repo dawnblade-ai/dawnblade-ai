@@ -755,8 +755,18 @@ test("a CARD in hand is proposed before an ability, and that ordering is a state
      six print a target restriction the plain swing fails, so picking the
      first `isAR` card gives a fixture whose card is REFUSED — and the
      ability is then proposed for the right reason by accident. */
-  const rx = ara.deck.find(c => PR.isAR(c) && /Two Sides to the Blade/.test(c.name));
+  /* …AND THIS FIXTURE WAS ONE, BY THE BUG (v4.88). It was Two Sides to
+     the Blade, which the comment called unrestricted: both of its MODES
+     are restricted (a dagger attack; an attack action card with
+     stealth), and they ride on `fx.modes`, where `judge.legal` never
+     looked. The plain swing meets neither, so the card had no legal
+     target and was proposed anyway. Night's Embrace is a STANDING grant
+     ("your attacks with stealth get +1{p}") and names no target at all,
+     which is what this drill always needed; Two Sides is kept as the
+     control that is now refused. */
+  const rx = ara.deck.find(c => PR.isAR(c) && /Night's Embrace/.test(c.name));
   assert.ok(rx, "her deck must hold a reaction with no target restriction");
+  const two = ara.deck.find(c => PR.isAR(c) && /Two Sides to the Blade/.test(c.name));
   const mk = hand => Object.assign(
     H.state({gear: ara.gear, res: 9, ap: 1, hand}, {hp: 20, hand: []},
             {turn: 3, actor: 0, builds: [ara, {}]}),
@@ -767,6 +777,12 @@ test("a CARD in hand is proposed before an ability, and that ordering is a state
   assert.equal((withCard || {}).uid, rx.uid);
   /* BOTH HALVES: empty the hand and the SAME state proposes the ability. */
   assert.deepEqual(SP.act(mk([]), 0), {t: "activate", uid: dd.uid});
+  /* …and a hand holding only a card with NO LEGAL TARGET is an empty hand
+     to this window: the ability is proposed, and the card is refused by
+     name rather than spent (v4.88). */
+  assert.match(String(J.legal(mk([two]), {t: "play", uid: two.uid, from: "hand"}, 0)),
+    /no mode of it can target Plain Swing/);
+  assert.deepEqual(SP.act(mk([two]), 0), {t: "activate", uid: dd.uid});
 });
 
 test("…and NOT an instant ability, because that is a timing judgement", {skip}, () => {

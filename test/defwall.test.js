@@ -357,7 +357,9 @@ test("while a sheet is live the wall is FINAL, on both block actions", () => {
     const i = HTML.indexOf(decl);
     assert.ok(i > 0, fn + " moved — re-anchor this drill");
     const body = HTML.slice(i, i + 400);
-    assert.match(body, /\|\|\s*s\.prompt\)\s*return s;/,
+    /* `sheetFirst` SINCE v4.88 — the same refusal, saying what is waiting;
+       `test/sheetdoors.test.js` holds every door to it. */
+    assert.match(body, /\{ const _w = sheetFirst\(s\); if\(_w\) return _w; \}/,
       fn + " refuses while a sheet raised off this wall is live");
   }
 });
