@@ -3918,7 +3918,7 @@ function makeEffects(ctx){
            an activation cost's gate from disagreeing about the same
            board. */
         : cond.slice(0,6)==="board:" ? !!P.boardEntryNamed(act(n), cond.slice(6))
-        : cond==="suspenseAura" ? (act(n).board||[]).some(b=>b.kind==="aura" && hasKw(b.card,"suspense"))
+        : cond==="suspenseAura" ? controlsAuraOf(act(n), "suspense")
         : /^pitchCost\d+$/.test(cond) ? act(n).pitch.some(c=>(c.cost||0) >= +cond.slice(9))
         : cond==="allyDied" ? (act(n).grave||[]).some(c=>c._gy===n.turn && /\bally\b/i.test(c.tt||""))
         : cond==="weaponSwung" ? Object.keys(act(n).weaponUsed||{}).length>0
@@ -4060,6 +4060,14 @@ function makeEffects(ctx){
        ordering question is only ever about the declaration loop. */
     if(card.pitch===3) actMut(n).hist = {...act(n).hist, blue:(act(n).hist.blue||0)+1};
     if(card.pitch===1) actMut(n).hist = {...act(n).hist, red:(act(n).hist.red||0)+1};
+    /* WHICH CARDS WERE PLAYED, BY NAME (v4.89) — `hist.playNames`, the
+       record "if you've played a Nimblism this turn" asks. Here for the
+       colour counters' reason: this line is reached by every play, attack
+       or not. An ACTIVATION is not a play (a weapon swing, an ally's or an
+       aura's attack, an ability's powCard), so `isActivation` — the one
+       reader of that question, v4.86 — keeps them out. */
+    if(!P.isActivation(card, from))
+      actMut(n).hist = {...act(n).hist, playNames: [...(act(n).hist.playNames || []), norm(card.name)]};
     /* ---- THE LATE "…THIS WAY" PASS, ONE BODY, BOTH BRANCHES (v3.62) --
        `execute` evaluates `fx.conds` BEFORE it runs the card's ops, so a
        condition asking what its own resolution just did reads an empty
@@ -9214,13 +9222,43 @@ function activateIfOk(game, gate, card){
     return dec.includes(card.uid) || dec.includes(String(card.uid));
   }
   if(k === "foeTurn") return foeTurnNow(s);
+  /* "IF YOU'VE PLAYED A <NAME> THIS TURN" (v4.89). The parser has read
+     this since Quick Clicks was dealt and NOTHING here answered it, so it
+     fell through to the `return true` below: Quick Clicks (its next attack
+     gets GO AGAIN, an action point) and Swiftstrike Bracers (+2{p}) were
+     activatable with no Nimblism played, in Azalea's and Briar's lists.
+     The record is `hist.playNames`, cleared at the turn boundary (CR
+     4.4.4), which is the whole of "this turn". */
+  if(k === "playedNamed") return ((sd.hist || {}).playNames || []).includes(P.norm(gate.name || ""));
+  /* "IF YOU CONTROL AN AURA OF <KEYWORD>" (v4.89) — Stand Strong; the
+     same reader Full of Bravado's printed condition asks. */
+  if(k === "auraOf")     return controlsAuraOf(sd, gate.kw);
   /* AN UNREAD RESTRICTION REFUSES. `parser.js` files a printed "Activate
      this only …" whose condition it cannot read as `unreadable` rather
      than leaving the gate undefined, and the fallthrough below used to
      wave it through — which is the ability escaping the one limit it
      prints. v2.04 settled the same question for costs: inert, never free. */
   if(k === "unreadable") return false;
-  return true;
+  /* …AND SO DOES A KIND NOBODY ANSWERED (v4.89). This was `return true`,
+     and `playedNamed` lived in it for as long as the parser emitted it:
+     a gate the parser READ and the evaluator never asked is the same
+     escape as one nobody read, and harder to see, because the clause
+     reports as read. `ACT_IF_KINDS` is the census, and a drill fails the
+     day the parser emits a kind with no branch here. */
+  return false;
+}
+const ACT_IF_KINDS = ["atkNamed", "hits", "boosted", "controlPow", "defending", "foeTurn",
+                      "playedNamed", "auraOf", "unreadable"];
+
+/* DO YOU CONTROL AN AURA OF <KEYWORD>? (v4.89) — one reader for both
+   printed spellings of the question: a CONDITION ("When this attacks or
+   defends, if you control an aura of suspense", Full of Bravado) and an
+   ACTIVATION GATE (Stand Strong). The aura must CARRY the keyword, which
+   is `printedKw` (v2.84); the old inline test asked `hasKw`, which also
+   answers for an aura that merely mentions it. Measured over the pool the
+   two agree on every aura that can reach a board, so nothing moves today. */
+function controlsAuraOf(sd, kw){
+  return ((sd && sd.board) || []).some(b => b && b.kind === "aura" && b.card && P.printedKw(b.card, kw));
 }
 
 function thawFreeze(game, seat){
@@ -10184,6 +10222,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, jabTargets, CTX_KEYS, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, restampHalving, returnStolen, pendPumped, rxNoTargetWhy, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
+return {makeEffects, jabTargets, CTX_KEYS, ACT_IF_KINDS, controlsAuraOf, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, restampHalving, returnStolen, pendPumped, rxNoTargetWhy, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

@@ -1,3 +1,100 @@
+## v4.89 — every activation gate is answered, and an unanswered one refuses
+
+> *"Action - Destroy this: Your next attack this turn gets go again.
+> Activate this only if you've played a Nimblism this turn."* — QUICK CLICKS
+
+### A gate the parser read and nothing answered
+
+The parser has read that sentence as `{kind: "playedNamed"}` since the card
+was dealt. `test/condcensus.test.js` pinned the kind as **emitted**.
+`activateIfOk`, the one evaluator both boards ask, had **no branch for it**
+and ended `return true`. So Quick Clicks (go again, an action point) and
+Swiftstrike Bracers (+2{p}) activated with no Nimblism played, in Azalea's
+and Briar's lists, on both boards. Stronger than printed, and every coverage
+tool called the clause read.
+
+- **`hist.playNames`** records the name of every card PLAYED this turn: the
+  non-attack twin of `atkNames`, which v3.38 and v3.41 both said was
+  missing. `parser.isActivation` keeps powCards, swings and board attacks
+  out of it, and that is driven: activating Quick Clicks after the
+  Nimblism leaves the record holding only the Nimblism.
+- **The fallthrough refuses.** An unknown kind answering TRUE is an ability
+  escaping its printed limit; FALSE is inert, never free (v2.04).
+  `ACT_IF_KINDS` is the census, and `condcensus` now asks both directions:
+  every emitted kind has a branch, and the fallthrough is driven.
+- **The refusal names the card as printed** ("a Nimblism", not "a
+  nimblism"), recovered from the cleaned text by index (v3.53).
+
+### Stand Strong reads its aura of suspense
+
+*"Activate this only if you control an aura of suspense"* was filed
+`unreadable` since v3.04, while Full of Bravado's identical printed
+condition read as `suspenseAura`. Both now ask `effects.controlsAuraOf`.
+It asks `printedKw`, never `hasKw` (v2.84); measured, the two agree on
+every aura that can reach a board, so nothing moves today, and a synthetic
+aura that only MENTIONS suspense is the near-miss. The keyword is a closed
+vocabulary of one, measured.
+
+### A weapon swing asks its gate at the table
+
+judge's weapon branch asked nothing about a swing's printed restriction,
+while the trainer's `tryPlay` always asked `activateIfOk`. So **Scorpio,
+Comet Tail** ("Activate this only if you control a Lightning attack") swung
+freely at the table and was refused on the trainer: v3.01's shape, on
+Briar's weapon. It asks now, and Scorpio refuses on both boards, because
+its condition is unread.
+
+**That condition is a RULING, not a reading.** Whether a resolved link is
+still "an attack you control" decides whether the swing can ever happen,
+and the repo carries no sourced CR definition to read it from.
+`scorpio-lightning-attack` is `open` in `tools/approx.js` with a driven
+probe that goes red the day it reads.
+
+**And two drills had used Scorpio as their cost-0 swing.** They were valid
+only while the table ignored its gate (v4.88's Two Sides shape, one version
+on). `actcost.test.js` moved to Raydn, Duskbane, which carries the same
+property with no gate. `judge.test.js`'s tap drill keeps Scorpio's gate as
+its first assertion and drives the tap on a synthetic copy of the swing line
+(v3.73), because Scorpio is the pool's only `{t}` weapon.
+
+### The sweep can reach the reaction window
+
+`tools/phone/deadtap.js` clicked "Pitch & play" without pitching anything,
+so nine of fifteen heroes never reached the reaction window: their sweep
+covered one window of two while reporting clean. It pitches now. Two more of
+its own faults turned up driving it:
+
+- **A tap can open a sheet** (Bull's Eye Bracers asks "Put an arrow face up
+  in your arsenal?"), and every later tap is then refused by `sheetFirst`,
+  correctly. The probe never answered it, so it stalled until timeout. It
+  declines, then confirms: on a `pick`, "Choose none" only clears the
+  selection.
+- **It gave up on the first attack it tried.** The cheapest is not always
+  playable from hand (an arrow is played from the arsenal), so it tries up
+  to four now and names them when none lands.
+
+**The v4.88 sweep, as promised there:** fifteen heroes, **no dead tap and no
+page error**. The action phase was swept for all fifteen; the reaction
+window was reached for six (Arakni, Boltyn, Briar, Fai, Lyath, Viserai),
+which is the gap this fault explains.
+
+### Measured
+
+- **3328 drills**, 0 fail, 5 skipped; 107 scenes; babel clean.
+- **11 sabotages, 11 bite**, one of which needed a driven half: the "records
+  activations too" sabotage first bit only through a source pin.
+- **The ladder at three seeds, both sides:** Briar 54 → 47 (19·16·19 →
+  19·15·13). The intervals overlap, so it is not resolved by the standing
+  rule, but the direction is the mechanism: her default loadout wears
+  Scorpio, whose swing now refuses at the table, and `fusion` rises
+  118 → 141 as she plays cards instead. Everything else is inside the band:
+  0 refusals, 0 violations, stalls 2 unchanged.
+- **The ledger:** 45 → 46 records, open 3 → 4.
+- **Pins moved, each read first:** the abilities unreadable-gate drill
+  (Stand Strong reads now, so Scorpio is the fixture, a recorded refusal
+  coming due), `actcost` and the judge tap drill (above), the activation-gate
+  census (`auraOf` arrives), and the slice census (+1 `effects.js` slice).
+
 ## v4.88 — every trainer door, the instant window, and a target is a legality
 
 The table dims every control off `judge.legal`, so a button there cannot

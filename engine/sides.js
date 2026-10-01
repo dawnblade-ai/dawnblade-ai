@@ -127,8 +127,15 @@ const SIDE_FIELDS = [
    IT IS KEYED BY KEYWORD, not a bare boolean, because the KEYWORD is read
    off the printed line rather than known by the engine: a second card
    naming a different one must not spend this one's grant. Same shape and
-   reason as `auraAtkNames`, one field over. */
-const freshHist = () => ({atk:0,non:0,arc:0,aura:0,made:0,booed:0,blue:0,red:0,trans:0,blueGY:0,atkNames:[],auraAtkNames:[],playTy:[],arcTaken:0,gyFirstKw:[]});
+   reason as `auraAtkNames`, one field over.
+
+   `playNames` (v4.89) — the NAME of every card PLAYED this turn, the
+   non-attack twin of `atkNames` that v3.38 and v3.41 both said was
+   missing. Quick Clicks and Swiftstrike Bracers print "Activate this only
+   if you've played a NIMBLISM this turn", and Nimblism is a card NAME, so
+   `playTy` (types) could never answer it. With no record the gate had no
+   answer, and the activation evaluator waved it through. */
+const freshHist = () => ({atk:0,non:0,arc:0,aura:0,made:0,booed:0,blue:0,red:0,trans:0,blueGY:0,atkNames:[],auraAtkNames:[],playTy:[],playNames:[],arcTaken:0,gyFirstKw:[]});
 
 function makeSide(o){
   o = o || {};

@@ -7013,12 +7013,26 @@ function fxParse(card){
     fx.activateIf = {kind:"defending", why:"this card isn't defending"};
   else if(tl.match(A("during an opponent'?s? turn")))
     fx.activateIf = {kind:"foeTurn", why:"it's your turn, not your opponent's"};
-  else if(ag = tl.match(A("if " + YOUVE + "played a ([a-z' -]+) this turn")))
-    fx.activateIf = {kind:"playedNamed", name:ag[1].trim(), why:"you haven't played the required card this turn"};
+  else if(ag = tl.match(A("if " + YOUVE + "played an? ([a-z' -]+) this turn")))
+  {
+    /* the NAME as printed — `tl` is this same cleaned text lowercased, so
+       the index lines up, and a feed line saying "a nimblism" reads as a
+       typo (v3.53) */
+    const nm = ag[1].trim(), at = tl.indexOf(nm);
+    const shown = at >= 0 ? clean(card.tx || "").substr(at, nm.length) : nm;
+    fx.activateIf = {kind:"playedNamed", name:nm, why:`you haven't played a ${shown} this turn`};
+  }
+  /* "IF YOU CONTROL AN AURA OF <KEYWORD>" (v4.89) — Stand Strong, refused
+     as unreadable since v3.04 while Full of Bravado's identical printed
+     condition read as `suspenseAura`. The keyword is a CLOSED vocabulary:
+     measured, the pool prints this phrase with exactly one, so another
+     arriving falls through to `unreadable` and refuses (v3.55's rule). */
+  else if(ag = tl.match(A("if you control an aura of (suspense)\\b")))
+    fx.activateIf = {kind:"auraOf", kw:ag[1], why:`you control no aura of ${ag[1]}`};
   /* AN UNREAD RESTRICTION MUST REFUSE, NOT WAVE THROUGH. Two pool cards
      print a condition no pattern above reads — Scorpio, Comet Tail ("only
-     if you control a Lightning attack") and Stand Strong ("only if you
-     control an aura of suspense"). With `activateIf` left undefined the
+     if you control a Lightning attack"; Stand Strong's "aura of
+     suspense" reads since v4.89). With `activateIf` left undefined the
      ability was activatable with NO restriction at all, which is the
      sev-3 direction: a card strictly stronger than printed.
 
