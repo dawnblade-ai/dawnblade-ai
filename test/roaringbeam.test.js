@@ -104,9 +104,13 @@ function window(soul){
   let g = table("roaringbeam1");
   while(g.arsenalFor != null) g = J.reduce(g, {t: "arsenal", uid: null}, g.arsenalFor).state;
   const seat = g.turnPlayer;
-  const atk = g.sides[seat].hand.find(x => PR.isAttack(x));
-  assert.ok(atk, "fixture: no attack in the opening hand");
   let sides = g.sides.slice(); sides[seat] = {...g.sides[seat], res: 9}; g = {...g, sides};
+  /* an attack `legal` ACCEPTS (v4.90): Boltyn's first is Duty Bound Blitz,
+     whose "play this only if a yellow card has been put into your soul this
+     turn" the table asks now */
+  const atk = g.sides[seat].hand.find(x => PR.isAttack(x)
+    && J.legal(g, {t: "play", uid: x.uid, from: "hand"}, seat) === null);
+  assert.ok(atk, "fixture: no playable attack in the opening hand");
   let n = settle(J.reduce(g, {t: "play", uid: atk.uid, from: "hand"}, seat).state);
   let k = 0;
   while(n.step !== "reaction" && k++ < 20){

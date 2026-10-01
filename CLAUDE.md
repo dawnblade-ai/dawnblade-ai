@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.89
+**Current version:** v4.90
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3328 drills** at v4.89.
+This is `node --test "test/*.test.js"` — **3335 drills** at v4.90.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,25 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A RULE THAT LIVES IN A TRAINER CLOSURE DOES NOT EXIST AT THE TABLE (v4.90)
+
+`fx.playIf` ("Play this only if …") was answered by a closure inside
+`Battle` and nowhere else, so `judge.legal` never asked it: Bear Hug, Run
+Roughshod and Duty Bound Blitz were playable at the table against their own
+first line, and the self-play ladder played Duty Bound Blitz 40 times in 16
+Boltyn games with nearly no yellow card charged. `effects.playIfOk` is the
+one evaluator now, it reads the printed number, colour and turn the closure
+dropped, and `had6ThisTurn` is one body both contexts hand `execute`.
+**When you find a rule in the trainer, grep judge for it**: v3.01's shape,
+and the trainer being a React closure is what hides it from every drill.
+
+- **"This turn" on a zone needs a stamp at every writer.** `_soulT` is set
+  by the three writers that add to a soul, and a source census holds them.
+- **A ladder move can be about the POLICY.** Boltyn fell 7.3 → 1.0 wins a
+  seed: the illegal plays are gone, and `sparring.act` never takes an
+  optional charge (v4.33), so the card is dead to it. Report that; do not
+  tune it inside a rules fix.
 
 ### A GATE THE PARSER READS AND NOTHING ANSWERS IS A GATE WAVED THROUGH (v4.89)
 

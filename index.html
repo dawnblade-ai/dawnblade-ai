@@ -806,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "4.89"; /* v4.89 - every printed activation gate is answered, an unanswered one refuses, and the table asks a weapon swing's gate as the trainer does. See CHANGELOG.md. */
+window.APP_VER = "4.90"; /* v4.90 - "play this only if" is a legality on both boards, from one evaluator that reads its printed number, colour and turn. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -2951,7 +2951,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      played satisfy the condition, and a 6-power attack satisfied it for
      itself. `act`, not `you` — this is a rules question, so it belongs to
      whoever is resolving (v2.24). `pow6` carries Kayo's clause 2. */
-  const had6ThisTurn = st => (act(st).grave||[]).some(c=>c._gy===st.turn && c._disc && pow6(c, bAct(st)));
+  const had6ThisTurn = DawnEffects.had6ThisTurn;   /* one body, both contexts (v4.90) */
   /* ONE READING OF "PLAY THIS ONLY IF …" (v2.65). `fx.playIf` is a GATE,
      not an effect, and `tryPlay` has refused the player on it since v2.12.
      `foePick` never asked — it filtered on type and affordability alone —
@@ -2963,14 +2963,10 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      either seat: `act`/`bAct` read whoever is resolving, and the opponent
      is asked by borrowing the actor (`{...n, actor:1}`) exactly as
      `foeEnd` borrows it around the end phase. */
-  const playIfOk = (st, card) => {
-    const pif = fxParse(card).playIf;
-    if(!pif) return true;
-    return pif.kind==="pitch6"     ? act(st).pitch.some(c=>pow6(c, bAct(st)))
-         : pif.kind==="discard6"   ? had6ThisTurn(st)
-         : pif.kind==="soulYellow" ? (act(st).soul||[]).some(c=>c.pitch===2)
-         : true;
-  };
+  /* …AND SINCE v4.90 IT IS NOT HERE: this closure was the ONLY reader of
+     `fx.playIf`, so the table never asked it at all, and its fallthrough
+     answered TRUE. `DawnEffects.playIfOk` is the one evaluator. */
+  const playIfOk = DawnEffects.playIfOk;
   /* ---- runechants are AURAS on the board ------------------------------
      Not a counter. The printed token is a "Runeblade Token - Aura", and
      seven pool cards ask about auras generically ("3 or more auras",

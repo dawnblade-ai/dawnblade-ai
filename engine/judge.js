@@ -633,8 +633,7 @@ function effectsFor(g){
        not a graveyard census. An attack reaches the graveyard AT
        DECLARATION, so without `_disc` any 6-power attack already played
        satisfies the condition, and one satisfies it for itself. */
-    had6ThisTurn: g2 => (act(g2).grave || [])
-      .some(c => c._gy === g2.turn && c._disc && PR.pow6(c, bAct(g2))),
+    had6ThisTurn: E.had6ThisTurn,   /* one body, both contexts (v4.90) */
     mkRune: (g2, count) => {
       if(!(count > 0)) return g2;
       const tok = runeCard();
@@ -1500,6 +1499,13 @@ function playableWhy(g, seat, c, win, zone){
      the player the card. */
   const barred = PR.nextTurnBars(sd, c);
   if(barred) return c.name + ": " + barred;
+
+  /* "PLAY THIS ONLY IF …" (v4.90). This board never asked it: Bear Hug,
+     Run Roughshod and Duty Bound Blitz were legal here against their own
+     printed first line, while the trainer refused them. `effects.playIfOk`
+     is the one evaluator and both boards ask it, with the seat as actor. */
+  if(!E.playIfOk({...g, actor: seat}, c))
+    return c.name + " can't be played — " + PR.fxParse(c).playIf.why;
 
   /* WHICH WINDOW IS THIS CARD BEING PLAYED IN?
      A card can print TWO types — `Assassin / Warrior Action Defense

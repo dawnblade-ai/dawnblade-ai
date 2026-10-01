@@ -761,11 +761,21 @@ test("rulings — 'Play this only if' is a gate, not an effect", () => {
   P.fxReset();
   const bear = P.fxParse({name:"Drill Bear", pitch:3, tt:"Brute Action - Attack", power:6,
     tx:"Play this only if you've pitched a card with 6 or more {p} this turn."});
-  assert.deepEqual(bear.playIf && bear.playIf.kind, "pitch6");
+  /* `pitchPow`/`discardPow` since v4.90, carrying the printed number */
+  assert.deepEqual(bear.playIf && [bear.playIf.kind, bear.playIf.n], ["pitchPow", 6]);
   assert.equal(bear.tier, "full");
   const rough = P.fxParse({name:"Drill Rough", pitch:3, tt:"Brute Action - Attack", power:6,
     tx:"Play this only if you've discarded a card with 6 or more {p} this turn."});
-  assert.equal(rough.playIf.kind, "discard6");
+  assert.deepEqual([rough.playIf.kind, rough.playIf.n], ["discardPow", 6]);
+  /* THE NUMBER IS READ — both pool cards print 6, so only a synthetic
+     printing another can tell a read number from a hardcoded one (v3.32) */
+  const eight = P.fxParse({name:"Drill Eight", pitch:3, tt:"Brute Action - Attack", power:6,
+    tx:"Play this only if you've pitched a card with 8 or more {p} this turn."});
+  assert.equal(eight.playIf.n, 8);
+  /* and an unread play condition REFUSES rather than vanishing */
+  const odd = P.fxParse({name:"Drill Odd", pitch:3, tt:"Brute Action - Attack", power:6,
+    tx:"Play this only if the moon is full."});
+  assert.equal(odd.playIf.kind, "unreadable");
 });
 
 test("rulings — Reincarnate redirects its own random discard", () => {

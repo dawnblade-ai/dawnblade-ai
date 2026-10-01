@@ -3637,7 +3637,10 @@ function makeEffects(ctx){
         const picked = act(n).hand.find(c2 => c2 && c2.uid === cu);
         if(!picked) continue;
         chargedWay.push({pitch: picked.pitch, ty: picked.ty || []});
-        actMut(n).soul = [picked, ...act(n).soul];
+        /* `_soulT` — WHEN it entered the soul (v4.90), which "a yellow card
+           has been put into your soul THIS TURN" asks. Every writer that
+           adds to a soul stamps it; test/playif.test.js censuses them. */
+        actMut(n).soul = [{...picked, _soulT: n.turn}, ...act(n).soul];
         actMut(n).hand = act(n).hand.filter(c2 => c2.uid !== picked.uid);
         n = creditCharge(n, picked);
       }
@@ -7781,7 +7784,7 @@ function makeEffects(ctx){
        loudest error, and ours rather than a caught one. */
     if(n._soulSelf){ delete n._soulSelf;
       if(total>0){ n = liftSelf(n, pc);
-        actMut(n).soul = [...act(n).soul, pc]; n = L(n, `${pc.name} ascends to the soul.`); }
+        actMut(n).soul = [...act(n).soul, {...pc, _soulT: n.turn}]; n = L(n, `${pc.name} ascends to the soul.`); }
     }
     n.featured = {card:{name:pc.name,img:pc.img,dbImg:pc.dbImg,pitch:0}, chip:`LINK ${n.chain.length} — ${total} DMG`};
     if(n._gaGrant){ n.pend = {...n.pend, ga:true}; delete n._gaGrant; }
@@ -9250,6 +9253,48 @@ function activateIfOk(game, gate, card){
 const ACT_IF_KINDS = ["atkNamed", "hits", "boosted", "controlPow", "defending", "foeTurn",
                       "playedNamed", "auraOf", "unreadable"];
 
+/* "PLAY THIS ONLY IF …" — ONE EVALUATOR, BOTH BOARDS (v4.90).
+
+   `fx.playIf` is a GATE, not an effect (RULING 2026-07-25), and it was
+   answered by a closure inside the trainer's `Battle` and NOWHERE ELSE.
+   `judge.legal` never read it, so at the table Bear Hug ×3, Run Roughshod
+   and Duty Bound Blitz were playable against their own printed first line
+   — sev-3 "illegal play allowed", in Kayo's and Boltyn's lists, and the
+   self-play ladder has played them that way since the table existed.
+   v3.01's shape, and the trainer's copy also ended `: true`.
+
+   Actor-relative: `game.actor` is whoever is playing, and their build is
+   the one `pow6`/`zonePow` reads Kayo's clause 2 off. */
+const PLAY_IF_KINDS = ["pitchPow", "discardPow", "soulPitch", "unreadable"];
+/* "you've DISCARDED a card with N or more {p} this turn" — a discard, not
+   a graveyard census: an attack reaches the graveyard AT DECLARATION, so
+   without `_disc` any big attack already played would satisfy it, and one
+   would satisfy it for itself. The ONE body: judge's and the trainer's
+   effects contexts both hand this to `execute` as `had6ThisTurn`, where
+   each used to write its own copy. */
+function discardedPowThisTurn(game, n){
+  const i = (game && game.actor) || 0;
+  const sd = ((game && game.sides) || [])[i] || {}, b = ((game && game.builds) || [])[i] || {};
+  return (sd.grave || []).some(c => c && c._gy === game.turn && c._disc && P.zonePow(c, b) >= (n == null ? 6 : n));
+}
+const had6ThisTurn = game => discardedPowThisTurn(game, 6);
+function playIfOk(game, card){
+  const pif = card && P.fxParse(card).playIf;
+  if(!pif) return true;
+  const i = (game && game.actor) || 0;
+  const sd = ((game && game.sides) || [])[i] || {}, b = ((game && game.builds) || [])[i] || {};
+  if(pif.kind === "pitchPow")   return (sd.pitch || []).some(c => c && P.zonePow(c, b) >= pif.n);
+  if(pif.kind === "discardPow") return discardedPowThisTurn(game, pif.n);
+  /* "…has been put into your soul THIS TURN" — the trainer's copy asked
+     whether ANY card of the colour was in the soul, so one charged on an
+     earlier turn opened the gate for the rest of the game. `_soulT` is the
+     turn it entered. */
+  if(pif.kind === "soulPitch")  return (sd.soul || []).some(c => c && c.pitch === pif.pitch && c._soulT === game.turn);
+  /* `unreadable`, and any kind nobody answered: inert, never free (v2.04,
+     v4.89's `activateIfOk` one gate over) */
+  return false;
+}
+
 /* DO YOU CONTROL AN AURA OF <KEYWORD>? (v4.89) — one reader for both
    printed spellings of the question: a CONDITION ("When this attacks or
    defends, if you control an aura of suspense", Full of Bravado) and an
@@ -10222,6 +10267,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, jabTargets, CTX_KEYS, ACT_IF_KINDS, controlsAuraOf, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, restampHalving, returnStolen, pendPumped, rxNoTargetWhy, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
+return {makeEffects, jabTargets, CTX_KEYS, ACT_IF_KINDS, controlsAuraOf, PLAY_IF_KINDS, playIfOk, had6ThisTurn, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, restampHalving, returnStolen, pendPumped, rxNoTargetWhy, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

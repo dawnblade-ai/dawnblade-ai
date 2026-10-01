@@ -1,3 +1,69 @@
+## v4.90 — "play this only if" is a legality on both boards
+
+> *"Play this only if you've pitched a card with 6 or more {p} this turn."*
+> — BEAR HUG ×3 · *"…discarded a card with 6 or more {p} this turn."* — RUN
+> ROUGHSHOD · *"…a yellow card has been put into your soul this turn."* —
+> DUTY BOUND BLITZ
+
+### A rule that lived in a trainer closure
+
+`fx.playIf` is a gate, not an effect (ruling 2026-07-25). It was answered by
+a closure inside `Battle` and **nowhere else**: `judge.legal` never read it.
+So at the table all five records were playable against their own first line
+(sev-3, "illegal play allowed"), in Kayo's and Boltyn's lists. **Measured on
+the v4.89 engine: Boltyn played Duty Bound Blitz 40 times in 16 self-play
+games, against 6 charges in total**, so nearly every play broke its rule.
+v3.01's shape. The trainer being a React closure is what hid it from every
+drill.
+
+The closure was wrong three more ways, all fixed in the one evaluator,
+`effects.playIfOk`:
+
+| | was | is |
+|---|---|---|
+| the threshold | captured by the regex and thrown away; a hardcoded 6 | read: `pitchPow`/`discardPow` carry `n` (only a synthetic printing 8 can tell, v3.32) |
+| "into your soul **this turn**" | ANY yellow card in the soul, ever | a card of the printed colour stamped `_soulT` this turn |
+| an unknown kind | `: true` | refuses (v4.89's rule, one gate over); an unread "Play this only if" parses as `unreadable` |
+
+- **`_soulT` is stamped by every writer that adds to a soul**: the charge
+  cost, a card's own "put this into your soul", and `moveCards`' soul
+  branch (Halo of Illumination, Roaring Beam's charge). A source census
+  holds all three.
+- **`had6ThisTurn` is one body.** judge's context and the trainer's each
+  wrote their own copy; both hand `execute` the shared one now, and the
+  drill that pinned the trainer's line is DRIVEN instead (the `_disc`
+  stamp, this turn, Kayo's clause 2, the actor).
+
+### Fixtures that played a gated card by accident
+
+Four drills picked "the first attack in hand" and got Bear Hug or Duty Bound
+Blitz, which `legal` now refuses (v4.09: check your own fixture). They ask
+`legal` for a playable attack now. The journey census reads no card text,
+so it cannot meet a printed gate: a refusal that IS the card's own play
+condition is collected and pinned (Bear Hug, Run Roughshod, Duty Bound
+Blitz ×2) rather than counted as a type failure, and those cards'
+destinations are driven with the gate met in `test/playif.test.js`.
+
+### The v4.89 sweep
+
+Fifteen heroes, **no dead tap and no page error**. The reaction window was
+reached for thirteen. Bravo's opening held no affordable attack. Kayo's probe
+tried four, two of them Bear Hug and Run Roughshod, which the trainer has
+always gated.
+
+### Measured
+
+- **3335 drills**, 0 fail, 5 skipped; 107 scenes; babel clean.
+- **12 sabotages, 12 bite.**
+- **The ladder at three seeds, both sides:** **Boltyn 7.3 → 1.0 wins a seed**
+  (5·9·8 → 1·1·1, intervals disjoint, REAL). The rule is right; the size is
+  the POLICY. `sparring.act` declines every optional charge (v4.33), so Duty
+  Bound Blitz is dead to it, and 40 illegal plays in 16 games are gone.
+  Re-measuring that policy decision is the next lead (HANDOFF §2b). Kayo is
+  unmoved (20.7 → 21.0; his deck pitches 6-power cards as a matter of
+  course). Everything else is inside the band. 0 refusals, 0 violations,
+  stalls 2 → 1.
+
 ## v4.89 — every activation gate is answered, and an unanswered one refuses
 
 > *"Action - Destroy this: Your next attack this turn gets go again.
