@@ -234,7 +234,13 @@ test("which SOURCE FILE each slice reads is pinned, or the resolver is unwatched
        always supplies two modes, so nothing written before v4.62 can reach
        the new branch. A measurement about a BUILDER has to read the builder
        (v4.32: the pool is the wrong oracle for what a builder builds). */
-    "engine/effects.js": 1,
+    /* +1 AT v4.89, READ FIRST: `condcensus.test.js` slices `activateIfOk`
+       out of `engine/effects.js`, bounded at `ACT_IF_KINDS`, which is
+       declared on the line after it — to ask that every activation-gate
+       kind the pool emits has a BRANCH, the direction that census never
+       asked, which is how `playedNamed` fell through for as long as the
+       parser emitted it. */
+    "engine/effects.js": 2,
     "DERIVED:TABLE": 1,
     "DERIVED:bar": 1,
     "DERIVED:lit": 1

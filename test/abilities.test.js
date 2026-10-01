@@ -117,14 +117,18 @@ test("Spellfire Cloak honours 'only during an opponent's turn' — both ways", {
 /* ---- READ THE WHOLE PHRASE OR REFUSE ----------------------------------- */
 
 test("an activation condition the parser cannot read REFUSES, never waves through", {skip}, () => {
-  /* Two pool cards print a restriction no pattern reads — Scorpio, Comet
+  /* Two pool cards printed a restriction no pattern read — Scorpio, Comet
      Tail ("only if you control a Lightning attack") and Stand Strong
      ("only if you control an aura of suspense"). With the gate left
      undefined the ability was activatable with NO restriction at all,
      which is the sev-3 direction. v2.04 settled the same question for
-     costs: inert, never free. */
+     costs: inert, never free.
+
+     STAND STRONG READS SINCE v4.89 (`auraOf`, test/actgate.test.js), so
+     this drill came due and Scorpio is the fixture now. Its reading is a
+     RULING (`scorpio-lightning-attack` in tools/approx.js). */
   P.fxReset();
-  const stand = require("../engine/cards.js").resolveEntry(H.db(), {name: "Stand Strong", p: 0, code: null, q: 1});
+  const stand = require("../engine/cards.js").resolveEntry(H.db(), {name: "Scorpio, Comet Tail", p: 0, code: null, q: 1});
   assert.ok(stand.resolved);
   const gate = P.fxParse(stand).activateIf;
   assert.equal(gate && gate.kind, "unreadable", "an unread restriction must be FILED, not dropped");

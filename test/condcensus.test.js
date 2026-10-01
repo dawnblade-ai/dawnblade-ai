@@ -242,9 +242,24 @@ test("the other three evaluators' vocabularies are closed too", {skip}, () => {
     assert.ok(![...set].includes(undefined),
       "a defSelf entry reached the census with no " + nm + " and no other key");
   assert.deepEqual([...actIf].sort(),
-    ["atkNamed", "boosted", "controlPow", "defending", "foeTurn", "hits", "playedNamed", "unreadable"],
+    ["atkNamed", "auraOf", "boosted", "controlPow", "defending", "foeTurn", "hits", "playedNamed", "unreadable"],
     "`unreadable` is in the list on purpose — an activation condition with no " +
     "reader REFUSES rather than running unrestricted (v3.04)");
+  /* …AND EVERY ONE IS ANSWERED (v4.89). This pinned the EMITTED set and
+     never asked the other direction, so `playedNamed` sat in it — pinned,
+     reviewed, and answered by NOTHING: `activateIfOk` fell through to
+     `return true`, and Quick Clicks granted go again with no Nimblism
+     played. A census that only goes one way is half a census (v4.12). */
+  const AIF = SRC.slice(SRC.indexOf("function activateIfOk("), SRC.indexOf("const ACT_IF_KINDS"));
+  assert.ok(AIF.length > 500, "activateIfOk moved — re-anchor this census");
+  for(const k of actIf){
+    assert.ok(E.ACT_IF_KINDS.includes(k), k + " is emitted and missing from ACT_IF_KINDS");
+    assert.ok(AIF.indexOf('k === "' + k + '"') > 0, k + " has no branch in activateIfOk — it falls through");
+  }
+  /* and the fallthrough itself REFUSES, driven, because a kind with no
+     branch is the case this exists for and no pool card can emit one */
+  assert.equal(E.activateIfOk({sides: [{}, {}], actor: 0}, {kind: "synthetic-unknown"}, null), false,
+    "an activation gate nobody answers waves the ability through again");
   /* and every `defSelf` name has a branch in its evaluator */
   for(const w of defSelf)
     assert.ok(SRC.indexOf('when === "' + w + '"') > 0 || SRC.indexOf('when==="' + w + '"') > 0,

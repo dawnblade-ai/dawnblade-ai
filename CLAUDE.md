@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.88
+**Current version:** v4.89
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3322 drills** at v4.88.
+This is `node --test "test/*.test.js"` — **3328 drills** at v4.89.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,25 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A GATE THE PARSER READS AND NOTHING ANSWERS IS A GATE WAVED THROUGH (v4.89)
+
+`activateIfOk` ended `return true`, and `playedNamed` had no branch, so Quick
+Clicks (go again) and Swiftstrike Bracers (+2{p}) activated with no Nimblism
+played. The census pinned the kind as EMITTED and never asked whether it was
+ANSWERED. Now the fallthrough refuses, `hist.playNames` answers the gate, and
+`test/condcensus.test.js` asks both directions. **When a census pins what a
+reader emits, pin that each one has a branch**: a half census reports read
+for a rule that does nothing.
+
+- **An evaluator's default is a ruling.** An unknown kind answering TRUE is
+  an ability escaping its printed limit; answering FALSE is inert, never
+  free (v2.04).
+- **A swing is an activation.** judge's weapon branch never asked the swing's
+  gate, so Scorpio swung freely at the table and the trainer refused it.
+  Its condition is a ruling the user owns (`scorpio-lightning-attack`).
+- **Two drills used Scorpio as a cost-0 swing** and were valid only while the
+  table ignored its gate; Raydn, Duskbane carries the property now.
 
 ### THE TRAINER HAS NO ORACLE, SO EVERY DOOR IS A RULE (v4.88)
 

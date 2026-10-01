@@ -1408,6 +1408,19 @@ function legal(g, a, seat){
     }
     const wc = PR.weaponCost(piece.tx || "");
     if(!wc) return piece.name + " prints no weapon attack";
+    /* A SWING'S PRINTED GATE IS ASKED HERE TOO (v4.89). Scorpio, Comet
+       Tail prints "Action - {t}: Attack. Activate this only if you control
+       a Lightning attack." The trainer's `tryPlay` has asked
+       `activateIfOk` of every activation it routes, the swing included;
+       this branch asked nothing, so at the table the swing ignored its
+       restriction while the trainer refused it — v3.01's shape, on
+       Briar's weapon. The condition is UNREAD (whether a resolved link is
+       still "an attack you control" is a ruling, recorded as
+       `scorpio-lightning-attack`), so it refuses on both boards: inert,
+       never free (v2.04). */
+    { const wg = PR.fxParse(piece).activateIf;
+      if(wg && !E.activateIfOk({...g, actor: seat}, wg, piece))
+        return piece.name + " can't be activated — " + wg.why; }
     /* TWO SEPARATE LIMITS, and honouring only one gets a card wrong in a
        different direction each time (see parser.js weaponCost):
 

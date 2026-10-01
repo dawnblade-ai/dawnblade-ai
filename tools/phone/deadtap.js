@@ -17,7 +17,7 @@
      NODE_PATH="$SCRATCH/node_modules" node tools/phone/deadtap.js Lyath
      NODE_PATH="$SCRATCH/node_modules" sh tools/phone/sweep.sh   # all fifteen
 
-   IT FOUND FIVE DEFECTS AT v4.88 AND HAD TWO OF ITS OWN FIRST, both kept
+   IT FOUND FIVE DEFECTS AT v4.88 AND HAD THREE OF ITS OWN, all kept
    here as the reason for the code that fixes them:
 
    - React state is read from `#root`'s CURRENT tree. A DOM node's fiber
@@ -26,6 +26,9 @@
    - Rebuild the page (`serve.sh <dir> refresh`) after every edit. A sweep
      run against a copy older than the fix reports the fixed defect, and
      reads exactly like a fix that did not work.
+   - It must PITCH to pay for the attack it plays. Clicking the confirm
+     alone left nine of fifteen heroes short of the reaction window, so
+     their sweep covered one window of two while reporting clean (v4.89).
 
    It sweeps ⚡ tiles only. Weapon tiles, hand cards and the arsenal tile
    are routed by the same doors and are the obvious widening.
@@ -123,9 +126,25 @@ const EXE = process.env.PW_CHROMIUM || "/opt/pw-browsers/chromium";
     if(atk){
       const l = p.locator(`text="${atk.name}"`).first();
       await l.click().catch(() => {}); await p.waitForTimeout(300); await l.click().catch(() => {}); await p.waitForTimeout(600);
-      for(let i = 0; i < 4; i++){
+      /* GET THE ATTACK ONTO THE CHAIN. A payment needs cards PITCHED first —
+         "Pitch & play" refuses an uncovered cost rather than greying out —
+         and selecting one is the same peek-then-commit pair of taps as
+         playing one. Before v4.89 this only clicked the confirm, so nine of
+         fifteen heroes never reached the reaction window and reported
+         NOSTACK: a limit of the probe, not the page. */
+      for(let i = 0; i < 10; i++){
         s = await state(); if(s.mode === "stack") break;
-        await click(/Pitch & play|^No boost|^Boost|^Decline|^No charge|^No reveal|^Confirm/i); await p.waitForTimeout(400);
+        if(s.mode === "pay"){
+          const pitch = s.hand.filter(c => c.name !== atk.name).map(c => c.name);
+          for(const nm of pitch.slice(0, 3)){
+            const h = p.locator(`text="${nm}"`).first();
+            await h.click().catch(() => {}); await p.waitForTimeout(200); await h.click().catch(() => {}); await p.waitForTimeout(250);
+          }
+          await click(/^Pitch & play/i); await p.waitForTimeout(500);
+          s = await state(); if(s.mode === "pay"){ await click(/cancel/i); break; }
+          continue;
+        }
+        await click(/^No boost|^Decline|^No charge|^No reveal|^Confirm|^Skip/i); await p.waitForTimeout(400);
       }
       s = await state();
       if(s.mode === "stack") await sweep("stack"); else console.log("NOSTACK", atk.name, s.mode);

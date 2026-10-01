@@ -921,12 +921,23 @@ test("a {t} weapon is limited by the TAP, not by 'once per turn'", {skip}, () =>
   assert.equal(wc.taps, true, "Scorpio's {t} cost is no longer read");
 
   g = J.put(g, seat, s => ({...s, res: 20, ap: 5}));
+  /* ITS PRINTED GATE COMES FIRST (v4.89). Scorpio also prints "Activate
+     this only if you control a Lightning attack"; judge asks a swing's
+     gate now, the reading is a ruling (`scorpio-lightning-attack`), so the
+     real card refuses here before the tap is ever asked. */
+  assert.match(String(J.legal(g, {t: "activate", uid: scorpio.uid}, seat)), /can't be activated/,
+    "Scorpio swings past its printed gate at the table again");
+  /* SO THE TAP IS DRIVEN ON SCORPIO'S OWN SWING LINE WITHOUT THE GATE —
+     the pool's only {t} weapon, so the near-miss is synthetic (v3.73),
+     under a unique name because `fxParse` memoizes on `name|pitch`. */
+  const bare = {...scorpio, name: "Synthetic Tap Sword", tx: "Action - {t}: Attack."};
+  g = J.put(g, seat, s => ({...s, gear: s.gear.map(x => x.uid === scorpio.uid ? bare : x)}));
   assert.equal(J.legal(g, {t: "activate", uid: scorpio.uid}, seat), null,
-    "Scorpio could not swing at all");
+    "a {t} swing with no gate could not swing at all");
   const swung = J.put(g, seat, s => ({...s, weaponUsed: {[scorpio.uid]: true}}));
   const why = J.legal(swung, {t: "activate", uid: scorpio.uid}, seat);
   assert.ok(why && /tapped/.test(why),
-    "Scorpio swung twice in one turn — {t} taps it until the end phase");
+    "a {t} weapon swung twice in one turn — {t} taps it until the end phase");
 });
 
 test("CR 8.1.2a — a reaction cannot be played in the action phase", {skip}, () => {

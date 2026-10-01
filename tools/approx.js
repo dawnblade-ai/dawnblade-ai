@@ -745,6 +745,19 @@ const APPROX = {
       "is deliberately narrow: it gates the one thing the card's own text spends "+
       "it on."},
 
+"scorpio-lightning-attack": {
+  status:"open", cr:null, board:"both", since:"v4.89", swept:"v4.89",
+  claim:"Scorpio, Comet Tail's swing — 'Activate this only if you control a "+
+        "Lightning attack' — is REFUSED on both boards: its condition is unread.",
+  why:"Whether a link that has already resolved is still 'an attack you control' "+
+      "decides whether the swing can ever happen, since a weapon attack is "+
+      "action speed and needs an empty stack. The repo carries no sourced CR "+
+      "definition of 'an attack' and restating one from memory is what "+
+      "`crindex.js` forbids, so this is a RULING the user owns. Until then the "+
+      "gate is `unreadable` and refuses — inert, never free (v2.04). Before v4.89 "+
+      "the trainer refused it and the TABLE asked nothing, so Briar's weapon "+
+      "swung there unrestricted (v3.01's shape)."},
+
 "cloaked-display": {
   status:"open", cr:null, board:"both", since:"v3.99", swept:"v4.02",
   claim:"The Cloaked ruling's display half — 'SHOW CARD BACK ON THE PLAYERS "+

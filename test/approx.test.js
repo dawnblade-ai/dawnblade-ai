@@ -261,7 +261,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      (built) and `cost-discard-auto-picked` (the cost half, stated). */
   /* 44 -> 45 AT v4.85: `activation-discard-cost-asked`, split off
      `cost-discard-auto-picked` when the activation half was built. */
-  assert.equal(Object.keys(APPROX).length, 45, "record count moved");
+  /* 45 -> 46 AT v4.89: `scorpio-lightning-attack`. */
+  assert.equal(Object.keys(APPROX).length, 46, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -341,7 +342,9 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      the payment — and its probe went red the moment the mint read X. */
   /* 5 -> 4 AT v4.73: `crush-halving-rider` was BUILT. 4 -> 3 AT v4.74:
      `control-change-steal` was BUILT. */
-  assert.equal(n("open"),    3, "open count moved");
+  /* 3 -> 4 AT v4.89: `scorpio-lightning-attack`, a RULING the user owns —
+     found when judge's weapon branch learned to ask a swing's gate. */
+  assert.equal(n("open"),    4, "open count moved");
   /* 16 -> 17 AT v4.63: `steam-build-powcard-read`. 17 -> 18 AT v4.66:
      `play-held-on-the-stack`. 19 -> 20 AT v4.72: `x-cost-declared`.
      20 -> 21 AT v4.73: `crush-halving-rider-read`. 21 -> 22 AT v4.74:
@@ -1685,6 +1688,25 @@ probe("cloaked-face-down-values", () => {
   assert.equal(G.gearDef(down), G.gearDef(up),
     "a face-down piece is now worth a different defence — that is a RULING and the " +
     "record must say it was made");
+});
+
+/* Scorpio's swing is refused on BOTH boards, because its gate is unread.
+   DRIVEN at the table; the trainer's half is the same `activateIfOk` its
+   `tryPlay` asks of every activation. Goes RED the day the gate is read
+   (the user's ruling) — or the day either board stops asking. */
+probe("scorpio-lightning-attack", () => {
+  H.db();
+  const sc = {...H.card("Scorpio, Comet Tail"), uid: 901};
+  assert.equal(PR.fxParse(sc).activateIf.kind, "unreadable",
+    "Scorpio's 'control a Lightning attack' now READS — the ruling was made; "
+    + "build its answer and close the record");
+  const g = Object.assign(H.state({gear: [sc], res: 9, ap: 1, hand: []}, {hp: 20, hand: []},
+                                  {turn: 3, actor: 0}),
+    {phase: "action", step: "layer", priority: 0, passed: [], firstPlayer: 0, round: 1, over: null});
+  assert.match(String(J.legal(g, {t: "activate", uid: 901}, 0)), /can't be activated/,
+    "the table swings Scorpio past its printed gate again");
+  assert.equal(E.activateIfOk(g, PR.fxParse(sc).activateIf, sc), false,
+    "the one reader both boards ask waves an unread gate through");
 });
 
 /* The Cloaked ruling's display half is not built. A claim about a shared

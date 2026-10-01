@@ -59,19 +59,26 @@ function frostbite(uid){
 
 /* A REAL MATCH, driven through `judge.reduce` — `H.state` builds an
    effects-shaped state and carries no CR machine at all, so a drill about
-   `legal` and `doActivate` has to open a real game. Seat 0 is Briar,
-   whose gear holds Scorpio, Comet Tail. */
+   `legal` and `doActivate` has to open a real game. Seat 0 is Boltyn,
+   whose gear holds Raydn, Duskbane — a cost-0 swing.
+
+   IT WAS BRIAR AND SCORPIO UNTIL v4.89, and that fixture was valid only
+   while the table never asked a swing's printed gate: Scorpio prints
+   "Activate this only if you control a Lightning attack", which judge now
+   asks and refuses (unread, `scorpio-lightning-attack`). Raydn carries the
+   same property — a printed cost of 0 that a Frostbite makes 1 — with no
+   gate in front of it. */
 function table(o){
   o = o || {};
   const W = loadData();
   const ctr = {n: 0};
   let rng = RNG.make("actcost");
-  const h0 = W.HEROES.find(x => x.k === "briar"), h1 = W.HEROES.find(x => x.k === "kayo");
-  const b0 = B.buildSideDefault(h0, G.parseDeck(W.DECKS.briar), H.db(), rng, ctr); rng = b0.rng;
+  const h0 = W.HEROES.find(x => x.k === "boltyn"), h1 = W.HEROES.find(x => x.k === "kayo");
+  const b0 = B.buildSideDefault(h0, G.parseDeck(W.DECKS.boltyn), H.db(), rng, ctr); rng = b0.rng;
   const b1 = B.buildSideDefault(h1, G.parseDeck(W.DECKS.kayo), H.db(), rng, ctr); rng = b1.rng;
   let g = J.newMatch({builds: [b0.b, b1.b], names: [h0.n, h1.n],
                       heroKeys: [h0.k, h1.k], rng, first: 0, tokSeq: ctr.n});
-  const sc = (g.sides[0].gear || []).find(x => /Scorpio/.test(x.name));
+  const sc = (g.sides[0].gear || []).find(x => /Raydn/.test(x.name));
   const sides = g.sides.slice();
   sides[0] = Object.assign({}, sides[0], {
     res: 0,
@@ -84,10 +91,11 @@ function table(o){
 test("the tax is real — effCost moves and the printed cost does not", {skip}, () => {
   /* THE PREMISE. Without this the two drills below could both pass on an
      engine where nothing taxes anything. */
-  const b = build("briar");
-  const sc = b.gear.find(g => /Scorpio/.test(g.name));
-  assert.ok(sc, "Briar carries Scorpio, Comet Tail");
-  assert.equal(sc.cost, 0, "its printed activation cost is {t} — no resources");
+  const b = build("boltyn");
+  const sc = b.gear.find(g => /Raydn/.test(g.name));
+  assert.ok(sc, "Boltyn carries Raydn, Duskbane");
+  assert.equal(sc.cost, 0, "its printed activation cost is 0 — no resources");
+  assert.equal(PR.fxParse(sc).activateIf, undefined, "and no printed gate stands in front of it");
   const bare = {res: 0, board: [], counters: {}, hand: []};
   const iced = {res: 0, board: [frostbite(990)], counters: {}, hand: []};
   assert.equal(PR.effCost(sc, bare), 0);
