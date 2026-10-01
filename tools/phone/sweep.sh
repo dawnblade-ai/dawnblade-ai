@@ -14,5 +14,6 @@ for h in Arakni Azalea Blaze Boltyn Bravo Briar Dash Dorinthea Enigma Fai Gravy 
     timeout 200 node "$D/deadtap.js" "$h" > "$OUT/$h.out" 2>&1
     if grep -q "stack " "$OUT/$h.out"; then break; fi
   done
-  echo "== $h"; grep -E "DEAD|before|after |NOSTACK|NOACT|NOATTACK|ERRS" "$OUT/$h.out" | cut -c1-600
+  # anchored: a refusal's own prose can say "before" (v4.89)
+  echo "== $h"; grep -E "^(DEAD|NOSTACK|NOACT|NOATTACK|ERRS)|^   (before|after)" "$OUT/$h.out" | cut -c1-600
 done
