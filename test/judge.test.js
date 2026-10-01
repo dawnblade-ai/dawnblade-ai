@@ -197,7 +197,12 @@ function passTurn(g){
    legally act at the same instant. */
 function toDefendStep(g){
   const seat = g.turnPlayer;
-  const c = g.sides[seat].hand.find(x => PR.isAttack(x));
+  /* an attack `legal` ACCEPTS — not merely the first one in hand. Since
+     v4.90 Bear Hug and Run Roughshod refuse at the table off their printed
+     "play this only if …", and a first-attack pick then reached no defend
+     step at all, which failed a drill about something else (v4.09). */
+  const c = g.sides[seat].hand.find(x => PR.isAttack(x)
+    && J.legal(g, {t: "play", uid: x.uid, from: "hand"}, seat) === null);
   let n = J.reduce(g, {t: "play", uid: c.uid, from: "hand"}, seat).state;
   while(J.pendingOf(n)){
     const p = J.pendingOf(n), sd = n.sides[p.seat];
@@ -1466,7 +1471,11 @@ test("legal() gives a reason or null for every action, and never throws", {skip}
      breaks it in the caller rather than returning a reason. */
   const ZONES = ["hand", "arsenal", "grave", "banish", "deck", "pitch", "soul", "board", "gear", "nonsense"];
   const g = match({seed: "total"});
-  const states = [g, J.put(g, 0, s => ({...s, arsenal: s.hand[0], hand: s.hand.slice(1)}))];
+  /* a card with no printed play condition: since v4.90 Bear Hug refuses
+     off "play this only if …", which is the RIGHT reason, and this drill
+     is about the arsenal path, not the gate */
+  const _ai = Math.max(0, g.sides[0].hand.findIndex(c => !PR.fxParse(c).playIf));
+  const states = [g, J.put(g, 0, s => ({...s, arsenal: s.hand[_ai], hand: s.hand.filter((_, i) => i !== _ai)}))];
   for(const st of states){
     for(const t of J.ACTIONS){
       for(const seat of [0, 1]){

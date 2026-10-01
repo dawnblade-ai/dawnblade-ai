@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.83 (updated through v4.89)
+# Handoff — Dawnblade, at v4.83 (updated through v4.90)
 
 **Written 2026-09-28. Every number below was re-derived this session, with
 the command that produces it.** Re-derive before you quote one; this file
@@ -22,8 +22,8 @@ where things stand and what is next.
 
 | measure | value | command |
 |---|---|---|
-| version | v4.89, live on GitHub Pages | `grep APP_VER index.html` |
-| drills | 3328 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
+| version | v4.90, live on GitHub Pages | `grep APP_VER index.html` |
+| drills | 3335 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
 | pool coverage | **405 of 405** unique cards read in full · 0 part · 0 none | `npm run audit`, top of `AUDIT.md` |
 | unfinished cards | 0, and 0 one clause away | `npm run gaps` |
 | approximation ledger | 46 records: 27 closed · **15 stated · 4 open** | `node tools/approx.js` |
@@ -88,6 +88,17 @@ in `CHANGELOG.md` v4.83.
 | `cloaked-face-down-values` | **a user ruling**: does a face-down Cloaked piece keep its printed defence and its Ward 1? |
 | `cloaked-display` | the card back on the board. A UI job; see §4 |
 | `scorpio-lightning-attack` | **a user ruling**: Scorpio, Comet Tail prints "Activate this only if you control a Lightning attack". Is a link that has already resolved still "an attack you control"? Until answered the swing refuses on both boards (v4.89). Briar wears it by default, and her ladder moved 54 → 47 with intervals overlapping |
+
+### 2b. A POLICY QUESTION THE LADDER NOW ASKS LOUDLY (v4.90)
+
+Boltyn's ladder fell **7.3 → 1.0 wins a seed** when Duty Bound Blitz's
+"play this only if a yellow card has been put into your soul this turn"
+became a legality at the table. The rule is right; the size is the POLICY:
+`sparring.act` declines every optional charge (v4.33, a stated choice with
+a reason), so the card is dead to it. v4.33 measured taking the charge as
+worth about two games in fourteen; with the gate enforced it is worth much
+more. Re-measuring that decision is the next lead, and it is a policy change,
+not a rules one.
 
 ### 3. The STATED records most worth re-asking
 

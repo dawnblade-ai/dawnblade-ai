@@ -6972,12 +6972,24 @@ function fxParse(card){
      all, not an effect. Hoist it so the play path can refuse and say why.
      Bear Hug reads the pitch zone; Run Roughshod reads the graveyard for a
      6+ power card stamped with this turn. */
-  if(/play this only if you'?(?:ve| have) pitched a card with (\d+) or more \{p\} this turn/.test(tl))
-    fx.playIf = {kind:"pitch6", why:"you haven't pitched a card with 6 or more power this turn"};
-  else if(/play this only if you'?(?:ve| have) discarded a card with (\d+) or more \{p\} this turn/.test(tl))
-    fx.playIf = {kind:"discard6", why:"nothing with 6 or more power has hit your graveyard this turn"};
-  else if(/play this only if a yellow card has been put into your soul this turn/.test(tl))
-    fx.playIf = {kind:"soulYellow", why:"no yellow card has gone into your soul this turn"};
+  /* THE NUMBER AND THE COLOUR ARE READ (v4.90). Both regexes captured the
+     threshold and threw it away — a hardcoded 6, right for the two cards
+     that print 6 and wrong for any other (v3.32) — and the soul gate was
+     spelled for yellow alone. `effects.playIfOk` is the one evaluator,
+     asked by BOTH boards (it lived in the trainer only, so at the table
+     these were never asked at all), and `PLAY_IF_KINDS` is its census. */
+  let pm;
+  if(pm = tl.match(/play this only if you'?(?:ve| have) pitched a card with (\d+) or more \{p\} this turn/))
+    fx.playIf = {kind:"pitchPow", n:+pm[1], why:`you haven't pitched a card with ${pm[1]} or more power this turn`};
+  else if(pm = tl.match(/play this only if you'?(?:ve| have) discarded a card with (\d+) or more \{p\} this turn/))
+    fx.playIf = {kind:"discardPow", n:+pm[1], why:`you haven't discarded a card with ${pm[1]} or more power this turn`};
+  else if(pm = tl.match(/play this only if an? (red|yellow|blue) card has been put into your soul this turn/))
+    fx.playIf = {kind:"soulPitch", pitch:{red:1, yellow:2, blue:3}[pm[1]],
+                 why:`no ${pm[1]} card has been put into your soul this turn`};
+  /* AN UNREAD PLAY CONDITION REFUSES — the activation gate's rule (v3.04),
+     one gate over. Measured, no pool record reaches it today. */
+  else if(/play this only if/.test(tl))
+    fx.playIf = {kind:"unreadable", why:"its printed play condition isn't modelled yet"};
   /* "When this is discarded at random, put it on the bottom of its owner's
      deck" — a discard redirect the auto-discard path has to honour. */
   if(/when this is discarded at random, put it on the bottom of (?:its owner'?s?|your) deck/.test(tl))

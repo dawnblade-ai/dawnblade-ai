@@ -989,7 +989,10 @@ function moveCards(game, side, from, to, cards){
     else if(_to === "board") s.board = [...(s.board||[]), ...cards.map(c=>({card:c, kind:"item", spent:false, uid:c.uid}))];
     else if(_to === "deckBottom") s.deck = [...(s.deck||[]), ...cards];
     else if(_to === "deckTop") s.deck = [...cards, ...(s.deck||[])];
-    else s[_to] = [...cards, ...(s[_to]||[])];
+    /* a card put into a SOUL is stamped with the turn (v4.90) — "a yellow
+       card has been put into your soul this turn" asks it, and this branch
+       is one of the three writers that add to a soul */
+    else s[_to] = [...(_to === "soul" ? cards.map(c => ({...c, _soulT: game.turn})) : cards), ...(s[_to]||[])];
   }
   sides[side] = s;
   return {...game, sides};

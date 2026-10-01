@@ -215,12 +215,18 @@ test("every pool card can be pitched for its printed pitch value", {skip}, () =>
 });
 
 test("a card played in an open window lands in the zone its TYPE sends it to", {skip}, () => {
-  const bad = [], tally = {chain: 0, arena: 0, grave: 0};
+  const bad = [], tally = {chain: 0, arena: 0, grave: 0}, gated = [];
   for(const card of pool()){
     const {g} = holding(card);
     const open = P.speedAllowed(g, SEAT);
     if(!TY.playWindows(card).some(w => open.includes(w))) continue;
     const why = J.legal(g, {t: "play", uid: "UT", from: "hand"}, SEAT);
+    /* A CARD'S OWN PRINTED "PLAY THIS ONLY IF …" (v4.90) is not a type
+       failure: the table never asked it before this version, and this
+       census reads no card text, so it cannot meet the gate itself. Those
+       refusals are collected and PINNED below; the cards' destinations are
+       driven with the gate met in test/playif.test.js. */
+    if(why && /can't be played — /.test(why)){ gated.push(card.name); continue; }
     if(why){ bad.push(card.name + " is playable by type and was refused: " + why); continue; }
     const want = TY.destination(card);
     const got = whereIs(settle(J.reduce(g, {t: "play", uid: "UT", from: "hand"}, SEAT).state), "UT");
@@ -228,9 +234,13 @@ test("a card played in an open window lands in the zone its TYPE sends it to", {
     else tally[want]++;
   }
   assert.deepEqual(bad, []);
+  assert.deepEqual(gated.sort(), ["Bear Hug", "Duty Bound Blitz", "Duty Bound Blitz", "Run Roughshod"],
+    "the cards refused by their OWN printed play condition in an empty state moved");
   /* The counts are a partition and they are checked, so a census that
-     quietly stopped driving anything cannot pass by reporting nothing. */
-  assert.deepEqual(tally, {chain: 175, arena: 23, grave: 91},
+     quietly stopped driving anything cannot pass by reporting nothing.
+     chain 175 -> 171 AT v4.90: the four gated records above are attacks,
+     and the census can no longer reach their play (see test/playif). */
+  assert.deepEqual(tally, {chain: 171, arena: 23, grave: 91},
     "the pool's play destinations moved — that is a rules change, so it is a deliberate edit here");
   /* AND THE BOOST QUESTION WAS ACTUALLY ASKED (v2.84). Without this the
      census passes just as well on an engine that never opens the pending

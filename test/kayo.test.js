@@ -157,21 +157,39 @@ test('"discarded this way" is a different condition from "this turn"', {skip}, (
   assert.notEqual(turn && turn.cond, "discard6way",
     "the turn-scoped wording must NOT be read as the resolution-scoped one");
 
-  assert.equal(P.fxParse(card("Run Roughshod")).playIf.kind, "discard6",
-    "Run Roughshod's play gate is turn-scoped");
+  /* `discardPow` since v4.90, carrying its printed threshold */
+  assert.deepEqual([P.fxParse(card("Run Roughshod")).playIf.kind, P.fxParse(card("Run Roughshod")).playIf.n],
+    ["discardPow", 6], "Run Roughshod's play gate is turn-scoped, and reads its number");
 });
 
-/* `had6ThisTurn` is a trainer closure, so pin its SHAPE at the call site:
-   it must ask for `_disc`, or it goes back to counting the whole graveyard. */
-test("the trainer's turn-scoped check asks for a real discard", {skip}, () => {
+/* `had6ThisTurn` WAS a trainer closure (and a second hand-written copy in
+   judge's context), so this drill pinned its SHAPE in the trainer's source.
+   Since v4.90 it is ONE body in effects.js that both contexts hand to
+   `execute`, so the property is DRIVEN instead — which says more than any
+   pin of a line could. */
+test("the turn-scoped check asks for a real discard — DRIVEN, one body", {skip}, () => {
+  const E = require("../engine/effects.js");
+  const b = kayoBuild();
+  const big = {...H.card("Raging Onslaught", 1), uid: "g1"};
+  assert.ok(P.zonePow(big, null) >= 6, "fixture: a 6+ power card");
+  const at = (grave, o) => Object.assign({turn: 5, actor: 0, sides: [{grave}, {grave: []}], builds: [b, {}]}, o || {});
+  assert.equal(E.had6ThisTurn(at([{...big, _gy: 5, _disc: true}])), true, "a 6-power card DISCARDED this turn");
+  /* an attack reaches the graveyard at DECLARATION — counting the graveyard
+     lets a played 6-power attack satisfy a discard condition, itself included */
+  assert.equal(E.had6ThisTurn(at([{...big, _gy: 5}])), false, "it must require the _disc stamp");
+  assert.equal(E.had6ThisTurn(at([{...big, _gy: 4, _disc: true}])), false, "and THIS turn's");
+  /* effective power, so Kayo's clause 2 applies — a printed 5 counts */
+  const five = {...card("Unexpected Backhand"), uid: "g2", _gy: 5, _disc: true};
+  assert.equal(E.had6ThisTurn(at([five])), true, "Kayo's clause 2 lifts a printed 5");
+  assert.equal(E.had6ThisTurn(at([five], {builds: [{}, {}]})), false, "and without his build it is a 5");
+  /* the ACTOR's graveyard, never seat 0's */
+  assert.equal(E.had6ThisTurn(at([], {actor: 1, sides: [{grave: [{...big, _gy: 5, _disc: true}]}, {grave: []}]})), false,
+    "a rules question belongs to the ACTOR, not to seat 0");
+  /* and both contexts hand THIS body to `execute` */
   const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
-  const m = html.match(/const had6ThisTurn = [^\n]*/);
-  assert.ok(m, "had6ThisTurn moved — re-anchor this drill");
-  assert.match(m[0], /_disc/,
-    "it must require the _disc stamp: an attack reaches the graveyard at DECLARATION, so " +
-    "counting the graveyard lets a played 6-power attack satisfy a discard condition, itself included");
-  assert.match(m[0], /pow6\(/, "and read effective power, so Kayo's clause 2 applies");
-  assert.ok(!/you\(/.test(m[0]), "a rules question belongs to the ACTOR, not to seat 0");
+  const jd = fs.readFileSync(path.join(__dirname, "..", "engine", "judge.js"), "utf8");
+  assert.match(html, /const had6ThisTurn = DawnEffects\.had6ThisTurn;/, "the trainer wrote its own copy again");
+  assert.match(jd, /had6ThisTurn: E\.had6ThisTurn,/, "judge wrote its own copy again");
 });
 
 /* ---- THE OP ITSELF ---------------------------------------------------- */
