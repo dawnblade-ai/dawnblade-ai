@@ -130,7 +130,7 @@ and nothing called either. Removed (v4.47's `parseHeroPower`, again).
   `playFoeTurnRx` and read the whole of `playArsenalInstant` while calling
   itself the next declaration; it is bounded at its real neighbour now.
 - **Re-swept on the fixed page:** Lyath clean in both windows (Stand Strong now names its
-  refusal); the fifteen-hero sweep is running and its result lands before merge.
+  refusal). The fifteen-hero result is recorded with v4.89.
 
 ## v4.87 — a hand ability is an activation, and it pays like one
 
