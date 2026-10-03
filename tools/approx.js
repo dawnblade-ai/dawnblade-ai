@@ -118,7 +118,7 @@ const APPROX = {
       "asks `legal` itself, as each seat, so the window opens exactly when an answer exists."},
 
 "instant-speed-plays-resolve-on-play": {
-  status:"stated", cr:"CR 4.2.2", board:"table", since:"v4.66", swept:"v4.66",
+  status:"stated", cr:"CR 4.2.2", board:"table", since:"v4.66", swept:"v4.93",
   claim:"Three halves of the stack are still collapsed at the table. An INSTANT or a "+
         "REACTION resolves the moment it is played, so the other seat can answer the card "+
         "it answered but not the answer itself. A when-this-attacks trigger resolves as "+
@@ -132,7 +132,16 @@ const APPROX = {
       "second reading of it here would be v3.80's three-cost-readers bug. It is weaker "+
       "than printed and visible, since a seat can still pitch for an answer. Built "+
       "together, the first two are a real stack of resolving LAYERS rather than of held "+
-      "plays, which is `execute`'s play/resolve split."},
+      "plays, which is `execute`'s play/resolve split. "+
+      "RE-MEASURED AT v4.93, v4.66's way (v3.69: ask the engine): over the 210-game "+
+      "ladder, 2124 plays were made at instant speed, 62 dealt damage to the other seat, "+
+      "and 9 of those landed on a seat holding a legal instant-speed answer it had no "+
+      "window to play before the damage. NONE of the nine answers is a prevention or "+
+      "anything whose ORDER changes the damage — Lyath's +1{d} applies at the damage "+
+      "step whenever it is activated, and Fai's hero and gear abilities, Compass of "+
+      "Sunken Depths and Absorb in Aether do not touch it — so the collapse is "+
+      "unobservable in driven games, which is the argument for leaving it. The day an "+
+      "instant prevention meets an instant that deals damage, the measurement moves."},
 
 "simultaneous-trigger-order": {
   status:"open", cr:"CR 4.1.8a", board:"both", since:"v2.45", swept:"v4.67",

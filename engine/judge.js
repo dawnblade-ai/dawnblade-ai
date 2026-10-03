@@ -157,8 +157,8 @@ const abWindow = ab => PR.abWindow(ab);
 function abCostWhy(sd, ab, ctx){
   const _sc = PR.abSoulCost(ab);
   if(_sc && (sd.soul || []).length < _sc)
-    return ab.name + " costs " + _sc + " from the soul, and " + sd.name
-         + " holds " + (sd.soul || []).length;
+    return ab.name + " costs " + _sc + " from the soul, and " + GM.sv(sd, "hold")
+         + " " + (sd.soul || []).length;
   if(PR.abFlipUp(ab)){
     const _fg = (sd.gear || []).find(x => x.uid === ab._flipGear);
     if(!_fg || !_fg._faceDown)
@@ -200,7 +200,7 @@ function abCostWhy(sd, ab, ctx){
        right is where the word is known. */
     const _sub = ab._discardSubject || "card";
     return ab.name + " costs " + (/^[aeiou]/i.test(_sub) ? "an " : "a ") + _sub
-         + " discarded, and " + sd.name + " holds none";
+         + " discarded, and " + GM.sv(sd, "hold") + " none";
   }
   /* ---- A PAID COST THAT RESOLVES TO NOTHING (v4.49, re-read v4.63) ---
      Plasma Barrel Shot's steam-build ability prints "Action - {r}{r}: IF
@@ -817,6 +817,14 @@ function legal(g, a, seat){
             return "that pitch leaves " + (left || "no") + " card" + (left === 1 ? "" : "s")
                  + " for " + p.card.name + "'s additional discard of " + ac.discard;
         } }
+      /* AND NO CARD IS PITCHED PAST THE COST (v4.93) — the ruling's "you
+         cannot pitch to bank resources", applied to how MUCH a payment may
+         take as well as WHEN one opens. `parser.pitchExcessWhy` is the one
+         reader and the trainer's `confirmPay` asks it too. */
+      { const sd = at(g, seat);
+        const _sel = (sd.paySel || []).map(u => (sd.hand || []).find(x => x.uid === u)).filter(Boolean);
+        const ex = PR.pitchExcessWhy(sd, _sel, p.need, PR.abChiCost(p.card));
+        if(ex) return ex; }
       return null;
     }
     return null;
@@ -2426,7 +2434,7 @@ function doPlay(g, a, seat){
        returned to the caller who attempted the action, and never enters
        the shared feed. */
     return say({...g, pending: {kind: "pay", seat, card, from: zone, need: cost, window, target}},
-      card.name + " costs " + cost + " and " + sd.name + " holds " + sd.res + " — pitch, or cancel.");
+      card.name + " costs " + cost + " and " + GM.sv(sd, "hold") + " " + sd.res + " — pitch, or cancel.");
   }
   /* THE RESOURCE COST IS SETTLED FIRST, THEN THE ADDITIONAL ONE. Both are
      costs and the CR pays them as a set, so the order they are ASKED in
@@ -2535,7 +2543,7 @@ function doActivate(g, a, seat){
     const _hat = PR.handAbilityTax(c, sd, PR.costCtx(g, seat));
     if(_hat > sd.res)
       return say({...g, pending: {kind: "pay", seat, card: c, from: "handAbility", need: _hat, target: null}},
-        c.name + "'s ability costs " + _hat + " to activate and " + sd.name + " holds " + sd.res
+        c.name + "'s ability costs " + _hat + " to activate and " + GM.sv(sd, "hold") + " " + sd.res
         + " — pitch, or cancel.");
     const out = withEffects({...g, actor: seat}, (fx, s) => {
       const r = fx.activateHandAbility(s, c);
@@ -2566,7 +2574,7 @@ function doActivate(g, a, seat){
     const acost = effCost(ab, sd, PR.costCtx(g, seat));
     if(acost > sd.res || chiShort(sd, ab) > 0)   /* v4.54 — see `chiShort` */
       return say({...g, pending: {kind: "pay", seat, card: ab, from: "hero", need: acost, target: null}},
-        ab.name + " costs " + acost + " and " + sd.name + " holds " + sd.res + " — pitch, or cancel.");
+        ab.name + " costs " + acost + " and " + GM.sv(sd, "hold") + " " + sd.res + " — pitch, or cancel.");
     return commitPlay(g, ab, "hero", seat, null, null);
   }
   /* THE ARENA (v3.44) — an ally's attack is an activated ability, so it
@@ -2610,7 +2618,7 @@ function doActivate(g, a, seat){
         if(bcost > sd.res || chiShort(sd, ab) > 0)   /* v4.54 — see `chiShort` */
           return say({...g, pending: {kind: "pay", seat, card: ab, from: "board",
                                       need: bcost, target: null}},
-            ab.name + " costs " + bcost + " and " + sd.name + " holds " + sd.res
+            ab.name + " costs " + bcost + " and " + GM.sv(sd, "hold") + " " + sd.res
             + " — pitch, or cancel.");
         return commitPlay(g, ab, "board", seat, null, null);
       }
@@ -2620,8 +2628,8 @@ function doActivate(g, a, seat){
       const _abc = boardAtkCost(g, seat, b.card, aa, route);   /* v4.86 */
       if(_abc > sd.res)
         return say({...g, pending: {kind: "pay", seat, card: b.card, from: route, need: _abc, target}},
-          b.card.name + " costs " + _abc + " to attack and " + sd.name
-          + " holds " + sd.res + " — pitch, or cancel.");
+          b.card.name + " costs " + _abc + " to attack and " + GM.sv(sd, "hold")
+          + " " + sd.res + " — pitch, or cancel.");
       return commitPlay(g, b.card, route, seat, null, target);
     }
   }
@@ -2643,7 +2651,7 @@ function doActivate(g, a, seat){
     const acost = effCost(ab, sd, PR.costCtx(g, seat));   /* v3.80 — see doActivate's hero branch */
     if(acost > sd.res || chiShort(sd, ab) > 0)   /* v4.54 — see `chiShort` */
       return say({...g, pending: {kind: "pay", seat, card: ab, from: "hero", need: acost, target: null}},
-        ab.name + " costs " + acost + " and " + sd.name + " holds " + sd.res + " — pitch, or cancel.");
+        ab.name + " costs " + acost + " and " + GM.sv(sd, "hold") + " " + sd.res + " — pitch, or cancel.");
     return commitPlay(g, ab, "hero", seat, null, null);
   }
   const wc = PR.weaponCost(piece.tx || "");
@@ -2655,7 +2663,7 @@ function doActivate(g, a, seat){
   const target = targetOf(g, seat, a.target);
   if(cost > sd.res){
     return say({...g, pending: {kind: "pay", seat, card: piece, from: "weapon", need: cost, target}},
-      piece.name + " costs " + cost + " to swing and " + sd.name + " holds " + sd.res + " — pitch, or cancel.");
+      piece.name + " costs " + cost + " to swing and " + GM.sv(sd, "hold") + " " + sd.res + " — pitch, or cancel.");
   }
   return commitPlay(g, piece, "weapon", seat, null, target);
 }

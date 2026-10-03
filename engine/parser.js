@@ -8023,6 +8023,39 @@ const chiValue = c => (c && (c.ty || []).indexOf(CHI_TYPE) >= 0) ? (c.pitch || 0
 const chiSum = cards => (cards || []).reduce((t, c) => t + chiValue(c), 0);
 /* HOW MUCH OF THE FLOATING POOL IS CHI. */
 const chiFloating = sd => !sd ? 0 : Math.min(sd.res || 0, chiSum(sd.pitch || []));
+
+/* ---- A CARD IS PITCHED ONLY WHILE THE COST IS UNPAID (v4.93) ----------
+
+   RULING (user, 2026-08-01): "you cannot pitch to bank resources. The pool
+   is filled only when an activation costs more than you hold." Both boards
+   honoured the WHEN — a payment opens only when the cost exceeds the pool —
+   and neither honoured the HOW MUCH: the payment confirmed any selection
+   that covered the cost, so a player paying 1 could tap two blues and float
+   5 for later. That is banking, inside a payment.
+
+   PITCHING IS SEQUENTIAL: each card is pitched while the cost is still
+   unpaid, and the last one may overshoot. So a selection is legal exactly
+   when SOME card in it was still needed — taking it out leaves a
+   requirement unmet — because that card can be the one pitched last and
+   every card before it was pitched while short. Measured both ways, the
+   last card's overshoot is kept: a 3 pitched for a cost of 1 is one card,
+   and legal.
+
+   TWO REQUIREMENTS, NOT ONE. A Chi cost (v4.54) is paid only by Chi, so
+   Enigma's {c}{c}{c} opens a payment with three resources already
+   floating: the resource half is met before anything is pitched, and an
+   Inner Chi pitched for the Chi half is NEEDED. A test of the resource half
+   alone refuses every Chi payment there is. `need` is the whole cost the
+   pool must reach and `chiCost` the Chi it must hold. */
+const pitchExcessWhy = (sd, sel, need, chiCost) => {
+  sel = (sel || []).filter(Boolean);
+  if(!sel.length) return null;
+  const res = (sd && sd.res) || 0, chi0 = chiFloating(sd);
+  const unmet = T => res + T.reduce((t, c) => t + ((c && c.pitch) || 0), 0) < (need || 0)
+                  || ((chiCost || 0) > 0 && chi0 + chiSum(T) < chiCost);
+  if(sel.some((_, i) => unmet(sel.filter((__, j) => j !== i)))) return null;
+  return "that is more than the cost needs — a card is pitched only while the cost is unpaid, so take one back";
+};
 /* THE MOST CHI THIS SEAT COULD REACH RIGHT NOW — what is floating plus
    every Chi still in hand. `payCeiling`'s twin: a seat cannot pre-pitch
    (the recorded ruling is that the pool is filled only when a cost
@@ -10272,6 +10305,6 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, spellvoidX, linksControlled, arcaneSoaks,
         ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
-        chiValue, chiSum, chiFloating, chiCeiling, abChiCost, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, boardEntryNamed, isEphemeral, isHandWipe, gyFirstGaKw,
+        chiValue, chiSum, chiFloating, pitchExcessWhy, chiCeiling, abChiCost, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, boardEntryNamed, isEphemeral, isHandWipe, gyFirstGaKw,
         CARD_OVERRIDES};
 });

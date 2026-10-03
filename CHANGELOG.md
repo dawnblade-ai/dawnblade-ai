@@ -1,3 +1,62 @@
+## v4.93 — a card is pitched only while the cost is unpaid
+
+> RULING (user, 2026-08-01): *"you cannot pitch to bank resources. The pool
+> is filled only when an activation costs more than you hold."*
+
+### The when was enforced and the how much was not
+
+Both boards honoured the WHEN: a payment opens only when the cost exceeds
+what is floating. Neither honoured the HOW MUCH. Both payment confirms
+accepted any selection that covered the cost, so a player paying 1 could tap
+two blues and float 5 for later — banking, inside a payment. A human-only
+defect: `sparring.act` and the trainer's `autoPitch` both stop the moment
+the cost is covered, which is why no driven game and no drill ever met it.
+
+### The rule is sequential, and the reader says so
+
+Each card is pitched while the cost is still unpaid, and the last may
+overshoot. So a selection is legal exactly when SOME card in it was still
+needed: that card can be the one pitched last, and every card before it was
+pitched while short. **Some, not every**: a red then a blue for a cost of 3
+is legal (the blue alone would have paid, but the red was pitched first),
+and a test that asked every card to be needed refuses a sequence the rule
+allows — one of the six sabotages, and it bites.
+
+**A Chi cost is a second requirement** (v4.54). Enigma's `{c}{c}{c}` opens a
+payment with three resources already floating, so the resource half is met
+before anything is pitched and the Inner Chi pitched for the Chi half is
+needed. A test of the resource half alone refuses every Chi payment there
+is. `parser.pitchExcessWhy(sd, selection, need, chiCost)` asks both, and
+judge's `payConfirm` and the trainer's `confirmPay` ask it of the same
+selection. The table's sheet says why (v4.91's statusline asks `legal`).
+
+### Measured
+
+- 6 sabotages, 6 bite.
+- The ladder is unmoved by construction (the policy never over-pitches) and a
+  drill drives the policy through a payment with spare blues to prove it:
+  at three seeds the summary block is byte-identical to v4.92's (630 games,
+  0 refusals, 0 violations, 0 stalls).
+- 3376 drills, 0 fail, 5 skipped; 107 scenes; both babel blocks compile.
+
+### "You holds 0"
+
+Nine of judge's payment and cost lines built `sd.name + " holds "` by
+hand, so seat 0 (named "You" on the trainer) would read "You holds 0".
+They go through `game.sv` now (v4.15's helper, v2.83's rule). Latent at the
+table, where every seat is named after a hero; `test/holdvoice.test.js` is a
+source census with a planted control, and its sabotage bites.
+
+### The instant-speed record, re-measured
+
+`instant-speed-plays-resolve-on-play` (stated) was re-asked of the engine:
+over the 210-game ladder, 2124 plays at instant speed, 62 dealt damage to
+the other seat, and 9 of those landed on a seat holding a legal
+instant-speed answer with no window to play it. None of the nine answers is
+a prevention or anything whose order changes the damage, so the collapse is
+unobservable in driven games — the argument for leaving it, recorded in
+`tools/approx.js` with the measurement.
+
 ## v4.92 — an attack's base power is one reader, and Put in Context is enforced
 
 > *"This can only defend an attack with 3 or less base {p}."*

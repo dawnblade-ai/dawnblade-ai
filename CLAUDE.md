@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.92
+**Current version:** v4.93
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3369 drills** at v4.92.
+This is `node --test "test/*.test.js"` — **3376 drills** at v4.93.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,17 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A CARD IS PITCHED ONLY WHILE THE COST IS UNPAID (v4.93)
+
+RULING (2026-08-01): no pitching to bank. Both boards enforced WHEN a payment
+opens and neither enforced HOW MUCH it may take, so paying 1 with two blues
+floated 5. `parser.pitchExcessWhy` is the one reader and both payment confirms
+ask it. **The rule is sequential**: legal exactly when SOME selected card was
+still needed (it can be pitched last, and may overshoot) — "every card needed"
+refuses a red-then-blue that the rule allows. **A Chi cost is a second
+requirement** (v4.54): Enigma's {c}{c}{c} opens a payment with resources
+already floating, and a resource-only test refuses every Chi payment there is.
 
 ### AN ATTACK'S BASE POWER IS ONE READER, AND PUT IN CONTEXT IS ENFORCED (v4.92)
 

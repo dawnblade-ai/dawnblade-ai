@@ -1,6 +1,6 @@
-# Handoff — Dawnblade, at v4.83 (updated through v4.92)
+# Handoff — Dawnblade, at v4.83 (updated through v4.93)
 
-**Written 2026-09-28. Every number below was re-derived this session, with
+**Written 2026-09-28, numbers refreshed 2026-10-03 at v4.93. Every number below was re-derived this session, with
 the command that produces it.** Re-derive before you quote one; this file
 has rotted before, and so has every document that stated a count.
 
@@ -22,8 +22,8 @@ where things stand and what is next.
 
 | measure | value | command |
 |---|---|---|
-| version | v4.92, live on GitHub Pages | `grep APP_VER index.html` |
-| drills | 3369 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
+| version | v4.93, live on GitHub Pages | `grep APP_VER index.html` |
+| drills | 3376 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
 | pool coverage | **405 of 405** unique cards read in full · 0 part · 0 none | `npm run audit`, top of `AUDIT.md` |
 | unfinished cards | 0, and 0 one clause away | `npm run gaps` |
 | approximation ledger | 46 records: 27 closed · **15 stated · 4 open** | `node tools/approx.js` |
@@ -54,6 +54,23 @@ can see. The last eight versions were all the second kind.
 Every one of those cards read `tier: full` before its fix.
 
 ---
+
+## WHAT LANDED SINCE (v4.84 → v4.93)
+
+| ver | what |
+|---|---|
+| 4.84 | `npm run unanchored`, standing; the if/when handler learned `whenever` |
+| 4.85–4.87 | attack-reaction abilities reachable on the trainer; every activation route goes through `costTaxes` (ally, aura, hand abilities) |
+| 4.88 | the trainer's play doors behind one live-sheet guard (`sheetFirst`); one reader of a printed target (`rxNoTargetWhy`) |
+| 4.89 | an activation gate nothing answered now refuses (Quick Clicks, Swiftstrike Bracers) |
+| 4.90 | "play this only if" is one evaluator on both boards (`playIfOk`) |
+| 4.91 | an arrow is played from the arsenal; an additional discard must be payable (`playZoneWhy`, `addCostWhy`) |
+| 4.92 | an attack's base power is one reader (`attackBase`); Put in Context's limit enforced on both boards (`defLimitWhy`) |
+| 4.93 | a card is pitched only while the cost is unpaid (`pitchExcessWhy`), both boards |
+
+Versions 4.88–4.93 were found by ONE census: every refusal in the trainer's
+play doors, read against `judge.legal`. When you find a rule in the trainer,
+census the trainer — and do the reverse too.
 
 ## THE PLAN — IN ORDER, WITH THE REASON FOR THE ORDER
 
@@ -114,9 +131,18 @@ today:
 - ~~**Hyper Inflation's tax reaches abilities**~~ **Fixed at v4.86**, with
   Frostbite and Cartilage Crush: `parser.costTaxes` is the one reader of
   which payments a tax reaches.
-- **`instant-speed-plays-resolve-on-play`** (table). An instant or reaction
-  resolves the moment it is played. v4.66 built the stack window for plays
-  at action speed; the reaction half is the remaining collapse.
+- **`instant-speed-plays-resolve-on-play`** (table). Re-measured at v4.93:
+  2124 instant-speed plays in 210 games, 62 dealt damage, 9 landed on a seat
+  holding an answer with no window — and none of the nine answers changes
+  the damage. Unobservable today; it moves the day an instant prevention
+  meets an instant that deals damage.
+- **The condition loop's "not met, then fires" family.** v3.60 and v4.08
+  each found a condition reported unmet in the feed and then satisfied by a
+  later pass. Census every condition kind the main loop SKIPS against where
+  it is answered later, and drive each so the feed and the state agree.
+- **The reverse census of v4.91.** That one read every TRAINER refusal
+  against `judge.legal`. Nobody has read every `judge.legal` refusal against
+  the trainer's doors.
 - **`attack-ops-at-resolution`**. Which bare "when this attacks" payloads
   still ride to resolution, and is each one still unobservable? v4.78
   re-asked two and moved both.

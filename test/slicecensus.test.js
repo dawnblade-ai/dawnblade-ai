@@ -224,7 +224,11 @@ test("which SOURCE FILE each slice reads is pinned, or the resolver is unwatched
        `moveToReact`) to pin that the dead copy of that check is gone. All
        three anchored on a declaration, bounded at the next; the table half
        is DRIVEN in the same file. */
-    "index.html": 30,
+    /* 30 -> 31 AT v4.93, READ FIRST: `overpitch.test.js` takes the
+       trainer's `confirmPay` (bounded at `cancelPay`, the same pair
+       `zonerule.test.js` reads) to pin that the payment asks
+       `parser.pitchExcessWhy`; the table half is DRIVEN in that file. */
+    "index.html": 31,
     "engine/build.js": 1,
     /* +2 AT v4.59, READ FIRST: `dichotomy.test.js` pins that `buildPrompt`
        names the new `filters` field (v2.34's rule, ninth field) and that
