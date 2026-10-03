@@ -1,3 +1,140 @@
+## v4.91 — two rules the trainer had and the table never asked
+
+> *"all cards that are 'arrow attack's can ONLY be played from arsenal"*
+> — RULING (user, 2026-07-25), `tools/rulings.json`
+>
+> *"As an additional cost to play this, discard a random card."*
+> — SAVAGE FEAST ×3, Kayo's
+
+### v4.90's lesson, run as a census
+
+v4.90 found `fx.playIf` answered inside a trainer closure and nowhere else,
+and wrote the rule down: *when you find a rule in the trainer, grep judge for
+it*. This version did that for every refusal in the trainer's `tryPlay` (and
+its sibling doors: `playRx`, `playRxA`, `playArsenalInstant`,
+`playFoeTurnRx`, `activateInstant`, `activateHand`, `toggleBlock`), each read
+against `judge.legal`. Three had no twin at the table. Two are built here;
+the third (Put in Context's *"can only defend an attack with 3 or less base
+{p}"*) asks for an attack's BASE power, which five sites already hand-roll
+differently, so it waits for the one reader (next version).
+
+### 1. An arrow is played from the arsenal
+
+The trainer refused an arrow from hand with its own line (*"Arrows fire from
+the arsenal"*). `judge.legal` asked nothing, so at the table **all eleven of
+Azalea's arrows played straight out of her hand**, and the self-play ladder
+has played them that way since the table existed. Sev-3, *illegal play
+allowed*, invisible to every card-level tool because no card's text is
+involved: it is a TYPE rule.
+
+- **`parser.playZoneWhy` is the zone rule with its reason**, and
+  `playableFromZone` is `!playZoneWhy` — one body, two spellings of its
+  answer (the trainer's tile asks the boolean to decide whether to OFFER a
+  graveyard play; both doors ask the reason form).
+- **The subtype is read off the structured array** (`parser.isArrowCard`,
+  v2.44), with the front face of `tt` as the fallback for a record with no
+  array, word-bounded.
+- **The trainer's door now asks the zone rule for every zone a card is
+  played from** — hand, arsenal, graveyard, banishment. It used to ask only
+  in the UI that offers the tile, so a frozen card in hand was playable on
+  the trainer (latent: the trainer's dummy cannot freeze).
+
+### 2. An additional discard cost must be payable
+
+With nothing else in hand, the table played Savage Feast for its full power
+and `execute` logged *"no additional-cost discard to feed — bonus skips"*:
+the cost skipped and the card collected (v2.04's shape).
+
+**And the trainer's own check was short by the pitch.** It counted the cards
+left in hand and forgot that a card pitched for the resource cost is not
+there to be discarded: one other card and nothing floating, and that card
+paid for the play while the discard took nothing. `parser.addCostWhy` asks
+whether SOME payment leaves enough behind, and the fewest cards a payment can
+use is the greedy one, highest pitch first. **Both boards' payment confirm**
+then refuses a pitch selection that spends the discard's cards.
+
+**The first draft took a zone, and a sabotage said it was dead.** It
+excluded the played card only when it came from hand; dropping that test was
+SILENT, because a card played from the arsenal is not in the hand to exclude.
+The card is excluded by uid and the parameter went (v4.11).
+
+### An adversarial review found the hold, after everything was green
+
+Before shipping, four independent reviewers were set on the diff (rules,
+both-board parity, drill validity, callers), each finding to be attacked by a
+skeptic. **Two of the four found the same hole, independently.** The table
+HOLDS a play on the stack (v4.66) and `execute` took Savage Feast's random
+discard only as it resolved — so Kayo could answer his own Savage Feast with
+Agile Windup (*"Instant - Discard this: …"*), empty his hand, and let it
+resolve with nothing left to take. The legality was right and the cost was
+still skipped, through a window the legality never looked at.
+
+**Costs are paid when a card is played**, so `judge.holdPlay` pays the
+discard there now — after the card has left the hand, out of the one body
+`execute` uses (`payAddCost`, seeded) — and carries the cards on the layer as
+a held declaration (`_addDiscPaid`); `execute` reads them and never pays
+twice. Driven both ways: with one spare card it is the cost, and with two the
+random discard is taken before the window opens.
+
+- **The field was first named `_addCostPaid`**, and `staunch.test.js`'s
+  guard caught it: `addCostPaid` is Staunch Response's rider condition. The
+  same-name-different-meaning trap, in a field name.
+- **A credit to `_discWay` beside it came back SILENT under sabotage** — its
+  only reader of a discard6 rider is the condition loop, which has already
+  run. Deleted (v4.11), with a premise drill: Savage Feast is the pool's only
+  additional discard and its rider is read at the cost site.
+- **And that ordering explained a feed contradiction the probe printed**: the
+  condition loop said *"condition not met (discard6way)"* one line before the
+  cost site fired the same rider. The loop leaves that rider to the cost site
+  now (v3.60: the feed is the observable when the state is identical).
+- **The table's pay sheet said "covered ✓" over a dead Pitch & play** when
+  the discard check refused the pitch; it says `legal`'s reason now (v2.83).
+- **The advisor coached Savage Feast into a hand that could not pay it**, and
+  carried a third private copy of the arrow rule; it asks both readers now.
+
+**No `WIRE_V` bump.** The wire digest does not cover held declarations, and
+since v4.69 `lobby.buildId` refuses two different releases at the handshake,
+so a v4.90 and a v4.91 peer never meet.
+
+### Fixtures that played an arrow from hand
+
+Three files did (`drx`, `herohit`, and the journey census), valid only while
+the table forgot the rule (v4.09: check your own fixture). They splice the
+arrow into the ARSENAL now, returning whatever it held to the hand so no card
+leaves the census. **The journey census asks an arrow both ways** — refused
+from the hand with the reason, driven from the arsenal — off the TYPE, so it
+still reads no card text, and the twelve records are pinned.
+
+### Two censuses moved, and why
+
+- **`speccensus`: `keepTop` ARRIVED** on the same 34 legs with no leg
+  written. It is Spire Sniping's reorder (v3.72), and it arrived *because of
+  this version*: Azalea's arrows now reach the table through the arsenal,
+  where Spire Sniping's "put or turned face up" trigger fires.
+- **`keycensus`: `isArrow` LEFT the trainer's set and `playableFromZone`
+  arrived** — one move, recorded in the drill. The dead `isArrow` bridge
+  alias is deleted (v4.47's rule).
+
+### Measured
+
+- **3352 drills**, 0 fail, 5 skipped; 107 scenes; babel clean.
+- **22 sabotages written, 20 bite.** Both silent ones were dead code and
+  were deleted rather than kept: the zone parameter, and the held path's
+  `_discWay` credit.
+- **The ladder at three seeds, both sides:** 0 refusals, 0 violations,
+  **stalls 1 → 0** (`azalea-boltyn-0` was the stall). **Azalea 4.3 → 2.0
+  wins a seed** (4·6·3 → 3·2·1); at eight seeds 2.4 → 1.1. **The size is the
+  RULE, and that was measured rather than assumed.** The first reading blamed
+  the policy (`sparring.act` arsenals its highest-power card, so an arrow that
+  is not the biggest card would never fire), and a policy fix was built to
+  test it: over 58 of Azalea's arsenal steps in ten games, whenever an arrow
+  was in hand it was ALREADY her highest-power card, and the fix changed the
+  pick zero times. It was not shipped (v4.11: a rule nothing reaches is dead
+  code that reads like a rule). What the ladder shows is Azalea playing as
+  printed: one arrow a turn, through the arsenal, where she used to fire
+  them from hand. Boltyn 1.0 → 2.0 (1·1·1 → 2·2·2) is a reshuffle of a hero
+  the policy cannot play; everything else is inside the band.
+
 ## v4.90 — "play this only if" is a legality on both boards
 
 > *"Play this only if you've pitched a card with 6 or more {p} this turn."*

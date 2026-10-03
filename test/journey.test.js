@@ -99,10 +99,14 @@ const VANILLA = {name: "Swing", uid: "SW", pitch: 0, power: 6, def: 0, cost: 0,
 /* The card under test in hand, with resources and action points to spare
    so nothing is refused for being unaffordable — this is a census of
    TYPES, and cost is a separate question with its own drills. */
-function holding(card){
+function holding(card, zone){
   const c = {...card, uid: "UT"};
-  const g = J.put(base(), SEAT, s => ({...s, hand: [c, fuel(1), fuel(2), fuel(3), fuel(4)],
-    ap: 3, res: 12, arsenal: null, paySel: [], pitch: [], grave: [], board: []}));
+  /* THE ZONE IS A TYPE QUESTION TOO (v4.91): an Arrow is played from the
+     arsenal and nowhere else (ruling 2026-07-25), so the play census holds
+     one there. Every other journey here holds the card in hand. */
+  const ars = zone === "arsenal";
+  const g = J.put(base(), SEAT, s => ({...s, hand: [...(ars ? [] : [c]), fuel(1), fuel(2), fuel(3), fuel(4)],
+    ap: 3, res: 12, arsenal: ars ? c : null, paySel: [], pitch: [], grave: [], board: []}));
   return {g, c};
 }
 
@@ -215,12 +219,22 @@ test("every pool card can be pitched for its printed pitch value", {skip}, () =>
 });
 
 test("a card played in an open window lands in the zone its TYPE sends it to", {skip}, () => {
-  const bad = [], tally = {chain: 0, arena: 0, grave: 0}, gated = [];
+  const bad = [], tally = {chain: 0, arena: 0, grave: 0}, gated = [], arrowsFromHand = [];
   for(const card of pool()){
-    const {g} = holding(card);
+    /* AN ARROW IS ASKED BOTH WAYS (v4.91): refused from the hand, with the
+       reason, and driven from the arsenal, where its journey is measured.
+       Both halves off the TYPE, so this census still reads no card text. */
+    const zone = TY.hasSubtype(card, "Arrow") ? "arsenal" : "hand";
+    if(zone === "arsenal"){
+      const h = holding(card).g;
+      const no = J.legal(h, {t: "play", uid: "UT", from: "hand"}, SEAT);
+      if(/an arrow is played only from the arsenal/.test(String(no))) arrowsFromHand.push(card.name);
+      else bad.push(card.name + " is an Arrow and was not refused from the HAND: " + no);
+    }
+    const {g} = holding(card, zone);
     const open = P.speedAllowed(g, SEAT);
     if(!TY.playWindows(card).some(w => open.includes(w))) continue;
-    const why = J.legal(g, {t: "play", uid: "UT", from: "hand"}, SEAT);
+    const why = J.legal(g, {t: "play", uid: "UT", from: zone}, SEAT);
     /* A CARD'S OWN PRINTED "PLAY THIS ONLY IF …" (v4.90) is not a type
        failure: the table never asked it before this version, and this
        census reads no card text, so it cannot meet the gate itself. Those
@@ -229,7 +243,7 @@ test("a card played in an open window lands in the zone its TYPE sends it to", {
     if(why && /can't be played — /.test(why)){ gated.push(card.name); continue; }
     if(why){ bad.push(card.name + " is playable by type and was refused: " + why); continue; }
     const want = TY.destination(card);
-    const got = whereIs(settle(J.reduce(g, {t: "play", uid: "UT", from: "hand"}, SEAT).state), "UT");
+    const got = whereIs(settle(J.reduce(g, {t: "play", uid: "UT", from: zone}, SEAT).state), "UT");
     if(got !== want) bad.push(`${card.name} [${TY.cardType(card).types.join("+")}] want ${want}, got ${got}`);
     else tally[want]++;
   }
@@ -242,6 +256,11 @@ test("a card played in an open window lands in the zone its TYPE sends it to", {
      and the census can no longer reach their play (see test/playif). */
   assert.deepEqual(tally, {chain: 171, arena: 23, grave: 91},
     "the pool's play destinations moved — that is a rules change, so it is a deliberate edit here");
+  /* AND EVERY ARROW WAS REFUSED FROM THE HAND (v4.91). Twelve records,
+     eleven names (Infecting Shot is printed at two pitches in the pool) —
+     the arrows Azalea decks. Pinned as a COUNT and a premise, because a
+     census that stopped asking would report nothing refused. */
+  assert.equal(arrowsFromHand.length, 12, "the arrow census moved: " + arrowsFromHand.join(", "));
   /* AND THE BOOST QUESTION WAS ACTUALLY ASKED (v2.84). Without this the
      census passes just as well on an engine that never opens the pending
      — the cards still reach the chain, because declining and never being

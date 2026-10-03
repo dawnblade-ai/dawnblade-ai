@@ -3813,6 +3813,13 @@ function makeEffects(ctx){
         return;
       }
       if(cond==="defLt2") return; // resolved after blocks
+      /* A RIDER ON AN ADDITIONAL DISCARD IS THE COST SITE'S (v4.91). The cost
+         is paid below this loop, so asked here "discarded as that cost" read
+         an empty record and the feed said "condition not met" one line
+         before the same rider fired — Savage Feast's draw, the feed
+         contradicting itself (v3.60). The cost site asks it of the cards the
+         cost actually took, and says the one line. */
+      if((cond==="discard6" || cond==="discard6way") && fx.addCost && fx.addCost.discard) return;
       if(cond==="discard6"){
         /* RULING: check the graveyard for a 6+ power card added THIS turn */
         if(!had6ThisTurn(n)){ n = L(n, `${card.name}: nothing with 6+ power has hit your graveyard this turn.`); return; }
@@ -4490,8 +4497,19 @@ function makeEffects(ctx){
          it silently. `sweepArena` files it, turn-stamped. */
       if(isAtkActionCard(card) && from !== "weapon" && from !== "ally" && from !== "aura")
         n = ctrClock(n, "atkPlay");
-      if(fx.addCost && fx.addCost.discard && act(n).hand.length){
-        const _pc = payAddCost(n, card, fx); n = _pc.game;
+      /* PAID AT THE HOLD, AT THE TABLE (v4.91) — `judge.holdPlay` takes the
+         discard when the card is played, and the cards ride in here as
+         `_addDiscPaid` so the rider below reads them and nothing is paid
+         twice. They are NOT credited to `_discWay`: its only reader of a
+         discard6 rider is the condition loop above, which has already run —
+         a credit here was a sabotage that came back SILENT (v4.11). A
+         premise drill holds the one card printing an additional discard to
+         having no other reader of it. */
+      if(fx.addCost && fx.addCost.discard && (n._addDiscPaid || act(n).hand.length)){
+        let _pc;
+        if(n._addDiscPaid){ _pc = {game: n, discarded: n._addDiscPaid}; delete n._addDiscPaid; }
+        else _pc = payAddCost(n, card, fx);
+        n = _pc.game;
         const bigDiscard = _pc.discarded.some(c2=>pow6(c2, bAct(n)));
         fx.conds.filter(x=>x.cond==="discard6"||x.cond==="discard6way").forEach(({op})=>{
           if(bigDiscard){ if(op[0]==="ga") ga=true; else n=runOps(n,[op],card.name); n=L(n,`${card.name}: a 6+ power card was fed to the cost — bonus triggers.`); }
@@ -4888,8 +4906,9 @@ function makeEffects(ctx){
       n._declared = {card, total, declNote};
       return n;
     } else {
-      if(fx.addCost && fx.addCost.discard && act(n).hand.length){
-        n = payAddCost(n, card, fx).game;
+      if(fx.addCost && fx.addCost.discard && (n._addDiscPaid || act(n).hand.length)){
+        if(n._addDiscPaid) delete n._addDiscPaid;
+        else n = payAddCost(n, card, fx).game;
       }
       /* the same gap on the non-attack side: the effects were logged, the
          PLAY was not, so a card that resolved to nothing visible left no

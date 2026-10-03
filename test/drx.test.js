@@ -303,10 +303,18 @@ function reactionWindow(atkName, atkPitch){
   const dr  = {...H.card("Put in Context", 3), uid: 9002};
   assert.ok(P.isDR(dr), "fixture: Put in Context is not a defence reaction any more");
   let sides = g.sides.slice();
-  sides[seat] = {...g.sides[seat], res: 9, hand: [atk, ...g.sides[seat].hand]};
+  /* AN ARROW IS SPLICED INTO THE ARSENAL (v4.91): it is played from there
+     and nowhere else (ruling 2026-07-25), and this fixture played Widowmaker
+     out of the hand — valid only while the table forgot the rule. Whatever
+     the arsenal held goes back to the hand, so no card leaves the census. */
+  const _ars = P.isArrowCard(atk);
+  const _old = g.sides[seat].arsenal;
+  sides[seat] = _ars
+    ? {...g.sides[seat], res: 9, arsenal: atk, hand: [...(_old ? [_old] : []), ...g.sides[seat].hand]}
+    : {...g.sides[seat], res: 9, hand: [atk, ...g.sides[seat].hand]};
   sides[foe]  = {...g.sides[foe],  res: 9, hand: [dr,  ...g.sides[foe].hand]};
   g = {...g, sides};
-  let n = settle(J.reduce(g, {t: "play", uid: atk.uid, from: "hand"}, seat).state, atk.uid);
+  let n = settle(J.reduce(g, {t: "play", uid: atk.uid, from: _ars ? "arsenal" : "hand"}, seat).state, atk.uid);
   let k = 0;
   while(n.step !== "reaction" && k++ < 30){
     if(n.priority == null) break;
@@ -492,14 +500,19 @@ function tensionWindow(atkName, atkPitch){
   const drA = {...H.card("Put in Context", 3), uid: 9103};
   const drH = {...H.card("Put in Context", 3), uid: 9104};
   let sides = g.sides.slice();
-  sides[seat] = {...g.sides[seat], res: 9, ap: 2, hand: [rtt, atk, ...g.sides[seat].hand]};
+  /* the arrow from the ARSENAL, as reactionWindow does (v4.91) */
+  const _ars = P.isArrowCard(atk);
+  const _old = g.sides[seat].arsenal;
+  sides[seat] = _ars
+    ? {...g.sides[seat], res: 9, ap: 2, arsenal: atk, hand: [rtt, ...(_old ? [_old] : []), ...g.sides[seat].hand]}
+    : {...g.sides[seat], res: 9, ap: 2, hand: [rtt, atk, ...g.sides[seat].hand]};
   sides[foe]  = {...g.sides[foe],  res: 9, hand: [drH, ...g.sides[foe].hand], arsenal: drA};
   g = {...g, sides};
   let n = H.drain(settle(J.reduce(g, {t: "play", uid: rtt.uid, from: "hand"}, seat).state, rtt.uid));
   assert.ok(n.sides[seat].grave.some(c => c.uid === rtt.uid), "fixture: Release the Tension never resolved");
   const granted = (n.sides[seat].buffQ || []).find(b => b.rider && b.rider.noDrx);
   let k = 0;
-  n = H.drain(settle(J.reduce(n, {t: "play", uid: atk.uid, from: "hand"}, seat).state, atk.uid));
+  n = H.drain(settle(J.reduce(n, {t: "play", uid: atk.uid, from: _ars ? "arsenal" : "hand"}, seat).state, atk.uid));
   while(n.step !== "reaction" && k++ < 30){
     if(n.priority == null) break;
     n = J.reduce(n, {t: "pass"}, n.priority).state;

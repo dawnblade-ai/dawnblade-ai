@@ -806,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "4.90"; /* v4.90 - "play this only if" is a legality on both boards, from one evaluator that reads its printed number, colour and turn. See CHANGELOG.md. */
+window.APP_VER = "4.91"; /* v4.91 - an arrow is played only from the arsenal and an additional discard must be payable, on both boards, out of one reader each. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -1457,7 +1457,7 @@ window.TROPHIES = [
    babel blocks already call. Every name here used to be a hand-mirrored
    definition in this file. */
 DawnCards.setCDN(window.CDN);
-var norm = DawnParser.norm, isAttack = DawnParser.isAttack, isArrow = DawnParser.isArrow,
+var norm = DawnParser.norm, isAttack = DawnParser.isAttack,
     isWeapon = DawnParser.isWeapon, hasGA = DawnParser.hasGA, arcaneDmg = DawnParser.arcaneDmg,
     num = DawnParser.num, clean = DawnParser.clean, classifyClause = DawnParser.classifyClause,
     fxParse = DawnParser.fxParse,
@@ -4034,7 +4034,17 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     { const _bar = DawnParser.nextTurnBars(act(s), card);
       if(_bar) return L(s, `${card.name} can't be played — ${_bar}.`); }
     const fx = fxParse(card);
-    if(from==="hand" && isAttack(card) && isArrow(card)) return L(s,"Arrows fire from the arsenal. Set it at end of turn.");
+    /* WHERE A CARD MAY BE PLAYED FROM IS ONE READER (v4.91) —
+       `parser.playZoneWhy`, which `judge.legal` asks too. This line was the
+       arrow rule written out here alone ("Arrows fire from the arsenal"), so
+       the table played all eleven of Azalea's arrows from hand. The tile
+       that offers a graveyard or banish play asks the same reader, and now
+       so does the door it opens — a frozen card is refused here as well. */
+    if(from==="hand" || from==="arsenal" || from==="grave" || from==="banish"){
+      const _zw = DawnParser.playZoneWhy(card, from, {wateryGrave: !!bAct(s).wateryGrave,
+                                                       blueGY: (act(s).hist||{}).blueGY||0, turn: s.turn});
+      if(_zw) return L(s, `${card.name} can't be played from your ${from==="grave"?"graveyard":from} — ${_zw}.`);
+    }
     if(from!=="weapon" && from!=="hero" && !isAttack(card) && !fx.playable) return L(s,`${card.name}: no scripted effect yet — pitch it, block with it, or ℹ to read it.`);
     if((from==="weapon"||from==="hero") && act(s).weaponUsed[card.uid]) return L(s, from==="hero" ? "Already used this turn." : `${card.name} already swung this turn.`);
     /* AN ALLY ATTACK IS AN ATTACK (v3.44) — `isAttack` reads the type
@@ -4187,10 +4197,12 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        the same question of the same parse `execute` resolves. */
     { const _cg = DawnParser.abCtrGateFails(act(s), card);
       if(_cg) return L(s, `${card.name.replace(/ — ability$/, "")} already carries a ${_cg} counter — its ability does nothing while it does.`); }
-    if(fx.addCost && fx.addCost.discard){
-      const avail = act(s).hand.length - (from==="hand" ? 1 : 0);
-      if(avail < fx.addCost.discard) return L(s, `${card.name}: additional cost needs ${fx.addCost.discard} to discard — hand's too thin.`);
-    }
+    /* AN ADDITIONAL DISCARD COST (v4.91) — `parser.addCostWhy`, the reader
+       `judge.legal` asks. This counted the hand and forgot the PITCH: with
+       one other card and nothing floating, that card paid the resource cost
+       and the discard took nothing. */
+    { const _ac = DawnParser.addCostWhy(act(s), card, payCost(s, card, from));
+      if(_ac) return L(s, `${card.name} can't be played — ${_ac}.`); }
     if(from==="weapon" && card.needSteam && !((act(s).counters[card.uid]||{}).steam>0)) return L(s, `${card.name} needs a steam counter to fire — build steam first (tap its ⚡).`);
     /* AN ALLY ATTACK IS AN ACTIVATED ABILITY (v3.44), and its two limits
        expire differently — the Sledge/Scorpio rule. `{t}` is the arena's
@@ -4255,6 +4267,14 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
         const _hv = DawnParser.chiFloating(you(s))
                   + DawnParser.chiSum(you(s).paySel.map(i=>you(s).hand[i]));
         if(_hv < _ch) return L(s,`Selected ${_hv} Chi, need ${_ch} — only a Chi pays a Chi cost.`);
+      } }
+    /* AND A PITCH THAT SPENDS WHAT AN ADDITIONAL DISCARD NEEDS IS REFUSED
+       (v4.91) — judge's `payConfirm` asks the same of the same selection. */
+    { const _ac = fxParse(s.pending.card).addCost;
+      if(_ac && _ac.discard){
+        const _left = you(s).hand.length - you(s).paySel.length - (s.pending.from==="hand" ? 1 : 0);
+        if(_left < _ac.discard)
+          return L(s, `That pitch leaves ${_left>0?_left:"no"} card${_left===1?"":"s"} for ${s.pending.card.name}'s additional discard — pitch fewer.`);
       } }
     const pitched = you(s).paySel.map(i=>you(s).hand[i]);
     const keepIdx = you(s).hand.map((_,i)=>i).filter(i=>!you(s).paySel.includes(i));
@@ -7203,7 +7223,10 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                 : boost ? <div className="statusline">Boost <b>{boost.card.name}</b>? Banish the top card of your deck as an additional cost — a <b>Mechanologist</b> card grants go again.</div>
                 : fuse ? <div className="statusline">Fuse <b>{fuse.card.name}</b>? Reveal a {(fuse.types||[]).join("/")} card from your hand as an additional cost — <b>{them.name} sees it</b>.</div>
                 : charge ? <div className="statusline">Charge for <b>{charge.card.name}</b>? A card from your hand goes to your <b>soul</b> as an additional cost — you may decline.</div>
-                : pay ? <div className="statusline">Paying <b>{pay.card.name}</b> — tap cards below to pitch · {(()=>{const short=Math.max(0,pay.need-me.res-DawnJudge.paySum(me)); return short>0?<span>need <b>{short}</b> more</span>:<span>covered ✓</span>;})()}
+                : pay ? <div className="statusline">Paying <b>{pay.card.name}</b> — tap cards below to pitch · {(()=>{const short=Math.max(0,pay.need-me.res-DawnJudge.paySum(me)); /* COVERED IS NOT CONFIRMABLE when a second question refuses the pitch
+     (v4.91 — Savage Feast's additional discard): say `legal`'s reason
+     rather than "covered ✓" over a dead button (v2.83, v4.59). */
+  const why=short>0?null:DawnJudge.legal(g,{t:"payConfirm"},mySeat); return short>0?<span>need <b>{short}</b> more</span>:why?<span>{why}</span>:<span>covered ✓</span>;})()}
                     <button onClick={()=>fire({t:"payCancel"})}>✕ cancel</button></div>
                 : theirPay ? <div className="statusline">{them.name} is paying for something…</div>
                 : myArsStep ? <div className="statusline">Tap a card below for <b>arsenal</b>

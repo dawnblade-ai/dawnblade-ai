@@ -170,7 +170,12 @@ function advise(g, ctx){
   const cands=[];
   you(g).hand.forEach((c,i)=>{
     const fx=fxParse(c); const atk=isAttack(c);
-    if(atk&&isArrow(c)) return;
+    /* WHERE A CARD MAY BE PLAYED FROM, AND WHETHER ITS ADDITIONAL COST CAN
+       BE PAID, are the shared readers both boards ask (v4.91). This was a
+       third private copy of the arrow rule, and it never asked the cost —
+       so it coached Savage Feast into a hand that could not pay it. */
+    if(P.playZoneWhy(c, "hand", {})) return;
+    if(P.addCostWhy(you(g), c, effCost(c, you(g)))) return;
     /* CR 8.1.2a / 8.1.3a — a reaction belongs to the reaction step, so it is
        not a candidate in the action phase. tryPlay refuses one; coaching a
        play the game then refuses is worse than not coaching it. */
@@ -179,7 +184,8 @@ function advise(g, ctx){
     if(effCost(c, you(g)) > you(g).res + advPitchPotential(you(g).hand,i)) return;
     cands.push({c,from:"hand",idx:i,excl:i});
   });
-  if(you(g).arsenal && (isAttack(you(g).arsenal)||fxParse(you(g).arsenal).playable) && (you(g).arsenal.cost||0)<=you(g).res+advPitchPotential(you(g).hand,null))
+  if(you(g).arsenal && (isAttack(you(g).arsenal)||fxParse(you(g).arsenal).playable) && (you(g).arsenal.cost||0)<=you(g).res+advPitchPotential(you(g).hand,null)
+     && !P.playZoneWhy(you(g).arsenal, "arsenal", {}) && !P.addCostWhy(you(g), you(g).arsenal, effCost(you(g).arsenal, you(g))))
     cands.push({c:you(g).arsenal,from:"arsenal",idx:0,excl:null});
   you(g).gear.forEach((w,i)=>{ if(isWeapon(w)&&!you(g).weaponUsed[w.uid]&&(w.cost||0)<=you(g).res+advPitchPotential(you(g).hand,null)) cands.push({c:w,from:"weapon",idx:i,excl:null}); });
   if(ctx.hpow && !you(g).weaponUsed["hpow"] && (ctx.hpow.cost||0)<=you(g).res+advPitchPotential(you(g).hand,null))

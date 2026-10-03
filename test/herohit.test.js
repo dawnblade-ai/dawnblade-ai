@@ -122,10 +122,20 @@ function board(seed){
     return P.isAttack(c) && (fx.onHitHero || []).length && (c.power || 0) >= ally.life;
   });
   assert.ok(atk, "no hero-gated on-hit attack in this precon — re-pick the fixture");
-  g = J.put(g, seat, s => ({...s, res: 9,
-    hand: [atk, ...s.hand.filter(c => c.uid !== atk.uid)],
-    deck: s.deck.filter(c => c.uid !== atk.uid)}));
+  g = J.put(g, seat, s => splice(s, atk));
   return {g, ally, atk, seat, def};
+}
+/* AN ARROW GOES INTO THE ARSENAL (v4.91). Azalea's hero-gated attack is
+   an arrow, and an arrow is played from the arsenal and nowhere else
+   (ruling 2026-07-25) — these fixtures played it from hand, which was valid
+   only while the table forgot the rule. Whatever the arsenal held goes back
+   to the hand, so no card leaves the census. */
+const zoneOf = c => P.isArrowCard(c) ? "arsenal" : "hand";
+function splice(s, atk){
+  const base = {...s, res: 9, deck: s.deck.filter(c => c.uid !== atk.uid),
+                hand: s.hand.filter(c => c.uid !== atk.uid)};
+  if(zoneOf(atk) === "hand") return {...base, hand: [atk, ...base.hand]};
+  return {...base, arsenal: atk, hand: [...(s.arsenal ? [s.arsenal] : []), ...base.hand]};
 }
 const toResolution = n => {
   for(let i = 0; i < 20 && n.step !== "resolution"; i++){
@@ -155,7 +165,7 @@ test("the SAME attack fires on a hero and not on an ally", {skip}, () => {
   const has = sd => (sd.board || []).some(b => new RegExp(tokName, "i").test(b.card.name));
 
   /* --- at the ALLY --- */
-  let a = H.drain(J.reduce(g, {t: "play", uid: atk.uid, from: "hand", target: ally.uid}, seat).state);
+  let a = H.drain(J.reduce(g, {t: "play", uid: atk.uid, from: zoneOf(atk), target: ally.uid}, seat).state);
   assert.equal(a.pend.target.kind, "ally", "the target must reach the chain link");
   a = toResolution(a);
   assert.equal(a.sides[def].hp, g.sides[def].hp,
@@ -167,7 +177,7 @@ test("the SAME attack fires on a hero and not on an ally", {skip}, () => {
     "and the feed must say why, or the player learns the wrong rule");
 
   /* --- at the HERO, same board, same card --- */
-  let h = H.drain(J.reduce(g, {t: "play", uid: atk.uid, from: "hand"}, seat).state);   /* no target = the hero */
+  let h = H.drain(J.reduce(g, {t: "play", uid: atk.uid, from: zoneOf(atk)}, seat).state);   /* no target = the hero */
   h = toResolution(h);
   assert.ok(h.sides[def].hp < g.sides[def].hp, "the hero took the damage");
   assert.ok(has(h.sides[def]), "the hero-gated payload must STILL fire on a hero hit");
@@ -195,19 +205,17 @@ test("crush does not fire on an ally, however large the hit", {skip}, () => {
   g = J.put(g, def, s => ({...s,
     board: [{card: ally, kind: "ally", spent: false, uid: ally.uid, life: ally.life}],
     deck: s.deck.filter(c => c.uid !== ally.uid)}));
-  g = J.put(g, seat, s => ({...s, res: 9,
-    hand: [atk, ...s.hand.filter(c => c.uid !== atk.uid)],
-    deck: s.deck.filter(c => c.uid !== atk.uid)}));
+  g = J.put(g, seat, s => splice(s, atk));
 
   const armed = st => ((st.nextTurn || []).length > 0);
-  let a = toResolution(J.reduce(g, {t: "play", uid: atk.uid, from: "hand", target: ally.uid}, seat).state);
+  let a = toResolution(J.reduce(g, {t: "play", uid: atk.uid, from: zoneOf(atk), target: ally.uid}, seat).state);
   assert.ok(!armed(a.sides[def]),
     atk.name + " crushed an ALLY — crush asks for damage to a hero");
   assert.ok((a.feed || []).some(m => /crush/i.test(m) && /ally/i.test(m)),
     "and the feed must name the reason");
 
   /* the half that proves the gate is not simply off */
-  let h = toResolution(J.reduce(g, {t: "play", uid: atk.uid, from: "hand"}, seat).state);
+  let h = toResolution(J.reduce(g, {t: "play", uid: atk.uid, from: zoneOf(atk)}, seat).state);
   assert.ok(armed(h.sides[def]), "crush must STILL fire on a hero hit");
 });
 
@@ -349,16 +357,14 @@ function allyBoard(seed, allyRe, pick, atkHero){
     deck: s.deck.filter(c => c.uid !== ally.uid)}));
   const atk = g.sides[seat].deck.find(c => pick(c, ally));
   assert.ok(atk, "no suitable attack in this precon");
-  g = J.put(g, seat, s => ({...s, res: 9,
-    hand: [atk, ...s.hand.filter(c => c.uid !== atk.uid)],
-    deck: s.deck.filter(c => c.uid !== atk.uid)}));
+  g = J.put(g, seat, s => splice(s, atk));
   return {g, ally, atk, seat, def};
 }
 
 test("driven at the TABLE: Oysten's Gold goes to the player who lost it", {skip}, () => {
   const {g, ally, atk, seat, def} =
     allyBoard("oysten", /Oysten/, (c, a) => P.isAttack(c) && (c.power || 0) >= a.life);
-  let n = H.drain(J.reduce(g, {t: "play", uid: atk.uid, from: "hand", target: ally.uid}, seat).state);
+  let n = H.drain(J.reduce(g, {t: "play", uid: atk.uid, from: zoneOf(atk), target: ally.uid}, seat).state);
   n = toResolution(n);
   const gold = si => (n.sides[si].board || []).filter(b => /gold/i.test(b.card.name)).length;
   assert.equal(gold(def), 1, "the ally's controller gets the token its card prints");
@@ -385,11 +391,11 @@ test("driven at the TABLE: judge hands the target to execute", {skip}, () => {
   g = J.put(g, def, s => ({...s, gear: []}));
   const hp0 = g.sides[def].hp;
 
-  let n = toResolution(J.reduce(g, {t: "play", uid: atk.uid, from: "hand", target: ally.uid}, seat).state);
+  let n = toResolution(J.reduce(g, {t: "play", uid: atk.uid, from: zoneOf(atk), target: ally.uid}, seat).state);
   assert.equal(n.sides[def].hp, hp0,
     "attacking an ALLY, the hero took damage — the target never reached the trigger");
 
-  let h = toResolution(J.reduce(g, {t: "play", uid: atk.uid, from: "hand"}, seat).state);
+  let h = toResolution(J.reduce(g, {t: "play", uid: atk.uid, from: zoneOf(atk)}, seat).state);
   /* the attack AND the arcane, so the 1 point is isolated */
   assert.equal(h.sides[def].hp, hp0 - (atk.power || 0) - 1,
     "at the hero: the swing lands AND the printed arcane fires");

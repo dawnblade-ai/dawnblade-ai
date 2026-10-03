@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.83 (updated through v4.90)
+# Handoff — Dawnblade, at v4.83 (updated through v4.91)
 
 **Written 2026-09-28. Every number below was re-derived this session, with
 the command that produces it.** Re-derive before you quote one; this file
@@ -22,15 +22,15 @@ where things stand and what is next.
 
 | measure | value | command |
 |---|---|---|
-| version | v4.90, live on GitHub Pages | `grep APP_VER index.html` |
-| drills | 3335 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
+| version | v4.91, live on GitHub Pages | `grep APP_VER index.html` |
+| drills | 3352 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
 | pool coverage | **405 of 405** unique cards read in full · 0 part · 0 none | `npm run audit`, top of `AUDIT.md` |
 | unfinished cards | 0, and 0 one clause away | `npm run gaps` |
 | approximation ledger | 46 records: 27 closed · **15 stated · 4 open** | `node tools/approx.js` |
 | CR rules cited | 61 distinct · 51 guarded · 3 unguarded (section pointers, pinned) | `node tools/crindex.js` |
 | fail states | 0 UNFAIR · 3 WRONG (all known, below) | `npm run sweep` |
 | scenes | 107 passing | `npm run scenes` |
-| ladder, 3 seeds | 630 games · 0 refusals · 0 violations · **2 stalls** · noise band median 2–3 | `npm run play '' '' 3` |
+| ladder, 3 seeds | 630 games · 0 refusals · 0 violations · **0 stalls** · noise band median 2–3 | `npm run play '' '' 3` |
 
 **The engine reads every card in the pool.** What is left is not unread text.
 It is the *rules machine* the cards run inside (the ledger's stated and open

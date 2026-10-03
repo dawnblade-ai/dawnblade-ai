@@ -9019,6 +9019,16 @@ const isActionCard = c => {
   const ty = (c && c.ty) || [];
   return ty.some(t => /^action$/i.test(String(t)));
 };
+/* AN ARROW, off the structured array (v4.91). `isArrow` above reads `tt`,
+   which carries stray words on five database records; the play-zone rule
+   asks this one, and falls back to the FRONT of the printed line only for
+   a record with no array (a hand-built fixture, a warm old cache). */
+const isArrowCard = c => {
+  if(!c) return false;
+  if(Array.isArray(c.ty) && c.ty.length && !/\/\//.test(c.tt || ""))
+    return c.ty.some(t => /^arrow$/i.test(String(t)));
+  return /\barrow\b/i.test(frontFace(c));
+};
 
 /* ---- DOES THIS DECLARED DEFENDER POP A PHANTASM ATTACK? (v4.31) ------
 
@@ -9491,32 +9501,93 @@ function chargeOffer(card, sd, uid, taken){
    Bones, Compass of Sunken Depths, Washed Up Wave, all of which ASK
    about watery grave), and under `hasKw` all three were replayable from
    the graveyard against their own printed text. */
-const playableFromZone = (c, zone, o) => {
+/* AND IT ANSWERS WITH THE REASON NOW (v4.91), so both boards can say WHY
+   in one spelling. `playableFromZone` is `!playZoneWhy`, and it stays,
+   because a UI asking "may I offer this tile" wants the boolean.
+
+   AN ARROW IS PLAYED FROM THE ARSENAL. RULING (user, 2026-07-25): "all
+   cards that are 'arrow attack's can ONLY be played from arsenal". The
+   trainer refused an arrow from hand inside `tryPlay`, a React closure,
+   and `judge.legal` asked nothing — so at the table all eleven of
+   Azalea's arrows played straight out of her hand, and the self-play
+   ladder has played them that way since the table existed. v4.90's
+   shape exactly: a rule in a trainer closure does not exist at the
+   table. The subtype is read off the STRUCTURED array (`isArrowCard`),
+   never `tt` (v2.44). */
+const playZoneWhy = (c, zone, o) => {
   o = o || {};
-  if(!c) return false;
+  if(!c) return "there is no such card";
   /* FROZEN (Cold Snap). "Whatever they choose cannot be played or
      activated until the start of your next turn" — so the gate is here,
      where both boards already ask whether a card may be played from where
      it sits. `_frozenBy` records WHICH seat's freeze it is; the thaw
      (`effects.thawFreeze`) reads the same mark, so no turn arithmetic is
      stored and the two boards' different `turn` clocks cannot disagree. */
-  if(c._frozenBy != null) return false;
+  if(c._frozenBy != null) return "it is frozen until the start of its freezer's next turn";
+  if(isArrowCard(c) && zone !== "arsenal")
+    return "an arrow is played only from the arsenal; set it there at the end of your turn";
   /* the ordinary routes, and the two the trainer models as zones */
-  if(zone === "hand" || zone === "arsenal" || zone === "weapon" || zone === "hero") return true;
+  if(zone === "hand" || zone === "arsenal" || zone === "weapon" || zone === "hero") return null;
   if(zone === "grave"){
-    if(fxParse(c).fromGY) return true;
+    if(fxParse(c).fromGY) return null;
     /* FACE DOWN IS THE DRAWBACK, and it is why watery grave is a keyword
        rather than a bonus: an ally that dies is turned face-down
        "specifically so it cannot be replayed infinitely" (RULING
        2026-07-25). Without this the six allies are a loop. */
-    if(c._fd) return false;
-    return !!(o.wateryGrave && (o.blueGY || 0) > 0 && printedKw(c, "watery grave"));
+    if(c._fd) return "it died face-down, so it cannot be replayed";
+    return (o.wateryGrave && (o.blueGY || 0) > 0 && printedKw(c, "watery grave")) ? null
+      : "nothing lets it be played from the graveyard";
   }
   if(zone === "banish"){
-    if(fxParse(c).fromBan) return true;
-    return c._playTurn != null && c._playTurn === o.turn;
+    if(fxParse(c).fromBan) return null;
+    return (c._playTurn != null && c._playTurn === o.turn) ? null
+      : "nothing lets it be played from banishment this turn";
   }
-  return false;
+  return "cards are not played from there";
+};
+const playableFromZone = (c, zone, o) => !!c && !playZoneWhy(c, zone, o);
+
+/* ---- AN ADDITIONAL DISCARD COST MUST BE PAYABLE (v4.91) -------------
+
+   > "As an additional cost to play Savage Feast discard a random card."
+   >                                         — SAVAGE FEAST ×3, Kayo's
+
+   A cost you cannot pay is a play you cannot make. The trainer refused it
+   when the rest of the hand was empty; `judge.legal` asked nothing, so at
+   the table Savage Feast swung for its full power with an empty hand and
+   `execute` logged that the cost had nothing to feed — the cost skipped
+   and the card collected (v2.04's shape, which is sev-3).
+
+   AND THE TRAINER'S OWN TEST WAS SHORT BY THE PITCH. A card pitched for
+   the resource cost is not in the hand to be discarded, so with one other
+   card in hand and nothing floating, that card is spent on the PITCH and
+   the discard again has nothing to take. The question is whether SOME
+   payment leaves enough behind, and the fewest cards a payment can use
+   is the greedy one, highest pitch first.
+
+   `cost` is the caller's answer (`effCost` with the game's half), and a
+   seat that cannot raise it at all is refused by the cost check beside
+   this; here it only decides how many cards the payment must spend.
+
+   THE PLAYED CARD IS EXCLUDED BY UID, AND THAT IS THE WHOLE ZONE QUESTION.
+   The first draft also took the zone and excluded the card only when it
+   was played from hand; a sabotage dropping that test came back SILENT,
+   because a card played from the arsenal is not in the hand to exclude.
+   A guard that cannot express a bug is dead code that reads like a rule
+   (v4.11), so the parameter went. */
+const addCostWhy = (sd, c, cost) => {
+  const ac = c && fxParse(c).addCost;
+  if(!ac || !ac.discard) return null;
+  const others = ((sd && sd.hand) || []).filter(x => !(x && c && x.uid === c.uid));
+  let need = Math.max(0, (cost || 0) - ((sd && sd.res) || 0));
+  const ps = others.map(x => (x && x.pitch) || 0).sort((a, b) => b - a);
+  let spent = 0;
+  while(need > 0 && spent < ps.length){ need -= ps[spent]; spent++; }
+  const left = others.length - spent;
+  if(left >= ac.discard) return null;
+  return "its additional cost discards " + ac.discard + (ac.random ? " at random" : "")
+    + ", and " + (spent ? "after paying for it " : "") + "you would hold "
+    + (left > 0 ? left : "no") + " card" + (left === 1 ? "" : "s") + " to discard";
 };
 
 /* ---- THE SPEED GRANT'S CONDITION, READ AND ANSWERED (v3.36) ---------
@@ -10192,7 +10263,7 @@ const fxReset = () => FXMEMO.clear();
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter,
   PER_COUNT, DEF_PER, perCountKey, chainHits, pickSubject, attackQual, markRed, costCtx, qualMatches, abWindow, defCap, defCounts, isBlockCard,
         nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, isActionCard, costOffFor, heaveOf,
-        classifyClause, fxParse, fxReset, playableFromZone, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost, isActivation, isActionPaid, costTaxes, handAbilityTax,
+        classifyClause, fxParse, fxReset, playableFromZone, playZoneWhy, addCostWhy, isArrowCard, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost, isActivation, isActionPaid, costTaxes, handAbilityTax,
         DECL_OPS, dracLinks, weaponCost, payTrigger, OFFER_TRIGGERS, allyAttack, auraWeaponGrant, wardValue, wardBearers, wardTotal, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, drxBarred, drxBarWhy, rxPump,
         idleCounterWipes, rustedThrough,
         isAtkActionCard, phantasmPops, zonePow, pow6, kwGated, hasKwNow, printedKw,

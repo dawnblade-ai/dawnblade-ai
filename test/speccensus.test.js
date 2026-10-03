@@ -105,10 +105,14 @@ let legs = 0, threw = 0;
    (v3.53). The rest are the sheet's alone: a title, a hint, a stamp that
    rides onto the card the answer moves. */
 const ANSWER_READS = ["amount", "by", "cards", "cost", "destroyUid", "discard", "elseOps",
-                      "filter", "max", "min", "ops", "options",
+                      "filter", "keepTop", "max", "min", "ops", "options",
                       "side", "spendCtr", "src", "tag", "tapHero", "tapUid", "taps",
                       "to", "zone"];
 /* -optional v4.44: it was here for two comments' sake and nothing reads it. */
+/* +keepTop v4.91: `applyPrompt`'s opt branch reads it to put the cards back
+   ON TOP rather than offering the bottom — a reorder is not an opt (v3.72).
+   It joined because it now ARRIVES (see the pin below), not because the
+   reader moved. */
 /* +discard v4.81: `applyPrompt` reads it to leave the move's line to
    `effects.discardChosen`, which names the seat and the card. */
 /* +spendCtr v4.48: THE REACH LIMIT v4.42 RECORDED IS DISCHARGED. That
@@ -209,9 +213,16 @@ test("every spec field that reaches prompts.js is pinned", () => {
   assert.deepEqual([...reached].sort(), [
     "amount", "arsStamp", "avail", "banStamp", "by", "cards", "charge", "cost", "costRider",
     "ctrHeld", "ctrSpend", "ctrStamp", "destroyUid", "discard", "elseOps", "equipStamp",
-    "faceUp", "filter", "hint", "jab", "lateGa", "max", "min", "moveFoe", "n",
+    "faceUp", "filter", "hint", "jab", "keepTop", "lateGa", "max", "min", "moveFoe", "n",
     "ops", "optional", "options", "playThisTurn", "shuffleAfter", "side", "spendCtr",
     "src", "tag", "tapHero", "tapUid", "taps", "title", "to", "wayRider", "xPay", "zone",
+  /* +keepTop v4.91 — Spire Sniping's reorder (v3.72's `lookOrder`, which
+     shares the opt sheet behind this flag). It arrived on the same 34 legs
+     with no leg written, and the reason is the version's own rule: an arrow
+     is played from the ARSENAL now, so Azalea's arrows reach the table the
+     way they are printed to and Spire Sniping's "put or turned face up"
+     trigger fires in a driven game. Until v4.91 she played them from hand,
+     where no arsenal trigger fires. */
   /* +discard v4.81 — a chosen discard's continuation (whose card asked, the
      ops printed after the discard, and what reads it). It arrived on the same
      34 legs with no leg written, so a non-random discard with a real choice

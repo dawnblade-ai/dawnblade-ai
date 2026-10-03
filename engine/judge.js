@@ -803,6 +803,20 @@ function legal(g, a, seat){
         const _hv = PR.chiFloating(sd) + PR.chiSum(_sel);
         if(_hv < _ch) return "still " + (_ch - _hv) + " Chi short — only a Chi pays a Chi cost";
       }
+      /* AND A PITCH THAT SPENDS THE CARDS AN ADDITIONAL DISCARD NEEDS IS
+         REFUSED (v4.91). `legal` asked whether SOME payment leaves enough
+         behind; this asks whether THIS one does, so Savage Feast cannot be
+         paid for with the last card in hand and then discard nothing. The
+         played card is still in hand while it is paid for, so it is not
+         counted among the cards left. */
+      { const ac = PR.fxParse(p.card).addCost;
+        if(ac && ac.discard){
+          const sd = at(g, seat), sel = sd.paySel || [];
+          const left = (sd.hand || []).filter(x => x.uid !== p.card.uid && sel.indexOf(x.uid) < 0).length;
+          if(left < ac.discard)
+            return "that pitch leaves " + (left || "no") + " card" + (left === 1 ? "" : "s")
+                 + " for " + p.card.name + "'s additional discard of " + ac.discard;
+        } }
       return null;
     }
     return null;
@@ -1042,9 +1056,13 @@ function legal(g, a, seat){
        the one copy now. The game's half of the question — whose hero
        grants watery grave, and whether a blue card has hit the graveyard
        this turn — is supplied here, because the parser is pure. */
-    if(!PR.playableFromZone(c, zone, {wateryGrave: !!bOf(g, seat).wateryGrave,
-                                      blueGY: (sd.hist || {}).blueGY || 0, turn: g.turn}))
-      return c.name + " cannot be played from your " + zone;
+    /* …AND IT SAYS WHY (v4.91), out of the same reader the trainer's
+       `tryPlay` asks — which is how an arrow came to be refused there and
+       played here: the trainer's refusal was its own line, and this board
+       never had it. */
+    { const _zw = PR.playZoneWhy(c, zone, {wateryGrave: !!bOf(g, seat).wateryGrave,
+                                         blueGY: (sd.hist || {}).blueGY || 0, turn: g.turn});
+      if(_zw) return c.name + " cannot be played from your " + zone + " — " + _zw; }
     const win = P.speedAllowed(g, seat);
     if(!win.length) return "no window is open for you";
     return playableWhy(g, seat, c, win, zone) || targetWhy(g, seat, c, a.target);
@@ -1614,6 +1632,14 @@ function playableWhy(g, seat, c, win, zone){
   const cost = effCost(c, sd, PR.costCtx(g, seat));
   if(cost > sd.res + payCeiling(sd, c))
     return c.name + " costs " + cost + " and you cannot raise it";
+
+  /* AND AN ADDITIONAL COST IS A COST (v4.91). Savage Feast's "discard a
+     random card" was asked by the trainer and by nothing here, so with an
+     empty hand it swung at the table for nothing and `execute` logged the
+     cost away. `parser.addCostWhy` is the one reader, and it counts the
+     cards the resource payment must spend too. */
+  { const _ac = PR.addCostWhy(sd, c, cost);
+    if(_ac) return c.name + " can't be played — " + _ac; }
 
   return null;
 }
@@ -2996,7 +3022,7 @@ function doBoost(g, a, seat){
    outcome of the window is the one this produces. It is also what keeps
    the change invisible to every game in which neither seat holds an
    instant-speed answer. */
-const HELD_DECL = ["_half", "_doBoost", "_addPaid", "_fuseUid", "_chargeUids", "_x", "_discCostUid"];
+const HELD_DECL = ["_half", "_doBoost", "_addPaid", "_fuseUid", "_chargeUids", "_x", "_discCostUid", "_addDiscPaid"];
 const HELD_LIFT = {hand: 1, arsenal: 1, grave: 1, banish: 1};
 /* WHICH PLAYS WAIT: everything at ACTION speed. A card played in the
    action window, a weapon swing, an ally's or an aura's attack, and an
@@ -3030,6 +3056,29 @@ function holdPlay(g, card, zone, seat, window, target){
     }
     return o;
   });
+  /* AN ADDITIONAL DISCARD IS PAID WHEN THE CARD IS PLAYED (v4.91), and a
+     held play has been played. `execute` takes Savage Feast's random
+     discard as it RESOLVES, so with the play waiting here its controller
+     could answer their own card — Agile Windup discards itself for a token
+     — empty the hand, and let it resolve with nothing left to take: the
+     cost skipped and the card collected, through the window v4.66 opened.
+     Found by an adversarial review of v4.91 (two of four reviewers,
+     independently), after every drill and the ladder were green.
+
+     So the cost is paid HERE, after the card has left the hand (it cannot
+     be its own discard) and before anyone may respond, out of the one body
+     `execute` uses (`payAddCost`, seeded). The discarded cards ride on the
+     layer as a declaration and `execute` reads them instead of paying
+     again, crediting `_discWay` after its own per-resolution clear (v4.09:
+     check where the state you write is cleared). */
+  if(lifted){
+    const afx = card && card.name ? PR.fxParse(card) : null;
+    if(afx && afx.addCost && afx.addCost.discard){
+      const r = withEffects({...n, actor: seat}, (fx, s) => fx.payAddCost(s, card, afx));
+      n = r.game;
+      decl._addDiscPaid = r.discarded;
+    }
+  }
   const shown = String(card.name || "").replace(/ — (?:ability|hero power)$/, "");
   const layer = {k: "play", label: shown + " (on the stack)", seat, card, zone, window,
                  target: target || null, decl, res: sd.res || 0, lifted};

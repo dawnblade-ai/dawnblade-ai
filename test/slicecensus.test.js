@@ -211,7 +211,13 @@ test("which SOURCE FILE each slice reads is pinned, or the resolver is unwatched
        `activateHand`, bounded at `closeChain`, its next declaration, to pin
        that the hand-ability door asks the discard question and raises the
        tax. A closure inside `Battle`, so a source scan, and it says so. */
-    "index.html": 25,
+    /* 25 -> 27 AT v4.91, READ FIRST: `zonerule.test.js` takes `tryPlay`
+       (it asks `playZoneWhy` and `addCostWhy` and refuses on each) and
+       `confirmPay` (a pitch that spends the additional discard's cards is
+       refused). Both anchored on a declaration, bounded at the next; the
+       trainer is a closure inside `Battle`, so a source scan, and it says
+       so — the table half of both rules is DRIVEN in the same file. */
+    "index.html": 27,
     "engine/build.js": 1,
     /* +2 AT v4.59, READ FIRST: `dichotomy.test.js` pins that `buildPrompt`
        names the new `filters` field (v2.34's rule, ninth field) and that
@@ -272,7 +278,12 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        `discard` field (a chosen discard's continuation). */
     /* +costtaxes AT v4.86: `tryPlay` -> `confirmPay`, the same body the
        rows below take, for the claim that its cost line asks `payCost`. */
-    "costtaxes.test.js index.html 22716",
+    /* 22,716 -> 23,598 AT v4.91, READ FIRST, for all six rows of this body:
+       still `tryPlay` -> `confirmPay`. The growth is the zone rule and the
+       additional discard cost each asked through a shared reader
+       (`playZoneWhy`, `addCostWhy`) where one-line local copies stood; the
+       anchors still bound the body every drill names. */
+    "costtaxes.test.js index.html 23598",
     "dichotomy.test.js engine/prompts.js 12746",
     /* 8,550 -> 9,523 AT v4.60, and now THREE files take the same slice —
        `playRx`, anchored on its own declaration and bounded at `playRxA`, the
@@ -292,7 +303,7 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        ACTIVATED route asks too, so the body is shorter by the two
        declarations it no longer carries. Same anchors. `rxability.test.js`
        takes the same slice to pin that the destructure is there. */
-    "discost.test.js index.html 22716",
+    "discost.test.js index.html 23598",
     "dorinthea.test.js index.html 9905",
     "drx.test.js index.html 9905",
     "phasebar.test.js index.html 15953",
@@ -326,11 +337,12 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        `tryPlay` in `stack` (an activated ability, never a reaction card).
        Same signature, same anchors; `discost.test.js` and
        `rxability.test.js` take the same slice for claims of their own. */
-    "priority.test.js index.html 22716",
-    "priority.test.js index.html 22716",
+    "priority.test.js index.html 23598",
+    "priority.test.js index.html 23598",
     "priority.test.js index.html 9905",
-    "rxability.test.js index.html 22716",
-    "rxability.test.js index.html 9905"
+    "rxability.test.js index.html 23598",
+    "rxability.test.js index.html 9905",
+    "zonerule.test.js index.html 23598"
   ], /* 15,440 -> 16,557 AT v4.59, READ FIRST (v4.57: a pin edited without
         being read is a guard switched off). Both rows are
         `tryPlay` -> `confirmPay` — anchored on the body's own declaration and

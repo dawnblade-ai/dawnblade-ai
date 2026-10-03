@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.90
+**Current version:** v4.91
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3335 drills** at v4.90.
+This is `node --test "test/*.test.js"` — **3352 drills** at v4.91.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,31 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### WHEN YOU FIND A RULE IN THE TRAINER, CENSUS THE TRAINER (v4.91)
+
+v4.90 wrote the rule down (*grep judge for it*); this version ran it over
+every refusal in the trainer's play doors, each read against `judge.legal`.
+Two had no twin at the table and both were sev-3:
+
+- **An arrow is played from the arsenal** (ruling 2026-07-25). The trainer
+  refused it with a private line; the table played all eleven of Azalea's
+  arrows from hand. `parser.playZoneWhy` is the zone rule WITH its reason,
+  `playableFromZone` is `!playZoneWhy`, and the trainer's door now asks it
+  for every zone a card is played from (hand, arsenal, graveyard, banish).
+  The subtype is `parser.isArrowCard`, off the structured array.
+- **An additional discard cost must be payable.** Savage Feast swung at the
+  table with an empty hand and logged the cost away; the trainer's own check
+  forgot that a card PITCHED for the resource cost is not there to discard.
+  `parser.addCostWhy` asks whether some payment leaves enough behind (the
+  fewest-card payment is the greedy one), and both payment confirms refuse a
+  pitch that spends the discard's cards.
+
+**AND A LADDER MOVE YOU ATTRIBUTE TO THE POLICY IS A CLAIM — MEASURE IT.**
+Azalea fell 4.3 → 2.0 wins a seed and the first reading blamed the arsenal
+pick. A policy fix built to test that changed the pick ZERO times in 58
+arsenal steps (her arrows are already her biggest cards), so the drop is the
+rule — one arrow a turn — and the fix was not shipped.
 
 ### A RULE THAT LIVES IN A TRAINER CLOSURE DOES NOT EXIST AT THE TABLE (v4.90)
 

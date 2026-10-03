@@ -356,9 +356,9 @@ test("the one-board reader sets are pinned", {skip}, () => {
     "and `chiFloating`/`chiSum`, which BOTH boards call.");
 
   assert.deepEqual(onlyT.sort(),
-    ["clean", "costsAP", "frostCount", "hasKwNow", "instantAbilityReady", "isArrow",
+    ["clean", "costsAP", "frostCount", "hasKwNow", "instantAbilityReady",
      "isAttack", "isInstantT", "isNonAtkActionCard", "isRx", "norm",
-     "runeCount", "rxAllowed", "wardTotal"].sort(),
+     "playableFromZone", "runeCount", "rxAllowed", "wardTotal"].sort(),
     "a reader the trainer asks and judge does not — mostly UI (`norm`, `clean`, " +
     "`instantAbilityReady`) or reached through types.js/effects.js on the other side. " +
     "v4.34: `wardTotal` is a DISPLAY reader — the pool plus the permanents that " +
@@ -369,7 +369,14 @@ test("the one-board reader sets are pinned", {skip}, () => {
     "`build.js` so `judge.legal` could offer the arena-ability route at all — so " +
     "NEITHER board asks it directly now and both reach it through `build.boardPow` " +
     "and `effects.js`. A name leaving is as deliberate an edit as one arriving " +
-    "(v4.12: a census that only ever goes up is half a census).");
+    "(v4.12: a census that only ever goes up is half a census).\n" +
+    "v4.91: `isArrow` LEFT and `playableFromZone` ARRIVED, and both are one move. " +
+    "The trainer's `tryPlay` refused an arrow from hand with its own `isArrow` " +
+    "line, and judge asked nothing, so the table played arrows from hand. Both " +
+    "boards now ask `playZoneWhy`, the reason form of the zone rule; judge asks " +
+    "only that, and the trainer's UI tile still asks the boolean " +
+    "`playableFromZone` (`!playZoneWhy`) to decide whether to OFFER a graveyard " +
+    "or banish play — one body, two spellings of its answer.");
 });
 
 test("every trainer `effCost` call passes the game's half of the cost", {skip}, () => {
