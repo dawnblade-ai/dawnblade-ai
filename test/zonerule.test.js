@@ -84,6 +84,34 @@ test("the subtype is read off the STRUCTURED array, never `tt` (v2.44)", () => {
   /* the fallback for a record with no array reads the FRONT face, word-bounded */
   assert.equal(P.isArrowCard({name: "Old", tt: "Ranger Action - Arrow Attack"}), true);
   assert.equal(P.isArrowCard({name: "Old2", tt: "Ranger Action - Arrowhead Attack"}), false);
+  /* AND THE RULE SITE ASKS IT. Asserted on the helper alone, `playZoneWhy`
+     could call a `tt` reader and nothing here would see it — every pool
+     record agrees across all three predicates (a second review of v4.91,
+     measured over 797). So the same two fixtures go through the zone rule
+     and through the TABLE, which is where a misread lands. */
+  assert.equal(P.playZoneWhy(strayWord, "hand", {}), null, "the zone rule read the printed line, not the array");
+  assert.match(String(P.playZoneWhy(realArrow, "hand", {})), /an arrow is played only from the arsenal/);
+  const atk = o => Object.assign({uid: "UT", pitch: 1, power: 4, def: 2, cost: 0, tx: "", kw: []}, o);
+  P.fxReset();
+  assert.equal(why(holding(atk({name: "Stray Swing", tt: strayWord.tt, ty: strayWord.ty}), "hand"), "hand"), null,
+    "the table refused a non-arrow whose printed line carries a stray 'Arrow'");
+  assert.match(String(why(holding(atk({name: "Real Swing", tt: realArrow.tt, ty: realArrow.ty}), "hand"), "hand")),
+    /an arrow is played only from the arsenal/, "the table played an array-typed arrow from hand");
+  P.fxReset();
+});
+
+test("the table NAMES the zone the way the trainer does — one word, both boards", () => {
+  /* "cannot be played from your grave" was the table's spelling and the
+     trainer spelled "graveyard" by hand: two spellings of one refusal across
+     two boards, which `prompts.promptZoneWord` exists to stop (v4.59). Found
+     by a second review of v4.91. */
+  const c = {...vanilla("ZW", 1), uid: "UT", name: "Zone Word Swing"};
+  P.fxReset();
+  const inGrave = holding(c, "hand", {hand: [], grave: [c]});
+  assert.match(String(why(inGrave, "grave")), /from your graveyard —/, "the table spells the graveyard as its state key");
+  const inBan = holding(c, "hand", {hand: [], banish: [c]});
+  assert.match(String(why(inBan, "banish")), /from your banished zone —/, "the table spells the banished zone as its state key");
+  P.fxReset();
 });
 
 test("`playableFromZone` is `!playZoneWhy` — one body, two spellings", () => {
@@ -136,6 +164,33 @@ test("…and the PITCH counts: one other card and nothing floating is still refu
   assert.equal(why(g3, "hand"), null);
 });
 
+test("the FEWEST-card payment decides it: pitch high, keep low (the order is load-bearing)", () => {
+  /* At a cost of 1 every pool fixture is silent on the order — both sorts
+     spend one card. A cost of 2 (Savage Feast under one Frostbite: Kayo v
+     Iyslander reaches it) with a 1 and a 3 in hand is the shape that tells
+     them apart: pitch the 3, discard the 1. Spending lowest-first takes both
+     and refuses a legal play. Found by a second review of v4.91. */
+  const sf = {name: "Synthetic Feast Two", uid: "S2", pitch: 1, cost: 2, power: 6, def: 3,
+              tt: "Brute Action - Attack", ty: ["Brute", "Action", "Attack"], kw: [],
+              tx: "As an additional cost to play this, discard a random card."};
+  P.fxReset();
+  const hand = [sf, vanilla("P1", 1), vanilla("P3", 3)];
+  assert.equal(P.addCostWhy({res: 0, hand}, sf, 2), null, "pitching the 3 leaves the 1 for the discard");
+  /* the near-miss: two 1s cannot pay 2 and keep one */
+  assert.match(String(P.addCostWhy({res: 0, hand: [sf, vanilla("Q1", 1), vanilla("Q2", 1)]}, sf, 2)), /no cards/);
+  P.fxReset();
+});
+
+test("…and at the TABLE, under a real Frostbite", {skip}, () => {
+  H.db();
+  const sf = {...H.card("Savage Feast", 1), uid: "UT"};
+  const fb = {...H.tok("Frostbite"), uid: "fb1"};
+  const g = holding(sf, "hand", {res: 0, hand: [sf, vanilla("P1", 1), vanilla("P3", 3)],
+                                 board: [{card: fb, kind: "token", spent: false, uid: "fb1"}]});
+  assert.equal(P.effCost(sf, g.sides[0], P.costCtx(g, 0)), 2, "fixture: the Frostbite no longer taxes Savage Feast");
+  assert.equal(why(g, "hand"), null, "a payable Savage Feast was refused — the payment was costed lowest-first");
+});
+
 test("the payment cannot spend the card the discard needs", {skip}, () => {
   H.db();
   const sf = H.card("Savage Feast", 1);
@@ -179,18 +234,27 @@ test("the trainer's door asks the zone reader and REFUSES on it", () => {
   assert.ok(TRY.length > 5000, "the tryPlay anchors moved — re-anchor");
   /* THE WHOLE CONDITIONAL (v4.00, v4.55): a scan for the bare call cannot
      tell a live guard from a neutered one */
-  assert.match(TRY, /const _zw = DawnParser\.playZoneWhy\(card, from,[^;]*\);\s*if\(_zw\) return L\(s,/,
-    "tryPlay does not refuse on the shared zone reader");
+  /* …and the GATE AROUND IT. A second review of v4.91 rewrote this gate as
+     `if(!(from==="hand" || …)){` and the substring scan stayed green with the
+     rule off for every real zone — so the gate, the read and the refusal are
+     one pattern, anchored on the line's own opening. */
+  assert.match(TRY, /\n\s*if\(from==="hand" \|\| from==="arsenal" \|\| from==="grave" \|\| from==="banish"\)\{\s*const _zw = DawnParser\.playZoneWhy\(card, from,[^;]*\);\s*if\(_zw\) return L\(s,/,
+    "tryPlay does not refuse on the shared zone reader for every zone a card is played from");
   assert.ok(!/isArrow\(card\)/.test(TRY), "the trainer's private arrow test came back beside the reader");
-  assert.match(TRY, /from==="hand" \|\| from==="arsenal" \|\| from==="grave" \|\| from==="banish"/,
-    "the door must ask the reader for every zone a card is PLAYED from");
+  /* and the zone is NAMED by the shared word, never spelled by hand */
+  assert.match(TRY, /can't be played from your \$\{DawnPrompts\.promptZoneWord\(from\)\}/,
+    "the trainer spells the zone by hand beside the shared reader — two spellings of one refusal");
 });
 
 test("…and the additional-cost reader, and the payment refuses too", () => {
   assert.match(TRY, /const _ac = DawnParser\.addCostWhy\(act\(s\), card, payCost\(s, card, from\)\);\s*if\(_ac\) return L\(s,/,
     "tryPlay does not refuse on the shared additional-cost reader");
   assert.ok(PAY.length > 500, "the confirmPay anchors moved — re-anchor");
-  assert.match(PAY, /if\(_left < _ac\.discard\)\s*return L\(s,/,
+  /* THE WHOLE BLOCK — the gate, the arithmetic and the refusal. `&& false`
+     on the gate, or the `paySel.length` term dropped, passed the old scan
+     (a second review of v4.91). The trainer is a closure inside `Battle`, so
+     this is a source scan and says so; the table half is DRIVEN above. */
+  assert.match(PAY, /const _ac = fxParse\(s\.pending\.card\)\.addCost;\s*if\(_ac && _ac\.discard\)\{\s*const _left = you\(s\)\.hand\.length - you\(s\)\.paySel\.length - \(s\.pending\.from==="hand" \? 1 : 0\);\s*if\(_left < _ac\.discard\)\s*return L\(s,/,
     "confirmPay accepts a pitch that leaves nothing for the additional discard");
 });
 
@@ -236,9 +300,12 @@ test("the discard is taken AT PLAY: an instant in hand cannot dodge it", {skip},
 
 test("…and the rider still reads the card the HOLD discarded", {skip}, () => {
   /* "if a card with 6 or more {p} was discarded as an additional cost to
-     play it, draw a card" — `_discWay` is cleared per resolution inside
-     `execute`, so a discard paid before it must be re-credited there or the
-     rider reads nothing (v4.09: check where the state you write is cleared) */
+     play it, draw a card" — the discard is paid at the HOLD, a resolution
+     before the one that fires the rider, so the cards the cost took have to
+     ride to it on the layer (`_addDiscPaid`) or the rider reads nothing.
+     They are read at the cost site, NOT re-credited to `_discWay` (the
+     premise drill below says why); this comment said otherwise until a
+     second review of v4.91 (v4.09). */
   H.db();
   const sf = {...H.card("Savage Feast", 1), uid: "SF"};
   const big = vanilla("BIG", 1); big.power = 7; big.name = "Seven Swing";
@@ -252,12 +319,32 @@ test("…and the rider still reads the card the HOLD discarded", {skip}, () => {
 
 test("the table's pay sheet says WHY a covered pitch cannot confirm, the advisor coaches no refused play", () => {
   /* a covered sheet over a dead button reads as a broken screen (v2.83) */
-  assert.match(HTML, /const why=short>0\?null:DawnJudge\.legal\(g,\{t:"payConfirm"\},mySeat\);/,
-    "the table's pay statusline no longer asks legal why a covered pitch is refused");
-  const ADV = stripSrc(fs.readFileSync(path.join(__dirname, "..", "engine", "advisor.js"), "utf8"));
-  assert.match(ADV, /if\(P\.playZoneWhy\(c, "hand", \{\}\)\) return;/, "the advisor's hand candidates skip the zone rule");
-  assert.match(ADV, /if\(P\.addCostWhy\(you\(g\), c, effCost\(c, you\(g\)\)\)\) return;/,
-    "the advisor coaches a play whose additional cost cannot be paid");
+  /* the computation AND its use: `:why?` swapped for a dead test put
+     "covered ✓" back over the dead button with the scan still green */
+  assert.match(HTML, /const why=short>0\?null:DawnJudge\.legal\(g,\{t:"payConfirm"\},mySeat\); return short>0\?<span>need <b>\{short\}<\/b> more<\/span>:why\?<span>\{why\}<\/span>:<span>covered ✓<\/span>;/,
+    "the table's pay statusline no longer says why a covered pitch is refused");
+});
+
+test("the advisor coaches NEITHER refused play — driven, not scanned", {skip}, () => {
+  /* advisor.js loads in Node, so the guard is asked of `advise` itself: a
+     scan for the two calls passed with `if(0)` in front of each (a second
+     review of v4.91). Both fixtures are the only card in hand, so a coached
+     line naming either is the guard gone. */
+  H.db();
+  const A = require("../engine/advisor");
+  const shot = {...(H.card("Swift Shot", 1) || H.card("Swift Shot", 2)), uid: "AH"};
+  const g1 = holding(shot, "hand", {res: 9});
+  assert.ok(!/Swift Shot/.test(A.advise(g1, {runeDmg: 1, window: "act"}).line),
+    "the advisor coaches an arrow out of the hand");
+  const sf = {...H.card("Savage Feast", 1), uid: "UT"};
+  const g2 = holding(sf, "hand", {res: 9});
+  assert.ok(!/Savage Feast/.test(A.advise(g2, {runeDmg: 1, window: "act"}).line),
+    "the advisor coaches Savage Feast with nothing to discard");
+  /* the controls: the arrow from the arsenal is not the advisor's hand
+     question, and a Savage Feast with a spare card IS coachable */
+  const g3 = holding(sf, "hand", {res: 9, hand: [sf, vanilla("F1", 1)]});
+  assert.match(A.advise(g3, {runeDmg: 1, window: "act"}).line, /Savage Feast/,
+    "the control: a payable Savage Feast is no longer coached, so the drill cannot tell a guard from a gag");
 });
 
 test("the rider fires with ONE line — the feed no longer says 'not met' first (v3.60)", {skip}, () => {

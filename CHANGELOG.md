@@ -1,3 +1,132 @@
+## v4.92 — an attack's base power is one reader, and Put in Context is enforced
+
+> *"This can only defend an attack with 3 or less base {p}."*
+> — PUT IN CONTEXT ×2, Dorinthea's and Enigma's
+>
+> *"When this defends an attack with {p} greater than its base, mark the
+> attacking hero."* — DEN OF THE SPIDER, Arakni's
+
+### A rule on neither board
+
+RULING (user, 2026-07-25): *"before this defense reaction is able to be
+activated we must check the attack power of the attack it will be defending
+… if it is pressed but the attack is 4 or greater the player should get a pop
+up to quickly explain that they can't play this."*
+
+The trainer checked it in `toggleBlock` — the **declaration** door — three
+lines below an early return for every defence reaction. Put in Context IS a
+defence reaction (it is played, never declared, CR 8.1.3a), so the check
+could never run; `judge.legal` never had one. The card blocked a 7-power
+attack for 3 on both boards. v4.61's zero-board shape, found by v4.91's
+census of the trainer's doors.
+
+`effects.defLimitWhy(card, base)` is the one body. `judge.legal` asks it in
+the defence-reaction window and both trainer reaction doors (hand and
+arsenal) ask it, refusing **before the card leaves the hand** with the
+ruling's explanation. **The base is the caller's answer**: the table asks the
+open link; the trainer's dummy swings a fabricated number with no card behind
+it, and that number is its printed power. **A base nobody can state
+refuses** (v4.89: an evaluator's default is a ruling). The dead declaration
+check is deleted, and a premise drill pins that every pool card printing the
+limit is a defence reaction — a declarable one arriving fails a test rather
+than meeting no check.
+
+### Four copies of one question, and what they read wrong
+
+"Base {p}" is printed on four kinds of attack and only one keeps it in
+`card.power`:
+
+| attack | its base |
+|---|---|
+| an attack action card, an ally, most weapons | the printed power |
+| an aura Cosmo turns into a weapon | its printed **ward** (v3.84) |
+| Plasma Barrel Shot | its printed **definition**, 1 plus this chain's boosts (v4.49) |
+
+Five sites asked and four wrote `card.power || 0`: the `pumped` qualifier an
+attack reaction targets with (`pendPumped`), the traps' *"defends an attack
+with {p} greater than its base"* (`defPumped`), the attack's own *"if this has
+{p} greater than its base"* (`linkPumps`), and its on-hit twin. Only
+`execute` knew the other rows, for its own feed line. **So against an aura
+attack or the Gun the base read ZERO** and Arakni's Den of the Spider and
+Inertia Trap fired off an attack nobody had pumped — stronger than printed,
+cross-hero (Arakni against Enigma or Dash), and outside every tool's model.
+`effects.basePowOf` / `attackBase` are the reader, and `execute` strikes the
+swing off the same number.
+
+**AND THE TRAPS' COPY MISSED A PUMP.** `defPumped` compared the link's
+declared total alone, so an attack reaction that had already resolved onto
+the link (`pend.rxPump`, v4.03) did not count at the table: weaker than
+printed. It asks `pendPumped` now, which has carried both records since
+v4.03.
+
+**`linkPumps` and the on-hit gate move with no observable change**, and
+that is measured: both read a `pumped` gate printed only on attack action
+cards, where printed power IS the base. Their routing is consistency, and
+the census drill (no hand-rolled base read of the open link in
+`effects.js`) is what guards them.
+
+**`fxParse` throws without a name**, and `pendPumped` is reached from
+`judge.legal`, whose contract is never to throw — v4.59's `abPickSpec`
+guard, one reader over. An existing drill handed it a nameless card and
+said so the first time it ran.
+
+### Fixtures that played Put in Context against a big attack
+
+`drx.test.js` used Put in Context as its "plain" defence reaction against
+Snatch and Widowmaker — valid only while its own limit went unenforced
+(v4.09). Springboard Somersault, which Dorinthea decks too, prints no attack
+restriction, so the drill's pairing argument survives.
+
+### And the second review of v4.91
+
+v4.91 shipped after a first adversarial review; a second one (drills,
+callers) reported seven findings while this version was being ported. Each
+was reproduced before it was fixed, and **every fix was sabotaged back: 11
+of 11 bite.**
+
+- **Two drills pinned the inner refusal and not the gate around it.**
+  `tryPlay`'s zone gate rewritten as `if(!(from==="hand" || …))` turned the
+  rule off for every real zone and the substring scan stayed green;
+  `confirmPay`'s `&& false`, or its `paySel.length` term dropped, did the
+  same for the discard. The gate, the arithmetic and the refusal are one
+  pattern now (v4.00, v4.55: a scan for the call cannot tell a live guard
+  from a neutered one).
+- **"Read off the structured array" was asserted on the helper only.**
+  `playZoneWhy` could have called the old `tt` reader and nothing would
+  notice, because every pool record agrees across all three predicates. The
+  synthetic fixtures go through the zone rule and the TABLE now.
+- **`addCostWhy`'s highest-pitch-first order had no fixture that could
+  see it.** At a cost of 1 both orders spend one card; Savage Feast under a
+  Frostbite costs 2, and there pitch-the-3-keep-the-1 is legal while
+  lowest-first refuses. Drilled directly and at the table with a real
+  Frostbite on the board.
+- **The advisor's guard was scanned, and `advisor.js` loads in Node.**
+  `if(0)` in front of each call passed. It is DRIVEN now, with a coachable
+  Savage Feast as the control so a gag cannot pass for a guard. The table's
+  pay statusline is pinned on its USE, not only its computation.
+- **Three comments disagreed about one fact.** `judge.holdPlay` and a drill
+  said the held discard is re-credited to `_discWay`; `effects.js` says,
+  correctly, that it is not. The two wrong ones are rewritten (v4.09: a
+  comment is the most convincing source of a mechanism that does not exist).
+- **`WIRE_V` 21 → 22, for v4.91.** A held play's `decl` gained
+  `_addDiscPaid` and the seeded discard moved to an earlier action, and
+  wire.js's own header says to bump by hand anyway: it is the only guard a
+  same-release dev pair has. v4.72's `_x` is the same shape.
+- **One refusal, two spellings.** The table said "cannot be played from
+  your grave" and the trainer spelled "graveyard" by hand. Both ask
+  `prompts.promptZoneWord` now, and `banish` joins it as "banished zone",
+  because "from your banish" is not a phrase anybody says.
+
+### Measured
+
+- **3369 drills**, 0 fail, 5 skipped; 107 scenes; babel clean.
+- **27 sabotages, 27 bite**: v4.92's 16 re-run on main after the port, and
+  the second review's 11.
+- **The ladder at three seeds:** 0 refusals, 0 violations, 0 stalls, and
+  every move inside the band. Dorinthea 25.0 → 24.0 wins a seed (24·23·25
+  against 25·26·24, intervals overlap), the direction Put in Context's limit
+  predicts and too small to resolve.
+
 ## v4.91 — two rules the trainer had and the table never asked
 
 > *"all cards that are 'arrow attack's can ONLY be played from arsenal"*

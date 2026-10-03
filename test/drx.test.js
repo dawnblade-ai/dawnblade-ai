@@ -287,8 +287,15 @@ function settle(n, skipUid){
 }
 /* AZALEA v DORINTHEA, and the pairing is the measurement rather than a
    convenience: Azalea decks Widowmaker, Dorinthea decks Wreck Havoc AND
-   Put in Context, so both halves of this drill are cards a ladder game can
-   actually deal to these two seats.
+   Springboard Somersault, so both halves of this drill are cards a ladder
+   game can actually deal to these two seats.
+
+   THE DEFENCE REACTION WAS PUT IN CONTEXT UNTIL v4.92, and it was valid only
+   while that card's own printed limit ("this can only defend an attack with
+   3 or less base {p}") went unenforced: against Snatch or Widowmaker it is
+   now refused for that reason, so the drills below would have been asserting
+   a different refusal than the one they name (v4.09, v4.90). Springboard
+   Somersault prints no attack restriction.
 
    THE CARDS ARE SPLICED IN AT THE WINDOW, and that is a stated fixture
    decision (rxlayer.test.js's, verbatim): getting a specific attack and a
@@ -300,8 +307,9 @@ function reactionWindow(atkName, atkPitch){
   while(g.arsenalFor != null) g = J.reduce(g, {t: "arsenal", uid: null}, g.arsenalFor).state;
   const seat = g.turnPlayer, foe = 1 - seat;
   const atk = {...H.card(atkName, atkPitch), uid: 9001};
-  const dr  = {...H.card("Put in Context", 3), uid: 9002};
-  assert.ok(P.isDR(dr), "fixture: Put in Context is not a defence reaction any more");
+  const dr  = {...H.card("Springboard Somersault", 2), uid: 9002};
+  assert.ok(P.isDR(dr), "fixture: Springboard Somersault is not a defence reaction any more");
+  assert.equal(P.fxParse(dr).defLimit, undefined, "fixture: the plain reaction now prints an attack limit");
   let sides = g.sides.slice();
   /* AN ARROW IS SPLICED INTO THE ARSENAL (v4.91): it is played from there
      and nowhere else (ruling 2026-07-25), and this fixture played Widowmaker
@@ -487,8 +495,9 @@ test("SYNTHETIC: a link that prints the bar refuses at both doors", {skip}, () =
    RELEASE THE TENSION, DRIVEN AT THE TABLE (v4.69)
    ============================================================ */
 
-/* Azalea decks Release the Tension AND Widowmaker, Dorinthea decks Put in
-   Context — so both seats hold cards a ladder game can deal them. The cards
+/* Azalea decks Release the Tension AND Widowmaker, Dorinthea decks
+   Springboard Somersault (Put in Context until v4.92 — see above) — so both
+   seats hold cards a ladder game can deal them. The cards
    are spliced in at the window (the stated fixture decision above); the
    grant, the declaration, the stack and the reaction step are all real. */
 function tensionWindow(atkName, atkPitch){
@@ -497,8 +506,8 @@ function tensionWindow(atkName, atkPitch){
   const seat = g.turnPlayer, foe = 1 - seat;
   const rtt = {...H.card("Release the Tension", 1), uid: 9101};
   const atk = {...H.card(atkName, atkPitch), uid: 9102};
-  const drA = {...H.card("Put in Context", 3), uid: 9103};
-  const drH = {...H.card("Put in Context", 3), uid: 9104};
+  const drA = {...H.card("Springboard Somersault", 2), uid: 9103};
+  const drH = {...H.card("Springboard Somersault", 2), uid: 9104};
   let sides = g.sides.slice();
   /* the arrow from the ARSENAL, as reactionWindow does (v4.91) */
   const _ars = P.isArrowCard(atk);

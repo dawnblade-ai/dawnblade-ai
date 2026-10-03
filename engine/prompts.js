@@ -45,11 +45,17 @@ const PROMPT_ZONES = ["hand","deck","grave","banish","soul","pitch","arsenal","b
    one noun across two boards is the mirror the no-mirror rule exists to
    stop — so it is ONE reader here, where the zone vocabulary already lives.
 
-   IT IS TOTAL OVER `PROMPT_ZONES` AND THE FALLBACK IS THE KEY. Exactly one
-   key differs today, which is why this is not a table of nine rows nobody
-   reads (v4.11, v4.50: unclaimed vocabulary is dead code that reads like a
-   rule) — and a zone whose key is already the word needs no entry. */
-const promptZoneWord = z => z === "grave" ? "graveyard" : String(z || "");
+   IT IS TOTAL OVER `PROMPT_ZONES` AND THE FALLBACK IS THE KEY. Two keys
+   differ, which is why this is not a table of nine rows nobody reads
+   (v4.11, v4.50: unclaimed vocabulary is dead code that reads like a rule)
+   — and a zone whose key is already the word needs no entry.
+
+   `banish` JOINED AT v4.92, when the play door's zone refusal started
+   asking this reader on both boards: the table said "cannot be played from
+   your banish", and the trainer spelled the graveyard by hand beside it —
+   two spellings of one refusal, which a review of v4.91 caught. */
+const ZONE_WORDS = {grave: "graveyard", banish: "banished zone"};
+const promptZoneWord = z => ZONE_WORDS[z] || String(z || "");
 
 /* WHAT IS IN ONE ZONE OF ONE SIDE. Split out of `promptZone` (v4.59) so a
    caller holding only a SIDE can ask the same question: `judge.abCostWhy`

@@ -3977,8 +3977,12 @@ function makeEffects(ctx){
         : cond==="defGA" || cond==="defPumped" ? (() => {
             const hostile = n.pend && n.pend.by != null && n.pend.by !== actorOf(n);
             if(!hostile) return false;
-            return cond==="defGA" ? !!n.pend.ga
-                                  : (n.pend.total||0) > ((n.pend.card && n.pend.card.power)||0);
+            /* `pendPumped`, the one reader (v4.92). This copy compared the
+               link's declared total alone against `card.power`, so it
+               missed a pump an attack REACTION had already landed on the
+               link (`pend.rxPump`, v4.03) — weaker than printed at the
+               table — and read the base of an aura or the Gun as zero. */
+            return cond==="defGA" ? !!n.pend.ga : pendPumped(n);
           })()
         : dracN!=null ? dracLinks >= dracN : false;
       const why = {atk:"no other attack yet", non:"no other non-attack yet",
@@ -4410,10 +4414,10 @@ function makeEffects(ctx){
          +1{p} counter is not the printed base (v3.78's rule at the other
          end: the card says BASE, so the counter goes on top), and the aura
          branch beside this one has always added it. */
-      const _pfm = fx.powFormula;
-      const base = _pfm ? _pfm.base + powPer(n, _pfm.per) + powCtr
-                 : _auraAtk ? _auraAtk.power + powCtr
-                 : (card.power||0) + powCtr;
+      /* THE BASE IS `basePowOf`'s (v4.92) — the one reader every "base
+         {p}" question now asks, so the number the swing is struck from and
+         the number a `pumped` gate compares against cannot disagree. */
+      const base = basePowOf(card, from, n) + powCtr;
       let total = base + bonus;
       if(powCtr) n = L(n, `${card.name} carries +${powCtr}{p} in counters — it swings at ${base}.`);
       /* a qualified buff that did NOT match is not spent — it waits for an
@@ -4877,9 +4881,7 @@ function makeEffects(ctx){
          0)" beside a perfectly correct 1 — the feed teaching the player
          that something added a point that never did, which is the aura
          case one card over and the reason that comment is here. */
-      const _printed = _auraAtk ? _auraAtk.power
-                     : _pfm ? _pfm.base + powPer(n, _pfm.per)
-                     : (card.power || 0);
+      const _printed = basePowOf(card, from, n);
       /* seat 0 is called "You", so the verb has to agree with it */
       const _s = /^you$/i.test(act(n).name || "") ? "" : "s";
       /* AND AN AURA IS ACTIVATED, NOT PLAYED. It is already on the board;
@@ -7166,7 +7168,7 @@ function makeEffects(ctx){
         pump("fewer than 2 defenders"); return;
       }
       if(cond==="pumped"){
-        const base = n.pend.card.power||0;
+        const base = attackBase(n);
         /* THE STRUCK POWER, and it is the number this function just
            computed — never the damage dealt, which is what the old site
            compared against a printed base: an attack pumped from 4 to 6
@@ -7557,7 +7559,7 @@ function makeEffects(ctx){
           : /^chargedPitch\d$/.test(cond) ? (n.pend.chargedWay||[])
               .some(c => c.pitch === +cond.match(/\d+/)[0])
           : cond==="marked" ? !!foe(n).marked
-          : cond==="pumped" ? (n.pend._struck != null ? n.pend._struck : (n.pend.total||0)) > (pc.power||0)
+          : cond==="pumped" ? (n.pend._struck != null ? n.pend._struck : (n.pend.total||0)) > attackBase(n)
           /* THREE CONDITIONS REACHED HERE AND ANSWERED FALSE (v3.96).
              Measured by asking the PARSER which conds the pool actually
              puts into `condOnHit`: SEVEN, and this evaluator knew four.
@@ -10169,10 +10171,84 @@ function rxPumpTotal(s){
   return waiting + resolved;
 }
 
+/* ---- AN ATTACK'S BASE POWER, ONE READER (v4.92) ----------------------
+
+   "Base {p}" is printed on four kinds of attack and only one of them keeps
+   it in `card.power`:
+
+   | attack | its base |
+   |---|---|
+   | an attack action card, an ally, most weapons | the printed power |
+   | an aura Cosmo turns into a weapon | its printed WARD — "weapons with base {p} equal to their ward" (v3.84) |
+   | Plasma Barrel Shot | its printed DEFINITION, "1 plus the number of times you've boosted this combat chain" (v4.49) |
+
+   FIVE SITES ASKED THE QUESTION AND FOUR WROTE `card.power || 0`: the
+   `pumped` qualifier an attack reaction targets with (`pendPumped`), the
+   trap's "defends an attack with {p} greater than its base" (`defPumped`),
+   the attack's own "if this has {p} greater than its base" (`linkPumps`),
+   and the on-hit twin of that gate. Only `execute` knew the other two
+   rows, for its own feed line. So against an aura attack or the Gun every
+   one of them read a base of ZERO, and the attack was "pumped" whatever
+   happened — Arakni's Den of the Spider marked a Dash who had pumped
+   nothing. Stronger than printed, and no tool here models it.
+
+   A +1{p} COUNTER IS NOT THE BASE (v3.78, v4.49): it rides on top, and
+   `execute` adds it after asking this. Lyath's halving IS the base, because
+   it is stamped onto the card at the deal (v3.78) and so is `card.power`. */
+function basePowOf(card, from, s){
+  if(!card) return null;
+  if(from === "aura"){ const w = P.wardValue(card); if(w > 0) return w; }
+  /* `fxParse` memoizes on `name|pitch` and throws without a name, and this
+     is reached from `judge.legal`, whose contract is that it never throws
+     (v4.59's `abPickSpec` guard, one reader over): a nameless card off a
+     wire has no printed definition to read, so its base is its power. */
+  const pf = card.name ? P.fxParse(card).powFormula : null;
+  if(pf) return pf.base + powPer(s, pf.per);
+  return card.power || 0;
+}
+/* the open link's, or null when no card is on it (the trainer's
+   fabricated swing has none — its caller answers with the number) */
+function attackBase(s){
+  const p = s && s.pend;
+  return (p && p.card) ? basePowOf(p.card, p.from, s) : null;
+}
+
 function pendPumped(s){
   const p = s && s.pend;
   if(!p || !p.card) return false;
-  return ((p.total || 0) + rxPumpTotal(s)) > (p.card.power || 0);
+  return ((p.total || 0) + rxPumpTotal(s)) > attackBase(s);
+}
+
+/* ---- "THIS CAN ONLY DEFEND AN ATTACK WITH N OR LESS BASE {p}" (v4.92) --
+
+   > "This can only defend an attack with 3 or less base {p}."
+   >                          — PUT IN CONTEXT ×2, Dorinthea's and Enigma's
+
+   RULING (user, 2026-07-25): "before this defense reaction is able to be
+   activated we must check the attack power of the attack it will be
+   defending … if it is pressed but the attack is 4 or greater the player
+   should get a pop up to quickly explain that they can't play this."
+
+   IT WAS ENFORCED ON NEITHER BOARD. The trainer checked it in
+   `toggleBlock` — the DECLARATION door — three lines below an early return
+   for every defence reaction, and Put in Context IS a defence reaction
+   (CR 8.1.3a: it is played, never declared). So the check could not run,
+   and `judge.legal` never had one. The card blocked a 7-power attack for 3
+   on both boards. A zero-board rule (v4.61's shape), found by censusing the
+   trainer's doors against the table's (v4.91).
+
+   `base` is the CALLER's answer: the table's link carries a card and asks
+   `attackBase`; the trainer's dummy swings a fabricated number with no card
+   behind it, and that number IS its printed power. A base nobody can state
+   REFUSES — a restriction the engine cannot check is never waved through
+   (v4.89's rule about an evaluator's default). */
+function defLimitWhy(c, base){
+  const lim = (c && c.name) ? P.fxParse(c).defLimit : null;
+  if(lim == null) return null;
+  if(base == null) return c.name + " can only defend an attack with " + lim
+                       + " or less base power, and there is no attack to measure";
+  return base > lim ? c.name + " can only defend an attack with " + lim
+                        + " or less base power — this one's base is " + base : null;
 }
 
 /* DOES THIS ATTACK REACTION HAVE A LEGAL TARGET ON THE OPEN LINK? (v4.88)
@@ -10286,6 +10362,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, jabTargets, CTX_KEYS, ACT_IF_KINDS, controlsAuraOf, PLAY_IF_KINDS, playIfOk, had6ThisTurn, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, restampHalving, returnStolen, pendPumped, rxNoTargetWhy, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
+return {makeEffects, jabTargets, CTX_KEYS, ACT_IF_KINDS, controlsAuraOf, PLAY_IF_KINDS, playIfOk, had6ThisTurn, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, restampHalving, returnStolen, pendPumped, attackBase, basePowOf, defLimitWhy, rxNoTargetWhy, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

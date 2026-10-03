@@ -806,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "4.91"; /* v4.91 - an arrow is played only from the arsenal and an additional discard must be payable, on both boards, out of one reader each. See CHANGELOG.md. */
+window.APP_VER = "4.92"; /* v4.92 - an attack's base power is one reader, and Put in Context's base-power limit is enforced on both boards. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -3389,6 +3389,11 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     if(!inAtk){
       const drxBar = DawnParser.drxBarWhy(s.pend, c, "hand");
       if(drxBar) return L(s, drxBar);
+      /* PUT IN CONTEXT (v4.92) — `effects.defLimitWhy`, the body
+         `judge.legal` asks. The dummy's swing carries no card, so its base
+         is the number it swings for (`incoming`). */
+      const _lim = DawnEffects.defLimitWhy(c, DawnEffects.attackBase(s) != null ? DawnEffects.attackBase(s) : s.incoming);
+      if(_lim) return L(s, _lim + ".");
     }
     const cost = c.cost||0;
     if(act(s).res < cost) return L(s, `${c.name} costs ${cost} — float resources before the window opens.`);
@@ -3501,6 +3506,10 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        HAND door too, which is stronger than printed. */
     const drxBarA = DawnParser.drxBarWhy(s.pend, c, "arsenal");
     if(drxBarA) return L(s, drxBarA);
+    /* PUT IN CONTEXT from the arsenal too (v4.92) — the same body the hand
+       door and `judge.legal` ask. */
+    const _limA = DawnEffects.defLimitWhy(c, DawnEffects.attackBase(s) != null ? DawnEffects.attackBase(s) : s.incoming);
+    if(_limA) return L(s, _limA + ".");
     const cost = c.cost||0;
     if(act(s).res < cost) return L(s, `${c.name} costs ${cost} — not enough floating.`);
     const dbuff = DawnEffects.defBuffOf(fx.ops);
@@ -4043,7 +4052,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     if(from==="hand" || from==="arsenal" || from==="grave" || from==="banish"){
       const _zw = DawnParser.playZoneWhy(card, from, {wateryGrave: !!bAct(s).wateryGrave,
                                                        blueGY: (act(s).hist||{}).blueGY||0, turn: s.turn});
-      if(_zw) return L(s, `${card.name} can't be played from your ${from==="grave"?"graveyard":from} — ${_zw}.`);
+      if(_zw) return L(s, `${card.name} can't be played from your ${DawnPrompts.promptZoneWord(from)} — ${_zw}.`);
     }
     if(from!=="weapon" && from!=="hero" && !isAttack(card) && !fx.playable) return L(s,`${card.name}: no scripted effect yet — pitch it, block with it, or ℹ to read it.`);
     if((from==="weapon"||from==="hero") && act(s).weaponUsed[card.uid]) return L(s, from==="hero" ? "Already used this turn." : `${card.name} already swung this turn.`);
@@ -4896,10 +4905,13 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       if(!c || c.def==null) return s;
       const cfx = fxParse(c);
       if(cfx.dr) return s;
-      /* RULING (Put in Context): a printed limit on what it may block. The
-         dummy's swing is the attack's power here, so compare against that. */
-      if(cfx.defLimit!=null && s.incoming > cfx.defLimit)
-        return L(s, `${c.name} can only defend an attack with ${cfx.defLimit} or less base power — this swing is ${s.incoming}.`);
+      /* PUT IN CONTEXT'S LIMIT USED TO BE CHECKED HERE, AND COULD NOT RUN
+         (v4.92): the card is a defence reaction, which the line above sends
+         back before it — it is PLAYED, never declared (CR 8.1.3a). The rule
+         is a legality of the reaction play now, in both reaction doors and
+         at the table, out of `effects.defLimitWhy`. A drill pins that every
+         card printing the limit is a defence reaction, so a declarable one
+         arriving fails a test rather than meeting no check here. */
       /* Declaring a defender is a free, simultaneous game-state action
          (CR 7.3.2) rather than a priority action — but it is still a real
          change to the board, and it used to happen in total silence. */

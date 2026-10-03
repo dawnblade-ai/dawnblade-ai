@@ -484,8 +484,11 @@ test("`promptZoneWord` is ONE reader, and it reaches the default hint too", () =
      caller the moment it existed: this module's own default hint read "From
      your grave." on every pick that supplies none. */
   assert.equal(PM.promptZoneWord("grave"), "graveyard");
+  /* v4.92: the play door's zone refusal asks this reader on both boards,
+     and "from your banish" is not a phrase anybody says */
+  assert.equal(PM.promptZoneWord("banish"), "banished zone");
   for(const z of PM.PROMPT_ZONES)
-    if(z !== "grave") assert.equal(PM.promptZoneWord(z), z, "the fallback is the key itself");
+    if(z !== "grave" && z !== "banish") assert.equal(PM.promptZoneWord(z), z, "the fallback is the key itself");
   const s = PM.buildPrompt(
     {sides: [H.side({name: "You", grave: [RATK("a1")]}, 0), H.side({name: "Them"}, 1)]},
     {tag: "pick", zone: "grave", to: "hand", min: 1, max: 1});
@@ -742,8 +745,9 @@ test("a `filters` prompt survives the wire, which is what the bump is ABOUT", ()
   /* 16 -> 17 AT v4.71 (a pick prompt's `xPay`). 17 -> 18 AT v4.72 (the
      `xval` pending and the `_x` declaration). */
   /* 18 -> 19 AT v4.77 (a soak prompt's `wayRider`). 19 -> 20 AT v4.81 (a
-     pick prompt's `discard`). */
-  assert.equal(W.WIRE_V, 21, "the bump moved — say what changed in wire.js's header");
+     pick prompt's `discard`). 20 -> 21 AT v4.82 (`foeBanishTop`'s trigger).
+     21 -> 22 AT v4.92 (v4.91's `_addDiscPaid` in a held play's `decl`). */
+  assert.equal(W.WIRE_V, 22, "the bump moved — say what changed in wire.js's header");
   const g = H.state({grave: [RATK("a1"), RNON("n1")], res: 9, ap: 1}, {}, {actor: 0, turn: 3});
   g.prompt = sheet([RATK("a1"), RNON("n1")]);
   assert.ok(g.prompt && g.prompt.filters, "fixture: the sheet carries the field");

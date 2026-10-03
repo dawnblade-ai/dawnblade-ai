@@ -337,7 +337,10 @@ test("WIRE_V moves when the payload shape moves, and only then", () => {
   /* 19 -> 20 AT v4.81: a pick prompt's `discard` — whole-shipped again. */
   /* 20 -> 21 AT v4.82: `foeBanishTop`'s colour trigger, inside
      `pend.onHitHero` — whole-shipped again, so the digest holds. */
-  assert.equal(W.WIRE_V, 21,
+  /* 21 -> 22 AT v4.92, for v4.91's `_addDiscPaid` in a held play's `decl` —
+     whole-shipped, so the digest holds; the bump was missed at v4.91 and a
+     second review of that version caught it. */
+  assert.equal(W.WIRE_V, 22,
     "WIRE_V moved — if the payload shape moved with it, update the digest below " +
     "in the same edit and say what changed in the header");
   assert.equal(h, 1095617619,

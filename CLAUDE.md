@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.91
+**Current version:** v4.92
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3352 drills** at v4.91.
+This is `node --test "test/*.test.js"` — **3369 drills** at v4.92.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,35 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### AN ATTACK'S BASE POWER IS ONE READER, AND PUT IN CONTEXT IS ENFORCED (v4.92)
+
+"Base {p}" is the printed power for most attacks, the WARD for an aura Cosmo
+turns into a weapon (v3.84), and a printed DEFINITION for Plasma Barrel Shot
+(v4.49). Four of five sites wrote `card.power || 0`, so against an aura attack
+or the Gun the base read zero and Arakni's traps fired off an unpumped attack.
+`effects.basePowOf` / `attackBase` are the reader; the traps' `defPumped` asks
+`pendPumped`, which also counts a reaction pump already resolved onto the
+link (`pend.rxPump`), which that copy missed.
+
+**PUT IN CONTEXT'S LIMIT WAS A RULE ON NEITHER BOARD.** The trainer checked it
+in the DECLARATION door, below an early return for every defence reaction —
+and the card IS one (it is played, never declared, CR 8.1.3a). So the check
+could never run, and the table had none. `effects.defLimitWhy(card, base)` is
+asked by `judge.legal` in the defence-reaction window and by both trainer
+reaction doors, refusing before the card leaves the hand (ruling 2026-07-25).
+**When you find a check, ask whether its door is one the card can reach.**
+
+**AND A SECOND REVIEW OF THE PREVIOUS VERSION FOUND SEVEN THINGS ITS FIRST
+MISSED**, every one a shape this file names: two scans that pinned the inner
+refusal and not the gate around it (`if(!(…))` and `&& false` both passed), a
+structured-array claim asserted on the helper and never at the rule site, a
+greedy order no fixture could express until a Frostbite raised the cost to
+2, an advisor guard scanned where it could be DRIVEN, three comments
+disagreeing about one fact, a missed `WIRE_V` bump (22 now), and one refusal
+spelled two ways across two boards (`promptZoneWord`, which learned
+`banish`). **Run the review again after the fixes land**: the first pass
+found the hold, the second found that the drills guarding it could be gagged.
 
 ### WHEN YOU FIND A RULE IN THE TRAINER, CENSUS THE TRAINER (v4.91)
 

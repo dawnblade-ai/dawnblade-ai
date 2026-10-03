@@ -1062,7 +1062,7 @@ function legal(g, a, seat){
        never had it. */
     { const _zw = PR.playZoneWhy(c, zone, {wateryGrave: !!bOf(g, seat).wateryGrave,
                                          blueGY: (sd.hist || {}).blueGY || 0, turn: g.turn});
-      if(_zw) return c.name + " cannot be played from your " + zone + " — " + _zw; }
+      if(_zw) return c.name + " cannot be played from your " + PM.promptZoneWord(zone) + " — " + _zw; }
     const win = P.speedAllowed(g, seat);
     if(!win.length) return "no window is open for you";
     return playableWhy(g, seat, c, win, zone) || targetWhy(g, seat, c, a.target);
@@ -1618,6 +1618,12 @@ function playableWhy(g, seat, c, win, zone){
   if(open.indexOf("defense-reaction") >= 0){
     const barred = PR.drxBarWhy(g.pend, c, zone);
     if(barred) return barred;
+    /* AND THE CARD CAN NAME WHICH ATTACKS IT MAY DEFEND (v4.92) — Put in
+       Context's "3 or less base {p}", enforced on neither board until now.
+       `effects.defLimitWhy` is the one body, the open link's base is
+       `effects.attackBase`'s, and the trainer's two doors ask the same. */
+    const lim = E.defLimitWhy(c, E.attackBase(g));
+    if(lim) return lim;
   }
 
   /* A PLAY YOU CANNOT PAY FOR IS NOT A LEGAL PLAY. Resources come from
@@ -3068,9 +3074,14 @@ function holdPlay(g, card, zone, seat, window, target){
      So the cost is paid HERE, after the card has left the hand (it cannot
      be its own discard) and before anyone may respond, out of the one body
      `execute` uses (`payAddCost`, seeded). The discarded cards ride on the
-     layer as a declaration and `execute` reads them instead of paying
-     again, crediting `_discWay` after its own per-resolution clear (v4.09:
-     check where the state you write is cleared). */
+     layer as a declaration, and `execute` hands them to the cost site's
+     rider instead of paying again. They are deliberately NOT credited to
+     `_discWay` — the rider reads the cards the cost took, and the one
+     condition-loop reader of that trace has already run (effects.js says
+     why, beside the read). This comment said the opposite until a second
+     review of v4.91 found three comments disagreeing about one fact
+     (v4.09: a comment is the most convincing source of a mechanism that
+     does not exist). */
   if(lifted){
     const afx = card && card.name ? PR.fxParse(card) : null;
     if(afx && afx.addCost && afx.addCost.discard){
