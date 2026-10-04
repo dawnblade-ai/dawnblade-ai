@@ -168,7 +168,7 @@ test("the trainer asks it at all three doors, before anything moves", () => {
   const stk = rxa.indexOf('if(s.mode === "stack" && act(s).arsenal){');
   assert.ok(stk > 0, "the attacker's arsenal door is gone — an arsenal attack reaction is dead again");
   const tw = rxa.indexOf("DawnEffects.rxNoTargetWhy(s, c)", stk);
-  const mv = rxa.indexOf("ars.arsenal = null;", stk);
+  const mv = rxa.indexOf('_EFX.playAtSpeed(s, c, "arsenal"', stk);
   assert.ok(tw > stk && mv > tw, "the target must be asked BEFORE the card leaves the arsenal");
   /* the whole statement, opening paren included — a bare call survives
      `false &&` (v4.00, v4.55) */
@@ -183,10 +183,15 @@ test("a refusal `attackRx` answers is returned on the state BEFORE the card move
   const code = strip(HTML);
   const a = code.indexOf("const playRx = (i, addPaid) => setG"), b = code.indexOf("const playRxA = () => setG");
   const rx = code.slice(a, b);
-  assert.match(rx, /if\(rx\.why\) return L\(s, rx\.why\);/, "the hand door spent the card on a refusal");
-  assert.doesNotMatch(rx, /if\(rx\.why\) return L\(n,/, "…returned on `n`, after the card left the hand");
+  /* `playAtSpeed` (v4.95) answers with `{game, why}` and a refusal must be
+     returned on `s` — the state before anything moved. Its own guard asks
+     `rxNoTargetWhy` before paying; that half is driven in
+     test/playatspeed.test.js. */
+  assert.match(rx, /if\(out\.why\) return L\(s, out\.why \+ "\."\);/, "the hand door spent the card on a refusal");
+  assert.doesNotMatch(rx, /if\(out\.why\) return L\(n,/, "…returned on `n`, after the card left the hand");
   const c = code.indexOf("const playRxA = () => setG"), d = code.indexOf("\n  const ", c + 10);
-  assert.match(code.slice(c, d), /if\(rx\.why\) return L\(s, rx\.why\);/, "and the arsenal door the same");
+  assert.equal((code.slice(c, d).match(/if\(out\.why\) return L\(s, out\.why \+ "\."\);/g) || []).length, 2,
+    "and both arsenal branches the same");
 });
 
 test("the arsenal tile routes the reaction window to that door", () => {

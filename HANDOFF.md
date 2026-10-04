@@ -1,6 +1,6 @@
-# Handoff — Dawnblade, at v4.83 (updated through v4.93)
+# Handoff — Dawnblade, at v4.83 (updated through v4.95)
 
-**Written 2026-09-28, numbers refreshed 2026-10-03 at v4.93. Every number below was re-derived this session, with
+**Written 2026-09-28, numbers refreshed 2026-10-04 at v4.95. Every number below was re-derived this session, with
 the command that produces it.** Re-derive before you quote one; this file
 has rotted before, and so has every document that stated a count.
 
@@ -22,11 +22,11 @@ where things stand and what is next.
 
 | measure | value | command |
 |---|---|---|
-| version | v4.93, live on GitHub Pages | `grep APP_VER index.html` |
-| drills | 3376 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
+| version | v4.95, live on GitHub Pages | `grep APP_VER index.html` |
+| drills | 3400 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
 | pool coverage | **405 of 405** unique cards read in full · 0 part · 0 none | `npm run audit`, top of `AUDIT.md` |
 | unfinished cards | 0, and 0 one clause away | `npm run gaps` |
-| approximation ledger | 46 records: 27 closed · **15 stated · 4 open** | `node tools/approx.js` |
+| approximation ledger | 47 records: 29 closed · **16 stated · 2 open** | `node tools/approx.js` |
 | CR rules cited | 61 distinct · 51 guarded · 3 unguarded (section pointers, pinned) | `node tools/crindex.js` |
 | fail states | 0 UNFAIR · 3 WRONG (all known, below) | `npm run sweep` |
 | scenes | 107 passing | `npm run scenes` |
@@ -67,6 +67,8 @@ Every one of those cards read `tier: full` before its fix.
 | 4.91 | an arrow is played from the arsenal; an additional discard must be payable (`playZoneWhy`, `addCostWhy`) |
 | 4.92 | an attack's base power is one reader (`attackBase`); Put in Context's limit enforced on both boards (`defLimitWhy`) |
 | 4.93 | a card is pitched only while the cost is unpaid (`pitchExcessWhy`), both boards |
+| 4.94 | two user rulings: a Cloaked piece's statics wait for the flip; Scorpio reads a Lightning link anywhere on the chain |
+| 4.95 | the trainer's four instant-speed doors are ONE body (`playAtSpeed`): priced through `effCost`, pitched on demand, resolved through `execute` |
 
 Versions 4.88–4.93 were found by ONE census: every refusal in the trainer's
 play doors, read against `judge.legal`. When you find a rule in the trainer,
@@ -142,9 +144,12 @@ today:
   each found a condition reported unmet in the feed and then satisfied by a
   later pass. Census every condition kind the main loop SKIPS against where
   it is answered later, and drive each so the feed and the state agree.
-- **The reverse census of v4.91.** That one read every TRAINER refusal
-  against `judge.legal`. Nobody has read every `judge.legal` refusal against
-  the trainer's doors.
+- ~~**The reverse census of v4.91.**~~ Run at v4.95 for the PLAY doors:
+  the four instant-speed doors were private copies of "play a card" and are
+  one body now. Still unread against `judge.legal`: the trainer's DEFEND door
+  (`toggleBlock` asks no `defCap` or `chainBlocked` — latent, because the
+  dummy's swing is fabricated with no card to print a cap) and the weapon
+  and ally tiles' activation doors.
 - **`attack-ops-at-resolution`**. Which bare "when this attacks" payloads
   still ride to resolution, and is each one still unobservable? v4.78
   re-asked two and moved both.
@@ -180,9 +185,7 @@ begin whenever the user wants it. Queued for it:
 
 ## WAITING ON THE USER — `DESKTOP-TASKS.md`
 
-**Two rulings** are the user's to make, both in §2: whether a face-down
-Cloaked piece keeps its values, and what Scorpio's "a Lightning attack you
-control" counts.
+Both rulings that were waiting are answered (2026-10-04) and built at v4.94.
 
 This sandbox cannot reach the web freely, so three jobs are flagged for a
 desktop:

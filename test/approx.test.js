@@ -262,7 +262,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 44 -> 45 AT v4.85: `activation-discard-cost-asked`, split off
      `cost-discard-auto-picked` when the activation half was built. */
   /* 45 -> 46 AT v4.89: `scorpio-lightning-attack`. */
-  assert.equal(Object.keys(APPROX).length, 46, "record count moved");
+  /* 46 -> 47 AT v4.95: `trainer-instant-doors-no-declarations`. */
+  assert.equal(Object.keys(APPROX).length, 47, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -301,7 +302,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      because its deviation half asserted a hand-built state (v4.36). */
   /* 15 holds AT v4.81: `auto-pitch-discard` left (closed as
      `chosen-discard-asked`) and `cost-discard-auto-picked` arrived. */
-  assert.equal(n("stated"), 15, "stated count moved");
+  /* 15 -> 16 AT v4.95: `trainer-instant-doors-no-declarations`. */
+  assert.equal(n("stated"), 16, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -1063,6 +1065,29 @@ probe("trainer-attack-target", () => {
    ============================================================ */
 
 /* An X cost and an X quantity are refused rather than guessed. */
+/* THE TRAINER'S INSTANT-SPEED DOORS ASK NO DECLARATION (v4.95). A source
+   probe, because the doors are closures inside `Battle`; it asserts the
+   DEVIATION — neither the arsenal-instant door nor the opponent's-turn door
+   pauses for fusion or an X — and the measurement half is DRIVEN: four of
+   the cards those doors can free print one. The day a door asks, this goes
+   red and the record must move. */
+probe("trainer-instant-doors-no-declarations", () => {
+  const html = require("fs").readFileSync(require("path").join(__dirname, "..", "index.html"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "");
+  const door = (a, b) => html.slice(html.indexOf(a), html.indexOf(b, html.indexOf(a) + 10));
+  const ai = door("const playArsenalInstant = () => setG", "const playFoeTurnRx = i => setG");
+  const ft = door("const playFoeTurnRx = i => setG", "const foePassWindow = ");
+  assert.ok(ai.length > 300 && ft.length > 300, "door anchors moved");
+  for(const [nm, body] of [["playArsenalInstant", ai], ["playFoeTurnRx", ft]])
+    assert.doesNotMatch(body, /fusepick|xpick|_fuseUid|fusionOffer|\bcx\b/,
+      nm + " now asks a declaration — the record must move");
+  H.db();
+  const asks = ["Aether Icevein", "Brain Freeze", "Polar Cap", "Ice Eternal"]
+    .filter(nm => { const c = H.card(nm, 3); return PR.fxParse(c).fusionCost || c.cx; });
+  assert.deepEqual(asks, ["Aether Icevein", "Brain Freeze", "Polar Cap", "Ice Eternal"],
+    "fixture: the blue cards the arsenal door can free stopped printing fusion or an X");
+});
+
 probe("activation-choices-at-resolution", () => {
   /* DRIVEN AT THE TABLE, and it asserts the DEVIATION: Beckoning Haunt's
      activation is HELD on the stack for the other seat's window with no

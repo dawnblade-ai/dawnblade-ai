@@ -76,7 +76,6 @@ test("exactly ONE site tests for the op kind", () => {
     "`defBuffOf` is it; a second test for the kind is a second copy of the filter");
   /* AND THE TRAINER ASKS IT RATHER THAN KEEPING ITS OWN. */
   const htm = strip(SRC("index.html"));
-  assert.match(htm, /DawnEffects\.defBuffOf\(/, "the trainer's played-reaction paths ask the shared body");
   /* THE COMPLEMENT IS NOT A COPY. `filter(o => o[0] !== "defBuff")` is a
      different operation — "run everything else" — and every extraction
      needs one. What must not exist twice is the SUM. */
@@ -89,9 +88,15 @@ test("exactly ONE site tests for the op kind", () => {
      whose payout are `prompts.js`' and `applyAnswer`'s — so the two that
      left are two fewer hand-rolled readers, not two fewer askers. A name
      leaving a census is as deliberate an edit as one arriving (v4.12). */
-  assert.equal((htm.match(/DawnEffects\.defBuffOf\(/g) || []).length, 2,
-    "two callers, both played-reaction paths — a number on screen that differs "
-    + "from the number charged is the sev-2 category (v4.00)");
+  /* AND ZERO SINCE v4.95, AND THAT IS ALSO A DEPARTURE. The two
+     played-reaction paths go through `effects.playAtSpeed` now, which
+     resolves the card through `execute` exactly as judge does — and judge
+     never extracted a `defBuff` off a played reaction either, because no
+     pool reaction emits one (the premise is pinned in
+     test/playatspeed.test.js). So what left is two hand-rolled readers of
+     an op no reaction carries, and the boards agree. */
+  assert.equal((htm.match(/DawnEffects\.defBuffOf\(/g) || []).length, 0,
+    "a played-reaction door extracts a defBuff again — it should go through playAtSpeed");
 });
 
 /* ---- THE LOOKUP ------------------------------------------------------- */

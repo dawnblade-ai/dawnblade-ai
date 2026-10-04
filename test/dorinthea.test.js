@@ -216,7 +216,11 @@ test("the reaction resolution is ONE body, and both boards call it", () => {
   const i = HTML.indexOf("const playRx = (i, addPaid) => setG");
   assert.ok(i > 0, "playRx must still be findable");
   const body = HTML.slice(i, HTML.indexOf("const playRxA", i));
-  assert.ok(/_EFX\.attackRx\(/.test(body), "the trainer delegates rather than keeping a copy");
+  /* through `playAtSpeed` since v4.95, which reaches `attackRx` through
+     `execute` — the route the table takes */
+  assert.ok(/_EFX\.playAtSpeed\(/.test(body), "the trainer delegates rather than keeping a copy");
+  const pas = EFX.slice(EFX.indexOf("const playAtSpeed = (s, c, from, o) =>"), EFX.indexOf("  /* ---- TURNING THE ARSENAL CARD FACE UP"));
+  assert.ok(pas.length > 200 && /n = execute\(n, c, from, idx,/.test(pas), "and the shared body resolves through execute");
   assert.ok(!/rxPump\(/.test(body), "and does NOT re-derive the pump itself");
   const JS = fs.readFileSync(path.join(__dirname, "..", "engine", "judge.js"), "utf8");
   assert.ok(!/\{\s*k:\s*"rx"/.test(JS), "judge must not grow its own rx layer either");

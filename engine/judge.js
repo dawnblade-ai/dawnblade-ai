@@ -1783,12 +1783,11 @@ function targetWhy(g, seat, c, spec){
   return targetOf(g, seat, spec) ? null : "no such attack-target";
 }
 
-/* The most this seat could put into the pool right now: what is already
-   floating plus every pitch value left in hand. A card never pitches for
+/* What the hand could pitch beyond the pool. A card never pitches for
    itself (`legal` refuses that too), and the arsenal is face down — only
-   the hand pitches. */
-const payCeiling = (sd, self) => (sd.hand || [])
-  .reduce((t, c) => t + (self && c.uid === self.uid ? 0 : (c.pitch || 0)), 0);
+   the hand pitches. The body is `parser.payCeiling` (v4.95): the trainer's
+   instant-speed doors ask the same question now. */
+const payCeiling = PR.payCeiling;   /* one reader, both boards (v4.95) */
 
 /* What the selected pitch is worth. */
 const paySum = sd => (sd.paySel || []).reduce((t, uid) => {

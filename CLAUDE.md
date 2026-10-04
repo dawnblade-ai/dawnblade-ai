@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.94
+**Current version:** v4.95
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3385 drills** at v4.94.
+This is `node --test "test/*.test.js"` — **3400 drills** at v4.95.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,25 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### FOUR DOORS, ONE BODY, AND IT PAYS ON DEMAND (v4.95)
+
+The reverse census of v4.91: every `judge.legal` refusal read against the
+trainer's doors. The trainer's four instant-speed doors (a reaction from hand
+or arsenal, Iyslander's arsenal instant, an instant on the opponent's turn)
+were each a private copy of "play a card". Each one charged the PRINTED cost
+(no Frostbite, no discount), refused unless it already FLOATED (RULING
+2026-08-01 forbids banking, and CR 4.4.3e leaves 0 on the opponent's turn, so
+every costed defence reaction was dead), skipped `execute` (nothing a play
+records was recorded), and read a defence reaction's value BEFORE its text
+ran (Sigil of Suffering's own arcane never met its own +1{d}).
+`effects.playAtSpeed` is the one body: `effCost`, pitch on demand for the
+shortfall, `execute`, then `defendValue`. `parser.payCeiling` moved out of
+judge so both boards ask one reader of what the hand could raise.
+**When a door resolves a card without `execute`, census what `execute`
+records** — the charge was the visible defect and the history was the quiet
+one. Recorded: those doors ask no fusion or X
+(`trainer-instant-doors-no-declarations`).
 
 ### A FACE-DOWN PIECE'S ABILITIES WAIT FOR THE FLIP (v4.94)
 

@@ -471,8 +471,12 @@ test("and the trainer's half is LATENT — measured, not assumed", () => {
   assert.ok(!/\bpend\b/.test(foe),
     "foeVanilla now opens a pend: the trainer's half has stopped being latent, "
     + "and this drill should become a driven one");
-  assert.match(DOOR_ARS, /atkCard\s*:\s*null/,
-    "the arsenal door no longer says the swing has no card — re-measure the latency");
+  /* through `playAtSpeed` since v4.95, which defaults the attacking card
+     to null — so the premise is that this door hands it NONE */
+  assert.match(DOOR_ARS, /_EFX\.playAtSpeed\(s, c, "arsenal", \{window: "defense-reaction",/,
+    "the arsenal door's defence branch no longer goes through the shared body");
+  assert.doesNotMatch(DOOR_ARS, /atkCard/,
+    "the arsenal door now names an attacking card — re-measure the latency");
 });
 
 test("SYNTHETIC: a link that prints the bar refuses at both doors", {skip}, () => {

@@ -308,7 +308,10 @@ test("judge hands `execute` the wall — reprise was dead there without it", {sk
   assert.match(src, /handBlockers: _wall\.handBlockers, defenders: _wall\.defenders/);
   /* and the trainer's own site names its own representation */
   const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
-  assert.match(html, /attackRx\(n, c, \{handBlockers, defenders\}\)/);
+  /* through `playAtSpeed` since v4.95, which hands the wall to `execute`
+     exactly as judge does — so the defender list reaches `attackRx` by the
+     same route on both boards */
+  assert.match(html, /handBlockers: _wall\.handBlockers, defenders: _wall\.defenders/);
 });
 
 test("driven at the table: the shrunk wall lets damage through", {skip}, () => {

@@ -806,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "4.94"; /* v4.94 - two user rulings: Cloaked statics wait for the flip, and Scorpio reads the whole chain. See CHANGELOG.md. */
+window.APP_VER = "4.95"; /* v4.95 - the trainer's instant-speed doors are one body that prices through effCost and pitches on demand. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -3395,74 +3395,44 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       const _lim = DawnEffects.defLimitWhy(c, DawnEffects.attackBase(s) != null ? DawnEffects.attackBase(s) : s.incoming);
       if(_lim) return L(s, _lim + ".");
     }
-    const cost = c.cost||0;
-    if(act(s).res < cost) return L(s, `${c.name} costs ${cost} — float resources before the window opens.`);
-    /* ASK ONLY WHEN THERE IS A REAL CHOICE — enough floating for BOTH the
-       printed cost and the addition. Otherwise it plays straight through
-       unpaid and the rider simply does not fire, which is the same rule
-       `buildPrompt` follows for a spec with nothing to ask. */
-    if(addPaid === undefined && fx.addPay && act(s).res >= cost + fx.addPay.cost)
+    /* PRICED THROUGH `effCost` AND PITCHED ON DEMAND (v4.95). This door
+       charged the printed `c.cost` and refused unless it was already
+       floating — "float resources before the window opens", which RULING
+       2026-08-01 forbids (no pitching to bank) and which CR 4.4.3e makes
+       impossible anyway on the opponent's turn. The table pays a reaction
+       on demand and always has. `payCeiling` is the one reader of what
+       the hand could raise, the card itself excluded. */
+    const cost = effCost(c, act(s), costCtx(s, actorOf(s)));
+    const bank = act(s).res + DawnParser.payCeiling(act(s), c);
+    if(bank < cost) return L(s, `${c.name} costs ${cost} — not enough in hand to pitch for it at instant speed.`);
+    /* ASK ONLY WHEN THERE IS A REAL CHOICE — enough for BOTH the cost and
+       the addition, counting what could be pitched. Otherwise it plays
+       straight through unpaid and the rider simply does not fire, which is
+       the same rule `buildPrompt` follows for a spec with nothing to ask. */
+    if(addPaid === undefined && fx.addPay && bank >= cost + fx.addPay.cost)
       return L({...s, mode:"rxaddpay", rxAdd:{idx:i, name:c.name, cost:fx.addPay.cost}},
         `${c.name} has an additional cost — you may pay ${fx.addPay.cost} more for +${(fxParse(c).defSelf||{}).amt||0}{d}.`);
-    let n = {...s, _addPaid: addPaid === true};
-    const rxSide = actMut(n);
-    rxSide.res = act(s).res - cost;
-    if(addPaid === true && fx.addPay){
-      rxSide.res = rxSide.res - fx.addPay.cost;
-      n = L(n, `${c.name}: the additional ${fx.addPay.cost} is paid.`);
-    }
-    rxSide.hand = act(s).hand.filter((_,x)=>x!==i);
-    rxSide.grave = [...gy(s.turn, c),...act(s).grave];
-    if(inAtk){
-      /* THE RESOLUTION IS `DawnEffects.attackRx` AS OF v3.11, and moving it
-         is what gave the TABLE attack reactions at all. `linkPumps` has
-         always read `{k:"rx"}` layers off the stack and only this function
-         ever pushed one — so at the table a reaction left the hand, paid,
-         and its pump went to `buffNext`: it landed on the player's NEXT
-         attack, and the feed said so. 14 pool cards, four heroes, eight of
-         them Dorinthea's.
+    /* ONE BODY FOR EVERY INSTANT-SPEED DOOR (v4.95) — `playAtSpeed` prices,
+       pitches, resolves through `execute` and only then asks what a
+       defence reaction is worth. See its header for what this door used to
+       skip.
 
-         THE HAND-BLOCKER COUNT IS THIS CALLER'S ANSWER. Reprise asks
-         whether a card from hand met the attack, and the two boards hold
-         declared defenders differently — the trainer as `{k:"def"}` layers
-         here, judge.js on `blockH`. A shared body that read either one is
-         a body the other board cannot call, which is exactly how phantasm
-         came to be inert at the table for three versions. */
-      /* AND WHICH CARDS THEY ARE (v3.89) — Shred targets one of them, and
-         a body both boards call cannot go looking for either seat's
-         representation of the wall (v3.00). `rxWall` is this board's one
-         reader of it, shared with the ACTIVATED route (v4.85). */
-      const {handBlockers, defenders} = rxWall(n);
-      const rx = _EFX.attackRx(n, c, {handBlockers, defenders});
-      /* REFUSED ON THE STATE BEFORE THE CARD LEFT THE HAND (v4.88). The
-         refusal `attackRx` answers — a modal card none of whose modes can
-         target this attack — is a LEGALITY, and `n` has already paid the
-         cost and filed the card. Returned on `n`, Pummel swung into an
-         attack neither of its modes names was spent for a log line;
-         `judge.legal` refuses the same play before anything moves (v3.11). */
-      if(rx.why) return L(s, rx.why);
-      n = rx.game;
-      return L(n, `${c.name} on the stack (+${rx.pump}). ${foe(n).name} passes back.`);
-    }
-    /* ONE EXTRACTOR (v4.53). `runOps` only LOGS a `defBuff`, so every
-       caller lifts it out first — and there were SIX hand-rolled copies
-       of this filter across two files. What differs is the ROUTING, and
-       legitimately so: a played defence reaction is a LAYER, so its
-       number goes into `blockRx`, while a declared defender's goes onto
-       the card as a `defMod`. The extraction is the same question. */
-    const dbuff = DawnEffects.defBuffOf(fx.ops);
-    /* A PLAYED DEFENCE REACTION IS WORTH `defendValue` TOO (v3.34) — judge
-       has asked it since v3.25 and this path summed the printed number.
-       Sigil of Suffering's own ruling (user, 2026-08-22) lives here. */
-    const dv = _EFX.defendValue(act(n), c,
-      {weaponAttack:false, atkCard:null, fromArsenal:false, addPaid: addPaid === true,
-       handDefenders:n.stack.filter(l=>l.k==="def" && l.gi==null).length}) + dbuff;
-    n = runOps(n, fx.ops.filter(o=>o[0]!=="defBuff"), c.name);
-    actMut(n).blockRx = [...act(n).blockRx, {label:`${c.name} — defend ${dv}`, def:dv}];
+       THE WALL IS THIS CALLER'S ANSWER (v3.11, v3.89). Reprise asks
+       whether a card from hand met the attack and Shred which cards are
+       defending, and the trainer holds declared defenders as `{k:"def"}`
+       layers — `rxWall` is this board's one reader of them, shared with
+       the ACTIVATED route (v4.85). */
+    const _wall = inAtk ? rxWall(s) : {handBlockers:0, defenders:[]};
+    const out = _EFX.playAtSpeed(s, c, "hand", {window: rxWin, addPaid,
+      handBlockers: _wall.handBlockers, defenders: _wall.defenders,
+      handDefenders: s.stack.filter(l=>l.k==="def" && l.gi==null).length});
+    if(out.why) return L(s, out.why + ".");
+    let n = out.game;
+    if(inAtk) return L(n, `${foe(n).name} passes back.`);
     /* STRIPPED, like judge's. A sticky answer would pay for the next
        reaction that happened to print an additional cost without asking. */
-    delete n._addPaid; n.mode = "block"; n.rxAdd = null;
-    return L(n, `${c.name} played at instant speed — +${dv} defense.`);
+    n = {...n, mode: "block", rxAdd: null};
+    return out.dv > 0 ? L(n, `${c.name} defends for ${out.dv}.`) : n;
   });
   const playRxA = () => setG(s=>{
     { const _w = sheetFirst(s); if(_w) return _w; }
@@ -3483,16 +3453,11 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
         ? `${c.name} is a defense reaction — this is the attacking player's window.`
         : `${c.name} isn't a reaction or an instant — it can't be played in the reaction step.`);
       { const _tw = DawnEffects.rxNoTargetWhy(s, c); if(_tw) return L(s, _tw + "."); }
-      const cost = c.cost||0;
-      if(act(s).res < cost) return L(s, `${c.name} costs ${cost} — float resources before the window opens.`);
-      let n = {...s};
-      const ars = actMut(n);
-      ars.res = act(s).res - cost;
-      ars.arsenal = null;
-      ars.grave = [...gy(s.turn, c),...act(s).grave];
-      const rx = _EFX.attackRx(n, c, rxWall(n));
-      if(rx.why) return L(s, rx.why);
-      return L(rx.game, `${c.name} from arsenal on the stack (+${rx.pump}). ${foe(rx.game).name} passes back.`);
+      /* ONE BODY (v4.95): priced through `effCost`, pitched on demand,
+         resolved through `execute` — see `playAtSpeed`. */
+      const out = _EFX.playAtSpeed(s, c, "arsenal", {window: "attack-reaction", ...rxWall(s)});
+      if(out.why) return L(s, out.why + ".");
+      return L(out.game, `${c.name} came from the arsenal. ${foe(out.game).name} passes back.`);
     }
     if(s.mode!=="block" || s.bphase!=="react" || !act(s).arsenal) return s;
     const c = act(s).arsenal; const fx = fxParse(c);
@@ -3510,22 +3475,13 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        door and `judge.legal` ask. */
     const _limA = DawnEffects.defLimitWhy(c, DawnEffects.attackBase(s) != null ? DawnEffects.attackBase(s) : s.incoming);
     if(_limA) return L(s, _limA + ".");
-    const cost = c.cost||0;
-    if(act(s).res < cost) return L(s, `${c.name} costs ${cost} — not enough floating.`);
-    const dbuff = DawnEffects.defBuffOf(fx.ops);
-    /* …and from the ARSENAL, which is the one place `fromArsenal` is true
-       — Springboard Somersault and Unmovable print exactly that. */
-    const dv = _EFX.defendValue(act(s), c,
-      {weaponAttack:false, atkCard:null, fromArsenal:true,
-       handDefenders:s.stack.filter(l=>l.k==="def" && l.gi==null).length}) + dbuff;
-    let n = {...s};
-    const rxaSide = actMut(n);
-    rxaSide.res = act(s).res - cost;
-    rxaSide.arsenal = null;
-    rxaSide.grave = [...gy(s.turn, c),...act(s).grave];
-    n = runOps(n, fx.ops.filter(o=>o[0]!=="defBuff"), c.name);
-    actMut(n).blockRx = [...act(n).blockRx, {label:`${c.name} (arsenal) — defend ${dv}`, def:dv}];
-    return L(n, `${c.name} fired from arsenal — +${dv} defense.`);
+    /* ONE BODY (v4.95) — `playAtSpeed`. From the ARSENAL, which is the
+       one place `fromArsenal` is true: Springboard Somersault and Unmovable
+       print exactly that. */
+    const out = _EFX.playAtSpeed(s, c, "arsenal", {window: "defense-reaction",
+      handDefenders: s.stack.filter(l=>l.k==="def" && l.gi==null).length});
+    if(out.why) return L(s, out.why + ".");
+    return out.dv > 0 ? L(out.game, `${c.name} fired from the arsenal — defends for ${out.dv}.`) : out.game;
   });
   const playArsenalInstant = () => setG(s=>{
     { const _w = sheetFirst(s); if(_w) return _w; }
@@ -3573,19 +3529,12 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
         return L(s, `${c.name} is an attack — her ability frees blue non-attack action cards only.`);
       return L(s, `${c.name} isn't blue — only blue non-attacks may strike at instant speed.`);
     }
-    const cost = c.cost||0;
-    let n = autoPitch(s, cost);
-    if(!n) return L(s, `${c.name} costs ${cost} — not enough in hand to pitch for it.`);
-    const prevRes = act(n).res;
-    n = {...n};
-    const arsRxSide = actMut(n);
-    arsRxSide.res = prevRes - cost;
-    arsRxSide.grave = [...gy(n.turn, c),...act(n).grave];
-    arsRxSide.arsenal = null;
-    n = runOps(n, fx.ops, c.name);
-    n = foeTurnIce(n, c);
-    n = L(n, `${c.name} struck from arsenal at instant speed — Iyslander bends winter on their turn.`);
-    return winCheck(n);
+    /* ONE BODY (v4.95) — `playAtSpeed`: priced through `effCost`,
+       resolved through `execute`, which spends the instant grant and runs
+       her clause 2 itself, so neither is taken by hand here any more. */
+    const out = _EFX.playAtSpeed(s, c, "arsenal", {window: "instant"});
+    if(out.why) return L(s, out.why + ".");
+    return L(out.game, `${c.name} struck from arsenal at instant speed — Iyslander bends winter on their turn.`);
   });
   /* Iyslander clause 2: "Whenever you play an Ice card during an opponent's
      turn, create a Frostbite token under their control." It lived INSIDE
@@ -3597,10 +3546,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      THE BODY IS `effects.js`'s AS OF v3.36. It was a closure in this file,
      so the TABLE had no second clause at all; moving it made her hero
      ability one rule instead of one board's rule, and `execute` picked up
-     the ordinary play routes for free. The two routes below still call it
-     because they reach `runOps` directly and never pass through
-     `execute` — see the shared body's comment. */
-  const foeTurnIce = _EFX.foeTurnIce;
+     the ordinary play routes for free. Since v4.95 the two routes below go
+     through `execute` too (`playAtSpeed`), so the trainer calls it nowhere
+     and its alias is gone. */
   /* THE PLAYER'S WINDOW ON THE OPPONENT'S TURN (v2.71). Instants only, and
      `speedAllowed` is asked rather than restated — five hand-rolled copies
      of "may this be played here" is exactly what `rxAllowed` was extracted
@@ -3627,23 +3575,12 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       return L(s, `${c.name} isn't an instant — only instants may be played during ${foe(s).name}'s turn.`);
     const fx = fxParse(c);
     if(!fx.ops.length) return L(s, `${c.name} has nothing the engine can resolve in this window.`);
-    const cost = c.cost||0;
-    let n = autoPitch(s, cost, c.uid);
-    if(!n) return L(s, `${c.name} costs ${cost} — not enough left in hand to pitch for it.`);
-    const rx = actMut(n);
-    rx.res  = act(n).res - cost;
-    rx.hand = act(n).hand.filter(h=>h.uid!==c.uid);
-    rx.grave = [...gy(n.turn, c), ...act(n).grave];
-    /* THE GRANT IS SPENT HERE, AHEAD OF THE OPS, because it carries an
-       AMP and `arcane` reads `sd.amp` as it resolves. This route reaches
-       `runOps` directly and never passes through `execute`, so it takes
-       the grant itself — the same reason it calls `foeTurnIce`. */
-    { const _iq = _EFX.takeInstantNext(n, c, {from:"hand"});
-      if(_iq && _iq.amp){ actMut(n).amp = act(n).amp + _iq.amp;
-        n = L(n, `${c.name} is what that grant was waiting for — +${_iq.amp} arcane.`); } }
-    n = runOps(n, fx.ops, c.name);
-    n = foeTurnIce(n, c);
-    return winCheck(L(n, `${c.name} played at instant speed on ${foe(n).name}'s turn.`));
+    /* ONE BODY (v4.95) — `playAtSpeed`. This route used to reach `runOps`
+       directly, so it took the instant grant and ran `foeTurnIce` by hand;
+       `execute` does both, ahead of the ops, and records the play. */
+    const out = _EFX.playAtSpeed(s, c, "hand", {window: "instant"});
+    if(out.why) return L(s, out.why + ".");
+    return L(out.game, `${c.name} played at instant speed on ${foe(out.game).name}'s turn.`);
   });
   /* CR 4.3.4 — both players pass in succession and the phase ends. */
   const foePassWindow = () => setG(s => sheetFirst(s) || (s.mode!=="foeturn" ? s
@@ -5521,7 +5458,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                 </div>
               </div>
               {g.mode==="pay" && (()=>{const sel=you(g).paySel.reduce((a,i)=>a+(you(g).hand[i].pitch||0),0); const need=Math.max(0,payCost(g, g.pending.card, g.pending.from)-you(g).res-sel); return <div className="statusline">Paying <b>{g.pending.card.name}</b> — pitch below · {need>0?<span>need <b>{need}</b> more</span>:<span>covered ✓</span>}<button onClick={cancelPay}>✕ cancel</button></div>;})()}
-              {g.mode==="block" && <div className="statusline">{g.bphase==="defend" ? <span>Tap hand &amp; equipment to defend — incoming <b>{g.incoming}</b></span> : <span>Reaction step — instants from floating <b>{you(g).res}</b></span>}</div>}
+              {g.mode==="block" && <div className="statusline">{g.bphase==="defend" ? <span>Tap hand &amp; equipment to defend — incoming <b>{g.incoming}</b></span> : <span>Reaction step — <b>{you(g).res}</b> floating; a reaction pitches for the rest as you play it</span>}</div>}
               {g.mode==="stack" && <div className="statusline">Priority — react from floating <b>{you(g).res}</b> or pass</div>}
               {g.mode==="arsenal" && (()=>{ const off = DawnEffects.heaveOffer(g, 0); return (
                 <div className="statusline">Tap a card below for <b>arsenal</b>

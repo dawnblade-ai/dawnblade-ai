@@ -5475,6 +5475,82 @@ function makeEffects(ctx){
     return {game: n, why: null};
   };
 
+  /* ---- A CARD PLAYED AT INSTANT SPEED ON THE TRAINER (v4.95) ----------
+
+     The trainer has four doors that play a card in a window that is not
+     its own action phase — a reaction from hand, a reaction from the
+     arsenal, Iyslander's arsenal instant, and an instant on the opponent's
+     turn — and every one of them was its OWN copy of "play a card": it
+     charged the PRINTED cost, refused unless that cost was already
+     FLOATING, and resolved the card by calling `runOps` or `attackRx`
+     directly. So none of them reached `execute`, which is the one place
+     a play is charged and recorded:
+
+       * the price was `c.cost`, never `effCost` — no Frostbite tax, no
+         Hyper Inflation, no discount, and a Frostbite the play should
+         have shattered stayed on the board to tax the next card;
+       * a reaction could not be pitched for. RULING 2026-08-01 is that a
+         card is pitched ON DEMAND when a cost exceeds the pool, and the
+         table has always done that here — while the trainer said "float
+         resources before the window opens", which the same ruling forbids
+         (no pitching to bank). CR 4.4.3e empties the pool at every end
+         phase, so on the opponent's turn the player holds 0: every
+         defence reaction with a cost was unplayable on the board a
+         player learns on;
+       * nothing a play RECORDS was recorded — `hist.red`/`hist.blue`,
+         `playTy`, `playNames`, the non-attack count — so "if you've
+         played another red card this turn" never saw a reaction;
+       * a played defence reaction's value was read BEFORE its text ran,
+         so Sigil of Suffering's own arcane could never satisfy its own
+         +1{d} (RULING 2026-08-22), which judge — reading after — honours.
+
+     ONE BODY NOW: price through `effCost`, pitch on demand for exactly
+     the shortfall (the card itself is never pitched for itself), resolve
+     through `execute`, and only THEN ask what a defence reaction is worth
+     — judge's order. `{game, why, dv}`; `why` means nothing moved.
+
+     WHAT THE TABLE ASKS AND THIS DOES NOT, STATED: fusion and an X are
+     declarations the table takes before the payment, and no reaction or
+     instant in the pool prints either — measured. Iyslander's arsenal
+     door can free a blue non-attack action card, and four of those do
+     (Aether Icevein, Brain Freeze, Polar Cap, Ice Eternal); through this
+     body they resolve unfused and with no X, which is weaker than
+     printed and visible (`trainer-instant-doors-no-declarations`). */
+  const playAtSpeed = (s, c, from, o) => {
+    o = o || {};
+    const fx = fxParse(c);
+    /* AN ATTACK REACTION WITH NO LEGAL TARGET IS REFUSED HERE, BEFORE
+       ANYTHING MOVES (v3.11, v4.88). `attackRx` answers the same two
+       refusals, but inside `execute` — after the cost is paid and the card
+       is filed — so asked only there, a reaction is spent for a log line.
+       `rxNoTargetWhy` is the one reader `judge.legal` asks too. */
+    if(o.window === "attack-reaction" && isAR(c)){
+      if(!s.pend || !s.pend.card) return {game: s, dv: 0, why: c.name + " has no attack to react to"};
+      const tw = rxNoTargetWhy(s, c);
+      if(tw) return {game: s, dv: 0, why: tw};
+    }
+    const cost = effCost(c, act(s), P.costCtx(s, actorOf(s)));
+    const extra = (o.addPaid === true && fx.addPay) ? fx.addPay.cost : 0;
+    const n0 = act(s).res >= cost + extra ? s : autoPitch(s, cost + extra, [c.uid]);
+    if(!n0) return {game: s, dv: 0,
+      why: `${c.name} costs ${cost}${extra ? " and " + extra + " more" : ""} — not enough in hand to pitch for it at instant speed`};
+    let n = {...n0, _addPaid: o.addPaid === true};
+    const idx = from === "hand" ? act(n).hand.findIndex(h => h.uid === c.uid) : 0;
+    if(from === "hand" && idx < 0) return {game: s, dv: 0, why: `${c.name} is no longer in hand`};
+    n = execute(n, c, from, idx, {window: o.window,
+      handBlockers: o.handBlockers || 0, defenders: o.defenders || []});
+    const addPaid = n._addPaid === true;
+    n = {...n}; delete n._addPaid;
+    let dv = 0;
+    if(o.window === "defense-reaction" && isDR(c)){
+      dv = defendValue(act(n), c, {weaponAttack: !!o.weaponAttack, atkCard: o.atkCard || null,
+        fromArsenal: from === "arsenal", addPaid, handDefenders: o.handDefenders || 0});
+      if(dv > 0) actMut(n).blockRx = [...(act(n).blockRx || []),
+        {label: `${c.name}${from === "arsenal" ? " (arsenal)" : ""} — defend ${dv}`, def: dv}];
+    }
+    return {game: n, dv, why: null};
+  };
+
   /* ---- TURNING THE ARSENAL CARD FACE UP (v2.33, one body at v3.71) ----
      THE EVENT IS ONE BODY, OR IT IS NOT AN EVENT (v3.17). This was written
      inline in `applyAnswer`, which was the only site that existed while the
@@ -7936,10 +8012,11 @@ function makeEffects(ctx){
      IT WAS A CLOSURE INSIDE `Battle`, so the table had none of it: an
      Ice card played on the opponent's turn created nothing at all, which
      is half of Iyslander's hero ability missing on the board she is
-     meant to be played on. `execute` calls it, and so do the trainer's
-     two bespoke opponent-turn routes — those reach `runOps` directly and
-     never pass through `execute`, so a body that lived only in `execute`
-     would have taken the rule AWAY from the board that had it.
+     meant to be played on. `execute` calls it, and since v4.95 that is the
+     ONLY caller: the trainer's two opponent-turn routes reached `runOps`
+     directly and called this by hand, and both go through `playAtSpeed`
+     (and so `execute`) now. The export went with them — an export
+     nothing calls is a global that reads like a rule (v4.47).
 
      THE TALENT IS READ OFF `ty`, THE STRUCTURED ARRAY (v2.44). The
      trainer asked `/ice/i.test(c.tt)`, which is clean across this pool
@@ -8016,7 +8093,7 @@ function makeEffects(ctx){
 
   return {runOps, execute, afterDefenders, defendsTriggers, resolveClash, resolveStack, afterDiscard, payAddCost, fileAttack, allyDeath,
           linkPumps, linkPayload, attackRx, preventDamage, autoPitch, applyAnswer,
-          activateHandAbility, foeTurnIce, takeInstantNext, fileDestroyedGear,
+          activateHandAbility, playAtSpeed, fileDestroyedGear,
           /* `applyDefMod` IS NO LONGER EXPOSED (v4.57). It was exposed at
              v4.53 for exactly one outside caller — `index.html`'s
              `confirmDefPay`, the trainer's own pause for one of the four

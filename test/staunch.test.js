@@ -183,7 +183,10 @@ test("both boards ask, and both read the ONE reader", () => {
       : src.slice(Math.max(0, src.indexOf('mode:"rxaddpay"') - 400), src.indexOf('mode:"rxaddpay"') + 200);
     assert.match(gate, /addPay(?:able)?/, nm + ": the pause must be gated on the card printing one");
     assert.match(gate, />=/, nm + ": …and on the seat being able to afford BOTH costs");
-    assert.match(src, /_addPaid/, nm + " must thread the answer to the play");
+    /* the trainer threads it through `playAtSpeed` since v4.95, which sets
+       `_addPaid` for `execute` exactly as judge's commit does */
+    assert.match(src, nm === "judge.js" ? /_addPaid/ : /_EFX\.playAtSpeed\(s, c, "hand", \{window: rxWin, addPaid,/,
+      nm + " must thread the answer to the play");
     assert.ok(!/addCostPaid/.test(src),
       nm + " must not re-derive the rider's condition — that is defSelfMet's");
     /* SCAN THE addPay SLICES, NOT THE WHOLE FILE. `index.html` carries the
@@ -221,8 +224,15 @@ test("the trainer's DEFENDING wall goes through defendValue", () => {
      would be a second copy of the wear rules (v3.24). */
   assert.match(body, /base:gearDef\(piece\)/, "the gear wall passes its wear as the base");
   /* AND THE PLAYED REACTION TOO. Three walls, one reader. */
-  assert.equal((htm.match(/_EFX\.defendValue\(/g) || []).length, 4,
-    "four sites: the hand wall, the gear wall, and the two played-reaction paths");
+  /* TWO SINCE v4.95: the played-reaction paths ask it inside
+     `effects.playAtSpeed`, AFTER the card's text has run — judge's order,
+     which is what lets Sigil of Suffering's own arcane meet its own +1{d}. */
+  assert.equal((htm.match(/_EFX\.defendValue\(/g) || []).length, 2,
+    "two sites: the hand wall and the gear wall");
+  const efx = strip(fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8"));
+  const pas = efx.slice(efx.indexOf("const playAtSpeed = (s, c, from, o) =>"));
+  assert.ok(pas.indexOf("defendValue(act(n), c,") > pas.indexOf("n = execute(n, c, from, idx,"),
+    "a played defence reaction's value is read before its text runs again");
 });
 
 test("driven: the trainer's wall applies a card's own defensive buff", {skip}, () => {

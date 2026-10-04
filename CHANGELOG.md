@@ -1,3 +1,63 @@
+## v4.95 — the trainer's instant-speed doors are one body, and it pays on demand
+
+Found by the census HANDOFF named as the next lead: every `judge.legal`
+refusal read against the trainer's doors (the reverse of v4.91's).
+
+### Four doors, four private copies of "play a card"
+
+The trainer has four doors that play a card outside its own action phase:
+a reaction from hand (`playRx`), a reaction from the arsenal (`playRxA`),
+Iyslander's arsenal instant, and an instant on the opponent's turn. Each one:
+
+- **charged the PRINTED cost.** No Frostbite tax, no Hyper Inflation, no
+  discount: Reduce to Runechant demanded 1 from a Viserai holding a
+  Runechant, and a Frostbite the play should have shattered stayed on the
+  board to tax the next card.
+- **refused unless the cost was already FLOATING** ("float resources before
+  the window opens"). RULING 2026-08-01 forbids pitching to bank, and CR
+  4.4.3e empties the pool at every end phase, so on the opponent's turn the
+  player held 0 and every defence reaction with a cost was unplayable. The
+  table has always pitched on demand here.
+- **resolved through `runOps` or `attackRx` directly**, so nothing a play
+  records was recorded (`hist.playTy`, the colour counters, play names).
+- **read a defence reaction's value BEFORE its text ran.** Sigil of
+  Suffering's own arcane could never meet its own +1{d} (RULING 2026-08-22),
+  which judge, reading after `execute`, has always honoured.
+
+`effects.playAtSpeed` is the one body now. It prices through `effCost`,
+pitches exactly the shortfall (never the card itself), resolves through
+`execute`, and only then asks what a defence reaction is worth. An attack
+reaction with no legal target is refused inside it, before anything moves.
+
+### One reader of what the hand could raise
+
+`payCeiling` moved from judge into `parser.js`, and the trainer's hand door
+asks it for both its refusal and the additional-cost offer (Staunch
+Response's choice is now offered on the opponent's turn, when nothing
+floats).
+
+### What left
+
+- `effects.foeTurnIce` and `takeInstantNext` lost their last outside
+  callers (the two opponent-turn doors called both by hand), so they are no
+  longer exported. `execute` runs both.
+- The trainer's `defBuffOf` calls went 2 -> 0. No pool reaction emits a
+  `defBuff` op, which is now a pinned premise, and judge never extracted one.
+
+### Recorded rather than built
+
+`trainer-instant-doors-no-declarations` (stated): those doors ask no fusion
+reveal and no X. No reaction or instant prints either, but four blue cards
+Iyslander's arsenal door can free do (Aether Icevein, Brain Freeze, Polar
+Cap, Ice Eternal). Weaker than printed and visible.
+
+### Measured
+
+- The ladder is byte-identical at three seeds on both sides, as it should
+  be: the table did none of this wrong, and `npm run play` drives the table.
+- 17 sabotages, 17 bite. Two were silent on the first pass (the arsenal
+  zone flag and the hand door's bank) and each now has its drill.
+
 ## v4.94 — two rulings: the flip, and the whole chain
 
 > RULING (user, 2026-10-04): *"you have to flip cloaked cards using their

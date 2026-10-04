@@ -443,7 +443,7 @@ test("…AND THE TAP REACHES IT: the reaction window is a door, not a wall (v4.8
   assert.match(rp, /execute\(\{\.\.\.s, mode:\(_arx\|\|_inRx\)\?"stack":"act", pending:null\}, card, from, idx, _arx \? rxWall\(s\) : undefined\)/,
     "the reaction window closes under the ability, or it resolves with no wall");
   const rx = src.slice(src.indexOf("const playRx = (i, addPaid) => setG"), src.indexOf("const playRxA = () => setG"));
-  assert.match(rx, /const \{handBlockers, defenders\} = rxWall\(n\);/,
+  assert.match(rx, /const _wall = inAtk \? rxWall\(s\) : \{handBlockers:0, defenders:\[\]\};/,
     "the reaction CARD route re-derives the wall — two readers of one fact");
   /* AND A CANCELLED PAYMENT RETURNS TO THE WINDOW IT OPENED FROM. */
   assert.match(tp, /pending:\{card,from,idx,back:s\.mode==="stack"\?"stack":"act"\}/);

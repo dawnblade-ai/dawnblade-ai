@@ -8082,6 +8082,15 @@ const pitchExcessWhy = (sd, sel, need, chiCost) => {
    demands it), so refusing on the FLOATING number alone would make a {c}
    cost unpayable by construction rather than merely hard. A card never
    pitches for itself. */
+/* THE MOST A SEAT COULD PUT INTO THE POOL RIGHT NOW (v4.95, moved here
+   from judge.js): what the HAND can pitch, the card being paid for
+   excluded, because a card never pitches for itself. The arsenal is face
+   down and pitches nothing. It lived in judge alone, so the trainer's
+   instant-speed doors asked a different question — "is it already
+   floating" — and refused every reaction the table pays for on demand
+   (RULING 2026-08-01). One reader, both boards. */
+const payCeiling = (sd, self) => !sd ? 0 : (sd.hand || [])
+  .reduce((t, c) => t + (self && c && c.uid === self.uid ? 0 : (c && c.pitch || 0)), 0);
 const chiCeiling = (sd, self) => !sd ? 0 : chiFloating(sd)
   + chiSum((sd.hand || []).filter(c => !(self && c && c.uid === self.uid)));
 
@@ -10351,6 +10360,6 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, spellvoidX, linksControlled, arcaneSoaks,
         ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
-        chiValue, chiSum, chiFloating, pitchExcessWhy, chiCeiling, abChiCost, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, abilitiesLive, boardEntryNamed, isEphemeral, isHandWipe, gyFirstGaKw,
+        chiValue, chiSum, chiFloating, pitchExcessWhy, chiCeiling, payCeiling, abChiCost, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, abilitiesLive, boardEntryNamed, isEphemeral, isHandWipe, gyFirstGaKw,
         CARD_OVERRIDES};
 });
