@@ -975,24 +975,13 @@ function legal(g, a, seat){
        Without this the defender is locked into their first choice, which
        is a dead tap wearing a rule. */
     const already = gi >= 0 ? (sd.blockG || []) : (sd.blockH || []);
+    /* ONE BODY SINCE v4.96 (`parser.defCapWhy`), which the trainer's
+       defend door asks too. The wall is this board's answer: uids. */
     if(already.indexOf(a.uid) < 0){
-      const cap = PR.defCap(g.pend && g.pend.card, g.pend && g.pend.defCap);
-      if(cap && PR.defCounts(cap, c, gi >= 0)){
-        const declared = (sd.blockH || []).map(u => sd.hand.find(x => x.uid === u))
-                           .filter(x => x && PR.defCounts(cap, x, false)).length
-                       + (sd.blockG || []).map(u => sd.gear.find(x => x.uid === u))
-                           .filter(x => x && PR.defCounts(cap, x, true)).length;
-        if(declared >= cap.n)
-          /* THE MESSAGE NAMES THE COUNTED SET, because the three sets
-             genuinely differ (v3.64, v4.22) and a refusal that says only
-             "more than 1 card" is wrong for two of them. overpower's own
-             printed reminder text is "no more than 1 ACTION card". */
-          return ((g.pend.card || {}).name || "that attack") + " can't be defended by more than "
-               + cap.n + (cap.count === "nonBlock" ? " non-block"
-                        : cap.count === "action" ? " action" : "") + " card"
-               + (cap.n === 1 ? "" : "s")
-               + (cap.count === "hand" ? " from hand" : "");
-      }
+      const declared = (sd.blockH || []).map(u => ({card: sd.hand.find(x => x.uid === u), gear: false}))
+        .concat((sd.blockG || []).map(u => ({card: sd.gear.find(x => x.uid === u), gear: true})));
+      const why = PR.defCapWhy(g.pend, declared, c, gi >= 0);
+      if(why) return why;
     }
     return null;
   }

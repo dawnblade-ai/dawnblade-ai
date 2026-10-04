@@ -1,3 +1,42 @@
+## v4.96 — a finished game stops every door, and the defend door asks judge's questions
+
+### A dead player kept taking the swing
+
+Found by driving the page at phone size. A probe that kept tapping after its
+hero died left the player on **-534 life**. `takeIt`, and every trainer door
+except four, never asked `s.over`. The action bar stayed lit under the
+"Down — but wiser" panel, and each "Resolve damage" took the same swing
+again and printed the loss again.
+
+`sheetFirst` is the guard every door already opens with, and a census holds
+them to it, so it asks `s.over` first. The bar renders one disabled line once
+the game is over. Driven again, the same probe stops at -2.
+
+### The defend door, read against `judge.legal`
+
+This is the second half of v4.95's reverse census. `toggleBlock` was missing
+three things:
+
+- **The defender cap** (dominate, Confidence, overpower). `parser.defCapWhy`
+  is the one body, and judge's inline copy was replaced by a call to it.
+- **CR 7.3.2b.** The player's side never recorded `chainBlocked`, while a
+  comment in `finishBlock` said the field "refuses the re-declaration". It
+  is recorded by uid (this side's `blockG` is indices) and cleared with the
+  turn.
+- **Its refusals were silent.** `handAct` pre-screened, so a dimmed card was
+  a dead tap. Every defend-step tap reaches the door now, and the door names
+  judge's two refusals word for word.
+
+The cap and the re-block are LATENT on this board: the dummy's swing is
+fabricated with no card, and it has one action point. They are built anyway,
+because a rule on one board is the recurring defect.
+
+### Measured
+
+- The ladder is byte-identical at three seeds on both sides.
+- 12 sabotages, 12 bite. One (the cap ignoring which side of the wall an
+  entry is on) was silent until a drill declared a helm before a hand card.
+
 ## v4.95 — the trainer's instant-speed doors are one body, and it pays on demand
 
 Found by the census HANDOFF named as the next lead: every `judge.legal`

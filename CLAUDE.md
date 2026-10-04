@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.95
+**Current version:** v4.96
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3400 drills** at v4.95.
+This is `node --test "test/*.test.js"` — **3406 drills** at v4.96.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,16 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A FINISHED GAME IS A STATE EVERY DOOR MUST ASK ABOUT (v4.96)
+
+Driven on the page, a probe that kept tapping after its hero died reached
+-534 life: `takeIt` never asked `s.over` and the bar stayed lit under the
+loss panel. `sheetFirst`, the guard every trainer door opens with, asks it
+first now, so the rule lives once. The same version read the defend door
+against `judge.legal`: the defender cap is one body (`parser.defCapWhy`), the
+player's side records `chainBlocked` (CR 7.3.2b), and the door names its
+refusals instead of `handAct` pre-screening them into dead taps.
 
 ### FOUR DOORS, ONE BODY, AND IT PAYS ON DEMAND (v4.95)
 

@@ -806,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "4.95"; /* v4.95 - the trainer's instant-speed doors are one body that prices through effCost and pitches on demand. See CHANGELOG.md. */
+window.APP_VER = "4.96"; /* v4.96 - a finished game stops every trainer door, and the defend door asks the cap and CR 7.3.2b. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -3294,7 +3294,17 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      ONE BODY, and it names what is waiting. `test/sheetdoors.test.js`
      holds every door in `Battle` to asking it, or to a pinned reason for
      not needing to. */
+  /* …AND A FINISHED GAME STOPS EVERY DOOR TOO (v4.96). Found by driving the
+     page: a probe that kept tapping after its hero died left the player on
+     -534 life, because `takeIt` (and every door but four) never asked
+     `s.over`. The bar stayed lit under the "Down — but wiser" panel, and
+     each "Resolve damage" took the same swing again and printed the loss
+     again. This is the one guard every door already asks (the census in
+     test/sheetdoors.test.js holds them to it), so the rule lives here once
+     rather than as a fifth hand-written `if(s.over)`. A tap after the game
+     is over changes nothing and says nothing new — the panel is the line. */
   const sheetFirst = s => {
+    if(s.over) return s;
     if(!s.prompt) return null;
     const what = String(s.prompt.title || s.prompt.src || "the sheet").trim();
     /* a title that is itself a question keeps its own mark */
@@ -4820,6 +4830,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       let o = {...n, _opening:false, mode:"act", chain:[],
         chainOpen:false, featured:null, boostChain:0};
       const os = oppMut(o); os.blockedHand = 0; os.chainBlocked = [];
+      youMut(o).chainBlocked = [];
       /* CR 4.3.2 — THE ACTION POINT IS ISSUED AT THE BEGINNING OF THE
          ACTION PHASE, and this branch IS the beginning of yours: the
          opening hands over without ticking the clock, so it never passes
@@ -4842,11 +4853,24 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        the wall is final (v4.57). */
     { const _w = sheetFirst(s); if(_w) return _w; }
     if(s.mode!=="block" || s.bphase!=="defend") return s;
+    /* THE DEFENDER CAP, OUT OF THE ONE BODY (v4.96) — `parser.defCapWhy`,
+       which `judge.legal` asks. LATENT HERE, and measured rather than
+       assumed: the dummy's swing is the fabricated [3,4,5] escalation with
+       no card, so nothing can print dominate or overpower (`s.pend` is
+       never opened by `foeVanilla` — test/drx.test.js pins that premise).
+       The site exists because a rule on one board is v3.01's shape. The
+       wall is this board's answer: uids for the hand, indices for gear. */
+    const declared = () => you(s).blockH.map(u=>({card: you(s).hand.find(x=>x.uid===u), gear:false}))
+      .concat(you(s).blockG.map(i=>({card: you(s).gear[i], gear:true})));
     if(kind==="h"){
       const c = you(s).hand.find(x=>x.uid===v);
-      if(!c || c.def==null) return s;
+      if(!c) return s;
+      /* NAMED, NOT SILENT (v4.96) — judge's two refusals, word for word.
+         The hand dims these, and `handAct` hands every defend-step tap
+         here so a tap on one says why rather than doing nothing. */
+      if(c.def==null) return L(s, `${c.name} prints no defence.`);
       const cfx = fxParse(c);
-      if(cfx.dr) return s;
+      if(cfx.dr) return L(s, `${c.name} is a defence reaction — play it in the reaction step.`);
       /* PUT IN CONTEXT'S LIMIT USED TO BE CHECKED HERE, AND COULD NOT RUN
          (v4.92): the card is a defence reaction, which the line above sends
          back before it — it is PLAYED, never declared (CR 8.1.3a). The rule
@@ -4858,13 +4882,20 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
          (CR 7.3.2) rather than a priority action — but it is still a real
          change to the board, and it used to happen in total silence. */
       const on = !you(s).blockH.includes(v);
+      if(on){ const _cw = DawnParser.defCapWhy(s.pend, declared(), c, false); if(_cw) return L(s, _cw + "."); }
       const arr = on ? [...you(s).blockH,v] : you(s).blockH.filter(x=>x!==v);
       const n = {...s}; youMut(n).blockH = arr;
       return L(n, `${c.name} ${on?"declared as a defender":"withdrawn"} — ${c.def} defence.`);
     }
     const gr = you(s).gear[v];
-    if(!gr || gearDef(gr)<=0) return s;
+    if(!gr) return s;
+    if(gearDef(gr)<=0) return L(s, `${gr.name} has no defence left.`);
     const on = !you(s).blockG.includes(v);
+    if(on){
+      /* CR 7.3.2b, judge's refusal word for word */
+      if((you(s).chainBlocked||[]).indexOf(gr.uid) >= 0) return L(s, `${gr.name} already blocked this chain.`);
+      const _cw = DawnParser.defCapWhy(s.pend, declared(), gr, true); if(_cw) return L(s, _cw + ".");
+    }
     const arr = on ? [...you(s).blockG,v] : you(s).blockG.filter(x=>x!==v);
     const n = {...s}; youMut(n).blockG = arr;
     return L(n, `${gr.name} ${on?"raised":"lowered"} — ${gearDef(gr)} defence.`);
@@ -4946,6 +4977,13 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     defSide.hand = act(s).hand.filter(c=>!act(s).blockH.includes(c.uid));
     defSide.grave = [...gy(s.turn, ...bcards),...act(s).grave];
     defSide.gear = act(s).gear.map((gr,i)=>act(s).blockG.includes(i)?gearBlockApply(gr):gr);
+    /* CR 7.3.2b — A PIECE SPENT ON THIS CHAIN CANNOT BLOCK AGAIN (v4.96).
+       Recorded by uid, as judge's `strike` does, because this side's
+       `blockG` is INDICES into `gear` and a destroyed piece filed below
+       renumbers them. The comment above has said this field "refuses the
+       re-declaration" since v4.53; until now it did only on the TABLE. */
+    defSide.chainBlocked = [...(act(s).chainBlocked||[]),
+      ...act(s).blockG.map(i=>act(s).gear[i] && act(s).gear[i].uid).filter(u=>u!=null)];
     n = L(n, `Blocked ${dh+dg+drx}, took ${through}.${drNames.length?` (${drNames.join(", ")} as defense reaction${drNames.length>1?"s":""}.)`:""}`);
     if(act(n).hp<=5 && act(n).hp>0 && !n.flags.p5) n = L({...n, flags:{...n.flags, p5:true}}, "On the ropes — every block counts now.");
     if(act(n).hp<=0){ n.over={win:false}; return L(n,`You hit the boards. ${foe(n).name} remains standing.`); }
@@ -5059,6 +5097,8 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        dropped. A second clear left standing is dead rules code, which reads
        as a rule somebody can reach (v3.67, v3.77, v3.82). */
     const oSide = oppMut(n); oSide.blockedHand = 0; oSide.chainBlocked = [];
+    /* the chain the PLAYER blocked on closes with the turn too (v4.96) */
+    youMut(n).chainBlocked = [];
     /* SUSPENSE TICKS AT THE BEGINNING OF THE TURN (v3.00), and the rule is
        `DawnEffects.tickSuspense` — pure, so a drill can drive it, and
        shared, so judge.js runs the identical schedule. It hands back the
@@ -5221,7 +5261,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
          8.1.3a) and not enough floating — and a tap that silently does
          nothing is the one outcome this UI never wants. */
       if(g.bphase==="react") playRx(i);
-      else if(c.def!=null && !fx.dr) toggleBlock("h",c.uid);
+      /* every defend-step tap goes to the door, which names a refusal
+         (v4.96) — pre-screening here made a dimmed card a dead tap */
+      else toggleBlock("h",c.uid);
     }
     else if(g.mode==="stack") playRx(i);
     else if(g.mode==="foeturn") playFoeTurnRx(i);
@@ -5625,7 +5667,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       </div>
 
       <div className="actbar">
-        {g.mode==="pay" ? <>
+        {g.over ? (
+          <button className="a dis" disabled>The game is over</button>
+        ) : g.mode==="pay" ? <>
           <button className="a" onClick={cancelPay}>Cancel</button>
           <button className="a pay" onClick={confirmPay}>Pitch & play</button>
         </> : g.mode==="stack" ? (

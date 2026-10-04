@@ -342,7 +342,7 @@ test("the one-board reader sets are pinned", {skip}, () => {
     assert.ok(both.includes(n), n + " is demonstrably asked by both boards");
 
   assert.deepEqual(onlyJ.sort(),
-    ["auraAttackOf", "chiValue", "defCounts", "isAtkActionCard", "isDR",
+    ["auraAttackOf", "chiValue", "isAtkActionCard", "isDR",
      "printedKw", "splitCostsAP", "weaponCost"].sort(),
     "a reader judge asks and the trainer does not. TWO LEFT this list at " +
     "v3.99: `tapsToActivate` (the trainer now refuses a tapped hero) and " +
@@ -353,14 +353,21 @@ test("the one-board reader sets are pinned", {skip}, () => {
     "in hand are Chi without reading card text — the seam `boardAttackOf` " +
     "(v3.84) and `abWindowOf` (v4.38) already use. The trainer needs no such " +
     "list: a human picks the cards, and its own two checks ask `chiCeiling` " +
-    "and `chiFloating`/`chiSum`, which BOTH boards call.");
+    "and `chiFloating`/`chiSum`, which BOTH boards call.\n" +
+    "v4.96: `defCounts` LEFT, because the defender cap became one body " +
+    "(`defCapWhy`) that both boards' defend doors ask — a departure from a " +
+    "one-board list is as deliberate an edit as an arrival (v4.12).");
 
   assert.deepEqual(onlyT.sort(),
-    ["clean", "costsAP", "frostCount", "hasKwNow", "instantAbilityReady",
+    ["clean", "costsAP", "defCap", "frostCount", "hasKwNow", "instantAbilityReady",
      "isAttack", "isInstantT", "isNonAtkActionCard", "isRx", "norm",
      "playableFromZone", "runeCount", "rxAllowed", "wardTotal"].sort(),
     "a reader the trainer asks and judge does not — mostly UI (`norm`, `clean`, " +
     "`instantAbilityReady`) or reached through types.js/effects.js on the other side. " +
+    "v4.96: `defCap` ARRIVED — judge stopped asking it directly when the " +
+    "defender cap became `defCapWhy`, which it and the trainer's defend door " +
+    "both ask; the trainer's other caller is the DUMMY's own wall, which judge " +
+    "has no twin of (seat 1 there is a policy that `legal` refuses). " +
     "v4.34: `wardTotal` is a DISPLAY reader — the pool plus the permanents that " +
     "print `Ward N` — and judge renders nothing. The rules half of the same " +
     "question is `wardBearers`, which both boards reach through `effects.preventDamage`.\n" +

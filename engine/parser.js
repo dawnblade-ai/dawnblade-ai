@@ -10257,6 +10257,26 @@ function defCounts(cap, card, fromGear){
   return !isBlockCard(card);          /* nonBlock — equipment counts too */
 }
 
+/* MAY ONE MORE DEFENDER BE DECLARED? (v4.96) — the cap's whole question,
+   ONE body. It lived inline in `judge.legal` alone, so the trainer's defend
+   door never asked it: v3.01's shape, LATENT there (the dummy's swing is
+   fabricated with no card to print dominate or overpower) and recorded as
+   such. `declared` is the caller's answer — `[{card, gear}]` — because the
+   two boards hold the wall differently (uids at the table, indices into
+   `gear` on the trainer). A WITHDRAWAL never asks: the cap limits how many
+   may be declared. THE MESSAGE NAMES THE COUNTED SET (v3.64, v4.22). */
+function defCapWhy(pend, declared, card, fromGear){
+  const cap = defCap(pend && pend.card, pend && pend.defCap);
+  if(!cap || !defCounts(cap, card, fromGear)) return null;
+  const n = (declared || []).filter(d => d && d.card && defCounts(cap, d.card, !!d.gear)).length;
+  if(n < cap.n) return null;
+  return (((pend && pend.card) || {}).name || "that attack") + " can't be defended by more than "
+       + cap.n + (cap.count === "nonBlock" ? " non-block"
+                : cap.count === "action" ? " action" : "") + " card"
+       + (cap.n === 1 ? "" : "s")
+       + (cap.count === "hand" ? " from hand" : "");
+}
+
 const costsAP = (c, window) => {
   /* An ACTIVATED ATTACK REACTION is never played in the action window
      (v3.63), so it never carries CR 8.1.1's point — the same reading this
@@ -10349,7 +10369,7 @@ function rustedThrough(gear, counters){
 const fxReset = () => FXMEMO.clear();
 
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter,
-  PER_COUNT, DEF_PER, perCountKey, chainHits, pickSubject, attackQual, markRed, costCtx, qualMatches, abWindow, defCap, defCounts, isBlockCard,
+  PER_COUNT, DEF_PER, perCountKey, chainHits, pickSubject, attackQual, markRed, costCtx, qualMatches, abWindow, defCap, defCounts, defCapWhy, isBlockCard,
         nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, isActionCard, costOffFor, heaveOf,
         classifyClause, fxParse, fxReset, playableFromZone, playZoneWhy, addCostWhy, isArrowCard, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost, isActivation, isActionPaid, costTaxes, handAbilityTax,
         DECL_OPS, dracLinks, weaponCost, payTrigger, OFFER_TRIGGERS, allyAttack, auraWeaponGrant, wardValue, wardBearers, wardTotal, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, drxBarred, drxBarWhy, rxPump,

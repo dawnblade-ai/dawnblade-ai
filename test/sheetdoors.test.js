@@ -112,3 +112,22 @@ test("`sheetFirst` names what is waiting, and passes when nothing is", () => {
   /* "Put an arrow face up in your arsenal?." — found on the page, v4.88 */
   assert.match(body, /\/\[\.\?!\]\$\/\.test\(what\) \? "" : "\."/, "a title ending in its own mark gets a second one");
 });
+
+test("a finished game stops every guarded door — `sheetFirst` asks `s.over` FIRST (v4.96)", () => {
+  /* Driven on the page: a probe that kept tapping after its hero died left
+     the player on -534 life, because `takeIt` never asked `s.over` and the
+     bar stayed lit under the loss panel. The guard is the one every door
+     already opens with, so it is pinned there — as the whole statement and
+     ahead of the sheet test, or a game that ends with a sheet open would
+     still answer its taps. */
+  const src = strip(battle());
+  const a = src.indexOf("const sheetFirst = s => {"), b = src.indexOf("\n  };", a);
+  const body = src.slice(a, b);
+  const over = body.indexOf("if(s.over) return s;"), sheet = body.indexOf("if(!s.prompt) return null;");
+  assert.ok(over > 0, "sheetFirst no longer stops a finished game");
+  assert.ok(over < sheet, "…and it must be asked before the sheet test");
+  /* and the bar says so rather than staying lit */
+  const bar = src.slice(src.indexOf('<div className="actbar">'));
+  assert.match(bar.slice(0, 200), /\{g\.over \? \(\s*<button className="a dis" disabled>The game is over<\/button>/,
+    "the action bar stays live under the loss panel");
+});
