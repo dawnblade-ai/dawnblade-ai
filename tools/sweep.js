@@ -176,7 +176,6 @@ function buildGap(){
       art: artFor(c.name, c.pitch),
       tx: (c.clauses||[]).map(x => x.t).join(" "),
       tier: c.tier,
-      approx: !!c.approx,
       clauses: (c.clauses||[]).map(x => ({t: x.t, covered: !isUnread(x), st: x.st})),
       unread: unread.length,
       total: (c.clauses||[]).length,
@@ -309,8 +308,7 @@ function writeMd(s){
   L.push("Cards whose ruling exists but which still do not resolve in full.");
   L.push("");
   for(const c of s.gap.slice(0, 60))
-    L.push("- **" + c.title + "** (" + c.tier + ", " + c.unread + "/" + c.total + " unread)"
-      + (c.approx ? " · flagged approx" : ""));
+    L.push("- **" + c.title + "** (" + c.tier + ", " + c.unread + "/" + c.total + " unread)");
   if(s.gap.length > 60) L.push("- … and " + (s.gap.length - 60) + " more (see the station)");
 
   /* ---- 4. fail states ---- */

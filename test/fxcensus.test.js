@@ -109,7 +109,10 @@ test("every `fx.*` field the pool emits is pinned", () => {
      field fails here, and the edit that fixes it is the moment somebody
      says what reads it. */
   assert.deepEqual(emitted(), [
-    "activateIf", "addCost", "addPay", "approx", "arsUpDeck", "arsenalPut",
+    /* `approx` LEFT AT v4.97 — its last two emitters were built ("attacks or
+       defends") or read exactly ("enters the arena"), and the field went
+       with them (v4.11: no claimant, no field). */
+    "activateIf", "addCost", "addPay", "arsUpDeck", "arsenalPut",
     "arsenalUp", "arsenalUpTurn", "asInstant", "atkTrigger", "auraWeapon",
     "boostBanish", "bottomOnDiscard", "chargeCost", "chargeSoul", "clash",
     "clashReveal", "clauses", "condOnHit", "condOnLeave", "conds", "crush",

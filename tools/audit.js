@@ -245,7 +245,7 @@ function analyzeCard(rc){
   return {
     name: rc.name, pitch: rc.pitch, tt: rc.tt, cost: rc.cost, power: rc.power, def: rc.def,
     kw: rc.kw||[], gkw: rc.gkw||[], symbols: syms, mentions: ledgerMentions(rc.tx),
-    tier: fx.tier, approx: fx.approx, playable: fx.playable,
+    tier: fx.tier, playable: fx.playable,
     clauses: fx.clauses, skipped, weaponCost: wc, eqAbility: eqAbility ? eqAbility.label : null,
     tx: rc.tx || "", flags
   };

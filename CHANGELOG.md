@@ -1,3 +1,29 @@
+## v4.98 — the last `approx` flag, read exactly
+
+> *"When this enters the arena, the crowd boos you."* — CONCEALED OBJECT
+
+v4.97 found that an `approx` flag on a clause is a recorded gap the audit
+counts as read. After that version built "attacks or defends", exactly one
+record still carried the flag. Its note said "the trainer has no
+leaves/enters-the-arena schedule, so the payload fires when the card is
+played — early".
+
+- **It is not early.** A permanent enters the arena at the moment it
+  resolves into it, so on-play is the exact moment.
+- **The leaving half of the note was stale.** Leaving has had a schedule
+  since v3.20 (`sweepArena`) and v4.29 (`leavePayout`), and the `onLeave`
+  readers claim every leave wording.
+
+The rule reads "enters" alone now. A refusal for leave forms was written and
+then deleted, because no wording could reach it (v4.11); the premise is a
+drill instead. With no emitter left, `fx.approx` is retired from the parser,
+the audit, the sweep and the inspect chip.
+
+Measured: no parse or tier moves (405 / 0 / 0), and the ladder is
+byte-identical. 2 sabotages, 1 bites. The silent one re-sets the flag on the
+clause result, which nothing forwards to the parse any more, so the sabotage
+cannot express a bug.
+
 ## v4.97 — "attacks or defends" reads its defend half, and the not-met reasons are words
 
 HANDOFF's lead: census the condition loop's "not met" family. This version

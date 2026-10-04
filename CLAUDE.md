@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.97
+**Current version:** v4.98
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3413 drills** at v4.97.
+This is `node --test "test/*.test.js"` — **3415 drills** at v4.98.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -875,7 +875,7 @@ and dropped, so Fyendal's Fighting Spirit and Full of Bravado did nothing on
 a block (six records, `tier: full`). `alsoDef` rides on the gated cond entry
 and `effects.defendsTriggers` answers it at the defender's seat from a closed
 vocabulary (`DEFENDS_CONDS`). **An `approx` flag on a clause is a recorded
-gap the audit counts as read**; grep for them when looking for work.
+gap the audit counts as read**. The last one (Concealed Object's "enters the arena") was exact rather than approximate, and the field is retired at v4.98.
 The same census made every "condition not met" reason a phrase
 (`test/notmetvoice.test.js` drives every gated pool card).
 

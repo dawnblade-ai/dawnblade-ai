@@ -92,3 +92,34 @@ test("CENSUS: every defend-half gate the pool prints is in the closed vocabulary
     "a gate arrived that `defendsCondMet` does not answer — or the vocabulary carries one nothing prints");
   assert.deepEqual(ungated, [], "an UNGATED attacks-or-defends payload has no defend half reader");
 });
+
+/* ---- THE LAST `approx` FLAG, READ EXACTLY (v4.97) ------------------- */
+
+test("'when this enters the arena' fires as the permanent resolves — and only Concealed Object reaches it", {skip}, () => {
+  /* It was flagged `approx` with the note "the trainer has no
+     leaves/enters-the-arena schedule". Entering the arena IS resolving into
+     it, so on-play is the exact moment; and leaving has had a schedule since
+     v3.20. Measured over the pool, one record reaches the enters reader. */
+  H.db(); P.fxReset();
+  const seen = new Set(), reach = [];
+  for(const r of require("../data/pool.json")) for(const p of [1, 2, 3, 0]){
+    let c; try { c = H.card(r.name, p); } catch(e){ continue; }
+    if(!c || !c.name) continue;
+    const k = c.name + "|" + c.pitch; if(seen.has(k)) continue; seen.add(k);
+    if(/when this enters the arena,/i.test(c.tx || "") && !/enters or leaves/i.test(c.tx || "")) reach.push(c);
+  }
+  assert.deepEqual(reach.map(c => c.name), ["Concealed Object"]);
+  const fx = P.fxParse(reach[0]);
+  assert.equal(fx.perm, "item", "it is a permanent — it enters the arena by resolving");
+  assert.ok(fx.ops.some(o => o[0] === "boo"), "its payload rides to resolution");
+});
+
+test("PREMISE: the leave readers claim every leave wording, so none reaches the enters line", () => {
+  for(const t of ["When this leaves the arena, gain 1{h}.",
+                  "When this leaves the arena by a route nobody prints, gain 1{h}.",
+                  "When this enters or leaves the arena, gain 1{h}."]){
+    const r = P.classifyClause(t);
+    assert.ok(r && r.onLeave, "a leave wording fell through: " + t
+      + " — it would now fire on PLAY, v3.07's printed delay collected as a bonus");
+  }
+});

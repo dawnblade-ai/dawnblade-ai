@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-04T15:53:22.593Z",
+ "generated": "2026-10-04T15:59:14.523Z",
  "appVer": "4.97",
  "dataVer": "sage-v14",
  "dbCount": 797,
@@ -536,7 +536,6 @@
     "battleworn"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -576,7 +575,6 @@
     "guardwell"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -614,7 +612,6 @@
     "temper"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -657,7 +654,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -697,7 +693,6 @@
     "arcane barrier"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -727,7 +722,6 @@
     "arcane barrier"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -757,7 +751,6 @@
     "arcane barrier"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -790,7 +783,6 @@
     "guardwell"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -826,7 +818,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -862,7 +853,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -892,7 +882,6 @@
     "clash"
    ],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -926,7 +915,6 @@
     "clash"
    ],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -958,7 +946,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -992,7 +979,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -1028,7 +1014,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -1056,7 +1041,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -1088,7 +1072,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -1118,7 +1101,6 @@
     "clash"
    ],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -1154,7 +1136,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -1186,7 +1167,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -1220,7 +1200,6 @@
     "clash"
    ],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -1252,7 +1231,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -1284,7 +1262,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -1314,7 +1291,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -1342,7 +1318,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -1374,7 +1349,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -1402,7 +1376,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -1432,7 +1405,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -1460,7 +1432,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -1490,7 +1461,6 @@
     "intimidate"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -1518,7 +1488,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -1546,7 +1515,6 @@
     "clash"
    ],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -1576,7 +1544,6 @@
     "arcane barrier"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -1608,7 +1575,6 @@
     "guardwell"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -1644,7 +1610,6 @@
     "guardwell"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -1676,7 +1641,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -1708,7 +1672,6 @@
     "arcane barrier"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -1742,7 +1705,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -1774,7 +1736,6 @@
     "ice fusion"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -1810,7 +1771,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -1836,7 +1796,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -1865,7 +1824,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -1891,7 +1849,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -1921,7 +1878,6 @@
     "ice fusion"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -1958,7 +1914,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -1990,7 +1945,6 @@
     "ice fusion"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -2024,7 +1978,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -2056,7 +2009,6 @@
     "ice fusion"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -2090,7 +2042,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -2124,7 +2075,6 @@
     "ice fusion"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -2161,7 +2111,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -2200,7 +2149,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -2238,7 +2186,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -2268,7 +2215,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -2294,7 +2240,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -2320,7 +2265,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -2352,7 +2296,6 @@
     "specialization"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -2390,7 +2333,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -2420,7 +2362,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -2450,7 +2391,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -2480,7 +2420,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -2512,7 +2451,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -2549,7 +2487,6 @@
     "guardwell"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -2583,7 +2520,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -2619,7 +2555,6 @@
     "arcane barrier"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -2653,7 +2588,6 @@
     "arcane barrier"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -2682,7 +2616,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -2722,7 +2655,6 @@
     "arcane barrier"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -2754,7 +2686,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -2786,7 +2717,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -2826,7 +2756,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -2856,7 +2785,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -2904,7 +2832,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -2934,7 +2861,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -2962,7 +2888,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -2998,7 +2923,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -3032,7 +2956,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -3058,7 +2981,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -3090,7 +3012,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -3118,7 +3039,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -3148,7 +3068,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -3178,7 +3097,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -3222,7 +3140,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -3254,7 +3171,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -3300,7 +3216,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -3340,7 +3255,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -3372,7 +3286,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -3402,7 +3315,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -3440,7 +3352,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -3474,7 +3385,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -3504,7 +3414,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -3534,7 +3443,6 @@
     "arcane barrier"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -3568,7 +3476,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -3599,7 +3506,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -3645,7 +3551,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -3685,7 +3590,6 @@
     "crank"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -3727,7 +3631,6 @@
     "boost"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -3763,7 +3666,6 @@
     "boost"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -3797,7 +3699,6 @@
     "boost"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -3837,7 +3738,6 @@
     "boost"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -3871,7 +3771,6 @@
     "boost"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -3903,7 +3802,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -3936,7 +3834,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -3976,7 +3873,6 @@
     "boost"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -4010,7 +3906,6 @@
     "boost"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -4040,7 +3935,6 @@
     "boost"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -4074,7 +3968,6 @@
     "boost"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -4104,7 +3997,6 @@
     "boost"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -4136,7 +4028,6 @@
     "boost"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -4170,7 +4061,6 @@
     "boost"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -4200,7 +4090,6 @@
     "boost"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -4230,7 +4119,6 @@
     "boost"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -4264,7 +4152,6 @@
     "boost"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -4300,7 +4187,6 @@
     "boost"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -4336,7 +4222,6 @@
     "boost"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -4370,7 +4255,6 @@
     "boost"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -4400,7 +4284,6 @@
     "boost"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -4430,7 +4313,6 @@
     "boost"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -4463,7 +4345,6 @@
     "temper"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -4497,7 +4378,6 @@
     "arcane barrier"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -4531,7 +4411,6 @@
     "surge"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -4567,7 +4446,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -4603,7 +4481,6 @@
     "temper"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -4632,7 +4509,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -4672,7 +4548,6 @@
     "crush"
    ],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -4704,7 +4579,6 @@
     "crush"
    ],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -4736,7 +4610,6 @@
     "crush"
    ],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -4768,7 +4641,6 @@
     "crush"
    ],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -4797,7 +4669,6 @@
     "surge"
    ],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -4833,7 +4704,6 @@
     "crush"
    ],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -4865,7 +4735,6 @@
     "crush"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -4897,7 +4766,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -4934,7 +4802,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -4970,7 +4837,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -5000,7 +4866,6 @@
     "crush"
    ],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -5032,7 +4897,6 @@
     "crush"
    ],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -5064,7 +4928,6 @@
     "crush"
    ],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -5094,7 +4957,6 @@
     "clash"
    ],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -5130,7 +4992,6 @@
     "crush"
    ],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -5162,7 +5023,6 @@
     "crush"
    ],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -5192,7 +5052,6 @@
     "crush"
    ],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -5224,7 +5083,6 @@
     "suspense"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -5259,7 +5117,6 @@
     "surge"
    ],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -5289,7 +5146,6 @@
     "dominate"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -5321,7 +5177,6 @@
     "suspense"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -5355,7 +5210,6 @@
     "heave"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -5391,7 +5245,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -5431,7 +5284,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -5475,7 +5327,6 @@
     "specialization"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -5513,7 +5364,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -5549,7 +5399,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -5585,7 +5434,6 @@
     "opt"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -5619,7 +5467,6 @@
     "reload"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -5651,7 +5498,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -5691,7 +5537,6 @@
     "piercing"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -5728,7 +5573,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -5760,7 +5604,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -5788,7 +5631,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -5816,7 +5658,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -5852,7 +5693,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -5888,7 +5728,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -5924,7 +5763,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -5956,7 +5794,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -5992,7 +5829,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -6028,7 +5864,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -6070,7 +5905,6 @@
     "opt"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -6110,7 +5944,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -6144,7 +5977,6 @@
     "opt"
    ],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -6176,7 +6008,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -6212,7 +6043,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -6242,7 +6072,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -6278,7 +6107,6 @@
     "reload"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -6314,7 +6142,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -6344,7 +6171,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -6370,7 +6196,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -6398,7 +6223,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -6431,7 +6255,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -6479,7 +6302,6 @@
     "unity"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -6517,7 +6339,6 @@
     "unity"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -6554,7 +6375,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -6593,7 +6413,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -6629,7 +6448,6 @@
     "reprise"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -6661,7 +6479,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -6697,7 +6514,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -6733,7 +6549,6 @@
     "reprise"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -6769,7 +6584,6 @@
     "reprise"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -6805,7 +6619,6 @@
     "piercing"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -6837,7 +6650,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -6869,7 +6681,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -6905,7 +6716,6 @@
     "reprise"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -6943,7 +6753,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -6973,7 +6782,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -7009,7 +6817,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -7041,7 +6848,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -7075,7 +6881,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -7107,7 +6912,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -7137,7 +6941,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -7175,7 +6978,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -7215,7 +7017,6 @@
     "reprise"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -7243,7 +7044,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -7275,7 +7075,6 @@
     "reprise"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -7311,7 +7110,6 @@
     "piercing"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -7339,7 +7137,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -7373,7 +7170,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -7409,7 +7205,6 @@
     "battleworn"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -7449,7 +7244,6 @@
     "arcane barrier"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -7489,7 +7283,6 @@
     "spellvoid"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -7523,7 +7316,6 @@
     "battleworn"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -7561,7 +7353,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -7603,7 +7394,6 @@
     "battleworn"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -7635,7 +7425,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -7665,7 +7454,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -7695,7 +7483,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -7725,7 +7512,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -7759,7 +7545,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -7793,7 +7578,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -7825,7 +7609,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -7861,7 +7644,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -7899,7 +7681,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -7935,7 +7716,6 @@
     "mark"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -7967,7 +7747,6 @@
     "rupture"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -7999,7 +7778,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -8039,7 +7817,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -8075,7 +7852,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -8115,7 +7891,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -8153,7 +7928,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -8179,7 +7953,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -8207,7 +7980,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -8237,7 +8009,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -8269,7 +8040,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -8299,7 +8069,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -8333,7 +8102,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -8361,7 +8129,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -8395,7 +8162,6 @@
     "ward"
    ],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -8435,7 +8201,6 @@
     "phantasm"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -8478,7 +8243,6 @@
     "ward"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -8516,7 +8280,6 @@
     "ward"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -8550,7 +8313,6 @@
     "phantasm"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -8582,7 +8344,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -8616,7 +8377,6 @@
     "clash"
    ],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -8648,7 +8408,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -8678,7 +8437,6 @@
     "ward"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -8714,7 +8472,6 @@
     "ward"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -8748,7 +8505,6 @@
     "phantasm"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -8782,7 +8538,6 @@
     "transcend"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -8818,7 +8573,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -8848,7 +8602,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -8882,7 +8635,6 @@
     "transcend"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -8918,7 +8670,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -8950,7 +8701,6 @@
     "transcend"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -8988,7 +8738,6 @@
     "phantasm"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -9024,7 +8773,6 @@
     "transcend"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -9064,7 +8812,6 @@
     "transcend"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -9102,7 +8849,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -9134,7 +8880,6 @@
     "phantasm"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -9170,7 +8915,6 @@
     "phantasm"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -9202,7 +8946,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -9228,7 +8971,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -9270,7 +9012,6 @@
     "mark"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -9319,7 +9060,6 @@
     "mark"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -9357,7 +9097,6 @@
     "stealth"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -9394,7 +9133,6 @@
     "arcane barrier"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -9430,7 +9168,6 @@
     "stealth"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -9468,7 +9205,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -9504,7 +9240,6 @@
     "mark"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -9532,7 +9267,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -9566,7 +9300,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -9598,7 +9331,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -9628,7 +9360,6 @@
     "stealth"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -9663,7 +9394,6 @@
     "mark"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -9695,7 +9425,6 @@
     "stealth"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -9729,7 +9458,6 @@
     "stealth"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -9765,7 +9493,6 @@
     "stealth"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -9802,7 +9529,6 @@
     "stealth"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -9842,7 +9568,6 @@
     "retrieve"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -9878,7 +9603,6 @@
     "mark"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -9908,7 +9632,6 @@
     "stealth"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -9942,7 +9665,6 @@
     "stealth"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -9979,7 +9701,6 @@
     "stealth"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -10021,7 +9742,6 @@
     "retrieve"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -10061,7 +9781,6 @@
     "stealth"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -10099,7 +9818,6 @@
     "stealth"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -10133,7 +9851,6 @@
     "stealth"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -10164,7 +9881,6 @@
     "stealth"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -10196,7 +9912,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -10226,7 +9941,6 @@
     "opt"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -10260,7 +9974,6 @@
     "opt"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -10294,7 +10007,6 @@
     "opt"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -10328,7 +10040,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -10358,7 +10069,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -10390,7 +10100,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -10424,7 +10133,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -10456,7 +10164,6 @@
     "opt"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -10490,7 +10197,6 @@
     "opt"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -10524,7 +10230,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -10560,7 +10265,6 @@
     "opt"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -10596,7 +10300,6 @@
     "surge"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -10630,7 +10333,6 @@
     "opt"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -10664,7 +10366,6 @@
     "opt"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -10702,7 +10403,6 @@
     "surge"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -10738,7 +10438,6 @@
     "opt"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -10773,7 +10472,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -10811,7 +10509,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -10847,7 +10544,6 @@
     "spellvoid"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -10881,7 +10577,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -10909,7 +10604,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -10951,7 +10645,6 @@
     "charge"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -10985,7 +10678,6 @@
     "charge"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -11017,7 +10709,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -11047,7 +10738,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -11085,7 +10775,6 @@
     "sharpen"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -11123,7 +10812,6 @@
     "charge"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -11155,7 +10843,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -11185,7 +10872,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -11217,7 +10903,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -11254,7 +10939,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -11284,7 +10968,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -11320,7 +11003,6 @@
     "solflare"
    ],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -11352,7 +11034,6 @@
     "charge"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -11386,7 +11067,6 @@
     "charge"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -11420,7 +11100,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -11454,7 +11133,6 @@
     "charge"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -11490,7 +11168,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -11526,7 +11203,6 @@
     "charge"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -11561,7 +11237,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -11599,7 +11274,6 @@
     "specialization"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -11635,7 +11309,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -11663,7 +11336,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -11710,7 +11382,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -11750,7 +11421,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -11792,7 +11462,6 @@
     "meld"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -11842,7 +11511,6 @@
     "lightning fusion"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -11878,7 +11546,6 @@
     "meld"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -11920,7 +11587,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -11952,7 +11618,6 @@
     "lightning fusion"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -11986,7 +11651,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -12021,7 +11685,6 @@
     "steal"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -12059,7 +11722,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -12089,7 +11751,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -12121,7 +11782,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -12162,7 +11822,6 @@
     "quickstrike"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -12200,7 +11859,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -12232,7 +11890,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -12268,7 +11925,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -12310,7 +11966,6 @@
     "lightning flow"
    ],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -12344,7 +11999,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -12384,7 +12038,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -12419,7 +12072,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -12460,7 +12112,6 @@
     "watery grave"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -12499,7 +12150,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -12535,7 +12185,6 @@
     "temper"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -12572,7 +12221,6 @@
     "arcane barrier"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -12613,7 +12261,6 @@
     "watery grave"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -12653,7 +12300,6 @@
     "high tide"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -12683,7 +12329,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -12721,7 +12366,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -12760,7 +12404,6 @@
     "high tide"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -12792,7 +12435,6 @@
     "watery grave"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -12831,7 +12473,6 @@
     "watery grave"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -12873,7 +12514,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -12915,7 +12555,6 @@
     "watery grave"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -12955,7 +12594,6 @@
     "watery grave"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -12996,7 +12634,6 @@
     "watery grave"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -13033,7 +12670,6 @@
     "watery grave"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -13069,7 +12705,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -13099,7 +12734,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -13129,7 +12763,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -13168,7 +12801,6 @@
     "watery grave"
    ],
    "tier": "full",
-   "approx": false,
    "playable": false,
    "clauses": [
     {
@@ -13204,7 +12836,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -13238,7 +12869,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -13274,7 +12904,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -13312,7 +12941,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -13350,7 +12978,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -13389,7 +13016,6 @@
     "high tide"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -13415,7 +13041,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -13445,7 +13070,6 @@
    "symbols": [],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -13477,7 +13101,6 @@
     "go again"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -13511,7 +13134,6 @@
     "arcane barrier"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -13543,7 +13165,6 @@
     "guardwell"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -13579,7 +13200,6 @@
     "blade break"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -13617,7 +13237,6 @@
     "suspense"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -13663,7 +13282,6 @@
     "temper"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -13703,7 +13321,6 @@
     "suspense"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -13735,7 +13352,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -13767,7 +13383,6 @@
     "suspense"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -13804,7 +13419,6 @@
     "the crowd boos"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -13844,7 +13458,6 @@
     "the crowd cheers"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -13890,7 +13503,6 @@
     "intimidate"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -13930,7 +13542,6 @@
     "suspense"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -13968,7 +13579,6 @@
     "the crowd boos"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -14009,7 +13619,6 @@
     "the crowd boos"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -14045,7 +13654,6 @@
     "crush"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -14082,7 +13690,6 @@
     "crush"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -14118,7 +13725,6 @@
     "crush"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -14154,7 +13760,6 @@
     "the crowd boos"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -14195,7 +13800,6 @@
     "the crowd boos"
    ],
    "tier": "full",
-   "approx": true,
    "playable": true,
    "clauses": [
     {
@@ -14231,7 +13835,6 @@
     "suspense"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -14263,7 +13866,6 @@
     "the crowd boos"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -14291,7 +13893,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -14324,7 +13925,6 @@
     "the crowd boos"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -14356,7 +13956,6 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -14386,7 +13985,6 @@
     "blade break"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -14416,7 +14014,6 @@
     "blade break"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -14446,7 +14043,6 @@
     "blade break"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -14476,7 +14072,6 @@
     "blade break"
    ],
    "tier": "full",
-   "approx": false,
    "playable": true,
    "clauses": [
     {

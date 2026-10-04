@@ -1337,10 +1337,20 @@ function classifyClause(raw){
     if(/discarded a card with 6 or more \{p\} this turn/.test(cond))
       return Object.assign(rest,{cond:"discard6"});
     if(/^you attack with /.test(cond)) return rest;
-    /* Arena triggers: the trainer has no leaves/enters-the-arena schedule,
-       so the payload fires when the card is played — early, but the value
-       is real. Flagged approx so the honest ledger keeps counting it. */
-    if(/^this (?:leaves|enters|enters or leaves) the arena/.test(cond)) return Object.assign(rest,{approx:true});
+    /* "WHEN THIS ENTERS THE ARENA" IS ITS RESOLUTION (v4.97), so the
+       payload riding to on-play is the EXACT reading rather than the
+       approximation this was flagged as: a permanent enters the arena at the
+       moment it resolves into it. The note here said "the trainer has no
+       leaves/enters-the-arena schedule"; leaving has had one since v3.20
+       (`sweepArena`) and v4.29 (`leavePayout`), and its clauses are claimed
+       by the `onLeave` readers above. Measured: Concealed Object is the only
+       record that reaches this line, a permanent, and the drill pins that.
+
+       THE LEAVE FORMS NEVER REACH HERE, and that is a premise rather than
+       a guard: the `onLeave` readers above claim "this leaves the arena"
+       and "enters or leaves" in every wording, so a refusal written here
+       could not fire (v4.11). The drill pins the premise instead. */
+    if(/^this enters the arena/.test(cond)) return rest;
     /* "When this is played, …" is just on-resolution, which is when every
        effect already fires — pass the inner clause (and its own condition)
        straight through.
@@ -4606,7 +4616,7 @@ function fxParse(card){
     /* `dr` is isDR's answer, not a second copy of the regex: the type
        question is asked in one place so a DFC's front face is read the
        same way here as everywhere else. */
-    self:0, ops:[], onHit:[], onHitHero:[], onAtkHero:[], onAtk:[], onDeath:[], conds:[], clauses:[], perm:null, dr:isDR(card), approx:false, defDebuff:null, millCost:null, tapCost:null};
+    self:0, ops:[], onHit:[], onHitHero:[], onAtkHero:[], onAtk:[], onDeath:[], conds:[], clauses:[], perm:null, dr:isDR(card), defDebuff:null, millCost:null, tapCost:null};
   if(fusionTypes) fx.fusionCost = {types:fusionTypes};
   if(/\bally\b/.test(tt)) fx.perm="ally";
   else if(/\bitem\b/.test(tt)) fx.perm="item";
@@ -6320,7 +6330,6 @@ function fxParse(card){
        Asked of the SAME matcher `quotedOnHit` uses, so the two cannot
        disagree about what counts as a quoted ability. */
     fx.clauses.push({t:raw, st:r.status});
-    if(r.approx) fx.approx = true;
     /* A GRANTED ABILITY RIDING ALONGSIDE THE CLAUSE'S OWN HEAD (v3.10).
        "this gets go again and \"When this hits a hero, mark them.\"" is two
        effects in one clause: an immediate keyword or pump, and an ability
