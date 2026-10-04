@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.98
+**Current version:** v4.99
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3415 drills** at v4.98.
+This is `node --test "test/*.test.js"` — **3415 drills** at v4.99.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -1023,6 +1023,10 @@ and the trainer being a React closure is what hides it from every drill.
   seed: the illegal plays are gone, and `sparring.act` never takes an
   optional charge (v4.33), so the card is dead to it. Report that; do not
   tune it inside a rules fix.
+- **RE-MEASURED AND REVERSED AT v4.99**, as its own change: the policy takes
+  one charge with its lowest-pitch card, and Boltyn's ladder went 2.0 →
+  9.7 a seed (disjoint). A stated policy choice is a measurement, and
+  measurements expire when the rules under them move.
 
 ### A GATE THE PARSER READS AND NOTHING ANSWERS IS A GATE WAVED THROUGH (v4.89)
 

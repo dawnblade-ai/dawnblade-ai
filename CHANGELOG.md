@@ -1,3 +1,30 @@
+## v4.99 — the seat policy takes the charge, re-measured
+
+HANDOFF §2b named this as the next lead. v4.33 had `sparring.act` decline
+every optional charge, on v4.24's standing rule that this policy declines a
+price it cannot weigh, and measured the cost then as about two games in
+fourteen. v4.90 then made Duty Bound Blitz's "play this only if a yellow card
+has been put into your soul this turn" a legality at the table. So a seat
+that never charges holds a card it can never play.
+
+Re-measured with Boltyn against the other fourteen heroes, at three seeds:
+
+| policy | Boltyn wins per seed |
+|---|---|
+| declines (v4.33) | 0 · 0 · 1 |
+| takes, lowest pitch | 5 · 4 · 6, 0 stalls |
+| takes, highest pitch | 5 · 5 · 9, 1 stall |
+
+Taking is disjoint from declining. The two "take" readings overlap, so the
+choice between them is noise. The policy charges the **lowest-pitch** card
+(the one worth least as a pitch, a printed-number argument; no card text),
+with ties on uid, and takes ONE charge: a `multi` offer is declined once
+something is picked.
+
+On the full 630-game ladder, Boltyn goes **2·2·2 → 10·10·9**. Every other
+hero moves inside the noise band. 0 refusals, 0 violations, 0 stalls. This
+is a POLICY change, not a rules change, and the drill pins the new answer.
+
 ## v4.98 — the last `approx` flag, read exactly
 
 > *"When this enters the arena, the crowd boos you."* — CONCEALED OBJECT

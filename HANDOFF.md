@@ -1,6 +1,6 @@
-# Handoff — Dawnblade, at v4.83 (updated through v4.98)
+# Handoff — Dawnblade, at v4.83 (updated through v4.99)
 
-**Written 2026-09-28, numbers refreshed 2026-10-04 at v4.98. Every number below was re-derived this session, with
+**Written 2026-09-28, numbers refreshed 2026-10-04 at v4.99. Every number below was re-derived this session, with
 the command that produces it.** Re-derive before you quote one; this file
 has rotted before, and so has every document that stated a count.
 
@@ -22,7 +22,7 @@ where things stand and what is next.
 
 | measure | value | command |
 |---|---|---|
-| version | v4.98, live on GitHub Pages | `grep APP_VER index.html` |
+| version | v4.99, live on GitHub Pages | `grep APP_VER index.html` |
 | drills | 3415 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
 | pool coverage | **405 of 405** unique cards read in full · 0 part · 0 none | `npm run audit`, top of `AUDIT.md` |
 | unfinished cards | 0, and 0 one clause away | `npm run gaps` |
@@ -72,6 +72,7 @@ Every one of those cards read `tier: full` before its fix.
 | 4.96 | a finished game stops every trainer door; the defend door asks the cap (`defCapWhy`) and CR 7.3.2b, and names its refusals |
 | 4.97 | "attacks or defends" reads its defend half (`alsoDef`, `DEFENDS_CONDS`); every not-met reason is a phrase |
 | 4.98 | the last `approx` flag ("enters the arena") was exact; `fx.approx` retired |
+| 4.99 | the seat policy takes one charge (lowest pitch); Boltyn 2.0 → 9.7 wins a seed |
 
 Versions 4.88–4.93 were found by ONE census: every refusal in the trainer's
 play doors, read against `judge.legal`. When you find a rule in the trainer,
@@ -113,7 +114,7 @@ Both user rulings are answered and built at v4.94: a face-down Cloaked
 piece's statics wait for the flip, and Scorpio reads a Lightning link
 anywhere on the chain.
 
-### 2b. A POLICY QUESTION THE LADDER NOW ASKS LOUDLY (v4.90)
+### 2b. ~~A POLICY QUESTION THE LADDER NOW ASKS LOUDLY (v4.90)~~ ANSWERED AT v4.99
 
 Boltyn's ladder fell **7.3 → 1.0 wins a seed** when Duty Bound Blitz's
 "play this only if a yellow card has been put into your soul this turn"

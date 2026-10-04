@@ -250,24 +250,31 @@ test(gate("the offer is not made when there is nothing to charge"), () => {
 
 /* ---- the policy declines, and that is a stated choice ---------------- */
 
-test("`sparring.act` declines the charge — it cannot weigh the payoff", () => {
-  /* v4.24's standing rule: DECLINE a price this policy cannot weigh.
-     Fusion escaped it because nothing moves zones and its price is
-     provably zero for a policy holding full state; charge's is not — a
-     card LEAVES THE HAND, and a card in hand can always block. */
+test("`sparring.act` TAKES the charge with its lowest-pitch card — re-measured at v4.99", () => {
+  /* v4.33 declined, on v4.24's standing rule (decline a price this policy
+     cannot weigh). v4.90 made Duty Bound Blitz's soul gate a legality, and
+     re-measured at three seeds Boltyn went from 0.3 wins a seed declining to
+     5.0 taking — disjoint intervals. The record of why is in sparring.js. */
   const card = {uid: "src", name: "Charger", pitch: 1, cost: 0,
                 tt: "Light Warrior Action - Attack", ty: ["Light", "Warrior", "Action", "Attack"],
                 tx: "As an additional cost to play this, you may charge your hero's soul."};
-  const g = H.state({name: "You", res: 9, ap: 1, hand: [card, mk("A", "a1")]},
+  const blue = {...mk("B", "b3"), pitch: 3}, red = {...mk("R", "r1"), pitch: 1};
+  const g = H.state({name: "You", res: 9, ap: 1, hand: [card, blue, red]},
                     {name: "Them"}, {actor: 0, turnPlayer: 0, seed: "chg-policy"});
   const withPend = {...g, phase: "action", step: "layer", priority: 0, passed: [],
                     pending: {kind: "charge", seat: 0, card, from: "hand",
-                              window: "action", target: null, uids: ["a1"]}};
+                              window: "action", target: null, uids: ["b3", "r1"]}};
   const a = S.act(withPend, 0);
-  assert.deepEqual(a, {t: "charge", uid: null}, "it answers the pending, and it answers NO");
+  assert.deepEqual(a, {t: "charge", uid: "r1"}, "it charges the card worth least as a pitch");
   /* A REFUSAL IS ALWAYS A BUG IN THAT FILE (its own contract), so the
      answer must be legal. */
   assert.equal(J.legal(withPend, a, 0), null, "and the answer is legal");
+  /* ONE charge: a multi offer that already holds one is declined */
+  const again = {...withPend, pending: {...withPend.pending, picked: ["r1"], multi: true, uids: ["b3"]}};
+  assert.deepEqual(S.act(again, 0), {t: "charge", uid: null}, "a second charge is declined");
+  /* and an offer with nothing eligible declines rather than inventing a uid */
+  const none = {...withPend, pending: {...withPend.pending, uids: []}};
+  assert.deepEqual(S.act(none, 0), {t: "charge", uid: null});
 });
 
 /* ---- the one reader, and the auto-pick is gone ---------------------- */

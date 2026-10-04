@@ -186,7 +186,32 @@ function payAction(g, seat, p, o){
      reachable and IS driven: `test/charge.test.js` takes the offer
      end-to-end through `judge.reduce` for all three cards. What is
      unexercised here is a policy branch that says no on purpose. */
-  if(p.kind === "charge") return {t: "charge", uid: null};
+  /* …AND RE-MEASURED AT v4.99, THE DECISION REVERSES. v4.33 measured
+     taking it as worth about two games in fourteen and declined on the
+     stated grounds above. v4.90 then made Duty Bound Blitz's "play this
+     only if a yellow card has been put into your soul this turn" a
+     legality at the table, so a seat that never charges has a card it can
+     never play — and HANDOFF named the re-measure as the next lead.
+     Measured, Boltyn against the other fourteen at three seeds:
+
+       declines           0 · 0 · 1   (mean 0.3)
+       takes, low pitch   5 · 4 · 6   (mean 5.0)   0 stalls
+       takes, high pitch  5 · 5 · 9   (mean 6.3)   1 stall
+
+     Disjoint from declining, and the two "take" readings overlap, so the
+     choice between them is noise; the LOWEST pitch wins on a printed-number
+     argument this file can make — it spends the card worth least as a
+     pitch — and on the stall. Ties on uid (v2.46). ONE charge: a `multi`
+     offer (V of the Vanguard) is declined once something is picked, which
+     leaves "any number of times" weaker than printed for this policy
+     alone. Still no card text: pitch is a printed number. */
+  if(p.kind === "charge"){
+    if((p.picked || []).length) return {t: "charge", uid: null};
+    const sd = g.sides[seat];
+    const c = (sd.hand || []).filter(h => (p.uids || []).indexOf(h.uid) >= 0)
+      .sort((a, b) => num(a, "pitch") - num(b, "pitch") || byUid(a, b))[0];
+    return {t: "charge", uid: c ? c.uid : null};
+  }
   /* ---- THE TWO KINDS THIS POLICY HAD NEVER MET (v3.80) --------------
      `judge.PENDING_KINDS` is a census of four and this function branched
      on ONE, falling through to `paySel` for the rest — which is v3.35's
