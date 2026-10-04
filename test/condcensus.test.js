@@ -242,7 +242,7 @@ test("the other three evaluators' vocabularies are closed too", {skip}, () => {
     assert.ok(![...set].includes(undefined),
       "a defSelf entry reached the census with no " + nm + " and no other key");
   assert.deepEqual([...actIf].sort(),
-    ["atkNamed", "auraOf", "boosted", "controlPow", "defending", "foeTurn", "hits", "playedNamed", "unreadable"],
+    ["atkNamed", "auraOf", "boosted", "controlPow", "ctrlAtkOf", "defending", "foeTurn", "hits", "playedNamed", "unreadable"],
     "`unreadable` is in the list on purpose — an activation condition with no " +
     "reader REFUSES rather than running unrestricted (v3.04)");
   /* …AND EVERY ONE IS ANSWERED (v4.89). This pinned the EMITTED set and

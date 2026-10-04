@@ -120,9 +120,11 @@ test("the whole gate is asked, not just the `defending` case", {skip}, () => {
   /* The trainer's original tested only `activateIf.kind === "defending"`.
      Any other printed restriction — including v3.04's `unreadable`, which
      exists precisely so an unread condition REFUSES — went straight
-     through. Driven with a synthetic card so it is the RULE under test. */
+     through. Driven with a synthetic card so it is the RULE under test.
+     (Its condition read "a Lightning attack" until v4.94, when Scorpio's
+     ruling made that phrase READABLE — so it is nonsense on purpose now.) */
   const fake = {name: "Drill Gate Card", pitch: 3, tt: "Generic Action", kw: [], uid: "g1",
-                tx: "Instant - Discard this: Amp 1. Activate this only if you control a Lightning attack."};
+                tx: "Instant - Discard this: Amp 1. Activate this only if the moon is full."};
   P.fxReset();
   const fx = P.fxParse(fake);
   assert.ok(fx.handAbility, "it prints a hand ability");

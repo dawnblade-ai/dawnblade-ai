@@ -340,7 +340,8 @@ test("WIRE_V moves when the payload shape moves, and only then", () => {
   /* 21 -> 22 AT v4.92, for v4.91's `_addDiscPaid` in a held play's `decl` —
      whole-shipped, so the digest holds; the bump was missed at v4.91 and a
      second review of that version caught it. */
-  assert.equal(W.WIRE_V, 22,
+  /* 22 -> 23 AT v4.94: a chain entry's `ty` and `by` — whole-shipped. */
+  assert.equal(W.WIRE_V, 23,
     "WIRE_V moved — if the payload shape moved with it, update the digest below " +
     "in the same edit and say what changed in the header");
   assert.equal(h, 1095617619,

@@ -202,7 +202,7 @@ function makeEffects(ctx){
   function offerPayCost(s, trigger, ok, extra){
     let n = s;
     const watchers = [...(act(n).gear||[]), ...((act(n).board||[]).map(b => b && b.card))]
-      .filter(Boolean)
+      .filter(P.abilitiesLive)
       .map(w => ({w, px: fxParse(w).payCost}))
       .filter(({w, px}) => px && px.trigger === trigger
                         && !(px.taps && (act(n).weaponUsed||{})[w.uid])
@@ -256,7 +256,7 @@ function makeEffects(ctx){
   function ctrClock(s, event){
     let n = s;
     const watchers = [...(act(n).gear || []), ...((act(n).board || []).map(b => b && b.card))]
-      .filter(Boolean)
+      .filter(P.abilitiesLive)
       .map(w => ({w, t: fxParse(w).ctrTick}))
       .filter(({w, t}) => t && t.on === event && !w.destroyed
                        && !(t.once && (act(n).weaponUsed || {})["ct" + w.uid]));
@@ -5612,7 +5612,7 @@ function makeEffects(ctx){
        every reload. Weaker than printed and visible is the safe
        direction (v3.24). */
     if(from === "deck"){
-      const watchers = [...(act(n).gear||[]).filter(g2 => g2 && !g2.destroyed),
+      const watchers = [...(act(n).gear||[]).filter(P.abilitiesLive),
                         ...(act(n).board||[]).map(b => b && b.card).filter(Boolean)];
       for(const w of watchers){
         const wfx = fxParse(w);
@@ -7388,7 +7388,11 @@ function makeEffects(ctx){
        v3.87's split read backwards: a standing grant consumed by the
        first swing is WEAKER than printed. */
     const _dracStand = !!act(n).dracChain;
-    n.chain = [...n.chain, {n:pc.name, img:pc.img, dbImg:pc.dbImg, dmg:total, ga:n.pend.ga, drac:/draconic/i.test(pc.tt||"")||_dracGrant||_dracStand, kind:"atk"}];
+    /* `ty` and `by` (v4.94): what the attack WAS and whose it is, so a
+       question about a RESOLVED link can be answered — "if you control a
+       Lightning attack" reads the whole chain (`chainAtkOf`). */
+    n.chain = [...n.chain, {n:pc.name, img:pc.img, dbImg:pc.dbImg, dmg:total, ga:n.pend.ga, drac:/draconic/i.test(pc.tt||"")||_dracGrant||_dracStand, kind:"atk",
+                            ty:(pc.ty || []).slice(), by:(n.pend.by != null ? n.pend.by : actorOf(n))}];
     if(_dracGrant){
       actMut(n).dracNext = false;
       n = L(n, `${pc.name} takes the Draconic grant \u2014 it is spent.`);
@@ -7738,7 +7742,7 @@ function makeEffects(ctx){
        item dealing its damage on every hit for the rest of the game. */
     if(total>0){
       const watchers = [...(act(n).gear || []), ...((act(n).board || []).map(b => b && b.card))]
-        .filter(Boolean)
+        .filter(P.abilitiesLive)
         .map(w => ({w, hw: fxParse(w).hitWatch}))
         .filter(({w, hw}) => hw && !w.destroyed
                           && (!hw.heroOnly || heroHit)
@@ -8576,7 +8580,7 @@ function tieGrantOf(sd){
   for(const b of bearers){
     if(!b) continue;
     const c = b.card || b;
-    if(!c || b.destroyed || c.destroyed) continue;
+    if(!c || !P.abilitiesLive(b)) continue;
     let g = null;
     try { g = P.fxParse(c).lifeTie; } catch(e){ g = null; }
     if(!g) continue;
@@ -9131,7 +9135,7 @@ function sweepArena(game, seat, when){
      printed line, and this asks it. */
   const stillGrants = op => {
     const live = [...kept.map(b => b.card),
-                  ...(sd.gear || []).filter(gp => gp && !gp.destroyed)];
+                  ...(sd.gear || []).filter(P.abilitiesLive)];
     return live.some(c => {
       if(!c) return false;
       const f = P.fxParse(c);
@@ -9218,6 +9222,32 @@ function handAbilityOK(s, c){
    while THIS CARD is defending" (Rally the Coast Guard). Reading the
    phase alone would let any card in hand answer yes while the hero
    happened to be blocking with something else. */
+/* DOES THIS SEAT CONTROL AN ATTACK OF THIS CLASS ON THE COMBAT CHAIN?
+   (v4.94.) Two records hold the chain's attacks and both are read:
+
+     the RESOLVED links on `chain`, each stamped at `linkPayload` with the
+       attack's structured type array and the seat that declared it — the
+       strip used to keep only a name and an image, which is why
+       `controlPow` could only ever ask the live attack;
+     the OPEN link, `pend`, which is on the chain from its declaration
+       (CR 7.2) and joins the strip only when it resolves (v3.99).
+
+   An arcane display entry is not a link (v4.39), so the kind is tested.
+   The class is matched against the STRUCTURED array, lowercased (v2.39),
+   so a card NAMED for a class claims nothing. A link with no stamp — off
+   an older wire — answers no: weaker than printed and visible. */
+function chainAtkOf(game, seat, cls){
+  const want = P.norm(cls || "");
+  if(!want || !game) return false;
+  const hasCls = ty => (ty || []).some(t => P.norm(t) === want);
+  for(const l of (game.chain || []))
+    if(l && l.kind === "atk" && l.by === seat && hasCls(l.ty)) return true;
+  const pd = game.pend;
+  if(pd && pd.card && (pd.by == null ? (game.actor || 0) : pd.by) === seat && hasCls(pd.card.ty))
+    return true;
+  return false;
+}
+
 function activateIfOk(game, gate, card){
   if(!gate) return true;
   const s = game, i = s.actor || 0, sd = (s.sides || [])[i] || {};
@@ -9257,6 +9287,11 @@ function activateIfOk(game, gate, card){
   /* "IF YOU CONTROL AN AURA OF <KEYWORD>" (v4.89) — Stand Strong; the
      same reader Full of Bravado's printed condition asks. */
   if(k === "auraOf")     return controlsAuraOf(sd, gate.kw);
+  /* "IF YOU CONTROL A <CLASS> ATTACK" (v4.94, ruling 2026-10-04): any
+     attack of YOURS on the combat chain, resolved links included — Scorpio
+     reads a Lightning attack at link 1 from link 3. `chainAtkOf` is the
+     one reader. */
+  if(k === "ctrlAtkOf")  return chainAtkOf(s, i, gate.cls);
   /* AN UNREAD RESTRICTION REFUSES. `parser.js` files a printed "Activate
      this only …" whose condition it cannot read as `unreadable` rather
      than leaving the gate undefined, and the fallthrough below used to
@@ -9271,7 +9306,7 @@ function activateIfOk(game, gate, card){
      day the parser emits a kind with no branch here. */
   return false;
 }
-const ACT_IF_KINDS = ["atkNamed", "hits", "boosted", "controlPow", "defending", "foeTurn",
+const ACT_IF_KINDS = ["atkNamed", "hits", "boosted", "controlPow", "defending", "foeTurn", "ctrlAtkOf",
                       "playedNamed", "auraOf", "unreadable"];
 
 /* "PLAY THIS ONLY IF …" — ONE EVALUATOR, BOTH BOARDS (v4.90).
@@ -10362,6 +10397,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, jabTargets, CTX_KEYS, ACT_IF_KINDS, controlsAuraOf, PLAY_IF_KINDS, playIfOk, had6ThisTurn, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, restampHalving, returnStolen, pendPumped, attackBase, basePowOf, defLimitWhy, rxNoTargetWhy, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
+return {makeEffects, jabTargets, CTX_KEYS, ACT_IF_KINDS, controlsAuraOf, PLAY_IF_KINDS, playIfOk, chainAtkOf, had6ThisTurn, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, restampHalving, returnStolen, pendPumped, attackBase, basePowOf, defLimitWhy, rxNoTargetWhy, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

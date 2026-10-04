@@ -97,14 +97,16 @@ Build it the way v4.42 promoted `fxcensus` and `speccensus`:
 The scratch version is the recipe. It is two short scripts and is described
 in `CHANGELOG.md` v4.83.
 
-### 2. The four OPEN records
+### 2. The two OPEN records
 
 | record | what it needs |
 |---|---|
 | `simultaneous-trigger-order` | CR 4.1.8a hands the order to the turn-player; the engine resolves in printed order. Needs an ordering prompt, and a measurement of which pairs of triggers actually co-occur in the pool (v4.67 found one ordering decided wrongly by an unreachable fixture) |
-| `cloaked-face-down-values` | **a user ruling**: does a face-down Cloaked piece keep its printed defence and its Ward 1? |
 | `cloaked-display` | the card back on the board. A UI job; see §4 |
-| `scorpio-lightning-attack` | **a user ruling**: Scorpio, Comet Tail prints "Activate this only if you control a Lightning attack". Is a link that has already resolved still "an attack you control"? Until answered the swing refuses on both boards (v4.89). Briar wears it by default, and her ladder moved 54 → 47 with intervals overlapping |
+
+Both user rulings are answered and built at v4.94: a face-down Cloaked
+piece's statics wait for the flip, and Scorpio reads a Lightning link
+anywhere on the chain.
 
 ### 2b. A POLICY QUESTION THE LADDER NOW ASKS LOUDLY (v4.90)
 

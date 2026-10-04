@@ -1,3 +1,44 @@
+## v4.94 — two rulings: the flip, and the whole chain
+
+> RULING (user, 2026-10-04): *"you have to flip cloaked cards using their
+> active abilities before you can use their static abilities. For Scorpio the
+> lightning attack has to be on the chain even if it was link 1 and you are
+> link 3."*
+
+The CR site is unreachable from this sandbox, so both are recorded as the
+user's rulings, and both close an OPEN ledger record (open 4 -> 2, closed
+27 -> 29).
+
+### Cloaked: a face-down piece's statics and triggers are off
+
+- Uphold Tradition's Ward 1 prevented damage while it was still face-down.
+  Driven: 2 damage left the wearer on 18 face-down and 19 face-up.
+- `parser.abilitiesLive` is the one reader of "can this piece's printed
+  abilities act right now" (not destroyed, not face-down). It replaces a
+  hand-written `!g.destroyed` in eleven scans across `parser.js` and
+  `effects.js`, and a census pins every scan to it.
+- Triggers are treated as off as well, the conservative reading. Defence is
+  moot because no Cloaked record prints one, and that is pinned as a premise.
+- `cloaked-face-down-values` closed, with its probe turned round.
+
+### Scorpio: a Lightning attack anywhere on the combat chain
+
+- The gate "Activate this only if you control a Lightning attack" reads as
+  `ctrlAtkOf`. `effects.chainAtkOf` answers it from every resolved link plus
+  the live one, counting only attacks the activating seat controls. An arcane
+  display entry does not count.
+- Chain entries gain `ty` (the structured type) and `by` (the controller),
+  stamped in `linkPayload`. `WIRE_V` is now 23.
+- The two "unreadable gate" drills had used Scorpio (and a synthetic card
+  printing its phrase) as their fixture. Both use nonsense conditions now.
+- Measured: Scorpio swings 0 -> 59 in 48 Briar games. Briar's ladder moved
+  16.0 -> 18.0 at three seeds, with overlapping intervals, so it is noise.
+- `scorpio-lightning-attack` closed, with its probe turned round.
+
+12 sabotages, 12 bite. One (the chain entry's `ty` stamp) was silent until a
+driven Fry-then-Scorpio drill was added: every other fixture wrote its chain
+by hand.
+
 ## v4.93 — a card is pitched only while the cost is unpaid
 
 > RULING (user, 2026-08-01): *"you cannot pitch to bank resources. The pool

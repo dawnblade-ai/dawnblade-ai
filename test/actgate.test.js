@@ -136,10 +136,55 @@ test("the TABLE's weapon swing asks its printed gate, as the trainer does", {ski
   const sc = piece("Scorpio, Comet Tail", 504);
   const g = acting({gear: [sc]});
   assert.match(String(J.legal(g, {t: "activate", uid: 504}, 0)),
-    /Scorpio, Comet Tail can't be activated — its printed activation condition isn't modelled yet/,
+    /Scorpio, Comet Tail can't be activated — you control no Lightning attack on the combat chain/,
     "the table swings Scorpio past its gate — a rule on one board (v3.01)");
   /* the control: a swing with no gate is untouched */
   const sl = piece("Sledge of Anvilheim", 505);
   assert.equal(P.fxParse(sl).activateIf, undefined);
   assert.equal(J.legal(acting({gear: [sl]}), {t: "activate", uid: 505}, 0), null);
+});
+
+/* RULING (user, 2026-10-04): "the lightning attack has to be on the chain
+   even if it was link 1 and you are link 3." A RESOLVED link is still an
+   attack you control while the chain is open, so the gate reads the whole
+   chain and not only the live link. Four rows, because each half of the
+   test (the class, the controller, resolved-vs-live) has a reading that
+   passes the other three. */
+test("Scorpio swings off a Lightning link anywhere on the chain — and only its controller's", {skip}, () => {
+  H.db();
+  const at = (chain, pend) => Object.assign(acting({gear: [piece("Scorpio, Comet Tail", 504)]}),
+    {step: "resolution", chain, pend: pend || null});
+  const link = (ty, by) => ({n: "L", kind: "atk", dmg: 3, ty, by});
+  const LIGHT = ["Lightning", "Action", "Attack"], GEN = ["Generic", "Action", "Attack"];
+  assert.equal(J.legal(at([link(LIGHT, 0), link(GEN, 0)]), {t: "activate", uid: 504}, 0), null,
+    "a Lightning attack at link 1 satisfies the gate from link 3");
+  assert.match(String(J.legal(at([link(GEN, 0), link(GEN, 0)]), {t: "activate", uid: 504}, 0)),
+    /no Lightning attack/, "a chain of non-Lightning links does not");
+  assert.match(String(J.legal(at([link(LIGHT, 1)]), {t: "activate", uid: 504}, 0)),
+    /no Lightning attack/, "the OPPONENT's Lightning attack is not one you control");
+  assert.equal(E.chainAtkOf({chain: [], actor: 0, pend: {by: 0, card: {ty: LIGHT}}}, 0, "lightning"), true,
+    "the live link counts too");
+  assert.equal(E.chainAtkOf({chain: [{kind: "arc", ty: LIGHT, by: 0}], actor: 0}, 0, "lightning"), false,
+    "an arcane display entry is not an attack (v4.39)");
+});
+
+/* DRIVEN, so the chain entry's stamp is what is tested: the fixtures above
+   hand `chainAtkOf` a chain they wrote, which passes against a
+   `linkPayload` that stamps nothing (found by sabotage, v4.94). */
+test("DRIVEN at the table: Fry resolves, and Scorpio may then swing", {skip}, () => {
+  H.db();
+  const fry = {...H.card("Fry", 3), uid: 610};
+  let g = acting({gear: [piece("Scorpio, Comet Tail", 504)], hand: [fry], ap: 1});
+  assert.match(String(J.legal(g, {t: "activate", uid: 504}, 0)), /no Lightning attack/,
+    "premise: before Fry, the gate refuses");
+  let r = J.reduce(g, {t: "play", uid: 610, from: "hand"}, 0);
+  assert.ok(!r.error, "Fry refused: " + r.error);
+  g = r.state;
+  for(let i = 0; i < 40 && !(g.chain || []).length; i++) g = H.move(g);
+  assert.equal((g.chain || []).length, 1, "Fry did not resolve onto the chain");
+  assert.deepEqual(g.chain[0].ty.includes("Lightning"), true, "the link carries the attack's structured type");
+  assert.equal(g.chain[0].by, 0, "and its controller");
+  for(let i = 0; i < 20 && !(g.priority === 0 && g.step === "resolution"); i++) g = H.move(g);
+  assert.equal(J.legal(g, {t: "activate", uid: 504}, 0), null,
+    "Fry (go again) resolved at link 1 — Scorpio's gate is met from the next link");
 });

@@ -124,12 +124,14 @@ test("an activation condition the parser cannot read REFUSES, never waves throug
      which is the sev-3 direction. v2.04 settled the same question for
      costs: inert, never free.
 
-     STAND STRONG READS SINCE v4.89 (`auraOf`, test/actgate.test.js), so
-     this drill came due and Scorpio is the fixture now. Its reading is a
-     RULING (`scorpio-lightning-attack` in tools/approx.js). */
+     STAND STRONG READS SINCE v4.89 (`auraOf`, test/actgate.test.js) and
+     SCORPIO SINCE v4.94 (`ctrlAtkOf`, the user's ruling), so this drill
+     came due twice and its fixture is synthetic now: no pool record left
+     prints a restriction nothing reads on an ACTIVATED weapon line. */
   P.fxReset();
-  const stand = require("../engine/cards.js").resolveEntry(H.db(), {name: "Scorpio, Comet Tail", p: 0, code: null, q: 1});
-  assert.ok(stand.resolved);
+  const stand = {name: "Unread Gate Sword", pitch: 0, uid: 990, tt: "Generic Weapon - Sword (1H)",
+                 ty: ["Generic", "Weapon", "Sword", "1H"], power: 2, kw: [],
+                 tx: "**Once per Turn Action** - {r}: **Attack**\n\nActivate this only if the moon is full."};
   const gate = P.fxParse(stand).activateIf;
   assert.equal(gate && gate.kind, "unreadable", "an unread restriction must be FILED, not dropped");
   assert.equal(E.activateIfOk({sides: [{}, {}], turnPlayer: 0, actor: 0}, gate), false,

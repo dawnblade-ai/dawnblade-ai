@@ -344,7 +344,11 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      `control-change-steal` was BUILT. */
   /* 3 -> 4 AT v4.89: `scorpio-lightning-attack`, a RULING the user owns —
      found when judge's weapon branch learned to ask a swing's gate. */
-  assert.equal(n("open"),    4, "open count moved");
+  /* 4 -> 3 AT v4.94: `cloaked-face-down-values`, CLOSED by the user's
+     ruling of 2026-10-04 (statics wait for the flip). */
+  /* 3 -> 2 AT v4.94: `scorpio-lightning-attack`, CLOSED by the same
+     day's ruling (a resolved Lightning link still counts). */
+  assert.equal(n("open"),    2, "open count moved");
   /* 16 -> 17 AT v4.63: `steam-build-powcard-read`. 17 -> 18 AT v4.66:
      `play-held-on-the-stack`. 19 -> 20 AT v4.72: `x-cost-declared`.
      20 -> 21 AT v4.73: `crush-halving-rider-read`. 21 -> 22 AT v4.74:
@@ -352,7 +356,9 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      23 -> 24 AT v4.77: `surge-dealt-read`. 24 -> 25 AT v4.79:
      `gear-filed-when-destroyed`. 25 -> 26 AT v4.81: `chosen-discard-asked`. */
   /* 26 -> 27 AT v4.85: `activation-discard-cost-asked`, built. */
-  assert.equal(n("closed"), 27, "closed count moved");
+  /* 27 -> 28 AT v4.94: `cloaked-face-down-values`. */
+  /* 28 -> 29 AT v4.94: `scorpio-lightning-attack`. */
+  assert.equal(n("closed"), 29, "closed count moved");
 });
 
 /* ============================================================
@@ -1678,16 +1684,20 @@ probe("aura-ward-prevention-pool", () => {
 
 /* A face-down (Cloaked) piece keeps its printed values: nothing changes
    them, which is the deliberate narrowness. */
+/* CLOSED AT v4.94 (ruling 2026-10-04), AND THE PROBE IS TURNED ROUND: it
+   used to assert the question was undecided; it asserts the ANSWER now, so
+   it goes red if a face-down piece's Ward comes back on. */
 probe("cloaked-face-down-values", () => {
   const eng = pool().find(c => /cloaked/i.test((c.kw || []).join(" ")) ||
                                /\bcloaked\b/i.test(c.tx || ""));
   assert.ok(eng, "no cloaked card in the pool");
-  const G = require("../engine/game.js");
   const down = {...eng, uid:31, _faceDown:true, curDef:null};
   const up   = {...eng, uid:32, curDef:null};
-  assert.equal(G.gearDef(down), G.gearDef(up),
-    "a face-down piece is now worth a different defence — that is a RULING and the " +
-    "record must say it was made");
+  assert.ok(PR.wardValue(up) > 0, "premise: the Cloaked record prints a Ward");
+  assert.deepEqual(PR.wardBearers({gear: [down], board: []}), [],
+    "a face-down piece's Ward is live again — the ruling says it waits for the flip");
+  assert.equal(PR.wardBearers({gear: [up], board: []}).length, 1,
+    "control: face-up, the Ward is live");
 });
 
 /* Scorpio's swing is refused on BOTH boards, because its gate is unread.
@@ -1695,18 +1705,19 @@ probe("cloaked-face-down-values", () => {
    `tryPlay` asks of every activation. Goes RED the day the gate is read
    (the user's ruling) — or the day either board stops asking. */
 probe("scorpio-lightning-attack", () => {
+  /* CLOSED AT v4.94 by the user's ruling of 2026-10-04, and the probe is
+     turned round: it asserts the gate READS and is answered off the whole
+     chain, and goes red if either regresses. */
   H.db();
   const sc = {...H.card("Scorpio, Comet Tail"), uid: 901};
-  assert.equal(PR.fxParse(sc).activateIf.kind, "unreadable",
-    "Scorpio's 'control a Lightning attack' now READS — the ruling was made; "
-    + "build its answer and close the record");
-  const g = Object.assign(H.state({gear: [sc], res: 9, ap: 1, hand: []}, {hp: 20, hand: []},
-                                  {turn: 3, actor: 0}),
-    {phase: "action", step: "layer", priority: 0, passed: [], firstPlayer: 0, round: 1, over: null});
-  assert.match(String(J.legal(g, {t: "activate", uid: 901}, 0)), /can't be activated/,
-    "the table swings Scorpio past its printed gate again");
-  assert.equal(E.activateIfOk(g, PR.fxParse(sc).activateIf, sc), false,
-    "the one reader both boards ask waves an unread gate through");
+  const gate = PR.fxParse(sc).activateIf;
+  assert.equal(gate.kind, "ctrlAtkOf", "Scorpio's gate stopped reading");
+  assert.equal(gate.cls, "lightning");
+  const base = {sides: [{}, {}], actor: 0, turnPlayer: 0, pend: null};
+  assert.equal(E.activateIfOk({...base, chain: []}, gate, sc), false, "an empty chain satisfies it");
+  assert.equal(E.activateIfOk({...base, chain: [{kind: "atk", ty: ["Lightning", "Action", "Attack"], by: 0},
+                                                {kind: "atk", ty: ["Generic"], by: 0}]}, gate, sc), true,
+    "a RESOLVED Lightning link at link 1 no longer satisfies it from link 3");
 });
 
 /* The Cloaked ruling's display half is not built. A claim about a shared

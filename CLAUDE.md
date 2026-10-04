@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.93
+**Current version:** v4.94
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3376 drills** at v4.93.
+This is `node --test "test/*.test.js"` — **3385 drills** at v4.94.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -868,6 +868,38 @@ CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
 
+### A FACE-DOWN PIECE'S ABILITIES WAIT FOR THE FLIP (v4.94)
+
+> RULING (user, 2026-10-04): *"you have to flip cloaked cards using their
+> active abilities before you can use their static abilities."*
+
+Uphold Tradition, the pool's only Cloaked card, prevented damage with its
+Ward 1 from the moment it was dealt face-down. `parser.abilitiesLive` is the
+one reader (destroyed OR face-down is off, a board entry read through its
+card), and every scan that reads a static or a trigger off the gear zone asks
+it: `wardBearers`, `auraAttackOf`, `arcaneSoaks`, `gyFirstGaKw`, the two
+counter readers, and five watcher scans in `effects.js`. **Eleven scans each
+wrote `!g.destroyed` by hand**, and a census in `test/cloakedlive.test.js`
+holds them to the reader. Triggers are off too, which is the conservative
+reading of "static". Defence is moot and PINNED: no Cloaked record prints
+one, so the day one does a drill asks the question.
+
+### A LIGHTNING ATTACK ANYWHERE ON THE CHAIN (v4.94)
+
+> RULING (user, 2026-10-04): *"For Scorpio the lightning attack has to be on
+> the chain even if it was link 1 and you are link 3."*
+
+Scorpio, Comet Tail's gate was `unreadable` and refused on both boards. It
+reads as `ctrlAtkOf` now, answered by `effects.chainAtkOf` off the whole
+chain plus the live link. **A chain entry had no type and no controller**, so
+`linkPayload` stamps `ty` (the structured array, v2.39) and `by`, and
+`WIRE_V` went 22 -> 23. The fixtures that wrote a chain by hand passed
+against a push that stamped nothing; a driven Fry-then-Scorpio drill is what
+bites. Measured: **59 Scorpio swings in 48 Briar games, against 0**; her
+ladder moved 16.0 -> 18.0 with overlapping intervals (noise by v4.40's rule).
+The CR site is unreachable from the sandbox, so both are recorded as the
+user's rulings rather than as CR citations.
+
 ### A CARD IS PITCHED ONLY WHILE THE COST IS UNPAID (v4.93)
 
 RULING (2026-08-01): no pitching to bank. Both boards enforced WHEN a payment
@@ -967,7 +999,8 @@ for a rule that does nothing.
   free (v2.04).
 - **A swing is an activation.** judge's weapon branch never asked the swing's
   gate, so Scorpio swung freely at the table and the trainer refused it.
-  Its condition is a ruling the user owns (`scorpio-lightning-attack`).
+  Its condition is a ruling the user owns (`scorpio-lightning-attack`),
+  **answered and built at v4.94**: a Lightning link anywhere on the chain.
 - **Two drills used Scorpio as a cost-0 swing** and were valid only while the
   table ignored its gate; Raydn, Duskbane carries the property now.
 
@@ -6298,6 +6331,9 @@ beside v3.39's counter, v3.74's soul banish and v3.86's named permanent —
 (v3.48). It gates the one thing the card's own text spends it on. Whether
 a face-down piece keeps its printed defence and its Ward is not stated,
 and half-building a value change is worse than the honest gap (v3.23).
+**ANSWERED AT v4.94** (user, 2026-10-04): a face-down piece's statics and
+triggers are OFF until it is flipped; see "A FACE-DOWN PIECE'S ABILITIES
+WAIT FOR THE FLIP".
 
 **THE RULING AGREES WITH THE PRINTING** (user, 2026-07-25) — *"INSTANT
 ABILITY - ALWAYS ACTIVE"* is this user's shorthand for the instant WINDOW,

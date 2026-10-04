@@ -7041,6 +7041,26 @@ function fxParse(card){
      arriving falls through to `unreadable` and refuses (v3.55's rule). */
   else if(ag = tl.match(A("if you control an aura of (suspense)\\b")))
     fx.activateIf = {kind:"auraOf", kw:ag[1], why:`you control no aura of ${ag[1]}`};
+  /* "IF YOU CONTROL A <CLASS> ATTACK" (v4.94) — Scorpio, Comet Tail.
+
+     RULING (user, 2026-10-04): "the lightning attack has to be on the
+     chain even if it was link 1 and you are link 3". So an attack you
+     control is any attack on the COMBAT CHAIN that is yours, a resolved
+     link as much as the open one, and the chain closing is what ends it.
+     That is also what makes the swing reachable at all: a weapon attack is
+     action speed and needs an empty stack, so the open link alone is never
+     there when Scorpio can be activated.
+
+     The word is printed as a CLASS or TALENT and is matched against the
+     attack's STRUCTURED type array (v2.39), never its type line or its
+     name. One word only: a phrase this cannot pin falls through to
+     `unreadable` and refuses (v2.29). `cls` is the printed word as written,
+     for the feed. */
+  else if(ag = tl.match(A("if you control an? ([a-z]+) attack\\b"))){
+    const at = tl.indexOf(ag[1], tl.indexOf("only if you control"));
+    const shown = at >= 0 ? clean(card.tx || "").substr(at, ag[1].length) : ag[1];
+    fx.activateIf = {kind:"ctrlAtkOf", cls:ag[1], why:`you control no ${shown} attack on the combat chain`};
+  }
   /* AN UNREAD RESTRICTION MUST REFUSE, NOT WAVE THROUGH. Two pool cards
      print a condition no pattern above reads — Scorpio, Comet Tail ("only
      if you control a Lightning attack"; Stand Strong's "aura of
@@ -8143,7 +8163,7 @@ function linksControlled(g, seat){
 function arcaneSoaks(sd, o){
   const out = [];
   for(const p of ((sd && sd.gear) || [])){
-    if(!p || p.destroyed) continue;
+    if(!abilitiesLive(p)) continue;
     const ab = arcaneBarrier(p);
     if(ab) out.push({uid: p.uid, name: p.name, kind: "barrier", amount: ab, cost: ab});
     /* X IS THE CALLER'S ANSWER (v4.75): the links this seat controls, off
@@ -8681,7 +8701,7 @@ function wardBearers(sd){
     if(w > 0) out.push({where: "board", uid: b.uid, card: b.card, ward: w, ent: b});
   }
   for(const gp of (sd.gear || [])){
-    if(!gp || gp.destroyed) continue;
+    if(!abilitiesLive(gp)) continue;
     const w = wardValue(gp);
     if(w > 0) out.push({where: "gear", uid: gp.uid, card: gp, ward: w, ent: gp});
   }
@@ -8734,7 +8754,7 @@ function auraAttackOf(card, sd, o){
      one, and it is filed only when the resolution that destroyed it ends
      (v4.79), so it can still be in the array while the grant is asked. */
   const g = (sd.gear || [])
-    .map(x => (x && !x.destroyed) ? auraWeaponGrant(x) : null)
+    .map(x => abilitiesLive(x) ? auraWeaponGrant(x) : null)
     .find(Boolean);
   if(!g) return null;
   /* THE HERO'S FIRST-ATTACK DISCOUNT (v3.84) — Enigma's clause 1, and it
@@ -9961,7 +9981,7 @@ const abDiscardCost = ab => (ab && ab._discardCost) || null;
    v3.93 — a board-only scan finds nothing for half the family). */
 function gyFirstGaKw(sd){
   if(!sd) return null;
-  const carriers = [...(sd.gear || []).filter(g => g && !g.destroyed),
+  const carriers = [...(sd.gear || []).filter(abilitiesLive),
                     ...(sd.board || []).map(b => b && b.card).filter(Boolean)];
   for(const c of carriers){
     const f = fxParse(c);
@@ -10123,6 +10143,32 @@ const abChiCost = ab => (ab && ab._chiCost) || 0;
    merely MENTIONED the keyword would otherwise be equipped face-down,
    which is a rule invented at the keyword level. */
 const isCloaked = c => printedKw(c, "cloaked");
+/* A FACE-DOWN PIECE'S PRINTED ABILITIES ARE NOT LIVE (v4.94).
+
+   RULING (user, 2026-10-04): a Cloaked card must be turned face-up with
+   its own activated ability before its static abilities do anything. So
+   a face-down piece is still IN the gear zone, and still yours to
+   activate, and its Ward, its keywords and its watchers are off until the
+   flip. A destroyed piece is off for v4.79's reason: it is marked and
+   filed when the resolution ends, so it can still be in the array.
+
+   ONE reader, because "is this piece's printed text live" is asked by
+   every scan that reads a static or a trigger off the gear zone. Eleven of
+   them each wrote `!g.destroyed` by hand, and a twelfth copy of a
+   two-part test is where one of them forgets the second part (v3.43: a
+   guard belongs to the SHAPE). A board entry wraps its card, so either is
+   accepted.
+
+   WHAT IT DOES NOT GATE: the ACTIVATION. The flip is printed as that
+   ability's cost, so the one thing a face-down piece can do is the thing
+   that turns it up. And a printed DEFENCE is a value rather than an
+   ability; the pool's only Cloaked record prints none, which is pinned as
+   a premise rather than decided here. */
+const abilitiesLive = c => {
+  if(!c) return false;
+  const p = c.card && !c.name ? c.card : c;
+  return !c.destroyed && !p.destroyed && !c._faceDown && !p._faceDown;
+};
 /* THE PERMANENT THAT COST NAMES, on one side's board — or null (v3.86).
    ONE reader, because "which card satisfies the cost" is asked in three
    places (both boards' legality and `execute`'s charge) and three
@@ -10270,7 +10316,7 @@ function rxPump(fx, fired){
    because "this turn" is the caller's clock. */
 function idleCounterWipes(gear, counters, hits){
   return (gear||[])
-    .filter(gr => gr && ((counters||{})[gr.uid]||{}).pow > 0
+    .filter(gr => abilitiesLive(gr) && ((counters||{})[gr.uid]||{}).pow > 0
                      && fxParse(gr).wipePowIfIdle
                      && !(((hits||{})[gr.uid]||0) > 0))
     .map(gr => gr.uid);
@@ -10283,7 +10329,7 @@ function idleCounterWipes(gear, counters, hits){
 function rustedThrough(gear, counters){
   return (gear||[])
     .filter(gr => {
-      if(!gr || gr.destroyed) return false;
+      if(!abilitiesLive(gr)) return false;
       const n = fxParse(gr).rustDestroy;
       return n != null && (((counters||{})[gr.uid]||{}).rust || 0) >= n;
     })
@@ -10305,6 +10351,6 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, spellvoidX, linksControlled, arcaneSoaks,
         ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
-        chiValue, chiSum, chiFloating, pitchExcessWhy, chiCeiling, abChiCost, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, boardEntryNamed, isEphemeral, isHandWipe, gyFirstGaKw,
+        chiValue, chiSum, chiFloating, pitchExcessWhy, chiCeiling, abChiCost, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, abilitiesLive, boardEntryNamed, isEphemeral, isHandWipe, gyFirstGaKw,
         CARD_OVERRIDES};
 });

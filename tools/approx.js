@@ -746,26 +746,28 @@ const APPROX = {
       "the probe below now RESOLVES the card."},
 
 "cloaked-face-down-values": {
-  status:"open", cr:null, board:"both", since:"v3.99", swept:"v4.02",
-  claim:"Whether a face-down (Cloaked) piece keeps its printed defence and its "+
-        "Ward 1 is not decided.",
-  why:"ENG005 prints 'Cloaked (Equip this face-down.)' and the flip cost, and "+
-      "nothing else. What face-down MEANS for a value is not stated, so the build "+
-      "is deliberately narrow: it gates the one thing the card's own text spends "+
-      "it on."},
+  status:"closed", cr:null, board:"both", since:"v3.99", swept:"v4.94",
+  claim:"A face-down (Cloaked) piece's printed abilities are off until its own "+
+        "activated ability turns it face-up. Built at v4.94.",
+  why:"RULING (user, 2026-10-04): 'you have to flip cloaked cards using their "+
+      "active abilities before you can use their static abilities.' Until then "+
+      "Uphold Tradition's Ward 1 prevented damage from the deal. `parser."+
+      "abilitiesLive` is the one reader and every gear scan of a static or a "+
+      "trigger asks it (test/cloakedlive.test.js). The DEFENCE half of the old "+
+      "question is moot and pinned as a premise: the pool's only Cloaked record "+
+      "prints no defence, so a drill fails the day one does."},
 
 "scorpio-lightning-attack": {
-  status:"open", cr:null, board:"both", since:"v4.89", swept:"v4.89",
+  status:"closed", cr:null, board:"both", since:"v4.89", swept:"v4.94",
   claim:"Scorpio, Comet Tail's swing — 'Activate this only if you control a "+
-        "Lightning attack' — is REFUSED on both boards: its condition is unread.",
-  why:"Whether a link that has already resolved is still 'an attack you control' "+
-      "decides whether the swing can ever happen, since a weapon attack is "+
-      "action speed and needs an empty stack. The repo carries no sourced CR "+
-      "definition of 'an attack' and restating one from memory is what "+
-      "`crindex.js` forbids, so this is a RULING the user owns. Until then the "+
-      "gate is `unreadable` and refuses — inert, never free (v2.04). Before v4.89 "+
-      "the trainer refused it and the TABLE asked nothing, so Briar's weapon "+
-      "swung there unrestricted (v3.01's shape)."},
+        "Lightning attack' — is legal while a Lightning attack of yours is anywhere "+
+        "on the open combat chain, resolved links included.",
+  why:"RULING (user, 2026-10-04): 'the lightning attack has to be on the chain even "+
+      "if it was link 1 and you are link 3.' A weapon attack is action speed and needs "+
+      "an empty stack, so the live link alone could never satisfy it; the chain does. "+
+      "`effects.chainAtkOf` is the one reader, off chain entries stamped with the "+
+      "attack's structured type and its controller, and both boards ask it through "+
+      "`activateIfOk`."},
 
 "cloaked-display": {
   status:"open", cr:null, board:"both", since:"v3.99", swept:"v4.02",

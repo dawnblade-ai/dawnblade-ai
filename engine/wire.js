@@ -247,7 +247,12 @@
    refuses a v4.90/v4.91 pair; this header's own rule is that the bump is
    made anyway, because it is the only guard a same-release DEV pair has.
    Found by a second review of v4.91 (v4.72's `_x` is the same shape). */
-const WIRE_V = 22;
+/* 22 -> 23 AT v4.94: a combat chain entry gains `ty` (the attack's
+   structured type) and `by` (its controller), because Scorpio's gate asks
+   whether a Lightning attack of yours is anywhere on the chain (the user's
+   ruling of 2026-10-04). `chain` ships whole; a v22 peer's entries carry
+   neither, so it refuses a swing a v23 peer allows. By hand. */
+const WIRE_V = 23;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------
