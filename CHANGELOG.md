@@ -1,3 +1,50 @@
+## v4.97 — "attacks or defends" reads its defend half, and the not-met reasons are words
+
+HANDOFF's lead: census the condition loop's "not met" family. This version
+ran it two ways: every "condition not met" line across 210 driven games,
+tallied by kind, and every pool card with a gate executed into an empty
+board.
+
+### A clause naming two events, read as one
+
+> *"When this attacks **or defends**, if you have less {h} than an opposing
+> hero, gain 1{h}."* — FYENDAL'S FIGHTING SPIRIT, and Full of Bravado's
+> Confidence token
+
+The parser read the attack half and flagged the clause `approx`, with the
+note "the defend half has no trigger point yet". So both cards did nothing
+when they blocked. That is six records, every one `tier: full`, and weaker
+than printed, which the one-sided sweep cannot see.
+
+The clause now carries `alsoDef` on its gated entry (opt-in, v3.58).
+`effects.defendsTriggers`, the one body both boards' walls call, answers it
+at the DEFENDER's seat, borrowed and handed back. The gates come from a
+closed vocabulary (`DEFENDS_CONDS`: `lifeLt`, `suspenseAura`), answered by
+the same readers the main loop asks, and an unknown gate answers false. A
+census pins the pool's gates to that vocabulary and pins that no printed
+form is ungated.
+
+Measured: the ladder is byte-identical on every hero at three seeds. The
+cards are decked only by Iyslander, Blaze and Lyath, and the policy rarely
+blocks with them; the route is driven by drills instead.
+
+### The reasons are words
+
+Five engine names reached the feed raw: `discard6way` (Pulping, Bare Fangs,
+Wild Ride), `arcTakenTurn` (Arcane Polarity), `reprise` and `defAtkAction`.
+Two lines were words but wrong:
+
+- Beaming Bravado said "wasn't the right colour" 29 times in 210 games about
+  a charge the policy had declined.
+- "Boltyn's hero's soul" doubled the possessive.
+
+`test/notmetvoice.test.js` drives every gated pool card and requires every
+reason to be a phrase.
+
+### Measured
+
+12 sabotages, 12 bite.
+
 ## v4.96 — a finished game stops every door, and the defend door asks judge's questions
 
 ### A dead player kept taking the swing

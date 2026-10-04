@@ -1,6 +1,6 @@
 {
- "generated": "2026-10-01T00:38:32.587Z",
- "appVer": "4.90",
+ "generated": "2026-10-04T15:53:22.593Z",
+ "appVer": "4.97",
  "dataVer": "sage-v14",
  "dbCount": 797,
  "poolUnique": 405,
@@ -1810,7 +1810,7 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": true,
+   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -14231,7 +14231,7 @@
     "suspense"
    ],
    "tier": "full",
-   "approx": true,
+   "approx": false,
    "playable": true,
    "clauses": [
     {

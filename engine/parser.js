@@ -1372,8 +1372,15 @@ function classifyClause(raw){
       return Object.assign(rest,{cond:"defGA"});
     if(/^this defends an attack with \{p\} greater than its base$/.test(cond))
       return Object.assign(rest,{cond:"defPumped"});
-    /* "attacks or defends" — the defend half has no trigger point yet */
-    if(/^this attacks or defends$/.test(cond)) return Object.assign(rest,{approx:true});
+    /* "ATTACKS OR DEFENDS" IS ONE CLAUSE NAMING TWO EVENTS (v4.97), and the
+       defend half was DROPPED — flagged `approx` and left there. Full of
+       Bravado and Fyendal's Fighting Spirit, six records, every one `tier:
+       full`, did nothing when they blocked: weaker than printed, which the
+       one-sided sweep cannot see. The attack half stays where it was (the
+       condition loop at declaration); `alsoDef` hands the same gated
+       payload to `effects.defendsTriggers`, the one body both boards' walls
+       call. `entersLeaves`' shape: one printed clause, two sites. */
+    if(/^this attacks or defends$/.test(cond)) return Object.assign(rest,{alsoDef:true});
     /* RULING (Emeritus Scolding): a card played at instant speed during the
        opponent's turn gets the bigger effect — Iyslander's whole game. */
     if(/(?:is|was) played during an opponent'?s? turn/.test(cond)) return Object.assign(rest,{cond:"foeTurn"});
@@ -6476,7 +6483,9 @@ function fxParse(card){
          appears only on the entries that carry it. */
       else if(r.cond) fx.conds.push(Object.assign(
         {cond:r.cond, op, instead:!!r.instead, atkHero:!!r.atkHero},
-        r.wpnOnly ? {wpnOnly:true} : {}));
+        r.wpnOnly ? {wpnOnly:true} : {},
+        /* opt-in for the same reason (v4.97) */
+        r.alsoDef ? {alsoDef:true} : {}));
       /* AN UNGATED "when this attacks a HERO" PAYLOAD gets its own list
          (v3.46), for the reason `onHitHero` does: an op is a bare array
          and a flag on it sits where a reader expects a parameter. */

@@ -4003,7 +4003,18 @@ function makeEffects(ctx){
         isDraconic:"this isn't Draconic",
         pitchOverBase:"nothing in your pitch zone beats its base power",
         charged:"you didn't charge your hero's soul this turn",
-        soulEmpty:`${sp(act(n))} hero's soul already holds a card`,
+        /* "Boltyn's hero's soul" read on the ladder (v4.97) — the possessive
+           is the HERO's already */
+        soulEmpty:`${sp(act(n))} soul already holds a card`,
+        /* AND THE ENGINE'S OWN NAME FOR IT reached the feed (v4.97):
+           Pulping and Bare Fangs printed "condition not met (discard6way)"
+           on every miss, 4 times in 210 games */
+        discard6way:"no card with 6 or more {p} was discarded this way",
+        arcTakenTurn:"no arcane damage has been dealt to you this turn",
+        /* the two reaction gates answer FALSE here only off the reaction
+           route (`attackRx` owns them on it), and still read as words */
+        reprise:"the defending hero hasn't defended with a card from hand",
+        defAtkAction:"it isn't defended by an attack action card",
         fused:"no qualifying card in hand to reveal for Fusion",
         /* NAMED, NOT SECOND-PERSON. These reach `L`, which writes the feed
            BOTH seats read — so the subject is the trap card the message
@@ -4022,7 +4033,12 @@ function makeEffects(ctx){
            CARD is missing, in the printed capitalisation the clause used,
            not "condition not met (board:spectral shield)". */
         || (/^board:/.test(cond) ? `no ${cond.replace(/^board:/, "").replace(/\b[a-z]/g, ch => ch.toUpperCase())} on ${sp(act(n))} board` : null)
-        || (/^chargedPitch(\d)$/.test(cond) ? `the card charged this way wasn't the right colour` : null)
+        /* AND A DECLINED CHARGE IS NOT A WRONG COLOUR (v4.97): the policy
+           declines every optional charge (v4.33), so Beaming Bravado said
+           "wasn't the right colour" 29 times in 210 games about a card that
+           was never charged at all */
+        || (/^chargedPitch(\d)$/.test(cond) ? (chargedWay.length
+              ? `the card charged this way wasn't the right colour` : `nothing was charged this way`) : null)
         /* the counter's PRINTED spelling, never the bag key — "+1{p}" reads
            as `pow` inside the engine and nobody at the table says that. */
         || (/^noCtr:/.test(cond) ? `it already carries a ${P.ctrLabel(cond.slice(6))} counter` : null)
@@ -6506,6 +6522,21 @@ function makeEffects(ctx){
        caller looks exactly like a trigger that works (v3.50). */
     for(const dc of [...(wall || []), ...(gearWall || [])]){
       const dfx = fxParse(dc);
+      /* "WHEN THIS ATTACKS OR DEFENDS, IF …" (v4.97) — the defend half,
+         gated by the closed vocabulary above and run at the DEFENDER's seat,
+         borrowed and handed straight back (v4.62): inside a link the actor
+         is the attacker, and a borrowed seat left behind corrupts every
+         rule after it in the same resolution. */
+      for(const ce of (dfx.conds || [])){
+        if(!ce || !ce.alsoDef) continue;
+        if(!defendsCondMet(n, defSeat, ce.cond)){
+          n = L(n, `${dc.name} defends — condition not met (${DEFENDS_WHY[ce.cond] || ce.cond}).`);
+          continue;
+        }
+        const was = n.actor;
+        n = runOps({...n, actor: defSeat}, [ce.op], dc.name);
+        n = {...n, actor: was};
+      }
       /* A MODAL OPTIONAL COST (v3.90) — Washed Up Wave. Its sibling
          Jittery Bones prints the identical cost on the `attacks`
          trigger; one reader, two sites, exactly as `optCost` keeps. */
@@ -8671,6 +8702,25 @@ const lifeAhead  = (mine, theirs) =>
 const lifeBehind = (mine, theirs) =>
   (mine.hp < theirs.hp) || (mine.hp === theirs.hp && tieGrantOf(theirs).behind);
 
+/* ---- THE DEFEND HALF OF "WHEN THIS ATTACKS OR DEFENDS" (v4.97) ---------
+   A CLOSED VOCABULARY, like `CONDONHIT_CONDS` (v3.96): the gates the pool
+   prints on this clause, answered by the SAME readers the main condition
+   loop asks — `lifeBehind` (Line Crossers' one pair, v4.51) and
+   `controlsAuraOf` — so the attack half and the defend half of one printed
+   sentence cannot disagree. An unknown gate answers FALSE: weaker than
+   printed and visible, never a payload fired off a gate nobody read. The
+   seat is the DEFENDER's, which on this route is not the actor. */
+const DEFENDS_CONDS = ["lifeLt", "suspenseAura"];
+function defendsCondMet(g, seat, cond){
+  const me = g && g.sides && g.sides[seat], them = g && g.sides && g.sides[1 - seat];
+  if(!me || !them) return false;
+  if(cond === "lifeLt") return lifeBehind(me, them);
+  if(cond === "suspenseAura") return controlsAuraOf(me, "suspense");
+  return false;
+}
+const DEFENDS_WHY = {lifeLt: "its controller isn't behind on life",
+                     suspenseAura: "its controller has no aura of Suspense"};
+
 function defendValue(defSide, card, opts){
   opts = opts || {};
   /* THE BASE IS THE CALLER'S WHEN IT KNOWS BETTER. A piece of equipment's
@@ -10474,6 +10524,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, jabTargets, CTX_KEYS, ACT_IF_KINDS, controlsAuraOf, PLAY_IF_KINDS, playIfOk, chainAtkOf, had6ThisTurn, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, restampHalving, returnStolen, pendPumped, attackBase, basePowOf, defLimitWhy, rxNoTargetWhy, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
+return {makeEffects, jabTargets, DEFENDS_CONDS, defendsCondMet, CTX_KEYS, ACT_IF_KINDS, controlsAuraOf, PLAY_IF_KINDS, playIfOk, chainAtkOf, had6ThisTurn, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, restampHalving, returnStolen, pendPumped, attackBase, basePowOf, defLimitWhy, rxNoTargetWhy, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

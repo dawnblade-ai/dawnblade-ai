@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.96
+**Current version:** v4.97
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3406 drills** at v4.96.
+This is `node --test "test/*.test.js"` — **3413 drills** at v4.97.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,17 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### ONE CLAUSE, TWO EVENTS — "ATTACKS OR DEFENDS" (v4.97)
+
+The defend half of *"when this attacks or defends, if …"* was flagged `approx`
+and dropped, so Fyendal's Fighting Spirit and Full of Bravado did nothing on
+a block (six records, `tier: full`). `alsoDef` rides on the gated cond entry
+and `effects.defendsTriggers` answers it at the defender's seat from a closed
+vocabulary (`DEFENDS_CONDS`). **An `approx` flag on a clause is a recorded
+gap the audit counts as read**; grep for them when looking for work.
+The same census made every "condition not met" reason a phrase
+(`test/notmetvoice.test.js` drives every gated pool card).
 
 ### A FINISHED GAME IS A STATE EVERY DOOR MUST ASK ABOUT (v4.96)
 

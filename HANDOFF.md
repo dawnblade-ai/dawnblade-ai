@@ -1,6 +1,6 @@
-# Handoff — Dawnblade, at v4.83 (updated through v4.96)
+# Handoff — Dawnblade, at v4.83 (updated through v4.97)
 
-**Written 2026-09-28, numbers refreshed 2026-10-04 at v4.96. Every number below was re-derived this session, with
+**Written 2026-09-28, numbers refreshed 2026-10-04 at v4.97. Every number below was re-derived this session, with
 the command that produces it.** Re-derive before you quote one; this file
 has rotted before, and so has every document that stated a count.
 
@@ -22,8 +22,8 @@ where things stand and what is next.
 
 | measure | value | command |
 |---|---|---|
-| version | v4.96, live on GitHub Pages | `grep APP_VER index.html` |
-| drills | 3406 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
+| version | v4.97, live on GitHub Pages | `grep APP_VER index.html` |
+| drills | 3413 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
 | pool coverage | **405 of 405** unique cards read in full · 0 part · 0 none | `npm run audit`, top of `AUDIT.md` |
 | unfinished cards | 0, and 0 one clause away | `npm run gaps` |
 | approximation ledger | 47 records: 29 closed · **16 stated · 2 open** | `node tools/approx.js` |
@@ -70,6 +70,7 @@ Every one of those cards read `tier: full` before its fix.
 | 4.94 | two user rulings: a Cloaked piece's statics wait for the flip; Scorpio reads a Lightning link anywhere on the chain |
 | 4.95 | the trainer's four instant-speed doors are ONE body (`playAtSpeed`): priced through `effCost`, pitched on demand, resolved through `execute` |
 | 4.96 | a finished game stops every trainer door; the defend door asks the cap (`defCapWhy`) and CR 7.3.2b, and names its refusals |
+| 4.97 | "attacks or defends" reads its defend half (`alsoDef`, `DEFENDS_CONDS`); every not-met reason is a phrase |
 
 Versions 4.88–4.93 were found by ONE census: every refusal in the trainer's
 play doors, read against `judge.legal`. When you find a rule in the trainer,
@@ -141,10 +142,12 @@ today:
   holding an answer with no window — and none of the nine answers changes
   the damage. Unobservable today; it moves the day an instant prevention
   meets an instant that deals damage.
-- **The condition loop's "not met, then fires" family.** v3.60 and v4.08
-  each found a condition reported unmet in the feed and then satisfied by a
-  later pass. Census every condition kind the main loop SKIPS against where
-  it is answered later, and drive each so the feed and the state agree.
+- ~~**The condition loop's "not met, then fires" family.**~~ Run at v4.97
+  over 210 games and over every gated pool card: no "not met, then fires"
+  pair remains, but the census found the dropped defend half of "attacks or
+  defends" and five raw engine names in the feed. **The remaining `approx`
+  flag** is "when this enters or leaves the arena" (parser.js, the
+  `entersLeaves` clause) — read it next.
 - ~~**The reverse census of v4.91.**~~ Run at v4.95 for the PLAY doors:
   the four instant-speed doors were private copies of "play a card" and are
   one body now, and the DEFEND door followed at v4.96. Still unread against
