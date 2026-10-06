@@ -223,6 +223,9 @@ function abCostWhy(sd, ab, ctx){
   { const _g = PR.abCtrGateFails(sd, ab);
     if(_g) return ab.name.replace(/ — ability$/, "")
          + " already carries a " + _g + " counter — its ability does nothing while it does"; }
+  /* …AND AN ARSENAL ABILITY WITH NOTHING TO PUT OR CYCLE (v5.00) —
+     `effects.arsNoOpWhy`, the one body the trainer's door asks too. */
+  { const _an = E.arsNoOpWhy(sd, ab); if(_an) return _an; }
   /* ---- AND A PICK WITH NOTHING TO CHOOSE (v4.59) ---------------------
      `buildPrompt` answers null on an empty candidate pool — a prompt
      politely declining to show nothing — and that is right THERE and wrong

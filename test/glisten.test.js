@@ -549,3 +549,17 @@ test("every prompt action judge accepts is one the table can send", () => {
   assert.deepEqual(missing, [],
     "judge accepts prompt actions the table has no control for: " + missing.join(", "));
 });
+
+test("the armed wipe's feed line names the seat whose weapons they are (v5.00)", () => {
+  /* The SUBJECT is the card's printed phrase — "weapons you control" — and
+     the feed is read by BOTH seats (v2.83), so at a named hero's end phase it
+     read as the reader's own weapons. Seat 0 called "You" keeps the second
+     person; a named seat is inflected. */
+  const run = nm => H.runOps(H.state({name: nm}, {name: "Dorinthea"}),
+    [["ctrEnd", {kind: "pow", filter: {}, label: "+1{p}", subj: "weapons you control"}]], "Glisten");
+  const named = (run("Boltyn").feed || []).join(" | ");
+  assert.match(named, /counter on weapons Boltyn controls falls away/, named);
+  assert.doesNotMatch(named, /you control/, named);
+  const you = (run("You").feed || []).join(" | ");
+  assert.match(you, /counter on weapons you control falls away/, you);
+});

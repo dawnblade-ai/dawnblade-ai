@@ -1,3 +1,51 @@
+## v5.00 — an arsenal ability with nothing to do is refused before it is paid
+
+Found by READING self-play feeds rather than counting them. In one Azalea
+game the same three lines repeated every turn: Death Dealer paid {r} with no
+arrow in hand, Bull's Eye Bracers shattered itself the same way, and her own
+ability ran on an empty arsenal ("nothing to cycle").
+
+v4.59 refused a pick with nothing to choose, but these three activation lines
+never open a pick. Their whole payload is the arsenal (`fx.arsenalPut`, or
+`arsCycle`), so the paid-no-op rule never asked them. **`effects.arsNoOpWhy`**
+is the one body now. Both `judge.abCostWhy` and the trainer's `tryPlay` door
+ask it, and it asks the same questions the queue site and `arsCycle` do:
+`arsEmpty`/`arsFree`, then `promptFilter` over the hand. It refuses only when
+the arsenal is the WHOLE payload, so a second op or a gate refuses nothing.
+That is drilled with two synthetics.
+
+Azalea's ability costs no resource, and its go again refunds the action
+point. What it spends is the ONCE-PER-TURN, and Call in the Big Guns puts an
+arrow face up later in the same turn, which is exactly when the ability would
+have done something. Fai's refusal at v4.59 counts that allowance as a cost
+for the same reason.
+
+**The ladder is byte-identical on standings** at three seeds both sides. Only
+route counters move: `held` 9308 → 9165, the no-op activations that no longer
+happen.
+
+The same reading found three feed lines that the player trusts and that were
+wrong:
+
+- **the token-created line doubled its period.** It quotes the token's first
+  sentence and appends one, and a one-sentence token text already ends in a
+  period ("…gets +1{p}..").
+- **its foe half hand-rolled the possessive** (`foe(n).name + "'s"`). That is
+  v4.22's "You's board" whenever a token lands under seat 0 from a seat-1
+  actor. It uses `sp` for both halves now.
+- **Glisten's armed wipe said "weapons you control"** at a named hero's end
+  phase. The subject is the card's printed phrase and the feed is read by
+  both seats (v2.83), so it is inflected for the seat.
+
+Drills: `test/arsnoop.test.js`, `test/tokenline.test.js`, and one in
+`test/glisten.test.js`. 11 sabotages, 11 bite. The two silences on the first
+pass were missing fixtures: a self-half possessive, and a gated second
+payload.
+
+**For the UI pass:** feed lines carry raw pips (`+1{p}`, `{r}`, `{d}`) and the
+ticker renders them as text. The engine is right to keep the printed symbol;
+drawing it as an icon is presentation.
+
 ## v4.99 — the seat policy takes the charge, re-measured
 
 HANDOFF §2b named this as the next lead. v4.33 had `sparring.act` decline

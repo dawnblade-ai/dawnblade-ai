@@ -300,8 +300,11 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
     /* 23,598 -> 23,599 AT v4.92, READ FIRST, same six rows: the zone
        refusal's word is `DawnPrompts.promptZoneWord(from)` where it was a
        hand-rolled ternary one character shorter (a second review of v4.91:
-       two spellings of one refusal across two boards). Same anchors. */
-    "costtaxes.test.js index.html 23599",
+       two spellings of one refusal across two boards). Same anchors.
+       23,599 -> 23,909 AT v5.00: `tryPlay` gained the arsenal no-op
+       refusal (`DawnEffects.arsNoOpWhy`), inside the same body — every
+       drill below taking that slice moved by the same 310. */
+    "costtaxes.test.js index.html 23909",
     "dichotomy.test.js engine/prompts.js 12746",
     /* 8,550 -> 9,523 AT v4.60, and now THREE files take the same slice —
        `playRx`, anchored on its own declaration and bounded at `playRxA`, the
@@ -321,7 +324,7 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        ACTIVATED route asks too, so the body is shorter by the two
        declarations it no longer carries. Same anchors. `rxability.test.js`
        takes the same slice to pin that the destructure is there. */
-    "discost.test.js index.html 23599",
+    "discost.test.js index.html 23909",
     /* 9,905 -> 10,264 AT v4.92, READ FIRST, for all four rows of this body:
        still `playRx` -> `playRxA`. The growth is Put in Context's limit
        asked in the defence branch through `effects.defLimitWhy`, beside the
@@ -359,15 +362,15 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        `tryPlay` in `stack` (an activated ability, never a reaction card).
        Same signature, same anchors; `discost.test.js` and
        `rxability.test.js` take the same slice for claims of their own. */
-    "priority.test.js index.html 23599",
-    "priority.test.js index.html 23599",
+    "priority.test.js index.html 23909",
+    "priority.test.js index.html 23909",
     /* 10,264 -> 8,459 AT v4.95, READ FIRST, for the five `playRx` -> `playRxA`
        rows: still the hand door, bounded at the arsenal door. It SHRANK —
        the charge, the resolution and the wall are `effects.playAtSpeed` now. */
     "priority.test.js index.html 8459",
-    "rxability.test.js index.html 23599",
+    "rxability.test.js index.html 23909",
     "rxability.test.js index.html 8459",
-    "zonerule.test.js index.html 23599"
+    "zonerule.test.js index.html 23909"
   ], /* 15,440 -> 16,557 AT v4.59, READ FIRST (v4.57: a pin edited without
         being read is a guard switched off). Both rows are
         `tryPlay` -> `confirmPay` — anchored on the body's own declaration and

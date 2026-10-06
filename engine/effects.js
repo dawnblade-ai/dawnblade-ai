@@ -1913,10 +1913,14 @@ function makeEffects(ctx){
            death trigger creates a Gold for the player who LOST the ally,
            and "your board" read as the attacker's. The trainer names seat
            0 "You", so it still reads "your board" there. */
-        const _self = act(n).name || "";
-        const who = side==="foe" ? foe(n).name+"'s"
-                  : (/^you$/i.test(_self) ? "your" : _self+"'s");
-        n = L(n, `${rec.name}${(op[2]||1)>1?` ×${op[2]}`:""} created on ${who} board — ${clean(rec.tx||"no text").split(". ")[0]}.`);
+        /* `sp` for BOTH halves (v5.00): the foe half hand-rolled `'s`, so a
+           token the dummy mints under the player's control read "You's
+           board" (v4.22). And the first sentence keeps no period of its own
+           — a one-sentence token text ends in one, and the line added a
+           second ("gets +1{p}.."). */
+        const who = sp(side==="foe" ? foe(n) : act(n));
+        const _first = clean(rec.tx||"no text").split(". ")[0].replace(/\.\s*$/, "");
+        n = L(n, `${rec.name}${(op[2]||1)>1?` ×${op[2]}`:""} created on ${who} board — ${_first}.`);
         /* AFTER THE LINE THAT SAYS IT ARRIVED. In a training sim the
            sequence IS the lesson (v3.60), and a counter announced before
            the token it sits on reads as a counter on something else. */
@@ -2749,8 +2753,11 @@ function makeEffects(ctx){
         actMut(n).ctrEnd = [...(act(n).ctrEnd||[]), spec];
         /* NO VERB TO INFLECT AND NO NOUN HARDCODED (v4.22, v4.43): `sp`
            gives "your" for seat 0 and "Boltyn's" for a named hero, and the
-           SUBJECT is the card's own printed phrase. */
-        n = L(n, `${srcName}: at the beginning of ${sp(act(n))} end phase, every ${spec.label || spec.kind} counter on ${spec.subj || "a permanent"} falls away.`);
+           SUBJECT is the card's own printed phrase — with its "you
+           control" inflected for the seat (v5.00): the feed is read by
+           BOTH seats, so "weapons you control" at Boltyn's end phase read
+           as the reader's own weapons (v2.83). */
+        n = L(n, `${srcName}: at the beginning of ${sp(act(n))} end phase, every ${spec.label || spec.kind} counter on ${String(spec.subj || "a permanent").replace(/\byou control\b/, sv(act(n), "control").replace(/^You\b/, "you"))} falls away.`);
       }
       else if(k==="ctrPut"){
         const spec = v || {};
@@ -8848,6 +8855,51 @@ function defendValue(defSide, card, opts){
    uid baked into the parse names whichever copy parsed first (v3.20's
    `notUid`). A caller that says nothing excludes nothing, which is the
    faithful reading when there is no chain link at all. */
+/* ---- AN ARSENAL ABILITY WITH NOTHING TO DO (v5.00) ----------------------
+   v4.59's paid-no-op refusal asked about a PICK, and the three activation
+   lines whose whole payload is the ARSENAL never open one: Death Dealer
+   ("{r}: If you have no cards in your arsenal, you may put an arrow card from
+   your hand face-up into your arsenal. If you do, draw a card"), Bull's Eye
+   Bracers (the same put, priced by DESTROYING ITSELF) and Azalea's own
+   ability ("0: Put a card from your arsenal on the bottom of your deck. If
+   you do, …"). So the seat paid {r}, or shattered the Arms piece, or spent
+   Azalea's once-per-turn — and the payload's own gate then did nothing.
+   Found by READING self-play feeds: an Azalea game repeated it every turn.
+
+   v2.04's mirror, which v4.49 states in as many words: a PAID cost that
+   does nothing is the player losing value for a play the rules should have
+   refused. Azalea's costs no resource and its go again refunds the action
+   point, so what it spends is the ONCE-PER-TURN — and Call in the Big Guns
+   puts an arrow face up later in the same turn, which is exactly when the
+   ability would have done something (Fai's refusal at v4.59 counts the
+   allowance as a cost for the same reason).
+
+   ONLY A WHOLE PAYLOAD. An ability that also does something else is not a
+   no-op, so any other op or a gate refuses nothing here. The questions are
+   the SAME the queue site and `arsCycle` ask (`arsEmpty`/`arsFree`, then
+   `promptFilter` over the hand), so the refusal and the resolution cannot
+   disagree. Module-level beside `jabTargets`, because both boards call it
+   and the trainer reaches it as `DawnEffects.arsNoOpWhy`. */
+function arsNoOpWhy(sd, ab){
+  if(!sd || !ab || typeof ab.name !== "string") return null;
+  const fx = P.fxParse(ab);
+  if((fx.conds || []).length) return null;
+  const ops = fx.ops || [];
+  const nm = ab.name.replace(/ — (?:ability|hero power)$/, "");
+  const ap = fx.arsenalPut;
+  if(ap && !ops.length){
+    if(ap.needEmpty ? !arsEmpty(sd) : !(arsFree(sd) > 0))
+      return ap.needEmpty
+        ? nm + " needs an empty arsenal, and " + sp(sd) + " arsenal holds a card"
+        : nm + ": " + sp(sd) + " arsenal is full";
+    if(!(sd.hand || []).some(promptFilter(ap.filter || {})))
+      return nm + ": " + sp(sd) + " hand holds no " + ((ap.filter && ap.filter.tt) || "card")
+           + " to put in the arsenal";
+  }
+  if(ops.length === 1 && ops[0][0] === "arsCycle" && !sd.arsenal)
+    return nm + ": " + sp(sd) + " arsenal is empty — nothing to cycle";
+  return null;
+}
 function jabTargets(sd, filt, exclUid){
   if(!sd || !filt) return [];
   const ok = promptFilter(filt);
@@ -10524,6 +10576,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, jabTargets, DEFENDS_CONDS, defendsCondMet, CTX_KEYS, ACT_IF_KINDS, controlsAuraOf, PLAY_IF_KINDS, playIfOk, chainAtkOf, had6ThisTurn, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, restampHalving, returnStolen, pendPumped, attackBase, basePowOf, defLimitWhy, rxNoTargetWhy, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
+return {makeEffects, jabTargets, arsNoOpWhy, DEFENDS_CONDS, defendsCondMet, CTX_KEYS, ACT_IF_KINDS, controlsAuraOf, PLAY_IF_KINDS, playIfOk, chainAtkOf, had6ThisTurn, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, restampHalving, returnStolen, pendPumped, attackBase, basePowOf, defLimitWhy, rxNoTargetWhy, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

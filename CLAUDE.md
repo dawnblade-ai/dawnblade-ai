@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.99
+**Current version:** v5.00
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3415 drills** at v4.99.
+This is `node --test "test/*.test.js"` — **3417 drills** at v5.00.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,19 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### READ A FEED, NOT ONLY A COUNT — AN ARSENAL ABILITY THAT DID NOTHING (v5.00)
+
+Reading one Azalea self-play feed line by line found three paid no-ops that
+repeated every turn: Death Dealer ({r}), Bull's Eye Bracers (destroy this)
+and Azalea's own ability (her once-per-turn). v4.59's refusal asked about a
+PICK, and an arsenal payload never opens one. `effects.arsNoOpWhy` is the one
+body, and both `judge.abCostWhy` and the trainer's `tryPlay` ask it. It
+refuses only when the arsenal is the WHOLE payload. **When a rule refuses one
+payload shape, census the other shapes an activation's whole payload can
+take.** The same reading found the token-created line doubling its period
+and two possessives hand-rolled past `sp`. No counter here can see a line
+that reads wrong; only reading one can.
 
 ### ONE CLAUSE, TWO EVENTS — "ATTACKS OR DEFENDS" (v4.97)
 
