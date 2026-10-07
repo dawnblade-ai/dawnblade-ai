@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.00
+**Current version:** v5.01
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3417 drills** at v5.00.
+This is `node --test "test/*.test.js"` — **3429 drills** at v5.01.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,23 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A HANDLER RETURNED FROM A CLICK IS A DEAD TAP (v5.01)
+
+`tapTwice(card, verb, commit)` RETURNS a handler. The trainer's arena row
+wrote `onClick={()=>{ … return tapTwice(…) }}`, so React called the arrow and
+dropped what it returned: no ally attack and no arena ability ever ran from
+that row, while every source scan showed the right call in the right place.
+It is an IIFE now (`onClick={(()=>{ … return tapTwice(…) })()}`), `gearBtn`'s
+shape, and `test/tapdoor.test.js` censuses every plain-arrow `onClick` for a
+returned `tapTwice`. **Found only by driving the tap on the real page** (v4.85:
+an enabled control in front of a silent guard reads like a working one).
+
+The same census of the trainer's weapon door found a one-board limit: it
+refused every second swing, where judge reads the printed `Once per Turn` /
+`{t}`, so Sledge of Anvilheim swung once in solo play. `parser.swingSpentWhy`
+is the one reader. And an aura Cosmo arms (v3.84) had no trainer route at
+all; `from==="aura"` is the ally door's twin, priced off `auraAttackOf`.
 
 ### READ A FEED, NOT ONLY A COUNT — AN ARSENAL ABILITY THAT DID NOTHING (v5.00)
 

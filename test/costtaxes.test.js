@@ -176,8 +176,8 @@ test("DRIVEN: an ally's attack is an action — it pays the first-action tax and
 /* ---- 3. THE TRAINER, WHICH NO DRILL CAN DRIVE ------------------------ */
 
 test("the trainer prices every payment through ONE reader, and it knows the ally route", () => {
-  assert.match(HTML, /const payCost = \(s, card, from\) => from==="ally"\n    \? \(\(DawnParser\.allyAttack\(card\)\|\|\{\}\)\.cost \|\| 0\) \+ DawnParser\.costTaxes\(card, act\(s\), costCtx\(s, actorOf\(s\)\), "ally"\)\n    : effCost\(card, act\(s\), costCtx\(s, actorOf\(s\)\)\);/,
-    "an ally's attack must be priced off its own line, with its taxes");
+  assert.match(HTML, /const payCost = \(s, card, from\) => from==="ally"\n    \? \(\(DawnParser\.allyAttack\(card\)\|\|\{\}\)\.cost \|\| 0\) \+ DawnParser\.costTaxes\(card, act\(s\), costCtx\(s, actorOf\(s\)\), "ally"\)\n    : from==="aura"\n    \? \(\(auraAtkOf\(s, card\)\|\|\{\}\)\.cost \|\| 0\) \+ DawnParser\.costTaxes\(card, act\(s\), costCtx\(s, actorOf\(s\)\), "aura"\)\n    : effCost\(card, act\(s\), costCtx\(s, actorOf\(s\)\)\);/,
+    "an ally's or an aura's attack must be priced off its own line, with its taxes (v5.01: the aura arm)");
   const tp = HTML.slice(HTML.indexOf("const tryPlay = (card,from,idx,half)"), HTML.indexOf("const confirmPay = () => setG"));
   assert.match(tp, /const cost = payCost\(s, card, from\);/, "tryPlay prices a play its own way again");
   const cp = HTML.slice(HTML.indexOf("const confirmPay = () => setG"), HTML.indexOf("const cancelPay = () =>"));

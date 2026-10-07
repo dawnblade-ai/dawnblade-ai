@@ -806,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "5.00"; /* v5.00 - an arsenal ability with nothing to put or cycle is refused before it is paid, and three feed lines read right. See CHANGELOG.md. */
+window.APP_VER = "5.01"; /* v5.01 - a swing is spent only where the weapon prints a limit, an armed aura can attack in the trainer, and the arena row taps again. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -3871,8 +3871,15 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      three-cost-readers bug on the one route that did not read `effCost`.
      The taxes an activated ability owes ride on it (`costTaxes`, the reader
      `effects.execute` charges with). */
+  /* AN AURA'S ATTACK IS PRICED OFF COSMO'S GRANT (v5.01), the way an
+     ally's is priced off its own line — `parser.auraAttackOf` is the one
+     reader `execute` and judge's `boardAtkCost` ask, discount included. */
+  const auraAtkOf = (s, card) => DawnParser.auraAttackOf(card, act(s),
+    {yourTurn: actorOf(s) === s.turnPlayer, discount: bAct(s).auraDiscount});
   const payCost = (s, card, from) => from==="ally"
     ? ((DawnParser.allyAttack(card)||{}).cost || 0) + DawnParser.costTaxes(card, act(s), costCtx(s, actorOf(s)), "ally")
+    : from==="aura"
+    ? ((auraAtkOf(s, card)||{}).cost || 0) + DawnParser.costTaxes(card, act(s), costCtx(s, actorOf(s)), "aura")
     : effCost(card, act(s), costCtx(s, actorOf(s)));
   const tryPlay = (card,from,idx,half) => setG(s=>{
     /* A LIVE SHEET STOPS THE GAME (v4.80) — `judge.legal`'s rule, which this
@@ -4002,7 +4009,12 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       if(_zw) return L(s, `${card.name} can't be played from your ${DawnPrompts.promptZoneWord(from)} — ${_zw}.`);
     }
     if(from!=="weapon" && from!=="hero" && !isAttack(card) && !fx.playable) return L(s,`${card.name}: no scripted effect yet — pitch it, block with it, or ℹ to read it.`);
-    if((from==="weapon"||from==="hero") && act(s).weaponUsed[card.uid]) return L(s, from==="hero" ? "Already used this turn." : `${card.name} already swung this turn.`);
+    if(from==="hero" && act(s).weaponUsed[card.uid]) return L(s, "Already used this turn.");
+    /* A SWING IS SPENT ONLY WHERE THE WEAPON PRINTS A LIMIT (v5.01) —
+       `parser.swingSpentWhy`, the reader judge asks. This refused every
+       second swing, so Sledge of Anvilheim (no Once per Turn, no {t}) could
+       not swing twice here while the table allowed it. */
+    if(from==="weapon"){ const _sw = DawnParser.swingSpentWhy(act(s), card); if(_sw) return L(s, _sw + "."); }
     /* AN ALLY ATTACK IS AN ATTACK (v3.44) — `isAttack` reads the type
        line and an ally's says "Action - Ally", never "Attack", exactly as
        a weapon's never does. Both are told apart by the ROUTE, so both
@@ -4010,7 +4022,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     /* AN ACTIVATED ATTACK REACTION IS PLAYED WITH THE CHAIN OPEN — that is
        the only time it is legal at all (v3.63), so it joins the exemptions
        here rather than being told to close the chain first. */
-    if(s.chainOpen && from!=="weapon" && from!=="ally" && !isAttack(card) && !isInstantT(card) && !card._instant && !card._attackRx)
+    if(s.chainOpen && from!=="weapon" && from!=="ally" && from!=="aura" && !isAttack(card) && !isInstantT(card) && !card._instant && !card._attackRx)
       return L(s, "Combat chain is open — close it (⛓) before playing a non-attack action.");
     /* …AND IT IS REFUSED WITHOUT ONE. The trainer's `stack` mode IS the
        attack-reaction window (priority.js's `fromTrainer` maps it to
@@ -4177,6 +4189,20 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       if(!_b) return L(s, `${card.name} is not in the arena.`);
       if(_aa.taps && _b.spent) return L(s, `${card.name} is tapped until your end phase.`);
       if(_aa.oncePerTurn && act(s).weaponUsed["ally"+card.uid]) return L(s, `${card.name} has already attacked this turn.`);
+    }
+    /* AN AURA THAT IS A WEAPON (v3.84) HAD NO ROUTE ON THIS BOARD (v5.01).
+       judge has offered it since Cosmo was built; here the arena tile only
+       zoomed the card, so Enigma's whole engine — Spectral Shields swinging
+       for their ward — did nothing in solo play. The same limits judge
+       asks: the grant ("during your turn", an equipped Cosmo), its tap, and
+       its once-per-turn, keyed `aura`+uid as `execute` records it. */
+    if(from==="aura"){
+      const _ga = auraAtkOf(s, card);
+      if(!_ga) return L(s, `${card.name} has no attack — an aura swings only while a piece grants it, on your turn.`);
+      const _b = act(s).board.find(x => x && x.uid === card.uid);
+      if(!_b) return L(s, `${card.name} is not in the arena.`);
+      if(_ga.taps && _b.spent) return L(s, `${card.name} is tapped until your end phase.`);
+      if(_ga.oncePerTurn && act(s).weaponUsed["aura"+card.uid]) return L(s, `${card.name} has already attacked this turn.`);
     }
     /* WHICH CARD THE DISCARD COST SPENDS (v4.85) — asked after every
        legality above, so a refused activation is never asked a question it
@@ -5366,7 +5392,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       return out;
     }
     if(you(g).arsenal) out.push({card:you(g).arsenal, zone:"arsenal", verb:"tap again to play", fn:()=>tryPlay(you(g).arsenal,"arsenal",0)});
-    you(g).gear.forEach((gr,i)=>{ if(isWeapon(gr)&&!gr.destroyed&&!you(g).weaponUsed[gr.uid]) out.push({card:{...gr,def:null}, zone:slotOf(gr).lab, verb:"tap again to swing", fn:()=>tryPlay(gr,"weapon",i)}); });
+    you(g).gear.forEach((gr,i)=>{ if(isWeapon(gr)&&!gr.destroyed&&!DawnParser.swingSpentWhy(you(g), gr)) out.push({card:{...gr,def:null}, zone:slotOf(gr).lab, verb:"tap again to swing", fn:()=>tryPlay(gr,"weapon",i)}); });
     you(g).gear.forEach((gr,i)=>{ if(gr.pow&&!gr.destroyed&&!you(g).weaponUsed["gp"+gr.uid]) out.push({card:gr.powCard, zone:slotOf(gr).lab, verb:"tap again to activate", fn:()=>tryPlay(gr.powCard,"hero",i)}); });
     if(built.HPOW && !you(g).weaponUsed["hpow"]) out.push({card:built.HPOW, zone:"hero", verb:"tap again to use the hero power", fn:()=>tryPlay(built.HPOW,"hero",0)});
     /* THE ZONE RULE IS `parser.playableFromZone` (v3.00) — it was written
@@ -5583,17 +5609,28 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
               {g.mode!=="act" && <div className="modehint">Action needed — flick up to the chain screen</div>}
               <InPlayRow entries={you(g).board} chips={toks} cell={(b,i)=>(
                 <button key={b.uid} className={"b clip-sm"+(b.spent?" spent":"")} style={{width:52,flex:"none"}}
-                  onClick={()=>{
-                    if(g.inspect) return setZoom(b.card);
+                  onClick={(()=>{
+                    /* `tapTwice` RETURNS A HANDLER, so this is an IIFE that
+                       picks one — `gearBtn`'s shape (v5.01). It was a plain
+                       arrow that RETURNED the handler from inside React's
+                       click, so every tap on this row was dead: no ally
+                       attack, no arena ability (Gold, the potions,
+                       Concealed Object) ever ran on this board. Found
+                       driving the new aura route at phone dimensions. */
+                    if(g.inspect) return ()=>setZoom(b.card);
                     /* AN ALLY ATTACK IS AN ACTIVATION LIKE ANY OTHER
                        (v3.44) — two-tap, then the shared route. It used
                        to call `allySwing`, which fabricated the damage. */
                     if(b.kind==="ally" && DawnParser.allyAttack(b.card))
                       return tapTwice(b.card, "attack", ()=>tryPlay(b.card,"ally",i));
+                    /* AN AURA COSMO HAS ARMED SWINGS (v5.01) — asked after
+                       the ally reader and never instead of it, as judge does. */
+                    if(auraAtkOf(g, b.card))
+                      return tapTwice(b.card, "attack", ()=>tryPlay(b.card,"aura",i));
                     const bp = boardPow(b);
                     if(bp) return tapTwice(bp, "activate", ()=>tryPlay(bp,"board",i));
-                    return setZoom(b.card);
-                  }}>
+                    return ()=>setZoom(b.card);
+                  })()}>
                   <span className={"tapwrap"+((b.spent&&/\btap\b|\{t\}/i.test(b.card.tx||""))?" tapped":"")}><CardFrame card={b.card} className="sm" noType={b.kind==="ally"&&b.card.power>0}/></span>
                   {b.kind==="ally" && b.card.power>0 && <span className="sw">{b.spent?"spent":"⚔ "+b.card.power}</span>}
                 </button>)}/>

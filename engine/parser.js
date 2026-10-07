@@ -10065,6 +10065,25 @@ function abPickBound(sd, ab, ctx){
   const bound = per > 0 ? Math.floor(Math.max(0, avail) / per) : -1;
   return Object.assign({}, spec, {filter: Object.assign({}, spec.filter || {}, {costLe: bound})});
 }
+/* ---- HAS THIS WEAPON SPENT ITS SWING? (v5.01) --------------------------
+   Two printed limits, and only a weapon that prints one of them is limited
+   at all: `Once per Turn` (nine of the pool's swinging weapons) and `{t}`
+   (Scorpio — a tapped permanent stays tapped until CR 4.4.3d). Sledge of
+   Anvilheim prints NEITHER, so paying four again swings again (v2.46).
+
+   `execute` marks `weaponUsed[uid]` on EVERY swing, which is right — the
+   record is a fact about what happened. The REFUSAL is what must read the
+   print, and it was read two ways: judge asked the two limits, and the
+   trainer's door refused any second swing, so Bravo's Sledge was weaker
+   than printed on the board a player uses (v3.01's one-board shape, found
+   reading the reverse census of the weapon door). One reader, both boards. */
+function swingSpentWhy(sd, piece){
+  if(!piece) return null;
+  const wc = weaponCost(piece.tx || "");
+  if(!wc || !(wc.oncePerTurn || wc.taps)) return null;
+  if(!((sd && sd.weaponUsed) || {})[piece.uid]) return null;
+  return piece.name + (wc.taps ? " is tapped until your end phase" : " has already swung this turn");
+}
 function abPickSpec(ab){
   /* THE NAME IS THE MEMO KEY, so `fxParse` throws without one — and this is
      reached from `judge.legal`, a surface fed by JSON off a wire whose
@@ -10398,6 +10417,6 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, spellvoidX, linksControlled, arcaneSoaks,
         ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
-        chiValue, chiSum, chiFloating, pitchExcessWhy, chiCeiling, payCeiling, abChiCost, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, abilitiesLive, boardEntryNamed, isEphemeral, isHandWipe, gyFirstGaKw,
+        chiValue, chiSum, chiFloating, pitchExcessWhy, chiCeiling, payCeiling, abChiCost, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, swingSpentWhy, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, abilitiesLive, boardEntryNamed, isEphemeral, isHandWipe, gyFirstGaKw,
         CARD_OVERRIDES};
 });

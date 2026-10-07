@@ -1,3 +1,37 @@
+## v5.01 — a swing is spent only where the weapon prints a limit; the trainer's arena row was a dead tap
+
+Found by the reverse census of the trainer's weapon and arena doors against
+`judge.legal`, then by driving the new route at phone dimensions.
+
+- **The trainer refused every second swing.** Its weapon door asked
+  `weaponUsed[uid]` alone, and `execute` marks that on EVERY swing. judge
+  asked the two printed limits — `Once per Turn` and `{t}` — so **Sledge of
+  Anvilheim**, which prints neither, could swing twice at the table and once
+  in solo play. `parser.swingSpentWhy` is the one reader now, asked by
+  judge's weapon branch, the trainer's door and the trainer's peek list.
+  v3.01's one-board shape, weaker than printed on the board a player uses.
+- **An aura Cosmo arms had no route in the trainer.** judge has offered it
+  since v3.84; the arena tile only zoomed the card, so Enigma's Spectral
+  Shields never swung in solo play. `from==="aura"` is the ally door's twin:
+  priced off the grant (`auraAtkOf`, beside `payCost`, the reader `execute`
+  charges with, discount included), refused without a grant, off the board,
+  tapped, or past its once-per-turn (`weaponUsed["aura"+uid]`).
+- **The arena row's every tap was dead.** Its `onClick` was a plain arrow
+  that RETURNED `tapTwice(...)`, which itself returns a handler, so React
+  ran nothing. No ally attack and no arena ability (Gold, the potions,
+  Concealed Object) ever ran from that row. It is an IIFE now, `gearBtn`'s
+  shape, and `test/tapdoor.test.js` censuses every plain-arrow `onClick` for
+  a returned `tapTwice` (none) and pins the count of plain arrows (6).
+  Verified on the real page at 393x852: a Spectral Shield swung at cost 0
+  under Enigma's discount, and a Gold paid 2, was destroyed and drew 1.
+- judge's Scorpio comment still called its gate UNREAD; answered at v4.94.
+
+Measured: **the ladder is byte-identical at three seeds on both sides**
+(every change is on the trainer, or is judge asking the same rule through a
+shared reader). Two pins moved deliberately: `auraAttackOf` left
+`keycensus`'s judge-only set, and the trainer's `payCost` pin learned the
+aura arm. Eight sabotages, eight bite.
+
 ## v5.00 — an arsenal ability with nothing to do is refused before it is paid
 
 Found by READING self-play feeds rather than counting them. In one Azalea

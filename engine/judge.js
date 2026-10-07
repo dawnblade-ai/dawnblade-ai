@@ -1431,10 +1431,9 @@ function legal(g, a, seat){
        `activateIfOk` of every activation it routes, the swing included;
        this branch asked nothing, so at the table the swing ignored its
        restriction while the trainer refused it — v3.01's shape, on
-       Briar's weapon. The condition is UNREAD (whether a resolved link is
-       still "an attack you control" is a ruling, recorded as
-       `scorpio-lightning-attack`), so it refuses on both boards: inert,
-       never free (v2.04). */
+       Briar's weapon. The condition was a ruling the user owned
+       (`scorpio-lightning-attack`), ANSWERED AT v4.94: a Lightning attack
+       anywhere on the combat chain, read by `effects.chainAtkOf`. */
     { const wg = PR.fxParse(piece).activateIf;
       if(wg && !E.activateIfOk({...g, actor: seat}, wg, piece))
         return piece.name + " can't be activated — " + wg.why; }
@@ -1446,8 +1445,7 @@ function legal(g, a, seat){
                         untap until CR 4.4.3d in the end phase
 
        Sledge of Anvilheim has neither and is genuinely repeatable. */
-    if((wc.oncePerTurn || wc.taps) && (sd.weaponUsed || {})[piece.uid])
-      return piece.name + (wc.taps ? " is tapped until your end phase" : " has already swung this turn");
+    { const _sw = PR.swingSpentWhy(sd, piece); if(_sw) return _sw; }
     /* ---- A STEAM COUNTER IS A THIRD LIMIT ON A SWING (v4.49) ----------
        `weaponCost` has answered `needSteam` off the printed cost ("Once
        per Turn Action - REMOVE A STEAM COUNTER FROM THIS: Attack") since

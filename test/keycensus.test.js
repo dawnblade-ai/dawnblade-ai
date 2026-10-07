@@ -342,7 +342,7 @@ test("the one-board reader sets are pinned", {skip}, () => {
     assert.ok(both.includes(n), n + " is demonstrably asked by both boards");
 
   assert.deepEqual(onlyJ.sort(),
-    ["auraAttackOf", "chiValue", "isAtkActionCard", "isDR",
+    ["chiValue", "isAtkActionCard", "isDR",
      "printedKw", "splitCostsAP", "weaponCost"].sort(),
     "a reader judge asks and the trainer does not. TWO LEFT this list at " +
     "v3.99: `tapsToActivate` (the trainer now refuses a tapped hero) and " +
@@ -356,7 +356,10 @@ test("the one-board reader sets are pinned", {skip}, () => {
     "and `chiFloating`/`chiSum`, which BOTH boards call.\n" +
     "v4.96: `defCounts` LEFT, because the defender cap became one body " +
     "(`defCapWhy`) that both boards' defend doors ask — a departure from a " +
-    "one-board list is as deliberate an edit as an arrival (v4.12).");
+    "one-board list is as deliberate an edit as an arrival (v4.12).\n" +
+    "v5.01: `auraAttackOf` LEFT. The trainer's arena tile offered an aura's " +
+    "granted attack nowhere — Cosmo's swing existed at the table alone — and " +
+    "it now prices and refuses that swing through the same reader judge asks.");
 
   assert.deepEqual(onlyT.sort(),
     ["clean", "costsAP", "defCap", "frostCount", "hasKwNow", "instantAbilityReady",
