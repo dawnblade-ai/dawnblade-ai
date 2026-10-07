@@ -1,3 +1,48 @@
+## v5.03 — an instant that pumps "target attack" lands on its target
+
+> *"Target attack action card with cost 1 or less gets +3{p}."* — LIGHTNING
+> PRESS, Briar's (an Instant) · *"Instant - {t}: Target attack gets +1{p}."* —
+> CONCEALED OBJECT, Lyath's
+
+Neither is an attack reaction, so `execute` never routed them through
+`attackRx`: the pump fell to a bare `buffNext`, the printed TARGET and its
+qualifier were dropped, and it landed on whatever attacked next. Read off a
+Briar feed: Fry, the legal target on the chain, stayed at 3, and Scorpio, a
+WEAPON the qualifier excludes, swung for +3 on the next link. Played with no
+attack at all it still queued the pump. Every record read `tier: full`, and the
+drift runs both ways, so neither coverage nor the one-sided sweep could see it.
+
+`effects.pumpTargetWhy` is the one reader, asked BEFORE anything moves (v3.11)
+by judge's play branch, `rxTargetWhy` (all three activation routes), and the
+trainer's `tryPlay`, `activateInstant` and `playAtSpeed`. `execute` resolves
+the pump through `runOps`' `self` case, which lands on `pend.total` for the
+seat's own attack (v3.99). The qualifier half is `rxNoTargetWhy`, the reader
+the reaction routes already ask.
+
+Censused over every pool record and every powCard the builders make: the family
+is exactly Lightning Press ×3 and Concealed Object's ability, pinned as a set.
+
+**Two choices are recorded, not built:**
+
+- `instant-pump-own-attack-only` (stated): the opponent's attack is never
+  offered as a target. Pumping it is dominated unless your own side rewards an
+  attack being pumped, and the one such reader (`defPumped`, Arakni's traps)
+  shares no deck with an instant pump. The probe pins that premise.
+- `attack-grant-misses-own-attack` (stated): **V of the Vanguard** grants its
+  "+1{p} for each Light card charged" at resolution, after its own damage, so
+  V swings for its printed 3 and only later attacks get the bonus. The reading
+  that gives V its own bonus is not sourced here (the CR site is unreachable and
+  no ruling was found), so it waits for a ruling rather than being built in the
+  stronger direction.
+
+Measured: no tier moves. `test/instantpump.test.js` adds 9 drills; 10 sabotages,
+10 bite. The ladder at three seeds both sides moves one hero: **Briar 17·17·18 →
+21·19·20, intervals disjoint**, because her press now pumps the swing it targets.
+Everyone else is inside the band. Two fixtures had to say what they meant: the
+journey census refuses Lightning Press in an empty state (one decked record, not
+three — Briar decks only the red), and the Lyath scene stands a swing on the
+chain before tapping Concealed Object.
+
 ## v5.02 — the whole-text self-pump fallback is retired
 
 `fxParse` scanned the WHOLE text of a non-attack for "gets/gains +N{p}" and,

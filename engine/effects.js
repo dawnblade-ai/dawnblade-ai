@@ -5139,7 +5139,16 @@ function makeEffects(ctx){
         if(rx.why) n = L(n, rx.why);
         else { n = rx.game; n = L(n, `${card.name} on the stack (+${rx.pump}).`); }
       }
-      else if(fx.self && !isAttack(card)){ actMut(n).buffNext += fx.self; n = L(n, `${card.name}: +${fx.self} power queued for your next attack.`); }
+      /* A TARGETED PUMP LANDS ON ITS TARGET (v5.03) — never on "your next
+         attack", which is a different printed rule (`buffNext`, its own op).
+         Every door refuses this play without a legal target first
+         (`pumpTargetWhy`); asked again here because `reduce` is fed by JSON
+         off a wire (v2.04), and refusing then is inert, never free. */
+      else if(fx.self && !isAttack(card)){
+        const _tw = pumpTargetWhy(n, card, actorOf(n));
+        if(_tw) n = L(n, `${_tw} — nothing to pump.`);
+        else n = runOps(n, [["self", fx.self]], card.name);
+      }
       n.featured = {card:{name:card.name,img:card.img,dbImg:card.dbImg,pitch:card.pitch,cost:card.cost,power:card.power,def:card.def,tt:card.tt}, chip:(fx.perm?"ENTERS PLAY — ":"RESOLVED — ")+(typeAbbr(card)||"effect").toUpperCase()};
       if(from==="hero" && card.sd){ actMut(n).gear = act(n).gear.map(x=> ("gp"+x.uid)===card.uid ? {...x,destroyed:true} : x); n = L(n, "The piece shatters — cost paid."); }
       /* A BOARD PERMANENT PAYING ITS OWN DESTROY COST (v2.35). Energy Potion
@@ -5552,6 +5561,8 @@ function makeEffects(ctx){
       const tw = rxNoTargetWhy(s, c);
       if(tw) return {game: s, dv: 0, why: tw};
     }
+    /* …and an instant's "target attack" in ANY window (v5.03) */
+    { const pw = pumpTargetWhy(s, c, actorOf(s)); if(pw) return {game: s, dv: 0, why: pw}; }
     const cost = effCost(c, act(s), P.costCtx(s, actorOf(s)));
     const extra = (o.addPaid === true && fx.addPay) ? fx.addPay.cost : 0;
     const n0 = act(s).res >= cost + extra ? s : autoPitch(s, cost + extra, [c.uid]);
@@ -10492,6 +10503,42 @@ function defLimitWhy(c, base){
    fields (v3.43, v3.63), so every asker answers them the same way.
    Returns the refusal without a closing mark, as `legal` does; a board
    that speaks in sentences adds its own. */
+/* ---- A NON-ATTACK THAT PUMPS "TARGET ATTACK" HAS A TARGET (v5.03) -----
+   "Target attack action card with cost 1 or less gets +3{p}" (Lightning
+   Press, Briar's) and "Instant - {t}: Target attack gets +1{p}" (Concealed
+   Object, Lyath's) are INSTANTS that name an attack. Neither is an attack
+   reaction, so `execute` never routed them to `attackRx`: the pump fell to
+   a bare `buffNext`, dropping the printed TARGET and its qualifier, and
+   landed on the next attack of any kind. Driven off a feed: Briar's Fry
+   (the legal target) stayed at 3 while Scorpio, a WEAPON, swung for +3 on
+   the next link. Played with no attack at all it still queued the pump —
+   a target that could never have been declared.
+
+   ONE READER, asked by every door BEFORE anything moves (v3.11, v4.88):
+   judge's play branch and `rxTargetWhy` (all three activation routes), the
+   trainer's `tryPlay`, `activateInstant` and `playAtSpeed`.
+
+   THE TARGET IS THE ACTIVE ATTACK, AND IT MUST BE YOURS. The CR lets a
+   player target the opponent's attack too; pumping it helps only them, so
+   that choice is never offered — weaker than printed in a dominated
+   direction, and recorded (`instant-pump-own-attack-only`). `runOps`'
+   `self` case, which these now resolve through, asks the same thing
+   (v3.99). The qualifier half is `rxNoTargetWhy`, the one reader the
+   reaction routes ask. */
+function pumpTargetWhy(s, c, seat){
+  if(!c || P.isAttack(c) || P.isAR(c) || c._attackRx) return null;
+  const fx = P.fxParse(c);
+  if(!((fx.self || 0) > 0)) return null;
+  const pend = s && s.pend;
+  if(!pend || !pend.card || pend.by == null)
+    return c.name + " targets an attack you control — none is on the chain";
+  /* the attack on the chain is the OTHER seat's: name it, because "none is
+     on the chain" would be false about a board the player is looking at */
+  if(pend.by !== seat)
+    return c.name + " targets an attack you control — " + pend.card.name + " isn't yours";
+  return rxNoTargetWhy(s, c);
+}
+
 function rxNoTargetWhy(s, c){
   if(!c) return null;
   const fx = P.fxParse(c);
@@ -10576,6 +10623,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, jabTargets, arsNoOpWhy, DEFENDS_CONDS, defendsCondMet, CTX_KEYS, ACT_IF_KINDS, controlsAuraOf, PLAY_IF_KINDS, playIfOk, chainAtkOf, had6ThisTurn, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, restampHalving, returnStolen, pendPumped, attackBase, basePowOf, defLimitWhy, rxNoTargetWhy, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
+return {makeEffects, jabTargets, arsNoOpWhy, DEFENDS_CONDS, defendsCondMet, CTX_KEYS, ACT_IF_KINDS, controlsAuraOf, PLAY_IF_KINDS, playIfOk, chainAtkOf, had6ThisTurn, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, restampHalving, returnStolen, pendPumped, attackBase, basePowOf, defLimitWhy, rxNoTargetWhy, pumpTargetWhy, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

@@ -54,6 +54,13 @@ function arena(entries, o){
   return n;
 }
 const ent = (card, uid, extra) => Object.assign({uid, kind: "token", card, spent: false}, extra || {});
+/* A LIVE ATTACK OF SEAT 0's (v5.03). Concealed Object prints "Target
+   attack gets +1{p}", and since v5.03 a targeted pump needs its target —
+   these drills activated it with nothing on the chain and read the +1 off
+   `buffNext`, which was valid only while the printed target was ignored. */
+const ATK_TOTAL = 4;
+const withAtk = g => Object.assign({}, g, {pend: {card: {name: "Probe Swing", ty: ["Generic", "Action", "Attack"],
+  tt: "Generic Action - Attack", power: ATK_TOTAL, uid: "a950"}, by: 0, total: ATK_TOTAL, ga: false, ops: [], onHit: []}});
 
 /* ---- 1. the route, driven at the table -------------------------------- */
 
@@ -128,18 +135,19 @@ test("a {t} arena ability TAPS its permanent, and cannot pay again", {skip}, () 
      nothing else limited it and it pumped forever. */
   H.db();
   const co = H.card("Concealed Object", 3);
-  const g = arena([ent(co, 906)]);
+  const g = withAtk(arena([ent(co, 906)]));
   assert.equal(PR.tapsToActivate(co.tx || ""), true,
     "fixture: the printed line carries {t} (read off the PERMANENT — boardPow " +
     "strips the cost prefix, v3.48's rule)");
   const a = J.reduce(g, {t: "activate", uid: 906}, 0).state;
-  assert.equal(a.sides[0].buffNext, 1, "the payload landed once");
+  assert.equal(a.pend.total, ATK_TOTAL + 1, "the payload landed once, ON THE TARGETED ATTACK (v5.03)");
+  assert.equal(a.sides[0].buffNext || 0, 0, "…and not as a pump for whatever attacks next");
   assert.equal(a.sides[0].board[0].spent, true, "…and the permanent is TAPPED");
   assert.match(String(J.legal(a, {t: "activate", uid: 906}, 0)),
     /is tapped until your end phase/, "a tapped permanent cannot pay {t} again");
   const b = J.reduce(a, {t: "activate", uid: 906}, 0);
   assert.notEqual(b.error, null, "…and `reduce` agrees");
-  assert.equal(b.state.sides[0].buffNext, 1,
+  assert.equal(b.state.pend.total, ATK_TOTAL + 1,
     "the pump did NOT land twice — three activations used to queue +1, +2, +3");
 });
 
@@ -151,7 +159,7 @@ test("the FEED says the tap was paid", {skip}, () => {
      verb agreeing with the name (v2.83, v4.15's `sv`). */
   H.db();
   const co = H.card("Concealed Object", 3);
-  const g = arena([ent(co, 907)]);
+  const g = withAtk(arena([ent(co, 907)]));
   g.sides[0] = {...g.sides[0], name: "Lyath Goldmane"};
   const feed = (J.reduce(g, {t: "activate", uid: 907}, 0).state.feed || []).join(" | ");
   assert.match(feed, /Concealed Object: Lyath Goldmane taps it to pay/,
@@ -168,8 +176,10 @@ test("the TAP is the arena's record, not a per-turn allowance", {skip}, () => {
      the cost payable again on the opponent's turn. */
   H.db();
   const co = H.card("Concealed Object", 3);
-  const g = arena([ent(co, 908)]);
-  const a = J.reduce(g, {t: "activate", uid: 908}, 0).state;
+  const g = withAtk(arena([ent(co, 908)]));
+  /* the probe link is dropped after the tap: it stands in for an attack,
+     and a turn cannot end over a live one */
+  const a = {...J.reduce(g, {t: "activate", uid: 908}, 0).state, pend: null};
   assert.deepEqual(a.sides[0].weaponUsed, {},
     "a tap is NOT an allowance — nothing may be keyed into weaponUsed for it");
   /* AND THE UNTAP STEP LIFTS IT — DRIVEN through a whole turn cycle rather

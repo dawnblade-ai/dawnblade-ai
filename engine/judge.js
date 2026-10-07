@@ -264,8 +264,12 @@ function abCostWhy(sd, ab, ctx){
   }
   return null;
 }
-function rxTargetWhy(g, sd, ab, want){
-  if(want !== "attack-reaction") return null;
+function rxTargetWhy(g, sd, ab, want, seat){
+  /* OUTSIDE THE REACTION WINDOW AN ABILITY CAN STILL NAME AN ATTACK
+     (v5.03) — Concealed Object's "Instant - {t}: Target attack gets
+     +1{p}". `effects.pumpTargetWhy` is the one reader, and it answers
+     null for anything that is not such a pump. */
+  if(want !== "attack-reaction") return E.pumpTargetWhy(g, ab, seat);
   /* A TARGETED JAB NAMES A PERMANENT IN YOUR OWN GEAR (v4.38), not the
      attack on the chain — so it is a different target question from the
      qualifier below, asked of a different object. It is still a LEGALITY:
@@ -1169,7 +1173,7 @@ function legal(g, a, seat){
       /* CR 8.1.1 / 8.1.6 — an ACTIVATED ability costs an action point; an
          instant does not. Blaze's is an Instant, so it costs none. */
       if(want === "action" && !(sd.ap > 0)) return "no action point left";
-      { const why = rxTargetWhy(g, sd, ab, want); if(why) return why; }
+      { const why = rxTargetWhy(g, sd, ab, want, seat); if(why) return why; }
       /* THE AFFORDABILITY CHECK MUST ASK WHAT `execute` CHARGES (v3.80).
          This read the PRINTED cost while `execute` charges `effCost`, and
          the two are different numbers the moment anything modifies one:
@@ -1281,7 +1285,7 @@ function legal(g, a, seat){
         if(P.speedAllowed(g, seat).indexOf(bwant) < 0)
           return "no " + bwant + "-speed window for " + b.card.name;
         if(bwant === "action" && !(sd.ap > 0)) return "no action point left";
-        { const why = rxTargetWhy(g, sd, ab, bwant); if(why) return why; }
+        { const why = rxTargetWhy(g, sd, ab, bwant, seat); if(why) return why; }
         { const _ec = effCost(ab, sd, PR.costCtx(g, seat));
           if(_ec > sd.res + payCeiling(sd, null))
             return b.card.name + " costs " + _ec + " to activate and you cannot raise it"; }
@@ -1403,7 +1407,7 @@ function legal(g, a, seat){
          one", which is `costsAP`'s own note and the reason Den of the
          Spider costs a point as an Action and none as a Defense Reaction. */
       if(want === "action" && !(sd.ap > 0)) return "no action point left";
-      { const why = rxTargetWhy(g, sd, ab, want); if(why) return why; }
+      { const why = rxTargetWhy(g, sd, ab, want, seat); if(why) return why; }
       /* THE AFFORDABILITY CHECK MUST ASK WHAT `execute` CHARGES (v3.80).
          This read the PRINTED cost while `execute` charges `effCost`, and
          the two are different numbers the moment anything modifies one:
@@ -1592,6 +1596,10 @@ function playableWhy(g, seat, c, win, zone){
     const why = E.rxNoTargetWhy(g, c);
     if(why) return why;
   }
+  /* …AND AN INSTANT THAT PUMPS "TARGET ATTACK" NEEDS ONE IN EVERY WINDOW
+     (v5.03) — Lightning Press played with no attack of yours on the chain
+     queued its +3 for whatever attacked next. */
+  { const pw = E.pumpTargetWhy(g, c, seat); if(pw) return pw; }
 
   /* AND THE LINK ITSELF CAN CLOSE THE DEFENCE WINDOW (v4.60).
 

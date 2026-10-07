@@ -155,17 +155,25 @@ module.exports = [
        "this\", so nothing else limited it. The clause reads `full` " +
        "throughout, so coverage is blind, and it is STRONGER than printed, " +
        "which is the half the one-sided sweep is built not to see. Found by " +
-       "building the table's arena-ability route and then driving it.",
+       "building the table's arena-ability route and then driving it. AND " +
+       "v5.03: its printed TARGET attack is the one on the chain, never a " +
+       "pump queued for whatever swings next.",
   run(c){
     const co = c.card("Concealed Object", 3, 9901);
     let g = c.acting(c.state({res: 0, ap: 1, name: "Lyath Goldmane",
       board: [{uid: 9901, kind: "token", card: co, spent: false}]}, {hp: 20}));
-    g = Object.assign({}, g, {turnPlayer: 0});
+    /* "TARGET ATTACK" NEEDS ONE (v5.03): the pump lands on a swing he
+       controls, so the scene stands one on the chain. With nothing to
+       target the activation is refused before the tap is paid. */
+    g = Object.assign({}, g, {turnPlayer: 0, pend: {card: {name: "Probe Swing",
+      ty: ["Generic", "Action", "Attack"], tt: "Generic Action - Attack", power: 4, uid: "a9902"},
+      by: 0, total: 4, ga: false, ops: [], onHit: []}});
     const first = c.reduce(g, {t: "activate", uid: 9901}, 0);
     const why   = c.J.legal(first, {t: "activate", uid: 9901}, 0);
     return {
       "the printed line carries {t}":        c.P.tapsToActivate(co.tx || ""),
-      "the pump lands once":                 first.sides[0].buffNext,
+      "the pump lands once, on the swing":   first.pend.total - 4,
+      "…and nothing waits for the next one": first.sides[0].buffNext || 0,
       "…and the permanent is tapped":        first.sides[0].board[0].spent,
       "it is NOT filed as an allowance":     Object.keys(first.sides[0].weaponUsed || {}).length,
       "a second use is refused by name":     /is tapped until your end phase/.test(String(why)),
@@ -175,7 +183,8 @@ module.exports = [
   },
   want: {
     "the printed line carries {t}": true,
-    "the pump lands once": 1,
+    "the pump lands once, on the swing": 1,
+    "…and nothing waits for the next one": 0,
     "…and the permanent is tapped": true,
     "it is NOT filed as an allowance": 0,
     "a second use is refused by name": true,

@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.02
+**Current version:** v5.03
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3433 drills** at v5.02.
+This is `node --test "test/*.test.js"` — **3444 drills** at v5.03.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,22 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### AN INSTANT THAT PUMPS "TARGET ATTACK" NEEDS ONE (v5.03)
+
+Lightning Press (an Instant) and Concealed Object's `{t}` ability print *"target
+attack … gets +N{p}"* and are not attack reactions, so `execute` sent the pump to
+`buffNext`: the target and its qualifier dropped, and it landed on the NEXT
+attack of any kind (Briar's Scorpio, a weapon, swung for +3). It resolves through
+`runOps`' `self` case now, onto the seat's own `pend`. `effects.pumpTargetWhy` is
+the one reader, asked before anything moves by judge's play branch,
+`rxTargetWhy`, `tryPlay`, `activateInstant` and `playAtSpeed`
+(`test/instantpump.test.js`). **When a card names a target, ask which route
+resolves it**: the reaction route had the target reader since v3.11 and the
+instant route never reached it. Recorded rather than built:
+`instant-pump-own-attack-only` (the opponent's attack is not offered) and
+`attack-grant-misses-own-attack` (V of the Vanguard's grant lands after its own
+damage; the reading that includes V is unsourced, so it waits for a ruling).
 
 ### A READER THAT ONLY ANSWERS WHEN IT IS WRONG IS RETIRED, NOT WIDENED (v5.02)
 

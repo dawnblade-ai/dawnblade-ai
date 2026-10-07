@@ -840,7 +840,39 @@ const APPROX = {
       "for the one static the engine can read sits beside it, so the four grant "+
       "families' on-hit shape is untouched. Measured before building: exactly two "+
       "pool records carried an unread quoted rider, and the other (Display "+
-      "Loyalty's attacks-trigger) is a different family."}
+      "Loyalty's attacks-trigger) is a different family."},
+
+"instant-pump-own-attack-only": {
+  status:"stated", cr:null, board:"both", since:"v5.03", swept:"v5.03",
+  claim:"A non-attack that pumps \"target attack\" (Lightning Press, Concealed Object's "+
+        "{t} ability) is offered only against an attack its controller controls. The "+
+        "printed target is any attack, so the CR also lets a player pump the attack "+
+        "that is hitting them; both boards refuse that (`effects.pumpTargetWhy`).",
+  why:"Pumping the opponent's attack only ever helps the opponent, unless something on "+
+      "the pumper's own side rewards an attack being pumped. The one such reader in the "+
+      "pool is `defPumped` (Arakni's traps, which ask whether the attack they defend "+
+      "has more {p} than its base) — and measured at v5.03, no deck that holds an "+
+      "instant pump holds a `defPumped` card: Lightning Press is Briar's, Concealed "+
+      "Object Lyath's, the traps Arakni's. So refusing it is weaker than printed in a "+
+      "dominated direction, and it keeps a reason the player could not otherwise read "+
+      "(\"… isn't yours\") in place of a sheet asking which attack. The probe pins that "+
+      "premise: a deck holding both halves is the day this needs a target choice."},
+
+"attack-grant-misses-own-attack": {
+  status:"stated", cr:null, board:"both", since:"v4.56", swept:"v5.03",
+  claim:"V of the Vanguard prints \"Your attacks this combat chain get +1{p} for each "+
+        "Light card charged this way.\" An attack card's ops ride to RESOLUTION with "+
+        "`pend.ops`, so the grant lands after V's own damage: driven with two Light "+
+        "cards charged, V deals its printed 3 and only the NEXT attack on the chain "+
+        "gets +2.",
+  why:"V is itself one of \"your attacks this combat chain\", and the reading under "+
+      "which its text is generated as the card resolves as a layer — before the "+
+      "defend step — gives V its own bonus. That reading is NOT SOURCED here: "+
+      "rules.fabtcg.com is unreachable from this sandbox and no release note or ruling "+
+      "was found, so moving it would be restating a rule from memory, in the STRONGER "+
+      "direction (v4.59's discipline). Measured at v5.03: V is the pool's only attack "+
+      "card carrying a standing grant (`atkBuff`), so the question is one card. "+
+      "Recorded as a ruling to ask for; the probe drives V and asserts the printed 3."}
 
 };
 

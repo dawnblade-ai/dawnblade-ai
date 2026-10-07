@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.83 (updated through v5.02)
+# Handoff — Dawnblade, at v4.83 (updated through v5.03)
 
 **Written 2026-09-28, numbers refreshed 2026-10-04 at v4.99. Every number below was re-derived this session, with
 the command that produces it.** Re-derive before you quote one; this file
@@ -22,11 +22,11 @@ where things stand and what is next.
 
 | measure | value | command |
 |---|---|---|
-| version | v5.02, live on GitHub Pages | `grep APP_VER index.html` |
-| drills | 3433 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
+| version | v5.03, live on GitHub Pages | `grep APP_VER index.html` |
+| drills | 3444 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
 | pool coverage | **405 of 405** unique cards read in full · 0 part · 0 none | `npm run audit`, top of `AUDIT.md` |
 | unfinished cards | 0, and 0 one clause away | `npm run gaps` |
-| approximation ledger | 47 records: 29 closed · **16 stated · 2 open** | `node tools/approx.js` |
+| approximation ledger | 49 records: 29 closed · **18 stated · 2 open** | `node tools/approx.js` |
 | CR rules cited | 61 distinct · 51 guarded · 3 unguarded (section pointers, pinned) | `node tools/crindex.js` |
 | fail states | 0 UNFAIR · 3 WRONG (all known, below) | `npm run sweep` |
 | scenes | 107 passing | `npm run scenes` |
@@ -74,6 +74,9 @@ Every one of those cards read `tier: full` before its fix.
 | 4.98 | the last `approx` flag ("enters the arena") was exact; `fx.approx` retired |
 | 4.99 | the seat policy takes one charge (lowest pitch); Boltyn 2.0 → 9.7 wins a seed |
 | 5.00 | an arsenal ability with nothing to put/cycle is refused before it is paid; token line and two possessives read right |
+| 5.01 | a swing is spent only where the weapon prints a limit (`swingSpentWhy`); an armed aura attacks in the trainer; the arena row taps again |
+| 5.02 | the whole-text self-pump fallback is retired; three cards stop granting a pump their text never printed |
+| 5.03 | an instant that pumps "target attack" lands on its target, refused without one (`pumpTargetWhy`); Briar 17·17·18 → 21·19·20 |
 
 Versions 4.88–4.93 were found by ONE census: every refusal in the trainer's
 play doors, read against `judge.legal`. When you find a rule in the trainer,
@@ -191,6 +194,15 @@ begin whenever the user wants it. Queued for it:
 ## WAITING ON THE USER — `DESKTOP-TASKS.md`
 
 Both rulings that were waiting are answered (2026-10-04) and built at v4.94.
+
+**ONE NEW RULING TO ASK (v5.03): does V of the Vanguard get its own bonus?**
+It prints *"Your attacks this combat chain get +1{p} for each Light card
+charged this way"*, and V is itself one of your attacks on that chain. The
+engine grants it at resolution, after V's own damage, so V swings for its
+printed 3 (`attack-grant-misses-own-attack`, stated, with a driven probe).
+The reading that includes V is not sourced here — the CR site is blocked from
+this sandbox and no ruling was found — so it is not built in the stronger
+direction. Answer it and the probe says where to start.
 
 This sandbox cannot reach the web freely, so three jobs are flagged for a
 desktop:

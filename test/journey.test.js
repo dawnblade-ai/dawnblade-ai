@@ -219,7 +219,7 @@ test("every pool card can be pitched for its printed pitch value", {skip}, () =>
 });
 
 test("a card played in an open window lands in the zone its TYPE sends it to", {skip}, () => {
-  const bad = [], tally = {chain: 0, arena: 0, grave: 0}, gated = [], arrowsFromHand = [];
+  const bad = [], tally = {chain: 0, arena: 0, grave: 0}, gated = [], untargeted = [], arrowsFromHand = [];
   for(const card of pool()){
     /* AN ARROW IS ASKED BOTH WAYS (v4.91): refused from the hand, with the
        reason, and driven from the arsenal, where its journey is measured.
@@ -241,6 +241,11 @@ test("a card played in an open window lands in the zone its TYPE sends it to", {
        refusals are collected and PINNED below; the cards' destinations are
        driven with the gate met in test/playif.test.js. */
     if(why && /can't be played — /.test(why)){ gated.push(card.name); continue; }
+    /* A NON-ATTACK THAT PUMPS "TARGET ATTACK" (v5.03) needs one, and an
+       empty state holds none — the same kind of refusal: a printed
+       condition this census cannot meet, pinned below and driven with the
+       target present in test/instantpump.test.js. */
+    if(why && /targets an attack you control/.test(why)){ untargeted.push(card.name); continue; }
     if(why){ bad.push(card.name + " is playable by type and was refused: " + why); continue; }
     const want = TY.destination(card);
     const got = whereIs(settle(J.reduce(g, {t: "play", uid: "UT", from: zone}, SEAT).state), "UT");
@@ -254,7 +259,13 @@ test("a card played in an open window lands in the zone its TYPE sends it to", {
      quietly stopped driving anything cannot pass by reporting nothing.
      chain 175 -> 171 AT v4.90: the four gated records above are attacks,
      and the census can no longer reach their play (see test/playif). */
-  assert.deepEqual(tally, {chain: 171, arena: 23, grave: 91},
+  assert.deepEqual(untargeted.sort(), ["Lightning Press"],
+    "the instants refused for want of a TARGET attack in an empty state moved (v5.03)");
+  /* grave 91 -> 90 AT v5.03: Lightning Press is an instant, and the
+     census can no longer reach its play without an attack to target. ONE
+     record, not three: this census walks the DECK LISTS, and Briar decks
+     the red printing alone (the pool file holds all three pitches). */
+  assert.deepEqual(tally, {chain: 171, arena: 23, grave: 90},
     "the pool's play destinations moved — that is a rules change, so it is a deliberate edit here");
   /* AND EVERY ARROW WAS REFUSED FROM THE HAND (v4.91). Twelve records,
      eleven names (Infecting Shot is printed at two pitches in the pool) —

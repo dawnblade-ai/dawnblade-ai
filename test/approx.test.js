@@ -263,7 +263,9 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      `cost-discard-auto-picked` when the activation half was built. */
   /* 45 -> 46 AT v4.89: `scorpio-lightning-attack`. */
   /* 46 -> 47 AT v4.95: `trainer-instant-doors-no-declarations`. */
-  assert.equal(Object.keys(APPROX).length, 47, "record count moved");
+  /* 47 -> 49 AT v5.03: `instant-pump-own-attack-only` and
+     `attack-grant-misses-own-attack`. */
+  assert.equal(Object.keys(APPROX).length, 49, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -303,7 +305,9 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 15 holds AT v4.81: `auto-pitch-discard` left (closed as
      `chosen-discard-asked`) and `cost-discard-auto-picked` arrived. */
   /* 15 -> 16 AT v4.95: `trainer-instant-doors-no-declarations`. */
-  assert.equal(n("stated"), 16, "stated count moved");
+  /* 16 -> 18 AT v5.03: `instant-pump-own-attack-only` and
+     `attack-grant-misses-own-attack`. */
+  assert.equal(n("stated"), 18, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -1086,6 +1090,61 @@ probe("trainer-instant-doors-no-declarations", () => {
     .filter(nm => { const c = H.card(nm, 3); return PR.fxParse(c).fusionCost || c.cx; });
   assert.deepEqual(asks, ["Aether Icevein", "Brain Freeze", "Polar Cap", "Ice Eternal"],
     "fixture: the blue cards the arsenal door can free stopped printing fusion or an X");
+});
+
+probe("instant-pump-own-attack-only", () => {
+  /* DRIVEN, and it asserts the DEVIATION: seat 0 holds Lightning Press in
+     the defence window against seat 1's legal target, and the table
+     refuses it. The day the opponent's attack is offered, this goes red. */
+  const db = H.db();
+  if(!db) return;
+  const atk = {...H.card("Wounding Blow", 3), uid: "OPP"};
+  const press = {...H.card("Lightning Press", 1), uid: "LP"};
+  const g = {...H.state({hand: [press], res: 6}, {}, {turn: 3, actor: 0}),
+    phase: "action", step: "reaction", turnPlayer: 1, attacker: 1, priority: 0,
+    passed: [false, false], firstPlayer: 1, round: 1, over: null, stack: [], chain: [], chainCards: [atk],
+    pend: {card: atk, from: "hand", by: 1, total: atk.power, ga: false, ops: [], onHit: []}};
+  assert.match(String(J.legal(g, {t: "play", uid: "LP", from: "hand"}, 0)), /isn't yours$/,
+    "the opponent's attack is now a legal target — the record must move");
+  /* THE PREMISE: no deck holds an instant pump AND a card that rewards the
+     attack it defends being pumped. */
+  const GM = require("../engine/game.js"), X = require("./helpers/extract.js"), D = X.loadData();
+  const both = [];
+  for(const h of D.HEROES){
+    const d = GM.parseDeck(D.DECKS[h.k]), sa = (h.code || "").slice(0, 3);
+    const cs = [...d.gear, ...d.deck].map(e => C.resolveEntry(db, e, sa)).filter(c => c.resolved);
+    const pump = cs.some(c => c.name === "Lightning Press" || c.name === "Concealed Object");
+    const rewards = cs.some(c => JSON.stringify(PR.fxParse(c)).includes("defPumped"));
+    if(pump && rewards) both.push(h.n);
+  }
+  assert.deepEqual(both, [], "a deck holds both halves — pumping the opponent's attack is no longer dominated");
+});
+
+probe("attack-grant-misses-own-attack", () => {
+  /* DRIVEN AT THE TABLE, asserting the DEVIATION: V of the Vanguard with two
+     Light cards charged swings for its PRINTED power while the +2 it grants
+     waits for the next attack. The day V gets its own bonus, this goes red. */
+  const db = H.db();
+  if(!db) return;
+  PR.fxReset();
+  const cc = (nm, p, uid) => ({...C.resolveEntry(db, {name: nm, p, code: null, q: 1}), uid});
+  const v = cc("V of the Vanguard", 2, 1);
+  let g = H.state({name: "Boltyn", res: 9, ap: 3, hand: [v, cc("Bolt of Courage", 1, 2), cc("Take Flight", 1, 3)]},
+                  {name: "Them", res: 9, hp: 20}, {turn: 3, actor: 0, turnPlayer: 0, seed: "vov"});
+  let s = J.reduce({...g, phase: "action", step: "layer", priority: 0, passed: []}, {t: "play", uid: 1, from: "hand"}, 0).state;
+  for(const nx of [2, 3, null]){
+    if(!(s.pending && s.pending.kind === "charge")) break;
+    s = J.reduce(s, nx == null ? {t: "charge"} : {t: "charge", uid: nx}, 0).state;
+  }
+  let guard = 0;
+  while(s.pend && s.step !== "resolution" && guard++ < 60){
+    const who = s.priority; if(who == null) break;
+    const r = J.reduce(s, {t: "pass"}, who); if(r.error) break; s = r.state;
+  }
+  assert.equal(s.step, "resolution", "the drive never reached the resolution step");
+  assert.deepEqual((s.sides[0].atkBuff || []).map(b => b.amt), [2], "fixture: two Light cards charged, +2 granted");
+  assert.equal(20 - s.sides[1].hp, v.power,
+    "V now deals more than its printed power — it gets its own grant, and the record must move");
 });
 
 probe("activation-choices-at-resolution", () => {
