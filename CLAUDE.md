@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.01
+**Current version:** v5.02
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3429 drills** at v5.01.
+This is `node --test "test/*.test.js"` — **3433 drills** at v5.02.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,17 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A READER THAT ONLY ANSWERS WHEN IT IS WRONG IS RETIRED, NOT WIDENED (v5.02)
+
+The whole-text self-pump fallback was widened five times, each time because a
+new reader owned a "+N{p}" it read a second time. **Census the claimants before
+the sixth widening**: of 20 pool records reaching it, none was a pump the parser
+had missed, and three were live (Concealed Object, Cutty Shark, The Suspense is
+Killing Me). Deleted, with `pumpRead`; `test/selfpump.test.js` pins the
+non-attacks that still carry `fx.self`. **A safety net with no catch is dead
+rules code that reads like a rule** (v4.11), and its only defence is the drill
+someone wrote for a wording the database has never printed.
 
 ### A HANDLER RETURNED FROM A CLICK IS A DEAD TAP (v5.01)
 

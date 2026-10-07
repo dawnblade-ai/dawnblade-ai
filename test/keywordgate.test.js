@@ -98,10 +98,11 @@ test("Rush of Power's gate is READ, not dropped", {skip}, () => {
     const e = (fx.conds || []).filter(x => x.cond === "hasGa");
     assert.equal(e.length, 1, "pitch " + pitch + ": the quickstrike gate must survive the prefix");
     assert.deepEqual(e[0].op, ["self", 1]);
-    /* AND IT MUST NOT ALSO BE UNCONDITIONAL. `fx.self` is the whole-text
-       self-pump fallback's home, and v3.87 is the third time a new op
-       arrived without `pumpRead` being told — a gate that is read AND
-       granted unconditionally is `VALUE-DOUBLED` with extra steps. */
+    /* AND IT MUST NOT ALSO BE UNCONDITIONAL. `fx.self` was the whole-text
+       self-pump fallback's home until v5.02 retired it, and v3.87 was the
+       third time a new op arrived without that fallback being told — a
+       gate that is read AND granted unconditionally is `VALUE-DOUBLED`
+       with extra steps. The assertion stays: any reader can do it. */
     assert.equal(fx.self, 0, "pitch " + pitch + ": the pump must not ALSO land unconditionally");
   }
 });

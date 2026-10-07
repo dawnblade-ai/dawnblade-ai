@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.83 (updated through v5.01)
+# Handoff — Dawnblade, at v4.83 (updated through v5.02)
 
 **Written 2026-09-28, numbers refreshed 2026-10-04 at v4.99. Every number below was re-derived this session, with
 the command that produces it.** Re-derive before you quote one; this file
@@ -22,8 +22,8 @@ where things stand and what is next.
 
 | measure | value | command |
 |---|---|---|
-| version | v5.01, live on GitHub Pages | `grep APP_VER index.html` |
-| drills | 3429 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
+| version | v5.02, live on GitHub Pages | `grep APP_VER index.html` |
+| drills | 3433 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
 | pool coverage | **405 of 405** unique cards read in full · 0 part · 0 none | `npm run audit`, top of `AUDIT.md` |
 | unfinished cards | 0, and 0 one clause away | `npm run gaps` |
 | approximation ledger | 47 records: 29 closed · **16 stated · 2 open** | `node tools/approx.js` |

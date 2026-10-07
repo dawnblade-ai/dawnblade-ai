@@ -1,3 +1,41 @@
+## v5.02 — the whole-text self-pump fallback is retired
+
+`fxParse` scanned the WHOLE text of a non-attack for "gets/gains +N{p}" and,
+when no op had read that number, queued it as a pump for the next attack.
+Five versions (v2.30, v3.00, v3.72, v3.87 and every `pumpRead` widening) each
+found it reading a number another reader already owned, and each answer was
+to tell it about one more list.
+
+**Censused before deleting it: 20 pinned records reached it, and not one was
+a pump the parser had failed to read.** Found by reading self-play feeds, three
+were live and stronger than printed:
+
+- **Concealed Object** (Lyath) — playing it queued a free, untargeted +1 for
+  the next attack, read off its own `Instant - {t}:` line, on top of the tap
+  ability the powCard already reads.
+- **Cutty Shark, Quick Clip** (Gravy Bones) — deploying the ally did the same,
+  off its once-per-turn ability line.
+- **The Suspense is Killing Me** (Bravo) — `fx.firstAtk` (v4.83) owns the +1,
+  and the fallback read it again, so the first attack each turn got +2.
+
+The other seventeen were inert misreads: two modal reactions (the chosen mode
+overrides `fx.self`), two equipment and two token lines no one plays, a refused
+reaction ability (Bait, v3.63), and eight hero records. A pump no reader has
+read stays a visible `skip` (v2.29).
+
+The "+1/2/3{p}" shorthand had one reader, this fallback, and **0 of 797 pinned
+records print it** — the database gives a number per pitch. Its two synthetic
+drills now pin that the wording is not invented into a number, and Pummel's
+rider drill reads the printed form. The attack-reaction blast-radius count
+reads a modal pump off `fx.modes`, where the board spends it.
+
+`test/selfpump.test.js` pins the non-attacks still carrying a self-pump as a
+set (attack reactions, plus Lightning Press, which is the next finding), and
+drives the three plays. Restoring the fallback fails all four drills.
+
+Measured: no tier moves, fairness clean, ladder inside the band at three seeds
+both sides (Gravy 26 → 25 with overlapping intervals).
+
 ## v5.01 — a swing is spent only where the weapon prints a limit; the trainer's arena row was a dead tap
 
 Found by the reverse census of the trainer's weapon and arena doors against

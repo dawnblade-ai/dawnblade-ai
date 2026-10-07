@@ -200,7 +200,13 @@ test("13 pool attack reactions pump, and that is the blast radius", {skip}, () =
     const full = H.card(c.name, c.pitch);
     if(!full) continue;
     P.fxReset && P.fxReset();
-    if((P.fxParse(full).self || 0) > 0) n++;
+    const fx = P.fxParse(full);
+    /* A MODAL REACTION CARRIES ITS PUMP ON ITS MODES (v3.12), and the
+       board takes the chosen mode's `self` in place of the card's. Pummel
+       and Two Sides to the Blade were counted here through the whole-text
+       fallback's misread of `fx.self`; v5.02 retired that fallback, so
+       they are counted off the field the engine actually spends. */
+    if((fx.self || 0) > 0 || (fx.modes || []).some(m => (m.self || 0) > 0)) n++;
   }
   /* 14 -> 13 AT v3.87, AND THE DEPARTURE IS A FIX. Night's Embrace prints
      "your attacks with stealth get +1{p} this turn" — a STANDING grant,

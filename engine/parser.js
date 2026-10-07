@@ -7345,80 +7345,30 @@ function fxParse(card){
       }
     }
   }
-  /* Fallback self-pump: a non-attack whose "+N{p}" never became an op still
-     queues that pump for your next attack.
+  /* ---- THE WHOLE-TEXT SELF-PUMP FALLBACK IS RETIRED (v5.02) ------------
+     It scanned the WHOLE text of a non-attack for "gets/gains +N{p}" and,
+     when no op had read that number, queued it as a pump for the next
+     attack. Five versions (v2.30, v3.00, v3.72, v3.87, and every
+     `pumpRead` widening) each found it reading a number SOME OTHER reader
+     already owned, and each answer was to tell it about one more list.
 
-     IT MUST NOT FIRE WHEN AN OP ALREADY READ THAT SAME "+N{p}".
-     This scans the WHOLE text, so "Your next arrow attack this turn GAINS
-     +3{p}" matched here as well as in the buffNext rule, and `execute` added
-     both — Lace with Frailty granted +6 from a card that prints +3. Every
-     "your next X attack gains +N{p}" card was doubled the same way; the
-     phrasing "gets" vs "gains" is why some escaped and some did not.
-
-     AND AN OP THAT READ IT CAN BE SITTING IN ANY OF FOUR PLACES, not just
-     `fx.ops`. The original guard named one, so a pump the parser had already
-     routed to `fx.conds` was read a second time here and granted with no
-     condition at all — which is worse than the doubling, because it also
-     deletes the gate. Ironsong Response is one printed clause, "Reprise -
-     if the defending hero has defended from hand, target weapon attack
-     gains +3{p}": the reprise handler read it into `fx.conds`, this
-     fallback then read the same words again into `fx.self`, and playRx adds
-     the two. It granted +3 with the reprise UNMET (printed: nothing) and +6
-     with it met (printed: +3). Seven cards across four heroes were doubled
-     this way, every one of them reporting tier `full`.
-
-     The magnitude is matched rather than the mere presence of an op, so a
-     card that genuinely prints two different pumps still gets its unread
-     one. `fx.self` is 0 here by the guard above, so `fx.ops` can carry no
-     `self` op (line ~921 routes those into `fx.self`) — it is scanned
-     anyway rather than reasoned about. */
-  /* EVERY LIST AN OP CAN LAND IN, or this fires a SECOND copy of a pump
-     the card already read. That is v2.30's VALUE-DOUBLED bug, and adding
-     `onLeave` in v3.00 reintroduced it for one version's worth of edit:
-     Act of Glory's +6{p} moved out of `fx.ops` into the departure
-     trigger, this fallback stopped seeing it, and the aura paid +6 on the
-     way in as well as on the way out. When a new trigger list is added,
-     it belongs here too. */
-  const pumpRead = v => [...fx.ops, ...(fx.onHit||[]), ...(fx.onLeave||[]),
-                         ...(fx.conds||[]).map(x=>x.op),
-                         ...(fx.condOnHit||[]).map(x=>x.op)]
-    .some(o => o && (o[0]==="self" || o[0]==="buffNext") && o[1]===v)
-    /* AN ARSENAL GRANT HAS ALREADY READ ITS "+N{p}" (v3.72). Bravo prints
-       "if it has crush, IT gets +2{p} and dominate this turn", where "it"
-       is the card in the ARSENAL — so the fallback below read the same
-       +2 a second time and queued it as a pump for his next attack,
-       whether or not the card had crush. v2.33's Bull's Eye Bracers trap,
-       one hero over, and VALUE-DOUBLED on the fairness sweep's own terms.
-
-       AND NO TOOL HERE WOULD HAVE SEEN IT: a hero powCard is not a pool
-       card, so neither the audit nor the sweep ever looks at one. Driving
-       the ability is what showed it.
-
-       THE MAGNITUDE IS MATCHED, not the mere presence of a grant (v2.30),
-       so a card printing two different pumps still gets its unread one. */
-    || [...fx.ops].some(o => o && (o[0]==="arsTurn" || o[0]==="arsCycle")
-                          && o[1] && o[1].pow === v)
-    /* A STANDING ATTACK GRANT HAS ALREADY READ ITS "+N{p}" (v3.87).
-       Night's Embrace prints "Your attacks with stealth get +1{p} this
-       turn" and the fallback read the same +1 a SECOND time into
-       `fx.self` — so the card granted its printed +1 to every stealth
-       attack AND queued a bare, unqualified +1 for the next attack of any
-       kind. Driven at the table: a 3-power stealth attack dealt 5.
-
-       v2.30's VALUE-DOUBLED, fourth outing, and the third to arrive the
-       same way — a new op reads a printed number and the whole-text
-       fallback has not been told. THE MAGNITUDE IS MATCHED, so a card
-       printing two different pumps still gets its unread one. */
-    || [...fx.ops].some(o => o && o[0]==="atkBuff" && o[1] === v);
-  if(!fx.self && !isAttack(card)
-     && ![...fx.ops, ...(fx.onLeave||[])].some(o=>o[0]==="buffNext")
-     && !(fx.arsenalPut && fx.arsenalPut.stamp)){
-    const pm = tl.match(/(?:gains?|gets?)\s*\+(\d+)\s*\{p\}/);
-    const v = pm ? +pm[1]
-            : /\+\s*1\s*\/\s*2\s*\/\s*3\s*\{p\}/.test(tl) ? (card.pitch||0)
-            : null;
-    if(v != null && !pumpRead(v)) fx.self = v;
-  }
+     CENSUSED OVER THE PINNED POOL BEFORE DELETING IT: 20 records reached
+     it and not one was a pump the parser had failed to read. Every one
+     was a number another reader owns or deliberately refuses —
+       * a `noop`ed ACTIVATION line (Concealed Object, Cutty Shark,
+         Swiftstrike Bracers, Tearing Shuko): the powCard reads that line,
+         and Concealed Object and Cutty Shark queued a free, untargeted +1
+         for the next attack on being PLAYED, on top of the ability;
+       * a standing static (The Suspense is Killing Me's `fx.firstAtk`,
+         v4.83): its first attack got +2 where it prints +1;
+       * a token's attack trigger (Courage's `atkTrigger`), a modal
+         reaction's modes (Pummel, Two Sides — overridden by the chosen
+         mode, so inert), a refused reaction line (Bait, v3.63), and eight
+         HERO records whose clauses other readers own.
+     A pump no reader has read is a `skip` clause, and the audit reports
+     it — which is the honest direction (v2.29). A reader that only ever
+     answers when it is WRONG is dead rules code wearing a safety net
+     (v4.11). `test/selfpump.test.js` holds the pool to it. */
   /* An activated ability on a card in HAND. It deliberately did NOT touch
      `tier` from v2.63 to v3.05 — "the audit keeps reporting Agile Windup
      as unread UNTIL ITS CLAUSE IS PROPERLY CONSUMED", which is the

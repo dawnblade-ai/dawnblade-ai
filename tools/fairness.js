@@ -111,8 +111,9 @@ for(const c of Object.values(audit.cards)){
      being right.
 
      WHEN YOU ADD AN OP THAT CARRIES A PRINTED VALUE, ADD IT HERE. The
-     same sentence `pumpRead` in parser.js carries about its own list,
-     which has now been widened three times for the identical reason. */
+     parser's twin of this list, `pumpRead`, was widened four times for
+     the identical reason and is gone at v5.02, with the whole-text
+     fallback it guarded — so this check still has a reader to watch. */
   const PUMP_OPS = ["buffNext", "self", "atkBuff"];
   const pumpOpsAnywhere = [...(fx.ops||[]), ...(fx.onHit||[]),
                            ...(fx.conds||[]).map(x => x.op),

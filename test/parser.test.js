@@ -184,19 +184,30 @@ test("fxParse — conditional go again stays conditional, not printed", () => {
   assert.deepEqual(fx.conds, [{cond:"pitch6", op:["ga"], instead:false, atkHero:false}]);
 });
 
-test("fxParse — the {p} pump drill: +1/2/3{p} reads the copy's pitch", () => {
+/* THE "+1/2/3{p}" SHORTHAND IS RETIRED (v5.02). These two drills were
+   written against a deck-list notation, and its only reader was the
+   whole-text self-pump fallback — which v5.02 deleted after a census found
+   all twenty of its claimants were misreads. The database prints a number
+   per pitch on every record: measured, 0 of 797 pinned records print the
+   shorthand. So the honest pin is that the wording is NOT invented into a
+   number — an unread pump stays a visible `skip` (v2.29) — and Pummel's
+   rider drill reads the printed form. */
+test("fxParse — the +1/2/3{p} shorthand has no claimant and is not invented into a number", () => {
   P.fxReset();
+  const pool = JSON.parse(require("fs").readFileSync(require("path").join(__dirname, "..", "data", "pool.json"), "utf8"));
+  assert.equal(pool.filter(c => /1\/2\/3/.test(c.functional_text || "")).length, 0,
+    "a pool record prints the shorthand now — read it on purpose rather than through a fallback");
   for(const pitch of [1,2,3]){
     const fx = P.fxParse({name:"pummel-drill-"+pitch, pitch, tt:"Instant - Attack Reaction", power:null,
       kw:[], tx:"Target attack action card gains +1/2/3 {p}."});
-    assert.equal(fx.self, pitch, `red/yellow/blue shorthand should pump by pitch (${pitch})`);
+    assert.equal(fx.self || 0, 0, "the shorthand must not become a pump by the copy's pitch");
   }
 });
 
 test("fxParse — Pummel's second clause: on-hit discard rides along", () => {
   P.fxReset();
   const fx = P.fxParse({name:"pummel-drill-full", pitch:2, tt:"Instant - Attack Reaction", power:null,
-    kw:[], tx:"Target attack action card gains +1/2/3 {p}. When this hits a hero, they discard a card."});
+    kw:[], tx:"Target attack action card gains +2 {p}. When this hits a hero, they discard a card."});
   assert.equal(fx.self, 2);
   /* `onHitHero` at v3.45: the clause reads "when this hits a HERO", and an
      ally hit must not make anyone discard. The bare-"hits" list is a
