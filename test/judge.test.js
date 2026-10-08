@@ -1684,7 +1684,13 @@ test("the second-person debt in the shared semantics does not grow", () => {
      control nothing it can target" and "nothing in your graveyard can be its
      target". A refusal goes back to whoever attempted the play, which is the
      case v2.83 calls correct. */
-  assert.ok(lits.length <= 56,
+  /* 56 -> 45 AT v5.08, AND THIS IS THE LEDGER BEING PAID DOWN. The
+     condition-not-met phrases moved into one body (`condWhy`) and the ten
+     that said "your board", "your pitch zone", "your arsenal" and "your
+     graveyard" name the seat through `sp` now, as v4.22 asks of every
+     possessive in a line both seats read. The go-again grant's two "Your
+     next attack" lines name the source and the seat. */
+  assert.ok(lits.length <= 45,
     `second-person literals in effects.js rose to ${lits.length} — the shared feed is read by both seats`);
   /* AND IT MUST NOT PASS BY FINDING NOTHING: if the scan ever stops
      matching, an empty result reads as a clean file. */

@@ -1,3 +1,49 @@
+## v5.08 — the feed names what was missing, and what made it
+
+Three lines read wrong to a player, found by reading self-play feeds line by line:
+
+> *"Static Shock: the granted on-hit bonus needed `playedCls:lightning` —
+> condition not met."*
+> *"Frost Spike: Boltyn has no exposed armour zone — the frostbite has nowhere to
+> land, and fizzles."* and on the next line *"Frostbite created on Boltyn's board"*
+> *"The rite empowers this swing — go again."* (Agility, on Boltyn)
+
+**One body for "condition not met (…)".** The main condition loop's phrase table
+was inline in `execute`, and `linkPayload`'s hit-time evaluator (v3.96's smaller
+copy of the vocabulary) kept its own list. That list fell back to the identifier,
+and it had drifted twice: Static Shock printed `playedCls:lightning`, and Light the
+Way said "needed a differently-coloured charge" in the shape v4.97 had already
+corrected in the main loop. `condWhy(n, cond, chargedWay, atHit)` is the one body
+now and both evaluators ask it. `wayWhy` is the one body for an unmet "…this way"
+gate, asked by `condWhy` and by the late pass's `wayMissLine`. A census asks
+`condWhy` about every condition the pool emits, through the whole parse, at both
+sites. The six conditions refused with lines of their own (the late conditions and
+`discard6`) are pinned as a set.
+
+**The seat, not "your".** Ten condition phrases said "your board", "your pitch
+zone", "your arsenal" or "your graveyard" in a line both seats read. They name the
+seat through `sp` (v4.22). The second-person ledger went **56 → 45**. "Fewer than 1
+blue cards" reads "no blue card".
+
+**Every token line names its source.** `Frost Spike: Frostbite created on …`,
+`Iyslander's hero ability: Frostbite created on …`. Two mints from two sources read
+as two, not as the feed contradicting itself. The fizzle line uses the printed name
+(the rename sat one line too late). `heroAbilityName` is the one source name for a
+hero trigger. It reads the HERO CARD's name, never the seat's (seat 0 is "You") and
+never `sd.hero`, which is the hero KEY. Briar's two mints read `.name` off that
+string, got `undefined`, and named no source. The line before them hard-coded "—
+Briar draws up Earth".
+
+**The go-again grant names its source, its seat and the card that spends it.**
+`Agility: Boltyn's next attack this turn will carry go again.` and then `Raging
+Onslaught is the attack that grant was waiting for — go again.` The end phase's
+thaw line read "You's turn" on the trainer, and intimidate's return read "You takes
+back".
+
+Measured: the ladder is **byte-identical at three seeds on both sides** apart from
+one example line, so no route counter moved. Fairness is clean, and so are the
+107 scenes. 17 sabotages, 17 bite.
+
 ## v5.07 — a played card whose only effect is a printed target needs one
 
 > *"Put three +1{p} counters on target aura with ward you control."* — ASTRAL

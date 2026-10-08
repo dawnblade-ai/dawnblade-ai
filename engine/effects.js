@@ -608,6 +608,20 @@ function makeEffects(ctx){
          and the wall already keep: judge routes by CR 1.4.5 attack-target
          and the trainer has no ally targeting wired, so a body that
          guessed here would be right on one board and wrong on the other. */
+  /* ---- A HERO TRIGGER'S SOURCE, NAMED (v5.08) -----------------------
+     The HERO CARD's short name — never the seat's, because seat 0 is
+     literally "You" (v2.83), and never `sd.hero`, which is the hero KEY:
+     Briar's two mints read `act(n).hero.name` off that string, got
+     undefined, and their token lines named no source at all, while the line
+     above them spelled the hero out as a literal ("— Briar draws up
+     Earth"). One body for every hero trigger that mints, so none of them
+     writes a hero's name into the engine. */
+  const heroAbilityName = n => {
+    const b = bAct(n) || {};
+    const nm = String((b.HZOOM && b.HZOOM.name) || "The hero").split(",")[0];
+    return `${G.spName(nm)} hero ability`;
+  };
+
   const briarEarth = (s, heroHit) => {
     let n = {...s};
     const b = bAct(n);
@@ -617,8 +631,8 @@ function makeEffects(ctx){
     if(n.pend && !isAttack(n.pend.card)) return n;
     if(act(n).hist && act(n).hist.briarEarth) return n;
     actMut(n).hist = {...act(n).hist, briarEarth:1};
-    n = L(n, `${act(n).name}: the first attack action card to land on a hero this turn — Briar draws up Earth.`);
-    return runOps(n, [["token", b.earthOnFirstHeroDmg, 1, "self"]], act(n).hero ? act(n).hero.name : "Briar");
+    n = L(n, `${heroAbilityName(n)}: the first attack action card to land on a hero this turn.`);
+    return runOps(n, [["token", b.earthOnFirstHeroDmg, 1, "self"]], heroAbilityName(n));
   };
 
   /* "The SECOND time you play a non-attack action card each turn." Exactly
@@ -630,8 +644,8 @@ function makeEffects(ctx){
     const b = bAct(n);
     if(!b || !b.lightningOnSecondNonAtk) return n;
     if((act(n).hist||{}).non !== 2) return n;
-    n = L(n, `${act(n).name}: the second non-attack action card this turn — Briar draws up Lightning.`);
-    return runOps(n, [["token", b.lightningOnSecondNonAtk, 1, "self"]], act(n).hero ? act(n).hero.name : "Briar");
+    n = L(n, `${heroAbilityName(n)}: the second non-attack action card this turn.`);
+    return runOps(n, [["token", b.lightningOnSecondNonAtk, 1, "self"]], heroAbilityName(n));
   };
 
   /* ---- ONE COPY OF THE ADDITIONAL-COST DISCARD (v2.65) ----------------
@@ -1677,9 +1691,14 @@ function makeEffects(ctx){
            the go again — see `takeGaNext` and its call site. */
         const rider = op[2] || null;
         if(gq){ actMut(n).gaNextQ = [...(act(n).gaNextQ||[]), {q: gq, rider}];
-                n=L(n,`Your next ${P.qualLabel(gq).replace(/^an? /,"")} this turn will carry go again`
+                n=L(n,`${srcName || act(n).name}: ${sp(act(n))} next ${P.qualLabel(gq).replace(/^an? /,"")} this turn will carry go again`
                      +`${rider?", and its hit carries a granted ability":""}.`); }
-        else  { actMut(n).gaNext=true; n=L(n,"Your next attack this turn will carry go again."); }
+        /* NAMED, BOTH OF THEM (v5.08): the source, because the line that
+           SPENDS the grant cannot say where it came from, and the seat,
+           because "Your next attack" is a lie to the other seat reading the
+           same feed (v2.83). These were two of the second-person ledger's
+           literals. */
+        else  { actMut(n).gaNext=true; n=L(n,`${srcName || act(n).name}: ${sp(act(n))} next attack this turn will carry go again.`); }
       }
       /* THE FIFTH QUALIFIED SINGLE-SHOT GRANT (v3.64), and it restricts the
          OPPONENT rather than buffing you: Confidence's "your next attack
@@ -1886,6 +1905,11 @@ function makeEffects(ctx){
         let rec = resolveEntry(db, {name:v, p:0, code:null, q:1});
         if(!rec.resolved){ n = L(n, `${srcName}: no card named "${v}" in the database — token not created.`); return; }
         const side = op[3]==="foe" ? "foe" : "self";
+        /* THE PRINTED NAME BEFORE ANY LINE USES IT (v5.08) — the fizzle
+           below read "the frostbite has nowhere to land", the lowercased
+           capture, because the rename sat after it (v3.33's lesson, one
+           line too late). */
+        if(rec.dbName) rec = {...rec, name: rec.dbName};
         /* A PLACEMENT INTO AN EXPOSED ARMOUR ZONE CAN FIZZLE, and that is
            the point of it — Frost Spike is WEAKER than a plain create, not
            stronger, because a fully-armoured hero offers it nowhere to
@@ -1949,7 +1973,15 @@ function makeEffects(ctx){
            second ("gets +1{p}.."). */
         const who = sp(side==="foe" ? foe(n) : act(n));
         const _first = clean(rec.tx||"no text").split(". ")[0].replace(/\.\s*$/, "");
-        n = L(n, `${rec.name}${(op[2]||1)>1?` ×${op[2]}`:""} created on ${who} board — ${_first}.`);
+        /* AND THE LINE NAMES WHAT MADE IT (v5.08). Read off a Boltyn v
+           Iyslander feed: "Frost Spike: … the frostbite has nowhere to
+           land, and fizzles." and on the NEXT line "Frostbite created on
+           Boltyn's board" — Iyslander's own hero trigger, a different
+           source, which the line did not name, so the feed read as
+           contradicting itself. Every mint now leads with its source, the
+           shape every other `runOps` line already has. */
+        const _by = srcName && srcName !== rec.name ? `${srcName}: ` : "";
+        n = L(n, `${_by}${rec.name}${(op[2]||1)>1?` ×${op[2]}`:""} created on ${who} board — ${_first}.`);
         /* AFTER THE LINE THAT SAYS IT ARRIVED. In a training sim the
            sequence IS the lesson (v3.60), and a counter announced before
            the token it sits on reads as a counter on something else. */
@@ -2921,6 +2953,91 @@ function makeEffects(ctx){
      point — and `costsAP` refuses to make anything more expensive with
      it. Nothing else in this body may read `opts`: the moment a card's
      EFFECT depends on the caller, there are two engines again. */
+  /* ---- "CONDITION NOT MET (…)" IN THE PLAYER'S WORDS — ONE BODY (v5.08) --
+     The feed is read by both seats and it is the lesson, so a gate that
+     refuses names what was missing in words, never the engine's name for
+     it (v4.97). The words lived inline in `execute`'s condition loop, and
+     `linkPayload`'s hit-time evaluator — the second, smaller copy of the
+     same vocabulary (v3.96) — kept a SECOND phrase list of its own, which
+     drifted twice: Static Shock printed "needed `playedCls:lightning`"
+     (its fallback was the identifier), and Light the Way said "needed a
+     differently-coloured charge" about a charge that never happened, the
+     exact line v4.97 had already corrected here.
+
+     `atHit` adds the two conditions the hit-time evaluator reads
+     differently — `pumped` is settled late, and `fused` there means the
+     card WAS NOT fused, not that nothing could be revealed. A `way:` gate
+     is `wayWhy`'s, at either site. */
+  function condWhy(n, cond, chargedWay, atHit){
+    if(/^way:/.test(String(cond || ""))) return wayWhy(cond);
+    if(atHit){
+      const h = {pumped:"its {p} isn't above its base", fused:"it wasn't fused"}[cond];
+      if(h) return h;
+    }
+    const dracN = /^drac(\d+)$/.test(cond) ? +cond.slice(4) : null;
+    const dracLinks = P.dracLinks(n.chain);
+    chargedWay = chargedWay || [];
+    return {atk:"no other attack yet", non:"no other non-attack yet",
+      pitch6:`no 6+ power card in ${sp(act(n))} pitch zone`, arsenal:"not played from arsenal",
+      lifeLt:"you aren't behind on life", lifeGt:"you aren't ahead on life",
+      marked:`${foe(n).name} isn't marked`, foeTurn:`it's your turn, not ${sp(foe(n))}`,
+      arcDealt:"no arcane damage dealt yet this turn",
+      auraTurn:"no aura played or created this turn",
+      madeCard:"nothing created this turn", booed:"the crowd hasn't booed you this turn",
+      blue:"no other blue card played this turn", red:"no other red card played this turn",
+      transcended:"you haven't transcended this turn",
+      aim:"no aim counter on it", hasArsenal:`${sp(act(n))} arsenal is empty`,
+      seismic:`no Seismic Surge token on ${sp(act(n))} board`,
+      suspenseAura:`no aura of Suspense on ${sp(act(n))} board`,
+      allyDied:`no ally has hit ${sp(act(n))} graveyard this turn`,
+      weaponSwung:"you haven't attacked with a weapon this turn",
+      dealtDmg:"you haven't dealt damage this turn",
+      isDraconic:"this isn't Draconic",
+      pitchOverBase:`nothing in ${sp(act(n))} pitch zone beats its base power`,
+      charged:"you didn't charge your hero's soul this turn",
+      /* "Boltyn's hero's soul" read on the ladder (v4.97) — the possessive
+         is the HERO's already */
+      soulEmpty:`${sp(act(n))} soul already holds a card`,
+      /* AND THE ENGINE'S OWN NAME FOR IT reached the feed (v4.97):
+         Pulping and Bare Fangs printed "condition not met (discard6way)"
+         on every miss, 4 times in 210 games */
+      discard6way:"no card with 6 or more {p} was discarded this way",
+      arcTakenTurn:"no arcane damage has been dealt to you this turn",
+      /* the two reaction gates answer FALSE here only off the reaction
+         route (`attackRx` owns them on it), and still read as words */
+      reprise:"the defending hero hasn't defended with a card from hand",
+      defAtkAction:"it isn't defended by an attack action card",
+      fused:"no qualifying card in hand to reveal for Fusion",
+      /* NAMED, NOT SECOND-PERSON. These reach `L`, which writes the feed
+         BOTH seats read — so the subject is the trap card the message
+         already names, never "you". `test/judge.test.js`'s ledger caught
+         the first draft of exactly this. */
+      defGA:"the attack it defends has no go again",
+      defPumped:"the attack it defends isn't pumped above its base"}[cond]
+      || (/^auras(\d+)$/.test(cond) ? `fewer than ${cond.slice(5)} auras on ${sp(act(n))} board` : null)
+      || (/^pitchCost(\d+)$/.test(cond) ? `no card costing ${cond.slice(9)} or more in ${sp(act(n))} pitch zone` : null)
+      || (/^pitchBlue(\d+)$/.test(cond) ? (+cond.match(/\d+/)[0] === 1 ? `no blue card in ${sp(act(n))} pitch zone`
+            : `fewer than ${cond.match(/\d+/)[0]} blue cards in ${sp(act(n))} pitch zone`) : null)
+      /* NAME THE CONDITION IN THE PLAYER'S WORDS, not the engine's. The
+         feed is the lesson in a training sim, and "condition not met
+         (playedCls:lightning)" teaches nobody anything. */
+      || (/^playedCls:/.test(cond) ? `no ${cond.replace(/^playedCls:/, "").replace(/^[a-z]/, ch => ch.toUpperCase())} card played this turn` : null)
+      /* Same rule for the named permanent — the player is told which
+         CARD is missing, in the printed capitalisation the clause used,
+         not "condition not met (board:spectral shield)". */
+      || (/^board:/.test(cond) ? `no ${cond.replace(/^board:/, "").replace(/\b[a-z]/g, ch => ch.toUpperCase())} on ${sp(act(n))} board` : null)
+      /* AND A DECLINED CHARGE IS NOT A WRONG COLOUR (v4.97): the policy
+         declines every optional charge (v4.33), so Beaming Bravado said
+         "wasn't the right colour" 29 times in 210 games about a card that
+         was never charged at all */
+      || (/^chargedPitch(\d)$/.test(cond) ? (chargedWay.length
+            ? `the card charged this way wasn't the right colour` : `nothing was charged this way`) : null)
+      /* the counter's PRINTED spelling, never the bag key — "+1{p}" reads
+         as `pow` inside the engine and nobody at the table says that. */
+      || (/^noCtr:/.test(cond) ? `it already carries a ${P.ctrLabel(cond.slice(6))} counter` : null)
+      || (dracN!=null ? `only ${dracLinks} Draconic chain link${dracLinks===1?"":"s"}, needs ${dracN}` : cond);
+  }
+
   const execute = (s,card,from,idx,opts) => {
     /* A DESTROYED PIECE GOES TO THE GRAVEYARD NOW (v4.79) — see
        `fileDestroyedGear`. One wrapper, so no return below can skip it. */
@@ -4017,64 +4134,7 @@ function makeEffects(ctx){
             return cond==="defGA" ? !!n.pend.ga : pendPumped(n);
           })()
         : dracN!=null ? dracLinks >= dracN : false;
-      const why = {atk:"no other attack yet", non:"no other non-attack yet",
-        pitch6:"no 6+ power card in your pitch zone", arsenal:"not played from arsenal",
-        lifeLt:"you aren't behind on life", lifeGt:"you aren't ahead on life",
-        marked:`${foe(n).name} isn't marked`, foeTurn:`it's your turn, not ${sp(foe(n))}`,
-        arcDealt:"no arcane damage dealt yet this turn",
-        auraTurn:"no aura played or created this turn",
-        madeCard:"nothing created this turn", booed:"the crowd hasn't booed you this turn",
-        blue:"no other blue card played this turn", red:"no other red card played this turn",
-        transcended:"you haven't transcended this turn",
-        aim:"no aim counter on it", hasArsenal:"your arsenal is empty",
-        seismic:"no Seismic Surge token on your board",
-        suspenseAura:"no aura of Suspense on your board",
-        allyDied:"no ally has hit your graveyard this turn",
-        weaponSwung:"you haven't attacked with a weapon this turn",
-        dealtDmg:"you haven't dealt damage this turn",
-        isDraconic:"this isn't Draconic",
-        pitchOverBase:"nothing in your pitch zone beats its base power",
-        charged:"you didn't charge your hero's soul this turn",
-        /* "Boltyn's hero's soul" read on the ladder (v4.97) — the possessive
-           is the HERO's already */
-        soulEmpty:`${sp(act(n))} soul already holds a card`,
-        /* AND THE ENGINE'S OWN NAME FOR IT reached the feed (v4.97):
-           Pulping and Bare Fangs printed "condition not met (discard6way)"
-           on every miss, 4 times in 210 games */
-        discard6way:"no card with 6 or more {p} was discarded this way",
-        arcTakenTurn:"no arcane damage has been dealt to you this turn",
-        /* the two reaction gates answer FALSE here only off the reaction
-           route (`attackRx` owns them on it), and still read as words */
-        reprise:"the defending hero hasn't defended with a card from hand",
-        defAtkAction:"it isn't defended by an attack action card",
-        fused:"no qualifying card in hand to reveal for Fusion",
-        /* NAMED, NOT SECOND-PERSON. These reach `L`, which writes the feed
-           BOTH seats read — so the subject is the trap card the message
-           already names, never "you". `test/judge.test.js`'s ledger caught
-           the first draft of exactly this. */
-        defGA:"the attack it defends has no go again",
-        defPumped:"the attack it defends isn't pumped above its base"}[cond]
-        || (/^auras(\d+)$/.test(cond) ? `fewer than ${cond.slice(5)} auras on your board` : null)
-        || (/^pitchCost(\d+)$/.test(cond) ? `no card costing ${cond.slice(9)} or more in your pitch zone` : null)
-        || (/^pitchBlue(\d+)$/.test(cond) ? `fewer than ${cond.match(/\d+/)[0]} blue cards in your pitch zone` : null)
-        /* NAME THE CONDITION IN THE PLAYER'S WORDS, not the engine's. The
-           feed is the lesson in a training sim, and "condition not met
-           (playedCls:lightning)" teaches nobody anything. */
-        || (/^playedCls:/.test(cond) ? `no ${cond.replace(/^playedCls:/, "")} card played this turn` : null)
-        /* Same rule for the named permanent — the player is told which
-           CARD is missing, in the printed capitalisation the clause used,
-           not "condition not met (board:spectral shield)". */
-        || (/^board:/.test(cond) ? `no ${cond.replace(/^board:/, "").replace(/\b[a-z]/g, ch => ch.toUpperCase())} on ${sp(act(n))} board` : null)
-        /* AND A DECLINED CHARGE IS NOT A WRONG COLOUR (v4.97): the policy
-           declines every optional charge (v4.33), so Beaming Bravado said
-           "wasn't the right colour" 29 times in 210 games about a card that
-           was never charged at all */
-        || (/^chargedPitch(\d)$/.test(cond) ? (chargedWay.length
-              ? `the card charged this way wasn't the right colour` : `nothing was charged this way`) : null)
-        /* the counter's PRINTED spelling, never the bag key — "+1{p}" reads
-           as `pow` inside the engine and nobody at the table says that. */
-        || (/^noCtr:/.test(cond) ? `it already carries a ${P.ctrLabel(cond.slice(6))} counter` : null)
-        || (dracN!=null ? `only ${dracLinks} Draconic chain link${dracLinks===1?"":"s"}, needs ${dracN}` : cond);
+      const why = condWhy(n, cond, chargedWay);
       if(!met){ n = L(n, `${card.name}: condition not met (${why}).`); return; }
       if(instead){ insteadKinds.add(op[0]);
         n = L(n, `${card.name}: the condition holds — ${op[0]} ${op[1]} REPLACES the printed value.`); }
@@ -4487,7 +4547,13 @@ function makeEffects(ctx){
            the write reaches back into a previous state. That is the access
            rule CLAUDE.md spends a section on, in the file that should be
            the last place to break it. */
-      if(act(n).gaNext){ ga = true; actMut(n).gaNext = false; n = L(n, "The rite empowers this swing — go again."); }
+      /* THE LINE NAMES THE CARD THAT COLLECTED IT (v5.08). It read "The
+         rite empowers this swing" — Viserai's flavour — for EVERY waiting
+         go again, so Boltyn's attack after Agility was narrated as a rite.
+         The grant is a bare boolean and records no source; the feed line
+         that MADE it names one (below, in `runOps`), and this names the
+         attack that spends it, `takeGaNext`'s own voice. */
+      if(act(n).gaNext){ ga = true; actMut(n).gaNext = false; n = L(n, `${card.name} is the attack that grant was waiting for — go again.`); }
       /* AND ANY ABILITY THE GRANT CARRIED comes with it (v3.42) — Avast
          Ye!'s "…gets go again and \"When this hits a hero, create a Gold
          token.\"" `qRider` above gathers the same shape off `buffQ`; this
@@ -7761,8 +7827,10 @@ function makeEffects(ctx){
            "needed a differently-coloured charge" for EVERY cond it does not
            know — so an unknown gate reported itself as a charge problem on
            a card with no charge in it, which is the feed lying about a rule
-           (v2.83's category, one board over). */
-        else n = L(n, `${pc.name}: the granted on-hit bonus needed ${cond==="charged"?"a charge this turn":cond==="marked"?"the target to be marked":cond==="pumped"?"its {p} above its base":cond==="way:took"?"the card it was printed to take — that zone was empty":/^auras(\d+)$/.test(cond)?`${cond.slice(5)} or more auras on your board`:/^drac(\d+)$/.test(cond)?`${cond.slice(4)} or more Draconic chain links`:cond==="fused"?"this to have been fused":/^chargedPitch\d$/.test(cond)?"a differently-coloured charge":"`"+cond+"`"} — condition not met.`);
+           (v2.83's category, one board over). Its own phrase list then
+           drifted from the main loop's twice (v5.08), so it asks `condWhy`,
+           the one body, and reads like the main loop's line. */
+        else n = L(n, `${pc.name}: the granted on-hit bonus — condition not met (${condWhy(n, cond, n.pend.chargedWay, true)}).`);
       });
     }
     if(n.pend.runeOnHit && total>0){ const many = n.pend.runeOnHit; n = mkRune(n, many);
@@ -8125,8 +8193,10 @@ function makeEffects(ctx){
     if(n.turnPlayer == null || n.turnPlayer === actorOf(n)) return n;
     const ty = card.ty || [];
     if(!ty.some(t => /^ice$/i.test(String(t)))) return n;
-    return runOps(n, [["token", "Frostbite", 1, "foe", null]],
-                  `${sp(act(n))} winter`);
+    /* THE SOURCE IS THE HERO, NAMED (v5.08). It was `${sp(act(n))} winter`
+       — flavour, and "your winter" on the trainer — and it never reached
+       the feed at all until the token line learned to name its source. */
+    return runOps(n, [["token", "Frostbite", 1, "foe", null]], heroAbilityName(n));
   }
 
   /* ---- A DESTROYED PIECE GOES TO THE GRAVEYARD NOW (v4.79) ---------
@@ -8199,7 +8269,12 @@ function makeEffects(ctx){
              second copy of the trigger reading: both heave call sites hold
              an effects context, so they call this after the put exactly as
              `applyAnswer` does. */
-          faceUpArsenal};
+          faceUpArsenal,
+          /* EXPOSED FOR ITS CENSUS (v5.08) — `test/feedvoice.test.js` asks it
+             for every condition the pool emits, at both of its sites, and a
+             phrase is the claim: a census that can only read the feed of a
+             driven game misses every gate no game happens to fail. */
+          condWhy};
 }
 
 /* ---- FROSTBITE'S END-PHASE THAW (v2.74) ------------------------------
@@ -9766,11 +9841,31 @@ const condOnHitKnown = cond => CONDONHIT_CONDS.some(rx => rx.test(String(cond ||
 /* WHAT A MISSED "…THIS WAY" GATE SAYS, in the player's words (v4.72,
    v4.77). One body for the immediate pass and the deferred one, so the two
    cannot word the same miss differently. */
+/* WHAT AN UNMET "…THIS WAY" GATE WAS WAITING FOR, IN WORDS (v5.08) — one
+   body for every `way:` name `thisWayMet` answers, asked by the late pass
+   (`wayMissLine`) and by both condition evaluators through `condWhy`. A
+   `way:` gate granted onto a link (Loot the Hold's "if they do") reached
+   the hit-time refusal with no words at all, and that refusal printed the
+   identifier. */
+function wayWhy(cond){
+  const c = String(cond || "");
+  let m;
+  if(c === "way:took") return "nothing was taken this way — that zone was empty";
+  if(c === "way:dealt") return "no damage was dealt this way";
+  if(c === "way:fused") return "it wasn't fused";
+  if(c === "way:dealtFused") return "it needs to have been fused AND to deal damage";
+  if((m = c.match(/^way:dealtOver(\d+)$/))) return `it didn't deal more than ${m[1]} damage`;
+  if((m = c.match(/^way:discardPitch(\d+)$/)))
+    return `no ${["", "red", "yellow", "blue"][+m[1]] || "pitch-" + m[1]} card was discarded this way`;
+  if((m = c.match(/^way:arsPut(\d+)$/))) return `fewer than ${m[1]} cards were put into arsenals this way`;
+  return "nothing matching happened this way";
+}
+
 function wayMissLine(name, cond){
   if(cond === "way:fused") return `${name} was not fused — its rider does not fire.`;
   const om = String(cond||"").match(/^way:dealtOver(\d+)$/);
   if(om) return `${name} didn't deal more than ${om[1]} damage — its surge does not fire.`;
-  return `${name}: nothing matching happened this way — the bonus skips.`;
+  return `${name}: condition not met (${wayWhy(cond)}).`;
 }
 
 function thisWayMet(cond, trace){
@@ -9958,7 +10053,7 @@ function beginEndPhase(game, seat, db){
     n = fb.game;
     if(fb.thawed)
       msgs.push("The " + (fb.thawed > 1 ? fb.thawed + " Frostbites" : "Frostbite")
-        + " thaw" + (fb.thawed > 1 ? "" : "s") + " unspent at the end of " + nameOf(seat) + "'s turn.");
+        + " thaw" + (fb.thawed > 1 ? "" : "s") + " unspent at the end of " + G.sp(n.sides[seat] || {name: nameOf(seat)}) + " turn.");
   }
 
   /* (3) RUST — off each piece's own printed threshold. */
@@ -10125,7 +10220,7 @@ function beginEndPhase(game, seat, db){
     me.hand = [...(me.hand||[]), ...held];
     me.intimidated = [];
     sides[i] = me; n = Object.assign({}, n, {sides});
-    msgs.push(nameOf(i) + " takes back " + held.length + " intimidated card"
+    msgs.push(G.sv(n.sides[i] || {name: nameOf(i)}, "take") + " back " + held.length + " intimidated card"
       + (held.length > 1 ? "s" : "") + " — the tax expires.");
   }
 

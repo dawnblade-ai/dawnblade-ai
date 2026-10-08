@@ -128,7 +128,8 @@ test("driven: Goon Beatdown's boo fires at three auras and not at one", {skip}, 
   assert.equal((on.sides[0].hist || {}).booed, 1, "the crowd boos");
   const off = hit("Goon Beatdown", 3, {auras: 1});
   assert.ok(!(off.sides[0].hist || {}).booed, "and does not, below the threshold");
-  assert.match(said(off), /3 or more auras on your board/,
+  /* v5.08: the hit-time line speaks with `condWhy`, the main loop's words */
+  assert.match(said(off), /Goon Beatdown: the granted on-hit bonus — condition not met \(fewer than 3 auras on Alice's board\)\./,
     "and the feed names the gate it actually failed");
 });
 
@@ -145,7 +146,7 @@ test("driven: Hot on Their Heels marks at two Draconic links", {skip}, () => {
   assert.equal(on.sides[1].marked, true);
   const off = hit("Hot on Their Heels", 1, {drac: 0});
   assert.ok(!off.sides[1].marked);
-  assert.match(said(off), /2 or more Draconic chain links/);
+  assert.match(said(off), /condition not met \(only 1 Draconic chain link, needs 2\)/);
 });
 
 test("FUSED rides on `pend` — it is a declaration-time fact", {skip}, () => {
@@ -200,7 +201,7 @@ test("driven: Mark of the Funnel Web needs the MARK, and its sibling proves the 
 
   const off = hit("Mark of the Funnel Web", 1, {marked: false, foe: {arsenal: junk("Set", "s1")}});
   assert.ok(off.sides[1].arsenal, "unmarked, the arsenal is untouched");
-  assert.match(said(off), /the target to be marked/);
+  assert.match(said(off), /condition not met \(Bob isn't marked\)/);
 
   const empty = hit("Mark of the Funnel Web", 1, {marked: true, foe: {arsenal: null}});
   assert.equal(empty.sides[1].arsenal, null);

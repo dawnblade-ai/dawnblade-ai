@@ -23,7 +23,9 @@ test("a one-sentence token text is quoted with exactly one period", {skip}, () =
   H.db();
   const g = H.runOps(H.state({name: "Kayo"}, {name: "Dorinthea"}), [["token", "Might", 1, "self"]], "Probe");
   const l = line(g);
-  assert.match(l, /^Might created on Kayo's board — /, l);
+  /* v5.08: the line leads with its SOURCE — the shape every other
+     `runOps` line has — so two mints from two sources read as two */
+  assert.match(l, /^Probe: Might created on Kayo's board — /, l);
   assert.doesNotMatch(l, /\.\.$/, "a doubled period: " + l);
   assert.match(l, /[^.]\.$/, "the line still ends its sentence: " + l);
 });

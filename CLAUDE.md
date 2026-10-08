@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.07
+**Current version:** v5.08
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3473 drills** at v5.07.
+This is `node --test "test/*.test.js"` — **3481 drills** at v5.08.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,18 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### THE FEED NAMES WHAT WAS MISSING, AND WHAT MADE IT (v5.08)
+
+`condWhy` is the one body for "condition not met (…)", and both evaluators ask it:
+`execute`'s condition loop and `linkPayload`'s hit-time copy. The hit-time copy had
+its own phrase list, and it printed `playedCls:lightning` into the feed. `wayWhy`
+words an unmet "…this way" gate. Every token line leads with its source, and
+`heroAbilityName` names a hero trigger off the hero CARD, never the seat ("You") and
+never `sd.hero` (the hero KEY, a string). **When a second evaluator has its own
+words, it drifts from the first**: this one had re-introduced a defect v4.97 fixed in
+the main loop. `test/feedvoice.test.js` asks `condWhy` about every condition the
+pool emits, through the whole parse.
 
 ### A PRINTED TARGET ON A PLAYED CARD (v5.07)
 
