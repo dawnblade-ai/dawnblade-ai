@@ -383,6 +383,11 @@ function play(g, limit, opts){
            invisible there. The phrase is the engine's own (v3.81) and
            test/ward.test.js pins the two spellings against each other. */
         if(/destroys itself — ward soaks/.test(line)) events.push(["ward", line]);
+        /* THE ONE-EVENT SHIELD (v5.06) — Cloud Cover, Toe the Line, Throw
+           Caution. Its own counter, because a shield is neither a ward
+           permanent (`ward`) nor the budget pool: the phrase is the engine's
+           (v3.81) and test/ward.test.js pins the two spellings together. */
+        if(/: \d+ of that damage is prevented/.test(line)) events.push(["shield", line]);
         /* WALK IN MY SHOES' HALVING, OPENED (v4.73). The last crush rider
            of twelve, and the one `crush` above cannot tell apart — every
            rider prints " — crush:", so this spells the EVENT the halving

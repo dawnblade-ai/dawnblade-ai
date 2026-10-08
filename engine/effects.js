@@ -797,6 +797,46 @@ function makeEffects(ctx){
     const mut = () => seat === actorOf(n) ? actMut(n) : foeMut(n);
     let prevented = 0;
 
+    /* ---- (0) THE ONE-EVENT SHIELDS (v5.06) ----------------------------
+       "The next time you would be dealt damage this turn, prevent N of that
+       damage" — Cloud Cover, Toe the Line, Throw Caution. THIS is that next
+       time, so every shield still waiting applies to it, prevents what it
+       can, and is GONE: what a 3 does not need of a 1 is lost with the
+       event, not kept for the next hit.
+
+       ORDER IS A STATED DEFAULT (`ward-spend-order`): the CR gives the
+       controller the order every prevention applies in. Shields go first,
+       in the order they were made, because a shield is used up by this
+       event either way; and a shield the earlier ones have left nothing to
+       prevent KEEPS WAITING — nothing to prevent prevents nothing, the same
+       shape as the early return above (CR 7.5.5).
+
+       ITS RIDER IS ITS OWN. Toe the Line's "if you prevent damage this way"
+       fires when THAT shield turned something aside, at the controller's
+       seat (borrowed and handed back, v3.46). */
+    {
+      const shields = (n.sides[seat] || {}).wardNext || [];
+      if(shields.length){
+        const keep = [], fired = [];
+        for(const sh of shields){
+          if(left <= 0){ keep.push(sh); continue; }
+          const off = Math.min((sh && sh.n) || 0, left);
+          left -= off; prevented += off;
+          n = L(n, `${(sh && sh.src) || "A prevention"}: ${off} of that damage is prevented`
+                 + (((sh && sh.n) || 0) > off ? ` — the other ${sh.n - off} goes with this hit.` : "."));
+          if(off > 0 && sh.ops && sh.ops.length) fired.push(sh);
+        }
+        mut().wardNext = keep;
+        if(fired.length){
+          const prev = actorOf(n);
+          n = Object.assign({}, n, {actor: seat});
+          for(const sh of fired) n = runOps(n, sh.ops, sh.src || srcName || "prevention");
+          n = Object.assign({}, n, {actor: prev});
+        }
+      }
+    }
+    if(left <= 0) return {game: n, dealt: 0, prevented};
+
     /* ---- (1) THE POOL, which is the windowed family ------------------
        "Prevent the next N damage that would be dealt to you THIS TURN" —
        Cloud Cover, Oasis Respite, Toe the Line, Throw Caution, Radiant
@@ -819,24 +859,8 @@ function makeEffects(ctx){
       mut().ward = pool - off;
       n = L(n, `${srcName || "The attack"}: ward soaks ${off}`
              + (pool - off > 0 ? ` (${pool - off} left).` : " and is spent."));
-      /* WHAT THE PREVENTION TRIGGERS (v3.67) — Toe the Line's "if you
-         prevent damage this way, create a Flurry token". The grant was made
-         on an earlier resolution and fires here, which is why it cannot be
-         a `way:` condition (those are cleared with the resolution that set
-         them). Spent when it fires: the card prints "the NEXT time".
-
-         IT BELONGS TO THE POOL, NOT TO A PERMANENT (v4.34). "This way"
-         names the prevention the card that granted it describes, and a
-         permanent destroying itself is a different one — so the rider
-         stays inside this branch rather than being asked again below. */
-      const rid = (n.sides[seat] || {}).wardRider || [];
-      if(rid.length){
-        mut().wardRider = [];
-        const prev = actorOf(n);
-        n = Object.assign({}, n, {actor: seat});
-        for(const r of rid) n = runOps(n, r.ops || [], r.src || srcName || "prevention");
-        n = Object.assign({}, n, {actor: prev});
-      }
+      /* NO RIDER HERE ANY MORE (v5.06): Toe the Line's rider is a one-event
+         shield's, fired in step (0) above. */
     }
 
     /* ---- (2) THE PERMANENTS THAT PRINT `Ward N` (v4.34) --------------
@@ -1683,6 +1707,18 @@ function makeEffects(ctx){
       else if(k==="runeHitNext"){ const many=Math.max(1,v||1); actMut(n).runeHitNext=many;
         n=L(n,`Your next attack: if it hits, ${many>1?`${many} Runechants are`:"a Runechant is"} forged.`); }
       else if(k==="amp"){ actMut(n).amp+=v; n=L(n,`Amp ${v} — next arcane +${v}.`); }
+      else if(k==="ward" && op[2] && op[2].next){
+        /* ONE EVENT, NOT A BUDGET (v5.06). "The next time you would be dealt
+           damage this turn, prevent N of that damage" is a shield that the
+           next hit uses up, however much of it that hit needed — filed in the
+           budget pool it soaked hit after hit until N ran out, so a 3 that
+           met a 1 kept 2 for later. Its rider (Toe the Line's "if you
+           prevent damage this way") rides on its OWN shield, because "this
+           way" names this prevention and no other. */
+        actMut(n).wardNext = [...(act(n).wardNext || []),
+          {n: v, src: srcName, ops: (op[2].ops || []).slice()}];
+        n = L(n, `${srcName}: the next time ${act(n).name} would be dealt damage this turn, ${v} of it is prevented.`);
+      }
       else if(k==="ward"){
         actMut(n).ward+=v;
         /* THE EXPIRING PORTION IS TRACKED SEPARATELY (v4.07). The pool is
@@ -1701,18 +1737,11 @@ function makeEffects(ctx){
            outlive the turn silently (v3.82). */
         if(op[2] && op[2].until === "turn") actMut(n).wardTurn += v;
         n=L(n,`Ward ${v}.`);
-        /* THE RIDER WAITS WITH THE POOL (v3.67). Toe the Line prints
-           "The next time you would be dealt damage this turn, prevent 2
-           of that damage. IF YOU PREVENT DAMAGE THIS WAY, create a
-           Flurry token." The two halves arrive as separate clauses and
-           are paired in `fxParse`; the second cannot be a `way:`
-           condition because the prevention happens on a LATER
-           resolution, and those traces are cleared with the resolution
-           that set them (v3.60). It is fired by `preventDamage`. */
-        if(op[2] && op[2].ops && op[2].ops.length){
-          actMut(n).wardRider = [...(act(n).wardRider||[]), {ops: op[2].ops, src: srcName}];
-          n = L(n, `${srcName}: and something waits on that prevention.`);
-        }
+        /* NO RIDER ON THE BUDGET (v5.06). The one pool card printing "if you
+           prevent damage this way" (Toe the Line) is a one-EVENT shield, and
+           its rider rides on that shield (the branch above). Measured: no
+           budget-shape prevention prints a rider, and a drill fails the day
+           one does rather than the rider being dropped here. */
       }
       else if(k==="awd"){ actMut(n).awd+=v;
         if(op[2] && op[2].until === "turn") actMut(n).awdTurn += v;   /* same window, same reason */
@@ -2647,16 +2676,12 @@ function makeEffects(ctx){
         if(!n.revealed){ n = L(n, `${srcName}: nothing was revealed, so there is no pitch to prevent with.`); return; }
         const p = n.revealed.pitch || 0;
         if(p <= 0){ n = L(n, `${n.revealed.name} prints no pitch — nothing is prevented.`); return; }
-        actMut(n).ward = act(n).ward + p;
-        /* AND IT IS WINDOWED (v4.34). The card prints "the next time you
-           would be dealt damage THIS TURN" and the feed line below says
-           so, while the state kept it forever — v4.07 built `wardTurn` so
-           the end phase could sweep exactly this family and this writer,
-           which reaches `.ward` directly rather than through the `ward`
-           op, was never told. The feed and the state disagreeing is the
-           sev-2 category the player TRUSTS. */
-        actMut(n).wardTurn = act(n).wardTurn + p;
-        n = L(n, `${n.revealed.name} is pitch ${p} — the next ${p} damage this turn is prevented.`);
+        /* ONE EVENT, NOT A BUDGET (v5.06) — Throw Caution prints "the next
+           TIME you would be dealt damage this turn, prevent X of THAT
+           damage", the same shape as Cloud Cover, so it is a shield on
+           `wardNext` (windowed by the end-phase sweep, v4.34's point). */
+        actMut(n).wardNext = [...(act(n).wardNext || []), {n: p, src: srcName, ops: []}];
+        n = L(n, `${n.revealed.name} is pitch ${p} — the next time ${act(n).name} would be dealt damage this turn, ${p} of it is prevented.`);
       }
       /* RULING (Saltwater Swell): reads the SAME n.revealed the reveal op
          just set (both ops run together in declOps), and if it matches,
@@ -10178,6 +10203,12 @@ function beginEndPhase(game, seat, db){
                   coincidence. */
                + (sd.amp ? 1 : 0) + (sd.runeHitNext ? 1 : 0)
                + (sd.wardTurn ? 1 : 0) + (sd.awdTurn ? 1 : 0)
+               /* AND THE ONE-EVENT SHIELDS (v5.06) — all print "this turn",
+                  and the rider they replaced (`wardRider`) was never swept
+                  at all: an unspent Toe the Line rider followed its
+                  controller into later turns and fired off a later turn's
+                  prevention. COUNTED here as well as cleared below. */
+               + (sd.wardNext || []).length
                /* AND THE DELAYED ON-HIT GRANT (v4.41). Both cards that
                   print it say "this turn", and it is the case v4.07's
                   note is about: the bug only shows when the grant is NOT
@@ -10208,7 +10239,7 @@ function beginEndPhase(game, seat, db){
           (v4.34) — the permanent carries the number and destroys itself to
           spend it — so the two now always move together, and the split is
           kept for the day a prevention arrives with no printed window. */
-       ward: Math.max(0, (sd.ward || 0) - (sd.wardTurn || 0)), wardTurn: 0,
+       ward: Math.max(0, (sd.ward || 0) - (sd.wardTurn || 0)), wardTurn: 0, wardNext: [],
        awd:  Math.max(0, (sd.awd  || 0) - (sd.awdTurn  || 0)), awdTurn: 0,
        atkBuff: (sd.atkBuff || []).filter(b => b.until === "chain"),
        defMod: (sd.defMod || []).filter(b => b.until !== "turn")});

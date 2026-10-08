@@ -75,7 +75,7 @@ test("every event kind selfplay emits is pinned", () => {
     "ally", "allyatk", "arsflip", "chi", "crush", "ctrWipe", "death", "defmod", "destroycost",
     "fusion", "gold", "halve",
     "held", "hitnext",
-    "hitwatch", "hood", "jab", "layer", "leave", "powctr", "reaction", "search", "tap", "ward",
+    "hitwatch", "hood", "jab", "layer", "leave", "powctr", "reaction", "search", "shield", "tap", "ward",
   ]);
 });
 
@@ -143,7 +143,10 @@ const FAULTS_PINNED = ["MALFORMED", "SECOND-PERSON"];
 const ROUTES_PINNED = ["ally", "allyatk", "arsflip", "chi", "crush", "ctrWipe", "death", "defmod",
                        "destroycost",
                        "fusion", "gold", "halve", "held", "hitnext", "hitwatch", "hood", "jab", "layer", "leave",
-                       "powctr", "reaction", "search", "tap", "ward"];
+                       "powctr", "reaction", "search", "shield", "tap", "ward"];
+/* +shield v5.06 — a one-event prevention ("the next time you would be dealt
+   damage"), which neither `ward` (a permanent destroying itself) nor any
+   pool line counts. On the ROUTE side: a number there means it fired. */
 /* +search v4.58 — Flamecall Awakening's deck search, and it belongs on the
    ROUTE side because a number there means a feature FIRED (v4.17). Measured:
    8 firings in 14 Fai games, so unlike `hood` — whose 0 is about the LOADOUT

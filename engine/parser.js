@@ -2522,6 +2522,13 @@ function classifyClause(raw){
      turn" is a statement about today. */
   if(m=c.match(/prevent (?:the next )?(\d+) (?:points? of |of )?(arcane )?(?:that )?damage/)){
     const win = /\bthis turn\b/.test(c) ? {until:"turn"} : null;
+    /* ONE EVENT OR A BUDGET (v5.06) — the pool prints both. "Prevent the
+       next N damage that would be dealt to you this turn" (Oasis Respite,
+       Radiant Touch, Seeker's Mitts) is a BUDGET spread over hits; "The next
+       time you would be dealt damage this turn, prevent N of that damage"
+       (Cloud Cover, Toe the Line) is ONE EVENT, and what it does not use is
+       gone with that event. Read off the clause's opening words. */
+    if(win && /^the next time you would be dealt damage\b/.test(c)) win.next = true;
     return R([[m[2] ? "awd" : "ward", +m[1], ...(win ? [win] : [])]]);
   }
   /* RULING (Crucible of Aetherweave, Absorb in Aether): "the next card you
@@ -8718,7 +8725,9 @@ function wardBearers(sd){
    after it, so their sum is the damage this seat turns aside. */
 function wardTotal(sd){
   if(!sd) return 0;
-  return (sd.ward || 0) + wardBearers(sd).reduce((a, x) => a + x.ward, 0);
+  /* …plus the one-event shields (v5.06): what they turn aside of the next hit */
+  return (sd.ward || 0) + (sd.wardNext || []).reduce((a, x) => a + ((x && x.n) || 0), 0)
+       + wardBearers(sd).reduce((a, x) => a + x.ward, 0);
 }
 
 /* CAN THIS BOARD AURA ATTACK RIGHT NOW, AND FOR HOW MUCH? (v3.84)

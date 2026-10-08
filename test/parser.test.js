@@ -631,8 +631,13 @@ test("classifyClause — 'prevent N of that damage' reads as ward, WITH its wind
      op now carries it, because the prevention pool never expired — an
      unspent ward followed its controller into every later turn of the
      game, which is stronger than printed. */
+  /* AND IT IS ONE EVENT (v5.06): "the next time you would be dealt damage"
+     is a shield the next hit uses up, where "prevent the next N damage" is
+     a budget spread over hits. The opening words decide, both directions. */
   assert.deepEqual(cc("The next time you would be dealt damage this turn, prevent 2 of that damage"),
-    {status:"run", ops:[["ward",2,{until:"turn"}]]});
+    {status:"run", ops:[["ward",2,{until:"turn",next:true}]]});
+  assert.deepEqual(cc("Prevent the next 2 damage that would be dealt to you this turn"),
+    {status:"run", ops:[["ward",2,{until:"turn"}]]}, "the budget shape carries no `next`");
 
   /* AND A PREVENTION THAT PRINTS NO WINDOW CARRIES NONE. The flag is
      opt-in (v3.58) — an always-present key changes the shape of every op

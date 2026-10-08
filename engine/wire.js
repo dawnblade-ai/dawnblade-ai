@@ -252,7 +252,12 @@
    whether a Lightning attack of yours is anywhere on the chain (the user's
    ruling of 2026-10-04). `chain` ships whole; a v22 peer's entries carry
    neither, so it refuses a swing a v23 peer allows. By hand. */
-const WIRE_V = 23;
+/* 23 -> 24 AT v5.06: the side field `wardRider` is retired and `wardNext`
+   added — "the next time you would be dealt damage, prevent N" is one
+   event, a shield carrying its own rider, not a share of the budget pool.
+   A v23 peer files the shield as pool and the hashes diverge on the first
+   prevention. The shape digest moves with it. */
+const WIRE_V = 24;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------
@@ -274,7 +279,7 @@ const ENTRY_ZONES = ["board"];                   /* {card, kind, spent, uid} */
    every SIDE_FIELD is accounted for one way or the other. */
 const NON_CARD_SIDE_FIELDS = [
   "id","name","hero","heroKey","hp","maxHp","int","baseInt","intWas",
-  "res","ap","wasted","counters","weaponUsed","heroTapped","buffNext","buffQ","atkBuff","defMod","gaNext","gaNextQ","costOff","instantNextQ","defCapNext","defActionBuff","wardRider","hitNext","ctrEnd",
+  "res","ap","wasted","counters","weaponUsed","heroTapped","buffNext","buffQ","atkBuff","defMod","gaNext","gaNextQ","costOff","instantNextQ","defCapNext","defActionBuff","wardNext","hitNext","ctrEnd",
   "runeHitNext","amp","ward","awd","wardTurn","awdTurn","arcShield",
   "lifeLock","namedBuff","dracNext","dracChain","marked","hist",
   "blockH","blockG","blockRx","blockedHand","chainBlocked","intimidated","paySel",

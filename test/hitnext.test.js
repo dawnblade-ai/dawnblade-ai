@@ -118,7 +118,8 @@ test("THE BOUND IS THE PRINTED WORD \"hit\", AND IT IS A MEASUREMENT", {skip}, (
   /* AND THE PREVENTION STILL READS, driven rather than asserted about. */
   assert.deepEqual(P.classifyClause(
     "the next time you would be dealt damage this turn, prevent 2 of that damage").ops,
-    [["ward", 2, {until: "turn"}]]);
+    [["ward", 2, {until: "turn", next: true}]],
+    "and it reads as ONE EVENT (v5.06), which is what \"the next time\" prints");
 });
 
 test("the pool emits `hitNext` from exactly two records, and both payloads RUN", {skip}, () => {

@@ -1,3 +1,46 @@
+## v5.06 — "the next time you would be dealt damage" is one event, not a budget
+
+The pool prints two prevention shapes, and both filled one draining pool:
+
+| printed | is | cards |
+|---|---|---|
+| *"Prevent the next N damage that would be dealt to you this turn"* | a BUDGET spread over hits | Oasis Respite, Radiant Touch, Seeker's Mitts |
+| *"The next time you would be dealt damage this turn, prevent N of that damage"* | ONE EVENT; what it does not use is gone | Cloud Cover, Toe the Line, Throw Caution to the Wind |
+
+Filed in the budget, a 3-point shield that met a 1-damage hit kept 2 for the next
+one: stronger than printed. **Measured over all 240 pairings: 66 shield events,
+35 with something left unused, 46 points the old pool would have banked.** Every
+record read `tier: full`, and the one-sided sweep has no model of a prevention's
+lifetime.
+
+- **The parser reads the opening words** and marks the op `next`; the budget
+  shape is unchanged.
+- **`sd.wardNext` holds the shields**, each with its OWN rider. Toe the Line's
+  *"if you prevent damage this way"* names that shield and no other, so it rides
+  on it rather than on the pool. `wardRider` is retired, and measured it was
+  **never swept**: an unspent rider followed its controller into later turns and
+  fired off a later turn's prevention.
+- **`preventDamage` spends shields first**, in the order they were made, then the
+  budget, then ward permanents (`ward-spend-order`, stated, widened). A shield the
+  earlier ones left nothing to prevent keeps waiting, the same shape as CR 7.5.5's
+  early return.
+- **The end phase counts and clears them**, and `wardTotal` (the number on
+  screen) includes them.
+- `WIRE_V` **23 → 24**, and the shape digest moves with it: a side field changed.
+- A `shield` route counter joins `npm run play` (166 firings in 630 games), with
+  its phrase pinned to the engine's.
+
+**And a scene had been measuring its own fixture.** "a prevention that prevents
+nothing triggers nothing" read `wardRider` off the state it built, so after the
+retirement it would have stayed green with nothing writing the field. Both Toe the
+Line scenes are rewritten against `wardNext`.
+
+Measured: `test/ward.test.js` gains 8 drills; 13 sabotages, 13 bite. Two were
+silent on the first pass and both were mine: one could not express its bug (it
+is a real reorder now), and one guard is reachable only by a wire-sent zero-size
+shield, which now has a synthetic drill. Ladder at three seeds both sides:
+unchanged (two heroes ±1 game).
+
 ## v5.05 — a card played is not an ability activated
 
 > *"Whenever you PLAY a Runeblade card, if you've played another NON-ATTACK

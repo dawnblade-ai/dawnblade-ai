@@ -739,6 +739,12 @@ probe("ward-spend-order", () => {
     "…and the Ward 1 followed it, not the Ward 3");
   assert.deepEqual(out.promptQ || [], [],
     "nothing asked the seat which ward to spend — the record must move");
+  /* AND THE SHIELD HALF (v5.06): a one-event shield goes before the pool,
+     unasked, and is used up by this hit while the pool is spared */
+  const g2 = H.state({ward:3, wardTurn:3, wardNext:[{n:2, src:"probe", ops:[]}], hp:20}, {}, {turn:7});
+  const o2 = H.J.withEffects(g2, (fx, s2) => fx.preventDamage(s2, 0, 2, "probe").game);
+  assert.deepEqual(o2.sides[0].wardNext, [], "the shield went first, unasked");
+  assert.equal(o2.sides[0].ward, 3, "…and the pool was spared");
 });
 
 /* CLOSED AT v4.35 — the probe TURNED ROUND, which is what a `stated`

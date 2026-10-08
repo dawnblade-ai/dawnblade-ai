@@ -341,10 +341,13 @@ test("WIRE_V moves when the payload shape moves, and only then", () => {
      whole-shipped, so the digest holds; the bump was missed at v4.91 and a
      second review of that version caught it. */
   /* 22 -> 23 AT v4.94: a chain entry's `ty` and `by` — whole-shipped. */
-  assert.equal(W.WIRE_V, 23,
+  /* 23 -> 24 AT v5.06, AND THE DIGEST MOVES WITH IT: a SIDE FIELD changed
+     (`wardRider` retired, `wardNext` added — one-event shields carry their
+     own rider), which is exactly the shape this digest covers. */
+  assert.equal(W.WIRE_V, 24,
     "WIRE_V moved — if the payload shape moved with it, update the digest below " +
     "in the same edit and say what changed in the header");
-  assert.equal(h, 1095617619,
+  assert.equal(h, 2375092828,
     "the payload SHAPE moved and WIRE_V did not. A stale key decodes fine (the " +
     "lists are read by name) — what breaks is the FINGERPRINT, so two honest " +
     "peers desync on the opening state instead of being refused at the handshake.");

@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.05
+**Current version:** v5.06
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3456 drills** at v5.05.
+This is `node --test "test/*.test.js"` — **3464 drills** at v5.06.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,17 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### ONE EVENT IS NOT A BUDGET (v5.06)
+
+*"Prevent the next N damage"* is a budget spread over hits; *"the next time you
+would be dealt damage, prevent N of that damage"* is one event, and what it does
+not use is gone. Both filled `sd.ward`, so a shield of 3 that met a 1 kept 2 (46
+banked points over 240 pairings). Shields live on `sd.wardNext`, each carrying its
+own rider, are spent first by `preventDamage`, and are swept at the end phase.
+**When two printed shapes feed one number, ask whether they spend the same way**,
+and when you retire a field, check every scene and drill that only READS it: one
+would have gone on passing by reading its own fixture.
 
 ### A CARD PLAYED IS NOT AN ABILITY ACTIVATED (v5.05)
 

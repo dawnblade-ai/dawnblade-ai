@@ -266,11 +266,13 @@ const APPROX = {
       "for exactly that, v3.84's rule) the day somebody decides the ranking."},
 
 "ward-spend-order": {
-  status:"stated", cr:"CR 4.1.8a", board:"both", since:"v4.34", swept:"v4.34",
+  status:"stated", cr:"CR 4.1.8a", board:"both", since:"v4.34", swept:"v5.06",
   claim:"A seat holding more than one ward chooses which to spend. Here the order "+
-        "is fixed: the windowed POOL first, then the smallest PERMANENT whose "+
-        "printed ward alone covers what is left, else the largest — and BOARD "+
-        "before GEAR at equal ward.",
+        "is fixed: the one-event SHIELDS first (\"the next time you would be dealt "+
+        "damage\", v5.06), in the order they were made, then the windowed budget POOL, "+
+        "then the smallest PERMANENT whose printed ward alone covers what is left, "+
+        "else the largest — and BOARD before GEAR at equal ward. A shield the earlier "+
+        "ones left nothing to prevent keeps waiting for a later hit.",
   why:"Every ward is an independent replacement effect and the CR gives the "+
       "controller the order they apply in, which this project does not model "+
       "anywhere (`simultaneous-trigger-order` is the same sentence one trigger "+

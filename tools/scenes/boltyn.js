@@ -209,41 +209,47 @@ module.exports = [
   why: "v3.67 — plain ward was consumed in ONE place, `index.html`'s " +
        "`takeIt`. judge.js read `.ward` nowhere at all, so five pool cards " +
        "printing a prevention did nothing at the table. The rider cannot be " +
-       "a `way:` condition: the prevention happens on a LATER resolution.",
+       "a `way:` condition: the prevention happens on a LATER resolution. " +
+       "AND v5.06: \"the next time you would be dealt damage\" is ONE " +
+       "event — a shield on `wardNext` carrying its own rider — not the " +
+       "budget pool, which it used to soak hit after hit.",
   run(c){
     let g = c.state({res: 9, ap: 1}, {}, {actor: 0, turn: 3});
-    g = c.ops(g, [["ward", 2, {ops: [["token", "flurry", 1, "self"]]}]], "Toe the Line");
-    const held = (g.sides[0].wardRider || []).length;
+    g = c.ops(g, [["ward", 2, {until: "turn", next: true, ops: [["token", "flurry", 1, "self"]]}]], "Toe the Line");
+    const held = (g.sides[0].wardNext || []).length;
     const out = c.J.withEffects(g, (fx, s) => fx.preventDamage(s, 0, 5, "a swing"));
     return {
-      "the rider waits with the pool": held,
-      "damage that gets through":      out.dealt,
-      "damage prevented":              out.prevented,
+      "the rider waits on its shield":  held,
+      "the budget pool is untouched":   g.sides[0].ward || 0,
+      "damage that gets through":       out.dealt,
+      "damage prevented":               out.prevented,
       "a Flurry token is minted": (out.game.sides[0].board || []).some(b => /flurry/i.test(b.card.name)),
-      "the rider is spent":            (out.game.sides[0].wardRider || []).length
+      "the shield is spent":            (out.game.sides[0].wardNext || []).length
     };
   },
-  want: {"the rider waits with the pool": 1, "damage that gets through": 3,
-         "damage prevented": 2, "a Flurry token is minted": true, "the rider is spent": 0}
+  want: {"the rider waits on its shield": 1, "the budget pool is untouched": 0, "damage that gets through": 3,
+         "damage prevented": 2, "a Flurry token is minted": true, "the shield is spent": 0}
 },
 
 {
   name: "a prevention that prevents nothing triggers nothing",
-  why: "CR 7.5.5's shape. With an empty pool no damage is turned aside, so " +
-       "the rider must still be waiting — and this runs in the same state as " +
-       "the scene above, whose token actually lands, or a negative " +
-       "observation passes by finding nothing.",
+  why: "CR 7.5.5's shape. A swing blocked to nothing means the hero would " +
+       "be dealt nothing, so the shield and its rider must still be waiting " +
+       "— and this runs in the same state as the scene above, whose token " +
+       "actually lands, or a negative observation passes by finding nothing. " +
+       "Rewritten at v5.06: it read `wardRider`, which nothing writes any " +
+       "more, and would have stayed green while measuring the fixture.",
   run(c){
-    const g = c.state({ward: 0, wardRider: [{ops: [["token", "flurry", 1, "self"]]}]},
+    const g = c.state({wardNext: [{n: 2, src: "Toe the Line", ops: [["token", "flurry", 1, "self"]]}]},
                       {}, {actor: 0, turn: 3});
-    const out = c.J.withEffects(g, (fx, s) => fx.preventDamage(s, 0, 4, "a swing"));
+    const out = c.J.withEffects(g, (fx, s) => fx.preventDamage(s, 0, 0, "a swing"));
     return {
       "damage that gets through":  out.dealt,
       "a token was minted": (out.game.sides[0].board || []).some(b => /flurry/i.test(b.card.name)),
-      "the rider still waits":     (out.game.sides[0].wardRider || []).length
+      "the shield still waits":    (out.game.sides[0].wardNext || []).length
     };
   },
-  want: {"damage that gets through": 4, "a token was minted": false, "the rider still waits": 1}
+  want: {"damage that gets through": 0, "a token was minted": false, "the shield still waits": 1}
 },
 
 {

@@ -121,7 +121,9 @@ test("Toe the Line's two halves are PAIRED, and the rider rides on the op", {ski
      merge DROPPED the "this turn" the matcher had just attached — so the
      single card printing BOTH a rider and a window was the one that lost
      one. v2.34's rule read at the consumer end (v3.53). */
-  assert.deepEqual(fx.ops, [["ward", 2, {until: "turn", ops: [["token", "flurry", 1, "self"]]}]]);
+  /* AND IT IS ONE EVENT (v5.06) — "the next time you would be dealt damage"
+     — so the op carries `next` beside the window and the rider. */
+  assert.deepEqual(fx.ops, [["ward", 2, {until: "turn", next: true, ops: [["token", "flurry", 1, "self"]]}]]);
   assert.equal(fx.tier, "full");
   P.fxReset();
 });
@@ -140,7 +142,7 @@ test("…and a ward with NO rider keeps its plain shape", {skip}, () => {
      so its op carries the window and no rider. What v3.58's rule protects
      is that the flag is OPT-IN: an aura's bare `Ward N` still parses to a
      two-element op, which `test/parser.test.js` pins. */
-  assert.deepEqual(fx.ops, [["ward", 3, {until: "turn"}]]);
+  assert.deepEqual(fx.ops, [["ward", 3, {until: "turn", next: true}]], "one event, no rider (v5.06)");
   P.fxReset();
 });
 
@@ -149,13 +151,13 @@ test("DRIVEN: the rider fires where the damage is turned aside", {skip}, () => {
   const g = H.state({}, {}, {actor: 0, turn: 3});
   /* hold the ward and its rider, then take a hit */
   let n = J.withEffects(g, (fx, s) =>
-    fx.runOps(s, [["ward", 2, {ops: [["token", "flurry", 1, "self"]]}]], "Toe the Line"));
-  assert.equal(n.sides[0].ward, 2);
-  assert.equal((n.sides[0].wardRider || []).length, 1, "the rider waits with the pool");
+    fx.runOps(s, [["ward", 2, {until: "turn", next: true, ops: [["token", "flurry", 1, "self"]]}]], "Toe the Line"));
+  assert.equal(n.sides[0].ward, 0, "a one-event shield is not the budget pool (v5.06)");
+  assert.equal((n.sides[0].wardNext || []).length, 1, "the rider waits on its OWN shield");
   n = J.withEffects(n, (fx, s) => fx.preventDamage(s, 0, 2, "a swing").game);
   assert.ok((n.sides[0].board || []).some(b => /flurry/i.test(b.card.name)),
     "prevention is the trigger — the token lands");
-  assert.deepEqual(n.sides[0].wardRider, [], "…and it is spent (the card prints \"the NEXT time\")");
+  assert.deepEqual(n.sides[0].wardNext, [], "…and the shield is spent (the card prints \"the NEXT time\")");
 });
 
 test("A PREVENTION THAT PREVENTS NOTHING TRIGGERS NOTHING", {skip}, () => {
@@ -171,12 +173,14 @@ test("A PREVENTION THAT PREVENTS NOTHING TRIGGERS NOTHING", {skip}, () => {
      drills. The positive control above registers it and proves the mint
      works; this one must run in the same state. */
   H.db();
-  const g = H.state({ward: 0, wardRider: [{ops: [["token", "flurry", 1, "self"]]}]},
+  /* A SWING BLOCKED TO NOTHING (v5.06's shape): the hero "would be dealt"
+     nothing, so the shield and its rider both keep waiting. */
+  const g = H.state({wardNext: [{n: 2, src: "Toe the Line", ops: [["token", "flurry", 1, "self"]]}]},
                     {}, {actor: 0, turn: 3});
-  const n = J.withEffects(g, (fx, s) => fx.preventDamage(s, 0, 4, "a swing").game);
+  const n = J.withEffects(g, (fx, s) => fx.preventDamage(s, 0, 0, "a swing").game);
   assert.ok(!(n.sides[0].board || []).some(b => /flurry/i.test(b.card.name)),
     "nothing was prevented, so nothing may trigger");
-  assert.equal((n.sides[0].wardRider || []).length, 1, "…and the rider still waits");
+  assert.equal((n.sides[0].wardNext || []).length, 1, "…and the shield still waits");
 });
 
 /* ---- 4. the ledgers ------------------------------------------------ */
@@ -184,10 +188,16 @@ test("A PREVENTION THAT PREVENTS NOTHING TRIGGERS NOTHING", {skip}, () => {
 test("a side field is not real until every ledger carries it", () => {
   const fs = require("fs"), path = require("path");
   const rd = f => fs.readFileSync(path.join(__dirname, "..", "engine", f), "utf8");
-  assert.ok(Array.isArray(S.makeSide().wardRider), "makeSide must declare it");
-  assert.ok(/"wardRider"/.test(rd("sides.js")), "SIDE_FIELDS");
-  assert.ok(/"wardRider"/.test(rd("wire.js")),  "wire.js — a dropped field is a desync");
-  assert.ok(/wardRider: sd\.wardRider/.test(rd("report.js")), "report.js seat()");
+  /* `wardNext` REPLACED `wardRider` AT v5.06 — the rider rides on its own
+     one-event shield now. */
+  assert.ok(Array.isArray(S.makeSide().wardNext), "makeSide must declare it");
+  assert.ok(/"wardNext"/.test(rd("sides.js")), "SIDE_FIELDS");
+  assert.ok(/"wardNext"/.test(rd("wire.js")),  "wire.js — a dropped field is a desync");
+  assert.ok(/wardNext: sd\.wardNext/.test(rd("report.js")), "report.js seat()");
+  /* comments stripped: wire.js's version header names the retired field
+     on purpose, and prose is not a field (v4.27) */
+  const code = t => t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  assert.ok(!/wardRider/.test(code(rd("sides.js") + rd("wire.js") + rd("report.js"))), "and the retired field is gone");
 });
 
 test("BOTH BOARDS ASK THE ONE BODY — neither keeps its own ward arithmetic", () => {
@@ -254,16 +264,19 @@ test("DRIVEN: the ward granted IS the revealed card's pitch", {skip}, () => {
   };
   /* THREE PITCHES, or a hardcoded 1 passes a test written against red
      alone — the same rule `rustDestroy` and heave follow. */
-  assert.equal(run(1).sides[0].ward, 1);
-  assert.equal(run(2).sides[0].ward, 2);
-  assert.equal(run(3).sides[0].ward, 3);
+  const sh = g => (g.sides[0].wardNext || []).map(x => x.n);
+  assert.deepEqual(sh(run(1)), [1]);
+  assert.deepEqual(sh(run(2)), [2]);
+  assert.deepEqual(sh(run(3)), [3]);
+  assert.equal(run(3).sides[0].ward, 0, "a one-event shield, never the budget pool (v5.06)");
 });
 
-test("…and it stacks onto a pool that is already there", {skip}, () => {
+test("…and it sits BESIDE a budget pool that is already there, not in it (v5.06)", {skip}, () => {
   H.db();
   const g = H.state({ward: 2, deck: [{uid: "t1", name: "Top", pitch: 3}]}, {}, {actor: 0, turn: 3});
   const n = J.withEffects(g, (fx, s) => fx.runOps(s, [["reveal", 1], ["revWard", 1]], "Throw Caution"));
-  assert.equal(n.sides[0].ward, 5, "ward is one draining pool, not a replacement");
+  assert.equal(n.sides[0].ward, 2, "the budget is untouched");
+  assert.deepEqual(n.sides[0].wardNext.map(x => x.n), [3], "the shield is its own");
 });
 
 test("a reveal that turned up nothing grants nothing", {skip}, () => {
@@ -271,6 +284,7 @@ test("a reveal that turned up nothing grants nothing", {skip}, () => {
   const g = H.state({deck: []}, {}, {actor: 0, turn: 3});
   const n = J.withEffects(g, (fx, s) => fx.runOps(s, [["reveal", 1], ["revWard", 1]], "Throw Caution"));
   assert.equal(n.sides[0].ward, 0, "an empty deck reveals nothing — 0 is the honest answer");
+  assert.deepEqual(n.sides[0].wardNext || [], [], "…and no shield is made");
 });
 
 test("DRIVEN: the granted ward actually prevents, through the shared body", {skip}, () => {
@@ -282,7 +296,7 @@ test("DRIVEN: the granted ward actually prevents, through the shared body", {ski
   let n = J.withEffects(g, (fx, s) => fx.runOps(s, [["reveal", 1], ["revWard", 1]], "Throw Caution"));
   const out = J.withEffects(n, (fx, s) => fx.preventDamage(s, 0, 5, "a swing"));
   assert.equal(out.dealt, 2, "3 of the 5 is prevented");
-  assert.equal(out.game.sides[0].ward, 0, "and the pool is spent");
+  assert.deepEqual(out.game.sides[0].wardNext, [], "and the shield is spent");
 });
 
 /* ============================================================
@@ -610,11 +624,10 @@ test("`revWard` carries its printed window", {skip}, () => {
   H.db();
   const g = H.state({deck: [{uid: "t1", name: "Top", pitch: 3}]}, {}, {actor: 0, turn: 3});
   const n = J.withEffects(g, (fx, s) => fx.runOps(s, [["reveal", 1], ["revWard", 1]], "Throw Caution"));
-  assert.equal(n.sides[0].ward, 3);
-  assert.equal(n.sides[0].wardTurn, 3, "the feed said \"this turn\" and the state kept it forever");
-
+  assert.deepEqual(n.sides[0].wardNext.map(x => x.n), [3]);
+  /* a one-event shield is windowed by the end-phase sweep (v5.06) */
   const end = E.beginEndPhase(n, 0);
-  assert.equal(end.game.sides[0].ward, 0, "…and the end phase takes it back");
+  assert.deepEqual(end.game.sides[0].wardNext, [], "…and the end phase takes it back");
 });
 
 /* ---- the two things measured rather than assumed ---------------------- */
@@ -658,6 +671,13 @@ test("the feed phrase and the self-play counter are pinned TOGETHER", () => {
   const sp  = fs.readFileSync(path.join(__dirname, "..", "tools", "selfplay.js"), "utf8");
   assert.ok(/destroys itself — ward soaks/.test(eff), "the engine's phrase moved");
   assert.ok(/destroys itself — ward soaks/.test(sp),  "…and the counter did not follow it");
+  /* AND THE ONE-EVENT SHIELD'S (v5.06), driven rather than grepped: the
+     line the engine prints must be the line the counter matches */
+  const g = H.state({hp: 20, wardNext: [{n: 3, src: "Cloud Cover", ops: []}]}, {}, {actor: 0, turn: 3});
+  const line = (J.withEffects(g, (fx, s) => fx.preventDamage(s, 0, 2, "a swing")).game.feed || [])
+    .find(l => /Cloud Cover/.test(l));
+  assert.ok(line && /: \d+ of that damage is prevented/.test(line), "the shield's phrase moved: " + line);
+  assert.ok(sp.includes(": \\d+ of that damage is prevented"), "…and the counter did not follow it");
 });
 
 /* ============================================================
@@ -959,4 +979,83 @@ test("a rider with NO head prevention is left alone", {skip}, () => {
     tx: "Draw a card.\n\nIf they have less {h} than each other hero, they may gain 1{h}."});
   assert.deepEqual((fx.conds || []).filter(e => e.cond === "lifeLt"), [],
     "the rider was claimed without the head that says who \"they\" is");
+});
+
+
+/* ============================================================
+   §9 — ONE EVENT, NOT A BUDGET (v5.06)
+
+   "The next time you would be dealt damage this turn, prevent N of that
+   damage" (Cloud Cover, Toe the Line, Throw Caution) is a SHIELD the next
+   hit uses up. Filed in the budget pool it soaked hit after hit, so a 3
+   that met a 1 kept 2 for later — stronger than printed.
+   ============================================================ */
+
+test("ONE EVENT: a 3 that meets a 1 is GONE — the next hit lands in full", () => {
+  const g = H.state({hp: 20, wardNext: [{n: 3, src: "Cloud Cover", ops: []}]}, {}, {actor: 0, turn: 3});
+  const a = J.withEffects(g, (fx, s) => fx.preventDamage(s, 0, 1, "a jab"));
+  assert.equal(a.dealt, 0, "the 1 is prevented");
+  assert.deepEqual(a.game.sides[0].wardNext, [], "and the shield went with that event");
+  const b = J.withEffects(a.game, (fx, s) => fx.preventDamage(s, 0, 3, "a swing"));
+  assert.equal(b.dealt, 3, "the next hit is not prevented by what was left of the first shield");
+});
+
+test("CONTROL: a BUDGET of 3 that meets a 1 keeps 2 — \"prevent the next 3 damage\"", () => {
+  const g = H.state({hp: 20, ward: 3, wardTurn: 3}, {}, {actor: 0, turn: 3});
+  const a = J.withEffects(g, (fx, s) => fx.preventDamage(s, 0, 1, "a jab"));
+  assert.equal(a.game.sides[0].ward, 2);
+});
+
+test("ORDER: the shield goes before the budget, which it cannot save (ward-spend-order)", () => {
+  const g = H.state({hp: 20, ward: 3, wardTurn: 3, wardNext: [{n: 2, src: "Toe", ops: []}]}, {}, {actor: 0, turn: 3});
+  const a = J.withEffects(g, (fx, s) => fx.preventDamage(s, 0, 2, "a swing"));
+  assert.equal(a.dealt, 0);
+  assert.deepEqual(a.game.sides[0].wardNext, [], "the shield is used by this event");
+  assert.equal(a.game.sides[0].ward, 3, "and the budget is untouched");
+});
+
+test("TWO SHIELDS: one the earlier left nothing for KEEPS WAITING (CR 7.5.5's shape)", () => {
+  const g = H.state({hp: 20, wardNext: [{n: 3, src: "A", ops: []}, {n: 1, src: "B", ops: []}]}, {}, {actor: 0, turn: 3});
+  const a = J.withEffects(g, (fx, s) => fx.preventDamage(s, 0, 2, "a swing"));
+  assert.equal(a.dealt, 0);
+  assert.deepEqual(a.game.sides[0].wardNext.map(x => x.src), ["B"], "B prevented nothing, so it waits");
+});
+
+test("THE END PHASE takes every shield, and COUNTS them, or they outlive the turn (v4.07)", () => {
+  const g = H.state({hp: 20, wardNext: [{n: 2, src: "Toe", ops: [["token", "flurry", 1, "self"]]}]}, {}, {actor: 0, turn: 3});
+  const end = E.beginEndPhase(g, 0);
+  assert.deepEqual(end.game.sides[0].wardNext, [], "an unspent shield and its rider expire with the turn");
+  assert.ok((end.msgs || []).some(m => /unspent/.test(m)), "the sweep's own gate counted it");
+});
+
+test("`wardTotal` shows the shields too — the number on screen is what will be turned aside", () => {
+  assert.equal(P.wardTotal({ward: 1, wardNext: [{n: 3}, {n: 2}], board: [], gear: []}), 6);
+});
+
+test("PREMISE: every rider on a prevention rides on a ONE-EVENT op", {skip}, () => {
+  /* The budget branch no longer carries a rider (v5.06). The day a budget
+     prevention prints "if you prevent damage this way", this fails rather
+     than the rider being dropped silently. */
+  H.db();
+  const C = require("../engine/cards.js");
+  const seen = new Set(), bad = [];
+  for(const r of require("../data/pool.json")){
+    const m = C.mapDbCard(r), c = C.resolveEntry(H.db(), {name: m.n, p: m.p == null ? 0 : m.p, code: null, q: 1});
+    if(!c || seen.has(c.name)) continue; seen.add(c.name);
+    for(const op of (P.fxParse(c).ops || []))
+      if(op[0] === "ward" && op[2] && op[2].ops && op[2].ops.length && !op[2].next) bad.push(c.name);
+  }
+  assert.deepEqual(bad, []);
+});
+
+test("A ZERO-SIZE SHIELD (off a wire) prevents nothing and fires nothing", {skip}, () => {
+  /* No pool card can make one — Throw Caution refuses a pitch-0 reveal —
+     so this is the guard `reduce` needs because it is fed by JSON (v2.04).
+     Without it the rider would fire off a prevention of 0, which is the
+     rule "a prevention that prevents nothing triggers nothing" broken. */
+  H.db();
+  const g = H.state({hp: 20, wardNext: [{n: 0, src: "wire", ops: [["token", "flurry", 1, "self"]]}]}, {}, {actor: 0, turn: 3});
+  const out = J.withEffects(g, (fx, s) => fx.preventDamage(s, 0, 3, "a swing"));
+  assert.equal(out.dealt, 3);
+  assert.ok(!(out.game.sides[0].board || []).some(b => /flurry/i.test(b.card.name)), "no token off a prevention of 0");
 });

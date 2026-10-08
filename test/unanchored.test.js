@@ -106,12 +106,19 @@ const PIN = [
   },
   {
     "src": "/\\bthis turn\\b/",
-    "n": 6,
+    "n": 3,
     "why": "the prevention window (v4.07). \"…to target hero … by a source of your choice\" is `prevention-target-and-source`, stated",
     "sentences": [
       "prevent the next 2 damage that would be dealt to target hero this turn by a source of your choice",
       "prevent the next 3 damage that would be dealt to target hero this turn by a source of your choice",
-      "prevent the next 4 damage that would be dealt to target hero this turn by a source of your choice",
+      "prevent the next 4 damage that would be dealt to target hero this turn by a source of your choice"
+    ]
+  },
+  {
+    "src": "/^the next time you would be dealt damage\\b/",
+    "n": 3,
+    "why": "the ONE-EVENT opening (v5.06): a test that marks the op `next`, beside the window test; the amount is the prevent-N matcher's, so the sentence is read whole by the three together. Moved here from the window family, whose last match it used to be",
+    "sentences": [
       "the next time you would be dealt damage this turn, prevent 1 of that damage",
       "the next time you would be dealt damage this turn, prevent 2 of that damage",
       "the next time you would be dealt damage this turn, prevent 3 of that damage"
