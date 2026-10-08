@@ -1680,7 +1680,11 @@ test("the second-person debt in the shared semantics does not grow", () => {
      `spec.side`, the seat being asked. Its FEED half names the seat
      ("<name> charges <card> into <name>'s hero's soul"), through `creditCharge`,
      the same body the cost route has always spoken with. */
-  assert.ok(lits.length <= 54,
+  /* 54 -> 56 AT v5.07, AND BOTH ARE REFUSALS — `playTargetWhy`'s "you
+     control nothing it can target" and "nothing in your graveyard can be its
+     target". A refusal goes back to whoever attempted the play, which is the
+     case v2.83 calls correct. */
+  assert.ok(lits.length <= 56,
     `second-person literals in effects.js rose to ${lits.length} — the shared feed is read by both seats`);
   /* AND IT MUST NOT PASS BY FINDING NOTHING: if the scan ever stops
      matching, an empty result reads as a clean file. */

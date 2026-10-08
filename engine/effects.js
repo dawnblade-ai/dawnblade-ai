@@ -2789,11 +2789,7 @@ function makeEffects(ctx){
 
         const kind = spec.kind, amt = spec.n || 1;
         const label = spec.label || kind;
-        const filt = promptFilter(spec.filter);
-        const cands = [
-          ...((act(n).board||[]).map(b => b && b.card).filter(Boolean)),
-          ...((act(n).gear||[]).filter(g => g && !g.destroyed))
-        ].filter(Boolean).filter(filt);
+        const cands = ctrPutCands(act(n), spec);
         const many = amt > 1;
         if(!cands.length){
           n = L(n, `${srcName}: ${sv(act(n), "control")} nothing that can take ${many ? amt + " " + label + " counters" : "a " + label + " counter"}.`);
@@ -5602,7 +5598,7 @@ function makeEffects(ctx){
     if(from === "hand" && P.isDeclaredDefender(act(s), c.uid))
       return {game: s, dv: 0, why: c.name + " is defending this chain link — it cannot also be played"};
     /* …and an instant's "target attack" in ANY window (v5.03) */
-    { const pw = pumpTargetWhy(s, c, actorOf(s)); if(pw) return {game: s, dv: 0, why: pw}; }
+    { const pw = playTargetWhy(s, c, actorOf(s)); if(pw) return {game: s, dv: 0, why: pw}; }
     const cost = effCost(c, act(s), P.costCtx(s, actorOf(s)));
     const extra = (o.addPaid === true && fx.addPay) ? fx.addPay.cost : 0;
     const n0 = act(s).res >= cost + extra ? s : autoPitch(s, cost + extra, [c.uid]);
@@ -8949,6 +8945,13 @@ function arsNoOpWhy(sd, ab){
   }
   if(ops.length === 1 && ops[0][0] === "arsCycle" && !sd.arsenal)
     return nm + ": " + sp(sd) + " arsenal is empty — nothing to cycle";
+  /* AND THE TURN (v5.07) — Bravo's "turn a face-down card in your arsenal
+     face-up" is the ability's whole payload (its go again only gives back
+     the action point it spent), so an empty arsenal, or one already face
+     up, pays {r}{r} and the hero's tap for nothing. v5.00 censused the put
+     and the cycle and stopped one payload shape short. */
+  if(ops.length === 1 && ops[0][0] === "arsTurn" && (!sd.arsenal || sd.arsenal._faceUp))
+    return nm + ": " + sp(sd) + " arsenal holds no face-down card to turn";
   return null;
 }
 function jabTargets(sd, filt, exclUid){
@@ -10585,6 +10588,83 @@ function pumpTargetWhy(s, c, seat){
   return rxNoTargetWhy(s, c);
 }
 
+/* ---- WHAT A COUNTER CAN BE PUT ON (v5.07) -------------------------------
+   The one candidate reader for `ctrPut` — the board's cards and the gear
+   still standing, through the spec's printed filter (v3.55: a counter goes
+   on an Item on the board OR on Equipment). `runOps` resolves through it and
+   `playTargetWhy` asks it before the card is played, so the two cannot
+   disagree about whether "target aura you control" has a target. */
+function ctrPutCands(sd, spec){
+  const filt = promptFilter((spec || {}).filter);
+  return [
+    ...(((sd || {}).board || []).map(b => b && b.card).filter(Boolean)),
+    ...(((sd || {}).gear || []).filter(g => g && !g.destroyed))
+  ].filter(Boolean).filter(filt);
+}
+
+/* ---- A PLAYED CARD WITH A PRINTED TARGET NEEDS ONE (v5.07) -------------
+   v3.11 made a printed target a LEGALITY for attack reactions, v4.59 for
+   an activation's pick, v5.03 for an instant's "target attack" pump. A
+   played card's payload was never asked, so six were playable into
+   nothing, paid for, and logged that nothing could be found:
+
+     Astral Etchings · Edict of Steel   "…counters on target aura / sword YOU CONTROL"
+     Memorial Ground · Preserve Tradition  "put target … from your graveyard"
+     Pass Over                          "banish target card from an opposing hero's graveyard"
+     A Drop in the Ocean                "target attack gets -1{p}"
+
+   THREE OF THEM ARE WORSE THAN A WASTED CARD. Enigma's Legendary Mystic
+   instants print "if you've played another blue card this turn,
+   TRANSCEND", so a play into nothing still counted as a blue card played
+   and could still transcend — a Chi loop fed by an illegal play.
+
+   ONE READER per op, each the reader its own resolution uses: `ctrPutCands`
+   for `ctrPut`, `promptPickPool`/`promptPickAskable` (the predicate the
+   sheet refuses on) for a MANDATORY graveyard pick — an optional "you may"
+   pick has no target to want. Attacks are left out: their targeted text is
+   a trigger's, and a trigger with no target does nothing while the attack
+   stays legal.
+
+   MEASURED: of the six, TWO print nothing else (Astral Etchings, Memorial
+   Ground) and are refused; the other four are the stated partial case. */
+function playTargetWhy(s, c, seat){
+  if(!c || P.isAttack(c) || c._attackRx) return null;
+  const pw = pumpTargetWhy(s, c, seat);
+  if(pw) return pw;
+  if(typeof c.name !== "string") return null;
+  const sd = (s && s.sides && s.sides[seat]) || {};
+  const fx = P.fxParse(c);
+  /* ONLY WHEN THE TARGET IS THE WHOLE PAYLOAD. Whether a card with one
+     unfillable target may be played at all is not sourced here (the CR site
+     is unreachable from this sandbox), and the two readings part exactly on
+     cards that print something else beside it — Re-Charge!'s +4{p}, Edict of
+     Steel's go again, the Mystic instants' transcend. Those keep resolving
+     the rest (`played-target-partial-resolution`, stated). A card whose ONLY
+     effect is the targeted one would do nothing at all, which is the paid
+     no-op v4.49 and v5.00 refuse without needing the targeting rule. */
+  const rest = op => (fx.ops || []).some(o => o !== op && o[0] !== "noop")
+    || (fx.conds || []).length > 0 || !!fx.ga
+    || (fx.onHit || []).length > 0 || (fx.onHitHero || []).length > 0;
+  for(const op of (fx.ops || [])){
+    const k = op[0], spec = op[1] || {};
+    /* A REFUSAL IS READ BY WHOEVER ATTEMPTED IT, so "you" is right here
+       (v2.83); the opponent's zone is named through `sp`. */
+    let why = null;
+    if(k === "ctrPut" && !ctrPutCands(sd, spec).length)
+      why = c.name + ": you control nothing it can target";
+    else if(k === "pickPrompt" && spec.zone === "grave" && (spec.min == null || spec.min >= 1)
+       && !PR.promptPickAskable(PR.promptPickPool(sd, spec), spec))
+      why = c.name + ": nothing in your graveyard can be its target";
+    /* NO `foePick` OR `atkMinus` BRANCH, MEASURED: their only targeted
+       claimants (Pass Over, A Drop in the Ocean) also print a transcend, so
+       they are the stated partial case and a refusal there could never fire
+       — vocabulary with no claimant is dead rules code (v4.11, v4.52).
+       test/notarget.test.js fails the day a whole-payload one arrives. */
+    if(why && !rest(op)) return why;
+  }
+  return null;
+}
+
 function rxNoTargetWhy(s, c){
   if(!c) return null;
   const fx = P.fxParse(c);
@@ -10669,6 +10749,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, jabTargets, arsNoOpWhy, DEFENDS_CONDS, defendsCondMet, CTX_KEYS, ACT_IF_KINDS, controlsAuraOf, PLAY_IF_KINDS, playIfOk, chainAtkOf, had6ThisTurn, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, restampHalving, returnStolen, pendPumped, attackBase, basePowOf, defLimitWhy, rxNoTargetWhy, pumpTargetWhy, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
+return {makeEffects, jabTargets, arsNoOpWhy, DEFENDS_CONDS, defendsCondMet, CTX_KEYS, ACT_IF_KINDS, controlsAuraOf, PLAY_IF_KINDS, playIfOk, chainAtkOf, had6ThisTurn, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, restampHalving, returnStolen, pendPumped, attackBase, basePowOf, defLimitWhy, rxNoTargetWhy, pumpTargetWhy, playTargetWhy, ctrPutCands, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

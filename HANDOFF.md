@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.83 (updated through v5.06)
+# Handoff — Dawnblade, at v4.83 (updated through v5.07)
 
 **Written 2026-09-28, numbers refreshed 2026-10-04 at v4.99. Every number below was re-derived this session, with
 the command that produces it.** Re-derive before you quote one; this file
@@ -22,11 +22,11 @@ where things stand and what is next.
 
 | measure | value | command |
 |---|---|---|
-| version | v5.06, live on GitHub Pages | `grep APP_VER index.html` |
-| drills | 3464 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
+| version | v5.07, live on GitHub Pages | `grep APP_VER index.html` |
+| drills | 3473 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
 | pool coverage | **405 of 405** unique cards read in full · 0 part · 0 none | `npm run audit`, top of `AUDIT.md` |
 | unfinished cards | 0, and 0 one clause away | `npm run gaps` |
-| approximation ledger | 49 records: 29 closed · **18 stated · 2 open** | `node tools/approx.js` |
+| approximation ledger | 50 records: 29 closed · **19 stated · 2 open** | `node tools/approx.js` |
 | CR rules cited | 61 distinct · 51 guarded · 3 unguarded (section pointers, pinned) | `node tools/crindex.js` |
 | fail states | 0 UNFAIR · 3 WRONG (all known, below) | `npm run sweep` |
 | scenes | 107 passing | `npm run scenes` |
@@ -80,6 +80,7 @@ Every one of those cards read `tier: full` before its fix.
 | 5.04 | a declared defender is not in the hand (`handFree`): 191 pitches and 114 plays from the wall per 240 games, now 0; Bravo 12.3 → 16.3 |
 | 5.05 | a card played is not an ability activated (`isCardPlay`): Viserai's rite 29 spurious firings → 0, Briar's Lightning 56 → 28 |
 | 5.06 | "the next time you would be dealt damage" is one event (`wardNext`), not the budget pool; 46 banked points per 240 games gone; `WIRE_V` 24 |
+| 5.07 | a played card whose whole payload is a printed target needs one (`playTargetWhy`); Bravo's ability on an empty arsenal is refused |
 
 Versions 4.88–4.93 were found by ONE census: every refusal in the trainer's
 play doors, read against `judge.legal`. When you find a rule in the trainer,
@@ -206,6 +207,14 @@ printed 3 (`attack-grant-misses-own-attack`, stated, with a driven probe).
 The reading that includes V is not sourced here — the CR site is blocked from
 this sandbox and no ruling was found — so it is not built in the stronger
 direction. Answer it and the probe says where to start.
+
+**AND A SECOND (v5.07): may a card with an unfillable target be played for the
+rest of its text?** Re-Charge! prints a targeted counter and *"the next attack you
+boost this turn gets +4{p}"*; Enigma's Pass Over prints *"banish target card from
+an opposing hero's graveyard"* and a transcend. With nothing to target, the engine
+plays them and resolves the rest (`played-target-partial-resolution`, stated). A
+card whose ONLY effect is the target is refused either way. If the answer is
+"refused", the probe goes red and the narrowing in `playTargetWhy` is one line.
 
 This sandbox cannot reach the web freely, so three jobs are flagged for a
 desktop:

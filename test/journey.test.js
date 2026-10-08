@@ -245,7 +245,7 @@ test("a card played in an open window lands in the zone its TYPE sends it to", {
        empty state holds none — the same kind of refusal: a printed
        condition this census cannot meet, pinned below and driven with the
        target present in test/instantpump.test.js. */
-    if(why && /targets an attack you control/.test(why)){ untargeted.push(card.name); continue; }
+    if(why && /targets an attack you control|nothing it can target|can be its target/.test(why)){ untargeted.push(card.name); continue; }
     if(why){ bad.push(card.name + " is playable by type and was refused: " + why); continue; }
     const want = TY.destination(card);
     const got = whereIs(settle(J.reduce(g, {t: "play", uid: "UT", from: zone}, SEAT).state), "UT");
@@ -259,13 +259,18 @@ test("a card played in an open window lands in the zone its TYPE sends it to", {
      quietly stopped driving anything cannot pass by reporting nothing.
      chain 175 -> 171 AT v4.90: the four gated records above are attacks,
      and the census can no longer reach their play (see test/playif). */
-  assert.deepEqual(untargeted.sort(), ["Lightning Press"],
-    "the instants refused for want of a TARGET attack in an empty state moved (v5.03)");
+  /* +Astral Etchings, +Memorial Ground AT v5.07: a played card whose ONLY
+     effect is a printed target is refused when the target is absent, and an
+     empty state holds no aura with ward and no graveyard. Driven with the
+     target present in test/notarget.test.js. */
+  assert.deepEqual(untargeted.sort(), ["Astral Etchings", "Lightning Press", "Memorial Ground"],
+    "the cards refused for want of a printed TARGET in an empty state moved (v5.03, v5.07)");
   /* grave 91 -> 90 AT v5.03: Lightning Press is an instant, and the
      census can no longer reach its play without an attack to target. ONE
      record, not three: this census walks the DECK LISTS, and Briar decks
      the red printing alone (the pool file holds all three pitches). */
-  assert.deepEqual(tally, {chain: 171, arena: 23, grave: 90},
+  /* grave 90 -> 88 AT v5.07: Astral Etchings and Memorial Ground above. */
+  assert.deepEqual(tally, {chain: 171, arena: 23, grave: 88},
     "the pool's play destinations moved — that is a rules change, so it is a deliberate edit here");
   /* AND EVERY ARROW WAS REFUSED FROM THE HAND (v4.91). Twelve records,
      eleven names (Infecting Shot is printed at two pitches in the pool) —

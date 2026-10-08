@@ -1,3 +1,43 @@
+## v5.07 — a played card whose only effect is a printed target needs one
+
+> *"Put three +1{p} counters on target aura with ward you control."* — ASTRAL
+> ETCHINGS · *"Put target attack action card with cost 2 or less from your
+> graveyard on top of your deck."* — MEMORIAL GROUND
+
+v3.11 made a printed target a legality for attack reactions, v4.59 for an
+activation's pick, v5.03 for an instant's "target attack" pump. A **played
+card's** payload was never asked, so six cards were playable into nothing, paid
+for, and logged that nothing could be found.
+
+`effects.playTargetWhy(game, card, seat)` asks each targeted op the reader its own
+resolution uses: `ctrPutCands` (now the one candidate reader `runOps` resolves
+through too) and the pick sheet's own `promptPickPool`/`promptPickAskable`. Asked
+by judge's play branch, the trainer's `tryPlay` and `playAtSpeed`; it asks the
+v5.03 pump reader first.
+
+**It refuses only when the target is the card's WHOLE payload**, which is the paid
+no-op v4.49 and v5.00 already refuse: Astral Etchings and Memorial Ground.
+Whether the CR refuses a card with one unfillable target that also prints
+something else is **not sourced here**, and the readings part exactly on four
+cards. Re-Charge!'s +4{p} (an existing drill pins it), Edict of Steel's go again,
+and the transcend on Enigma's Pass Over, Preserve Tradition and A Drop in the
+Ocean still resolve their rest. That is `played-target-partial-resolution`
+(stated), with a probe, and a ruling to ask.
+
+**And Bravo's ability.** `arsNoOpWhy` (v5.00) censused the arsenal put and cycle
+and stopped one shape short: *"turn a face-down card in your arsenal face-up"* on
+an empty or face-up arsenal paid {r}{r} and the hero's tap for nothing.
+
+**Two branches were deleted before they shipped.** The first draft also read
+`foePick` and `atkMinus`; measured, their only targeted claimants print a
+transcend, so those refusals could never fire. Vocabulary with no claimant is
+dead rules code (v4.11), and a premise drill fails the day a whole-payload one
+arrives. The same pass found Drag Down ("when this defends an attack, the attack
+gets -3{p}") wrongly claimed until the check asked for a printed "target attack".
+
+Measured: `test/notarget.test.js` adds 8 drills; 10 sabotages, 10 bite. Ladder at
+three seeds both sides inside the band.
+
 ## v5.06 — "the next time you would be dealt damage" is one event, not a budget
 
 The pool prints two prevention shapes, and both filled one draining pool:

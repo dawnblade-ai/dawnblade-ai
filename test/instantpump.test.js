@@ -158,17 +158,22 @@ test("EVERY DOOR ASKS IT, as a whole conditional (v4.55: an identifier alone sur
   const efx = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8");
   const tp = html.slice(html.indexOf("const tryPlay = "), html.indexOf("const confirmPay"));
   assert.ok(tp.length > 1000, "tryPlay anchors moved");
-  assert.match(tp, /\{ const _pw = DawnEffects\.pumpTargetWhy\(s, card, actorOf\(s\)\); if\(_pw\) return L\(s, _pw \+ "\."\); \}/,
+  /* v5.07: the play doors ask `playTargetWhy`, which asks this reader
+     FIRST and then each targeted op — the activation door still asks it
+     directly. */
+  assert.match(tp, /\{ const _pw = DawnEffects\.playTargetWhy\(s, card, actorOf\(s\)\); if\(_pw\) return L\(s, _pw \+ "\."\); \}/,
     "the trainer's play door asks it before anything is paid");
   const ai = html.slice(html.indexOf("const activateInstant = "), html.indexOf("\n  const ", html.indexOf("const activateInstant = ") + 30));
   assert.ok(ai.length > 200, "activateInstant anchors moved");
   assert.match(ai, /\{ const _pw = DawnEffects\.pumpTargetWhy\(s, card, actorOf\(s\)\); if\(_pw\) return L\(s, _pw \+ "\."\); \}/,
     "the trainer's instant-ability door asks it, before the ability is paid");
-  assert.match(judge, /\{ const pw = E\.pumpTargetWhy\(g, c, seat\); if\(pw\) return pw; \}/, "judge's play branch asks it");
+  assert.match(judge, /\{ const pw = E\.playTargetWhy\(g, c, seat\); if\(pw\) return pw; \}/, "judge's play branch asks it");
   assert.match(judge, /if\(want !== "attack-reaction"\) return E\.pumpTargetWhy\(g, ab, seat\);/,
     "and every activation route, through `rxTargetWhy`");
-  assert.match(efx, /\{ const pw = pumpTargetWhy\(s, c, actorOf\(s\)\); if\(pw\) return \{game: s, dv: 0, why: pw\}; \}/,
+  assert.match(efx, /\{ const pw = playTargetWhy\(s, c, actorOf\(s\)\); if\(pw\) return \{game: s, dv: 0, why: pw\}; \}/,
     "`playAtSpeed` asks it");
+  assert.match(efx, /function playTargetWhy\(s, c, seat\)\{[\s\S]{0,120}const pw = pumpTargetWhy\(s, c, seat\);\s*if\(pw\) return pw;/,
+    "…and `playTargetWhy` asks the pump reader first");
   /* AND `execute` RESOLVES IT ONTO THE LINK, never into `buffNext` */
   assert.match(efx, /const _tw = pumpTargetWhy\(n, card, actorOf\(n\)\);\s*if\(_tw\) n = L\(n, `\$\{_tw\} — nothing to pump\.`\);\s*else n = runOps\(n, \[\["self", fx\.self\]\], card\.name\);/);
 });

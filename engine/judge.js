@@ -1607,7 +1607,7 @@ function playableWhy(g, seat, c, win, zone){
   /* …AND AN INSTANT THAT PUMPS "TARGET ATTACK" NEEDS ONE IN EVERY WINDOW
      (v5.03) — Lightning Press played with no attack of yours on the chain
      queued its +3 for whatever attacked next. */
-  { const pw = E.pumpTargetWhy(g, c, seat); if(pw) return pw; }
+  { const pw = E.playTargetWhy(g, c, seat); if(pw) return pw; }
 
   /* AND THE LINK ITSELF CAN CLOSE THE DEFENCE WINDOW (v4.60).
 

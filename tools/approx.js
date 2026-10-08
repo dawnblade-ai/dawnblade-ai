@@ -874,7 +874,22 @@ const APPROX = {
       "was found, so moving it would be restating a rule from memory, in the STRONGER "+
       "direction (v4.59's discipline). Measured at v5.03: V is the pool's only attack "+
       "card carrying a standing grant (`atkBuff`), so the question is one card. "+
-      "Recorded as a ruling to ask for; the probe drives V and asserts the printed 3."}
+      "Recorded as a ruling to ask for; the probe drives V and asserts the printed 3."},
+
+"played-target-partial-resolution": {
+  status:"stated", cr:null, board:"both", since:"v5.07", swept:"v5.07",
+  claim:"A played card whose printed target has nothing to name is refused only when "+
+        "that target is its WHOLE payload (Astral Etchings, Memorial Ground). A card "+
+        "printing something beside it is played and resolves the rest: Re-Charge!'s "+
+        "+4{p}, Edict of Steel's go again, and the transcend on Pass Over, Preserve "+
+        "Tradition and A Drop in the Ocean.",
+  why:"Whether the CR lets a card with one unfillable target be played at all is not "+
+      "sourced here (rules.fabtcg.com is unreachable from this sandbox), and an existing "+
+      "drill pins the partial reading for Re-Charge!. The whole-payload refusal needs no "+
+      "ruling: that play would do nothing, which v4.49 and v5.00 already refuse. The "+
+      "reading matters most for Enigma's Mystic instants, whose transcend still fires off "+
+      "a play that targeted nothing. Recorded as a ruling to ask; the probe plays Pass "+
+      "Over into an empty graveyard and asserts it is legal."}
 
 };
 

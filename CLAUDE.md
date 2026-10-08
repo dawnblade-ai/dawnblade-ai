@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.06
+**Current version:** v5.07
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3464 drills** at v5.06.
+This is `node --test "test/*.test.js"` — **3473 drills** at v5.07.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,16 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A PRINTED TARGET ON A PLAYED CARD (v5.07)
+
+`effects.playTargetWhy` refuses a played card whose WHOLE payload is a targeted op
+with nothing to target (Astral Etchings, Memorial Ground), asking the reader that
+op's own resolution uses (`ctrPutCands`, `promptPickAskable`). A card printing
+something BESIDE its target resolves the rest — the CR's answer is unsourced here,
+so that is `played-target-partial-resolution`, stated, and a ruling to ask.
+**Build a refusal for the shape a ruling is not needed for**, and record the rest:
+the whole-payload case is the paid no-op v4.49 already refuses.
 
 ### ONE EVENT IS NOT A BUDGET (v5.06)
 
