@@ -1,3 +1,47 @@
+## v5.05 — a card played is not an ability activated
+
+> *"Whenever you PLAY a Runeblade card, if you've played another NON-ATTACK
+> ACTION CARD this turn, create a Runechant token."* — VISERAI
+>
+> *"The second time you PLAY a non-attack action card each turn, create an
+> Embodiment of Lightning token."* — BRIAR
+
+`execute` is reached by every route, and both clauses were answered off routes
+that play nothing. Driven:
+
+- **Reaping Blade's swing fired Viserai's rite.** A weapon is activated, never
+  played.
+- **`hist.non` counted every non-attack that resolved** — instants, defence
+  reactions and activated abilities — so Blossom of Spring's ability or Arcane
+  Polarity (an Instant) satisfied "another non-attack action card".
+- **And fixing that exposed a fourth:** Briar's mint tested `hist.non === 2`
+  after every non-attack, so an instant played after the second action would
+  have minted again. It is asked only when the count moves.
+
+Measured over the 58 games Viserai or Briar sits in: **the rite fired 29 times
+on the previous engine and every one was spurious** (6 swings, 2 defence
+reactions after an ability, the rest held plays after an ability or reaction
+was counted). It fires 0 times now, and that 0 is about the seat policy:
+Viserai plays 4 non-attack action cards in 28 games and never a Runeblade card
+after one, because `sparring.act` ranks a non-attack last (v3.80). The accept
+path is driven by the drill instead. Briar's Lightning: 56 mints → 28.
+
+`parser.isCardPlay(from)` reads the route off an allow-list (`PLAY_ROUTES`:
+hand, arsenal, graveyard, banish), and `isNonAtkActionPlay(card, from, half)`
+the type of what was played. A split card is the HALF it was played as: Shock
+alone is an Instant, Burn Up alone an Action, the meld both. The rite reads
+the Runeblade class off the structured array (0 records disagree with `tt`).
+
+**And the Briar drill had the engine's defect written into its fixture**: its
+"non-attack action card" was Sigil of Suffering, a Defense Reaction, with a
+premise that asked only "not an attack". It plays Nimblism now, and a near-miss
+drill plays an instant and a reaction in between.
+
+Measured: `test/playroute.test.js` adds 4 drills and `briar.test.js` one; 6
+sabotages, 5 bite. The sixth swaps the class read back to `tt` and cannot
+express a bug, since the two readers agree on every record. Ladder at three
+seeds both sides: every hero inside the band.
+
 ## v5.04 — a declared defender is not in the hand
 
 Declaring a card from hand as a defender commits it to the combat chain. Both

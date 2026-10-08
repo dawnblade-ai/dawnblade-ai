@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.83 (updated through v5.04)
+# Handoff — Dawnblade, at v4.83 (updated through v5.05)
 
 **Written 2026-09-28, numbers refreshed 2026-10-04 at v4.99. Every number below was re-derived this session, with
 the command that produces it.** Re-derive before you quote one; this file
@@ -22,8 +22,8 @@ where things stand and what is next.
 
 | measure | value | command |
 |---|---|---|
-| version | v5.04, live on GitHub Pages | `grep APP_VER index.html` |
-| drills | 3451 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
+| version | v5.05, live on GitHub Pages | `grep APP_VER index.html` |
+| drills | 3456 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
 | pool coverage | **405 of 405** unique cards read in full · 0 part · 0 none | `npm run audit`, top of `AUDIT.md` |
 | unfinished cards | 0, and 0 one clause away | `npm run gaps` |
 | approximation ledger | 49 records: 29 closed · **18 stated · 2 open** | `node tools/approx.js` |
@@ -78,6 +78,7 @@ Every one of those cards read `tier: full` before its fix.
 | 5.02 | the whole-text self-pump fallback is retired; three cards stop granting a pump their text never printed |
 | 5.03 | an instant that pumps "target attack" lands on its target, refused without one (`pumpTargetWhy`); Briar 17·17·18 → 21·19·20 |
 | 5.04 | a declared defender is not in the hand (`handFree`): 191 pitches and 114 plays from the wall per 240 games, now 0; Bravo 12.3 → 16.3 |
+| 5.05 | a card played is not an ability activated (`isCardPlay`): Viserai's rite 29 spurious firings → 0, Briar's Lightning 56 → 28 |
 
 Versions 4.88–4.93 were found by ONE census: every refusal in the trainer's
 play doors, read against `judge.legal`. When you find a rule in the trainer,

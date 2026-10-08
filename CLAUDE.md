@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.04
+**Current version:** v5.05
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3451 drills** at v5.04.
+This is `node --test "test/*.test.js"` — **3456 drills** at v5.05.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,18 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A CARD PLAYED IS NOT AN ABILITY ACTIVATED (v5.05)
+
+Viserai's rite and Briar's Lightning both print *"PLAY a … non-attack action
+card"*, and `execute` is reached by every route: a weapon swing fired the rite,
+and `hist.non` counted instants, defence reactions and activated abilities.
+`parser.isCardPlay(from)` is the allow-list of play zones, and
+`isNonAtkActionPlay(card, from, half)` asks the type of what was played (a split
+card is its half). **When a hero asks about cards PLAYED, ask which routes reach
+the line**, and keep a mint that fires on an exact count inside the branch that
+moves the count. The Briar drill's "non-attack action card" was a Defense
+Reaction, which is v3.13 again: a fixture that pins an anomaly legitimises it.
 
 ### A DECLARED DEFENDER IS NOT IN THE HAND (v5.04)
 

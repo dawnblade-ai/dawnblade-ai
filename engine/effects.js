@@ -3429,7 +3429,11 @@ function makeEffects(ctx){
       actMut(n).hist = {...act(n).hist,
         auraAtkNames: [...(act(n).hist.auraAtkNames || []), card.name]};
     }
-    if(bAct(n).viseraiPassive && /runeblade/i.test(card.tt||"") && act(n).hist.non>0){ n = mkRune(n, 1); n=L(n,`Viserai's rite — a non-attack already down, so this Runeblade card conjures a Runechant (now ${runeCount(act(n))}).`); }
+    /* VISERAI'S RITE asks about a card PLAYED (v5.05) — a weapon swing or
+       an activated ability plays nothing (`parser.isCardPlay`). The class
+       comes off the structured array (v2.39), never `tt`. */
+    if(bAct(n).viseraiPassive && P.isCardPlay(from) && (card.ty || []).some(t => /^runeblade$/i.test(String(t)))
+       && act(n).hist.non>0){ n = mkRune(n, 1); n=L(n,`Viserai's rite — a non-attack action card already down, so this Runeblade card conjures a Runechant (now ${runeCount(act(n))}).`); }
     const preHP = foe(n).hp;
     /* THE COLOUR COUNTERS USED TO BE INCREMENTED HERE, 460 LINES ABOVE THE
        CONDITION THAT READS THEM, AND EVERY CARD THEREFORE SATISFIED ITS OWN
@@ -5239,8 +5243,14 @@ function makeEffects(ctx){
         actMut(n).board=[...act(n).board,{card,kind:fx.perm,spent:false,uid:card.uid,sd:_sd,susp:_susp}]; if(fx.perm==="aura") actMut(n).hist={...act(n).hist, aura:(act(n).hist.aura||0)+1}; n=L(n,`${card.name} enters play (${fx.perm})${_susp?` with ${_susp} suspense counters — it pays out when it leaves`:""}.`); }
       else if((from==="hand"||from==="arsenal") && !_offGrave) actMut(n).grave=[...gy(n.turn, card),...act(n).grave];
       else if(from==="grave"||from==="banish") actMut(n).banish=[card,...act(n).banish];
-      actMut(n).hist = {...act(n).hist, non:act(n).hist.non+1};
-      n = briarLightning(n);
+      /* COUNTED ONLY FOR A NON-ATTACK ACTION CARD PLAYED (v5.05), which is
+         what both readers print. And Briar's mint asks only when the count
+         MOVES: tested on every non-attack, the exact `=== 2` would mint
+         again off an instant played after the second action. */
+      if(P.isNonAtkActionPlay(card, from, _half)){
+        actMut(n).hist = {...act(n).hist, non:act(n).hist.non+1};
+        n = briarLightning(n);
+      }
       /* THE OPTIONAL COST ON A NON-ATTACK (v3.20), and the reason it is a
          FIX rather than only a new site.
 

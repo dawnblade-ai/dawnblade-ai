@@ -83,8 +83,13 @@ function playNonAttacks(count){
   let n = H.state({hand: [], res: 9, ap: 3}, {}, {turn: 3});
   for(let i = 0; i < count; i++){
     n.builds = [built, {}];
-    const c = Object.assign({}, H.card("Sigil of Suffering", 1), {uid: "na" + i});
-    assert.equal(P.isAttack(c), false, "the fixture must be a NON-attack or this drill proves nothing");
+    /* A NON-ATTACK ACTION CARD (v5.05). This fixture was Sigil of
+       Suffering — a Defense Reaction — with a premise that asked only "not
+       an attack", which is the engine's own defect written into the drill
+       that pinned it: `hist.non` counted every non-attack. Nimblism is in
+       Briar's list and is an Action, off the structured array. */
+    const c = Object.assign({}, H.card("Nimblism", 1), {uid: "na" + i});
+    assert.ok(P.isNonAtkActionCard(c), "the fixture must be a NON-ATTACK ACTION card or this drill proves nothing");
     n = H.execute(n, c, "hand", 0, {});
   }
   return n;
@@ -101,6 +106,28 @@ test("and not the third — 'the second time' is exactly once", {skip}, () => {
   const n = playNonAttacks(3);
   assert.deepEqual(boardNames(n), ["Embodiment of Lightning"]);
   assert.equal(n.sides[0].hist.non, 3, "the counter still climbs; only the mint is once");
+});
+
+test("an INSTANT or a DEFENCE REACTION is not a non-attack action card, and does not re-mint (v5.05)", {skip}, () => {
+  /* Briar decks four instants, and the old count made Arcane Polarity a
+     "non-attack action card": an instant and one action minted Lightning.
+     And the mint asks only when the count MOVES, or an instant played after
+     the second action would satisfy `=== 2` a second time. */
+  P.fxReset();
+  const built = briarBuild();
+  const play = (n, nm, p, uid) => { n.builds = [built, {}];
+    return H.execute(n, Object.assign({}, H.card(nm, p), {uid}), "hand", 0, {}); };
+  let n = H.state({hand: [], res: 9, ap: 3}, {}, {turn: 3});
+  n = play(n, "Arcane Polarity", 1, "i1");
+  n = play(n, "Sigil of Suffering", 1, "d1");
+  n = play(n, "Nimblism", 1, "a1");
+  assert.deepEqual(boardNames(n), [], "one action card, however many instants and reactions");
+  assert.equal(n.sides[0].hist.non, 1);
+  n = play(n, "Nimblism", 1, "a2");
+  assert.deepEqual(boardNames(n), ["Embodiment of Lightning"], "the second ACTION card mints");
+  n = play(n, "Arcane Polarity", 1, "i2");
+  assert.deepEqual(boardNames(n), ["Embodiment of Lightning"], "an instant after it does not mint again");
+  assert.equal(n.sides[0].hist.non, 2);
 });
 
 /* ---- 3. THE FIRST attack action card to land on a hero ------------- */

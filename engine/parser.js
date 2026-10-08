@@ -9594,6 +9594,33 @@ const playZoneWhy = (c, zone, o) => {
 };
 const playableFromZone = (c, zone, o) => !!c && !playZoneWhy(c, zone, o);
 
+/* ---- A CARD PLAYED, NOT AN ABILITY ACTIVATED (v5.05) ------------------
+   Two heroes ask about cards PLAYED: Viserai — "Whenever you PLAY a
+   Runeblade card, if you've played another NON-ATTACK ACTION CARD this
+   turn" — and Briar — "the second time you PLAY a non-attack action card
+   each turn". `execute` is reached by every route, so both were answered
+   off routes that play nothing: Reaping Blade's SWING fired the rite (a
+   weapon is activated, never played), and `hist.non` counted every
+   non-attack that resolved — instants, defence reactions and activated
+   abilities included — so Blossom of Spring's ability or Arcane Polarity
+   (an Instant) satisfied "another non-attack action card".
+
+   `PLAY_ROUTES` is an ALLOW-list (a blacklist is the bug, v3.35): the zones
+   a card is played from. The activation routes — weapon, ally, aura, hero,
+   board — are left out by not being named. A split card is the type of the
+   HALF it was played as (v3.34): Shock alone is an Instant, Burn Up alone
+   an Action, and melded it is both, so the meld counts. */
+const PLAY_ROUTES = ["hand", "arsenal", "grave", "banish"];
+const isCardPlay = from => PLAY_ROUTES.indexOf(from) >= 0;
+const isNonAtkActionPlay = (c, from, half) => {
+  if(!c || !isCardPlay(from)) return false;
+  if(isSplit(c) && (half === 0 || half === 1)){
+    const hs = splitHalves(c);
+    if(hs) return isNonAtkActionCard(hs[half]);
+  }
+  return isNonAtkActionCard(c);
+};
+
 /* ---- AN ADDITIONAL DISCARD COST MUST BE PAYABLE (v4.91) -------------
 
    > "As an additional cost to play Savage Feast discard a random card."
@@ -10384,6 +10411,6 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, spellvoidX, linksControlled, arcaneSoaks,
         ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
-        chiValue, chiSum, chiFloating, pitchExcessWhy, chiCeiling, payCeiling, handFree, isDeclaredDefender, abChiCost, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, swingSpentWhy, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, abilitiesLive, boardEntryNamed, isEphemeral, isHandWipe, gyFirstGaKw,
+        chiValue, chiSum, chiFloating, pitchExcessWhy, chiCeiling, payCeiling, handFree, isDeclaredDefender, PLAY_ROUTES, isCardPlay, isNonAtkActionPlay, abChiCost, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, swingSpentWhy, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, abilitiesLive, boardEntryNamed, isEphemeral, isHandWipe, gyFirstGaKw,
         CARD_OVERRIDES};
 });
