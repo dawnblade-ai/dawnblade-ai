@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.03
+**Current version:** v5.04
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3444 drills** at v5.03.
+This is `node --test "test/*.test.js"` — **3451 drills** at v5.04.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,18 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A DECLARED DEFENDER IS NOT IN THE HAND (v5.04)
+
+Both boards hold the wall as uids into the hand (`blockH`) until the damage
+step, so a declared defender LOOKS like a hand card to every hand reader. It is
+on the combat chain. On the previous engine the seat policy pitched one 191
+times and played one 114 times in 240 games: the card blocked AND paid, or
+blocked AND resolved, and a declaration was withdrawn after CR 7.3.2b had fixed
+it. `parser.handFree(sd, self)` is the one reader of the spendable hand, and
+five hand-rolled copies of its filter now ask it (`test/defenderzone.test.js`
+censuses a sixth). **When a representation keeps a card in a zone it has left,
+census every reader of that zone**, not only the one that turned up the bug.
 
 ### AN INSTANT THAT PUMPS "TARGET ATTACK" NEEDS ONE (v5.03)
 

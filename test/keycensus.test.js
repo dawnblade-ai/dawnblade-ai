@@ -342,7 +342,7 @@ test("the one-board reader sets are pinned", {skip}, () => {
     assert.ok(both.includes(n), n + " is demonstrably asked by both boards");
 
   assert.deepEqual(onlyJ.sort(),
-    ["chiValue", "isAtkActionCard", "isDR",
+    ["chiValue", "handFree", "isAtkActionCard", "isDeclaredDefender", "isDR",
      "printedKw", "splitCostsAP", "weaponCost"].sort(),
     "a reader judge asks and the trainer does not. TWO LEFT this list at " +
     "v3.99: `tapsToActivate` (the trainer now refuses a tapped hero) and " +
@@ -359,7 +359,12 @@ test("the one-board reader sets are pinned", {skip}, () => {
     "one-board list is as deliberate an edit as an arrival (v4.12).\n" +
     "v5.01: `auraAttackOf` LEFT. The trainer's arena tile offered an aura's " +
     "granted attack nowhere — Cosmo's swing existed at the table alone — and " +
-    "it now prices and refuses that swing through the same reader judge asks.");
+    "it now prices and refuses that swing through the same reader judge asks.\n" +
+    "v5.04: `handFree` and `isDeclaredDefender` ARRIVED, and the trainer is NOT " +
+    "missing them: its only doors where a declared defender can be spent are the " +
+    "instant-speed ones, and those go through `effects.playAtSpeed` and " +
+    "`autoPitch`, which ask both. Judge asks them in its own legality, and " +
+    "re-exports `handFree` so `sparring.js` can ask without reading the parser.");
 
   assert.deepEqual(onlyT.sort(),
     ["clean", "costsAP", "defCap", "frostCount", "hasKwNow", "instantAbilityReady",

@@ -5371,7 +5371,9 @@ function makeEffects(ctx){
   const autoPitch = (s, cost, keepUid) => {
     let n = {...s};
     const keep = [].concat(keepUid);
-    const spendable = () => act(n).hand.filter(h=>keep.indexOf(h.uid) < 0);
+    /* never a declared defender (v5.04): it is on the chain, and pitched
+       it would both block and pay — `parser.handFree` is the one reader */
+    const spendable = () => P.handFree(act(n)).filter(h=>keep.indexOf(h.uid) < 0);
     while(act(n).res < cost && spendable().length){
       const pool = spendable();
       const p = pool.map(h=>({h,v:advValue(h,n,{runeDmg:bAct(n).runeDmg})})).sort((a,b)=>a.v-b.v || a.h.uid-b.h.uid)[0].h;
@@ -5476,8 +5478,7 @@ function makeEffects(ctx){
          was nothing to choose, or a declared uid that cannot pay. A card
          already declared as a defender is committed and is not available
          to spend. */
-      const pool = act(n).hand
-        .filter(h => h.uid !== c.uid && (act(n).blockH || []).indexOf(h.uid) < 0)
+      const pool = P.handFree(act(n), c)
         .map(h => ({h, v: advValue(h, n, {runeDmg: bAct(n).runeDmg})}))
         .sort((a, b) => a.v - b.v);
       if(!pool.length) return {game: s, why: c.name + ": nothing spare in hand to discard"};
@@ -5561,6 +5562,10 @@ function makeEffects(ctx){
       const tw = rxNoTargetWhy(s, c);
       if(tw) return {game: s, dv: 0, why: tw};
     }
+    /* A DECLARED DEFENDER IS ON THE CHAIN (v5.04) — judge's play branch
+       refuses the same thing in the same words */
+    if(from === "hand" && P.isDeclaredDefender(act(s), c.uid))
+      return {game: s, dv: 0, why: c.name + " is defending this chain link — it cannot also be played"};
     /* …and an instant's "target attack" in ANY window (v5.03) */
     { const pw = pumpTargetWhy(s, c, actorOf(s)); if(pw) return {game: s, dv: 0, why: pw}; }
     const cost = effCost(c, act(s), P.costCtx(s, actorOf(s)));
@@ -9386,7 +9391,7 @@ function handAbilityOK(s, c){
   if(fx.activateIf && !activateIfOk(s, fx.activateIf, c)) return false;
   /* a cost you cannot pay is not an option — "discard a card" needs
      another card that is not itself committed to the block */
-  if(ha.cost === "card" && !(sd.hand || []).some(x => x.uid !== c.uid && (sd.blockH || []).indexOf(x.uid) < 0))
+  if(ha.cost === "card" && !P.handFree(sd, c).length)
     return false;
   return true;
 }

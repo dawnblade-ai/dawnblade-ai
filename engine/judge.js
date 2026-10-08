@@ -790,6 +790,10 @@ function legal(g, a, seat){
     if(a.t === "paySel"){
       if(find(at(g, seat).hand, a.uid) < 0) return "card is not in hand";
       if(a.uid === p.card.uid) return "a card cannot pitch for itself";
+      /* …nor a card declared as a defender (v5.04): it is on the chain,
+         and pitched it would both block and pay. */
+      if(PR.isDeclaredDefender(at(g, seat), a.uid))
+        return at(g, seat).hand[find(at(g, seat).hand, a.uid)].name + " is defending — it cannot be pitched";
       /* …nor the card already declared for a discard cost (v4.87): pitched,
          the cost it was named for has nothing left to spend. */
       if(g._discCostUid != null && a.uid === g._discCostUid) return "that card is already spent on the discard";
@@ -1050,6 +1054,11 @@ function legal(g, a, seat){
       const i = find(sd[zone], a.uid);
       if(i < 0) return "card is not in your " + zone;
       c = sd[zone][i];
+      /* A DECLARED DEFENDER IS ON THE CHAIN (v5.04), so it is not played
+         from hand: declared and then played, an Instant blocked and also
+         resolved. `blockH` holds it on the hand only as a representation. */
+      if(zone === "hand" && PR.isDeclaredDefender(sd, a.uid))
+        return c.name + " is defending this chain link — it cannot also be played";
     }
     /* WHICH ZONES A CARD MAY BE PLAYED FROM (v3.00). This asked only
        whether the card was THERE, so every card in a graveyard was
@@ -1119,8 +1128,7 @@ function legal(g, a, seat){
          cheapest one that could be discarded, or the payment spends the
          card the cost needs and the activation resolves to nothing. */
       const _keep = ha.cost === "card"
-        ? Math.min(...(sd.hand || []).filter(h => h.uid !== c.uid && (sd.blockH || []).indexOf(h.uid) < 0)
-                                      .map(h => h.pitch || 0).concat([Infinity]))
+        ? Math.min(...PR.handFree(sd, c).map(h => h.pitch || 0).concat([Infinity]))
         : 0;
       if(_hat && _hat > sd.res + payCeiling(sd, c) - (isFinite(_keep) ? _keep : 0))
         return c.name + "'s ability costs " + _hat + " to activate and you cannot raise it";
@@ -1843,8 +1851,8 @@ function chiNeed(g, seat){
              propose a refusal. `payCeiling`'s own exclusion, one list
              over. Today `p.card` is always a powCard and never in hand, so
              this costs nothing and is right the day a CARD prints {c}. */
-          uids: (sd.hand || [])
-                  .filter(c => c && c.uid !== p.card.uid && PR.chiValue(c) > 0)
+          uids: PR.handFree(sd, p.card)
+                  .filter(c => PR.chiValue(c) > 0)
                   .map(c => c.uid)
                   .sort((a, b) => String(a).localeCompare(String(b)))};
 }
@@ -3681,6 +3689,7 @@ function drawTo(g, i){
 return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
         playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
+        handFree: PR.handFree,
         /* the card semantics seam (v2.77) */
         setDb, effectsFor, withEffects, openPrompt, autoAnswer,
         PENDING_KINDS, PROMPT_ACTIONS};

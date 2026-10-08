@@ -8057,10 +8057,27 @@ const pitchExcessWhy = (sd, sel, need, chiCost) => {
    instant-speed doors asked a different question — "is it already
    floating" — and refused every reaction the table pays for on demand
    (RULING 2026-08-01). One reader, both boards. */
-const payCeiling = (sd, self) => !sd ? 0 : (sd.hand || [])
-  .reduce((t, c) => t + (self && c && c.uid === self.uid ? 0 : (c && c.pitch || 0)), 0);
-const chiCeiling = (sd, self) => !sd ? 0 : chiFloating(sd)
-  + chiSum((sd.hand || []).filter(c => !(self && c && c.uid === self.uid)));
+/* ---- A DECLARED DEFENDER IS NOT IN THE HAND (v5.04) ---------------------
+   Declaring a card from hand as a defender commits it to the combat chain;
+   both boards keep it on `sd.hand` until the damage step only because the
+   wall is held as uids into the hand (`blockH`) — a representation, not a
+   zone. So every reader of "what this seat could spend from hand" must
+   leave it out, or a card blocks AND pays: driven at the table, Wounding
+   Blow was declared, then pitched for Absorb in Aether, and sat in the pitch
+   zone and the wall at once; Bravo's The Suspense is Killing Me (an Instant
+   with 2{d}) was declared and then PLAYED into the arena from the wall.
+
+   ONE READER. Five copies of `blockH.indexOf(uid) < 0` were hand-rolled
+   before this (a hand ability's discard, its keep-back, `discCostChoice`,
+   the sparring wall pick, the hand-ability gate) while the pitch paths had
+   none. `self` is the card being paid for or activated, which never pays
+   for itself either. */
+const handFree = (sd, self) => !sd ? [] : (sd.hand || [])
+  .filter(c => c && !(self && c.uid === self.uid) && (sd.blockH || []).indexOf(c.uid) < 0);
+const isDeclaredDefender = (sd, uid) => !!sd && (sd.blockH || []).indexOf(uid) >= 0;
+const payCeiling = (sd, self) => handFree(sd, self)
+  .reduce((t, c) => t + (c.pitch || 0), 0);
+const chiCeiling = (sd, self) => !sd ? 0 : chiFloating(sd) + chiSum(handFree(sd, self));
 
 /* ---- ARCANE BARRIER AND SPELLVOID (v2.74) ---------------------------
    Two keywords, 21 pieces of equipment across ALL FIFTEEN heroes, and
@@ -10367,6 +10384,6 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, spellvoidX, linksControlled, arcaneSoaks,
         ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
-        chiValue, chiSum, chiFloating, pitchExcessWhy, chiCeiling, payCeiling, abChiCost, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, swingSpentWhy, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, abilitiesLive, boardEntryNamed, isEphemeral, isHandWipe, gyFirstGaKw,
+        chiValue, chiSum, chiFloating, pitchExcessWhy, chiCeiling, payCeiling, handFree, isDeclaredDefender, abChiCost, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, swingSpentWhy, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, abilitiesLive, boardEntryNamed, isEphemeral, isHandWipe, gyFirstGaKw,
         CARD_OVERRIDES};
 });

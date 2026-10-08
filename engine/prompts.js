@@ -939,7 +939,7 @@ function discCostChoice(ab, sd){
   const ha = !f && ab && ab.tx ? P.fxParse(ab).handAbility : null;
   if(!f && !(ha && ha.cost === "card")) return null;
   const pass = f ? promptFilter(f)
-                 : (c => c.uid !== ab.uid && ((sd && sd.blockH) || []).indexOf(c.uid) < 0);
+                 : (c => P.handFree(sd, ab).indexOf(c) >= 0);
   const seen = new Set(), uids = [];
   for(const c of ((sd && sd.hand) || [])){
     if(!c || !pass(c)) continue;

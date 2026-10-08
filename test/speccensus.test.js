@@ -164,8 +164,14 @@ const drive = () => {
      longer true. Enigma v Boltyn is now the first pairing outside the ring
      that reaches it: Astral Etchings, Enigma's own, over three candidates.
      Still ONE leg for ONE field, so the count and the pinned set both
-     stand. */
-  { const r = T.leg(E[8], E[11], "spec-8-11", 0); legs++; if(r && r.threw) threw++; }
+     stand.
+
+     AND A THIRD TIME AT v5.04. A declared defender stopped being
+     pitchable, so the seat policy pays from a smaller hand and Enigma v
+     Boltyn stopped reaching the sheet. Measured over every pairing outside
+     the ring: six reach it, every one Enigma's, and Azalea v Enigma is the
+     first. Replaced, for the reason given above. */
+  { const r = T.leg(E[5], E[8], "spec-5-8", 0); legs++; if(r && r.threw) threw++; }
   /* AND THE 34th IS THE SAME RULE A SECOND TIME (v4.59). Generalising the
      activation-pick legality means Fai's hero ability is refused when his
      graveyard holds no Phoenix Flame — three resources and his once-per-turn
@@ -181,6 +187,12 @@ const drive = () => {
      only the leg count moves. A widening that moved the pin would be a
      fixture change wearing a fix's clothes. */
   { const r = T.leg(E[1], E[7], "spec-1-7", 0); legs++; if(r && r.threw) threw++; }
+  /* AND THE 35th (v5.04): CRANK'S OFFER (`avail`, `spendCtr` on the `pay`
+     sheet, v4.24). The same change moved the ring's games off it. Measured
+     over every pairing Dash can sit in, both chairs: exactly one reaches
+     it — Dash v Fai with Fai's chair first, the ring's own pairing turned
+     round. Every other field it brings is already pinned. */
+  { const r = T.leg(E[3], E[7], "spec-3-7", 1); legs++; if(r && r.threw) threw++; }
 };
 
 /* BOUND A FUNCTION AT THE NEXT SAME-LEVEL DECLARATION, NEVER AT A CHAR
@@ -199,9 +211,9 @@ const fnBody = name => {
 
 test("the driven census is alive — the legs really ran", () => {
   drive();
-  assert.equal(legs, 34, "the leg count moved; the pinned field set is taken at 34 "
-    + "(32 in the ring, plus the two named legs that keep `ctrStamp` and "
-    + "`shuffleAfter` in it — see `drive`)");
+  assert.equal(legs, 35, "the leg count moved; the pinned field set is taken at 35 "
+    + "(32 in the ring, plus the three named legs that keep `ctrStamp`, "
+    + "`shuffleAfter` and crank's `avail`/`spendCtr` in it — see `drive`)");
   assert.equal(threw, 0,
     "a leg threw — `leg` reports that as `threw: true` rather than raising, so a "
     + "census built on it reports ZERO exactly as a missing feature does (v3.81)");

@@ -119,8 +119,11 @@ const legal = (g, a, seat) => J.legal(g, a, seat) == null;
    cards as possible. */
 function pitchPick(sd, self, o){
   const sel = sd.paySel || [];
-  return (sd.hand || [])
-    .filter(c => c && c.uid !== (self && self.uid) && sel.indexOf(c.uid) < 0 && num(c, "pitch") > 0)
+  /* `handFree` (v5.04): a declared defender is on the chain, and `legal`
+     refuses pitching one — proposing it would be a refusal. Asked of
+     JUDGE, which reads it off the parser: this file reads no card text */
+  return J.handFree(sd, self)
+    .filter(c => sel.indexOf(c.uid) < 0 && num(c, "pitch") > 0)
     .sort((a, b) => num(b, "pitch") - num(a, "pitch") || num(a, "power") - num(b, "power") || byUid(a, b))[0] || null;
 }
 
@@ -350,8 +353,8 @@ function nextBlocker(g, seat, o){
      (CR 8.1.3a) — `legal` refuses it, so the policy does not have to
      know that, and would be wrong here if it tried. */
   if(!lethal && (sd.blockH || []).length >= o.handBlockers) return null;
-  const card = (sd.hand || []).slice()
-    .filter(c => c && (sd.blockH || []).indexOf(c.uid) < 0 && num(c, "def") > 0)
+  const card = J.handFree(sd)
+    .filter(c => num(c, "def") > 0)
     .sort((a, b) => num(b, "def") - num(a, "def") || num(a, "power") - num(b, "power") || byUid(a, b))
     .find(c => legal(g, {t: "defend", uid: c.uid}, seat));
   return card ? {t: "defend", uid: card.uid} : null;

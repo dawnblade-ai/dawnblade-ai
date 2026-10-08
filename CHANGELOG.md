@@ -1,3 +1,40 @@
+## v5.04 — a declared defender is not in the hand
+
+Declaring a card from hand as a defender commits it to the combat chain. Both
+boards keep it on `sd.hand` until the damage step only because the wall is held
+as uids into the hand (`blockH`): a representation, not a zone. Every reader of
+"what this seat could spend from hand" therefore had to leave it out, and the
+pitch paths never did. Driven at the table:
+
+- **Wounding Blow declared, then PITCHED for Absorb in Aether** — in the pitch
+  zone and in the wall at once, and the block withdrawn after the defend step
+  had closed (CR 7.3.2b says a declaration stands).
+- **Bravo's The Suspense is Killing Me** (an Instant printing 2{d}) declared,
+  then **played from the wall** into the arena.
+
+**Measured on the previous engine over every pairing: 191 accepted pitches of a
+declared defender and 114 accepted plays of one in 240 games**, against 0 and 0
+now. Neither sweep could see it: the cards were read correctly, and the defect
+was in which zone the engine thought they were in.
+
+`parser.handFree(sd, self)` is the one reader — the hand minus the declared wall
+and the card being paid for — with `isDeclaredDefender` beside it. Asked by
+`payCeiling` and `chiCeiling`, judge's `paySel`, judge's play-from-hand branch,
+`effects.playAtSpeed` and `autoPitch` (the trainer's instant-speed doors), the
+seat policy's `pitchPick` (through `judge.handFree`, because `sparring.js` reads
+no card text) and judge's `chiNeed`. **Five copies of the same filter had been
+hand-rolled** where the question had come up before (a hand ability's discard
+pool, its keep-back, `discCostChoice`, the wall pick, the hand-ability gate);
+they ask the reader now, and a census fails a sixth.
+
+Measured: `test/defenderzone.test.js` adds 7 drills; 8 sabotages, 8 bite. The
+ladder at three seeds both sides: **Bravo 13·12·12 → 18·14·17, intervals
+disjoint**, and games run 20.3 → 22.3 turns, because walls now hold. Lyath
+4·6·4 → 6·7·8 touches at 6, inside the band. The spec census lost three fields
+when the games moved, and got MORE LEGS rather than a looser claim: Enigma v
+Boltyn is replaced by Azalea v Enigma for `ctrStamp`, and a 35th leg (Dash v
+Fai, Fai's chair first) keeps crank's `avail`/`spendCtr`.
+
 ## v5.03 — an instant that pumps "target attack" lands on its target
 
 > *"Target attack action card with cost 1 or less gets +3{p}."* — LIGHTNING
