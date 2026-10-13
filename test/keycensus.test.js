@@ -367,7 +367,7 @@ test("the one-board reader sets are pinned", {skip}, () => {
     "re-exports `handFree` so `sparring.js` can ask without reading the parser.");
 
   assert.deepEqual(onlyT.sort(),
-    ["clean", "costsAP", "defCap", "frostCount", "hasKwNow", "instantAbilityReady",
+    ["clean", "defCap", "frostCount", "hasKwNow", "instantAbilityReady",
      "isAttack", "isInstantT", "isNonAtkActionCard", "isRx", "norm",
      "playableFromZone", "runeCount", "rxAllowed", "wardTotal"].sort(),
     "a reader the trainer asks and judge does not — mostly UI (`norm`, `clean`, " +
@@ -376,6 +376,10 @@ test("the one-board reader sets are pinned", {skip}, () => {
     "defender cap became `defCapWhy`, which it and the trainer's defend door " +
     "both ask; the trainer's other caller is the DUMMY's own wall, which judge " +
     "has no twin of (seat 1 there is a policy that `legal` refuses). " +
+    "v5.15: `costsAP` LEFT. The trainer's one action-point gate asked the CARD, " +
+    "so a Cosmo-armed Instant aura swung at 0 points; both boards now ask " +
+    "`routeCostsAP`, which is `costsAP` off the ally and aura routes, and the " +
+    "trainer's bare alias was deleted with its last caller. " +
     "v4.34: `wardTotal` is a DISPLAY reader — the pool plus the permanents that " +
     "print `Ward N` — and judge renders nothing. The rules half of the same " +
     "question is `wardBearers`, which both boards reach through `effects.preventDamage`.\n" +

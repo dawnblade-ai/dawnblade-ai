@@ -1,3 +1,27 @@
+## v5.15 — A board attack costs an action point, whatever the card is
+
+> *"…auras you control with ward are weapons with base {p} equal to their ward and
+> \"Once per Turn Action - {r}: Attack\"."* — COSMO · WAXING SPECTER is a Mystic
+> Illusionist **Instant** - Aura
+
+**QUEUE item N2 (review-b §2), re-verified here.** The trainer's only action-point
+gate asked `costsAP(card)`, which reads the card's own type line. An aura's attack is
+Cosmo's granted "Action -" line, and `linkPayload` charges every attack link a point
+when it resolves. So Enigma swung a Cosmo-armed Waxing Specter at 0 action points,
+and the link left her at `ap: -1` (`NEGATIVE-AP`, CR 4.4.3e). The table already
+refused it.
+
+**`parser.routeCostsAP(card, from)` is the one reader.** It returns TRUE on the ally
+and aura routes and `costsAP` everywhere else, so the instant exemption (CR 8.1.6)
+holds for every other play. The trainer's gate asks it with the route, and judge's
+board-attack branch asks it too. Measured: exactly two board attackers are typed
+Instant (Waxing Specter and Waning Vengeance). Every ally is typed Action or Token,
+so the ally half is symmetry. `costsAP` left the trainer-only reader set, and its
+bare alias went with its last caller.
+
+**6 sabotages, 6 bite.** The ladder is byte-identical at three seeds on both sides,
+because the table's rule did not move and `npm run play` cannot reach the trainer.
+
 ## v5.14 — A declared defender cannot discard itself
 
 > *"**Instant** - Discard this: …"* — ARCANE TWINING · AGILE WINDUP · PHOTON SPLICING

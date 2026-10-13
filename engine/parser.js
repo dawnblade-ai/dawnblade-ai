@@ -10328,6 +10328,22 @@ const costsAP = (c, window) => {
   return !isInstantT(c);
 };
 
+/* DOES THIS PLAY COST AN ACTION POINT ON THIS ROUTE? (v5.15)
+
+   `costsAP` asks the CARD, which is right for a card played from a zone and
+   wrong for an ally's or an aura's ATTACK: that is an activated ability whose
+   own line prints "Action -" (an ally's "Action - {r}: Attack", Cosmo's grant
+   "Once per Turn Action - {r}: Attack"), and `linkPayload` charges every
+   attack link a point when it resolves. Measured over the pool: every ally
+   is typed Action or Token, so asking the card happened to work for them, but
+   Waxing Specter and Waning Vengeance are `Instant - Aura`. So the trainer's
+   one gate let Enigma swing a Cosmo-armed Specter at 0 action points and the
+   link charged the point she did not have (`NEGATIVE-AP`, CR 4.4.3e; QUEUE
+   N2). Both boards ask this now: the trainer's `tryPlay` gate and judge's
+   board-attack branch, which refused it already and now says why from the
+   same reader. */
+const routeCostsAP = (c, from) => (from === "ally" || from === "aura") ? true : costsAP(c);
+
 /* ---- THE REACTION PUMP (v2.66) --------------------------------------
    How much an attack reaction adds to the attack it targets. THREE
    printed things fold into one number and each has been wrong:
@@ -10412,7 +10428,7 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
   PER_COUNT, DEF_PER, perCountKey, chainHits, pickSubject, attackQual, markRed, costCtx, qualMatches, abWindow, defCap, defCounts, defCapWhy, isBlockCard,
         nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, isActionCard, costOffFor, heaveOf,
         classifyClause, fxParse, fxReset, playableFromZone, playZoneWhy, addCostWhy, isArrowCard, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost, isActivation, isActionPaid, costTaxes, handAbilityTax,
-        DECL_OPS, dracLinks, weaponCost, payTrigger, OFFER_TRIGGERS, allyAttack, auraWeaponGrant, wardValue, wardBearers, wardTotal, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, drxBarred, drxBarWhy, rxPump,
+        DECL_OPS, dracLinks, weaponCost, payTrigger, OFFER_TRIGGERS, allyAttack, auraWeaponGrant, wardValue, wardBearers, wardTotal, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, routeCostsAP, rxAllowed, drxBarred, drxBarWhy, rxPump,
         idleCounterWipes, rustedThrough,
         isAtkActionCard, phantasmPops, zonePow, pow6, kwGated, hasKwNow, printedKw,
         crankCost, fusionOffer, chargeOffer,

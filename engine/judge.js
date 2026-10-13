@@ -1317,7 +1317,8 @@ function legal(g, a, seat){
         return b.card.name + " is not on the battlefield";
       const win = P.speedAllowed(g, seat);
       if(win.indexOf("action") < 0) return "no action-speed window — " + _route + " cannot attack here";
-      if(!(sd.ap > 0)) return "no action point left";
+      if(PR.routeCostsAP(b.card, _route === "an ally" ? "ally" : "aura") && !(sd.ap > 0))
+        return "no action point left";
       /* WITH ITS TAXES (v4.86) — an ally's or an aura's attack is an
          activated ability, which Frostbite and a first-action tax reach;
          `boardAtkCost` is the one reader all three sites ask. */

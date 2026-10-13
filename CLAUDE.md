@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.14
+**Current version:** v5.15
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3506 drills** at v5.14.
+This is `node --test "test/*.test.js"` — **3510 drills** at v5.15.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -868,6 +868,14 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A BOARD ATTACK COSTS A POINT WHATEVER THE CARD IS (v5.15)
+
+The trainer gated the action point on `costsAP(card)`, the card's own type line, and an
+aura's attack is Cosmo's "Action -" grant, so Waxing Specter (an Instant - Aura) swung
+at 0 points (QUEUE N2). `parser.routeCostsAP(card, from)` is the one reader, asked by
+both boards (`test/routeap.test.js`). **When a route borrows a card's play, ask whose
+type line prices it.**
 
 ### A DECLARED DEFENDER CANNOT DISCARD ITSELF (v5.14)
 

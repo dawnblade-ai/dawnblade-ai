@@ -990,9 +990,12 @@ test("action point — the play gate exempts instants (CR 8.1.6)", () => {
                           HTML.indexOf("const confirmPay = () => setG"));
   const gate = body.match(/^.*ap<1.*$/m);
   assert.ok(gate, "tryPlay must still refuse an ACTION with no action point");
-  assert.match(gate[0], /costsAP\(card\)\s*&&/,
+  /* v5.15: asked of the ROUTE, so an ally's or an aura's attack (an Action
+     whatever the card's own type line says) is gated too; `routeCostsAP`
+     is `costsAP` for every other route, so the instant exemption holds. */
+  assert.match(gate[0], /DawnParser\.routeCostsAP\(card, from\)\s*&&/,
     "CR 8.1.6 — an instant may be played any time the player has priority, "
-  + "so the 0-action-point refusal must ask costsAP first");
+  + "so the 0-action-point refusal must ask costsAP (through routeCostsAP) first");
 });
 
 test("action point — resolution charges an action, not an instant (CR 8.1.1)", () => {
@@ -1101,7 +1104,7 @@ test("reactions — tryPlay refuses one in the action phase (CR 8.1.2a / 8.1.3a)
   /* and it must name the window, not dead-tap: the trainer's own rule is
      that a refusal says why */
   assert.match(body, /reaction step/, "the refusal must name where the card does belong");
-  assert.ok(body.indexOf("if(isRx(card))") < body.indexOf("costsAP(card) && act(s).ap<1"),
+  assert.ok(body.indexOf("if(isRx(card))") < body.indexOf("routeCostsAP(card, from) && act(s).ap<1"),
     "refuse the card before charging or gating on resources");
 });
 
