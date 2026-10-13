@@ -7104,7 +7104,9 @@ function makeEffects(ctx){
         n = L(n, `${c.name} grants go again to ${want} — ${n.pend.card.name} isn't one.`);
       }
     }
-    n = runOps(n, (eff.ops || []).filter(op => op[0] !== "buffNext"), c.name);
+    /* A "YOUR NEXT ATTACK" OP RUNS AS ITSELF (v5.20) — a grant that waits on
+       the side for a LATER attack, never a pump on this one (`rxPump`). */
+    n = runOps(n, eff.ops || [], c.name);
     /* ---- A DEFENDER SHRUNK FOR THE REST OF THE CHAIN (v3.89) --------
        Shred: "Target card defending an ASSASSIN attack gets -2{d} this
        combat chain."

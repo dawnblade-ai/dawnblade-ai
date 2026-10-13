@@ -1,3 +1,27 @@
+## v5.20 — "Your next sword attack" is a later one
+
+> *"Target sword attack gets go again. Your next sword attack this turn gets +N{p}."* —
+> RUN THROUGH ×3, Dorinthea's
+
+**QUEUE item 6, CEO-verified and re-verified here.** An attack reaction is played on
+an attack that is already on the chain, so "your NEXT sword attack" names a later one,
+and Dorinthea's hero gives her exactly that second sword swing. `parser.rxPump` folded
+every unconditional `buffNext` op into the reaction's pump, so the +N landed on the
+swing Run Through targeted (the rx layer read `pump: 2`, with nothing waiting on the
+side). That was stronger than printed when no second sword swing followed, and weaker
+when one did.
+
+**The op runs as itself now**, through `attackRx`'s `runOps`: a sword-qualified grant
+that waits on the side for a sword attack (v2.30) and expires with the turn. `rxPump`
+sums only the reaction's targeted pump and its gated pumps. Out for Blood's reprise
+rider prints the same "your next attack" shape behind its gate, and it has always run
+this way.
+
+Measured: Run Through is the pool's only attack reaction with an unconditional "your
+next attack" op, and Out for Blood the only gated one (both pinned). **3 sabotages, 3
+bite.** The ladder's wins are byte-identical at three seeds on both sides; a few route
+counters move by single digits.
+
 ## v5.19 — A play trigger resolves before the card's conditions are read
 
 > *"Once per turn, when you play an attack action card, remove a verse counter from

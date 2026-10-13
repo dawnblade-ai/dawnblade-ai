@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.19
+**Current version:** v5.20
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3537 drills** at v5.19.
+This is `node --test "test/*.test.js"` — **3541 drills** at v5.20.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -868,6 +868,14 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### "YOUR NEXT ATTACK" ON A REACTION IS A LATER ATTACK (v5.20)
+
+`parser.rxPump` folded a "your next attack" op into the reaction's pump, so Run
+Through's "your next sword attack this turn gets +N{p}" landed on the attack it
+targeted (QUEUE item 6). The op runs through `attackRx`'s `runOps` as a qualified grant
+(`test/runthrough.test.js`). **v3.11's rule (a reaction pumps the attack it is played
+on) is about a TARGETED pump; when the card says "next", it means a later attack.**
 
 ### A PLAY TRIGGER RESOLVES BEFORE THE CARD'S CONDITIONS (v5.19)
 

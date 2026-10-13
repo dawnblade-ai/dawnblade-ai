@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.83 (updated through v5.19)
+# Handoff — Dawnblade, at v4.83 (updated through v5.20)
 
 **Written 2026-09-28, numbers refreshed 2026-10-04 at v4.99. Every number below was re-derived this session, with
 the command that produces it.** Re-derive before you quote one; this file
@@ -22,8 +22,8 @@ where things stand and what is next.
 
 | measure | value | command |
 |---|---|---|
-| version | v5.19, live on GitHub Pages | `grep APP_VER index.html` |
-| drills | 3537 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
+| version | v5.20, live on GitHub Pages | `grep APP_VER index.html` |
+| drills | 3541 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
 | pool coverage | **405 of 405** unique cards read in full · 0 part · 0 none | `npm run audit`, top of `AUDIT.md` |
 | unfinished cards | 0, and 0 one clause away | `npm run gaps` |
 | approximation ledger | 51 records: 29 closed · **21 stated · 1 open** | `node tools/approx.js` |
@@ -93,6 +93,7 @@ Every one of those cards read `tier: full` before its fix.
 | 5.17 | QUEUE 4: a "destroy this" price whose piece is already gone lapses, with a true line (`promptDestroyGone`) |
 | 5.18 | QUEUE 5: a late go again (Pulping, Bolt'n' Shot) and the struck power reach the table (`judge.strike`) |
 | 5.19 | QUEUE N3: Malefic's play trigger resolves before the card's "aura this turn" condition is read |
+| 5.20 | QUEUE 6: Run Through's "your next sword attack" waits for a later sword attack (`rxPump`, `attackRx`) |
 
 Versions 5.09–5.11 came out of ONE measurement: a scratch copy of the engine
 traced every trigger that fires on one event over the 3-seed ladder. Every pair

@@ -10375,12 +10375,21 @@ const costsAP = (c, window) => {
 const routeCostsAP = (c, from) => (from === "ally" || from === "aura") ? true : costsAP(c);
 
 /* ---- THE REACTION PUMP (v2.66) --------------------------------------
-   How much an attack reaction adds to the attack it targets. THREE
-   printed things fold into one number and each has been wrong:
+   How much an attack reaction adds to the attack it targets. TWO printed
+   things fold into one number and each has been wrong:
 
      fx.self    the reaction's own unconditional "+N{p}"
      fx.conds   a GATED pump — and "instead" REPLACES the base (v2.32)
-     buffNext   a "your next attack" pump on the same card
+
+   A THIRD USED TO FOLD IN AND IT WAS NEVER THIS ATTACK'S (v5.20). A
+   `buffNext` op is a "your NEXT attack" grant, and an attack reaction is
+   played on an attack that is already on the chain, so "next" is a LATER
+   attack: Run Through prints "Target sword attack gets go again. Your next
+   sword attack this turn gets +N{p}", and the +N landed on the swing it
+   targeted, while Dorinthea's hero hands her exactly the second sword swing
+   it was printed for (QUEUE item 6). `attackRx` runs the op now, so it
+   waits on the side as a qualified grant. Out for Blood's reprise rider
+   prints the same shape behind its gate and has always run that way.
 
    It lived as one hand-rolled line inside `playRx`, a React closure no
    drill could reach, and it read `(fx.self||0) + condPump + …` — a plain
@@ -10404,8 +10413,7 @@ function rxPump(fx, fired){
     if(c.instead) replaced = true;
   });
   const base = replaced ? 0 : (fx.self||0);
-  const buff = (fx.ops||[]).filter(o => o[0]==="buffNext").reduce((a,o)=>a+o[1], 0);
-  return {pump: base + cond + buff, base, cond, buff, replaced};
+  return {pump: base + cond, base, cond, replaced};
 }
 
 /* ---- THE IDLE-COUNTER WIPE (v2.68) ----------------------------------
