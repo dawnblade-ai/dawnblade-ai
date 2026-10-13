@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.11
+**Current version:** v5.12
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3489 drills** at v5.11.
+This is `node --test "test/*.test.js"` — **3493 drills** at v5.12.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,15 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A PLAYED ATTACK REACTION'S GO AGAIN IS THE TARGET'S TOO (v5.12)
+
+v3.74 fixed the ability route and the played card kept reading `fx.ga`, so Stains of
+the Redback and Run Through banked their controller an action point on every play
+(QUEUE item 1). `execute` asks `printedKw(card, "go again")` for a played attack
+reaction's own, and `attackRx` asks the same discriminator before granting the
+target (`test/rxgaowner.test.js`). **When a fix lands on one route, census the
+routes that reach the same reader.**
 
 ### MEASURE AN ORDER BY TRACING THE EVENT, NOT BY READING THE PAIRS (v5.11)
 

@@ -1,3 +1,29 @@
+## v5.12 — a played attack reaction's go again is the target's
+
+> *"Target attack with stealth gets +3{p} and go again."* — STAINS OF THE REDBACK
+> ×3 · *"Target sword attack gets go again."* — RUN THROUGH ×3
+
+**QUEUE item 1, CEO-verified and re-verified here.** v3.74 fixed this for an
+attack-reaction ABILITY: the payload's go again belongs to the attack it targets,
+never to the ability. A PLAYED attack-reaction CARD fell through to `fx.ga`, so the
+card itself "went again", and since a reaction costs no action point, CR 5.3.5 made
+it a GAINED one. Driven (Arakni v Viserai, seed `ar3`): Arakni's AP went **1 → 2**
+on the play and she made three attacks where the printed text allows two. Stronger
+than printed, `tier: full`, found by reading a self-play feed.
+
+**The card's own go again is a printed keyword line**, so `printedKw` answers it
+(v2.84), and `attackRx` asks the same discriminator before handing the grant to the
+target, so the two cannot both claim one printed go again. Measured over the pool:
+six attack-reaction records carry `fx.ga`, every one with a target qualifier, and
+none prints its own. The census is a drill; a synthetic reaction that does print one
+keeps its action point and grants the target nothing.
+
+Measured: the ladder at three seeds moves **one game** (Enigma → Dorinthea, inside
+a band of median 3) and Arakni is unchanged at 26.3. Fairness is clean and so are the
+107 scenes. 5 sabotages, 4 bite on the first pass. The silent one ("a played reaction
+never goes again") could not be seen through the pool, which prints no such card;
+the synthetic row was written for it and now bites.
+
 ## v5.11 — the trigger-order record, measured and restated
 
 `simultaneous-trigger-order` was the ledger's one `open` record about the rules

@@ -3636,6 +3636,22 @@ function makeEffects(ctx){
               payload's. The ops are already held back for exactly the
               same reason one line down. */
            : card._attackRx ? (card.kw||[]).some(k=>/^go again$/i.test(String(k)))
+           /* ---- …AND SO IS A PLAYED ATTACK REACTION CARD'S (v5.12) ------
+              v3.74 fixed the ACTIVATED route above and the PLAYED card fell
+              through to `fx.ga` below. Run Through ("target sword attack
+              gets go again") and Stains of the Redback ("target attack with
+              stealth gets +3{p} and go again") put the grant on the TARGET
+              through `attackRx`, and the card's own `ga` read the same
+              words — so playing one banked its controller an instant's
+              action point on top (CR 5.3.5): measured, Arakni's AP went
+              1 -> 2 on the play and she made three attacks where the text
+              allows two. Stronger than printed, `tier: full`, found by a
+              feed read.
+              THE CARD'S OWN go again IS A PRINTED KEYWORD LINE, so
+              `printedKw` answers it (v2.84). Measured over the pool: six
+              attack-reaction records carry `fx.ga`, every one with a target
+              qualifier (`gaQ`), and NONE prints a go again of its own. */
+           : (isAR(card) && !isAttack(card)) ? printedKw(card, "go again")
            /* ---- A WEAPON'S GO AGAIN IS ITS **ATTACK LINE'S** (v4.49) ----
               The comment above says reading `fx.ga` "for a weapon is
               exactly right", and it was — measured at v3.44, when the ONE
@@ -7052,9 +7068,13 @@ function makeEffects(ctx){
       n.pend = {...n.pend, onHitHero: [...(n.pend.onHitHero || []), ...riderH]};
       n = L(n, `${c.name}: ${n.pend.card.name} carries its rider — it pays out if it hits a hero.`);
     }
-    /* `fx.ga` on an attack reaction can only mean the TARGET's go again —
-       no attack reaction in the pool prints the keyword for itself. */
-    if(fx.ga && n.pend){
+    /* `fx.ga` on an attack reaction is the TARGET's go again unless the
+       card PRINTS the keyword for itself (v5.12) — the same discriminator
+       `execute` asks for the card's own, so the two cannot both claim one
+       printed go again. No pool attack reaction prints its own; the census
+       in `test/rxgaowner.test.js` fails the day one does, and a synthetic
+       drives this half. */
+    if(fx.ga && n.pend && (fx.gaQ || !printedKw(c, "go again"))){
       if(qualMatches(fx.gaQ, n.pend.card, qo)){
         n.pend = {...n.pend, ga: true};
         n = L(n, `${c.name}: ${n.pend.card.name} goes again.`);
