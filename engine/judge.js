@@ -685,7 +685,9 @@ function newMatch(o){
   const sides = [0, 1].map(i => {
     const b = builds[i] || {};
     const int = b.int != null ? b.int : 4;
-    return S.makeSide({
+    /* DASH'S PREGAME ITEM ENTERS LIKE ANY PERMANENT (v5.13) — its counters
+       and its clock, off its own text. `placeStartItem` is the one body. */
+    return E.placeStartItem(S.makeSide({
       id: i,
       name: (o.names && o.names[i]) || ("Seat " + i),
       hero: b.HZOOM ? b.HZOOM.name : null,
@@ -695,13 +697,13 @@ function newMatch(o){
       deck: (b.deck || []).slice(int),
       hand: (b.deck || []).slice(0, int),
       gear: b.gear || [],
-      board: b.startItem ? [b.startItem] : [],
+      board: [],
       /* FAI'S PREGAME GRAVEYARD START (v3.86), beside Dash's arena one.
          `build.js` splices the card out of the deck and stamps `_gy: 0`,
          so it is here rather than being re-derived: one place decides
          which card, both boards place it. */
       grave: b.startGrave ? [b.startGrave] : []
-    });
+    }), b.startItem);
   });
 
   /* THE BUILD'S `deck` AND `gear` ARE CONSTRUCTION INPUTS, NOT STATE.

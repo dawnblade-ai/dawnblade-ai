@@ -806,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "5.12"; /* v5.12 - a played attack reaction's go again belongs to the attack it targets, so playing one no longer banks its controller an action point. See CHANGELOG.md. */
+window.APP_VER = "5.13"; /* v5.13 - Dash's pregame item enters with its counters and its clock, through one body both boards call. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -2790,13 +2790,15 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        their defaults because it pays no costs and takes no action phase
        yet; inert-but-present is the point, and it is what lets a second
        human occupy slot 1 without a single new field. */
-    sides:[makeSide({
+    /* Dash's pregame item enters with its counters and its clock (v5.13):
+       `DawnEffects.placeStartItem` is the one body, judge.newMatch calls it too. */
+    sides:[DawnEffects.placeStartItem(makeSide({
       id:0, name:"You", hp:built.myHP, maxHp:built.myHP, int:built.myInt,
       deck:built.deck.slice(built.myInt), hand:built.deck.slice(0,built.myInt),
-      gear:built.gear, board:built.startItem?[built.startItem]:[],
+      gear:built.gear, board:[],
       /* Fai's pregame graveyard start (v3.86) — see judge.newMatch */
       grave:built.startGrave?[built.startGrave]:[]
-    }), makeSide({
+    }), built.startItem), DawnEffects.placeStartItem(makeSide({
       /* SEAT 1 IS BUILT FROM ITS OWN BUILD, not from constants. `int` in
          particular: the opponent draws to ITS hero's intellect, which is
          where DUMMY_INT stops being a number the trainer knows and starts
@@ -2807,9 +2809,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       deck:built.both[1].deck.slice(built.both[1].int),
       hand:built.both[1].deck.slice(0,built.both[1].int),
       gear:built.both[1].gear,
-      board:built.both[1].startItem?[built.both[1].startItem]:[],
+      board:[],
       grave:built.both[1].startGrave?[built.both[1].startGrave]:[]
-    })],
+    }), built.both[1].startItem)],
     prompt:null, promptQ:[], revealed:null, lastRoll:null,
     boostOn:true, chainOpen:false, featured:null, boostChain:0, stack:[], pend:null, chain:[], chainHist:[], hitSeq:0, lastDmg:0, flags:{}, over:null, inspect:false,
     /* set only when the opponent won the seating: its opening swing happens

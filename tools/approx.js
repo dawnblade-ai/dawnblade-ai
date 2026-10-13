@@ -174,6 +174,19 @@ const APPROX = {
       "parse — so a parser change that adds a source moves it and the order is "+
       "measured again."},
 
+"start-item-crank-unasked": {
+  status:"stated", cr:null, board:"both", since:"v5.13", swept:"v5.13",
+  claim:"Dash's pregame item enters the arena with its counters and its clock, and "+
+        "Boom Grenade's CRANK (\"as this enters the arena, you may remove a steam counter "+
+        "from it; if you do, gain an action point\") is not offered for it.",
+  why:"Whether a game-start placement ENTERS the arena for a trigger that reads \"as "+
+      "this enters\" is not sourced here — the CR site is unreachable from this "+
+      "sandbox and the repo carries no quote about pregame placements. Offering it "+
+      "would invent a decision before turn one; the action point it buys has no "+
+      "action phase to spend it in until Dash's first turn, and the counter it costs "+
+      "is the Grenade's only reprieve from its own start-of-turn clock. Declining is "+
+      "what the seat policy answers anyway (v4.24). A ruling to ask, not a build."},
+
 "control-change-steal-built": {
   status:"closed", cr:null, board:"both", since:"v4.68", swept:"v4.74",
   claim:"Jack Be Quick's \"{u} an ally they control, then steal it until the end "+

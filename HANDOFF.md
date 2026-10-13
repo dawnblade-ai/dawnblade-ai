@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.83 (updated through v5.11)
+# Handoff — Dawnblade, at v4.83 (updated through v5.13)
 
 **Written 2026-09-28, numbers refreshed 2026-10-04 at v4.99. Every number below was re-derived this session, with
 the command that produces it.** Re-derive before you quote one; this file
@@ -22,11 +22,11 @@ where things stand and what is next.
 
 | measure | value | command |
 |---|---|---|
-| version | v5.11, live on GitHub Pages | `grep APP_VER index.html` |
-| drills | 3489 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
+| version | v5.13, live on GitHub Pages | `grep APP_VER index.html` |
+| drills | 3499 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
 | pool coverage | **405 of 405** unique cards read in full · 0 part · 0 none | `npm run audit`, top of `AUDIT.md` |
 | unfinished cards | 0, and 0 one clause away | `npm run gaps` |
-| approximation ledger | 50 records: 29 closed · **20 stated · 1 open** | `node tools/approx.js` |
+| approximation ledger | 51 records: 29 closed · **21 stated · 1 open** | `node tools/approx.js` |
 | CR rules cited | 61 distinct · 51 guarded · 3 unguarded (section pointers, pinned) | `node tools/crindex.js` |
 | fail states | 0 UNFAIR · 3 WRONG (all known, below) | `npm run sweep` |
 | scenes | 107 passing | `npm run scenes` |
@@ -85,6 +85,8 @@ Every one of those cards read `tier: full` before its fix.
 | 5.09 | "when this hits a MARKED hero" reads the board at the hit (`_atHit`); a mark granted by the same hit no longer satisfies it |
 | 5.10 | a phantasm pop no longer swallows the defender's "when this defends" triggers; they resolve first |
 | 5.11 | `simultaneous-trigger-order` measured over every event and restated `stated`; its probe pins the pool's trigger census |
+| 5.12 | QUEUE 1: a played attack reaction's go again is the target's; Stains of the Redback / Run Through no longer bank an action point |
+| 5.13 | QUEUE 2: Dash's pregame item enters with its counters and its clock (`placeStartItem`, both boards) |
 
 Versions 5.09–5.11 came out of ONE measurement: a scratch copy of the engine
 traced every trigger that fires on one event over the 3-seed ladder. Every pair
@@ -233,6 +235,12 @@ ruling, because then "clash with the ATTACKING hero" plainly has one. If the
 turn-player may put phantasm first, a popped attack's defender might clash with
 nobody. The CR site is blocked here, so `simultaneous-trigger-order` says so
 rather than guessing.
+
+**AND A FOURTH (v5.13): does Dash's pregame item "enter the arena" for crank?**
+Boom Grenade prints *"Crank (as this enters the arena, you may remove a steam
+counter from it; if you do, gain an action point)"*. The starting Grenade now
+enters with its counter and its clock, and crank is not offered before turn one
+(`start-item-crank-unasked`, stated, with a probe).
 
 This sandbox cannot reach the web freely, so three jobs are flagged for a
 desktop:

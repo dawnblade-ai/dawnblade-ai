@@ -319,7 +319,7 @@ function makeEffects(ctx){
      could ever pay, which is the no-op blind spot. */
   function enterWithCounters(s0, card, uid, seat, cs){
     let n = s0;
-    const spec = cs || ((P.fxParse(card).ops || []).find(o => o[0] === "ctrSelf") || [])[1] || null;
+    const spec = cs || enterCtrOf(card);
     const sdOf = () => (n.sides || [])[seat] || {};
     if(spec){
       const cur = (sdOf().counters || {})[uid] || {};
@@ -1930,7 +1930,7 @@ function makeEffects(ctx){
            typed `Aura` also inflates every "auras you control" count on
            the board. Read from the token's own printed text, so nothing
            here names a token. */
-        const _tsd = ((P.fxParse(rec).ops || []).find(o => o[0] === "selfDestruct") || [])[1] || null;
+        const _tsd = selfDestructOf(rec);
         /* THE PRINTED NAME, NOT THE CAPTURE (v3.33). The op carries a name
            read out of a lowercased clause, and `resolveEntry` returns the
            ENTRY's name by design — so every token minted from card text
@@ -8611,6 +8611,38 @@ function leavePayout(card, sd){
   return [...(fx.onLeave || []), ...gated];
 }
 
+/* ---- WHAT A PERMANENT ENTERS THE ARENA WITH, OFF ITS OWN TEXT (v5.13) --
+   Two printed facts ride on a permanent from the moment it arrives: the
+   counters it "enters the arena with" (`ctrSelf`) and the schedule that
+   destroys it (`selfDestruct`). A card PLAYED from hand gets both through
+   `execute`, a TOKEN through the mint (v3.07, v4.24) — and Dash's pregame
+   item through NEITHER: `build.js` placed a bare entry, so a starting
+   Hyper Driver had no steam counters (a boost paid no {r}) and a starting
+   Boom Grenade had no counter and no clock, so its printed "destroy this
+   unless you remove a steam counter" never ran (QUEUE item 2). These two
+   readers are the one place each fact is read off a card. */
+function selfDestructOf(card){
+  return ((P.fxParse(card).ops || []).find(o => o[0] === "selfDestruct") || [])[1] || null;
+}
+function enterCtrOf(card){
+  return ((P.fxParse(card).ops || []).find(o => o[0] === "ctrSelf") || [])[1] || null;
+}
+/* THE PREGAME PLACEMENT, ONE BODY BOTH BOARDS CALL (judge.newMatch and the
+   trainer's opening state). It stamps the schedule and fills the counters
+   bag exactly as a played permanent arrives. CRANK IS NOT OFFERED: whether
+   a game-start placement "enters the arena" for crank's "as this enters"
+   is a ruling this repo cannot source — `start-item-crank-unasked` in
+   `tools/approx.js`. Declining is what the seat policy would do anyway
+   (v4.24), and asking would invent a decision before turn one. */
+function placeStartItem(sd, item){
+  if(!item || !item.card) return sd;
+  const spec = enterCtrOf(item.card);
+  const entry = Object.assign({}, item, {sd: selfDestructOf(item.card)});
+  const bag = Object.assign({}, sd.counters || {});
+  if(spec) bag[item.uid] = Object.assign({}, bag[item.uid] || {}, {[spec.kind]: spec.n || 1});
+  return Object.assign({}, sd, {board: [...(sd.board || []), entry], counters: bag});
+}
+
 function tickSuspense(game, seat){
   const sides = (game.sides || []).slice();
   const sd = Object.assign({}, sides[seat]);
@@ -10895,6 +10927,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, jabTargets, arsNoOpWhy, DEFENDS_CONDS, defendsCondMet, CTX_KEYS, ACT_IF_KINDS, controlsAuraOf, PLAY_IF_KINDS, playIfOk, chainAtkOf, had6ThisTurn, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, restampHalving, returnStolen, pendPumped, attackBase, basePowOf, defLimitWhy, rxNoTargetWhy, pumpTargetWhy, playTargetWhy, ctrPutCands, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
+return {makeEffects, placeStartItem, jabTargets, arsNoOpWhy, DEFENDS_CONDS, defendsCondMet, CTX_KEYS, ACT_IF_KINDS, controlsAuraOf, PLAY_IF_KINDS, playIfOk, chainAtkOf, had6ThisTurn, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, restampHalving, returnStolen, pendPumped, attackBase, basePowOf, defLimitWhy, rxNoTargetWhy, pumpTargetWhy, playTargetWhy, ctrPutCands, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

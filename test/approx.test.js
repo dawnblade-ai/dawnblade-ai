@@ -266,7 +266,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 47 -> 49 AT v5.03: `instant-pump-own-attack-only` and
      `attack-grant-misses-own-attack`. */
   /* 49 -> 50 AT v5.07: `played-target-partial-resolution`. */
-  assert.equal(Object.keys(APPROX).length, 50, "record count moved");
+  /* 50 -> 51 AT v5.13: `start-item-crank-unasked`. */
+  assert.equal(Object.keys(APPROX).length, 51, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -312,7 +313,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 19 -> 20 AT v5.11: `simultaneous-trigger-order` MEASURED — every pair
      that fires together commutes, and the two that did not were defects
      (v5.09, v5.10). */
-  assert.equal(n("stated"), 20, "stated count moved");
+  /* 20 -> 21 AT v5.13: `start-item-crank-unasked`, a ruling to ask. */
+  assert.equal(n("stated"), 21, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -717,6 +719,24 @@ probe("simultaneous-trigger-order", () => {
     "play:weapon": {"boltyn": ["Courage", "Flurry"]},
     "start": {"dorinthea": ["Agility", "Vigor"], "kayo": ["Agility", "Might", "Vigor"], "lyath": ["Booze!", "Confidence", "Might"]},
   }, "a trigger source arrived or left — measure the order again before re-pinning");
+});
+
+/* Dash's pregame Boom Grenade carries its counter (so a crank COULD be
+   offered) and nothing asks. The day a sheet opens before turn one, the
+   ruling has been built and the record must move. */
+probe("start-item-crank-unasked", () => {
+  const W2 = X.loadData(), db = tdb(); J.setDb(db);
+  const hero = k => W2.HEROES.find(h => h.k === k), ctr = {n: 0};
+  let rng = H.RNG.make("s2");
+  const b0 = BL.buildSideDefault(hero("dash"), G.parseDeck(W2.DECKS.dash), db, rng, ctr); rng = b0.rng;
+  const b1 = BL.buildSideDefault(hero("lyath"), G.parseDeck(W2.DECKS.lyath), db, rng, ctr); rng = b1.rng;
+  const g = J.newMatch({builds: [b0.b, b1.b], names: ["Dash", "Lyath"], heroKeys: ["dash", "lyath"],
+                        rng, first: 0, tokSeq: ctr.n});
+  const b = g.sides[0].board[0];
+  assert.equal(b && b.card.name, "Boom Grenade", "fixture: seed s2 must deal the Grenade");
+  assert.equal((g.sides[0].counters[b.uid] || {}).steam, 1, "fixture: the counter crank would spend is there");
+  assert.ok(!g.prompt && !(g.promptQ || []).length,
+    "a crank sheet opens at game start — the ruling was built and the record must move");
 });
 
 /* Oasis Respite names a TARGET HERO and a SOURCE and the engine reads

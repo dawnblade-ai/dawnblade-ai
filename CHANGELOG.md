@@ -1,3 +1,39 @@
+## v5.13 — Dash's pregame item enters like any permanent
+
+> *"You may start the game with a Mechanologist item with cost 2 or less in the
+> arena."* — DASH · *"This enters the arena with 3 steam counters."* — HYPER DRIVER
+> · *"This enters the arena with a steam counter. At the start of your turn, destroy
+> this unless you remove a steam counter from it."* — BOOM GRENADE
+
+**QUEUE item 2, CEO-verified and re-verified here** (six seeds, the item is a Hyper
+Driver on three and a Boom Grenade on three, and every one entered bare).
+`build.js` placed the item as a board entry with no counters and no schedule. A card
+played from hand gets both through `execute`, a token through the mint (v3.07,
+v4.24); the pregame placement got neither. A starting Hyper Driver paid no {r} on a
+boost (weaker), and a starting Boom Grenade was never swept at Dash's turn start, so
+its printed drawback never ran and it waited for a hit for the whole game
+(stronger).
+
+**`effects.placeStartItem` is the one body** and both boards place through it:
+`judge.newMatch` and the trainer's opening state, both seats. It stamps the
+schedule and fills the counters bag off the card's own text. The two readers it
+uses (`selfDestructOf`, `enterCtrOf`) are now the ones the token mint and
+`enterWithCounters` ask too, so each fact is read off a card in one place.
+
+**Crank is not offered before turn one.** Whether a game-start placement "enters the
+arena" for crank's "as this enters" is a ruling this repo cannot source, so it is
+recorded (`start-item-crank-unasked`, stated, with a probe) rather than guessed.
+Ledger 51 records: 21 stated · 1 open · 29 closed.
+
+Measured: the ladder at three seeds moves Dash 7.3 → 6.7 a seed, inside a band of
+median 3. Boom Grenade detonations (`hitwatch`) go 55 → 40, because a starting
+Grenade now leaves on its own clock. Driven: a starting Grenade survives its first
+turn start (the reprieve spends the counter) and is destroyed on the second. Both
+babel blocks compile; fairness is clean and so are the 107 scenes. 11 sabotages, 8
+bite as first written. Of the three silent ones, one was a drill gap (counting the
+trainer's calls passed a call handed `null`; it now pins each seat's argument) and
+two were sabotages aimed wrong (re-aimed, both bite).
+
 ## v5.12 — a played attack reaction's go again is the target's
 
 > *"Target attack with stealth gets +3{p} and go again."* — STAINS OF THE REDBACK
