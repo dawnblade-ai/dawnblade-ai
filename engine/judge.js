@@ -498,6 +498,8 @@ function openPrompt(g){
     /* A LAPSED SOAK STILL LANDS ITS DAMAGE (v4.77) — `prompts.promptLapse`. */
     const lapse = PM.promptLapse(g, p);
     if(lapse) return withEffects({...g, promptQ: rest}, (fx, s) => fx.applyAnswer(s, lapse));
+    /* A LAPSED PRICE SAYS WHY (v5.17) — `prompts.promptLapseLine`. */
+    { const why = PM.promptLapseLine(g, p); if(why) g = say(g, why); }
     return openPrompt({...g, promptQ: rest});
   }
   /* NOTHING TO DECIDE (v4.68) — one mandatory candidate is confirmed on the

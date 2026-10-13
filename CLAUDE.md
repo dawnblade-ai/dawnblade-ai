@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.16
+**Current version:** v5.17
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3522 drills** at v5.16.
+This is `node --test "test/*.test.js"` — **3528 drills** at v5.17.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -868,6 +868,15 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A PRICE WHOSE PIECE IS GONE LAPSES (v5.17)
+
+Danger Digits' jab makes Mark of the Huntsman hit and then destroys it, so the dagger's
+own "destroy this and mark them" offer was drained about a card in the graveyard, and
+accepting marked for free (QUEUE item 4). `prompts.promptDestroyGone` is the one reader;
+`buildPrompt` lapses the sheet, both drains print `promptLapseLine`, and `applyAnswer`
+refuses a crafted answer (`test/destroygone.test.js`). **When a cost is queued, ask
+whether it can still be paid when it is asked.**
 
 ### A TOKEN THAT LEAVES THE ARENA CEASES TO EXIST (v5.16)
 

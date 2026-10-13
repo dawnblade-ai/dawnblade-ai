@@ -5876,6 +5876,11 @@ function makeEffects(ctx){
       const sdP = (s.sides || [])[p.side || 0] || {};
       if(ch && p.xPay.per * (ch.cost || 0) > (sdP.res || 0) + P.handPitch(sdP)) return s;
     }
+    /* AND A "DESTROY THIS" PRICE WHOSE PIECE IS GONE IS NOT AN ANSWER
+       (v5.17). No sheet a board renders reaches this — `buildPrompt` lapses
+       it at the drain — but `reduce` is fed by JSON off a wire (v2.04), and
+       an accepted price that destroys nothing would resolve the rider free. */
+    if(p.tag === "pay" && p.choice === "pay" && PR.promptDestroyGone(s, p)) return s;
     const r = applyPrompt({...s, prompt:null}, p);
     let n = r.game;
     n.prompt = null;

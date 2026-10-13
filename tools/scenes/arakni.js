@@ -265,7 +265,10 @@ module.exports = [
       "the defending hero takes the jab":   20 - m.sides[1].hp,
       "the chosen dagger is destroyed":     c.H.filed(m.sides[0], gear[1].uid),
       "the other dagger is still equipped": gz(gear[2].uid).uid === gear[2].uid && !gz(gear[2].uid).destroyed,
-      "and its own on-hit ability is offered": !!m.prompt && m.prompt.src
+      /* v5.17: its own "destroy this and mark them" offer LAPSES — the jab
+         has already destroyed the dagger it would pay with, and accepting
+         used to mark for free (QUEUE item 4). */
+      "…and its own offer lapses, nobody marked free": !m.prompt && !m.sides[1].marked
     };
   },
   want: {
@@ -275,7 +278,7 @@ module.exports = [
     "the defending hero takes the jab":   1,
     "the chosen dagger is destroyed":     true,
     "the other dagger is still equipped": true,
-    "and its own on-hit ability is offered": "Mark of the Huntsman"
+    "…and its own offer lapses, nobody marked free": true
   }
 },
 

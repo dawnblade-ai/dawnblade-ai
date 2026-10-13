@@ -1,3 +1,36 @@
+## v5.17 — A "destroy this" price whose piece is gone is not a price
+
+> *"When this hits a hero, you may choose to destroy this and mark them."* — MARK OF
+> THE HUNTSMAN · *"…If damage is dealt this way, the dagger has hit. Destroy the
+> dagger."* — DANGER DIGITS, Arakni's
+
+**QUEUE item 4, CEO-verified and re-verified here** (arakni v kayo, seed ar1). The jab
+makes the dagger HIT, so its own offer is queued. The jab's last printed sentence then
+destroys the dagger, and the offer was drained about a card already in the graveyard.
+Accepting it destroyed nothing (`applyAnswer`'s gear lookup missed silently), the mark
+landed, and the feed claimed "destroyed Mark of the Huntsman — the rider resolves". An
+unpayable cost is inert, never free (v2.04).
+
+**`prompts.promptDestroyGone` is the one reader**: is the piece still a live permanent
+in the payer's gear? `buildPrompt` lapses the sheet, and both drains print
+`promptLapseLine` ("…is already gone — its price is to destroy it, so there is nothing
+to pay and the rider does not resolve."), so the player learns the offer existed.
+`applyAnswer` refuses an accepted answer whose piece is gone, because `reduce` is fed by
+JSON off a wire. Measured: every pool record whose pay sheet destroys its source is gear
+(Beaten Trackers, Mark of the Huntsman, Refraction Bolters, Silent Stilettos), and that
+set is pinned.
+
+**FIVE FIXTURES BUILT A DESTROY PRICE OVER A GAME WITH NO GEAR**, so the price was never
+payable in them. They name the piece now. Two jab drills and an Arakni scene used the
+live sheet as proof that the "dagger has hit" fiction fired. The state cannot tell
+"lapsed" from "never fired", so the lapse line is the observable there (v3.60). It is
+still an order proof, because `offerPayCost` refuses to queue for a destroyed piece.
+
+Measured: **7 sabotages, 7 bite.** The ladder's wins are byte-identical at three seeds
+on both sides. `destroycost` fell 812 → 732: **80 offers in 630 games were made about a
+dagger already in the graveyard**, and the policy declined each one with a false "kept
+Mark of the Huntsman rather than destroy it" line.
+
 ## v5.16 — A token that leaves the arena ceases to exist
 
 **QUEUE item 3, CEO-verified and re-verified here.** At the end of Enigma v Lyath

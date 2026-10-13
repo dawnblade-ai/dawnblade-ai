@@ -421,9 +421,11 @@ test("FOUR COST VERBS, ONE `payVerb`, BOTH ANSWERS", () => {
     counter: {tag: "pay", side: 0, src: "Hyper Driver", cost: 0,
               spendCtr: {uid: 7, kind: "steam", n: 1}}
   };
+  /* the destroy price's piece is in the gear, or the sheet lapses (v5.17) */
+  const G0 = {sides: [{res: 9, gear: [{uid: 7, name: "Beaten Trackers"}]}, {res: 9}]};
   const say = (sp, choice) => {
-    const p = PM.promptChoose(PM.buildPrompt({sides: [{res: 9}, {res: 9}]}, sp), choice);
-    return PM.applyPrompt({sides: [{res: 9}, {res: 9}]}, p).msgs.join(" ");
+    const p = PM.promptChoose(PM.buildPrompt(G0, sp), choice);
+    return PM.applyPrompt(G0, p).msgs.join(" ");
   };
   for(const [k, sp] of Object.entries(specs)){
     for(const choice of ["pay", "decline"]){

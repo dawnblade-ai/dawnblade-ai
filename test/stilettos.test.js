@@ -154,7 +154,8 @@ const spec = (over) => Object.assign({
   ops: [["ap", 1]], taps: false, destroyUid: 41, title: "t", hint: "h"}, over || {});
 
 const answer = (sp, take) => {
-  const g = {sides: [{res: 9}, {res: 9}]};
+  /* the piece the price destroys must be there to destroy (v5.17) */
+  const g = {sides: [{res: 9, gear: [{uid: sp.destroyUid, name: sp.src}]}, {res: 9}]};
   const p = PM.buildPrompt(g, sp);
   return PM.applyPrompt(g, Object.assign({}, p, {choice: take ? "pay" : "decline"}));
 };

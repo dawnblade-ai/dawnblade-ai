@@ -582,6 +582,14 @@ function buildPrompt(game, spec){
        It counts the hand too, because pitching is on demand (RULING
        2026-08-01) and a hero asked to pay on someone else's turn has no
        other way to find an {r}. */
+    /* A "DESTROY THIS" PRICE WHOSE PIECE IS ALREADY GONE IS NOT A PRICE
+       (v5.17). Danger Digits' jab makes Mark of the Huntsman HIT and its
+       last printed sentence destroys it, so the dagger's own offer is
+       drained after the dagger is in the graveyard. Accepting destroyed
+       nothing and the mark landed free (QUEUE item 4): an unpayable cost
+       is inert, never free (v2.04). The sheet lapses instead, and both
+       drains say why (`promptLapseLine`). */
+    if(promptDestroyGone(game, spec)) return null;
     const cost = spec.cost || 0;
     const sd = (game.sides || [])[side] || {};
     const avail = spec.avail != null ? spec.avail
@@ -893,6 +901,28 @@ function promptForcedSel(prompt){
    or null for a spec that lapses harmlessly. The `pay` variant never builds
    null (an "unless they pay" toll always shows), and measured, no other
    variant carries a payload in its answer. */
+/* IS A "DESTROY THIS" PRICE STILL THERE TO PAY? (v5.17) The piece must be a
+   live permanent in the payer's GEAR, which is where `applyAnswer` destroys
+   it: measured, every pool record whose pay sheet carries `destroyUid` is an
+   Equipment or a Weapon (Beaten Trackers, Refraction Bolters, Silent
+   Stilettos, Mark of the Huntsman), and `test/destroygone.test.js` pins that
+   set, so a board permanent arriving with the price fails a drill rather
+   than lapsing every time. */
+function promptDestroyGone(game, spec){
+  if(!spec || spec.tag !== "pay" || spec.destroyUid == null) return false;
+  const sd = ((game && game.sides) || [])[spec.side != null ? spec.side : 0] || {};
+  return !(sd.gear || []).some(x => x && x.uid === spec.destroyUid && !x.destroyed);
+}
+/* …AND THE LINE A LAPSED ONE PRINTS. A sheet that skips itself says
+   nothing, and in a training sim the feed is the lesson (v3.60): the player
+   should learn the offer existed and why it did not reach them. Both drains
+   ask this one body, so the two boards cannot word it differently. */
+function promptLapseLine(game, spec){
+  if(!promptDestroyGone(game, spec)) return null;
+  const nm = String(spec.src || "It").replace(/ — ability$/, "");
+  return nm + " is already gone — its price is to destroy it, so there is nothing to pay and the rider does not resolve.";
+}
+
 function promptLapse(game, spec){
   if(!spec || spec.tag !== "soak" || !((spec.amount || 0) > 0)) return null;
   if(buildPrompt(game, spec)) return null;
@@ -1337,7 +1367,7 @@ function applyPrompt(game, prompt){
 return {PROMPT_ZONES, promptZoneWord, promptZone, promptSideZone, promptFilter,
         promptMatchSet, promptMatchAssign,
         promptPickPool, promptPickAskable, buildPrompt,
-        promptToggleSel, promptChoose, promptDecline, promptTakeBack, promptReady, promptForcedSel, promptLapse,
+        promptToggleSel, promptChoose, promptDecline, promptTakeBack, promptReady, promptForcedSel, promptLapse, promptDestroyGone, promptLapseLine,
         promptDiscardDefault, discCostChoice,
         moveCards, applyPrompt};
 });
