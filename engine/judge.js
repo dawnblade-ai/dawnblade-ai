@@ -1100,11 +1100,7 @@ function legal(g, a, seat){
          who simply is not defending was told about a missing board
          feature instead of the restriction their card prints — a refusal
          that names the wrong thing teaches the wrong lesson. */
-      if(!E.handAbilityOK({...g, actor: seat}, c)){
-        const gate = PR.fxParse(c).activateIf;
-        return c.name + (gate ? " can't be activated — " + gate.why
-                              : "'s ability can't be activated right now");
-      }
+      { const _hw = E.handAbilityWhy({...g, actor: seat}, c); if(_hw) return _hw; }
       /* THE +{d} REFUSAL IS GONE (v4.53), AND IT WAS STALE. It read
          "a +{d} needs a per-defender bonus map: the trainer keeps one
          (`defBonus`) and this board does not" — true when it was written

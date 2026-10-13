@@ -5565,7 +5565,7 @@ function makeEffects(ctx){
   const activateHandAbility = (s, c) => {
     const fx = fxParse(c), ha = fx.handAbility;
     if(!ha) return {game: s, why: c.name + " prints no ability to activate"};
-    if(!handAbilityOK(s, c)) return {game: s, why: c.name + "'s ability can't be activated right now"};
+    { const _hw = handAbilityWhy(s, c); if(_hw) return {game: s, why: _hw}; }
     /* AN ABILITY PAYS ITS TAXES (v4.87). The printed cost is a discard,
        so nothing priced this activation and Frostbite — "cards AND
        ABILITIES cost you an additional {r} to activate … when you play a
@@ -9574,23 +9574,44 @@ const foeTurnNow = s => (s && s.turnPlayer != null && s.actor != null)
 
    It reads the ACTING side off the state, so a caller asking about a
    particular seat passes `{...g, actor: seat}`. */
-function handAbilityOK(s, c){
-  if(!s || !c || s.over) return false;
+/* AND IT SAYS WHY (v5.14). `handAbilityWhy` is the body and answers the
+   refusal as a sentence; `handAbilityOK` is its negation, so the boolean
+   the trainer dims a tile on and the sentence judge refuses with cannot
+   disagree (`playZoneWhy` / `playableFromZone`'s shape, v4.91). The
+   generic wording stays for the cases that had it; only the wall gets its
+   own words, because "can't be activated right now" names nothing. */
+function handAbilityWhy(s, c){
+  const busy = (c && c.name || "this") + "'s ability can't be activated right now";
+  if(!s || !c || s.over) return busy;
   const fx = P.fxParse(c), ha = fx.handAbility;
-  if(!ha) return false;
+  if(!ha) return c.name + " prints no ability to activate";
   const sd = (s.sides || [])[s.actor || 0] || {};
-  if(ha.oncePerTurn && ((sd.hist || {}).handAb || {})[c.uid]) return false;
+  if(ha.oncePerTurn && ((sd.hist || {}).handAb || {})[c.uid]) return busy;
   /* THE WHOLE GATE, not one case of it. The trainer's original asked only
      `activateIf.kind === "defending"` — the one restriction its own pool
      card prints — so any other, including v3.04's `unreadable`, slipped
      straight through. */
-  if(fx.activateIf && !activateIfOk(s, fx.activateIf, c)) return false;
+  if(fx.activateIf && !activateIfOk(s, fx.activateIf, c))
+    return c.name + " can't be activated — " + fx.activateIf.why;
+  /* A DECLARED DEFENDER IS ON THE COMBAT CHAIN, NOT IN THE HAND (v5.04,
+     v5.14). "Discard THIS" spends the card itself, so a card in the wall
+     cannot pay it: the declaration is fixed (CR 7.3.2b), and paying would
+     withdraw the block for value — Arcane Twining's amp, Agile Windup's
+     Agility, Reaper's Call's mark — with the damage step then skipping
+     the card that left. v5.04 censused the hand readers and missed this
+     door, because it asks about the card's OWN uid rather than the free
+     hand. Rally the Coast Guard's "discard A card" spends a DIFFERENT
+     card and is gated "while this is defending", so it stays legal; the
+     next test is its own. */
+  if(ha.cost === "self" && P.isDeclaredDefender(sd, c.uid))
+    return c.name + " is defending this chain link — discarding it would withdraw the block";
   /* a cost you cannot pay is not an option — "discard a card" needs
      another card that is not itself committed to the block */
   if(ha.cost === "card" && !P.handFree(sd, c).length)
-    return false;
-  return true;
+    return busy;
+  return null;
 }
+function handAbilityOK(s, c){ return !handAbilityWhy(s, c); }
 
 /* ---- IS THIS PRINTED ACTIVATION GATE SATISFIED? (v3.04) --------------
 
@@ -10928,5 +10949,5 @@ function payPolicy(live, sd){
 }
 
 return {makeEffects, placeStartItem, jabTargets, arsNoOpWhy, DEFENDS_CONDS, defendsCondMet, CTX_KEYS, ACT_IF_KINDS, controlsAuraOf, PLAY_IF_KINDS, playIfOk, chainAtkOf, had6ThisTurn, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, restampHalving, returnStolen, pendPumped, attackBase, basePowOf, defLimitWhy, rxNoTargetWhy, pumpTargetWhy, playTargetWhy, ctrPutCands, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
-        activateIfOk, handAbilityOK, soakPolicy, payPolicy};
+        activateIfOk, handAbilityOK, handAbilityWhy, soakPolicy, payPolicy};
 });

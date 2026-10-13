@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.13
+**Current version:** v5.14
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3499 drills** at v5.13.
+This is `node --test "test/*.test.js"` — **3506 drills** at v5.14.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -481,8 +481,9 @@ own terms.
 **NO TOOL HERE WOULD HAVE SEEN IT.** The audit and the sweep both walk the
 POOL, and a hero powCard is built by `build.js` out of the hero's printed
 line — it is in neither. **Driving the ability is the only thing that
-looks at one.** The fallback's existing magnitude test is what suppresses
-it, so a card printing two different pumps still gets its unread one.
+looks at one.** The fallback itself is gone (v5.02, retired with
+`pumpRead`), so this cannot happen by that route any more; a powCard's pump
+is read once, by the reader that owns it.
 
 ### A REORDER IS NOT AN OPT (v3.72)
 
@@ -867,6 +868,16 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A DECLARED DEFENDER CANNOT DISCARD ITSELF (v5.14)
+
+v5.04 made every reader of the spendable hand skip the wall, and the hand-ability door
+was missed: it asks about the card's OWN uid, so "Discard this" on a declared defender
+was legal on both boards, and it withdrew the block for value (QUEUE N1).
+`effects.handAbilityWhy` is the one body and `handAbilityOK` its negation; Rally the
+Coast Guard's "discard A card", gated "while defending", is the positive control
+(`test/defenderzone.test.js`). **When a census asks about the free hand, ask which
+door spends the card itself.**
 
 ### A PREGAME PLACEMENT IS AN ENTRY TOO (v5.13)
 
@@ -7062,8 +7073,10 @@ v3.72's arsenal grant, this).
 two op kinds. It is a named constant (`PUMP_OPS`) and pinned as a SET now,
 the way `wire.test.js`'s `HEADLESS` list is.
 
-**WHEN YOU ADD AN OP THAT CARRIES A PRINTED VALUE, ADD IT TO BOTH LISTS**
-— `parser.pumpRead` and `fairness.PUMP_OPS`. v3.12's `MODAL-SUMMED`
+**WHEN YOU ADD AN OP THAT CARRIES A PRINTED VALUE, ADD IT TO
+`fairness.PUMP_OPS`.** This sentence used to name `parser.pumpRead` as a
+second list; v5.02 deleted it with the whole-text fallback, so there is one
+list now (a retired function named as a live one, v4.60's shape). v3.12's `MODAL-SUMMED`
 lesson restated: the tool's model going stale looks exactly like the card
 being right, and the two are indistinguishable in a report.
 

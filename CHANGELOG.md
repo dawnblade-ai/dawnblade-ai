@@ -1,3 +1,30 @@
+## v5.14 — A declared defender cannot discard itself
+
+> *"**Instant** - Discard this: …"* — ARCANE TWINING · AGILE WINDUP · PHOTON SPLICING
+> · REAPER'S CALL (×3 each)
+
+**QUEUE item N1 (review-b §1), CEO-verified and re-verified here** on all four
+cards. v5.04 made every reader of the spendable hand skip the wall, and this door was
+missed because it asks about the card's OWN uid rather than the free hand. A seat
+declared one of these as a defender, saw the attack, then discarded it for its payload
+(Arcane Twining's amp, Agile Windup's Agility, Reaper's Call's mark). The damage step
+then skipped the card that had left, so the block was withdrawn for value after
+CR 7.3.2b had fixed it. `legal` answered null, and the card sat in the graveyard and in
+`blockH` at once. This happened on both boards, which share `handAbilityOK`.
+
+**`effects.handAbilityWhy` is the one body** and answers the refusal as a sentence.
+`handAbilityOK` is its negation, so the trainer's tile and judge's refusal cannot
+disagree. A `cost: "self"` ability on a declared defender refuses. **Rally the Coast
+Guard stays legal**: its "Discard a card" spends a DIFFERENT card, and it is gated
+"while this is defending". It is the positive control.
+
+Measured: the census pins four self-cost cards and one other-card cost, both directions.
+**6 sabotages, 6 bite**. One was silent on the first pass: a guard asking whether the
+free hand was empty passed a fixture holding only the declared card, so a free second
+card is in every row now. The ladder is byte-identical at three seeds on both sides,
+because `sparring.act` never activates a hand ability. CLAUDE.md's two `pumpRead`
+instructions (N12) are corrected in the same edit.
+
 ## v5.13 — Dash's pregame item enters like any permanent
 
 > *"You may start the game with a Mechanologist item with cost 2 or less in the

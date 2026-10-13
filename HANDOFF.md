@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.83 (updated through v5.13)
+# Handoff — Dawnblade, at v4.83 (updated through v5.14)
 
 **Written 2026-09-28, numbers refreshed 2026-10-04 at v4.99. Every number below was re-derived this session, with
 the command that produces it.** Re-derive before you quote one; this file
@@ -22,8 +22,8 @@ where things stand and what is next.
 
 | measure | value | command |
 |---|---|---|
-| version | v5.13, live on GitHub Pages | `grep APP_VER index.html` |
-| drills | 3499 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
+| version | v5.14, live on GitHub Pages | `grep APP_VER index.html` |
+| drills | 3506 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
 | pool coverage | **405 of 405** unique cards read in full · 0 part · 0 none | `npm run audit`, top of `AUDIT.md` |
 | unfinished cards | 0, and 0 one clause away | `npm run gaps` |
 | approximation ledger | 51 records: 29 closed · **21 stated · 1 open** | `node tools/approx.js` |
@@ -87,6 +87,7 @@ Every one of those cards read `tier: full` before its fix.
 | 5.11 | `simultaneous-trigger-order` measured over every event and restated `stated`; its probe pins the pool's trigger census |
 | 5.12 | QUEUE 1: a played attack reaction's go again is the target's; Stains of the Redback / Run Through no longer bank an action point |
 | 5.13 | QUEUE 2: Dash's pregame item enters with its counters and its clock (`placeStartItem`, both boards) |
+| 5.14 | QUEUE N1: a declared defender's "Discard this" hand ability is refused on both boards (`handAbilityWhy`) |
 
 Versions 5.09–5.11 came out of ONE measurement: a scratch copy of the engine
 traced every trigger that fires on one event over the 3-seed ladder. Every pair
