@@ -161,7 +161,9 @@ test("FUSED rides on `pend` — it is a declaration-time fact", {skip}, () => {
   const src = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8");
   assert.match(src, /condOnHit:\[\.\.\.\(fx\.condOnHit\|\|\[\]\), \.\.\.qRiderCond\],[^\n]{0,80} chargedWay, fused,/,
     "the declaration folds it onto the link");
-  assert.match(src, /cond==="fused" \? !!n\.pend\.fused/, "and the hit-time gate reads it from there");
+  /* `h`, not `n`, since v5.09: the hit-time gates read the board AT the
+     hit (`_atHit`), before any trigger of that hit has resolved. */
+  assert.match(src, /cond==="fused" \? !!h\.pend\.fused/, "and the hit-time gate reads it from there");
 });
 
 /* ---- 3. THE TWO PAYLOADS ---------------------------------------------- */
@@ -201,7 +203,7 @@ test("driven: Mark of the Funnel Web needs the MARK, and its sibling proves the 
 
   const off = hit("Mark of the Funnel Web", 1, {marked: false, foe: {arsenal: junk("Set", "s1")}});
   assert.ok(off.sides[1].arsenal, "unmarked, the arsenal is untouched");
-  assert.match(said(off), /condition not met \(Bob isn't marked\)/);
+  assert.match(said(off), /condition not met \(Bob wasn't marked when it hit\)/);
 
   const empty = hit("Mark of the Funnel Web", 1, {marked: true, foe: {arsenal: null}});
   assert.equal(empty.sides[1].arsenal, null);

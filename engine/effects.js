@@ -2971,7 +2971,10 @@ function makeEffects(ctx){
   function condWhy(n, cond, chargedWay, atHit){
     if(/^way:/.test(String(cond || ""))) return wayWhy(cond);
     if(atHit){
-      const h = {pumped:"its {p} isn't above its base", fused:"it wasn't fused"}[cond];
+      const h = {pumped:"its {p} isn't above its base", fused:"it wasn't fused",
+                 /* asked of the board AT the hit (v5.09), so the past tense
+                    is the truth: a mark granted by the same hit lands after */
+                 marked:`${foe(n).name} wasn't marked when it hit`}[cond];
       if(h) return h;
     }
     const dracN = /^drac(\d+)$/.test(cond) ? +cond.slice(4) : null;
@@ -7640,6 +7643,18 @@ function makeEffects(ctx){
        created its Bloodrot Pox off a hit on Barnacle — an ALLY. */
     const heroHit = info.heroHit != null ? info.heroHit : (total > 0);
     const _dd0 = n._discDeferred || 0;       /* a discard the on-hit ops defer (v4.81) */
+    /* ---- THE BOARD AT THE HIT (v5.09) --------------------------------
+       "When this hits a MARKED hero" asks about the hero at the moment of
+       the hit, and every trigger the hit sets off is answered off that
+       one moment — CR 4.1.8a's order of simultaneous triggers decides
+       which RESOLVES first, never which of them EXIST. The gates below
+       were read after `pend.onHit` had run, so Two Sides to the Blade's
+       granted "mark them" landed first and Mark of the Black Widow's
+       banish fired on a hero who was unmarked when it hit: 3 of 630
+       ladder games, stronger than printed, found by measuring which
+       triggers fire together. A STATE gate is read here; a `way:` gate
+       still waits for the ops it asks about (v3.60). */
+    const _atHit = n;
     if(total>0) n = runOps(n, n.pend.onHit, pc.name);
     else if(n.pend.onHit.length) n = L(n, "Fully blocked — on-hit effects fizzle.");
     const _oh = n.pend.onHitHero || [];
@@ -7779,18 +7794,19 @@ function makeEffects(ctx){
           const hd = attachDiscardRider(n, pc.name, actorOf(n), {conds: [{cond, op}]});
           if(hd){ n = L(hd, `${pc.name}: that waits on which card is discarded.`); return; }
         }
+        const h = _atHit;                  /* the board at the hit, above */
         const met = /^way:/.test(cond)
             ? thisWayMet(cond, {disc: n._discWay, dmg: n._dmgWay, ars: n._arsWay, took: n._tookWay})
-          : cond==="charged" ? (act(n).hist.charged||0)>0
+          : cond==="charged" ? (act(h).hist.charged||0)>0
           /* A LIST SINCE v4.56, AND RENAMED WITH THE SHAPE — `chargedPitch`
              was a scalar naming the one card charged, and "any number of
              times" makes it a set. Keeping the old name for a new shape is
              the same-name-different-meaning trap `KNOWN_COLLISIONS`
              polices, so the name moved with it. */
-          : /^chargedPitch\d$/.test(cond) ? (n.pend.chargedWay||[])
+          : /^chargedPitch\d$/.test(cond) ? (h.pend.chargedWay||[])
               .some(c => c.pitch === +cond.match(/\d+/)[0])
-          : cond==="marked" ? !!foe(n).marked
-          : cond==="pumped" ? (n.pend._struck != null ? n.pend._struck : (n.pend.total||0)) > attackBase(n)
+          : cond==="marked" ? !!foe(h).marked
+          : cond==="pumped" ? (h.pend._struck != null ? h.pend._struck : (h.pend.total||0)) > attackBase(h)
           /* THREE CONDITIONS REACHED HERE AND ANSWERED FALSE (v3.96).
              Measured by asking the PARSER which conds the pool actually
              puts into `condOnHit`: SEVEN, and this evaluator knew four.
@@ -7804,13 +7820,13 @@ function makeEffects(ctx){
              fix for `PENDING_KINDS` and v3.91's for the attack-reaction
              condition list, applied to
              the second, smaller copy of a condition vocabulary. */
-          : /^auras\d+$/.test(cond) ? (act(n).board||[]).filter(b=>b.kind==="aura").length >= +cond.slice(5)
-          : /^drac\d+$/.test(cond) ? P.dracLinks(n.chain) >= +cond.slice(4)
+          : /^auras\d+$/.test(cond) ? (act(h).board||[]).filter(b=>b.kind==="aura").length >= +cond.slice(5)
+          : /^drac\d+$/.test(cond) ? P.dracLinks(h.chain) >= +cond.slice(4)
           /* FUSED IS A DECLARATION-TIME FACT — how the card was PLAYED,
              which no board state can answer at the hit. It rides on `pend`
              for `chargedPitches`'s reason, and a link built without it
              answers FALSE: weaker than printed and visible (v3.24). */
-          : cond==="fused" ? !!n.pend.fused
+          : cond==="fused" ? !!h.pend.fused
           /* v4.21 — Static Shock's "Lightning Flow - When this hits a
              hero, IF YOU'VE PLAYED A LIGHTNING CARD THIS TURN, deal 1
              arcane damage to them." The keyword prefix used to eat the
@@ -7819,7 +7835,7 @@ function makeEffects(ctx){
              history v3.38 built, and the main condition loop has answered
              `playedCls:` from it since — this is the second, smaller copy
              of that vocabulary being told (v3.96). */
-          : /^playedCls:/.test(cond) ? ((act(n).hist.playTy||[])
+          : /^playedCls:/.test(cond) ? ((act(h).hist.playTy||[])
               .some(ty => (ty||[]).indexOf(cond.replace(/^playedCls:/, "")) >= 0))
           : false;
         if(met) n = runOps(n, [op], pc.name);
@@ -7830,7 +7846,7 @@ function makeEffects(ctx){
            (v2.83's category, one board over). Its own phrase list then
            drifted from the main loop's twice (v5.08), so it asks `condWhy`,
            the one body, and reads like the main loop's line. */
-        else n = L(n, `${pc.name}: the granted on-hit bonus — condition not met (${condWhy(n, cond, n.pend.chargedWay, true)}).`);
+        else n = L(n, `${pc.name}: the granted on-hit bonus — condition not met (${condWhy(h, cond, h.pend.chargedWay, true)}).`);
       });
     }
     if(n.pend.runeOnHit && total>0){ const many = n.pend.runeOnHit; n = mkRune(n, many);

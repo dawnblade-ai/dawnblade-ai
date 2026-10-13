@@ -1,3 +1,45 @@
+## v5.09 — a hit on an unmarked hero is not a hit on a marked hero
+
+> *"Stealth / When this hits a marked hero, they banish a card from their hand."*
+> — MARK OF THE BLACK WIDOW · *"…banish a card in their arsenal."* — MARK OF THE
+> FUNNEL WEB · *"Target attack action card with stealth gets +3{p} and "When this
+> hits a hero, mark them.""* — TWO SIDES TO THE BLADE
+
+**Found by measuring the open `simultaneous-trigger-order` record before building
+anything.** A scratch copy of the engine traced every trigger that fires on one
+event (a hit, a play, a defence, a discard, an arsenal put, the start and end of a
+turn) and the 3-seed ladder was run through it: 630 games, 12,849 hits. Almost
+every pair that fires together commutes. Two do not, and this is the first.
+
+**Two Sides to the Blade grants "mark them" to a stealth attack, so one hit sets off
+two triggers**: the grant's mark and the card's own "when this hits a marked hero".
+`linkPayload` ran the granted on-hit ops first and then asked the condition, so the
+banish found a hero the same hit had just marked. **That is not an order, and no
+order fixes it.** The order of simultaneous triggers decides which resolves first;
+whether a trigger exists is decided at the event, and the hero was not marked when
+it was hit. 3 games in 630 (Arakni against Viserai, Lyath and Enigma), stronger
+than printed, and both cards read `tier: full` throughout.
+
+**The hit-time gates read the board at the hit.** `_atHit` is taken before
+`pend.onHit` runs, and every state gate in the `condOnHit` loop (`marked`, `auras`,
+`drac`, `charged`, `chargedPitch`, `pumped`, `fused`, `playedCls`) asks it. A
+`way:` gate still reads the traces the ops leave, which is what it is for (v3.60);
+the loot drills hold that half, and a sabotage that points it at the snapshot
+bites three of them. The refusal says *"Viserai wasn't marked when it hit"*: asked
+of the board at the hit, "isn't marked" would be refuted by the line above it.
+
+Measured: the ladder is **byte-identical at three seeds on both sides**. The three
+affected games change inside (a banished card stays in hand, 3 fewer steps in one)
+and keep their winner and their length. Fairness is clean and so are the 107
+scenes. 6 sabotages, 5 bite. The silent one pointed the refusal's words at the
+post-op board, which only the mark can tell apart and whose words name no board
+state, so the switch was dead and is gone: the refusal reads the snapshot for
+every gate.
+
+**AND THE SAME DRILL FOUND A THIRD DEFECT, QUEUED.** The `auras N` gates count
+board entries of kind `aura` and miss Aura TOKENS (Might, Confidence, Runechant),
+while `parser.auraCount` counts both. That is the next release.
+
 ## v5.08 — the feed names what was missing, and what made it
 
 Three lines read wrong to a player, found by reading self-play feeds line by line:

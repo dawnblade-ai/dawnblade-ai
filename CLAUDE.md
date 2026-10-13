@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.08
+**Current version:** v5.09
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3481 drills** at v5.08.
+This is `node --test "test/*.test.js"` — **3485 drills** at v5.09.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,18 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A TRIGGER EXISTS AT THE EVENT; ITS ORDER IS DECIDED AFTER (v5.09)
+
+"When this hits a MARKED hero" (Mark of the Black Widow, Mark of the Funnel Web) was
+asked after the hit's other on-hit ops ran, so Two Sides to the Blade's granted
+"mark them" satisfied it on a hero who was unmarked when hit. CR 4.1.8a's order
+decides which simultaneous trigger RESOLVES first, never which ones EXIST.
+`linkPayload` takes `_atHit` before `pend.onHit` runs, and every state gate in the
+`condOnHit` loop reads it; a `way:` gate still reads the traces the ops leave
+(v3.60). Found by tracing which triggers fire together on one event over the
+3-seed ladder (`test/hitmoment.test.js`). **When two triggers share an event, ask
+whether one of them changes the other's condition before you ask about order.**
 
 ### THE FEED NAMES WHAT WAS MISSING, AND WHAT MADE IT (v5.08)
 
