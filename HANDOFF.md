@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.83 (updated through v5.07)
+# Handoff — Dawnblade, at v4.83 (updated through v5.11)
 
 **Written 2026-09-28, numbers refreshed 2026-10-04 at v4.99. Every number below was re-derived this session, with
 the command that produces it.** Re-derive before you quote one; this file
@@ -22,11 +22,11 @@ where things stand and what is next.
 
 | measure | value | command |
 |---|---|---|
-| version | v5.07, live on GitHub Pages | `grep APP_VER index.html` |
-| drills | 3473 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
+| version | v5.11, live on GitHub Pages | `grep APP_VER index.html` |
+| drills | 3489 · 0 fail · 5 skipped (the drift probes) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
 | pool coverage | **405 of 405** unique cards read in full · 0 part · 0 none | `npm run audit`, top of `AUDIT.md` |
 | unfinished cards | 0, and 0 one clause away | `npm run gaps` |
-| approximation ledger | 50 records: 29 closed · **19 stated · 2 open** | `node tools/approx.js` |
+| approximation ledger | 50 records: 29 closed · **20 stated · 1 open** | `node tools/approx.js` |
 | CR rules cited | 61 distinct · 51 guarded · 3 unguarded (section pointers, pinned) | `node tools/crindex.js` |
 | fail states | 0 UNFAIR · 3 WRONG (all known, below) | `npm run sweep` |
 | scenes | 107 passing | `npm run scenes` |
@@ -81,6 +81,15 @@ Every one of those cards read `tier: full` before its fix.
 | 5.05 | a card played is not an ability activated (`isCardPlay`): Viserai's rite 29 spurious firings → 0, Briar's Lightning 56 → 28 |
 | 5.06 | "the next time you would be dealt damage" is one event (`wardNext`), not the budget pool; 46 banked points per 240 games gone; `WIRE_V` 24 |
 | 5.07 | a played card whose whole payload is a printed target needs one (`playTargetWhy`); Bravo's ability on an empty arsenal is refused |
+| 5.08 | the feed names what was missing (`condWhy`, one body) and every token and go-again grant names its source |
+| 5.09 | "when this hits a MARKED hero" reads the board at the hit (`_atHit`); a mark granted by the same hit no longer satisfies it |
+| 5.10 | a phantasm pop no longer swallows the defender's "when this defends" triggers; they resolve first |
+| 5.11 | `simultaneous-trigger-order` measured over every event and restated `stated`; its probe pins the pool's trigger census |
+
+Versions 5.09–5.11 came out of ONE measurement: a scratch copy of the engine
+traced every trigger that fires on one event over the 3-seed ladder. Every pair
+that fires together commutes; the two that decided something were not orders
+at all. The recipe is in `CHANGELOG.md` v5.11.
 
 Versions 4.88–4.93 were found by ONE census: every refusal in the trainer's
 play doors, read against `judge.legal`. When you find a rule in the trainer,
@@ -111,11 +120,11 @@ Build it the way v4.42 promoted `fxcensus` and `speccensus`:
 The scratch version is the recipe. It is two short scripts and is described
 in `CHANGELOG.md` v4.83.
 
-### 2. The two OPEN records
+### 2. The OPEN record (one left since v5.11)
 
 | record | what it needs |
 |---|---|
-| `simultaneous-trigger-order` | CR 4.1.8a hands the order to the turn-player; the engine resolves in printed order. Needs an ordering prompt, and a measurement of which pairs of triggers actually co-occur in the pool (v4.67 found one ordering decided wrongly by an unreachable fixture) |
+| ~~`simultaneous-trigger-order`~~ | MEASURED and `stated` at v5.11: every co-firing pair commutes, and the two that did not were defects (v5.09, v5.10). Its probe pins the pool's trigger census, so a parser change that adds a source forces the measurement again |
 | `cloaked-display` | the card back on the board. A UI job; see §4 |
 
 Both user rulings are answered and built at v4.94: a face-down Cloaked
@@ -215,6 +224,15 @@ an opposing hero's graveyard"* and a transcend. With nothing to target, the engi
 plays them and resolves the rest (`played-target-partial-resolution`, stated). A
 card whose ONLY effect is the target is refused either way. If the answer is
 "refused", the probe goes red and the narrowing in `playTargetWhy` is one line.
+
+**AND A THIRD (v5.10): does the turn-player order the OPPONENT's simultaneous
+triggers too, or only their own?** Phantasm (Enigma's, the attacker's) and a
+defender's "when this defends" fire on one event. The engine resolves the
+defender's first, with the attack still on the chain — the order that needs no
+ruling, because then "clash with the ATTACKING hero" plainly has one. If the
+turn-player may put phantasm first, a popped attack's defender might clash with
+nobody. The CR site is blocked here, so `simultaneous-trigger-order` says so
+rather than guessing.
 
 This sandbox cannot reach the web freely, so three jobs are flagged for a
 desktop:

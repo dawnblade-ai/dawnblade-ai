@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.10
+**Current version:** v5.11
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3489 drills** at v5.10.
+This is `node --test "test/*.test.js"` — **3489 drills** at v5.11.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,16 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### MEASURE AN ORDER BY TRACING THE EVENT, NOT BY READING THE PAIRS (v5.11)
+
+`simultaneous-trigger-order` is `stated`: a tracer on every trigger fire site, run
+over the 3-seed ladder, showed every pair that fires together commutes, and the two
+that did not were defects rather than orders (v5.09, v5.10). The recipe is in
+`CHANGELOG.md` v5.11; its probe pins the pool's trigger census, so a parser change
+that adds a trigger source forces the trace again. **An instrument that records
+what fired together finds what a list of pairs cannot: the trigger that never
+fired at all.**
 
 ### A POP DOES NOT SWALLOW THE DEFENDER'S TRIGGERS (v5.10)
 

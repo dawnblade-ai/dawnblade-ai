@@ -1,3 +1,56 @@
+## v5.11 — the trigger-order record, measured and restated
+
+`simultaneous-trigger-order` was the ledger's one `open` record about the rules
+machine: *"CR 4.1.8a hands the order of simultaneous triggers to the turn-player;
+the engine resolves them in printed order."* v4.67 measured two families by hand
+and found one order decided wrongly. This measures all of them at once, and it is
+`stated` now.
+
+**THE INSTRUMENT, so it can be run again.** A scratch `git worktree` of the engine,
+with one tracer line at each trigger fire site: `linkPayload` (each on-hit block —
+the card's own, a granted rider, a delayed `hitNext`, Briar's Earth, `condOnHit`,
+Dawnblade's counter, a Tarantula drain, a Huntsman offer, a Boom Grenade watcher, a
+Refraction Bolters offer, Dorinthea's refresh, crush), `afterDefenders` (every
+defend trigger on the wall, and the pop), `execute`'s play triggers (Runechants and
+their kin, the rite, `ctrClock`, `boostBanish`, Briar's Lightning, the aura offer),
+`afterDiscard`, `faceUpArsenal`, and judge's start and end of turn. Each event
+records what fired; a driver runs the ladder through it and prints every event
+where two or more fired. **Do not commit it** — it is a patch on the engine, and its
+answer is what goes in the ledger.
+
+**Measured over the 3-seed ladder, 630 games:** 27,793 plays, 12,887 defences,
+12,849 hits, 654 discards, 256 arsenal puts. The pairs that fire together:
+
+| event | pair | per seed | order |
+|---|---|---|---|
+| discard | Kayo's Might + Beaten Trackers' offer (+ Reincarnate) | 115 | commutes: both read the discarded cards |
+| hit | Refraction Bolters' offer + Dorinthea's refresh | 115 | commutes |
+| play | Runechants, Embodiment of Lightning, Malefic Incantation, the rite, Flurry, Courage | 50+ | commutes: a token the play makes never pops for it (the firing set is captured first) |
+| start | suspense payouts + Might / Vigor / Agility / Confidence | 100+ | commutes: additive grants |
+| hit | Briar's Earth + an attack's own on-hit | 30 | commutes |
+| hit | an attack's own on-hit + a granted rider | ~50 | commutes, **except the mark**: v5.09 (3 in 630) |
+| faceUp | Crow's Nest + an arrow's own put trigger | 13 | commutes |
+| end | Bloodrot Pox, Frailty, Concealed Object | 7 | commutes; v4.67 measured the end phase |
+| defends | phantasm + a defender's own trigger | 1 (3 in 630) | **the defender's never ran**: v5.10 |
+
+**Both pairs that decided something were defects, and neither was an order.** A
+granted "mark them" satisfied "hits a MARKED hero" because the gate was read after
+it (v5.09: whether a trigger exists is decided at the event). A phantasm pop
+returned before the defender's triggers ran (v5.10). What is left: the boost pair is
+decided by dominance (v4.67), Inertia against a heave and the ward spend are their
+own records, and two questions wait on a RULING rather than a sheet — Arakni's
+brood (which triggers exist) and whether a clash resolved after its attack was
+popped still finds "the attacking hero". **A sheet that asks an order with no
+consequence is a tap that teaches nothing** (v3.55), so none is built.
+
+**THE PROBE IS THE CENSUS.** `test/approx.test.js` reads the parse for every
+precon's events with two or more trigger sources (cards, the tokens they make, the
+hero's passives) and pins it. The pool is frozen by the Dawnblade format, so it
+moves only when the PARSER does, which is when an order can become observable. It
+is an upper bound, and says so. Ledger: **20 stated · 1 open · 29 closed**. 4
+sabotages (a boost trigger unread, Dorinthea's refresh unread, Banneret's delayed
+hit unread, an ordering sheet that builds), 4 bite.
+
 ## v5.10 — a phantasm pop does not swallow the defender's triggers
 
 > *"When this defends, clash with the attacking hero. The winner creates a Might

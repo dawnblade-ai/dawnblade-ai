@@ -144,28 +144,35 @@ const APPROX = {
       "instant prevention meets an instant that deals damage, the measurement moves."},
 
 "simultaneous-trigger-order": {
-  status:"open", cr:"CR 4.1.8a", board:"both", since:"v2.45", swept:"v4.67",
-  claim:"Simultaneous triggers resolve in a fixed printed order. CR 4.1.8a hands "+
-        "the order to the turn-player.",
-  why:"`beginEndPhase` is six steps in a fixed order and the order is load-bearing "+
-      "for reasons that are NOT the CR's (rust before the idle wipe before the "+
-      "gear sweep — specific readers first). Letting a player reorder them would "+
-      "need a prompt in a phase where CR 4.4.1 gives nobody priority. "+
-      "MEASURED AT v4.67, FAMILY BY FAMILY, because a generic instrument cannot "+
-      "tell an order that DECIDES something from one that does not. BOOST: "+
-      "Hyper Driver's clock and Crankshaft/Big Bertha's put fire on one boost, "+
-      "and v4.23 fixed the order as tick-first on the strength of a Driver with "+
-      "NO counters — unreachable, since every steam remover in the pool removes "+
-      "from its own permanent. At ONE counter tick-first destroyed the Driver; "+
-      "put-first is weakly dominant in every reachable state and is now the "+
-      "order (drilled, with the premise pinned). END PHASE: the only step pair "+
-      "whose order changes an outcome is Inertia against a heave, recorded as "+
-      "`heave-window`; ward spends are `ward-spend-order`. ONE OPEN QUESTION IS "+
-      "NOT AN ORDER AT ALL: Arakni's brood step returns an Agent and then lets "+
-      "Arakni become one again IN THE SAME END PHASE. Whether a trigger can fire "+
-      "for a hero who was not the hero when that end phase began is a question "+
-      "about which triggers EXIST at the event, and nothing here sources an "+
-      "answer — it waits on a ruling rather than a guess."},
+  status:"stated", cr:"CR 4.1.8a", board:"both", since:"v2.45", swept:"v5.11",
+  claim:"Simultaneous triggers resolve in a fixed order. CR 4.1.8a hands "+
+        "the order to the turn-player, and no sheet asks.",
+  why:"MEASURED AT v5.09-v5.11, EVERY EVENT AT ONCE. A scratch copy of the engine "+
+      "traced every trigger that fires on one event (a play, an attack, a defence, a "+
+      "hit, a discard, an arsenal put, the start and the end of a turn) and the 3-seed "+
+      "ladder ran through it: 630 games, 12,849 hits, 12,887 defences. Every pair that "+
+      "fired together COMMUTES: Kayo's Might beside Beaten Trackers' offer (115 per seed), "+
+      "Refraction Bolters beside Dorinthea's refresh (115), Runechants beside the rite "+
+      "and Malefic Incantation (a token made by the play never pops for it, because the "+
+      "firing set is captured first), the start-of-turn payouts (all additive grants), "+
+      "Crow's Nest beside an arrow's own put trigger, Briar's Earth beside an attack's "+
+      "own on-hit, two Bloodrots. THE TWO PAIRS WHERE THE FIXED ORDER DECIDED SOMETHING "+
+      "WERE NOT ORDERS: a granted \"mark them\" satisfied \"hits a MARKED hero\" on an "+
+      "unmarked hero, because the gate was read after it (v5.09 — whether a trigger "+
+      "EXISTS is decided at the event); and a phantasm pop RETURNED before the "+
+      "defender's own \"when this defends\" triggers ran (v5.10 — they resolve first "+
+      "now, with the attack still on the chain). What is left: the boost pair is "+
+      "decided by dominance (v4.67, put before tick), Inertia against a heave is "+
+      "`heave-window`, the ward spend is `ward-spend-order`, and two questions wait on "+
+      "a RULING rather than a sheet — whether Arakni's brood can return an Agent and "+
+      "become one again in the same end phase (which triggers EXIST, not their order), "+
+      "and whether a clash resolved after its attack was popped still finds an "
+      +"\"attacking hero\" (the engine resolves it before the pop, the reading that "+
+      "needs no ruling). A sheet that asks an order with no observable consequence is a "+
+      "tap that teaches nothing (v3.55), so none is built. THE PROBE PINS THE POOL "+
+      "CENSUS — every precon's events with two or more trigger sources, read off the "+
+      "parse — so a parser change that adds a source moves it and the order is "+
+      "measured again."},
 
 "control-change-steal-built": {
   status:"closed", cr:null, board:"both", since:"v4.68", swept:"v4.74",

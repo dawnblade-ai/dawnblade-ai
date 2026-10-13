@@ -309,7 +309,10 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 16 -> 18 AT v5.03: `instant-pump-own-attack-only` and
      `attack-grant-misses-own-attack`. */
   /* 18 -> 19 AT v5.07: `played-target-partial-resolution`. */
-  assert.equal(n("stated"), 19, "stated count moved");
+  /* 19 -> 20 AT v5.11: `simultaneous-trigger-order` MEASURED — every pair
+     that fires together commutes, and the two that did not were defects
+     (v5.09, v5.10). */
+  assert.equal(n("stated"), 20, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -356,7 +359,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      ruling of 2026-10-04 (statics wait for the flip). */
   /* 3 -> 2 AT v4.94: `scorpio-lightning-attack`, CLOSED by the same
      day's ruling (a resolved Lightning link still counts). */
-  assert.equal(n("open"),    2, "open count moved");
+  /* 2 -> 1 AT v5.11: `simultaneous-trigger-order` is `stated`. */
+  assert.equal(n("open"),    1, "open count moved");
   /* 16 -> 17 AT v4.63: `steam-build-powcard-read`. 17 -> 18 AT v4.66:
      `play-held-on-the-stack`. 19 -> 20 AT v4.72: `x-cost-declared`.
      20 -> 21 AT v4.73: `crush-halving-rider-read`. 21 -> 22 AT v4.74:
@@ -611,18 +615,108 @@ probe("control-change-steal-built", () => {
     "the end of the action phase did not hand it back");
 });
 
-/* CR 4.1.8a hands the order of simultaneous triggers to the turn-player.
-   The observable is that no mechanism exists to ASK: `buildPrompt`'s tag
-   vocabulary has no ordering variant, so a caller that wanted one gets
-   null rather than a sheet. */
+/* CR 4.1.8a hands the order of simultaneous triggers to the turn-player,
+   and no sheet asks. STATED since v5.11: measured over every event, every
+   pair that fires together commutes, and the two that did not were defects
+   that are fixed (v5.09, v5.10) — see the record.
+
+   THE MEASUREMENT IS THE PROBE. Which triggers can share an event is a fact
+   about the PARSE, so the census below reads it: for each precon, every
+   event with two or more trigger sources (cards, the tokens they make and
+   the hero's own passives). The pool is frozen by the Dawnblade format, so
+   this moves only when the PARSER moves — which is exactly when the order
+   has to be measured again. It is an UPPER BOUND: a card's own "when this
+   attacks" never shares its attack with another card's, and the census
+   lists them together anyway, because pinning a narrower claim would be a
+   claim this file cannot drive. */
+function trigEvents(c){
+  const fx = PR.fxParse(c), ev = [];
+  for(const r of ((fx.atkTrigger || {}).on || [])) ev.push("play:" + r);
+  if((fx.onAtk || []).length || (fx.onAtkHero || []).length) ev.push("attacks");
+  const T = {attacks: "attacks", hits: "hit", defends: "defends", play: "play:self",
+             entersLeaves: "enterLeave", weaponHit: "hit", selfHitHero: "hit",
+             discardRandom: "discard", playAura: "play:aura", allyDiesOrPhantasm: "death"};
+  for(const k of ["optCost", "payCost", "millCost"])
+    if(fx[k] && fx[k].trigger) ev.push(T[fx[k].trigger] || ("?" + fx[k].trigger));
+  if(fx.clash || (fx.conds || []).some(x => x && x.alsoDef)) ev.push("defends");
+  if((fx.onHit || []).length || (fx.onHitHero || []).length || (fx.condOnHit || []).length
+     || fx.crush || fx.hitWatch || fx.hitCounter) ev.push("hit");
+  if(fx.boostBanish) ev.push("boost");
+  if(fx.ctrTick) ev.push(fx.ctrTick.on === "boost" ? "boost" : "play:" + fx.ctrTick.on);
+  if((fx.onLeave || []).length || (fx.condOnLeave || []).length || (fx.onDestroy || []).length) ev.push("leave");
+  if((fx.onDeath || []).length) ev.push("death");
+  if((fx.arsenalUp || []).length || fx.arsUpDeck || (fx.deckFaceUp || []).length) ev.push("faceUp");
+  if(fx.chargeSoul) ev.push("charge");
+  if(fx.handWipe || fx.rustDestroy || fx.wipePowIfIdle) ev.push("end");
+  /* a DELAYED on-hit ("the next time you hit") is a hit trigger too */
+  let delayed = false;
+  const walk = v => { if(Array.isArray(v)){ if(v[0] === "hitNext") delayed = true; v.forEach(walk); }
+                      else if(v && typeof v === "object") Object.values(v).forEach(walk); };
+  walk(fx); if(delayed) ev.push("hit");
+  const sd = (fx.ops || []).find(o => o[0] === "selfDestruct");
+  if(sd) ev.push(sd[1] === "end" ? "end" : sd[1] === "turn" ? "start" : "sd:" + sd[1]);
+  return [...new Set(ev)];
+}
+/* The hero passives that TRIGGER, and on what. A static (a discount, a
+   halving, a pregame placement) shares no event and is left out. */
+const PASSIVE_EVENTS = {mightOnFirst6Discard: ["discard"], weaponRefresh: ["hit"],
+  earthOnFirstHeroDmg: ["hit"], lightningOnSecondNonAtk: ["play:nonAtk"],
+  viseraiPassive: ["play:atk", "play:nonAtk"], iceFrostbite: ["play:oppTurn"],
+  energyOnOpt: ["opt"], lyathBoo: ["boo"], becomeAgent: ["end"], returnToBrood: ["end"]};
+function trigCensus(){
+  const db = tdb(), W2 = X.loadData(), out = {};
+  for(const h of W2.HEROES){
+    const b = BL.buildSideDefault(h, G.parseDeck(W2.DECKS[h.k]), db, H.RNG.make("census"), {n: 0}).b;
+    const recs = W2.DECKS[h.k].split("\n").filter(Boolean).map(l => l.split("|"))
+      .map(([, nm, p]) => C.resolveEntry(db, {name: nm, p: +p || 0, code: null, q: 1})).filter(Boolean);
+    const toks = new Set();
+    const walk = v => { if(Array.isArray(v)){ if(v[0] === "token" && typeof v[1] === "string") toks.add(v[1]);
+                          if(v[0] === "rune") toks.add("runechant"); v.forEach(walk); }
+                        else if(v && typeof v === "object") Object.values(v).forEach(walk); };
+    for(const c of recs) walk(PR.fxParse(c));
+    for(const k of Object.keys(PASSIVE_EVENTS)) if(typeof b[k] === "string" && b[k]) toks.add(b[k].toLowerCase());
+    const hero = recs.find(c => (c.ty || []).indexOf("Hero") >= 0);
+    for(const m of String((hero && hero.tx) || "").matchAll(/create an? ([A-Z][\w']*(?: [A-Z][\w']*)*) token/g))
+      toks.add(m[1].toLowerCase());
+    for(const t of toks){ const tc = C.resolveEntry(db, {name: t, p: 0, code: null, q: 1}); if(tc) recs.push(tc); }
+    const srcs = {};
+    for(const c of recs) for(const e of trigEvents(c)) (srcs[e] = srcs[e] || new Set()).add(c.dbName || c.name);
+    for(const [k, evs] of Object.entries(PASSIVE_EVENTS))
+      if(b[k]) for(const e of evs) (srcs[e] = srcs[e] || new Set()).add("hero:" + k);
+    for(const [e, set] of Object.entries(srcs)) if(set.size >= 2) (out[e] = out[e] || {})[h.k] = [...set].sort();
+  }
+  const flat = {};
+  for(const e of Object.keys(out).sort())
+    flat[e] = Object.fromEntries(Object.keys(out[e]).sort().map(k => [k, out[e][k]]));
+  return flat;
+}
 probe("simultaneous-trigger-order", () => {
+  /* THE DEVIATION: there is no mechanism to ASK. `buildPrompt` has no
+     ordering variant, so a caller that wanted one gets null, and the end
+     phase's order is one fixed description. */
   const g = H.state({hand:[], deck:[]}, {});
   assert.equal(PM.buildPrompt(g, {tag:"trigorder", side:0, options:[1,2]}), null,
     "an ordering prompt now builds — CR 4.1.8a is BUILD-ABLE and the record must move");
-  /* And the end phase's order is FIXED: two runs of the same state agree. */
   const a = E.beginEndPhase(H.state({hand:[{uid:1,name:"X",tt:"Generic Action",ty:["Generic","Action"],tx:"",kw:[]}]}, {}), 0);
   const b = E.beginEndPhase(H.state({hand:[{uid:1,name:"X",tt:"Generic Action",ty:["Generic","Action"],tx:"",kw:[]}]}, {}), 0);
   assert.deepEqual(a.msgs, b.msgs, "the end-phase order is no longer deterministic");
+  /* THE MEASUREMENT: which triggers can share an event, per precon. A
+     source arriving or leaving here is a parser change that can make an
+     order observable — re-run the trace (CHANGELOG v5.09-v5.11) before
+     moving this pin. */
+  assert.deepEqual(trigCensus(), {
+    "attacks": {"arakni": ["Hyper Inflation", "Pick Up the Point"], "briar": ["Jack Be Quick", "Path of Same Ends"], "gravy": ["Golden Tipple", "Jittery Bones"], "viserai": ["Runic Fellingsong", "Spellblade Assault", "Vexing Malice"]},
+    "boost": {"dash": ["Big Bertha", "Crankshaft", "Hyper Driver"]},
+    "defends": {"bravo": ["Clash of Vigor", "Crash and Bash"], "iyslander": ["Brothers in Arms", "Fyendal's Fighting Spirit"], "kayo": ["Clash of Agility", "Clash of Might", "Test of Might"], "lyath": ["Brothers in Arms", "Full of Bravado", "Stonewall Impasse"]},
+    "discard": {"kayo": ["Beaten Trackers", "hero:mightOnFirst6Discard"]},
+    "end": {"arakni": ["Bloodrot Pox", "Frailty", "Inertia", "hero:becomeAgent"], "azalea": ["Bloodrot Pox", "Frailty", "Inertia"]},
+    "faceUp": {"azalea": ["Crow's Nest", "Dry Powder Shot", "Entangling Shot", "Ridge Rider Shot", "Spire Sniping", "Swift Shot"]},
+    "hit": {"arakni": ["Art of Desire: Body", "Art of Desire: Mind", "Infect", "Mark of the Black Widow", "Mark of the Funnel Web", "Mark of the Huntsman", "Mark the Prey", "Scar Tissue", "Spike with Bloodrot"], "azalea": ["Bolt'n' Shot", "Drill Shot", "Infecting Shot", "Searing Shot"], "boltyn": ["Banneret of Salvation", "Bolt of Courage", "Engulfing Light", "Illuminate", "Light the Way", "Snatch"], "bravo": ["Boulder Drop", "Buckling Blow", "Cartilage Crush", "Chokeslam", "Crush the Weak", "Debilitate", "Disable", "Fault Line", "Flatten the Field"], "briar": ["Burn Up // Shock", "Jack Be Quick", "Rush of Power", "Scorpio, Comet Tail", "Snatch", "Static Shock", "hero:earthOnFirstHeroDmg"], "dash": ["Boom Grenade", "Under Loop"], "dorinthea": ["Dawnblade", "Refraction Bolters", "Wreck Havoc", "hero:weaponRefresh"], "fai": ["Hot on Their Heels", "Mounting Anger", "Rising Resentment", "Snatch"], "lyath": ["Goon Beatdown", "Goon Tactics", "Short Shrift", "Walk in My Shoes", "Wee Wrecking Ball"]},
+    "leave": {"enigma": ["Phantasmal Haze", "Waning Vengeance"], "lyath": ["Act of Glory", "Booze!", "Edge of Their Seats", "Tension in the Air"]},
+    "play:atk": {"briar": ["Embodiment of Lightning", "Runechant"], "viserai": ["Runechant", "hero:viseraiPassive"]},
+    "play:weapon": {"boltyn": ["Courage", "Flurry"]},
+    "start": {"dorinthea": ["Agility", "Vigor"], "kayo": ["Agility", "Might", "Vigor"], "lyath": ["Booze!", "Confidence", "Might"]},
+  }, "a trigger source arrived or left — measure the order again before re-pinning");
 });
 
 /* Oasis Respite names a TARGET HERO and a SOURCE and the engine reads
