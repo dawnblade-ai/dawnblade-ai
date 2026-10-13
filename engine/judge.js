@@ -2198,7 +2198,16 @@ function strike(g){
     n = put(n, def, s => ({...s, hp: s.hp - total}));
   }
 
-  n = {...n, pend: {...link, dealt: total, wall, handBlockers}};
+  /* THE POST-PUMP LINK, NOT THE ONE CAPTURED BEFORE IT (v5.18). `link` is
+     `pend` as it stood when the wall was totalled, and `linkPumps` writes
+     onto `n.pend` afterwards: the late conditions' go again (Pulping's
+     "defended by fewer than 2 non-equipment cards", Bolt'n' Shot's
+     "pumped") and the struck total `_struck`. Rebuilt from `link` alone,
+     both were thrown away, so the printed action point never arrived at
+     this board while the trainer, which keeps `n.pend`, granted it (QUEUE
+     item 5). `link` stays underneath, so nothing the link carried is lost
+     if a later writer replaced `pend`. */
+  n = {...n, pend: {...link, ...(n.pend || {}), dealt: total, wall, handBlockers}};
 
   /* PIECE TWO — the payload. Everything the link DOES now that its damage
      has landed: its own ops, its on-hit clauses, the weapon's earned

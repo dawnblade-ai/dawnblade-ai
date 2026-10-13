@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.17
+**Current version:** v5.18
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3528 drills** at v5.17.
+This is `node --test "test/*.test.js"` — **3532 drills** at v5.18.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -868,6 +868,15 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### THE LINK AFTER THE PUMPS IS THE LINK (v5.18)
+
+`judge.strike` rebuilt `pend` from the link it captured before `linkPumps`, so the
+late conditions' go again (Pulping, Bolt'n' Shot) and the struck power `_struck` were
+thrown away at the table while the trainer kept them (QUEUE item 5;
+`test/latega.test.js`). The rebuild spreads the post-pump `pend` over the captured
+one. **When a function captures state and a callee writes it, rebuild from what the
+callee left.**
 
 ### A PRICE WHOSE PIECE IS GONE LAPSES (v5.17)
 

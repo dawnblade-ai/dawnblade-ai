@@ -1,3 +1,31 @@
+## v5.18 — A late go again reaches the table
+
+> *"If this is defended by fewer than 2 non-equipment cards, it gets go again."* —
+> PULPING · *"If this card's {p} is greater than its base, it gets go again and \"When
+> this hits, reload.\""* — BOLT'N' SHOT
+
+**QUEUE item 5, CEO-verified and re-verified here** with the finding's own script.
+Both conditions can only be answered once the wall exists, so `linkPumps` settles them
+and writes `pend.ga` and the struck power `_struck` onto the link. `judge.strike` then
+rebuilt `pend` from the link it had captured BEFORE `linkPumps` ran, and both fields
+were thrown away. Pulping with one blocker left its controller at 0 action points where
+it prints a go again, at the CR-exact board only: the trainer keeps `n.pend` and
+granted it.
+
+**THE SECOND FIELD WAS A SECOND DEFECT.** Bolt'n' Shot's hit-time "reload" asks
+`_struck`. With it dropped, the gate fell back to the DECLARED power, so a reaction's
+pump was invisible to it and the printed reload was never offered at the table. The
+rebuild now spreads the post-pump `pend` over `link`, so anything a pump writes
+survives.
+
+Measured: exactly two pool cards carry a late go again (pinned). **4 sabotages, 4
+bite**: back to `link` alone, dropping `ga` only, dropping `_struck` only, and the
+post-pump pend placed under the link. The ladder reshuffles, because Pulping now keeps
+its point at the table: every hero's mean moves by at most 0.4 wins a seed against a
+band of median 3. Scenario C of the finding (one blocker plus a played defence
+reaction) now keeps its point too, which is QUEUE item 7's defect becoming visible: a
+played defence reaction is not counted as a defender.
+
 ## v5.17 — A "destroy this" price whose piece is gone is not a price
 
 > *"When this hits a hero, you may choose to destroy this and mark them."* — MARK OF
