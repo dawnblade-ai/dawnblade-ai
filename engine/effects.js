@@ -3940,6 +3940,23 @@ function makeEffects(ctx){
       n = runOps(n, pre, card.name);
       pre.forEach(o=>preRan.add(o));
     }
+    /* THE COUNTER CLOCK FIRES BEFORE THE CONDITIONS ARE READ (v5.19 moved
+       it here from the attack branch, QUEUE N3). Malefic Incantation prints
+       "when you PLAY an attack action card, remove a verse counter … create
+       a Runechant token": a trigger on the play, which resolves above the
+       attack, so its Runechant exists before the attack does anything. Read
+       after the loop, Hit the High Notes, Shrill of Skullform and Runerager
+       Swarm ("if you've played or created an aura this turn") never saw the
+       Runechant the very card they are had just made, and the defender
+       blocked an attack two or three short of its printed power.
+
+       IT STAYS BELOW THE FIRING-SET CAPTURE at the top of this function
+       (`atkTrigAt`), so a Runechant minted here does not pop on the swing
+       that made it — v2.23's rule, and the reason it cannot move higher.
+       Measured: Malefic is the only `atkPlay` clock in the pool, and its
+       only op mints a Runechant. */
+    if(isAtkActionCard(card) && from !== "weapon" && from !== "ally" && from !== "aura")
+      n = ctrClock(n, "atkPlay");
     fx.conds.forEach(({cond,op,instead,atkHero,wpnOnly})=>{
       /* "THIS CARD'S ATTACKS GET …" IS ABOUT THE SWING, NOT THE CARD
          (v3.58). Three pool weapons print a conditional static on their
@@ -4632,8 +4649,7 @@ function makeEffects(ctx){
          was in NO zone — which `invariants.js` cannot see, because its
          census catches a card in TWO zones and one in none falls out of
          it silently. `sweepArena` files it, turn-stamped. */
-      if(isAtkActionCard(card) && from !== "weapon" && from !== "ally" && from !== "aura")
-        n = ctrClock(n, "atkPlay");
+      /* (the play clock fired above the condition loop — v5.19) */
       /* PAID AT THE HOLD, AT THE TABLE (v4.91) — `judge.holdPlay` takes the
          discard when the card is played, and the cards ride in here as
          `_addDiscPaid` so the rider below reads them and nothing is paid

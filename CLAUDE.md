@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.18
+**Current version:** v5.19
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3532 drills** at v5.18.
+This is `node --test "test/*.test.js"` — **3537 drills** at v5.19.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -868,6 +868,15 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A PLAY TRIGGER RESOLVES BEFORE THE CARD'S CONDITIONS (v5.19)
+
+Malefic Incantation's "when you play an attack action card … create a Runechant" ticked
+after the condition loop, so Hit the High Notes, Shrill of Skullform and Runerager Swarm
+never saw the aura their own play had created (QUEUE N3). The clock fires above the
+loop and below the Runechant pop's firing-set capture (`test/playclock.test.js`). **When
+you move a call above a branch, the guards it carried may start doing work: drill the
+case the branch used to exclude.**
 
 ### THE LINK AFTER THE PUMPS IS THE LINK (v5.18)
 

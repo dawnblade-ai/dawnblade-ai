@@ -1,3 +1,30 @@
+## v5.19 — A play trigger resolves before the card's conditions are read
+
+> *"Once per turn, when you play an attack action card, remove a verse counter from
+> this. If you do, create a Runechant token."* — MALEFIC INCANTATION · *"If you've
+> played or created an aura this turn, this gets +2{p}."* — HIT THE HIGH NOTES (+3
+> SHRILL OF SKULLFORM, go again RUNERAGER SWARM)
+
+**QUEUE N3, CEO-verified and re-verified here** on all three cards. `execute` read
+the condition loop first and ticked Malefic's counter clock four hundred lines later,
+so the Runechant the play itself created was invisible to the card that played it.
+The feed showed "condition not met (no aura played or created this turn)" and then
+"+1 Runechant". The trigger resolves above the attack, so its token exists before the
+attack does anything. The three cards lost +2, +3 and an action point, and the
+defender blocked an attack short of its printed power.
+
+**The clock now fires just above the condition loop**, which is still below the
+Runechant pop's firing-set capture at the top of `execute` (v2.23), so the new
+Runechant waits for the next swing. **It moved above the attack/non-attack split, so
+its card-type guard is now load-bearing**: dropping it would peel a verse counter off
+every non-attack Viserai plays, and a drill holds that.
+
+Measured: Malefic is the pool's only `atkPlay` clock and its only op mints a Runechant
+(pinned with the three aura-turn cards). **3 sabotages, 3 bite.** The one that came back
+silent first was the card-type guard against a weapon swing, which the route guard also
+excludes; a non-attack from hand is the row that bites. The ladder moves one game
+(Viserai 12.7 → 13.0 a seed, Enigma 15.3 → 15.0), inside the band.
+
 ## v5.18 — A late go again reaches the table
 
 > *"If this is defended by fewer than 2 non-equipment cards, it gets go again."* —
