@@ -1,3 +1,36 @@
+## v5.10 — a phantasm pop does not swallow the defender's triggers
+
+> *"When this defends, clash with the attacking hero. The winner creates a Might
+> token."* — CLASH OF MIGHT, 6{p} · *"When this defends, you may reveal a card with
+> crush from your hand. If you do, create a Seismic Surge token."* — CRASH AND BASH
+
+**The second defect the trigger-order measurement found.** Phantasm ("when this is
+defended by a non-Illusionist attack action card with 6 or more {p}, destroy this")
+and every "when this defends" trigger fire on ONE event, the wall becoming final.
+`afterDefenders` handled the pop and **returned**, so `defendsTriggers` never ran.
+Clash of Might, Clash of Agility, Clash of Vigor and Brothers in Arms are 6-power
+non-Illusionist attack action cards, so each IS a popper and lost its own trigger
+every time it popped an Enigma attack.
+
+Measured on the 3-seed ladder: **12 pops in 630 games, 3 carrying a defend trigger
+that never resolved** — Crash and Bash's offer (Bravo), Clash of Might's clash
+(Kayo) and Fyendal's Fighting Spirit's life gain (Iyslander). Weaker than printed,
+so the one-sided fairness sweep could not see it, and all three read `tier: full`.
+
+**The defender's triggers resolve first, with the attack still on the chain.**
+Whichever order the CR hands out, the pop cannot touch them: it reads only the
+declared wall, and none of them changes the wall. The one that reads the attack is
+clash ("clash with the ATTACKING hero"), and resolving it while the attack exists
+needs no ruling about a hero whose attack has already gone. Their sheets drain at
+whichever exit `afterDefenders` takes.
+
+Measured: driven, the three games now clash (a tie), offer Crash and Bash (the
+policy declines) and gain the life, and the Fyendal game runs two turns longer with
+the same winner. The ladder at three seeds is identical on both sides apart from
+one route counter (`held` 9665 → 9666). A ladder taken while a sabotage was in
+flight differed and was discarded, then re-run clean. Fairness is clean and the 107
+scenes pass. 6 sabotages, 6 bite.
+
 ## v5.09 — a hit on an unmarked hero is not a hit on a marked hero
 
 > *"Stealth / When this hits a marked hero, they banish a card from their hand."*

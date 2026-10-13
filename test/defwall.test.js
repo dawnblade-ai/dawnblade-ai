@@ -274,7 +274,10 @@ test("`afterDefenders` still runs the families, through the shared body", {skip}
   const slice = body.slice(i, j > i ? j : i + 4000);
   assert.match(slice, /defendsTriggers\(n, 1 - actorOf\(n\), wall, gearWall\)/,
     "the attacker's path derives the DEFENDER as 1 - actor, and hands it in");
-  assert.match(slice, /if\(r\.queued\) n = openPrompt\(n\)/,
+  /* `_dt` since v5.10, when the triggers moved ABOVE the phantasm pop —
+     the pop used to return before they ran (`test/phantasmdefends.test.js`
+     drives that half). */
+  assert.match(slice, /if\(_dt\.queued\) n = openPrompt\(n\)/,
     "…and drains only what it queued");
   /* AND IT KEEPS PHANTASM, which is the half that genuinely needs the
      attacking CARD and is why the block path could not call this function

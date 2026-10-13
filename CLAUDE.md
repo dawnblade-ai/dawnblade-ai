@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.09
+**Current version:** v5.10
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3485 drills** at v5.09.
+This is `node --test "test/*.test.js"` — **3489 drills** at v5.10.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,17 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A POP DOES NOT SWALLOW THE DEFENDER'S TRIGGERS (v5.10)
+
+Phantasm and "when this defends" fire on one event, the wall becoming final, and
+`afterDefenders` returned on a pop before `defendsTriggers` ran. Four 6-power
+attack action cards with a defend trigger (Clash of Might, Agility, Vigor and
+Brothers in Arms) are themselves poppers, so each lost its own trigger. The
+defender's triggers now resolve first, with the attack still on the chain, which is
+the order that needs no ruling about "the attacking hero" after the attack is gone
+(`test/phantasmdefends.test.js`). **When a branch returns early, ask what else that
+event triggered.**
 
 ### A TRIGGER EXISTS AT THE EVENT; ITS ORDER IS DECIDED AFTER (v5.09)
 

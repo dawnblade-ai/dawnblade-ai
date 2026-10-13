@@ -6712,6 +6712,38 @@ function makeEffects(ctx){
        phantasm reads no other kind. */
     const card = d ? d.card : (n.pend && n.pend.card);
     if(!card) return n;
+    /* "WHEN THIS DEFENDS, …" FIRES HERE, ON BOTH BOARDS (v3.33).
+
+       This is the moment the wall is FINAL and both boards already reach
+       it — which is the whole reason the trigger lives here rather than at
+       the declaration toggle, where a defender can still be withdrawn.
+       The wall is the CALLER's answer, exactly as phantasm's is.
+
+       IT IS ADDRESSED TO THE DEFENDER, not the actor. Inside a link the
+       actor is the ATTACKER (judge sets it from `link.by`, and the
+       trainer's block path keeps seat 0 for the swing), so billing
+       `actorOf(n)` here would offer the attacking hero a choice printed on
+       their opponent's blocker — the self/foe pairing `selfPayOr` and
+       `payOr` already keep apart. */
+    /* THE DEFENDER'S TRIGGERS RESOLVE BEFORE THE POP (v5.10). Phantasm
+       ("when this is defended by …") and every "when this defends" fire on
+       ONE event, the wall becoming final, and this function used to handle
+       the pop and RETURN — so the defender's triggers never ran. Clash of
+       Might, Clash of Agility, Clash of Vigor and Brothers in Arms are
+       6-power non-Illusionist attack action cards: each IS a popper, so
+       each lost its own trigger every time it popped one. Found by
+       measuring `simultaneous-trigger-order`: 12 pops in 630 ladder games,
+       3 with a defend trigger that silently never resolved.
+
+       FIRST, WITH THE ATTACK STILL ON THE CHAIN. CR 4.1.8a's order is
+       unobservable here in either direction for every defend trigger the
+       pool prints: the pop reads only the declared wall, which none of them
+       changes, and none of them reads the attack except clash — "clash
+       with the ATTACKING hero" — which needs no ruling about a hero whose
+       attack has already gone if it resolves while the attack is there.
+       Their sheets drain at whichever exit this function takes. */
+    const _dt = defendsTriggers(n, 1 - actorOf(n), wall, gearWall);
+    n = _dt.game;
     /* PHANTASM: a defender destroys this attack outright ("popping" it).
        Because the card is destroyed its go again never resolves and the
        action point is not refunded, so the pend is torn down here rather
@@ -6771,29 +6803,12 @@ function makeEffects(ctx){
         return openPrompt(winCheck(n));
       }
     }
-    /* "WHEN THIS DEFENDS, …" FIRES HERE, ON BOTH BOARDS (v3.33).
-
-       This is the moment the wall is FINAL and both boards already reach
-       it — which is the whole reason the trigger lives here rather than at
-       the declaration toggle, where a defender can still be withdrawn.
-       The wall is the CALLER's answer, exactly as phantasm's is.
-
-       IT IS ADDRESSED TO THE DEFENDER, not the actor. Inside a link the
-       actor is the ATTACKER (judge sets it from `link.by`, and the
-       trainer's block path keeps seat 0 for the swing), so billing
-       `actorOf(n)` here would offer the attacking hero a choice printed on
-       their opponent's blocker — the self/foe pairing `selfPayOr` and
-       `payOr` already keep apart. */
-    {
-      const r = defendsTriggers(n, 1 - actorOf(n), wall, gearWall);
-      n = r.game;
-      /* DRAIN ONLY IF THIS FIRED. A blanket `openPrompt` here opens
-         whatever else happened to be waiting in the queue, mid-combat, and
-         a live sheet stops the game for both seats — three drills stalled
-         at the damage step on cards that print no defends trigger at all.
-         A prompt is drained by whoever queued it. */
-      if(r.queued) n = openPrompt(n);
-    }
+    /* DRAIN ONLY IF THIS FIRED. A blanket `openPrompt` here opens
+       whatever else happened to be waiting in the queue, mid-combat, and
+       a live sheet stops the game for both seats — three drills stalled
+       at the damage step on cards that print no defends trigger at all.
+       A prompt is drained by whoever queued it. */
+    if(_dt.queued) n = openPrompt(n);
     return n;
   };
 
