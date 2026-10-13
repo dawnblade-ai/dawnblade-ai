@@ -1,3 +1,40 @@
+## v5.16 — A token that leaves the arena ceases to exist
+
+**QUEUE item 3, CEO-verified and re-verified here.** At the end of Enigma v Lyath
+(seed s3, Lyath first), Lyath's graveyard held twelve Might tokens, and Pass Over then
+offered one as a legal banish. Five sites in the engine had said "a token that leaves
+the arena ceases to exist" since v2.23: the Runechant pop, the trigger pop, Frostbite's
+shatter, the end-phase sweep's header, and `popRunechants`. The rest of the writers did
+not ask. A tracer over the 630 ladder games found them:
+
+| writer | tokens it filed |
+|---|---|
+| `sweepArena` (the turn-start and end-phase clocks) | Might, Vigor, Agility, Confidence, Embodiment of Earth, Bloodrot Pox, Frailty |
+| the context's `gy` (both boards) | a ward permanent spending itself (Spectral Shield), Gravy Bones' Gold cost, the Robe's Runechant |
+| `tickSuspense`, `sweepGear`, `damageAlly`, `prompts.moveCards` | the same rule, not reached in the ladder |
+
+**`parser.ceasesToExist(card, to)` is the one reader.** A token ceases to exist bound
+for any zone outside the arena (the board and the gear). An ephemeral card ceases to
+exist only instead of being put into a graveyard (Crouching Tiger's printed reminder
+text). Both boards' graveyard funnels ask it, as do the three pure writers and
+`moveCards`. `game.damageAlly` reads no card types, so it takes the reader from its one
+caller.
+
+**AND THE STATE IS ASKED, NOT A LIST OF WRITERS.** `invariants.js` names a token
+anywhere but the board and the gear (`TOKEN-OUT-OF-ARENA`), so a writer nobody
+remembered fails every self-play game rather than being trusted. Measured after the
+fix: the tracer finds 0 tokens outside the arena in 630 games, and the cup reports 0
+violations in 284.
+
+**Seven drills and three scenes asserted that a token REACHED a graveyard.** That was
+the defect pinned as a rule (v3.13). Each now asserts the token is gone, with a
+non-token control beside it. Gravy Bones' cost-before-effect drill reads the order off
+a non-token permanent named Gold, because a token Gold leaves no card to order.
+
+Measured: **15 sabotages, 15 bite.** The ladder's wins are byte-identical at three seeds
+on both sides. One counter moved, `destroycost` 813 → 812: a Graphene Chelicera token
+can no longer be retrieved from a graveyard.
+
 ## v5.15 — A board attack costs an action point, whatever the card is
 
 > *"…auras you control with ward are weapons with base {p} equal to their ward and

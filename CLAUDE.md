@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.15
+**Current version:** v5.16
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3510 drills** at v5.15.
+This is `node --test "test/*.test.js"` — **3522 drills** at v5.16.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -868,6 +868,16 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A TOKEN THAT LEAVES THE ARENA CEASES TO EXIST (v5.16)
+
+Five sites had said so since v2.23, and the writers a tracer found over the ladder
+did not ask (QUEUE item 3: twelve Might in one graveyard, and Pass Over offering one).
+`parser.ceasesToExist(card, to)` is the one reader: a token outside the board and gear,
+an ephemeral card bound for a graveyard. Every graveyard funnel asks it, and
+`invariants.js` names a token anywhere else (`TOKEN-OUT-OF-ARENA`), so a forgotten writer
+fails self-play (`test/tokenzone.test.js`). **When a rule is stated at five sites, census
+the writers it governs, then make the STATE the guard, not the list.**
 
 ### A BOARD ATTACK COSTS A POINT WHATEVER THE CARD IS (v5.15)
 
@@ -13781,9 +13791,12 @@ it carded effects only once the engine can actually read them.
   tokens — both are in `NEEDED` so the loader fetches them even though no deck
   lists them. Anything else minted by an effect must be added there too, and
   `DATA_VER` bumped, or a warm cache will not have it.
-- **Ephemeral** is enforced in the `gy()` helper — the single path into the
-  graveyard — straight off Crouching Tiger's printed reminder text: "if it would
-  be put into a graveyard from anywhere, instead it ceases to exist."
+- **Ephemeral** is enforced through `parser.ceasesToExist`, straight off Crouching
+  Tiger's printed reminder text: "if it would be put into a graveyard from anywhere,
+  instead it ceases to exist." This note used to call `gy()` "the single path into
+  the graveyard", and it never was: v5.16 found five writers that bypassed it. The
+  same reader now drops a TOKEN leaving the arena, and `TOKEN-OUT-OF-ARENA` guards
+  the state.
 - **Clash resolves on DEFENCE** (fixed v2.12). Every clash card in the pool reads
   "When this defends, clash with the attacking hero" — it fires when the card blocks.
   It used to fire when the card was played as an attack, which is simply the wrong

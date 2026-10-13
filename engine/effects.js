@@ -8670,7 +8670,9 @@ function tickSuspense(game, seat){
   }
   if(!fired.length && !msgs.length) return {game, fired: [], msgs: [], ops: []};
   sd.board = keep;
-  if(grave.length) sd.grave = [...grave.map(c => Object.assign({}, c, {_gy: game.turn})), ...(sd.grave || [])];
+  /* a token that runs out of suspense ceases to exist (v5.16) */
+  const filed = grave.filter(c => !P.ceasesToExist(c));
+  if(filed.length) sd.grave = [...filed.map(c => Object.assign({}, c, {_gy: game.turn})), ...(sd.grave || [])];
   sides[seat] = sd;
   return {game: Object.assign({}, game, {sides}), fired, msgs, ops};
 }
@@ -9494,8 +9496,12 @@ function sweepArena(game, seat, when){
      controller's trigger is paid above — CR's "when this dies" belongs to
      whoever controls it — but the card goes home. */
   const away = b => b.owner != null && b.owner !== seat;
-  sd.grave = [...dying.filter(b => !away(b)).map(b => Object.assign({}, b.card, {_gy: game.turn})), ...(sd.grave || [])];
-  for(const b of dying.filter(away)){
+  /* AND A TOKEN IS FILED NOWHERE (v5.16): it ceases to exist as it leaves
+     the arena. This sweep was the writer behind most of QUEUE item 3's
+     graveyards of Might, Vigor and Embodiment of Earth. */
+  const filed = dying.filter(b => !P.ceasesToExist(b.card));
+  sd.grave = [...filed.filter(b => !away(b)).map(b => Object.assign({}, b.card, {_gy: game.turn})), ...(sd.grave || [])];
+  for(const b of filed.filter(away)){
     const c = Object.assign({}, b.card, {_gy: game.turn}); delete c._owner;
     sides[b.owner] = Object.assign({}, sides[b.owner], {grave: [c, ...((sides[b.owner] || {}).grave || [])]});
   }
@@ -10041,8 +10047,11 @@ function sweepGear(game, seat){
      banished piece there would hand it back a card the text removed from
      the game. One sweep, because the index hazard v3.54 names is the same
      for both, and one mark says which. */
-  const banished = gone.filter(g => g._banished);
-  const destroyed = gone.filter(g => !g._banished);
+  /* A TOKEN IN THE GEAR ZONE (an equipped Graphene Chelicera, v4.15) is
+     in the arena, so destroying or banishing it makes it cease to exist
+     rather than filing it (v5.16). */
+  const banished = gone.filter(g => g._banished && !P.ceasesToExist(g, "banish"));
+  const destroyed = gone.filter(g => !g._banished && !P.ceasesToExist(g));
   me.grave = [...destroyed.map(g => Object.assign({}, g, {_gy: game.turn})), ...(sd.grave || [])];
   if(banished.length) me.banish = [...banished.map(g => Object.assign({}, g)), ...(sd.banish || [])];
   sides[seat] = me;
@@ -10051,7 +10060,9 @@ function sweepGear(game, seat){
   const whose = G.sp((game.sides || [])[seat] || {name: "seat " + seat});
   return {
     game: Object.assign({}, game, {sides}),
-    msgs: gone.map(g => g._banished
+    msgs: gone.map(g => P.isToken(g)
+      ? `${g.name} is ${g._banished ? "banished" : "destroyed"} — a token, it ceases to exist.`
+      : g._banished
       ? `${g.name} is banished — it is out of ${whose} game for good.`
       : `${g.name} is destroyed — it goes to ${whose} graveyard.`),
     moved: gone.map(g => g.uid)};

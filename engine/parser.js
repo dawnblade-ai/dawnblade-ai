@@ -9982,6 +9982,36 @@ const abWindow = ab => ab && ab._attackRx ? "attack-reaction"
 const isHandWipe = c => !!(c && fxParse(c).handWipe);
 
 const isEphemeral = c => printedKw(c, "ephemeral");
+/* A TOKEN, off the structured array (v5.16) — `isArrowCard`'s shape, with
+   the same fallback to the FRONT of the printed line for a record that has
+   no array (a hand-built fixture, a warm old cache). */
+const isToken = c => {
+  if(!c) return false;
+  if(Array.isArray(c.ty) && c.ty.length && !/\/\//.test(c.tt || ""))
+    return c.ty.some(t => /^token$/i.test(String(t)));
+  return /\btoken\b/i.test(frontFace(c));
+};
+/* DOES THIS CARD CEASE TO EXIST ON ITS WAY TO `to`? (v5.16)
+
+   Two rules, and they differ in WHERE:
+     a TOKEN that leaves the arena ceases to exist, whatever zone it was
+       headed for; five sites in this engine have said so since v2.23 (the
+       Runechant pop, the trigger pop, Frostbite's shatter, the end-phase
+       sweep's header, `popRunechants`) and the rest of the writers did not;
+     an EPHEMERAL card ceases to exist only instead of being put into a
+       GRAVEYARD (Crouching Tiger's printed reminder text), so it may still
+       reach a hand or a deck.
+   `to` defaults to the graveyard, which is what every funnel that asks it
+   files into. The arena is the board and the gear (an equipped Graphene
+   Chelicera token is in the arena), and a move between those two is not a
+   departure. QUEUE item 3: twelve Might tokens sat in one graveyard by the
+   end of a game, and Pass Over then offered one as a legal banish. */
+const ARENA_ZONES = ["board", "gear"];
+const ceasesToExist = (c, to) => {
+  const dest = to || "grave";
+  if(ARENA_ZONES.indexOf(dest) >= 0) return false;
+  return isToken(c) || (dest === "grave" && isEphemeral(c));
+};
 const abSoulCost = ab => (ab && ab._soulCost) || 0;
 /* ITS SIBLING (v3.79) — does the ability ALSO banish its own source?
    One reader, for the same reason `abSoulCost` is one: a cost read in one
@@ -10436,6 +10466,6 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, spellvoidX, linksControlled, arcaneSoaks,
         ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
-        chiValue, chiSum, chiFloating, pitchExcessWhy, chiCeiling, payCeiling, handFree, isDeclaredDefender, PLAY_ROUTES, isCardPlay, isNonAtkActionPlay, abChiCost, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, swingSpentWhy, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, abilitiesLive, boardEntryNamed, isEphemeral, isHandWipe, gyFirstGaKw,
+        chiValue, chiSum, chiFloating, pitchExcessWhy, chiCeiling, payCeiling, handFree, isDeclaredDefender, PLAY_ROUTES, isCardPlay, isNonAtkActionPlay, abChiCost, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, swingSpentWhy, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, abilitiesLive, boardEntryNamed, isEphemeral, isToken, ceasesToExist, ARENA_ZONES, isHandWipe, gyFirstGaKw,
         CARD_OVERRIDES};
 });

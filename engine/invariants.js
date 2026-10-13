@@ -32,9 +32,9 @@
      "warn"  — legal but almost certainly a mistake.
    ============================================================ */
 (function(root, factory){
-  if(typeof module==="object" && module.exports) module.exports = factory(require("./sides.js"), require("./priority.js"));
-  else root.DawnInvariants = factory(root.DawnSides, root.DawnPriority);
-})(typeof self!=="undefined" ? self : this, function(S, P){
+  if(typeof module==="object" && module.exports) module.exports = factory(require("./sides.js"), require("./priority.js"), require("./parser.js"));
+  else root.DawnInvariants = factory(root.DawnSides, root.DawnPriority, root.DawnParser);
+})(typeof self!=="undefined" ? self : this, function(S, P, PR){
 
 /* Zones that hold an ARRAY of cards. `arsenal` is deliberately absent:
    it holds a single card or null, which is its own check below. */
@@ -124,6 +124,34 @@ function check(game){
       err("ARSENAL-SHAPE", "sides[" + si + "].arsenal holds a single card or null, got " + typeof sd.arsenal);
     if(Array.isArray(sd.arsenal))
       err("ARSENAL-SHAPE", "sides[" + si + "].arsenal is an array — it holds ONE card or null");
+  });
+
+  /* ---- a token is in the arena, or it does not exist (v5.16) ---------
+     A token that leaves the arena ceases to exist, and `parser.
+     ceasesToExist` is the one reader every graveyard funnel asks. QUEUE
+     item 3 found five writers that never asked: twelve Might tokens in one
+     graveyard, and Pass Over offering one as a banish. A census of every
+     writer is a list somebody forgets to extend, so the state is asked
+     instead, the way a stolen card off a board is (v4.74). The arena is
+     the board and the gear; every other zone, the arsenal and the combat
+     chain included, is an error. Guarded on `PR` so a caller loading this
+     module without the parser keeps every other check. */
+  if(PR && PR.isToken) sides.forEach((sd, si) => {
+    const out = [];
+    for(const z of LIST_ZONES){
+      if(PR.ARENA_ZONES.indexOf(z) >= 0 || !Array.isArray(sd[z])) continue;
+      for(const c of sd[z]) if(PR.isToken(c)) out.push([z, c]);
+    }
+    if(sd.arsenal && PR.isToken(sd.arsenal)) out.push(["arsenal", sd.arsenal]);
+    for(const [z, c] of out)
+      err("TOKEN-OUT-OF-ARENA", "\"" + nameOf(c) + "\" is a token in sides[" + si + "]." + z +
+          " — a token that leaves the arena ceases to exist", String(uidOf(c)));
+  });
+  (game.chainCards || []).forEach(entry => {
+    const c = entry && (entry.card || entry);
+    if(PR && PR.isToken && PR.isToken(c))
+      err("TOKEN-OUT-OF-ARENA", "\"" + nameOf(c) + "\" is a token on the combat chain — an activation leaves its card where it is",
+          String(uidOf(c)));
   });
 
   /* ---- a stolen card is on a board, or it has gone home (v4.74) ------

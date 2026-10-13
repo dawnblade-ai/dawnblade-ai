@@ -129,14 +129,17 @@ module.exports = [
       "with no Gold it is refused":          /Gold/.test(String(broke || "")),
       "…and asking does not tap him":        g0.sides[0].heroTapped,
       "the Gold leaves the arena":           (n.sides[0].board || []).length,
-      "…for the GRAVEYARD, turn-stamped":    (gv.find(x => x.name === "Gold") || {})._gy,
+      /* A GOLD IS A TOKEN, so it ceases to exist rather than reaching the
+         graveyard (v5.16). This used to want it there, turn-stamped. */
+      "…and ceases to exist — no Gold is filed": gv.filter(x => x.name === "Gold").length,
       "he drew one and discarded one":       n.sides[0].hand.length - hand0,
       "the {t} is charged":                  n.sides[0].heroTapped,
       /* AN INSTANT COSTS NO ACTION POINT (CR 8.1.6). */
       "action points spent":                 withGold.sides[0].ap - n.sides[0].ap,
-      /* THE COST IS PAID FIRST. Every path in UNSHIFTS, so the card filed
-         first sits deepest — cost-first puts the Gold under the discard. */
-      "the Gold went in BEFORE the discard": gv.length - 1 - gv.findIndex(x => x.name === "Gold"),
+      /* THE COST IS PAID FIRST — and with a token Gold nothing is filed to
+         order, so `test/gravy.test.js` drives that with a non-token Gold.
+         What is filed here is the discard alone. */
+      "only the discard reached the graveyard": gv.length - withGold.sides[0].grave.length,
       "the board is clean":                  require("../../engine/invariants.js").errors(n).length
     };
   },
@@ -145,11 +148,11 @@ module.exports = [
     "with no Gold it is refused": true,
     "…and asking does not tap him": false,
     "the Gold leaves the arena": 0,
-    "…for the GRAVEYARD, turn-stamped": 4,
+    "…and ceases to exist — no Gold is filed": 0,
     "he drew one and discarded one": 0,
     "the {t} is charged": true,
     "action points spent": 0,
-    "the Gold went in BEFORE the discard": 0,
+    "only the discard reached the graveyard": 1,
     "the board is clean": 0
   }
 },

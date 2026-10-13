@@ -188,8 +188,11 @@ module.exports = [
       "…and the ephemeral one does not":         grave.indexOf("Crouching Tiger") < 0,
       "judge holds no reminder-text regex any more":
         !/if it would be put into a graveyard from anywhere/.test(src),
+      /* v5.16: the one reader is `ceasesToExist`, which asks
+         `isEphemeral` for a graveyard and `isToken` everywhere — so judge
+         names it rather than the ephemeral half alone. */
       "both of its paths ask the one reader":
-        (src.match(/PR\.isEphemeral/g) || []).length,
+        (src.match(/PR\.ceasesToExist\(c\)\)/g) || []).length,
       /* AND THE TRAINER MUST NOT KEEP ITS OWN. It held the keyword-list
          test inline, which is the no-mirror rule broken across the two
          boards — the shape that let the two answers drift in the first

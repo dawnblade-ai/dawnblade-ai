@@ -984,6 +984,14 @@ function moveCards(game, side, from, to, cards){
   if(from === "arsenal") s.arsenal = null;
   else if(from === "board") s.board = (s.board||[]).filter(b=>!(b && b.card && ids.has(b.card.uid)));
   else s[from] = (s[from]||[]).filter(c=>!ids.has(c.uid));
+  /* A TOKEN THAT LEAVES THE ARENA CEASES TO EXIST, AND AN EPHEMERAL CARD
+     BOUND FOR A GRAVEYARD DOES TOO (v5.16): `parser.ceasesToExist` is the
+     one reader, asked of the DESTINATION. A board pick filed into the
+     graveyard ("destroy an aura you control") used to file the token. */
+  if(to){
+    const _dest = to === "deckTop" || to === "deckBottom" ? "deck" : to;
+    cards = cards.filter(c => !P.ceasesToExist(c, _dest));
+  }
   if(to){
     /* A DECK-TOP PUT ASKS `deckTopTo` (v4.65) — Topsy Turvy's replacement
        sends it to the bottom instead, and the pick's own order is kept.

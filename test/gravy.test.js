@@ -65,7 +65,12 @@ function table(o){
   const board = [];
   for(let i = 0; i < (o.golds == null ? 1 : o.golds); i++)
     board.push({uid: "tokGOLD" + i, kind: "item", spent: false,
-                card: Object.assign({}, H.card("Gold", 0), {uid: "tokGOLD" + i})});
+                card: Object.assign({}, H.card("Gold", 0), {uid: "tokGOLD" + i},
+                  /* A Gold is a TOKEN and ceases to exist when it leaves the
+                     arena (v5.16), so a drill that reads the ORDER of a cost
+                     off the graveyard needs a permanent of the same NAME
+                     that is not one. `abDestroyBoard` matches by name. */
+                  o.notToken ? {ty: ["Generic", "Item"], tt: "Generic Item"} : {})});
   sides[0] = Object.assign({}, sides[0], {board});
   return {g: Object.assign({}, g, {sides}), b0: b0.b};
 }
@@ -203,19 +208,30 @@ test("driven: the Gold is destroyed, he taps, and the hand nets one down",
   const n = out.state;
   assert.equal(n.sides[0].board.length, before.board - 1, "the Gold left the arena");
   assert.equal(n.sides[0].hand.length, before.hand, "drew one, discarded one");
-  assert.equal(n.sides[0].grave.length, before.grave + 2, "the Gold AND the discard");
+  assert.equal(n.sides[0].grave.length, before.grave + 1,
+    "the DISCARD only — the Gold is a token, and ceases to exist (v5.16)");
   assert.equal(n.sides[0].heroTapped, true, "the {t} is charged (v3.48)");
   assert.equal(INV.errors(n).length, 0);
 });
 
-test("the destroyed Gold reaches the GRAVEYARD, turn-stamped", {skip}, () => {
-  /* The 2026-08-29 ruling: a destroyed permanent goes to the graveyard.
-     And `_gy` answers the whole "…this turn" family — a new path in that
-     forgets the stamp makes those cards quietly wrong (v3.54). */
+test("the destroyed Gold ceases to exist — it is a TOKEN (v5.16)", {skip}, () => {
+  /* This drill used to assert the Gold reached the graveyard, turn-stamped:
+     QUEUE item 3's defect pinned as a rule (v3.13). A token that leaves the
+     arena ceases to exist. */
   const {g} = table({});
   const n = use({...g, turn: 5}).state;
+  assert.equal(n.sides[0].grave.find(c => c.name === "Gold"), undefined, "no Gold in the graveyard");
+  assert.equal(n.sides[0].board.some(b => b.card.name === "Gold"), false, "and none on the board");
+  assert.deepEqual(INV.errors(n), []);
+});
+
+test("…and a NON-token permanent the cost names is filed, turn-stamped (both halves)", {skip}, () => {
+  /* The 2026-08-29 ruling: a destroyed permanent goes to the graveyard, and
+     `_gy` answers the whole "…this turn" family (v3.54). */
+  const {g} = table({notToken: true});
+  const n = use({...g, turn: 5}).state;
   const gold = n.sides[0].grave.find(c => c.name === "Gold");
-  assert.ok(gold, "it is in the graveyard, not in limbo");
+  assert.ok(gold, "a destroyed card that is not a token is in the graveyard, not in limbo");
   assert.equal(gold._gy, 5);
 });
 
@@ -232,7 +248,8 @@ test("the COST is paid before the effect — the graveyard order says so",
      both orders leave the Gold at the same index. The sabotage that bites
      MOVES the whole charge to the late site where an equipment's own
      `destroy this` is paid, which is the thing the drill is named for. */
-  const {g} = table({});
+  /* A non-token Gold, because the token one leaves no card to order (v5.16). */
+  const {g} = table({notToken: true});
   const n = use(g).state;
   const gv = n.sides[0].grave;
   const gi = gv.findIndex(c => c.name === "Gold");

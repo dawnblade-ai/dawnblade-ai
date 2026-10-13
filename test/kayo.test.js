@@ -350,7 +350,9 @@ test("a start-of-turn token is destroyed and pays out — driven", {skip}, () =>
                     {}, {turn: 4});
   const out = E.sweepArena(g, 0, "turn");
   assert.deepEqual(out.game.sides[0].board, [], "the token leaves the arena");
-  assert.deepEqual(out.game.sides[0].grave.map(c => c.name), ["Might"], "and lands in the graveyard");
+  /* …and CEASES TO EXIST (v5.16). This line used to read "and lands in the
+     graveyard" — QUEUE item 3's defect pinned as a rule (v3.13). */
+  assert.deepEqual(out.game.sides[0].grave, [], "a token reaches no graveyard");
   assert.deepEqual(out.ops, [["buffNext", 1]],
     "and pays the ops AFTER the destroy — never the whole parse");
   assert.equal(g.sides[0].board.length, 1, "the input game is untouched");

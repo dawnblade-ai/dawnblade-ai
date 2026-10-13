@@ -254,7 +254,13 @@ const targetCanBeDefended = t => !t || t.kind === "hero";
    Hero damage is the caller's business (it interacts with ward, arcane
    barrier and the score); this owns the ALLY case, which is the one the
    trainer had no path for at all. */
-function damageAlly(game, side, uid, amount){
+/* `opts.ceases(card)` is the CALLER's answer to "does this corpse cease to
+   exist rather than reach a graveyard" (v5.16) — a token ally does. This
+   module reads no card types, so the one reader (`parser.ceasesToExist`)
+   is handed in rather than written a second time here. A caller that says
+   nothing files every corpse, and `invariants.js` names a token found in a
+   graveyard, so a forgotten argument is caught rather than trusted. */
+function damageAlly(game, side, uid, amount, opts){
   const msgs = [];
   const sides = game.sides.slice();
   const sd = Object.assign({}, sides[side]);
@@ -291,7 +297,8 @@ function damageAlly(game, side, uid, amount){
        works until it dies and then lands in the wrong graveyard, which is
        v3.23's worst case and the reason the steal waited to be built. */
     const dead = Object.assign({}, killed.card, {_fd: true});
-    if(killed.owner != null && killed.owner !== side && sides[killed.owner]){
+    if(opts && opts.ceases && opts.ceases(killed.card)){ /* a token: filed nowhere */ }
+    else if(killed.owner != null && killed.owner !== side && sides[killed.owner]){
       delete dead._owner;
       sides[killed.owner] = Object.assign({}, sides[killed.owner],
         {grave: [dead, ...(sides[killed.owner].grave || [])]});

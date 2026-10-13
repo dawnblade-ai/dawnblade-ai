@@ -134,7 +134,9 @@ module.exports = [
       "…and the piece survives that refusal":   (g0.sides[0].gear || [])
                                                  .some(x => x.destroyed),
       "the Runechant leaves the arena":         (sd.board || []).length,
-      "…for the GRAVEYARD, turn-stamped":      (sd.grave.find(x => x.name === "Runechant") || {})._gy,
+      /* A RUNECHANT IS A TOKEN, so it ceases to exist rather than reaching
+         the graveyard (v5.16). This used to want it there, turn-stamped. */
+      "…and ceases to exist — none is filed":  sd.grave.filter(x => x.name === "Runechant").length,
       "none survives to pop on the next swing": P.runeCount(sd),
       "the printed prevention lands":           sd.awd,
       "…carrying its printed window":           sd.awdTurn,
@@ -150,7 +152,7 @@ module.exports = [
     "with no Runechant it is refused": true,
     "…and the piece survives that refusal": false,
     "the Runechant leaves the arena": 0,
-    "…for the GRAVEYARD, turn-stamped": 4,
+    "…and ceases to exist — none is filed": 0,
     "none survives to pop on the next swing": 0,
     "the printed prevention lands": 1,
     "…carrying its printed window": 1,

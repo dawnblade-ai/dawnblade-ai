@@ -235,7 +235,11 @@ test("which SOURCE FILE each slice reads is pinned, or the resolver is unwatched
        `confirmPay`, the same pair, to pin that the one action-point gate asks
        `routeCostsAP` with the route and sits above the ally and aura doors;
        the table half is DRIVEN in that file. */
-    "index.html": 33,
+    /* 33 -> 34 AT v5.16, READ FIRST: `tokenzone.test.js` takes the trainer's
+       `gy`, bounded at `gyDisc` (its next declaration, the safe form), to pin
+       that the trainer's graveyard funnel asks `ceasesToExist`; every other
+       writer is DRIVEN in that file through judge's twin. */
+    "index.html": 34,
     "engine/build.js": 1,
     /* +2 AT v4.59, READ FIRST: `dichotomy.test.js` pins that `buildPrompt`
        names the new `filters` field (v2.34's rule, ninth field) and that

@@ -398,10 +398,11 @@ test("DRIVEN: the Runechant is destroyed, the piece shatters, the ward lands",
   const n = J.reduce(t.g, {t: "activate", uid: t.robe.uid}, 0).state;
   /* ASSERT ON ZONES, LIFE AND COUNTERS — never on the feed (v2.45). */
   assert.equal(n.sides[0].board.length, 0, "the Runechant left the arena");
-  const rune = n.sides[0].grave.find(c => c.name === "Runechant");
-  assert.ok(rune, "it reached the graveyard");
-  assert.equal(rune._gy, n.turn,
-    "TURN-STAMPED, or the whole \"…this turn\" family goes quietly wrong (v3.54)");
+  /* A TOKEN CEASES TO EXIST AS IT LEAVES THE ARENA (v5.16). This line
+     used to assert the Runechant reached the graveyard, turn-stamped —
+     QUEUE item 3's defect, pinned as a rule (v3.13). */
+  assert.equal(n.sides[0].grave.find(c => c.name === "Runechant"), undefined,
+    "a spent Runechant is a token — it reaches no graveyard");
   assert.equal(n.sides[0].awd, 1, "the printed 1 arcane prevention landed");
   assert.equal(n.sides[0].awdTurn, 1,
     "and it carries its printed window, so the end phase expires it (v4.07)");

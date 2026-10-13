@@ -394,7 +394,7 @@ function mint(g, tag){
    that exists on one board (v3.01), and the board it was missing from is
    the CR-exact one. One reader now, asked by both. */
 const toGrave = (g, i, cards) => put(g, i, s => ({...s,
-  grave: [...cards.filter(c => !PR.isEphemeral(c)).map(c => ({...c, _gy: g.turn})),
+  grave: [...cards.filter(c => !PR.ceasesToExist(c)).map(c => ({...c, _gy: g.turn})),
           ...(s.grave || [])]}));
 
 /* ============================================================
@@ -625,7 +625,7 @@ function effectsFor(g){
      descriptions of one rule across two files, two of them matching
      nothing on any of the 797 records. */
   const stamp = (turn, cards, disc) => cards
-    .filter(c => c && !PR.isEphemeral(c))
+    .filter(c => c && !PR.ceasesToExist(c))   /* ephemeral AND tokens (v5.16) */
     .map(c => disc ? {...c, _gy: turn, _disc: true} : {...c, _gy: turn});
   const ctx = {
     L: say,
@@ -2168,7 +2168,7 @@ function strike(g){
        reports the corpse by NAME and the death trigger needs the card. */
     const dying = ((at(n, link.target.side).board) || [])
       .find(b => b && b.uid === link.target.uid);
-    const out = GM.damageAlly(n, link.target.side, link.target.uid, total);
+    const out = GM.damageAlly(n, link.target.side, link.target.uid, total, {ceases: c => PR.ceasesToExist(c)});
     n = out.game;
     (out.msgs || []).forEach(m => { n = say(n, m); });
     /* A NEW PATH INTO A GRAVEYARD MUST STAMP THE TURN. `damageAlly` files

@@ -179,8 +179,26 @@ test("PAYING returns the rider, and the cost really leaves the arena", () => {
   const out = PR.applyPrompt(g, PR.promptToggleSel(p, i));
   assert.deepEqual(out.ops, [["foeDestroyAura", 1]], "paid, so the rider resolves");
   assert.equal((out.game.sides[0].board || []).length, 0, "the aura left the arena");
-  assert.ok((out.game.sides[0].grave || []).some(c => c.uid === mine.uid),
-    "and reached the graveyard — a destroyed card in NO zone falls out of the census");
+  /* THE FIXTURE AURA IS A TOKEN, and a token that leaves the arena ceases
+     to exist (v5.16). This line used to assert it reached the graveyard,
+     which was QUEUE item 3's defect pinned as a rule (v3.13). */
+  assert.ok(!(out.game.sides[0].grave || []).some(c => c.uid === mine.uid),
+    "a destroyed TOKEN reaches no graveyard — it ceases to exist");
+});
+
+test("…and a non-token aura destroyed the same way DOES reach the graveyard (both halves)", () => {
+  /* A filter that dropped every card passes the row above perfectly. */
+  const {g} = played();
+  const real = {name: "Malefic Sigil", tt: "Runeblade Action - Aura", ty: ["Runeblade", "Action", "Aura"],
+                pitch: 1, uid: "a2", tx: "", kw: []};
+  g.sides[0].board = [{card: real, kind: "aura", spent: false, uid: "a2", sd: null}];
+  const p = PR.buildPrompt(g, {tag: "pick", side: 0, src: "Condemn", zone: "board",
+                               to: "grave", filter: {tt: "aura"}, min: 0, max: 1,
+                               ops: [["foeDestroyAura", 1]]});
+  const out = PR.applyPrompt(g, PR.promptToggleSel(p, 0));
+  assert.equal((out.game.sides[0].board || []).length, 0);
+  assert.ok((out.game.sides[0].grave || []).some(c => c.uid === "a2"),
+    "a destroyed card that is not a token reaches the graveyard — one in NO zone falls out of the census");
 });
 
 /* ---- the rider: THEIR aura, THEIR choice --------------------------- */
