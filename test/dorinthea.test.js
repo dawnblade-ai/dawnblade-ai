@@ -839,7 +839,7 @@ test("playRx refuses a reaction whose target does not match", {skip}, () => {
      modes and the go-again target this door's own `selfQ` test never
      reached. Its answers are DRIVEN in test/rxtarget.test.js; what is
      pinned here is that this door asks it, on the untouched state. */
-  assert.match(body, /if\(inAtk\)\{ const _tw = DawnEffects\.rxNoTargetWhy\(s, c\); if\(_tw\) return L\(s, _tw \+ "\."\); \}/,
+  assert.match(body, /if\(inAtk\)\{ const _tw = DawnEffects\.rxNoTargetWhy\(s, c, rxWall\(s\)\.defenders\); if\(_tw\) return L\(s, _tw \+ "\."\); \}/,
     "the printed restriction must be checked against the attack being reacted to, and refused by NAME");
 });
 

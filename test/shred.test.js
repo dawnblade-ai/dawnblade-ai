@@ -61,6 +61,9 @@ const react = (g, shred, defs) => {
   return J.openPrompt(n) || n;
 };
 
+const rxWhy = (g, shred, defs) => J.withEffects(g, (fx, s) =>
+  ({game: s, why: fx.attackRx(s, shred, {handBlockers: defs.length, defenders: defs}).why})).why;
+
 /* ---- 1. THE READER -------------------------------------------------- */
 
 test("all three printings read, and each keeps its own number", {skip}, () => {
@@ -182,14 +185,16 @@ test("the printed GATE holds — a non-Assassin attack refuses", {skip}, () => {
   assert.ok(!/assassin/i.test(wrong.tt), "the control: it is not an Assassin card");
   const n = react(g, shred, defs);
   assert.deepEqual(n.sides[1].defMod, [], "nothing is shrunk");
-  assert.match((n.feed || []).join(" | "), /isn't one/, "and the feed says why");
+  /* REFUSED AS A LEGALITY since v5.21 (`rxNoTargetWhy`), before the card
+     leaves the hand, rather than logged after it has */
+  assert.match(rxWhy(g, shred, defs) || "", /isn't one/, "and the refusal says why");
 });
 
 test("an EMPTY wall refuses rather than crashing", {skip}, () => {
   const {g, shred} = board([]);
   const n = react(g, shred, []);
   assert.deepEqual(n.sides[1].defMod, []);
-  assert.match((n.feed || []).join(" | "), /nothing is defending/);
+  assert.match(rxWhy(g, shred, []) || "", /nothing is defending/);
 });
 
 test("a caller that says nothing offers no target", {skip}, () => {
@@ -396,4 +401,52 @@ test("BOTH attackRx routes are handed the wall — one is latent, deliberately",
   assert.equal(calls.length, 2, "exactly two routes reach it");
   calls.forEach((c, i) => assert.ok(/opts\.defenders/.test(c),
     "route " + i + " must hand in the wall, not a literal"));
+});
+
+/* ---- SHRED IS REFUSED AT THE TABLE WITH NO TARGET (v5.21) -----------
+   `fx.defDebuff` is a FOURTH home for a target qualifier, after v4.88's
+   `modes`, `selfQ` and `gaQ`, and `rxNoTargetWhy` did not read it — so
+   `judge.legal` accepted Shred against an empty wall or a non-Assassin
+   attack, the card went to the graveyard, and the feed said "nothing is
+   defending". The wall is fixed before the reaction step opens (CR 7.3
+   precedes 7.4), so there is no legal target to name. Driven through
+   `legal` and `reduce`, with the positive control in the same state. */
+const tableBoard = (defs, atk) => {
+  const {shred, g} = board(defs, atk);
+  return {shred, g: {...g, phase: "action", step: "reaction", priority: 0, passed: [],
+    attacker: 0, stack: [], sides: g.sides.map((sd, i) => i === 1
+      ? {...sd, blockH: defs.map(d => d.uid)} : sd)}};
+};
+test("DRIVEN: `legal` refuses Shred with nothing defending, before it leaves the hand", {skip}, () => {
+  const {shred, g} = tableBoard([]);
+  const why = J.legal(g, {t: "play", uid: shred.uid, from: "hand"}, 0);
+  assert.match(why || "", /nothing is defending/, "named, not a dead tap — got: " + String(why));
+  assert.ok(J.reduce(g, {t: "play", uid: shred.uid, from: "hand"}, 0).error, "and reduce agrees");
+});
+test("DRIVEN: …and against a non-Assassin attack", {skip}, () => {
+  H.db();
+  const wrong = Object.assign({}, H.card("Wounding Blow", 1), {uid: 990});
+  const {shred, g} = tableBoard([blk(981, 3)], wrong);
+  assert.match(J.legal(g, {t: "play", uid: shred.uid, from: "hand"}, 0) || "", /isn't one/);
+});
+test("DRIVEN: …and the positive control — an Assassin attack and a defender", {skip}, () => {
+  const {shred, g} = tableBoard([blk(981, 3)]);
+  assert.equal(J.legal(g, {t: "play", uid: shred.uid, from: "hand"}, 0), null,
+    "a refusal that refuses everything passes both drills above");
+});
+test("`defDebuff` is the qualifier's FOURTH home, and Shred is its only claimant", {skip}, () => {
+  /* the day a second card arrives here, its target is asked the same way */
+  H.db();
+  const pool = require("../data/pool.json");
+  const all = Array.isArray(pool) ? pool : (pool.cards || Object.values(pool));
+  const names = [...new Set(all.filter(c => c && c.name && P.fxParse(c).defDebuff).map(c => c.name))];
+  assert.deepEqual(names, ["Shred"]);
+});
+test("DRIVEN: the trainer's door body (`playAtSpeed`) refuses before Shred leaves the hand", {skip}, () => {
+  const {shred, g} = board([]);
+  const out = J.withEffects(g, (fx, s) => { const r = fx.playAtSpeed(s, s.sides[0].hand[0], "hand",
+    {window: "attack-reaction", handBlockers: 0, defenders: []}); return {game: r.game, why: r.why}; });
+  assert.match(out.why || "", /nothing is defending/);
+  assert.ok(out.game.sides[0].hand.some(c => c.uid === shred.uid), "still in hand");
+  assert.ok(!(out.game.sides[0].grave || []).some(c => c.uid === shred.uid), "and not in the graveyard");
 });

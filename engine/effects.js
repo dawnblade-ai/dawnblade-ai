@@ -5691,7 +5691,7 @@ function makeEffects(ctx){
        `rxNoTargetWhy` is the one reader `judge.legal` asks too. */
     if(o.window === "attack-reaction" && isAR(c)){
       if(!s.pend || !s.pend.card) return {game: s, dv: 0, why: c.name + " has no attack to react to"};
-      const tw = rxNoTargetWhy(s, c);
+      const tw = rxNoTargetWhy(s, c, o.defenders);
       if(tw) return {game: s, dv: 0, why: tw};
     }
     /* A DECLARED DEFENDER IS ON THE CHAIN (v5.04) — judge's play branch
@@ -6987,7 +6987,7 @@ function makeEffects(ctx){
     /* `rxNoTargetWhy` IS THE ONE READER (v4.88), and every door asks it
        BEFORE the card moves; answered here too, because `reduce` is fed by
        JSON off a wire (v2.04) and a crafted play reaches this body. */
-    { const why = rxNoTargetWhy(s, c);
+    { const why = rxNoTargetWhy(s, c, o.defenders);
       if(why) return {game: s, pump: 0, why: why + "."}; }
     let n = {...s};
     /* A MODAL REACTION: THE BOARD PICKS THE MODE (v3.12). "Choose 1;" was
@@ -7141,11 +7141,10 @@ function makeEffects(ctx){
     if(fx.defDebuff){
       const wall = (o.defenders || []).filter(Boolean);
       const dSeat = 1 - actorOf(n);
-      if(fx.defDebuff.q && !qualMatches(fx.defDebuff.q, pend.card, qo))
-        n = L(n, `${c.name} shrinks a card defending ${P.qualLabel(fx.defDebuff.q)} — ${pend.card.name} isn't one.`);
-      else if(!wall.length)
-        n = L(n, `${c.name}: nothing is defending — there is no card to shrink.`);
-      else if(wall.length === 1){
+      /* THE TWO NO-TARGET CASES ARE REFUSED ABOVE (v5.21) — a non-matching
+         attack and an empty wall — by `rxNoTargetWhy`, before the card has
+         left the hand. They used to be log lines here, after it had. */
+      if(wall.length === 1){
         n = applyDefMod(n, dSeat, wall[0], -fx.defDebuff.amt, c.name);
       } else {
         n.promptQ = [...(n.promptQ||[]), {tag: "pick", src: c.name, side: actorOf(n),
@@ -10916,11 +10915,28 @@ function playTargetWhy(s, c, seat){
   return null;
 }
 
-function rxNoTargetWhy(s, c){
+function rxNoTargetWhy(s, c, defenders){
   if(!c) return null;
   const fx = P.fxParse(c);
   const tgt = s && s.pend && s.pend.card;
   const qo = {pumped: pendPumped(s), atk: true};
+  /* A FOURTH HOME FOR A TARGET (v5.21). Shred prints "target card
+     defending an Assassin attack", and its restriction rides on
+     `fx.defDebuff` — not `modes`, `selfQ` or `gaQ`, the three v4.88 named.
+     Its target is a DEFENDER, so it has two halves: the attack must be the
+     kind the line names, and something must be defending. The wall is
+     fixed before the reaction step opens (CR 7.3 precedes 7.4), so an
+     empty one has no legal target. WHICH CARDS DEFEND is the caller's
+     answer (v3.89) — `attackRx` picks among exactly that list — and a
+     caller that says nothing gets the empty wall: weaker and visible. */
+  if(fx.defDebuff){
+    const dq = fx.defDebuff.q;
+    if(dq && !(tgt && P.qualMatches(dq, tgt, qo)))
+      return c.name + " targets a card defending " + P.qualLabel(dq) + " — "
+        + (tgt ? tgt.name : "this attack") + " isn't one";
+    if(!(defenders || []).filter(Boolean).length)
+      return c.name + ": nothing is defending — it has no card to target";
+  }
   if(fx.modes && fx.modes.length){
     if(tgt && fx.modes.some(md => md.q && P.qualMatches(md.q, tgt, qo))) return null;
     return c.name + ": no mode of it can target " + (tgt ? tgt.name : "this attack");

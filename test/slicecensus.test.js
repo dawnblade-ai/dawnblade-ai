@@ -300,7 +300,7 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        `discard` field (a chosen discard's continuation). */
     /* v4.92: `basepow.test.js` takes the same `playRx` -> `playRxA` slice
        to pin that the hand door asks `defLimitWhy`. */
-    "basepow.test.js index.html 8437",
+    "basepow.test.js index.html 8458",
     /* +costtaxes AT v4.86: `tryPlay` -> `confirmPay`, the same body the
        rows below take, for the claim that its cost line asks `payCost`. */
     /* 22,716 -> 23,598 AT v4.91, READ FIRST, for all six rows of this body:
@@ -324,7 +324,7 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        25,551 -> 25,685 AT v5.07, READ FIRST, same body: that line asks
        `playTargetWhy` now (every printed target a played card names), and
        its comment grew by the two sentences that say so. */
-    "costtaxes.test.js index.html 25934",
+    "costtaxes.test.js index.html 25955",
     "dichotomy.test.js engine/prompts.js 12746",
     /* 8,550 -> 9,523 AT v4.60, and now THREE files take the same slice —
        `playRx`, anchored on its own declaration and bounded at `playRxA`, the
@@ -344,15 +344,15 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        ACTIVATED route asks too, so the body is shorter by the two
        declarations it no longer carries. Same anchors. `rxability.test.js`
        takes the same slice to pin that the destructure is there. */
-    "discost.test.js index.html 25934",
+    "discost.test.js index.html 25955",
     /* 9,905 -> 10,264 AT v4.92, READ FIRST, for all four rows of this body:
        still `playRx` -> `playRxA`. The growth is Put in Context's limit
        asked in the defence branch through `effects.defLimitWhy`, beside the
        `drxBarWhy` bar it sits with. Same anchors, same body. */
-    "dorinthea.test.js index.html 8437",
-    "drx.test.js index.html 8437",
+    "dorinthea.test.js index.html 8458",
+    "drx.test.js index.html 8458",
     /* +instantpump AT v5.03: the same `tryPlay` -> `confirmPay` body. */
-    "instantpump.test.js index.html 25934",
+    "instantpump.test.js index.html 25955",
     "phasebar.test.js index.html 15953",
     "phasebar.test.js index.html 62489",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
@@ -384,16 +384,16 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        `tryPlay` in `stack` (an activated ability, never a reaction card).
        Same signature, same anchors; `discost.test.js` and
        `rxability.test.js` take the same slice for claims of their own. */
-    "priority.test.js index.html 25934",
-    "priority.test.js index.html 25934",
+    "priority.test.js index.html 25955",
+    "priority.test.js index.html 25955",
     /* 10,264 -> 8,459 AT v4.95, READ FIRST, for the five `playRx` -> `playRxA`
        rows: still the hand door, bounded at the arsenal door. It SHRANK —
        the charge, the resolution and the wall are `effects.playAtSpeed` now. */
-    "priority.test.js index.html 8437",
-    "routeap.test.js index.html 25934",
-    "rxability.test.js index.html 25934",
-    "rxability.test.js index.html 8437",
-    "zonerule.test.js index.html 25934"
+    "priority.test.js index.html 8458",
+    "routeap.test.js index.html 25955",
+    "rxability.test.js index.html 25955",
+    "rxability.test.js index.html 8458",
+    "zonerule.test.js index.html 25955"
   ], /* 15,440 -> 16,557 AT v4.59, READ FIRST (v4.57: a pin edited without
         being read is a guard switched off). Both rows are
         `tryPlay` -> `confirmPay` — anchored on the body's own declaration and

@@ -1,3 +1,30 @@
+## v5.22 — Shred needs a defender to target
+
+> *"Target card defending an Assassin attack gets -N{d} this combat chain."* — SHRED,
+> Arakni's
+
+**QUEUE item 9 ([8]), re-verified here.** `judge.legal` accepted Shred against an empty
+wall or a non-Assassin attack. The card went to the graveyard and the feed said
+"nothing is defending — there is no card to shrink". v4.88 made `rxNoTargetWhy` the
+one reader of a reaction's printed target and named three homes for the qualifier
+(`modes`, `selfQ`, `gaQ`). Shred's rides on a fourth, `fx.defDebuff`, and its target is
+a DEFENDER, so it has two halves: the attack must be the kind the line names, and
+something must be defending. The wall is fixed before the reaction step opens (CR 7.3
+precedes 7.4), so an empty one has no legal target.
+
+**`rxNoTargetWhy(s, c, defenders)`** reads `defDebuff` now, and the wall is the
+caller's answer (v3.89), as it already is for `attackRx`'s own pick: judge passes
+`declaredWall(...).defenders`, the trainer `rxWall(s).defenders`, and `playAtSpeed`
+and `attackRx` the list they were handed. A caller that says nothing gets the empty
+wall (weaker, visible). `attackRx`'s two log lines for these cases were unreachable
+after the refusal and are deleted (v4.11). Shred is the only `defDebuff` claimant,
+pinned.
+
+Measured: **7 sabotages, 7 bite** (one first-pass silence was the `playAtSpeed`
+pre-check, which a later refusal masked; a drill now asks whether the card stayed in
+hand). The ladder at three seeds moves two games in 630 (Arakni 80 → 81, Fai 39 → 38),
+against a band of median 3; 0 refusals, 0 violations, 0 stalls.
+
 ## v5.21 — A played defence reaction is a defending card in the counts too
 
 > *"**Reprise** - If the defending hero has defended with a card from their hand this

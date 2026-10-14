@@ -284,7 +284,7 @@ function rxTargetWhy(g, sd, ab, want, seat){
            + sd.name + " controls none"; }
   /* the qualifier half is `effects.rxNoTargetWhy`, the ONE reader the
      card route and both of the trainer's doors ask too (v4.88) */
-  return E.rxNoTargetWhy(g, ab);
+  return E.rxNoTargetWhy(g, ab, declaredWall(g, P.other(seat)).defenders);
 }
 
 /* Every action a seat can take. Serializable by construction: a uid, a
@@ -1602,7 +1602,7 @@ function playableWhy(g, seat, c, win, zone){
      facts `attackRx` and the ability branch answer, so the three could
      disagree about one card. `effects.rxNoTargetWhy` is all of them. */
   if(open.indexOf("attack-reaction") >= 0 && PR.isAR(c)){
-    const why = E.rxNoTargetWhy(g, c);
+    const why = E.rxNoTargetWhy(g, c, declaredWall(g, P.other(seat)).defenders);
     if(why) return why;
   }
   /* …AND AN INSTANT THAT PUMPS "TARGET ATTACK" NEEDS ONE IN EVERY WINDOW

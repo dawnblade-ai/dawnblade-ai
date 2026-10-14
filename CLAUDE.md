@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.21
+**Current version:** v5.22
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3551 drills** at v5.21.
+This is `node --test "test/*.test.js"` — **3556 drills** at v5.22.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -868,6 +868,14 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A TARGET QUALIFIER HAS A FOURTH HOME, AND A DEFENDER IS A TARGET (v5.22)
+
+`rxNoTargetWhy` read `modes`, `selfQ` and `gaQ`; Shred's restriction rides on
+`fx.defDebuff`, and its target is a DEFENDER, so it was legal with nothing defending or
+against a non-Assassin attack (QUEUE item 9). The wall is the third argument, the
+caller's answer on every route (`test/shred.test.js`). **When a reader names the homes
+of a field, census the parse for a home it does not name.**
 
 ### A PLAYED DEFENCE REACTION IS A DEFENDING CARD IN THE COUNTS TOO (v5.21)
 

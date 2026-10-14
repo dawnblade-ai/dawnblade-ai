@@ -154,20 +154,20 @@ test("no board hand-rolls the target question any more", () => {
 
 test("judge asks it for a CARD and for an ABILITY", () => {
   const code = strip(JUDGE);
-  assert.equal((code.match(/E\.rxNoTargetWhy\(g, (?:c|ab)\)/g) || []).length, 2,
+  assert.equal((code.match(/E\.rxNoTargetWhy\(g, (?:c|ab), declaredWall\(g, P\.other\(seat\)\)\.defenders\)/g) || []).length, 2,
     "the card route in `legal` and `rxTargetWhy`'s qualifier half");
 });
 
 test("the trainer asks it at all three doors, before anything moves", () => {
   const code = strip(HTML);
   /* the hand door, attack window */
-  assert.match(code, /if\(inAtk\)\{ const _tw = DawnEffects\.rxNoTargetWhy\(s, c\); if\(_tw\) return L\(s, _tw \+ "\."\); \}/);
+  assert.match(code, /if\(inAtk\)\{ const _tw = DawnEffects\.rxNoTargetWhy\(s, c, rxWall\(s\)\.defenders\); if\(_tw\) return L\(s, _tw \+ "\."\); \}/);
   /* the arsenal door's attack window (new at v4.88) */
   const a = code.indexOf("const playRxA = () => setG"), b = code.indexOf("\n  const ", a + 10);
   const rxa = code.slice(a, b);
   const stk = rxa.indexOf('if(s.mode === "stack" && act(s).arsenal){');
   assert.ok(stk > 0, "the attacker's arsenal door is gone — an arsenal attack reaction is dead again");
-  const tw = rxa.indexOf("DawnEffects.rxNoTargetWhy(s, c)", stk);
+  const tw = rxa.indexOf("DawnEffects.rxNoTargetWhy(s, c, rxWall(s).defenders)", stk);
   const mv = rxa.indexOf('_EFX.playAtSpeed(s, c, "arsenal"', stk);
   assert.ok(tw > stk && mv > tw, "the target must be asked BEFORE the card leaves the arsenal");
   /* the whole statement, opening paren included — a bare call survives
@@ -175,7 +175,7 @@ test("the trainer asks it at all three doors, before anything moves", () => {
   assert.match(rxa.slice(stk), /\n\s*if\(!rxAllowed\(c, "attack-reaction"\)\) return L\(s, isRx\(c\)/,
     "and the window's card half is asked, refusing by name");
   /* the ability route in tryPlay */
-  assert.match(code, /if\(card\._attackRx\)\{ const _tw = DawnEffects\.rxNoTargetWhy\(s, card\); if\(_tw\) return L\(s, _tw \+ "\."\); \}/,
+  assert.match(code, /if\(card\._attackRx\)\{ const _tw = DawnEffects\.rxNoTargetWhy\(s, card, rxWall\(s\)\.defenders\); if\(_tw\) return L\(s, _tw \+ "\."\); \}/,
     "an attack-reaction ABILITY pays its cost with no legal target");
 });
 
