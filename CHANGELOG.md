@@ -1,3 +1,31 @@
+## v5.28 — The feed batch, part one
+
+**QUEUE item 14, items [11]–[15].** Lines the player reads that were false or printed a field
+name. Each is driven in `test/feedbatch.test.js`, with the state asserted beside the line.
+
+- **[11] Pick lines in words.** "Swift Shot → deckTop from grave." is "Swift Shot goes from
+  the graveyard to the top of the deck." and the sheet hint "From your grave → deckTop" is
+  "From your graveyard to the top of your deck." `prompts.promptDestWord` is the one reader of
+  a destination, beside `promptZoneWord`. A census over every `to:` the engine writes holds
+  each to a word. Under Topsy Turvy the line still names where the cards WENT (v4.65).
+- **[12] Noop reasons in game words.** "off fx.noDrx", "cost read by the weapon reader" (on
+  every swing), "applied by the cost reader", "read at the play by execute, off
+  fx.gyFirstGa", and "activation gate — checked before the ability can be used" are
+  reworded. `test/noopvoice.test.js` now also bans a dotted `fx.` field and the word
+  "reader", with its control routed through both.
+- **[13] Payment-averts lines** were fixed at v5.24 (an "unless" sheet says the payer
+  "avoids what declining costs"). Re-verified, nothing to do.
+- **[14] A shield's leftover** read "the other 2 goes with this hit", which says the damage
+  goes through. It is "the other 2 it could have stopped is lost with this hit" now, the
+  v5.06 rule in words.
+- **[15] Bare Fangs** printed "no additional-cost discard to feed — bonus skips" while its
+  +2 landed (6 → 8). The line belongs only to a card that prints an additional discard, and
+  says "no card in hand to discard to the cost" when that is why.
+
+3585 drills, 0 fail, 5 skipped; fairness clean; scenes 107/107; 7 sabotages, 7 bite. One slice
+width repinned (`dichotomy.test.js` over `prompts.js`, 12746 → 12771, the pick line's own
+growth). No rule moved, so the ladder is not re-run.
+
 ## v5.27 — Counters after the declaration, recorded
 
 **QUEUE item 13 [10].** A +1{p} counter put on a weapon or a Cosmo-armed aura after its

@@ -842,7 +842,7 @@ function makeEffects(ctx){
           const off = Math.min((sh && sh.n) || 0, left);
           left -= off; prevented += off;
           n = L(n, `${(sh && sh.src) || "A prevention"}: ${off} of that damage is prevented`
-                 + (((sh && sh.n) || 0) > off ? ` — the other ${sh.n - off} goes with this hit.` : "."));
+                 + (((sh && sh.n) || 0) > off ? ` — the other ${sh.n - off} it could have stopped is lost with this hit.` : "."));
           if(off > 0 && sh.ops && sh.ops.length) fired.push(sh);
         }
         mut().wardNext = keep;
@@ -4685,8 +4685,12 @@ function makeEffects(ctx){
           if(bigDiscard){ if(op[0]==="ga") ga=true; else n=runOps(n,[op],card.name); n=L(n,`${card.name}: a 6+ power card was fed to the cost — bonus triggers.`); }
           else n=L(n,`${card.name}: nothing 6+ power discarded — bonus skips.`);
         });
-      } else if(fx.conds.some(x=>x.cond==="discard6"||x.cond==="discard6way")){
-        n=L(n,`${card.name}: no additional-cost discard to feed — bonus skips.`);
+      /* ONLY A CARD THAT PRINTS AN ADDITIONAL DISCARD (v5.28). Bare Fangs'
+         "discard a random card" is its EFFECT, answered by the condition
+         loop off `_discWay`, so this line printed "bonus skips" over a bonus
+         that had just landed (QUEUE item 14 [15]). */
+      } else if(fx.addCost && fx.addCost.discard && fx.conds.some(x=>x.cond==="discard6"||x.cond==="discard6way")){
+        n=L(n,`${card.name}: no card in hand to discard to the cost — bonus skips.`);
       }
       let declNote = "";
       if(isBoostPlay(n, card)){

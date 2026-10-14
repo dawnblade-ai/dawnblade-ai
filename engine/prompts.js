@@ -56,6 +56,18 @@ const PROMPT_ZONES = ["hand","deck","grave","banish","soul","pitch","arsenal","b
    two spellings of one refusal, which a review of v4.91 caught. */
 const ZONE_WORDS = {grave: "graveyard", banish: "banished zone"};
 const promptZoneWord = z => ZONE_WORDS[z] || String(z || "");
+/* WHERE A PICK SENDS A CARD, IN WORDS (v5.28). `spec.to` is a state key
+   too, and the shared pick line printed it raw — "Swift Shot → deckTop
+   from grave." One reader, beside the zone word, and the possessive is the
+   caller's: the shared feed says "the", a sheet's hint says "your". */
+const promptDestWord = (to, pos) => {
+  const p = pos || "the";
+  if(to === "deckTop") return "the top of " + p + " deck";
+  if(to === "deckBottom") return "the bottom of " + p + " deck";
+  if(to === "gear") return "play, equipped";
+  if(to === "board") return p + " arena";
+  return p + " " + promptZoneWord(to);
+};
 
 /* WHAT IS IN ONE ZONE OF ONE SIDE. Split out of `promptZone` (v4.59) so a
    caller holding only a SIDE can ask the same question: `judge.abCostWhy`
@@ -489,7 +501,7 @@ function buildPrompt(game, spec){
          actually waiting for rather than a bound (v4.59). */
       title: spec.title || (filters ? ("Choose " + filters.length + " cards")
                                     : max === 1 ? "Choose a card" : "Choose up to " + max),
-      hint: spec.hint || ("From your " + promptZoneWord(zone) + (spec.to ? " → " + spec.to : "") + ".")};
+      hint: spec.hint || ("From your " + promptZoneWord(zone) + (spec.to ? " to " + promptDestWord(spec.to, "your") : "") + ".")};
   }
   /* ============================================================
      ALLOC — THE SIXTH VARIANT, AND THE ONE THAT APPORTIONS (v4.44)
@@ -1201,10 +1213,13 @@ function applyPrompt(game, prompt){
     /* A DISCARD SAYS SO ITSELF (v4.81) — `effects.discardChosen` names the
        seat and the card and counts what is left, so a second line here
        would announce the same move twice in two voices. */
+    /* IN WORDS, NOT STATE KEYS (v5.28): "Swift Shot → deckTop from grave"
+       is a field name read aloud. */
     if(!prompt.discard) out.msgs.push(picked.map(c=>c.name).join(", ") +
-      (prompt.to ? " → " + _dest
-                 : prompt.zone ? " revealed" : " chosen") +
-      (prompt.zone ? " from " + prompt.zone : "") + ".");
+      (prompt.to ? (picked.length > 1 ? " go" : " goes") +
+                   (prompt.zone ? " from the " + promptZoneWord(prompt.zone) : "") +
+                   " to " + promptDestWord(_dest)
+                 : (prompt.zone ? " revealed from the " + promptZoneWord(prompt.zone) : " chosen")) + ".");
     /* AND WHERE THE ORDER IS THE DECISION, SAY WHAT IT WAS (v4.59). Crown
        of Dichotomy prints "in any order", `promptToggleSel` pushes onto
        `sel` in TAP ORDER and `moveCards`' deckTop branch front-inserts the
@@ -1369,7 +1384,7 @@ function applyPrompt(game, prompt){
   return out;
 }
 
-return {PROMPT_ZONES, promptZoneWord, promptZone, promptSideZone, promptFilter,
+return {PROMPT_ZONES, promptZoneWord, promptDestWord, promptZone, promptSideZone, promptFilter,
         promptMatchSet, promptMatchAssign,
         promptPickPool, promptPickAskable, buildPrompt,
         promptToggleSel, promptChoose, promptDecline, promptTakeBack, promptReady, promptForcedSel, promptLapse, promptDestroyGone, promptLapseLine,

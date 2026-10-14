@@ -253,7 +253,7 @@ test("the FEED says where the cards went, and never claims a top order under the
   /* THE ONE DRILL HERE THAT READS PROSE, AND WHY (v3.60): with the flip set
      the game state is identical whatever the feed says, so the only thing a
      wrong line changes is what the player is TOLD — the sev-2 category they
-     trust. Two lines could lie: the shared "→ <zone>" line, and v4.59's
+     trust. Two lines could lie: the shared "goes to <zone>" line, and v4.59's
      "On top of the deck: A first, then B" for a multi-card pick. */
   for(const flip of [false, true]){
     const g = board(flip, {grave: [card("Wounding Blow", 1, "gy1"), card("Brutal Assault", 1, "gy2")]});
@@ -264,8 +264,8 @@ test("the FEED says where the cards went, and never claims a top order under the
       ["gy1", "gy2"], "fixture: the cards landed where the replacement says (flip=" + flip + ")");
     const feed = r.msgs.join(" | ");
     assert.equal(/On top of the deck:/.test(feed), !flip, "the top-order line (flip=" + flip + "): " + feed);
-    assert.equal(/→ deckTop\b/.test(feed), !flip, "the shared line names the TOP (flip=" + flip + "): " + feed);
-    if(flip) assert.match(feed, /→ deckBottom\b/, "and names the bottom when that is where they went");
+    assert.equal(/to the top of the deck\b/.test(feed), !flip, "the shared line names the TOP (flip=" + flip + "): " + feed);
+    if(flip) assert.match(feed, /to the bottom of the deck\b/, "and names the bottom when that is where they went");
   }
 });
 

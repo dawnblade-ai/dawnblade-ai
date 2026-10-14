@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.27
+**Current version:** v5.28
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3581 drills** at v5.27.
+This is `node --test "test/*.test.js"` — **3585 drills** at v5.28.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -868,6 +868,13 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A STATE KEY IS NOT A WORD (v5.28)
+
+The shared pick line printed `spec.to` raw ("→ deckTop from grave"), and five noop reasons
+named parse fields and "the reader" (QUEUE item 14). `prompts.promptDestWord` is the one
+reader of a destination, and `test/noopvoice.test.js` bans `fx.` fields and "reader". **A line
+built from a field is a field read aloud: route it through the reader that names it.**
 
 ### NO QUOTE, NO BUILD: A RULES QUESTION GOES TO THE LEDGER (v5.27)
 

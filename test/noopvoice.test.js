@@ -51,7 +51,12 @@ const DEV_VOICE = [
   [/\.js\b/,                   "a filename"],
   [/[A-Za-z_$][\w$]*\.[A-Za-z_$][\w$]*\(/, "a function call"],
   [/`/,                        "a backtick"],
-  [/\bfxParse\b|\bclassifyClause\b|\brunOps\b|\bexecute\(/, "an engine identifier"]
+  [/\bfxParse\b|\bclassifyClause\b|\brunOps\b|\bexecute\(/, "an engine identifier"],
+  /* v5.28 (QUEUE item 14 [12]): "off fx.noDrx" and "cost read by the weapon
+     reader" printed on every swing. A dotted parse field and the engine's
+     own noun for a parser rule are both developer voice. */
+  [/\bfx\.[A-Za-z]/,           "a parse field"],
+  [/\breaders?\b/i,            "the word \"reader\""]
 ];
 const faults = s => DEV_VOICE.filter(([rx]) => rx.test(s)).map(([, why]) => why);
 
@@ -75,9 +80,10 @@ function poolNoopReasons(){
 }
 
 test("the scan is ALIVE — a control string is flagged by every shape", () => {
-  assert.deepEqual(faults("live — v4.24; see parser.crankCost() in engine/parser.js `here` via fxParse"),
-    ["a version number", "a filename", "a function call", "a backtick", "an engine identifier"],
-    "all five shapes fire, so a zero below means the reasons are clean " +
+  assert.deepEqual(faults("live — v4.24; see parser.crankCost() in engine/parser.js `here` via fxParse, off fx.noDrx by the weapon reader"),
+    ["a version number", "a filename", "a function call", "a backtick", "an engine identifier",
+     "a parse field", "the word \"reader\""],
+    "all seven shapes fire, so a zero below means the reasons are clean " +
     "rather than that the scan stopped matching");
   assert.deepEqual(faults("a defence restriction — the wall reads it when this attacks"), [],
     "and ordinary game text is not flagged");

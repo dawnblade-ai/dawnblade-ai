@@ -325,7 +325,7 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        `playTargetWhy` now (every printed target a played card names), and
        its comment grew by the two sentences that say so. */
     "costtaxes.test.js index.html 25955",
-    "dichotomy.test.js engine/prompts.js 12746",
+    "dichotomy.test.js engine/prompts.js 12771",
     /* 8,550 -> 9,523 AT v4.60, and now THREE files take the same slice —
        `playRx`, anchored on its own declaration and bounded at `playRxA`, the
        next one, which is the safe form. READ FIRST (v4.57: a pin edited

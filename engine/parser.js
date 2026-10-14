@@ -718,8 +718,8 @@ function classifyClause(raw){
      route is a real job — see HANDOFF.md — and reading the payload
      before it exists is the never-parse-ahead-of-wiring rule. */
   if(/^(?:once per turn )?(?:action|instant)\s*[-—]/.test(c)){
-    if(weaponCost(raw)) return NOOP("weapon attack ability — cost read by the weapon reader");
-    if(parseHeroPower(raw, true)) return NOOP("activated ability — read by the equipment reader");
+    if(weaponCost(raw)) return NOOP("the weapon's attack — its cost is paid when it swings");
+    if(parseHeroPower(raw, true)) return NOOP("an activated ability — used from its own button");
     return null;
   }
   /* AND IT REFUSES OUTRIGHT, rather than deferring to the equipment
@@ -877,16 +877,16 @@ function classifyClause(raw){
      pitch prompt — they are not effects that fire on resolution. Both must sit
      above the if/when handler, which would otherwise split them and fail. */
   if(/^if you control (?:a|an) [a-z' -]+, this costs \{r\} less to play$/.test(c))
-    return NOOP("cost reduction — applied by the cost reader when you play it");
+    return NOOP("a cost reduction — taken off the price when you play it");
   if(/^this costs \{r\} less to play for each runechant(?: token)? you control$/.test(c))
-    return NOOP("cost reduction — applied by the cost reader when you play it");
+    return NOOP("a cost reduction — taken off the price when you play it");
   /* THE MARK DISCOUNT (v3.96) — `parser.markRed` reads it inside `effCost`
      for the same reason its two neighbours above do: a discount is applied
      when the card is PAID for, never as an op on resolution. It is a
      `noop` only now that `effCost` actually carries it; filed earlier it
      would have been the no-op blind spot at its purest. */
   if(/^if the defending hero is marked, this costs (?:\{r\})+ less to play$/.test(c))
-    return NOOP("cost reduction — applied by the cost reader, against a marked defending hero");
+    return NOOP("a cost reduction — taken off the price against a marked defending hero");
   /* The clash block reads "the winner creates a <X> token" off the card's own
      text at declaration and routes the token to whoever won. */
   if(/^the winner creates? (?:a|an|\d+) [a-z' -]+ tokens?$/.test(c))
@@ -1813,7 +1813,7 @@ function classifyClause(raw){
   if(m=c.match(/^the first card with ([a-z' ]+?) you play from your graveyard each turn gets go again$/)){
     const kwName = m[1].trim();
     if(!KW_VOCAB.test(kwName)) return null;
-    return R([["noop", "static — read at the play by execute, off fx.gyFirstGa"]], {gyFirstGa: kwName});
+    return R([["noop", "a standing ability — it applies when you play that card from your graveyard"]], {gyFirstGa: kwName});
   }
   if(m=c.match(/^quickstrike\s*[-—]\s*if this (?:gets|has) go again,\s*(.+)$/i))
     return GATED(m[1], "hasGa");
@@ -3678,7 +3678,7 @@ function classifyClause(raw){
   /* activation gates on equipment abilities — the gate is its own printed
      sentence, so it must read as accounted-for while fx.activateIf enforces it */
   if(/^activate this(?: ability)? only (?:if|while|during)/.test(c))
-    return NOOP("activation gate — checked before the ability can be used");
+    return NOOP("a condition on the ability — it can only be used when that holds");
   /* Clash fires when the card DEFENDS (which is what every clash card says),
      resolved in the defence step off the clash keyword. */
   if(/^clash with the attacking hero$/.test(c))
@@ -3787,7 +3787,7 @@ function classifyClause(raw){
      form still cannot bar the hand — that is the half the refusal existed
      to protect, and a drill drives it. */
   if(m = c.match(/^defense reaction(?: card)?s can'?t be played (?:(from arsenal) )?(?:to )?this(?:'s)? chain link$/))
-    return R([["noop", "static — read in the reaction window, off fx.noDrx"]],
+    return R([["noop", "a restriction on this chain link — the defending hero cannot play those defense reactions"]],
              {noDrx: m[1] ? "arsenal" : true});
   /* TWO `enterCounters` RULES STOOD HERE AND THE OP WAS DEAD (v4.23).
      `runOps` stashed it as `_enterCounters` and NOTHING read that field,

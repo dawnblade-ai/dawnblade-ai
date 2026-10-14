@@ -286,7 +286,7 @@ test("DRIVEN: taking one moves it to HAND, shuffles, and draws nothing", {skip},
     "the seeded stream advanced — `rngShuffle` is pure and the store-back is the property");
   /* THE FEED IS THE REVEAL (v2.83): the card is NAMED, in a log both seats
      read, which is what the printed `reveal it` IS. */
-  assert.match(feed(take), /Phoenix Flame → hand from deck/);
+  assert.match(feed(take), /Phoenix Flame goes from the deck to the hand/);
   assert.match(feed(take), /deck is shuffled/);
   P.fxReset();
 });
