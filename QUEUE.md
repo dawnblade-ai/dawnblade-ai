@@ -29,7 +29,8 @@ fairness clean, scenes 107/107, every script tag present in the pushed commit.
 7. [6] Run Through's "your next sword attack" rider.
 8. [7] A played defense reaction is in the wall but not in the counts. Fold in **[N4]**
    and **[N5]**.
-9. [8] Shred is legal with nothing to target.
+9. **[R1] THE MARK RULING (user, 2026-10-14) — build next, after item 8.** See "R1" below.
+9b. [8] Shred is legal with nothing to target.
 10. **[N6] `playTargetWhy` treats an untargeted `ctrPut` as targeted.** It refuses Uphold
     Tradition's flip on the trainer. This is the other half of v1's rejection note.
 11. [9] Look Tuff's "unless you pay" tests floating resources only.
@@ -244,8 +245,39 @@ always 1). Both are measured and stated; don't build anything for them.
   aura you control with ward" — NOT targeted — and the flip itself turns its Ward 1 on. The
   activation is legal and not a paid no-op.
 
+## R1 — THE MARK RULING (user, 2026-10-14)
+
+> "Marks wear off when the hero is hit by an opponent's attack or an effect but otherwise
+> sticks around — I'd say even if a hero transforms the mark will stay on!"
+
+Record it verbatim, with the date, wherever rulings are recorded (`tools/rulings.json`, and
+`tools/approx.js` if a stated record is affected). Nothing clears `marked` today; `sides.js`
+is the only place it is ever `false`. Build it this way:
+
+- **Cleared by a HIT from an opponent's attack.** CR 7.5.5: damage actually dealt. A swing
+  blocked to nothing or fully prevented is not a hit and does not clear. A hit on an ally does
+  not clear the hero's mark.
+- **The hit fiction counts.** Danger Digits' "the dagger has hit" is a hit by definition.
+- **Order inside the hit.** Snapshot marked-ness AT the hit, then clear it, then resolve the
+  on-hit triggers.
+  - "When this hits a MARKED hero" (Mark of the Black Widow, Mark of the Funnel Web) must
+    still fire off the snapshot.
+  - "When this hits a hero, mark them" (Mark the Prey, Scar Tissue, Two Sides, Hot on Their
+    Heels, Mark of the Huntsman) re-marks AFTER the clear, so the hero ends that hit marked.
+  - Drill both: a two-case drill can't tell clear-then-trigger from trigger-then-clear.
+- **Persists through transformation.** Arakni becoming an Agent, and returning to the brood,
+  changes nothing about anyone's mark. Pin it with a drill.
+- **"Or an effect" is AMBIGUOUS; do not guess it.** Over the pool, NO card prints an effect
+  that removes a mark, and in CR vocabulary only an attack (or a stated fiction like Danger
+  Digits) "hits". So build attack hits plus the fiction, leave non-attack damage (arcane, a
+  Runechant) NOT clearing, and state that reading in `tools/approx.js` as
+  `mark-cleared-by-effect`, with a probe. The CEO has asked the user to confirm.
+- **Measure the ladder on both sides.** Arakni's whole deck reads marks (Agents,
+  Black Widow, Funnel Web, Stains' discount, Graphene Chelicera), so expect her to move.
+  Report it, and don't retune the policy inside the rules fix.
+
 ## NEEDS A RULING FROM THE USER (do not build)
 
-- **Mark never expires.** Nothing clears `marked` once it is set (`sides.js:171` is the only
+- ~~**Mark never expires.**~~ **RULED 2026-10-14, see R1.** Original note: Nothing clears `marked` once it is set (`sides.js:171` is the only
   `false`), so Arakni's Agents and Black Widow / Funnel Web riders keep reading it for the
   rest of the game. The repo has no sourced rule for when a mark ends. Ask the user.
