@@ -269,7 +269,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 50 -> 51 AT v5.13: `start-item-crank-unasked`. */
   /* 51 -> 52 AT v5.24: `end-phase-unless-floating-only`. */
   /* 52 -> 53 AT v5.27: `attack-power-fixed-at-declaration`. */
-  assert.equal(Object.keys(APPROX).length, 53, "record count moved");
+  /* 53 -> 54 AT v5.30: `look-named-in-shared-feed`. */
+  assert.equal(Object.keys(APPROX).length, 54, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -320,7 +321,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      self "unless you pay" clauses that Look Tuff's sheet started. */
   /* 22 -> 23 AT v5.27: `attack-power-fixed-at-declaration`, QUEUE item 13,
      recorded because no CR quote about an attack-proxy's power is sourced here. */
-  assert.equal(n("stated"), 23, "stated count moved");
+  /* 23 -> 24 AT v5.30: `look-named-in-shared-feed`, QUEUE item 15. */
+  assert.equal(n("stated"), 24, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -779,6 +781,22 @@ probe("attack-power-fixed-at-declaration", () => {
   const pumped = J.withEffects(late, (fx, s2) => fx.linkPumps(s2, {defenders: 0, handBlockers: 0}));
   assert.equal(pumped.total, plain.g.pend.total,
     "a counter put on the aura after the declaration now reaches the attack — the record must move");
+});
+
+/* QUEUE item 15. Compass's printed LOOK resolves as the reveal op, and the
+   line it prints names the card in the feed both seats read. */
+probe("look-named-in-shared-feed", () => {
+  const fx = PR.fxParse(one("Compass of Sunken Depths"));
+  const look = PR.classifyClause("Look at the top card of your deck.");
+  assert.deepEqual(look && look.ops, [["reveal", 1]], "fixture: a look is read as the reveal op");
+  const top = {uid: "tp", name: "Hidden Probe", pitch: 2, tt: "Generic Action", ty: ["Generic", "Action"], tx: ""};
+  const g = H.state({name: "Gravy", deck: [top]}, {name: "Bob"});
+  const n = H.runOps(g, look.ops, "Compass of Sunken Depths");
+  assert.equal(n.sides[0].deck[0].uid, "tp", "the card stays on top");
+  const feed = n.feed.map(f => (typeof f === "string" ? f : f.t)).join(" | ");
+  assert.match(feed, /Hidden Probe/,
+    "the looked-at card is no longer named in the shared feed — the record must move");
+  assert.ok(fx, "and Compass parses");
 });
 
 probe("end-phase-unless-floating-only", () => {

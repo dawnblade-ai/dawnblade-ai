@@ -1,3 +1,19 @@
+## v5.30 — A look that the table hears, recorded
+
+**QUEUE item 15 [19].** Compass of Sunken Depths prints "Look at the top card of your deck",
+which the parser files as the `reveal` op on purpose: in the trainer the opponent is a dummy and
+nothing is hidden. At the table the feed is one list both seats read, so the looked-at card is
+named to the opponent. That is a hidden-information leak, and a per-seat feed is a UI decision,
+so it is recorded rather than built: `tools/approx.js` `look-named-in-shared-feed`, `stated`,
+board `table` (ledger 53 → 54 records, 23 → 24 stated). Its probe drives the look through
+`runOps` and goes red the day the line stops naming the card, which a sabotage confirmed.
+
+**[N12]** asked to correct CLAUDE.md's two references to `parser.pumpRead` (deleted at v5.02).
+Re-verified: both already read in the past tense ("Deleted, with `pumpRead`" and "This sentence
+used to name `parser.pumpRead`"), so nothing was left to change.
+
+No rules moved. 3594 drills, 0 fail, 5 skipped.
+
 ## v5.29 — The feed batch, part two
 
 **QUEUE item 14, items [16]–[18] and N8–N11**, each driven in `test/feedbatch.test.js` with the

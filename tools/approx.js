@@ -213,6 +213,16 @@ const APPROX = {
       "for this record if there was none. The counters are not lost: they stay on the "+
       "permanent for its next swing."},
 
+"look-named-in-shared-feed": {
+  status:"stated", cr:null, board:"table", since:"v4.01", swept:"v5.30",
+  claim:"A card that LOOKS at the top card of a deck (Compass of Sunken Depths, Scout the "+
+        "Periphery) is read as a reveal, so the shared table feed NAMES the card to both "+
+        "seats. Looking is private; this leaks hidden information at the table.",
+  why:"The feed is one list both seats read, and the parser files a look as `reveal` on "+
+      "purpose (\"for the trainer both just put the top card in front of you\"), where "+
+      "the opponent is a dummy and nothing is hidden from anyone. A per-seat feed is a UI "+
+      "decision, not a rules fix, so it is recorded here rather than built (QUEUE item 15)."},
+
 "control-change-steal-built": {
   status:"closed", cr:null, board:"both", since:"v4.68", swept:"v4.74",
   claim:"Jack Be Quick's \"{u} an ally they control, then steal it until the end "+
