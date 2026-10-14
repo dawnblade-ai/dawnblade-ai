@@ -11,8 +11,11 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
 
 ## THE ORDER — v2 (work this list; numbers in brackets point at the item text)
 
-Done: [1] v5.12, [2] v5.13. Also shipped from your own trigger-order measurement:
-v5.09, v5.10, v5.11.
+Done: [1] v5.12, [2] v5.13. Also shipped from the trigger-order measurement: v5.09, v5.10,
+v5.11. **Order items 1–7 are SHIPPED** as v5.14 (N1), v5.15 (N2), v5.16 ([3]), v5.17 ([4]),
+v5.18 ([5]), v5.19 (N3) and v5.20 ([6]). The CEO verified v5.20: 3541 tests, 0 fail, 5 skipped,
+fairness clean, scenes 107/107, every script tag present in the pushed commit.
+**NEXT: item 8.**
 
 1. **[N1] A declared defender's "Discard this" hand ability is legal and pulls it out of
    the wall.** Sev-3, both boards. CEO-verified on v5.13.
