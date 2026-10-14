@@ -1,3 +1,19 @@
+## v5.27 — Counters after the declaration, recorded
+
+**QUEUE item 13 [10].** A +1{p} counter put on a weapon or a Cosmo-armed aura after its
+attack is declared (Astral Etchings at instant speed onto an attacking Spectral Shield) lands
+on the permanent and does not reach the attack, because `powCtr` is read once, into
+`pend.total`, at the declaration. Whether an attack-proxy's power follows its source after
+declaration is a CR question, and the repo carries no verbatim quote for it (searched: no
+"attack-proxy" text anywhere in the engine, the docs or `CR-INDEX.md`). As the queue asked,
+it is recorded rather than built: `tools/approx.js` `attack-power-fixed-at-declaration`,
+`stated`, ledger 52 -> 53 records and 22 -> 23 stated.
+
+Its probe drives a real Enigma table. A counter present at the declaration reaches the
+attack (the control), and one put on afterwards does not (the deviation). It goes red the
+day `linkPumps` reads the live counters, which a sabotage confirmed. No rules moved, so the
+ladder is not re-run. 3581 drills, 0 fail, 5 skipped.
+
 ## v5.26 — "Can't be prevented" is read where the damage lands
 
 > *"Damage that would be dealt by this can't be prevented."* — MURKMIRE GRAPNEL x3

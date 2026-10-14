@@ -200,6 +200,19 @@ const APPROX = {
       "you pay\" became the player's call: the pool prints two self \"unless you pay\" "+
       "clauses, and this is the one with no window to ask in."},
 
+"attack-power-fixed-at-declaration": {
+  status:"stated", cr:null, board:"both", since:"v3.84", swept:"v5.27",
+  claim:"A +1{p} counter put on a weapon or a Cosmo-armed aura AFTER its attack is "+
+        "declared (Astral Etchings at instant speed onto an attacking Spectral Shield) "+
+        "lands on the permanent and never reaches the attack: `powCtr` is read once, at "+
+        "the declaration, into `pend.total`.",
+  why:"Whether an attack-proxy's power follows its source after declaration is a CR "+
+      "question this repo carries no verbatim quote for, and the CR site is unreachable "+
+      "from the sandbox, so building either reading would be restating a rule from "+
+      "memory (`crindex.js`'s own contract). QUEUE item 13 asked for the quote first and "+
+      "for this record if there was none. The counters are not lost: they stay on the "+
+      "permanent for its next swing."},
+
 "control-change-steal-built": {
   status:"closed", cr:null, board:"both", since:"v4.68", swept:"v4.74",
   claim:"Jack Be Quick's \"{u} an ally they control, then steal it until the end "+

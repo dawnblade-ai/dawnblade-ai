@@ -268,7 +268,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 49 -> 50 AT v5.07: `played-target-partial-resolution`. */
   /* 50 -> 51 AT v5.13: `start-item-crank-unasked`. */
   /* 51 -> 52 AT v5.24: `end-phase-unless-floating-only`. */
-  assert.equal(Object.keys(APPROX).length, 52, "record count moved");
+  /* 52 -> 53 AT v5.27: `attack-power-fixed-at-declaration`. */
+  assert.equal(Object.keys(APPROX).length, 53, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -317,7 +318,9 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 20 -> 21 AT v5.13: `start-item-crank-unasked`, a ruling to ask. */
   /* 21 -> 22 AT v5.24: `end-phase-unless-floating-only`, the census of the
      self "unless you pay" clauses that Look Tuff's sheet started. */
-  assert.equal(n("stated"), 22, "stated count moved");
+  /* 22 -> 23 AT v5.27: `attack-power-fixed-at-declaration`, QUEUE item 13,
+     recorded because no CR quote about an attack-proxy's power is sourced here. */
+  assert.equal(n("stated"), 23, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -745,6 +748,39 @@ probe("start-item-crank-unasked", () => {
 /* Bloodrot's "unless you pay" reads floating resources only. DRIVEN: 0
    floating and three blues in hand, and the damage lands with the hand
    untouched. The day it asks or pitches, the record must move. */
+/* QUEUE item 13. A REAL Enigma table, a Cosmo-armed Spectral Shield
+   attacking, and a counter landing on it after the declaration: the
+   permanent carries it, the open attack does not. The control is the same
+   swing declared WITH the counter already on, so the fixture can tell. */
+probe("attack-power-fixed-at-declaration", () => {
+  const B = require("../engine/build.js"), G = require("../engine/game.js"),
+        RNG = require("../engine/rng.js");
+  H.db();
+  const set = (g, f) => { const sides = g.sides.slice(); sides[0] = f(sides[0]); return {...g, sides}; };
+  const mk = ctr => {
+    const Wd = X.loadData(), c = {n: 0};
+    let rng = RNG.make("approx-pow");
+    const h0 = Wd.HEROES.find(x => x.k === "enigma"), h1 = Wd.HEROES.find(x => x.k === "kayo");
+    const b0 = B.buildSideDefault(h0, G.parseDeck(Wd.DECKS.enigma), H.db(), rng, c); rng = b0.rng;
+    const b1 = B.buildSideDefault(h1, G.parseDeck(Wd.DECKS.kayo), H.db(), rng, c); rng = b1.rng;
+    let g = J.newMatch({builds: [b0.b, b1.b], names: [h0.n, h1.n], heroKeys: [h0.k, h1.k],
+                        rng, first: 0, tokSeq: c.n});
+    g = J.withEffects(g, (fx, n) => ({game: fx.runOps(n, [["token", "Spectral Shield", 1, "self"]], "probe")})).game;
+    const sh = g.sides[0].board.find(e => /Spectral Shield/.test(e.card.name));
+    g = set(g, sd => ({...sd, res: 9, hand: [], counters: ctr ? {[sh.uid]: {pow: ctr}} : {}}));
+    const r = J.reduce(g, {t: "activate", uid: sh.uid}, 0);
+    assert.equal(r.error, null, r.error);
+    return {g: r.state, uid: sh.uid};
+  };
+  const plain = mk(0), armed = mk(2);
+  assert.equal(armed.g.pend.total, plain.g.pend.total + 2,
+    "fixture: counters on the aura AT declaration do reach the attack");
+  const late = set(plain.g, sd => ({...sd, counters: {[plain.uid]: {pow: 2}}}));
+  const pumped = J.withEffects(late, (fx, s2) => fx.linkPumps(s2, {defenders: 0, handBlockers: 0}));
+  assert.equal(pumped.total, plain.g.pend.total,
+    "a counter put on the aura after the declaration now reaches the attack — the record must move");
+});
+
 probe("end-phase-unless-floating-only", () => {
   const g = H.state({hp: 20, res: 0, hand: [1, 2, 3].map(u => ({uid: u, name: "Blue " + u, pitch: 3,
     tt: "Generic Action", ty: ["Generic", "Action"], cost: 0}))}, {hp: 20});
