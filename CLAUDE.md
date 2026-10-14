@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.25
+**Current version:** v5.26
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3574 drills** at v5.25.
+This is `node --test "test/*.test.js"` — **3580 drills** at v5.26.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -868,6 +868,15 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A FLAG NOTHING READS, SET AFTER THE DAMAGE IT GOVERNS (v5.26)
+
+Murkmire Grapnel's *"damage that would be dealt by this can't be prevented"* was an op
+setting `n._unpreventable`, read by nothing, and an attack's ops ride to resolution (v4.08)
+anyway (QUEUE item 12, N7). It is a card fact (`fx.unpreventable`) now, and the attack's
+damage hands it to `preventDamage` on both boards: judge's `strike` and the trainer's
+`resolveStack` (`test/unpreventable.test.js`). No ward or shield is spent on it. **An op
+that only sets a field on the state is a lead: grep for the reader.**
 
 ### A HIT WEARS THE MARK OFF (v5.25)
 

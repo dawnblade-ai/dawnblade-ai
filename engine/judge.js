@@ -2165,7 +2165,8 @@ function strike(g){
      hero branch only. */
   if(!(link.target && link.target.kind === "ally")){
     const pv = withEffects(n, (fx, st) =>
-      fx.preventDamage(st, def, total, (link.card || {}).name));
+      fx.preventDamage(st, def, total, (link.card || {}).name,
+        {unpreventable: !!(link.card && link.card.name && PR.fxParse(link.card).unpreventable)}));
     n = pv.game;
     total = pv.dealt;
   }

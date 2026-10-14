@@ -122,7 +122,7 @@ test("every `fx.*` field the pool emits is pinned", () => {
     "noDrx", "noEquipDefend", "onAtk", "onAtkHero", "onDeath", "onDestroy", "onHit",
     "onHitHero", "onLeave", "ops", "optCost", "payCost", "perm", "playIf",
     "playable", "powFormula", "quotedUnread", "rustDestroy", "self", "selfQ",
-    "tapCost", "tier", "wipePowIfIdle",
+    "tapCost", "tier", "unpreventable", "wipePowIfIdle",
   ]);
   /* +firstAtk v4.83 — The Suspense is Killing Me's "your first attack
      each turn gets +1{p}", a STANDING static on an aura. It was an op,
@@ -136,6 +136,10 @@ test("every `fx.*` field the pool emits is pinned", () => {
      and so has no play moment to bank at. Consumed by `effects.tieGrantOf`,
      which `lifeAhead`/`lifeBehind` call — the ONE pair every cross-seat
      life comparison goes through. */
+  /* +unpreventable v5.26 — Murkmire Grapnel's "damage that would be
+     dealt by this can't be prevented". It was an op setting a flag nothing
+     read; it is read where the attack's damage meets `preventDamage`, by
+     judge's `strike` and the trainer's `resolveStack`. */
   /* +noDrx v4.60 — "Defense reaction(s| cards) can't be played (to) this
      chain link", Widowmaker x3 and Wreck Havoc x3. It was filed `noop`
      with a reason that stopped being true at v4.03 (`sparring.act` plays

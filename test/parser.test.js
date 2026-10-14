@@ -908,7 +908,8 @@ test("deep dive — plain damage, Draconic grants and unpreventable damage", () 
   assert.deepEqual(cc("Deal 2 damage to any target").ops, [["dmg",2]]);
   assert.deepEqual(cc("Your next attack this combat chain is Draconic in addition to its other card types.").ops,
     [["dracNext",1]]);
-  assert.deepEqual(cc("Damage that would be dealt by this can't be prevented.").ops, [["unpreventable",1]]);
+  /* a card fact since v5.26, read at the damage step (test/unpreventable.test.js) */
+  assert.equal(cc("Damage that would be dealt by this can't be prevented.").unpreventable, true);
   const d = cc("When this attacks, if it is Draconic, deal 2 damage to any target.");
   assert.equal(d.cond, "isDraconic");
   assert.deepEqual(d.ops, [["dmg",2]]);

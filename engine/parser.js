@@ -3712,8 +3712,13 @@ function classifyClause(raw){
      tick op that precedes it owns the destruction. */
   if(/^destroy it at the beginning of the end phase$/.test(c))
     return R([["selfDestruct","end"]]);
+  /* "DAMAGE THAT WOULD BE DEALT BY THIS CAN'T BE PREVENTED" (v5.26) —
+     Murkmire Grapnel x3. It was an op setting `n._unpreventable`, which
+     nothing read, and an attack's ops ride to RESOLUTION (v4.08), after the
+     damage they were meant to govern. A CARD FACT, read where the attack's
+     damage meets `preventDamage` on both boards (`noDrx`'s shape). */
   if(/^damage that would be dealt by this can'?t be prevented$/.test(c))
-    return R([["unpreventable",1]]);
+    return R([["noop", "its damage can't be prevented"]], {unpreventable: true});
   /* ---- "DEFENSE REACTIONS CAN'T BE PLAYED TO THIS CHAIN LINK" (v4.60) --
      Widowmaker x3 (Azalea's) and Wreck Havoc x3 (Dorinthea's), and until
      now the clause was filed:
@@ -6322,6 +6327,8 @@ function fxParse(card){
        play, so without this line the clause reports `run` and bars nothing
        — v4.01's no-op blind spot arriving through the front door. */
     if(r.noDrx) fx.noDrx = r.noDrx;
+    /* v5.26: the same rule again, read at the damage step. */
+    if(r.unpreventable) fx.unpreventable = true;
     /* v4.83, the same rule a third time: a board static the declaration
        reads, forwarded or it is a noop that does nothing. */
     if(r.firstAtk) fx.firstAtk = (fx.firstAtk || 0) + r.firstAtk;

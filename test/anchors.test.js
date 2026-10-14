@@ -129,8 +129,11 @@ test("`runOps`'s vocabulary and what the pool emits are pinned both ways", {skip
      98 -> 97 AT v4.83: `firstAtkBuff` LEFT. The Suspense is Killing Me's
      "your first attack each turn" is a standing static read at the
      declaration (`fx.firstAtk`), so the op that fired it once on play had
-     no emitter and its case was deleted rather than kept (v4.11). */
-  assert.equal(r.dispatched, 97, "runOps's op vocabulary moved");
+     no emitter and its case was deleted rather than kept (v4.11).
+     97 -> 96 AT v5.26: `unpreventable` LEFT. It set a flag nothing read,
+     at resolution, after the damage it governs; Murkmire Grapnel's clause
+     is a card fact (`fx.unpreventable`) read at the damage step now. */
+  assert.equal(r.dispatched, 96, "runOps's op vocabulary moved");
   /* DISPATCHED WITH NO EMITTER — the `perBoost` shape. Three have a
      producer that is not the parser and are named for it; two have none
      anywhere and are latent readers whose printed wording the pool only

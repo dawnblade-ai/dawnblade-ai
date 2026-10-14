@@ -1,3 +1,26 @@
+## v5.26 — "Can't be prevented" is read where the damage lands
+
+> *"Damage that would be dealt by this can't be prevented."* — MURKMIRE GRAPNEL x3
+
+**QUEUE item 12 [N7], re-verified.** The clause parsed to an op, `unpreventable`, whose
+case set `n._unpreventable`, and nothing in the project read that field. It also could not
+have worked as an op: an attack's ops ride to RESOLUTION (v4.08), after the damage step. So
+a ward pool or a one-event shield stopped the arrow against its printed text, weaker than
+printed, and the card read `tier: full` throughout.
+
+- `fx.unpreventable` is a card fact (`noDrx`'s shape, forwarded by the clause loop), and the
+  clause is a `noop` whose reason names it.
+- `preventDamage` takes an optional fifth argument; with `unpreventable` it prevents
+  nothing and spends no ward or shield. Judge's `strike` and the trainer's `resolveStack`
+  pass it off the attacking card's own parse.
+- The dead `runOps` case is deleted: `runOps`'s dispatched vocabulary 97 -> 96 and the
+  `fx.*` field census gains `unpreventable`, both pinned.
+
+Measured: 3580 drills, 0 fail, 5 skipped; fairness clean; scenes 107/107; 5 sabotages, 5
+bite (each board's call, the early return, the forward, and the dealt amount). Ladder at
+three seeds on both sides: every hero row identical, one `shield` route line 167 -> 166;
+Azalea, who decks the card, does not change.
+
 ## v5.25 — A hit wears the mark off
 
 > RULING (user, 2026-10-14): *"Marks wear off when the hero is hit by an opponent's attack

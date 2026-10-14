@@ -801,8 +801,13 @@ function makeEffects(ctx){
      soaking from the same pool at the same moment, so a rider held while
      ANY of it drains really was prevented "this way". Stated as an
      approximation rather than derived. */
-  const preventDamage = (n, seat, amount, srcName) => {
+  const preventDamage = (n, seat, amount, srcName, o) => {
     let left = Math.max(0, amount | 0);
+    /* "CAN'T BE PREVENTED" (v5.26) — the caller's answer, off the attacking
+       card's own parse. Nothing below applies, and no shield or ward is
+       spent on damage it could not have stopped. */
+    if(o && o.unpreventable && left > 0)
+      return {game: L(n, `${srcName}: its damage can't be prevented.`), dealt: left, prevented: 0};
     /* NOTHING TO PREVENT PREVENTS NOTHING — CR 7.5.5's shape, and the
        property both halves below depend on. A swing already blocked to
        nothing leaves the pool's rider waiting (which is what "the NEXT
@@ -2670,7 +2675,6 @@ function makeEffects(ctx){
            second-person debt; a new line must not grow it. `sv` takes the
            SIDE, so seat 0 reads "You have" and seat 1 reads "Fai has". */
         n = L(n, `${sv(act(n), "have")} Draconic attacks for the rest of this chain.`); }
-      else if(k==="unpreventable"){ n._unpreventable = true; n = L(n, `${srcName}: this damage can't be prevented.`); }
       else if(k==="boo"){
         actMut(n).hist = {...act(n).hist, booed:(act(n).hist.booed||0)+1};
         n = L(n, "The crowd boos you — Reviled, and your Bravo cards know it.");
@@ -8262,7 +8266,9 @@ function makeEffects(ctx){
        permanent, so nothing moves today. A printed rule reachable from
        one direction only is still a hole (v3.01), and the number this
        hands on is the one CR 7.5.5 makes every rider read. */
-    { const _pv = preventDamage(n, 1 - actorOf(n), total, (n.pend && n.pend.card || {}).name);
+    { const _pc = (n.pend && n.pend.card) || {};
+      const _pv = preventDamage(n, 1 - actorOf(n), total, _pc.name,
+                                {unpreventable: !!(_pc.name && fxParse(_pc).unpreventable)});
       n = _pv.game; total = _pv.dealt; }
     foeMut(n).hp -= total;
     /* Runechants no longer pop here. They trigger on PLAY and resolve above
