@@ -509,7 +509,11 @@ test("Sharpen reads as `ctrPut`, with the keyword's own wipe", {skip}, () => {
   P.fxReset();
   const r = cc("Sharpen target sword you control");
   assert.deepEqual(r && r.ops, [["ctrPut",
-    {kind: "pow", n: 1, filter: {tt: "sword"}, label: "+1{p}", wipeEnd: true}]]);
+    {kind: "pow", n: 1, filter: {tt: "sword"}, label: "+1{p}", wipeEnd: true, target: true}]]);
+  /* …and a sharpen that prints no "target" carries no flag (v5.22) */
+  P.fxReset();
+  const u = cc("Sharpen a sword you control");
+  assert.ok(u && u.ops && !u.ops[0][1].target, "untargeted reads untargeted");
 });
 
 test("the THRESHOLD is the card's own number, not a literal", {skip}, () => {

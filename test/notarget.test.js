@@ -138,3 +138,46 @@ test("PREMISE: every targeted foePick or 'target attack' payload prints somethin
   assert.deepEqual([...claim].sort(), ["A Drop in the Ocean", "Pass Over"], "the scan is alive and its claimants are pinned");
   assert.deepEqual(bare, []);
 });
+
+/* ---- "ON AN AURA" IS NOT "ON TARGET AURA" (v5.22) -------------------
+   QUEUE N6. `playTargetWhy` refused every whole-payload `ctrPut` with no
+   candidate, and the trainer's `tryPlay` asks it for powCards too — so
+   Uphold Tradition's flip ("Put a +1{p} counter on AN aura you control
+   with ward") was refused there with no ward aura, while the table and the
+   trainer's own opponent's-turn door allowed it. The flip turns its Ward 1
+   on (ruling 2026-10-04), so the activation is not a paid no-op. The flag
+   is the printed word "target". */
+test("N6: Uphold Tradition's untargeted put is not refused with no aura", {skip}, () => {
+  H.db();
+  const pc = B.equipPiece({...H.card("Uphold Tradition"), uid: 7}).powCard;
+  assert.ok(pc && /on an aura/i.test(pc.tx), "the fixture is the real ability line");
+  assert.equal(E.playTargetWhy(at([]), pc, 0), null, "nothing is targeted, so nothing is missing");
+});
+test("N6: the `target` flag is the printed word — the pool's ctrPut emitters, both ways", {skip}, () => {
+  const db = H.db();
+  const C = require("../engine/cards.js");
+  const tgt = new Set(), untgt = new Set();
+  const walk = (o, name) => {
+    if(Array.isArray(o)){
+      if(o[0] === "ctrPut" && o[1] && typeof o[1] === "object") (o[1].target ? tgt : untgt).add(name);
+      o.forEach(x => walk(x, name));
+    } else if(o && typeof o === "object") Object.values(o).forEach(x => walk(x, name));
+  };
+  for(const r of require("../data/pool.json")){
+    const m = C.mapDbCard(r), c = C.resolveEntry(db, {name: m.n, p: m.p == null ? 0 : m.p, code: null, q: 1});
+    if(c) walk(P.fxParse(c), c.name);
+  }
+  assert.deepEqual([...tgt].sort(), ["Astral Etchings", "Edict of Steel"]);
+  assert.deepEqual([...untgt].sort(), ["Big Bertha", "Crankshaft", "Glisten", "Re-Charge!"]);
+});
+test("N6: a SYNTHETIC whole-payload untargeted put is not refused; its targeted twin is", () => {
+  /* the near-miss no pool card prints: the same sentence with and without
+     the word, so only the flag separates them (v3.73) */
+  P.fxReset();
+  const mk = (nm, tx) => ({uid: 9, name: nm, tt: "Generic Action", ty: ["Generic", "Action"],
+    pitch: 1, cost: 0, power: null, def: 2, tx, kw: []});
+  const un = mk("Ctr Untargeted Probe", "Put a +1{p} counter on an aura you control with ward.");
+  const tg = mk("Ctr Targeted Probe", "Put a +1{p} counter on target aura you control with ward.");
+  assert.equal(E.playTargetWhy(at([un]), un, 0), null);
+  assert.match(E.playTargetWhy(at([tg]), tg, 0) || "", /nothing it can target/);
+});

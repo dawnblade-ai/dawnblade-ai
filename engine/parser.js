@@ -3461,7 +3461,9 @@ function classifyClause(raw){
                  .replace(/\s+/g, " ").trim();
     const filter = pickSubject(subj);
     if(!filter) return null;
-    return R([["ctrPut", {kind:"pow", n:1, filter, label:"+1{p}", wipeEnd:true}]]);
+    /* TARGETED OFF THE PRINTED WORD (v5.22) — see the plain put below */
+    return R([["ctrPut", {kind:"pow", n:1, filter, label:"+1{p}", wipeEnd:true,
+      ...(/^target\b/.test(m[1]) ? {target: true} : {})}]]);
   }
   if((m=c.match(RX_CTR_PUT)) && CTR_KINDS[m[2]]){
     const kind = CTR_KINDS[m[2]];
@@ -3473,7 +3475,14 @@ function classifyClause(raw){
        refuses an UNRESTRICTED answer; see its header. */
     const filter = ctrSubject(cased(RX_CTR_PUT, 3, m[3]));
     if(!filter) return null;
-    return R([["ctrPut", {kind, n, filter, label:m[2]}]]);
+    /* "ON TARGET aura" IS TARGETED; "on AN aura" IS NOT (v5.22). A targeted
+       op with nothing to target is a play the rules refuse
+       (`playTargetWhy`); an untargeted one simply finds nothing and the rest
+       of the card resolves — Uphold Tradition's flip turns its Ward 1 on
+       (ruling 2026-10-04) whether or not an aura takes the counter. The flag
+       is opt-in (v3.58), so every untargeted spec keeps its shape. */
+    return R([["ctrPut", {kind, n, filter, label:m[2],
+      ...(/^target\b/.test(m[3]) ? {target: true} : {})}]]);
   }
   /* ============================================================
      GLISTEN — AN ALLOCATION, AND A WIPE WITH A WIDER SCOPE (v4.44)

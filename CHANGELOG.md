@@ -1,3 +1,28 @@
+## v5.23 — "On an aura" is not "on target aura"
+
+> *"**Instant** - {r}, turn this face-up: Put a +1{p} counter on an aura you control with
+> ward."* — UPHOLD TRADITION, Enigma's · *"Put three +1{p} counters on target aura with
+> ward you control."* — ASTRAL ETCHINGS
+
+**QUEUE item 10 (N6), re-verified here.** v5.07's `playTargetWhy` refuses a played card
+whose whole payload is a targeted op with nothing to target, and it read EVERY `ctrPut`
+as targeted. The trainer's `tryPlay` asks it for powCards too, so with no ward aura the
+trainer refused Uphold Tradition's flip, while the table and the trainer's own
+opponent's-turn door allowed it. The board disagreed with itself. The flip turns its
+Ward 1 on (ruling 2026-10-04), so the activation is not a paid no-op.
+
+**The `ctrPut` spec carries `target: true` off the printed word** ("on target aura",
+"sharpen target sword"), opt-in so every untargeted spec keeps its shape, and
+`playTargetWhy` refuses only a targeted one. Census, both ways and pinned: Astral
+Etchings and Edict of Steel are targeted; Big Bertha, Crankshaft, Glisten and Re-Charge!
+are not. Uphold Tradition's ability line is driven as the real powCard, and a synthetic
+pair (the same sentence with and without the word) separates the flag from everything
+else (v3.73). No tier moves.
+
+Measured: **5 sabotages, 5 bite.** The ladder at three seeds is byte-identical on both
+sides (the trainer is the only board that ever refused it); 0 refusals, 0 violations,
+0 stalls.
+
 ## v5.22 — Shred needs a defender to target
 
 > *"Target card defending an Assassin attack gets -N{d} this combat chain."* — SHRED,

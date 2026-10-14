@@ -10900,7 +10900,7 @@ function playTargetWhy(s, c, seat){
     /* A REFUSAL IS READ BY WHOEVER ATTEMPTED IT, so "you" is right here
        (v2.83); the opponent's zone is named through `sp`. */
     let why = null;
-    if(k === "ctrPut" && !ctrPutCands(sd, spec).length)
+    if(k === "ctrPut" && spec.target && !ctrPutCands(sd, spec).length)
       why = c.name + ": you control nothing it can target";
     else if(k === "pickPrompt" && spec.zone === "grave" && (spec.min == null || spec.min >= 1)
        && !PR.promptPickAskable(PR.promptPickPool(sd, spec), spec))

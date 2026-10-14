@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.22
+**Current version:** v5.23
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3556 drills** at v5.22.
+This is `node --test "test/*.test.js"` — **3559 drills** at v5.23.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -868,6 +868,14 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### "ON AN AURA" IS NOT "ON TARGET AURA" (v5.23)
+
+`playTargetWhy` read every `ctrPut` as targeted, so the trainer refused Uphold
+Tradition's flip with no ward aura while the table allowed it (QUEUE N6). The spec
+carries `target: true` off the printed word, and the emitters are pinned both ways in
+`test/notarget.test.js`. **A refusal for a missing target needs the printed word
+"target"; without it the effect finds nothing and the rest resolves.**
 
 ### A TARGET QUALIFIER HAS A FOURTH HOME, AND A DEFENDER IS A TARGET (v5.22)
 
