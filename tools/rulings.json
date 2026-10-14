@@ -210,7 +210,18 @@
    "Mark the Prey (1)",
    "Two Sides to the Blade (1)"
   ],
-  "ruling": "marking is a specific ability to arachni and assassins - having a mark does nothing on its own but is a qualifier for many other abilities."
+  "ruling": "marking is a specific ability to arachni and assassins - having a mark does nothing on its own but is a qualifier for many other abilities.",
+  "followup": [
+   {
+    "at": "2026-10-14",
+    "ruling": "Marks wear off when the hero is hit by an opponent's attack or an effect but otherwise sticks around — I'd say even if a hero transforms the mark will stay on!"
+   },
+   {
+    "at": "2026-10-14",
+    "ruling": "the effect would specifically need to remove a mark."
+   }
+  ],
+  "built": "v5.25: a hit from an opponent's attack (Danger Digits' fiction included) clears the mark after the board at the hit is snapshotted; non-attack damage does not; the mark survives transformation. test/markwear.test.js"
  },
  "ice-fusion": {
   "at": "2026-07-25",

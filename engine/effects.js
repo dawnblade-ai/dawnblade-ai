@@ -7551,6 +7551,27 @@ function makeEffects(ctx){
      watcher is the piece that hit and the jabbed dagger is not `pend.card`
      — a body that reached for the resolving card would be right on one
      route and silently wrong on the other (v3.48's `tapFoeHero`). */
+  /* ---- A HIT WEARS THE MARK OFF (R1, v5.25) ------------------------
+     RULING (user, 2026-10-14): "Marks wear off when the hero is hit by an
+     opponent's attack or an effect but otherwise sticks around — I'd say
+     even if a hero transforms the mark will stay on!" And on the effect
+     half: "the effect would specifically need to remove a mark." No pool
+     record prints one (a census drill pins that), so the attack hit is the
+     whole of it. CR 7.5.5: only damage actually DEALT is a hit, so the
+     callers ask this only after the hit is settled, and a hit on an ally
+     never reaches it. The board AT the hit is snapshotted before this runs
+     (v5.09), so "when this hits a MARKED hero" still fires, and a "mark
+     them" rider resolves after it and leaves the hero marked again. */
+  const wearMark = (s) => {
+    /* A COPY, NEVER THE CALLER'S OBJECT: `foeMut` replaces `sides` on the
+       object it is handed, and `linkPayload`'s snapshot (`_atHit`) IS that
+       object, so clearing in place erases the very mark the snapshot holds. */
+    let n = {...s};
+    if(!foe(n).marked) return n;
+    foeMut(n).marked = false;
+    return L(n, `${foe(n).name} is hit, and the mark wears off.`);
+  };
+
   const heroHitBy = (s, card, uid) => {
     let n = s;
     /* ---- ARAKNI, TARANTULA (v3.77) --------------------------------
@@ -7610,6 +7631,7 @@ function makeEffects(ctx){
     n = runOps(n, [["dmg", jab.amt]], nm);
     if(before - foe(n).hp > 0){
       n = L(n, `${nm} counts as having HIT — its own on-hit abilities fire, though it never attacked.`);
+      n = wearMark(n);                   /* the fiction is a hit (R1) */
       /* THE CARD'S OWN PRINTED WHEN-THIS-HITS-A-HERO PAYLOAD. Measured
          over the pool: both Daggers are Arakni's and NEITHER carries a
          bare one today — Mark of the Huntsman's is behind a destroy cost
@@ -7725,6 +7747,7 @@ function makeEffects(ctx){
        triggers fire together. A STATE gate is read here; a `way:` gate
        still waits for the ops it asks about (v3.60). */
     const _atHit = n;
+    if(heroHit) n = wearMark(n);
     if(total>0) n = runOps(n, n.pend.onHit, pc.name);
     else if(n.pend.onHit.length) n = L(n, "Fully blocked — on-hit effects fizzle.");
     const _oh = n.pend.onHitHero || [];

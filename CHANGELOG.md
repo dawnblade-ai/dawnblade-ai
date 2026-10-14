@@ -1,3 +1,36 @@
+## v5.25 — A hit wears the mark off
+
+> RULING (user, 2026-10-14): *"Marks wear off when the hero is hit by an opponent's attack
+> or an effect but otherwise sticks around — I'd say even if a hero transforms the mark will
+> stay on!"*
+> RULING (user, 2026-10-14): *"the effect would specifically need to remove a mark."*
+
+**QUEUE R1.** Nothing cleared `marked`; `sides.js` was the only place it was ever false, so
+one Mark the Prey kept every mark-gated card live for the rest of the game.
+
+- `effects.wearMark` clears the defending hero's mark at a HIT: `linkPayload` when
+  `heroHit` (damage dealt, never an ally hit or a full block, CR 7.5.5), and `jabResolve`
+  when Danger Digits' jab lands, because "the dagger has hit" is a hit.
+- **Order:** the v5.09 snapshot is taken first, then the clear, then the on-hit triggers.
+  Mark of the Black Widow / Funnel Web still fire off a hero marked at the hit, and a "mark
+  them" rider (Two Sides to the Blade, Hot on Their Heels, Mark the Prey) re-marks after the
+  clear, so that hero ends the hit marked. Both are driven.
+- **A copy, not the caller's object.** The first draft cleared in place, and since
+  `foeMut` replaces `sides` on the object handed to it and `_atHit` is that object, the
+  snapshot lost its mark and Black Widow's banish stopped firing. Caught by the order drill.
+- Non-attack damage (arcane, `dmg` from an effect) does not clear it. A census drill pins
+  that no pool record prints a mark removal, so the effect half of the ruling has nothing
+  to build and arriving is a decision. Transformation (become an Agent, return to the
+  brood) leaves the opponent's mark alone, driven over four end phases.
+- Recorded in `tools/rulings.json` under `mark`.
+
+Measured: 3574 drills, 0 fail, 5 skipped; fairness clean; scenes 107/107; 6 sabotages, 6
+bite (one first landed in an unreachable `else if` and was re-aimed at the real arcane
+branch). Ladder at three seeds, both sides: **Arakni 27·27·27 → 22·25·23**, intervals
+disjoint, so real and in the direction the ruling predicts (her deck reads the mark and a
+hit now spends it). Everyone else is inside the band (median 3). The one stall is the same
+genuine draw as v5.24 (`enigma-viserai-0`), unchanged. The policy was not retuned.
+
 ## v5.24 — "Unless you pay" is the player's call
 
 > *"When this attacks, it gets -1{p} unless you pay {r}."* — LOOK TUFF

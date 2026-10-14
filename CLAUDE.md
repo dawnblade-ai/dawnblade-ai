@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.24
+**Current version:** v5.25
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3565 drills** at v5.24.
+This is `node --test "test/*.test.js"` — **3574 drills** at v5.25.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -868,6 +868,21 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A HIT WEARS THE MARK OFF (v5.25)
+
+> RULING (user, 2026-10-14): *"Marks wear off when the hero is hit by an opponent's attack
+> or an effect but otherwise sticks around — I'd say even if a hero transforms the mark will
+> stay on!"* And on the effect half: *"the effect would specifically need to remove a mark."*
+
+Nothing cleared `marked` before. `effects.wearMark` clears it at a hero hit (CR 7.5.5: damage
+actually dealt, never an ally hit), in `linkPayload` AFTER the v5.09 snapshot and BEFORE the
+on-hit triggers, so "hits a MARKED hero" fires and "mark them" re-marks. Danger Digits' fiction
+is a hit too. Non-attack damage does not clear it, no pool record removes a mark (census), and
+transformation leaves it alone (`test/markwear.test.js`). **It returns a COPY**: `foeMut`
+replaces `sides` on the object it is handed, and `_atHit` IS that object, so an in-place clear
+erased the snapshot. When you write beside a snapshot, ask whether it is a reference.
+Arakni 27.0 → 23.3 a seed on three seeds, intervals disjoint (real).
 
 ### "UNLESS YOU PAY" IS THE PLAYER'S CALL (v5.24)
 
