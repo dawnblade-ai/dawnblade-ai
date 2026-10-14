@@ -8082,6 +8082,21 @@ const pitchExcessWhy = (sd, sel, need, chiCost) => {
 const handFree = (sd, self) => !sd ? [] : (sd.hand || [])
   .filter(c => c && !(self && c.uid === self.uid) && (sd.blockH || []).indexOf(c.uid) < 0);
 const isDeclaredDefender = (sd, uid) => !!sd && (sd.blockH || []).indexOf(uid) >= 0;
+/* A PLAYED DEFENCE REACTION IS A DEFENDING CARD (v5.21). It is never
+   DECLARED (CR 8.1.3a), so it is not on `blockH`/`blockG` — it resolves
+   into `blockRx`, and the wall has added its defence since v3.25. Every
+   COUNT of the defenders has to see it too, or one wall gives two answers:
+   reprise ("defended with a card from their hand") read none, and Pulping's
+   "fewer than 2 non-equipment cards" read a DR plus one declared card as
+   one. `all` is every played defence reaction (each is a non-equipment
+   card); `fromHand` is the ones played from HAND, which is what reprise
+   names — one from the arsenal defends, and was never in a hand this link.
+   An entry that predates the zone stamp counts toward `all` only: the
+   narrow reading, never a reprise granted off a zone nobody recorded. */
+const rxDefenders = sd => {
+  const ls = (sd && sd.blockRx) || [];
+  return {all: ls.length, fromHand: ls.filter(l => l && l.from === "hand").length};
+};
 const payCeiling = (sd, self) => handFree(sd, self)
   .reduce((t, c) => t + (c.pitch || 0), 0);
 const chiCeiling = (sd, self) => !sd ? 0 : chiFloating(sd) + chiSum(handFree(sd, self));
@@ -10474,6 +10489,6 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, spellvoidX, linksControlled, arcaneSoaks,
         ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
-        chiValue, chiSum, chiFloating, pitchExcessWhy, chiCeiling, payCeiling, handFree, isDeclaredDefender, PLAY_ROUTES, isCardPlay, isNonAtkActionPlay, abChiCost, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, swingSpentWhy, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, abilitiesLive, boardEntryNamed, isEphemeral, isToken, ceasesToExist, ARENA_ZONES, isHandWipe, gyFirstGaKw,
+        chiValue, chiSum, chiFloating, pitchExcessWhy, chiCeiling, payCeiling, handFree, isDeclaredDefender, rxDefenders, PLAY_ROUTES, isCardPlay, isNonAtkActionPlay, abChiCost, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, swingSpentWhy, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, abilitiesLive, boardEntryNamed, isEphemeral, isToken, ceasesToExist, ARENA_ZONES, isHandWipe, gyFirstGaKw,
         CARD_OVERRIDES};
 });

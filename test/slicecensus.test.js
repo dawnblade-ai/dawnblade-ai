@@ -300,7 +300,7 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        `discard` field (a chosen discard's continuation). */
     /* v4.92: `basepow.test.js` takes the same `playRx` -> `playRxA` slice
        to pin that the hand door asks `defLimitWhy`. */
-    "basepow.test.js index.html 8459",
+    "basepow.test.js index.html 8437",
     /* +costtaxes AT v4.86: `tryPlay` -> `confirmPay`, the same body the
        rows below take, for the claim that its cost line asks `payCost`. */
     /* 22,716 -> 23,598 AT v4.91, READ FIRST, for all six rows of this body:
@@ -349,8 +349,8 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        still `playRx` -> `playRxA`. The growth is Put in Context's limit
        asked in the defence branch through `effects.defLimitWhy`, beside the
        `drxBarWhy` bar it sits with. Same anchors, same body. */
-    "dorinthea.test.js index.html 8459",
-    "drx.test.js index.html 8459",
+    "dorinthea.test.js index.html 8437",
+    "drx.test.js index.html 8437",
     /* +instantpump AT v5.03: the same `tryPlay` -> `confirmPay` body. */
     "instantpump.test.js index.html 25934",
     "phasebar.test.js index.html 15953",
@@ -389,10 +389,10 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
     /* 10,264 -> 8,459 AT v4.95, READ FIRST, for the five `playRx` -> `playRxA`
        rows: still the hand door, bounded at the arsenal door. It SHRANK —
        the charge, the resolution and the wall are `effects.playAtSpeed` now. */
-    "priority.test.js index.html 8459",
+    "priority.test.js index.html 8437",
     "routeap.test.js index.html 25934",
     "rxability.test.js index.html 25934",
-    "rxability.test.js index.html 8459",
+    "rxability.test.js index.html 8437",
     "zonerule.test.js index.html 25934"
   ], /* 15,440 -> 16,557 AT v4.59, READ FIRST (v4.57: a pin edited without
         being read is a guard switched off). Both rows are

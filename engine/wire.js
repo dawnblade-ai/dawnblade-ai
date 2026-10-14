@@ -257,7 +257,11 @@
    event, a shield carrying its own rider, not a share of the budget pool.
    A v23 peer files the shield as pool and the hashes diverge on the first
    prevention. The shape digest moves with it. */
-const WIRE_V = 24;
+/* 24 -> 25 AT v5.21: a `blockRx` entry gains `from`, the zone a defence
+   reaction was played from, because reprise counts one played from HAND
+   as "defended with a card from their hand" and one from the arsenal does
+   not. Inside a side field's entries, so the digest holds. By hand. */
+const WIRE_V = 25;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

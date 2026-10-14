@@ -2090,6 +2090,12 @@ function strike(g){
     wall += l.def || 0;
     parts.push(l.label || "defence reaction");
   }
+  /* …AND IT IS COUNTED AS A DEFENDER (v5.21). The wall above has added a
+     played defence reaction's defence since v3.25, and the COUNTS below
+     never saw it: Pulping's "fewer than 2 non-equipment cards" scored a DR
+     plus one declared card as one. Every played DR is a non-equipment
+     defending card; `parser.rxDefenders` is the one reader. */
+  const rxDef = PR.rxDefenders(sd);
 
   /* Equipment WEARS rather than leaving; a card GOES to the graveyard.
 
@@ -2127,7 +2133,10 @@ function strike(g){
      than reading the defenders itself, because how a seat holds its
      declarations is this file's business and not the card's. */
   const pre = withEffects(n, (fx, s) => fx.linkPumps(s, {equipDefenders: spentGear.length,
-    defenders: spentGear.length + handBlockers, handBlockers,
+    defenders: spentGear.length + handBlockers + rxDef.all,
+    /* NON-EQUIPMENT defenders, which is what `defLt2` asks — a played
+       defence reaction is one wherever it was played from (v5.21). */
+    handBlockers: handBlockers + rxDef.all,
     /* WHICH CARDS defend is this file's answer (v3.74), like the wall
        above it: this board holds them on `blockH`, the trainer as stack
        layers, and Boltyn's clause 1 asks whether an ATTACK ACTION CARD is
@@ -2288,7 +2297,11 @@ function declaredWall(g, defSeat){
     .map(u => (sd.hand || []).find(c => c.uid === u)).filter(Boolean);
   const gear = (sd.blockG || [])
     .map(u => (sd.gear || []).find(c => c.uid === u)).filter(Boolean);
-  return {handBlockers: hand.length, defenders: [...gear, ...hand]};
+  /* A DEFENCE REACTION ALREADY PLAYED FROM HAND THIS LINK HAS DEFENDED
+     WITH A CARD FROM HAND (v5.21) — reprise's own words. One played AFTER
+     the reaction asking is not counted, because it is not there yet: the
+     timing is as played. */
+  return {handBlockers: hand.length + PR.rxDefenders(sd).fromHand, defenders: [...gear, ...hand]};
 }
 
 function closeChain(g){
@@ -3245,7 +3258,7 @@ function commitPlay(g, card, zone, seat, window, target){
          addPaid: g._addPaid === true});
       if(dv > 0){
         n = put(n, seat, s => ({...s,
-          blockRx: [...(s.blockRx || []), {label: card.name + " " + dv, def: dv}]}));
+          blockRx: [...(s.blockRx || []), {label: card.name + " " + dv, def: dv, from: zone}]}));
         n = say(n, card.name + " answers at instant speed — +" + dv + " defence.");
       }
     }

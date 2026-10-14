@@ -5717,7 +5717,7 @@ function makeEffects(ctx){
       dv = defendValue(act(n), c, {weaponAttack: !!o.weaponAttack, atkCard: o.atkCard || null,
         fromArsenal: from === "arsenal", addPaid, handDefenders: o.handDefenders || 0});
       if(dv > 0) actMut(n).blockRx = [...(act(n).blockRx || []),
-        {label: `${c.name}${from === "arsenal" ? " (arsenal)" : ""} — defend ${dv}`, def: dv}];
+        {label: `${c.name}${from === "arsenal" ? " (arsenal)" : ""} — defend ${dv}`, def: dv, from}];
     }
     return {game: n, dv, why: null};
   };
@@ -7495,7 +7495,7 @@ function makeEffects(ctx){
           pump(`chain link ${link}`); return;
         } }
       if(cond==="defLt2"){ // a real count now that both seats block from hand
-        if(handBlk >= 2){ n = L(n, `${n.pend.card.name}: two cards from hand met it — the bonus is denied.`); return; }
+        if(handBlk >= 2){ n = L(n, `${n.pend.card.name}: two non-equipment cards met it — the bonus is denied.`); return; }
         pump("defended by fewer than 2 non-equipment cards");
       }
     });
@@ -8140,9 +8140,14 @@ function makeEffects(ctx){
        from the DECLARATIONS rather than from the loop below is also the
        more faithful reading — a card is declared as a defender whether or
        not the loop later finds it. */
+    /* A defence reaction the defender PLAYED is a defending card too
+       (v5.21), counted by the one reader judge's `strike` asks. Latent on
+       this board — the trainer's defender here is the vanilla dummy, which
+       plays none — and stated so a seat that does is counted right. */
+    const _rxd = P.rxDefenders(foe(n));
     const _pre = linkPumps(n, {equipDefenders: defLs.filter(l=>l.gi!=null).length,
-                               defenders: defLs.length,
-                               handBlockers: defLs.filter(l=>l.gi==null).length,
+                               defenders: defLs.length + _rxd.all,
+                               handBlockers: defLs.filter(l=>l.gi==null).length + _rxd.all,
                                /* WHICH CARDS defend is this board's answer
                                   (v3.74) — the trainer holds them as stack
                                   layers pointing into the defender's hand. */
@@ -8196,6 +8201,19 @@ function makeEffects(ctx){
       total = Math.max(0, total - wall);
       blkNote = ` Wall of ${wall} — ${parts.join(", ")} — stops ${stopped}.`;
     }
+    /* A DEFENCE REACTION THE DEFENDER PLAYED DEFENDS HERE TOO (v5.21) —
+       judge's `strike` has summed `blockRx` since v3.25 and this wall never
+       did. Latent, like the count above it; the entries are spent with the
+       link, as judge spends them. Subtracting them after the declared wall
+       is the same arithmetic: the floor at zero composes. */
+    { const _rxl = foe(n).blockRx || [];
+      if(_rxl.length){
+        const rw = _rxl.reduce((t, l) => t + (l.def || 0), 0);
+        const stopped = Math.min(rw, total);
+        total = Math.max(0, total - rw);
+        blkNote += ` ${_rxl.map(l => l.label || "defence reaction").join(", ")} — stops ${stopped}.`;
+        foeMut(n).blockRx = [];
+      } }
     foeMut(n).blockedHand = handBlockers;
     /* AND THE PREVENTION IS ASKED HERE TOO (v4.35). This is the TRAINER's
        own combat path — the one the PLAYER's swing takes — and it applied

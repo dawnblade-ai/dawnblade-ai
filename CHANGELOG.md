@@ -1,3 +1,45 @@
+## v5.21 — A played defence reaction is a defending card in the counts too
+
+> *"**Reprise** - If the defending hero has defended with a card from their hand this
+> chain link, …"* — IRONSONG RESPONSE, OVERPOWER, OUT FOR BLOOD, STROKE OF FORESIGHT ·
+> *"If this is defended by fewer than 2 non-equipment cards, …"* — PULPING ·
+> *"…fewer than 2 cards…"* — WIDOWMAKER
+
+**QUEUE item 8 ([7], with N4 and N5 folded in), re-verified here.** A defence
+reaction is played, never declared (CR 8.1.3a), so it resolves into `blockRx` rather
+than `blockH`/`blockG`. Judge's wall has added its defence since v3.25, and no
+defender COUNT ever saw it, so one wall gave two answers. Driven at the table: a
+Sigil of Suffering played from hand left Ironsong Response's reprise at +0, and a
+declared card plus a played DR read as "fewer than 2" for Pulping.
+
+**`parser.rxDefenders(sd)` is the one reader**: `all` counts every played DR (each is
+a non-equipment defending card), `fromHand` counts the ones played from HAND, which is
+what reprise names. Both play sites stamp the zone on the entry (`from`): judge's play
+branch and `playAtSpeed`. It is asked by `judge.declaredWall` (reprise, timed as
+played: a DR played after the reaction asking is not there yet), by `strike`'s
+`defLt2`/`defLt2any` counts, by the trainer's `rxWall`, and by the shared
+`resolveStack`, which also sums a played DR into its wall now and spends it with the
+link (latent: the trainer's defender is the vanilla dummy). An entry with no zone
+stamp counts toward `all` only. Unity is not moved: "when this defends together with
+a card from hand" fires at declaration, before any DR exists. Its defenders list
+(Shred's targets) is unchanged. `WIRE_V` 24 → 25 for the new entry field.
+
+**N4.** The trainer's two defence-reaction doors counted `{k:"def"}` stack layers for
+Unity's `handDefenders`. On this board those are the dummy's defenders on the
+player's own attack. They count the player's `blockH` now, through one reader
+(`blockHandCount`).
+
+**N5.** `playAtSpeed`'s `handBlockers` forward is driven both ways now (Ironsong
+Response +3 with a hand blocker, +0 without).
+
+The `defLt2` refusal line said "two cards from hand met it", which is false for a DR
+from the arsenal. It says "two non-equipment cards" now.
+
+Measured: **13 sabotages, 13 bite** (one first-pass silence was a missing assertion
+that the trainer's wall spends the DR, added). The ladder at three seeds moves one game
+in 630 (Kayo 61 → 60 wins, Viserai 39 → 40), against a band of median 3. 0 refusals,
+0 violations, 0 stalls.
+
 ## v5.20 — "Your next sword attack" is a later one
 
 > *"Target sword attack gets go again. Your next sword attack this turn gets +N{p}."* —

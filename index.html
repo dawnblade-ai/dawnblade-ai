@@ -806,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "5.20"; /* v5.20 - Run Through's "your next sword attack" bonus waits for a later sword attack instead of pumping the one it targets. See CHANGELOG.md. */
+window.APP_VER = "5.21"; /* v5.21 - a defence reaction the defender played counts as a defending card for reprise and for "defended by fewer than 2". See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -3279,8 +3279,19 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      ABILITY (`resolvePlay`), which is the `handBlockers`/`defenders` pair
      `execute` hands to `attackRx` on both (v3.89). One reader, or the
      second route re-derives the wall and the two drift. */
+  /* THE PLAYER'S DECLARED HAND DEFENDERS, in the DEFENCE window (v5.21).
+     The two defence-reaction doors counted `{k:"def"}` stack layers, which
+     on this board are the DUMMY's defenders against the PLAYER's attack —
+     the other wall entirely. The player's own declarations are `blockH`,
+     still in hand, which is what `finishBlock`'s wall and judge's wall
+     read. Unity is the reader (`handDefenders`). */
+  const blockHandCount = n => act(n).blockH.filter(u => act(n).hand.some(x => x.uid === u)).length;
   const rxWall = n => ({
-    handBlockers: n.stack.filter(l=>l.k==="def" && l.gi==null).length,
+    /* …plus a defence reaction the defender played FROM HAND this link
+       (v5.21) — reprise's "defended with a card from their hand". The
+       one reader is judge's too; latent here, the dummy plays none. */
+    handBlockers: n.stack.filter(l=>l.k==="def" && l.gi==null).length
+      + DawnParser.rxDefenders(opp(n)).fromHand,
     defenders: n.stack.filter(l=>l.k==="def").map(l =>
       l.gi != null ? opp(n).gear[l.gi]
                    : (opp(n).hand.find(x=>x.uid===l.uid) || null)).filter(Boolean)});
@@ -3438,7 +3449,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     const _wall = inAtk ? rxWall(s) : {handBlockers:0, defenders:[]};
     const out = _EFX.playAtSpeed(s, c, "hand", {window: rxWin, addPaid,
       handBlockers: _wall.handBlockers, defenders: _wall.defenders,
-      handDefenders: s.stack.filter(l=>l.k==="def" && l.gi==null).length});
+      handDefenders: inAtk ? 0 : blockHandCount(s)});
     if(out.why) return L(s, out.why + ".");
     let n = out.game;
     if(inAtk) return L(n, `${foe(n).name} passes back.`);
@@ -3492,7 +3503,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        one place `fromArsenal` is true: Springboard Somersault and Unmovable
        print exactly that. */
     const out = _EFX.playAtSpeed(s, c, "arsenal", {window: "defense-reaction",
-      handDefenders: s.stack.filter(l=>l.k==="def" && l.gi==null).length});
+      handDefenders: blockHandCount(s)});
     if(out.why) return L(s, out.why + ".");
     return out.dv > 0 ? L(out.game, `${c.name} fired from the arsenal — defends for ${out.dv}.`) : out.game;
   });
