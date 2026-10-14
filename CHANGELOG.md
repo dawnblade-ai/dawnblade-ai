@@ -1,3 +1,35 @@
+## v5.29 — The feed batch, part two
+
+**QUEUE item 14, items [16]–[18] and N8–N11**, each driven in `test/feedbatch.test.js` with the
+state beside the line.
+
+- **[16] The turn header comes first.** On both boards, a thaw, a suspense payout or a
+  crumbling aura printed above `— X's turn N —`, so it read as the previous end phase. Judge
+  says the header before the start-phase triggers; the trainer's `newTurn` opens with it.
+- **[17] Waxing Specter** printed "condition not met (no blue card …)" on every Cosmo swing.
+  Its "this enters the arena with a +1{p} counter" belongs to the card entering, so the
+  condition loop skips a `ctrSelf` payload on a route that is not a card play
+  (`parser.isCardPlay`). No state moved; the line was noise.
+- **[18] A "Destroy this:" cost is paid before the effect.** The equipment piece was marked
+  destroyed after `runOps`, so it was live during its own effect and the feed printed the
+  effect and then "cost paid". It is marked first now.
+- **N8 The end-phase grant count.** `preventDamage` spent `ward`/`awd` and left
+  `wardTurn`/`awdTurn` standing, so a spent Oasis Respite was announced as unspent. The
+  windowed part is clamped to the pool on spend. And `buffNext` is an amount, so one +6 grant
+  read "6 grants"; it counts once.
+- **N9 The crowd's boo** said "the crowd boos you — Reviled, and your Bravo cards know it" in
+  a feed both seats read, and no pool card prints "Bravo". It names the seat now.
+- **N10 Pouncing Paws** printed the minted card's lowercased capture and a hand-rolled
+  "your". It is "Crouching Tiger springs into Kayo's banished zone" now.
+- **N11 Wax On** said "+3 defence" for the card's whole value. A defence reaction played at
+  instant speed "joins the wall … it defends for N", with the printed number only when it
+  moved.
+
+The second-person ledger in `effects.js` went 45 → 43 and is tightened to that. 3593 drills,
+0 fail, 5 skipped; fairness clean; scenes 107/107; 9 sabotages, 9 bite. Ladder at three seeds
+on both sides: every hero inside the band (Dorinthea 22.0 → 22.3, Enigma unchanged in mean),
+route counters within a few firings, and v5.24's `enigma-viserai-0` draw no longer stalls.
+
 ## v5.28 — The feed batch, part one
 
 **QUEUE item 14, items [11]–[15].** Lines the player reads that were false or printed a field

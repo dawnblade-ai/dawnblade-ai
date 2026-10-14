@@ -1690,7 +1690,10 @@ test("the second-person debt in the shared semantics does not grow", () => {
      graveyard" name the seat through `sp` now, as v4.22 asks of every
      possessive in a line both seats read. The go-again grant's two "Your
      next attack" lines name the source and the seat. */
-  assert.ok(lits.length <= 45,
+  /* 45 -> 43 AT v5.29, PAID DOWN AGAIN (QUEUE N9, N10). The crowd's boo
+     said "the crowd boos you … your Bravo cards know it" and Pouncing Paws
+     "springs into your banished zone"; both name the seat now. */
+  assert.ok(lits.length <= 43,
     `second-person literals in effects.js rose to ${lits.length} — the shared feed is read by both seats`);
   /* AND IT MUST NOT PASS BY FINDING NOTHING: if the scan ever stops
      matching, an empty result reads as a clean file. */

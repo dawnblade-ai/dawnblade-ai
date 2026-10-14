@@ -876,6 +876,10 @@ function makeEffects(ctx){
       const off = Math.min(pool, left);
       left -= off; prevented += off;
       mut().ward = pool - off;
+      /* THE WINDOWED PART CANNOT OUTLIVE THE POOL (v5.28, QUEUE N8): a spent
+         Oasis Respite left `wardTurn` standing, so the end phase announced
+         an unspent grant that had been used up. */
+      mut().wardTurn = Math.min((n.sides[seat] || {}).wardTurn || 0, pool - off);
       n = L(n, `${srcName || "The attack"}: ward soaks ${off}`
              + (pool - off > 0 ? ` (${pool - off} left).` : " and is spent."));
       /* NO RIDER HERE ANY MORE (v5.06): Toe the Line's rider is a one-event
@@ -968,6 +972,7 @@ function makeEffects(ctx){
     if(pool > 0 && left > 0){
       const off = Math.min(pool, left); left -= off;
       mut().awd = pool - off;
+      mut().awdTurn = Math.min(sd().awdTurn || 0, pool - off);   /* v5.28, as `wardTurn` */
       n = L(n, `${srcName}: arcane ward soaks ${off}${pool-off>0?` (${pool-off} left)`:" and is spent"}.`);
     }
 
@@ -2415,7 +2420,10 @@ function makeEffects(ctx){
         const made = {...rec, uid:"mk"+tokSeq(), _playTurn:n.turn};
         actMut(n).banish = [made, ...act(n).banish];
         actMut(n).hist = {...act(n).hist, made:(act(n).hist.made||0)+1};
-        n = L(n, `${rec.name} springs into your banished zone — playable this turn (${clean(rec.tx||"").split("\n")[0]}).`);
+        /* THE DATABASE'S NAME AND THE SEAT'S POSSESSIVE (v5.28, QUEUE N10): the
+           parse captures the name lowercased ("crouching tiger"), and a
+           hand-rolled "your" is wrong in a feed both seats read (v2.83). */
+        n = L(n, `${rec.dbName || rec.name} springs into ${sp(act(n))} banished zone — playable this turn (${clean(rec.tx||"").split("\n")[0]}).`);
       }
       else if(k==="namedBuff"){
         actMut(n).namedBuff = {name:norm(v), amount:op[2]||0};
@@ -2677,7 +2685,10 @@ function makeEffects(ctx){
         n = L(n, `${sv(act(n), "have")} Draconic attacks for the rest of this chain.`); }
       else if(k==="boo"){
         actMut(n).hist = {...act(n).hist, booed:(act(n).hist.booed||0)+1};
-        n = L(n, "The crowd boos you — Reviled, and your Bravo cards know it.");
+        /* NAMED, AND TRUE (v5.28, QUEUE N9). It said "the crowd boos you" in
+           a feed both seats read, and "your Bravo cards know it" — no pool
+           card prints "Bravo". What reads a boo is the turn record. */
+        n = L(n, `${sv(act(n), "hear")} the crowd boo — Reviled this turn.`);
         /* LYATH: "Whenever the crowd boos you, create a Might token." Reuses
            the generic "token" op rather than duplicating the board-mint
            logic — a token is a card, resolved once, in one place. */
@@ -3970,6 +3981,12 @@ function makeEffects(ctx){
          ability, and the bonus must not follow it there. `from` is the
          route, exactly as it is for an ally (v3.44). */
       if(wpnOnly && from !== "weapon") return;
+      /* AN ENTERS-WITH PAYLOAD BELONGS TO THE CARD ENTERING (v5.28, QUEUE
+         item 14 [17]). Waxing Specter's "this enters the arena with a +1{p}
+         counter" was asked again every time Cosmo swung it, and printed
+         "condition not met" on every swing. A board permanent attacking is
+         not being played, so its entry clause is not in question. */
+      if(op && op[0] === "ctrSelf" && !P.isCardPlay(from)) return;
       /* A "…THIS WAY" CONDITION CANNOT BE ANSWERED YET (v3.60). This loop
          runs BEFORE `fx.ops`, so the trace it asks about is empty — every
          such condition would read false, on every card, forever. They are
@@ -5086,6 +5103,10 @@ function makeEffects(ctx){
          PLAY was not, so a card that resolved to nothing visible left no
          trace of having been played at all */
       n = L(n, `${act(n).name} ${/^you$/i.test(act(n).name||"") ? "play" : "plays"} ${card.name}${from==="weapon"||from==="hero"||from==="board" ? " — activated" : ""}.`);
+      /* A "DESTROY THIS:" COST IS PAID BEFORE THE EFFECT (v5.28, QUEUE item
+         14 [18]). The piece was marked after `runOps`, so it was live during
+         its own effect and the feed printed the effect, then "cost paid". */
+      if(from==="hero" && card.sd){ actMut(n).gear = act(n).gear.map(x=> ("gp"+x.uid)===card.uid ? {...x,destroyed:true} : x); n = L(n, "The piece shatters — cost paid."); }
       /* AN ACTIVATED ATTACK-REACTION ABILITY RESOLVES ONTO THE OPEN LINK,
          SO ITS OPS ARE NOT RUN HERE (v3.63). `attackRx` runs them itself,
          against the attack the ability names — running them here as well
@@ -5297,7 +5318,6 @@ function makeEffects(ctx){
         else n = runOps(n, [["self", fx.self]], card.name);
       }
       n.featured = {card:{name:card.name,img:card.img,dbImg:card.dbImg,pitch:card.pitch,cost:card.cost,power:card.power,def:card.def,tt:card.tt}, chip:(fx.perm?"ENTERS PLAY — ":"RESOLVED — ")+(typeAbbr(card)||"effect").toUpperCase()};
-      if(from==="hero" && card.sd){ actMut(n).gear = act(n).gear.map(x=> ("gp"+x.uid)===card.uid ? {...x,destroyed:true} : x); n = L(n, "The piece shatters — cost paid."); }
       /* A BOARD PERMANENT PAYING ITS OWN DESTROY COST (v2.35). Energy Potion
          and Timesnap Potion both read "Destroy this: …" and both sat inert on
          the board with no way to activate them at all — the board's onClick
@@ -10477,7 +10497,9 @@ function beginEndPhase(game, seat, db){
      during your turn must not keep it into their own. */
   for(const i of [0, 1]){
     const sd = (n.sides || [])[i] || {};
-    const held = (sd.buffNext || 0) + (sd.buffQ || []).length
+    /* `buffNext` IS AN AMOUNT, NOT A COUNT (v5.28, QUEUE N8): one +6 grant
+       read "6 unspent grants". */
+    const held = (sd.buffNext ? 1 : 0) + (sd.buffQ || []).length
                + ((sd.gaNext ? 1 : 0)) + (sd.gaNextQ || []).length + (sd.costOff || []).length
                + (sd.instantNextQ || []).length + (sd.defCapNext || []).length
                /* LYATH'S DEFENCE GRANT IS "THIS TURN" TOO (v3.78) — the

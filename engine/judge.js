@@ -3260,7 +3260,12 @@ function commitPlay(g, card, zone, seat, window, target){
       if(dv > 0){
         n = put(n, seat, s => ({...s,
           blockRx: [...(s.blockRx || []), {label: card.name + " " + dv, def: dv, from: zone}]}));
-        n = say(n, card.name + " answers at instant speed — +" + dv + " defence.");
+        /* THE CARD'S WHOLE VALUE, NOT A BONUS (v5.28, QUEUE N11): "+3
+           defence" read as an increase over something when 3 is what the
+           card blocks for. Name the printed number only when it moved. */
+        const pd = card.def || 0;
+        n = say(n, card.name + " joins the wall at instant speed — it defends for " + dv +
+                   (dv !== pd ? " (printed " + pd + ")" : "") + ".");
       }
     }
   }
@@ -3632,6 +3637,10 @@ function endPhaseAfterArsenal(g, seat){
      schedule written into one board's turn boundary is a schedule the
      other board does not have, which is how phantasm came to be inert
      here for three versions. */
+  /* THE HEADER FIRST (v5.28, QUEUE item 14 [16]). The start-phase lines
+     below printed ABOVE it, so a thaw or a suspense payout read as the
+     previous turn's end phase. */
+  n = say(n, "— " + at(n, n.turnPlayer).name + "'s turn " + n.turn + " —");
   {
     const inc = n.turnPlayer;
     /* FREEZE LIFTS AT THE START OF THE FREEZING PLAYER'S TURN (Cold Snap),
@@ -3667,8 +3676,7 @@ function endPhaseAfterArsenal(g, seat){
     }
   }
 
-  n = P.toPhase(n, "action");                       /* CR 4.3.2 issues the AP */
-  return say(n, "— " + at(n, n.turnPlayer).name + "'s turn " + n.turn + " —");
+  return P.toPhase(n, "action");                   /* CR 4.3.2 issues the AP */
 }
 
 /* TWO LIMITS LIVE IN `weaponUsed` AND THEY EXPIRE DIFFERENTLY.

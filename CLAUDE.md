@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.28
+**Current version:** v5.29
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3585 drills** at v5.28.
+This is `node --test "test/*.test.js"` — **3593 drills** at v5.29.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -868,6 +868,15 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A COST BEFORE ITS EFFECT, A HEADER BEFORE ITS TURN (v5.29)
+
+The second feed batch (QUEUE item 14) is mostly order. A "Destroy this:" piece is marked
+destroyed before its effect runs; the turn header prints before that turn's start-phase
+triggers on both boards; and an entry clause (`ctrSelf`) is not asked when a board permanent
+attacks rather than being played. N8: a windowed ward is clamped to its pool on spend, so the
+end phase does not announce a spent grant. **When a line reads as the wrong moment, check the
+order of the writes before rewording it.**
 
 ### A STATE KEY IS NOT A WORD (v5.28)
 
