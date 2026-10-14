@@ -17,7 +17,10 @@ v5.18 ([5]), v5.19 (N3) and v5.20 ([6]). The CEO verified v5.20: 3541 tests, 0 f
 fairness clean, scenes 107/107, every script tag present in the pushed commit.
 Then **item 8 ([7]+N4+N5) v5.21, 9b ([8] Shred) v5.22, and 10 (N6) v5.23** shipped. The CEO
 verified v5.23: 3559 tests, 0 fail, 5 skipped, scenes 107/107, every script tag present.
-**NEXT: R1 (the mark ruling, item 9), then 11, 12, 13, 14, 15.**
+Then **11 v5.24, R1 v5.25, 12 v5.26, 13 v5.27 (recorded, unsourced), 14 v5.28 + v5.29, and
+15 v5.30 (recorded)** shipped. **THE QUEUE IS COMPLETE.** The CEO verified v5.30: 3594 tests,
+0 fail, 5 skipped, scenes 107/107, fairness clean, every script tag present. The approximation
+ledger reads 24 stated, 1 open (`cloaked-display`, a UI job) and 29 closed.
 
 1. **[N1] A declared defender's "Discard this" hand ability is legal and pulls it out of
    the wall.** Sev-3, both boards. CEO-verified on v5.13.
