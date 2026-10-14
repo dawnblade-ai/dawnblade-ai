@@ -267,11 +267,12 @@ is the only place it is ever `false`. Build it this way:
   - Drill both: a two-case drill can't tell clear-then-trigger from trigger-then-clear.
 - **Persists through transformation.** Arakni becoming an Agent, and returning to the brood,
   changes nothing about anyone's mark. Pin it with a drill.
-- **"Or an effect" is AMBIGUOUS; do not guess it.** Over the pool, NO card prints an effect
-  that removes a mark, and in CR vocabulary only an attack (or a stated fiction like Danger
-  Digits) "hits". So build attack hits plus the fiction, leave non-attack damage (arcane, a
-  Runechant) NOT clearing, and state that reading in `tools/approx.js` as
-  `mark-cleared-by-effect`, with a probe. The CEO has asked the user to confirm.
+- **"Or an effect" — ANSWERED (user, 2026-10-14): "the effect would specifically need to
+  remove a mark."** Non-attack damage (arcane, a Runechant) does NOT clear a mark. Only an
+  effect whose text says to remove the mark does, and over the pinned pool NO card prints one,
+  so there is nothing to build for that half. Record both quotes verbatim. Pin the premise as a
+  drill: a census proving no pool record removes a mark, so the day one arrives it is a
+  decision rather than a silent no-op. No `stated` record is needed.
 - **Measure the ladder on both sides.** Arakni's whole deck reads marks (Agents,
   Black Widow, Funnel Web, Stains' discount, Graphene Chelicera), so expect her to move.
   Report it, and don't retune the policy inside the rules fix.
