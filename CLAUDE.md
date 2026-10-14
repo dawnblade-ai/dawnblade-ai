@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.23
+**Current version:** v5.24
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3559 drills** at v5.23.
+This is `node --test "test/*.test.js"` — **3565 drills** at v5.24.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -868,6 +868,16 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### "UNLESS YOU PAY" IS THE PLAYER'S CALL (v5.24)
+
+Look Tuff auto-decided off floating resources and printed "can't pay" over a pitchable
+hand (QUEUE item 11). A declaration-time sheet has opened at the declaration since
+v4.80, so the shared pay sheet asks, with the penalty on `elseOps`
+(`test/looktuff.test.js`). Bloodrot Pox, the pool's other self "unless", has no
+priority window to ask in and is recorded (`end-phase-unless-floating-only`). **When a
+comment calls something an approximation forced by a wall, check whether the wall is
+still there.**
 
 ### "ON AN AURA" IS NOT "ON TARGET AURA" (v5.23)
 

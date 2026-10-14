@@ -1303,7 +1303,12 @@ function applyPrompt(game, prompt){
        "You" or "The opponent" and those take different verb forms — the
        existing "paid" dodges it the same way, and v2.83 is the version
        that had to learn a cross-seat line names one seat. */
-    out.msgs.push(who + payVerb(prompt, true) + " — the rider resolves.");
+    /* AN "UNLESS" PAID HAS NO RIDER — it AVOIDS what declining runs (v5.24).
+       Look Tuff, Winter's Bite and every "unless they pay" carry nothing on
+       `ops` and the consequence on `elseOps`, so "the rider resolves" said
+       the opposite of what happened. */
+    const unless = !(prompt.ops || []).length && (prompt.elseOps || []).length > 0;
+    out.msgs.push(who + payVerb(prompt, true) + (unless ? " — and avoids what declining costs." : " — the rider resolves."));
     return out;
   }
   /* SOAK. This module runs no effects and touches no resources, so the

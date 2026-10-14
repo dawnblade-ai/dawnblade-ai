@@ -187,6 +187,19 @@ const APPROX = {
       "is the Grenade's only reprieve from its own start-of-turn clock. Declining is "+
       "what the seat policy answers anyway (v4.24). A ruling to ask, not a build."},
 
+"end-phase-unless-floating-only": {
+  status:"stated", cr:"CR 4.4.1", board:"both", since:"v3.09", swept:"v5.24",
+  claim:"Bloodrot Pox's \"…it deals 2 damage to you unless you pay {r}{r}{r}\" is "+
+        "paid out of FLOATING resources only. A hand that could pitch the three is not "+
+        "asked, and the damage lands.",
+  why:"It fires at the beginning of the controller's end phase, where CR 4.4.1 gives "+
+      "nobody priority, so no sheet can be put to the player (a queued prompt there is "+
+      "silently never shown — v3.09 measured that). Pitching on the player's behalf "+
+      "would spend three cards to avoid 2 life, a losing trade made quietly, which is "+
+      "why `selfPayOr` never pitches. CENSUSED AT v5.24 when Look Tuff's own \"unless "+
+      "you pay\" became the player's call: the pool prints two self \"unless you pay\" "+
+      "clauses, and this is the one with no window to ask in."},
+
 "control-change-steal-built": {
   status:"closed", cr:null, board:"both", since:"v4.68", swept:"v4.74",
   claim:"Jack Be Quick's \"{u} an ally they control, then steal it until the end "+

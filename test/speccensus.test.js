@@ -170,8 +170,17 @@ const drive = () => {
      pitchable, so the seat policy pays from a smaller hand and Enigma v
      Boltyn stopped reaching the sheet. Measured over every pairing outside
      the ring: six reach it, every one Enigma's, and Azalea v Enigma is the
-     first. Replaced, for the reason given above. */
+     first. Replaced, for the reason given above.
+
+     AND A FOURTH TIME AT v5.24. Look Tuff's "unless you pay" became the
+     player's call on the pay sheet, so the policy's games moved and Azalea
+     v Enigma stopped reaching it. Measured over every pairing and both
+     chairs: four reach it, every one Enigma's, and Enigma v Azalea under
+     its own seed is the first. It is ADDED rather than swapped: Azalea v
+     Enigma still carries `keepTop` (Spire Sniping's reorder), which left
+     the set the moment that leg went. 35 -> 36 legs; the set stands. */
   { const r = T.leg(E[5], E[8], "spec-5-8", 0); legs++; if(r && r.threw) threw++; }
+  { const r = T.leg(E[8], E[5], "spec-8-5", 0); legs++; if(r && r.threw) threw++; }
   /* AND THE 34th IS THE SAME RULE A SECOND TIME (v4.59). Generalising the
      activation-pick legality means Fai's hero ability is refused when his
      graveyard holds no Phoenix Flame — three resources and his once-per-turn
@@ -211,8 +220,8 @@ const fnBody = name => {
 
 test("the driven census is alive — the legs really ran", () => {
   drive();
-  assert.equal(legs, 35, "the leg count moved; the pinned field set is taken at 35 "
-    + "(32 in the ring, plus the three named legs that keep `ctrStamp`, "
+  assert.equal(legs, 36, "the leg count moved; the pinned field set is taken at 36 "
+    + "(32 in the ring, plus the four named legs that keep `keepTop`, `ctrStamp`, "
     + "`shuffleAfter` and crank's `avail`/`spendCtr` in it — see `drive`)");
   assert.equal(threw, 0,
     "a leg threw — `leg` reports that as `threw: true` rather than raising, so a "

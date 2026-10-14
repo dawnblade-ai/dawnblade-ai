@@ -1,3 +1,41 @@
+## v5.24 — "Unless you pay" is the player's call
+
+> *"When this attacks, it gets -1{p} unless you pay {r}."* — LOOK TUFF
+
+**QUEUE item 11 ([9]), re-verified here.** Look Tuff tested FLOATING resources only and
+decided for the player. With nothing floating and pitchable cards in hand, the feed said
+"can't pay 1", which is false under the pitch-on-demand ruling (2026-08-01), and the
+penalty landed. The comment called it an honest approximation forced by a timing wall,
+and v4.80 removed that wall: a sheet queued at an attack's declaration opens there on
+both boards, so the answer lands on this swing.
+
+**The shared pay sheet asks now**, addressed to the controller. Declining runs
+`elseOps` (`self -1` on the open link), the "unless" half `buildPrompt` has carried
+since v2.75, and paying pitches on demand. Only a seat that cannot reach the cost even
+by pitching takes the penalty unasked, and the line now says that. `runOps`'s `self`
+learned a negative: floored at zero, and printed as a minus. The pay sheet's accept line
+said "the rider resolves" for every paid sheet. For an "unless" (nothing on `ops`, the
+consequence on `elseOps`: Look Tuff, Winter's Bite, every "unless they pay") it says the
+payer "avoids what declining costs" now.
+
+**The census of self "unless you pay" clauses** finds two in the pool. The other is
+Bloodrot Pox, which fires at the beginning of the end phase where nobody has priority
+(CR 4.4.1), so it pays from floating resources only and never pitches for the player
+(v3.09). That is recorded as `end-phase-unless-floating-only`, `stated`, with a driven
+probe (ledger 51 → 52 records, 21 → 22 stated).
+
+`test/speccensus.test.js` lost `ctrStamp` again because the games moved: the fourth
+time since v4.58. Enigma v Azalea under its own seed is the first leg that reaches it.
+It is ADDED (35 → 36 legs) because the old leg still carries `keepTop`.
+
+Measured: **6 sabotages, 6 bite.** The ladder at three seeds moves single games on
+nine heroes, every interval overlapping, against a band of median 3. **One stall
+appeared** (enigma-viserai-0), and it is a genuine draw rather than a livelock: about
+2.4 steps a turn, both heroes on 1 life, Viserai's deck and hand empty so he cannot pay
+for Reaping Blade, and Enigma's hand a Block, a defence reaction and two Astral Etchings
+with no aura to target. CR 4.5.3 has no deck-out loss (v3.80, v4.58). 0 refusals,
+0 violations.
+
 ## v5.23 — "On an aura" is not "on target aura"
 
 > *"**Instant** - {r}, turn this face-up: Put a +1{p} counter on an aura you control with

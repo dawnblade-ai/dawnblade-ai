@@ -1822,10 +1822,12 @@ function makeEffects(ctx){
          than printed and visible (v3.24). */
       else if(k==="self"){
         if(n.pend && n.pend.by != null && n.pend.by === actorOf(n)){
-          n.pend = {...n.pend, total: (n.pend.total||0) + v};
-          n = L(n, `${srcName}: +${v} power to the attack → ${n.pend.total}.`);
+          /* A NEGATIVE `self` IS LOOK TUFF'S DECLINED "UNLESS" (v5.24),
+             floored at zero like every other power read here. */
+          n.pend = {...n.pend, total: Math.max(0, (n.pend.total||0) + v)};
+          n = L(n, `${srcName}: ${v < 0 ? "" : "+"}${v} power to the attack → ${n.pend.total}.`);
         }
-        else n = L(n, `${srcName}: +${v} power, but no attack of yours is in flight.`);
+        else n = L(n, `${srcName}: ${v < 0 ? "" : "+"}${v} power, but no attack of yours is in flight.`);
       }
       /* ---- PIERCING N (v4.20) ------------------------------------
          The AAZ010 printing of Drill Shot carries the reminder text the
@@ -4449,18 +4451,29 @@ function makeEffects(ctx){
          half of the same rider is read by `effCost`, which is called from
          twenty sites and is handed no turn. One record, both halves. */
       const banPow = card._banPow || 0;
-      /* "it gets -N{p} unless you pay {cost}" (Look Tuff). This is a
-         declare-time decision, before the total below is struck — the same
-         timing wall Charge and Fusion hit, so it gets the same honest
-         approximation: auto-pay when it's affordable (a real prompt drains
-         only after resolution, too late to change THIS attack's own
-         total), else eat the penalty. */
+      /* "it gets -N{p} unless you pay {cost}" (Look Tuff) — THE PLAYER'S
+         CALL, ON THE SHARED PAY SHEET (v5.24).
+
+         This used to auto-pay out of FLOATING resources and otherwise say
+         "can't pay" — while the hand held pitchable cards, so the feed
+         stated a falsehood and the player was denied a printed choice
+         (pitching is on demand, RULING 2026-08-01). The reason it gave was
+         a timing wall that v4.80 removed: a sheet queued when an attack is
+         declared opens at the declaration on both boards, so the answer
+         lands on THIS swing. Declining runs `elseOps`, the "unless" half
+         `buildPrompt` has carried since v2.75, and `self` lands it on the
+         open link. Only a seat that cannot reach the cost even by pitching
+         takes the penalty without being asked, and the line says why. */
       const payOrLose = fx.ops.find(o=>o[0]==="payOrLose");
       let payPenalty = 0;
       if(payOrLose){
         const [,penAmt,cost] = payOrLose;
-        if(act(n).res >= cost){ actMut(n).res -= cost; n = L(n, `${card.name}: paid ${cost} — the ${penAmt}{p} penalty is avoided.`); }
-        else { payPenalty = -penAmt; n = L(n, `${card.name}: can't pay ${cost} — takes -${penAmt}{p}.`); }
+        const reach = act(n).res + P.payCeiling(act(n), card);
+        if(reach < cost){ payPenalty = -penAmt; n = L(n, `${card.name}: ${cost} can't be raised, even by pitching — it takes -${penAmt}{p}.`); }
+        else n.promptQ = [...(n.promptQ||[]), {tag:"pay", side:actorOf(n), src:card.name, cost,
+          ops:[], elseOps:[["self", -penAmt]],
+          title:`Pay ${cost} or ${card.name} loses ${penAmt}{p}`,
+          hint:`${card.name} prints -${penAmt}{p} unless its controller pays ${cost}. Pitching is on demand.`}];
       }
       /* FRAILTY IS NARROW, AND THE SCOPE IS PRINTED ON THE TOKEN (v3.09):
          "Attack action cards you've played FROM ARSENAL and your WEAPON

@@ -267,7 +267,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      `attack-grant-misses-own-attack`. */
   /* 49 -> 50 AT v5.07: `played-target-partial-resolution`. */
   /* 50 -> 51 AT v5.13: `start-item-crank-unasked`. */
-  assert.equal(Object.keys(APPROX).length, 51, "record count moved");
+  /* 51 -> 52 AT v5.24: `end-phase-unless-floating-only`. */
+  assert.equal(Object.keys(APPROX).length, 52, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -314,7 +315,9 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      that fires together commutes, and the two that did not were defects
      (v5.09, v5.10). */
   /* 20 -> 21 AT v5.13: `start-item-crank-unasked`, a ruling to ask. */
-  assert.equal(n("stated"), 21, "stated count moved");
+  /* 21 -> 22 AT v5.24: `end-phase-unless-floating-only`, the census of the
+     self "unless you pay" clauses that Look Tuff's sheet started. */
+  assert.equal(n("stated"), 22, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -737,6 +740,18 @@ probe("start-item-crank-unasked", () => {
   assert.equal((g.sides[0].counters[b.uid] || {}).steam, 1, "fixture: the counter crank would spend is there");
   assert.ok(!g.prompt && !(g.promptQ || []).length,
     "a crank sheet opens at game start — the ruling was built and the record must move");
+});
+
+/* Bloodrot's "unless you pay" reads floating resources only. DRIVEN: 0
+   floating and three blues in hand, and the damage lands with the hand
+   untouched. The day it asks or pitches, the record must move. */
+probe("end-phase-unless-floating-only", () => {
+  const g = H.state({hp: 20, res: 0, hand: [1, 2, 3].map(u => ({uid: u, name: "Blue " + u, pitch: 3,
+    tt: "Generic Action", ty: ["Generic", "Action"], cost: 0}))}, {hp: 20});
+  const n = H.runOps(g, [["selfPayOr", 3, [["dmgSelf", 2]]]], "Bloodrot Pox");
+  assert.equal(n.sides[0].hp, 18, "the damage lands — the hand could have paid");
+  assert.equal(n.sides[0].hand.length, 3, "and nothing was pitched for the player");
+  assert.ok(!n.prompt && !(n.promptQ || []).length, "and nothing asked");
 });
 
 /* Oasis Respite names a TARGET HERO and a SOURCE and the engine reads
