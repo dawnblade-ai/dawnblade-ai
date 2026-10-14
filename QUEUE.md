@@ -15,7 +15,9 @@ Done: [1] v5.12, [2] v5.13. Also shipped from the trigger-order measurement: v5.
 v5.11. **Order items 1–7 are SHIPPED** as v5.14 (N1), v5.15 (N2), v5.16 ([3]), v5.17 ([4]),
 v5.18 ([5]), v5.19 (N3) and v5.20 ([6]). The CEO verified v5.20: 3541 tests, 0 fail, 5 skipped,
 fairness clean, scenes 107/107, every script tag present in the pushed commit.
-**NEXT: item 8.**
+Then **item 8 ([7]+N4+N5) v5.21, 9b ([8] Shred) v5.22, and 10 (N6) v5.23** shipped. The CEO
+verified v5.23: 3559 tests, 0 fail, 5 skipped, scenes 107/107, every script tag present.
+**NEXT: R1 (the mark ruling, item 9), then 11, 12, 13, 14, 15.**
 
 1. **[N1] A declared defender's "Discard this" hand ability is legal and pulls it out of
    the wall.** Sev-3, both boards. CEO-verified on v5.13.
