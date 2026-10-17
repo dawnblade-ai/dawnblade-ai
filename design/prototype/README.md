@@ -37,7 +37,11 @@ passes and judge-audited states the game had.
 ## What it measured
 
 See `STAGE.md`, Appendix B. In short: the projection matched every strike in
-the game, the strike equation must read `_struck` rather than `pend.total`,
-the life numeral belongs beside the bar (over it, it covers the damage edge at
-some life total), per-blocker numbers must come from `defendValue`, and the
-shared feed needs a classified caption list.
+the game, and every pass-only projection in the 210-game corpus. The strike
+equation needs a new `pend.power` field, because neither `pend.total` nor
+`_struck` is the power the wall was subtracted from. The life numeral belongs
+beside the bar (over it, it covers the damage edge at some life total).
+Per-blocker numbers must come from `defendValue`. The shared feed needs a
+classified caption list, and it names hidden cards and speaks in the second
+person on thousands of lines. The page's stamp reads `_struck`, which is exact
+for this game only.
