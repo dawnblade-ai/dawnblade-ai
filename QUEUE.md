@@ -9,6 +9,69 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
+## v3 — STAGE INCREMENT 1 INPUTS (CEO, 2026-10-17)
+
+The v2 queue is complete. These come from the Stage design (`design/STAGE.md` on branch
+`design/stage`, Appendix B), measured over the 210-game self-play corpus at `4d42c58`. Every
+line reference below was re-read on `origin/main` at `4d42c58`. They are the feed and state
+work of **increment 1, "Truth first" (v5.31)**, which changes no look. Same rules as v2: one
+item per release unless it says batch, re-verify first, and update `tools/selfplay.js`'s route
+regexes in the same commit as any wording change (v3.81).
+
+**S1. `strike` records the power it subtracted the wall from as `pend.power`.** Neither
+`pend.total` (the declared power) nor `pend._struck` (stamped before the late bonuses,
+`effects.js:7442`) is that number. Counting prevention, an equation `power − wall → dealt`
+is wrong on 282 of 4,224 hero strikes against `total`, 97 against `_struck`, and 0 against
+the total `linkPumps` returns (`pre.total` in `strike`). One key at `judge.js:2220`. State
+hashes change once, deliberately: re-pin them in that commit and say so.
+
+**S2. The shared feed names hidden cards: 2,124 lines, 10 shapes, every game.** Compass and
+Scout the Periphery are already recorded (`look-named-in-shared-feed`, v5.30). Not yet:
+- `(b) <card> is set in the arsenal, face down.` — `judge.js:3457`, 1,347 lines, 210 games.
+  Name the seat, not the card.
+- Opt and Spire Sniping's reorder: `prompts.js:1179-1184` (214 lines). The "sent to the
+  bottom" branch (`:1184`) never fired, but it names cards the same way.
+- Azalea's ability names the face-down arsenal card it sends to the deck: `effects.js:1435`
+  (46 of 61 lines of that shape).
+- Hand-to-deck moves with no printed reveal (Rising Sun, Setting Moon; Stroke of Foresight's
+  mode): `prompts.js:1218-1221` (29 lines).
+- Boulder Drop's crush names the card forced from the defender's hand: `effects.js:1283` (3).
+Batch into one release. Check the trainer's feed for the same lines.
+
+**S3. Second person in the shared feed: 1,716 engine-voice lines in 27 shapes.** Both seats
+read the feed (v2.83). Largest first, with where the text is written:
+- noop reasons: `parser.js:1713` (299), `parser.js:2510` (263), `parser.js:880/882` (152),
+  `parser.js:3146` (44), `parser.js:1925` (2);
+- `condWhy` phrases: `effects.js:3002-3025` (13 shapes, about 445 lines);
+- `effects.js:581` (118), **`effects.js:8151`** (118, Dorinthea's "your hero ability frees
+  it"), `effects.js:2699` (86), `effects.js:2675` (52), `effects.js:2241`, `2324`, `4033`,
+  `4359`, and the next-attack labels from `parser.js:4086-4087` via `effects.js:1629`.
+The 845 quoted token lines (`effects.js:1996`, `created on X's board — <printed line>`) are
+the card's own printed text and are NOT a defect. Batch; widen `test/noopvoice.test.js` so a
+noop reason cannot say "you"/"your".
+
+**S4. Hard-coded names and a lowercased name in engine strings.** `effects.js:581` prints
+"Kayo makes Might" and `parser.js:1713` prints "Gravy Bones'": a hero and a token named
+inside the engine (golden rule). `effects.js:2430` prints `norm(v)`, so the feed reads
+"Your next crouching tiger". Rides with S3.
+
+**S5. Every attack prints its declaration twice.** `judge.js:3377` ("attacks with / swings")
+and `effects.js:5076` ("— N power on the chain"), 4,443 of 4,443 attacks. Keep one line that
+carries both facts. Mind the `swing`/`attack` route counters (v4.46).
+
+**S6. A defender the feed never names.** When the wall totals 0, `strike` prints no Wall line,
+so a card that defended for 0 (a halved card hit by Shred, 3 strikes in 2,100 games) is never
+mentioned. Print the wall when anything was declared.
+
+**S7. Doc fixes (ride with any release).** `ROADMAP-MULTIPLAYER.md:232` still calls the
+2026-07-25 "no AI opponent" decision "still right"; it was reversed 2026-08-14. CLAUDE.md
+points to `HANDOFF.md` ("THE NEW DIRECTION") for that reversal; it lives in
+`HANDOFF-MERGE.md:188`.
+
+**Not for the shipper (UI, increment 5):** the trainer's `onState` funnel calls
+`DawnInvariants.errors(st)` (`index.html:6809`), so the warn band is still unread on the page
+(v4.39). The Stage judge's eye reads `check()`.
+
 ## THE ORDER — v2 (work this list; numbers in brackets point at the item text)
 
 Done: [1] v5.12, [2] v5.13. Also shipped from the trigger-order measurement: v5.09, v5.10,
@@ -21,6 +84,7 @@ Then **11 v5.24, R1 v5.25, 12 v5.26, 13 v5.27 (recorded, unsourced), 14 v5.28 + 
 15 v5.30 (recorded)** shipped. **THE QUEUE IS COMPLETE.** The CEO verified v5.30: 3594 tests,
 0 fail, 5 skipped, scenes 107/107, fairness clean, every script tag present. The approximation
 ledger reads 24 stated, 1 open (`cloaked-display`, a UI job) and 29 closed.
+**v3 opens below (S1–S7), from the Stage design.**
 
 1. **[N1] A declared defender's "Discard this" hand ability is legal and pulls it out of
    the wall.** Sev-3, both boards. CEO-verified on v5.13.
@@ -283,6 +347,17 @@ is the only place it is ever `false`. Build it this way:
   Report it, and don't retune the policy inside the rules fix.
 
 ## NEEDS A RULING FROM THE USER (do not build)
+
+- **May the AI pilot a hero?** (Stage §8.3.) RULING 2026-08-16 says a seat the dummy fills is
+  always the vanilla pile (CLAUDE.md:12059). The Stage design's vs-AI tiers, its L9 lesson
+  and AI-vs-AI exhibitions need a hero-piloting AI. Asked 2026-10-17.
+- **Unity and a defence reaction from hand.** Unity prints "When this defends together with
+  a card from hand". `handDefenders` counts declared hand cards (`blockH`) only, so a defence
+  reaction played from hand later does not lift it (44 times at 3 seeds). Timing says that is
+  right; v5.21's rule (every count of a wall sees a played reaction) points the other way.
+- **Is the soul hidden?** Not sourced in the repo. If it is, "`X charges <card> into X's
+  hero's soul`" (`effects.js:1099`, 127 lines), "`<card> goes from the hand to the soul`"
+  (`prompts.js:1218`) and Banneret's pay-off line (`effects.js:1647`) name hidden cards too.
 
 - ~~**Mark never expires.**~~ **RULED 2026-10-14, see R1.** Original note: Nothing clears `marked` once it is set (`sides.js:171` is the only
   `false`), so Arakni's Agents and Black Widow / Funnel Web riders keep reading it for the
