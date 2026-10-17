@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.31
+**Current version:** v5.32
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3597 drills** at v5.31.
+This is `node --test "test/*.test.js"` — **3602 drills** at v5.32.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -868,6 +868,13 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A HIDDEN CARD IS A COUNT IN THE SHARED FEED (v5.32)
+
+The arsenal set, opt, a reorder, a hand-to-deck pick, Azalea's cycle and Boulder Drop's crush named
+cards only one seat had seen (QUEUE v3 S2). Each names the seat and a count now; a graveyard pick and
+a face-up arsenal card are public and keep their names (`test/hiddenfeed.test.js`). **When a line
+names a card, ask which zone it came from and which it went to: two hidden zones mean a count.**
 
 ### THE POWER THE WALL WAS SUBTRACTED FROM (v5.31)
 

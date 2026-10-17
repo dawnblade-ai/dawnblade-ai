@@ -1,3 +1,29 @@
+## v5.32 — The shared feed stops naming hidden cards
+
+**QUEUE v3 S2.** Both seats read one feed (v2.83), and five writers named a card only one seat
+had seen (2,124 lines over the ladder). Each now names the seat and a count:
+
+- **(b) the arsenal set** (`judge.js`): *"(b) Kayo sets a card face down in the arsenal."* The
+  trainer's two lines (yours and the dummy's) read the same now, through `sv`.
+- **Opt and Spire Sniping's reorder** (`prompts.applyPrompt`): *"Opt — 1 card left on top, 1 card
+  sent to the bottom."*, *"the top 2 cards go back in a chosen order."*, and the Topsy Turvy branch
+  says how many went to the bottom.
+- **A pick from a hidden zone into a hidden one** (hand or deck into a deck, or face down into an
+  arsenal) names no card: *"A card goes from the hand to the bottom of the deck."* A graveyard pick
+  is public and keeps its names. That covers Rising Sun, Setting Moon and Stroke of Foresight's
+  mode, and Hope Merchant's Hood's put-back. `applyPrompt` now reads `faceUp`, so the spec census
+  pins it (`test/speccensus.test.js`).
+- **Azalea's cycle** names a face-down arsenal card as *"the face-down arsenal card"*; a face-up
+  one is public and keeps its name.
+- **Boulder Drop's crush** says *"a card is forced from Kayo's hand"*.
+
+Checked the trainer's feed for the same lines: its arsenal set named the card and now does not; the
+rest go through the shared writers. No `tools/selfplay.js` route reads any of these lines (the Hood
+and search counters read the shuffle line, which already printed a count).
+
+`test/hiddenfeed.test.js` drives every writer with a public control beside it; 8 sabotages, 8 bite.
+No rules moved. 3602 drills, 0 fail, 5 skipped.
+
 ## v5.31 — The power the wall was subtracted from
 
 **QUEUE v3 S1.** `strike` totals the wall against what `linkPumps` returns, and that number

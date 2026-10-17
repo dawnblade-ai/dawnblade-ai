@@ -3458,7 +3458,10 @@ function doArsenal(g, a, seat){
   if(a.uid != null){
     const c = at(n, seat).hand.find(x => x.uid === a.uid);
     n = put(n, seat, s => ({...s, hand: s.hand.filter(x => x.uid !== a.uid), arsenal: c}));
-    n = say(n, "(b) " + c.name + " is set in the arsenal, face down.");
+    /* THE SEAT, NOT THE CARD (v5.32). The feed is one list both seats
+       read, and a face-down arsenal card is hidden from the opponent; the
+       trainer's dummy line has always said "sets a card" (QUEUE v3 S2). */
+    n = say(n, "(b) " + GM.sv(at(n, seat), "set") + " a card face down in the arsenal.");
   } else {
     n = say(n, "(b) Arsenal left empty — nothing set.");
   }

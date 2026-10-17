@@ -806,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "5.31"; /* v5.31 - strike records the power it subtracted the wall from as pend.power. See CHANGELOG.md. */
+window.APP_VER = "5.32"; /* v5.32 - the shared feed stops naming hidden cards: arsenal sets, opt, reorders, hand-to-deck moves, Azalea and Boulder Drop. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -4531,7 +4531,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     const arSide = youMut(n);
     arSide.arsenal = you(s).hand[idx];
     arSide.hand = you(s).hand.filter((_,i)=>i!==idx);
-    return afterArsenal(L(n,`${you(n).arsenal.name} set face down in arsenal.`));
+    return afterArsenal(L(n,`(b) ${DawnGame.sv(you(n), "set")} a card face down in the arsenal.`));
   });
   const skipArsenal = () => setG(s=> sheetFirst(s) || (s.mode==="arsenal" ? afterArsenal(L(s,"(b) Arsenal left empty — nothing set.")) : s));
   /* HEAVE — THE ARSENAL SET THAT PAYS (v3.32). The gate, the payment, the
@@ -4872,7 +4872,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       const set = opp(n).hand.slice().sort((a,b)=>(b.power||0)-(a.power||0) || a.uid-b.uid)[0];
       const os = oppMut(n);
       os.arsenal = set; os.hand = opp(n).hand.filter(c=>c.uid!==set.uid);
-      n = L(n, `(b) ${opp(n).name} sets a card face down in arsenal.`);
+      n = L(n, `(b) ${DawnGame.sv(opp(n), "set")} a card face down in the arsenal.`);
     } else n = L(n, `(b) ${opp(n).name} sets nothing in arsenal.`);
     /* (c)-(f), the same procedure yours runs. */
     n = endPhaseCF(n, 1);

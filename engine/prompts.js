@@ -1173,15 +1173,21 @@ function applyPrompt(game, prompt){
       ? [...keep, ...bottom, ..._rest]
       : [...keep, ..._rest, ...bottom];
     sides[side] = s;
+    /* A COUNT, NEVER A NAME (v5.32). A card looked at off the top of a
+       deck is seen by its controller alone, and the feed is one list both
+       seats read, so naming it hands the opponent the top of the deck
+       (QUEUE v3 S2: 214 lines a ladder). How many went where is public. */
+    const _nc = k => k + " card" + (k === 1 ? "" : "s");
+    const _all = keep.length + bottom.length;
     if(_flip) out.msgs.push((prompt.src ? prompt.src + " — " : "")
-      + "nothing may be put on top of a deck this turn, so " + [...keep, ...bottom].map(c=>c.name).join(", ")
-      + " go" + (keep.length + bottom.length === 1 ? "es" : "") + " to the bottom.");
+      + "nothing may be put on top of a deck this turn, so " + (_all === 1 ? "it goes" : "all " + _all + " go")
+      + " to the bottom.");
     else out.msgs.push(prompt.keepTop
-      ? ((prompt.src ? prompt.src + " — " : "") + "the top " + prompt.cards.length
-         + " go back as " + [...keep, ...bottom].map(c=>c.name).join(", ") + ".")
+      ? ((prompt.src ? prompt.src + " — " : "") + "the top " + _nc(prompt.cards.length)
+         + " go" + (prompt.cards.length === 1 ? "es" : "") + " back in a chosen order.")
       : ("Opt — " +
-      (keep.length ? keep.map(c=>c.name).join(", ") + " left on top" : "nothing kept on top") +
-      (bottom.length ? ", " + bottom.map(c=>c.name).join(", ") + " sent to the bottom" : "") + "."));
+      (keep.length ? _nc(keep.length) + " left on top" : "nothing kept on top") +
+      (bottom.length ? ", " + _nc(bottom.length) + " sent to the bottom" : "") + "."));
     out.game = {...game, sides};
     return out;
   }
@@ -1215,7 +1221,18 @@ function applyPrompt(game, prompt){
        would announce the same move twice in two voices. */
     /* IN WORDS, NOT STATE KEYS (v5.28): "Swift Shot → deckTop from grave"
        is a field name read aloud. */
-    if(!prompt.discard) out.msgs.push(picked.map(c=>c.name).join(", ") +
+    /* A MOVE BETWEEN TWO HIDDEN ZONES NAMES NO CARD (v5.32). A card put
+       from a hand onto a deck, or face down into an arsenal, was never
+       revealed unless the card prints a reveal, and the feed is read by
+       both seats (QUEUE v3 S2: Rising Sun, Setting Moon, Stroke of
+       Foresight). `zone` is where it came FROM, so a graveyard pick, which
+       is public, keeps its names. */
+    const _hidFrom = prompt.zone === "hand" || prompt.zone === "deck";
+    const _hidTo = /^deck/.test(String(_dest || "")) || (_dest === "arsenal" && !prompt.faceUp);
+    const _names = (_hidFrom && _hidTo)
+      ? (picked.length === 1 ? "A card" : picked.length + " cards")
+      : picked.map(c=>c.name).join(", ");
+    if(!prompt.discard) out.msgs.push(_names +
       (prompt.to ? (picked.length > 1 ? " go" : " goes") +
                    (prompt.zone ? " from the " + promptZoneWord(prompt.zone) : "") +
                    " to " + promptDestWord(_dest)

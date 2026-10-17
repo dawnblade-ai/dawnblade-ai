@@ -105,9 +105,11 @@ let legs = 0, threw = 0;
    (v3.53). The rest are the sheet's alone: a title, a hint, a stamp that
    rides onto the card the answer moves. */
 const ANSWER_READS = ["amount", "by", "cards", "cost", "destroyUid", "discard", "elseOps",
-                      "filter", "keepTop", "max", "min", "ops", "options",
+                      "faceUp", "filter", "keepTop", "max", "min", "ops", "options",
                       "side", "spendCtr", "src", "tag", "tapHero", "tapUid", "taps",
                       "to", "zone"];
+/* +faceUp v5.32: the pick's feed line asks whether an arsenal put is face
+   down, because a face-down card is not named to the seat across (QUEUE v3 S2). */
 /* -optional v4.44: it was here for two comments' sake and nothing reads it. */
 /* +keepTop v4.91: `applyPrompt`'s opt branch reads it to put the cards back
    ON TOP rather than offering the bottom — a reorder is not an opt (v3.72).

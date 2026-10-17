@@ -1277,10 +1277,11 @@ function makeEffects(ctx){
         /* A DECK-TOP PUT ASKS `deckTopTo` (v4.65) — Topsy Turvy. */
         if(P.deckTopTo(n) === "deckBottom"){
           foeMut(n).deck = [...foe(n).deck, top];
-          n = L(n, `${srcName}: ${top.name} is forced from ${sp(foe(n))} hand — and nothing may be put on top of a deck this turn, so it goes to the bottom.`);
+          n = L(n, `${srcName}: a card is forced from ${sp(foe(n))} hand — and nothing may be put on top of a deck this turn, so it goes to the bottom.`);
         } else {
           foeMut(n).deck = [top, ...foe(n).deck];
-          n = L(n, `${srcName}: ${top.name} is forced from ${sp(foe(n))} hand back on top of their deck.`);
+          /* NOT NAMED (v5.32): nothing reveals it, and both seats read this. */
+          n = L(n, `${srcName}: a card is forced from ${sp(foe(n))} hand back on top of their deck.`);
         }
       }
       else if(k==="foeGearDef"){
@@ -1432,7 +1433,9 @@ function makeEffects(ctx){
            string that is wrong on exactly one of the two boards. Three
            older sites in this file still say it; recorded in HANDOFF.md
            rather than swept in on a card change. */
-        n = L(n, `${act(n).name}: ${srcName} — ${out.name} goes to the bottom of the deck.`);
+        /* A FACE-DOWN CARD IS NOT NAMED (v5.32): the feed is read by both
+           seats, and only a card turned face up is public (QUEUE v3 S2). */
+        n = L(n, `${act(n).name}: ${srcName} — ${out._faceUp ? out.name : "the face-down arsenal card"} goes to the bottom of the deck.`);
         if(!act(n).deck.length){ n = L(n, `${srcName}: the deck is empty — nothing comes back.`); return; }
         const top = act(n).deck[0];
         actMut(n).deck = act(n).deck.slice(1);
