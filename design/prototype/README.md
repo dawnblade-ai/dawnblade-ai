@@ -37,6 +37,7 @@ passes and judge-audited states the game had.
 ## What it measured
 
 See `STAGE.md`, Appendix B. In short: the projection matched every strike in
-the game, the strike equation must read `_struck` rather than `pend.total`, the life numeral
-belongs beside the bar (over it, it covers the damage edge at some life total), per-blocker numbers must
-come from `defendValue`, and the shared feed needs a classified caption list.
+the game, the strike equation must read `_struck` rather than `pend.total`,
+the life numeral belongs beside the bar (over it, it covers the damage edge at
+some life total), per-blocker numbers must come from `defendValue`, and the
+shared feed needs a classified caption list.
