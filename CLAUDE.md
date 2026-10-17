@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.30
+**Current version:** v5.31
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3594 drills** at v5.30.
+This is `node --test "test/*.test.js"` — **3597 drills** at v5.31.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -868,6 +868,14 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### THE POWER THE WALL WAS SUBTRACTED FROM (v5.31)
+
+`pend.power` is what `linkPumps` returned, the number `strike` subtracts the wall from. `total`
+is the declared power and `_struck` is stamped before the late conditions, so neither answers
+`power − wall → dealt` (QUEUE v3 S1; `test/strikepower.test.js`). `WIRE_V` 25 → 26. **When a
+reader needs a number the engine computes and drops, record it on the link rather than
+re-deriving it.**
 
 ### A LOOK THE TABLE HEARS (v5.30)
 

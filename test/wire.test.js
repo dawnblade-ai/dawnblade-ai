@@ -347,7 +347,9 @@ test("WIRE_V moves when the payload shape moves, and only then", () => {
   /* 24 -> 25 AT v5.21: a `blockRx` entry's `from` — the zone a defence
      reaction was played from, inside a side field's entries, so the
      digest (which covers the field LISTS) does not move. */
-  assert.equal(W.WIRE_V, 25,
+  /* 25 -> 26 AT v5.31: `pend.power`, inside a GAME_KEY that ships whole,
+     so the digest does not move. */
+  assert.equal(W.WIRE_V, 26,
     "WIRE_V moved — if the payload shape moved with it, update the digest below " +
     "in the same edit and say what changed in the header");
   assert.equal(h, 2375092828,

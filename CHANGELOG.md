@@ -1,3 +1,23 @@
+## v5.31 — The power the wall was subtracted from
+
+**QUEUE v3 S1.** `strike` totals the wall against what `linkPumps` returns, and that number
+was on no field: `pend.total` is the declared power and `pend._struck` is stamped before the
+late conditions add theirs. So `power − wall → dealt` read off the link was wrong whenever a
+reaction or a late condition moved the swing (282 of 4,224 hero strikes against `total`, 97
+against `_struck`). The rebuilt `pend` now carries `power: pre.total`.
+`test/strikepower.test.js` drives Widowmaker from the arsenal, pumped by a reaction and
+blocked by one card, which tells all three apart (declared 4, struck 5, power 8), with a
+two-defender control and a blocked-to-nothing row. All three sabotages bite (key dropped,
+key read from `total`, key read from `_struck`).
+
+**State hashes change once, deliberately.** `pend` is a GAME_KEY that ships whole, so every
+state after a damage step hashes differently from v5.30. No drill pins a state hash value
+(the one hex literal in `test/report.test.js` is a fixture it supplies itself), so nothing
+needed re-pinning. `WIRE_V` goes 25 → 26 so a v5.30 peer is refused at the handshake rather
+than desyncing on the first strike; the shape digest does not move.
+
+No rules moved: the field is recorded and nothing reads it yet. 3597 drills, 0 fail, 5 skipped.
+
 ## v5.30 — A look that the table hears, recorded
 
 **QUEUE item 15 [19].** Compass of Sunken Depths prints "Look at the top card of your deck",

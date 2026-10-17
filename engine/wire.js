@@ -261,7 +261,11 @@
    reaction was played from, because reprise counts one played from HAND
    as "defended with a card from their hand" and one from the arsenal does
    not. Inside a side field's entries, so the digest holds. By hand. */
-const WIRE_V = 25;
+/* 25 -> 26 AT v5.31: `pend` gains `power`, the number `strike` subtracted
+   the wall from. `pend` is a GAME_KEY that ships whole, so the digest
+   cannot see it and a v25 peer hashes the link differently from the
+   first damage step on. By hand. */
+const WIRE_V = 26;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

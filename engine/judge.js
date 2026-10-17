@@ -2217,7 +2217,11 @@ function strike(g){
      this board while the trainer, which keeps `n.pend`, granted it (QUEUE
      item 5). `link` stays underneath, so nothing the link carried is lost
      if a later writer replaced `pend`. */
-  n = {...n, pend: {...link, ...(n.pend || {}), dealt: total, wall, handBlockers}};
+  /* `power` IS THE NUMBER THE WALL WAS SUBTRACTED FROM (v5.31): what
+     `linkPumps` returned, reactions and late conditions included. Neither
+     `total` (declared) nor `_struck` (stamped before the late bonuses) is
+     it, so a reader doing `power - wall -> dealt` asks this field. */
+  n = {...n, pend: {...link, ...(n.pend || {}), power: pre.total || 0, dealt: total, wall, handBlockers}};
 
   /* PIECE TWO — the payload. Everything the link DOES now that its damage
      has landed: its own ops, its on-hit clauses, the weapon's earned
