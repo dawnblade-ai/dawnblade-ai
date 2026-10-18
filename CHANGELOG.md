@@ -1,3 +1,23 @@
+## v5.34 — One declaration line, and a wall worth 0 is still a wall
+
+**QUEUE v3 S5.** Every attack at the table printed its declaration twice: `execute` says
+*"<seat> plays <card> — N power on the chain"* (with the printed power and go again beside it),
+and judge's `declareAttack` then said *"<seat> attacks with <card> for N."* about the same
+number, `_declared.total`. The second line is gone; the declaration note (boost, rust, pops)
+still follows. No route counter read the removed line (`swing`/`allyatk` read `execute`'s).
+
+**QUEUE v3 S6.** `strike` gated *"Wall of N — … — stops M."* on the wall's TOTAL, so a block
+whose pieces were worth 0 printed nothing and read exactly like no block. It is gated on
+whether anything was declared, which is what the trainer's wall already asked.
+
+**QUEUE v3 S7.** `ROADMAP-MULTIPLAYER.md` still called the 2026-07-25 "no AI opponent" decision
+"still right"; it was reversed 2026-08-14. Three CLAUDE.md pointers sent the reader to
+`HANDOFF.md` ("THE NEW DIRECTION") for that reversal; it is recorded in `HANDOFF-MERGE.md`'s
+DECISIONS table ("Build the seat").
+
+`test/declline.test.js` (2 drills, both reading the feed on purpose, since the state is
+identical either way). 3 sabotages, 3 bite. **3607 drills, 0 fail, 5 skipped.**
+
 ## v5.33 — The engine names the seat, never "you"
 
 **QUEUE v3 S3+S4.** Both seats read one feed (v2.83), and about two dozen engine lines spoke in

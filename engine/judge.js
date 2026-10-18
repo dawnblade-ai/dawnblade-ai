@@ -2236,7 +2236,12 @@ function strike(g){
 
      `blkNote` is passed rather than rebuilt: the wall is this file's, but
      what the log SAYS about it should read the same on both boards. */
-  const blkNote = wall
+  /* THE WALL IS NAMED WHEN ANYTHING WAS DECLARED, NOT WHEN IT ADDS UP TO
+     SOMETHING (v5.34). Gated on `wall`, a block of two worn pieces said
+     nothing at all, so the player could not tell a block that stopped 0
+     from no block (QUEUE v3 S6). The trainer's wall already asks whether
+     anything defends. */
+  const blkNote = parts.length
     ? ` Wall of ${wall} — ${parts.join(", ")} — stops ${Math.min(wall, pre.total || 0)}.`
     : "";
   /* WHERE THE DAMAGE LANDED IS THIS FILE'S ANSWER, like the wall above it.
@@ -3378,8 +3383,11 @@ function declareAttack(g, card, seat, fromZone, target, declared){
      rather than the name so a caller cannot read one seat's name and agree
      with the other's. The BASE form is the argument, because third person
      is derivable from it and the reverse is not. */
-  n = say(n, GM.sv(at(n, seat), fromWeapon ? "swing" : "attack")
-    + (fromWeapon ? " " : " with ") + card.name + " for " + total + ".");
+  /* ONE DECLARATION LINE (v5.34). `execute` has already printed it —
+     "<seat> plays/swings/sends/turns <card> — N power on the chain",
+     with the printed power and go again beside it — and `total` here IS
+     that line's number (`_declared.total`). A second "attacks with X for
+     N" printed every attack twice at the table (QUEUE v3 S5). */
   if(declared && declared.declNote && declared.declNote.trim()) n = say(n, declared.declNote.trim());
   /* A SHEET QUEUED BY THE DECLARATION IS ASKED AT THE DECLARATION (v4.80).
      CR 7.2 puts a "when this attacks" trigger on the stack above the attack,

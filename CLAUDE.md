@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.33
+**Current version:** v5.34
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3605 drills** at v5.33.
+This is `node --test "test/*.test.js"` — **3607 drills** at v5.34.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -875,6 +875,13 @@ The arsenal set, opt, a reorder, a hand-to-deck pick, Azalea's cycle and Boulder
 cards only one seat had seen (QUEUE v3 S2). Each names the seat and a count now; a graveyard pick and
 a face-up arsenal card are public and keep their names (`test/hiddenfeed.test.js`). **When a line
 names a card, ask which zone it came from and which it went to: two hidden zones mean a count.**
+
+### ONE DECLARATION LINE, AND A WALL WORTH 0 IS NAMED (v5.34)
+
+`execute` prints an attack's declaration with its power; judge's `declareAttack` printed a second
+"attacks with X for N" about the same `_declared.total` (QUEUE v3 S5). And `strike` named the wall
+only when it totalled more than 0 (S6), so a worn block read as no block (`test/declline.test.js`).
+**When two layers both announce one event, the one that knows more keeps the line.**
 
 ### A LINE BOTH SEATS READ NAMES THE SEAT (v5.33)
 
@@ -11803,7 +11810,8 @@ equipment wears rather than leaving, so raising it costs no card.
 
 It was **not an AI opponent** (standing decision 2026-07-25) — **that
 decision was REVERSED on 2026-08-14**, and building the seat is now the
-active direction; see the roadmap entry below and `HANDOFF.md`. What has
+active direction; see the roadmap entry below and `HANDOFF-MERGE.md`'s
+DECISIONS table ("Build the seat"). What has
 not changed is that it is **not a difficulty curve**: the `[3,4,5]`
 escalation it replaces was *tuned* and real cards from a real hand are not.
 Retuning is a play session, not a drill.
@@ -14100,8 +14108,9 @@ the goal; a policy in seat 1 is now **also** a goal rather than a detour.
 Both dates are kept because the old note is quoted elsewhere and a reader who
 finds only one of them will re-litigate the other. `engine/sparring.js` is already
 this shape — `act(game, seat) -> action | null`, 11 drills, and the only module
-still in `test/wire.test.js`'s `HEADLESS` list. **See `HANDOFF.md`, "THE NEW
-DIRECTION", for what unifying the two engines actually costs** — `effects.js` is
+still in `test/wire.test.js`'s `HEADLESS` list. The decision itself is
+recorded in `HANDOFF-MERGE.md`'s DECISIONS table ("Build the seat"); the
+merge that followed is that file's subject** — `effects.js` is
 phase-free as of v2.73, but still takes ~19 trainer closures.
 
 **Decision 2026-07-26: multiplayer is phased** — serverless friend-vs-friend
@@ -14143,7 +14152,7 @@ phase-free as of v2.73, but still takes ~19 trainer closures.
    dummy keeps the tuned `[3,4,5]` escalation; a real hero in seat 1 plays
    cards. **The successor is THE NEW DIRECTION (2026-08-14): unify the two
    engines and give seat 1 to a policy** — `engine/sparring.js` is already that
-   shape and is the last headless module. See `HANDOFF.md`.
+   shape and is the last headless module. See `HANDOFF-MERGE.md`, DECISIONS.
 4. **Dash** is mostly online as of v2.11 — Hyper Driver discounts, Out Pace,
    Fender Bender, Overblast, Under Loop. What's left is **crank** (prompt to spend
    the entering steam counter for an action point) and Boom Grenade's on-hit rider,
