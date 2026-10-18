@@ -132,7 +132,7 @@ header.top p{color:var(--page-dim);font-size:13px;flex:1 1 260px}
 /* strips */
 .strip{display:flex;align-items:center;gap:4px;padding:0 6px;background:var(--forge);border-bottom:1px solid #1a1310}
 .strip.top{top:123px;height:56px}
-.strip.bot{top:598px;height:52px;border-top:1px solid #1a1310;border-bottom:none}
+.strip.bot{top:512px;height:52px;border-top:1px solid #1a1310;border-bottom:none}
 .strip .gear{display:flex;gap:3px}
 .strip .lbl{font-size:11px;letter-spacing:.12em;color:var(--bone-dim);font-family:'Spline Sans Mono';writing-mode:vertical-rl;transform:rotate(180deg)}
 .strip .sp{flex:1}
@@ -157,7 +157,7 @@ header.top p{color:var(--page-dim);font-size:13px;flex:1 1 260px}
 .cd .pbar{position:absolute;left:0;right:0;top:0;height:3px}
 
 /* stage */
-.stage{top:179px;height:419px;overflow:hidden;background:
+.stage{top:179px;height:333px;overflow:hidden;background:
   radial-gradient(120% 60% at 50% var(--lightY,70%),rgba(229,103,46,.16),transparent 60%),
   radial-gradient(90% 70% at 50% 50%,#2a201a,#140f0c)}
 .stage.lit-top{--lightY:15%}
@@ -198,26 +198,32 @@ header.top p{color:var(--page-dim);font-size:13px;flex:1 1 260px}
 .caption .t.big{font-weight:600;color:#fff}
 
 /* hand + actbar */
-.hand{top:650px;height:112px;background:#0f0b09;display:flex;gap:6px;padding:7px 8px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
-.hand::-webkit-scrollbar{display:none}
-.hand .cd{width:70px;height:98px;cursor:pointer;transition:transform .12s}
-.hand .cd.peek{transform:translateY(-4px);outline:2px solid var(--y)}
-.hand .cd.wall{outline:2px solid var(--steel);opacity:.45}
-.hand .cd.wall:after{content:"⛨ WALL";position:absolute;left:0;right:0;top:38px;text-align:center;font-family:'Big Shoulders Display','Arial Narrow',Impact,sans-serif;font-weight:800;font-size:13px;letter-spacing:.1em;color:#fff;background:rgba(63,84,102,.9);padding:2px 0}
-.handmore{position:absolute;right:0;top:650px;height:112px;width:34px;z-index:5;pointer-events:none;background:linear-gradient(90deg,transparent,#0f0b09 70%);display:flex;align-items:center;justify-content:flex-end;padding-right:4px;font-family:'Big Shoulders Display','Arial Narrow',Impact,sans-serif;font-weight:800;font-size:18px;color:var(--y)}
-.hand .empty{font-size:12px;color:var(--bone-dim);align-self:center;padding-left:6px}
-.act{top:762px;height:56px;display:flex;align-items:center;gap:6px;padding:0 8px;background:var(--forge2);border-top:1px solid var(--line)}
-.act .resap{width:84px;font-family:'Spline Sans Mono';font-size:12px;line-height:1.3;color:var(--bone-dim)}
-.act .resap b{color:var(--y);font-weight:500}
-.act .ap{display:inline-block;width:9px;height:9px;transform:rotate(45deg);border:1.5px solid var(--bone-dim);margin-left:3px}
-.act .ap.on{background:var(--ok);border-color:var(--ok)}
-.act .sec{width:88px;height:48px;border:1px solid var(--line);font-family:'Big Shoulders Display','Arial Narrow',Impact,sans-serif;font-weight:700;font-size:13px;letter-spacing:.08em;color:var(--bone-dim)}
-.act .pri{flex:1;height:48px;font-family:'Big Shoulders Display','Arial Narrow',Impact,sans-serif;font-weight:800;font-size:17px;letter-spacing:.06em;background:var(--y);color:var(--ink);clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px))}
-.act .pri.dis{background:#3a2e25;color:var(--bone-dim);font-size:13px}
-.act .pri.glow{box-shadow:inset 0 0 0 2px #fff}
-
-/* peek */
-.peek{position:absolute;left:50%;bottom:216px;width:184px;margin-left:-92px;z-index:70;pointer-events:none;opacity:0;transform:translateY(8px);transition:opacity .15s,transform .15s}
+/* THE WHEEL (2026-10-18, the user's idea): the hand sits on a wheel whose centre is below the
+   screen. The card at the top is the target and is magnified; the rest tilt away down the arc and
+   off the bottom. A swipe anywhere in the bottom band spins it (with momentum, then a snap), so a
+   thumb from either hand stays in the bottom-centre lane. The hub, peeking up at bottom centre, is
+   the one action that is not a card: PASS, END TURN, TAKE N. Prompts answer in the same lane. */
+.wheel{top:564px;height:254px;overflow:hidden;touch-action:none;cursor:grab;
+  background:radial-gradient(70% 90% at 50% 120%,rgba(229,103,46,.10),transparent 70%),#0f0b09;border-top:1px solid var(--line)}
+.wheel .lane{position:absolute;left:96px;right:96px;top:6px;bottom:0;border-left:1px dashed rgba(232,223,208,.07);border-right:1px dashed rgba(232,223,208,.07);pointer-events:none}
+.wheel .wc{position:absolute;left:50%;top:0;width:80px;height:112px;margin-left:-40px;transform-origin:50% 50%;will-change:transform}
+.wheel .wc .cd{width:80px;height:112px;box-shadow:0 8px 22px rgba(0,0,0,.7)}
+.wheel .wc.top .cd{outline:2px solid var(--y)}
+.wheel .wc.wall .cd{outline:2px solid var(--steel)}
+.wheel .wc.wall .cd:after{content:"⛨ WALL";position:absolute;left:0;right:0;top:44px;text-align:center;font-family:'Big Shoulders Display','Arial Narrow',Impact,sans-serif;font-weight:800;font-size:13px;letter-spacing:.1em;color:#fff;background:rgba(63,84,102,.9);padding:2px 0}
+.wheel .verb{position:absolute;left:50%;top:180px;z-index:25;transform:translateX(-50%);white-space:nowrap;font-family:'Spline Sans Mono',monospace;font-size:11px;letter-spacing:.06em;color:var(--bone-dim);pointer-events:none}
+.wheel .idx{position:absolute;left:12px;top:10px;font-family:'Spline Sans Mono',monospace;font-size:11px;color:var(--bone-dim);pointer-events:none}
+.wheel .empty{position:absolute;left:0;right:0;top:80px;text-align:center;font-size:12px;color:var(--bone-dim)}
+.wheel .hub{position:absolute;left:50%;bottom:0;width:212px;height:54px;margin-left:-106px;border-radius:106px 106px 0 0;padding-top:10px;
+  font-family:'Big Shoulders Display','Arial Narrow',Impact,sans-serif;font-weight:800;font-size:17px;letter-spacing:.06em;background:var(--y);color:var(--ink);text-align:center;z-index:30}
+.wheel .hub.dis{background:#3a2e25;color:var(--bone-dim);font-size:13px;padding-top:14px}
+.wheel .hub.glow{box-shadow:inset 0 0 0 2px #fff}
+.wheel .resap{position:absolute;left:8px;bottom:6px;width:76px;padding:4px 6px;box-sizing:border-box;background:var(--forge2);border:1px solid var(--line);font-family:'Spline Sans Mono';font-size:11px;line-height:1.3;color:var(--bone-dim);z-index:30}
+.wheel .resap b{color:var(--y);font-weight:500}
+.wheel .ap{display:inline-block;width:9px;height:9px;transform:rotate(45deg);border:1.5px solid var(--bone-dim);margin-left:3px}
+.wheel .ap.on{background:var(--ok);border-color:var(--ok)}
+.wheel .sec{position:absolute;right:8px;bottom:6px;width:64px;height:44px;border:1px solid var(--line);font-family:'Big Shoulders Display','Arial Narrow',Impact,sans-serif;font-weight:700;font-size:13px;letter-spacing:.08em;color:var(--bone-dim);background:var(--forge2);z-index:30}
+.peek{position:absolute;left:50%;bottom:296px;width:184px;margin-left:-92px;z-index:70;pointer-events:none;opacity:0;transform:translateY(8px);transition:opacity .15s,transform .15s}
 .peek.on{opacity:1;transform:none}
 .peek .cd{width:184px;height:257px;box-shadow:0 14px 40px rgba(0,0,0,.8)}
 .peek .v{margin-top:6px;text-align:center;font-size:11.5px;background:rgba(0,0,0,.8);padding:4px 6px;color:var(--bone)}
@@ -280,18 +286,40 @@ header.top p{color:var(--page-dim);font-size:13px;flex:1 1 260px}
 .cast .hole .hh{display:flex;flex-wrap:wrap;gap:3px;align-content:flex-start;min-height:100px}
 .cast .hole .cd{width:26px;height:36px}
 .cast .hole .who{font-family:'Big Shoulders Display','Arial Narrow',Impact,sans-serif;font-weight:700;font-size:12px;letter-spacing:.08em}
-.cast .table{position:absolute;left:132px;top:96px;width:592px;height:300px;perspective:900px}
-.cast .felt3{position:absolute;inset:0;transform:rotateX(14deg);transform-origin:50% 100%;background:radial-gradient(70% 80% at 50% 50%,#2c2119,#16100c);border:1px solid #3a2e25;border-radius:6px}
-.cast .half{position:absolute;top:14px;bottom:14px;width:200px;display:flex;flex-direction:column;gap:6px}
-.cast .half.s0{left:12px}
-.cast .half.s1{right:12px;align-items:flex-end}
-.cast .half .row{display:flex;gap:3px;flex-wrap:wrap}
-.cast .half.s1 .row{justify-content:flex-end}
-.cast .half .cd{width:34px;height:48px}
-.cast .half .tag{font-family:'Spline Sans Mono';font-size:11px;letter-spacing:.12em;color:var(--bone-dim)}
-.cast .cring{position:absolute;left:50%;top:22px;width:110px;margin-left:-55px;text-align:center}
-.cast .cring .cd{width:110px;height:154px;margin:0 auto;box-shadow:0 10px 26px rgba(0,0,0,.7)}
-.cast .cring .stamp{position:absolute;left:-16px;top:118px;width:44px;height:44px;background:#9c3517;color:#fff;font-family:'Big Shoulders Display','Arial Narrow',Impact,sans-serif;font-weight:800;font-size:24px;line-height:44px;text-align:center;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
+.cast .table{position:absolute;left:132px;top:96px;width:592px;height:294px}
+.cast .half{position:absolute;inset:0}
+/* THE OVERHEAD MAT (2026-10-18, after the Calling Kyoto finals feed): one landscape playmat seen
+   from straight above, split down the middle, each half laid out like a real mat. Flat, no tilt. */
+.cast .mat{position:absolute;inset:0;border-radius:4px;border:1px solid #3d3a55;
+  background:radial-gradient(90% 120% at 25% 50%,rgba(130,120,190,.10),transparent 60%),
+             radial-gradient(90% 120% at 75% 50%,rgba(130,120,190,.10),transparent 60%),#1a1924;
+  box-shadow:inset 0 0 50px rgba(0,0,0,.55)}
+.cast .mat .mid{position:absolute;left:50%;top:10px;bottom:10px;width:2px;margin-left:-1px;background:rgba(200,190,240,.18)}
+.cast .mat .logo{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-90deg);font-family:'Big Shoulders Display','Arial Narrow',Impact,sans-serif;font-weight:800;font-size:28px;letter-spacing:.3em;color:rgba(200,190,240,.07);white-space:nowrap}
+.cast .slot{position:absolute;width:40px;height:56px;border:1px solid rgba(200,190,240,.22);border-radius:3px;background:rgba(200,190,240,.05)}
+.cast .slot.hero{width:48px;height:67px}
+.cast .slot .cd{position:absolute;inset:0;width:auto;height:auto}
+.cast .slot .zl{position:absolute;left:-8px;right:-8px;top:100%;margin-top:2px;text-align:center;font-family:'Spline Sans Mono',monospace;font-size:11px;letter-spacing:.04em;line-height:13px;color:rgba(232,223,208,.42);white-space:nowrap}
+.cast .slot .ct{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);min-width:24px;padding:1px 4px;text-align:center;background:rgba(10,8,7,.85);border:1px solid var(--line);font-family:'Big Shoulders Display','Arial Narrow',Impact,sans-serif;font-weight:800;font-size:14px;color:var(--bone)}
+.cast .slot.pile{background:repeating-linear-gradient(135deg,rgba(90,52,38,.35) 0 6px,rgba(42,20,14,.35) 6px 12px)}
+.cast .slot.empty .ct{display:none}
+.cast .prow{position:absolute;display:flex;height:56px}
+.cast .prow .cd{width:40px;height:56px;flex:0 0 40px}
+.cast .prow .cd + .cd{margin-left:-26px}
+.cast .arena{position:absolute;top:22px;width:32px}
+.cast .arena .cd{width:32px;height:45px;margin-bottom:-23px;box-shadow:0 2px 6px rgba(0,0,0,.5)}
+.cast .arena .more{margin-top:26px;text-align:center;font-family:'Spline Sans Mono',monospace;font-size:11px;color:var(--bone-dim)}
+.cast .arena .zl{font-family:'Spline Sans Mono',monospace;font-size:11px;color:rgba(232,223,208,.42);text-align:center;margin-bottom:3px}
+.cast .cring{position:absolute;left:50%;top:58px;width:60px;margin-left:-30px;text-align:center}
+.cast .cring .cd{width:60px;height:84px;margin:0 auto;box-shadow:0 10px 26px rgba(0,0,0,.75)}
+.cast .cring .stamp{position:absolute;left:-18px;top:58px;width:34px;height:34px;background:#9c3517;color:#fff;font-family:'Big Shoulders Display','Arial Narrow',Impact,sans-serif;font-weight:800;font-size:19px;line-height:34px;text-align:center;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
+.cast .cring .turnw{position:absolute;left:50%;top:30px;transform:translateX(-50%);white-space:nowrap;font-family:'Big Shoulders Display','Arial Narrow',Impact,sans-serif;font-weight:800;font-size:18px;letter-spacing:.08em;background:rgba(10,8,7,.75);padding:2px 8px}
+.cast .clinks{position:absolute;left:50%;top:10px;transform:translateX(-50%);display:flex;gap:3px}
+.cast .clinks .cl{position:relative}
+.cast .clinks .cd{width:26px;height:36px;opacity:.85}
+.cast .clinks .dm{position:absolute;left:0;right:0;bottom:-1px;text-align:center;font-family:'Big Shoulders Display','Arial Narrow',Impact,sans-serif;font-weight:800;font-size:11px;background:rgba(10,8,7,.8);color:var(--y)}
+.cast .wall3{position:absolute;left:50%;top:214px;margin-left:-90px;width:180px;display:flex;gap:4px;justify-content:center}
+.cast .wall3 .cd{width:34px;height:48px;outline:1px solid var(--steel)}
 .cast .ceq{position:absolute;left:280px;width:296px;top:394px;line-height:1.05;text-align:center;font-family:'Big Shoulders Display','Arial Narrow',Impact,sans-serif;font-weight:800;font-size:20px;letter-spacing:.06em}
 .cast .ceq{padding:0 4px}
 .cast .ceq .ar{color:var(--y)}
@@ -517,8 +545,8 @@ function buildPhone(){
       <div class="caption" data-r="cap"><span class="who">TALLY</span><span class="t"></span></div>
     </div>
     <div class="band strip bot" data-r="strip${v}"></div>
-    <div class="band hand" data-r="hand"></div><div class="handmore" data-r="handmore" style="display:none">›</div>
-    <div class="band act" data-r="act"><div class="resap" data-r="resap"></div><button class="sec" data-r="sec">LOG</button><button class="pri" data-r="pri">END TURN</button></div>
+    <div class="band wheel" data-r="hand"><div class="lane"></div><div class="idx" data-r="widx"></div><div class="verb" data-r="wverb"></div>
+      <div class="resap" data-r="resap"></div><button class="sec" data-r="sec">LOG</button><div class="hub" data-r="pri">END TURN</div></div>
     <div class="safe-b"></div>
     <div class="peek" data-r="peek"></div>
     <canvas class="fxcv" width="786" height="1704" data-r="fx"></canvas>
@@ -544,8 +572,9 @@ function buildCast(){
     <div class="hole"><div class="h">HOLE CAM</div>
       <div class="who" style="color:var(--p1)">${esc(H[0].name)}</div><div class="hh" data-r="hole0"></div>
       <div class="who" style="color:var(--p2)">${esc(H[1].name)}</div><div class="hh" data-r="hole1"></div></div>
-    <div class="table" data-r="stage"><div class="felt3"></div>
+    <div class="table" data-r="stage"><div class="mat"><div class="mid"></div><div class="logo">DAWNBLADE</div></div>
       <div class="half s0" data-r="half0"></div><div class="half s1" data-r="half1"></div>
+      <div class="clinks" data-r="clinks"></div>
       <div class="cring" data-r="ring"></div>
       <div class="wall3" data-r="wall"></div></div>
     <div class="ccombo" data-r="links"></div>
@@ -565,6 +594,7 @@ function mount(){
   scaler.appendChild(root);
   for(const s of [0,1]){ const im = R("port" + s).querySelector("img"); const a = heroArt(s); if(a) im.src = a; }
   root.addEventListener("pointerdown", onTableTap);
+  if(st.view === "phone") R("hand").addEventListener("pointerdown", wheelDown);
   $("#segSeat").style.display = st.view === "phone" ? "" : "none";
   fit();
   paint(ROWS[st.k], ROWS[st.k - 1] || null, true);
@@ -746,31 +776,13 @@ function paintPhone(r){
   cw.style.display = cap.t ? "" : "none";
   cw.querySelector(".t").textContent = cap.t;
   cw.querySelector(".t").classList.toggle("big", /down to/.test(cap.t));
-  // hand
-  const hand = R("hand"); hand.innerHTML = "";
+  // the wheel
   const sd = r.sides[v];
-  if(!sd.hand.length) hand.appendChild(el("div", "empty", "No cards in hand."));
-  // a declared hand defender is on the chain: mark it in the rail (one mark per name in the wall)
-  const walled = (r.pend && r.pend.by !== v && r.pend.dealt == null) ? (r.pend.wallH || []).slice() : [];
-  sd.hand.forEach((n, i) => {
-    const c = card(n, 70, 98, {badges:true, cost:true});
-    c.dataset.idx = i;
-    const wi = walled.indexOf(n);
-    if(wi >= 0){ c.classList.add("wall"); walled.splice(wi, 1); }
-    if(st.peek === i) c.classList.add("peek");
-    hand.appendChild(c);
-  });
-  // the rail compresses before it hides a card (overlapping just enough to fit 393),
-  // and only past ~10 cards does it scroll, with the edge marker saying so
-  // (gap cannot go negative in CSS, so the overlap is a negative left margin past the first card)
-  const n = sd.hand.length;
-  const step = n > 1 ? Math.max(-34, Math.min(6, Math.floor((393 - 16 - 70 * n) / (n - 1)))) : 6;
-  if(step < 6) [...hand.querySelectorAll(":scope > .cd")].forEach((c, i) => { if(i) c.style.marginLeft = (step - 6) + "px"; });
-  requestAnimationFrame(() => { const more = R("handmore"); if(more) more.style.display = hand.scrollWidth > hand.clientWidth + 2 ? "" : "none"; });
+  paintWheel(r, v);
   // actbar
   R("resap").innerHTML = `res <b>${sd.res}</b><span class="ap ${sd.ap >= 1 && r.tp === v ? "on" : ""}"></span><br><span style="font-size:11px">${sd.ap >= 1 && r.tp === v ? "action point" : "&nbsp;"}</span>`;
   const pri = R("pri"), lab = primaryLabel(r, v);
-  pri.textContent = lab.t; pri.className = "pri" + (lab.dis ? " dis" : "") + (lab.glow ? " glow" : "");
+  pri.textContent = lab.t; pri.className = "hub" + (lab.dis ? " dis" : "") + (lab.glow ? " glow" : "");
   R("sec").textContent = r.pend && r.tp === v ? "CANCEL" : "LOG";
 }
 function stampOf(pd){
@@ -798,18 +810,80 @@ function primaryLabel(r, v){
   if(r.tp === v && r.phase === "action") return {t:"END TURN"};
   return {t:"PASS"};
 }
+/* ---------- the overhead mat (broadcast) ----------
+   One half of the playmat, laid out from that player's side. Columns run from the outer edge in:
+   graveyard / deck / pitch, then arms / weapon / legs, then head / HERO / chest, then the second
+   weapon and the arsenal, then the arena column beside the centre line. P2's half is the mirror.
+   Gear goes in its slot by its own printed type line (the database's, never a guess). */
+const MAT = {col:[12, 62, 108, 166], arena:216, row:[22, 114, 206], heroY:108, W:592};
+function slotOf(name){
+  const tt = (C[name] || {}).tt || "";
+  if(/Weapon/.test(tt)) return "weapon";
+  if(/Off-Hand/.test(tt)) return "weapon";
+  const m = tt.match(/Equipment - (Head|Chest|Arms|Legs)/);
+  return m ? m[1].toLowerCase() : "other";
+}
+function paintMatHalf(s, sd, half){
+  half.innerHTML = "";
+  const X = (x, w) => s === 0 ? x : MAT.W - x - w;
+  const slot = (col, row, label, o) => {
+    o = o || {};
+    const w = o.hero ? 48 : 40, h = o.hero ? 67 : 56;
+    const d = el("div", "slot" + (o.hero ? " hero" : "") + (o.pile ? " pile" : "") + (o.cls ? " " + o.cls : ""));
+    d.style.left = X(o.x != null ? o.x : MAT.col[col], w) + "px";
+    d.style.top = (o.hero ? MAT.heroY : MAT.row[row]) + "px";
+    if(o.card) d.appendChild(o.card);
+    if(o.count != null) d.appendChild(el("div", "ct", o.count));
+    d.appendChild(el("div", "zl", label));
+    half.appendChild(d);
+    return d;
+  };
+  const gear = {head:[], chest:[], arms:[], legs:[], weapon:[], other:[]};
+  sd.gear.forEach(n => gear[slotOf(n)].push(n));
+  /* a slot holding more than one piece stacks the rest, offset, so nothing on the board is ever hidden */
+  const put = (list, label, col, row) => {
+    const d = slot(col, row, label, list.length ? {card: card(list[0], 40, 56)} : {cls:"empty"});
+    list.slice(1).forEach((n, i) => { const c = card(n, 40, 56); c.style.position = "absolute"; c.style.left = (5 * (i + 1)) + "px"; c.style.top = (-5 * (i + 1)) + "px"; d.insertBefore(c, d.querySelector(".zl")); });
+    return d;
+  };
+  /* column A: the public piles. The recording keeps the graveyard as a count, so it shows as a pile */
+  slot(0, 0, "GRAVE", {pile:true, count: sd.grave, cls: sd.grave ? "" : "empty"});
+  slot(0, 1, "DECK", {card: card("", 40, 56, {back:true}), count: sd.deck});
+  if(sd.pitch.length){
+    const pr = el("div", "prow");
+    pr.style.top = MAT.row[2] + "px";
+    pr.style.left = X(MAT.col[0], 40 + 14 * (sd.pitch.length - 1)) + "px";
+    sd.pitch.forEach(n => pr.appendChild(card(n, 40, 56)));
+    half.appendChild(pr);
+    const lb = el("div", "slot empty"); lb.style.border = "none"; lb.style.background = "none";
+    lb.style.left = X(MAT.col[0], 40) + "px"; lb.style.top = MAT.row[2] + "px";
+    lb.appendChild(el("div", "zl", "PITCH " + sd.res)); half.appendChild(lb);
+  } else slot(0, 2, "PITCH " + sd.res, {cls:"empty"});
+  /* columns B and C: equipment around the hero */
+  put(gear.arms, "ARMS", 1, 0);
+  put(gear.weapon.slice(0, 1), "WEAPON", 1, 1);
+  put(gear.legs, "LEGS", 1, 2);
+  put(gear.head, "HEAD", 2, 0);
+  const hero = el("div", "cd"); const ha = heroArt(s); if(ha){ const im = new Image(); im.src = ha; im.alt = H[s].hero || ""; hero.appendChild(im); }
+  slot(2, 1, "HERO", {hero:true, card: hero});
+  put(gear.chest, "CHEST", 2, 2);
+  /* column D: the second hand and the arsenal (face down unless it was turned up) */
+  put(gear.weapon.slice(1).concat(gear.other), "WEAPON", 3, 0);
+  slot(3, 1, "ARSENAL", sd.ars ? {card: card(sd.ars.n, 40, 56, {back: !sd.ars.up})} : {cls:"empty"});
+  /* the arena column, beside the centre line: tokens and permanents, newest last */
+  const ar = el("div", "arena");
+  ar.style.left = X(MAT.arena, 32) + "px";
+  ar.appendChild(el("div", "zl", "ARENA"));
+  sd.board.slice(0, 5).forEach(n => ar.appendChild(card(n, 32, 45, {cls:"tok"})));
+  if(sd.board.length > 5) ar.appendChild(el("div", "more", "+" + (sd.board.length - 5)));
+  half.appendChild(ar);
+}
 function paintCast(r){
   for(const s of [0,1]){
     const h = R("hole" + s); h.innerHTML = "";
     r.sides[s].hand.forEach(n => h.appendChild(card(n, 26, 36)));
     if(r.sides[s].ars) h.appendChild(card(r.sides[s].ars.n, 26, 36, {cls: r.sides[s].ars.up ? "" : "dim"}));
-    const half = R("half" + s); half.innerHTML = "";
-    const sd = r.sides[s];
-    const row = (lbl, names, o, cls) => { if(!names.length) return; half.appendChild(el("div", "tag", lbl)); const rw = el("div", "row" + (cls ? " " + cls : "")); names.forEach(n => rw.appendChild(card(n, 34, 48, o))); half.appendChild(rw); };
-    row("GEAR", sd.gear);
-    row("ARENA", sd.board, {cls:"tok"});
-    row("PITCH · res " + sd.res, sd.pitch, null, "prow");
-    half.appendChild(el("div", "tag", `DECK ${sd.deck} · GRAVE ${sd.grave}`));
+    paintMatHalf(s, r.sides[s], R("half" + s));
   }
   const ring = R("ring"); ring.innerHTML = "";
   const nowr = R("nowr"); nowr.innerHTML = "";
@@ -821,10 +895,14 @@ function paintCast(r){
     const ln = r.pend.dealt != null ? r.chain.length : r.chain.length + 1;
     nowr.appendChild(el("div", "chip", `LINK ${ln}` + (r.pend.dealt != null ? ` — ${r.chain[r.chain.length - 1] ? r.chain[r.chain.length - 1].dmg : r.pend.dealt} DMG` : "")));
   } else {
-    ring.innerHTML = r.over ? "" : `<div style="font-family:'Big Shoulders Display','Arial Narrow',Impact,sans-serif;font-weight:800;font-size:24px;letter-spacing:.08em;margin-top:56px;color:${r.tp ? "var(--p2)" : "var(--p1)"}">${esc(short(r.tp).toUpperCase())}'S TURN</div>`;
+    ring.innerHTML = r.over ? "" : `<div class="turnw" style="color:${r.tp ? "var(--p2)" : "var(--p1)"}">${esc(short(r.tp).toUpperCase())}'S TURN</div>`;
   }
   const wall = R("wall"); wall.innerHTML = "";
   if(r.pend) [...(r.pend.wallG || []), ...(r.pend.wallH || [])].forEach(n => n && wall.appendChild(card(n, 34, 48)));
+  /* earlier links of this chain, smallest, above the live one; a resolved link keeps its damage */
+  const cl = R("clinks"); cl.innerHTML = "";
+  const done = r.pend && r.pend.dealt == null ? r.chain : r.chain.slice(0, -1);
+  done.slice(-5).forEach(e => { const w = el("div", "cl"); w.appendChild(card(e.n, 26, 36)); w.appendChild(el("div", "dm", e.dmg)); cl.appendChild(w); });
   R("eq").innerHTML = eqHTML(r);
   R("links").textContent = r.chain.length >= 2 ? `${r.chain.length} LINKS · ${r.chain.reduce((a, e) => a + e.dmg, 0)} DMG` : "";
   const cap = captionFor(r);
@@ -990,7 +1068,7 @@ async function stageRow(k){
       anim(sr && sr.querySelector(".ppips, .prow"), [{transform:"scale(1.6)"}, {transform:"scale(1)"}], {duration:T.pitch});
     } else if(m.k === "swing" && T.swing){
       const cd = ring && ring.querySelector(".cd");
-      anim(cd, [{transform:`translateY(${m.seat === st.viewer || st.view === "cast" ? 120 : -120}px) scale(1.3)`, opacity:.2}, {transform:"scale(1)", opacity:1}], {duration:T.swing * .7, easing:"cubic-bezier(.2,.8,.2,1)"});
+      anim(cd, [{transform: st.view === "cast" ? `translateX(${m.seat ? 140 : -140}px) scale(1.3)` : `translateY(${m.seat === st.viewer ? 120 : -120}px) scale(1.3)`, opacity:.2}, {transform:"scale(1)", opacity:1}], {duration:T.swing * .7, easing:"cubic-bezier(.2,.8,.2,1)"});
       anim(ring && ring.querySelector(".stamp"), [{transform:"scale(2.4)", opacity:0}, {transform:"scale(2.4)", opacity:0, offset:.55}, {transform:"scale(1)", opacity:1}], {duration:T.swing});
       noise(.18, .12); tone(220, .2, "sawtooth", .05, 90);
       await go(T.swing);
@@ -1135,26 +1213,122 @@ function buildScrub(){
   });
 }
 function onTableTap(e){
-  const c = e.target.closest(".hand .cd");
-  if(c && st.view === "phone"){
-    const i = +c.dataset.idx;
-    const pk = R("peek");
-    if(st.peek === i){
-      pk.innerHTML = ""; pk.appendChild(card(c.dataset.name, 184, 257, {badges:true, cost:true}));
-      pk.appendChild(el("div", "v", "Replay: a second tap would play it."));
-      return;
-    }
-    st.peek = i;
-    document.querySelectorAll(".hand .cd").forEach(x => x.classList.toggle("peek", x === c));
-    pk.innerHTML = ""; pk.appendChild(card(c.dataset.name, 184, 257, {badges:true, cost:true}));
-    pk.appendChild(el("div", "v", esc(c.dataset.name) + " · tap again to play"));
-    pk.classList.add("on");
-    return;
-  }
   if(e.target.closest(".story")) return;
-  const pk = R("peek"); if(pk && pk.classList.contains("on")){ pk.classList.remove("on"); st.peek = null; document.querySelectorAll(".hand .cd.peek").forEach(x => x.classList.remove("peek")); return; }
+  const pk = R("peek"); if(pk && pk.classList.contains("on")){ pk.classList.remove("on"); st.peek = null; return; }
   flush();
 }
+
+/* ---------- the wheel ----------
+   Geometry: the wheel's centre sits 360px below the band's top (off the bottom of the screen),
+   radius 260, one card every 24 degrees, so two neighbours show on each side and the rest run off
+   the bottom. The top card is scaled 1.6x (80x112 -> 128x179). One card per ~109px of swipe. The
+   hand WRAPS, so it spins without an end, which is the fidget the idea asked for. */
+const WH = {R:260, cy:348, step:24 * Math.PI / 180, h:112, grow:.5};
+const wh = {pos:0, names:[], cards:[], vel:0, raf:0, drag:null, r:null, v:0};
+const wrapOff = (i, pos, n) => { let d = (i - pos) % n; if(d < -n / 2) d += n; if(d >= n / 2) d -= n; return d; };
+const topIndex = () => { const n = wh.names.length; return n ? ((Math.round(wh.pos) % n) + n) % n : -1; };
+function paintWheel(r, v){
+  const box = R("hand"); if(!box) return;
+  const prevTop = wh.names[topIndex()];
+  box.querySelectorAll(".wc, .empty").forEach(x => x.remove());
+  const sd = r.sides[v];
+  wh.names = sd.hand.slice(); wh.cards = []; wh.r = r; wh.v = v;
+  if(!wh.names.length){ box.appendChild(el("div", "empty", "No cards in hand.")); R("widx").textContent = ""; R("wverb").textContent = ""; return; }
+  // a declared hand defender is on the chain: mark it on the wheel (one mark per name in the wall)
+  const walled = (r.pend && r.pend.by !== v && r.pend.dealt == null) ? (r.pend.wallH || []).slice() : [];
+  wh.names.forEach((n, i) => {
+    const w = el("div", "wc"); w.dataset.idx = i; w.dataset.name = n;
+    w.appendChild(card(n, 80, 112, {badges:true, cost:true}));
+    const wi = walled.indexOf(n); if(wi >= 0){ w.classList.add("wall"); walled.splice(wi, 1); }
+    box.insertBefore(w, R("pri"));
+    wh.cards.push(w);
+  });
+  // the same card stays on top across a row change while it is still in hand
+  const keep = prevTop != null ? wh.names.indexOf(prevTop) : -1;
+  wh.pos = keep >= 0 ? keep : Math.max(0, Math.min(Math.round(wh.pos), wh.names.length - 1));
+  layoutWheel();
+}
+function layoutWheel(){
+  const n = wh.cards.length; if(!n) return;
+  wh.cards.forEach((w, i) => {
+    const d = wrapOff(i, wh.pos, n), a = d * WH.step;
+    const vis = Math.abs(a) < 1.45;
+    w.style.display = vis ? "" : "none"; if(!vis) return;
+    const x = WH.R * Math.sin(a), y = WH.cy - WH.R * Math.cos(a) - WH.h / 2;
+    const sc = 1 + WH.grow * Math.max(0, 1 - Math.abs(d));
+    w.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) rotate(${a.toFixed(3)}rad) scale(${sc.toFixed(3)})`;
+    w.style.zIndex = String(20 - Math.round(Math.abs(d) * 3));
+    w.style.opacity = Math.abs(d) > 1 ? Math.max(.4, 1 - .45 * (Math.abs(d) - 1)).toFixed(2) : "1";
+    w.classList.toggle("top", Math.abs(d) < .5);
+  });
+  const t = topIndex();
+  R("widx").textContent = `${t + 1} / ${n}`;
+  R("wverb").textContent = verbFor(wh.r, wh.v, wh.names[t]);
+}
+function verbFor(r, v, nm){
+  const c = C[nm] || {};
+  if(!r || r.over) return "";
+  if(r.pend && r.pend.by !== v && r.pend.dealt == null && r.step === "defend") return `TAP · BLOCK ⛨${c.def != null ? c.def : 0}`;
+  if(r.tp === v && !r.pend && !r.stack.length) return "TAP · PLAY" + (c.cost != null ? ` · COST ${c.cost}` : "");
+  return "TAP · LOOK";
+}
+const devScale = () => root ? root.getBoundingClientRect().width / 393 : 1;
+function wheelDown(e){
+  e.stopPropagation();
+  const pk = R("peek"); if(pk && pk.classList.contains("on")){ pk.classList.remove("on"); st.peek = null; }
+  if(!wh.cards.length || e.target.closest(".sec, .hub")) return;
+  cancelAnimationFrame(wh.raf);
+  const now = performance.now();
+  wh.drag = {x0: e.clientX, p0: wh.pos, lastX: e.clientX, lastT: now, moved: 0, target: e.target.closest(".wc")};
+  wh.vel = 0;
+}
+function wheelMove(e){
+  const d = wh.drag; if(!d) return;
+  const sc = devScale(), dx = (e.clientX - d.x0) / sc;
+  d.moved = Math.max(d.moved, Math.abs(dx));
+  wh.pos = d.p0 - dx / (WH.R * WH.step);
+  const now = performance.now(), dt = Math.max(1, now - d.lastT);
+  wh.vel = -((e.clientX - d.lastX) / sc) / (WH.R * WH.step) / dt;
+  d.lastX = e.clientX; d.lastT = now;
+  layoutWheel();
+}
+function wheelUp(){
+  const d = wh.drag; wh.drag = null; if(!d) return;
+  if(d.moved < 6){
+    const w = d.target; if(!w) return;
+    const i = +w.dataset.idx;
+    if(i === topIndex()) peekTop(w.dataset.name); else spinTo(i);
+    return;
+  }
+  let last = performance.now();
+  const coast = now => {
+    const dt = Math.min(40, now - last); last = now;
+    if(Math.abs(wh.vel) > 0.0005){ wh.pos += wh.vel * dt; wh.vel *= Math.pow(0.994, dt); layoutWheel(); wh.raf = requestAnimationFrame(coast); }
+    else snapTo(Math.round(wh.pos));
+  };
+  wh.raf = requestAnimationFrame(coast);
+}
+function spinTo(i){ snapTo(wh.pos + wrapOff(i, wh.pos, wh.names.length)); }
+function snapTo(target){
+  const n = wh.names.length; if(!n) return;
+  const from = wh.pos, t0 = performance.now(), dur = 220;
+  cancelAnimationFrame(wh.raf);
+  const f = now => {
+    const k = Math.min(1, (now - t0) / dur), e2 = 1 - Math.pow(1 - k, 3);
+    wh.pos = from + (target - from) * e2; layoutWheel();
+    if(k < 1) wh.raf = requestAnimationFrame(f); else { wh.pos = ((Math.round(target) % n) + n) % n; layoutWheel(); }
+  };
+  wh.raf = requestAnimationFrame(f);
+}
+function peekTop(name){
+  const pk = R("peek"); if(!pk) return;
+  pk.innerHTML = ""; pk.appendChild(card(name, 184, 257, {badges:true, cost:true}));
+  pk.appendChild(el("div", "v", esc(name) + " · in a live game this tap plays it"));
+  pk.classList.add("on");
+}
+addEventListener("pointermove", wheelMove);
+addEventListener("pointerup", wheelUp);
+addEventListener("pointercancel", wheelUp);
 
 /* ---------- wiring ---------- */
 function segs(id, key, fn){

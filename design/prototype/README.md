@@ -8,7 +8,7 @@ design instrument, not the game: nothing here is loaded by `index.html`.
 |---|---|
 | `record.js` | drives `sparring.act` in both seats through `judge.reduce`, and records every row the stage shows: both sides' zones, the open chain link, the engine's **"if both pass now" projection** (the real reducer run on a copy), the chain, the feed lines, and the cup8 booth lines. It also runs `invariants.check` on every state and records the count |
 | `build.py` | inlines the recording and the card art (fetched from the public CDN into a work folder you name, shrunk, embedded as `data:` URIs) into one self-contained page |
-| `stage.tpl.html` | the page: a 393x852 phone table, a 960x540 broadcast program, the moment director, three presets |
+| `stage.tpl.html` | the page: a 393x852 phone table with the hand wheel in a bottom-centre thumb lane, a 960x540 broadcast program over an overhead playmat, the moment director, three presets (`STAGE.md`, Appendix C) |
 
 ## Rebuild
 

@@ -1,6 +1,6 @@
 # DAWNBLADE STAGE: the table brought to life
 
-**Status: design, not built.** Design week, 2026-10-14 to 2026-10-16. Nothing in this file has shipped. Every engine claim cites the tree at v5.30 (`4d42c58`). The build order is §10, and its first release changes no look at all: it makes the feed fit to be read by a viewer.
+**Status: design, not built.** Design week, 2026-10-14 to 2026-10-16. Nothing in this file has shipped. **Revised 2026-10-18:** the phone's hand and action bar are now a hand wheel in a thumb lane (§2.1), the broadcast field is an overhead playmat (§2.2), and §8.3's open question is answered yes. Appendix C holds both layout changes and their measurements. Every engine claim cites the tree at v5.30 (`4d42c58`). The build order is §10, and its first release changes no look at all: it makes the feed fit to be read by a viewer.
 
 **The brief, in the user's words.**
 - "I want the final version to feel like super smash melee / a fighting game. But we are not trying to bring the cards to life — we need to bring the table to life."
@@ -170,6 +170,8 @@ TITLE  "TAP TO SIT DOWN"  (the tap unlocks WebAudio and speech on iOS)
 
 ### 2.1 Phone portrait, 393x852 (standalone geometry). Every band is measured, and only the stage flexes.
 
+> **Revised 2026-10-18 (Appendix C.1).** The hand rail and the actbar below are replaced by one **hand wheel** in a bottom-centre **thumb lane**, and the stage shrinks from 419 to 333. The bands above the stage are unchanged.
+
 ```
  x0                                                                         393
 y  0 ┌──────────────────────────────────────────────────────────────────────┐
@@ -232,6 +234,8 @@ The bands replace `--tv:calc(100vh - 152px)` (index.html:19). Heights come from 
 - the existing `.statusline` hint ("pick a card to pitch") while it is your decision.
 
 ### 2.2 Broadcast, 16:9. Design canvas 960x540, scaled by one flat `transform: scale()`: 2x for an OBS 1920x1080 browser source.
+
+> **Revised 2026-10-18 (Appendix C.2).** The field in the middle of this canvas is now an **overhead playmat**, laid out the way a tournament feed shoots a real table. The HUD, hole cam, now-resolving card, lower third and spine are unchanged.
 
 ```
   0 ┌──────────────────────────────────────── 960 ────────────────────────────────────────┐
@@ -767,6 +771,8 @@ There is no dedicated end-turn key, which removes the slip risk next to Q and W.
 
 ### 8.3 vs AI. Waiting on one decision: may the AI pilot a hero?
 
+> **Answered 2026-10-18: yes.** RULING (user): *"Yes it is time for the ai to learn to play the heroes - I'm confident the cards are suitable :)"* It shipped as v5.35, and the AI is now being taught one hero gap at a time (v5.36 plays a go-again non-attack before the attack). The rest of this section is kept as it was written.
+
 *(Corrected; Appendix B, P3 and P9.)* The draft cited ROADMAP-MULTIPLAYER.md:232, "Do not build a deck-piloting AI". That line is stale: CLAUDE.md records it **reversed on 2026-08-14** ("build the seat"), and `engine/sparring.js` is that seat. But a later ruling narrows it. **RULING (user, 2026-08-16):** "seat 1 is either a PERSON, who picks their own hero when they join a table, or the dummy — and a seat the dummy fills is ALWAYS the vanilla pile. There is no hero the dummy plays as" (CLAUDE.md:12059; HANDOFF-MERGE.md:186; `test/flow.test.js:89` guards it). Today's VS AI seats `heroes: [yours, null]` (index.html:7729-7742), which is the vanilla dummy.
 
 The tiers below, the hero opponent in L9 and the AI-vs-AI Exhibition and attract mode all need an AI **piloting a hero**, so they reopen that ruling. The 2026-10-14 brief asks for "vs AI" but does not say which kind. This is open question 3, and the two answers build different things:
@@ -970,7 +976,7 @@ The release rule for all of them:
 ### Open questions for the user (each with the default this plan builds)
 1. **What does running out of time mean?** *Default: a loss* (MTGO). Flesh and Blood paper policy plays one more turn and then calls a draw.
 2. **Fake chat for atmosphere?** *Default: no simulated chatters, handles or viewer counts.* The rail fills with real booth lines and moment cards, real chat appears when real people watch, and a real YouTube stream can show its own chat. Fake chat would be the one dishonest pixel on the screen.
-3. **May the AI pilot a hero?** *No default; this one needs you.* The 2026-08-16 ruling says a seat the dummy fills is always the vanilla pile, and the vs-AI tiers, L9's hero opponent and the AI-vs-AI Exhibition all need a hero-piloting AI (§8.3). If yes, the tiers run on `sparring.act` with measured knobs. If no, VS AI is the vanilla dummy at tuned difficulty.
+3. **May the AI pilot a hero?** **Answered 2026-10-18: yes** (§8.3; shipped v5.35). *As first written:* The 2026-08-16 ruling says a seat the dummy fills is always the vanilla pile, and the vs-AI tiers, L9's hero opponent and the AI-vs-AI Exhibition all need a hero-piloting AI (§8.3). If yes, the tiers run on `sparring.act` with measured knobs. If no, VS AI is the vanilla dummy at tuned difficulty.
 4. **Which number is "average time"?** *Default: clock used per turn started* (on the HUD and the ladder), with seconds per decision as a personal stat on the results screen.
 5. **When does "ranked" begin?** *Default: Phase B ships as Clocked Friendlies* with local, advisory time scores. The word "ranked" and a public leaderboard wait for the Phase C server, which stamps the clock and holds redacted state.
 6. **Should "cumulative time remaining" count wins only?** *Default: yes.* Losses add 0, and the board ranks the mean per win. Counting losses would let a player top the Clock board by losing quickly.
@@ -1122,3 +1128,80 @@ Its stamp reads `_struck` because `pend.power` does not exist yet. That is exact
 - /home/user/dawnblade-ai/engine/net.js (`PROTO` 88, `JOURNAL` 108, `apply`/`sequence`/COMMIT 150-172, `submit` 178-185, HELLO/proto 365-390) and /home/user/dawnblade-ai/engine/local.js (`push` with no meta at 72, `runPolicy`/`submit` 78-111)
 - /home/user/dawnblade-ai/tools/cup8.js (`tally`/`ledger`/`called`/`observe`/`ROUTE_GLOSS` 146-230, glosses 195-212) and /home/user/dawnblade-ai/tools/selfplay.js (route regexes 146-431, no-mirror rule 107-110, row shape 452-460), which merge into the new engine/booth.js
 - /home/user/dawnblade-ai/engine/game.js (`sv`/`sp` 105/135), /home/user/dawnblade-ai/engine/build.js (`buildVanilla` 925-937, vanilla names 985), /home/user/dawnblade-ai/tools/phone/serve.sh (line 28) and /home/user/dawnblade-ai/test/wire.test.js (424-433)
+
+## Appendix C. Two layout changes, 2026-10-18
+
+Both came from the user after watching the prototype. They are built in `design/prototype/stage.tpl.html` and measured the same way as Appendix B.
+
+### C.1 The hand wheel and the thumb lane (phone)
+
+**The brief, in the user's words:**
+> "Display the playables rail as a wheel that goes off the bottom of the screen, the 'top' card is the target - the lower rectangle in the center of the screen is the most unbiased region of the phone for someone lefty or righty playing with 1 hand to hit. They can easily swipe through that center bottom rectangle. The center lower rectangular region should also be the default for the user to answer prompts. The user should rarely be asked to move their thumb from that bottom half center vertical rectangular region. The card in the top of the wheel can then be significantly magnified. The player can also have the satisfaction of fidget spinning through the wheel while they think of their play."
+
+**The thumb lane** is the band from x 96 to x 297 at 393 wide: the middle 51% of the screen, from the wheel's top to the bottom edge. A left or a right thumb reaches it equally. Everything a turn needs sits in it:
+- the **top card** of the wheel, the only card a tap commits;
+- its **verb** (`TAP · PLAY · COST 2`, `TAP · BLOCK ⛨3`, `TAP · LOOK`), read from the state the same way the actbar's labels are;
+- the **hub**, a 212x54 half-disc on the bottom edge holding the primary button (PASS, END TURN, TAKE 6). It is the old actbar's primary, moved under the thumb.
+
+Two things sit outside the lane on purpose, because a thumb should not hit them by accident: resources and the action point (bottom left, read-only) and the secondary button (bottom right, LOG in the replay; Cancel in the game).
+
+**The wheel.**
+
+| | value | why |
+|---|---|---|
+| radius | 260 px, centre 348 px below the wheel's top edge | the arc leaves through the bottom corners, so the wheel reads as larger than the screen |
+| spacing | 24° per card | the top card's two neighbours stay readable; the next ones fade to 0.4 and leave the screen |
+| top card | 80x112 scaled 1.5, outlined in yellow | "significantly magnified": cost, pitch and printed defence are legible without the peek |
+| spin | drag moves the wheel 1:1 along the arc; release coasts with friction and snaps to a card in 220 ms | the fidget spin |
+| tap the top card | commits (in the replay, it opens the large peek and says so) | one card is ever the target, so there is no peek-then-commit step for the top card |
+| tap any other card | spins it to the top | the second tap commits; the same two-tap rule as today, said with motion instead of a dock |
+| a declared defender | stays on the wheel, outlined in steel and marked ⛨ WALL | it is still a uid in the hand (v5.04), and a player looks for it there |
+| the same card | stays on top across a state change while it is still in hand | the wheel never jumps under a thinking thumb |
+
+**Prompts answer in the lane, and that is a rule for increment 3, not a nice-to-have.** Every prompt variant maps onto the two controls the lane already has:
+- `pick`, `target`, `modal`: the candidates, targets or modes load onto the wheel and the hub confirms the top one. `promptReady` decides when the hub lights, exactly as it decides Confirm today.
+- `pay`, `soak`: the hub is PAY N; a downward swipe on the hub is Decline. The sheet's text sits above the wheel, where the verb sits now.
+- `opt`, `alloc`: the cards load onto the wheel, a tap on the top card toggles it into the bottom (opt) or places one counter (alloc), and the hub confirms.
+- `reveal`: the revealed cards load onto the wheel and the hub reads OK.
+
+So `PromptSheet` becomes a second **source** for the wheel rather than a second surface, and the thumb leaves the lane only to read the strips above it.
+
+**What the geometry cost.** The stage gives up 86 px (419 to 333) and the peek moves up to sit above the wheel (bottom 296). The ring card, the swing line, the projection and the caption all still fit; the box check below holds them to it.
+
+**Measured** (the prototype, all 143 rows, at 393x852 and 360x740):
+- no overlap between the top card, the verb, the index, the hub and the corner controls, and none between any two named parts of the stage;
+- no text under 11 px, the hub is 54 px tall, and there is no horizontal scroll;
+- the check bites: the first geometry (centre 360, top scale 1.6) hid the verb under the top card in 122 of 143 rows;
+- the fidelity check (C.3) holds the wheel to the viewer's hand, in hand order, on every row.
+
+### C.2 The overhead playmat (broadcast)
+
+**The brief:** "make the actual view of the field look more like the YouTube screenshot … I'd like to see the cards arranged in the classic broadcast over table angle", with "no major revision" to the rest of the view. The reference was the Calling finals feed: a landscape playmat shot from overhead, split down the middle, each half laid out like a real mat.
+
+**The mat** is 592x294 in the middle of the 960x540 canvas, a dark felt with a centre line and the wordmark printed faintly down it. Each half is the same four columns, mirrored, so a viewer who learns one side has learned both:
+
+| column | top | middle | bottom |
+|---|---|---|---|
+| A, the outer edge | graveyard (a pile with its count) | deck (back, with its count) | pitch zone (the pitched cards fanned, labelled with floating resources) |
+| B | arms | weapon | legs |
+| C | head | **hero** (larger) | chest |
+| D | second weapon or off-hand | arsenal (face down unless it was turned up) | |
+| arena | tokens, auras, allies and items, stacked beside the centre line, newest last, then `+N` | | |
+
+- **A piece's slot is read off its printed type line**, never off a list of names: `Equipment - Head` goes to HEAD, any `Weapon` or `Off-Hand` to a weapon slot. A slot holding more than one piece stacks the rest, offset, so nothing on the mat is ever hidden.
+- **The combat chain lives on the centre line**: the open link's card enlarged with its power stamp, earlier links as small cards with their damage above it, and the declared wall below it, outlined in steel.
+- **Kept as they were:** the HUD, the hole cam, the now-resolving card, the strike equation, the lower third and the spine.
+
+**Measured** (all 143 rows, at 1280x900 and 820x1180):
+- no overlap between any two slots, labels, the arena column or the chain parts, or between the mat and the parts around it. The first pass found one: the strike equation sat 2 px over the mat's bottom edge in 88 rows, so the mat is 294 tall rather than 300;
+- no text under 11 px;
+- the fidelity check (C.3) holds every zone on the mat to the recording.
+
+**Limitations, stated rather than hidden.**
+- The recording keeps the graveyard as a **count**, so the mat shows a pile and not its top card. The game has the cards, and the built mat should show the top one.
+- **No deck in this recording carries two weapons**, so the stacking rule is never reached by the real game. It was checked on a synthetic recording with three weapons on one seat: all three shown.
+- The reference shows **player cams** beside the mat. A replay has no video, so the hole cam column is where an OBS layout would put them.
+
+### C.3 The fidelity check, updated
+
+The Appendix B fidelity check, rewritten for the new structure, reads the page's DOM on every row, at all three presets, and compares it to the recording: **48,533 checks, 0 mismatches.** For the mat it asks that the grave and deck counts are right, the pitch fan is the pitch zone, every gear piece is shown exactly once and in its printed slot, the arsenal is face down unless it was turned up, the arena is the board, and the hero has art. **It bites:** a mat that drops the arms slot fails 447 checks.
