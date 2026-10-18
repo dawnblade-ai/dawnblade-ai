@@ -47,6 +47,10 @@ ladder byte-identical to v5.34.
   play to the first strike, check no dead tap and no overflow. Measure one game per hero for
   `POLICY REFUSALS 0` and `INVARIANT VIOLATIONS 0` through `local.js`, not just `selfplay.js`.
 
+**H2. SHIPPED as v5.36 (`9e79547`), CEO-verified 2026-10-18:** 3615 drills, 0 fail, 5 skipped;
+scenes 107/107; all 21 engine script tags in the pushed commit; CI drills and Pages green; the
+3-seed ladder is byte-identical to the CEO's scratch experiment.
+
 **H2. A non-attack that keeps the action point goes BEFORE the attack.** One release. CEO-measured
 on v5.34 in a scratch copy (method below); re-measure in the real tree before shipping.
 - **The gap.** `sparring.offence` ranks every attack first and every non-attack last
