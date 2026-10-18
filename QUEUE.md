@@ -104,7 +104,54 @@ on v5.34 in a scratch copy (method below); re-measure in the real tree before sh
   good" (sparring.js:48-54).** The 2026-10-18 ruling supersedes the first half: say so, and keep the
   legibility half, which still holds.
 
-**H3+.** One gap at a time. The CEO writes the next one here after H2 ships.
+**H3. The AI seat boosts when its own deck makes boost pay.** One release. CEO-measured on v5.36
+(`9e79547`) in a scratch copy; re-measure in the real tree before shipping.
+- **The gap.** `sparring.payAction` declines every boost (`if(p.kind === "boost") return {t:"boost",
+  yes:false}`, sparring.js:144), on the reasoning that the banished card "is hidden from it — so
+  there is nothing to weigh". Boost's reminder pays go again when the banished card is a
+  Mechanologist card, and **Dash's deck is 44 of 44 Mechanologist**, so declining costs him every
+  go again his deck is built on. He was the weakest hero on the v5.36 ladder (4.7 wins a seed).
+- **Why the old reasoning no longer holds.** The ORDER of the deck is hidden; its COMPOSITION is
+  not. A player knows their decklist minus every card they have seen, which is exactly the
+  remaining deck as a multiset. So the policy weighs a probability the seat legitimately has, not
+  a card it cannot see. Rewrite the v2.84 comment to say this, and keep its point that the policy
+  never peeks at `deck[0]`.
+- **The fix.** `judge.boostShare(g, seat)`: the share of `g.sides[seat].deck` (the remaining deck
+  only; never the hand, never the order) that a boost would pay off for. `sparring` accepts boost
+  when the share is at least 1/2, else declines. It reads no card text: judge answers, as with
+  `keepsActionPoint`, `boardAttackOf` and `chiNeed`.
+- **One reader of "does this banished card pay boost".** effects.js:4722 tests
+  `/mechanologist/i.test(top.tt)`. Move it to one parser reader (for example
+  `parser.boostPays(card)`) that reads the structured array `ty` (v2.39: the array is the
+  authority), and have both effects.js and `boostShare` ask it. Measured: `tt` and `ty` agree on
+  all 797 pool records, so this moves nothing today and is right the day they diverge. Pin that.
+- **Measured** (3 seeds, scratch copy):
+
+  | | before | after |
+  |---|---|---|
+  | Dash, only his seat on the rule (`tourney.js dash '' 3`, 42 games a side) | 2 · 3 · 4 (3.0 of 14) | 12 · 10 · 12 (11.3 of 14) |
+  | Dash's average game length | 22.7 turns | 12.7 turns |
+  | Full ladder, every seat on the rule (`tourney.js '' '' 3`) | Dash 4.7 a seed | Dash 22.3 a seed |
+  | refusals · violations · stalls (full ladder) | 0 · 0 · 1 | 0 · 0 · 1 (the same deck-out draw, `gravy-azalea-2`) |
+
+  Intervals disjoint by a wide margin: real. The others move down a little, which is the
+  zero-sum ladder, not self-harm (H2's per-seat method).
+- **The threshold is a stated choice that this pool never tests.** Only Dash's deck holds a boost
+  card (38 of 44 print it) and his share at the deal is 1.0, so 1/2 and "always" give identical
+  ladders (measured: SPBT 0, 0.5 and 0.7 all give 12 · 10 · 12). Pin both premises as drills: the
+  set of decks holding a printed boost is {dash}, and its share at the deal is 1.0. The day a second
+  boost deck arrives, somebody re-measures the threshold.
+- **Drills.** `boostShare` counts the remaining deck and not the hand (a fixture with Mechanologist
+  cards in hand only answers 0); the policy accepts at a share of 1/2 and declines just below it
+  (synthetic decks); `sparring` still reads no card text (the existing guard). Add a `boost` route
+  counter to `tools/selfplay.js` on the engine's own phrase (`Boost: <card> banished`), pinned
+  against the engine's spelling (v3.81), and confirm it is non-zero after the fix and 0 before it.
+  Sabotage: the threshold, the hand/deck split, and the reader move.
+- **The ladder line in CLAUDE.md and FINISH.md that names the policy declining boost** should be
+  updated in the same release, so no doc still says the seat never boosts.
+
+**H4+.** One gap at a time. Next candidates by the v5.36 ladder: Gravy Bones (5.0), Azalea (7.0),
+Boltyn and Iyslander (8.3).
 
 ## v3 — STAGE INCREMENT 1 INPUTS (CEO, 2026-10-17)
 
