@@ -863,7 +863,7 @@ function classifyClause(raw){
   if(m=c.match(/^if it is (red|yellow|blue), pitch it$/))
     return R([["revColorPitch", COLOR_PITCH[m[1]]]]);
   if(/^if you win, this gets \+\d+\s*\{d\}(?: until end of turn)?$/.test(c))
-    return NOOP("clash payoff — the defence step applies this when you win");
+    return NOOP("clash payoff — the defence step applies this to the clash's winner");
   /* RULING (Reaping Blade): a static lock — the hero ahead on life can't gain
      any. The life op checks it before healing. */
   if(/^if a hero has more \{h\} than (?:any|each) other hero, they can'?t gain \{h\}$/.test(c))
@@ -877,9 +877,9 @@ function classifyClause(raw){
      pitch prompt — they are not effects that fire on resolution. Both must sit
      above the if/when handler, which would otherwise split them and fail. */
   if(/^if you control (?:a|an) [a-z' -]+, this costs \{r\} less to play$/.test(c))
-    return NOOP("a cost reduction — taken off the price when you play it");
+    return NOOP("a cost reduction — taken off the price when it is played");
   if(/^this costs \{r\} less to play for each runechant(?: token)? you control$/.test(c))
-    return NOOP("a cost reduction — taken off the price when you play it");
+    return NOOP("a cost reduction — taken off the price when it is played");
   /* THE MARK DISCOUNT (v3.96) — `parser.markRed` reads it inside `effCost`
      for the same reason its two neighbours above do: a discount is applied
      when the card is PAID for, never as an op on resolution. It is a
@@ -1710,7 +1710,7 @@ function classifyClause(raw){
      phase. `noop` here because the printed keyword line carries no payload
      of its own, the same bookkeeping "arcane barrier" above uses. */
   if(/^inertia$/.test(c)) return NOOP("live — a hand wipe at the beginning of its controller's end phase (resolveInertia)");
-  if(/^watery grave$/.test(c)) return NOOP("live — Gravy Bones' ability enables it once a blue card has hit your graveyard");
+  if(/^watery grave$/.test(c)) return NOOP("a hero ability lets it be played from the graveyard");
   /* VERSE COUNTERS (Malefic Incantation): the unwind-into-a-Runechant is
      read directly off the board in execute() at declaration (it scans
      every board permanent's own text for this exact shape on every attack
@@ -1813,7 +1813,7 @@ function classifyClause(raw){
   if(m=c.match(/^the first card with ([a-z' ]+?) you play from your graveyard each turn gets go again$/)){
     const kwName = m[1].trim();
     if(!KW_VOCAB.test(kwName)) return null;
-    return R([["noop", "a standing ability — it applies when you play that card from your graveyard"]], {gyFirstGa: kwName});
+    return R([["noop", "a standing ability — it applies when its controller plays that card from the graveyard"]], {gyFirstGa: kwName});
   }
   if(m=c.match(/^quickstrike\s*[-—]\s*if this (?:gets|has) go again,\s*(.+)$/i))
     return GATED(m[1], "hasGa");
@@ -1922,7 +1922,7 @@ function classifyClause(raw){
      which is the whole of v3.16's rule. Filed before the offer was built
      it would have been the no-op blind spot exactly (v3.32's argument for
      heave), which is why it stayed `skip` through v4.23. */
-  if(/^crank$/.test(c)) return NOOP("you are offered it as this enters the arena — a counter for an action point");
+  if(/^crank$/.test(c)) return NOOP("offered as this enters the arena — a counter for an action point");
   /* MELD (v3.34). The printed reminder text is the whole rule:
 
        Meld (You may play 1 or both halves of this card. Each costs 0.)
@@ -2348,7 +2348,7 @@ function classifyClause(raw){
      plays a real hero deck. A noop must describe the clause in front of it
      (v3.16) and its reason must describe a world that still exists. */
   if(SPELLVOID_X.test(c))
-    return NOOP("X is the number of chain links you control, counted when the arcane damage is dealt");
+    return NOOP("X is the number of chain links its wearer controls, counted when the arcane damage is dealt");
   /* RUST IS A CLOCK, AND IT IS THE CARD'S OWN NUMBER (v3.17).
      This was a NOOP reading "the end phase already destroys it at 3
      counters" — a reason that named a payload living in ONE board's end
@@ -2507,7 +2507,7 @@ function classifyClause(raw){
      spends them. Nothing is lost by refusing the op — the clause is
      accounted for, by a reader that was already there. */
   if(m=c.match(/^ward (\d+)/))
-    return NOOP("ward " + m[1] + " — it destroys itself to prevent that much damage to you");
+    return NOOP("ward " + m[1] + " — it destroys itself to prevent that much damage to its controller");
   /* THE WINDOW IS READ OFF THE PRINTED WORDS (v3.87, v4.07). Every
      prevention in this pool prints "this turn" — Cloud Cover, Oasis
      Respite, Toe the Line, Throw Caution, Radiant Touch, Seeker's Mitts,
@@ -3143,7 +3143,7 @@ function classifyClause(raw){
   /* RULING (Put in Context): a printed limit on what this may be declared
      against — enforced when blockers are declared, not on resolution. */
   if(/^this can only defend an attack with \d+ or less base \{p\}$/.test(c))
-    return NOOP("defender restriction — checked when you declare it as a blocker");
+    return NOOP("defender restriction — checked when it is declared as a blocker");
   if(/^play this only if /.test(c)) return NOOP("play restriction — checked before the card can be played");
   /* RULING (Out Pace): a restriction on what may be declared against it */
   if(/^this can'?t be defended by equipment$/.test(c))
@@ -3674,7 +3674,10 @@ function classifyClause(raw){
   if(/^you may play it this turn$/.test(c))
     return NOOP("playable this turn — the flag is set when the card is created");
   if(m=c.match(/^the next ([a-z][a-z' -]*?) you play this turn gets \+(\d+)\s*\{p\}$/))
-    return R([["namedBuff", m[1].trim(), +m[2]]]);
+    /* THE NAME KEEPS ITS PRINTED CAPITALISATION (v5.33): the feed line read
+       "the next crouching tiger" off the lowercased clause (QUEUE v3 S4). The
+       match is case-insensitive at the reader (`norm`), so only the words move. */
+    return R([["namedBuff", String(cased(/^the next (.+?) you play this turn gets \+\d+\s*\{p\}$/, 1, m[1])).trim(), +m[2]]]);
   /* activation gates on equipment abilities — the gate is its own printed
      sentence, so it must read as accounted-for while fx.activateIf enforces it */
   if(/^activate this(?: ability)? only (?:if|while|during)/.test(c))
@@ -4083,8 +4086,8 @@ function qualLabel(qual){
   if(qual.costGe != null) post.push("with cost " + qual.costGe + " or more");
   if(qual.powLe  != null) post.push("with " + qual.powLe + " or less base {p}");
   if(qual.powGe  != null) post.push("with " + qual.powGe + " or more base {p}");
-  if(qual.from)    post.push("played from your " + qual.from);
-  if(qual.boosted) post.push("you boost");
+  if(qual.from)    post.push("played from the " + qual.from);
+  if(qual.boosted) post.push("that is boosted");
   if(qual.pumped)  post.push("with {p} above its base");
   const noun = pre + (qual.nonAtk ? "non-attack action card"
                     : qual.aac ? "attack action card" : "attack")

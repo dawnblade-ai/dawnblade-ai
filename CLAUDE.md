@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.32
+**Current version:** v5.33
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3602 drills** at v5.32.
+This is `node --test "test/*.test.js"` — **3605 drills** at v5.33.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -875,6 +875,13 @@ The arsenal set, opt, a reorder, a hand-to-deck pick, Azalea's cycle and Boulder
 cards only one seat had seen (QUEUE v3 S2). Each names the seat and a count now; a graveyard pick and
 a face-up arsenal card are public and keep their names (`test/hiddenfeed.test.js`). **When a line
 names a card, ask which zone it came from and which it went to: two hidden zones mean a count.**
+
+### A LINE BOTH SEATS READ NAMES THE SEAT (v5.33)
+
+About two dozen engine lines said you/your in the shared feed, hidden because seat 0 is named "You"
+(QUEUE v3 S3+S4). They go through `sv`/`sp` now (`sv` knows `are`), noop reasons may not say
+you/your (`test/noopvoice.test.js`), and `test/seatvoice.test.js` drives every pool condition
+through `condWhy` with a named actor. **Write a feed line as if the reader is the other seat.**
 
 ### THE POWER THE WALL WAS SUBTRACTED FROM (v5.31)
 

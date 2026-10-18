@@ -98,7 +98,7 @@ const handsFree = cards => HANDS - handsUsed(cards);
    and no side — `prompts.js`, which builds "You" / "The opponent" from
    the seat index and has no side object to hand over. */
 const isSecondPerson = nm => /^you$/i.test(String(nm || ""));
-const thirdPerson = base => base === "have" ? "has"
+const thirdPerson = base => base === "have" ? "has" : base === "are" ? "is"
   : /(?:s|sh|ch|x|z)$/.test(base) ? base + "es" : base + "s";
 const svName = (nm, base) =>
   String(nm || "") + " " + (isSecondPerson(nm) ? base : thirdPerson(base));

@@ -1693,11 +1693,18 @@ test("the second-person debt in the shared semantics does not grow", () => {
   /* 45 -> 43 AT v5.29, PAID DOWN AGAIN (QUEUE N9, N10). The crowd's boo
      said "the crowd boos you … your Bravo cards know it" and Pouncing Paws
      "springs into your banished zone"; both name the seat now. */
-  assert.ok(lits.length <= 43,
+  /* 43 -> 19 AT v5.33, PAID DOWN (QUEUE v3 S3). Every FEED line left in
+     the file names the seat through `sv`/`sp`: the condition-not-met
+     phrases, the reload, discard and life-lock refusals that reach the feed,
+     the next-attack grants and Kayo's hero line. The 19 left are prompt
+     titles and hints (addressed to `spec.side`), refusals returned to the
+     seat that tried the play, the printed "the next time you hit a hero"
+     quoted from a card, and the `/^you$/` tests that choose a verb. */
+  assert.ok(lits.length <= 19,
     `second-person literals in effects.js rose to ${lits.length} — the shared feed is read by both seats`);
   /* AND IT MUST NOT PASS BY FINDING NOTHING: if the scan ever stops
      matching, an empty result reads as a clean file. */
-  assert.ok(lits.length >= 30,
+  assert.ok(lits.length >= 12,
     `only ${lits.length} matched — the scan shape moved, repoint this drill rather than banking the win`);
 });
 

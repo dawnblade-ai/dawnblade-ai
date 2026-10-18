@@ -578,7 +578,9 @@ function makeEffects(ctx){
     if(act(n).hist && act(n).hist.might6) return n;
     if(!big) return n;
     actMut(n).hist = {...act(n).hist, might6:1};
-    n = L(n, "The first card with 6 or more {p} you have discarded this action phase — Kayo makes Might.");
+    /* NAMED OFF THE HERO CARD, NOT WRITTEN AS "Kayo" (v5.33): the engine names no hero (golden
+       rule), and the seat is inflected through `sv` because both seats read this (QUEUE v3 S3/S4). */
+    n = L(n, `${heroAbilityName(n)}: the first card with 6 or more {p} ${sv(act(n), "have")} discarded this action phase makes a Might token.`);
     return runOps(n, [["token","Might",1,"self"]], "Kayo");
   };
 
@@ -1132,7 +1134,7 @@ function makeEffects(ctx){
           taken.push(h[r.v]);
           actMut(n).hand = h.filter((_,ix)=>ix!==r.v);
         }
-        if(!taken.length){ n=L(n,`${srcName}: your hand is empty — nothing to discard.`); return; }
+        if(!taken.length){ n=L(n,`${srcName}: ${sp(act(n))} hand is empty — nothing to discard.`); return; }
         /* Reincarnate prints "When this is discarded at random, put it on
            the bottom of its owner's deck" — it IS discarded (so it still
            answers "discarded this way"), it just never lands in the
@@ -1562,7 +1564,7 @@ function makeEffects(ctx){
       else if(k==="ap"){ actMut(n).ap+=v; n=L(n,`+${v} action point${v>1?"s":""} — the turn stretches.`); }
       else if(k==="life"){
         /* RULING (Reaping Blade): if you are the hero ahead, the gain fizzles */
-        if(act(n).lifeLock && lifeAhead(act(n), foe(n))){ n = L(n, `${srcName}: you are ahead on life — the gain fizzles.`); return; }
+        if(act(n).lifeLock && lifeAhead(act(n), foe(n))){ n = L(n, `${srcName}: ${sv(act(n), "are")} ahead on life — the gain fizzles.`); return; }
         actMut(n).hp+=v; n=L(n,`+${v} life.`);
       }
       /* ARCANE DAMAGE GOES THROUGH THE ONE CHOKE POINT (v2.74). It used to
@@ -1737,7 +1739,7 @@ function makeEffects(ctx){
          "create a runechant". Viserai's own card, and Runechants are his
          whole engine. */
       else if(k==="runeHitNext"){ const many=Math.max(1,v||1); actMut(n).runeHitNext=many;
-        n=L(n,`Your next attack: if it hits, ${many>1?`${many} Runechants are`:"a Runechant is"} forged.`); }
+        n=L(n,`${srcName}: ${sp(act(n))} next attack — if it hits, ${many>1?`${many} Runechants are`:"a Runechant is"} forged.`); }
       else if(k==="amp"){ actMut(n).amp+=v; n=L(n,`Amp ${v} — next arcane +${v}.`); }
       else if(k==="ward" && op[2] && op[2].next){
         /* ONE EVENT, NOT A BUDGET (v5.06). "The next time you would be dealt
@@ -1863,11 +1865,11 @@ function makeEffects(ctx){
           n.pend = {...n.pend, lateOps: [...(n.pend.lateOps||[]), ["piercing", v]]};
           n = L(n, `${srcName}: ${n.pend.card.name} has piercing ${v} — +${v} power if an equipment blocks.`);
         }
-        else n = L(n, `${srcName}: piercing ${v}, but no attack of yours is in flight.`);
+        else n = L(n, `${srcName}: piercing ${v}, but ${sv(act(n), "have")} no attack in flight.`);
       }
       else if(k==="soulSpend"){
         if((act(n).soul||[]).length >= v){ actMut(n).soul = act(n).soul.slice(v); n = L(n,`${v} soul spent.`); n = runOps(n, op[2]||[], srcName); }
-        else n = L(n,`Needs ${v} soul — you have ${(act(n).soul||[]).length}.`);
+        else n = L(n,`Needs ${v} soul — ${sv(act(n), "have")} ${(act(n).soul||[]).length}.`);
       }
       else if(k==="rune"){ n = mkRune(n, v); n=L(n,`+${v} Runechant${v>1?"s":""} — ${runeCount(act(n))} on the board.`); }
       /* RULING: a token is a card. Resolve it through the same reader as
@@ -2240,8 +2242,8 @@ function makeEffects(ctx){
          — nothing about which card to reload is implied by the rest of the
          card's text the way Charge's colour preference was. */
       else if(k==="reload"){
-        if(!arsEmpty(act(n))){ n = L(n, `${srcName}: your arsenal isn't empty — Reload needs it clear.`); return; }
-        if(!act(n).hand.length){ n = L(n, `${srcName}: your hand is empty — nothing to reload.`); return; }
+        if(!arsEmpty(act(n))){ n = L(n, `${srcName}: ${sp(act(n))} arsenal isn't empty — Reload needs it clear.`); return; }
+        if(!act(n).hand.length){ n = L(n, `${srcName}: ${sp(act(n))} hand is empty — nothing to reload.`); return; }
         n.promptQ = [...(n.promptQ||[]), {tag:"pick", side:actorOf(n), src:srcName,
           zone:"hand", to:"arsenal", min:0, max:1,
           title:"Reload — put a card face-down into your arsenal?",
@@ -2324,7 +2326,7 @@ function makeEffects(ctx){
         if(!pc){ n = L(n, `${srcName}: nothing on the chain to recycle.`); return; }
         n = liftSelf(n, pc);
         actMut(n).deck = [...act(n).deck, pc];
-        n = L(n, `${pc.name} loops under — bottom of your deck instead of the graveyard.`);
+        n = L(n, `${pc.name} loops under — bottom of ${sp(act(n))} deck instead of the graveyard.`);
       }
       /* ---- FREEZE (Cold Snap) --------------------------------------
          RULING 2026-07-25: "if they don't pay the player gets a pop up and
@@ -2430,7 +2432,7 @@ function makeEffects(ctx){
       }
       else if(k==="namedBuff"){
         actMut(n).namedBuff = {name:norm(v), amount:op[2]||0};
-        n = L(n, `Your next ${v} this turn gets +${op[2]||0} power.`);
+        n = L(n, `${srcName}: ${sp(act(n))} next ${v} this turn gets +${op[2]||0} power.`);
       }
       /* "EACH OPPONENT DESTROYS AN AURA PERMANENT THEY CONTROL" (v3.18).
          Condemn to Slaughter's rider, and it is THEIR choice which aura
@@ -2675,7 +2677,7 @@ function makeEffects(ctx){
         n = L(n, `${String(srcName||"").replace(/ — ability$/, "")}: until end of turn, a card that would be put on top of a deck is put on the bottom instead.`);
       }
       else if(k==="costTax"){ n.costTax = (n.costTax||0)+v; n = L(n, `Cards cost ${n.costTax} more for the rest of this turn.`); }
-      else if(k==="dracNext"){ actMut(n).dracNext = true; n = L(n, "Your next attack this chain counts as Draconic."); }
+      else if(k==="dracNext"){ actMut(n).dracNext = true; n = L(n, `${srcName}: ${sp(act(n))} next attack this chain counts as Draconic.`); }
       /* THE STANDING GRANT (v4.19) — never spent, so it is NOT the field
          above with a different name. `linkPayload` spends `dracNext` and
          deliberately leaves this one alone; `closeChainGrants` expires
@@ -2699,7 +2701,7 @@ function makeEffects(ctx){
       }
       else if(k==="mark"){
         foeMut(n).marked = true;
-        n = L(n, `${foe(n).name} is marked — a qualifier your Assassin cards can read.`);
+        n = L(n, `${foe(n).name} is marked — a qualifier ${sp(act(n))} Assassin cards can read.`);
       }
       /* RULING (Ravenous Rabble): both players see the reveal, and the attack
          shifts by the revealed card's PITCH. The card stays on top. */
@@ -3002,22 +3004,22 @@ function makeEffects(ctx){
     chargedWay = chargedWay || [];
     return {atk:"no other attack yet", non:"no other non-attack yet",
       pitch6:`no 6+ power card in ${sp(act(n))} pitch zone`, arsenal:"not played from arsenal",
-      lifeLt:"you aren't behind on life", lifeGt:"you aren't ahead on life",
-      marked:`${foe(n).name} isn't marked`, foeTurn:`it's your turn, not ${sp(foe(n))}`,
+      lifeLt:`${sv(act(n), "are")} not behind on life`, lifeGt:`${sv(act(n), "are")} not ahead on life`,
+      marked:`${foe(n).name} isn't marked`, foeTurn:`it is ${sp(act(n))} turn, not ${sp(foe(n))}`,
       arcDealt:"no arcane damage dealt yet this turn",
       auraTurn:"no aura played or created this turn",
-      madeCard:"nothing created this turn", booed:"the crowd hasn't booed you this turn",
+      madeCard:"nothing created this turn", booed:"no boo from the crowd this turn",
       blue:"no other blue card played this turn", red:"no other red card played this turn",
-      transcended:"you haven't transcended this turn",
+      transcended:`${sv(act(n), "have")} not transcended this turn`,
       aim:"no aim counter on it", hasArsenal:`${sp(act(n))} arsenal is empty`,
       seismic:`no Seismic Surge token on ${sp(act(n))} board`,
       suspenseAura:`no aura of Suspense on ${sp(act(n))} board`,
       allyDied:`no ally has hit ${sp(act(n))} graveyard this turn`,
-      weaponSwung:"you haven't attacked with a weapon this turn",
-      dealtDmg:"you haven't dealt damage this turn",
+      weaponSwung:`${sv(act(n), "have")} not attacked with a weapon this turn`,
+      dealtDmg:`${sv(act(n), "have")} not dealt damage this turn`,
       isDraconic:"this isn't Draconic",
       pitchOverBase:`nothing in ${sp(act(n))} pitch zone beats its base power`,
-      charged:"you didn't charge your hero's soul this turn",
+      charged:"no card charged to the soul this turn",
       /* "Boltyn's hero's soul" read on the ladder (v4.97) — the possessive
          is the HERO's already */
       soulEmpty:`${sp(act(n))} soul already holds a card`,
@@ -3025,7 +3027,7 @@ function makeEffects(ctx){
          Pulping and Bare Fangs printed "condition not met (discard6way)"
          on every miss, 4 times in 210 games */
       discard6way:"no card with 6 or more {p} was discarded this way",
-      arcTakenTurn:"no arcane damage has been dealt to you this turn",
+      arcTakenTurn:`${sv(act(n), "have")} taken no arcane damage this turn`,
       /* the two reaction gates answer FALSE here only off the reaction
          route (`attackRx` owns them on it), and still read as words */
       reprise:"the defending hero hasn't defended with a card from hand",
@@ -4033,7 +4035,7 @@ function makeEffects(ctx){
       if((cond==="discard6" || cond==="discard6way") && fx.addCost && fx.addCost.discard) return;
       if(cond==="discard6"){
         /* RULING: check the graveyard for a 6+ power card added THIS turn */
-        if(!had6ThisTurn(n)){ n = L(n, `${card.name}: nothing with 6+ power has hit your graveyard this turn.`); return; }
+        if(!had6ThisTurn(n)){ n = L(n, `${card.name}: nothing with 6+ power has hit ${sp(act(n))} graveyard this turn.`); return; }
         if(op[0]==="ga") ga = true;
         else if(op[0]==="self" && attacking) n._condSelf = (n._condSelf||0)+op[1];
         /* PIERCING COLLECTS THE SAME WAY (v4.20). The condition loop runs
@@ -4359,7 +4361,7 @@ function makeEffects(ctx){
       }
       return L(nn, fx.arsenalPut.needEmpty
         ? `${card.name}: it needs an empty arsenal — the rest of the card still resolves.`
-        : `${card.name}: your arsenal is occupied — the rest of the card still resolves.`);
+        : `${card.name}: ${sp(act(n))} arsenal is occupied — the rest of the card still resolves.`);
     };
     if(attacking){
       /* Declaration-time ops. An attack's own ops normally wait for
@@ -7974,7 +7976,7 @@ function makeEffects(ctx){
       });
     }
     if(n.pend.runeOnHit && total>0){ const many = n.pend.runeOnHit; n = mkRune(n, many);
-      n = L(n, `${pc.name} connects — ${many>1?`${many} Runechants are`:"a Runechant is"} forged (now ${runeCount(act(n))}), poised for your next swing.`); }
+      n = L(n, `${pc.name} connects — ${many>1?`${many} Runechants are`:"a Runechant is"} forged (now ${runeCount(act(n))}), poised for ${sp(act(n))} next swing.`); }
     /* ---- A WEAPON THAT HITS EARNS ITS COUNTERS -----------------------
        "The second time this hits each turn, put a +1{p} counter on it."
 
@@ -8151,7 +8153,7 @@ function makeEffects(ctx){
       actMut(n).hist = {...act(n).hist, wpnAgain:1};
       const wu = {...(act(n).weaponUsed||{})}; delete wu[pc.uid];
       actMut(n).weaponUsed = wu;
-      n = L(n, `${pc.name} connects — your hero ability frees it for one more swing this turn.`);
+      n = L(n, `${pc.name} connects — ${heroAbilityName(n)} frees it for one more swing this turn.`);
     }
     /* CRUSH RUNS THE CARD'S OWN RIDER (v3.16). This site used to run
        Boulder Drop's payload — a card from hand onto their deck — for

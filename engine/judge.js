@@ -3558,7 +3558,7 @@ function endPhaseAfterArsenal(g, seat){
   n = put(n, seat, s => ({...s,
     weaponUsed: {}, heroTapped: false,
     board: (s.board || []).map(b => b.spent ? {...b, spent: false} : b)}));
-  n = say(n, "(d) " + at(n, seat).name + " untaps.");
+  n = say(n, "(d) " + GM.sv(at(n, seat), "untap") + ".");
 
   /* (e) ALL players lose action and resource points (CR 4.4.3e). Only the
      turn-player's fizzled before — a Wizard who banks a resource off
@@ -3588,7 +3588,7 @@ function endPhaseAfterArsenal(g, seat){
   const first = g.turn === 1;
   const seats = first ? [seat, P.other(seat)] : [seat];
   for(const i of seats) n = drawTo(n, i);
-  n = say(n, "(f) " + seats.map(i => at(n, i).name).join(" and ") + " draw" + (seats.length > 1 ? "" : "s") + " to intellect."
+  n = say(n, "(f) " + (seats.length > 1 ? seats.map(i => at(n, i).name).join(" and ") + " draw" : GM.sv(at(n, seats[0]), "draw")) + " to intellect."
     + (first && seats.length > 1 ? " (CR 4.4.3f — first turn only.)" : ""));
 
   /* THE ROLLED INTELLECT SETTLES BACK, AFTER THE DRAW IT GOVERNED (v3.49).
@@ -3720,7 +3720,7 @@ function drawTo(g, i){
   const drawn = sd.deck.slice(0, need);
   let n = put(g, i, s => ({...s, hand: [...s.hand, ...drawn], deck: s.deck.slice(drawn.length)}));
   if(drawn.length < need)
-    n = say(n, at(n, i).name + " draws " + drawn.length + " of " + need
+    n = say(n, GM.sv(at(n, i), "draw") + " " + drawn.length + " of " + need
               + " — the deck is empty. (CR 4.5.3: that is not a loss.)");
   return n;
 }

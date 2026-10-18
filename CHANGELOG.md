@@ -1,3 +1,26 @@
+## v5.33 — The engine names the seat, never "you"
+
+**QUEUE v3 S3+S4.** Both seats read one feed (v2.83), and about two dozen engine lines spoke in
+the second person: *"you aren't behind on life"*, *"Needs a card in your soul"*, *"it's your turn,
+not theirs"*. Seat 0 is literally named "You", so they read fine in the trainer and told the
+opponent the wrong thing at a table.
+
+- `condWhy`'s phrases (life, turn, boo, transcend, weapon swing, damage dealt, arcane taken,
+  charge) and the feed lines in `effects.js` name the seat through `sv`/`sp`. `game.sv` learned
+  `are` → `is`, so a seat named "You" still reads *"You are"*.
+- `judge.js`'s (d) untap and (f) draw lines name the seat.
+- Kayo's Might line names the ability off the hero card (`heroAbilityName`) instead of the literal
+  "Kayo".
+- `parser.js` noop reasons that said "you" are reworded (cost reductions, watery grave, crank,
+  ward, the defender restriction, clash, Spellvoid X, Compass). `qualLabel` no longer says "you".
+- A named-card buff keeps its printed capitals (*"Crouching Tiger"*, not *"crouching tiger"*).
+- The quoted token text at `effects.js` (printed card text) is untouched.
+
+The second-person ledger in `test/judge.test.js` went 43 → 19 (floor 12), and
+`test/noopvoice.test.js` now refuses a noop reason saying you/your. `test/seatvoice.test.js`
+drives every condition the pool emits through `condWhy` with a named actor. 6 sabotages, 6 bite.
+No `tools/selfplay.js` route reads a changed line. No rules moved. 3605 drills, 0 fail, 5 skipped.
+
 ## v5.32 — The shared feed stops naming hidden cards
 
 **QUEUE v3 S2.** Both seats read one feed (v2.83), and five writers named a card only one seat

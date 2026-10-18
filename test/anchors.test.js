@@ -95,7 +95,7 @@ test("every parser reading the pool never reaches is pinned", {skip}, () => {
     "if(m=c.match(/^discards? (a|an|one|two|three|\\d+) random cards?$/)) return R([[\"discardRandom\",num(m[1])]]);",
     "if(m=c.match(/gains? (\\d+)\\s*(?:\\{r\\}|resource)/)) return R([[\"res\",+m[1]]]);",
     "return NOOP(\"clash payoff — the clash block creates this for whoever wins\");",
-    "return NOOP(\"clash payoff — the defence step applies this when you win\");",
+    "return NOOP(\"clash payoff — the defence step applies this to the clash's winner\");",
     "return NOOP(\"clash — resolved when this blocks, off the clash keyword\");",
     "return NOOP(\"reveal payoff — fires if this is the card revealed on a winning clash\");",
     "return R([[\"soulSpend\", num(m[1]), sub.ops]]);",

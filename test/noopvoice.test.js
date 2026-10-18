@@ -56,7 +56,11 @@ const DEV_VOICE = [
      reader" printed on every swing. A dotted parse field and the engine's
      own noun for a parser rule are both developer voice. */
   [/\bfx\.[A-Za-z]/,           "a parse field"],
-  [/\breaders?\b/i,            "the word \"reader\""]
+  [/\breaders?\b/i,            "the word \"reader\""],
+  /* v5.33 (QUEUE v3 S3): `runOps` prints a noop reason into the feed both
+     seats read (v2.83), so "you" is a different player depending on who
+     reads it. 299 lines a ladder said "your graveyard" off one reason. */
+  [/\byour?\b/i,              "the second person"]
 ];
 const faults = s => DEV_VOICE.filter(([rx]) => rx.test(s)).map(([, why]) => why);
 
@@ -80,10 +84,10 @@ function poolNoopReasons(){
 }
 
 test("the scan is ALIVE — a control string is flagged by every shape", () => {
-  assert.deepEqual(faults("live — v4.24; see parser.crankCost() in engine/parser.js `here` via fxParse, off fx.noDrx by the weapon reader"),
+  assert.deepEqual(faults("live — v4.24; see parser.crankCost() in engine/parser.js `here` via fxParse, off fx.noDrx by the weapon reader for you"),
     ["a version number", "a filename", "a function call", "a backtick", "an engine identifier",
-     "a parse field", "the word \"reader\""],
-    "all seven shapes fire, so a zero below means the reasons are clean " +
+     "a parse field", "the word \"reader\"", "the second person"],
+    "all eight shapes fire, so a zero below means the reasons are clean " +
     "rather than that the scan stopped matching");
   assert.deepEqual(faults("a defence restriction — the wall reads it when this attacks"), [],
     "and ordinary game text is not flagged");
