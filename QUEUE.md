@@ -47,10 +47,60 @@ ladder byte-identical to v5.34.
   play to the first strike, check no dead tap and no overflow. Measure one game per hero for
   `POLICY REFUSALS 0` and `INVARIANT VIOLATIONS 0` through `local.js`, not just `selfplay.js`.
 
-**H2+. Teach the policy its heroes.** Coming from a CEO measurement workflow: per-hero gaps in
-`sparring.act` (the ladder has Azalea at 1 win of 28, Boltyn 8, Dash, Lyath and Gravy Bones 6),
-each with a proposed no-card-text change and a 3-seed measurement on both sides (v4.40). Do
-not start these until the CEO writes them here.
+**H2. A non-attack that keeps the action point goes BEFORE the attack.** One release. CEO-measured
+on v5.34 in a scratch copy (method below); re-measure in the real tree before shipping.
+- **The gap.** `sparring.offence` ranks every attack first and every non-attack last
+  (sparring.js:455-600). So Azalea fires her arrow, spends the turn's action point, and her
+  "your next arrow attack gets +N … Go again" cards (Lace with Frailty/Bloodrot/Inertia, Take Aim,
+  Read the Glide Path, Nimblism, Call in the Big Guns) never land on it. Measured on v5.34: 1 win in
+  28 games, 0.7 a seed over 3 seeds.
+- **The rule.** If the seat has an attack available (a card with printed power in hand or arsenal,
+  or a board attacker), first play the cheapest affordable non-attack that **keeps the action
+  point**, ties on pitch then uid. Then the existing ranking runs as before.
+- **"Keeps the action point" is one judge reader, not card text in sparring.js** (its contract):
+  `judge.keepsActionPoint(g, seat, uid, from)`, true when the card's own printed go again is
+  unconditional, the same fact `execute` grants (`fxParse(card).ga === true`; v2.31's layout
+  rule). The `boardAttackOf` / `abWindowOf` / `chiNeed` seam (v3.84, v4.38, v4.54). Do NOT widen
+  it to instants or to conditional go again in this release: neither was measured.
+- **The experiment patch** (inside `offence`, just above `const pick = from`):
+  ```js
+  const haveAtk = from.some(x => x.c && num(x.c, "power") > 0) || allies.length > 0;
+  if(haveAtk){
+    const first = from.map(x => ({c: x.c, uid: x.c && x.c.uid, from: x.from}))
+      .filter(x => x.c && num(x.c, "power") <= 0 && KEEPS_AP(x.c))   /* → judge.keepsActionPoint */
+      .filter(x => affordableWithin(sd, x.c, o))
+      .sort((a, b) => num(a.c, "cost") - num(b.c, "cost") || num(a.c, "pitch") - num(b.c, "pitch") || byUid(a, b))
+      .find(x => legal(g, {t: "play", uid: x.uid, from: x.from}, seat));
+    if(first) return {t: "play", uid: first.uid, from: first.from};
+  }
+  ```
+- **Measured, the change on ONE hero's seat only, every opponent on the old policy** (A/B; 14
+  games a seed, 3 seeds, `tourney.js <hero> '' 3`):
+
+  | hero | old | new | |
+  |---|---|---|---|
+  | Azalea | 1·0·0 (0.3) | 4·2·6 (4.0) | disjoint, REAL |
+  | Lyath | 3·2·4 (3.0) | 7·6·9 (7.3) | REAL |
+  | Viserai | 10·5·4 (6.3) | 14·12·11 (12.3) | REAL |
+  | Briar | 12·11·9 (10.7) | 14·14·14 (14.0) | REAL |
+  | the other 11 | | | within ±1–2, overlapping (noise) |
+
+  On the full ladder (both seats on the new policy), Blaze 17.3 → 10.3 and Iyslander 16.7 → 8.3.
+  **That is the zero-sum ladder, not self-harm**: with only their own seat switched they are
+  unchanged (8.7 → 8.3 each). Report both tables; the full ladder is what `npm run play` shows.
+- **Stalls 0 → 1 on the full ladder** (Gravy v Azalea 3 and Enigma v Iyslander 1 in the A/B runs).
+  All are genuine draws: both decks and hands empty, or a hand of four cards with no play
+  (Unmovable, two Put in Context, Astral Etchings with no aura). CR 4.5.3 has no deck-out loss
+  (v3.80, v4.58). Record it in the changelog; do not invent a rule to end them.
+- **Drill it** in `test/sparring.test.js`: a go-again non-attack plus an attack in hand → the
+  non-attack is proposed first; a non-attack WITHOUT go again plus an attack → the attack first;
+  no attack available → unchanged order. The drill must not depend on the parser in sparring.js.
+  Sabotage the reader and the ordering.
+- **sparring.js's header still says "NOT an AI opponent … should stay legible rather than become
+  good" (sparring.js:48-54).** The 2026-10-18 ruling supersedes the first half: say so, and keep the
+  legibility half, which still holds.
+
+**H3+.** One gap at a time. The CEO writes the next one here after H2 ships.
 
 ## v3 — STAGE INCREMENT 1 INPUTS (CEO, 2026-10-17)
 
