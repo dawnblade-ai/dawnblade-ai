@@ -104,6 +104,10 @@ on v5.34 in a scratch copy (method below); re-measure in the real tree before sh
   good" (sparring.js:48-54).** The 2026-10-18 ruling supersedes the first half: say so, and keep the
   legibility half, which still holds.
 
+**H3. SHIPPED as v5.37 (`0d82fbf`), CEO-verified 2026-10-18:** 3623 drills, 0 fail, 5 skipped;
+scenes 107/107; 21 engine script tags and `.nojekyll` in the pushed commit; CI drills and Pages
+green; the 3-seed ladder is byte-identical to the CEO's scratch experiment; `boost` route 0 -> 825.
+
 **H3. The AI seat boosts when its own deck makes boost pay.** One release. CEO-measured on v5.36
 (`9e79547`) in a scratch copy; re-measure in the real tree before shipping.
 - **The gap.** `sparring.payAction` declines every boost (`if(p.kind === "boost") return {t:"boost",
