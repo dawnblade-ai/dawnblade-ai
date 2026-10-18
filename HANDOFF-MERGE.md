@@ -183,7 +183,8 @@ reading, and each is a shape that will recur.
 | decision | date | what |
 |---|---|---|
 | **Keep the `sparring.js` wall** | 2026-08-16 | It reads NO card text, and that stays. v2.78 added one call — `judge.autoAnswer`, so a seat that is ASKED can answer — which reads no card text either; the two answers that cost real money delegate to `soakPolicy`/`payPolicy`, the same pure policies the trainer uses. |
-| **Two-player is the only mode** | 2026-08-16 | Seat 1 is a PERSON, who picks their own hero when they join a table, or the DUMMY, which is always the vanilla pile. The opponent picker is gone (v2.81) — there is no hero the dummy plays as. |
+| **An AI seat may wear a hero** | 2026-10-18 | RULING (user): *"Yes it is time for the ai to learn to play the heroes - I'm confident the cards are suitable :)"* The table's local opponent is the Dummy, any of the 15 heroes, or Random, piloted by `sparring.act` on `build.defaultBoard` (v5.35). The trainer and the networked lobby are unchanged. Supersedes the row below. |
+| ~~**Two-player is the only mode**~~ *(superseded 2026-10-18)* | 2026-08-16 | Seat 1 is a PERSON, who picks their own hero when they join a table, or the DUMMY, which is always the vanilla pile. The opponent picker is gone (v2.81) — there is no hero the dummy plays as. |
 | **Sideboard follows the throw** | 2026-08-16 | v2.76. |
 | **Build the seat** | 2026-08-14 | Reverses the 2026-07-25 "no AI opponent" note. Both dates kept so nobody re-litigates from the old one. |
 | **`Battle` retires last** | 2026-08-16 | And only once the five semantics drills pass driving `judge.reduce`. |

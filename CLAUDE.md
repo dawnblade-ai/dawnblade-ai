@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.34
+**Current version:** v5.35
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3607 drills** at v5.34.
+This is `node --test "test/*.test.js"` — **3611 drills** at v5.35.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -875,6 +875,15 @@ The arsenal set, opt, a reorder, a hand-to-deck pick, Azalea's cycle and Boulder
 cards only one seat had seen (QUEUE v3 S2). Each names the seat and a count now; a graveyard pick and
 a face-up arsenal card are public and keep their names (`test/hiddenfeed.test.js`). **When a line
 names a card, ask which zone it came from and which it went to: two hidden zones mean a count.**
+
+### AN AI SEAT WEARS A HERO, AT THE TABLE ONLY (v5.35)
+
+RULING (user, 2026-10-18): *"Yes it is time for the ai to learn to play the heroes - I'm
+confident the cards are suitable :)"* The table path offers the Dummy, any of the 15 heroes, or
+Random; the seat is `sparring.act` on `build.defaultBoard`, the one body self-play's
+`buildSideDefault` now calls (`{}` would deal every printed piece, v2.41). The trainer still
+deals `buildVanilla(DUMMY_DECK…)`; `test/aiseat.test.js` plays one game per hero through
+`local.js`. **When a ruling reverses an old one, strike the old one through and keep it.**
 
 ### ONE DECLARATION LINE, AND A WALL WORTH 0 IS NAMED (v5.34)
 
@@ -12086,11 +12095,19 @@ third keyword-matched a log string. **Pin the GATE, not the identifier.**
 
 ### The solo mirror (v2.63) — RETIRED in v2.81, BURNED in v2.83
 
-**RULING (user, 2026-08-16): seat 1 is either a PERSON, who picks their
+> **RULING (user, 2026-10-18), which SUPERSEDES the one below:**
+> *"Yes it is time for the ai to learn to play the heroes - I'm confident
+> the cards are suitable :)"* On the new-engine (table) path the local
+> opponent may be the Dummy, any of the fifteen heroes, or Random, piloted
+> by `sparring.act` and wearing `build.defaultBoard`. The TRAINER still
+> faces the vanilla pile only, and the networked lobby is untouched. See v5.35.
+
+~~**RULING (user, 2026-08-16): seat 1 is either a PERSON, who picks their
 own hero when they join a table, or the dummy — and a seat the dummy
-fills is ALWAYS the vanilla pile.** There is no hero the dummy plays as.
-The picker is gone; so is `oppH`, and a drill fails if the name appears
-in live code, because a picker comes back one branch at a time.
+fills is ALWAYS the vanilla pile.** There is no hero the dummy plays as.~~
+*(superseded 2026-10-18)* The solo mirror's picker stays gone and `oppH`
+stays banned (a drill still fails on the name): the new choice lives on the
+table path as `aiFoe`, reuses `HEROES`, and is not a second roster.
 
 **`foePick`/`foePlay` ARE GONE (v2.83)** — 103 lines that had been
 unreachable since v2.81 and still read as live rules. Dead rules code is

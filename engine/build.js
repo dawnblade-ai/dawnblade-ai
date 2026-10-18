@@ -864,9 +864,18 @@ function buildSide(h, d, db, opts, rng, ctr){
    differ only in their arguments — there is deliberately no seat index
    here, and no branch for "the opponent". */
 function buildSideDefault(h, d, db, rng, ctr){
+  return buildSide(h, d, db, defaultBoard(h, d, db), rng, ctr);
+}
+
+/* THE LOADOUT AN AI SEAT WEARS (v5.35). The same legal default the
+   self-play ladder equips, as a `boards[i]` entry for `buildMatch`. One
+   body, because a board of `{}` is NOT a default: `buildSide` reads a
+   missing `gearIdx` as EVERY printed piece, which is v2.41's eight-gear
+   bug (Azalea in all eight pieces where the slot rules allow about five). */
+function defaultBoard(h, d, db){
   const saSet = (h.code||"").slice(0,3) || null;
   const slots = gearSlots(d.gear.map(e => resolveEntry(db, e, saSet)));
-  return buildSide(h, d, db, {gearIdx: defaultPicks(slots)}, rng, ctr);
+  return {gearIdx: defaultPicks(slots)};
 }
 
 /* ---- BOTH SEATS, FROM A SPEC AND A SEED (Phase 2) ---------------------
@@ -1047,6 +1056,6 @@ const PASSIVE_TYPE = {
 return {ARMOR_Z, HAND_Z, gearSlots, applyPick, defaultPicks, equipPiece, boardPow,
   buildSide, buildSideDefault,
   halveCard,
-        buildSeed, buildMatch, buildVanilla, heroAbilityLine, heroAbilities,
+        buildSeed, buildMatch, buildVanilla, defaultBoard, heroAbilityLine, heroAbilities,
         agentsOf, PASSIVES, PASSIVE_TYPE};
 });

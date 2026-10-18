@@ -1,3 +1,24 @@
+## v5.35 — The new engine's opponent can be a hero
+
+**QUEUE v4 H1.** RULING (user, 2026-10-18): *"Yes it is time for the ai to learn to play the
+heroes - I'm confident the cards are suitable :)"* — superseding the 2026-08-16 ruling that a
+seat the dummy fills is always the vanilla pile. The loadout's deck screen offers a *New engine
+opponent*: the Dummy, any of the fifteen heroes (the same `HEROES` and `HeroArt`, no second
+roster), or Random. `buildMatch` gets `heroes: [player, choice]`, and an AI seat wears
+`build.defaultBoard`, now the one body `buildSideDefault` uses too. VsStrip shows the chosen
+P2's portrait, name and printed life. The note under the button says only what is measured:
+*"An AI pilots <hero> with the policy self-play uses. Untuned."*
+
+Unchanged: the trainer (`Battle`) still deals `buildVanilla(DUMMY_DECK…)`, the networked lobby
+offers no AI pick, and `sparring.js` is untouched. **Mirrors are allowed and unmeasured.**
+
+Measured: `test/aiseat.test.js` plays one game per hero through `local.js` with 0 policy
+refusals, 0 stalls and 0 invariant errors on every intermediate state; driven on the page at
+393x852 (Kayo v Dorinthea, coin to Dorinthea) to her first strike (20 → 16), 0 dead taps, no
+horizontal overflow, no page errors. `test/flow.test.js`'s two v2.81 no-picker guards are
+replaced by four pins (trainer still vanilla; table seats exactly the chosen key or null;
+the picker is the P1 roster; the lobby has no AI pick). 7 sabotages, 7 bite.
+
 ## v5.34 — One declaration line, and a wall worth 0 is still a wall
 
 **QUEUE v3 S5.** Every attack at the table printed its declaration twice: `execute` says
@@ -64,7 +85,7 @@ Checked the trainer's feed for the same lines: its arsenal set named the card an
 rest go through the shared writers. No `tools/selfplay.js` route reads any of these lines (the Hood
 and search counters read the shuffle line, which already printed a count).
 
-`test/hiddenfeed.test.js` drives every writer with a public control beside it; 8 sabotages, 8 bite.
+`test/hiddenfeed.test.js` drives every writer with a public control beside it; 7 sabotages, 7 bite.
 No rules moved. 3602 drills, 0 fail, 5 skipped.
 
 ## v5.31 — The power the wall was subtracted from
@@ -959,7 +980,7 @@ hand-rolled** where the question had come up before (a hand ability's discard
 pool, its keep-back, `discCostChoice`, the wall pick, the hand-ability gate);
 they ask the reader now, and a census fails a sixth.
 
-Measured: `test/defenderzone.test.js` adds 7 drills; 8 sabotages, 8 bite. The
+Measured: `test/defenderzone.test.js` adds 7 drills; 7 sabotages, 7 bite. The
 ladder at three seeds both sides: **Bravo 13·12·12 → 18·14·17, intervals
 disjoint**, and games run 20.3 → 22.3 turns, because walls now hold. Lyath
 4·6·4 → 6·7·8 touches at 6, inside the band. The spec census lost three fields
@@ -2563,7 +2584,7 @@ Measured:
   refuses, so `test/helpers/judged.js` gains `move` (answer a live sheet as
   the policy would, else pass) and `answerAll`. The sixth counted three
   Runechant soaks in the QUEUE, and the first one is live now.
-- **8 sabotages, 8 bite**: both drains, the drain's order, the live total,
+- **7 sabotages, 7 bite.*: both drains, the drain's order, the live total,
   the resume's marker delete, and the trainer's freezes.
 
 ## v4.79 — a destroyed piece goes to the graveyard when it is destroyed
@@ -2844,7 +2865,7 @@ Measured:
   This is the fifth time that has happened (the Hood, the Gun, the
   Stilettos, the Robe, now this). The accept path is driven end to end
   instead, by `test/spellvoidx.test.js` (7 drills).
-- **8 sabotages, 8 bite.** One needed a unique revert anchor on the second
+- **7 sabotages, 7 bite.** One needed a unique revert anchor on the second
   attempt, and the harness said so rather than reporting SILENT (v4.37).
 
 ### AND THE CR INDEX WAS COUNTING A REPORT'S POPULATION

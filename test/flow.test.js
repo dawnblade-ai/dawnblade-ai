@@ -70,39 +70,55 @@ test("the sideboard is TOLD the seating, or boarding after the throw buys nothin
 });
 
 /* ============================================================
-   THERE IS NO OPPONENT PICKER (v2.81)
+   THE NEW ENGINE'S OPPONENT IS CHOSEN; THE TRAINER'S IS NOT (v5.35)
 
-   RULING (user, 2026-08-16): seat 1 is either a PERSON, who picks their
-   own hero when they join a table, or the dummy — and a seat the dummy
-   fills is always the vanilla pile. There is no hero the dummy plays as.
+   RULING (user, 2026-10-18): "Yes it is time for the ai to learn to play
+   the heroes - I'm confident the cards are suitable :)". It supersedes the
+   2026-08-16 seat ruling, which made seat 1 a person or the vanilla pile
+   and nothing else. v2.81's two guards pinned that ruling ("no opponent
+   picker survives anywhere" and "the trainer and the table seat the SAME
+   punching bag"), and they are retired deliberately, by this edit, rather
+   than left to fail: each claim below is the one that replaces them.
 
-   Five drills used to live here pinning the picker: where it sat, what
-   it offered, and that the slot around it was not a button (a <select>
-   inside one swallows its own clicks). They are replaced by the single
-   claim that matters now, which is that NONE of it is there — because a
-   picker is the sort of thing that comes back one branch at a time, and
-   every branch it creates has to be carried by the trainer, the loadout,
-   the pregame and the table.
+   What has NOT moved: the trainer still deals the pile, the networked
+   lobby still seats a person, and `oppH` (the old picker's state) stays
+   gone, so a fresh name keeps the history readable.
    ============================================================ */
-test("no opponent picker survives anywhere in the file", () => {
-  assert.ok(!/id="foesel"/.test(CODE), "the dropdown is gone");
-  assert.ok(!/\boppH\b/.test(CODE),
-    "and so is the state it wrote to — `oppH` in live code means a branch somewhere is " +
-    "still asking which kind of opponent this is");
-  assert.ok(!/setOppH/.test(CODE));
-});
-
-test("the trainer and the table seat the SAME punching bag", () => {
-  assert.match(CODE, /function VsStrip\(\{hero,db\}\)/,
-    "the vs strip takes no opponent — P2 is the dummy, always");
+test("the trainer still deals the vanilla pile, whatever the table seats", () => {
   assert.match(CODE, /buildVanilla\(DUMMY_DECK, DUMMY_GEAR, db, rng, ctr/,
     "the trainer deals the pile through engine/build.js, not a copy of its own");
-  assert.match(CODE, /heroes: \[seating\.h\.k, null\]/,
-    "and the local table seats a NULL hero key, which buildMatch reads as the dummy — " +
-    "both boards face the same opponent, so the only thing that differs between them " +
-    "is which engine is driving, which is what makes them comparable");
   assert.match(CODE, /vanilla: \{deck: DUMMY_DECK, gear: DUMMY_GEAR/,
-    "with the pile passed in as DATA, the same way buildSide takes a deck");
+    "and the table still knows the pile, because the Dummy is still its default");
+  assert.ok(!/\boppH\b/.test(CODE) && !/setOppH/.test(CODE) && !/id="foesel"/.test(CODE),
+    "the retired picker's names stay retired");
+});
+
+test("the table seats exactly the chosen key, or null for the Dummy", () => {
+  assert.match(CODE, /heroes: \[seating\.h\.k, cfg\.aiFoe \|\| null\]/,
+    "seat 1 is the chosen hero key or null, which buildMatch reads as the Dummy");
+  assert.match(CODE, /cfg\.aiFoe \? DawnBuild\.defaultBoard\(/,
+    "and an AI seat wears the self-play default, never `{}` (every printed piece, v2.41)");
+  assert.match(CODE, /const \[aiFoe,setAiFoe\] = uS\(null\)/,
+    "the Dummy is the default the screen opens on");
+  assert.match(CODE, /onStart\(\{gearIdx:sel, cuts, table:true, aiFoe: pickedFoe\}\)/,
+    "the choice rides only on the TABLE start");
+  assert.ok(!/onStart\(\{gearIdx:sel, cuts\}\)[^;]*aiFoe/.test(CODE),
+    "and never on the trainer's");
+});
+
+test("the picker is the P1 roster, not a second one", () => {
+  const pick = CODE.match(/<div className="aifoe">[\s\S]*?<\/div>\s*<VsStrip/);
+  assert.ok(pick, "the picker is gone");
+  assert.match(pick[0], /HEROES\.map\(/, "it lists the one roster the hero grid lists");
+  assert.match(pick[0], /<HeroArt h=\{x\}/, "with the one portrait component");
+  assert.ok(!/k:"(?:kayo|azalea|bravo)"/.test(pick[0]), "and writes no hero list of its own");
+  assert.match(pick[0], /setAiFoe\(null\)/, "the Dummy is offered");
+  assert.match(pick[0], /setAiFoe\("random"\)/, "and so is Random");
+});
+
+test("the networked lobby offers no AI pick", () => {
+  assert.match(CODE, /\{!netFoe && <div className="hpane" style=\{\{marginTop:10\}\}>\s*<div className="paneflag"><span>New engine opponent/,
+    "at a table the seat across is a person, so the sideboard step shows no picker");
 });
 
 test("the table button is no longer gated on choosing a hero", () => {

@@ -666,8 +666,19 @@ img{display:block;max-width:100%}
 .foepick{display:flex;flex-direction:column;gap:5px;margin:10px 0 0}
 .foepick label{font-family:'Spline Sans Mono';font-size:9.5px;letter-spacing:.12em;
   text-transform:uppercase;color:var(--bone-dim)}
-.foepick select{width:100%;background:var(--ink);color:var(--bone);border:1px solid var(--line);
-  border-radius:2px;padding:9px;font-family:inherit;font-size:12.5px;min-height:42px}
+/* who sits across the new engine's table (v5.35): the Dummy, Random, or a
+   hero the AI pilots. Tiles, never a <select> — a select inside a tappable
+   slot swallows its own clicks (v2.81). */
+.aifoe{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px;margin:8px 0 0}
+.aifoe button{background:var(--forge);border:1px solid var(--line);border-radius:3px;
+  padding:4px 3px 5px;color:var(--bone);display:flex;flex-direction:column;align-items:center;
+  gap:3px;min-width:0;cursor:pointer}
+.aifoe button.on{border-color:var(--b);box-shadow:inset 0 0 0 1px var(--b)}
+.aifoe .fport{width:100%;aspect-ratio:1/1;overflow:hidden;display:flex;align-items:center;
+  justify-content:center;font-family:'Big Shoulders Display';font-weight:700;font-size:22px;color:var(--y)}
+.aifoe .fport .art,.aifoe .fport .fallbackart{width:100%;height:100%;object-fit:cover}
+.aifoe .fname{font-family:'Spline Sans Mono';font-size:8.5px;letter-spacing:.04em;
+  text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 /* ---- JUDGE!! — the in-game bug report (v2.22) ---- */
 .judgebtn{flex:none;background:var(--r);color:var(--bone);border:none;border-radius:2px;
   font-family:'Spline Sans Mono',monospace;font-size:8.5px;font-weight:700;letter-spacing:.1em;
@@ -806,7 +817,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "5.34"; /* v5.34 - an attack at the table prints one declaration line, and a declared wall is named even when it is worth 0. See CHANGELOG.md. */
+window.APP_VER = "5.35"; /* v5.35 - the new engine's opponent can be the Dummy, any hero, or Random, piloted by the self-play policy. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -1754,7 +1765,28 @@ const TAUNTS=["hit me.","still undefeated.","creaks menacingly.","zero fear dete
    faked: 30 Generic attack actions with no rules text, blocking with
    printed defence and swinging with printed power. A punching bag to
    practise against, which is what the trainer is for. */
-function VsStrip({hero,db}){
+function VsStrip({hero,db,foe}){
+  /* P2 IS A HERO WHEN THE AI PILOTS ONE (v5.35) — portrait, name and the
+     printed life off the database, or "???" for a random pick that is
+     settled at the tap. With no `foe` it is the Dummy, as it always was. */
+  if(foe){
+    const fc = !foe.mystery && db && db.status==="ready" ? resolveHero(db, PARSED[foe.k].hero) : null;
+    return (
+      <div className="vs">
+        <div className={"vslot p1 clip-sm"+(hero?"":" empty")}>
+          <span className="ptag" style={{color:"var(--r)"}}>P1</span>
+          {hero && <><div className="port clip-sm"><HeroArt h={hero} db={db} key={db.status}/></div><span className="vname">{hero.n.split(",")[0]}</span></>}
+        </div>
+        <div className="vsmid">VS</div>
+        <div className="vslot p2 clip-sm">
+          <span className="ptag" style={{color:"var(--b)"}}>P2 · AI</span>
+          {foe.mystery
+            ? <><div className="port clip-sm"><div className="fallbackart" style={{aspectRatio:"1/1",fontSize:26,color:"var(--y)"}}>?</div></div><span className="vname">A random hero</span></>
+            : <><div className="port clip-sm"><HeroArt h={foe} db={db} key={db.status}/></div>
+                <span className="vname">{foe.n.split(",")[0]} {fc && fc.hp!=null && <b className="mono" style={{color:"var(--r)"}}>{fc.hp}</b>}</span></>}
+        </div>
+      </div>);
+  }
   const [t,setT]=useState(()=>Math.floor(Math.random()*TAUNTS.length));
   const [bonk,setBonk]=useState(0);
   return (
@@ -5955,7 +5987,14 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
      and its vanilla pile is the one deck where nothing can be faked
      (ROADMAP-OPPONENT.md). Deliberately NOT saved per hero the way the
      loadout is — the opponent is a property of the match, not of your
-     deck, and a remembered one would silently change a later game. */
+     deck, and a remembered one would silently change a later game.
+
+     AND IT CAN BE A HERO NOW (v5.35). RULING (user, 2026-10-18): "Yes it
+     is time for the ai to learn to play the heroes - I'm confident the
+     cards are suitable :)". `aiFoe` is a hero KEY, "random", or null for
+     the Dummy, and it reaches only the new engine's table: the trainer
+     keeps its tuned pile. */
+  const [aiFoe,setAiFoe] = uS(null);
   const item = i => gearR.find(x=>x.i===i);
   const hands = sel.filter(i=>["1h","2h","off"].includes(item(i).s.z)).reduce((a,i)=>a+item(i).s.h,0);
   const armorN = sel.filter(i=>ARMOR_Z.includes(item(i).s.z)||item(i).s.z==="misc").length;
@@ -5984,7 +6023,14 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
      `Battle` is the regression harness and does not retire until the
      merged path passes the same drills, and the [3,4,5] escalation it
      runs is TUNED where `sparring.act` is not. */
-  const startTable = () => { store.set("loadout."+h.k,{sel,cuts}); onStart({gearIdx:sel, cuts, table:true}); };
+  const startTable = () => {
+    store.set("loadout."+h.k,{sel,cuts});
+    /* RANDOM is settled here, at the tap, so the key the match is built
+       from is a real hero and a replay of the spec deals the same game. */
+    const pickedFoe = aiFoe === "random" ? HEROES[Math.floor(Math.random()*HEROES.length)].k : aiFoe;
+    onStart({gearIdx:sel, cuts, table:true, aiFoe: pickedFoe});
+  };
+  const foeHero = aiFoe && aiFoe !== "random" ? HEROES.find(x=>x.k===aiFoe) : null;
   const deckRows = d.deck.map((e,ei)=>({ei, e, c:resolveEntry(db,e,saSet)}));
   const PD = {1:"var(--r)",2:"var(--y)",3:"var(--b)"};
   const Tile = ({x}) => {
@@ -6097,7 +6143,8 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
             <div className="foepick"><label>Across the table</label>
               <div className="foefixed mono">
                 {netFoe ? netFoe.n+" — "+netFoe.cls
-                        : "The Dummy — 42 life, vanilla pile"}</div>
+                        : "The Dummy — 42 life, vanilla pile"
+                          + (aiFoe ? " · new engine: "+(foeHero ? foeHero.n.split(",")[0]+", an AI seat" : "a random AI hero") : "")}</div>
               <div className="seatline mono">{(netFoe ? netOnPlay : onPlay)
                 ? "You are ON THE PLAY — first turn, and a card of tempo for it."
                 : "You are ON THE DRAW — they swing first, and you keep the extra card."}</div>
@@ -6169,6 +6216,20 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
             </div>
             <p className="note">Blitz runs exactly 40 — cut what your plan won't miss. Loadout and cuts saved per hero.</p>
           </div>
+          {!netFoe && <div className="hpane" style={{marginTop:10}}>
+            <div className="paneflag"><span>New engine opponent</span><span>the trainer always faces the Dummy</span></div>
+            <div className="aifoe">
+              <button className={aiFoe===null?"on":""} onClick={()=>setAiFoe(null)} aria-label="The Dummy">
+                <div className="fport">✕</div><span className="fname">The Dummy</span></button>
+              <button className={aiFoe==="random"?"on":""} onClick={()=>setAiFoe("random")} aria-label="A random hero">
+                <div className="fport">?</div><span className="fname">Random</span></button>
+              {HEROES.map(x=>
+                <button key={x.k} className={aiFoe===x.k?"on":""} onClick={()=>setAiFoe(x.k)} aria-label={x.n}>
+                  <div className="fport"><HeroArt h={x} db={db} key={db.status}/></div>
+                  <span className="fname">{x.n.split(",")[0]}</span></button>)}
+            </div>
+            <VsStrip hero={h} db={db} foe={aiFoe==="random" ? {mystery:true} : foeHero}/>
+          </div>}
         </div>
       </div>
       <div className="actbar" ref={bar}>
@@ -6205,10 +6266,17 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
               <button className="bigbtn alt" style={{marginTop:8}} onClick={startTable}>
                 Fight the new engine — harder
               </button>
+              {/* THE NOTE SAYS ONLY WHAT IS MEASURED (v5.35). No win rate
+                  is quoted for a hero seat: none was measured per pair on
+                  this release, and a number the player trusts has to be one
+                  somebody took. */}
               <p className="note" style={{marginTop:6,marginBottom:0}}>
-                The same 30-card pile, but played as a real seat: it holds a hand,
-                pays costs and blocks like a person. <b>Untuned and currently
-                winning most games.</b> This is the engine a second player will sit at.
+                {aiFoe===null
+                  ? <>The same 30-card pile, but played as a real seat: it holds a hand,
+                    pays costs and blocks like a person. <b>Untuned and currently
+                    winning most games.</b> This is the engine a second player will sit at.</>
+                  : <>An AI pilots {foeHero ? foeHero.n.split(",")[0] : "a random hero"} with
+                    the policy self-play uses. <b>Untuned.</b> Pick the opponent above.</>}
               </p>
             </>}
       </div>
@@ -7729,8 +7797,12 @@ function App(){
           if(cfg.table){
             try {
               const m = DawnBuild.buildMatch({
-                heroes: [seating.h.k, null],
-                boards: [{gearIdx: cfg.gearIdx, cuts: cfg.cuts}, {}],
+                heroes: [seating.h.k, cfg.aiFoe || null],
+                /* AN AI SEAT WEARS THE SELF-PLAY DEFAULT (v5.35). `{}` would
+                   deal every printed piece — v2.41's eight-gear bug. */
+                boards: [{gearIdx: cfg.gearIdx, cuts: cfg.cuts},
+                         cfg.aiFoe ? DawnBuild.defaultBoard(HEROES.find(x=>x.k===cfg.aiFoe),
+                                                          PARSED[cfg.aiFoe], db) : {}],
                 first: seating.first, seed: String(seating.seed)
               }, {db, heroes: Object.fromEntries(HEROES.map(x=>[x.k,x])),
                   decks: Object.fromEntries(HEROES.map(x=>[x.k,PARSED[x.k]])),
