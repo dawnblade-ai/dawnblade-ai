@@ -104,10 +104,13 @@ let legs = 0, threw = 0;
    field leaving this set is a consumer that stopped obeying its spec
    (v3.53). The rest are the sheet's alone: a title, a hint, a stamp that
    rides onto the card the answer moves. */
-const ANSWER_READS = ["amount", "by", "cards", "cost", "destroyUid", "discard", "elseOps",
+const ANSWER_READS = ["amount", "by", "cards", "cost", "defUid", "destroyUid", "discard", "elseOps",
                       "faceUp", "filter", "keepTop", "max", "min", "ops", "options",
                       "side", "spendCtr", "src", "tag", "tapHero", "tapUid", "taps",
                       "to", "zone"];
+/* +defUid v5.36: the `pay` branch hands it out (`out.defUid`) so the paid
+   +{d} lands on the named defender (v4.53). It was always read; it joined
+   because the ring now reaches Brothers in Arms' sheet. */
 /* +faceUp v5.32: the pick's feed line asks whether an arsenal put is face
    down, because a face-down card is not named to the seat across (QUEUE v3 S2). */
 /* -optional v4.44: it was here for two comments' sake and nothing reads it. */
@@ -204,6 +207,14 @@ const drive = () => {
      it — Dash v Fai with Fai's chair first, the ring's own pairing turned
      round. Every other field it brings is already pinned. */
   { const r = T.leg(E[3], E[7], "spec-3-7", 1); legs++; if(r && r.threw) threw++; }
+  /* AND THE 37th (v5.36): `keepTop` LEFT AGAIN. The seat policy now plays a
+     go-again non-attack before its attack, so Azalea's games moved and
+     Enigma v Azalea stopped reaching Spire Sniping's reorder. Measured over
+     every pairing, both chairs and three seeds: three reach it, and Bravo v
+     Azalea with Azalea's chair first is one. ADDED, for v5.24's reason.
+     `defUid` ARRIVED in the same move (Brothers in Arms' defends payment,
+     v4.53, now reached by the ring) and is pinned below. */
+  { const r = T.leg(E[4], E[5], "kt-4-5-1", 1); legs++; if(r && r.threw) threw++; }
 };
 
 /* BOUND A FUNCTION AT THE NEXT SAME-LEVEL DECLARATION, NEVER AT A CHAR
@@ -222,8 +233,8 @@ const fnBody = name => {
 
 test("the driven census is alive — the legs really ran", () => {
   drive();
-  assert.equal(legs, 36, "the leg count moved; the pinned field set is taken at 36 "
-    + "(32 in the ring, plus the four named legs that keep `keepTop`, `ctrStamp`, "
+  assert.equal(legs, 37, "the leg count moved; the pinned field set is taken at 37 "
+    + "(32 in the ring, plus the five named legs that keep `keepTop`, `ctrStamp`, "
     + "`shuffleAfter` and crank's `avail`/`spendCtr` in it — see `drive`)");
   assert.equal(threw, 0,
     "a leg threw — `leg` reports that as `threw: true` rather than raising, so a "
@@ -235,7 +246,7 @@ test("every spec field that reaches prompts.js is pinned", () => {
   drive();
   assert.deepEqual([...reached].sort(), [
     "amount", "arsStamp", "avail", "banStamp", "by", "cards", "charge", "cost", "costRider",
-    "ctrHeld", "ctrSpend", "ctrStamp", "destroyUid", "discard", "elseOps", "equipStamp",
+    "ctrHeld", "ctrSpend", "ctrStamp", "defUid", "destroyUid", "discard", "elseOps", "equipStamp",
     "faceUp", "filter", "hint", "jab", "keepTop", "lateGa", "max", "min", "moveFoe", "n",
     "ops", "optional", "options", "playThisTurn", "shuffleAfter", "side", "spendCtr",
     "src", "tag", "tapHero", "tapUid", "taps", "title", "to", "wayRider", "xPay", "zone",

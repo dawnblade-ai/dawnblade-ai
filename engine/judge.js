@@ -1755,6 +1755,21 @@ const abWindowOf = (g, seat, uid) => {
   const gr = (sd.gear || []).find(x => x && x.uid === uid);
   return gr && gr.powCard ? abWindow(gr.powCard) : null;
 };
+/* ---- DOES THIS CARD KEEP THE TURN'S ACTION POINT? (v5.36) -----------
+
+   `abWindowOf`'s sibling, for the same reason: `sparring.js` reads NO card
+   text by contract, so it asks judge and there is still ONE reader. The
+   answer is the card's own UNCONDITIONAL printed go again, `fx.ga`, which
+   is the fact `execute` grants (v2.31's layout rule keeps a go again the
+   text only grants under an `if` out of it). Conditional go again and
+   instants are deliberately not widened in: neither was measured. A card
+   the seat does not hold in that zone answers false. */
+const keepsActionPoint = (g, seat, uid, from) => {
+  const sd = at(g, seat);
+  const c = from === "arsenal" ? (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null)
+          : from === "hand" ? (sd.hand || []).find(x => x && x.uid === uid) : null;
+  return !!(c && PR.fxParse(c).ga === true);
+};
 const targetOf = (g, seat, spec) => {
   const def = P.other(seat);
   if(spec == null || spec === "hero") return {kind: "hero", side: def, uid: null};
@@ -3734,7 +3749,7 @@ function drawTo(g, i){
 }
 
 return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf,
+        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */

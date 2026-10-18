@@ -46,12 +46,13 @@
 
    ---- WHAT IT IS NOT --------------------------------------------------
 
-   NOT an AI opponent. The project's standing decision (2026-07-25) is
-   that the goal is two humans; the dummy stays as the solo trainer and as
-   the regression harness that drives whole games through the reducer.
-   This is deliberately a handful of legible heuristics — hit hardest,
-   block what is worth blocking, pitch what you were least likely to play
-   — and it should stay legible rather than become good.
+   ~~NOT an AI opponent.~~ The 2026-07-25 decision that the goal is two
+   humans is SUPERSEDED (user, 2026-10-18): "Yes it is time for the ai to
+   learn to play the heroes", so this policy pilots a hero at the table.
+   What still holds is the second half: this is a handful of legible
+   heuristics — hit hardest, block what is worth blocking, pitch what you
+   were least likely to play, play a go-again non-attack before the
+   attack — and it should stay legible rather than clever.
 
    NOT a difficulty curve either. The `[3,4,5]` escalation it replaces was
    TUNED, and real cards from a real hand are not: a hero drawing well
@@ -513,6 +514,25 @@ function offence(g, seat, o){
     .filter(x => x && x.at)
     .map(x => ({c: Object.assign({}, x.b.card, {power: x.at.power, cost: x.at.cost}),
                 uid: x.b.uid, ally: true}));
+
+  /* ---- A NON-ATTACK THAT KEEPS THE ACTION POINT GOES FIRST (v5.36) --
+     With an attack available, the attack ranked first spent the turn's
+     one action point and every "your next attack gets +N … Go again" card
+     sat in hand: Azalea won 1 of 28. A non-attack whose own printed go
+     again is unconditional costs no action, so it goes BEFORE the attack.
+     `judge.keepsActionPoint` answers that, so this file still reads no
+     card text. Cheapest first, ties on pitch then uid, as below. */
+  const haveAtk = from.some(x => x.c && num(x.c, "power") > 0) || allies.length > 0;
+  if(haveAtk){
+    const first = from
+      .map(x => ({c: x.c, uid: x.c && x.c.uid, from: x.from}))
+      .filter(x => x.c && num(x.c, "power") <= 0 && J.keepsActionPoint(g, seat, x.uid, x.from))
+      .filter(x => affordableWithin(sd, x.c, o))
+      .sort((a, b) => num(a.c, "cost") - num(b.c, "cost")
+                   || num(a.c, "pitch") - num(b.c, "pitch") || byUid(a, b))
+      .find(x => legal(g, {t: "play", uid: x.uid, from: x.from}, seat));
+    if(first) return {t: "play", uid: first.uid, from: first.from};
+  }
 
   const pick = from
     .map(x => ({c: x.c, uid: x.c && x.c.uid, from: x.from}))

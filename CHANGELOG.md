@@ -1,3 +1,39 @@
+## v5.36 — A go-again non-attack is played before the attack
+
+**QUEUE v4 H2.** `sparring.offence` ranked every attack first and every non-attack last, so the
+attack spent the turn's action point and a "your next attack gets +N … Go again" card never landed
+on it. With an attack available (a powered card in hand or arsenal, or a board attacker), the seat
+now first plays the cheapest affordable non-attack whose own printed go again is unconditional,
+ties on pitch then uid; then the old ranking runs. The answer is `judge.keepsActionPoint(g, seat,
+uid, from)` (`fxParse(card).ga === true`), so `sparring.js` still reads no card text. Instants and
+conditional go again are not widened in: neither was measured. The header note that this policy is
+"NOT an AI opponent" is struck through, superseded by the 2026-10-18 ruling; the legibility half stays.
+
+Measured in the real tree, re-deriving the CEO's scratch numbers exactly. **A/B, only that hero's
+seat on the new policy** (14 games a seed, 3 seeds):
+
+| hero | old | new | |
+|---|---|---|---|
+| Azalea | 1·0·0 (0.3) | 4·2·6 (4.0) | disjoint, real |
+| Lyath | 3·2·4 (3.0) | 7·6·9 (7.3) | disjoint, real |
+| Viserai | 10·5·4 (6.3) | 14·12·11 (12.3) | disjoint, real |
+| Briar | 12·11·9 (10.7) | 14·14·14 (14.0) | disjoint, real |
+| the other 11 | | | overlapping (noise) |
+
+**Full ladder, both seats on the new policy** (630 games): Briar 21.3 → 26.3, Viserai 12.7 → 21.7,
+Azalea 0.7 → 7.0, Lyath 7.0 → 12.7; Blaze 17.3 → 10.3 and Iyslander 16.7 → 8.3, which is the
+zero-sum ladder rather than self-harm (A/B with only their own seat switched: 8.7 → 8.3 each).
+**Stalls 0 → 1** (gravy-azalea-2: 4000 steps over 1345 turns, about three steps a turn, so a genuine
+draw rather than a livelock; CR 4.5.3 has no deck-out loss, v3.80, v4.58). 0 policy refusals,
+0 invariant violations on both sides. Four drills in `test/sparring.test.js`; 5 sabotages, 5 bite.
+
+Two fixtures moved with the policy, both for reasons this file has recorded before. `aiseat`'s
+Gravy game became a deck-out draw (2851 turns, both decks and hands empty), so the drill accepts a
+game that did not end only when neither seat holds a card; a livelock with cards in hand still
+fails. `speccensus` lost `keepTop` and gained `defUid` (Brothers in Arms' defends payment, read by
+`applyPrompt`'s pay branch), so a 37th leg (Bravo v Azalea, Azalea's chair) keeps the reorder in,
+and `defUid` is pinned in both sets. 3615 drills.
+
 ## v5.35 — The new engine's opponent can be a hero
 
 **QUEUE v4 H1.** RULING (user, 2026-10-18): *"Yes it is time for the ai to learn to play the

@@ -396,6 +396,59 @@ test("an ATTACK still outranks a non-attack — the addition changed no order", 
     + "a card that could have blocked");
 });
 
+/* ---- A GO-AGAIN NON-ATTACK BEFORE THE ATTACK (v5.36) -----------------
+   QUEUE v4 H2. With an attack available, a non-attack whose own printed go
+   again is unconditional is played FIRST: it costs no action, so playing
+   the attack first throws its "your next attack" grant away. Measured A/B
+   with only one hero's seat switched: Azalea 0.3 -> 4.0 wins a seed,
+   Lyath 3.0 -> 7.3, Viserai 6.3 -> 12.3, Briar 10.7 -> 14.0. The answer
+   comes from `judge.keepsActionPoint`, so sparring.js still reads no text. */
+const gaNon = (uid, cost) => ({uid, name: "Go-Again Non-Attack " + uid, pitch: 1, cost, power: null,
+  def: 2, tt: "Generic Action", ty: ["Generic", "Action"], kw: ["Go again"], tx: "Gain 1 action point.\nGo again"});
+const plainNon = (uid, cost) => ({uid, name: "Plain Non-Attack " + uid, pitch: 1, cost, power: null,
+  def: 2, tt: "Generic Action", ty: ["Generic", "Action"], kw: [], tx: ""});
+function withHand(hand){
+  const g0 = match({h0: heroBy(/kayo/i), h1: heroBy(/dorinthea/i), seed: "spar"});
+  const sides = g0.sides.slice();
+  sides[0] = Object.assign({}, sides[0], {hand, res: 9, gear: []});
+  return Object.assign({}, g0, {sides});
+}
+
+test("judge.keepsActionPoint answers the card's own go again, and false off the zone", {skip}, () => {
+  const ga = gaNon(8901, 1), pl = plainNon(8902, 0);
+  const g = withHand([ga, pl]);
+  assert.equal(J.keepsActionPoint(g, 0, 8901, "hand"), true, "a printed go again keeps the point");
+  assert.equal(J.keepsActionPoint(g, 0, 8902, "hand"), false, "no go again, no");
+  assert.equal(J.keepsActionPoint(g, 0, 8901, "arsenal"), false, "not in that zone, no");
+  assert.equal(J.keepsActionPoint(g, 1, 8901, "hand"), false, "not that seat's card, no");
+});
+
+test("a go-again non-attack is played BEFORE an attack", {skip}, () => {
+  const atk = match({seed: "spar"}).sides[0].hand.find(c => c.power > 0);
+  assert.ok(atk, "the fixture needs an attack");
+  const ga = gaNon(8911, 1);
+  const g = withHand([atk, ga]);
+  assert.equal(J.legal(g, {t: "play", uid: ga.uid, from: "hand"}, 0), null, "the non-attack must be legal");
+  const a = SP.act(g, 0);
+  assert.equal(a.t, "play");
+  assert.equal(a.uid, ga.uid, "it keeps the action point, so it goes first and the attack still follows");
+});
+
+test("…a non-attack WITHOUT go again still waits behind the attack", {skip}, () => {
+  const atk = match({seed: "spar"}).sides[0].hand.find(c => c.power > 0);
+  const pl = plainNon(8921, 0);
+  const a = SP.act(withHand([atk, pl]), 0);
+  assert.equal(a.uid, atk.uid, "playing it first would spend the action point the attack needs");
+});
+
+test("…and with no attack available the old non-attack order is unchanged", {skip}, () => {
+  /* the plain one is cheaper, so the cheapest-first ranking picks it; the
+     go-again branch must not fire when there is no attack to keep a point for */
+  const a = SP.act(withHand([gaNon(8931, 1), plainNon(8932, 0)]), 0);
+  assert.equal(a.t, "play");
+  assert.equal(a.uid, 8932, "cheapest first, as before");
+});
+
 test("the non-attack ranking is a TOTAL order — the uid breaks a real tie", {skip}, () => {
   /* A RANKING THAT LEAVES TIES UNBROKEN IS A DESYNC waiting for two equal
      cards. Asserting `act()` twice over one state proves NOTHING — any

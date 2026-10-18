@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.35
+**Current version:** v5.36
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3611 drills** at v5.35.
+This is `node --test "test/*.test.js"` — **3615 drills** at v5.36.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -875,6 +875,15 @@ The arsenal set, opt, a reorder, a hand-to-deck pick, Azalea's cycle and Boulder
 cards only one seat had seen (QUEUE v3 S2). Each names the seat and a count now; a graveyard pick and
 a face-up arsenal card are public and keep their names (`test/hiddenfeed.test.js`). **When a line
 names a card, ask which zone it came from and which it went to: two hidden zones mean a count.**
+
+### A GO-AGAIN NON-ATTACK GOES BEFORE THE ATTACK (v5.36)
+
+`sparring.offence` ranked every attack first, so the attack spent the action point and every
+"your next attack gets +N … Go again" card sat in hand (Azalea won 1 of 28). With an attack
+available, a non-attack whose own printed go again is unconditional now goes first, asked through
+`judge.keepsActionPoint` so the policy still reads no card text (QUEUE v4 H2). A/B with one seat
+switched: Azalea 0.3 → 4.0, Lyath 3.0 → 7.3, Viserai 6.3 → 12.3, Briar 10.7 → 14.0 wins a seed,
+intervals disjoint. **A policy change is measured one seat at a time; the full ladder is zero-sum.**
 
 ### AN AI SEAT WEARS A HERO, AT THE TABLE ONLY (v5.35)
 

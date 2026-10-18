@@ -81,6 +81,14 @@ test("one game per hero through local.js: no refusal, no stall, no violation", {
     assert.deepEqual(INV.errors(end), [], ai + ": the final state broke an invariant");
     assert.equal(s.stats().policyRefused, 0, ai + ": POLICY REFUSALS");
     assert.equal(s.stats().stalls, 0, ai + ": the session stalled");
-    assert.ok(end.over, ai + ": the game never ended (turn " + end.turn + ")");
+    /* A GENUINE DRAW IS NOT A FAILURE (v5.36). CR 4.5.3 has no deck-out
+       loss, so two seats with no deck and no hand can only pass. What this
+       still refuses is a game that did not end while either seat held a
+       card, which is a livelock rather than a draw. Gravy's leg reaches it:
+       2851 turns, both decks and hands empty. */
+    if(!end.over){
+      const dry = end.sides.every(sd => !(sd.deck || []).length && !(sd.hand || []).length);
+      assert.ok(dry, ai + ": the game never ended (turn " + end.turn + ") and a seat still held cards");
+    }
   }
 });
