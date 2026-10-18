@@ -84,7 +84,12 @@ Then **11 v5.24, R1 v5.25, 12 v5.26, 13 v5.27 (recorded, unsourced), 14 v5.28 + 
 15 v5.30 (recorded)** shipped. **THE QUEUE IS COMPLETE.** The CEO verified v5.30: 3594 tests,
 0 fail, 5 skipped, scenes 107/107, fairness clean, every script tag present. The approximation
 ledger reads 24 stated, 1 open (`cloaked-display`, a UI job) and 29 closed.
-**v3 opens below (S1–S7), from the Stage design.**
+**v3 (S1–S7) is SHIPPED** as v5.31 (S1 `pend.power`), v5.32 (S2 hidden cards), v5.33 (S3+S4 seat voice,
+names) and v5.34 (S5 one declaration line, S6 a wall worth 0 is named, S7 doc pointers). The CEO verified
+v5.34: 3607 tests, 0 fail, 5 skipped, scenes 107/107, fairness clean, all 21 script tags and `.nojekyll` in
+the pushed commit, and the 210-game ladder byte-identical to v5.32 (0 stalls, 0 refusals, 0 violations,
+every route counter unchanged). **Increment 1 of the Stage design is complete.** The three items under
+NEEDS A RULING stay open.
 
 1. **[N1] A declared defender's "Discard this" hand ability is legal and pulls it out of
    the wall.** Sev-3, both boards. CEO-verified on v5.13.
