@@ -19,7 +19,9 @@ pile. There is no hero the dummy plays as", CLAUDE.md:12091 on v5.34) for the TA
 The trainer (`Battle`) keeps the tuned `[3,4,5]` dummy; nothing about it changes. A networked
 seat is still a person who picks their own hero. Answers Stage §8.3 / open question 3.
 
-**H1. Seat a hero AI at the table.** One release.
+**H1. Seat a hero AI at the table.** ~~One release.~~ **SHIPPED v5.35, CEO-verified:** 3611 tests, 0 fail,
+5 skipped, scenes 107/107, all 21 script tags in the pushed commit, CI and Pages green, and the 210-game
+ladder byte-identical to v5.34.
 - **Record the ruling** verbatim with its date in CLAUDE.md, in place of the 2026-08-16
   paragraph (keep the old one, struck through, with "superseded 2026-10-18"), in
   HANDOFF-MERGE.md's DECISIONS list, and in `tools/rulings.json` if seat rulings live there.
