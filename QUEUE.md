@@ -9,6 +9,47 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
+## v4 — THE AI PILOTS HEROES (CEO, 2026-10-18)
+
+> RULING (user, 2026-10-18): *"Yes it is time for the ai to learn to play the heroes - I'm
+> confident the cards are suitable :)"*
+
+This **supersedes the 2026-08-16 seat ruling** ("a seat the dummy fills is ALWAYS the vanilla
+pile. There is no hero the dummy plays as", CLAUDE.md:12091 on v5.34) for the TABLE's AI seat.
+The trainer (`Battle`) keeps the tuned `[3,4,5]` dummy; nothing about it changes. A networked
+seat is still a person who picks their own hero. Answers Stage §8.3 / open question 3.
+
+**H1. Seat a hero AI at the table.** One release.
+- **Record the ruling** verbatim with its date in CLAUDE.md, in place of the 2026-08-16
+  paragraph (keep the old one, struck through, with "superseded 2026-10-18"), in
+  HANDOFF-MERGE.md's DECISIONS list, and in `tools/rulings.json` if seat rulings live there.
+- **The choice.** On the loadout's "Fight the new engine" path the player picks the opponent:
+  **The Dummy** (the vanilla pile, as today) or **any of the 15 heroes**, plus **Random**. Reuse
+  the P1 hero list and art (`HeroArt`), never a second roster. One state field holds the key, or
+  null for the dummy. Do not name it `oppH`: that name was retired with the old picker, and a
+  fresh name keeps the history readable.
+- **The build.** `index.html:7732` passes `heroes: [seating.h.k, <choice>]`. The AI seat's
+  loadout is `build.defaultPicks`, the same as self-play. `sparring.act` already drives
+  seat 1 through `local.js`, so no policy change belongs in this release.
+- **`VsStrip`** shows the chosen hero's portrait, name and printed life for P2, or the dummy.
+- **The note under the button must say only what is measured.** "An AI pilots <hero> with the
+  policy self-play uses. Untuned." Quote no win rate unless it was measured for that pair on
+  this release (`node tools/tourney.js <yours> <theirs> 3`).
+- **Mirrors** (the same hero on both sides) are allowed. The ladder skips them (v4.31), so they
+  are unmeasured; say so in the changelog.
+- **Guards.** `test/flow.test.js:80-100` pins "no opponent picker" and "the trainer and the
+  table seat the SAME punching bag". Retire those two claims deliberately and pin the new ones:
+  the trainer still deals `buildVanilla(DUMMY_DECK…)`; the table seats exactly the chosen key
+  or null; no second roster; and the networked lobby is untouched.
+- **Drive it on the phone page at 393x852** (the v4.28 pre-ship browser step): pick a hero,
+  play to the first strike, check no dead tap and no overflow. Measure one game per hero for
+  `POLICY REFUSALS 0` and `INVARIANT VIOLATIONS 0` through `local.js`, not just `selfplay.js`.
+
+**H2+. Teach the policy its heroes.** Coming from a CEO measurement workflow: per-hero gaps in
+`sparring.act` (the ladder has Azalea at 1 win of 28, Boltyn 8, Dash, Lyath and Gravy Bones 6),
+each with a proposed no-card-text change and a 3-seed measurement on both sides (v4.40). Do
+not start these until the CEO writes them here.
+
 ## v3 — STAGE INCREMENT 1 INPUTS (CEO, 2026-10-17)
 
 The v2 queue is complete. These come from the Stage design (`design/STAGE.md` on branch
