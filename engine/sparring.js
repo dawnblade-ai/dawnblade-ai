@@ -128,26 +128,30 @@ function pitchPick(sd, self, o){
     .sort((a, b) => num(b, "pitch") - num(a, "pitch") || num(a, "power") - num(b, "power") || byUid(a, b))[0] || null;
 }
 
+const BOOST_SHARE = 1/2;
 function payAction(g, seat, p, o){
   const sd = g.sides[seat];
-  /* BOOST'S ADDITIONAL COST (v2.84). Declined, and that is a rule rather
-     than a shrug: `autoAnswer`'s standing policy is to decline what is
-     optional, and here it is also the only HONEST answer available. The
-     card boost banishes is the top of this seat's own deck, which is
-     hidden from it — so there is nothing to weigh, and a policy that
-     accepted would be guessing at a card it cannot see. Declining is also
-     the conservative direction: it can never make the seat stronger than
-     printed, which is the direction that steals games.
+  /* BOOST'S ADDITIONAL COST (v2.84, v5.37). v2.84 declined it on the
+     grounds that the banished card is the top of this seat's own deck,
+     hidden from it, so there was nothing to weigh. The ORDER is hidden; the
+     COMPOSITION is not. A player knows their decklist minus every card they
+     have seen, which is the remaining deck as a multiset, so the policy
+     weighs a probability the seat legitimately has. It still never peeks at
+     `deck[0]`: `judge.boostShare` answers the share of the remaining deck a
+     boost pays off for (reading no card text here), and the seat boosts when
+     that share is at least 1/2.
 
-     THE WALL STANDS. This reads no card text — `judge` asked the
-     question, and "no" is a complete answer to "you may". */
-  if(p.kind === "boost") return {t: "boost", yes: false};
+     THE THRESHOLD IS A STATED CHOICE THIS POOL NEVER TESTS (QUEUE v4 H3):
+     only Dash's deck prints boost and its share at the deal is 1.0, so 1/2
+     and "always" give the same ladder. Both premises are drills, so a second
+     boost deck forces the threshold to be re-measured. */
+  if(p.kind === "boost") return {t: "boost", yes: J.boostShare(g, seat) >= BOOST_SHARE};
   /* FUSION'S REVEAL (v4.27) — TAKEN, and the reasoning is why it is not
      boost's answer one line up.
 
      v4.24's standing rule is to DECLINE a price this policy cannot
-     weigh, and boost is the worked example: the card it banishes is the
-     top of this seat's own deck, which the policy cannot see. Fusion's
+     weigh, and boost was the worked example until v5.37, which found the
+     seat CAN weigh it off the deck's composition (see above). Fusion's
      price is different in kind — nothing moves zones and the whole cost
      is the INFORMATION the opponent gains. Both peers hold full state by
      construction (`wire.js`'s stated Phase B position, and this policy

@@ -4719,7 +4719,7 @@ function makeEffects(ctx){
         const top = act(n).deck[0];
         actMut(n).deck = act(n).deck.slice(1); actMut(n).banish = [...act(n).banish, top];
         n.boostChain = (n.boostChain||0)+1;
-        const mech = /mechanologist/i.test(top.tt||"");
+        const mech = P.boostPays(top);
         if(mech) ga = true;
         declNote += ` Boost: ${top.name} banished${mech?" — Mechanologist, go again!":"."}`;
         /* THE COUNTER CLOCK, ON THE BOOST ROUTE (v4.23). Hyper Driver

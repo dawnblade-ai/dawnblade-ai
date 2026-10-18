@@ -342,7 +342,7 @@ test("the one-board reader sets are pinned", {skip}, () => {
     assert.ok(both.includes(n), n + " is demonstrably asked by both boards");
 
   assert.deepEqual(onlyJ.sort(),
-    ["chiValue", "handFree", "isAtkActionCard", "isDeclaredDefender", "isDR",
+    ["boostPays", "chiValue", "handFree", "isAtkActionCard", "isDeclaredDefender", "isDR",
      "printedKw", "splitCostsAP", "weaponCost"].sort(),
     "a reader judge asks and the trainer does not. TWO LEFT this list at " +
     "v3.99: `tapsToActivate` (the trainer now refuses a tapped hero) and " +
@@ -364,7 +364,11 @@ test("the one-board reader sets are pinned", {skip}, () => {
     "missing them: its only doors where a declared defender can be spent are the " +
     "instant-speed ones, and those go through `effects.playAtSpeed` and " +
     "`autoPitch`, which ask both. Judge asks them in its own legality, and " +
-    "re-exports `handFree` so `sparring.js` can ask without reading the parser.");
+    "re-exports `handFree` so `sparring.js` can ask without reading the parser.\n" +
+    "v5.37: `boostPays` ARRIVED, and the job is judge's: it is read inside " +
+    "`judge.boostShare`, the seam `sparring.js` asks instead of reading card " +
+    "text (`chiValue`'s reason). The trainer's banish asks it through the " +
+    "shared `execute`, and a human decides their own boost.");
 
   assert.deepEqual(onlyT.sort(),
     ["clean", "defCap", "frostCount", "hasKwNow", "instantAbilityReady",

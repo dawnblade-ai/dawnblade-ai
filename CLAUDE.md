@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.36
+**Current version:** v5.37
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3615 drills** at v5.36.
+This is `node --test "test/*.test.js"` — **3623 drills** at v5.37.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -875,6 +875,16 @@ The arsenal set, opt, a reorder, a hand-to-deck pick, Azalea's cycle and Boulder
 cards only one seat had seen (QUEUE v3 S2). Each names the seat and a count now; a graveyard pick and
 a face-up arsenal card are public and keep their names (`test/hiddenfeed.test.js`). **When a line
 names a card, ask which zone it came from and which it went to: two hidden zones mean a count.**
+
+### THE ORDER IS HIDDEN, THE COMPOSITION IS NOT (v5.37)
+
+`sparring.payAction` declined every boost because the banished card is the top of the seat's own
+deck. A player knows their decklist minus every card seen, so `judge.boostShare` answers the share
+of the REMAINING deck a boost pays off for (never the hand, never `deck[0]`), and the seat boosts at
+1/2 or more (QUEUE v4 H3). `parser.boostPays` is the one reader, off `ty`, asked by `execute` too.
+Dash with only his seat switched: 3.0 → 11.3 of 14 wins a seed. **A route counter must spell the
+line as the feed prints it**: judge trims the declaration note, and a regex expecting a leading
+space read 0 over 630 games while both string pins were green, so the pin drives a game now.
 
 ### A GO-AGAIN NON-ATTACK GOES BEFORE THE ATTACK (v5.36)
 
@@ -5731,6 +5741,8 @@ pieces were destroyed every time the offer was made.
 `sparring.js` states it twice for boost, with the reason: declining can
 never make the seat stronger than printed. It is guarded by SHAPE rather
 than by verb, so the next cost verb inherits the answer (v3.43).
+**BOOST LEFT THAT RULE AT v5.37**: the seat CAN weigh it, because the
+deck's order is hidden and its composition is not (`judge.boostShare`).
 
 ### A PERMANENT ON A COUNTER CLOCK (v4.23)
 

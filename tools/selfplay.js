@@ -428,6 +428,11 @@ function play(g, limit, opts){
            What this version BUILT is a Chi being SPENT on a {c} cost,
            and that line is printed nowhere else. */
         if(/: \d+ Chi spent —/.test(line)) events.push(["chi", line]);
+        /* A BOOST TAKEN (v5.37). `execute` prints "Boost: <card> banished"
+           at the banish and nowhere else (judge trims the declaration note, so
+           the line OPENS with it), so this counts the accepts; the
+           seat declined every boost before QUEUE v4 H3, so it read 0. */
+        if(/(?:^| )Boost: .+ banished/.test(line)) events.push(["boost", line]);
         if(/undefined|NaN|\[object/i.test(line)) events.push(["MALFORMED", line]);
         /* SEAT 0 IS LITERALLY NAMED "You" (v2.83, v3.90), so a feed line
            that NAMES the seat and then uses a third-person verb reads

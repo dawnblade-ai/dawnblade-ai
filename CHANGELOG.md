@@ -1,3 +1,32 @@
+## v5.37 — The AI seat boosts when its deck makes boost pay
+
+**QUEUE v4 H3.** `sparring.payAction` declined every boost, reasoning that the banished card is the
+top of the seat's own deck and hidden from it. The ORDER is hidden; the COMPOSITION is not: a player
+knows their decklist minus every card seen, which is the remaining deck as a multiset. So
+`judge.boostShare(g, seat)` answers the share of the remaining deck (never the hand, never
+`deck[0]`) a boost would pay off for, and the seat boosts at a share of 1/2 or more. `sparring.js`
+still reads no card text. `parser.boostPays` is the one reader of "does this banished card pay
+boost", off the structured array `ty`, asked by `execute` at the banish and by `boostShare`; it
+agrees with the old `tt` test on all pool records (pinned), so it moves nothing today.
+
+Measured in the real tree, re-deriving the CEO's scratch numbers exactly:
+
+| | before | after |
+|---|---|---|
+| Dash, only his seat on the rule (42 games a side, 3 seeds) | 2 · 3 · 4 (3.0 of 14) | 12 · 10 · 12 (11.3 of 14) |
+| Dash's average game length (same run) | 22.7 turns | 12.7 turns |
+| Full ladder, every seat (630 games) | Dash 4.7 a seed | Dash 22.3 a seed |
+| refusals · violations · stalls | 0 · 0 · 1 | 0 · 0 · 1 (the same deck-out draw, `gravy-azalea-2`) |
+| `boost` route counter | 0 | 825 |
+
+The others move down a little on the full ladder, which is the zero-sum ladder (H2's per-seat
+method). The 1/2 threshold is a stated choice this pool never tests: only Dash's deck prints boost
+and its share at the deal is 1.0, both pinned as drills so a second boost deck forces a re-measure.
+
+**And the route counter's first draft read 0 with both string pins green.** Judge trims the
+declaration note, so the feed line OPENS with "Boost:" and a regex expecting a leading space never
+matched. The pin now drives a Dash game. `test/boostshare.test.js`, 8 drills; 7 sabotages, 7 bite.
+
 ## v5.36 — A go-again non-attack is played before the attack
 
 **QUEUE v4 H2.** `sparring.offence` ranked every attack first and every non-attack last, so the

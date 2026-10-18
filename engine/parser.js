@@ -9120,6 +9120,19 @@ const isArrowCard = c => {
   return /\barrow\b/i.test(frontFace(c));
 };
 
+/* DOES THE CARD BOOST BANISHED PAY OFF? (v5.37) Boost's reminder grants go
+   again when the banished card is a Mechanologist card. One reader, asked by
+   `execute` at the banish and by `judge.boostShare` for the seat policy, off
+   the structured array (v2.39: the array is the authority). The printed line
+   is the fallback only for a record with no array. Measured: the two agree
+   on all 797 pool records, so this moves nothing today. */
+const boostPays = c => {
+  if(!c) return false;
+  if(Array.isArray(c.ty) && c.ty.length)
+    return c.ty.some(t => /^mechanologist$/i.test(String(t)));
+  return /mechanologist/i.test(String(c.tt || ""));
+};
+
 /* ---- DOES THIS DECLARED DEFENDER POP A PHANTASM ATTACK? (v4.31) ------
 
    The database prints no reminder text for any keyword, and this project
@@ -10499,7 +10512,7 @@ const fxReset = () => FXMEMO.clear();
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter,
   PER_COUNT, DEF_PER, perCountKey, chainHits, pickSubject, attackQual, markRed, costCtx, qualMatches, abWindow, defCap, defCounts, defCapWhy, isBlockCard,
         nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, isActionCard, costOffFor, heaveOf,
-        classifyClause, fxParse, fxReset, playableFromZone, playZoneWhy, addCostWhy, isArrowCard, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost, isActivation, isActionPaid, costTaxes, handAbilityTax,
+        classifyClause, fxParse, fxReset, playableFromZone, playZoneWhy, addCostWhy, isArrowCard, boostPays, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost, isActivation, isActionPaid, costTaxes, handAbilityTax,
         DECL_OPS, dracLinks, weaponCost, payTrigger, OFFER_TRIGGERS, allyAttack, auraWeaponGrant, wardValue, wardBearers, wardTotal, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, routeCostsAP, rxAllowed, drxBarred, drxBarWhy, rxPump,
         idleCounterWipes, rustedThrough,
         isAtkActionCard, phantasmPops, zonePow, pow6, kwGated, hasKwNow, printedKw,

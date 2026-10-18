@@ -72,7 +72,7 @@ test("the emitted-kind scan is alive", () => {
 test("every event kind selfplay emits is pinned", () => {
   assert.deepEqual(EMITTED, [
     "MALFORMED", "SECOND-PERSON",
-    "ally", "allyatk", "arsflip", "chi", "crush", "ctrWipe", "death", "defmod", "destroycost",
+    "ally", "allyatk", "arsflip", "boost", "chi", "crush", "ctrWipe", "death", "defmod", "destroycost",
     "fusion", "gold", "halve",
     "held", "hitnext",
     "hitwatch", "hood", "jab", "layer", "leave", "powctr", "reaction", "search", "shield", "tap", "ward",
@@ -140,7 +140,9 @@ const FAULTS_PINNED = ["MALFORMED", "SECOND-PERSON"];
    because a number there means a feature fired (v4.17), and its own counter
    because `crush` counts every rider on one shared prefix. Measured: 23
    windows in 84 Lyath games. */
-const ROUTES_PINNED = ["ally", "allyatk", "arsflip", "chi", "crush", "ctrWipe", "death", "defmod",
+/* +boost v5.37 — a boost the seat TOOK (QUEUE v4 H3). On the ROUTE side:
+   before H3 the policy declined every boost and it read 0. */
+const ROUTES_PINNED = ["ally", "allyatk", "arsflip", "boost", "chi", "crush", "ctrWipe", "death", "defmod",
                        "destroycost",
                        "fusion", "gold", "halve", "held", "hitnext", "hitwatch", "hood", "jab", "layer", "leave",
                        "powctr", "reaction", "search", "shield", "tap", "ward"];

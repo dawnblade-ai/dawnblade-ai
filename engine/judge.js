@@ -1770,6 +1770,18 @@ const keepsActionPoint = (g, seat, uid, from) => {
           : from === "hand" ? (sd.hand || []).find(x => x && x.uid === uid) : null;
   return !!(c && PR.fxParse(c).ga === true);
 };
+/* ---- HOW MUCH OF THIS SEAT'S DECK WOULD A BOOST PAY OFF? (v5.37) ------
+
+   `keepsActionPoint`'s sibling, for `sparring.js`, which reads no card text.
+   The ORDER of a deck is hidden and its COMPOSITION is not: a player knows
+   the decklist minus every card seen, which is the remaining deck as a
+   multiset. So this is the share of `deck` (never the hand, never the top
+   card) that `parser.boostPays` answers yes for. An empty deck answers 0. */
+const boostShare = (g, seat) => {
+  const deck = (at(g, seat).deck || []);
+  if(!deck.length) return 0;
+  return deck.filter(c => PR.boostPays(c)).length / deck.length;
+};
 const targetOf = (g, seat, spec) => {
   const def = P.other(seat);
   if(spec == null || spec === "hero") return {kind: "hero", side: def, uid: null};
@@ -3749,7 +3761,7 @@ function drawTo(g, i){
 }
 
 return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint,
+        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, boostShare,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */
