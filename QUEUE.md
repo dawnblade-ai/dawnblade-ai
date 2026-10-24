@@ -257,8 +257,54 @@ RULE, never the gate.
   - Every ally deploy spends the last action point, 40 of them while a board ally could still attack.
   Candidates for H5+ once measured.
 
-**H5+.** One gap at a time, one investigator at a time. Waiting with unmeasured experiments in the
-scratchpad, in order: Boltyn (6.3), Azalea (6.7), Iyslander (6.7), Blaze (8.3).
+**H5. A non-attack that spends the action point: the biggest printed arcane goes first.** One
+release (v5.39). Measured by an investigator on v5.38 (`fa7b7e0`) and re-measured by the CEO in a
+fresh copy; the numbers below are the CEO's. Re-measure in the real tree before shipping. The
+experiment, gated on `SPX`, is `experiments/H5-iyslander-experiment.patch` on this branch and
+applies to `fa7b7e0`. Ship the RULE, never the gate.
+- **The gap.** When the seat has no attack to make, `sparring.offence` ranks its non-attacks
+  CHEAPEST first, so it spends Iyslander's one action point on the smallest damage. In her 42 games
+  she made 153 non-attack plays that spent the point, and in 79 of them a legal non-attack printing
+  more arcane was in hand or arsenal: +1 x13, +2 x10, +3 x20, +4 x15, +5 x21. That is about 258
+  arcane, roughly 6 a game, left unplayed. A typical case is a 1-arcane Frosting played with a
+  5-arcane Ice Bolt legal in the same hand.
+- **The rule.** Among the non-attacks the seat would spend its action on, play the one printing the
+  most UNCONDITIONAL arcane damage first. Ties fall back to the existing order: cost, then pitch,
+  then uid. A non-attack printing no arcane ranks as 0.
+  - H2's go-again step runs before this, so a card that keeps the action point still goes first.
+- **The reader.** `judge.arcaneOf(g, seat, uid, from)` returns the card's printed arcane through
+  `parser.arcAmount`. That is the same reader Blaze's ability prices with: unconditional ops only, so
+  a gated "instead deal N" is not counted and an X is not guessed. A card the seat does not hold in
+  that zone (hand or arsenal) answers 0.
+  - `keycensus.test.js`'s one-board reader pin moves deliberately, because `arcAmount` is now also
+    asked by judge (the v5.37 `boostPays` and v5.38 `abilityGa` precedent). Give the reason line.
+- **Measured** (3 seeds; wins a seed):
+
+  | | v5.38 | with the rule |
+  |---|---|---|
+  | Iyslander, own seat only (`tourney.js iyslander '' 3`, of 14) | 5 · 1 · 2 | 6 · 6 · 8 (two runs byte-identical) |
+  | Iyslander, full ladder, rule on every seat | 4.0 [3,5] | 12.3 [9,14], disjoint |
+  | every other hero, full ladder | | moves by at most 1.4, inside the band (MAX 5) |
+  | refusals · violations · stalls | 0 · 0 · 2 | 0 · 0 · 1 (`gravy-briar-2`, the existing no-damage draw) |
+
+  - The probe confirms the mechanism. Plays made while a higher-arcane alternative was legal went
+    79 -> 0, and 5-arcane plays went 25 -> 54.
+  - Blaze, the other arcane deck, does not move (7.3 -> 7.3). Do not claim the rule helps him.
+- **Drills.**
+  - `arcaneOf` reads the printed number (two cards differing only in arcane), ignores a gated
+    "instead" rider, and answers 0 for a card not held.
+  - The policy plays the 5-arcane card over the cheaper 1-arcane one in the same hand.
+  - A go-again non-attack still goes first (H2 is unchanged).
+  - Ties fall back to cost.
+  - Sabotage: the sort key dropped, the key inverted, and the reader counting a gated rider.
+- **Also measured, not built (H6+ candidates for Iyslander):**
+  - A Block card (On the Horizon) set in the arsenal is never played from there.
+  - Crucible of Aetherweave's amp is activated and then wasted on 278 of her turns.
+  - Both A/Bs overlapped at 3 seeds (`all-hypotheses.patch` in the investigator's scratchpad), so
+    they stay recorded rather than built.
+
+**H6+.** One gap at a time, one investigator at a time, each rebased on the latest release.
+Waiting, by the v5.38 ladder: Boltyn (5.7), Azalea (8.0), Blaze (7.3).
 
 ## v3 — STAGE INCREMENT 1 INPUTS (CEO, 2026-10-17)
 

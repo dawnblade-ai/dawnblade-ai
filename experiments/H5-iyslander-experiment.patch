@@ -1,0 +1,70 @@
+diff --git a/engine/judge.js b/engine/judge.js
+index e25fc8d..495585a 100644
+--- a/engine/judge.js
++++ b/engine/judge.js
+@@ -1867,6 +1867,19 @@ const boostShare = (g, seat) => {
+   if(!deck.length) return 0;
+   return deck.filter(c => PR.boostPays(c)).length / deck.length;
+ };
++/* ---- HOW MUCH ARCANE DAMAGE DOES THIS CARD PRINT? (H4) ----------------
++
++   `keepsActionPoint`'s sibling, for `sparring.js`, which reads no card text.
++   `parser.arcAmount` is the one reader: the card's UNCONDITIONAL arcane ops
++   (the same number Blaze's ability charges as its price), so a gated
++   "instead deal 6" is not counted and an X is not guessed. A card the seat
++   does not hold in that zone answers 0. */
++const arcaneOf = (g, seat, uid, from) => {
++  const sd = at(g, seat);
++  const c = from === "arsenal" ? (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null)
++          : from === "hand" ? (sd.hand || []).find(x => x && x.uid === uid) : null;
++  return c ? PR.arcAmount(c) : 0;
++};
+ const targetOf = (g, seat, spec) => {
+   const def = P.other(seat);
+   if(spec == null || spec === "hero") return {kind: "hero", side: def, uid: null};
+@@ -3846,7 +3859,7 @@ function drawTo(g, i){
+ }
+ 
+ return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
+-        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, boostShare, grantTakers,
++        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, boostShare, grantTakers, arcaneOf,
+         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
+         handFree: PR.handFree,
+         /* the card semantics seam (v2.77) */
+diff --git a/engine/sparring.js b/engine/sparring.js
+index b06a6a4..8117c66 100644
+--- a/engine/sparring.js
++++ b/engine/sparring.js
+@@ -111,6 +111,15 @@ const byUid = (a, b) => String(a.uid) < String(b.uid) ? -1 : String(a.uid) > Str
+ 
+ const legal = (g, a, seat) => J.legal(g, a, seat) == null;
+ 
++/* ---- H4 EXPERIMENT GATE (not a rule) ----------------------------------
++   The rule below is measured per seat: it applies only to a seat whose
++   hero key is listed in the SPX environment variable. */
++const SPX = (g, seat) => {
++  const env = (typeof process !== "undefined" && process.env && process.env.SPX) || "";
++  const sd = g && g.sides && g.sides[seat];
++  return !!(env && sd && env.split(",").indexOf(sd.heroKey) >= 0);
++};
++
+ /* ---- the payment ------------------------------------------------------
+    `judge.legal` has already refused any play this seat could not fund, so
+    by the time a payment is open the hand can always cover it. The only
+@@ -634,7 +643,15 @@ function offence(g, seat, o){
+     .filter(x => x.c && num(x.c, "power") <= 0)
+     .filter(x => grantOK(x))
+     .filter(x => affordableWithin(sd, x.c, o))
+-    .sort((a, b) => num(a.c, "cost") - num(b.c, "cost")
++    /* THE BIGGEST PRINTED ARCANE FIRST (H4). Cheapest-first spent the one
++       action point on a 1-arcane Frosting with a 5-arcane Ice Bolt legal in
++       the same hand: 79 of Iyslander's 153 point-spending non-attacks in 42
++       games had a higher-arcane legal alternative. `judge.arcaneOf` answers
++       the card's unconditional printed arcane, so this file reads no card
++       text; a non-attack that prints none ranks as 0, and ties fall back to
++       the cheapest, then pitch, then uid. */
++    .map(x => Object.assign(x, {arc: SPX(g, seat) ? J.arcaneOf(g, seat, x.uid, x.from) : 0}))
++    .sort((a, b) => (b.arc - a.arc) || num(a.c, "cost") - num(b.c, "cost")
+                  || num(a.c, "pitch") - num(b.c, "pitch") || byUid(a, b))
+     .find(x => legal(g, {t: "play", uid: x.uid, from: x.from}, seat));
+   if(nonAtk) return {t: "play", uid: nonAtk.uid, from: nonAtk.from};
