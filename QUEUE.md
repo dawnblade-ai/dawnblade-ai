@@ -310,8 +310,92 @@ applies to `fa7b7e0`. Ship the RULE, never the gate.
   - Both A/Bs overlapped at 3 seeds (`all-hypotheses.patch` in the investigator's scratchpad), so
     they stay recorded rather than built.
 
-**H6+.** One gap at a time, one investigator at a time, each rebased on the latest release.
-Waiting, by the v5.38 ladder: Boltyn (5.7), Azalea (8.0), Blaze (7.3).
+**S8. A soul card banished as a cost goes to NO zone, and Duty Bound Blitz's gate reads the soul
+instead of the event. ENGINE, ships BEFORE H6 (v5.40).** Found by the Boltyn investigator on v5.39;
+CEO-reproduced with `experiments/S8-soul-repro.js` (`node experiments/S8-soul-repro.js <tree>`).
+- **The vanishing card.** `effects.js:3396` pays `abSoulCost` with
+  `actMut(n).soul = act(n).soul.slice(_sc)` and puts the cards nowhere. Boltyn's hero ability and
+  Radiant Touch both pay it.
+  - Repro: in Boltyn v Dorinthea, seed `boltyn-dorinthea-0`, turn 5, the hero ability banishes
+    Bolt of Courage#29, which ends up in NO zone.
+  - `effects.js:1871` (`soulSpend`) is the same shape. v4.50 measured zero claimants for it, so it is
+    probably latent; fix it through the same body anyway.
+  - The cards go to the BANISHED zone. A banish from the soul is a banish, and both lines say so in
+    the feed.
+  - **No guard here sees a card in no zone.** `invariants.js` catches a card in TWO zones, and one in
+    none falls out of the census silently. That is CLAUDE.md's own warning from v2.21 and v3.07.
+    Consider a self-play fault for it: a non-token, non-ephemeral uid present in one state and in no
+    zone in the next. It would have caught this, and it is how this family stops recurring. Size it
+    honestly; if it is more than a small instrument, record it as its own item instead.
+- **The gate.** Duty Bound Blitz prints "Play this only if a yellow card has been put into your soul
+  this turn". That is an EVENT. `effects.playIfOk`'s `soulPitch` (`effects.js:9877`) asks whether a
+  yellow card stamped `_soulT === turn` is IN the soul now.
+  - Boltyn's ability banishes the freshest soul card. So in the same repro, a yellow card is charged
+    and then banished, and `judge.legal` refuses the face-up Duty Bound Blitz with "no yellow card
+    has been put into your soul this turn". Weaker than printed, and live in his deck.
+  - Record the event: for example, `hist` keeps the pitch of every card put into the soul this turn,
+    written by the three soul writers (`effects.js:3833` charge, `:8183` ascend, `prompts.js:1051`
+    pick to soul). CR 4.4.4 clears it with `hist`, and the gate reads it.
+  - v4.90's source census of the three writers is the place to hold all three to it.
+- **Which soul card is banished is the engine's choice, not the player's.** The front, which is the
+  card just charged. Search the repo for a verbatim CR quote about who chooses a cost's object before
+  building anything.
+  - If the choice is cheap through v4.85's `discost` pending shape, build it.
+  - Otherwise record it beside `cost-discard-auto-picked`, for example as
+    `soul-banish-cost-auto-picked` (stated, with a probe).
+  - The event-gate fix above makes the choice matter less.
+- Drills: drive the repro (the card lands in `banish`; the gate opens after a yellow is charged and
+  banished in one turn; it stays shut with no yellow put in); census the soul writers; sabotage each.
+  Re-measure the ladder; expect Boltyn to move, since Duty Bound Blitz becomes playable more often.
+  Name any hero that moves.
+
+**H6. Boltyn: charge first, then swing the weapon the charge pumped. POLICY, ships AFTER S8
+(v5.41).** Measured by the investigator on v5.39 (`10f41e2`) and CEO re-measured in a fresh copy;
+re-measure on top of S8 before shipping, because S8 changes his games. The experiment is
+`experiments/H6-boltyn-experiment.patch` on this branch, gated on `SPX` (and `SPH`). Ship the RULE.
+- **The gap.** Boltyn's deck turns on "if you've charged this turn", and the policy ranks attacks on
+  printed power alone. Over 42 games and 377 Boltyn turns:
+  - 302 turns make exactly one attack.
+  - Only 148 turns are charged, and 109 of those end without Raydn swinging, though Raydn is 0 power
+    and +3 once charged.
+  - Take Flight, which has go again only once charged, went first in 47 of the 113 turns it was held.
+  - Uncharged 4-power attacks were walled on 90 of 92 swings.
+- **The rule.**
+  - Before the seat has charged this turn, an attack that offers an additional-cost charge outranks
+    the other attacks, if the hand can pay its cost and keep a card to charge. One whose go again the
+    charge switches on goes first among those.
+  - Once charged, such an attack counts as keeping the action point.
+  - A weapon whose swing the charge pumped above its printed base swings before any hand attack that
+    does not keep the point.
+- **The reader.** `judge.chargeView(g, seat, uid, from)` gives, off the parse:
+  - `charged` (`hist.charged`);
+  - `offers` (`fx.chargeCost`);
+  - `gaIf` (a `charged`-gated `ga`);
+  - `base` (`effects.basePowOf`);
+  - `power` (base, plus +1{p} counters on a weapon, plus every charge-gated `self` pump once charged).
+
+  `chargeRoom` in sparring uses printed numbers only. Consider whether `chargeView` should fold into
+  an existing reader (v3.61); one record per fact.
+- **Measured on v5.39** (3 seeds; wins a seed):
+
+  | | v5.39 | with the rule |
+  |---|---|---|
+  | Boltyn, own seat only (of 14) | 1 · 2 · 2 | 6 · 4 · 8 (two runs byte-identical) |
+  | Boltyn, full ladder, rule on every seat | 5.3 [4,7] | 11.0 [10,13], disjoint |
+  | everyone else | | inside the band (MAX 4); only Boltyn charges, so all 546 non-Boltyn games are identical |
+  | refusals · violations · stalls | 0 · 0 · 1 | 0 · 0 · 1 (the same `gravy-briar-2` draw) |
+  | `npm test` with the gated patch | | 3640, 0 fail, 5 skipped |
+
+- **Measured, not built (A/B overlapped H1 alone):**
+  - Charge the colour a rider or a held gate asks for; this cut missed-yellow charges from 61 to 2,
+    but did not move wins.
+  - Set a play-restricted card face down into the arsenal last.
+- Drills: `chargeView` answers per field; the policy picks the charge-offering attack first when it
+  can keep a card to charge, swings the pumped weapon once charged, and does neither when uncharged
+  with no charge card. Sabotage the rank, `chargeRoom`, and the weapon candidate.
+
+**H7+.** One gap at a time, one investigator at a time, each rebased on the latest release.
+Waiting, by the v5.39 ladder: Azalea (7.3), Blaze (7.3); then Lyath (6.7), Bravo (9.3).
 
 ## v3 — STAGE INCREMENT 1 INPUTS (CEO, 2026-10-17)
 

@@ -1,0 +1,134 @@
+diff --git a/engine/judge.js b/engine/judge.js
+index 0c40e9e..4e003ab 100644
+--- a/engine/judge.js
++++ b/engine/judge.js
+@@ -1880,6 +1880,34 @@ const arcaneOf = (g, seat, uid, from) => {
+           : from === "hand" ? (sd.hand || []).find(x => x && x.uid === uid) : null;
+   return c ? PR.arcAmount(c) : 0;
+ };
++/* ---- WHAT DOES A CHARGE DO FOR THIS PLAY? (QUEUE v4 H4) -------------
++   `keepsActionPoint`'s sibling, for `sparring.js`, which reads no card
++   text. Boltyn's deck turns on "if you've charged this turn" (`charged`,
++   off `hist.charged`, which CR 4.4.4 clears). For a card the seat holds in
++   `from` ("hand" / "arsenal") or a weapon it has equipped ("weapon"):
++     charged  has the seat charged its soul this turn;
++     offers   the card prints an additional-cost charge (`fx.chargeCost`);
++     gaIf     its go again is gated on having charged ({cond:"charged",
++              op:["ga"]} in `fx.conds`);
++     base     its printed base power (`effects.basePowOf`);
++     power    base, plus +1{p} counters on a weapon, plus every "+N{p}"
++              gated on having charged — counted only once the seat HAS.
++   null for anything the seat does not hold there. */
++const chargeView = (g, seat, uid, from) => {
++  const sd = at(g, seat);
++  const c = from === "weapon" ? (sd.gear || []).find(x => x && x.uid === uid && PR.isWeapon(x))
++          : from === "arsenal" ? (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null)
++          : from === "hand" ? (sd.hand || []).find(x => x && x.uid === uid) : null;
++  if(!c || !c.name) return null;
++  const fx = PR.fxParse(c);
++  const charged = (((sd.hist || {}).charged) || 0) > 0;
++  const conds = (fx.conds || []).filter(e => e && e.cond === "charged" && e.op);
++  const base = E.basePowOf(c, from === "weapon" ? "weapon" : from, g) || 0;
++  const ctr = from === "weapon" ? (((sd.counters || {})[uid] || {}).pow || 0) : 0;
++  const pump = charged ? conds.filter(e => e.op[0] === "self").reduce((t, e) => t + (+e.op[1] || 0), 0) : 0;
++  return {charged, offers: !!fx.chargeCost, gaIf: conds.some(e => e.op[0] === "ga"),
++          base, power: base + ctr + pump};
++};
+ const targetOf = (g, seat, spec) => {
+   const def = P.other(seat);
+   if(spec == null || spec === "hero") return {kind: "hero", side: def, uid: null};
+@@ -3859,7 +3887,7 @@ function drawTo(g, i){
+ }
+ 
+ return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
+-        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, boostShare, grantTakers, arcaneOf,
++        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, boostShare, grantTakers, arcaneOf, chargeView,
+         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
+         handFree: PR.handFree,
+         /* the card semantics seam (v2.77) */
+diff --git a/engine/sparring.js b/engine/sparring.js
+index 35824b8..e428896 100644
+--- a/engine/sparring.js
++++ b/engine/sparring.js
+@@ -111,6 +111,17 @@ const byUid = (a, b) => String(a.uid) < String(b.uid) ? -1 : String(a.uid) > Str
+ 
+ const legal = (g, a, seat) => J.legal(g, a, seat) == null;
+ 
++/* QUEUE v4 H4 — a per-seat experiment gate on the seat's HERO KEY (a build
++   fact, not card text). Off unless SPX names the seat's hero; SPH picks
++   the hypothesis (all when unset). */
++const SPX_ENV = (typeof process !== "undefined" && process.env) || {};
++const spx = (g, seat, h) => {
++  const sd = g && g.sides && g.sides[seat];
++  if(!SPX_ENV.SPX || !sd) return false;
++  if(SPX_ENV.SPX.split(",").indexOf(sd.heroKey) < 0) return false;
++  return !SPX_ENV.SPH || SPX_ENV.SPH.split(",").indexOf(h) >= 0;
++};
++
+ /* ---- the payment ------------------------------------------------------
+    `judge.legal` has already refused any play this seat could not fund, so
+    by the time a payment is open the hand can always cover it. The only
+@@ -562,17 +573,42 @@ function offence(g, seat, o){
+      in hand. `judge.keepsActionPoint` answers for an attack and a board
+      entry too, so the one that keeps the point sorts first and ties fall
+      back to power, cost, uid. */
++  /* H4-B: CHARGE FIRST, THEN THE WEAPON THE CHARGE PUMPED. Before the
++     seat has charged this turn, an attack that offers a charge (and leaves
++     a card to charge) outranks the rest, the one whose go again the charge
++     turns on first; once charged, such an attack keeps the point, and a
++     weapon whose swing the charge pumped above its base swings before a
++     card from hand. `judge.chargeView` answers all of it. */
++  const hB = spx(g, seat, "B");
++  const cv = x => hB && !x.ally ? J.chargeView(g, seat, x.uid, x.from) : null;
++  const rankB = x => {
++    if(!hB) return 0;
++    if(x.kap) return 0;
++    const v = x.cv;
++    if(x.weapon) return 2;
++    if(!v) return 3;
++    if(v.charged) return v.gaIf ? 0 : 3;
++    return v.offers && chargeRoom(sd, x.c, o) ? (v.gaIf ? 1 : 2) : 3;
++  };
++  const wpB = !hB ? [] : (sd.gear || []).slice().sort(byUid)
++    .map(w => ({w, v: J.chargeView(g, seat, w.uid, "weapon")}))
++    .filter(x => x.v && x.v.charged && x.v.power > x.v.base)
++    .map(x => ({c: Object.assign({}, x.w, {power: x.v.power}), uid: x.w.uid, weapon: true, kap: 0}));
+   const pick = from
+     .map(x => ({c: x.c, uid: x.c && x.c.uid, from: x.from}))
+     .concat(allies)
+     .filter(x => x.c && num(x.c, "power") > 0)
+     .filter(x => x.ally || affordableWithin(sd, x.c, o))
+     .map(x => Object.assign(x, {kap: J.keepsActionPoint(g, seat, x.uid, x.ally ? "board" : x.from) ? 1 : 0}))
+-    .sort((a, b) => (b.kap - a.kap) || num(b.c, "power") - num(a.c, "power")
++    .map(x => Object.assign(x, {cv: cv(x)}))
++    .concat(wpB)
++    .sort((a, b) => (rankB(a) - rankB(b)) || (b.kap - a.kap) || num(b.c, "power") - num(a.c, "power")
+                  || num(a.c, "cost") - num(b.c, "cost") || byUid(a, b))
+-    .find(x => legal(g, x.ally ? {t: "activate", uid: x.uid, target: targetFor(g, seat, x.c)}
++    .find(x => legal(g, x.weapon ? {t: "activate", uid: x.uid}
++                     : x.ally ? {t: "activate", uid: x.uid, target: targetFor(g, seat, x.c)}
+                                : {t: "play", uid: x.uid, from: x.from,
+                                   target: targetFor(g, seat, x.c)}, seat));
++  if(pick && pick.weapon) return {t: "activate", uid: pick.uid};
+   if(pick) return pick.ally
+     ? {t: "activate", uid: pick.uid, target: targetFor(g, seat, pick.c)}
+     : {t: "play", uid: pick.uid, from: pick.from, target: targetFor(g, seat, pick.c)};
+@@ -660,6 +696,18 @@ function offence(g, seat, o){
+    reduce, so the estimate is high and the policy's mistake is to skip a
+    card it could in fact afford — the safe direction, and one that shows
+    up as a quiet turn rather than as a rules error. */
++/* H4-B: can the hand pay this card's printed cost within `maxPitch` and
++   still keep one OTHER card back to charge? Printed numbers only. */
++function chargeRoom(sd, card, o){
++  const need = num(card, "cost") - (sd.res || 0);
++  const rest = (sd.hand || []).filter(c => c && c.uid !== card.uid);
++  if(need <= 0) return rest.length >= 1;
++  const pool = rest.filter(c => num(c, "pitch") > 0).map(c => num(c, "pitch")).sort((a, b) => b - a);
++  let got = 0, k = 0;
++  while(k < pool.length && k < o.maxPitch && got < need){ got += pool[k]; k++; }
++  return got >= need && rest.length - k >= 1;
++}
++
+ function affordableWithin(sd, card, o){
+   const need = num(card, "cost") - (sd.res || 0);
+   if(need <= 0) return true;
