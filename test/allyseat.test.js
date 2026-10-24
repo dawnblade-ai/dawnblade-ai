@@ -118,7 +118,10 @@ test("a bigger card in hand outranks a smaller ally, and vice versa", {skip}, ()
   /* ALLIES ARE RANKED IN THE SAME ORDER AS EVERYTHING ELSE, not appended
      after it: both cost the turn's one action point, so they compete for
      the same thing. Printed power decides, exactly as it does for a card. */
-  const {g, ally} = withAlly("Limpit, Hop-a-long", 2);   /* 2 power */
+  /* BARNACLE, NOT LIMPIT (v5.38). Limpit's attack line prints go again, and
+     an attack that keeps the action point now ranks first whatever its
+     power (QUEUE v4 H4), so it could no longer say anything about POWER. */
+  const {g, ally} = withAlly("Barnacle", 2);             /* 4 power, no go again */
   const big = H.card("Wounded Bull", 1); big.uid = ++_uid; /* more */
   assert.ok(big.power > ally.power, "fixture: the hand card must be bigger");
   const withBig = {...g, sides: g.sides.map((s, i) => i ? s : {...s, hand: [big]})};

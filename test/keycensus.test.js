@@ -342,8 +342,8 @@ test("the one-board reader sets are pinned", {skip}, () => {
     assert.ok(both.includes(n), n + " is demonstrably asked by both boards");
 
   assert.deepEqual(onlyJ.sort(),
-    ["boostPays", "chiValue", "handFree", "isAtkActionCard", "isDeclaredDefender", "isDR",
-     "printedKw", "splitCostsAP", "weaponCost"].sort(),
+    ["abilityGa", "boostPays", "chiValue", "handFree", "isAtkActionCard", "isDeclaredDefender", "isDR",
+     "printedKw", "qualMatches", "splitCostsAP", "weaponCost"].sort(),
     "a reader judge asks and the trainer does not. TWO LEFT this list at " +
     "v3.99: `tapsToActivate` (the trainer now refuses a tapped hero) and " +
     "`costCtx` (it now threads the game's half of every cost). Adding one is " +
@@ -368,7 +368,11 @@ test("the one-board reader sets are pinned", {skip}, () => {
     "v5.37: `boostPays` ARRIVED, and the job is judge's: it is read inside " +
     "`judge.boostShare`, the seam `sparring.js` asks instead of reading card " +
     "text (`chiValue`'s reason). The trainer's banish asks it through the " +
-    "shared `execute`, and a human decides their own boost.");
+    "shared `execute`, and a human decides their own boost.\n" +
+    "v5.38: `abilityGa` and `qualMatches` ARRIVED, read inside " +
+    "`judge.keepsActionPoint` and `judge.grantTakers`, the seam `sparring.js` " +
+    "asks instead of reading card text. The trainer asks both through the " +
+    "shared `execute`, and a human sequences their own attacks and grants.");
 
   assert.deepEqual(onlyT.sort(),
     ["clean", "defCap", "frostCount", "hasKwNow", "instantAbilityReady",

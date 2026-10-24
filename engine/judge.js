@@ -1763,12 +1763,97 @@ const abWindowOf = (g, seat, uid) => {
    is the fact `execute` grants (v2.31's layout rule keeps a go again the
    text only grants under an `if` out of it). Conditional go again and
    instants are deliberately not widened in: neither was measured. A card
-   the seat does not hold in that zone answers false. */
+   the seat does not hold in that zone answers false.
+
+   ONE READER FOR EVERY PLAY THE POLICY RANKS (v5.38, QUEUE v4 H4). It
+   answers for an ATTACK too, and for an attacking BOARD entry
+   (`from === "board"`), with the sources `execute` collects at the play:
+
+     the card's own unconditional go again, EXCEPT where it sits on an
+       activated ability's line (`abilityGa`): an ally's "Action - …:
+       Attack. Go again" is its ATTACK's, and `execute` grants the DEPLOY
+       nothing. Read as the card's, Limpit, Hop-a-long and Cutty Shark in
+       hand answered TRUE and the deploy spent the point;
+     a board ALLY's attack line (`allyAttack(...).ga`), and an AURA
+       attack's Cosmo rider (one or more +1{p} counters);
+     a face-up arsenal stamp (`_arsGA`) for this turn;
+     a waiting grant: bare `gaNext` for an attack, and a `gaNextQ` entry
+       `qualMatches` admits with the context `execute` passes — `atk` on
+       an attack, so Mage Master Boots' non-attack grant still answers for
+       a non-attack.
+
+   One reader rather than a sibling (v3.61: two records of one fact). */
 const keepsActionPoint = (g, seat, uid, from) => {
+  const sd = at(g, seat);
+  let c = null, route = from, atk = false;
+  if(from === "board"){
+    const b = (sd.board || []).find(x => x && x.uid === uid);
+    const ba = b && boardAttackOf(g, seat, uid);
+    if(!ba) return false;
+    c = b.card; route = ba.kind; atk = true;
+    if(ba.kind === "ally"){
+      if(PR.allyAttack(c).ga) return true;
+    } else {
+      const aa = PR.auraAttackOf(c, sd, {yourTurn: seat === g.turnPlayer,
+                                         discount: bOf(g, seat).auraDiscount});
+      if(aa && aa.gaWithCounters && (((sd.counters || {})[uid] || {}).pow || 0) > 0) return true;
+    }
+  } else {
+    c = from === "arsenal" ? (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null)
+      : from === "hand" ? (sd.hand || []).find(x => x && x.uid === uid) : null;
+    if(!c) return false;
+    if(!PR.abilityGa(c) && PR.fxParse(c).ga === true) return true;
+    atk = TY.isAttack(c);
+    if(atk && c._arsGA && c._upTurn === g.turn) return true;
+  }
+  if(atk && sd.gaNext) return true;
+  const qc = atk ? {from: route, atk: true} : {from: route};
+  return (sd.gaNextQ || []).some(x => x && x.q && PR.qualMatches(x.q, c, qc));
+};
+/* ---- WHICH ATTACKS COULD TAKE THIS GRANT NOW? (v5.38, QUEUE v4 H4) ----
+
+   `keepsActionPoint`'s sibling, for `sparring.js`, which reads no card
+   text. A non-attack whose WHOLE payload is next-attack grants — `buffNext`
+   / `gaNext` ops, no condition, no optional cost — does nothing unless an
+   attack its printed qualifier admits follows it: Avast Ye! played with
+   only a non-Pirate attack in hand is a card spent for a log line.
+
+   `null` for anything that is not such a pure grant (this reader only
+   speaks about a grant). Otherwise the attacks LEGAL RIGHT NOW the
+   qualifier admits — from hand or arsenal (never the grant itself), an
+   attacking board entry, a weapon swing — as `{uid, from, cost}` with the
+   printed cost, so the caller asks its own affordability question.
+   Matched through `qualMatches`, the matcher `execute` spends a grant with. */
+const GRANT_Q = {buffNext: 2, gaNext: 1};
+const grantTakers = (g, seat, uid, from) => {
   const sd = at(g, seat);
   const c = from === "arsenal" ? (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null)
           : from === "hand" ? (sd.hand || []).find(x => x && x.uid === uid) : null;
-  return !!(c && PR.fxParse(c).ga === true);
+  if(!c) return null;
+  const fx = PR.fxParse(c);
+  const ops = (fx.ops || []).filter(o => o && o[0] !== "noop");
+  if(!ops.length || (fx.conds || []).length || fx.optCost) return null;
+  if(!ops.every(o => GRANT_Q[o[0]] != null)) return null;
+  const qs = ops.map(o => o[GRANT_Q[o[0]]] || null);
+  const takes = (card, route) => qs.some(q => !q || PR.qualMatches(q, card, {from: route, atk: true}));
+  const out = [];
+  const cards = (sd.hand || []).map(h => ({h, f: "hand"}))
+    .concat(sd.arsenal ? [{h: sd.arsenal, f: "arsenal"}] : []);
+  for(const {h, f} of cards)
+    if(h && h.uid !== uid && TY.isAttack(h) && takes(h, f)
+       && legal(g, {t: "play", uid: h.uid, from: f, target: "hero"}, seat) == null)
+      out.push({uid: h.uid, from: f, cost: +h.cost || 0});
+  for(const b of sd.board || []){
+    const ba = b && boardAttackOf(g, seat, b.uid);
+    if(ba && takes(b.card, ba.kind)
+       && legal(g, {t: "activate", uid: b.uid, target: "hero"}, seat) == null)
+      out.push({uid: b.uid, from: "board", cost: ba.cost || 0});
+  }
+  for(const w of sd.gear || [])
+    if(w && PR.isWeapon(w) && takes(w, "weapon")
+       && legal(g, {t: "activate", uid: w.uid}, seat) == null)
+      out.push({uid: w.uid, from: "weapon", cost: +w.cost || 0});
+  return out;
 };
 /* ---- HOW MUCH OF THIS SEAT'S DECK WOULD A BOOST PAY OFF? (v5.37) ------
 
@@ -3761,7 +3846,7 @@ function drawTo(g, i){
 }
 
 return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, boostShare,
+        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, boostShare, grantTakers,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */

@@ -214,7 +214,12 @@ const drive = () => {
      Azalea with Azalea's chair first is one. ADDED, for v5.24's reason.
      `defUid` ARRIVED in the same move (Brothers in Arms' defends payment,
      v4.53, now reached by the ring) and is pinned below. */
-  { const r = T.leg(E[4], E[5], "kt-4-5-1", 1); legs++; if(r && r.threw) threw++; }
+  /* AND REPLACED AT v5.38: the policy now plays the attack that keeps the
+     action point first and holds a grant with no attack to take it, so
+     Bravo v Azalea stopped reaching the reorder. Measured over every
+     pairing, both chairs: five reach it, and Azalea v Kayo with Azalea's
+     chair first is the first. Swapped, so the count stands. */
+  { const r = T.leg(E[5], E[0], "kt-5-0-0", 0); legs++; if(r && r.threw) threw++; }
 };
 
 /* BOUND A FUNCTION AT THE NEXT SAME-LEVEL DECLARATION, NEVER AT A CHAR

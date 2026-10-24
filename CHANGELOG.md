@@ -1,3 +1,59 @@
+## v5.38 — The AI seat sequences its go-again chain
+
+**QUEUE v4 H4.** `sparring.offence` ranked attacks on printed power alone, so a go-again attack
+(Golden Tipple, Saltwater Swell, Limpit's swing) sat behind a bigger one, or an ally deploy, that
+spent the action point and was stranded; and H2's "go-again non-attack first" step played a pure
+next-attack grant (Avast Ye!, Flying High) with no attack left to take it. Two rules, both asked
+through judge so `sparring.js` still reads no card text:
+
+- **the attack that keeps the action point goes first** (a `kap` key ahead of power in the sort);
+- **a non-attack whose whole payload is next-attack grants waits** until an attack its qualifier
+  admits is legal and payable without the grant card (`judge.grantTakers`).
+
+`judge.keepsActionPoint` is now ONE reader for every play rather than H2's non-attack reader plus a
+sibling (v3.61). It mirrors `execute`: an own unconditional go again, a board ally's attack line,
+Cosmo's aura grant with a +1{p} counter, a face-up arrow's `_arsGA` this turn, a bare `gaNext` for an
+attack, and `gaNextQ` through `qualMatches` with each of execute's two contexts.
+
+**AND IT HAD A LATENT FALSE POSITIVE**: an ally card in HAND answered TRUE, because `fx.ga` carries
+the go again printed on its ATTACK line (Limpit, Hop-a-long; Cutty Shark) while `execute` grants the
+deploy nothing (`abilityGa`). H2 read only non-attacks, so nothing reached it; ranking every play by
+it would have deployed Limpit first and stranded the attack. Pinned, with the deploy driven.
+
+Measured in the real tree, re-deriving the CEO's scratch numbers exactly:
+
+| | before | after |
+|---|---|---|
+| Gravy Bones, only his seat on the rule (42 games a side, 3 seeds) | 3 · 4 · 2 of 14 | 6 · 6 · 8 of 14 |
+| Full ladder, Gravy Bones (630 games, 3 seeds) | 6 · 6 · 4 (5.3) | 11 · 11 · 12 (11.3), disjoint |
+| Full ladder, Fai | 15 · 11 · 12 (12.7) | 19 · 18 · 18 (18.3), disjoint |
+| refusals · violations · stalls | 0 · 0 · 1 | 0 · 0 · 2 |
+
+Enigma, Bravo, Lyath and Iyslander move with overlapping intervals (the zero-sum ladder). The
+reader's merge alone, with both new rules switched off, is BYTE-IDENTICAL to v5.37 over the full
+ladder, so H2's answers did not move.
+
+**Both stalls are genuine draws, checked on the final state.** `iyslander-azalea-1`: both decks and
+hands empty, the arsenals holding On the Horizon (a Block) and Lace with Frailty (a held grant).
+`gravy-briar-2`: both empty; Gravy's Cutty Shark costs {r} with nothing to pitch, and Briar's Scorpio
+needs a Lightning link on the chain. CR 4.5.3 has no deck-out loss. `test/aiseat.test.js` now says
+that its draw check reads the deck and the hand and not the arsenal.
+
+**Fixture moves.** `allyseat.test.js`'s power-order drill used Limpit, which now ranks first for its
+go again; it uses Barnacle. `speccensus.test.js`'s v5.36 `keepTop` leg stopped reaching the field,
+so it is replaced by Azalea v Kayo (five pairings measured to reach it), 37 legs unchanged.
+`keycensus.test.js` gains `abilityGa` and `qualMatches` as judge-only readers.
+
+`test/gochain.test.js`, 12 drills; 6 sabotages, 6 bite (dropping `kap`, dropping `grantOK`, letting
+the grant pay for its own taker, listing the grant as its own taker, restoring the ally false
+positive, and taking the attack gate off `gaNext`). The last was SILENT on the first pass because
+the non-attack fixture was never asked about, and the first fix used Flying High, which prints its
+own Go again; nearly every pool non-attack does, so the near-miss is synthetic.
+
+**Recorded, not built:** an ally deploy's feed line reads "the weapon's attack — its cost is paid
+when it swings" (`parser.js`'s noop reason for an "Action - …: Attack" line), which names a weapon
+on an ally.
+
 ## v5.37 — The AI seat boosts when its deck makes boost pay
 
 **QUEUE v4 H3.** `sparring.payAction` declined every boost, reasoning that the banished card is the

@@ -85,7 +85,15 @@ test("one game per hero through local.js: no refusal, no stall, no violation", {
        loss, so two seats with no deck and no hand can only pass. What this
        still refuses is a game that did not end while either seat held a
        card, which is a livelock rather than a draw. Gravy's leg reaches it:
-       2851 turns, both decks and hands empty. */
+       2851 turns, both decks and hands empty.
+
+       IT READS THE DECK AND THE HAND, NOT THE ARSENAL (v5.38), and that is
+       stated rather than fixed: the ladder's iyslander-azalea-1 ends with
+       both decks and hands empty and an arsenal each holding a card neither
+       seat can use for damage (On the Horizon is a Block; Lace with Frailty
+       is a grant held for an attack that will never come). This check would
+       call that a draw, which it is; a livelock hiding in an arsenal would
+       pass it too. */
     if(!end.over){
       const dry = end.sides.every(sd => !(sd.deck || []).length && !(sd.hand || []).length);
       assert.ok(dry, ai + ": the game never ended (turn " + end.turn + ") and a seat still held cards");

@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.37
+**Current version:** v5.38
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3623 drills** at v5.37.
+This is `node --test "test/*.test.js"` — **3635 drills** at v5.38.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -875,6 +875,17 @@ The arsenal set, opt, a reorder, a hand-to-deck pick, Azalea's cycle and Boulder
 cards only one seat had seen (QUEUE v3 S2). Each names the seat and a count now; a graveyard pick and
 a face-up arsenal card are public and keep their names (`test/hiddenfeed.test.js`). **When a line
 names a card, ask which zone it came from and which it went to: two hidden zones mean a count.**
+
+### THE ATTACK THAT KEEPS THE POINT GOES FIRST (v5.38)
+
+`sparring.offence` ranked attacks on printed power, so a go-again attack sat behind a bigger one that
+spent the action point, and a pure next-attack grant was played with nothing left to take it (QUEUE
+v4 H4). The seat now ranks a point-keeping play first and holds a grant until `judge.grantTakers`
+names an attack its qualifier admits, payable without the grant. `judge.keepsActionPoint` is ONE
+reader mirroring `execute`, and it fixed a latent false positive: an ally in HAND carries its attack
+line's go again in `fx.ga`, and the deploy keeps nothing (`abilityGa`). Gravy 5.3 → 11.3 and Fai
+12.7 → 18.3 a seed, disjoint; both new stalls are genuine draws. **When one reader answers for
+every play, drive the plays it never used to see.**
 
 ### THE ORDER IS HIDDEN, THE COMPOSITION IS NOT (v5.37)
 

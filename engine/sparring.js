@@ -459,6 +459,21 @@ function reaction(g, seat){
 
 function offence(g, seat, o){
   const sd = g.sides[seat];
+  /* ---- A GRANT WAITS FOR AN ATTACK TO TAKE IT (v5.38, QUEUE v4 H4) ---
+     A non-attack whose whole payload is next-attack grants was played
+     whenever it was legal, so Gravy Bones' Pirate-ally grants landed 40
+     times in 162 and Flying High 26 in 56: the attack that would take
+     them was an ally card, or unaffordable, or not there at all. It is
+     held until an attack its qualifier admits is legal now and payable
+     WITHOUT the grant card. `judge.grantTakers` answers which attacks the
+     grant admits, so this file still reads no card text. */
+  const grantOK = x => {
+    const t = J.grantTakers(g, seat, x.uid, x.from);
+    if(!t) return true;
+    const rest = Object.assign({}, sd, {hand: (sd.hand || []).filter(h => h.uid !== x.uid)});
+    return t.some(k => k.from === "board" || k.from === "weapon"
+                    || affordableWithin(rest, {uid: k.uid, cost: k.cost}, o));
+  };
   const from = [];
   (sd.hand || []).forEach(c => from.push({c, from: "hand"}));
   if(sd.arsenal) from.push({c: sd.arsenal, from: "arsenal"});
@@ -531,6 +546,7 @@ function offence(g, seat, o){
     const first = from
       .map(x => ({c: x.c, uid: x.c && x.c.uid, from: x.from}))
       .filter(x => x.c && num(x.c, "power") <= 0 && J.keepsActionPoint(g, seat, x.uid, x.from))
+      .filter(x => grantOK(x))
       .filter(x => affordableWithin(sd, x.c, o))
       .sort((a, b) => num(a.c, "cost") - num(b.c, "cost")
                    || num(a.c, "pitch") - num(b.c, "pitch") || byUid(a, b))
@@ -538,12 +554,21 @@ function offence(g, seat, o){
     if(first) return {t: "play", uid: first.uid, from: first.from};
   }
 
+  /* ---- THE ATTACK THAT KEEPS THE POINT GOES FIRST (v5.38, QUEUE v4 H4)
+     Ranked on printed power alone, a 1-power go-again attack (Golden
+     Tipple, Saltwater Swell) sat behind a bigger attack or an ally deploy
+     that spent the action point, and was stranded: in Gravy Bones' 42
+     games, 231 of 305 plays that spent the last point were made with one
+     in hand. `judge.keepsActionPoint` answers for an attack and a board
+     entry too, so the one that keeps the point sorts first and ties fall
+     back to power, cost, uid. */
   const pick = from
     .map(x => ({c: x.c, uid: x.c && x.c.uid, from: x.from}))
     .concat(allies)
     .filter(x => x.c && num(x.c, "power") > 0)
     .filter(x => x.ally || affordableWithin(sd, x.c, o))
-    .sort((a, b) => num(b.c, "power") - num(a.c, "power")
+    .map(x => Object.assign(x, {kap: J.keepsActionPoint(g, seat, x.uid, x.ally ? "board" : x.from) ? 1 : 0}))
+    .sort((a, b) => (b.kap - a.kap) || num(b.c, "power") - num(a.c, "power")
                  || num(a.c, "cost") - num(b.c, "cost") || byUid(a, b))
     .find(x => legal(g, x.ally ? {t: "activate", uid: x.uid, target: targetFor(g, seat, x.c)}
                                : {t: "play", uid: x.uid, from: x.from,
@@ -607,6 +632,7 @@ function offence(g, seat, o){
   const nonAtk = from
     .map(x => ({c: x.c, uid: x.c && x.c.uid, from: x.from}))
     .filter(x => x.c && num(x.c, "power") <= 0)
+    .filter(x => grantOK(x))
     .filter(x => affordableWithin(sd, x.c, o))
     .sort((a, b) => num(a.c, "cost") - num(b.c, "cost")
                  || num(a.c, "pitch") - num(b.c, "pitch") || byUid(a, b))
