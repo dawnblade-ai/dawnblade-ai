@@ -154,6 +154,21 @@ green; the 3-seed ladder is byte-identical to the CEO's scratch experiment; `boo
 - **The ladder line in CLAUDE.md and FINISH.md that names the policy declining boost** should be
   updated in the same release, so no doc still says the seat never boosts.
 
+**H4. SHIPPED as v5.38 (`fa7b7e0`), CEO-verified 2026-10-24.**
+- 3635 drills, 0 fail, 5 skipped; scenes 107/107.
+- 21 engine script tags and `.nojekyll` are in the pushed commit; CI drills and Pages are green.
+- Gravy Bones (11.3) and Fai (18.3) match the experiment exactly.
+- **The shipped reader is wider than the experiment, and that is measured rather than assumed.** The
+  merge into one `keepsActionPoint` adds an AURA attack carrying a +1{p} counter, which is Cosmo's
+  printed go-again rider, `auraAttackOf().gaWithCounters`.
+  - On the full ladder Enigma reads 11.7 against 8.7 for the experiment and 9.7 for v5.37.
+  - Her own-seat A/B with and without that branch overlaps: [7,5,6] against [6,3,4]. The direction
+    is consistent; the size is unresolved at 3 seeds.
+  - It is a faithful reading of a printed rider, so it stays.
+- v5.38 full ladder: briar 26.0, dash 23.0, dorinthea 20.7, kayo 18.7, fai 18.3, arakni 18.3,
+  viserai 18.0, enigma 11.7, gravy 11.3, bravo 10.3, azalea 8.0, lyath 8.0, blaze 7.3, boltyn 5.7,
+  iyslander 4.0.
+
 **H4. Sequence the go-again chain: the attack that keeps the action point goes first, and a
 next-attack grant waits for an attack to take it.** One release (v5.38). Measured by an investigator on v5.37
 (`0d82fbf`) and re-measured by the CEO in a fresh copy; numbers below are the CEO's. Re-measure in
