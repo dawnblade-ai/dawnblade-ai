@@ -310,6 +310,16 @@ applies to `fa7b7e0`. Ship the RULE, never the gate.
   - Both A/Bs overlapped at 3 seeds (`all-hypotheses.patch` in the investigator's scratchpad), so
     they stay recorded rather than built.
 
+**S8. SHIPPED as v5.40 (`844ee9d`), CEO-verified 2026-10-24.**
+- 3650 drills, 0 fail, 5 skipped; scenes 107/107.
+- 21 engine script tags and `.nojekyll` are in the pushed commit; CI drills and Pages are green.
+- The repro's Bolt of Courage#29 now lands in `banish`.
+- The new self-play fault NO-ZONE reads 0. It read 202 on v5.39: 134 soul banishes, plus 68
+  transcends, a second vanishing-card defect it found. A transcended card now keeps its uid.
+- Ladder: Boltyn 5.3 -> 5.7, nobody else beyond 0.6. The policy, not the gate, is Boltyn's binding
+  constraint (H6).
+- The cost choice is recorded as `soul-banish-cost-auto-picked` (stated).
+
 **S8. A soul card banished as a cost goes to NO zone, and Duty Bound Blitz's gate reads the soul
 instead of the event. ENGINE, ships BEFORE H6 (v5.40).** Found by the Boltyn investigator on v5.39;
 CEO-reproduced with `experiments/S8-soul-repro.js` (`node experiments/S8-soul-repro.js <tree>`).
