@@ -602,6 +602,17 @@ always 1). Both are measured and stated; don't build anything for them.
 18. Equipment "Destroy this:" abilities print the effect, then `The piece shatters — cost
     paid.` The piece is only marked destroyed after `runOps`, so it is live during its own
     effect (latent state). Pay the cost first. `effects.js:~5244`. (feed-a §6)
+19. Deploying an ally prints `<ally>: the weapon's attack — its cost is paid when it swings.`
+    (CEO, 2026-10-24, from the H4 investigation.) It is `parser.js:721`'s noop reason for
+    every `Action - …: Attack` line, and `classifyClause` cannot see the card's type.
+    - Measured over the pool, 26 cards carry it: 10 allies, 13 weapons, Bait (a token aura) and
+      Teklovossen.
+    - It reaches the feed only on an ally DEPLOY, because weapons are equipped, never played, and
+      tokens are minted. That is the 10 allies, for example Riggermortis (Gravy Bones v Dorinthea,
+      seed 0, turn 5).
+    - Fix: one neutral wording true of both, such as `its attack — the cost is paid each time it
+      attacks`. No drill pins the string (`grep "weapon's attack" test/` finds only an unrelated
+      test title). `noopvoice.test.js` holds the voice.
 
 ## RECORD, DON'T BUILD
 
