@@ -257,6 +257,13 @@ RULE, never the gate.
   - Every ally deploy spends the last action point, 40 of them while a board ally could still attack.
   Candidates for H5+ once measured.
 
+**H5. SHIPPED as v5.39 (`10f41e2`), CEO-verified 2026-10-24:** 3640 drills, 0 fail, 5 skipped;
+scenes 107/107; 21 engine script tags and `.nojekyll` in the pushed commit; CI drills and Pages
+green; the full 3-seed ladder is byte-identical to the CEO's re-measure of the gated experiment
+(nobody moves beyond it). v5.39 ladder: briar 26.0, dash 22.7, dorinthea 20.0, kayo 19.3, fai 17.7,
+arakni 17.7, viserai 17.0, iyslander 12.3, gravy 10.7, enigma 10.3, bravo 9.3, azalea 7.3,
+blaze 7.3, lyath 6.7, boltyn 5.3. Stalls: 1 (`gravy-briar-2`, a no-damage draw).
+
 **H5. A non-attack that spends the action point: the biggest printed arcane goes first.** One
 release (v5.39). Measured by an investigator on v5.38 (`fa7b7e0`) and re-measured by the CEO in a
 fresh copy; the numbers below are the CEO's. Re-measure in the real tree before shipping. The
