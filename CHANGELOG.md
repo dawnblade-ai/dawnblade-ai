@@ -1,3 +1,30 @@
+## v5.39 — The AI seat plays its biggest arcane first
+
+**QUEUE v4 H5.** With no attack to make, `sparring.offence` played its non-attacks cheapest first,
+so Iyslander spent her one action point on a 1-arcane Frosting while a 5-arcane Ice Bolt was legal
+in the same hand: 79 of her 153 point-spending plays had a higher-arcane option. The seat now plays
+the non-attack printing the most unconditional arcane first, and ties fall back to cost, then pitch,
+then uid. It asks for the number through `judge.arcaneOf`, which wraps `parser.arcAmount` (the
+reader Blaze's ability already prices with), so `sparring.js` still reads no card text. A gated
+"instead deal 6" is not counted, and a card not in the named zone answers 0.
+
+Measured in the real tree, re-deriving the CEO's numbers exactly:
+
+| | before | after |
+|---|---|---|
+| Iyslander, only her seat on the rule (42 games a side, 3 seeds) | 5 · 1 · 2 of 14 | 6 · 6 · 8 of 14 |
+| Full ladder, Iyslander (630 games, 3 seeds) | 5 · 3 · 4 (4.0) | 9 · 14 · 14 (12.3), disjoint |
+| refusals · violations · stalls | 0 · 0 · 2 | 0 · 0 · 1 |
+
+**No other hero moves outside its interval.** Blaze, the pool's other arcane deck, reads 7.3 a
+seed on both sides, so the rule is not claimed to help him. The stall that left is
+`iyslander-azalea-1`; the one that stays is `gravy-briar-2`, the genuine draw recorded at v5.38.
+
+`test/keycensus.test.js` gains `arcAmount` as a judge-only reader, with its reason.
+`test/arcrank.test.js`, 5 drills; 5 sabotages, 5 bite. The cost tie-break sabotage was SILENT on
+the first pass, because the fixture's cheaper card was also its lower pitch, so the pitch key made
+the same choice; the drill now uses two pitch-1 cards that differ only in cost.
+
 ## v5.38 — The AI seat sequences its go-again chain
 
 **QUEUE v4 H4.** `sparring.offence` ranked attacks on printed power alone, so a go-again attack

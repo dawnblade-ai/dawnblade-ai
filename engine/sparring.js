@@ -634,7 +634,15 @@ function offence(g, seat, o){
     .filter(x => x.c && num(x.c, "power") <= 0)
     .filter(x => grantOK(x))
     .filter(x => affordableWithin(sd, x.c, o))
-    .sort((a, b) => num(a.c, "cost") - num(b.c, "cost")
+    /* THE BIGGEST PRINTED ARCANE FIRST (v5.39, QUEUE v4 H5). Cheapest-first
+       spent the one action point on a 1-arcane Frosting with a 5-arcane Ice
+       Bolt legal in the same hand: 79 of Iyslander's 153 point-spending
+       non-attacks in 42 games had a higher-arcane legal alternative.
+       `judge.arcaneOf` answers the card's unconditional printed arcane, so
+       this file reads no card text; a non-attack that prints none ranks as
+       0, and ties fall back to the cheapest, then pitch, then uid. */
+    .map(x => Object.assign(x, {arc: J.arcaneOf(g, seat, x.uid, x.from)}))
+    .sort((a, b) => (b.arc - a.arc) || num(a.c, "cost") - num(b.c, "cost")
                  || num(a.c, "pitch") - num(b.c, "pitch") || byUid(a, b))
     .find(x => legal(g, {t: "play", uid: x.uid, from: x.from}, seat));
   if(nonAtk) return {t: "play", uid: nonAtk.uid, from: nonAtk.from};

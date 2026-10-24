@@ -342,7 +342,7 @@ test("the one-board reader sets are pinned", {skip}, () => {
     assert.ok(both.includes(n), n + " is demonstrably asked by both boards");
 
   assert.deepEqual(onlyJ.sort(),
-    ["abilityGa", "boostPays", "chiValue", "handFree", "isAtkActionCard", "isDeclaredDefender", "isDR",
+    ["abilityGa", "arcAmount", "boostPays", "chiValue", "handFree", "isAtkActionCard", "isDeclaredDefender", "isDR",
      "printedKw", "qualMatches", "splitCostsAP", "weaponCost"].sort(),
     "a reader judge asks and the trainer does not. TWO LEFT this list at " +
     "v3.99: `tapsToActivate` (the trainer now refuses a tapped hero) and " +
@@ -372,7 +372,12 @@ test("the one-board reader sets are pinned", {skip}, () => {
     "v5.38: `abilityGa` and `qualMatches` ARRIVED, read inside " +
     "`judge.keepsActionPoint` and `judge.grantTakers`, the seam `sparring.js` " +
     "asks instead of reading card text. The trainer asks both through the " +
-    "shared `execute`, and a human sequences their own attacks and grants.");
+    "shared `execute`, and a human sequences their own attacks and grants.\n" +
+    "v5.39: `arcAmount` ARRIVED, read inside `judge.arcaneOf`, the seam " +
+    "`sparring.js` asks to rank its non-attacks by printed arcane without " +
+    "reading card text. The trainer reaches it through the shared bodies that " +
+    "price Blaze's ability (`prompts.js`'s filter, `effects.js`'s charge), and " +
+    "a human chooses which arcane card to play.");
 
   assert.deepEqual(onlyT.sort(),
     ["clean", "defCap", "frostCount", "hasKwNow", "instantAbilityReady",

@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.38
+**Current version:** v5.39
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3635 drills** at v5.38.
+This is `node --test "test/*.test.js"` — **3640 drills** at v5.39.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -875,6 +875,14 @@ The arsenal set, opt, a reorder, a hand-to-deck pick, Azalea's cycle and Boulder
 cards only one seat had seen (QUEUE v3 S2). Each names the seat and a count now; a graveyard pick and
 a face-up arsenal card are public and keep their names (`test/hiddenfeed.test.js`). **When a line
 names a card, ask which zone it came from and which it went to: two hidden zones mean a count.**
+
+### THE BIGGEST PRINTED ARCANE GOES FIRST (v5.39)
+
+With no attack to make, `sparring.offence` played its non-attacks cheapest first, so Iyslander spent
+her action point on a 1-arcane Frosting with a 5-arcane Ice Bolt legal (QUEUE v4 H5). The seat ranks
+non-attacks by unconditional printed arcane through `judge.arcaneOf` (wrapping `parser.arcAmount`),
+then cost, pitch and uid. Iyslander 4.0 → 12.3 a seed, disjoint; Blaze does not move. **A tie-break
+drill needs a fixture where the key under test is the ONLY key that separates the cards.**
 
 ### THE ATTACK THAT KEEPS THE POINT GOES FIRST (v5.38)
 

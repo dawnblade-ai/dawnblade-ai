@@ -1867,6 +1867,19 @@ const boostShare = (g, seat) => {
   if(!deck.length) return 0;
   return deck.filter(c => PR.boostPays(c)).length / deck.length;
 };
+/* ---- HOW MUCH ARCANE DAMAGE DOES THIS CARD PRINT? (v5.39) --------------
+
+   `keepsActionPoint`'s sibling, for `sparring.js`, which reads no card text
+   (QUEUE v4 H5). `parser.arcAmount` is the one reader: the card's
+   UNCONDITIONAL arcane ops (the same number Blaze's ability charges as its
+   price), so a gated "instead deal 6" is not counted and an X is not
+   guessed. A card the seat does not hold in that zone answers 0. */
+const arcaneOf = (g, seat, uid, from) => {
+  const sd = at(g, seat);
+  const c = from === "arsenal" ? (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null)
+          : from === "hand" ? (sd.hand || []).find(x => x && x.uid === uid) : null;
+  return c ? PR.arcAmount(c) : 0;
+};
 const targetOf = (g, seat, spec) => {
   const def = P.other(seat);
   if(spec == null || spec === "hero") return {kind: "hero", side: def, uid: null};
@@ -3846,7 +3859,7 @@ function drawTo(g, i){
 }
 
 return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, boostShare, grantTakers,
+        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, boostShare, grantTakers, arcaneOf,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */
