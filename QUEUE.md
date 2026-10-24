@@ -154,8 +154,95 @@ green; the 3-seed ladder is byte-identical to the CEO's scratch experiment; `boo
 - **The ladder line in CLAUDE.md and FINISH.md that names the policy declining boost** should be
   updated in the same release, so no doc still says the seat never boosts.
 
-**H4+.** One gap at a time. Next candidates by the v5.36 ladder: Gravy Bones (5.0), Azalea (7.0),
-Boltyn and Iyslander (8.3).
+**H4. Sequence the go-again chain: the attack that keeps the action point goes first, and a
+next-attack grant waits for an attack to take it.** One release (v5.38). Measured by an investigator on v5.37
+(`0d82fbf`) and re-measured by the CEO in a fresh copy; numbers below are the CEO's. Re-measure in
+the real tree before shipping. The experiment, gated on `SPX`, is
+`$S/h4/H4-gravy-experiment.patch` (scratchpad); ship the RULE, never the gate.
+- **The gap, half 1 (ranking).** `sparring.offence` ranks attacks on printed power alone, so a
+  go-again attack (Golden Tipple, Saltwater Swell, 1-3 power) sits behind a bigger attack or an ally
+  deploy that spends the action point, and is then stranded. In Gravy Bones' 42 games, 231 of 305
+  plays that spent the last action point were made while an affordable attack that keeps its own
+  point was in hand (Golden Tipple stranded 229 times, Saltwater Swell 139).
+- **The gap, half 2 (grants with no taker).** H2's "go-again non-attack first" step asks only
+  whether any card with power exists, so a pure next-attack grant is played when no attack can take
+  it: an ally card in hand or an unaffordable attack counts. Pirate-ally grants (Avast Ye!, Loot the
+  Arsenal, Loot the Hold, Yo Ho Ho!): 162 played, 40 used. Flying High: 56 played, 26 used. With the
+  rule: 69 played / 61 used, and 46 / 46.
+- **The rule.**
+  - Among the attacks the seat can make, the one that keeps the action point goes first. That means
+    its own unconditional go again, an arsenal stamp, or a waiting `gaNext` / `gaNextQ` grant it
+    matches.
+  - Ties fall back to the existing order: power, then cost, then uid.
+  - A non-attack whose WHOLE payload is next-attack grants (`buffNext` / `gaNext` ops, no conditions,
+    no optional cost) is held until an attack the grant's qualifier admits is legal now and
+    affordable without the grant card.
+- **Two judge readers, and one may be the existing one.**
+  - The experiment adds `judge.attackKeepsActionPoint(g, seat, uid, from)` beside H2's
+    `keepsActionPoint`, plus `judge.grantTakers(g, seat, uid, from)` (null unless a pure grant; else
+    the legal attacks its qualifier admits, as `{uid, from, cost}`, through `qualMatches`).
+  - **Prefer ONE reader of "does this play keep the action point"**: extend `keepsActionPoint` to
+    answer for attacks and board allies too, rather than shipping a sibling with a near-identical
+    name (v3.61, two records of one fact). If the merge moves H2's non-attack answers (a non-attack
+    can match a `gaNextQ`, e.g. Mage Master Boots), measure it; if it moves the ladder, keep two
+    readers and say why in the header.
+  - **Either way, fix the latent defect the investigator found in `keepsActionPoint`.** It answers
+    TRUE for Limpit, Hop-a-long and Cutty Shark in hand, because `fx.ga` carries the go again from
+    the ally's ATTACK line, while `execute` grants a deploy nothing (`abilityGa`). Repro: seed
+    `gravy-arakni-0`, turn 9; `keepsActionPoint(Limpit, "hand")` is true, and the deploy takes ap
+    1 -> 0. It is latent today only because H2's caller filters to power <= 0. Pin it.
+- **Measured** (3 seeds; wins a seed):
+
+  | | v5.37 | with the rule |
+  |---|---|---|
+  | Gravy Bones, own seat only (`tourney.js gravy '' 3`, of 14) | 3 · 4 · 2 | 6 · 6 · 8 (two runs byte-identical) |
+  | Gravy Bones, full ladder, rule on every seat | 5.3 [4,6] | 11.3 [11,12], disjoint |
+  | Fai, full ladder | 12.7 [11,15] | 18.3 [18,19], disjoint |
+  | Bravo · Lyath · Iyslander, full ladder | 13.3 · 10.7 · 6.7 | 10.7 · 8.0 · 4.0, none disjoint (zero-sum) |
+  | refusals · violations · stalls | 0 · 0 · 1 | 0 · 0 · 2 |
+  | `npm test` (rule gated) | | 3618 pass, 0 fail, 5 skipped |
+
+- **The two stalls are draws in which no seat can deal damage, CEO-checked, and both seats are not
+  empty-handed in the strict sense.**
+  - `iyslander-azalea-1`: both decks and hands are empty and both arsenals hold one card. Iyslander's
+    is On the Horizon (a Block). Azalea's is Lace with Frailty, which is LEGAL, but it is a grant with
+    no attack to take it, so the rule holds it.
+  - `gravy-briar-2`: Gravy's Cutty Shark, Quick Clip costs 1 to attack and he cannot raise it. Briar's
+    Scorpio needs a Lightning attack on the chain.
+  - CR 4.5.3 has no deck-out loss. `aiseat.test.js`'s draw check reads deck and hand only (not the
+    arsenal), so it would accept the first; say so in that drill's comment, or tighten the drill to
+    "no seat has a legal play that can deal damage" if that is cheap.
+- **Drills.**
+  - The reader(s):
+    - own go again keeps the point;
+    - an ally deploy does not;
+    - a board ally whose attack line prints go again does;
+    - a waiting bare `gaNext` does;
+    - a `gaNextQ` entry matches or misses by its qualifier;
+    - a conditional go again does not.
+  - `grantTakers`:
+    - null for a card that prints anything besides grants;
+    - never lists the grant itself;
+    - respects the qualifier: a Pirate-ally grant with only a non-Pirate attack lists nothing.
+  - The policy:
+    - holds a pure grant with no taker and plays it with one;
+    - ranks a 1-power go-again attack before a 5-power one without go again.
+  - Sabotage each: drop the `kap` key, drop `grantOK`, count the grant card as its own taker, and
+    restore the ally false positive.
+  - `keycensus.test.js` gains `abilityGa` and `qualMatches` as judge-only readers, with the reason.
+- **Recorded, not built (feed text, for the next feed batch).** Deploying an ally prints "<ally>:
+  the weapon's attack — its cost is paid when it swings". This is `parser.js:721`'s noop reason for
+  every `Action - …: Attack` line, so an ally's attack line is called a weapon's. Repro: Gravy Bones v
+  Dorinthea, seed 0, turn 5, "Riggermortis: the weapon's attack — …". The rules are right; only the
+  line is wrong.
+- **Also seen, not built:**
+  - Golden Tipple's optional discard is always declined.
+  - Offence never proposes a graveyard play (watery grave).
+  - Every ally deploy spends the last action point, 40 of them while a board ally could still attack.
+  Candidates for H5+ once measured.
+
+**H5+.** One gap at a time, one investigator at a time. Waiting with unmeasured experiments in the
+scratchpad, in order: Boltyn (6.3), Azalea (6.7), Iyslander (6.7), Blaze (8.3).
 
 ## v3 — STAGE INCREMENT 1 INPUTS (CEO, 2026-10-17)
 
