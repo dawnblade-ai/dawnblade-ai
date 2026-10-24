@@ -1,0 +1,186 @@
+diff --git a/engine/judge.js b/engine/judge.js
+index 15169d5..219c005 100644
+--- a/engine/judge.js
++++ b/engine/judge.js
+@@ -1782,6 +1782,92 @@ const boostShare = (g, seat) => {
+   if(!deck.length) return 0;
+   return deck.filter(c => PR.boostPays(c)).length / deck.length;
+ };
++/* ---- WOULD THIS ATTACK, MADE NOW, KEEP THE ACTION POINT? (H4) --------
++
++   `keepsActionPoint`'s sibling, for `sparring.js`, which reads no card
++   text. It answers for an ATTACK the seat could make right now, from hand,
++   arsenal or an attacking board entry, with the same three sources of go
++   again `execute` collects at the attack's declaration:
++
++     the card's own UNCONDITIONAL go again — `fx.ga`, except where it sits
++       on an activated ability's line (`abilityGa`: an ally's attack line
++       is not its play, and `execute` grants the deploy nothing), or, for
++       a board ally's attack, `allyAttack(...).ga`, its attack line's;
++     a bare waiting `gaNext`, which the next attack takes whatever it is;
++     a qualified `gaNextQ` entry the attack matches (`qualMatches`, the
++       one matcher `takeGaNext` uses, with the route as the caller's
++       answer).
++
++   A card whose play puts it in the arena (an ally deploy) is not an
++   attack and answers false, as does anything the seat does not hold. A
++   conditional go again (High Tide) is deliberately not counted. */
++const attackKeepsActionPoint = (g, seat, uid, from) => {
++  const sd = at(g, seat);
++  let c = null, route = from;
++  if(from === "board"){
++    const b = (sd.board || []).find(x => x && x.uid === uid);
++    const aa = b && PR.allyAttack(b.card);
++    if(!aa) return false;
++    c = b.card; route = "ally";
++    if(aa.ga) return true;
++  } else {
++    c = from === "arsenal" ? (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null)
++      : from === "hand" ? (sd.hand || []).find(x => x && x.uid === uid) : null;
++    if(!c || !TY.isAttack(c) || TY.destination(c) === "arena") return false;
++    if(!PR.abilityGa(c) && PR.fxParse(c).ga === true) return true;
++    if(c._arsGA && c._upTurn === g.turn) return true;
++  }
++  if(sd.gaNext) return true;
++  const qc = {from: route, atk: true};
++  return (sd.gaNextQ || []).some(x => x && x.q && PR.qualMatches(x.q, c, qc));
++};
++/* ---- WHICH ATTACKS COULD TAKE THIS GRANT THIS TURN? (H4) -------------
++
++   `keepsActionPoint`'s sibling, for `sparring.js`, which reads no card
++   text. A non-attack whose WHOLE payload is a next-attack grant — the
++   `buffNext` / `gaNext` ops, each with its printed qualifier ("your next
++   Pirate ally attack this turn gets go again") — does nothing unless an
++   attack the qualifier admits follows it this turn.
++
++   Answers `null` for a card that is not such a pure grant (it prints
++   anything else, or a condition): this reader only speaks about a grant.
++   Otherwise the list of attacks LEGAL RIGHT NOW that the grant's
++   qualifier admits — an attack card from hand or arsenal (never the
++   grant itself), an attacking board entry, a weapon swing — each as
++   `{uid, from, cost}` with the printed cost, so the caller can ask its
++   own affordability question. Matched through `qualMatches`, the one
++   matcher `execute` spends the grant with, route as the caller's answer. */
++const GRANT_Q = {buffNext: 2, gaNext: 1};
++const grantTakers = (g, seat, uid, from) => {
++  const sd = at(g, seat);
++  const c = from === "arsenal" ? (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null)
++          : from === "hand" ? (sd.hand || []).find(x => x && x.uid === uid) : null;
++  if(!c) return null;
++  const fx = PR.fxParse(c);
++  const ops = (fx.ops || []).filter(o => o && o[0] !== "noop");
++  if(!ops.length || (fx.conds || []).length || fx.optCost) return null;
++  if(!ops.every(o => GRANT_Q[o[0]] != null)) return null;
++  const qs = ops.map(o => o[GRANT_Q[o[0]]] || null);
++  const takes = (card, route) => qs.some(q => !q || PR.qualMatches(q, card, {from: route, atk: true}));
++  const out = [];
++  const cards = (sd.hand || []).map(h => ({h, f: "hand"}))
++    .concat(sd.arsenal ? [{h: sd.arsenal, f: "arsenal"}] : []);
++  for(const {h, f} of cards)
++    if(h && h.uid !== uid && TY.isAttack(h) && takes(h, f)
++       && legal(g, {t: "play", uid: h.uid, from: f, target: "hero"}, seat) == null)
++      out.push({uid: h.uid, from: f, cost: +h.cost || 0});
++  for(const b of sd.board || []){
++    const ba = b && boardAttackOf(g, seat, b.uid);
++    if(ba && takes(b.card, ba.kind)
++       && legal(g, {t: "activate", uid: b.uid, target: "hero"}, seat) == null)
++      out.push({uid: b.uid, from: "board", cost: ba.cost || 0});
++  }
++  for(const w of sd.gear || [])
++    if(w && PR.isWeapon(w) && takes(w, "weapon")
++       && legal(g, {t: "activate", uid: w.uid}, seat) == null)
++      out.push({uid: w.uid, from: "weapon", cost: +w.cost || 0});
++  return out;
++};
+ const targetOf = (g, seat, spec) => {
+   const def = P.other(seat);
+   if(spec == null || spec === "hero") return {kind: "hero", side: def, uid: null};
+@@ -3761,7 +3847,7 @@ function drawTo(g, i){
+ }
+ 
+ return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
+-        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, boostShare,
++        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, boostShare, attackKeepsActionPoint, grantTakers,
+         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
+         handFree: PR.handFree,
+         /* the card semantics seam (v2.77) */
+diff --git a/engine/sparring.js b/engine/sparring.js
+index ac89f06..11028e3 100644
+--- a/engine/sparring.js
++++ b/engine/sparring.js
+@@ -459,6 +459,21 @@ function reaction(g, seat){
+ 
+ function offence(g, seat, o){
+   const sd = g.sides[seat];
++  /* H4 EXPERIMENT, gated on this seat's hero key (SPX). Two halves of one
++     rule: (a) an attack that keeps the action point is made before one
++     that spends it, and (b) a pure next-attack grant is held until an
++     attack it would apply to, and that this seat would pay for, is there.
++     `judge.attackKeepsActionPoint` and `judge.grantTakers` answer both, so
++     this file still reads no card text. */
++  const on = !!(typeof process !== "undefined" && process.env && process.env.SPX
++          && process.env.SPX.split(",").includes(sd.heroKey));
++  const grantOK = x => {
++    if(!on) return true;
++    const t = J.grantTakers(g, seat, x.uid, x.from);
++    if(!t) return true;
++    const rest = Object.assign({}, sd, {hand: (sd.hand || []).filter(h => h.uid !== x.uid)});
++    return t.some(k => k.from === "board" || k.from === "weapon" || affordableWithin(rest, {uid: k.uid, cost: k.cost}, o));
++  };
+   const from = [];
+   (sd.hand || []).forEach(c => from.push({c, from: "hand"}));
+   if(sd.arsenal) from.push({c: sd.arsenal, from: "arsenal"});
+@@ -531,6 +546,7 @@ function offence(g, seat, o){
+     const first = from
+       .map(x => ({c: x.c, uid: x.c && x.c.uid, from: x.from}))
+       .filter(x => x.c && num(x.c, "power") <= 0 && J.keepsActionPoint(g, seat, x.uid, x.from))
++      .filter(x => grantOK(x))
+       .filter(x => affordableWithin(sd, x.c, o))
+       .sort((a, b) => num(a.c, "cost") - num(b.c, "cost")
+                    || num(a.c, "pitch") - num(b.c, "pitch") || byUid(a, b))
+@@ -543,7 +559,8 @@ function offence(g, seat, o){
+     .concat(allies)
+     .filter(x => x.c && num(x.c, "power") > 0)
+     .filter(x => x.ally || affordableWithin(sd, x.c, o))
+-    .sort((a, b) => num(b.c, "power") - num(a.c, "power")
++    .map(x => Object.assign(x, {kap: on && J.attackKeepsActionPoint(g, seat, x.uid, x.ally ? "board" : x.from) ? 1 : 0}))
++    .sort((a, b) => (b.kap - a.kap) || num(b.c, "power") - num(a.c, "power")
+                  || num(a.c, "cost") - num(b.c, "cost") || byUid(a, b))
+     .find(x => legal(g, x.ally ? {t: "activate", uid: x.uid, target: targetFor(g, seat, x.c)}
+                                : {t: "play", uid: x.uid, from: x.from,
+@@ -607,6 +624,7 @@ function offence(g, seat, o){
+   const nonAtk = from
+     .map(x => ({c: x.c, uid: x.c && x.c.uid, from: x.from}))
+     .filter(x => x.c && num(x.c, "power") <= 0)
++    .filter(x => grantOK(x))
+     .filter(x => affordableWithin(sd, x.c, o))
+     .sort((a, b) => num(a.c, "cost") - num(b.c, "cost")
+                  || num(a.c, "pitch") - num(b.c, "pitch") || byUid(a, b))
+diff --git a/test/keycensus.test.js b/test/keycensus.test.js
+index 1a15b6a..21c225c 100644
+--- a/test/keycensus.test.js
++++ b/test/keycensus.test.js
+@@ -342,8 +342,8 @@ test("the one-board reader sets are pinned", {skip}, () => {
+     assert.ok(both.includes(n), n + " is demonstrably asked by both boards");
+ 
+   assert.deepEqual(onlyJ.sort(),
+-    ["boostPays", "chiValue", "handFree", "isAtkActionCard", "isDeclaredDefender", "isDR",
+-     "printedKw", "splitCostsAP", "weaponCost"].sort(),
++    ["abilityGa", "boostPays", "chiValue", "handFree", "isAtkActionCard", "isDeclaredDefender", "isDR",
++     "printedKw", "qualMatches", "splitCostsAP", "weaponCost"].sort(),
+     "a reader judge asks and the trainer does not. TWO LEFT this list at " +
+     "v3.99: `tapsToActivate` (the trainer now refuses a tapped hero) and " +
+     "`costCtx` (it now threads the game's half of every cost). Adding one is " +
+@@ -368,7 +368,11 @@ test("the one-board reader sets are pinned", {skip}, () => {
+     "v5.37: `boostPays` ARRIVED, and the job is judge's: it is read inside " +
+     "`judge.boostShare`, the seam `sparring.js` asks instead of reading card " +
+     "text (`chiValue`'s reason). The trainer's banish asks it through the " +
+-    "shared `execute`, and a human decides their own boost.");
++    "shared `execute`, and a human decides their own boost.\n" +
++    "H4 (gravy): `abilityGa` and `qualMatches` ARRIVED, read inside " +
++    "`judge.attackKeepsActionPoint` and `judge.grantTakers` for the same " +
++    "reason: they are the seam `sparring.js` asks instead of reading card text, " +
++    "and a human sequences their own attacks and grants.");
+ 
+   assert.deepEqual(onlyT.sort(),
+     ["clean", "defCap", "frostCount", "hasKwNow", "instantAbilityReady",

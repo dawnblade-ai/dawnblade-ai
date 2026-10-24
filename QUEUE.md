@@ -158,7 +158,8 @@ green; the 3-seed ladder is byte-identical to the CEO's scratch experiment; `boo
 next-attack grant waits for an attack to take it.** One release (v5.38). Measured by an investigator on v5.37
 (`0d82fbf`) and re-measured by the CEO in a fresh copy; numbers below are the CEO's. Re-measure in
 the real tree before shipping. The experiment, gated on `SPX`, is
-`$S/h4/H4-gravy-experiment.patch` (scratchpad); ship the RULE, never the gate.
+`experiments/H4-gravy-experiment.patch` on this branch (applies cleanly to `0d82fbf`); ship the
+RULE, never the gate.
 - **The gap, half 1 (ranking).** `sparring.offence` ranks attacks on printed power alone, so a
   go-again attack (Golden Tipple, Saltwater Swell, 1-3 power) sits behind a bigger attack or an ally
   deploy that spends the action point, and is then stranded. In Gravy Bones' 42 games, 231 of 305
