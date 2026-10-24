@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.39
+**Current version:** v5.40
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3640 drills** at v5.39.
+This is `node --test "test/*.test.js"` — **3650 drills** at v5.40.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -875,6 +875,15 @@ The arsenal set, opt, a reorder, a hand-to-deck pick, Azalea's cycle and Boulder
 cards only one seat had seen (QUEUE v3 S2). Each names the seat and a count now; a graveyard pick and
 a face-up arsenal card are public and keep their names (`test/hiddenfeed.test.js`). **When a line
 names a card, ask which zone it came from and which it went to: two hidden zones mean a count.**
+
+### A SOUL BANISH IS A BANISH, AND A SOUL PUT IS AN EVENT (v5.40)
+
+Boltyn's soul cost and `soulSpend` sliced cards off the soul into no zone; `banishFromSoul` is the
+one body and they land in `banish` (QUEUE v4 S8). Duty Bound Blitz's gate read the soul's contents,
+so a yellow charged and banished shut it; `hist.soulPut` is the event, written by every soul writer
+through `parser.soulPutNote`. `tools/selfplay.js`'s `NO-ZONE` fault reports a card that leaves every
+zone, and found a transcended card changing uid (it keeps it now). **A card in no zone is invisible
+to a census: compare consecutive states.**
 
 ### THE BIGGEST PRINTED ARCANE GOES FIRST (v5.39)
 

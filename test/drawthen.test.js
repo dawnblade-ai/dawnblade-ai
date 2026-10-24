@@ -190,8 +190,9 @@ test("DRIVEN: Rising Sun's transcend comes AFTER the put-back — the Chi is not
              deck: [van("d1", 3)], hist: Object.assign({}, S.makeSide({}).hist, {blue: 1})});
   R({t: "play", uid: "rs", from: "hand"}, 0);
   passTo(() => false);
-  const chi = n.sides[0].hand.find(c => /^chi/.test(String(c.uid)));
+  const chi = n.sides[0].hand.find(c => c.name === "Inner Chi");
   assert.ok(chi, "it transcended");
+  assert.equal(chi.uid, "rs", "the flipped card keeps its uid (v5.40)");
   assert.equal(n.prompt.cards.some(c => c.uid === chi.uid), false, "the Chi it made afterwards is not offered");
   assert.deepEqual(n.prompt.cards.map(c => c.uid).sort(), ["d1", "keep"]);
   pick("keep");

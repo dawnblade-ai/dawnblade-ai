@@ -175,6 +175,19 @@ function makeEffects(ctx){
      it instead of rediscovering it. Matching is by UID rather than by
      reference: a card that has been through a spread is a different
      object with the same identity, and the census works by uid. */
+  /* A SOUL BANISH GOES TO THE BANISHED ZONE (v5.40). Boltyn's ability and
+     Radiant Touch pay "banish a card from your soul" and the card was
+     sliced off the soul into NO zone — invisible to invariants.js, which
+     catches a card in two zones and not one in none. One body for every
+     soul cost, so the next one inherits the destination. Which card is
+     the engine's choice (the front, the card most recently put there):
+     `soul-banish-cost-auto-picked` in tools/approx.js. */
+  const banishFromSoul = (n, k) => {
+    const taken = (act(n).soul || []).slice(0, k);
+    actMut(n).soul = act(n).soul.slice(k);
+    actMut(n).banish = [...taken, ...(act(n).banish || [])];
+    return n;
+  };
   const liftSelf = (n, pc) => {
     actMut(n).grave = act(n).grave.filter(x => x.uid !== pc.uid);
     n.chainCards = (n.chainCards || []).filter(e => e.card.uid !== pc.uid);
@@ -1868,7 +1881,7 @@ function makeEffects(ctx){
         else n = L(n, `${srcName}: piercing ${v}, but ${sv(act(n), "have")} no attack in flight.`);
       }
       else if(k==="soulSpend"){
-        if((act(n).soul||[]).length >= v){ actMut(n).soul = act(n).soul.slice(v); n = L(n,`${v} soul spent.`); n = runOps(n, op[2]||[], srcName); }
+        if((act(n).soul||[]).length >= v){ n = banishFromSoul(n, v); n = L(n,`${v} banished from the soul.`); n = runOps(n, op[2]||[], srcName); }
         else n = L(n,`Needs ${v} soul — ${sv(act(n), "have")} ${(act(n).soul||[]).length}.`);
       }
       else if(k==="rune"){ n = mkRune(n, v); n=L(n,`+${v} Runechant${v>1?"s":""} — ${runeCount(act(n))} on the board.`); }
@@ -3393,7 +3406,7 @@ function makeEffects(ctx){
         if((act(n).soul||[]).length < _sc)
           return L(n, `${card.name} — ${act(n).name}: ${(act(n).soul||[]).length} in the soul, and it costs ${_sc}. Nothing happens.`);
         else {
-          actMut(n).soul = act(n).soul.slice(_sc);
+          n = banishFromSoul(n, _sc);
           n = L(n, `${act(n).name}: ${_sc} banished from the soul — the cost is paid.`);
         }
       } }
@@ -3827,10 +3840,11 @@ function makeEffects(ctx){
         const picked = act(n).hand.find(c2 => c2 && c2.uid === cu);
         if(!picked) continue;
         chargedWay.push({pitch: picked.pitch, ty: picked.ty || []});
-        /* `_soulT` — WHEN it entered the soul (v4.90), which "a yellow card
-           has been put into your soul THIS TURN" asks. Every writer that
-           adds to a soul stamps it; test/playif.test.js censuses them. */
-        actMut(n).soul = [{...picked, _soulT: n.turn}, ...act(n).soul];
+        /* "a yellow card has been put into your soul THIS TURN" is an
+           EVENT (v5.40): every writer that adds to a soul records it in
+           `hist` through `soulPutNote`; test/playif.test.js censuses them. */
+        actMut(n).soul = [picked, ...act(n).soul];
+        actMut(n).hist = P.soulPutNote(act(n).hist, [picked]);
         actMut(n).hand = act(n).hand.filter(c2 => c2.uid !== picked.uid);
         n = creditCharge(n, picked);
       }
@@ -5361,7 +5375,13 @@ function makeEffects(ctx){
       if(n._transcended){
         delete n._transcended;
         const chi = resolveEntry(db, {name:"Inner Chi", p:0, code:null, q:1});
-        const chiUid = "chi" + tokSeq();
+        /* THE FLIPPED CARD IS THE SAME CARD (v5.40). Its back face is
+           Inner Chi (the database prints Inner Chi as the `_BACK` of each
+           transcend printing, v4.54), so it keeps its uid; a fresh one made
+           the card vanish under its own identity and reappear under another,
+           which the self-play NO-ZONE fault reads as a card lost. A uid-less
+           fixture still gets a minted one. */
+        const chiUid = card.uid != null ? card.uid : "chi" + tokSeq();
         actMut(n).hand = [...act(n).hand, {...chi, uid: chiUid}];
         actMut(n).hist = {...act(n).hist, trans:(act(n).hist.trans||0)+1};
         n = L(n, `${card.name} transcends — it flips to Inner Chi and returns to ${sp(act(n))} hand.`);
@@ -8180,7 +8200,8 @@ function makeEffects(ctx){
        loudest error, and ours rather than a caught one. */
     if(n._soulSelf){ delete n._soulSelf;
       if(total>0){ n = liftSelf(n, pc);
-        actMut(n).soul = [...act(n).soul, {...pc, _soulT: n.turn}]; n = L(n, `${pc.name} ascends to the soul.`); }
+        actMut(n).soul = [...act(n).soul, pc]; actMut(n).hist = P.soulPutNote(act(n).hist, [pc]);
+        n = L(n, `${pc.name} ascends to the soul.`); }
     }
     n.featured = {card:{name:pc.name,img:pc.img,dbImg:pc.dbImg,pitch:0}, chip:`LINK ${n.chain.length} — ${total} DMG`};
     if(n._gaGrant){ n.pend = {...n.pend, ga:true}; delete n._gaGrant; }
@@ -9870,11 +9891,13 @@ function playIfOk(game, card){
   const sd = ((game && game.sides) || [])[i] || {}, b = ((game && game.builds) || [])[i] || {};
   if(pif.kind === "pitchPow")   return (sd.pitch || []).some(c => c && P.zonePow(c, b) >= pif.n);
   if(pif.kind === "discardPow") return discardedPowThisTurn(game, pif.n);
-  /* "…has been put into your soul THIS TURN" — the trainer's copy asked
-     whether ANY card of the colour was in the soul, so one charged on an
-     earlier turn opened the gate for the rest of the game. `_soulT` is the
-     turn it entered. */
-  if(pif.kind === "soulPitch")  return (sd.soul || []).some(c => c && c.pitch === pif.pitch && c._soulT === game.turn);
+  /* "…has been put into your soul THIS TURN" — an EVENT, not the soul's
+     contents (v5.40). The trainer's copy asked whether ANY card of the
+     colour was in the soul, so one charged on an earlier turn opened the
+     gate for the rest of the game; v4.90's turn stamp asked whether one
+     put in this turn was STILL there, so banishing it to Boltyn's ability
+     shut the gate. `hist.soulPut` is the event, cleared at CR 4.4.4. */
+  if(pif.kind === "soulPitch")  return P.soulPutThisTurn(sd, pif.pitch);
   /* `unreadable`, and any kind nobody answered: inert, never free (v2.04,
      v4.89's `activateIfOk` one gate over) */
   return false;

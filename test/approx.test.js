@@ -270,7 +270,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 51 -> 52 AT v5.24: `end-phase-unless-floating-only`. */
   /* 52 -> 53 AT v5.27: `attack-power-fixed-at-declaration`. */
   /* 53 -> 54 AT v5.30: `look-named-in-shared-feed`. */
-  assert.equal(Object.keys(APPROX).length, 54, "record count moved");
+  /* 54 -> 55 AT v5.40: `soul-banish-cost-auto-picked`. */
+  assert.equal(Object.keys(APPROX).length, 55, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -322,7 +323,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 22 -> 23 AT v5.27: `attack-power-fixed-at-declaration`, QUEUE item 13,
      recorded because no CR quote about an attack-proxy's power is sourced here. */
   /* 23 -> 24 AT v5.30: `look-named-in-shared-feed`, QUEUE item 15. */
-  assert.equal(n("stated"), 24, "stated count moved");
+  /* 24 -> 25 AT v5.40: `soul-banish-cost-auto-picked`, QUEUE v4 S8. */
+  assert.equal(n("stated"), 25, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -797,6 +799,23 @@ probe("look-named-in-shared-feed", () => {
   assert.match(feed, /Hidden Probe/,
     "the looked-at card is no longer named in the shared feed — the record must move");
   assert.ok(fx, "and Compass parses");
+});
+
+probe("soul-banish-cost-auto-picked", () => {
+  /* DRIVEN: two cards in the soul and Boltyn's ability; the front one goes,
+     nothing asks, and it lands in the banished zone. */
+  const W = require("./helpers/extract.js").loadData();
+  const b = require("../engine/build.js").buildSide(W.HEROES.find(x => x.k === "boltyn"),
+    require("../engine/game.js").parseDeck(W.DECKS.boltyn), H.db(), {},
+    require("../engine/rng.js").make("approx-soul"), {n: 0}).b;
+  const mk = (uid, p) => ({uid, name: "Soul " + uid, pitch: p, tt: "Light Action", ty: ["Light", "Action"], tx: "", kw: []});
+  const atk = Object.assign({}, H.card("Brutal Assault", 1), {uid: "sa"});
+  const g = H.state({hand: [atk], res: 9, ap: 1, soul: [mk("s1", 2), mk("s2", 1)]}, {hp: 20},
+                    {actor: 0, turnPlayer: 0, turn: 3, builds: [b, {}]});
+  const n = H.execute(H.execute(g, atk, "hand", 0, {}), b.HPOW, "hero", 0, {});
+  assert.deepEqual(n.sides[0].soul.map(c => c.uid), ["s2"], "the FRONT card was banished — the record must move");
+  assert.ok(n.sides[0].banish.some(c => c.uid === "s1"), "into the banished zone");
+  assert.ok(!n.pending && !n.prompt && !(n.promptQ || []).length, "and nothing asked which");
 });
 
 probe("end-phase-unless-floating-only", () => {

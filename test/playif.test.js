@@ -88,37 +88,48 @@ test("Duty Bound Blitz asks for a yellow card put into the soul THIS TURN", {ski
   const yel = {...H.card("Raging Onslaught", 2), uid: "s1"};
   assert.equal(yel.pitch, 2, "fixture: a yellow card");
   assert.match(String(playWhy(holding(db))), /no yellow card has been put into your soul this turn/);
-  assert.equal(playWhy(holding(db, {soul: [{...yel, _soulT: 5}]})), null, "put in this turn opens it");
-  /* THE HALF THE TRAINER'S COPY DROPPED: one put in on an earlier turn */
-  assert.match(String(playWhy(holding(db, {soul: [{...yel, _soulT: 3}]}))), /can't be played/,
+  /* v5.40: the gate asks the EVENT (`hist.soulPut`), not the soul's contents */
+  const S = require("../engine/sides");
+  const put = pitches => ({...S.freshHist(), soulPut: pitches});
+  assert.equal(playWhy(holding(db, {soul: [yel], hist: put([2])})), null, "put in this turn opens it");
+  /* THE HALF THE TRAINER'S COPY DROPPED: a yellow in the soul from an earlier turn */
+  assert.match(String(playWhy(holding(db, {soul: [yel], hist: put([])}))), /can't be played/,
     "a yellow card charged on an EARLIER turn opened the gate — 'this turn' was dropped");
+  /* THE HALF v4.90's STAMP DROPPED: put in this turn and banished since */
+  assert.equal(playWhy(holding(db, {soul: [], hist: put([2])})), null,
+    "a yellow put in this turn and banished since shut the gate — it read the soul, not the event");
   /* and the colour is the printed one */
-  const red = {...H.card("Raging Onslaught", 1), uid: "s2"};
-  assert.match(String(playWhy(holding(db, {soul: [{...red, _soulT: 5}]}))), /can't be played/);
+  assert.match(String(playWhy(holding(db, {soul: [], hist: put([1])}))), /can't be played/);
 });
 
-test("every writer that ADDS to a soul stamps the turn", {skip}, () => {
+test("every writer that ADDS to a soul records the event", {skip}, () => {
   H.db();
   /* the PICK route — Halo of Illumination, Roaring Beam's charge */
   const g = H.state({hand: [{...H.card("Raging Onslaught", 2), uid: "h1"}], soul: []}, {}, {turn: 7, actor: 0});
   const moved = PM.moveCards(g, 0, "hand", "soul", [g.sides[0].hand[0]]);
-  assert.equal(moved.sides[0].soul[0]._soulT, 7, "a pick into the soul is not stamped");
-  /* a pick anywhere else is untouched */
+  assert.deepEqual(moved.sides[0].hist.soulPut, [2], "a pick into the soul is not recorded");
+  /* a pick anywhere else records nothing */
   const elsewhere = PM.moveCards(g, 0, "hand", "grave", [g.sides[0].hand[0]]);
-  assert.equal(elsewhere.sides[0].grave[0]._soulT, undefined);
+  assert.deepEqual(elsewhere.sides[0].hist.soulPut || [], []);
 
   /* THE SOURCE CENSUS: every assignment in the engine that ADDS a card to
-     a soul carries the stamp. Removals (slice/filter) are not writers. */
+     a soul records it through `soulPutNote` within the next line. Removals
+     (slice/filter) are not writers. */
   const strip = t => t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
   const writers = [];
   for(const f of ["effects.js", "prompts.js", "judge.js"]){
-    const src = strip(fs.readFileSync(path.join(__dirname, "..", "engine", f), "utf8"));
-    for(const line of src.split("\n"))
-      if(/\.soul = \[|\[_to\] = \[/.test(line) && !/\.slice\(|\.filter\(/.test(line)) writers.push([f, line.trim()]);
+    const lines = strip(fs.readFileSync(path.join(__dirname, "..", "engine", f), "utf8")).split("\n");
+    lines.forEach((line, i) => {
+      if(/\.soul = \[|s\[_to\] = \[/.test(line) && !/\.slice\(|\.filter\(/.test(line))
+        writers.push([f, line.trim(), line + (lines[i + 1] || "")]);
+    });
   }
   assert.ok(writers.length >= 3, "the writer scan stopped matching — " + writers.length);
-  for(const [f, line] of writers)
-    assert.match(line, /_soulT/, f + ": a soul writer that does not stamp the turn — " + line.slice(0, 100));
+  for(const [f, line, two] of writers)
+    assert.match(two, /soulPutNote/, f + ": a soul writer that does not record the event — " + line.slice(0, 100));
+  /* and the retired stamp is gone: one record per fact */
+  for(const f of ["effects.js", "prompts.js", "judge.js"])
+    assert.doesNotMatch(strip(fs.readFileSync(path.join(__dirname, "..", "engine", f), "utf8")), /_soulT/, f);
 });
 
 test("the evaluator answers every kind the pool emits, and refuses one it does not know", {skip}, () => {

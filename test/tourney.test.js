@@ -71,7 +71,7 @@ test("the emitted-kind scan is alive", () => {
    it, since no scan can tell a fault from a route. */
 test("every event kind selfplay emits is pinned", () => {
   assert.deepEqual(EMITTED, [
-    "MALFORMED", "SECOND-PERSON",
+    "MALFORMED", "NO-ZONE", "SECOND-PERSON",
     "ally", "allyatk", "arsflip", "boost", "chi", "crush", "ctrWipe", "death", "defmod", "destroycost",
     "fusion", "gold", "halve",
     "held", "hitnext",
@@ -97,7 +97,7 @@ test("every name in FAULTS is a kind selfplay actually emits", () => {
    WHICH SIDE A KIND BELONGS ON IS A JUDGEMENT and no scan can make it, so
    this is a pin rather than a derivation: moving a name is a deliberate
    edit here, which is the moment somebody states what the counter means. */
-const FAULTS_PINNED = ["MALFORMED", "SECOND-PERSON"];
+const FAULTS_PINNED = ["MALFORMED", "NO-ZONE", "SECOND-PERSON"]; /* NO-ZONE: v5.40 */
 /* `destroycost` is a ROUTE (v4.37): a number there means the offer was
    MADE and answered. It counts BOTH outcomes deliberately, because the
    seat declines by standing rule (v4.24) and a counter narrowed to the

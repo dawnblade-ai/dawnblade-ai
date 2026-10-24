@@ -10060,6 +10060,16 @@ const ceasesToExist = (c, to) => {
   return isToken(c) || (dest === "grave" && isEphemeral(c));
 };
 const abSoulCost = ab => (ab && ab._soulCost) || 0;
+/* "A CARD HAS BEEN PUT INTO YOUR SOUL THIS TURN" IS AN EVENT (v5.40).
+   v4.90 stamped the card (`_soulT`) and the gate asked whether a stamped
+   card was still IN the soul, so a yellow charged and then banished to
+   Boltyn's own ability no longer counted and Duty Bound Blitz was refused
+   against its printed text. The event is recorded in `hist`, which CR 4.4.4
+   clears at the turn boundary, by every writer that adds to a soul — and
+   `soulPutNote` is the one way they write it. */
+const soulPutNote = (hist, cards) => ({...(hist || {}),
+  soulPut: [...((hist && hist.soulPut) || []), ...(cards || []).map(c => +(c && c.pitch) || 0)]});
+const soulPutThisTurn = (sd, pitch) => ((sd && sd.hist && sd.hist.soulPut) || []).indexOf(pitch) >= 0;
 /* ITS SIBLING (v3.79) — does the ability ALSO banish its own source?
    One reader, for the same reason `abSoulCost` is one: a cost read in one
    place and re-derived in the other is two descriptions of one price. */
@@ -10521,6 +10531,6 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, spellvoidX, linksControlled, arcaneSoaks,
         ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
-        chiValue, chiSum, chiFloating, pitchExcessWhy, chiCeiling, payCeiling, handFree, isDeclaredDefender, rxDefenders, PLAY_ROUTES, isCardPlay, isNonAtkActionPlay, abChiCost, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, swingSpentWhy, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, abilitiesLive, boardEntryNamed, isEphemeral, isToken, ceasesToExist, ARENA_ZONES, isHandWipe, gyFirstGaKw,
+        chiValue, chiSum, chiFloating, pitchExcessWhy, chiCeiling, payCeiling, handFree, isDeclaredDefender, rxDefenders, PLAY_ROUTES, isCardPlay, isNonAtkActionPlay, abChiCost, abSoulCost, soulPutNote, soulPutThisTurn, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, swingSpentWhy, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, abilitiesLive, boardEntryNamed, isEphemeral, isToken, ceasesToExist, ARENA_ZONES, isHandWipe, gyFirstGaKw,
         CARD_OVERRIDES};
 });

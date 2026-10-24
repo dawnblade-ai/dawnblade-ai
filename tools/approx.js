@@ -213,6 +213,18 @@ const APPROX = {
       "for this record if there was none. The counters are not lost: they stay on the "+
       "permanent for its next swing."},
 
+"soul-banish-cost-auto-picked": {
+  status:"stated", cr:null, board:"both", since:"v3.74", swept:"v5.40",
+  claim:"\"Banish a card from your soul\" (Boltyn's ability, Radiant Touch) banishes the "+
+        "FRONT of the soul, the card most recently put there, rather than asking which. "+
+        "Since v5.40 it lands in the banished zone; before, it landed in no zone at all.",
+  why:"A cost is paid before the ability resolves, so asking needs a PENDING (v3.34), "+
+      "and the soul banish has none on either board; v4.85's `discost` is the shape, "+
+      "and building it is a judge pending, a trainer sheet and a policy answer. No CR "+
+      "quote about who chooses a cost's object is sourced here. v5.40 made the gate "+
+      "that cared (Duty Bound Blitz) read the EVENT, so the choice decides less "+
+      "(QUEUE v4 S8)."},
+
 "look-named-in-shared-feed": {
   status:"stated", cr:null, board:"table", since:"v4.01", swept:"v5.30",
   claim:"A card that LOOKS at the top card of a deck (Compass of Sunken Depths, Scout the "+

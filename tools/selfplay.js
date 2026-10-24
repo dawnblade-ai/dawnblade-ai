@@ -30,6 +30,7 @@ const B   = require("../engine/build.js");
 const G   = require("../engine/game.js");
 const RNG = require("../engine/rng.js");
 const INV = require("../engine/invariants.js");
+const PR  = require("../engine/parser.js");
 const {loadData} = require("../test/helpers/extract.js");
 const H = require("../test/helpers/judged.js");
 
@@ -46,9 +47,37 @@ function match(k0, k1, seed, first){
                      heroKeys: [h0.k, h1.k], rng, first: first || 0, tokSeq: ctr.n});
 }
 
+/* Every card a state holds, by uid: both seats' zones, the combat chain
+   and a card lifted onto the stack — invariants.js's own census. */
+function heldCards(g){
+  const m = new Map();
+  const put = c => { if(c && c.uid != null && !m.has(c.uid)) m.set(c.uid, c); };
+  (g.sides || []).forEach(sd => {
+    INV.LIST_ZONES.forEach(z => (sd[z] || []).forEach(e => put(e && e.card ? e.card : e)));
+    put(sd.arsenal);
+    /* intimidate's face-down banish is a holding zone: the cards come back
+       at the end phase (v2.10) */
+    (sd.intimidated || []).forEach(put);
+  });
+  (g.chainCards || []).forEach(e => put(e && (e.card || e)));
+  (g.stack || []).forEach(l => { if(l && l.k === "play" && l.lifted) put(l.card); });
+  return m;
+}
+function lostCards(before, after){
+  /* a game that has just ENDED stops filing: the attack whose declaration
+     killed the opponent is never put on the chain, and that is the end of
+     the game rather than a card lost from it */
+  if(after.over) return [];
+  const now = heldCards(after), out = [];
+  for(const [uid, c] of heldCards(before))
+    if(!now.has(uid) && !PR.isToken(c) && !PR.isEphemeral(c)) out.push(c);
+  return out;
+}
+
 /* Drive one game, auditing every state on the way. `sparring.run` returns
    only the end state, so the loop is inlined to get at the intermediates —
    a game that ends clean can still have passed through a broken board. */
+
 /* `opts.timeline` is OPT-IN (v3.58) — nothing that already calls this moves.
    What it buys is the one thing `events` cannot give a reader: the STATE
    beside the line. A commentator, a per-seat replay and a "what did the
@@ -71,6 +100,15 @@ function play(g, limit, opts){
       if(out.error){ errs.push({t: a.t, seat: s, why: out.error, turn: n.turn}); continue; }
       const before = n;
       n = out.state; steps++; moved = true;
+      /* A CARD IN NO ZONE (v5.40). `invariants.js` catches a card in TWO
+         zones and cannot see one in NONE — it simply falls out of the
+         census (v2.21, v3.07). Boltyn's soul-banish cost sliced cards off
+         the soul into nowhere for as long as it existed, and nothing here
+         could say so. So the harness compares consecutive states: a uid
+         held in one and in no zone in the next is a fault, unless the rules
+         say it ceases to exist (a token, an ephemeral card). */
+      for(const c of lostCards(before, n))
+        events.push(["NO-ZONE", `${c.name}#${c.uid} left every zone after ${a.t}`]);
       try {
         /* `invariants.js` produces TWO severities and this project has only
            ever read one. `errors()` filters the warnings out, and every
@@ -488,7 +526,7 @@ function play(g, limit, opts){
    One spelling, here, where the counters are. A fault added below and
    not named here is caught by `test/selfplay.test.js`, which drives a
    line of each kind rather than reading this list. */
-const FAULTS = ["MALFORMED", "SECOND-PERSON"];
+const FAULTS = ["MALFORMED", "SECOND-PERSON", "NO-ZONE"];
 
 /* AND THE TWO DECISIONS THE REPORT MAKES ABOUT THAT CENSUS LIVE HERE TOO,
    beside the thing they read. Both were a hardcoded list in `tourney.js`
@@ -508,7 +546,7 @@ const summaryLine = (refusals, viols, faults) =>
   + FAULTS.map(k => `${k} ${(faults[k] || []).length}`).join(" · ");
 const routeNames = evts => Object.keys(evts).filter(k => !FAULTS.includes(k)).sort();
 
-module.exports = {match, play, W, DB, J, SP, FAULTS, summaryLine, routeNames};
+module.exports = {match, play, W, DB, J, SP, FAULTS, heldCards, lostCards, summaryLine, routeNames};
 
 if(require.main === module){
   const keys = W.HEROES.map(h => h.k);

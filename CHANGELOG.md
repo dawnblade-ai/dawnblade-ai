@@ -1,3 +1,40 @@
+## v5.40 — A soul banish goes to the banished zone, and the soul put is an event
+
+**QUEUE v4 S8.** Boltyn's hero ability and Radiant Touch pay "banish a card from your soul", and
+`execute` sliced the card off the soul into NO zone. `soulSpend` had the same shape (latent, zero
+claimants). Both go through one body now, `banishFromSoul`, and the card lands in the banished
+zone. invariants.js catches a card in two zones and cannot see one in none, which is how this
+survived since v3.74.
+
+Duty Bound Blitz prints "Play this only if a yellow card has been put into your soul this turn",
+and v4.90's `_soulT` stamp asked whether a stamped yellow was STILL in the soul. Boltyn's ability
+banishes the front of the soul, the card just charged, so charging a yellow and then using the
+ability shut the gate. The put is an EVENT now: `hist.soulPut` holds the pitch of every card put
+into a soul this turn, written through `parser.soulPutNote` by the three soul writers (the charge,
+an ascend, a pick to the soul), and CR 4.4.4 clears it with `hist`. The stamp is retired, and
+`test/playif.test.js`'s writer census holds every writer to the note.
+
+**Which soul card is banished is still the engine's choice** (the front). Asking needs a pending
+on both boards, the `discost` shape, and no CR quote about who chooses a cost's object is sourced
+here, so it is recorded: `soul-banish-cost-auto-picked` (stated, with a driven probe).
+
+**A NEW SELF-PLAY FAULT, `NO-ZONE`.** `tools/selfplay.js` compares consecutive states and reports
+a uid held in one and in no zone in the next, unless it is a token, an ephemeral card, or the
+game has just ended; intimidate's face-down banish counts as a holding zone. On the v5.39 engine
+it reads **202** over the 3-seed ladder: 134 soul banishes and 68 transcends. **The transcends were
+an identity change, not a lost card**: a transcended card flipped to Inner Chi under a freshly
+minted uid. The card's back face IS Inner Chi (v4.54), so the flipped card now keeps its uid. On
+v5.40 the fault reads 0.
+
+Measured, 3-seed ladder both sides: **no hero moves outside the band** (Boltyn 5.3 → 5.7; nobody
+else moves more than 0.3 a seed). 0 refusals, 0 violations, the same one stall (`gravy-briar-2`).
+The gate opens more often, and the policy does not yet sequence a charge before the ability; that
+is H6.
+
+`test/soulbanish.test.js`, 9 drills; 15 sabotages, 15 bite. The sabotage harness itself asserted
+a revert anchor's uniqueness before reverting once more and corrupted `tools/selfplay.js`'s first
+line; it was restored by hand and every count re-derived (v4.37's lesson, again).
+
 ## v5.39 — The AI seat plays its biggest arcane first
 
 **QUEUE v4 H5.** With no attack to make, `sparring.offence` played its non-attacks cheapest first,

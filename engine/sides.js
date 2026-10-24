@@ -135,7 +135,7 @@ const SIDE_FIELDS = [
    if you've played a NIMBLISM this turn", and Nimblism is a card NAME, so
    `playTy` (types) could never answer it. With no record the gate had no
    answer, and the activation evaluator waved it through. */
-const freshHist = () => ({atk:0,non:0,arc:0,aura:0,made:0,booed:0,blue:0,red:0,trans:0,blueGY:0,atkNames:[],auraAtkNames:[],playTy:[],playNames:[],arcTaken:0,gyFirstKw:[]});
+const freshHist = () => ({atk:0,non:0,arc:0,aura:0,made:0,booed:0,blue:0,red:0,trans:0,blueGY:0,atkNames:[],auraAtkNames:[],playTy:[],playNames:[],arcTaken:0,gyFirstKw:[],soulPut:[]});
 
 function makeSide(o){
   o = o || {};
