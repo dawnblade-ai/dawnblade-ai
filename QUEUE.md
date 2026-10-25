@@ -410,8 +410,13 @@ re-measure on top of S8 before shipping, because S8 changes his games. The exper
   can keep a card to charge, swings the pumped weapon once charged, and does neither when uncharged
   with no charge card. Sabotage the rank, `chargeRoom`, and the weapon candidate.
 
+**S9. SHIPPED as v5.42 (`469d8e3`), CEO-verified 2026-10-25:** 3665 drills, 0 fail, 5 skipped; scenes
+107/107; all 21 engine script tags and `.nojekyll` in the pushed commit; CI drills and Pages green; the
+3-seed ladder byte-identical to v5.41 (the AI never played from banish). The repro under the H7 policy
+reads 25 banish plays and 0 replays on v5.42, where v5.41 finds a replay by the third game.
+
 **S9. A card played from banish under "you may play it this turn" goes back into banish STILL
-PLAYABLE, so it can be played again, without limit. ENGINE, ships next (v5.42).**
+PLAYABLE, so it can be played again, without limit. ENGINE.**
 Found by the Blaze investigator on v5.41 (`5a76ddf`); CEO-reproduced.
 - **The defect.** Both filing paths put a card played from banish (or the graveyard) back into
   banish: `effects.js:~5433` (`execute`, non-attacks) and `fileAttack` `:~6583` (attacks). Its
@@ -550,7 +555,7 @@ an AI Blaze, opponent first). Four observations; all four are real, and they mak
 
 **H8+.** One gap at a time, one investigator at a time, each rebased on the latest release.
 Waiting, by the v5.41 ladder: Lyath (5.7, needs a new investigator), Azalea (7.0), Bravo (8.7);
-then Blaze again after S9. **The S-items above (S9, S10, S11, S12) go first, in that order.**
+then Blaze again after S9. **The S-items above (S10, S11, S12) go first, in that order.**
 
 ## v3 — STAGE INCREMENT 1 INPUTS (CEO, 2026-10-17)
 
