@@ -300,13 +300,19 @@ function buildPrompt(game, spec){
        forced choice is a tap that teaches nothing (v3.55), and unlike opt
        there is no "or the bottom" alternative to make it a real decision. */
     if(spec.keepTop && look.length < 2) return null;
-    return {...base, cards:look, n, keepTop: !!spec.keepTop,
+    /* THE DRAW ORDER IS THE PLAYER'S (v5.45). Opt prints "put them back on
+       top or bottom IN ANY ORDER", so the kept cards carry an ORDER, a
+       permutation of the indices dealt (QUEUE v4 S12). It opens in the
+       dealt order, which is what the seat policy keeps, and only
+       `promptMove` changes it. */
+    return {...base, cards:look, n, keepTop: !!spec.keepTop, order: look.map((_,i)=>i),
       title: spec.title || (spec.keepTop ? ("Reorder the top " + n) : ("Opt " + n)),
       hint: spec.hint || (spec.keepTop
-        ? ("Top " + n + " cards of your deck. Tap any you want to go UNDER the rest — "
-           + "they all stay on top, in the order you leave them.")
-        : ("Top " + (n===1 ? "card" : n + " cards") +
-        " of your deck. Tap any you want on the bottom instead — the rest stay on top in this order."))};
+        ? ("Top " + n + " cards of your deck. Tap a card to put it UNDER the rest. "
+           + "◀ ▶ change the order you draw them in.")
+        : n === 1 ? "Top card of your deck. Tap it to send it to the bottom."
+        : ("Top " + n + " cards of your deck. Tap a card to send it to the bottom. "
+           + "◀ ▶ change the order you draw them in."))};
   }
   if(spec.tag === "pick"){
     const zone = spec.zone || "hand";
@@ -743,6 +749,45 @@ function buildPrompt(game, spec){
   return null;
 }
 
+/* THE ORDER AN OPT SHEET WILL WRITE (v5.45). `prompt.order` when it is a
+   permutation of the dealt indices, else the dealt order: a sheet built
+   before the field existed, or a value off a wire that is not one, reads
+   as no reordering at all rather than as a deck missing a card. */
+function optOrder(prompt){
+  const n = (prompt && prompt.cards || []).length;
+  const o = prompt && prompt.order;
+  const ok = Array.isArray(o) && o.length === n
+    && o.every(x => Number.isInteger(x) && x >= 0 && x < n)
+    && new Set(o).size === n;
+  return ok ? o.slice() : Array.from({length: n}, (_, i) => i);
+}
+
+/* ONE CARD ONE PLACE EARLIER (dir -1) OR LATER (dir +1) in the draw order
+   (v5.45, QUEUE v4 S12). Only a KEPT card moves, and it swaps with the
+   kept card beside it: a card sent to the bottom has no draw position to
+   change, and moving past one would reorder nothing. Anything else (a
+   bottom card, an edge, an index or direction the sheet never rendered)
+   returns the prompt unchanged, which is how this module refuses
+   (v4.61's `promptIndexOK`). */
+function promptMove(prompt, i, dir){
+  if(!prompt || prompt.tag !== "opt") return prompt;
+  /* `promptIndexOK` is the one validator of an index off a wire, so a
+     `null` does not read as card 0; the direction is two words only. */
+  if(!promptIndexOK(i, prompt.cards)) return prompt;
+  const d = dir === 1 || dir === "1" ? 1 : dir === -1 || dir === "-1" ? -1 : 0;
+  if(!d) return prompt;
+  const k = +i;
+  const down = prompt.down || [];
+  const order = optOrder(prompt);
+  const kept = order.filter(x => !down.includes(x));
+  /* a bottom card is not in `kept`, so `at` is -1 and nothing moves */
+  const at = kept.indexOf(k), to = at + d;
+  if(at < 0 || to < 0 || to >= kept.length) return prompt;
+  const a = order.indexOf(kept[at]), b = order.indexOf(kept[to]);
+  order[a] = kept[to]; order[b] = kept[at];
+  return {...prompt, order};
+}
+
 /* Selection, honouring max. `opt` keeps its own bottom/top toggle. */
 function promptToggleSel(prompt, i){
   if(!prompt) return prompt;
@@ -1153,8 +1198,13 @@ function applyPrompt(game, prompt){
   const who = (game.sides && game.sides[side] && game.sides[side].name)
               || (side === 0 ? "You" : "The opponent");
   if(prompt.tag === "opt"){
-    const keep = prompt.cards.filter((_,i)=>!prompt.down.includes(i));
-    const bottom = prompt.cards.filter((_,i)=>prompt.down.includes(i));
+    /* IN THE ORDER THE PLAYER CHOSE (v5.45). The cards sent to the bottom
+       keep the sheet's order too; which of them is lowest is a STATED
+       approximation, unobservable because no pool record reads the bottom
+       of a deck (the Topsy Turvy note below). */
+    const _ord = optOrder(prompt);
+    const keep = _ord.filter(i=>!prompt.down.includes(i)).map(i=>prompt.cards[i]);
+    const bottom = _ord.filter(i=>prompt.down.includes(i)).map(i=>prompt.cards[i]);
     const sides = game.sides.slice();
     const s = {...sides[side]};
     /* THE ONE LINE THAT SEPARATES A REORDER FROM AN OPT (v3.71): the
@@ -1406,7 +1456,7 @@ function applyPrompt(game, prompt){
 return {PROMPT_ZONES, promptZoneWord, promptDestWord, promptZone, promptSideZone, promptFilter,
         promptMatchSet, promptMatchAssign,
         promptPickPool, promptPickAskable, buildPrompt,
-        promptToggleSel, promptChoose, promptDecline, promptTakeBack, promptReady, promptForcedSel, promptLapse, promptDestroyGone, promptLapseLine,
+        promptToggleSel, promptChoose, promptDecline, promptTakeBack, promptMove, optOrder, promptReady, promptForcedSel, promptLapse, promptDestroyGone, promptLapseLine,
         promptDiscardDefault, discCostChoice,
         moveCards, applyPrompt};
 });

@@ -325,7 +325,8 @@ const ACTIONS = [
      the sequenced state, so the undo has to travel as an action or one
      peer's board disagrees with the other's about what has been placed.
      `alloc` only: every other tag toggles. */
-  "promptTakeBack"
+  "promptTakeBack",
+  "promptMove"    /* {i, dir}     an opt card one draw earlier (-1) or later (+1) (v5.45) */
 ];
 
 /* EVERY KIND `pending` CAN HOLD (v3.35). One field, four kinds — and a UI
@@ -340,7 +341,7 @@ const ACTIONS = [
    remembering — the next kind added walks into the same fallback. */
 const PENDING_KINDS = ["pay", "boost", "addPay", "split", "fuse", "charge", "xval", "discost"];
 const PROMPT_ACTIONS = ["promptSel", "promptChoose", "promptConfirm", "promptDecline",
-                        "promptTakeBack"];
+                        "promptTakeBack", "promptMove"];
 
 /* ---- reading and writing ---------------------------------------------
    `act`/`foe` are ACTOR-relative and are what rules code uses. There is
@@ -2524,6 +2525,7 @@ function reduce(g, a, seat){
     case "promptChoose": n = {...n, prompt: PM.promptChoose(n.prompt, a.choice)}; break;
     case "promptDecline":n = {...n, prompt: PM.promptDecline(n.prompt)}; break;
     case "promptTakeBack":n = {...n, prompt: PM.promptTakeBack(n.prompt)}; break;
+    case "promptMove":   n = {...n, prompt: PM.promptMove(n.prompt, a.i, a.dir)}; break;
     case "promptConfirm":
       n = withEffects(n, (fx, s2) => fx.applyAnswer(s2, s2.prompt));
       break;

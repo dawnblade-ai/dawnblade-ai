@@ -566,6 +566,10 @@ img{display:block;max-width:100%}
 .psheet .pcard.sel .cfw{border-color:var(--ok);box-shadow:0 0 0 1px var(--ok) inset}
 .psheet .pcard.sel .ptag{background:var(--ok);color:var(--ink)}
 .psheet .pcard.flat{opacity:1}
+.psheet .poptcol{flex:none;width:86px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.psheet .parrows{display:flex;gap:6px}
+.psheet .parrows button{min-width:38px;min-height:30px;padding:0;font-size:14px;line-height:1;background:var(--forge2);color:var(--bone);border:1px solid var(--line);border-radius:4px}
+.psheet .parrows button:disabled{opacity:.3}
 .psheet .pside{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--r);
   border:1px solid var(--r);border-radius:2px;padding:1px 5px;margin-left:auto}
 .psheet .pcount{align-self:center;font-family:'Spline Sans Mono';font-size:10px;
@@ -817,7 +821,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "5.44"; /* v5.44 - the table's rail offers every route the trainer's does, and a gear tile declares while it can defend. See CHANGELOG.md. */
+window.APP_VER = "5.45"; /* v5.45 - an opt sheet puts the kept cards back in the order the player chooses, with arrows on both boards. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -1525,6 +1529,7 @@ var PROMPT_ZONES = DawnPrompts.PROMPT_ZONES, promptZone = DawnPrompts.promptZone
     promptLapse = DawnPrompts.promptLapse,
     promptDiscardDefault = DawnPrompts.promptDiscardDefault,
     promptTakeBack = DawnPrompts.promptTakeBack,
+    promptMove = DawnPrompts.promptMove, optOrder = DawnPrompts.optOrder,
     promptSideZone = DawnPrompts.promptSideZone,
     promptMatchSet = DawnPrompts.promptMatchSet,
     promptPickPool = DawnPrompts.promptPickPool,
@@ -2337,7 +2342,7 @@ const COPY_MSG = {copied:"Copied to clipboard.",
    silently stopped) and its controls are inert unless the sheet is
    addressed to you, which is what `judge.legal` already enforces.
    ============================================================ */
-function PromptSheet({p, me, onToggle, onPick, onTakeBack, onDecline, onConfirm}){
+function PromptSheet({p, me, onToggle, onPick, onTakeBack, onMove, onDecline, onConfirm}){
   if(!p) return null;
   /* `viewer`, NEVER `seat` — CLAUDE.md names that collision by name:
      `priority.js` exports a `seat` helper meaning "seat a game", and a
@@ -2368,21 +2373,44 @@ function PromptSheet({p, me, onToggle, onPick, onTakeBack, onDecline, onConfirm}
       {!mine && <span className="pside">opponent's call</span>}</div>
     <div className="phint">{p.hint}</div>
 
-    {(p.tag==="opt" || p.tag==="pick" || p.tag==="reveal" || p.tag==="alloc")
+    {/* AN OPT IS DRAWN IN THE ORDER THE PLAYER CHOOSES (v5.45, QUEUE v4
+        S12). The cards stand in their RESULTING order, left to right as
+        they will be drawn, each labelled with its draw; a tap still sends
+        one to the bottom (under the rest for a reorder), and each kept
+        card carries arrows that move it one draw earlier or later through
+        `promptMove`, the one reader both boards send. */}
+    {p.tag==="opt" && !!p.cards.length && (()=>{
+      const ord0 = optOrder(p);
+      const kept = ord0.filter(i=>!p.down.includes(i));
+      const seq = [...kept, ...ord0.filter(i=>p.down.includes(i))];
+      return <div className="prow2">
+        {seq.map((i, pos)=>{
+          const c = p.cards[i], down = p.down.includes(i), at = kept.indexOf(i);
+          return <div key={c.uid||i} className="poptcol">
+            <button className={"pcard"+(down?" down":"")} onClick={go(()=>onToggle(i))}>
+              <CardFrame card={c} className="sm"/>
+              <span className="ptag">{down && !p.keepTop ? "bottom" : ord(pos)+" draw"}</span>
+            </button>
+            {!down && kept.length > 1 && <div className="parrows">
+              <button disabled={!mine || at===0} onClick={go(()=>onMove(i,-1))}>◀</button>
+              <button disabled={!mine || at===kept.length-1} onClick={go(()=>onMove(i,1))}>▶</button>
+            </div>}
+          </div>;
+        })}
+      </div>;
+    })()}
+
+    {(p.tag==="pick" || p.tag==="reveal" || p.tag==="alloc")
       && !!p.cards.length &&
       <div className="prow2">
         {p.cards.map((c,i)=>{
-          const down = p.tag==="opt" && p.down.includes(i);
           const sel  = p.tag==="pick" && p.sel.includes(i);
           const n    = put(i);
-          const topOrder = p.tag==="opt"
-            ? p.cards.filter((_,j)=>!p.down.includes(j)).indexOf(c)+1 : 0;
           const tap = p.tag==="reveal" ? undefined : go(()=>onToggle(i));
           return <button key={c.uid||i}
-            className={"pcard"+(down?" down":"")+((sel||n>0)?" sel":"")+(p.tag==="reveal"?" flat":"")}
+            className={"pcard"+((sel||n>0)?" sel":"")+(p.tag==="reveal"?" flat":"")}
             onClick={tap}>
             <CardFrame card={c} className="sm"/>
-            {p.tag==="opt" && <span className="ptag">{down ? "bottom" : "top "+topOrder}</span>}
             {p.tag==="pick" && sel && <span className="ptag">
               {p.filters ? ord(p.sel.indexOf(i)) : "✓ chosen"}</span>}
             {p.tag==="alloc" && n>0 && <span className="ptag">+{n}</span>}
@@ -3204,6 +3232,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      MULTISET, so `promptToggleSel` is not its own inverse there — tapping
      a permanent twice places two counters rather than taking one back. */
   const promptTakeBackC = () => setG(s=> s.prompt ? {...s, prompt:promptTakeBack(s.prompt)} : s);
+  /* AN OPT CARD ONE DRAW EARLIER OR LATER (v5.45): the same reader the
+     table sends as `promptMove`. */
+  const promptMoveC = (i, dir) => setG(s=> s.prompt ? {...s, prompt:promptMove(s.prompt, i, dir)} : s);
 
   /* ---- the dummy's defence -------------------------------------------
      It wears iron and now holds cards, so it defends the way an opponent
@@ -5871,7 +5902,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
           prompt a livelock there — see PromptSheet's own header. */}
       <PromptSheet p={g.over ? null : g.prompt} me={0}
         onToggle={promptToggle} onPick={promptPick} onTakeBack={promptTakeBackC}
-        onDecline={promptDecline} onConfirm={promptConfirm}/>
+        onMove={promptMoveC} onDecline={promptDecline} onConfirm={promptConfirm}/>
     </div>
   );
 }
@@ -7764,6 +7795,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
         onToggle={i=>fire({t:"promptSel", i})}
         onPick={choice=>fire({t:"promptChoose", choice})}
         onTakeBack={()=>fire({t:"promptTakeBack"})}
+        onMove={(i,dir)=>fire({t:"promptMove", i, dir})}
         onDecline={()=>fire({t:"promptDecline"})}
         onConfirm={()=>fire({t:"promptConfirm"})}/>
     </div>

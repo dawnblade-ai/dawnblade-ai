@@ -1,3 +1,29 @@
+## v5.45 — An opt is put back in any order
+
+**QUEUE v4 S12, the opt sheet.** Opt prints "look at the top X cards of your deck, then put them back
+on top or bottom in any order". Both boards' sheet offered only the top/bottom toggle, so the kept
+cards went back in the order they were dealt. That was weaker than printed on every opt card.
+
+- **`prompt.order`** is a permutation of the dealt indices. `buildPrompt` opens it in the dealt order,
+  `prompts.optOrder` reads it (an order that is not a permutation reads as the dealt order, since
+  `reduce` is fed by JSON off a wire), and `prompts.promptMove(prompt, i, dir)` is the one writer. It
+  swaps a kept card with its kept neighbour, skipping cards sent to the bottom, and refuses a bad
+  index or a direction other than ±1 by returning the prompt unchanged.
+- **`applyPrompt`** writes the kept cards in that order and the bottom cards under the rest. A reorder
+  (`keepTop`, Spire Sniping) uses the same order. The order of the bottom cards is still the dealt
+  order, which stays a stated approximation.
+- **The table** gets a `promptMove` action in `judge.PROMPT_ACTIONS`. `test/promptctl.test.js`
+  demands the control on the opt sheet and on no other.
+- **The sheet** shows the cards in their resulting order, labelled "1st draw" … "bottom". A tap still
+  toggles the bottom, and each kept card has ◀ ▶ arrows (38x30). The trainer and the table both wire
+  them to `promptMove`.
+- **The seat policy keeps the dealt order**, so `autoAnswer` is unchanged. `npm run play '' '' 3` is
+  byte-identical before and after.
+- **Measured at 393x852 on both boards**: opt 3, two ◀ on the third card, the first card to the
+  bottom, confirm. The deck reads in the chosen order with the tapped card at the bottom, and there is
+  no horizontal overflow. Sabotage: 11 of 12 bite. The 12th was a "bottom card cannot move" guard
+  that the `kept` lookup already covers, so it was deleted (v4.11).
+
 ## v5.44 — The table's rail offers every route; a gear tile declares while it can defend
 
 **QUEUE v4 S11, the table's hand rail and gear tile.**

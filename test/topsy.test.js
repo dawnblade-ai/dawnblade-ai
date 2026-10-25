@@ -206,7 +206,7 @@ test("CENSUS: every site that front-inserts onto a deck asks `deckTopTo`", () =>
   /* AND THE OPT BRANCH, BY NAME: it builds the deck behind a ternary over
      spreads, which is the shape the scan above is weakest on. */
   const pr = fs.readFileSync(path.join(ROOT, "engine/prompts.js"), "utf8");
-  const at = pr.indexOf('if(prompt.tag === "opt"){\n    const keep');
+  const at = pr.indexOf('if(prompt.tag === "opt"){\n    /* IN THE ORDER THE PLAYER CHOSE');
   assert.ok(at > 0, "the opt application moved — re-anchor");
   assert.match(pr.slice(at, at + 2500), /const _flip = P\.deckTopTo\(game\) === "deckBottom";/,
     "opt's application must ask the one reader");

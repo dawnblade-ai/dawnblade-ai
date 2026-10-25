@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.44
+**Current version:** v5.45
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3679 drills** at v5.44.
+This is `node --test "test/*.test.js"` — **3692 drills** at v5.45.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -875,6 +875,14 @@ The arsenal set, opt, a reorder, a hand-to-deck pick, Azalea's cycle and Boulder
 cards only one seat had seen (QUEUE v3 S2). Each names the seat and a count now; a graveyard pick and
 a face-up arsenal card are public and keep their names (`test/hiddenfeed.test.js`). **When a line
 names a card, ask which zone it came from and which it went to: two hidden zones mean a count.**
+
+### AN OPT IS PUT BACK IN ANY ORDER (v5.45)
+
+The opt sheet only toggled top/bottom, so kept cards went back in the dealt order (QUEUE v4 S12).
+`prompt.order` is a permutation; `prompts.promptMove` is its one writer, `optOrder` its one reader.
+`applyPrompt` writes in that order, the table sends a `promptMove` action, and both boards draw ◀ ▶
+on each kept card, labelled by draw (`test/optorder.test.js`). The policy keeps the dealt order, so
+the ladder is byte-identical. **A printed "in any order" is a decision: give it a control.**
 
 ### THE TABLE'S RAIL HAS EVERY ROUTE, AND THE TILE DECLARES FIRST (v5.44)
 

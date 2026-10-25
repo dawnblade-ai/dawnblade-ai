@@ -57,7 +57,7 @@ function doors(){
    the way out of a sheet or a pending mode, never a way around one. The
    prompt sheet's own controls, and the pre-payment and payment modes,
    which `tryPlay` (guarded) is the only way into. */
-const ANSWERS = ["promptToggle", "promptPick", "promptConfirm", "promptDecline", "promptTakeBackC",
+const ANSWERS = ["promptToggle", "promptPick", "promptConfirm", "promptDecline", "promptTakeBackC", "promptMoveC",
                  "confirmBoost", "confirmCharge", "confirmFuse", "confirmPay", "cancelPay", "cancelDiscCost"];
 const GUARDED = ["playRx", "playRxA", "playArsenalInstant", "playFoeTurnRx", "foePassWindow", "activateInstant",
                  "resolveStack", "tryPlay", "activateHand", "closeChain", "endTurn", "pickArsenal", "skipArsenal",

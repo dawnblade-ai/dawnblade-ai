@@ -318,6 +318,24 @@ test("`promptTakeBack` is the other optional control, and it has one too", () =>
     "Confirm is there, which is the control nothing could hide");
 });
 
+test("`promptMove` is the order control, and only the opt sheet has it (v5.45)", () => {
+  /* QUEUE v4 S12: opt prints "IN ANY ORDER", and the module accepting a
+     reorder with no control on the sheet is v4.61's defect one answer over.
+     DRIVEN, both directions: the move changes exactly the opt shape, and
+     the sheet offers the arrows on exactly that tag. */
+  const v = variants();
+  const changed = {};
+  for(const k of Object.keys(v))
+    changed[k] = JSON.stringify(PM.promptMove(v[k], 1, -1)) !== JSON.stringify(v[k]);
+  assert.deepEqual(Object.keys(changed).filter(k => changed[k]), ["opt"],
+    "only the opt sheet carries an order");
+  const hasMove = t => (tagBlock(t).match(/onClick=\{go\(\(\)=>onMove\(i,-?1\)\)\}/g) || []).length;
+  assert.equal(hasMove("opt"), 2, "the opt sheet has its two arrows");
+  for(const t of ["pick", "modal", "pay", "reveal", "target", "alloc", "soak"])
+    assert.equal(hasMove(t), 0, t + " has no order to change, so it offers no arrow");
+  assert.ok(J.PROMPT_ACTIONS.includes("promptMove"), "and the table can send it");
+});
+
 test("the comment stripper this census depends on really strips", () => {
   /* THE CONTROL GOES THROUGH THE SCAN, NOT BESIDE IT (v4.32). Written as a
      literal the fixture would be a comment in THIS file, so it is built by

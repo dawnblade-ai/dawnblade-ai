@@ -357,7 +357,7 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
     /* +instantpump AT v5.03: the same `tryPlay` -> `confirmPay` body. */
     "instantpump.test.js index.html 25955",
     "phasebar.test.js index.html 18386",
-    "phasebar.test.js index.html 63360",
+    "phasebar.test.js index.html 63730",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
        `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
        `abPickBound` in the pick legality it extends. */
