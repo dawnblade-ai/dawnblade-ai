@@ -570,6 +570,10 @@ boards.
   spin decides the draw order, and a tap on the top card sends it to the bottom. The CEO updates
   STAGE.md.
 
+**H8. SHIPPED as v5.46 (`97b4b75`), CEO-verified 2026-10-25:** 3696 drills, 0 fail, 5 skipped; scenes
+107/107; both babel blocks compile; all 21 engine script tags and `.nojekyll` in the pushed commit; the
+3-seed ladder is identical to the CEO's H8 measurement. New drill: `test/defending.test.js`.
+
 **H8 (Lyath). While it defends, the seat plays only a card that helps the link. POLICY, after S12
 (v5.46). CEO-measured on v5.44; the patch is ready: `experiments/H8-lyath-defending.patch`
 (3 files, 78 lines).**
@@ -654,7 +658,8 @@ which tells the player what the hero ai would do in each situation."*
   is not. The CEO reports that choice to the user. A drill: the string "Claude's call" appears
   nowhere in `index.html`.
 - **THE ENGINE HALF IS BUILT AND MEASURED (CEO, 2026-10-25):** `experiments/S13-explain-H11.patch`,
-  402 lines over judge.js, sparring.js and speccensus. It applies on v5.45 with H8 applied.
+  402 lines over judge.js, sparring.js and speccensus, REBASED onto v5.46 (`97b4b75`): it applies cleanly,
+  the suite is 0 fail, and the ladder is identical to the prototype.
   - `sparring.explain(g, seat)` returns `{action, key, why, line}`. A module-level `NOTE` is set
     only inside `explain`, and every return site calls `tag(key, action)`, so `act` alone is
     unchanged. The reason table is `sparring.CALL_WHY`, 46 keys. `BY_TYPE` gives the reason for
@@ -719,7 +724,7 @@ ability banishes "this turn" (the H7 patch's `playNowPick` and banish play):
 
 **H8+.** One gap at a time, one investigator at a time, each rebased on the latest release.
 Waiting, by the v5.44 ladder: Bravo (8.7), Gravy (10.3, 7.7 under H8); Lyath has H8, Azalea H9 and Blaze H7b are recorded;
-then Blaze again after S9. **Order: H8, S13, then feed items 19-20.**
+then Blaze again after S9. **Order: S13, then feed items 19-20.**
 
 ## v3 — STAGE INCREMENT 1 INPUTS (CEO, 2026-10-17)
 

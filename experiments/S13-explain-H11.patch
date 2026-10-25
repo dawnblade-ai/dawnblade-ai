@@ -1,8 +1,8 @@
 diff --git a/engine/judge.js b/engine/judge.js
-index 96a5bb9..fd6719c 100644
+index 4057182..bce15af 100644
 --- a/engine/judge.js
 +++ b/engine/judge.js
-@@ -1797,6 +1797,16 @@ const defendsNow = (g, seat, uid, from) => {
+@@ -1769,6 +1769,16 @@ const defendsNow = (g, seat, uid, from) => {
    const fx = PR.fxParse(c);
    return !!fx.dr || (fx.ops || []).some(o => DEFENDS_OPS.indexOf(o[0]) >= 0);
  };
@@ -16,15 +16,15 @@ index 96a5bb9..fd6719c 100644
 +  const ops = (PR.fxParse(pc).ops || []).filter(o => o[0] !== "noop");
 +  return ops.length > 0 && ops.every(o => o[0] === "res");
 +};
- const keepsActionPoint = (g, seat, uid, from) => {
-   const sd = at(g, seat);
-   let c = null, route = from, atk = false;
+ /* ---- DOES THIS CARD KEEP THE TURN'S ACTION POINT? (v5.36) -----------
+ 
+    `abWindowOf`'s sibling, for the same reason: `sparring.js` reads NO card
 @@ -3902,7 +3912,7 @@ function drawTo(g, i){
  }
  
  return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
--        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, defendsNow, boostShare, grantTakers, arcaneOf, chargeView,
-+        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, defendsNow, abPieceForRes, boostShare, grantTakers, arcaneOf, chargeView,
+-        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, defendsNow, DEFENDS_OPS, boostShare, grantTakers, arcaneOf, chargeView,
++        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, defendsNow, DEFENDS_OPS, abPieceForRes, boostShare, grantTakers, arcaneOf, chargeView,
          actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
          handFree: PR.handFree,
          /* the card semantics seam (v2.77) */
