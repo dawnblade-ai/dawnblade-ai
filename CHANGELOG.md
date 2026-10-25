@@ -1,3 +1,35 @@
+## v5.44 — The table's rail offers every route; a gear tile declares while it can defend
+
+**QUEUE v4 S11, the table's hand rail and gear tile.**
+
+- **The gear tile preferred the ability over defend.** `cellAct` tried the swing, then the equipment
+  ability, then the declaration, so a piece whose instant ability was legal in the defend step answered
+  a tap meant to BLOCK by activating. Measured, not hypothetical: with Fai holding priority in the defend
+  step (CR 7.3.3), Pouncing Paws and Tearing Shuko are each a legal defender AND a legal activation.
+  While `defend` (or "stop defending", the same action) is legal the tile declares; the ability is on
+  the rail.
+- **The rail had the hand and the arsenal only.** `railPlays` is the trainer's `playables()` as ACTIONS:
+  each weapon swing (with its attack-target), each equipment ability (`"gp"+uid`), the hero power, and
+  the graveyard and banish cards `judge.legal` accepts. Gear and hero entries show dim when refused (a
+  tap zooms); a graveyard or banish card appears only when legal. The table had no route from the
+  graveyard or banish at all, so Gravy Bones could not replay a watery-grave ally there.
+- **A peek is the route, not only the card.** The tile and the rail share a uid and may carry different
+  actions, so `usePeek` re-peeks on a different verb rather than committing the other route.
+- **The peek dock could not find an ability.** `peekables()` never carried the powCards, though the tile
+  has peeked one since v4.49 (its comment said otherwise); it carries them, the hero power, the
+  graveyard and banish now.
+
+`test/tablerail.test.js` reads the board as source and drives the premise. 8 sabotages, 8 bite.
+
+Driven on the phone page at 393x852: Kayo's Plating tile in the defend step declares it (`blockG`, not
+destroyed); on Kayo's own turn with his 6-power swing the rail offers the Plating's ability lit, and the
+tap pays it; Gravy Bones replays Limpit from the graveyard through the rail. No page errors, no
+horizontal overflow, every dim tap zooms.
+
+**Found and NOT fixed (reported):** Limpit, Hop-a-long played from the GRAVEYARD keeps its action point
+("Go again — action point kept"), where the same card from hand keeps none (v3.44/v5.38: an ally's go
+again belongs to its attack ability). This release makes that route reachable at the table.
+
 ## v5.43 — An opt opens for the seat that opted; an opponent's attack is not yours
 
 **QUEUE v4 S10, two seat defects from the user's own bug report.**

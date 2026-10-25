@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.43
+**Current version:** v5.44
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3673 drills** at v5.43.
+This is `node --test "test/*.test.js"` — **3679 drills** at v5.44.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -875,6 +875,16 @@ The arsenal set, opt, a reorder, a hand-to-deck pick, Azalea's cycle and Boulder
 cards only one seat had seen (QUEUE v3 S2). Each names the seat and a count now; a graveyard pick and
 a face-up arsenal card are public and keep their names (`test/hiddenfeed.test.js`). **When a line
 names a card, ask which zone it came from and which it went to: two hidden zones mean a count.**
+
+### THE TABLE'S RAIL HAS EVERY ROUTE, AND THE TILE DECLARES FIRST (v5.44)
+
+The table's gear tile tried the ability before defend, so in the defend step Fai's Pouncing Paws and
+Tearing Shuko (each a legal defender AND a legal instant activation) answered a block tap by
+activating (QUEUE v4 S11). The tile declares while `defend` is legal; `railPlays` puts the trainer's
+`playables()` on the rail as legal-gated actions (swings, `"gp"+uid` abilities, the hero power,
+graveyard and banish cards `judge.legal` accepts), and `usePeek` re-peeks on a different verb so one
+route's peek cannot commit another (`test/tablerail.test.js`). **When one tap can mean two actions,
+ask which one the player is most likely making, and put the other on the rail.**
 
 ### A QUEUED PROMPT NAMES ITS SEAT, AND "YOU CONTROL" IS YOURS (v5.43)
 

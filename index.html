@@ -817,7 +817,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "5.43"; /* v5.43 - an opt opens for the seat that opted, and an opponent's attack is not a card you control. See CHANGELOG.md. */
+window.APP_VER = "5.44"; /* v5.44 - the table's rail offers every route the trainer's does, and a gear tile declares while it can defend. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -2174,7 +2174,11 @@ function usePeek(resetKey, inspect, onInspect){
   uE(()=>{ setPeek(null); },[resetKey]);
   const tapTwice = (card, verb, commit) => () => {
     if(inspect){ onInspect && onInspect(card); return; }
-    if(!peek || peek.uid !== card.uid){ setPeek({uid:card.uid, verb}); return; }
+    /* THE SECOND TAP COMMITS THE ROUTE THE FIRST TAP NAMED (v5.44). A gear
+       tile and the rail's entry for the same piece share a uid and may carry
+       different actions (defend on the tile, the swing on the rail), so a
+       peek armed on one must not commit the other: a different verb re-peeks. */
+    if(!peek || peek.uid !== card.uid || peek.verb !== verb){ setPeek({uid:card.uid, verb}); return; }
     setPeek(null);
     commit();
   };
@@ -7081,8 +7085,15 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
   const actAct = (uid) => needTarget ? {t:"activate", uid, target:tgtSpec()}
                                      : {t:"activate", uid};
 
+  /* EVERY CARD A TAP CAN PEEK, or the dock finds nothing while the tap
+     still arms. The gear tile's ability peek has named the powCard since
+     v4.49 and this list never carried one; the rail adds the hero power
+     and the graveyard and banish (v5.44). */
   const peekables = () => [...me.hand, ...me.gear, ...(me.arsenal?[me.arsenal]:[]),
-                           ...me.board.map(b=>b.card)];
+                           ...me.board.map(b=>b.card),
+                           ...me.gear.map(gr=>gr.powCard).filter(Boolean),
+                           ...(liveBuild.HPOW ? [liveBuild.HPOW] : []),
+                           ...(me.grave||[]), ...(me.banish||[])];
 
   /* One gear tile, for either seat. Yours is tappable — swing it or
      raise it — theirs opens the card, because it is not actionable and
@@ -7130,9 +7141,16 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
        shape with `foe` in takeIt's clash loop crashed the trainer outright
        (v2.54). Nothing here needs the acting side today, which is exactly
        how the other one survived unnoticed for so long. */
-    const cellAct = mine(swing) ? swing
-                  : (ability && mine(ability)) ? ability
-                  : mine(defend) ? defend : null;
+    /* ---- THE DECLARATION WINS THE TAP (v5.44, QUEUE v4 S11) ----------
+       The tile tried the ability before defend, so in the defend step
+       Kayo's Predatory Plating (an Instant whose cost is "Destroy this")
+       answered a tap meant to BLOCK by destroying itself. While `defend` (or
+       "stop defending", the same action) is legal, the tile declares; the
+       swing and the ability are on the rail too, so the tile preferring the
+       declaration loses nothing. */
+    const cellAct = mine(defend) ? defend
+                  : mine(swing) ? swing
+                  : (ability && mine(ability)) ? ability : null;
     /* THE VERB NAMES THE ROUTE. It read "swing" for every `activate`, so
        tapping any of the 32 ability-only pieces promised a swing the piece
        does not print — and the ability's own card is what the two-tap peek
@@ -7192,6 +7210,48 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
         {blocking && <span className="defsel">⛨ DEF</span>}
         {pitched && <span className="defsel">◈ {c.pitch}</span>}
         <CardFrame card={c}/>
+      </button>);
+  };
+
+  /* ---- THE RAIL'S OTHER PLAYS (v5.44, QUEUE v4 S11) -----------------
+     The trainer's `playables()` puts every route a seat has besides its
+     hand on the rail: each weapon swing, each equipment ability's powCard,
+     the hero power, and the cards playable from the graveyard or banish.
+     The table had the swing and the ability folded into one tile tap (so
+     one of them hid behind the other) and NO route from the graveyard or
+     banish at all: Gravy Bones could not replay a watery-grave ally here.
+
+     Each entry is an ACTION and `judge.legal` lights it (v3.84: the UI
+     reads no card text). The gear and hero entries are few and show dim
+     when refused; a graveyard or banish card appears only when legal, or a
+     thirty-card graveyard floods the rail. */
+  const liveBuild = (g.builds && g.builds[mySeat]) || myBuild;
+  const railPlays = () => {
+    if(pay || myArsStep || over) return [];
+    const out = [];
+    for(const gr of me.gear){
+      if(gr.destroyed) continue;
+      if(isWeapon(gr)) out.push({card:gr, a:actAct(gr.uid), verb:"swing", zone:slotOf(gr).lab});
+      if(gr.pow && gr.powCard) out.push({card:gr.powCard, a:{t:"activate", uid:"gp"+gr.uid},
+                                         verb:"activate", zone:slotOf(gr).lab});
+    }
+    if(liveBuild.HPOW) out.push({card:liveBuild.HPOW, a:{t:"activate", from:"hero", uid:"hpow"},
+                                 verb:"use the hero power", zone:"hero"});
+    for(const [z, verb, lab] of [["grave", "play from the graveyard", "discard"],
+                                 ["banish", "play from banish", "banish"]])
+      for(const c of me[z] || []){
+        const a = playAct(c, z);
+        if(mine(a)) out.push({card:c, a, verb, zone:lab});
+      }
+    return out;
+  };
+  const railCell = (p, i) => {
+    const ok = mine(p.a);
+    return (
+      <button key={"rp-"+p.zone+"-"+p.card.uid+"-"+i}
+        className={"hc clip-sm"+(ok?"":" dis")+(peek&&peek.uid===p.card.uid&&peek.verb===p.verb?" peek":"")}
+        onClick={ok ? tapTwice(p.card, p.verb, ()=>fire(p.a)) : ()=>setZoom(p.card)}>
+        <CardFrame card={p.card} zone={p.zone}/>
       </button>);
   };
 
@@ -7407,6 +7467,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
 
               <div className="phand"><span className="hlbl">Hand</span>
                 {me.hand.map(handCell)}
+                {railPlays().map(railCell)}
                 {me.arsenal && (()=>{
                   const a = playAct(me.arsenal, "arsenal");
                   const ok = mine(a);

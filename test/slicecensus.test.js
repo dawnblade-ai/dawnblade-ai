@@ -271,7 +271,10 @@ test("which SOURCE FILE each slice reads is pinned, or the resolver is unwatched
     "engine/effects.js": 3,
     "DERIVED:TABLE": 1,
     "DERIVED:bar": 1,
-    "DERIVED:lit": 1
+    "DERIVED:lit": 1,
+    /* +1 AT v5.44: `tablerail.test.js` reads `railPlays` out of its
+       TableBoard slice, bounded at `railCell` on the next declaration. */
+    "DERIVED:TB": 1
   }, "a slice changed which file it reads, or the holder resolver stopped "
    + "distinguishing them — read the row before repinning");
 });
@@ -426,5 +429,6 @@ test("every holder resolves to a source file, or the census is under-reporting",
                        .map(r => r.tf + " " + r.f).sort(),
     ["arenaability.test.js DERIVED:TABLE",
      "phasebar.test.js DERIVED:bar",
-     "sides.test.js DERIVED:lit"]);
+     "sides.test.js DERIVED:lit",
+     "tablerail.test.js DERIVED:TB"]);
 });
