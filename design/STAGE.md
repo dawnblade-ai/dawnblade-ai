@@ -1162,6 +1162,7 @@ Two things sit outside the lane on purpose, because a thumb should not hit them 
 - `pick`, `target`, `modal`: the candidates, targets or modes load onto the wheel and the hub confirms the top one. `promptReady` decides when the hub lights, exactly as it decides Confirm today.
 - `pay`, `soak`: the hub is PAY N; a downward swipe on the hub is Decline. The sheet's text sits above the wheel, where the verb sits now.
 - `opt`, `alloc`: the cards load onto the wheel, a tap on the top card toggles it into the bottom (opt) or places one counter (alloc), and the hub confirms.
+  - **Opt also has an ORDER** (added 2026-10-25, from a user report on v5.40). The ruling says the kept cards go back on top "in any order", and today's sheet cannot order them (QUEUE S12). On the wheel, the order the kept cards sit in IS the draw order, clockwise from the top. A drag that carries the top card past its neighbour swaps them. The verb strip reads `1ST DRAW` / `BOTTOM` for the top card.
 - `reveal`: the revealed cards load onto the wheel and the hub reads OK.
 
 So `PromptSheet` becomes a second **source** for the wheel rather than a second surface, and the thumb leaves the lane only to read the strips above it.
