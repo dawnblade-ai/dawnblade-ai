@@ -1,0 +1,402 @@
+diff --git a/engine/judge.js b/engine/judge.js
+index 96a5bb9..fd6719c 100644
+--- a/engine/judge.js
++++ b/engine/judge.js
+@@ -1797,6 +1797,16 @@ const defendsNow = (g, seat, uid, from) => {
+   const fx = PR.fxParse(c);
+   return !!fx.dr || (fx.ops || []).some(o => DEFENDS_OPS.indexOf(o[0]) >= 0);
+ };
++/* DOES THIS EQUIPMENT ABILITY SPEND THE PIECE FOR RESOURCES ALONE? (QUEUE v4
++   H11) Its cost destroys or banishes the piece, and every op it pays out is a
++   resource gain. For `sparring.js`, which reads no card text. */
++const abPieceForRes = (g, seat, uid) => {
++  const piece = (at(g, seat).gear || []).find(x => x && x.uid === uid);
++  const pc = piece && piece.powCard;
++  if(!pc || !(pc.sd || pc._selfBanish)) return false;
++  const ops = (PR.fxParse(pc).ops || []).filter(o => o[0] !== "noop");
++  return ops.length > 0 && ops.every(o => o[0] === "res");
++};
+ const keepsActionPoint = (g, seat, uid, from) => {
+   const sd = at(g, seat);
+   let c = null, route = from, atk = false;
+@@ -3902,7 +3912,7 @@ function drawTo(g, i){
+ }
+ 
+ return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
+-        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, defendsNow, boostShare, grantTakers, arcaneOf, chargeView,
++        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, defendsNow, abPieceForRes, boostShare, grantTakers, arcaneOf, chargeView,
+         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
+         handFree: PR.handFree,
+         /* the card semantics seam (v2.77) */
+diff --git a/engine/sparring.js b/engine/sparring.js
+index 541c050..315ea0d 100644
+--- a/engine/sparring.js
++++ b/engine/sparring.js
+@@ -111,6 +111,13 @@ const byUid = (a, b) => String(a.uid) < String(b.uid) ? -1 : String(a.uid) > Str
+ 
+ const legal = (g, a, seat) => J.legal(g, a, seat) == null;
+ 
++/* THE BRANCH THAT DECIDED (QUEUE v4 S13). `explain` sets NOTE, calls `act`,
++   and reads which return site tagged it; `act` alone leaves NOTE null, so
++   the policy's own play cannot move. The first tag wins, because the branch
++   that built the action returns before its callers do. */
++let NOTE = null;
++const tag = (k, a) => { if(NOTE && a && NOTE.why == null) NOTE.why = k; return a; };
++
+ /* ---- the payment ------------------------------------------------------
+    `judge.legal` has already refused any play this seat could not fund, so
+    by the time a payment is open the hand can always cover it. The only
+@@ -145,7 +152,7 @@ function payAction(g, seat, p, o){
+      only Dash's deck prints boost and its share at the deal is 1.0, so 1/2
+      and "always" give the same ladder. Both premises are drills, so a second
+      boost deck forces the threshold to be re-measured. */
+-  if(p.kind === "boost") return {t: "boost", yes: J.boostShare(g, seat) >= BOOST_SHARE};
++  if(p.kind === "boost"){ const yes = J.boostShare(g, seat) >= BOOST_SHARE; return tag(yes ? "boostYes" : "boostNo", {t: "boost", yes}); }
+   /* FUSION'S REVEAL (v4.27) — TAKEN, and the reasoning is why it is not
+      boost's answer one line up.
+ 
+@@ -171,7 +178,7 @@ function payAction(g, seat, p, o){
+      waiting for two equal reveals. And it reads NO card text: `judge`
+      supplied the eligible uids with the question. */
+   if(p.kind === "fuse")
+-    return {t: "fuse", uid: [...(p.uids || [])].sort((a, b) => byUid({uid:a}, {uid:b}))[0] || null};
++    return tag("fuse", {t: "fuse", uid: [...(p.uids || [])].sort((a, b) => byUid({uid:a}, {uid:b}))[0] || null});
+   /* CHARGE (v4.33) — DECLINED, and it is boost's answer rather than
+      fusion's.
+ 
+@@ -214,11 +221,11 @@ function payAction(g, seat, p, o){
+      leaves "any number of times" weaker than printed for this policy
+      alone. Still no card text: pitch is a printed number. */
+   if(p.kind === "charge"){
+-    if((p.picked || []).length) return {t: "charge", uid: null};
++    if((p.picked || []).length) return tag("chargeDone", {t: "charge", uid: null});
+     const sd = g.sides[seat];
+     const c = (sd.hand || []).filter(h => (p.uids || []).indexOf(h.uid) >= 0)
+       .sort((a, b) => num(a, "pitch") - num(b, "pitch") || byUid(a, b))[0];
+-    return {t: "charge", uid: c ? c.uid : null};
++    return tag(c ? "charge" : "chargeNone", {t: "charge", uid: c ? c.uid : null});
+   }
+   /* ---- THE TWO KINDS THIS POLICY HAD NEVER MET (v3.80) --------------
+      `judge.PENDING_KINDS` is a census of four and this function branched
+@@ -253,7 +260,7 @@ function payAction(g, seat, p, o){
+      still wins wherever both are legal. */
+   if(p.kind === "split"){
+     for(const half of [0, 1])
+-      if(legal(g, {t: "split", half}, seat)) return {t: "split", half};
++      if(legal(g, {t: "split", half}, seat)) return tag("split", {t: "split", half});
+     /* Neither half legal: fall through to the payment branches below
+        rather than proposing a refusal. */
+   }
+@@ -270,13 +277,13 @@ function payAction(g, seat, p, o){
+      the pending carries (`legal` checks the answer against it), so this
+      reads no card text. Weighing X against the resources a later play
+      might want is a judgement about the hand this policy does not make. */
+-  if(p.kind === "xval") return {t: "xval", x: p.max || 0};
++  if(p.kind === "xval") return tag("xvalMax", {t: "xval", x: p.max || 0});
+   /* WHICH CARD A DISCARD COST SPENDS (v4.85) — the FIRST candidate, which
+      `discCostChoice` returns in hand order: exactly the card the engine
+      took before the question existed, so the ladder measures the route
+      rather than a new judgement about which card to lose (v4.81's rule for
+      the chosen discard, one cost over). */
+-  if(p.kind === "discost") return {t: "discost", uid: (p.uids || [])[0]};
++  if(p.kind === "discost") return tag("discost", {t: "discost", uid: (p.uids || [])[0]});
+   /* ---- A CHI COST ASKS A SECOND QUESTION OF THE SAME PITCH (v4.54) ---
+      Enigma's ability prints "{c}{c}{c}", and a Chi pays a {c} cost where
+      a resource point does not. `pitchPick` ranks on printed pitch, so a
+@@ -294,15 +301,15 @@ function payAction(g, seat, p, o){
+   const chi = J.chiNeed(g, seat);
+   if(chi.short > 0){
+     const u = chi.uids.find(x => (sd.paySel || []).indexOf(x) < 0);
+-    if(u != null) return {t: "paySel", uid: u};
++    if(u != null) return tag("pitchChi", {t: "paySel", uid: u});
+   }
+-  if(p.need - sd.res - J.paySum(sd) <= 0 && chi.short <= 0) return {t: "payConfirm"};
++  if(p.need - sd.res - J.paySum(sd) <= 0 && chi.short <= 0) return tag("payConfirm", {t: "payConfirm"});
+   const c = pitchPick(sd, p.card, o);
+   /* Unreachable after a play this policy proposed — `legal` guarantees
+      the hand covers the cost. It is here for a payment the policy did not
+      open: a human who taps a card and hands the seat over mid-decision
+      must not leave the policy with nothing legal to do. */
+-  return c ? {t: "paySel", uid: c.uid} : {t: "payCancel"};
++  return c ? tag("pitch", {t: "paySel", uid: c.uid}) : tag("payCancel", {t: "payCancel"});
+ }
+ 
+ /* ---- the wall (CR 7.3.2) ----------------------------------------------
+@@ -341,7 +348,7 @@ function nextBlocker(g, seat, o){
+       .filter(x => x && (sd.blockG || []).indexOf(x.uid) < 0 && GM.gearDef(x) > 0)
+       .sort((a, b) => GM.gearDef(b) - GM.gearDef(a) || byUid(a, b))
+       .find(x => legal(g, {t: "defend", uid: x.uid}, seat));
+-    if(piece) return {t: "defend", uid: piece.uid};
++    if(piece) return tag("blockGear", {t: "defend", uid: piece.uid});
+   }
+ 
+   /* THEN CARDS, AND ONLY IF THE HIT IS WORTH ONE.
+@@ -362,7 +369,7 @@ function nextBlocker(g, seat, o){
+     .filter(c => num(c, "def") > 0)
+     .sort((a, b) => num(b, "def") - num(a, "def") || num(a, "power") - num(b, "power") || byUid(a, b))
+     .find(c => legal(g, {t: "defend", uid: c.uid}, seat));
+-  return card ? {t: "defend", uid: card.uid} : null;
++  return card ? tag(lethal ? "blockLethal" : "blockHand", {t: "defend", uid: card.uid}) : null;
+ }
+ 
+ /* ---- the action phase -------------------------------------------------
+@@ -416,7 +423,7 @@ function reaction(g, seat){
+     .filter(x => legal(g, {t: "play", uid: x.c.uid, from: x.from}, seat))
+     .sort((a, b) => num(a.c, "cost") - num(b.c, "cost") || byUid(a.c, b.c));
+   const pick = legalRx[0];
+-  if(pick) return {t: "play", uid: pick.c.uid, from: pick.from};
++  if(pick) return tag(defending ? "rxDefend" : "rxAttack", {t: "play", uid: pick.c.uid, from: pick.from});
+ 
+   /* ---- AN ACTIVATED ABILITY IS A REACTION TOO (v4.38) ----------------
+ 
+@@ -461,7 +468,7 @@ function reaction(g, seat){
+     .filter(uid => rxAb(J.abWindowOf(g, seat, uid)))
+     .map(uid => uid === "hpow" ? {t: "activate", from: "hero", uid} : {t: "activate", uid})
+     .find(a => legal(g, a, seat));
+-  return ab || null;
++  return ab ? tag("rxAbility", ab) : null;
+ }
+ 
+ function offence(g, seat, o){
+@@ -558,7 +565,7 @@ function offence(g, seat, o){
+       .sort((a, b) => num(a.c, "cost") - num(b.c, "cost")
+                    || num(a.c, "pitch") - num(b.c, "pitch") || byUid(a, b))
+       .find(x => legal(g, {t: "play", uid: x.uid, from: x.from}, seat));
+-    if(first) return {t: "play", uid: first.uid, from: first.from};
++    if(first) return tag("keepsAP", {t: "play", uid: first.uid, from: first.from});
+   }
+ 
+   /* ---- THE ATTACK THAT KEEPS THE POINT GOES FIRST (v5.38, QUEUE v4 H4)
+@@ -606,17 +613,28 @@ function offence(g, seat, o){
+                      : x.ally ? {t: "activate", uid: x.uid, target: targetFor(g, seat, x.c)}
+                                : {t: "play", uid: x.uid, from: x.from,
+                                   target: targetFor(g, seat, x.c)}, seat));
+-  if(pick && pick.weapon) return {t: "activate", uid: pick.uid};
+-  if(pick) return pick.ally
++  const pickWhy = x => x.weapon ? "pumpedWeapon" : rankC(x) < 3 && x.cv && !x.cv.charged ? "chargeFirst"
++    : x.kap ? "atkKeepsAP" : x.ally ? (targetFor(g, seat, x.c) !== "hero" ? "allyTake" : "allyIn") : "biggestAttack";
++  if(pick && pick.weapon) return tag(pickWhy(pick), {t: "activate", uid: pick.uid});
++  if(pick) return tag(pickWhy(pick), pick.ally
+     ? {t: "activate", uid: pick.uid, target: targetFor(g, seat, pick.c)}
+-    : {t: "play", uid: pick.uid, from: pick.from, target: targetFor(g, seat, pick.c)};
++    : {t: "play", uid: pick.uid, from: pick.from, target: targetFor(g, seat, pick.c)});
+ 
+   /* A weapon swing is an attack that comes from the gear zone. `legal`
+      owns both of its limits — the printed `Once per Turn` and the tap —
+      so the policy just asks. */
++  /* A PIECE THAT PAYS WITH ITSELF IS NOT A SPARE ACTION (QUEUE v4 H11).
++     This fallback activated any legal equipment ability, so Blossom of
++     Spring and Predatory Plating were destroyed for {r} at the end of a turn
++     with nothing left to spend it on: a defender thrown away for a resource
++     that fizzles. Only a piece whose whole payout is resources is held:
++     Beckoning Haunt's destroy returns an aura and still fires. Measured as
++     ladder noise, and kept because "[Hero]'s call" shows this branch to the
++     player. `judge.abPieceForRes` answers. */
+   const w = (sd.gear || []).slice().sort(byUid)
++    .filter(x => !J.abPieceForRes(g, seat, x.uid))
+     .find(x => legal(g, {t: "activate", uid: x.uid}, seat));
+-  if(w) return {t: "activate", uid: w.uid};
++  if(w) return tag(w.power != null ? "weapon" : "gearAbility", {t: "activate", uid: w.uid});
+ 
+   /* THE HERO'S OWN ABILITY, last, and for the same reason it was missing:
+      nothing proposed one in 210 games. It goes after the attacks because
+@@ -625,7 +643,7 @@ function offence(g, seat, o){
+      so spending the action point on it ahead of a swing would be a
+      judgement this file cannot make without reading the card. */
+   if(legal(g, {t: "activate", from: "hero", uid: "hpow"}, seat))
+-    return {t: "activate", from: "hero", uid: "hpow"};
++    return tag("heroAbility", {t: "activate", from: "hero", uid: "hpow"});
+ 
+   /* ---- A NON-ATTACK IS STILL A PLAY (v3.80) --------------------------
+      THE FILTER ABOVE IS `num(x.c, "power") > 0`, AND A NON-ATTACK PRINTS
+@@ -679,7 +697,7 @@ function offence(g, seat, o){
+     .sort((a, b) => (b.arc - a.arc) || num(a.c, "cost") - num(b.c, "cost")
+                  || num(a.c, "pitch") - num(b.c, "pitch") || byUid(a, b))
+     .find(x => legal(g, {t: "play", uid: x.uid, from: x.from}, seat));
+-  if(nonAtk) return {t: "play", uid: nonAtk.uid, from: nonAtk.from};
++  if(nonAtk) return tag(nonAtk.arc > 0 ? "arcaneFirst" : "nonAttack", {t: "play", uid: nonAtk.uid, from: nonAtk.from});
+ 
+   return null;
+ }
+@@ -745,7 +763,19 @@ function act(g, seat, o){
+ 
+      Asked before `pending` for the same reason `pending` is asked before
+      priority: it is the narrowest thing that blocks everything else. */
+-  if(g.prompt) return (g.prompt.side || 0) === seat ? J.autoAnswer(g) : null;
++  if(g.prompt){
++    if((g.prompt.side || 0) !== seat) return null;
++    const ans = J.autoAnswer(g), pt = g.prompt.tag;
++    const k = !ans ? null
++      : pt === "opt" ? "optKeep"
++      : pt === "soak" ? "soak"
++      : pt === "pay" ? ((ans.choice || g.prompt.choice) === "decline" ? "payNo" : "payYes")
++      : pt === "modal" || pt === "target" ? "firstOption"
++      : pt === "alloc" ? "allocAll"
++      : pt === "pick" ? (ans.t === "promptSel" ? "pickMin" : (g.prompt.sel || []).length ? "pickDone" : "declineOptional")
++      : "answer";
++    return tag(k, ans);
++  }
+ 
+   /* A half-finished interaction belongs to ONE seat and blocks the other
+      entirely, so it is asked about before anything else. */
+@@ -759,7 +789,7 @@ function act(g, seat, o){
+   if(g.arsenalFor === seat){
+     const best = (g.sides[seat].hand || []).slice()
+       .sort((a, b) => num(b, "power") - num(a, "power") || byUid(a, b))[0];
+-    return {t: "arsenal", uid: best ? best.uid : null};
++    return tag(best ? "arsenalBest" : "arsenalSkip", {t: "arsenal", uid: best ? best.uid : null});
+   }
+ 
+   /* CR 7.3.2 — declaring defenders is free and simultaneous, and is the
+@@ -818,8 +848,8 @@ function act(g, seat, o){
+      (CR 4.3.4 — the phase ends only when both seats pass in succession),
+      so this is not a shortcut past the opponent; it is the same pass with
+      a better log line, and `legal` refuses it anywhere it would be a lie. */
+-  if(legal(g, {t: "endTurn"}, seat)) return {t: "endTurn"};
+-  return {t: "pass"};
++  if(legal(g, {t: "endTurn"}, seat)) return tag("endTurn", {t: "endTurn"});
++  return tag("pass", {t: "pass"});
+ }
+ 
+ /* ---- driving -----------------------------------------------------------
+@@ -855,5 +885,121 @@ function run(g, o){
+   return {game: n, steps, errs, trace};
+ }
+ 
+-return {DEFAULTS, act, run, pitchPick, nextBlocker, offence, wallOf, affordableWithin};
++/* ---- WHAT THE HERO AI WOULD DO, IN WORDS (QUEUE v4 S13) ---------------
++   `explain` is `act` with its reason. The action is exactly `act`'s (a drill
++   holds them equal over self-play), the line names it with card NAMES only,
++   and the reason is the sentence for the branch that decided. Names are not
++   card text, so this file still reads none. */
++const CALL_WHY = {
++  pitch: "Pitch your highest-pitch card, to cover the cost in as few cards as possible.",
++  pitchChi: "Pitch the Chi card. Only Chi pays this part of the cost.",
++  payCancel: "Cancel. Your hand cannot cover this cost.",
++  payConfirm: "That covers the cost.",
++  boostYes: "Boost: most of what is left in your deck pays it off.",
++  boostNo: "Don't boost: too little of what is left in your deck pays it off.",
++  fuse: "Fuse it. Revealing the card costs you nothing.",
++  charge: "Charge your lowest-pitch card. It is worth the least as a resource.",
++  chargeNone: "Don't charge. There is no card worth giving up.",
++  chargeDone: "That is enough charging.",
++  split: "Play the half you can play right now.",
++  addPayNo: "Skip the extra cost. It isn't worth the cards.",
++  xvalMax: "Make X as big as you can pay for.",
++  discost: "Discard this card to pay the cost.",
++  arsenalBest: "Keep your biggest attack face down. It is the card you most want to lead with next turn.",
++  arsenalSkip: "There is nothing worth keeping.",
++  blockGear: "Block with armour first. Equipment wears down instead of leaving your hand.",
++  blockLethal: "Block with everything. This hit would kill you.",
++  blockHand: "Block with your best defender. This hit is too big to take.",
++  rxDefend: "Play it now. It protects you from this attack.",
++  rxAttack: "React with your cheapest card to pump this attack.",
++  rxAbility: "Use the ability. It is printed for this window.",
++  keepsAP: "Play it before you attack. It keeps your action point.",
++  atkKeepsAP: "Lead with the attack that goes again. It keeps your action point.",
++  chargeFirst: "Swing the attack that lets you charge first. Your other cards are waiting on a charge.",
++  pumpedWeapon: "Swing the weapon. The charge pumped it.",
++  allyTake: "Attack the ally. This swing kills it, and an attack on an ally can't be blocked.",
++  allyIn: "Send your ally in.",
++  biggestAttack: "Swing the biggest attack you can afford.",
++  weapon: "Swing your weapon. It costs no card.",
++  gearAbility: "Use your equipment's ability. Nothing better is left to do.",
++  heroAbility: "Use your hero's ability. Nothing better is left for the action point.",
++  arcaneFirst: "Play your biggest arcane first.",
++  nonAttack: "Play the cheapest card you have left.",
++  optKeep: "Leave them on top in this order.",
++  soak: "Pay to soak only what the damage is worth.",
++  payYes: "Pay it.",
++  payNo: "Don't pay. It isn't worth the cards.",
++  firstOption: "Take the first option.",
++  allocAll: "Place every counter on your strongest piece.",
++  pickMin: "Choose this one.",
++  pickDone: "That is enough.",
++  declineOptional: "Decline. It is optional, and not worth it here.",
++  answer: "Answer the question.",
++  endTurn: "End your turn. Nothing worth doing is left.",
++  pass: "Pass."
++};
++const BY_TYPE = {addPay: "addPayNo"};
++function cardIn(sd, uid){
++  if(uid == null) return null;
++  const zones = [sd.hand || [], sd.arsenal ? [sd.arsenal] : [], sd.gear || [],
++                 (sd.board || []).map(b => b && Object.assign({}, b.card, {uid: b.uid})),
++                 sd.grave || [], sd.banish || []];
++  for(const z of zones) for(const c of z) if(c && c.uid === uid) return c;
++  return null;
++}
++const nm = c => (c && c.name) || "it";
++const short = n => String(n || "").split(",")[0];
++function lineOf(g, seat, a){
++  if(!a) return null;
++  const sd = g.sides[seat], c = cardIn(sd, a.uid), p = g.prompt;
++  const FROM = {arsenal: " from your arsenal", grave: " from your graveyard", banish: " from your banished zone"};
++  switch(a.t){
++    case "play": {
++      const tg = a.target && a.target !== "hero" ? cardIn(g.sides[1 - seat], a.target) : null;
++      return "Play " + nm(c) + (FROM[a.from] || "") + (tg ? " at " + nm(tg) : "");
++    }
++    case "activate": {
++      if(a.uid === "hpow") return "Use " + short(sd.name) + "'s ability";
++      const b = (sd.board || []).find(x => x && x.uid === a.uid);
++      if(b){ const tg = a.target && a.target !== "hero" ? cardIn(g.sides[1 - seat], a.target) : null;
++        return "Attack with " + nm(b.card) + (tg ? " at " + nm(tg) : ""); }
++      const gp = String(a.uid).indexOf("gp") === 0 ? cardIn(sd, Number(String(a.uid).slice(2))) || cardIn(sd, String(a.uid).slice(2)) : null;
++      if(gp) return "Activate " + nm(gp);
++      return (c && c.power != null ? "Swing " : "Activate ") + nm(c);
++    }
++    case "defend": return "Block with " + nm(c);
++    case "arsenal": return a.uid != null ? "Put " + nm(c) + " face down in your arsenal" : "Leave your arsenal empty";
++    case "paySel": return "Pitch " + nm(c);
++    case "payConfirm": return "Pay";
++    case "payCancel": return "Cancel the payment";
++    case "boost": return a.yes ? "Boost it" : "Don't boost";
++    case "fuse": return a.uid != null ? "Reveal " + nm(c) + " to fuse it" : "Don't fuse";
++    case "charge": return a.uid != null ? "Charge " + nm(c) + " into your soul" : "Don't charge";
++    case "split": return "Play the " + (a.half === 1 ? "second" : a.half === 0 ? "first" : "both") + " half";
++    case "addPay": return a.yes ? "Pay the extra cost" : "Don't pay the extra cost";
++    case "xval": return "Make X " + a.x;
++    case "discost": return "Discard " + nm(c) + " for the cost";
++    case "promptSel": return "Choose " + nm(p && (p.cards || [])[a.i] || (p && p.options || [])[a.i]);
++    case "promptChoose": return a.choice === "decline" ? "Decline"
++      : a.choice === "pay" ? "Pay" : "Choose " + (((p && p.options || [])[a.choice] || {}).label || "the first option");
++    case "promptConfirm": return p && p.tag === "opt" ? "Keep them in this order"
++      : p && p.tag === "pay" ? (p.choice === "decline" ? "Don't pay" : "Pay")
++      : p && p.tag === "pick" && !(p.sel || []).length ? "Choose none" : "Confirm";
++    case "promptDecline": return "Decline";
++    case "endTurn": return "End your turn";
++    case "pass": return "Pass";
++  }
++  return a.t;
++}
++function explain(g, seat, o){
++  NOTE = {};
++  let a = null, n = null;
++  try { a = act(g, seat, o); } finally { n = NOTE; NOTE = null; }
++  /* A SITE THAT A DRILL PINS VERBATIM STAYS UNTAGGED, and its reason is
++     read off the action instead (`addPay` is pinned by sparring.test.js). */
++  const key = a ? (n.why || BY_TYPE[a.t] || null) : null;
++  return {action: a, key, why: key ? (CALL_WHY[key] || null) : null, line: lineOf(g, seat, a)};
++}
++
++return {DEFAULTS, act, explain, CALL_WHY, run, pitchPick, nextBlocker, offence, wallOf, affordableWithin};
+ });
+diff --git a/test/speccensus.test.js b/test/speccensus.test.js
+index 23195b9..ca56b67 100644
+--- a/test/speccensus.test.js
++++ b/test/speccensus.test.js
+@@ -219,7 +219,12 @@ const drive = () => {
+      Bravo v Azalea stopped reaching the reorder. Measured over every
+      pairing, both chairs: five reach it, and Azalea v Kayo with Azalea's
+      chair first is the first. Swapped, so the count stands. */
+-  { const r = T.leg(E[5], E[0], "kt-5-0-0", 0); legs++; if(r && r.threw) threw++; }
++  /* AND REPLACED AGAIN (QUEUE v4 H11): the seat no longer destroys a piece
++     for a resource it cannot spend, so Azalea's game against Kayo moved and
++     the leg above stopped reaching the reorder. Measured over every pairing,
++     both chairs: Azalea v Kayo with Kayo's chair first is the first to
++     reach it. Swapped, so the count stands. */
++  { const r = T.leg(E[5], E[0], "fs-5-0-1", 1); legs++; if(r && r.threw) threw++; }
+   /* AND THE 38th (v5.41): `charge` LEFT. Boltyn's seat now charges before it
+      swings (QUEUE v4 H6), so his soul is rarely empty when Roaring Beam asks
+      and the ring stopped reaching its charge-your-soul pick. Measured over

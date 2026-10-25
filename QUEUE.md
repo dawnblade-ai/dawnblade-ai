@@ -653,6 +653,32 @@ which tells the player what the hero ai would do in each situation."*
   keeps `advisor.js`, relabelled "✦ Coach's call", so no box claims to be the hero AI where it
   is not. The CEO reports that choice to the user. A drill: the string "Claude's call" appears
   nowhere in `index.html`.
+- **THE ENGINE HALF IS BUILT AND MEASURED (CEO, 2026-10-25):** `experiments/S13-explain-H11.patch`,
+  402 lines over judge.js, sparring.js and speccensus. It applies on v5.45 with H8 applied.
+  - `sparring.explain(g, seat)` returns `{action, key, why, line}`. A module-level `NOTE` is set
+    only inside `explain`, and every return site calls `tag(key, action)`, so `act` alone is
+    unchanged. The reason table is `sparring.CALL_WHY`, 46 keys. `BY_TYPE` gives the reason for
+    a site a drill pins verbatim (`addPay`).
+  - **Checked by `experiments/S13-explain-check.js <tree>`.** Over 30 self-play games and 15,076
+    states, for both seats: 0 mismatches between `explain(...).action` and `act(...)`, 0 actions
+    without a reason, and 0 with no line. Make it a drill. Eleven keys are not reached by that
+    sample, which is expected.
+  - **Names that collide with the guards were renamed:** `allyAttack` is a banned parser name, and
+    `WHY` is read as a bare call in index.html's prose. Keep `CALL_WHY`.
+  - **H11 is folded in, because the call shows this branch to the player.** The gear fallback
+    activated any legal equipment ability, so Blossom of Spring, Garland of Spring and Predatory
+    Plating were destroyed for {r} at the end of a turn with nothing to spend it on.
+    `judge.abPieceForRes` holds a self-destroying ability whose whole payout is resources. A blunter
+    first draft also blocked Beckoning Haunt's aura return, and the census showed it (`xPay` left).
+    - The full ladder with H8+H11 is 0/0/0, and every hero's interval overlaps H8 alone.
+    - The census swaps its `keepTop` leg to `fs-5-0-1` (Azalea v Kayo, Kayo's chair first). The
+      suite is 0 fail.
+  - **What is left for the Shipper:**
+    - the drills: equality over self-play, every action type has a line, the reason sentences
+      under `noopvoice`'s rules, and sabotage of `tag` sites;
+    - the UI: the box label, the table wiring, the trainer relabel and the "Claude's call" absence
+      drill;
+    - the phone drive.
 - **Drive it on the phone page at 393x852:**
   - Kayo v the AI: the box updates on every state, at the action phase, the defend step, a pitch
     payment, an opt sheet and the arsenal step.
