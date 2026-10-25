@@ -890,6 +890,9 @@ always 1). Both are measured and stated; don't build anything for them.
 
 ## FEED TEXT — batch into one or two releases
 
+**Items 11–18 SHIPPED** in v5.28 (11–15) and v5.29 (16–18); CEO-checked against v5.44 source on
+2026-10-25. **Open: 19 and 20**, small, one release together.
+
 11. Pick result lines print raw state keys: `Swift Shot → deckTop from grave.` (also the
     sheet hint `From your grave → deckTop`). Use `promptZoneWord` and a destination word.
     `prompts.js:~1167`, `~492`. (feed-a §4)
