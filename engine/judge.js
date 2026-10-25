@@ -1880,6 +1880,34 @@ const arcaneOf = (g, seat, uid, from) => {
           : from === "hand" ? (sd.hand || []).find(x => x && x.uid === uid) : null;
   return c ? PR.arcAmount(c) : 0;
 };
+/* ---- WHAT DOES A CHARGE DO FOR THIS PLAY? (v5.41, QUEUE v4 H6) -------
+   `keepsActionPoint`'s sibling, for `sparring.js`, which reads no card
+   text. Boltyn's deck turns on "if you've charged this turn" (`charged`,
+   off `hist.charged`, which CR 4.4.4 clears). For a card the seat holds in
+   `from` ("hand" / "arsenal") or a weapon it has equipped ("weapon"):
+     charged  has the seat charged its soul this turn;
+     offers   the card prints an additional-cost charge (`fx.chargeCost`);
+     gaIf     its go again is gated on having charged ({cond:"charged",
+              op:["ga"]} in `fx.conds`);
+     base     its printed base power (`effects.basePowOf`);
+     power    base, plus +1{p} counters on a weapon, plus every "+N{p}"
+              gated on having charged — counted only once the seat HAS.
+   null for anything the seat does not hold there. */
+const chargeView = (g, seat, uid, from) => {
+  const sd = at(g, seat);
+  const c = from === "weapon" ? (sd.gear || []).find(x => x && x.uid === uid && PR.isWeapon(x))
+          : from === "arsenal" ? (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null)
+          : from === "hand" ? (sd.hand || []).find(x => x && x.uid === uid) : null;
+  if(!c || !c.name) return null;
+  const fx = PR.fxParse(c);
+  const charged = (((sd.hist || {}).charged) || 0) > 0;
+  const conds = (fx.conds || []).filter(e => e && e.cond === "charged" && e.op);
+  const base = E.basePowOf(c, from === "weapon" ? "weapon" : from, g) || 0;
+  const ctr = from === "weapon" ? (((sd.counters || {})[uid] || {}).pow || 0) : 0;
+  const pump = charged ? conds.filter(e => e.op[0] === "self").reduce((t, e) => t + (+e.op[1] || 0), 0) : 0;
+  return {charged, offers: !!fx.chargeCost, gaIf: conds.some(e => e.op[0] === "ga"),
+          base, power: base + ctr + pump};
+};
 const targetOf = (g, seat, spec) => {
   const def = P.other(seat);
   if(spec == null || spec === "hero") return {kind: "hero", side: def, uid: null};
@@ -3859,7 +3887,7 @@ function drawTo(g, i){
 }
 
 return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, boostShare, grantTakers, arcaneOf,
+        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, boostShare, grantTakers, arcaneOf, chargeView,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */

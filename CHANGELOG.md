@@ -1,3 +1,30 @@
+## v5.41 — Charge first, then the weapon the charge pumped
+
+**QUEUE v4 H6.** Boltyn's deck turns on "if you've charged this turn" (Take Flight's go again,
+Valiant Thrust's +3{p}, Raydn, Duskbane's swing), and `sparring.offence` ranked attacks on printed
+power alone, so his turn was one uncharged attack and the gates never opened. The seat now ranks:
+
+- **before it has charged**, an attack that offers an additional-cost charge AND leaves one other card
+  in hand to charge (`chargeRoom`, printed numbers only) goes first, the one whose go again turns on the
+  charge ahead of the rest;
+- **once charged**, an attack whose go again the charge turned on keeps the point and goes first, and a
+  weapon the charge pumped above its printed base is a candidate that swings before a hand attack that
+  keeps nothing.
+
+`judge.chargeView(g, seat, uid, from)` is the one reader (`charged`, `offers`, `gaIf`, `base`,
+`power`), `keepsActionPoint`'s sibling, so `sparring.js` still reads no card text. A seat that never
+charges ranks exactly as before: no charge view, no pumped weapon.
+
+**Measured on top of v5.40, 3 seeds, both sides:** Boltyn **6·7·4 → 10·10·14** wins a seed (5.7 →
+11.3), intervals disjoint; own seat (`tourney.js boltyn '' 3`) 2·2·2 → 6·4·9. **No other hero's
+interval separates**: Kayo 19.3 → 18.7, Blaze 7.3 → 5.7, Lyath 6.7 → 5.7, Iyslander 12.3 → 11.3,
+Gravy 11.0 → 10.3, the rest within a point, all overlapping. 0 refusals, 0 violations, NO-ZONE 0, one
+stall (gravy-briar-2, as at v5.40).
+
+`test/speccensus.test.js` lost `charge` (Roaring Beam's charge-your-soul pick): Boltyn's soul is rarely
+empty now. Over every pairing, both chairs and three seeds only Azalea v Boltyn reaches it, so it is a
+38th named leg, not a looser pin. `test/chargerank.test.js`: 8 drills, 10 sabotages, 10 bite.
+
 ## v5.40 — A soul banish goes to the banished zone, and the soul put is an event
 
 **QUEUE v4 S8.** Boltyn's hero ability and Radiant Touch pay "banish a card from your soul", and

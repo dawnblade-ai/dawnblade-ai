@@ -220,6 +220,12 @@ const drive = () => {
      pairing, both chairs: five reach it, and Azalea v Kayo with Azalea's
      chair first is the first. Swapped, so the count stands. */
   { const r = T.leg(E[5], E[0], "kt-5-0-0", 0); legs++; if(r && r.threw) threw++; }
+  /* AND THE 38th (v5.41): `charge` LEFT. Boltyn's seat now charges before it
+     swings (QUEUE v4 H6), so his soul is rarely empty when Roaring Beam asks
+     and the ring stopped reaching its charge-your-soul pick. Measured over
+     every pairing, both chairs and three seeds: only Azalea v Boltyn reaches
+     it. ADDED, for v4.58's reason; every other field it brings is pinned. */
+  { const r = T.leg(E[5], E[11], "ch-5-11-a", 0); legs++; if(r && r.threw) threw++; }
 };
 
 /* BOUND A FUNCTION AT THE NEXT SAME-LEVEL DECLARATION, NEVER AT A CHAR
@@ -238,9 +244,9 @@ const fnBody = name => {
 
 test("the driven census is alive — the legs really ran", () => {
   drive();
-  assert.equal(legs, 37, "the leg count moved; the pinned field set is taken at 37 "
-    + "(32 in the ring, plus the five named legs that keep `keepTop`, `ctrStamp`, "
-    + "`shuffleAfter` and crank's `avail`/`spendCtr` in it — see `drive`)");
+  assert.equal(legs, 38, "the leg count moved; the pinned field set is taken at 38 "
+    + "(32 in the ring, plus the six named legs that keep `keepTop`, `ctrStamp`, "
+    + "`shuffleAfter`, crank's `avail`/`spendCtr` and `charge` in it — see `drive`)");
   assert.equal(threw, 0,
     "a leg threw — `leg` reports that as `threw: true` rather than raising, so a "
     + "census built on it reports ZERO exactly as a missing feature does (v3.81)");

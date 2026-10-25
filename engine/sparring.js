@@ -562,17 +562,44 @@ function offence(g, seat, o){
      in hand. `judge.keepsActionPoint` answers for an attack and a board
      entry too, so the one that keeps the point sorts first and ties fall
      back to power, cost, uid. */
+  /* CHARGE FIRST, THEN THE WEAPON THE CHARGE PUMPED (v5.41, QUEUE v4 H6).
+     Boltyn's deck turns on "if you've charged this turn", and ranked on
+     printed power alone his turn made one uncharged attack. Before the
+     seat has charged, an attack that offers a charge and leaves a card to
+     charge outranks the rest, the one whose go again the charge turns on
+     first; once charged, such an attack keeps the point; and a weapon whose
+     swing the charge pumped above its base swings before a hand attack that
+     keeps nothing. `judge.chargeView` answers every fact, so this still
+     reads no card text. A seat that never charges ranks exactly as before:
+     no charge view, and no pumped weapon. */
+  const cv = x => !x.ally ? J.chargeView(g, seat, x.uid, x.from) : null;
+  const rankC = x => {
+    if(x.kap) return 0;
+    if(x.weapon) return 2;
+    const v = x.cv;
+    if(!v) return 3;
+    if(v.charged) return v.gaIf ? 0 : 3;
+    return v.offers && chargeRoom(sd, x.c, o) ? (v.gaIf ? 1 : 2) : 3;
+  };
+  const pumped = (sd.gear || []).slice().sort(byUid)
+    .map(w => ({w, v: J.chargeView(g, seat, w.uid, "weapon")}))
+    .filter(x => x.v && x.v.charged && x.v.power > x.v.base)
+    .map(x => ({c: Object.assign({}, x.w, {power: x.v.power}), uid: x.w.uid, weapon: true, kap: 0}));
   const pick = from
     .map(x => ({c: x.c, uid: x.c && x.c.uid, from: x.from}))
     .concat(allies)
     .filter(x => x.c && num(x.c, "power") > 0)
     .filter(x => x.ally || affordableWithin(sd, x.c, o))
     .map(x => Object.assign(x, {kap: J.keepsActionPoint(g, seat, x.uid, x.ally ? "board" : x.from) ? 1 : 0}))
-    .sort((a, b) => (b.kap - a.kap) || num(b.c, "power") - num(a.c, "power")
+    .map(x => Object.assign(x, {cv: cv(x)}))
+    .concat(pumped)
+    .sort((a, b) => (rankC(a) - rankC(b)) || (b.kap - a.kap) || num(b.c, "power") - num(a.c, "power")
                  || num(a.c, "cost") - num(b.c, "cost") || byUid(a, b))
-    .find(x => legal(g, x.ally ? {t: "activate", uid: x.uid, target: targetFor(g, seat, x.c)}
+    .find(x => legal(g, x.weapon ? {t: "activate", uid: x.uid}
+                     : x.ally ? {t: "activate", uid: x.uid, target: targetFor(g, seat, x.c)}
                                : {t: "play", uid: x.uid, from: x.from,
                                   target: targetFor(g, seat, x.c)}, seat));
+  if(pick && pick.weapon) return {t: "activate", uid: pick.uid};
   if(pick) return pick.ally
     ? {t: "activate", uid: pick.uid, target: targetFor(g, seat, pick.c)}
     : {t: "play", uid: pick.uid, from: pick.from, target: targetFor(g, seat, pick.c)};
@@ -660,6 +687,18 @@ function offence(g, seat, o){
    reduce, so the estimate is high and the policy's mistake is to skip a
    card it could in fact afford — the safe direction, and one that shows
    up as a quiet turn rather than as a rules error. */
+/* Can the hand pay this card's printed cost within `maxPitch` and still
+   keep one OTHER card back to charge (v5.41)? Printed numbers only. */
+function chargeRoom(sd, card, o){
+  const need = num(card, "cost") - (sd.res || 0);
+  const rest = (sd.hand || []).filter(c => c && c.uid !== card.uid);
+  if(need <= 0) return rest.length >= 1;
+  const pool = rest.filter(c => num(c, "pitch") > 0).map(c => num(c, "pitch")).sort((a, b) => b - a);
+  let got = 0, k = 0;
+  while(k < pool.length && k < o.maxPitch && got < need){ got += pool[k]; k++; }
+  return got >= need && rest.length - k >= 1;
+}
+
 function affordableWithin(sd, card, o){
   const need = num(card, "cost") - (sd.res || 0);
   if(need <= 0) return true;

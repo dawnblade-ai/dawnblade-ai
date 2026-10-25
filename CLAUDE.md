@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.40
+**Current version:** v5.41
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3650 drills** at v5.40.
+This is `node --test "test/*.test.js"` — **3658 drills** at v5.41.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -875,6 +875,15 @@ The arsenal set, opt, a reorder, a hand-to-deck pick, Azalea's cycle and Boulder
 cards only one seat had seen (QUEUE v3 S2). Each names the seat and a count now; a graveyard pick and
 a face-up arsenal card are public and keep their names (`test/hiddenfeed.test.js`). **When a line
 names a card, ask which zone it came from and which it went to: two hidden zones mean a count.**
+
+### CHARGE FIRST, THEN THE WEAPON THE CHARGE PUMPED (v5.41)
+
+`sparring.offence` ranked attacks on printed power, so Boltyn's turn was one uncharged attack and his
+deck's "if you've charged this turn" never fired (QUEUE v4 H6). Before the seat has charged, an attack
+that offers a charge and leaves a card in hand to charge goes first (the go-again one ahead); once
+charged, a weapon the charge pumped above its base swings before a hand attack that keeps nothing.
+`judge.chargeView` answers every fact (`test/chargerank.test.js`). Boltyn 5.7 → 11.3 a seed, disjoint.
+**A seat that never charges must rank exactly as before: drive the uncharged half too.**
 
 ### A SOUL BANISH IS A BANISH, AND A SOUL PUT IS AN EVENT (v5.40)
 
