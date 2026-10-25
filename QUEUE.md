@@ -359,6 +359,12 @@ CEO-reproduced with `experiments/S8-soul-repro.js` (`node experiments/S8-soul-re
   Re-measure the ladder; expect Boltyn to move, since Duty Bound Blitz becomes playable more often.
   Name any hero that moves.
 
+**H6. SHIPPED as v5.41 (`5a76ddf`), CEO-verified 2026-10-25:** 3658 drills, 0 fail, 5 skipped;
+scenes 107/107; 21 engine script tags and `.nojekyll` in the pushed commit; CI drills and Pages
+green; NO-ZONE 0. Boltyn 5.7 -> 11.3 [10,14] on the full ladder, disjoint; nobody else separates.
+v5.41 ladder: briar 26.0, dash 22.7, dorinthea 20.3, kayo 18.7, arakni 18.0, fai 17.3, viserai 16.7,
+iyslander 11.3, boltyn 11.3, gravy 10.3, enigma 10.0, bravo 8.7, azalea 7.0, blaze 5.7, lyath 5.7.
+
 **H6. Boltyn: charge first, then swing the weapon the charge pumped. POLICY, ships AFTER S8
 (v5.41).** Measured by the investigator on v5.39 (`10f41e2`) and CEO re-measured in a fresh copy;
 re-measure on top of S8 before shipping, because S8 changes his games. The experiment is
@@ -405,7 +411,7 @@ re-measure on top of S8 before shipping, because S8 changes his games. The exper
   with no charge card. Sabotage the rank, `chargeRoom`, and the weapon candidate.
 
 **H7+.** One gap at a time, one investigator at a time, each rebased on the latest release.
-Waiting, by the v5.39 ladder: Azalea (7.3), Blaze (7.3); then Lyath (6.7), Bravo (9.3).
+Waiting, by the v5.41 ladder: Blaze (5.7), Lyath (5.7), Azalea (7.0), Bravo (8.7).
 
 ## v3 — STAGE INCREMENT 1 INPUTS (CEO, 2026-10-17)
 
