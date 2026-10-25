@@ -565,9 +565,58 @@ Limpit from the graveyard. Its "Limpit keeps its point" finding is the Compass w
   spin decides the draw order, and a tap on the top card sends it to the bottom. The CEO updates
   STAGE.md.
 
+**S13. "[Hero]'s call": the advisor box says what the hero AI would do in your seat. UI + sparring
+(v5.46).** RULING (user, 2026-10-25): *"Instead of 'Claude's call' replace it with '[kayo]'s call'
+which tells the player what the hero ai would do in each situation."*
+- **The call is the policy, run for the player's seat.** At the table (local sessions, seat 0, the
+  same gate the Advisor has today at `index.html:7380`), the box runs `sparring.act(g, mySeat)` and
+  says that action in words. The AI seat across the table runs the same function, so the box and the
+  opponent cannot disagree about how the AI plays. It reads nothing the player cannot see; the policy
+  is already held to that.
+- **One body: `sparring.explain(g, seat)` → `{action, line, why}`.**
+  - `action` is exactly what `act` returns. A drill drives self-play and asserts
+    `explain(g,s).action` deep-equals `act(g,s)` on every state.
+  - `line` names the action with card NAMES only, and names are not card text. It is the imperative
+    addressed to the player: "Play Bare Fangs", "Pitch Wild Ride", "Block with Predatory Plating",
+    "Swing Mandible Claw", "Use Kayo's ability", "Put Bare Fangs in your arsenal", "Boost it",
+    "Opt: keep all three on top", "Pass", "End your turn".
+  - Every action type the policy can emit has a line. Census it both ways: drive self-play over the
+    ladder seeds, collect every `a.t`, and fail on any type with no line.
+- **`why` is the branch that decided, never a guess written afterwards.** `act` gains an OPT-IN
+  note out-param (v3.58), `act(g, seat, o, note)`, and each branch sets `note.why` to a key. The
+  keys and their sentences live in one table beside `act`. Measured branches, each with a reason
+  the code already states:
+  - **pending:** the cheapest pitch that covers the cost; boost when half the remaining deck pays
+    for it (H3); the lowest-pitch charge (v4.99); declining a price it cannot weigh (v4.24).
+  - **prompt:** decline what is optional; take the printed minimum; keep an opt's order.
+  - **arsenal:** the biggest attack goes face down.
+  - **defend:** blocks to stay out of lethal; takes up to N rather than spend a card; equipment
+    first, because iron wears instead of leaving.
+  - **offence:** a non-attack that keeps the action point goes first (H2); arcane first (H5); the
+    go-again chain (H4); charge, then swing the pumped weapon (H6); the biggest affordable attack;
+    an ally that dies to this swing (v3.81); non-attacks last (v3.80).
+  - **reaction:** the cheapest legal reaction, one per link.
+  - **nothing to do:** pass or end the turn.
+  - Each sentence is coach-voiced and plain, with no version numbers and no identifiers.
+    `test/noopvoice.test.js`'s rules apply.
+- **Waiting is a call too.** When the seat cannot act (`act` returns null), the line says who holds
+  priority: "Dorinthea is deciding."
+- **The label.** "✦ Kayo's call", taken from the seat's hero name before the comma, as the rail's
+  `them.name.split(",")[0]` does. `build.js:815`'s turn-one read is "Kayo's read", and
+  "Claude's read" goes with it.
+- **The trainer cannot run the policy** (its state is `mode`/`bphase`, not the CR machine). It
+  keeps `advisor.js`, relabelled "✦ Coach's call", so no box claims to be the hero AI where it
+  is not. The CEO reports that choice to the user. A drill: the string "Claude's call" appears
+  nowhere in `index.html`.
+- **Drive it on the phone page at 393x852:**
+  - Kayo v the AI: the box updates on every state, at the action phase, the defend step, a pitch
+    payment, an opt sheet and the arsenal step.
+  - Doing what the box says never meets a refusal.
+  - The ladder is byte-identical (the note out-param is unused there). Run it to prove that.
+
 **H8+.** One gap at a time, one investigator at a time, each rebased on the latest release.
 Waiting, by the v5.41 ladder: Lyath (5.7, needs a new investigator), Azalea (7.0), Bravo (8.7);
-then Blaze again after S9. **S12 above goes first.**
+then Blaze again after S9. **S12, then S13, go first.**
 
 ## v3 — STAGE INCREMENT 1 INPUTS (CEO, 2026-10-17)
 
