@@ -1756,6 +1756,19 @@ const abWindowOf = (g, seat, uid) => {
   const gr = (sd.gear || []).find(x => x && x.uid === uid);
   return gr && gr.powCard ? abWindow(gr.powCard) : null;
 };
+/* DOES THIS CARD HELP THE LINK BEING DEFENDED? (QUEUE v4 H8) For `sparring.js`,
+   which reads no card text: a defence reaction, or a card whose payload
+   prevents damage. Every other card held in hand while the seat defends is
+   kept for its own turn, where it can pay for and pump an attack. */
+const DEFENDS_OPS = ["ward", "revWard", "arcShield", "awd"];
+const defendsNow = (g, seat, uid, from) => {
+  const sd = at(g, seat);
+  const c = from === "arsenal" ? (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null)
+          : (sd.hand || []).find(x => x && x.uid === uid);
+  if(!c) return false;
+  const fx = PR.fxParse(c);
+  return !!fx.dr || (fx.ops || []).some(o => DEFENDS_OPS.indexOf(o[0]) >= 0);
+};
 /* ---- DOES THIS CARD KEEP THE TURN'S ACTION POINT? (v5.36) -----------
 
    `abWindowOf`'s sibling, for the same reason: `sparring.js` reads NO card
@@ -3889,7 +3902,7 @@ function drawTo(g, i){
 }
 
 return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, boostShare, grantTakers, arcaneOf, chargeView,
+        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, defendsNow, DEFENDS_OPS, boostShare, grantTakers, arcaneOf, chargeView,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */

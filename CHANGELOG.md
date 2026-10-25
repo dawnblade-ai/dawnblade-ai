@@ -1,3 +1,27 @@
+## v5.46 — While it defends, the seat plays only what helps the link
+
+**QUEUE v4 H8, a policy release.** `sparring.reaction` played the cheapest legal card in every reaction
+window, which on the opponent's turn included any instant. So Lyath spent his Guardian Instant Auras
+and Concealed Object while being attacked (194 plays and 105 pitches on the opponent's turn in 28
+games), and he began his own action phase with two cards or fewer in about 70 of 219 turns.
+
+- **The rule.** While the seat is defending (`pend.by` is the other seat), the reaction branch proposes
+  only a card `judge.defendsNow` admits. Everything else waits for the seat's own turn.
+- **`judge.defendsNow(g, seat, uid, from)`** answers true for a defence reaction (`fx.dr`) or for a card
+  with an op in `DEFENDS_OPS` (`ward`, `revWard`, `arcShield`, `awd`). `sparring.js` still reads no
+  card text.
+- **Measured on v5.45**, with `tools/tourney.js` at 3 seeds:
+  - Lyath with only his own seat switched: [2,3,3] → [5,6,6], disjoint.
+  - Full ladder with the rule on every seat: 0 refusals, 0 violations, stalls 1 → 0, and no hero's
+    interval separates.
+- **The census moved.** `test/speccensus.test.js` lost `ctrStamp`, so a 39th leg (Fai v Enigma,
+  Enigma's chair first, seed `ctr-7-8-1`) brings it back; every other field is unchanged.
+- **Drills** are in `test/defending.test.js`:
+  - the reader on four real cards and a synthetic `awd`;
+  - the hold and the play while defending;
+  - the aura still proposed on the seat's own link.
+  8 sabotages, 8 bite.
+
 ## v5.45 — An opt is put back in any order
 
 **QUEUE v4 S12, the opt sheet.** Opt prints "look at the top X cards of your deck, then put them back

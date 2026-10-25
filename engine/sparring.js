@@ -405,7 +405,14 @@ function reaction(g, seat){
   const from = [];
   (sd.hand || []).forEach(c => from.push({c, from: "hand"}));
   if(sd.arsenal) from.push({c: sd.arsenal, from: "arsenal"});
+  /* WHILE DEFENDING, ONLY WHAT HELPS THIS LINK (QUEUE v4 H8). The cheapest
+     legal play here used to include any instant, so Lyath spent his Suspense
+     auras, Act of Glory and Concealed Object on the opponent's turn (194 plays,
+     105 pitches in 28 games) and began his own turn with two cards or fewer
+     in about 70 of 219 turns. `judge.defendsNow` answers which cards defend. */
+  const defending = g.pend && g.pend.by != null && g.pend.by !== seat;
   const legalRx = from
+    .filter(x => !defending || J.defendsNow(g, seat, x.c.uid, x.from))
     .filter(x => legal(g, {t: "play", uid: x.c.uid, from: x.from}, seat))
     .sort((a, b) => num(a.c, "cost") - num(b.c, "cost") || byUid(a.c, b.c));
   const pick = legalRx[0];

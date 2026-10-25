@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.45
+**Current version:** v5.46
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3692 drills** at v5.45.
+This is `node --test "test/*.test.js"` — **3696 drills** at v5.46.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -875,6 +875,14 @@ The arsenal set, opt, a reorder, a hand-to-deck pick, Azalea's cycle and Boulder
 cards only one seat had seen (QUEUE v3 S2). Each names the seat and a count now; a graveyard pick and
 a face-up arsenal card are public and keep their names (`test/hiddenfeed.test.js`). **When a line
 names a card, ask which zone it came from and which it went to: two hidden zones mean a count.**
+
+### WHILE IT DEFENDS, THE SEAT PLAYS ONLY WHAT HELPS THE LINK (v5.46)
+
+`sparring.reaction` played the cheapest legal card in every window, so Lyath spent his instant auras
+on the opponent's turn and opened his own with two cards or fewer (QUEUE v4 H8). While `pend.by` is
+the other seat, it proposes only what `judge.defendsNow` admits: a defence reaction, or an op in
+`DEFENDS_OPS` (`test/defending.test.js`). Lyath's own seat goes [2,3,3] to [5,6,6], disjoint.
+**A window where a card is legal is not a window where it is worth playing.**
 
 ### AN OPT IS PUT BACK IN ANY ORDER (v5.45)
 
