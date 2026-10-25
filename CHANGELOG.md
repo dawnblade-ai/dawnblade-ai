@@ -1,3 +1,25 @@
+## v5.42 — "You may play it this turn" is one play
+
+**QUEUE v4 S9, an engine fix.** A card played from the banished zone under a this-turn permission was
+filed back into banish with its play stamps intact (`_playTurn`, `_asInstant`, `_banPow`,
+`_banCostOff`), so `playZoneWhy` allowed it again, without limit. This happened on both paths:
+`execute` on the trainer and `fileAttack` at the table. `parser.spendPlayGrant` is the one body both
+ask, and it strips all four on filing. Driven on the real routes, none through a policy: Pouncing
+Paws' Crouching Tiger, Blaze's banished Snapback, and a card banished by Mounting Anger or Rising
+Resentment. Each is played once and then refused with a sentence (`test/banishreplay.test.js`).
+
+- **The destination is NOT decided.** The card still files to banish. Whether it belongs in the
+  graveyard has no verbatim CR quote here, so it is the stated record
+  `played-from-banish-files-to-banish`, with a driven probe.
+- **Crouching Tiger's feed line agrees with the state.** The ephemeral noop said "it ceases to exist"
+  while the card went back to banish. It is conditional now: "if it would be put into a graveyard, it
+  ceases to exist instead".
+- **`mkBanish` names the card with the database's name**, never the lowercased entry
+  ("Crouching Tiger", not "crouching tiger").
+
+8 sabotages, 8 bite. The first pass found the route drills iterating `PLAY_GRANT_STAMPS` itself, so
+dropping one stamp from the list was visible only to the pin; they assert a literal list now.
+
 ## v5.41 — Charge first, then the weapon the charge pumped
 
 **QUEUE v4 H6.** Boltyn's deck turns on "if you've charged this turn" (Take Flight's go again,

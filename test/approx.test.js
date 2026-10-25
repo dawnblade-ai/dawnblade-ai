@@ -271,7 +271,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 52 -> 53 AT v5.27: `attack-power-fixed-at-declaration`. */
   /* 53 -> 54 AT v5.30: `look-named-in-shared-feed`. */
   /* 54 -> 55 AT v5.40: `soul-banish-cost-auto-picked`. */
-  assert.equal(Object.keys(APPROX).length, 55, "record count moved");
+  /* 55 -> 56 AT v5.42: `played-from-banish-files-to-banish`. */
+  assert.equal(Object.keys(APPROX).length, 56, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -324,7 +325,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      recorded because no CR quote about an attack-proxy's power is sourced here. */
   /* 23 -> 24 AT v5.30: `look-named-in-shared-feed`, QUEUE item 15. */
   /* 24 -> 25 AT v5.40: `soul-banish-cost-auto-picked`, QUEUE v4 S8. */
-  assert.equal(n("stated"), 25, "stated count moved");
+  /* 25 -> 26 AT v5.42: `played-from-banish-files-to-banish`, QUEUE v4 S9. */
+  assert.equal(n("stated"), 26, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -799,6 +801,22 @@ probe("look-named-in-shared-feed", () => {
   assert.match(feed, /Hidden Probe/,
     "the looked-at card is no longer named in the shared feed — the record must move");
   assert.ok(fx, "and Compass parses");
+});
+
+/* QUEUE v4 S9. DRIVEN: Crouching Tiger is minted into banish, played at the
+   table, and resolves — it lands back in banish, its permission spent. */
+probe("played-from-banish-files-to-banish", () => {
+  H.db();
+  let g = H.state({res: 9, ap: 1, hand: []}, {hp: 20}, {actor: 0, turnPlayer: 0, turn: 3});
+  g.builds = [{}, {}];
+  g = H.runOps(g, [["mkBanish", "crouching tiger"]], "Pouncing Paws");
+  const u = g.sides[0].banish[0].uid;
+  g = {...g, phase: "action", step: "layer", priority: 0, passed: []};
+  g = J.reduce(g, {t: "play", uid: u, from: "banish"}, 0).state;
+  for(let i = 0; i < 40 && (g.pend || g.step !== "layer" || g.priority !== 0); i++) g = H.move(g);
+  assert.ok(g.sides[0].banish.some(c => c.uid === u),
+    "the card no longer files back into banish — the destination was decided and the record must move");
+  assert.ok(!g.sides[0].grave.some(c => c.uid === u), "and it is not in the graveyard");
 });
 
 probe("soul-banish-cost-auto-picked", () => {

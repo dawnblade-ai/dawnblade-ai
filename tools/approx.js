@@ -235,6 +235,18 @@ const APPROX = {
       "the opponent is a dummy and nothing is hidden from anyone. A per-seat feed is a UI "+
       "decision, not a rules fix, so it is recorded here rather than built (QUEUE item 15)."},
 
+"played-from-banish-files-to-banish": {
+  status:"stated", cr:null, board:"both", since:"v2.20", swept:"v5.42",
+  claim:"A card played from the banished zone under a this-turn permission (Crouching "+
+        "Tiger off Pouncing Paws, Blaze's banished Wizard card, a card Mounting Anger or "+
+        "Rising Resentment banished) is filed BACK INTO BANISH when it resolves, on both "+
+        "paths (`execute` and `fileAttack`). The permission is spent there "+
+        "(`parser.spendPlayGrant`, v5.42); the destination is not decided.",
+  why:"Whether such a card goes to the graveyard or back to banish is a rules question "+
+      "with no verbatim CR quote in this repo, so it is a ruling to ask rather than a "+
+      "build (QUEUE v4 S9). The replay loop it caused is closed: the stamps are stripped "+
+      "on filing, so the card cannot be played again."},
+
 "control-change-steal-built": {
   status:"closed", cr:null, board:"both", since:"v4.68", swept:"v4.74",
   claim:"Jack Be Quick's \"{u} an ally they control, then steal it until the end "+

@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.41
+**Current version:** v5.42
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3658 drills** at v5.41.
+This is `node --test "test/*.test.js"` — **3665 drills** at v5.42.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -875,6 +875,16 @@ The arsenal set, opt, a reorder, a hand-to-deck pick, Azalea's cycle and Boulder
 cards only one seat had seen (QUEUE v3 S2). Each names the seat and a count now; a graveyard pick and
 a face-up arsenal card are public and keep their names (`test/hiddenfeed.test.js`). **When a line
 names a card, ask which zone it came from and which it went to: two hidden zones mean a count.**
+
+### "YOU MAY PLAY IT THIS TURN" IS ONE PLAY (v5.42)
+
+A card played from banish under a this-turn permission was filed back into banish with
+`_playTurn`/`_asInstant`/`_banPow`/`_banCostOff` intact, so it could be replayed forever, on both
+paths (`execute`, `fileAttack`) (QUEUE v4 S9). `parser.spendPlayGrant` is the one body both ask. The
+DESTINATION is not decided: it stays banish, recorded as `played-from-banish-files-to-banish`.
+Crouching Tiger's ephemeral line is conditional now, and `mkBanish` uses the database's name
+(`test/banishreplay.test.js`). **A drill that iterates the list under test cannot see an entry
+dropped from it: assert a literal.**
 
 ### CHARGE FIRST, THEN THE WEAPON THE CHARGE PUMPED (v5.41)
 

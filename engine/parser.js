@@ -1723,8 +1723,12 @@ function classifyClause(raw){
      do" cond string is shared by every optional-cost rider in the pool and
      would over-match if read as a generic condition here. */
   /* Ephemeral, per its own printed reminder text: if it would be put into a
-     graveyard from anywhere, instead it ceases to exist. Enforced in gy(). */
-  if(/^ephemeral$/.test(c)) return NOOP("live — it ceases to exist instead of reaching a graveyard");
+     graveyard from anywhere, instead it ceases to exist. Enforced by
+     ceasesToExist at every graveyard funnel. The line is CONDITIONAL
+     (v5.42): played from banish, the card files back to banish and
+     reaches no graveyard, so an unconditional "it ceases to exist" told
+     the player the opposite of the state. */
+  if(/^ephemeral$/.test(c)) return NOOP("live — if it would be put into a graveyard, it ceases to exist instead");
   /* Reprise is live from v2.09: the dummy blocks from hand, so "has defended
      with a card from their hand this chain link" is a real count of the
      non-equipment defenders currently declared. */
@@ -9650,6 +9654,23 @@ const playZoneWhy = (c, zone, o) => {
 };
 const playableFromZone = (c, zone, o) => !!c && !playZoneWhy(c, zone, o);
 
+/* "YOU MAY PLAY IT THIS TURN" IS ONE PERMISSION (v5.42, QUEUE v4 S9). A card
+   played out of banish under one of these grants is filed back into banish
+   when it resolves, and the stamps that made it playable travelled with it,
+   so `playZoneWhy` answered "playable" again the same turn: Snapback replayed
+   off Blaze's ability, and Crouching Tiger (cost 0, go again) attacked without
+   limit. Every stamp the grant writes is the PLAY's, so the filing strips them
+   all through this one body: `_playTurn` (the window), `_asInstant` (Blaze's
+   speed grant), `_banPow` and `_banCostOff` (Mounting Anger / Rising
+   Resentment, "it gets +1{p}" / "it costs {r} less", read when it is played). */
+const PLAY_GRANT_STAMPS = ["_playTurn", "_asInstant", "_banPow", "_banCostOff"];
+const spendPlayGrant = c => {
+  if(!c || !PLAY_GRANT_STAMPS.some(k => k in c)) return c;
+  const out = {...c};
+  PLAY_GRANT_STAMPS.forEach(k => { delete out[k]; });
+  return out;
+};
+
 /* ---- A CARD PLAYED, NOT AN ABILITY ACTIVATED (v5.05) ------------------
    Two heroes ask about cards PLAYED: Viserai — "Whenever you PLAY a
    Runeblade card, if you've played another NON-ATTACK ACTION CARD this
@@ -10531,6 +10552,6 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, spellvoidX, linksControlled, arcaneSoaks,
         ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
-        chiValue, chiSum, chiFloating, pitchExcessWhy, chiCeiling, payCeiling, handFree, isDeclaredDefender, rxDefenders, PLAY_ROUTES, isCardPlay, isNonAtkActionPlay, abChiCost, abSoulCost, soulPutNote, soulPutThisTurn, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, swingSpentWhy, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, abilitiesLive, boardEntryNamed, isEphemeral, isToken, ceasesToExist, ARENA_ZONES, isHandWipe, gyFirstGaKw,
+        chiValue, chiSum, chiFloating, pitchExcessWhy, chiCeiling, payCeiling, handFree, isDeclaredDefender, rxDefenders, PLAY_ROUTES, isCardPlay, isNonAtkActionPlay, abChiCost, abSoulCost, soulPutNote, soulPutThisTurn, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, swingSpentWhy, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, abilitiesLive, boardEntryNamed, isEphemeral, isToken, ceasesToExist, PLAY_GRANT_STAMPS, spendPlayGrant, ARENA_ZONES, isHandWipe, gyFirstGaKw,
         CARD_OVERRIDES};
 });

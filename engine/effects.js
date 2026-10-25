@@ -2435,7 +2435,7 @@ function makeEffects(ctx){
       else if(k==="mkBanish"){
         const rec = resolveEntry(db, {name:v, p:0, code:null, q:1});
         if(!rec.resolved){ n = L(n, `${srcName}: no card named "${v}" in the database.`); return; }
-        const made = {...rec, uid:"mk"+tokSeq(), _playTurn:n.turn};
+        const made = {...rec, name: rec.dbName || rec.name, uid:"mk"+tokSeq(), _playTurn:n.turn};
         actMut(n).banish = [made, ...act(n).banish];
         actMut(n).hist = {...act(n).hist, made:(act(n).hist.made||0)+1};
         /* THE DATABASE'S NAME AND THE SEAT'S POSSESSIVE (v5.28, QUEUE N10): the
@@ -5430,7 +5430,7 @@ function makeEffects(ctx){
            and one reader — the same deletion v3.82 made of `sd.rune`. */
         actMut(n).board=[...act(n).board,{card,kind:fx.perm,spent:false,uid:card.uid,sd:_sd,susp:_susp}]; if(fx.perm==="aura") actMut(n).hist={...act(n).hist, aura:(act(n).hist.aura||0)+1}; n=L(n,`${card.name} enters play (${fx.perm})${_susp?` with ${_susp} suspense counters — it pays out when it leaves`:""}.`); }
       else if((from==="hand"||from==="arsenal") && !_offGrave) actMut(n).grave=[...gy(n.turn, card),...act(n).grave];
-      else if(from==="grave"||from==="banish") actMut(n).banish=[card,...act(n).banish];
+      else if(from==="grave"||from==="banish") actMut(n).banish=[P.spendPlayGrant(card),...act(n).banish];
       /* COUNTED ONLY FOR A NON-ATTACK ACTION CARD PLAYED (v5.05), which is
          what both readers print. And Briar's mint asks only when the count
          MOVES: tested on every non-attack, the exact `=== 2` would mint
@@ -6580,7 +6580,7 @@ function makeEffects(ctx){
       actMut(n).grave=[...gy(n.turn, card),...act(n).grave];
       if(card.pitch===3) actMut(n).hist = {...act(n).hist, blueGY:(act(n).hist.blueGY||0)+1};
     }
-    if(from==="grave"||from==="banish") actMut(n).banish=[card,...act(n).banish];
+    if(from==="grave"||from==="banish") actMut(n).banish=[P.spendPlayGrant(card),...act(n).banish];
     return n;
   };
 
