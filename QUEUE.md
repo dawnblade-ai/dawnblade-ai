@@ -461,9 +461,96 @@ by the investigator; the experiment is kept at `experiments/H7-blaze-negative.pa
 - Re-measure after S9 ships; the honest answer today is that the policy's Blaze gap is not yet
   found.
 
+**THE USER'S BUG REPORT, 2026-10-25** (`dawnblade-bug-kayo-t1-1792898007684.json`, v5.40, the table, Kayo v
+an AI Blaze, opponent first). Four observations; all four are real, and they make three items.
+> *"my blaze opp whispered on t1 and I got to opt, also while opting unjustly I couldn't figure out how to
+> reorder cards. Lastly I think guardwell on the predatory plating might be coded slightly wrong - the piece
+> should remain in play with -2 defense after blocking with it but one time it went to grave after blocking
+> … I do like the 'usable' equipment and hero cards etc to show up in the hand rail but they don't in the vs
+> ai mode."*
+
+**S10. Two seat defects, ENGINE, after S9 (v5.43). CEO-reproduced and fixed in a scratch copy:
+`experiments/S10-opt-seat-controlpow.patch` (3 lines), suite 0 fail / 5 skipped.**
+- **(a) An opt resolved by seat 1 opens on SEAT 0, over seat 0's deck.** The two opt specs
+  (`effects.js:2070`, `opt`; `:2105`, `lookOrder`) carry no `side`, and `prompts.buildPrompt` defaults a
+  missing side to 0. In the report, Blaze (seat 1) played Whisper of the Oracle and the sheet offered Kayo
+  the top three of KAYO's deck. Blaze's energy still landed, because it is credited at the queue.
+  - It is a free opt for whoever sits in seat 0, at the table and over the network alike. The trainer
+    cannot reach it, because its seat 1 never opts.
+  - Every existing opt drill runs at seat 0, the one seat where the default happens to be right.
+  - Repro: `node experiments/S10-opt-seat.js <tree>` prints `actor 1 opt: prompt.side=0 cards=Wild Ride,
+    Buckwild, Bare Fangs`.
+  - Fix: `side: actorOf(n)` on both specs.
+  - Census the family: every `promptQ` push in `effects.js` names a `side` or goes through a `*Spec(…,
+    side)` builder. Measured, these two were the only ones without one. Pin that set, so that a new spec
+    without a side fails a drill rather than defaulting to seat 0. Drive the opt at seat 1 on both variants.
+- **(b) "Activate this only if you control a card with 6 or more {p}" counts the OPPONENT's attack.**
+  `activateIfOk`'s `controlPow` (`effects.js:9814`) adds `s.pend.card` whoever declared it.
+  - Repro: `node experiments/S10-plating.js <tree>`. Dorinthea (seat 1) swings a 6-power attack.
+    Kayo's Predatory Plating "Destroy this: Gain {r}" is then LEGAL for seat 0 in the attack, defend,
+    reaction, damage and resolution steps. It must be refused in all five, with the card's own sentence.
+  - Fix: count `pend.card` only when `pend.by` is the asking seat, the test `chainAtkOf` already makes.
+  - Positive control: Kayo's own 6-power attack still enables it (checked).
+  - This is half of the user's Guardwell report; S11 has the other half. **Guardwell itself is right:**
+    the SKA006 printing reads "When the combat chain closes, if this defended, put -1{d} counters on it
+    equal to its {d}". The piece stays in play at 0. Upstream's `keyword.csv` has an empty Guardwell row;
+    record the printing in CLAUDE.md the way Heave and Retrieve were.
+- **Measured:** the 3-seed full ladder is BYTE-IDENTICAL with the patch (630 games, 0 refusals, 0 violations,
+  1 stall gravy-briar-2, as v5.41). The policy never reorders an opt and never fires the Plating on the
+  opponent's turn, so neither defect could move a ladder number. Both are human-facing.
+
+**S11. The table's hand rail and gear tiles, UI (v5.44).** Reported by the user; CEO-read in source.
+- **The rail.** The trainer's hand rail appends `playables` (`index.html:5443`): weapon swings, each
+  equipment ability's powCard, the hero power, and cards playable from the graveyard or banish. The
+  table's rail (`:7409`) shows the hand and the arsenal only. Build the same rail at the table.
+  - Each entry is an ACTION, lit when `mine(a)` (judge.legal) and dim otherwise, two-tap to commit. The UI
+    reads no card text (v3.84), so judge decides what is legal.
+  - **The graveyard and banish half is a missing ROUTE, not only a missing button.** `judge.legal`
+    accepts `from: "grave"` / `"banish"`, but the table has no control that sends one. A human Gravy
+    Bones cannot replay a watery-grave ally there, and a human Kayo cannot play Crouching Tiger. Offer
+    exactly the cards `judge.legal` accepts from those zones, so a 30-card graveyard does not flood the
+    rail.
+  - Keep the armour grid's tiles as well. The user likes the rail, so the rail is the addition.
+- **The tile's one tap picks the ABILITY over DEFEND** (`:7133`, `cellAct = swing ? : ability ? : defend`).
+  In the defend step, once the attacker passes, the defender holds priority. If the piece's instant is
+  legal there, the tile commits the ability. With S10(b) unfixed that is exactly how the Plating "went
+  to grave after blocking": a double tap meant to block destroyed it for {r}.
+  - Rule: while `defend` (or "stop defending") is legal for the piece, the tile's tap is the
+    declaration. The ability is reached from the rail entry above, which is the trainer's shape: two rows
+    for two routes.
+  - Pin it with a census in the style of `test/tapdoor.test.js`.
+- Drive it on the phone page at 393x852 (the v4.28 step): Kayo blocking a 6-power swing with the
+  Plating. The tap declares it, the rail offers the ability only on Kayo's own turn, and no tap is dead.
+
+**S12. Opt can only send cards to the bottom; it cannot ORDER the ones kept on top. UI + prompts (v5.45).**
+- The ruling `effects.js:2059` records: "look at the top X, then put them back on top or bottom IN ANY
+  ORDER". The sheet (`PromptSheet`, `index.html:2367`, shared by both boards) offers only the top/bottom
+  toggle, and `applyPrompt` keeps the kept cards in the order they were dealt. It is weaker than printed,
+  on every opt card in the pool, and the user looked for the control and found none.
+- **The model.** `prompt.order`, a permutation of the kept indices (default: dealt order), and one
+  reader `promptMove(prompt, i, dir)` in `prompts.js`, used by both boards.
+  - `applyPrompt` writes the kept cards in `order`.
+  - The table needs a new action in `PROMPT_ACTIONS`; `test/promptctl.test.js` will demand the control
+    (v4.61).
+  - The ORDER of the cards sent to the bottom stays a stated approximation: no pool record reads the
+    bottom of a deck (`applyPrompt`'s own note).
+- **The control** (CEO's call, one-hand phone):
+  - The sheet shows the cards in their RESULTING order, left to right as drawn, each labelled
+    "1st draw", "2nd draw"… or "bottom".
+  - Tapping a card still toggles top/bottom.
+  - Each kept card carries two arrows under it, "◀" (earlier) and "▶" (later), each at least 36x28.
+  - The hint says both: "Tap a card to send it to the bottom. ◀ ▶ change the order you draw them in."
+- **`keepTop` (Spire Sniping) gets the arrows too.** Its "tap to put it under the rest" toggle stays
+  as it is.
+- **Policy:** `autoAnswer` keeps the dealt order, so the ladder is unchanged by construction. Say so,
+  and prove it by running it.
+- **Design note for the stage (Appendix C.1):** on the wheel, the arrows become the wheel's order. A
+  spin decides the draw order, and a tap on the top card sends it to the bottom. The CEO updates
+  STAGE.md.
+
 **H8+.** One gap at a time, one investigator at a time, each rebased on the latest release.
 Waiting, by the v5.41 ladder: Lyath (5.7, needs a new investigator), Azalea (7.0), Bravo (8.7);
-then Blaze again after S9.
+then Blaze again after S9. **The S-items above (S9, S10, S11, S12) go first, in that order.**
 
 ## v3 — STAGE INCREMENT 1 INPUTS (CEO, 2026-10-17)
 

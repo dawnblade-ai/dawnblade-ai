@@ -1,0 +1,31 @@
+diff --git a/engine/effects.js b/engine/effects.js
+index 716f5c3..f5747a2 100644
+--- a/engine/effects.js
++++ b/engine/effects.js
+@@ -2067,7 +2067,7 @@ function makeEffects(ctx){
+            an X nobody counted is not a 1. */
+         if(!(typeof v === "number" && v > 0)){ n = L(n, `${srcName}: nothing to opt.`); return; }
+         const looked = Math.min(v, act(n).deck.length);
+-        n.promptQ = [...(n.promptQ||[]), {tag:"opt", n:looked, src:srcName}];
++        n.promptQ = [...(n.promptQ||[]), {tag:"opt", side:actorOf(n), n:looked, src:srcName}];
+         /* BLAZE, CLAUSE 1 (v3.39) — "Whenever you opt, put energy
+            counters on Blaze equal to the number of cards LOOKED AT this
+            way."
+@@ -2102,7 +2102,7 @@ function makeEffects(ctx){
+       else if(k==="lookOrder"){
+         if(!act(n).deck.length){ n = L(n, `${srcName}: deck is empty — nothing to look at.`); return; }
+         const looked = Math.min(v, act(n).deck.length);
+-        n.promptQ = [...(n.promptQ||[]), {tag:"opt", n:looked, keepTop:true, src:srcName}];
++        n.promptQ = [...(n.promptQ||[]), {tag:"opt", side:actorOf(n), n:looked, keepTop:true, src:srcName}];
+       }
+       /* pickPrompt — a GENERIC mandatory-or-optional targeted pick, carrying
+          its own zone/to/filter/min/max as data rather than a bespoke op per
+@@ -9812,7 +9812,7 @@ function activateIfOk(game, gate, card){
+      attack counts, not resolved links — the chain history keeps a name and
+      an image, not the card. */
+   if(k === "controlPow") return [...(sd.board || []).map(b => b && b.card), ...(sd.gear || []),
+-                                 ...(s.pend && s.pend.card ? [s.pend.card] : [])]
++                                 ...(s.pend && s.pend.card && (s.pend.by == null ? i : s.pend.by) === i ? [s.pend.card] : [])]
+                                 .some(x => x && (x.power || 0) >= gate.n);
+   /* ASKED OF THE CARD, NOT THE PHASE. "Activate this only while THIS CARD
+      is defending" (Rally the Coast Guard) — so the question is whether it
