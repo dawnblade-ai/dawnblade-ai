@@ -565,6 +565,46 @@ Limpit from the graveyard. Its "Limpit keeps its point" finding is the Compass w
   spin decides the draw order, and a tap on the top card sends it to the bottom. The CEO updates
   STAGE.md.
 
+**H8 (Lyath). While it defends, the seat plays only a card that helps the link. POLICY, after S12
+(v5.46). CEO-measured on v5.44; the patch is ready: `experiments/H8-lyath-defending.patch`
+(3 files, 78 lines).**
+- **The gap.** `sparring.reaction` plays the cheapest legal card in every reaction window, and
+  on the opponent's turn that includes any instant.
+  - So Lyath spent his Guardian Instant Auras (The Suspense is Killing Me, Edge of Their Seats,
+    Tension in the Air, Act of Glory) and Concealed Object while being attacked. That was 194
+    plays and 105 pitches on the opponent's turn in 28 games; Briar pitches once there and Kayo
+    plays nothing.
+  - He began his own action phase with two cards or fewer in about 70 of 219 turns. He never made
+    a second attack in a turn, and made none in 67.
+  - Probes: `experiments/H8-handsize.js`, `H8-turns.js`, `H8-zero.js`, `H8-conds.js`,
+    `H8-read.js`. Each takes `<tree> <hero>`.
+- **The rule.** While the seat is defending (`pend.by` is the other seat), the reaction branch
+  proposes only a card that helps this link: a defence reaction, or a card whose payload prevents
+  damage. Everything else waits for the seat's own turn.
+- **Judge reader:** `judge.defendsNow(g, seat, uid, from)` is true when `fxParse(card).dr` holds,
+  or when an op is one of `ward`, `revWard`, `arcShield`, `awd`. Drill it on Drag Down, Oasis
+  Respite, Toe the Line and Throw Caution (true) and on Edge of Their Seats and Concealed Object
+  (false), and pin the op set.
+- **Measured (3 seeds, `node tools/tourney.js lyath '' 3`):**
+  - Lyath's own seat: [2,3,3] -> [5,6,6], DISJOINT.
+  - Rejected: E2, "play instants before the attack on your own turn", read [1,2,4] alone and
+    [4,4,3] together with E1.
+  - With the rule on Azalea's or Gravy's own seat only, the results are byte-identical; on
+    Boltyn's, [4,9] -> [5,8], overlapping.
+- **Full ladder with the rule on every seat:** 0 refusals, 0 violations, **0 stalls** (v5.44: 1),
+  and no hero's interval separates. Means v5.44 -> rule:
+  - up: lyath 5.7->7.7, blaze 5.7->7.7, bravo 8.7->10.7, enigma 10.0->10.7;
+  - down: gravy 10.3->7.7, azalea 7.0->5.0, boltyn 11.3->9.7, iyslander 11.3->10.7;
+  - the top seven are within one win either way.
+  - The dips are opponents improving, not the rule on their own seat (above).
+- **The census moves.** `test/speccensus.test.js` loses `ctrStamp` (v4.58's shape). The patch adds
+  a 39th leg, Fai v Enigma with Enigma's chair first (seed `ctr-7-8-1`), measured as the first
+  pairing that still reaches it. Every other field is unchanged, and the suite is 0 fail.
+- Drills:
+  - Lyath defending holds Edge of Their Seats and plays Drag Down.
+  - On his own turn the held aura is still playable.
+  - Sabotage the `defending` test, the reader's `dr` half, and each op.
+
 **S13. "[Hero]'s call": the advisor box says what the hero AI would do in your seat. UI + sparring
 (v5.46).** RULING (user, 2026-10-25): *"Instead of 'Claude's call' replace it with '[kayo]'s call'
 which tells the player what the hero ai would do in each situation."*
@@ -615,8 +655,8 @@ which tells the player what the hero ai would do in each situation."*
   - The ladder is byte-identical (the note out-param is unused there). Run it to prove that.
 
 **H8+.** One gap at a time, one investigator at a time, each rebased on the latest release.
-Waiting, by the v5.41 ladder: Lyath (5.7, needs a new investigator), Azalea (7.0), Bravo (8.7);
-then Blaze again after S9. **S12, then S13, go first.**
+Waiting, by the v5.44 ladder: Azalea (7.0), Bravo (8.7), Blaze (5.7, now unblocked by S9); Lyath has H8;
+then Blaze again after S9. **Order: S12, H8, S13, then feed items 19-20.**
 
 ## v3 — STAGE INCREMENT 1 INPUTS (CEO, 2026-10-17)
 

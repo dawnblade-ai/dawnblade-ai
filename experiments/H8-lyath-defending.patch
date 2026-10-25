@@ -1,0 +1,78 @@
+diff --git a/engine/judge.js b/engine/judge.js
+index 26d5191..6c070ff 100644
+--- a/engine/judge.js
++++ b/engine/judge.js
+@@ -1783,6 +1783,19 @@ const abWindowOf = (g, seat, uid) => {
+        a non-attack.
+ 
+    One reader rather than a sibling (v3.61: two records of one fact). */
++/* DOES THIS CARD HELP THE LINK BEING DEFENDED? (QUEUE v4 H8) For `sparring.js`,
++   which reads no card text: a defence reaction, or a card whose payload
++   prevents damage. Every other card held in hand while the seat defends is
++   kept for its own turn, where it can pay for and pump an attack. */
++const DEFENDS_OPS = ["ward", "revWard", "arcShield", "awd"];
++const defendsNow = (g, seat, uid, from) => {
++  const sd = at(g, seat);
++  const c = from === "arsenal" ? (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null)
++          : (sd.hand || []).find(x => x && x.uid === uid);
++  if(!c) return false;
++  const fx = PR.fxParse(c);
++  return !!fx.dr || (fx.ops || []).some(o => DEFENDS_OPS.indexOf(o[0]) >= 0);
++};
+ const keepsActionPoint = (g, seat, uid, from) => {
+   const sd = at(g, seat);
+   let c = null, route = from, atk = false;
+@@ -3887,7 +3900,7 @@ function drawTo(g, i){
+ }
+ 
+ return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
+-        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, boostShare, grantTakers, arcaneOf, chargeView,
++        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, defendsNow, boostShare, grantTakers, arcaneOf, chargeView,
+         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
+         handFree: PR.handFree,
+         /* the card semantics seam (v2.77) */
+diff --git a/engine/sparring.js b/engine/sparring.js
+index f850d70..541c050 100644
+--- a/engine/sparring.js
++++ b/engine/sparring.js
+@@ -405,7 +405,14 @@ function reaction(g, seat){
+   const from = [];
+   (sd.hand || []).forEach(c => from.push({c, from: "hand"}));
+   if(sd.arsenal) from.push({c: sd.arsenal, from: "arsenal"});
++  /* WHILE DEFENDING, ONLY WHAT HELPS THIS LINK (QUEUE v4 H8). The cheapest
++     legal play here used to include any instant, so Lyath spent his Suspense
++     auras, Act of Glory and Concealed Object on the opponent's turn (194 plays,
++     105 pitches in 28 games) and began his own turn with two cards or fewer
++     in about 70 of 219 turns. `judge.defendsNow` answers which cards defend. */
++  const defending = g.pend && g.pend.by != null && g.pend.by !== seat;
+   const legalRx = from
++    .filter(x => !defending || J.defendsNow(g, seat, x.c.uid, x.from))
+     .filter(x => legal(g, {t: "play", uid: x.c.uid, from: x.from}, seat))
+     .sort((a, b) => num(a.c, "cost") - num(b.c, "cost") || byUid(a.c, b.c));
+   const pick = legalRx[0];
+diff --git a/test/speccensus.test.js b/test/speccensus.test.js
+index bc1274d..23195b9 100644
+--- a/test/speccensus.test.js
++++ b/test/speccensus.test.js
+@@ -226,6 +226,12 @@ const drive = () => {
+      every pairing, both chairs and three seeds: only Azalea v Boltyn reaches
+      it. ADDED, for v4.58's reason; every other field it brings is pinned. */
+   { const r = T.leg(E[5], E[11], "ch-5-11-a", 0); legs++; if(r && r.threw) threw++; }
++  /* AND THE 39th (QUEUE v4 H8): `ctrStamp` LEFT AGAIN. While it defends, the
++     seat now plays only a card that helps the link, so the ring's games moved
++     off a counter sheet with two candidates. Measured over every pairing and
++     both chairs: Fai v Enigma with Enigma's chair first is the first to reach
++     it. ADDED, for v4.58's reason; every other field it brings is pinned. */
++  { const r = T.leg(E[7], E[8], "ctr-7-8-1", 1); legs++; if(r && r.threw) threw++; }
+ };
+ 
+ /* BOUND A FUNCTION AT THE NEXT SAME-LEVEL DECLARATION, NEVER AT A CHAR
+@@ -244,7 +250,7 @@ const fnBody = name => {
+ 
+ test("the driven census is alive — the legs really ran", () => {
+   drive();
+-  assert.equal(legs, 38, "the leg count moved; the pinned field set is taken at 38 "
++  assert.equal(legs, 39, "the leg count moved; the pinned field set is taken at 39 "
+     + "(32 in the ring, plus the six named legs that keep `keepTop`, `ctrStamp`, "
+     + "`shuffleAfter`, crank's `avail`/`spendCtr` and `charge` in it — see `drive`)");
+   assert.equal(threw, 0,
