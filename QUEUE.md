@@ -654,8 +654,31 @@ which tells the player what the hero ai would do in each situation."*
   - Doing what the box says never meets a refusal.
   - The ladder is byte-identical (the note out-param is unused there). Run it to prove that.
 
+**H9 (Azalea): a CLEAN NEGATIVE.** CEO-measured on v5.44 with H8 applied, 3 seeds.
+- **The lead.** Azalea's hero ability, her engine, is used 26 times in 28 games. The policy proposes
+  a hero ability after every attack, and once her arsenal arrow has been shot the ability has
+  nothing to put on the bottom. She takes 38 "no aim counter" misses, and Crow's Nest is offered
+  19 times.
+- **The experiment.** An action-speed hero ability whose own go again is unconditional goes before
+  the attack. The reader is `heroKeepsAP`; Azalea and Bravo qualify, and Boltyn's attack-reaction
+  ability does not.
+  - Always first: Azalea [2,3,4] -> [0,1,2], WORSE, because it cycles away the arrow she would
+    have shot. Bravo [7,2,7] -> [7,1,7].
+  - Only when the arsenal card is not a legal attack: Azalea [2,2,4], Bravo [6,2,5], both noise.
+- Nothing ships. Her gap is still open: aim counters, and the 185 arrows she blocks with
+  from hand, are the next leads.
+
+**H7b (Blaze) re-measured after S9, on H8: overlapping, not shipped.** Playing the card Blaze's
+ability banishes "this turn" (the H7 patch's `playNowPick` and banish play):
+- 6 seeds: [3,2,5,3,6,3] (3.7) -> [5,5,6,6,9,4] (5.8). The intervals overlap at [4,6].
+- H7's stricter "reactions only on the opponent's turn" hold adds nothing on top of H8
+  (identical numbers).
+- The same patch without H8, on v5.44: [5,2,3,1,4,2] (2.8) -> [7,5,5,7,10,5] (6.5). The intervals
+  touch at 5.
+- Recorded rather than shipped, under the standard every H item has met.
+
 **H8+.** One gap at a time, one investigator at a time, each rebased on the latest release.
-Waiting, by the v5.44 ladder: Azalea (7.0), Bravo (8.7), Blaze (5.7, now unblocked by S9); Lyath has H8;
+Waiting, by the v5.44 ladder: Bravo (8.7), Gravy (10.3, 7.7 under H8); Lyath has H8, Azalea H9 and Blaze H7b are recorded;
 then Blaze again after S9. **Order: S12, H8, S13, then feed items 19-20.**
 
 ## v3 — STAGE INCREMENT 1 INPUTS (CEO, 2026-10-17)
