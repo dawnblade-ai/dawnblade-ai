@@ -1,3 +1,27 @@
+## v5.43 — An opt opens for the seat that opted; an opponent's attack is not yours
+
+**QUEUE v4 S10, two seat defects from the user's own bug report.**
+
+- **(a) An opt resolved by seat 1 opened on seat 0, over seat 0's deck.** The two opt specs (`opt`
+  and `lookOrder`) carried no `side`, and `prompts.buildPrompt` defaults a missing side to 0. Blaze in
+  seat 1 played Whisper of the Oracle and Kayo was offered his own top three: a free opt for the wrong
+  player, at the table and over the network. Every opt drill ran at seat 0, the one seat where the
+  default is right. Both specs name `actorOf(n)` now, and `test/promptside.test.js` censuses every
+  push onto `promptQ` in `effects.js`: each names a side on the literal, through a pinned `*Spec(…,
+  side)` builder, or through a pinned variable built with one. Both variants are driven at seat 1.
+- **(b) "Activate this only if you control a card with 6 or more {p}" counted the OPPONENT's attack.**
+  `activateIfOk`'s `controlPow` added `pend.card` whoever declared it, so Dorinthea's 6-power swing made
+  Kayo's Predatory Plating "Destroy this: Gain {r}" legal on her turn. It counts the live attack only
+  when `pend.by` is the asking seat, the test `chainAtkOf` already makes. `test/platingseat.test.js`
+  refuses it in all five steps of her chain with the card's own sentence, and Kayo's own 6-power swing
+  still enables it.
+- **Guardwell is right, and the printing is recorded.** The SKA006 printing reads "When the combat
+  chain closes, if this defended, put -1{d} counters on it equal to its {d}", so the piece stays in play
+  at 0. Upstream's `keyword.csv` has an empty Guardwell row.
+
+The 3-seed ladder is byte-identical (CEO-measured): the policy never reorders an opt and never fires the
+Plating on the opponent's turn, so both defects were human-facing only. 6 sabotages, 6 bite.
+
 ## v5.42 — "You may play it this turn" is one play
 
 **QUEUE v4 S9, an engine fix.** A card played from the banished zone under a this-turn permission was

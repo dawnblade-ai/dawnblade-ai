@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.42
+**Current version:** v5.43
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3665 drills** at v5.42.
+This is `node --test "test/*.test.js"` — **3673 drills** at v5.43.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -875,6 +875,17 @@ The arsenal set, opt, a reorder, a hand-to-deck pick, Azalea's cycle and Boulder
 cards only one seat had seen (QUEUE v3 S2). Each names the seat and a count now; a graveyard pick and
 a face-up arsenal card are public and keep their names (`test/hiddenfeed.test.js`). **When a line
 names a card, ask which zone it came from and which it went to: two hidden zones mean a count.**
+
+### A QUEUED PROMPT NAMES ITS SEAT, AND "YOU CONTROL" IS YOURS (v5.43)
+
+`buildPrompt` defaults a missing `side` to 0, and the two opt specs carried none, so a seat-1 opt
+opened on seat 0 over seat 0's deck (QUEUE v4 S10a). `test/promptside.test.js` reads every `promptQ`
+push in `effects.js` and requires a side on the literal, a pinned `*Spec(…, side)` builder, or a pinned
+variable. `controlPow` counted the opponent's live attack as "a card you control", so Kayo's Predatory
+Plating was legal on Dorinthea's turn (S10b); it asks `pend.by` now (`test/platingseat.test.js`).
+**Guardwell's printing (SKA006):** "When the combat chain closes, if this defended, put -1{d} counters
+on it equal to its {d}": the piece stays in play at 0, and upstream's `keyword.csv` row is empty.
+**A default that is right at seat 0 is a drill that only ever runs at seat 0: drive seat 1.**
 
 ### "YOU MAY PLAY IT THIS TURN" IS ONE PLAY (v5.42)
 
