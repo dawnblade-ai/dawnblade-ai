@@ -410,8 +410,60 @@ re-measure on top of S8 before shipping, because S8 changes his games. The exper
   can keep a card to charge, swings the pumped weapon once charged, and does neither when uncharged
   with no charge card. Sabotage the rank, `chargeRoom`, and the weapon candidate.
 
-**H7+.** One gap at a time, one investigator at a time, each rebased on the latest release.
-Waiting, by the v5.41 ladder: Blaze (5.7), Lyath (5.7), Azalea (7.0), Bravo (8.7).
+**S9. A card played from banish under "you may play it this turn" goes back into banish STILL
+PLAYABLE, so it can be played again, without limit. ENGINE, ships next (v5.42).**
+Found by the Blaze investigator on v5.41 (`5a76ddf`); CEO-reproduced.
+- **The defect.** Both filing paths put a card played from banish (or the graveyard) back into
+  banish: `effects.js:~5433` (`execute`, non-attacks) and `fileAttack` `:~6583` (attacks). Its
+  play-permission stamps (`_playTurn`, `_asInstant`) travel with it, so `parser.playableFromZone`
+  (`:~9646`) answers "playable" again the same turn.
+  - Repro: `SPX=blaze node experiments/S9-banish-replay-repro.js <tree>`, run against a tree carrying
+    `experiments/H7-blaze-negative.patch`, whose policy plays from banish. It prints "blaze-boltyn-0
+    turn 7: Snapback#15 played from banish, back in banish with _playTurn=7, legal to play AGAIN:
+    true".
+  - `execute` is shared, so a HUMAN on either board can do it today. Crouching Tiger (Pouncing
+    Paws; cost 0, go again) then gives unlimited attacks in one turn. With that policy on every
+    seat, 35 Fai games livelock at turn 1-2.
+  - It is invisible to today's ladder only because the AI never plays from banish (Blaze's pick
+    parses `min:0`, and `autoAnswer` declines it). It is sev-3, illegal play allowed.
+- **The fix that needs no ruling.** "You may play it this turn" is ONE permission. Strip the
+  play-permission stamps when the played card is filed after it resolves, on BOTH paths, through one
+  helper.
+  - Drill it on the real routes: Blaze's ability (Snapback), Pouncing Paws (Crouching Tiger), and
+    Mounting Anger / Rising Resentment's banished attack.
+  - Each is playable once, then refused with a sentence.
+- **The feed and the state disagree for Crouching Tiger.** It is ephemeral, and the feed says "it
+  ceases to exist" while the card lands back in banish. Make the two agree with whatever destination
+  rules.
+- **Minor, same release.** `mkBanish` (`effects.js:~2438`) mints with the deck ENTRY's lowercased
+  name (`{...rec}` keeps "crouching tiger"); v5.28 fixed only the "springs into" line. Use the
+  database's name, as v3.33's token mint does.
+- **The destination is a RULING, not a build** (see NEEDS A RULING). The filing comment calls
+  banish-on-resolution "the printed rule for the cards that reach back into those zones". Measured
+  over the pool, no card that grants a play from banish prints that: Blaze's ability, Pouncing Paws,
+  Mounting Anger, Rising Resentment, Gate to i'Arathael. The repo has no verbatim CR quote either
+  way. Keep the destination unchanged and record it as stated with a probe, e.g.
+  `played-from-banish-files-to-banish`.
+
+**H7 (Blaze): a CLEAN NEGATIVE once S9's defect is neutralised; nothing to ship.** Measured on v5.41
+by the investigator; the experiment is kept at `experiments/H7-blaze-negative.patch`.
+- On the frozen engine, "play the banished card, and hold instants on the opponent's turn" read
+  Blaze [5,2,3] -> [10,9,8]. 293 of 401 banish plays in the probe were REPLAYS through the S9
+  defect.
+- With the defect neutralised, the result is [7,5,5], which overlaps and is not real.
+- "Hold instants on the opponent's turn" also costs Boltyn his defensive instants (Toe the Line,
+  Glisten): his interval falls [10,14] -> [5,7]. It must not ship as a blanket rule.
+- Measured leaks, recorded:
+  - 9.8 energy unspent per Blaze turn.
+  - Cindering Foresight's amp lapses on the opponent's turn 261 times.
+  - Crucible's {r} amp pitches the last card in hand 207 times.
+  - Every "arcane before attacks" or "spend energy" variant was negative in probes.
+- Re-measure after S9 ships; the honest answer today is that the policy's Blaze gap is not yet
+  found.
+
+**H8+.** One gap at a time, one investigator at a time, each rebased on the latest release.
+Waiting, by the v5.41 ladder: Lyath (5.7, needs a new investigator), Azalea (7.0), Bravo (8.7);
+then Blaze again after S9.
 
 ## v3 — STAGE INCREMENT 1 INPUTS (CEO, 2026-10-17)
 
@@ -767,6 +819,12 @@ is the only place it is ever `false`. Build it this way:
   Report it, and don't retune the policy inside the rules fix.
 
 ## NEEDS A RULING FROM THE USER (do not build)
+
+- **Where does a card played from the banished zone go after it resolves?** The graveyard, or
+  back to banish? Blaze's ability, Pouncing Paws' Crouching Tiger, Mounting Anger and Rising
+  Resentment grant "you may play it this turn" from banish, and none prints a destination. The
+  engine files it back into banish (`effects.js:~5433`, `fileAttack`), and the repo has no CR quote
+  either way. S9 closes the replay loop without deciding this. Asked 2026-10-25.
 
 - **May the AI pilot a hero?** (Stage §8.3.) RULING 2026-08-16 says a seat the dummy fills is
   always the vanilla pile (CLAUDE.md:12059). The Stage design's vs-AI tiers, its L9 lesson
