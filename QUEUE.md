@@ -682,6 +682,15 @@ ability banishes "this turn" (the H7 patch's `playNowPick` and banish play):
   touch at 5.
 - Recorded rather than shipped, under the standard every H item has met.
 
+**H10 (Bravo): noise, not shipped.** CEO-measured on H8, 6 seeds.
+- **The lead.** He deals 1.4 a swing (8.4 power into a 5.9 wall) and uses his hero ability 18
+  times in 28 games. The ability flips a face-down arsenal card, and one with crush gets +2{p} and
+  dominate.
+- **The experiment.** Flip first when the arsenal is face down, then attack with the card stamped
+  this turn.
+  - It fires: ability uses 18 -> 75, damage per swing 1.4 -> 1.9.
+  - Wins [7,2,7,7,4,2] (4.8) -> [5,1,7,8,6,3] (5.0), overlapping.
+
 **H8+.** One gap at a time, one investigator at a time, each rebased on the latest release.
 Waiting, by the v5.44 ladder: Bravo (8.7), Gravy (10.3, 7.7 under H8); Lyath has H8, Azalea H9 and Blaze H7b are recorded;
 then Blaze again after S9. **Order: H8, S13, then feed items 19-20.**
