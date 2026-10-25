@@ -539,6 +539,11 @@ Limpit from the graveyard. Its "Limpit keeps its point" finding is the Compass w
 - Drive it on the phone page at 393x852 (the v4.28 step): Kayo blocking a 6-power swing with the
   Plating. The tap declares it, the rail offers the ability only on Kayo's own turn, and no tap is dead.
 
+**S12. SHIPPED as v5.45 (`cbbc0ae`), CEO-verified 2026-10-25:** 3692 drills, 0 fail, 5 skipped; scenes
+107/107; both babel blocks compile; all 21 engine script tags and `.nojekyll` in the pushed commit; CI and
+Pages green; the 3-seed ladder byte-identical to v5.44. The Shipper drove a reorder at 393x852 on both
+boards.
+
 **S12. Opt can only send cards to the bottom; it cannot ORDER the ones kept on top. UI + prompts (v5.45).**
 - The ruling `effects.js:2059` records: "look at the top X, then put them back on top or bottom IN ANY
   ORDER". The sheet (`PromptSheet`, `index.html:2367`, shared by both boards) offers only the top/bottom
@@ -679,7 +684,7 @@ ability banishes "this turn" (the H7 patch's `playNowPick` and banish play):
 
 **H8+.** One gap at a time, one investigator at a time, each rebased on the latest release.
 Waiting, by the v5.44 ladder: Bravo (8.7), Gravy (10.3, 7.7 under H8); Lyath has H8, Azalea H9 and Blaze H7b are recorded;
-then Blaze again after S9. **Order: S12, H8, S13, then feed items 19-20.**
+then Blaze again after S9. **Order: H8, S13, then feed items 19-20.**
 
 ## v3 — STAGE INCREMENT 1 INPUTS (CEO, 2026-10-17)
 
