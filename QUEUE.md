@@ -474,6 +474,11 @@ an AI Blaze, opponent first). Four observations; all four are real, and they mak
 > … I do like the 'usable' equipment and hero cards etc to show up in the hand rail but they don't in the vs
 > ai mode."*
 
+**S10. SHIPPED as v5.43 (`c5d4e02`), CEO-verified 2026-10-25:** 3673 drills, 0 fail, 5 skipped; scenes
+107/107; both repros now answer the right seat; all 21 engine script tags and `.nojekyll` in the pushed
+commit; CI drills and Pages green; the 3-seed ladder byte-identical to v5.42. New census
+`test/promptside.test.js` (every `promptQ` push names a side) and `test/platingseat.test.js`.
+
 **S10. Two seat defects, ENGINE, after S9 (v5.43). CEO-reproduced and fixed in a scratch copy:
 `experiments/S10-opt-seat-controlpow.patch` (3 lines), suite 0 fail / 5 skipped.**
 - **(a) An opt resolved by seat 1 opens on SEAT 0, over seat 0's deck.** The two opt specs
@@ -555,7 +560,7 @@ an AI Blaze, opponent first). Four observations; all four are real, and they mak
 
 **H8+.** One gap at a time, one investigator at a time, each rebased on the latest release.
 Waiting, by the v5.41 ladder: Lyath (5.7, needs a new investigator), Azalea (7.0), Bravo (8.7);
-then Blaze again after S9. **The S-items above (S10, S11, S12) go first, in that order.**
+then Blaze again after S9. **The S-items above (S11, S12) go first, in that order.**
 
 ## v3 — STAGE INCREMENT 1 INPUTS (CEO, 2026-10-17)
 
