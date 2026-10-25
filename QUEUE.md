@@ -509,6 +509,13 @@ commit; CI drills and Pages green; the 3-seed ladder byte-identical to v5.42. Ne
   1 stall gravy-briar-2, as v5.41). The policy never reorders an opt and never fires the Plating on the
   opponent's turn, so neither defect could move a ladder number. Both are human-facing.
 
+**S11. SHIPPED as v5.44 (`5f0ea7a`), CEO-verified 2026-10-25:** 3679 drills, 0 fail, 5 skipped; scenes
+107/107; both babel blocks compile; all 21 engine script tags and `.nojekyll` in the pushed commit; it
+touches `index.html` only, and the 3-seed ladder is byte-identical to v5.43. The Shipper drove it at 393x852:
+Kayo's Plating declares and survives, the rail offers its ability on Kayo's turn, and Gravy replays
+Limpit from the graveyard. Its "Limpit keeps its point" finding is the Compass working as printed
+(FEED TEXT item 20).
+
 **S11. The table's hand rail and gear tiles, UI (v5.44).** Reported by the user; CEO-read in source.
 - **The rail.** The trainer's hand rail appends `playables` (`index.html:5443`): weapon swings, each
   equipment ability's powCard, the hero power, and cards playable from the graveyard or banish. The
@@ -560,7 +567,7 @@ commit; CI drills and Pages green; the 3-seed ladder byte-identical to v5.42. Ne
 
 **H8+.** One gap at a time, one investigator at a time, each rebased on the latest release.
 Waiting, by the v5.41 ladder: Lyath (5.7, needs a new investigator), Azalea (7.0), Bravo (8.7);
-then Blaze again after S9. **The S-items above (S11, S12) go first, in that order.**
+then Blaze again after S9. **S12 above goes first.**
 
 ## v3 — STAGE INCREMENT 1 INPUTS (CEO, 2026-10-17)
 
@@ -869,6 +876,15 @@ always 1). Both are measured and stated; don't build anything for them.
     - Fix: one neutral wording true of both, such as `its attack — the cost is paid each time it
       attacks`. No drill pins the string (`grep "weapon's attack" test/` finds only an unrelated
       test title). `noopvoice.test.js` holds the voice.
+20. A Compass of Sunken Depths go again does not name the Compass (CEO, 2026-10-25, from the S11
+    report). Playing Limpit from the graveyard with the Compass equipped prints "Go again — action
+    point kept." with no source.
+    - The Shipper read it as an engine defect ("an ally from the graveyard keeps its point"). Measured,
+      the engine is right: with the Compass the point is kept (1 -> 1), and without it the point is
+      spent (1 -> 0). Repro: `node experiments/S11-limpit-compass.js <tree>`.
+    - A line that leaves out its source reads as a bug even to us, so name the grant's source, as
+      `heroAbilityName` does for hero triggers (v5.08): "Compass of Sunken Depths: the first
+      watery-grave card from the graveyard this turn goes again."
 
 ## RECORD, DON'T BUILD
 
