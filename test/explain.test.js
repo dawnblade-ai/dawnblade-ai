@@ -42,7 +42,7 @@ const faults = s => CALL_VOICE.filter(([rx]) => rx.test(s)).map(([, why]) => why
 let CENSUS = null;
 function census(){
   if(CENSUS) return CENSUS;
-  const out = {states: 0, acted: 0, bad: [], keys: {}, types: {}, lines: new Set(), resBurn: []};
+  const out = {states: 0, acted: 0, bad: [], keys: {}, types: {}, lines: new Set(), resBurn: [], chargeOk: [], chargeBad: []};
   for(let i = 0; i < HEROES.length; i++){
     const k0 = HEROES[i], k1 = HEROES[(i + 3) % HEROES.length];
     for(const first of [0, 1]){
@@ -61,6 +61,10 @@ function census(){
           if(!e.why) out.bad.push(`${a.t} has no reason (key ${e.key})`);
           if(!e.line || e.line === a.t) out.bad.push(`${a.t} has no line: ${JSON.stringify(a)}`);
           else out.lines.add(e.line);
+          if(e.key === "chargeFirst"){
+            const v = J.chargeView(g, s, a.uid, a.from || "hand");
+            (v && v.offers ? out.chargeOk : out.chargeBad).push(`${k0}/${k1} seat ${s}: ${e.line}`);
+          }
           if(a.t === "activate" && J.abPieceForRes(g, s, a.uid))
             out.resBurn.push(`${k0}/${k1} seat ${s}: ${a.uid}`);
           const o = J.reduce(g, a, s);
@@ -178,4 +182,17 @@ test("the turn-one read names the hero whose deck it reads", () => {
     const g = match(k, "lyath", "read", 0);
     assert.ok(g.builds[0].read.startsWith(n + "'s read: "), g.builds[0].read);
   }
+});
+
+test("S14: \"charge first\" names only a card that offers a charge", () => {
+  /* QUEUE S14. `chargeView` answers for every card, so in v5.47 a go-again
+     attack for an uncharged seat was labelled "chargeFirst": 38 of 54 such
+     calls over 15 games named a card that offers no charge (Fai's Ronin
+     Renegade the sharpest). The key moves; the action does not, which the
+     census above holds. */
+  const c = census();
+  assert.deepEqual(c.chargeBad.slice(0, 5), [], c.chargeBad.length + " mislabelled");
+  assert.ok(c.chargeOk.filter(l => /^boltyn\/|\/boltyn /.test(l)).length > 3,
+    "the positive control: Boltyn's charge-first calls are still named (" + c.chargeOk.length + ")");
+  assert.ok(c.keys.atkKeepsAP > 20, "the go-again attacks are named as keeping the point");
 });

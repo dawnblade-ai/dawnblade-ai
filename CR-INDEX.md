@@ -138,7 +138,7 @@ Only rules cited in code. A rules revision is a lookup here, not an archaeology 
 **CR 8.1.6** — engine/advisor.js:165, engine/effects.js:5519, engine/judge.js:55, engine/judge.js:1121, engine/judge.js:1182, engine/judge.js:1414, engine/judge.js:1551, engine/judge.js:1578, engine/parser.js:5052, engine/parser.js:9035, engine/parser.js:9858, engine/parser.js:9864, engine/parser.js:9953, engine/parser.js:9956, engine/types.js:290, index.html:3594, index.html:3607, index.html:3726, index.html:3987, index.html:4058, index.html:4834, index.html:5355, index.html:5456  
 *drills:* test/arenaability.test.js:80, test/arenaability.test.js:427, test/arenaability.test.js:434, test/asinstant.test.js:13, test/asinstant.test.js:161, test/asinstant.test.js:227, test/asinstant.test.js:282, test/asinstant.test.js:357, test/blaze.test.js:211, test/blaze.test.js:232, test/handability.test.js:80, test/iceeternal.test.js:240, test/judge.test.js:841, test/judge.test.js:854, test/keycensus.test.js:274, test/mirror.test.js:309, test/mirror.test.js:312, test/mirror.test.js:413, test/parser.test.js:1877, test/parser.test.js:1897, test/parser.test.js:1965, test/playatspeed.test.js:188, test/priority.test.js:581, test/priority.test.js:974, test/priority.test.js:988, test/priority.test.js:997, test/routeap.test.js:54, test/rxability.test.js:417, test/split.test.js:196, test/split.test.js:383, test/stir.test.js:204
 
-**CR 7.3.2** — engine/actions.js:17, engine/actions.js:140, engine/advisor.js:94, engine/judge.js:47, engine/judge.js:935, engine/judge.js:2207, engine/judge.js:2280, engine/judge.js:3588, engine/judge.js:3604, engine/lobby.js:26, engine/net.js:43, engine/priority.js:197, engine/priority.js:236, engine/priority.js:386, engine/sparring.js:317, engine/sparring.js:797, engine/types.js:230, index.html:3416, index.html:5009  
+**CR 7.3.2** — engine/actions.js:17, engine/actions.js:140, engine/advisor.js:94, engine/judge.js:47, engine/judge.js:935, engine/judge.js:2207, engine/judge.js:2280, engine/judge.js:3588, engine/judge.js:3604, engine/lobby.js:26, engine/net.js:43, engine/priority.js:197, engine/priority.js:236, engine/priority.js:386, engine/sparring.js:317, engine/sparring.js:807, engine/types.js:230, index.html:3416, index.html:5009  
 *drills:* test/actions.test.js:109, test/advisor.test.js:137, test/defreaction.test.js:135, test/judge.test.js:697, test/lobby.test.js:4, test/net.test.js:196, test/priority.test.js:115, test/priority.test.js:156, test/priority.test.js:605, test/priority.test.js:861
 
 **CR 4.5.3** — engine/effects.js:6113, engine/judge.js:3891, engine/judge.js:3910, engine/sides.js:77, engine/wire.js:125, index.html:4764, index.html:4794  
@@ -147,7 +147,7 @@ Only rules cited in code. A rules revision is a lookup here, not an archaeology 
 **CR 7.3.2b** — engine/actions.js:149, engine/actions.js:287, engine/effects.js:9747, engine/invariants.js:20, engine/invariants.js:283, engine/invariants.js:297, engine/judge.js:957, engine/judge.js:2283, engine/sparring.js:347, index.html:2909, index.html:5022, index.html:5102, index.html:5107  
 *drills:* test/actions.test.js:122, test/defcap.test.js:272, test/defcap.test.js:291, test/defenddoor.test.js:9, test/defenddoor.test.js:71, test/defenderzone.test.js:12, test/invariants.test.js:141, test/invariants.test.js:142, test/judge.test.js:980, test/judge.test.js:993, test/judge.test.js:1044
 
-**CR 4.3.4** — engine/judge.js:1022, engine/judge.js:1037, engine/judge.js:2062, engine/judge.js:2572, engine/judge.js:3462, engine/priority.js:114, engine/priority.js:148, engine/priority.js:399, engine/sparring.js:850, index.html:3680, index.html:4918, index.html:4927, index.html:5876, index.html:7643  
+**CR 4.3.4** — engine/judge.js:1022, engine/judge.js:1037, engine/judge.js:2062, engine/judge.js:2572, engine/judge.js:3462, engine/priority.js:114, engine/priority.js:148, engine/priority.js:399, engine/sparring.js:860, index.html:3680, index.html:4918, index.html:4927, index.html:5876, index.html:7643  
 *drills:* test/arena.test.js:169, test/judge.test.js:162, test/judge.test.js:176, test/judge.test.js:566, test/judge.test.js:623, test/judge.test.js:628, test/judge.test.js:642, test/judge.test.js:648, test/judge.test.js:660, test/judge.test.js:1148, test/priority.test.js:220, test/priority.test.js:285, test/priority.test.js:577, test/priority.test.js:589, test/suspense.test.js:121
 
 **CR 8.1.1** — engine/effects.js:5519, engine/effects.js:5553, engine/judge.js:1182, engine/judge.js:1414, engine/judge.js:1578, engine/parser.js:9035, engine/parser.js:9953, engine/parser.js:9954, engine/parser.js:9967, engine/parser.js:10441, engine/types.js:290  
@@ -219,7 +219,7 @@ Only rules cited in code. A rules revision is a lookup here, not an archaeology 
 **CR 7.1.2** — engine/judge.js:3226, index.html:7474  
 *drills:* test/approx.test.js:394, test/crindex.test.js:71, test/tablestack.test.js:4
 
-**CR 4.4.3b** — engine/advisor.js:91, engine/judge.js:3611, engine/priority.js:421, engine/sparring.js:787, index.html:4543, index.html:4936  
+**CR 4.4.3b** — engine/advisor.js:91, engine/judge.js:3611, engine/priority.js:421, engine/sparring.js:797, index.html:4543, index.html:4936  
 *drills:* test/advisor.test.js:160, test/priority.test.js:536, test/walkinmyshoes.test.js:194
 
 **CR 4.2** — index.html:4861, index.html:5222, index.html:5293  

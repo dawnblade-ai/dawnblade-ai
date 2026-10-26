@@ -615,8 +615,18 @@ function offence(g, seat, o){
                      : x.ally ? {t: "activate", uid: x.uid, target: targetFor(g, seat, x.c)}
                                : {t: "play", uid: x.uid, from: x.from,
                                   target: targetFor(g, seat, x.c)}, seat));
-  const pickWhy = x => x.weapon ? "pumpedWeapon" : rankC(x) < 3 && x.cv && !x.cv.charged ? "chargeFirst"
-    : x.kap ? "atkKeepsAP" : x.ally ? (targetFor(g, seat, x.c) !== "hero" ? "allyTake" : "allyIn") : "biggestAttack";
+  /* THE KEY FOLLOWS THE RANK THAT PUT THE CARD FIRST (v5.49, QUEUE S14).
+     `chargeView` answers for every card, so a go-again attack (rank 0 by
+     `kap`) read as "chargeFirst" for any uncharged seat: 38 of 54 such
+     calls named a card that offers no charge. A go-again card is asked
+     first; "chargeFirst" names only a rank 1-2 card, which is one that
+     offers a charge with room for it. (A rank-0 branch for a card whose
+     charge turned on its go again changed no key over 30 games, so it is
+     not written.) */
+  const pickWhy = x => x.weapon ? "pumpedWeapon"
+    : x.kap ? "atkKeepsAP"
+    : rankC(x) < 3 && x.cv && !x.cv.charged ? "chargeFirst"
+    : x.ally ? (targetFor(g, seat, x.c) !== "hero" ? "allyTake" : "allyIn") : "biggestAttack";
   if(pick && pick.weapon) return tag(pickWhy(pick), {t: "activate", uid: pick.uid});
   if(pick) return tag(pickWhy(pick), pick.ally
     ? {t: "activate", uid: pick.uid, target: targetFor(g, seat, pick.c)}

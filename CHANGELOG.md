@@ -1,3 +1,19 @@
+## v5.49 — "Charge first" names a card that charges
+
+**QUEUE S14, a "[Hero]'s call" reason mislabel.** `pickWhy` asked about the charge before go again,
+and `judge.chargeView` answers for every card. So every go-again attack, for a seat that had not
+charged this turn, was called "Swing the attack that lets you charge first". On v5.47 that was 38 of
+54 such calls over 15 games, on a card that offers no charge (Fai's Ronin Renegade, among others).
+
+- **The fix.** A go-again card is keyed "atkKeepsAP" first, and "chargeFirst" names only a rank 1-2
+  card, one that offers a charge with room for it.
+- **A rank-0 branch was dropped.** The suggested branch for a card whose charge turned on its go
+  again changed no key over 30 games, so it is not written.
+- **Key only:** `act` is unchanged and the 3-seed ladder is byte-identical to v5.48.
+- **Drill** in `test/explain.test.js`: across the 30-game census, every "chargeFirst" names a card whose
+  `chargeView.offers` is true, Boltyn's charge-first calls are still named, and go-again attacks are
+  named as keeping the point. Restoring the v5.47 order bites.
+
 ## v5.48 — Two feed lines say what they are about
 
 **QUEUE FEED TEXT 19 and 20, the last two open, both voice-only.**
