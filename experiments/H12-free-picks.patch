@@ -1,0 +1,44 @@
+diff --git a/engine/judge.js b/engine/judge.js
+index bce15af..012c398 100644
+--- a/engine/judge.js
++++ b/engine/judge.js
+@@ -538,6 +538,20 @@ function openPrompt(g){
+    the minimum where a minimum is printed, and leave an `opt` in the order
+    it came. A policy that always took the maximum would be inventing
+    value it cannot read. */
++/* EXPERIMENT GATE (QUEUE v4 H12) — a FREE optional pick is taken for the
++   seats whose hero key is named in SPX; PCLS names the classes tried. */
++const SPX_J = (typeof process !== "undefined" && process.env && process.env.SPX)
++  ? process.env.SPX.split(",") : [];
++const PCLS = (typeof process !== "undefined" && process.env && process.env.PCLS)
++  ? process.env.PCLS.split(",") : ["dead", "rev", "ars"];
++const freePickClass = p => {
++  if(!p || p.filters || (p.cost || 0) > 0 || p.discard || p.maxAll || p.zone == null) return null;
++  if(["grave", "deck", "banish"].indexOf(p.zone) >= 0 && (p.to === "hand" || p.to === "banish")) return "dead";
++  if(p.zone === "hand" && p.to == null) return "rev";
++  if(p.zone === "hand" && p.to === "arsenal") return "ars";
++  if(p.zone === "hand" && p.to === "grave" && (p.ops || []).some(o => o && o[0] === "draw")) return "disc";
++  return null;
++};
+ function autoAnswer(g){
+   const p = g && g.prompt;
+   if(!p) return null;
+@@ -582,6 +596,18 @@ function autoAnswer(g){
+     } else if((p.sel || []).length < (p.min || 0)){
+       for(let i = 0; i < (p.cards || []).length; i++)
+         if((p.sel || []).indexOf(i) < 0) return {t: "promptSel", i};
++    } else if(!(p.sel || []).length && SPX_J.indexOf(sd.heroKey) >= 0){
++      const k = freePickClass(p), cs = p.cards || [];
++      if(k && PCLS.indexOf(k) >= 0 && cs.length){
++        let best = 0;
++        for(let i = 1; i < cs.length; i++){
++          const a = cs[i], c = cs[best];
++          const pa = k === "disc" ? -((a.power || 0)) : (a.power || 0), pc = k === "disc" ? -((c.power || 0)) : (c.power || 0);
++          if(pa > pc || (pa === pc && String(a.uid) < String(c.uid))) best = i;
++        }
++        if(process.env.PLOG) console.error("H12", sd.heroKey, k, p.src, "->", cs[best] && cs[best].name);
++        return {t: "promptSel", i: best};
++      }
+     }
+     return {t: "promptConfirm"};
+   }

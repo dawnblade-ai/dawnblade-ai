@@ -626,7 +626,7 @@ charge rank; the action never moves, so the ladder stays byte-identical. Drill: 
 names a card whose `chargeView.offers` is true (Boltyn positive, Fai's Ronin Renegade near-miss).
 Sent to the Shipper 2026-10-26 with feed 19-20.
 
-**H12 (policy, every hero with a free optional pick). Measuring.** `judge.autoAnswer` answers a
+**H12 (policy, every hero with a free optional pick). MEASURED REAL — ship it.** `judge.autoAnswer` answers a
 `min:0` pick with an empty selection, so the AI declines every optional pick, including ones it has
 already paid for. Census, 60 self-play games on v5.47 (pick | zone->to | rider | times declined):
 - **paid, then its payload declined:** Death Dealer's put (the {r} paid) 18, Bull's Eye Bracers' put
@@ -640,6 +640,26 @@ already paid for. Census, 60 self-play games on v5.47 (pick | zone->to | rider |
   `maxAll`, and is either a dead zone (grave/deck/banish) to hand or banish, a reveal, or hand to an
   empty arsenal. Best card by printed power, ties on uid. Blaze's banish is NOT in it: the policy
   never plays from banish (H7).
+- **Result (CEO, v5.47, `experiments/H12-free-picks.patch`, census `experiments/H12-optpicks-census.js`).**
+  - Azalea own seat, 12 seeds: [6,4,3,3,2,2,2,4,1,2,2,2] (2.8) -> [11,6,9,9,3,9,12,10,9,6,10,9] (8.6),
+    up on 12 of 12 seeds. One seed (s4: 3) keeps the own-seat intervals touching.
+  - `PCLS=ars` alone gives the IDENTICAL result, so the hand-to-arsenal put (Death Dealer, Bull's Eye
+    Bracers, reload) carries all of it. `dead` and `rev` are free by construction and move nothing
+    measurable (Fai 8.3 -> 9.3 at 6 seeds, Briar/Viserai/Bravo noise at 3).
+  - Full ladder with every seat on (the shipping configuration), 3 seeds: Azalea [11,6,5] (7.3) ->
+    [21,15,21] (19.0), DISJOINT. Every other hero inside the band. 0 refusals, 0 violations, 0 stalls.
+- **Build it ungated in `judge.autoAnswer`** as a named reader (e.g. `judge.freePick(p)` answering the
+  class or null), so a pick's freeness is stated once. Keep the exclusions exactly: any `cost`,
+  `filters`, `discard`, `maxAll`, a caller-supplied pool (`zone == null`), a board or gear zone, a
+  hand-to-banish or hand-to-graveyard move.
+- **Drills (real cards):** taken: Death Dealer and Bull's Eye Bracers (the arrow reaches the arsenal,
+  Death Dealer draws), Rise from the Ashes and Flamecall Awakening (a Phoenix Flame to hand), Crash and
+  Bash (the reveal mints a Seismic Surge). Still declined: Pick Up the Point's retrieve ({r}),
+  Condemn to Slaughter, Golden Tipple's discard, Mounting Anger's hand banish, Blaze's hand banish.
+  Sabotage each class and each exclusion.
+- **The call's voice:** `explain` keys a taken optional pick as `pickMin` ("Choose this one."). A key
+  of its own reads better, e.g. "Take it. It costs you nothing."
+- **The spec census may move** (Azalea's games change): more legs, not a looser claim.
 
 **S13. SHIPPED as v5.47 (`91fb2ba`), CEO-verified 2026-10-26:** 3705 drills, 0 fail, 5 skipped;
 scenes 107/0; both babel blocks compile; 21 engine scripts + `.nojekyll` in the pushed commit; CI
