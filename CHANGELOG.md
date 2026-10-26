@@ -1,3 +1,21 @@
+## v5.48 — Two feed lines say what they are about
+
+**QUEUE FEED TEXT 19 and 20, the last two open, both voice-only.**
+
+- **19.** An "Action - <cost>: Attack" line is filed `noop` and its reason reaches the feed on every
+  play: on every ally deploy it said "the weapon's attack". 26 pool cards carry it (allies, weapons,
+  Bait, Teklovossen). It now reads "it attacks through its own ability — the cost is paid each time
+  it attacks", which is true of all of them.
+- **20.** A go again printed "Go again — action point kept." with no source.
+  - The line now names the resolving card: an attack at resolution, a non-attack, a piece's ability
+    without the builder's suffix, or "<Hero>'s hero ability".
+  - Compass of Sunken Depths' graveyard grant names the Compass. `parser.gyFirstGaSource` is the one
+    reader of the carrier, and `gyFirstGaKw` reads its keyword off it.
+- **Measured:** the 3-seed ladder is byte-identical to v5.47, feed samples included.
+- **Drills:** `test/feedsource.test.js` (the carrier census, a Riggermortis deploy, and a self-play
+  census of every go-again line) and the Compass drill in `test/compass.test.js`. The line is the
+  observable here (v3.60). 7 sabotages, 7 bite.
+
 ## v5.47 — [Hero]'s call
 
 **QUEUE S13, with H11 folded in.** The table's advisor box ran `advisor.advise`, a second policy beside

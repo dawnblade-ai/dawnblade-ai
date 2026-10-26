@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.47
+**Current version:** v5.48
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3705 drills** at v5.47.
+This is `node --test "test/*.test.js"` — **3709 drills** at v5.48.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -875,6 +875,14 @@ The arsenal set, opt, a reorder, a hand-to-deck pick, Azalea's cycle and Boulder
 cards only one seat had seen (QUEUE v3 S2). Each names the seat and a count now; a graveyard pick and
 a face-up arsenal card are public and keep their names (`test/hiddenfeed.test.js`). **When a line
 names a card, ask which zone it came from and which it went to: two hidden zones mean a count.**
+
+### A FEED LINE NAMES ITS SOURCE, AND ITS REASON FITS EVERY CARRIER (v5.48)
+
+An activated attack's `noop` reason said "the weapon's attack" on every ally deploy (QUEUE FEED 19);
+it is one neutral sentence now, censused over its 26 carriers in `test/feedsource.test.js`. A go
+again printed "Go again — action point kept." with no source (FEED 20); `gaSourceName` names the
+resolving card, and Compass of Sunken Depths' grant names the Compass through
+`parser.gyFirstGaSource`. **When a reason is shared by many cards, check it is true of all of them.**
 
 ### [HERO]'S CALL IS THE SEAT POLICY'S OWN MOVE (v5.47)
 

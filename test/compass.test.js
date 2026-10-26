@@ -175,6 +175,17 @@ test("driven: the first watery-grave card out of the graveyard goes again", {ski
   assert.match(said(first.game), /first watery grave card out of the graveyard/i);
 });
 
+test("driven: the feed names the grant's source and whose go again it is (v5.47)", {skip}, () => {
+  /* QUEUE FEED 20. The action point is the state, and the drill above holds
+     it; the SOURCE has no state of its own, so here the line is the
+     observable (v3.60's exception). It printed "Go again — action point
+     kept." with nothing named. */
+  const lines = (play({}).game.feed || []).join("\n");
+  assert.match(lines, /^Compass of Sunken Depths: Barnacle is the first watery grave card out of the graveyard this turn — go again\.$/m);
+  assert.match(lines, /^Barnacle: go again — action point kept\.$/m);
+  assert.doesNotMatch(lines, /^Go again — action point kept\.$/m, "the bare line is gone");
+});
+
 test("driven: the SECOND does not — that is what \"first\" means", {skip}, () => {
   const second = play({hist: {gyFirstKw: ["watery grave"]}});
   assert.equal(second.ap, 0, "the grant is spent for the turn");

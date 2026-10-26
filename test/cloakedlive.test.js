@@ -134,7 +134,7 @@ test("every static and trigger scan of the gear zone asks abilitiesLive", () => 
     const j = rest.slice(1).search(new RegExp("\\n" + m[1] + "(?:function|const) "));
     return rest.slice(0, j < 0 ? undefined : j + 1);
   };
-  for(const f of ["wardBearers", "auraAttackOf", "arcaneSoaks", "gyFirstGaKw",
+  for(const f of ["wardBearers", "auraAttackOf", "arcaneSoaks", "gyFirstGaSource",
                   "idleCounterWipes", "rustedThrough"])
     assert.match(body(par, f), /abilitiesLive\b/, "parser." + f + " no longer asks the reader");
   for(const f of ["offerPayCost", "ctrClock", "tieGrantOf"])

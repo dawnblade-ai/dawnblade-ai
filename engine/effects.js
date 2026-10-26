@@ -636,6 +636,17 @@ function makeEffects(ctx){
     const nm = String((b.HZOOM && b.HZOOM.name) || "The hero").split(",")[0];
     return `${G.spName(nm)} hero ability`;
   };
+  /* WHOSE GO AGAIN IT WAS (v5.47, QUEUE FEED 20). The action-point line
+     printed "Go again — action point kept." with no source, so a Compass of
+     Sunken Depths activation read as a rule firing from nowhere. It names
+     the resolving card: a piece's ability without the builder's suffix, and
+     a hero's ability the way `heroAbilityName` names a hero trigger. */
+  const gaSourceName = card => {
+    const nm = String((card && card.name) || "");
+    if(/ — hero power$/.test(nm))
+      return `${G.spName(nm.replace(/ — hero power$/, "").split(",")[0])} hero ability`;
+    return nm.replace(/ — ability$/, "") || "The card";
+  };
 
   const briarEarth = (s, heroHit) => {
     let n = {...s};
@@ -3746,7 +3757,7 @@ function makeEffects(ctx){
         ga = true;
         actMut(n).hist = {...act(n).hist,
           gyFirstKw: [...(act(n).hist.gyFirstKw || []), _gk]};
-        n = L(n, `${card.name} is the first ${_gk} card out of the graveyard this turn — go again.`);
+        n = L(n, `${P.gyFirstGaSource(act(n)).name}: ${card.name} is the first ${_gk} card out of the graveyard this turn — go again.`);
       }
     }
     /* SPEND A WAITING NEXT-INSTANT GRANT (v3.37) — Stir the Aetherwinds.
@@ -5536,7 +5547,7 @@ function makeEffects(ctx){
           n = L(n, `${card.name} isn't an attack — the granted on-hit ability has no hit to fire on.`); } }
     const apCost = P.splitCostsAP(card, _half, opts && opts.window) ? 1 : 0;
     actMut(n).ap = act(n).ap - apCost + (ga ? 1 : 0);
-    if(ga) n = L(n, apCost ? "Go again — action point kept." : "Go again on an instant — an action point gained (CR 5.3.5).");
+    if(ga) n = L(n, `${gaSourceName(card)}: ` + (apCost ? "go again — action point kept." : "go again on an instant — an action point gained (CR 5.3.5)."));
     /* AND THE LINE NAMES THE WINDOW IT WAS ACTUALLY PLAYED IN (v4.38).
        `apCost` is 0 for an instant AND for anything played in a reaction
        window (CR 8.1.1's point is charged to an ACTION), so this said
@@ -8207,7 +8218,7 @@ function makeEffects(ctx){
     if(n._gaGrant){ n.pend = {...n.pend, ga:true}; delete n._gaGrant; }
     actMut(n).hist = {...act(n).hist, atk:act(n).hist.atk+1};
     actMut(n).ap = n.pend.ga ? act(n).ap : act(n).ap-1;
-    if(n.pend.ga) n = L(n, "Go again — action point kept.");
+    if(n.pend.ga) n = L(n, `${gaSourceName(n.pend.card)}: go again — action point kept.`);
     return {game:n, total};
   };
 

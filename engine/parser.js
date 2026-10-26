@@ -718,7 +718,11 @@ function classifyClause(raw){
      route is a real job — see HANDOFF.md — and reading the payload
      before it exists is the never-parse-ahead-of-wiring rule. */
   if(/^(?:once per turn )?(?:action|instant)\s*[-—]/.test(c)){
-    if(weaponCost(raw)) return NOOP("the weapon's attack — its cost is paid when it swings");
+    /* ONE WORDING FOR EVERY CARRIER (v5.47, QUEUE FEED 19). It reaches the
+       feed on every ally deploy, and 26 pool cards carry it: allies,
+       weapons, Bait and Teklovossen. "The weapon's attack" was false of
+       all but the weapons. */
+    if(weaponCost(raw)) return NOOP("it attacks through its own ability — the cost is paid each time it attacks");
     if(parseHeroPower(raw, true)) return NOOP("an activated ability — used from its own button");
     return null;
   }
@@ -10117,15 +10121,22 @@ const abDiscardCost = ab => (ab && ab._discardCost) || null;
    Off-Hand, and a future record printing the same static on a permanent
    would otherwise be silently inert (v3.33's Magmatic Carapace, v3.55,
    v3.93 — a board-only scan finds nothing for half the family). */
-function gyFirstGaKw(sd){
+/* `gyFirstGaSource` answers the CARD that carries it, so the feed can
+   name the grant's source (v5.47); the keyword is read off that card, one
+   body for both questions. */
+function gyFirstGaSource(sd){
   if(!sd) return null;
   const carriers = [...(sd.gear || []).filter(abilitiesLive),
                     ...(sd.board || []).map(b => b && b.card).filter(Boolean)];
   for(const c of carriers){
     const f = fxParse(c);
-    if(f && f.gyFirstGa) return f.gyFirstGa;
+    if(f && f.gyFirstGa) return c;
   }
   return null;
+}
+function gyFirstGaKw(sd){
+  const c = gyFirstGaSource(sd);
+  return c ? fxParse(c).gyFirstGa : null;
 }
 const abFlipUp = ab => !!(ab && ab._flipUp);
 /* ---- THE PICK AN ACTIVATION'S PAYLOAD OPENS (v4.59) -----------------
@@ -10552,6 +10563,6 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, spellvoidX, linksControlled, arcaneSoaks,
         ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
-        chiValue, chiSum, chiFloating, pitchExcessWhy, chiCeiling, payCeiling, handFree, isDeclaredDefender, rxDefenders, PLAY_ROUTES, isCardPlay, isNonAtkActionPlay, abChiCost, abSoulCost, soulPutNote, soulPutThisTurn, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, swingSpentWhy, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, abilitiesLive, boardEntryNamed, isEphemeral, isToken, ceasesToExist, PLAY_GRANT_STAMPS, spendPlayGrant, ARENA_ZONES, isHandWipe, gyFirstGaKw,
+        chiValue, chiSum, chiFloating, pitchExcessWhy, chiCeiling, payCeiling, handFree, isDeclaredDefender, rxDefenders, PLAY_ROUTES, isCardPlay, isNonAtkActionPlay, abChiCost, abSoulCost, soulPutNote, soulPutThisTurn, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, swingSpentWhy, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, abilitiesLive, boardEntryNamed, isEphemeral, isToken, ceasesToExist, PLAY_GRANT_STAMPS, spendPlayGrant, ARENA_ZONES, isHandWipe, gyFirstGaKw, gyFirstGaSource,
         CARD_OVERRIDES};
 });
