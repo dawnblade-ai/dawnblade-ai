@@ -726,6 +726,12 @@ offence ranks an ally card in hand by printed power as though deploying it were 
 Gravy's lever. His 1-life allies die to any swing at them, which the opponent's policy correctly takes
 (CR 7.3.2a), and 12 of his cards print no defence.
 
+**H19 (policy, Lyath): boo with the hero ability before an attack that wants a boo. NOISE, not
+shipped.** Mocking Blow gets +N "if you've been booed this turn"; 15 of its swings came before any boo
+in 28 games. `judge.wantsBoo` + `judge.heroBoos` (`experiments/H19-lyath-boo-first-NOISE.patch`)
+moved the boo first: "no boo this turn" 15 -> 0, damage per swing 1.8 -> 2.1, but wins [4,3,6,4,6,2]
+(4.2) -> [5,3,4,5,7,4] (4.7) at 6 seeds. The ability's {r}{r} is paid by a pitched card either way.
+
 **H18 (policy, Blaze/Iyslander): an amp-only ability waits for an arcane card to take it. CONSISTENT
 PAIRED GAIN, interval rule NOT met; queue for the next policy release.** Found by the CEO tracing
 Blaze on H12+H13+H14a. With no attack in hand the gear fallback runs before the non-attack branch,
@@ -1209,6 +1215,19 @@ always 1). Both are measured and stated; don't build anything for them.
     - A line that leaves out its source reads as a bug even to us, so name the grant's source, as
       `heroAbilityName` does for hero triggers (v5.08): "Compass of Sunken Depths: the first
       watery-grave card from the graveyard this turn goes again."
+
+21. **Grant lines lowercase printed class names and hide the rider** (CEO, 2026-10-26, reading v5.49
+    self-play feeds). `parser.qualLabel` joins `qual.g` as stored, so the feed prints "Next draconic or
+    ninja attack action card +3." (Rise from the Ashes), "Next runeblade attack", "Next pirate ally
+    attack", "Next lightning or elemental attack". The cards print the class capitalised ("Draconic or
+    Ninja"); subtypes such as arrow and dagger are lowercase in rules text too, so capitalise only
+    the CLASS and TALENT words (`ACTION_CLASSES` and the talent list are the vocabulary).
+    - `effects.riderWords` falls back to ", and a granted ability" for any rider it cannot name, so
+      Yo Ho Ho! and the Loot cards print "Next pirate ally attack, and a granted ability." Name the
+      quoted rider's own words, or say what it does ("…, and its hit makes a Gold token").
+    - "Next attack if it is blue +N." (Flying High) reads backwards; "Next blue attack +N" or
+      "Next attack +N if it is blue".
+    - Voice only. `effects.js:1658` is the line, `parser.js:4086` the label.
 
 ## RECORD, DON'T BUILD
 
