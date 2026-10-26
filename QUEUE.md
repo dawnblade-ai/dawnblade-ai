@@ -661,6 +661,25 @@ already paid for. Census, 60 self-play games on v5.47 (pick | zone->to | rider |
   of its own reads better, e.g. "Take it. It costs you nothing."
 - **The spec census may move** (Azalea's games change): more legs, not a looser claim.
 
+**H13 (policy, Enigma/Bravo/Iyslander/Kayo). Ship WITH H12: the arsenal step never stores a card
+that cannot leave it.** Found by the CEO on v5.47 (`experiments/H13-apleft.js enigma`): at the end
+of Enigma's turns her arsenal held Test of Strength 48 times and On the Horizon 43. The arsenal
+step takes the highest-power card in hand, so a hand with no attack stores a BLOCK card (or an
+Inner Chi), which has no play, cannot be pitched or declared as a defender from the arsenal, and
+clogs the slot for the rest of the game.
+- **The fix:** `judge.arsenalUsable(g, seat, uid)` answers `types.isPlayable`, and the arsenal step
+  filters on it; with no usable card it leaves the arsenal empty and the card stays in hand to block
+  or pitch. Patch: `experiments/H13-arsenal-usable.patch`; with H12: `experiments/H12-H13-combined.patch`.
+- **Measured: noise in wins, dominant by construction.** Enigma [5,4,4,7,6,5] (5.2) -> [5,6,5,5,7,5]
+  (5.5) at 6 seeds; Bravo and Kayo byte-identical, Iyslander noise. Full ladder with H12+H13 on every
+  seat: 0 refusals, 0 violations, 0 stalls; Azalea 19.0 as with H12 alone.
+- **Why ship a noise move:** "[Hero]'s call" shows this branch to the player, and it currently says
+  "Keep your biggest attack face down" while storing a Block card. H11's reason. Give the arsenal
+  step's reason a second key for a non-attack ("Keep it face down. It can be played from there.")
+  and say "arsenalSkip" when only unusable cards are left.
+- **Drills:** Enigma's hand of Test of Strength + On the Horizon leaves the arsenal empty; a hand
+  with an attack still stores it; Inner Chi is never stored. Sabotage the filter.
+
 **S13. SHIPPED as v5.47 (`91fb2ba`), CEO-verified 2026-10-26:** 3705 drills, 0 fail, 5 skipped;
 scenes 107/0; both babel blocks compile; 21 engine scripts + `.nojekyll` in the pushed commit; CI
 and Pages green. Ladder at 3 seeds byte-identical to the CEO's H8+S13 measurement
@@ -778,8 +797,8 @@ ability banishes "this turn" (the H7 patch's `playNowPick` and banish play):
 
 **H8+.** One gap at a time, one investigator at a time, each rebased on the latest release.
 Waiting, by the v5.44 ladder: Bravo (8.7), Gravy (10.3, 7.7 under H8); Lyath has H8, Azalea H9 and Blaze H7b are recorded;
-then Blaze again after S9. **Order: feed items 19-20 + S14 (one voice-only release), then H12 (its own release, it
-moves the ladder), then the next census lead, one at a time.**
+then Blaze again after S9. **Order: feed items 19-20 + S14 (one voice-only release), then H12 + H13 (one policy release),
+then the next census lead, one at a time.**
 
 ## v3 — STAGE INCREMENT 1 INPUTS (CEO, 2026-10-17)
 
