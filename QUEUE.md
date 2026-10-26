@@ -778,8 +778,8 @@ ability banishes "this turn" (the H7 patch's `playNowPick` and banish play):
 
 **H8+.** One gap at a time, one investigator at a time, each rebased on the latest release.
 Waiting, by the v5.44 ladder: Bravo (8.7), Gravy (10.3, 7.7 under H8); Lyath has H8, Azalea H9 and Blaze H7b are recorded;
-then Blaze again after S9. **Order: feed items 19-20 (S13 shipped v5.47), then the census leads
-below as H12+, one at a time.**
+then Blaze again after S9. **Order: feed items 19-20 + S14 (one voice-only release), then H12 (its own release, it
+moves the ladder), then the next census lead, one at a time.**
 
 ## v3 — STAGE INCREMENT 1 INPUTS (CEO, 2026-10-17)
 
