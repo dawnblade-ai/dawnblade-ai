@@ -614,7 +614,14 @@ boards.
   - On his own turn the held aura is still playable.
   - Sabotage the `defending` test, the reader's `dr` half, and each op.
 
-**S13. "[Hero]'s call": the advisor box says what the hero AI would do in your seat. UI + sparring
+**S13. SHIPPED as v5.47 (`91fb2ba`), CEO-verified 2026-10-26:** 3705 drills, 0 fail, 5 skipped;
+scenes 107/0; both babel blocks compile; 21 engine scripts + `.nojekyll` in the pushed commit; CI
+and Pages green. Ladder at 3 seeds byte-identical to the CEO's H8+S13 measurement
+(`full-s13b`), 0 refusals / 0 violations / 0 stalls. The trainer's box is labelled "Coach's call"
+and still runs `advise`, because `sparring.explain` needs a judge state and the trainer's seat 1 is
+the tuned `[3,4,5]` dummy. The table's box is "<Hero>'s call".
+
+**S13 (original item). "[Hero]'s call": the advisor box says what the hero AI would do in your seat. UI + sparring
 (v5.46).** RULING (user, 2026-10-25): *"Instead of 'Claude's call' replace it with '[kayo]'s call'
 which tells the player what the hero ai would do in each situation."*
 - **The call is the policy, run for the player's seat.** At the table (local sessions, seat 0, the
@@ -724,7 +731,8 @@ ability banishes "this turn" (the H7 patch's `playNowPick` and banish play):
 
 **H8+.** One gap at a time, one investigator at a time, each rebased on the latest release.
 Waiting, by the v5.44 ladder: Bravo (8.7), Gravy (10.3, 7.7 under H8); Lyath has H8, Azalea H9 and Blaze H7b are recorded;
-then Blaze again after S9. **Order: S13, then feed items 19-20.**
+then Blaze again after S9. **Order: feed items 19-20 (S13 shipped v5.47), then the census leads
+below as H12+, one at a time.**
 
 ## v3 — STAGE INCREMENT 1 INPUTS (CEO, 2026-10-17)
 
@@ -1099,7 +1107,7 @@ is the only place it is ever `false`. Build it this way:
   engine files it back into banish (`effects.js:~5433`, `fileAttack`), and the repo has no CR quote
   either way. S9 closes the replay loop without deciding this. Asked 2026-10-25.
 
-- **May the AI pilot a hero?** (Stage §8.3.) RULING 2026-08-16 says a seat the dummy fills is
+- ~~**May the AI pilot a hero?**~~ **RULED 2026-10-18, see v4 at the top.** Original note: (Stage §8.3.) RULING 2026-08-16 says a seat the dummy fills is
   always the vanilla pile (CLAUDE.md:12059). The Stage design's vs-AI tiers, its L9 lesson
   and AI-vs-AI exhibitions need a hero-piloting AI. Asked 2026-10-17.
 - **Unity and a defence reaction from hand.** Unity prints "When this defends together with
