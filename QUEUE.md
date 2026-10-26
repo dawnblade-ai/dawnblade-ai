@@ -718,6 +718,14 @@ Dealer 15, Fai 10, Enigma 9 + Uphold Tradition 6, Bravo 6, Beckoning Haunt 4.
 NOISE, not shipped.** On H12+H13+H14a: Blaze [1,2,5,1,4,3] (2.7) -> [2,3,3,3,5,3] (3.2) at 6 seeds;
 Fai identical. H7's reading stands.
 
+**H17 (policy, Gravy): rank an ally DEPLOY apart from a swing. NEGATIVE both ways, not shipped.**
+On H12+H13+H14a, Gravy 179 of 277 turns end with an ally able to attack and no action point. The
+offence ranks an ally card in hand by printed power as though deploying it were a swing
+(`experiments/H17-ally-deploy-last.patch`, `judge.allyDeploy`). Deploy last: [3,2,4,1,4,2] (2.7)
+-> [3,3,5,0,2,2] (2.5); deploy first (`DEPFIRST`): [1,3,2,2,3,3] (2.3). The ordering is not
+Gravy's lever. His 1-life allies die to any swing at them, which the opponent's policy correctly takes
+(CR 7.3.2a), and 12 of his cards print no defence.
+
 **H18 (policy, Blaze/Iyslander): an amp-only ability waits for an arcane card to take it. CONSISTENT
 PAIRED GAIN, interval rule NOT met; queue for the next policy release.** Found by the CEO tracing
 Blaze on H12+H13+H14a. With no attack in hand the gear fallback runs before the non-attack branch,
