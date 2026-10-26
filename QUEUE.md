@@ -614,6 +614,33 @@ boards.
   - On his own turn the held aura is still playable.
   - Sabotage the `defending` test, the reader's `dr` half, and each op.
 
+**S14. The call's reason names a charge for a card that offers none. VOICE ONLY (with feed 19-20).**
+Found by the CEO on v5.47, tracing Fai. `sparring.js` `pickWhy` tests `rankC(x) < 3 && x.cv &&
+!x.cv.charged` before `x.kap`; `judge.chargeView` answers an object for every hand/arsenal card
+(`offers:false` for one with no charge), and `rankC` is 0 for any attack that keeps the point. So
+every go-again attack, for a seat that has not charged, is labelled `chargeFirst` ("Swing the attack
+that lets you charge first…"). Measured over 15 self-play games, one per hero: 54 `chargeFirst`
+calls, 38 on a card that offers no charge (Fai 16, Gravy 7, Arakni/Briar/Azalea 4, Viserai 2,
+Enigma 1). Repro: Fai v Kayo seed 0, turn 1, Ronin Renegade. Order the key `kap` first, then the
+charge rank; the action never moves, so the ladder stays byte-identical. Drill: `chargeFirst` only
+names a card whose `chargeView.offers` is true (Boltyn positive, Fai's Ronin Renegade near-miss).
+Sent to the Shipper 2026-10-26 with feed 19-20.
+
+**H12 (policy, every hero with a free optional pick). Measuring.** `judge.autoAnswer` answers a
+`min:0` pick with an empty selection, so the AI declines every optional pick, including ones it has
+already paid for. Census, 60 self-play games on v5.47 (pick | zone->to | rider | times declined):
+- **paid, then its payload declined:** Death Dealer's put (the {r} paid) 18, Bull's Eye Bracers' put
+  (the piece destroyed) 8, Blaze's hero power banish 18.
+- **free cards declined:** Rise from the Ashes (Phoenix Flame back to hand) 2, Flamecall Awakening's
+  deck search 3, Jack Be Quick's graveyard banish for +1 and go again 4, Sigil of Silphidae's
+  graveyard banish for 1 arcane 3, Crash and Bash's reveal for a Seismic Surge 8, reloads 5.
+- **priced, left alone:** Pick Up the Point / Up Sticks and Run retrieve ({r}), Condemn to
+  Slaughter, Golden Tipple's discard, Mounting Anger / Rising Resentment's hand banish.
+- Experiment (judge.js, `SPX`-gated): take the pick when it is cost 0, no `filters`/`discard`/
+  `maxAll`, and is either a dead zone (grave/deck/banish) to hand or banish, a reveal, or hand to an
+  empty arsenal. Best card by printed power, ties on uid. Blaze's banish is NOT in it: the policy
+  never plays from banish (H7).
+
 **S13. SHIPPED as v5.47 (`91fb2ba`), CEO-verified 2026-10-26:** 3705 drills, 0 fail, 5 skipped;
 scenes 107/0; both babel blocks compile; 21 engine scripts + `.nojekyll` in the pushed commit; CI
 and Pages green. Ladder at 3 seeds byte-identical to the CEO's H8+S13 measurement
