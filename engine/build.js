@@ -812,7 +812,9 @@ function buildSide(h, d, db, opts, rng, ctr){
   const _blue = deck.filter(c=>c.pitch===3).length;
   const _perm = deck.filter(c=>fxParse(c).perm).length;
   const _avg = _atk.length ? _atk.reduce((a,c)=>a+(c.power||0),0)/_atk.length : 0;
-  const read = "Claude's read: "+_atk.length+" attacks avg "+_avg.toFixed(1)+" power, "+_ga+" go-again, "+_blue+" blue fuel"
+  /* THE READ IS THE HERO'S OWN (v5.47): it names the hero whose deck it
+     reads, by the part of the name before the comma. */
+  const read = String(d.hero.name||"Your hero").split(",")[0]+"'s read: "+_atk.length+" attacks avg "+_avg.toFixed(1)+" power, "+_ga+" go-again, "+_blue+" blue fuel"
     +(_arc?", "+_arc+" arcane":"")+(_perm?", "+_perm+" permanents":"")+". "+(function(){
       const cnt = k => deck.filter(c=>hasKw(c,k)).length;
       const soulN = deck.filter(c=>/into your (?:hero'?s? )?soul/i.test(c.tx||"")).length;

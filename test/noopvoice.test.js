@@ -46,22 +46,9 @@ const skip = !H.hasDb() && "no cached card database";
 /* WHAT MAKES A LINE READ AS A CODE COMMENT. Each half is a real fault
    this census found, kept as its own alternative so a failure names the
    shape rather than only the string. */
-const DEV_VOICE = [
-  [/\bv\d\.\d\d\b/,            "a version number"],
-  [/\.js\b/,                   "a filename"],
-  [/[A-Za-z_$][\w$]*\.[A-Za-z_$][\w$]*\(/, "a function call"],
-  [/`/,                        "a backtick"],
-  [/\bfxParse\b|\bclassifyClause\b|\brunOps\b|\bexecute\(/, "an engine identifier"],
-  /* v5.28 (QUEUE item 14 [12]): "off fx.noDrx" and "cost read by the weapon
-     reader" printed on every swing. A dotted parse field and the engine's
-     own noun for a parser rule are both developer voice. */
-  [/\bfx\.[A-Za-z]/,           "a parse field"],
-  [/\breaders?\b/i,            "the word \"reader\""],
-  /* v5.33 (QUEUE v3 S3): `runOps` prints a noop reason into the feed both
-     seats read (v2.83), so "you" is a different player depending on who
-     reads it. 299 lines a ladder said "your graveyard" off one reason. */
-  [/\byour?\b/i,              "the second person"]
-];
+/* The shapes live in `helpers/voice.js` (v5.47): the seat's call is
+   player-facing text too, and two copies of one list drift apart. */
+const {DEV_VOICE} = require("./helpers/voice.js");
 const faults = s => DEV_VOICE.filter(([rx]) => rx.test(s)).map(([, why]) => why);
 
 function poolNoopReasons(){

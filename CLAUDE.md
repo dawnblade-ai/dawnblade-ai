@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.46
+**Current version:** v5.47
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3696 drills** at v5.46.
+This is `node --test "test/*.test.js"` — **3705 drills** at v5.47.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -875,6 +875,15 @@ The arsenal set, opt, a reorder, a hand-to-deck pick, Azalea's cycle and Boulder
 cards only one seat had seen (QUEUE v3 S2). Each names the seat and a count now; a graveyard pick and
 a face-up arsenal card are public and keep their names (`test/hiddenfeed.test.js`). **When a line
 names a card, ask which zone it came from and which it went to: two hidden zones mean a count.**
+
+### [HERO]'S CALL IS THE SEAT POLICY'S OWN MOVE (v5.47)
+
+The table's advisor box ran `advisor.advise`, a second policy that could disagree with the seat (QUEUE
+S13). It shows `sparring.explain(g, mySeat)` now: `act`'s move, the reason keyed by the `tag` at its
+return site (`CALL_WHY`), and a line naming the cards. The trainer keeps `advise` as the Coach's call.
+H11: the gear fallback skips a piece that pays only resources (`judge.abPieceForRes`). The tags are
+byte-identical on the ladder; `test/explain.test.js` holds `explain` to `act` at every state.
+**When advice and play can disagree, show the play.**
 
 ### WHILE IT DEFENDS, THE SEAT PLAYS ONLY WHAT HELPS THE LINK (v5.46)
 

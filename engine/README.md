@@ -12,7 +12,7 @@ still ships as-is.
 - **game.js** — pure state helpers: `parseDeck`, `gearDef`/`gearBlockApply`
   (Blade Break / Battleworn / Temper / Guardwell), `slotOf`, `shuffle`.
   Browser: `window.DawnGame`.
-- **advisor.js** — "Claude's call": `advise` and its evaluation stack.
+- **advisor.js** — the Coach's call: `advise` and its evaluation stack.
   Browser: `window.DawnAdvisor`.
 
 ### Phase 2 — the two-player groundwork (v2.14)

@@ -219,7 +219,12 @@ const drive = () => {
      Bravo v Azalea stopped reaching the reorder. Measured over every
      pairing, both chairs: five reach it, and Azalea v Kayo with Azalea's
      chair first is the first. Swapped, so the count stands. */
-  { const r = T.leg(E[5], E[0], "kt-5-0-0", 0); legs++; if(r && r.threw) threw++; }
+  /* AND REPLACED AGAIN (QUEUE v4 H11): the seat no longer destroys a piece
+     for a resource it cannot spend, so Azalea's game against Kayo moved and
+     the leg above stopped reaching the reorder. Measured over every pairing,
+     both chairs: Azalea v Kayo with Kayo's chair first is the first to
+     reach it. Swapped, so the count stands. */
+  { const r = T.leg(E[5], E[0], "fs-5-0-1", 1); legs++; if(r && r.threw) threw++; }
   /* AND THE 38th (v5.41): `charge` LEFT. Boltyn's seat now charges before it
      swings (QUEUE v4 H6), so his soul is rarely empty when Roaring Beam asks
      and the ring stopped reaching its charge-your-soul pick. Measured over

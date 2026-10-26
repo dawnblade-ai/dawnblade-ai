@@ -1,6 +1,6 @@
 /* ============================================================
    Dawnblade engine — advisor.js (Phase 1 extraction)
-   "Claude's call" — pure move evaluation, extracted verbatim
+   the Coach's call — pure move evaluation, extracted verbatim
    from index.html. No DOM, no React: state in, coaching out.
    ============================================================ */
 (function(root, factory){

@@ -1,3 +1,39 @@
+## v5.47 — [Hero]'s call
+
+**QUEUE S13, with H11 folded in.** The table's advisor box ran `advisor.advise`, a second policy beside
+the one that plays seat 1, so its advice and the seat's play could disagree. It now shows the seat
+policy's own move.
+
+- **`sparring.explain(g, seat)`** returns `{action, key, why, line}`. Every return site in the policy
+  is `tag(key, action)`. The tag records the action object it wrapped, `explain` keeps the key of the
+  action actually returned, and `act` alone is unchanged. `sparring.CALL_WHY` holds 46 reasons in a
+  coach's voice; `lineOf` names the cards.
+- **The table's box** is "✦ <Hero>'s call", for local sessions and seat 0 only, as before. When the
+  seat has nothing to decide it says who is deciding. The turn-one read is "<Hero>'s read"
+  (`build.js`). The trainer keeps `advise`, labelled "✦ Coach's call". "Claude's call" appears
+  nowhere.
+- **H11.** The gear fallback no longer destroys a piece whose whole payout is resources (Blossom of
+  Spring, Spellfire Cloak, Predatory Plating) for an {r} that fizzles at end of turn.
+  `judge.abPieceForRes` names them; Beckoning Haunt's destroy returns an aura and still fires. The
+  census swaps its keepTop leg to `fs-5-0-1`.
+- **Measured** with `tools/tourney.js` at 3 seeds:
+  - with the H11 filter neutered, the ladder is byte-identical to v5.46, so `explain` and the tags
+    move nothing;
+  - with H11, the wins move inside the band and every hero's interval overlaps;
+  - 0 refusals, 0 violations, 0 stalls.
+- **Phone drive at 393x852, table board.** Blaze followed 65 calls and Kayo 86, through eight turns
+  each. There were 0 refusals, the box matched the call every time, and there was no horizontal
+  overflow.
+- **Drills** are in `test/explain.test.js`:
+  - `explain` equals `act` with a reason and a line at every state of 30 self-play games (15,076 states);
+  - every action type has a case in the line writer;
+  - every reason has a tag site, and the unreached keys are pinned;
+  - every reason and line passes the voice shapes, now shared in `test/helpers/voice.js`;
+  - H11;
+  - the labels.
+  12 sabotages, 11 bite. The silent one makes the first tag win instead of the returned action's, and
+  is unobservable today because no branch discards a tagged candidate.
+
 ## v5.46 — While it defends, the seat plays only what helps the link
 
 **QUEUE v4 H8, a policy release.** `sparring.reaction` played the cheapest legal card in every reaction

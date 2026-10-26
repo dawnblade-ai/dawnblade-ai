@@ -1769,6 +1769,16 @@ const defendsNow = (g, seat, uid, from) => {
   const fx = PR.fxParse(c);
   return !!fx.dr || (fx.ops || []).some(o => DEFENDS_OPS.indexOf(o[0]) >= 0);
 };
+/* DOES THIS EQUIPMENT ABILITY SPEND THE PIECE FOR RESOURCES ALONE? (QUEUE v4
+   H11) Its cost destroys or banishes the piece, and every op it pays out is a
+   resource gain. For `sparring.js`, which reads no card text. */
+const abPieceForRes = (g, seat, uid) => {
+  const piece = (at(g, seat).gear || []).find(x => x && x.uid === uid);
+  const pc = piece && piece.powCard;
+  if(!pc || !(pc.sd || pc._selfBanish)) return false;
+  const ops = (PR.fxParse(pc).ops || []).filter(o => o[0] !== "noop");
+  return ops.length > 0 && ops.every(o => o[0] === "res");
+};
 /* ---- DOES THIS CARD KEEP THE TURN'S ACTION POINT? (v5.36) -----------
 
    `abWindowOf`'s sibling, for the same reason: `sparring.js` reads NO card
@@ -3902,7 +3912,7 @@ function drawTo(g, i){
 }
 
 return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, defendsNow, DEFENDS_OPS, boostShare, grantTakers, arcaneOf, chargeView,
+        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, defendsNow, DEFENDS_OPS, abPieceForRes, boostShare, grantTakers, arcaneOf, chargeView,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */

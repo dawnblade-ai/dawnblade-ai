@@ -821,7 +821,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "5.46"; /* v5.46 - while a seat defends, the sparring policy plays only a card that helps the link being defended. See CHANGELOG.md. */
+window.APP_VER = "5.47"; /* v5.47 - the table's advisor shows the seat policy's own move and its reason, named for the hero. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -2631,13 +2631,17 @@ function Ticker({feed}){
     </div>
   );
 }
-function Advisor({g,ctx,read}){
+/* THE CALL HAS TWO SOURCES (v5.47). The trainer's is `advise`, labelled
+   the Coach's; the table's is the seat policy itself, explained
+   (`sparring.explain`), and labelled with the hero who would make it. The
+   component takes the label and, when one is handed in, the call. */
+function Advisor({g,ctx,read,label,call}){
   const [open,setOpen]=uS(()=>store.get("adv",true));
-  const rec = uM(()=>{ try{return advise(g,ctx);}catch(e){return {line:"(advisor hiccup)",why:String(e)};} },[g]);
+  const rec = uM(()=>{ try{return call ? call() : advise(g,ctx);}catch(e){return {line:"(advisor hiccup)",why:String(e)};} },[g]);
   if(g.over) return null;
   return (
     <div className="adv clip-sm">
-      <button className="advhead" onClick={()=>setOpen(o=>{store.set("adv",!o);return !o;})}>✦ Claude's call {open?"▾":"▸"}</button>
+      <button className="advhead" onClick={()=>setOpen(o=>{store.set("adv",!o);return !o;})}>✦ {label||"Coach's call"} {open?"▾":"▸"}</button>
       {open && <div className="advbody">
         <div>{rec.line}</div>
         {rec.why ? <div className="advwhy">{rec.why}</div> : null}
@@ -5568,7 +5572,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
         {/* ---- SCREEN 2: chain command center ---- */}
         <div className="vscreen" ref={chainRef}>
           <div className="hscroll" ref={midRef}>
-            {/* PANE 1 — LOG: scoreboard + Claude's call + live feed */}
+            {/* PANE 1 — LOG: scoreboard + the Coach's call + live feed */}
             <div className="hpane logpane">
               <div className="paneflag">
                 <span>log & advisor</span>
@@ -7381,7 +7385,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                 <span className="ph">{stepLabel(g, mySeat)}</span>
               </div>
               <div style={{marginTop:6}}><Ticker feed={g.feed}/></div>
-              {/* ---- CLAUDE'S CALL, AT THE TABLE (v2.83) ------------------
+              {/* ---- THE CALL, AT THE TABLE (v2.83) -----------------------
                   This board had no advisor, and the stated reason — that it
                   "would coach card text that does not resolve here" — has
                   been false since v2.77, when judge.js started resolving
@@ -7408,12 +7412,18 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                   would read as ordinary bad advice. A local session always
                   seats you at 0, so this costs nothing today and cannot go
                   quietly wrong if that ever changes. */}
+              {/* <HERO>'S CALL (v5.47). The table's call is the seat
+                  policy's own move with its reason (`sparring.explain`), so
+                  following it never meets a refusal. When this seat has
+                  nothing to decide, the box says who is deciding. */}
               {local && mySeat === 0 && <Advisor g={g}
-                ctx={{...advView(g, mySeat),
-                      runeDmg: myBuild.runeDmg, hpow: myBuild.HPOW, boostOn: false,
-                      dBlk: (them.gear||[]).filter(x=>gearDef(x)>0).length
-                          + (them.hand||[]).filter(c=>(c.def||0)>0).length,
-                      dDef: gearDef((them.gear||[]).find(x=>gearDef(x)>0)||{})||1}}
+                label={String((myH && myH.n) || me.name).split(",")[0] + "'s call"}
+                call={() => {
+                  const e = DawnSparring.explain(g, mySeat);
+                  if(e.action) return {line: e.line, why: e.why};
+                  const other = DawnSparring.explain(g, 1 - mySeat).action;
+                  return {line: other ? them.name.split(",")[0] + " is deciding." : "Nothing to decide yet."};
+                }}
                 read={myBuild.read}/>}
               <div className="gamelog" style={{marginTop:8}}>{[...(g.feed||[])].reverse().map((l,i)=><div key={i} className="gl">{l}</div>)}</div>
             </div>
