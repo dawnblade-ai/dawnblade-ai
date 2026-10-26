@@ -614,7 +614,11 @@ boards.
   - On his own turn the held aura is still playable.
   - Sabotage the `defending` test, the reader's `dr` half, and each op.
 
-**S14. The call's reason names a charge for a card that offers none. VOICE ONLY (with feed 19-20).**
+**S14. SHIPPED as v5.49 (`4616e81`), CEO-verified 2026-10-26:** 3710 drills, 0 fail, 5 skipped; scenes
+107/0; babel ok; scripts + `.nojekyll` present; CI and Pages green; ladder byte-identical to v5.47. The
+CEO's mislabel probe reads 0 of 16 `chargeFirst` calls on a card without a charge (was 38 of 54).
+
+**S14 (original item). The call's reason names a charge for a card that offers none. VOICE ONLY (with feed 19-20).**
 Found by the CEO on v5.47, tracing Fai. `sparring.js` `pickWhy` tests `rankC(x) < 3 && x.cv &&
 !x.cv.charged` before `x.kap`; `judge.chargeView` answers an object for every hand/arsenal card
 (`offers:false` for one with no charge), and `rankC` is 0 for any attack that keeps the point. So
@@ -816,7 +820,7 @@ ability banishes "this turn" (the H7 patch's `playNowPick` and banish play):
 
 **H8+.** One gap at a time, one investigator at a time, each rebased on the latest release.
 Waiting, by the v5.44 ladder: Bravo (8.7), Gravy (10.3, 7.7 under H8); Lyath has H8, Azalea H9 and Blaze H7b are recorded;
-then Blaze again after S9. **Order: feed items 19-20 + S14 (one voice-only release), then H12 + H13 + H14a (one policy release),
+then Blaze again after S9. **Order: H12 + H13 + H14a (one policy release; feed 19-20 shipped v5.48, S14 v5.49),
 then the next census lead, one at a time.**
 
 ## v3 — STAGE INCREMENT 1 INPUTS (CEO, 2026-10-17)
@@ -1092,7 +1096,8 @@ always 1). Both are measured and stated; don't build anything for them.
 ## FEED TEXT — batch into one or two releases
 
 **Items 11–18 SHIPPED** in v5.28 (11–15) and v5.29 (16–18); CEO-checked against v5.44 source on
-2026-10-25. **Open: 19 and 20**, small, one release together.
+2026-10-25. **19 and 20 SHIPPED as v5.48 (`9f8f20a`), CEO-verified 2026-10-26** (3709 drills, 0 fail,
+5 skipped; CI green; ladder byte-identical to v5.47). The feed batch is closed.
 
 11. Pick result lines print raw state keys: `Swift Shot → deckTop from grave.` (also the
     sheet hint `From your grave → deckTop`). Use `promptZoneWord` and a destination word.
