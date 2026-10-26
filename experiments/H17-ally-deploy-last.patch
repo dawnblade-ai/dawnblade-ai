@@ -1,0 +1,53 @@
+diff --git a/engine/judge.js b/engine/judge.js
+index 3a38893..cffbf37 100644
+--- a/engine/judge.js
++++ b/engine/judge.js
+@@ -1848,6 +1848,15 @@ const chargePitchWanted = (g) => {
+   const hit = (PR.fxParse(p.card).conds || []).map(e => e && /^chargedPitch(\d)$/.exec(e.cond)).find(Boolean);
+   return hit ? +hit[1] : null;
+ };
++/* IS THIS HAND CARD AN ALLY? (QUEUE v4 H17) Playing one DEPLOYS it: it
++   enters the arena and deals nothing this turn, so ranked by its printed
++   power as though it were a swing it beats a real attack. `types` answers. */
++const allyDeploy = (g, seat, uid, from) => {
++  const sd = at(g, seat);
++  const c = from === "arsenal" ? (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null)
++    : (sd.hand || []).find(x => x && x.uid === uid);
++  return !!c && TY.permanentKind(c) === "ally" && TY.destination(c) === "arena";
++};
+ const keepsActionPoint = (g, seat, uid, from) => {
+   const sd = at(g, seat);
+   let c = null, route = from, atk = false;
+@@ -3953,7 +3962,7 @@ function drawTo(g, i){
+ }
+ 
+ return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
+-        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, arsenalUsable, chargePitchWanted, defendsNow, DEFENDS_OPS, abPieceForRes, boostShare, grantTakers, arcaneOf, chargeView,
++        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, arsenalUsable, chargePitchWanted, allyDeploy, defendsNow, DEFENDS_OPS, abPieceForRes, boostShare, grantTakers, arcaneOf, chargeView,
+         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
+         handFree: PR.handFree,
+         /* the card semantics seam (v2.77) */
+diff --git a/engine/sparring.js b/engine/sparring.js
+index 47d89db..d45bb64 100644
+--- a/engine/sparring.js
++++ b/engine/sparring.js
+@@ -110,6 +110,8 @@ const num = (c, k) => (c && c[k] != null) ? c[k] : 0;
+ const byUid = (a, b) => String(a.uid) < String(b.uid) ? -1 : String(a.uid) > String(b.uid) ? 1 : 0;
+ 
+ const legal = (g, a, seat) => J.legal(g, a, seat) == null;
++const SPX5 = (typeof process !== "undefined" && process.env && process.env.SPX5) ? process.env.SPX5.split(",") : [];
++const gated5 = (g, seat) => { const sd = g && g.sides && g.sides[seat]; return !!(sd && SPX5.indexOf(sd.heroKey) >= 0); };
+ 
+ /* THE BRANCH THAT DECIDED (QUEUE v4 S13). `explain` sets NOTE, calls `act`,
+    and reads which return site tagged it; `act` alone leaves NOTE null, so
+@@ -611,8 +613,9 @@ function offence(g, seat, o){
+     .filter(x => x.ally || affordableWithin(sd, x.c, o))
+     .map(x => Object.assign(x, {kap: J.keepsActionPoint(g, seat, x.uid, x.ally ? "board" : x.from) ? 1 : 0}))
+     .map(x => Object.assign(x, {cv: cv(x)}))
++    .map(x => Object.assign(x, {dep: gated5(g, seat) && !x.ally && J.allyDeploy(g, seat, x.uid, x.from) ? 1 : 0}))
+     .concat(pumped)
+-    .sort((a, b) => (rankC(a) - rankC(b)) || (b.kap - a.kap) || num(b.c, "power") - num(a.c, "power")
++    .sort((a, b) => (rankC(a) - rankC(b)) || (b.kap - a.kap) || ((a.dep || 0) - (b.dep || 0)) || num(b.c, "power") - num(a.c, "power")
+                  || num(a.c, "cost") - num(b.c, "cost") || byUid(a, b))
+     .find(x => legal(g, x.weapon ? {t: "activate", uid: x.uid}
+                      : x.ally ? {t: "activate", uid: x.uid, target: targetFor(g, seat, x.c)}

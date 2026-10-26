@@ -1,0 +1,67 @@
+diff --git a/engine/judge.js b/engine/judge.js
+index 3a38893..e4bf08f 100644
+--- a/engine/judge.js
++++ b/engine/judge.js
+@@ -1848,6 +1848,23 @@ const chargePitchWanted = (g) => {
+   const hit = (PR.fxParse(p.card).conds || []).map(e => e && /^chargedPitch(\d)$/.exec(e.cond)).find(Boolean);
+   return hit ? +hit[1] : null;
+ };
++/* AN AMP-ONLY ABILITY AND WHAT COULD TAKE IT (QUEUE v4 H18). Crucible of
++   Aetherweave's whole payout is "the next card you play this turn with an
++   arcane damage effect … plus 1", so activated with no arcane card to follow
++   it is a card pitched for nothing. null when the piece's payout is not amp
++   alone; otherwise its effective cost and the arcane cards in hand/arsenal. */
++const abAmpTakers = (g, seat, uid) => {
++  const sd = at(g, seat);
++  const piece = (sd.gear || []).find(x => x && x.uid === uid);
++  const pc = piece && !PR.isWeapon(piece) ? piece.powCard : null;
++  if(!pc) return null;
++  const ops = (PR.fxParse(pc).ops || []).filter(o => o && o[0] !== "noop");
++  if(!ops.length || !ops.every(o => o[0] === "amp")) return null;
++  const takers = [];
++  (sd.hand || []).forEach(c => { if(c && arcaneOf(g, seat, c.uid, "hand") > 0) takers.push({uid: c.uid, from: "hand", cost: c.cost}); });
++  if(sd.arsenal && arcaneOf(g, seat, sd.arsenal.uid, "arsenal") > 0) takers.push({uid: sd.arsenal.uid, from: "arsenal", cost: sd.arsenal.cost});
++  return {cost: effCost(pc, sd, PR.costCtx(g, seat)), takers};
++};
+ const keepsActionPoint = (g, seat, uid, from) => {
+   const sd = at(g, seat);
+   let c = null, route = from, atk = false;
+@@ -3953,7 +3970,7 @@ function drawTo(g, i){
+ }
+ 
+ return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
+-        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, arsenalUsable, chargePitchWanted, defendsNow, DEFENDS_OPS, abPieceForRes, boostShare, grantTakers, arcaneOf, chargeView,
++        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, arsenalUsable, chargePitchWanted, abAmpTakers, defendsNow, DEFENDS_OPS, abPieceForRes, boostShare, grantTakers, arcaneOf, chargeView,
+         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
+         handFree: PR.handFree,
+         /* the card semantics seam (v2.77) */
+diff --git a/engine/sparring.js b/engine/sparring.js
+index 47d89db..c58cea1 100644
+--- a/engine/sparring.js
++++ b/engine/sparring.js
+@@ -110,6 +110,16 @@ const num = (c, k) => (c && c[k] != null) ? c[k] : 0;
+ const byUid = (a, b) => String(a.uid) < String(b.uid) ? -1 : String(a.uid) > String(b.uid) ? 1 : 0;
+ 
+ const legal = (g, a, seat) => J.legal(g, a, seat) == null;
++const SPX4 = (typeof process !== "undefined" && process.env && process.env.SPX4) ? process.env.SPX4.split(",") : [];
++const gated4 = (g, seat) => { const sd = g && g.sides && g.sides[seat]; return !!(sd && SPX4.indexOf(sd.heroKey) >= 0); };
++/* both the ability's cost and the taker's printed cost, out of the floating pool plus the rest of the hand */
++const affordsBoth = (sd, abCost, t, o) => {
++  const need = abCost + num(t, "cost") - (sd.res || 0);
++  if(need <= 0) return true;
++  const pool = (sd.hand || []).filter(c => c && c.uid !== t.uid && num(c, "pitch") > 0).map(c => num(c, "pitch")).sort((a, b) => b - a);
++  let got = 0; for(let i = 0; i < pool.length && i < o.maxPitch; i++){ got += pool[i]; if(got >= need) return true; }
++  return false;
++};
+ 
+ /* THE BRANCH THAT DECIDED (QUEUE v4 S13). `explain` sets NOTE, calls `act`,
+    and reads which return site tagged it; `act` alone leaves NOTE null, so
+@@ -638,6 +648,8 @@ function offence(g, seat, o){
+      player. `judge.abPieceForRes` answers. */
+   const w = (sd.gear || []).slice().sort(byUid)
+     .filter(x => !J.abPieceForRes(g, seat, x.uid))
++    .filter(x => { if(!gated4(g, seat)) return true; const v = J.abAmpTakers(g, seat, x.uid);
++      return !v || v.takers.some(t => affordsBoth(sd, v.cost, t, o)); })
+     .find(x => legal(g, {t: "activate", uid: x.uid}, seat));
+   if(w) return tag(w.power != null ? "weapon" : "gearAbility", {t: "activate", uid: w.uid});
+ 

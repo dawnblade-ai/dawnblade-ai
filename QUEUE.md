@@ -714,6 +714,31 @@ Dealer 15, Fai 10, Enigma 9 + Uphold Tradition 6, Bravo 6, Beckoning Haunt 4.
   next attack, and Death Dealer's put (H12) needs its {r}. If anything, the lead is Crucible's amp
   alone (it lapses at end of turn with no arcane left to play), and it overlaps.
 
+**H16 (policy, Blaze/Fai): take Blaze's banish and play from banish, WITHOUT H7's "hold instants".
+NOISE, not shipped.** On H12+H13+H14a: Blaze [1,2,5,1,4,3] (2.7) -> [2,3,3,3,5,3] (3.2) at 6 seeds;
+Fai identical. H7's reading stands.
+
+**H18 (policy, Blaze/Iyslander): an amp-only ability waits for an arcane card to take it. CONSISTENT
+PAIRED GAIN, interval rule NOT met; queue for the next policy release.** Found by the CEO tracing
+Blaze on H12+H13+H14a. With no attack in hand the gear fallback runs before the non-attack branch,
+so Crucible of Aetherweave ("the next card you play this turn with an arcane damage effect … plus
+1") was activated FIRST every turn, pitching a card. On turn 3 (Blaze v Dorinthea seed 0) it pitched
+Emeritus Scolding, the arcane card, to amp an Arcane Polarity that deals none.
+- **The rule:** `judge.abAmpTakers(g, seat, uid)` answers null unless the piece's whole payout is
+  `amp`, else its effective cost and the arcane cards (`arcaneOf > 0`) in hand and arsenal. The
+  fallback holds it unless the seat can pay BOTH the ability and one taker out of floating plus the
+  rest of the hand. v5.38's `grantOK` (a pure grant waits for its taker), one route over.
+  Patch: `experiments/H18-amp-takers.patch` (on top of the combined H12-H14a tree, `SPX4`-gated).
+- **Measured at 12 seeds, own seat:** Blaze [1,2,5,1,4,3,2,4,8,1,2,1] (2.8) ->
+  [2,3,5,3,6,2,6,6,7,5,2,4] (4.3), paired +1.4 (8 up, 2 down, 2 level; paired t about 2.8).
+  Iyslander [5,4,8,5,7,3,4,7,6,4,2,6] (5.1) -> [7,7,9,4,8,5,6,7,4,7,8,5] (6.4), paired +1.3 (8 up,
+  3 down; t about 2.1). Min/max intervals overlap for both.
+- Ship it with the next policy release on the principle and the call: today "[Hero]'s call" tells the
+  player to pitch their damage card for an amp nothing will take. Give the held case no key (it is
+  simply not proposed); the activation keeps `gearAbility`, or better "Amp it. An arcane card follows."
+- Drills: Crucible with only a non-arcane card left is not activated; with an affordable arcane card
+  it is, and the arcane card then deals +1; Spellfire Cloak / Talismanic Lens are unaffected.
+
 **S15 (engine): Display Loyalty's granted rider and the Fealty token it creates. Fai's deck. Weaker
 than printed, visible in the audit.** Found by the CEO in a refreshed `npm run audit` on v5.49 (the
 committed AUDIT.md still reads v5.01; refresh it with the next release).
