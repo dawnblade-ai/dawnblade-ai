@@ -680,6 +680,25 @@ clogs the slot for the rest of the game.
 - **Drills:** Enigma's hand of Test of Strength + On the Horizon leaves the arsenal empty; a hand
   with an attack still stores it; Inner Chi is never stored. Sabotage the filter.
 
+**H14a (policy, Boltyn). Ship WITH H12 + H13: charge the colour the card asks for.** Found by the
+CEO on v5.47 tracing Boltyn. The charge answer takes the LOWEST pitch, and Beaming Bravado ("if a
+yellow card is charged this way, this gets +1{p}") and Light the Way (go again on hit if a yellow
+was charged) pay off only for a yellow, so the AI charged a red over a yellow in hand.
+- **The fix:** `judge.chargePitchWanted(g)` answers the pitch the pending card's `chargedPitchN`
+  condition asks for (null if none); the charge answer prefers that pitch, then the lowest, then uid.
+  Patch: `experiments/H14a-boltyn-charge-colour.patch`; all three: `experiments/H12-H13-H14a-combined.patch`.
+- **Measured: noise in wins.** Boltyn [6,3,4,2,5,8] (4.7) -> [5,4,7,2,7,8] (5.5) at 6 seeds. Full
+  ladder with H12+H13+H14a on every seat: 0 refusals, 0 violations, 0 stalls; Boltyn 9.3, Azalea 19.0.
+- **Why ship it:** the call says "Charge your lowest-pitch card" while the card in play prints "if a
+  yellow card is charged". Give it a reason of its own ("Charge a yellow card. This card pays off
+  for yellow.").
+- **Drill:** Beaming Bravado with a red and a yellow in hand charges the yellow; Bolt of Courage
+  (asks no colour) still charges the red. Sabotage the preference.
+- **Not built, recorded:** Duty Bound Blitz ("play this only if a yellow card has been put into your
+  soul this turn") in hand also wants a yellow charged, from ANOTHER card; and a charge attack with no
+  go again can spend the last action point before the Raydn swing the charge pumped (Boltyn T7,
+  Dorinthea seed 0). Both are sequencing judgements, measure before building.
+
 **S13. SHIPPED as v5.47 (`91fb2ba`), CEO-verified 2026-10-26:** 3705 drills, 0 fail, 5 skipped;
 scenes 107/0; both babel blocks compile; 21 engine scripts + `.nojekyll` in the pushed commit; CI
 and Pages green. Ladder at 3 seeds byte-identical to the CEO's H8+S13 measurement
@@ -797,7 +816,7 @@ ability banishes "this turn" (the H7 patch's `playNowPick` and banish play):
 
 **H8+.** One gap at a time, one investigator at a time, each rebased on the latest release.
 Waiting, by the v5.44 ladder: Bravo (8.7), Gravy (10.3, 7.7 under H8); Lyath has H8, Azalea H9 and Blaze H7b are recorded;
-then Blaze again after S9. **Order: feed items 19-20 + S14 (one voice-only release), then H12 + H13 (one policy release),
+then Blaze again after S9. **Order: feed items 19-20 + S14 (one voice-only release), then H12 + H13 + H14a (one policy release),
 then the next census lead, one at a time.**
 
 ## v3 — STAGE INCREMENT 1 INPUTS (CEO, 2026-10-17)

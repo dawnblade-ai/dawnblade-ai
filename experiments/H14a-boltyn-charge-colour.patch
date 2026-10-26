@@ -1,0 +1,47 @@
+diff --git a/engine/judge.js b/engine/judge.js
+index bce15af..edb8681 100644
+--- a/engine/judge.js
++++ b/engine/judge.js
+@@ -1807,6 +1807,16 @@ const abPieceForRes = (g, seat, uid) => {
+        a non-attack.
+ 
+    One reader rather than a sibling (v3.61: two records of one fact). */
++/* WHICH PITCH DOES THE CARD BEING CHARGED FOR ASK FOR? (QUEUE v4 H14) Beaming
++   Bravado and Light the Way pay off only when a YELLOW card is charged; the
++   card's own `chargedPitchN` conditions say which. null when it asks none, so
++   `sparring.js` keeps its lowest-pitch rule and reads no card text. */
++const chargePitchWanted = (g) => {
++  const p = g && g.pending;
++  if(!p || p.kind !== "charge" || !p.card) return null;
++  const hit = (PR.fxParse(p.card).conds || []).map(e => e && /^chargedPitch(\d)$/.exec(e.cond)).find(Boolean);
++  return hit ? +hit[1] : null;
++};
+ const keepsActionPoint = (g, seat, uid, from) => {
+   const sd = at(g, seat);
+   let c = null, route = from, atk = false;
+@@ -3912,7 +3922,7 @@ function drawTo(g, i){
+ }
+ 
+ return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
+-        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, defendsNow, DEFENDS_OPS, abPieceForRes, boostShare, grantTakers, arcaneOf, chargeView,
++        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, chargePitchWanted, defendsNow, DEFENDS_OPS, abPieceForRes, boostShare, grantTakers, arcaneOf, chargeView,
+         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
+         handFree: PR.handFree,
+         /* the card semantics seam (v2.77) */
+diff --git a/engine/sparring.js b/engine/sparring.js
+index bdb57a7..04d0ef6 100644
+--- a/engine/sparring.js
++++ b/engine/sparring.js
+@@ -225,8 +225,11 @@ function payAction(g, seat, p, o){
+   if(p.kind === "charge"){
+     if((p.picked || []).length) return tag("chargeDone", {t: "charge", uid: null});
+     const sd = g.sides[seat];
++    const SPXc = (typeof process !== "undefined" && process.env && process.env.SPX) ? process.env.SPX.split(",") : [];
++    const want = SPXc.indexOf(sd.heroKey) >= 0 ? J.chargePitchWanted(g) : null;
+     const c = (sd.hand || []).filter(h => (p.uids || []).indexOf(h.uid) >= 0)
+-      .sort((a, b) => num(a, "pitch") - num(b, "pitch") || byUid(a, b))[0];
++      .sort((a, b) => (want != null ? ((num(a, "pitch") === want ? 0 : 1) - (num(b, "pitch") === want ? 0 : 1)) : 0)
++                   || num(a, "pitch") - num(b, "pitch") || byUid(a, b))[0];
+     return tag(c ? "charge" : "chargeNone", {t: "charge", uid: c ? c.uid : null});
+   }
+   /* ---- THE TWO KINDS THIS POLICY HAD NEVER MET (v3.80) --------------

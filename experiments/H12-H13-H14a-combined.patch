@@ -1,0 +1,103 @@
+diff --git a/engine/judge.js b/engine/judge.js
+index bce15af..3a38893 100644
+--- a/engine/judge.js
++++ b/engine/judge.js
+@@ -538,6 +538,20 @@ function openPrompt(g){
+    the minimum where a minimum is printed, and leave an `opt` in the order
+    it came. A policy that always took the maximum would be inventing
+    value it cannot read. */
++/* EXPERIMENT GATE (QUEUE v4 H12) — a FREE optional pick is taken for the
++   seats whose hero key is named in SPX; PCLS names the classes tried. */
++const SPX_J = (typeof process !== "undefined" && process.env && process.env.SPX)
++  ? process.env.SPX.split(",") : [];
++const PCLS = (typeof process !== "undefined" && process.env && process.env.PCLS)
++  ? process.env.PCLS.split(",") : ["dead", "rev", "ars"];
++const freePickClass = p => {
++  if(!p || p.filters || (p.cost || 0) > 0 || p.discard || p.maxAll || p.zone == null) return null;
++  if(["grave", "deck", "banish"].indexOf(p.zone) >= 0 && (p.to === "hand" || p.to === "banish")) return "dead";
++  if(p.zone === "hand" && p.to == null) return "rev";
++  if(p.zone === "hand" && p.to === "arsenal") return "ars";
++  if(p.zone === "hand" && p.to === "grave" && (p.ops || []).some(o => o && o[0] === "draw")) return "disc";
++  return null;
++};
+ function autoAnswer(g){
+   const p = g && g.prompt;
+   if(!p) return null;
+@@ -582,6 +596,18 @@ function autoAnswer(g){
+     } else if((p.sel || []).length < (p.min || 0)){
+       for(let i = 0; i < (p.cards || []).length; i++)
+         if((p.sel || []).indexOf(i) < 0) return {t: "promptSel", i};
++    } else if(!(p.sel || []).length && SPX_J.indexOf(sd.heroKey) >= 0){
++      const k = freePickClass(p), cs = p.cards || [];
++      if(k && PCLS.indexOf(k) >= 0 && cs.length){
++        let best = 0;
++        for(let i = 1; i < cs.length; i++){
++          const a = cs[i], c = cs[best];
++          const pa = k === "disc" ? -((a.power || 0)) : (a.power || 0), pc = k === "disc" ? -((c.power || 0)) : (c.power || 0);
++          if(pa > pc || (pa === pc && String(a.uid) < String(c.uid))) best = i;
++        }
++        if(process.env.PLOG) console.error("H12", sd.heroKey, k, p.src, "->", cs[best] && cs[best].name);
++        return {t: "promptSel", i: best};
++      }
+     }
+     return {t: "promptConfirm"};
+   }
+@@ -1807,6 +1833,21 @@ const abPieceForRes = (g, seat, uid) => {
+        a non-attack.
+ 
+    One reader rather than a sibling (v3.61: two records of one fact). */
++/* CAN THIS HAND CARD EVER LEAVE THE ARSENAL? (QUEUE v4 H13) A Block or a
++   resource card has no play, and in the arsenal it cannot be pitched or
++   declared as a defender either, so storing one there kills the card and
++   the slot. `types.isPlayable` answers, so `sparring.js` reads no card text. */
++const arsenalUsable = (g, seat, uid) => {
++  const c = (at(g, seat).hand || []).find(x => x && x.uid === uid);
++  return !!c && TY.isPlayable(c);
++};
++/* WHICH PITCH DOES THE CARD BEING CHARGED FOR ASK FOR? (QUEUE v4 H14) */
++const chargePitchWanted = (g) => {
++  const p = g && g.pending;
++  if(!p || p.kind !== "charge" || !p.card) return null;
++  const hit = (PR.fxParse(p.card).conds || []).map(e => e && /^chargedPitch(\d)$/.exec(e.cond)).find(Boolean);
++  return hit ? +hit[1] : null;
++};
+ const keepsActionPoint = (g, seat, uid, from) => {
+   const sd = at(g, seat);
+   let c = null, route = from, atk = false;
+@@ -3912,7 +3953,7 @@ function drawTo(g, i){
+ }
+ 
+ return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
+-        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, defendsNow, DEFENDS_OPS, abPieceForRes, boostShare, grantTakers, arcaneOf, chargeView,
++        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, arsenalUsable, chargePitchWanted, defendsNow, DEFENDS_OPS, abPieceForRes, boostShare, grantTakers, arcaneOf, chargeView,
+         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
+         handFree: PR.handFree,
+         /* the card semantics seam (v2.77) */
+diff --git a/engine/sparring.js b/engine/sparring.js
+index bdb57a7..47d89db 100644
+--- a/engine/sparring.js
++++ b/engine/sparring.js
+@@ -225,8 +225,11 @@ function payAction(g, seat, p, o){
+   if(p.kind === "charge"){
+     if((p.picked || []).length) return tag("chargeDone", {t: "charge", uid: null});
+     const sd = g.sides[seat];
++    const SPXc = (typeof process !== "undefined" && process.env && process.env.SPX) ? process.env.SPX.split(",") : [];
++    const want = SPXc.indexOf(sd.heroKey) >= 0 ? J.chargePitchWanted(g) : null;
+     const c = (sd.hand || []).filter(h => (p.uids || []).indexOf(h.uid) >= 0)
+-      .sort((a, b) => num(a, "pitch") - num(b, "pitch") || byUid(a, b))[0];
++      .sort((a, b) => (want != null ? ((num(a, "pitch") === want ? 0 : 1) - (num(b, "pitch") === want ? 0 : 1)) : 0)
++                   || num(a, "pitch") - num(b, "pitch") || byUid(a, b))[0];
+     return tag(c ? "charge" : "chargeNone", {t: "charge", uid: c ? c.uid : null});
+   }
+   /* ---- THE TWO KINDS THIS POLICY HAD NEVER MET (v3.80) --------------
+@@ -789,7 +792,10 @@ function act(g, seat, o){
+      goes face down: it is the card this seat most wants to lead with, and
+      it is the one card that survives the hand being spent. */
+   if(g.arsenalFor === seat){
++    const SPXa = (typeof process !== "undefined" && process.env && process.env.SPX) ? process.env.SPX.split(",") : [];
++    const gatedA = SPXa.indexOf(g.sides[seat].heroKey) >= 0;
+     const best = (g.sides[seat].hand || []).slice()
++      .filter(c => !gatedA || J.arsenalUsable(g, seat, c.uid))
+       .sort((a, b) => num(b, "power") - num(a, "power") || byUid(a, b))[0];
+     return tag(best ? "arsenalBest" : "arsenalSkip", {t: "arsenal", uid: best ? best.uid : null});
+   }
