@@ -1,0 +1,67 @@
+diff --git a/engine/judge.js b/engine/judge.js
+index 3a38893..723a4e2 100644
+--- a/engine/judge.js
++++ b/engine/judge.js
+@@ -1848,6 +1848,22 @@ const chargePitchWanted = (g) => {
+   const hit = (PR.fxParse(p.card).conds || []).map(e => e && /^chargedPitch(\d)$/.exec(e.cond)).find(Boolean);
+   return hit ? +hit[1] : null;
+ };
++/* WOULD THIS ACTIVATION OPEN A PAYMENT? (QUEUE v4 H15) The same cost
++   `doActivate` asks — the hero powCard, a piece's ability powCard, or a
++   weapon's swing — against the floating pool, so `sparring.js` can hold a
++   last-resort ability that would pitch a card. */
++const abNeedsPitch = (g, seat, uid) => {
++  const sd = at(g, seat);
++  let card = null;
++  if(uid === "hpow") card = bOf(g, seat).HPOW;
++  else {
++    const piece = (sd.gear || []).find(x => x && x.uid === uid);
++    if(!piece) return false;
++    card = PR.isWeapon(piece) ? piece : piece.powCard;
++  }
++  if(!card) return false;
++  return effCost(card, sd, PR.costCtx(g, seat)) > (sd.res || 0) || chiShort(sd, card) > 0;
++};
+ const keepsActionPoint = (g, seat, uid, from) => {
+   const sd = at(g, seat);
+   let c = null, route = from, atk = false;
+@@ -3953,7 +3969,7 @@ function drawTo(g, i){
+ }
+ 
+ return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
+-        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, arsenalUsable, chargePitchWanted, defendsNow, DEFENDS_OPS, abPieceForRes, boostShare, grantTakers, arcaneOf, chargeView,
++        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, arsenalUsable, chargePitchWanted, abNeedsPitch, defendsNow, DEFENDS_OPS, abPieceForRes, boostShare, grantTakers, arcaneOf, chargeView,
+         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
+         handFree: PR.handFree,
+         /* the card semantics seam (v2.77) */
+diff --git a/engine/sparring.js b/engine/sparring.js
+index 47d89db..96c9c68 100644
+--- a/engine/sparring.js
++++ b/engine/sparring.js
+@@ -110,6 +110,8 @@ const num = (c, k) => (c && c[k] != null) ? c[k] : 0;
+ const byUid = (a, b) => String(a.uid) < String(b.uid) ? -1 : String(a.uid) > String(b.uid) ? 1 : 0;
+ 
+ const legal = (g, a, seat) => J.legal(g, a, seat) == null;
++const SPX2 = (typeof process !== "undefined" && process.env && process.env.SPX2) ? process.env.SPX2.split(",") : [];
++const gated2 = (g, seat) => { const sd = g && g.sides && g.sides[seat]; return !!(sd && SPX2.indexOf(sd.heroKey) >= 0); };
+ 
+ /* THE BRANCH THAT DECIDED (QUEUE v4 S13). `explain` sets NOTE, calls `act`,
+    and reads which return site tagged it; `act` alone leaves NOTE null, so
+@@ -638,6 +640,7 @@ function offence(g, seat, o){
+      player. `judge.abPieceForRes` answers. */
+   const w = (sd.gear || []).slice().sort(byUid)
+     .filter(x => !J.abPieceForRes(g, seat, x.uid))
++    .filter(x => !gated2(g, seat) || !J.abNeedsPitch(g, seat, x.uid))
+     .find(x => legal(g, {t: "activate", uid: x.uid}, seat));
+   if(w) return tag(w.power != null ? "weapon" : "gearAbility", {t: "activate", uid: w.uid});
+ 
+@@ -647,7 +650,8 @@ function offence(g, seat, o){
+      ability in this pool draws, digs or buffs rather than dealing damage,
+      so spending the action point on it ahead of a swing would be a
+      judgement this file cannot make without reading the card. */
+-  if(legal(g, {t: "activate", from: "hero", uid: "hpow"}, seat))
++  if(legal(g, {t: "activate", from: "hero", uid: "hpow"}, seat)
++     && (!gated2(g, seat) || !J.abNeedsPitch(g, seat, "hpow")))
+     return tag("heroAbility", {t: "activate", from: "hero", uid: "hpow"});
+ 
+   /* ---- A NON-ATTACK IS STILL A PLAY (v3.80) --------------------------

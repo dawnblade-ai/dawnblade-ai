@@ -703,6 +703,39 @@ was charged) pay off only for a yellow, so the AI charged a red over a yellow in
   go again can spend the last action point before the Raydn swing the charge pumped (Boltyn T7,
   Dorinthea seed 0). Both are sequencing judgements, measure before building.
 
+**H15 (policy): a last-resort ability never pitches a card. NEGATIVE, not shipped.** CEO, measured
+on top of H12+H13+H14a (`experiments/H15-no-pitch-fallback-NEGATIVE.patch`, census
+`experiments/H15-abpitch-census.js`). The census over 120 games found the gear/hero fallback paying
+by pitch often: Crucible of Aetherweave (Blaze 70, Iyslander 54), Lyath's hero ability 23, Death
+Dealer 15, Fai 10, Enigma 9 + Uphold Tradition 6, Bravo 6, Beckoning Haunt 4.
+- Holding every such activation, own seat at 3 seeds: Iyslander [5,4,8] -> [8,7,8] (overlapping);
+  Blaze, Fai, Enigma flat; Lyath 4.3 -> 3.3, Viserai 8.3 -> 6.0, Azalea 8.7 -> 6.0, Bravo 5.3 -> 3.7.
+- Read: a pitched ability is often worth its card. Lyath's end-of-turn boo makes a Might token for his
+  next attack, and Death Dealer's put (H12) needs its {r}. If anything, the lead is Crucible's amp
+  alone (it lapses at end of turn with no arcane left to play), and it overlaps.
+
+**S15 (engine): Display Loyalty's granted rider and the Fealty token it creates. Fai's deck. Weaker
+than printed, visible in the audit.** Found by the CEO in a refreshed `npm run audit` on v5.49 (the
+committed AUDIT.md still reads v5.01; refresh it with the next release).
+- Display Loyalty prints "If you control 2 or more Draconic chain links, this gets go again and
+  \"When this attacks a hero, create a Fealty token.\"" The head (`drac2` -> `ga`) reads; the rider
+  is `fx.quotedUnread`, refused on purpose at v3.10 ("triggers on *attacks* rather than hits").
+  It is the LAST unread quoted rider in the pool.
+- The machinery exists now: a condition entry carries `atkHero` (v3.46), and the condition loop runs
+  an attack's conditions at declaration, which is when a granted "when this attacks a hero" fires.
+  So the rider is one more `{cond: "drac2", op: <token Fealty>, atkHero: true}` entry.
+- **Build Fealty with it, or not at all** (v3.72: building a source makes what it creates
+  reachable). Fealty reads `none` today: "Instant - Destroy this: The next card you play this turn
+  is Draconic" and "At the beginning of your end phase, if you haven't created a Fealty token or
+  played a Draconic card this turn, destroy this." Without the clock a Fealty sits in the arena
+  forever. The grant is for the next CARD (not attack) and must be spent by it (v4.06's `dracNext`
+  lesson). `hist.playTy` already records the structured types, Draconic included; "created a Fealty
+  token this turn" needs a record of its own.
+- The AI never activates an arena ability (v4.47), so the ladder will barely move; the human playing
+  Fai gets the printed card. Drills: the rider fires only at 2+ Draconic links and only at a hero; the
+  token's ability makes the next card Draconic once; the clock keeps it while the condition holds
+  and destroys it when it does not.
+
 **S13. SHIPPED as v5.47 (`91fb2ba`), CEO-verified 2026-10-26:** 3705 drills, 0 fail, 5 skipped;
 scenes 107/0; both babel blocks compile; 21 engine scripts + `.nojekyll` in the pushed commit; CI
 and Pages green. Ladder at 3 seeds byte-identical to the CEO's H8+S13 measurement
@@ -820,7 +853,7 @@ ability banishes "this turn" (the H7 patch's `playNowPick` and banish play):
 
 **H8+.** One gap at a time, one investigator at a time, each rebased on the latest release.
 Waiting, by the v5.44 ladder: Bravo (8.7), Gravy (10.3, 7.7 under H8); Lyath has H8, Azalea H9 and Blaze H7b are recorded;
-then Blaze again after S9. **Order: H12 + H13 + H14a (one policy release; feed 19-20 shipped v5.48, S14 v5.49),
+then Blaze again after S9. **Order: H12 + H13 + H14a (one policy release; feed 19-20 shipped v5.48, S14 v5.49), then S15,
 then the next census lead, one at a time.**
 
 ## v3 — STAGE INCREMENT 1 INPUTS (CEO, 2026-10-17)
