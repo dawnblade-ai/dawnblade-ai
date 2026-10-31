@@ -71,6 +71,15 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
   her deck; Blaze has nothing; 1 life each; nothing changes from turn 35. Proposed: "nothing at all
   changes for 20 turns -> draw, even with cards in a deck" (trade-off: two humans idling that long
   get a forced draw).
+- **H25 NEGATIVE (2026-11-01):** hold instants that change nothing on the seat's own turn
+  (prevent-only cards, Glisten off a weapon link; reader `rxWaste`, key `rxWait`). Own-seat, 24
+  paired seeds: Boltyn 7.04 -> 6.50 (t -1.4), Glisten-only -0.46 (t -1.8), Lyath 0, Gravy +0.17
+  (t 0.9). Cause: the "wasted" play is free CYCLING — a held dead card occupies a hand slot and costs
+  a draw (blockSpare's reason, the other way round). Patch `experiments/H25-rxwait-negative.patch`.
+  Leads it saw, untested: Gravy floats ~1 resource per own turn because `pitchPick` takes the highest
+  pitch first even when a lower card pays exactly (also high in won games — may not be a leak);
+  Arakni holds its mark cards (Reaper's Call, Mark the Prey, Lair of the Spider) at turn end about
+  twice as often in losses as in wins.
 - **NEXT (measured leads, not built):**
   1. ~~R6 detection gap~~ SHIPPED v5.67. Original note: **R6 detection gap:** a dead position where a hero ability keeps cycling cards (Lyath) never
      trips "nothing changing" — `lyath-boltyn-24` stalled in a 48-seed run (outside the ladder's
