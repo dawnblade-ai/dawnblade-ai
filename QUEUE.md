@@ -9,7 +9,7 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-10-31, at v5.60)
+## HANDOFF — START HERE (CEO, 2026-10-31, at v5.63)
 
 **This section is the handoff.** Root `HANDOFF.md`/`WEEK.md` were retired to `docs/archive/` on
 2026-10-31; do not start a new root handoff file — rewrite this section instead.
@@ -42,6 +42,15 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
   - R6 -> the table ends a dead position (both decks empty, nothing changing for N full turns) as a
     DRAW; the ladder reports `draws` apart from `stalls`. Sudden death: record, don't build.
   - R7 -> V of the Vanguard counts itself (closes `attack-grant-misses-own-attack`).
+- **SHIPPED after the rulings:** **v5.61** R7 V of the Vanguard counts itself. **v5.62** R6 a dead
+  position is a DRAW at the table (`judge.reduce`, 20 still turns, `over.how: "stalemate"`; ladder
+  reports `draws` apart from `stalls`; WIRE_V 30). **v5.63** H21b spare-card block (`blockSpare`):
+  a deliberate field shift — Kayo 43 -> 68, Bravo 25 -> 37, Enigma 26 -> 37, Blaze 20 -> 30, Gravy
+  17 -> 25; Dorinthea 51 -> 30, Arakni 47 -> 31, Boltyn 33 -> 23, Lyath 23 -> 16 (spread unchanged,
+  stdev 17.2 -> 17.5). Revert `a1bf6c9` to undo. The losers' own play is unchanged; their chip hits
+  now meet blocks. NEXT for balance: Lyath (16) and the chip decks; Briar still leads (79).
+- **Open for the next session:** the trainer's twin of the R6 draw and sudden death (both stated in
+  `tools/approx.js`); 23 stated approximations remain (`node tools/approx.js`), 0 open.
 - **v5.59** soul-banish cost asks which card (`soul-banish-cost-auto-picked` CLOSED). **v5.60** the
   nameless "Go again granted." line removed (split out of H21).
 - **The two rulings as they were asked (2026-10-31):**
