@@ -538,6 +538,19 @@ function openPrompt(g){
    the minimum where a minimum is printed, and leave an `opt` in the order
    it came. A policy that always took the maximum would be inventing
    value it cannot read. */
+/* A FREE OPTIONAL PICK (QUEUE v4 H12). Answers the class of the pick or null.
+   Free means: nothing paid, nothing filtered, nothing discarded, no "all of
+   them", and the pool is the seat's own zone. Dead zones to hand or banish
+   ("dead"), a reveal ("rev") and hand to arsenal ("ars") are free; a hand
+   to banish or graveyard, a board or gear zone, or a caller-supplied pool
+   is not, and stays declined. */
+const freePick = p => {
+  if(!p || p.filters || (p.cost || 0) > 0 || p.discard || p.maxAll || p.zone == null) return null;
+  if(["grave", "deck", "banish"].indexOf(p.zone) >= 0 && (p.to === "hand" || p.to === "banish")) return "dead";
+  if(p.zone === "hand" && p.to == null) return "rev";
+  if(p.zone === "hand" && p.to === "arsenal") return "ars";
+  return null;
+};
 function autoAnswer(g){
   const p = g && g.prompt;
   if(!p) return null;
@@ -582,6 +595,17 @@ function autoAnswer(g){
     } else if((p.sel || []).length < (p.min || 0)){
       for(let i = 0; i < (p.cards || []).length; i++)
         if((p.sel || []).indexOf(i) < 0) return {t: "promptSel", i};
+    } else if(!(p.sel || []).length){
+      const k = freePick(p), cs = p.cards || [];
+      if(k && cs.length){
+        let best = 0;
+        for(let i = 1; i < cs.length; i++){
+          const a = cs[i], c = cs[best];
+          const pa = a.power || 0, pc = c.power || 0;
+          if(pa > pc || (pa === pc && String(a.uid) < String(c.uid))) best = i;
+        }
+        return {t: "promptSel", i: best};
+      }
     }
     return {t: "promptConfirm"};
   }
@@ -1807,6 +1831,25 @@ const abPieceForRes = (g, seat, uid) => {
        a non-attack.
 
    One reader rather than a sibling (v3.61: two records of one fact). */
+/* CAN THIS HAND CARD EVER LEAVE THE ARSENAL? (QUEUE v4 H13) A Block or a
+   resource card has no play, and in the arsenal it cannot be pitched or
+   declared as a defender either, so storing one there kills the card and
+   the slot. `types.isPlayable` answers, so `sparring.js` reads no card text. */
+const arsenalUsable = (g, seat, uid) => {
+  const c = (at(g, seat).hand || []).find(x => x && x.uid === uid);
+  return !!c && TY.isPlayable(c);
+};
+const arsenalAttack = (g, seat, uid) => {
+  const c = (at(g, seat).hand || []).find(x => x && x.uid === uid);
+  return !!c && TY.isAttack(c);
+};
+/* WHICH PITCH DOES THE CARD BEING CHARGED FOR ASK FOR? (QUEUE v4 H14) */
+const chargePitchWanted = (g) => {
+  const p = g && g.pending;
+  if(!p || p.kind !== "charge" || !p.card) return null;
+  const hit = (PR.fxParse(p.card).conds || []).map(e => e && /^chargedPitch(\d)$/.exec(e.cond)).find(Boolean);
+  return hit ? +hit[1] : null;
+};
 const keepsActionPoint = (g, seat, uid, from) => {
   const sd = at(g, seat);
   let c = null, route = from, atk = false;
@@ -3912,7 +3955,7 @@ function drawTo(g, i){
 }
 
 return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, defendsNow, DEFENDS_OPS, abPieceForRes, boostShare, grantTakers, arcaneOf, chargeView,
+        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, chargePitchWanted, defendsNow, DEFENDS_OPS, abPieceForRes, boostShare, grantTakers, arcaneOf, chargeView,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */

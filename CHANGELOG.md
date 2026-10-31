@@ -1,3 +1,24 @@
+## v5.50 — A free pick is taken, a dead card is not stored, a charge asks for its colour
+
+**QUEUE H12 + H13 + H14a, three measured seat-policy fixes.** Built ungated, each behind a named
+judge reader, so `sparring.js` still reads no card text.
+
+- **H12, `judge.freePick`.** `autoAnswer` declined every optional pick, including ones already paid
+  for. A pick is free when it costs nothing, has no filter, discard or "all of them", and its pool is
+  the seat's own: grave, deck or banish to hand or banish, a reveal, or hand to arsenal. The best
+  printed power is taken, ties on uid. Death Dealer and Bull's Eye Bracers now reach the arsenal.
+  Still declined: any cost (Pick Up the Point), a board or gear zone (Condemn to Slaughter), a
+  discard (Golden Tipple), a hand to banish or graveyard (Mounting Anger, Blaze).
+- **H13, `judge.arsenalUsable`.** The arsenal step never stores a card with no play (a Block, Inner
+  Chi). With nothing usable it leaves the arsenal empty.
+- **H14a, `judge.chargePitchWanted`.** The charge answer prefers the pitch the pending card's own
+  condition asks for (Beaming Bravado: yellow), then the lowest pitch, then uid. Light the Way's
+  colour condition is not parsed yet, so it still charges the lowest.
+- **The call.** New reasons: `pickFree`, `arsenalOther`, `arsenalSkip` (now reached) and `chargeColour`.
+- **Measured, 630 games, 3 seeds, every seat on:** 0 refusals, 0 violations, 0 stalls. Azalea
+  7.3 -> 19.0 wins ([11,6,5] -> [21,15,21]); Fai +2.4, Lyath -1.3, Arakni -2.0 are inside the band.
+- `speccensus` gained a 40th leg: `charge` stopped arriving on its old chair.
+
 ## v5.49 — "Charge first" names a card that charges
 
 **QUEUE S14, a "[Hero]'s call" reason mislabel.** `pickWhy` asked about the charge before go again,

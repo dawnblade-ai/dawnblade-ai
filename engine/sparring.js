@@ -225,9 +225,12 @@ function payAction(g, seat, p, o){
   if(p.kind === "charge"){
     if((p.picked || []).length) return tag("chargeDone", {t: "charge", uid: null});
     const sd = g.sides[seat];
+    const want = J.chargePitchWanted(g);
     const c = (sd.hand || []).filter(h => (p.uids || []).indexOf(h.uid) >= 0)
-      .sort((a, b) => num(a, "pitch") - num(b, "pitch") || byUid(a, b))[0];
-    return tag(c ? "charge" : "chargeNone", {t: "charge", uid: c ? c.uid : null});
+      .sort((a, b) => (want != null ? ((num(a, "pitch") === want ? 0 : 1) - (num(b, "pitch") === want ? 0 : 1)) : 0)
+                   || num(a, "pitch") - num(b, "pitch") || byUid(a, b))[0];
+    return tag(!c ? "chargeNone" : want != null && num(c, "pitch") === want ? "chargeColour" : "charge",
+      {t: "charge", uid: c ? c.uid : null});
   }
   /* ---- THE TWO KINDS THIS POLICY HAD NEVER MET (v3.80) --------------
      `judge.PENDING_KINDS` is a census of four and this function branched
@@ -784,7 +787,7 @@ function act(g, seat, o){
       : pt === "pay" ? ((ans.choice || g.prompt.choice) === "decline" ? "payNo" : "payYes")
       : pt === "modal" || pt === "target" ? "firstOption"
       : pt === "alloc" ? "allocAll"
-      : pt === "pick" ? (ans.t === "promptSel" ? "pickMin" : (g.prompt.sel || []).length ? "pickDone" : "declineOptional")
+      : pt === "pick" ? (ans.t === "promptSel" ? (J.freePick(g.prompt) ? "pickFree" : "pickMin") : (g.prompt.sel || []).length ? "pickDone" : "declineOptional")
       : "answer";
     return tag(k, ans);
   }
@@ -800,8 +803,9 @@ function act(g, seat, o){
      it is the one card that survives the hand being spent. */
   if(g.arsenalFor === seat){
     const best = (g.sides[seat].hand || []).slice()
+      .filter(c => J.arsenalUsable(g, seat, c.uid))
       .sort((a, b) => num(b, "power") - num(a, "power") || byUid(a, b))[0];
-    return tag(best ? "arsenalBest" : "arsenalSkip", {t: "arsenal", uid: best ? best.uid : null});
+    return tag(!best ? "arsenalSkip" : J.arsenalAttack(g, seat, best.uid) ? "arsenalBest" : "arsenalOther", {t: "arsenal", uid: best ? best.uid : null});
   }
 
   /* CR 7.3.2 — declaring defenders is free and simultaneous, and is the
@@ -911,6 +915,7 @@ const CALL_WHY = {
   boostNo: "Don't boost: too little of what is left in your deck pays it off.",
   fuse: "Fuse it. Revealing the card costs you nothing.",
   charge: "Charge your lowest-pitch card. It is worth the least as a resource.",
+  chargeColour: "Charge a COLOUR card. This card pays off for COLOUR.",
   chargeNone: "Don't charge. There is no card worth giving up.",
   chargeDone: "That is enough charging.",
   split: "Play the half you can play right now.",
@@ -918,7 +923,8 @@ const CALL_WHY = {
   xvalMax: "Make X as big as you can pay for.",
   discost: "Discard this card to pay the cost.",
   arsenalBest: "Keep your biggest attack face down. It is the card you most want to lead with next turn.",
-  arsenalSkip: "There is nothing worth keeping.",
+  arsenalOther: "Keep it face down. It can be played from there.",
+  arsenalSkip: "Keep your hand. Nothing in it can be played from the arsenal.",
   blockGear: "Block with armour first. Equipment wears down instead of leaving your hand.",
   blockLethal: "Block with everything. This hit would kill you.",
   blockHand: "Block with your best defender. This hit is too big to take.",
@@ -944,6 +950,7 @@ const CALL_WHY = {
   firstOption: "Take the first option.",
   allocAll: "Place every counter on your strongest piece.",
   pickMin: "Choose this one.",
+  pickFree: "Take it. It costs you nothing.",
   pickDone: "That is enough.",
   declineOptional: "Decline. It is optional, and not worth it here.",
   answer: "Answer it and play on.",
@@ -1012,7 +1019,7 @@ function explain(g, seat, o){
      read off the action instead (`addPay` is pinned by sparring.test.js). */
   const hit = a && n.tags.find(t => t[1] === a);
   const key = a ? ((hit && hit[0]) || BY_TYPE[a.t] || null) : null;
-  return {action: a, key, why: key ? (CALL_WHY[key] || null) : null, line: lineOf(g, seat, a)};
+  return {action: a, key, why: key ? (CALL_WHY[key] ? (key === "chargeColour" ? CALL_WHY[key].replace(/COLOUR/g, ["", "red", "yellow", "blue"][J.chargePitchWanted(g)] || "matching") : CALL_WHY[key]) : null) : null, line: lineOf(g, seat, a)};
 }
 
 return {DEFAULTS, act, explain, CALL_WHY, run, pitchPick, nextBlocker, offence, wallOf, affordableWithin};
