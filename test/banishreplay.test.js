@@ -6,8 +6,9 @@
    `_banPow`, `_banCostOff`) intact, so `playZoneWhy` let it be played
    again, and again: on the trainer through `execute`, at the table
    through `fileAttack`. `parser.spendPlayGrant` is the one body both
-   ask. WHERE the card goes is NOT decided here: it stays banish, and
-   that is the stated record `played-from-banish-files-to-banish`.
+   ask. WHERE the card goes is the user's ruling (2026-10-31): the
+   GRAVEYARD like any card, turn-stamped, an ephemeral card ceasing to
+   exist; the record `played-from-banish-files-to-banish` is closed.
 
    Every route is driven, and none goes through a policy: each card is
    played once, resolved, and then refused with a sentence.
@@ -34,17 +35,22 @@ function settle(g){
   }
   return g;
 }
-function playTwice(g, u){
+function playTwice(g, u, o){
+  o = o || {};
   const PLAY = {t: "play", uid: u, from: "banish"};
   assert.equal(J.legal(g, PLAY, 0), null, "the first play is legal");
   const out = J.reduce(g, PLAY, 0);
   assert.equal(out.error, null);
   g = settle(out.state);
-  const back = (g.sides[0].banish||[]).find(c => c.uid === u);
-  assert.ok(back, "the card is back in banish (the stated destination)");
-  STAMPS.forEach(k => assert.ok(!(k in back), k + " was spent with the play"));
-  const why = J.legal(g, PLAY, 0);
-  assert.match(String(why), REFUSED, "a second play is refused with a sentence: " + why);
+  assert.ok(!(g.sides[0].banish||[]).some(c => c.uid === u), "it is NOT filed back into banish");
+  const gone = (g.sides[0].grave||[]).find(c => c.uid === u);
+  if(o.ceases) assert.ok(!gone, "an ephemeral card ceases to exist");
+  else {
+    assert.ok(gone, "the card is in the graveyard");
+    assert.equal(gone._gy, g.turn, "turn-stamped");
+    STAMPS.forEach(k => assert.ok(!(k in gone), k + " was spent with the play"));
+  }
+  assert.ok(J.legal(g, PLAY, 0), "a second play is refused");
   return g;
 }
 
@@ -56,9 +62,7 @@ test("Pouncing Paws: Crouching Tiger is played once, then refused", {skip}, () =
   const ct = g.sides[0].banish[0];
   assert.equal(ct.name, "Crouching Tiger", "the minted card wears the DATABASE's name");
   assert.equal(ct._playTurn, 3);
-  g = playTwice(table(g), ct.uid);
-  assert.ok(!(g.feed||[]).some(l => /Crouching Tiger: live — it ceases to exist instead of/.test(String(l))),
-    "the feed must not say it ceased to exist while it sits in banish");
+  g = playTwice(table(g), ct.uid, {ceases: true});
 });
 
 test("Blaze: a banished Snapback is played once at instant speed, then refused", {skip}, () => {
@@ -105,8 +109,9 @@ test("the TRAINER path (execute) spends the grant too", {skip}, () => {
   g.builds = [{}, {}];
   g = {...g, sides: [{...g.sides[0], banish: []}, g.sides[1]]};
   g = H.execute(g, tx, "banish");
-  const back = g.sides[0].banish.find(c => c.uid === "ib1");
-  assert.ok(back, "filed back to banish");
+  assert.ok(!g.sides[0].banish.some(c => c.uid === "ib1"), "not filed back to banish");
+  const back = g.sides[0].grave.find(c => c.uid === "ib1");
+  assert.ok(back && back._gy === 3, "filed to the graveyard, turn-stamped");
   STAMPS.forEach(k => assert.ok(!(k in back), k + " spent"));
   assert.equal(P.playableFromZone(back, "banish", {turn: 3}), false);
 });

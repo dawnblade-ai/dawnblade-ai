@@ -821,7 +821,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "5.50"; /* v5.50 - the sparring seat takes a free optional pick, never stores a card the arsenal cannot play, and charges the colour a card asks for. See CHANGELOG.md. */
+window.APP_VER = "5.51"; /* v5.51 - a card played from banish goes to the graveyard, and Unity counts a defence reaction played from hand. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -3356,7 +3356,8 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      the other wall entirely. The player's own declarations are `blockH`,
      still in hand, which is what `finishBlock`'s wall and judge's wall
      read. Unity is the reader (`handDefenders`). */
-  const blockHandCount = n => act(n).blockH.filter(u => act(n).hand.some(x => x.uid === u)).length;
+  const blockHandCount = n => act(n).blockH.filter(u => act(n).hand.some(x => x.uid === u)).length
+    + DawnParser.rxDefenders(act(n)).fromHand; // RULING (user, 2026-10-31): a hand-played defence reaction counts for Unity
   const rxWall = n => ({
     /* …plus a defence reaction the defender played FROM HAND this link
        (v5.21) — reprise's "defended with a card from their hand". The

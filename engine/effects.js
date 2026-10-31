@@ -5441,7 +5441,8 @@ function makeEffects(ctx){
            and one reader — the same deletion v3.82 made of `sd.rune`. */
         actMut(n).board=[...act(n).board,{card,kind:fx.perm,spent:false,uid:card.uid,sd:_sd,susp:_susp}]; if(fx.perm==="aura") actMut(n).hist={...act(n).hist, aura:(act(n).hist.aura||0)+1}; n=L(n,`${card.name} enters play (${fx.perm})${_susp?` with ${_susp} suspense counters — it pays out when it leaves`:""}.`); }
       else if((from==="hand"||from==="arsenal") && !_offGrave) actMut(n).grave=[...gy(n.turn, card),...act(n).grave];
-      else if(from==="grave"||from==="banish") actMut(n).banish=[P.spendPlayGrant(card),...act(n).banish];
+      else if(from==="banish") actMut(n).grave=[...gy(n.turn, P.spendPlayGrant(card)),...act(n).grave]; /* RULING (user, 2026-10-31): a card played from banish goes to the graveyard like any card */
+      else if(from==="grave") actMut(n).banish=[P.spendPlayGrant(card),...act(n).banish];
       /* COUNTED ONLY FOR A NON-ATTACK ACTION CARD PLAYED (v5.05), which is
          what both readers print. And Briar's mint asks only when the count
          MOVES: tested on every non-attack, the exact `=== 2` would mint
@@ -6591,7 +6592,8 @@ function makeEffects(ctx){
       actMut(n).grave=[...gy(n.turn, card),...act(n).grave];
       if(card.pitch===3) actMut(n).hist = {...act(n).hist, blueGY:(act(n).hist.blueGY||0)+1};
     }
-    if(from==="grave"||from==="banish") actMut(n).banish=[P.spendPlayGrant(card),...act(n).banish];
+    if(from==="banish") actMut(n).grave=[...gy(n.turn, P.spendPlayGrant(card)),...act(n).grave];
+    if(from==="grave") actMut(n).banish=[P.spendPlayGrant(card),...act(n).banish];
     return n;
   };
 
@@ -8270,7 +8272,7 @@ function makeEffects(ctx){
          "Unity — when this defends together with a card from hand" is a
          fact about the whole wall, and a piece read mid-loop would see
          only the defenders declared before it. */
-      const handDefenders = defLs.filter(d => d.gi == null).length;
+      const handDefenders = defLs.filter(d => d.gi == null).length + _rxd.fromHand; // RULING (user, 2026-10-31): a hand-played defence reaction counts
       for(const dl of defLs){
         if(dl.gi != null){
           const piece = foe(n).gear[dl.gi];

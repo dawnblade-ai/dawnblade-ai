@@ -2265,7 +2265,8 @@ function strike(g){
      the gear loop runs first, so a piece reading a running total would
      always see zero. Unity asks about the whole wall. */
   const handDefenders = (sd.blockH || [])
-    .filter(u => (sd.hand || []).some(c => c.uid === u)).length;
+    .filter(u => (sd.hand || []).some(c => c.uid === u)).length
+    + PR.rxDefenders(sd).fromHand; // RULING (user, 2026-10-31): a hand-played defence reaction counts for Unity
   for(const uid of (sd.blockG || [])){
     const gi = find(sd.gear, uid);
     if(gi < 0) continue;

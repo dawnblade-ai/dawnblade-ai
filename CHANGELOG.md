@@ -1,3 +1,20 @@
+## v5.51 — A banished card is played to the graveyard, and Unity counts a hand-played reaction
+
+**QUEUE R2 + R3, the user's rulings of 2026-10-31.** Engine only; the AI is unchanged.
+
+- **R2, played from banish files to the graveyard.** "To grave like normal even if it is played from
+  banish." `execute` and `fileAttack` filed such a card back into banish; both now put it in the
+  graveyard, turn-stamped (`_gy`). The permission strip stays (`parser.spendPlayGrant`), so the card
+  keeps no `_playTurn` / `_asInstant` and cannot replay. Crouching Tiger still ceases to exist. A
+  card played from the graveyard still files into banish. Approx record
+  `played-from-banish-files-to-banish` is closed, its probe turned round. Drilled through Blaze's
+  Snapback, Pouncing Paws' Crouching Tiger, and a Mounting Anger / Rising Resentment attack.
+- **R3, Unity counts a defence reaction played from hand.** `handDefenders` read declared hand cards
+  (`blockH`) only. Both boards now add `parser.rxDefenders(...).fromHand` (judge.js `strike`, the
+  trainer's `resolveStack`, and `blockHandCount` in index.html). One played from the arsenal does not
+  count. Drilled on both boards in `rxdefcount.test.js`.
+- **R4, no change.** The soul is public.
+
 ## v5.50 — A free pick is taken, a dead card is not stored, a charge asks for its colour
 
 **QUEUE H12 + H13 + H14a, three measured seat-policy fixes.** Built ungated, each behind a named

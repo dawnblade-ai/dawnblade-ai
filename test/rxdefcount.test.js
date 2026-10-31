@@ -185,3 +185,50 @@ test("DRIVEN: the trainer's `resolveStack` counts a played DR too", () => {
   assert.equal(run([]), 9 - 1, "control: one defender — the +3 lands");
   assert.equal(run([{label: "dr 1", def: 1, from: "hand"}]), 6 - 2, "a played DR is the second defender");
 });
+
+/* UNITY COUNTS A DEFENCE REACTION PLAYED FROM HAND (v5.51)
+   RULING (user, 2026-10-31): "Yes". Unity prints "When this defends
+   together with a card from hand"; both boards counted only the declared
+   hand cards, so a played DR from hand did not lift it. One from the
+   ARSENAL is not a card from hand. The Helm defends alone (nothing
+   declared from hand) and the only other defender is the played DR. */
+const unityHelm = () => {
+  const CD = require("../engine/cards.js");
+  const db = CD.buildMaps(JSON.parse(fs.readFileSync(require("./helpers/extract").cardDbPath(), "utf8"))
+    .filter(c => c && c.name).map(CD.mapDbCard));
+  return Object.assign({}, CD.resolveEntry(db, {name: "Helm of Unity", p: 0, code: null, q: 1}),
+    {uid: "helm1", curDef: null, destroyed: false});
+};
+const swingCard = {uid: 50, name: "Probe Swing", tt: "Generic Action - Attack",
+  ty: ["Generic", "Action", "Attack"], pitch: 1, cost: 0, power: 6, def: 2, tx: "", kw: []};
+const unityWall = (rx, board) => {
+  P.fxReset();
+  const helm = unityHelm();
+  if(board === "judge"){
+    const g0 = H.state({res: 0, ap: 0}, {hp: 20, gear: [helm], blockG: ["helm1"], blockRx: rx},
+                       {turn: 3, actor: 0, turnPlayer: 0});
+    const g = {...g0, phase: "action", step: "damage", priority: null, passed: [], attacker: 0,
+      chainCards: [swingCard],
+      pend: {card: swingCard, from: "hand", by: 0, target: {kind: "hero"}, total: 6, ga: false,
+             ops: [], onHit: []}};
+    return 20 - J.strike(g).sides[1].hp;
+  }
+  const g = H.state({}, {gear: [helm], hp: 20, blockRx: rx}, {turn: 3});
+  g.builds = [{}, {}];
+  g.pend = {card: swingCard, from: "hand", total: 6, ga: false,
+            ops: [], onHit: [], condOnHit: [], lateConds: [], lateOps: []};
+  g.stack = [{k: "def", gi: 0}];
+  return 20 - H.fx(g, (f, n) => f.resolveStack(n)).sides[1].hp;
+};
+for(const board of ["judge", "trainer"]){
+  test(`DRIVEN (${board}): Unity counts a DR played from hand, not one from the arsenal`, {skip}, () => {
+    H.db();
+    /* the DR's own defence rides on the wall only through `blockRx`; use def 0 so the
+       difference is Unity's +1 alone */
+    assert.equal(unityWall([], board), 5, "control: the helm alone blocks 1");
+    assert.equal(unityWall([{label: "dr", def: 0, from: "hand"}], board), 4,
+      "a DR from hand is a card from hand — Unity gives +1");
+    assert.equal(unityWall([{label: "dr", def: 0, from: "arsenal"}], board), 5,
+      "a DR from the arsenal is not — no bonus");
+  });
+}
