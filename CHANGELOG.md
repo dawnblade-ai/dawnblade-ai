@@ -1,3 +1,33 @@
+## v5.66 — The AI sets up Duty Bound Blitz
+
+**QUEUE H23, policy (Boltyn).** Found and measured by a Sonnet agent, re-measured and shipped by the
+CEO thread.
+
+- **The leak:** Duty Bound Blitz plays only once a yellow card has gone into the soul this turn, and
+  the policy never set that up. The charge took the lowest pitch, the payment before it pitched the
+  yellow (or the gated card itself), and the attack that spent the one action point was ranked on
+  power. Over 84 games Boltyn held it at the start of 476 of 852 turns and played it 0.28 times per
+  lost game (1.05 per won game).
+- **The rule:** four judge readers (`playGate`, `gateColourWanted`, `gateReserve`, `gateRaises`) and
+  three reasons:
+  - `gateColour`: charge the colour a held card waits on.
+  - `gateKeep`: the payment keeps the colour card and the gated card while the rest of the hand can
+    pay. It is claimed only when it changed the pitch.
+  - `gateFirst`: an attack that colour pumps (Beaming Bravado) leads, so the hero ability gives it go
+    again and the gated card follows.
+
+  Nothing is gated by hero and no card text is read in `sparring.js`. Duty Bound Blitz is the pool's
+  only soul-colour gate.
+- **Own-seat A/B, 48 seeds paired, wins of 28:** 5.92 -> 7.19 (t 5.9, 34 up / 7 down; each 24-seed
+  half agrees). Measured negative, not shipped: keeping gated cards out of the arsenal (-0.79).
+- **Full ladder, 630 games at 3 seeds:** 0 stalls, 0 refusals, 0 violations, 2 draws (the same two).
+  Boltyn 20 -> 22, no longer last; Gravy +1, Bravo / Iyslander / Blaze -1, the rest unchanged.
+- **Noted for the next session:** in the 48-seed A/B one game stalled outside the ladder's seeds
+  (lyath-boltyn-24). Both decks were empty, but Lyath's hero ability keeps cycling cards, so the R6
+  "nothing changing" test never trips. That is a gap in the dead-position rule, not a Boltyn loop.
+- Drills in `test/gatecharge.test.js` (11, including a driven turn where it is played), sabotaged six
+  ways; `explain`'s unreached-key pin moved (`chargeDone` is now reached).
+
 ## v5.65 — Jack Be Quick keeps its go again
 
 **Engine, found by an audit of Briar and Kayo.** A Sonnet agent audited both leaders against print,

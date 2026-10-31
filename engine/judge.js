@@ -1864,6 +1864,62 @@ const arsenalAttack = (g, seat, uid) => {
   const c = (at(g, seat).hand || []).find(x => x && x.uid === uid);
   return !!c && TY.isAttack(c);
 };
+/* THE PLAY GATE A HELD CARD WAITS ON (H23). `fx.playIf` is the card's "Play this only if ..."
+   line and `effects.playIfOk` answers it; this is the reader for `sparring.js`, which reads no
+   card text. null for a card with no gate (or one the seat does not hold in hand/arsenal);
+   otherwise {kind, pitch, open}: the gate's kind, the colour it asks for (a soul put), and
+   whether it is open NOW. */
+const playGate = (g, seat, uid) => {
+  const sd = at(g, seat);
+  const c = (sd.hand || []).find(x => x && x.uid === uid) || (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null);
+  const pif = c && c.name ? PR.fxParse(c).playIf : null;
+  return pif ? {kind: pif.kind, pitch: pif.pitch == null ? null : pif.pitch, open: E.playIfOk({...g, actor: seat}, c)} : null;
+};
+/* WHICH COLOUR WOULD OPEN A GATE THE SEAT IS HOLDING? (H23) The colour of the first closed
+   soul-put gate among the hand and arsenal, or null. */
+const gateColourWanted = (g, seat) => {
+  const sd = at(g, seat);
+  const held = [...(sd.hand || []), ...(sd.arsenal ? [sd.arsenal] : [])]
+    .filter(c => c && c.name).sort((a, b) => String(a.uid) < String(b.uid) ? -1 : 1);
+  for(const c of held){
+    const v = playGate(g, seat, c.uid);
+    if(v && v.kind === "soulPitch" && !v.open) return v.pitch;
+  }
+  return null;
+};
+/* DOES THE COLOUR THAT OPENS THE GATE ALSO RAISE THIS ATTACK? (H23) True for a held attack
+   that prints an additional-cost charge and a "+N{p}" that turns on a card of that colour
+   charged: charged with it, the attack's power passes its base, so the hero's ability can give
+   it go again and the gated card can follow. */
+const gateRaises = (g, seat, uid, from) => {
+  const want = gateColourWanted(g, seat);
+  if(want == null) return false;
+  const sd = at(g, seat);
+  const c = from === "arsenal" ? (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null)
+          : (sd.hand || []).find(x => x && x.uid === uid);
+  if(!c || !c.name) return false;
+  const fx = PR.fxParse(c);
+  return !!fx.chargeCost && (fx.conds || []).some(e => e && e.cond === "chargedPitch" + want && e.op && e.op[0] === "self" && (+e.op[1] || 0) > 0);
+};
+/* THE CARD A PAYMENT MUST NOT PITCH, SO THE CHARGE CAN OPEN THE GATE (H23). `card` is the play
+   being paid for. When it prints a charge cost and the seat holds a closed soul-put gate,
+   the uid of the hand card of that colour to keep back for the charge, else null. */
+const gateReserve = (g, seat, card) => {
+  if(!card || !card.name || !PR.fxParse(card).chargeCost) return null;
+  const want = gateColourWanted(g, seat);
+  if(want == null) return null;
+  const sd = at(g, seat);
+  const c = (sd.hand || []).filter(h => h && h.uid !== card.uid && (+h.pitch || 0) === want
+      && !playGate(g, seat, h.uid) && (sd.paySel || []).indexOf(h.uid) < 0)
+    .sort((a, b) => String(a.uid) < String(b.uid) ? -1 : 1)[0];
+  if(!c) return null;
+  /* the gated card to play afterwards: an arsenal one cannot be pitched anyway, so it is the
+     one kept and the hand's copies are free to pay; otherwise the first held by uid */
+  const inArs = sd.arsenal && sd.arsenal.name && playGate(g, seat, sd.arsenal.uid);
+  const gated = inArs ? [] : (sd.hand || []).filter(h => h && h.name && playGate(g, seat, h.uid))
+    .sort((a, b) => String(a.uid) < String(b.uid) ? -1 : 1).slice(0, 1).map(h => h.uid);
+  return [c.uid, ...gated];
+};
 /* WHICH PITCH DOES THE CARD BEING CHARGED FOR ASK FOR? (QUEUE v4 H14) */
 const chargePitchWanted = (g) => {
   const p = g && g.pending;
@@ -4179,7 +4235,7 @@ function drawTo(g, i){
 }
 
 return {STALEMATE_TURNS, STILL_ZONES, stillSig, stalemateCheck, drawText, ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, chargePitchWanted, soulCostAnswer, abAmpTakers, arenaUseful, defendsNow, DEFENDS_OPS, abPieceForRes, abPieceResGain, boostShare, grantTakers, arcaneOf, chargeView,
+        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, arenaUseful, defendsNow, DEFENDS_OPS, abPieceForRes, abPieceResGain, boostShare, grantTakers, arcaneOf, chargeView,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */

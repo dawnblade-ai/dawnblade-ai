@@ -136,8 +136,16 @@ const tag = (k, a) => { if(NOTE && a) NOTE.tags.push([k, a]); return a; };
    high-pitch cards, because in this pool those are the expensive attacks
    you were least likely to play this turn, and cover the cost in as few
    cards as possible. */
-function pitchPick(sd, self, o){
+function pitchPick(sd, self, o, keep, need){
   const sel = sd.paySel || [];
+  /* THE CARDS A GATE NEEDS STAY (v5.65, H23): `keep` is the uids `judge.gateReserve` named. They are
+     passed over while the rest of the hand can still pay, so the charge that follows has its colour. */
+  if(keep && keep.length){
+    const rest = J.handFree(sd, self).filter(c => sel.indexOf(c.uid) < 0 && num(c, "pitch") > 0 && keep.indexOf(c.uid) < 0);
+    const got = rest.map(c => num(c, "pitch")).sort((a, b) => b - a).slice(0, (o && o.maxPitch) || 2).reduce((a, b) => a + b, 0);
+    if(rest.length && got >= (need == null ? 1 : need))
+      return rest.sort((a, b) => num(b, "pitch") - num(a, "pitch") || num(a, "power") - num(b, "power") || byUid(a, b))[0];
+  }
   /* `handFree` (v5.04): a declared defender is on the chain, and `legal`
      refuses pitching one — proposing it would be a refusal. Asked of
      JUDGE, which reads it off the parser: this file reads no card text */
@@ -234,11 +242,14 @@ function payAction(g, seat, p, o){
   if(p.kind === "charge"){
     if((p.picked || []).length) return tag("chargeDone", {t: "charge", uid: null});
     const sd = g.sides[seat];
-    const want = J.chargePitchWanted(g);
+    const wantC = J.chargePitchWanted(g);
+    const wantG = wantC == null ? J.gateColourWanted(g, seat) : null;
+    const want = wantC != null ? wantC : wantG;
+    const hit = h => num(h, "pitch") === want && !(wantG != null && J.playGate(g, seat, h.uid));
     const c = (sd.hand || []).filter(h => (p.uids || []).indexOf(h.uid) >= 0)
-      .sort((a, b) => (want != null ? ((num(a, "pitch") === want ? 0 : 1) - (num(b, "pitch") === want ? 0 : 1)) : 0)
+      .sort((a, b) => (want != null ? ((hit(a) ? 0 : 1) - (hit(b) ? 0 : 1)) : 0)
                    || num(a, "pitch") - num(b, "pitch") || byUid(a, b))[0];
-    return tag(!c ? "chargeNone" : want != null && num(c, "pitch") === want ? "chargeColour" : "charge",
+    return tag(!c ? "chargeNone" : want != null && hit(c) ? (wantG != null ? "gateColour" : "chargeColour") : "charge",
       {t: "charge", uid: c ? c.uid : null});
   }
   /* ---- THE TWO KINDS THIS POLICY HAD NEVER MET (v3.80) --------------
@@ -322,7 +333,11 @@ function payAction(g, seat, p, o){
     if(u != null) return tag("pitchChi", {t: "paySel", uid: u});
   }
   if(p.need - sd.res - J.paySum(sd) <= 0 && chi.short <= 0) return tag("payConfirm", {t: "payConfirm"});
-  const c = pitchPick(sd, p.card, o);
+  const keep = J.gateReserve(g, seat, p.card);
+  const owe = p.need - sd.res - J.paySum(sd);
+  const c = pitchPick(sd, p.card, o, keep, owe);
+  /* the call names the gate only when keeping it changed the card pitched */
+  if(c && keep){ const plain = pitchPick(sd, p.card, o); if(plain && plain.uid !== c.uid) return tag("gateKeep", {t: "paySel", uid: c.uid}); }
   /* Unreachable after a play this policy proposed — `legal` guarantees
      the hand covers the cost. It is here for a payment the policy did not
      open: a human who taps a card and hands the seat over mid-decision
@@ -688,7 +703,7 @@ function offenceBase(g, seat, o){
     const v = x.cv;
     if(!v) return 3;
     if(v.charged) return v.gaIf ? 0 : 3;
-    return v.offers && chargeRoom(sd, x.c, o) ? (v.gaIf ? 1 : 2) : 3;
+    return v.offers && chargeRoom(sd, x.c, o) ? (v.gaIf || x.gr ? 1 : 2) : 3;
   };
   const pumped = (sd.gear || []).slice().sort(byUid)
     .map(w => ({w, v: J.chargeView(g, seat, w.uid, "weapon")}))
@@ -701,6 +716,7 @@ function offenceBase(g, seat, o){
     .filter(x => x.ally || affordableWithin(sd, x.c, o))
     .map(x => Object.assign(x, {kap: J.keepsActionPoint(g, seat, x.uid, x.ally ? "board" : x.from) ? 1 : 0}))
     .map(x => Object.assign(x, {cv: cv(x)}))
+    .map(x => Object.assign(x, {gr: !x.ally && J.gateRaises(g, seat, x.uid, x.from)}))
     .concat(pumped)
     .sort((a, b) => (rankC(a) - rankC(b)) || (b.kap - a.kap) || num(b.c, "power") - num(a.c, "power")
                  || num(a.c, "cost") - num(b.c, "cost") || byUid(a, b))
@@ -718,7 +734,7 @@ function offenceBase(g, seat, o){
      not written.) */
   const pickWhy = x => x.weapon ? "pumpedWeapon"
     : x.kap ? "atkKeepsAP"
-    : rankC(x) < 3 && x.cv && !x.cv.charged ? "chargeFirst"
+    : rankC(x) < 3 && x.cv && !x.cv.charged ? (x.gr && !x.cv.gaIf ? "gateFirst" : "chargeFirst")
     : x.ally ? (targetFor(g, seat, x.c) !== "hero" ? "allyTake" : "allyIn") : "biggestAttack";
   if(pick && pick.weapon) return tag(pickWhy(pick), {t: "activate", uid: pick.uid});
   if(pick) return tag(pickWhy(pick), pick.ally
@@ -1040,6 +1056,9 @@ const CALL_WHY = {
   fuse: "Fuse it. Revealing the card costs you nothing.",
   charge: "Charge your lowest-pitch card. It is worth the least as a resource.",
   chargeColour: "Charge a COLOUR card. This card pays off for COLOUR.",
+  gateColour: "Charge a COLOUR card. A card in your hand only plays once a COLOUR card has gone into your soul this turn.",
+  gateKeep: "Pitch a different card. The card you are waiting to play, and the colour you need to charge, stay in your hand.",
+  gateFirst: "Lead with the attack your charge pumps. Pumped, it can take go again, and the card you are holding plays after it.",
   chargeNone: "Don't charge. There is no card worth giving up.",
   chargeDone: "That is enough charging.",
   split: "Play the half you can play right now.",
@@ -1154,7 +1173,7 @@ function explain(g, seat, o){
      read off the action instead (`addPay` is pinned by sparring.test.js). */
   const hit = a && n.tags.find(t => t[1] === a);
   const key = a ? ((hit && hit[0]) || BY_TYPE[a.t] || null) : null;
-  return {action: a, key, why: key ? (CALL_WHY[key] ? (key === "chargeColour" ? CALL_WHY[key].replace(/COLOUR/g, ["", "red", "yellow", "blue"][J.chargePitchWanted(g)] || "matching") : CALL_WHY[key]) : null) : null, line: lineOf(g, seat, a)};
+  return {action: a, key, why: key ? (CALL_WHY[key] ? (key === "chargeColour" || key === "gateColour" ? CALL_WHY[key].replace(/COLOUR/g, ["", "red", "yellow", "blue"][key === "gateColour" ? J.gateColourWanted(g, seat) : J.chargePitchWanted(g)] || "matching") : CALL_WHY[key]) : null) : null, line: lineOf(g, seat, a)};
 }
 
 return {DEFAULTS, act, explain, CALL_WHY, run, pitchPick, nextBlocker, offence, wallOf, affordableWithin};
