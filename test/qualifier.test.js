@@ -216,6 +216,49 @@ test("qualLabel names a qualifier once, so five sites cannot disagree", () => {
   assert.equal(P.qualLabel({nonAtk: true}), "a non-attack action card");
 });
 
+/* ---- 3b. THE PRINTED CAPITALS (v5.54, FEED 21) ------------------------
+   The feed printed "Next draconic or ninja attack action card +3" for
+   Rise from the Ashes. A class or talent is capitalised as printed; a
+   subtype stays lowercase, as rules text prints it. */
+test("qualLabel capitalises a class or talent and leaves a subtype alone", () => {
+  assert.equal(P.qualLabel({aac: true, g: [["draconic"], ["ninja"]]}),
+    "a Draconic or Ninja attack action card");
+  assert.equal(P.qualLabel({g: [["pirate", "ally"]]}), "a Pirate ally attack",
+    "the class rises and the subtype beside it does not");
+  assert.equal(P.qualLabel({g: [["arrow"]]}), "an arrow attack", "a subtype alone stays lowercase");
+  assert.equal(P.qualLabel({pitch: 3}), "an attack if it is blue");
+  assert.equal(P.qualLabel({pitch: 3}, {colour: false}), "an attack",
+    "the colour can be left to the caller, which puts it after the pump");
+  assert.equal(P.qualColour({pitch: 3}), "blue");
+  assert.equal(P.qualColour({g: [["arrow"]]}), null);
+});
+
+test("the class/talent vocabulary matches the pool's own type lines, both ways", {skip}, () => {
+  /* ASKED OF `types.js`, which reads a type line into classes, types and
+     subtypes. Every class or talent a pool record prints must be in the
+     vocabulary, and no type or subtype may be — so a word the list gets
+     wrong fails here rather than printing in the wrong case. `classGroups`
+     (the words LEFT of the dash), not `classes`: the structured array also
+     carries subtypes `types.js` has no list for (Young, Disease, Chi). */
+  const TY = require("../engine/types.js");
+  const C = require("../engine/cards.js");
+  const classes = new Set(), others = new Set();
+  for(const rec of require("../data/pool.json")){
+    const m = C.mapDbCard(rec); if(!m) continue;
+    const t = TY.cardType({tt: m.tt, ty: m.ty});
+    /* a two-word type ("Defense Reaction") is split into its words */
+    const meta = [...t.types, ...t.subtypes].join(" ").toLowerCase().split(/\s+/).filter(Boolean);
+    [].concat(...t.classGroups).map(w => String(w).toLowerCase())
+      .filter(w => meta.indexOf(w) < 0).forEach(w => classes.add(w));
+    meta.forEach(w => others.add(w));
+  }
+  assert.ok(classes.size > 10 && others.size > 10, "fixture: the pool was walked");
+  const missing = [...classes].filter(w => !P.CLASS_TALENT_WORDS.has(w));
+  assert.deepEqual(missing, [], "a printed class or talent the feed would lowercase");
+  const wrong = [...others].filter(w => P.CLASS_TALENT_WORDS.has(w));
+  assert.deepEqual(wrong, [], "a type or subtype the feed would capitalise");
+});
+
 /* ---- 4. DRIVEN — the qualified go-again ------------------------------ */
 
 const nonAtk = u => ({name: "Ritual" + u, tt: "Runeblade Action", ty: ["Runeblade", "Action"],

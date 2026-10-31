@@ -4137,13 +4137,33 @@ function attackQual(phrase, tail){
    `q.map(g => g.join(" ")).join(" or ")`, which knew the qualifier was an
    array of word groups — a second reader of the shape, and it threw the
    moment the shape gained a field. One namer, beside the one matcher. */
-function qualLabel(qual){
+/* CLASS AND TALENT WORDS ARE PRINTED CAPITALISED (v5.54, FEED 21). A
+   qualifier stores its words lowercased, and the feed printed "Next draconic
+   or ninja attack action card"; the card prints "Draconic or Ninja". A
+   subtype (arrow, dagger, ally, sword) is lowercase in rules text too, so
+   only these are raised. Presentation vocabulary, not a rule: the CR's
+   classes and talents. `test/qualifier.test.js` holds it against the pool's
+   own type lines, both ways. */
+const CLASS_TALENT_WORDS = new Set([
+  "adjudicator", "assassin", "bard", "brute", "guardian", "illusionist", "mechanologist",
+  "merchant", "necromancer", "ninja", "pirate", "ranger", "runeblade", "shapeshifter",
+  "thief", "warrior", "wizard", "generic",
+  "chaos", "draconic", "earth", "elemental", "ice", "light", "lightning", "mystic",
+  "revered", "reviled", "royal", "shadow"]);
+const qualWord = w => CLASS_TALENT_WORDS.has(w) ? w[0].toUpperCase() + w.slice(1) : w;
+/* THE COLOUR A QUALIFIER ASKS, as a word — or null. Flying High's colour is
+   a CONDITION on the card the grant takes (v4.12), so its feed line puts it
+   after the pump ("Next attack +1 if it is blue") rather than inside the
+   noun, where it read backwards; `qualLabel(q, {colour: false})` leaves it
+   out for that caller. */
+const qualColour = qual => !qual || qual.pitch == null ? null
+  : (Object.keys(COLOR_PITCH).find(k => COLOR_PITCH[k] === qual.pitch) || ("pitch " + qual.pitch));
+function qualLabel(qual, o){
   if(!qual) return "an attack";
-  const pre = qual.g ? qual.g.map(g => g.join(" ")).join(" or ") + " " : "";
+  const pre = qual.g ? qual.g.map(g => g.map(qualWord).join(" ")).join(" or ") + " " : "";
   const post = [];
   if(qual.kw) post.push("with " + qual.kw);
-  if(qual.pitch != null) post.push("if it is " +
-    (Object.keys(COLOR_PITCH).find(k => COLOR_PITCH[k] === qual.pitch) || ("pitch " + qual.pitch)));
+  if(qual.pitch != null && !(o && o.colour === false)) post.push("if it is " + qualColour(qual));
   if(qual.costLe != null) post.push("with cost " + qual.costLe + " or less");
   if(qual.costGe != null) post.push("with cost " + qual.costGe + " or more");
   if(qual.powLe  != null) post.push("with " + qual.powLe + " or less base {p}");
@@ -10620,7 +10640,7 @@ const fxReset = () => FXMEMO.clear();
 
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter,
   PER_COUNT, DEF_PER, perCountKey, chainHits, pickSubject, attackQual, markRed, costCtx, qualMatches, abWindow, defCap, defCounts, defCapWhy, isBlockCard,
-        nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, isActionCard, costOffFor, heaveOf,
+        nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, qualColour, CLASS_TALENT_WORDS, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, isActionCard, costOffFor, heaveOf,
         classifyClause, fxParse, fxReset, playableFromZone, playZoneWhy, addCostWhy, isArrowCard, boostPays, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost, isActivation, isActionPaid, costTaxes, handAbilityTax,
         DECL_OPS, dracLinks, weaponCost, payTrigger, OFFER_TRIGGERS, allyAttack, auraWeaponGrant, wardValue, wardBearers, wardTotal, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, routeCostsAP, rxAllowed, drxBarred, drxBarWhy, rxPump,
         idleCounterWipes, rustedThrough,

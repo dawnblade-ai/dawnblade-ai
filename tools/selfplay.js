@@ -224,7 +224,12 @@ function play(g, limit, opts){
            Anchored on the engine's own phrasing, with the old spellings
            kept so a future rewording of either is still counted. */
         if(/goes down|dies|died/i.test(line))     events.push(["death", line]);
-        if(/\bGold\b.*\bcreated\b|Gold token/i.test(line)) events.push(["gold", line]);
+        /* A GRANT ANNOUNCING A GOLD IS NOT A GOLD (v5.54). Grant lines name
+           their rider now ("Next Pirate ally attack, and if it hits a hero,
+           create a Gold token"), and "Gold token" counted the promise: 187 ->
+           286 with every game identical. The hit that pays it is counted. */
+        if(/\bGold\b.*\bcreated\b|Gold token/i.test(line) && !/^Next |will carry go again/.test(line))
+          events.push(["gold", line]);
         /* CRUSH FIRING, NOT THE WORD (v4.66). This read `/\bcrush\b/i` and
            so counted every PITCH of Cartilage Crush or Crush the Weak, every
            wall line naming one, and the arsenal grant that SAYS "has crush"

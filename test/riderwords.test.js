@@ -42,9 +42,45 @@ test("an on-hit go again still says so, and only that", {skip}, () => {
 });
 
 test("anything else is 'a granted ability', never a guessed one", {skip}, () => {
-  assert.match(lineFor(["buffNext", 0, {g: [["pirate", "ally"]]}, {onHitHero: [["token", "Gold", 1]]}]),
+  /* THE FALLBACK FIXTURE MOVED AT v5.54: the Gold rider is named now (below),
+     so an op kind the describer does not know stands in for "anything else". */
+  assert.match(lineFor(["buffNext", 0, {g: [["pirate", "ally"]]}, {onHitHero: [["boo", 1]]}]),
     /a granted ability/);
   assert.match(lineFor(["buffNext", 3, Q, {gaIf: "fused"}]), /goes again if it was fused/);
+});
+
+/* ---- WHAT THE RIDER DOES, SAID (v5.54, FEED 21) ----------------------
+   Yo Ho Ho! and the Loot cards printed ", and a granted ability". Each
+   case is the rider shape the parser emits for that card. */
+test("a rider's on-hit effect is named: Gold, a discard or destroy and its tail, a foe's token, a tap", {skip}, () => {
+  const PA = {g: [["pirate", "ally"]]};
+  assert.equal(lineFor(["buffNext", 1, PA, {onHitHero: [["token", "gold", 1, "self"]]}], "Yo Ho Ho!"),
+    "Next Pirate ally attack +1, and if it hits a hero, create a Gold token.");
+  assert.equal(lineFor(["buffNext", 0, {...PA, atk: true}, {onHitHero: [["foeDiscard", 1]],
+    condOnHit: [{cond: "way:took", op: ["token", "gold", 1, "self"], heroOnly: true}]}], "Loot the Hold"),
+    "Next Pirate ally attack, and if it hits a hero, they discard a card \u2014 if they do, create a Gold token.");
+  assert.match(lineFor(["buffNext", 0, {...PA, atk: true}, {onHitHero: [["foeArsDestroy", 1]],
+    condOnHit: [{cond: "way:took", op: ["token", "gold", 1, "self"], heroOnly: true}]}], "Loot the Arsenal"),
+    /destroy the card in their arsenal \u2014 if one is destroyed, create a Gold token/);
+  assert.match(lineFor(["buffNext", 3, Q, {onHitHero: [["token", "bloodrot pox", 1, "foe"]]}]),
+    /create a Bloodrot Pox token under their control/);
+  assert.match(lineFor(["buffNext", 3, Q, {onHitHero: [["tapFoeHero", 1, {allies: true}]]}]),
+    /tap them and all allies they control/);
+  /* THE NEAR-MISS: a tail the describer cannot attribute is not half-said. */
+  assert.match(lineFor(["buffNext", 0, PA, {onHitHero: [["foeDiscard", 1]],
+    condOnHit: [{cond: "marked", op: ["token", "gold", 1, "self"]}]}]), /a granted ability/,
+    "a gated tail that is not `way:took` falls back whole");
+});
+
+test("a go-again grant's rider is named too, and a colour reads after the pump", {skip}, () => {
+  H.db();
+  const g = H.runOps(H.state({res: 9, ap: 1}, {}, {turn: 3, actor: 0, turnPlayer: 0}),
+    [["gaNext", {g: [["pirate", "ally"]], atk: true}, {onHitHero: [["token", "gold", 1, "self"]]}]], "Avast Ye!");
+  const ga = (g.feed || g.log || []).map(x => typeof x === "string" ? x : (x && (x.t || x.msg || x.text)) || "")
+    .filter(l => /carry go again/.test(l)).pop() || "";
+  assert.match(ga, /Pirate ally attack this turn will carry go again, and if it hits a hero, create a Gold token\.$/);
+  assert.equal(lineFor(["buffNext", 1, {pitch: 3}, null, true], "Flying High"), "Next attack +1 if it is blue.",
+    "it read \"Next attack if it is blue +1\" — backwards");
 });
 
 test("a zero-power grant does not print +0", {skip}, () => {

@@ -1,3 +1,25 @@
+## v5.54 — A grant line capitalises its classes and says what its rider does
+
+**QUEUE FEED 21, voice only.** No state changes; the AI is unchanged.
+
+- **Class and talent words are capitalised** in every qualifier the feed prints (`parser.qualLabel`):
+  "Next Draconic or Ninja attack action card +3", "Next Pirate ally attack", "Next Lightning or
+  Elemental attack action card". Subtypes stay lowercase as rules text prints them ("Next arrow
+  attack"). The vocabulary is `parser.CLASS_TALENT_WORDS`, held both ways by a drill against every
+  pool type line through `types.js`.
+- **A rider says what it does** (`effects.riderWords`). Yo Ho Ho!, Avast Ye!, the Loot cards, Drop
+  the Anchor and the three Lace cards printed ", and a granted ability". Now: "…, and if it hits a
+  hero, create a Gold token", "…they discard a card — if they do, create a Gold token", "…destroy the
+  card in their arsenal — if one is destroyed, create a Gold token", "…tap them and all allies they
+  control", "…create a Bloodrot Pox token under their control". An op kind the describer does not
+  know still falls back to "a granted ability". The go-again grant line uses the same words.
+- **Flying High's colour reads after the pump:** "Next attack +1 if it is blue", not "Next attack if
+  it is blue +1" (`parser.qualColour`, `qualLabel(q, {colour: false})`).
+- **The `gold` route counter counts Golds, not promises** (`tools/selfplay.js`). Its "Gold token"
+  alternative matched the new grant lines and moved 187 -> 286 with every game identical; grant
+  announcements are excluded. The 3-seed ladder report is now byte-identical to v5.53.
+- Drills in `test/qualifier.test.js` and `test/riderwords.test.js`, each sabotaged (7 sabotages).
+
 ## v5.53 — Display Loyalty makes its Fealty, Fealty works, and an attack counts as a card played
 
 **QUEUE S15, plus one defect found underneath it.** Engine only; the AI is unchanged.

@@ -111,6 +111,22 @@ const rngRoll = R.roll, rngInt = R.int, rngShuffle = R.shuffle;
    training sim the feed is the lesson (v3.60), so a line that names the
    wrong ability teaches the wrong card. Pure, and it names only what the
    rider carries; anything else is "a granted ability" rather than a guess. */
+/* AND WHAT A RIDER'S ON-HIT OPS DO (v5.54, FEED 21). Yo Ho Ho! and the
+   Loot cards read ", and a granted ability", which says nothing a player can
+   learn from. These are the op kinds the pool's grant riders carry,
+   measured; an op not here still falls back to "a granted ability" rather
+   than a guess. `RIDER_TOOK` says the "if they do / if you do" tail in the
+   third person, because both seats read the line (v2.83). */
+const tokenWords = nm => String(nm || "").split(" ").map(w => w ? w[0].toUpperCase() + w.slice(1) : w).join(" ");
+const RIDER_OP_WORDS = {
+  ga:            () => "it goes again",
+  token:         o => "create " + ((o[2] || 1) === 1 ? "a" : o[2]) + " " + tokenWords(o[1]) + " token"
+                    + ((o[2] || 1) === 1 ? "" : "s") + (o[3] === "foe" ? " under their control" : ""),
+  foeDiscard:    o => "they discard " + ((o[1] || 1) === 1 ? "a card" : o[1] + " cards"),
+  foeArsDestroy: () => "destroy the card in their arsenal",
+  tapFoeHero:    o => "tap them" + (o[2] && o[2].allies ? " and all allies they control" : ""),
+};
+const RIDER_TOOK = {foeDiscard: "if they do", foeArsDestroy: "if one is destroyed"};
 function riderWords(r){
   if(!r) return "";
   if(r.noDrx) return r.noDrx === true
@@ -118,8 +134,16 @@ function riderWords(r){
     : ", and no defence reaction can be played from arsenal to its chain link";
   if(r.gaIf === "fused") return ", and it goes again if it was fused";
   const hit = [...(r.onHit || []), ...(r.onHitHero || [])];
-  if(hit.length === 1 && hit[0][0] === "ga" && !(r.condOnHit || []).length)
+  const tails = r.condOnHit || [];
+  if(hit.length === 1 && hit[0][0] === "ga" && !tails.length)
     return ", and it goes again if it hits";
+  const say = o => o && RIDER_OP_WORDS[o[0]] ? RIDER_OP_WORDS[o[0]](o) : null;
+  const heads = hit.map(say);
+  const took = hit.length === 1 ? RIDER_TOOK[hit[0][0]] : null;
+  const after = tails.map(t => t && t.cond === "way:took" && took ? say(t.op) : null);
+  if(hit.length && heads.every(Boolean) && after.every(Boolean))
+    return ", and if it hits" + ((r.onHitHero || []).length ? " a hero" : "") + ", " + heads.join(" and ")
+      + (after.length ? " \u2014 " + took + ", " + after.join(" and ") : "");
   return ", and a granted ability";
 }
 
@@ -1654,8 +1678,9 @@ function makeEffects(ctx){
           actMut(n).buffQ = [...(act(n).buffQ||[]),
             Object.assign({amt:v, q:op[2]||null, rider:op[3]||null}, op[4] ? {once:true} : {},
                           op[3] && op[3].noDrx ? {src: srcName} : {})];
-          const who = op[2] ? P.qualLabel(op[2]).replace(/^an? /, "") : "attack";
-          n=L(n,`Next ${who}${v ? " +" + v : ""}${riderWords(op[3])}.`); }
+          const who = op[2] ? P.qualLabel(op[2], {colour: false}).replace(/^an? /, "") : "attack";
+          const hue = P.qualColour(op[2]);
+          n=L(n,`Next ${who}${v ? " +" + v : ""}${hue ? " if it is " + hue : ""}${riderWords(op[3])}.`); }
         else { actMut(n).buffNext+=v; n=L(n,`Next attack +${v}.`); }
       }
       /* ---- THE DELAYED ON-HIT GRANT (v4.41) --------------------------
@@ -1731,7 +1756,7 @@ function makeEffects(ctx){
         const rider = op[2] || null;
         if(gq){ actMut(n).gaNextQ = [...(act(n).gaNextQ||[]), {q: gq, rider}];
                 n=L(n,`${srcName || act(n).name}: ${sp(act(n))} next ${P.qualLabel(gq).replace(/^an? /,"")} this turn will carry go again`
-                     +`${rider?", and its hit carries a granted ability":""}.`); }
+                     +`${riderWords(rider)}.`); }
         /* NAMED, BOTH OF THEM (v5.08): the source, because the line that
            SPENDS the grant cannot say where it came from, and the seat,
            because "Your next attack" is a lie to the other seat reading the
