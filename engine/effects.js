@@ -6352,6 +6352,18 @@ function makeEffects(ctx){
        the drill for it passes on a card that does nothing. Opt-in on the
        SPEC (v3.58), so every other prompt keeps the existing consumers. */
     if(p.lateGa) n = settleLateGa(n);
+    /* A GRANT ANSWERED WHILE ITS OWN LINK IS STILL OPEN RIDES THAT LINK
+       (Jack Be Quick's "you may banish a Nimblism … this gets +1{p} and go
+       again", asked at the declaration and answered in the reaction step).
+       Left on the state the flag waits for the next consumer, and the
+       next consumer is whatever card is played first — the table's
+       instant (Cloud Cover, Lightning Press) took the go again off the
+       attack that earned it, 33 times in 84 Briar games. `settleDiscardRider`
+       reads the same pend with the same two tests. */
+    else if(n._gaGrant && n.pend && n.pend.by === actorOf(n) && n.pend.dealt == null){
+      n.pend = {...n.pend, ga: true}; delete n._gaGrant;
+      n = L(n, `${p.src || "That answer"}: go again.`);
+    }
     /* ARSENAL, FACE UP (v2.33). A card put face UP into the arsenal is a
        different event from the end-of-turn arsenal step, which sets face
        DOWN — Azalea's arrows trigger on the face-up one only. The flag

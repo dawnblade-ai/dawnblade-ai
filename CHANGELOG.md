@@ -1,3 +1,26 @@
+## v5.65 — Jack Be Quick keeps its go again
+
+**Engine, found by an audit of Briar and Kayo.** A Sonnet agent audited both leaders against print,
+and the CEO thread verified and shipped the one defect it found.
+
+- **The audit's verdict: no over-grant explains Briar's lead or Kayo's.** Every Briar source was
+  checked against print and found faithful. That covers both hero clauses (the Lightning mint after
+  exactly two non-attack actions, Earth once per turn and never on a swing or a zero-damage hit),
+  Earth's clock and its +1 defence, the Sizzle / Weave / Nimblism / Lightning Press qualifiers,
+  Runechants on a swing, 993 links of damage arithmetic, and per-turn resets. Turning both hero
+  clauses off still leaves her 62 wins of 84, and her deck is all cost-0 cards. Kayo's Might clocks
+  and discard readers are faithful too. Their lead reads as deck and policy.
+- **The defect: Jack Be Quick's go again could be stolen.** "Banish a Nimblism, then this gets +1{p}
+  and go again" is answered in the reaction step. The go again was left on a one-shot flag, and the
+  next card played took it. The flag leaked in 33 of 33 banishes, and 5 times an instant (Cloud
+  Cover, Lightning Press) took the attack's go again. An answered prompt now puts the go again on the
+  attacker's own open link, with the two tests `settleDiscardRider` already makes. No card names.
+- Drills in `test/lategrant.test.js` (4: accept puts go again on the link and not on the next
+  instant; decline grants nothing), each sabotaged.
+- **Measured:** 630 games at 3 seeds: 0 stalls, 0 refusals, 0 violations, 2 draws. Every hero's wins
+  are identical to v5.64; the go again moved from an instant to the attack, which kept the action
+  point either way.
+
 ## v5.64 — The AI holds a defence reaction its blocks do not need
 
 **QUEUE H22, policy.** Found and measured by a Sonnet agent, re-measured and shipped by the CEO thread.
