@@ -164,7 +164,7 @@ legality or a feed line, ask which board runs it.
 `Battle` is still the regression harness: it plays every card effect and the
 drills that prove the semantics are right were written against it. It also owns
 the *tuned* difficulty curve, which is why retiring it is sequenced with tuning
-rather than before it (`FINISH.md`).
+rather than before it (`docs/archive/FINISH.md`).
 
 ## Card data pipeline
 
@@ -293,8 +293,9 @@ it** (`CLAUDE.md`, v3.13).
 |---|---|
 | `CLAUDE.md` | **the working manual.** Conventions, traps, and every rule that cost a real bug. The accurate one |
 | `CHANGELOG.md` | per-version history, newest first |
-| `HANDOFF.md` | current state and what to pick up next |
-| `FINISH.md` | what "finished" means, as five measurable conditions, and the order |
+| `QUEUE.md` (branch `findings/queue`) | the handoff: current state and what to pick up next |
+| `LESSONS.md` | the long-form why behind every rule in `CLAUDE.md` |
+| `docs/archive/` | finished plans and old handoffs (`HANDOFF.md`, `FINISH.md`, …) |
 | `UI-GUIDE.md` | the UI surface: components, screens, the design system, the interaction contract |
 | `ROADMAP-MULTIPLAYER.md` | the road to online play, and why in this order |
 | `CR-INDEX.md` | every CR rule this project cites, and whether a drill guards it |

@@ -137,7 +137,7 @@ For the current state, in order of usefulness:
 - **`ROADMAP-MULTIPLAYER.md`** — the road to online play, which supersedes the
   architecture and phase plan that used to live here.
 - **`CHANGELOG.md`** — what each version actually changed, v2.14 onward.
-- **`HANDOFF.md`** — where to pick up next.
+- **`QUEUE.md`** on the `findings/queue` branch — where to pick up next (its top section is the handoff).
 
 What this file is still *for* is everything those four do not carry: the world,
 the rules knowledge, the licensing posture, and the things that must never

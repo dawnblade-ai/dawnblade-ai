@@ -6,7 +6,7 @@
 > released but other than that and rules changes I want the rest of the game
 > to be built to last the test of time."*
 
-`FINISH.md` says when the game is **correct**. This says when it is **good**.
+`docs/archive/FINISH.md` said when the game is **correct**. This says when it is **good**.
 They are different questions and the second one is not a coat of paint.
 
 ---

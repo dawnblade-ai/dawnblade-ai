@@ -14,7 +14,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v5.52
+**Current version:** `grep APP_VER index.html` (a version written here rots in one release)
 
 ---
 
@@ -28,10 +28,19 @@ every session on every step, so **it stays short (budget: under 30 KB)**.
   don't read it: `grep -n -i "<topic>" LESSONS.md`. Older code comments that say
   "CLAUDE.md's …" mean LESSONS.md.
 - **Per-release summaries** are at the top of `CHANGELOG.md`.
-- **The work list** is `QUEUE.md` on the branch `findings/queue` (S-items = engine,
+- **START HERE: the handoff and the work list** are `QUEUE.md` on the branch
+  `findings/queue` — its top section is the current handoff (S-items = engine,
   H-items = AI policy, FEED items = feed text, NEEDS A RULING = questions for the
   user). `git fetch origin findings/queue && git show origin/findings/queue:QUEUE.md`.
   Experiment patches and probes live in `experiments/` on that branch.
+- **The other docs.** Generated (rerun the tool, never hand-edit): `AUDIT.md`,
+  `CARD_PROGRESS.md`, `CR-INDEX.md`, `STACK.md`, `SWEEP.md`. Reference:
+  `ARCHITECTURE.md`, `UI-GUIDE.md` (any screen work), `POLISH.md` (the user's quality
+  bar), `TORCH.md` (FaB rules and lore), `DESKTOP-TASKS.md` (jobs the sandbox cannot
+  reach). Future plans: `ROADMAP-MULTIPLAYER.md`, `SUPABASE.md`, `GEMMY.md`.
+  **`docs/archive/`** holds finished plans and old handoffs (`HANDOFF.md`, `WEEK.md`,
+  `FINISH.md`, …) — frozen history; code comments that cite them mean that folder.
+  Do not start a new root handoff file: update `QUEUE.md`'s HANDOFF section.
 - **When a release teaches something:** write it in CHANGELOG.md. Add ONE line
   here only if it is a new rule every session must know. Long-form goes in LESSONS.md.
 - **Derive numbers, never state them.** Counts in prose rot; give the command.

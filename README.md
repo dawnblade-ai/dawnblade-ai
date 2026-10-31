@@ -77,9 +77,10 @@ was never noticing — it was reconstructing what went wrong afterwards.
 |---|---|
 | `CLAUDE.md` | the working manual — conventions, traps, and every rule that cost a real bug |
 | `CHANGELOG.md` | per-version history, newest first |
-| `HANDOFF.md` | current state and what to pick up next |
+| `QUEUE.md` (branch `findings/queue`) | the handoff — current state and what to pick up next |
 | `ARCHITECTURE.md` | how the project uses Flesh and Blood materials, and the engine map |
-| `FINISH.md` | what "finished" means, as five measurable conditions |
+| `LESSONS.md` | the long-form why behind every rule in `CLAUDE.md` |
+| `docs/archive/` | finished plans and old handoffs, kept because the history cites them |
 | `UI-GUIDE.md` | the UI surface — components, screens, the design system |
 | `ROADMAP-MULTIPLAYER.md` | the road to online play, and why in this order |
 
@@ -92,8 +93,9 @@ shared `engine/effects.js`. Every deck card in the pool now reads something
 (`node tools/approx.js`, `pool-deck-complete`).
 
 What is left is written down rather than guessed at: `node tools/approx.js`
-lists every stated approximation with a drill behind it, `FINISH.md` orders the
-remaining work, and the difficulty curve is still untuned at the table.
+lists every stated approximation with a drill behind it, `QUEUE.md` (branch
+`findings/queue`) orders the remaining work, and the difficulty curve is still
+untuned at the table.
 
 ---
 

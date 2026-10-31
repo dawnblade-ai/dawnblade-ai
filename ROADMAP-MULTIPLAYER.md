@@ -230,7 +230,7 @@ a session; it competes with the ladder.
 ## What not to do
 
 - ~~**Do not build a deck-piloting AI.** Decided 2026-07-25.~~ **REVERSED
-  2026-08-14 ("Build the seat", `HANDOFF-MERGE.md`'s DECISIONS table):** seat 1
+  2026-08-14 ("Build the seat", `docs/archive/HANDOFF-MERGE.md`'s DECISIONS table):** seat 1
   is a policy (`engine/sparring.js`) or a person. What still holds is that the
   DUMMY is a training partner and a test fixture, not an opponent to grow.
 - **Do not add per-side features before step 1.** Every one doubles the actor
