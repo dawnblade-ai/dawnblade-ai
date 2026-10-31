@@ -868,12 +868,22 @@ const APPROX = {
       "`activateIfOk`."},
 
 "cloaked-display": {
-  status:"open", cr:null, board:"both", since:"v3.99", swept:"v4.02",
-  claim:"The Cloaked ruling's display half — 'SHOW CARD BACK ON THE PLAYERS "+
-        "BOARD' — is not built.",
-  why:"Deferred with the rest of the UI pass, deliberately and on the record. It "+
-      "is one shared component (`ArmorGrid`'s cell), so both boards get it in one "+
-      "edit when that pass happens."},
+  status:"closed", cr:null, board:"both", since:"v3.99", swept:"v5.57",
+  claim:"A Cloaked piece that is still face-down is drawn as a CARD BACK in its "+
+        "armour slot on both boards, for both seats; once it is turned face-up the "+
+        "normal face renders. Built at v5.57.",
+  why:"RULING (user, 2026-07-25): 'SHOW CARD BACK ON THE PLAYERS BOARD.' It is one "+
+      "shared component, so both boards got it in one edit: `ArmorGrid` hands each "+
+      "board's own cell a `CloakedBack` for a `_faceDown` piece, and the cell puts "+
+      "it where the face would go and keeps its own tap. The back is asymmetric "+
+      "like the face-down graveyard (2026-07-25): the owner's carries the name "+
+      "small and its tile still peeks and activates (the flip is that tap's "+
+      "ability); the other seat's carries 'Cloaked' and nothing that names the "+
+      "card, and tapping it opens no zoom. DISPLAY ONLY — what a face-down piece "+
+      "does is `parser.abilitiesLive` (`cloaked-face-down-values`). Not built: a "+
+      "Cloaked WEAPON, which would sit in the hero row outside `ArmorGrid`; the "+
+      "pool's only Cloaked record is Uphold Tradition, an armour piece (Enigma's "+
+      "deck), so this is a premise the probe pins."},
 
 "peers-hold-full-state": {
   status:"stated", cr:null, board:"table", since:"v2.49", swept:"v4.02",

@@ -375,7 +375,9 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 3 -> 2 AT v4.94: `scorpio-lightning-attack`, CLOSED by the same
      day's ruling (a resolved Lightning link still counts). */
   /* 2 -> 1 AT v5.11: `simultaneous-trigger-order` is `stated`. */
-  assert.equal(n("open"),    1, "open count moved");
+  /* 1 -> 0 AT v5.57: `cloaked-display`, the last open record, was BUILT (the
+     user's ruling of 2026-07-25) and is `closed` with its probe turned round. */
+  assert.equal(n("open"),    0, "open count moved");
   /* 16 -> 17 AT v4.63: `steam-build-powcard-read`. 17 -> 18 AT v4.66:
      `play-held-on-the-stack`. 19 -> 20 AT v4.72: `x-cost-declared`.
      20 -> 21 AT v4.73: `crush-halving-rider-read`. 21 -> 22 AT v4.74:
@@ -385,7 +387,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 26 -> 27 AT v4.85: `activation-discard-cost-asked`, built. */
   /* 27 -> 28 AT v4.94: `cloaked-face-down-values`. */
   /* 29 -> 30 closed AT v5.51: `played-from-banish-files-to-banish`. */
-  assert.equal(n("closed"), 30, "closed count moved");
+  /* 30 -> 31 closed AT v5.57: `cloaked-display`. */
+  assert.equal(n("closed"), 31, "closed count moved");
 });
 
 /* ============================================================
@@ -2052,19 +2055,64 @@ probe("scorpio-lightning-attack", () => {
     "a RESOLVED Lightning link at link 1 no longer satisfies it from link 3");
 });
 
-/* The Cloaked ruling's display half is not built. A claim about a shared
-   component, pinned as source. */
+/* BUILT AT v5.57, AND THE PROBE IS TURNED ROUND. It was `open` and asserted
+   that `ArmorGrid` did NOT read `_faceDown`, which is what made closing it a
+   deliberate edit here rather than a stale sentence (v4.02). `closed` now: it
+   asserts the shared component DRAWS a face-down piece as a back and goes red
+   if that regresses.
+
+   A CLAIM ABOUT A REACT COMPONENT IN A BABEL BLOCK, which no drill can mount
+   (no build step, no DOM here), so it is pinned as source — precisely enough
+   that neutering any half breaks it. The rendered result is driven against the
+   real page at 393x852 by `tools/page.js` (that is where the geometry, the
+   opponent's nameless back and the flip live; it is not part of `npm test`).
+   THE FILE-WIDE SCAN WAS THE WRONG SHAPE (index.html reads `_faceDown` once in
+   the flip-cost legality, a rules read): ask the component itself. */
 probe("cloaked-display", () => {
-  /* THE FILE-WIDE SCAN IS THE WRONG SHAPE and reported this closed on its
-     first run: index.html DOES read `_faceDown`, once, in the flip-cost
-     LEGALITY (v3.99) — a rules read, not a display one. Ask the component
-     that would have to change. */
   const i = HTML.indexOf("function ArmorGrid");
   assert.ok(i > 0, "ArmorGrid is gone — the shared cell moved and this pin is stale");
   const body = HTML.slice(i, HTML.indexOf("\n}", i));
-  assert.ok(!/_faceDown|faceDown|cardBack/.test(body),
-    "ArmorGrid now renders a face-down piece differently — the Cloaked display " +
-    "half is BUILT and the record must move (and the UI-pass note with it)");
+  /* 1. THE DECISION LIVES IN THE SHARED COMPONENT, for armour and misc alike. */
+  assert.ok(/cell\(x, z, x\._faceDown \? <CloakedBack card=\{x\} own=\{!!own\}\/> : null\)/.test(body),
+    "ArmorGrid no longer hands a _faceDown piece's cell a CloakedBack — a Cloaked " +
+    "piece shows its face again");
+  assert.equal(body.split("draw(").length - 1, 2,
+    "both the four slots and the misc piece must go through the one `draw`");
+  assert.ok(!/cell\(x(,|\s*,)\s*(z|"misc")\)/.test(body), "a cell is called without the back");
+
+  /* 2. THE BACK IS THE DECK'S BACK, AND IT IS ASYMMETRIC: the name is gated on
+     the owner everywhere it could appear (the tag, the title and the caption). */
+  const j = HTML.indexOf("function CloakedBack");
+  assert.ok(j > 0 && j < i, "CloakedBack is gone");
+  const back = HTML.slice(j, HTML.indexOf("\n}", j));
+  assert.ok(/className="deckback gback clip-sm"/.test(back), "the back is not the deck back");
+  assert.ok(/<span className="gbtag">Cloaked<\/span>/.test(back), "the back no longer says what it is");
+  const ungated = back
+    .replace(/own \? card\.name\+" — face down \(Cloaked\)"/, "")
+    .replace(/\{own && <span className="gbname">\{card\.name\}<\/span>\}/, "");
+  assert.ok(!/card\./.test(ungated),
+    "the opponent's back reads the card — a name (or anything of the card) leaks past `own`");
+
+  /* 3. EVERY SEAT OF EVERY ArmorGrid SAYS WHOSE ARMOUR IT IS (left off, the
+     name stays hidden — but a call that forgets is a back that cannot be read
+     by its owner), and every cell that receives a back puts it on the tile. */
+  const calls = HTML.match(/<ArmorGrid [^\n]*/g) || [];
+  assert.equal(calls.length, 4, "the armour grid is drawn in four places (two boards, two seats)");
+  assert.ok(calls.every(c => /\bown(=\{(true|false)\})?\s/.test(c)), "an ArmorGrid call does not say whose armour it is");
+  assert.equal(calls.filter(c => /own=\{false\}/.test(c)).length, 2, "the opponent's seat is `own={false}` on both boards");
+  const tiles = HTML.match(/\{back \|\| <CardFrame/g) || [];
+  assert.ok(tiles.length >= 4, "the trainer's two cells and the table's two tiles must draw `back` in place of the face");
+  assert.equal((HTML.match(/if\(!back\) setZoom\(/g) || []).length, 2,
+    "the opponent's tile must not open the card when it is a back (trainer and table)");
+
+  /* 4. THE PREMISE: the pool's only Cloaked record is armour (Enigma's Uphold
+     Tradition, Arms), so no Cloaked weapon sits outside ArmorGrid. The day one
+     does, the hero row needs the same back. */
+  const pool = require("../data/pool.json");
+  const cloaked = pool.filter(r => (r.card_keywords || []).some(k => /^cloaked$/i.test(k)));
+  assert.deepEqual(cloaked.map(r => r.name), ["Uphold Tradition"],
+    "a second Cloaked record is in the pool — is it a weapon? the hero row draws it face-up");
+  assert.ok(!(cloaked[0].types || []).includes("Weapon"), "the Cloaked piece is a weapon");
 });
 
 /* Both peers hold the full state, the opponent's hand included. */

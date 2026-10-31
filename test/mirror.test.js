@@ -388,7 +388,7 @@ test("instantAbilityReady: the printed facts, and only those", () => {
 });
 
 test("both callers ask instantAbilityReady rather than re-deriving it", () => {
-  const gb = slice("  const gearBtn = (gr,i,extra,st) => {", "  const handAct = (c,i) => {");
+  const gb = slice("  const gearBtn = (gr,i,extra,st,back) => {", "  const handAct = (c,i) => {");
   assert.ok(/const instAb = instantAbilityReady\(gr, you\(g\)\)/.test(gb),
     "the tap route reads the shared gate");
   assert.ok(/if\(instAb\)\s*\n\s*return tapTwice\(gr\.powCard/.test(gb),

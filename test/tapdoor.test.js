@@ -41,7 +41,11 @@ function arrowBodies(src){
 
 test("CENSUS: no plain-arrow onClick returns a tapTwice handler", () => {
   const bodies = arrowBodies(strip(RAW));
-  assert.equal(bodies.length, 6, "the plain-arrow onClick count moved (" + bodies.length + ") — read the new one, then repin");
+  /* 6 -> 8 AT v5.57, READ FIRST: the two opponent armour tiles (trainer and
+     table) answer a tap with `if(!back) setZoom(..)` — a face-down Cloaked
+     piece opens no card — and neither returns a handler, so the census below
+     still holds. */
+  assert.equal(bodies.length, 8, "the plain-arrow onClick count moved (" + bodies.length + ") — read the new one, then repin");
   const dead = bodies.filter(b => /return tapTwice\(/.test(b));
   assert.deepEqual(dead.map(b => b.slice(0, 120)), [], "a tap that builds its handler and throws it away");
 });

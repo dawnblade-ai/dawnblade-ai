@@ -435,6 +435,10 @@ img{display:block;max-width:100%}
 .deckback{width:100%;aspect-ratio:5/7;background:linear-gradient(150deg,#5A1310,#2A0908 55%,#1A0605);border:2px solid #7A2A1E;position:relative;display:flex;align-items:center;justify-content:center}
 .deckback::before{content:"";width:46%;aspect-ratio:1;border:2px solid #B9542F;transform:rotate(45deg)}
 .deckback::after{content:"✦";position:absolute;color:#D98A4A;font-size:17px}
+/* a Cloaked piece's back: the same back as the deck, with the word on it */
+.deckback.gback{overflow:hidden}
+.gbtag{position:absolute;top:3px;left:50%;transform:translateX(-50%);z-index:2;background:var(--ink);border:1px solid #B9542F;color:#D98A4A;font-family:'Spline Sans Mono';font-size:7px;letter-spacing:.1em;text-transform:uppercase;padding:0 4px;white-space:nowrap}
+.gbname{position:absolute;bottom:2px;left:2px;right:2px;z-index:2;background:rgba(16,12,10,.9);color:var(--bone);font-size:8px;line-height:1.15;text-align:center;padding:1px 2px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .dcnt{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);background:var(--ink);border:1px solid var(--y);color:var(--y);font-family:'Spline Sans Mono';font-size:12px;font-weight:700;padding:0 6px;z-index:2}
 .tapwrap{display:block;transition:transform .28s}
 .tapwrap.tapped{transform:rotate(90deg) scale(.72)}
@@ -821,7 +825,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "5.56"; /* v5.56 - Death Dealer never pitches away the arrow it puts, and the AI spends a resource piece when it pays for an attack it holds. See CHANGELOG.md. */
+window.APP_VER = "5.57"; /* v5.57 - a Cloaked piece shows its card back on the board until it is turned face up. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -2075,18 +2079,44 @@ function CardFrame({card,className,noType,zone}){
    so the list of zones and the picture of them must agree — a hand-copied
    second copy is exactly the mirror the v2.20 no-mirror rule deletes. */
 
-/* `cell(piece, zone)` draws an occupied slot; an empty one is drawn here
-   so both boards show the same four holes in the same places. */
-function ArmorGrid({gear, cell}){
+/* A CLOAKED PIECE IS DRAWN AS A CARD BACK (RULING 2026-07-25: "SHOW CARD
+   BACK ON THE PLAYERS BOARD"). Cloaked equipment is equipped face-down
+   (`_faceDown`, stamped at the deal by `build.equipPiece`) and stays that way
+   until its own "turn this face up" cost is paid. This is the DISPLAY half
+   only: what a face-down piece does or defends with is the rules' business
+   (RULING 2026-10-04) and nothing here reads it.
+
+   THE BACK IS ASYMMETRIC, like the face-down graveyard (`GravePane`): the
+   owner knows what they wear, so their back carries the name small; the other
+   seat sees a back and the word "Cloaked", and nothing that names the card. */
+function CloakedBack({card, own}){
+  return (
+    <div className="deckback gback clip-sm" data-faceback={own?"own":"foe"}
+      title={own ? card.name+" — face down (Cloaked)" : "Cloaked — face down, theirs to know"}>
+      <span className="gbtag">Cloaked</span>
+      {own && <span className="gbname">{card.name}</span>}
+    </div>
+  );
+}
+
+/* `cell(piece, zone, back)` draws an occupied slot; an empty one is drawn
+   here so both boards show the same four holes in the same places.
+
+   `back` is the card back for a face-down piece and `null` for a face-up one:
+   the cell puts it where the card face would go and keeps its own button, so
+   each board keeps its own tap and a Cloaked piece stays tappable for its
+   owner. `own` says whose armour this is — left off, the name stays hidden. */
+function ArmorGrid({gear, cell, own}){
   const worn = z => (gear||[]).find(d=>slotOf(d).z===z);
+  const draw = (x, z) => cell(x, z, x._faceDown ? <CloakedBack card={x} own={!!own}/> : null);
   return (
     <div className="armorgrid">
       {ARMOR_SLOTS.map(z=>{
         const x = worn(z);
-        return x ? cell(x, z)
+        return x ? draw(x, z)
           : <div key={z} className="aslot clip-sm" style={{gridArea:z}}><span className="wempty">{z}</span></div>;
       })}
-      {(gear||[]).filter(d=>!ARMOR_SLOTS.includes(slotOf(d).z) && slotOf(d).z==="misc").map(x=>cell(x,"misc"))}
+      {(gear||[]).filter(d=>!ARMOR_SLOTS.includes(slotOf(d).z) && slotOf(d).z==="misc").map(x=>draw(x,"misc"))}
     </div>
   );
 }
@@ -5339,7 +5369,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
   const featured = (g.mode==="stack" && g.pend) ? {card:g.pend.card, chip:"ON THE STACK — "+g.pend.total} : (g.mode==="boostpick" && g.pending) ? {card:g.pending.card, chip:"BOOST? — banish the top card"} : (g.mode==="fusepick" && g.pending) ? {card:g.pending.card, chip:"FUSION? — reveal a "+g.pending.types.join("/")+" card"} : (g.mode==="chargepick" && g.pending) ? {card:g.pending.card, chip:"CHARGE? — a card from hand to your soul"} : (g.mode==="pay" && g.pending) ? {card:g.pending.card, chip:"PAYING — PITCH "+Math.max(0,payCost(g, g.pending.card, g.pending.from)-you(g).res)+" MORE"}
     : g.featured;
   const prevLinks = g.chain.slice(0,-1).reverse();
-  const gearBtn = (gr,i,extra,st) => {
+  const gearBtn = (gr,i,extra,st,back) => {
     const w = isWeapon(gr), blockable = g.mode==="block" && gearDef(gr)>0;
     const spent = gr.destroyed || (gr.curDef!=null && gr.curDef===0);
     const sel = you(g).blockG.includes(i);
@@ -5374,7 +5404,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
           /* nothing to commit to — a second tap opens the full card instead */
           return tapTwice(gr, "tap again for full card", ()=>setZoom(gr));
         })()}>
-        <span className={"tapwrap"+(tapped?" tapped":"")}><CardFrame card={{...gr, def:(gr.def!=null||gr.curDef!=null)?gearDef(gr):null}} className="sm"/></span>
+        <span className={"tapwrap"+(tapped?" tapped":"")}>{back || <CardFrame card={{...gr, def:(gr.def!=null||gr.curDef!=null)?gearDef(gr):null}} className="sm"/>}</span>
         {(()=>{ const ct=you(g).counters[gr.uid]; if(!ct||(!ct.steam&&!ct.rust&&!ct.pow)) return null; return <span className="ctr">{ct.steam?<span className="cc steam">S{ct.steam}</span>:null}{ct.rust?<span className="cc rust">R{ct.rust}</span>:null}{ct.pow?<span className="cc pow">+{ct.pow}</span>:null}</span>; })()}
         {gr.pow && !gr.destroyed && <span className="gp">{you(g).weaponUsed["gp"+gr.uid]?"·":"⚡"}</span>}
       </button>);
@@ -5523,9 +5553,10 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
             <div className="hpane vfill">
               <div className="paneflag"><span>Opponent board</span><span>swipe → graveyard</span></div>
               <div className="midrow">
-                <ArmorGrid gear={opp(g).gear} cell={(x,z)=>(
-                  <button key={x.uid} className={"g clip-sm"+(gearDef(x)===0?" used":"")} style={{gridArea:z}} onClick={()=>setZoom(x)}>
-                    <CardFrame card={{...x, def:gearDef(x)}} className="sm"/>
+                <ArmorGrid gear={opp(g).gear} own={false} cell={(x,z,back)=>(
+                  <button key={x.uid} className={"g clip-sm"+(gearDef(x)===0?" used":"")} style={{gridArea:z}}
+                    onClick={()=>{ if(!back) setZoom(x); }}>
+                    {back || <CardFrame card={{...x, def:gearDef(x)}} className="sm"/>}
                   </button>)}/>
                 <div className="arscol"><div className="slot clip-sm">arsenal —</div><span className="zlbl">holds {opp(g).hand.length} · blocks from hand</span></div>
                 <DeckPitchCol deck={opp(g).deck} pitch={opp(g).hand} title="Hand" hidden/>
@@ -5785,9 +5816,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                     the lookup goes through it rather than through the piece.
                     ArmorGrid still owns the empty slots and the grid areas —
                     the half that must match the opponent's side of the table. */}
-                <ArmorGrid gear={armor.map(x=>x.gr)} cell={(gr,z)=>{
+                <ArmorGrid gear={armor.map(x=>x.gr)} own cell={(gr,z,back)=>{
                   const it = armor.find(x=>x.gr.uid===gr.uid);
-                  return gearBtn(it.gr, it.i, "", z==="misc"?undefined:{gridArea:z});
+                  return gearBtn(it.gr, it.i, "", z==="misc"?undefined:{gridArea:z}, back);
                 }}/>
                 <div className="arscol">
                   <div className="slot clip-sm" style={{width:"100%"}}>{you(g).arsenal
@@ -7135,7 +7166,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
   /* One gear tile, for either seat. Yours is tappable — swing it or
      raise it — theirs opens the card, because it is not actionable and
      there is nothing to commit to (the trainer's own rule). */
-  const gearTile = (own) => (gr, z) => {
+  const gearTile = (own) => (gr, z, back) => {
     const spent = (own?me:them).weaponUsed && (own?me:them).weaponUsed[gr.uid];
     const blocking = own && (me.blockG||[]).indexOf(gr.uid) >= 0;
     /* A PIECE THAT PRINTS NO DEFENCE SHOWS NO DEFENCE BADGE. `gearDef`
@@ -7149,9 +7180,9 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
     if(!own) return (
       <button key={gr.uid} className={"g clip-sm"+(worn?" used":"")
         +((them.blockG||[]).indexOf(gr.uid)>=0?" sel":"")} style={style}
-        onClick={()=>setZoom(gr)}>
+        onClick={()=>{ if(!back) setZoom(gr); }}>
         <span className={"tapwrap"+(spent&&/\btap\b|\{t\}/i.test(gr.tx||"")?" tapped":"")}>
-          <CardFrame card={{...gr, def}} className="sm"/></span>
+          {back || <CardFrame card={{...gr, def}} className="sm"/>}</span>
       </button>);
     const swing  = actAct(gr.uid);
     const defend = {t:"defend", uid:gr.uid};
@@ -7211,7 +7242,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                          : ()=>setZoom(gr)}>
         {blocking && <span className="defsel">⛨ DEF</span>}
         <span className={"tapwrap"+(spent&&/\btap\b|\{t\}/i.test(gr.tx||"")?" tapped":"")}>
-          <CardFrame card={{...gr, def}} className="sm"/></span>
+          {back || <CardFrame card={{...gr, def}} className="sm"/>}</span>
       </button>);
   };
 
@@ -7324,7 +7355,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
             <div className="hpane vfill">
               <div className="paneflag"><span>{them.name} · seat {1-mySeat}</span><span>swipe → graveyard</span></div>
               <div className="midrow">
-                <ArmorGrid gear={armorOf(them)} cell={gearTile(false)}/>
+                <ArmorGrid gear={armorOf(them)} own={false} cell={gearTile(false)}/>
                 <div className="arscol">
                   <div className="slot clip-sm" style={{width:"100%"}}>{them.arsenal
                     ? <button style={{padding:0,width:"100%"}} onClick={()=>setZoom(them.arsenal)}>
@@ -7618,7 +7649,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                 </div>
               </div>
               <div className="midrow">
-                <ArmorGrid gear={armorOf(me)} cell={gearTile(true)}/>
+                <ArmorGrid gear={armorOf(me)} own cell={gearTile(true)}/>
                 <div className="arscol">
                   <div className="slot clip-sm" style={{width:"100%"}}>{me.arsenal
                     ? <button style={{padding:0,width:"100%"}} onClick={()=>setZoom(me.arsenal)}>

@@ -1,3 +1,26 @@
+## v5.57 — A Cloaked piece shows its card back
+
+**The last OPEN approximation record, `cloaked-display`.** UI only. Built by a Sonnet agent, verified
+and shipped by the CEO thread.
+
+> RULING (user, 2026-07-25): *"SHOW CARD BACK ON THE PLAYERS BOARD."*
+
+- **A face-down Cloaked piece draws as a card back in its armour slot**, on both boards, through the
+  one shared `ArmorGrid` cell (`CloakedBack`). Uphold Tradition (Enigma's Arms) is the pool's only
+  Cloaked piece.
+  - **Owner:** the back, a "Cloaked" tag and the name small. The tile is still a button: the first tap
+    peeks the card in the dock, the second pays the flip.
+  - **Opponent:** the back and the tag only. There is no name in the markup, title or alt text, and a
+    tap opens no zoom.
+  - **Once flipped**, the face renders as before.
+- **Proved on the real page at 393x852** with `tools/page.js`: 73 assertions across table (either seat
+  first) and trainer. They check the back's box (5:7, same width as a face-up tile), that no face or
+  image is inside it, that the opponent's markup never names the piece, the peek, pay and flip, and
+  `scrollWidth` 393 throughout. The 28-screen smoke check passes.
+- **The ledger:** `cloaked-display` closed, its probe turned round. `node tools/approx.js` has **0 open
+  records**. Three source pins moved with reasons (`slicecensus`, `mirror`, `tapdoor`). UI-GUIDE §8.3
+  is updated.
+
 ## v5.56 — Death Dealer keeps the arrow it puts, and the AI spends Blossom for an attack
 
 **The 6-seed stalls, two of them.** Found by a Sonnet agent, verified and shipped by the CEO thread.

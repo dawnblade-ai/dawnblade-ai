@@ -99,7 +99,7 @@ board renders and the other hand-copies.
 |---|---|---|
 | `CardFrame` | 1993 | the card face — both boards |
 | `ChainLink` | 1982 | the chain strip |
-| `ArmorGrid` | 2036 | props-only; `cell` supplies the tile so each board keeps its own tap |
+| `ArmorGrid` | 2036 | props-only; `cell` supplies the tile so each board keeps its own tap; hands it the card back for a face-down (Cloaked) piece, `own` says whose |
 | `DeckPitchCol` | 2054 | props-only; `hidden` shows a pile's SIZE, not its contents |
 | `InPlayRow` | 2077 | the arena |
 | `GravePane` | 2092 | graveyard / banish / soul |
@@ -375,15 +375,19 @@ never reading the opponent's gear. **Latent**: `DUMMY_GEAR` has no weapon
 today, so nothing is visibly wrong. It is wrong the day one is added, and the
 table's `gearTile` is the shape to copy.
 
-### 8.3 Cloaked has no display half — recorded, deliberate
+### 8.3 Cloaked display — BUILT at v5.57
 
-`tools/approx.js`: `cloaked-display`, **open**. The ruling's display half —
-*"SHOW CARD BACK ON THE PLAYERS BOARD"* — is not built. Uphold Tradition is
-equipped face-down and the board shows its face. Its sibling record
-`cloaked-face-down-values` (also open) is a **rules** question, not a UI one:
-whether a face-down piece keeps its printed defence and its Ward is undecided,
-and **half-building a value change is worse than the honest gap** (v3.23), so
-do not "fix" it while doing the display.
+`tools/approx.js`: `cloaked-display`, **closed**. The ruling's display half —
+*"SHOW CARD BACK ON THE PLAYERS BOARD"* — lives in `ArmorGrid`: a `_faceDown`
+piece's cell is handed a `CloakedBack` (the deck back plus a "Cloaked" tag), and
+each board's cell draws it in place of the card face, keeping its own tap. The
+owner's back carries the name small and stays tappable (tap = peek, second tap =
+the "turn this face up" ability); the other seat's carries the word and nothing
+that names the card, and tapping it opens no zoom. `ArmorGrid` takes `own` for
+that, and `cell(piece, zone, back)` a third argument. DISPLAY ONLY: what a
+face-down piece does is `parser.abilitiesLive` (`cloaked-face-down-values`,
+closed). Not covered: a Cloaked *weapon* sits in the hero row outside
+`ArmorGrid`; the pool has none (the probe pins that premise).
 
 ### 8.4 Everything in `POLISH.md` §4 — sound and one-thing-ness
 
