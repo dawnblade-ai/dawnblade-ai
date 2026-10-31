@@ -9,7 +9,7 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-10-31, at v5.64)
+## HANDOFF — START HERE (CEO, 2026-10-31, at v5.66)
 
 **This section is the handoff.** Root `HANDOFF.md`/`WEEK.md` were retired to `docs/archive/` on
 2026-10-31; do not start a new root handoff file — rewrite this section instead.
@@ -56,6 +56,21 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
   it (not shipped): holding against small leaks, a one-point cushion, skipping an attacker's reaction
   on a lookahead. NEXT for balance: Briar (79) and Kayo (67) lead by a wide margin; Boltyn, Lyath and
   Gravy trail at ~20.
+- **v5.65** Jack Be Quick keeps its go again (an answered late prompt puts it on the attacker's
+  link). The same audit found NO over-grant behind Briar's or Kayo's lead (census in CHANGELOG):
+  their lead is deck and policy. **v5.66** H23 Duty Bound Blitz setup (`gateColour` / `gateKeep` /
+  `gateFirst`; Boltyn own-seat 5.92 -> 7.19 of 28, 48 seeds). Ladder now: briar 79 · kayo 67 · dash
+  53 · fai 52 · azalea 48 · viserai 46 · bravo 45 · enigma 44 · iyslander 42 · blaze 31 · dorinthea 29
+  · arakni 27 · gravy 23 · boltyn 22 · lyath 20; 0/0/0, 2 draws.
+- **NEXT (measured leads, not built):**
+  1. **R6 detection gap:** a dead position where a hero ability keeps cycling cards (Lyath) never
+     trips "nothing changing" — `lyath-boltyn-24` stalled in a 48-seed run (outside the ladder's
+     seeds). Refine the test (e.g. both decks empty AND no LIFE change for N turns AND no card that
+     can deal damage is playable) — ask the user only if the refinement is a rules choice.
+  2. V of the Vanguard charges once though it may charge any number (Boltyn).
+  3. Glisten sits dead in 1.2 hands per lost Boltyn game.
+  4. Briar/Kayo lead by deck+policy: the remaining balance work is the bottom four
+     (Lyath, Boltyn, Gravy, Arakni ~20-27).
 - **Open for the next session:** the trainer's twin of the R6 draw and sudden death (both stated in
   `tools/approx.js`); 23 stated approximations remain (`node tools/approx.js`), 0 open.
 - **v5.59** soul-banish cost asks which card (`soul-banish-cost-auto-picked` CLOSED). **v5.60** the
