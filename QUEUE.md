@@ -9,46 +9,43 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-10-31)
+## HANDOFF — START HERE (CEO, 2026-10-31, at v5.55)
 
-- **Live: v5.50** (`c24c6b4` + `11ee76a`), CEO-verified: 3720 drills, 0 fail, 5 skipped; scenes 107/0;
-  babel ok; scripts + `.nojekyll`; CI green; 3-seed ladder per-seed identical to the CEO's measurement,
-  0 refusals / 0 violations / 0 stalls; Azalea 7.3 -> 19.0.
-- **CLAUDE.md was slimmed to a 14 KB core on 2026-10-31**; the long history is `LESSONS.md` (grep it).
-  Work in FRESH sessions: a long session re-reads its whole context on every step. Use Sonnet for
-  mechanical releases (Shipper 3, `session_013xG9x9VCvPFxBfDXutTUeb`, shipped v5.50 in 11 minutes);
-  keep Opus for judgement. The old Shipper 2 session is idle and stays idle.
-- **Next release (v5.51), small and already measured:** (1) H18, an amp-only ability waits for an
-  arcane taker (patch `experiments/H18-amp-takers.patch`); (2) Light the Way reads its colour: its
-  rider is "When this hits, if a yellow card was charged this way, this gets go again", and `fxParse`
-  gives it no `chargedPitch` condition in `fx.conds`, so `judge.chargePitchWanted` answers null and the
-  AI still charges the lowest pitch (Shipper 3's finding). Teach the reader to look at the on-hit
-  condition too. Then **S15** (Display Loyalty's rider + the Fealty token), then FEED 21.
-- **v5.51 (R2, R3) and v5.52 (H18, Light the Way) SHIPPED by Shipper 4, CEO-verified 2026-10-31:**
-  3727 drills, 0 fail, 5 skipped; scenes 107/0; fairness 0; babel ok; scripts present; CI green on both;
-  3-seed ladder 0/0/0 and win-for-win identical to Shipper 4's report (Iyslander 29 -> 39, Boltyn 28
-  -> 34, Blaze 16 -> 21 total wins).
-- **Next: S15** (Display Loyalty's rider + the Fealty token), then **FEED 21**, then the open record
-  `cloaked-display`. Use a fresh Sonnet shipper per job (a peer message cannot extend a session's
-  assignment; give the whole job in its creation prompt).
-- **v5.53 (S15) SHIPPED by the CEO thread, 2026-10-31** (`434ac10`): Display Loyalty's rider reads
-  (`parser.quotedAtkHero`), Fealty reads in full (`dracCard` grant + `_drac` stamp; end-phase clock
-  with a turn-record reprieve, `hist.madeNames`). Found under it and fixed in the same release: no
-  ATTACK card ever entered `hist.playTy` (the attack branch returned before the only write), so
-  Static Shock / Star Fall never counted a Lightning attack. 3734 drills, 0 fail, 5 skipped; scenes
-  107/0; fairness clean; babel ok; 21 scripts + `.nojekyll`; ladder 0/0/0 and wins per seed
-  IDENTICAL to v5.52 (Fai 84 games: 28 Fealty made, 56 kept, 5 destroyed; Static Shock 18 -> 20).
-  `WIRE_V` 27. `quotedUnread` is no longer emitted by any pool record.
-- **v5.54 (FEED 21) SHIPPED by the CEO thread, 2026-10-31** (`1c0cb1c`): class/talent words
-  capitalised in grant lines (`parser.CLASS_TALENT_WORDS`, drilled against every pool type line),
-  riders say what they do (`effects.riderWords`), Flying High's colour after the pump. Voice only:
-  the 3-seed ladder report is byte-identical to v5.53 once `tools/selfplay.js`'s `gold` counter
-  stopped counting the new grant announcements (187 -> 286 -> 187). 3738 drills, 0 fail, 5 skipped.
-- **Next: R5 if the user rules** (below, NEEDS A RULING), then the open record `cloaked-display`
-  (a UI job: the card back on the board), then the H-items still listed as unresolved.
-- **Latent, recorded:** a non-permanent played FROM THE GRAVEYARD still files to banish (R2 covered
-  banish only). Measured reach: every watery-grave card in the pool is an ally, which goes to the
-  arena, so no pool card reaches that path today. Ask the user before changing it.
+**This section is the handoff.** Root `HANDOFF.md`/`WEEK.md` were retired to `docs/archive/` on
+2026-10-31; do not start a new root handoff file — rewrite this section instead.
+
+- **Live: v5.55** (`0813ae7`) plus a docs commit (`9051f58`). Verified: 3742 drills, 0 fail,
+  5 skipped; scenes 107/0; fairness clean; both babel blocks compile; 21 engine scripts +
+  `.nojekyll` in the pushed commit; CI green on v5.53, v5.54, v5.55. The live URL and the CDNs are
+  blocked from the cloud sandbox, so the real page was not driven this session.
+- **Shipped this session (CEO thread, Opus):**
+  - v5.53 S15: Display Loyalty's Fealty rider reads (`parser.quotedAtkHero`); Fealty reads in full
+    (`dracCard` grant + `_drac` stamp; end-phase clock, `hist.madeNames`). Found under it: no ATTACK
+    ever entered `hist.playTy`, so Static Shock / Star Fall never counted a Lightning attack. Fixed.
+  - v5.54 FEED 21: class/talent capitals (`parser.CLASS_TALENT_WORDS`), riders say what they do
+    (`effects.riderWords`), Flying High's colour after the pump. Ladder byte-identical.
+  - v5.55 R5 (ruling below): an attack counts its own chain link (`parser.dracNow`,
+    `dracLinksNow`, `pend.linked`). 6 seeds vs v5.54: Fai 105 -> 114, nothing else moved > 4.
+  - Docs: eleven finished plans/handoffs moved to `docs/archive/` (with an index); `CLAUDE.md` has a
+    docs map and derives the version instead of stating it.
+- **How to work** (unchanged): `CLAUDE.md` is the core; one item per release; re-verify before
+  fixing; sabotage every new drill; ladder at 3 seeds (6+ for a balance claim, both sides of the
+  change). Work in fresh sessions. A Sonnet shipper suits a mechanical release; keep judgement work
+  (rules readings, new mechanics) in Opus.
+- **NEXT, in order:**
+  1. **Two stalls outside the standard ladder** (CEO, 2026-10-31). `node tools/tourney.js '' '' 6`
+     stalls `azalea-gravy-3` (turn 686) and `arakni-dash-5` (turn 1768), identically on v5.54 and
+     v5.55; seeds 0–2 have none, so `npm run play '' '' 3` does not see them. Replay one with
+     `tools/selfplay.js` (`match(a, b, seed, first)` then `play`) and read what both seats do near
+     the end before deciding: a policy loop is an H-item, a game with no way to end is a rules
+     question for the user (CR 4.5.3: there is no deck-out loss).
+  2. **`cloaked-display`** (open approx record): the card back on the board. A UI job; read
+     `UI-GUIDE.md` first and drive the page at 393×852 — which needs a machine that can reach the CDN.
+  3. The unresolved H-items in THE ORDER below.
+- **Latent, recorded:** (a) a non-permanent played FROM THE GRAVEYARD still files to banish (R2
+  covered banish only); every watery-grave card in the pool is an ally, so no pool card reaches it —
+  ask the user before changing. (b) Synthetic only: a quoted "gain 1{h}" rider is relocated by a loose
+  life matcher (NEEDS A RULING section, second bullet). Record, don't build.
 
 ## R2-R4 — THREE RULINGS (user, 2026-10-31)
 
@@ -1342,7 +1339,8 @@ is the only place it is ever `false`. Build it this way:
 
 ## NEEDS A RULING FROM THE USER (do not build)
 
-- **R5 (asked 2026-10-31, CEO). Does an attack count ITS OWN chain link?** Fai's "If you control 2
+- **ANSWERED 2026-10-31 and SHIPPED as v5.55:** *"Yes, an attack counts its own chain link."*
+  **R5 (asked 2026-10-31, CEO). Does an attack count ITS OWN chain link?** Fai's "If you control 2
   or more Draconic chain links" cards (Cinderskin Devotion, Display Loyalty, Hot on Their Heels,
   Phoenix Flame, Enflame's rungs, Searing Emberblade's static) are read at declaration against
   `parser.dracLinks(chain)`, and the asking attack is not on the strip yet (`linkPayload` pushes
