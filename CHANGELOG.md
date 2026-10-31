@@ -1,3 +1,14 @@
+## v5.60 — No nameless "Go again granted."
+
+**Feed voice.** Found by the Sonnet agent measuring H21 (held; see QUEUE), split out and shipped
+alone.
+
+- `runOps`' `ga` case printed "Go again granted." with no card name. Every consumer of the grant
+  already prints its own named line ("<card>: go again — action point kept", or the late-grant
+  lines), so the nameless one only repeated them without saying whose it was. Removed. The
+  feed-source drill catches the line wherever self-play reaches an on-hit grant (Art of Desire: Mind,
+  Light the Way, Dawnblade).
+
 ## v5.59 — A soul-banish cost asks which card
 
 **Approximation `soul-banish-cost-auto-picked`, closed.** Built by a Sonnet agent, verified and

@@ -1845,7 +1845,10 @@ function makeEffects(ctx){
         if(op[2] && op[2].until === "turn") actMut(n).awdTurn += v;   /* same window, same reason */
         n=L(n,`Arcane ward ${v} — soaks spells, not fists.`); }
       else if(k==="soulSelf"){ n._soulSelf = true; }
-      else if(k==="ga"){ n._gaGrant = true; n = L(n, "Go again granted."); }
+      /* NO LINE OF ITS OWN (v5.60): "Go again granted." named no card, and every
+         consumer of `_gaGrant` prints its own named line — "<card>: go again —
+         action point kept" at the resolution, or the late-grant lines above. */
+      else if(k==="ga"){ n._gaGrant = true; }
       else if(k==="defBuff"){ n = L(n, `+${v} defense to the wall.`); }
       /* "-N POWER" ASKS WHETHER THERE IS A HOSTILE ATTACK IN FLIGHT, and
          that is not a phase question (v2.77). It read `mode==="block"`,
