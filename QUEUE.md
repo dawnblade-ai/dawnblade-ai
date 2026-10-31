@@ -9,7 +9,7 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-10-31, at v5.66)
+## HANDOFF — START HERE (CEO, 2026-11-01, at v5.68)
 
 **This section is the handoff.** Root `HANDOFF.md`/`WEEK.md` were retired to `docs/archive/` on
 2026-10-31; do not start a new root handoff file — rewrite this section instead.
@@ -62,12 +62,21 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
   `gateFirst`; Boltyn own-seat 5.92 -> 7.19 of 28, 48 seeds). Ladder now: briar 79 · kayo 67 · dash
   53 · fai 52 · azalea 48 · viserai 46 · bravo 45 · enigma 44 · iyslander 42 · blaze 31 · dorinthea 29
   · arakni 27 · gravy 23 · boltyn 22 · lyath 20; 0/0/0, 2 draws.
+- **v5.67** R6 tightened: a repeating dead position (by-name loop tracker `still.loop`, 8-turn ring,
+  20 turns) draws; over 10,080 games only `lyath-boltyn-24` is a new draw. WIRE_V 31. **v5.68** H24:
+  the AI charges V of the Vanguard with every spare Light card (`judge.chargeMore`; Boltyn t 2.0 and
+  3.0 on two 96-seed sets). Ladder identical to v5.66.
+- **R8 ASKED of the user (2026-11-01), do not build until answered:** `blaze-enigma-46` stalls —
+  Enigma holds a full hand (= intellect) she never plays, so she never draws from the 8 cards left in
+  her deck; Blaze has nothing; 1 life each; nothing changes from turn 35. Proposed: "nothing at all
+  changes for 20 turns -> draw, even with cards in a deck" (trade-off: two humans idling that long
+  get a forced draw).
 - **NEXT (measured leads, not built):**
-  1. **R6 detection gap:** a dead position where a hero ability keeps cycling cards (Lyath) never
+  1. ~~R6 detection gap~~ SHIPPED v5.67. Original note: **R6 detection gap:** a dead position where a hero ability keeps cycling cards (Lyath) never
      trips "nothing changing" — `lyath-boltyn-24` stalled in a 48-seed run (outside the ladder's
      seeds). Refine the test (e.g. both decks empty AND no LIFE change for N turns AND no card that
      can deal damage is playable) — ask the user only if the refinement is a rules choice.
-  2. V of the Vanguard charges once though it may charge any number (Boltyn).
+  2. ~~V of the Vanguard charges once~~ SHIPPED v5.68.
   3. Glisten sits dead in 1.2 hands per lost Boltyn game.
   4. Briar/Kayo lead by deck+policy: the remaining balance work is the bottom four
      (Lyath, Boltyn, Gravy, Arakni ~20-27).
