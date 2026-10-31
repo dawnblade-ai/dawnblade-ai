@@ -9283,6 +9283,31 @@ function defendValue(defSide, card, opts){
    uid baked into the parse names whichever copy parsed first (v3.20's
    `notUid`). A caller that says nothing excludes nothing, which is the
    faithful reading when there is no chain link at all. */
+/* THE PAYMENT COMES OUT OF THAT HAND (azalea-gravy-3), for `arsNoOpWhy` below. Death Dealer's
+   {r} is raised by pitching, and a seat holding ONE card, the arrow, could
+   only pay by pitching the arrow it was about to put: the question above is
+   asked before the payment, so it said yes, and the seat activated it every
+   turn for ~650 turns. `cost` is the caller's answer (`effCost` with the
+   game's half; a caller that names none asks only the old question). It is
+   v4.91's `addCostWhy` one payload over: the fewest arrows a payment can
+   spend is "everything else first, highest pitch first", and the put is
+   refused only when EVERY payment leaves none. A cost the hand cannot raise
+   at all is the cost check's own refusal, so this answers null for it. */
+function arsPayEatsWhy(sd, ap, cost, nm){
+  if(!(cost > 0)) return null;
+  const want = promptFilter(ap.filter || {});
+  const held = P.handFree(sd, null);
+  const byPitch = (a, b) => ((b && b.pitch) || 0) - ((a && a.pitch) || 0);
+  let need = cost - (sd.res || 0);
+  if(need <= 0) return null;
+  for(const c of held.filter(x => !want(x)).sort(byPitch)){ if(need <= 0) break; need -= (c.pitch || 0); }
+  const arrows = held.filter(want).sort(byPitch);
+  let spent = 0;
+  while(need > 0 && spent < arrows.length){ need -= (arrows[spent].pitch || 0); spent++; }
+  if(need > 0 || arrows.length - spent >= 1) return null;
+  const noun = (ap.filter && ap.filter.tt) || "card";
+  return nm + ": " + sd.name + " would have to pitch the only " + noun + " in hand to pay for it";
+}
 /* ---- AN ARSENAL ABILITY WITH NOTHING TO DO (v5.00) ----------------------
    v4.59's paid-no-op refusal asked about a PICK, and the three activation
    lines whose whole payload is the ARSENAL never open one: Death Dealer
@@ -9308,7 +9333,7 @@ function defendValue(defSide, card, opts){
    `promptFilter` over the hand), so the refusal and the resolution cannot
    disagree. Module-level beside `jabTargets`, because both boards call it
    and the trainer reaches it as `DawnEffects.arsNoOpWhy`. */
-function arsNoOpWhy(sd, ab){
+function arsNoOpWhy(sd, ab, cost){
   if(!sd || !ab || typeof ab.name !== "string") return null;
   const fx = P.fxParse(ab);
   if((fx.conds || []).length) return null;
@@ -9323,6 +9348,8 @@ function arsNoOpWhy(sd, ab){
     if(!(sd.hand || []).some(promptFilter(ap.filter || {})))
       return nm + ": " + sp(sd) + " hand holds no " + ((ap.filter && ap.filter.tt) || "card")
            + " to put in the arsenal";
+    const _eats = arsPayEatsWhy(sd, ap, cost, nm);
+    if(_eats) return _eats;
   }
   if(ops.length === 1 && ops[0][0] === "arsCycle" && !sd.arsenal)
     return nm + ": " + sp(sd) + " arsenal is empty — nothing to cycle";

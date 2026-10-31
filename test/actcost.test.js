@@ -202,6 +202,17 @@ test("all three activation branches ask effCost, and the ALLY one does not", {sk
   /* and EVERY `effCost` in the file asks it — the ally branch is the one
      deliberate exception and it does not call `effCost` at all */
   const calls = whole.match(/effCost\([^;]*?\)/g) || [];
+  /* ONE READ IS THREADED, NOT BUILT: `abCostWhy(sd, ab, ctx)` prices the
+     ability for the arsenal put's own payment (azalea-gravy-3), and has no
+     game or seat to call `costCtx` with. It is handed the game's half, and
+     the scan below holds every one of its callers to handing it the same
+     `PR.costCtx(g, seat)` the sites above ask for. */
+  const threaded = "effCost(ab, sd, ctx)";
+  const sites = whole.match(/abCostWhy\(sd, ab, [^;]*?\)\)/g) || [];
+  assert.ok(sites.length >= 3, "the scan found " + sites.length + " `abCostWhy` calls — aimed wrong");
+  for(const site of sites)
+    assert.match(site, /PR\.costCtx\(g, seat\)/, "`abCostWhy` is not handed the game's half: " + site);
   for(const call of calls)
-    assert.match(call, /PR\.costCtx\(g, seat\)/, "unthreaded cost read: " + call);
+    if(call !== threaded)
+      assert.match(call, /PR\.costCtx\(g, seat\)/, "unthreaded cost read: " + call);
 });

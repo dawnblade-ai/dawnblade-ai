@@ -250,6 +250,13 @@ const drive = () => {
      the seed named below: entrants 0 v 1 with entrant 0's chair first reaches both. ADDED,
      for v4.58's reason; every other field it brings is already pinned. */
   { const r = T.leg(E[0], E[1], "scan-0-1", 0); legs++; if(r && r.threw) threw++; }
+  /* AND THE 42nd (azalea-gravy-3): `defUid` and `tapUid` LEFT TOGETHER AGAIN. A
+     resource piece is now spent for the attack it pays for, and Death Dealer is no
+     longer paid for with the only arrow it was to put, so the games moved off the
+     defends payment and the tap payment a second time. Measured over every pairing
+     and both chairs, with the seed named below: entrants 0 v 14 reaches both, and
+     brings no other field than the pinned ones. ADDED, for v4.58's reason. */
+  { const r = T.leg(E[0], E[14], "scan-0-14", 0); legs++; if(r && r.threw) threw++; }
 };
 
 /* BOUND A FUNCTION AT THE NEXT SAME-LEVEL DECLARATION, NEVER AT A CHAR
@@ -268,7 +275,7 @@ const fnBody = name => {
 
 test("the driven census is alive — the legs really ran", () => {
   drive();
-  assert.equal(legs, 41, "the leg count moved; the pinned field set is taken at 41 "
+  assert.equal(legs, 42, "the leg count moved; the pinned field set is taken at 42 "
     + "(32 in the ring, plus the six named legs that keep `keepTop`, `ctrStamp`, "
     + "`shuffleAfter`, crank's `avail`/`spendCtr` and `charge` in it — see `drive`)");
   assert.equal(threw, 0,

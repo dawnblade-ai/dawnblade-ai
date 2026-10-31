@@ -225,7 +225,7 @@ function abCostWhy(sd, ab, ctx){
          + " already carries a " + _g + " counter — its ability does nothing while it does"; }
   /* …AND AN ARSENAL ABILITY WITH NOTHING TO PUT OR CYCLE (v5.00) —
      `effects.arsNoOpWhy`, the one body the trainer's door asks too. */
-  { const _an = E.arsNoOpWhy(sd, ab); if(_an) return _an; }
+  { const _an = E.arsNoOpWhy(sd, ab, PR.effCost(ab, sd, ctx)); if(_an) return _an; }
   /* ---- AND A PICK WITH NOTHING TO CHOOSE (v4.59) ---------------------
      `buildPrompt` answers null on an empty candidate pool — a prompt
      politely declining to show nothing — and that is right THERE and wrong
@@ -1793,16 +1793,26 @@ const defendsNow = (g, seat, uid, from) => {
   const fx = PR.fxParse(c);
   return !!fx.dr || (fx.ops || []).some(o => DEFENDS_OPS.indexOf(o[0]) >= 0);
 };
+/* THE RESOURCE OPS OF A PIECE THAT SPENDS ITSELF FOR NOTHING ELSE, or null.
+   One reader for the two questions below, so they cannot disagree. */
+const abResOps = (g, seat, uid) => {
+  const piece = (at(g, seat).gear || []).find(x => x && x.uid === uid);
+  const pc = piece && piece.powCard;
+  if(!pc || !(pc.sd || pc._selfBanish)) return null;
+  const ops = (PR.fxParse(pc).ops || []).filter(o => o[0] !== "noop");
+  return ops.length > 0 && ops.every(o => o[0] === "res") ? ops : null;
+};
 /* DOES THIS EQUIPMENT ABILITY SPEND THE PIECE FOR RESOURCES ALONE? (QUEUE v4
    H11) Its cost destroys or banishes the piece, and every op it pays out is a
    resource gain. For `sparring.js`, which reads no card text. */
-const abPieceForRes = (g, seat, uid) => {
-  const piece = (at(g, seat).gear || []).find(x => x && x.uid === uid);
-  const pc = piece && piece.powCard;
-  if(!pc || !(pc.sd || pc._selfBanish)) return false;
-  const ops = (PR.fxParse(pc).ops || []).filter(o => o[0] !== "noop");
-  return ops.length > 0 && ops.every(o => o[0] === "res");
-};
+const abPieceForRes = (g, seat, uid) => !!abResOps(g, seat, uid);
+/* HOW MANY RESOURCES DOES THAT PIECE PAY OUT? (azalea-gravy-3) `abPieceForRes`
+   says a piece is only a resource; this says how big. For `sparring.js`, which
+   reads no card text and has to know whether the payout is what makes a card
+   it holds affordable. 0 for any piece that is not resource-only, and for a
+   payout that is not a plain number (it asks no guess of the parse). */
+const abPieceResGain = (g, seat, uid) =>
+  (abResOps(g, seat, uid) || []).reduce((t, o) => t + (typeof o[1] === "number" && o[1] > 0 ? o[1] : 0), 0);
 /* ---- DOES THIS CARD KEEP THE TURN'S ACTION POINT? (v5.36) -----------
 
    `abWindowOf`'s sibling, for the same reason: `sparring.js` reads NO card
@@ -3977,7 +3987,7 @@ function drawTo(g, i){
 }
 
 return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, chargePitchWanted, abAmpTakers, defendsNow, DEFENDS_OPS, abPieceForRes, boostShare, grantTakers, arcaneOf, chargeView,
+        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, chargePitchWanted, abAmpTakers, defendsNow, DEFENDS_OPS, abPieceForRes, abPieceResGain, boostShare, grantTakers, arcaneOf, chargeView,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */

@@ -65,7 +65,10 @@ function census(){
             const v = J.chargeView(g, s, a.uid, a.from || "hand");
             (v && v.offers ? out.chargeOk : out.chargeBad).push(`${k0}/${k1} seat ${s}: ${e.line}`);
           }
-          if(a.t === "activate" && J.abPieceForRes(g, s, a.uid))
+          /* THE FALLBACK never burns one; the unlock (test/arspay.test.js) is
+             a different branch with its own key, spending the piece for an
+             attack it makes affordable. */
+          if(a.t === "activate" && J.abPieceForRes(g, s, a.uid) && e.key !== "resUnlock")
             out.resBurn.push(`${k0}/${k1} seat ${s}: ${a.uid}`);
           const o = J.reduce(g, a, s);
           if(o.error) continue;

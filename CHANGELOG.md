@@ -1,3 +1,26 @@
+## v5.56 — Death Dealer keeps the arrow it puts, and the AI spends Blossom for an attack
+
+**The 6-seed stalls, two of them.** Found by a Sonnet agent, verified and shipped by the CEO thread.
+
+- **Death Dealer's arsenal put no longer pays with its only arrow** (engine). `arsNoOpWhy` checked
+  the hand BEFORE the payment, so Azalea paid {r} by pitching her only arrow and then put nothing,
+  every turn. `effects.arsPayEatsWhy` refuses unless some payment leaves an arrow to put;
+  `judge.abCostWhy` and the trainer's door pass the price.
+- **The AI spends a resource-only piece when it pays for an attack it holds** (policy, reason
+  `resUnlock`). QUEUE v4 H11 holds a piece that pays with itself (Blossom of Spring) when there is
+  nothing to spend it on, and it held one forever beside a lethal Widowmaker it could not afford.
+  The seat now activates it when an attack it holds is illegal now and legal with the payout added.
+  `legal` is asked of a copy of the state, so the call never names a play the judge would refuse.
+  New reader `judge.abPieceResGain`.
+- **The other stall is a dead position, not a defect:** both decks empty and neither seat can deal
+  damage again (CR 4.5.3 has no deck-out loss). How such a game should end is asked of the user in
+  QUEUE; nothing is invented.
+- **Measured:** 630 games at 3 seeds: 0 stalls, 0 refusals, 0 violations, every hero within noise.
+  6 seeds: stalls 2 -> 1 (the dead position), Azalea 102 -> 108, Enigma 58 -> 63, Lyath 42 -> 35,
+  the rest within 4. The unlock fired 183 times in 420 games, each followed by an attack.
+- Drills in `test/arspay.test.js` (8, each guard sabotaged); five pinned drills moved with their
+  reasons (`actcost`, `arsnoop`, `slicecensus`, `speccensus` gains a 42nd leg, `explain`).
+
 ## v5.55 — An attack counts its own chain link
 
 **QUEUE R5, the user's ruling of 2026-10-31.** Rules engine; the AI is unchanged.

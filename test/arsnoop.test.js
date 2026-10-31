@@ -95,7 +95,7 @@ test("ONLY A WHOLE PAYLOAD — an ability that does something else is never refu
 
 test("the trainer's door asks the same body", () => {
   const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
-  assert.match(html, /\{ const _an = DawnEffects\.arsNoOpWhy\(act\(s\), card\);\s*if\(_an\) return L\(s, _an \+ "\."\); \}/);
+  assert.match(html, /\{ const _an = DawnEffects\.arsNoOpWhy\(act\(s\), card, payCost\(s, card, from\)\);\s*if\(_an\) return L\(s, _an \+ "\."\); \}/);
   const js = fs.readFileSync(path.join(__dirname, "..", "engine", "judge.js"), "utf8");
-  assert.match(js, /\{ const _an = E\.arsNoOpWhy\(sd, ab\); if\(_an\) return _an; \}/);
+  assert.match(js, /\{ const _an = E\.arsNoOpWhy\(sd, ab, PR\.effCost\(ab, sd, ctx\)\); if\(_an\) return _an; \}/);
 });

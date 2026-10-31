@@ -644,6 +644,36 @@ function offence(g, seat, o){
     ? {t: "activate", uid: pick.uid, target: targetFor(g, seat, pick.c)}
     : {t: "play", uid: pick.uid, from: pick.from, target: targetFor(g, seat, pick.c)});
 
+  /* A RESOURCE PIECE IS SPENT FOR THE ATTACK IT PAYS FOR (azalea-gravy-3).
+     Nothing above could afford its attack, and QUEUE v4 H11's hold on a piece
+     that pays with itself (below) is right about a resource with nothing to
+     spend on - but a Widowmaker in the arsenal that costs {r} the seat cannot
+     raise, beside a Blossom of Spring that pays exactly {r}, is a resource
+     with something to spend on, and the attack was lethal: the game ran 650
+     turns with both seats holding it. So a resource-only piece is activated
+     when, with its payout floating, an attack the seat holds is legal and is
+     not legal now. `judge.abPieceResGain` says how big the payout is and
+     `legal` is asked of a copy of the state with it added, so the seat is
+     never told a card is playable that the judge would still refuse. The
+     piece is gone after one use, so this cannot repeat; the attack itself
+     is then played by the branch above, on the next call. */
+  const unlockOf = gain => {
+    const rich = Object.assign({}, g, {sides: g.sides.map((s, i) => i === seat
+      ? Object.assign({}, s, {res: (s.res || 0) + gain}) : s)});
+    return from
+      .map(x => ({c: x.c, uid: x.c && x.c.uid, from: x.from}))
+      .concat(allies)
+      .filter(x => x.c && num(x.c, "power") > 0)
+      .map(x => x.ally ? {t: "activate", uid: x.uid, target: targetFor(g, seat, x.c)}
+                       : {t: "play", uid: x.uid, from: x.from, target: targetFor(g, seat, x.c)})
+      .some(a => !legal(g, a, seat) && legal(rich, a, seat));
+  };
+  const unlock = (sd.gear || []).slice().sort(byUid)
+    .map(w => ({w, gain: J.abPieceResGain(g, seat, w.uid)}))
+    .filter(x => x.gain > 0 && legal(g, {t: "activate", uid: x.w.uid}, seat))
+    .find(x => unlockOf(x.gain));
+  if(unlock) return tag("resUnlock", {t: "activate", uid: unlock.w.uid});
+
   /* A weapon swing is an attack that comes from the gear zone. `legal`
      owns both of its limits — the printed `Once per Turn` and the tap —
      so the policy just asks. */
@@ -952,6 +982,7 @@ const CALL_WHY = {
   allyIn: "Send your ally in.",
   biggestAttack: "Swing the biggest attack you can afford.",
   weapon: "Swing your weapon. It costs no card.",
+  resUnlock: "Spend the piece for its resource. It pays for an attack you are holding.",
   gearAbility: "Use your equipment's ability. Nothing better is left to do.",
   gearAmp: "Use your equipment's ability. You can pay for an arcane card to take its extra damage.",
   heroAbility: "Use your hero's ability. Nothing better is left for the action point.",
