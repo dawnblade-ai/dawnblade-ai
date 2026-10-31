@@ -24,8 +24,16 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
   gives it no `chargedPitch` condition in `fx.conds`, so `judge.chargePitchWanted` answers null and the
   AI still charges the lowest pitch (Shipper 3's finding). Teach the reader to look at the on-hit
   condition too. Then **S15** (Display Loyalty's rider + the Fealty token), then FEED 21.
-- **Rulings answered 2026-10-31** (R2-R4 below): next is v5.51 = R2 + R3 (engine), then v5.52 = H18 +
-  Light the Way (AI), then S15, then FEED 21.
+- **v5.51 (R2, R3) and v5.52 (H18, Light the Way) SHIPPED by Shipper 4, CEO-verified 2026-10-31:**
+  3727 drills, 0 fail, 5 skipped; scenes 107/0; fairness 0; babel ok; scripts present; CI green on both;
+  3-seed ladder 0/0/0 and win-for-win identical to Shipper 4's report (Iyslander 29 -> 39, Boltyn 28
+  -> 34, Blaze 16 -> 21 total wins).
+- **Next: S15** (Display Loyalty's rider + the Fealty token), then **FEED 21**, then the open record
+  `cloaked-display`. Use a fresh Sonnet shipper per job (a peer message cannot extend a session's
+  assignment; give the whole job in its creation prompt).
+- **Latent, recorded:** a non-permanent played FROM THE GRAVEYARD still files to banish (R2 covered
+  banish only). Measured reach: every watery-grave card in the pool is an ally, which goes to the
+  arena, so no pool card reaches that path today. Ask the user before changing it.
 
 ## R2-R4 — THREE RULINGS (user, 2026-10-31)
 
