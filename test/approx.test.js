@@ -922,29 +922,40 @@ probe("arena-ability-routed-at-the-table", () => {
 });
 
 probe("arena-ability-policy-declines", () => {
-  /* THE DEVIATION IS THAT `sparring.js` NEVER PROPOSES ONE, and that is a
-     stated choice (v4.24) rather than a gap. What this asserts is the
-     STATE the claim describes: the policy reads no card text, so it cannot
-     price a cost paid with the permanent, and the file names no such
-     route. It goes red the day somebody wires one — which is the moment to
-     re-measure the ladder on both sides (v4.40).
-
-     A SOURCE SCAN IS HONEST HERE because the claim is about ABSENCE, and
-     absence is the one thing a driven probe cannot show: a policy that
+  /* THE DEVIATION IS THE DECLINED REMAINDER (QUEUE H20). The policy now asks
+     `judge.arenaUseful` for an arena ABILITY, so the first half is turned
+     round: the route has a caller, and it asks judge rather than reading
+     card text. What is still declined is DRIVEN, not scanned — a policy that
      returns nothing for a board with an ability on it is indistinguishable
-     from one that never looked. Both halves are asked. */
+     from one that never looked, so each declined shape is paired with the
+     control that fires (test/arenapolicy.test.js holds the firing halves). */
   const src = require("fs").readFileSync(
     require("path").join(__dirname, "..", "engine", "sparring.js"), "utf8")
     .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
-  assert.ok(!/boardAbilityOf/.test(src),
-    "the policy now asks for an arena ABILITY — close this record and re-measure the " +
-    "ladder at three seeds on BOTH sides before quoting any move (v4.40)");
-  /* THE CONTROL: it DOES ask for the arena ATTACK, so the scan is alive
-     and the absence above is about this route rather than about the scan
-     (v4.00, v3.81 — a scan aimed at the wrong shape reports nothing
-     exactly as a real absence does). */
+  assert.ok(/J\.arenaUseful\(/.test(src),
+    "the policy stopped asking for an arena ABILITY — the record's claim is stale");
+  assert.ok(!/fxParse|boardPow/.test(src), "and it must still read no card text");
   assert.ok(/boardAttackOf/.test(src),
-    "the policy stopped asking for the arena ATTACK either — the scan is aimed wrong");
+    "the policy stopped asking for the arena ATTACK — the scan is aimed wrong");
+  const SP = require("../engine/sparring.js");
+  H.db();
+  const arena = (entries, o) => {
+    const g = H.state(Object.assign({res: 0, ap: 1, board: entries}, o || {}), {hp: 20},
+      {actor: 0, turnPlayer: 0, turn: 3});
+    return Object.assign(g, {phase: "action", step: "layer", priority: 0, passed: []});
+  };
+  const blue = uid => ({uid, name: "Probe Blue " + uid, pitch: 3, cost: 0, power: 0, def: 2,
+    tt: "Generic Action", ty: ["Generic", "Action"], kw: [], tx: ""});
+  const gold = {uid: 9501, kind: "token", spent: false, card: H.card("Gold", 0)};
+  const fealty = {uid: 9502, kind: "token", spent: false, card: H.card("Fealty", 0)};
+  const used = (g, uid) => { const a = SP.act(g, 0); return !!a && a.t === "activate" && a.uid === uid; };
+  const deck = [H.card("Wounding Blow", 1)];
+  assert.ok(used(arena([gold], {res: 2, deck, hand: [blue("pb1")]}), 9501),
+    "control: a Gold paid from floating resources IS cashed");
+  assert.ok(!used(arena([gold], {res: 0, deck, hand: [blue("pb1"), blue("pb2")]}), 9501),
+    "a Gold paid by pitching a card is still declined");
+  assert.ok(!used(arena([fealty], {res: 2, deck, hand: [blue("pb1")]}), 9502),
+    "Fealty is still declined");
 });
 
 probe("ward-spend-order", () => {

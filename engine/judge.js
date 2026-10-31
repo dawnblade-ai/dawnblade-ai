@@ -1881,6 +1881,84 @@ const abAmpTakers = (g, seat, uid) => {
   if(sd.arsenal && arcaneOf(g, seat, sd.arsenal.uid, "arsenal") > 0) takers.push({uid: sd.arsenal.uid, from: "arsenal", cost: sd.arsenal.cost});
   return {cost: effCost(pc, sd, PR.costCtx(g, seat)), takers};
 };
+/* ---- WHICH ARENA ABILITY IS A NET GAIN RIGHT NOW? (QUEUE H20) ------
+
+   `boardAbilityOf`'s sibling for `sparring.js`, which reads no card text.
+   An arena permanent's ability was never proposed (v4.47's
+   `arena-ability-policy-declines`): a price the policy cannot weigh is
+   declined. This is the weighing, done where card text may be read, and it
+   answers only for a payload whose worth is a NUMBER the seat can spend in
+   the window it is asking about:
+
+     pump   "Target attack gets +1{p}" on the chain link the seat itself is
+            attacking with. The tap is the whole cost; `legal` has already
+            refused it on the opponent's attack (`pumpTargetWhy`).
+     draw   a draw paid out of the resources ALREADY FLOATING, with go again
+            to keep the action point. Never a card pitched for it.
+     res    resources, when `o.next` is a play that costs more than the pool
+            holds and the gain covers the difference: the card it would have
+            pitched stays in hand.
+     ap     action points, when the seat holds two plays that each need one
+            and cannot keep it, and can pay for both.
+
+   `null` otherwise; `{uid, kind}` for the first (by uid) that qualifies.
+   `o.next` is the action the policy is about to take; `o.kinds` narrows the
+   answer; `o.maxPitch` is the policy's own cap on cards pitched for one
+   play. Everything it asks is `legal`'s, so a refusal here is a policy bug. */
+const arenaUseful = (g, seat, o) => {
+  o = o || {};
+  const sd = at(g, seat);
+  const want = k => !o.kinds || o.kinds.indexOf(k) >= 0;
+  const maxPitch = o.maxPitch || 2;
+  const zoneCard = x => !x ? null : x.from === "arsenal" ? ((sd.arsenal && sd.arsenal.uid === x.uid) ? sd.arsenal : null)
+    : (sd.hand || []).find(c => c && c.uid === x.uid) || null;
+  const pitchOf = skip => (sd.hand || []).filter(c => c && skip.indexOf(c.uid) < 0 && (+c.pitch || 0) > 0)
+    .map(c => +c.pitch).sort((a, b) => b - a).slice(0, maxPitch).reduce((a, b) => a + b, 0);
+  const ents = (sd.board || []).filter(b => b && b.uid != null).slice()
+    .sort((a, b) => String(a.uid) < String(b.uid) ? -1 : String(a.uid) > String(b.uid) ? 1 : 0);
+  for(const b of ents){
+    if(boardAttackOf(g, seat, b.uid)) continue;
+    const ab = BD.boardPow(b);
+    if(!ab || legal(g, {t: "activate", uid: b.uid}, seat) != null) continue;
+    const fx = PR.fxParse(ab);
+    const ops = (fx.ops || []).filter(x => x && x[0] !== "noop");
+    const gain = k => ops.reduce((n, x) => n + (x[0] === k ? (+x[1] || 0) : 0), 0);
+    const cost = effCost(ab, sd, PR.costCtx(g, seat));
+    if(!ops.length){
+      if(want("pump") && (fx.self || 0) > 0) return {uid: b.uid, kind: "pump"};
+      continue;
+    }
+    if(ops.every(x => x[0] === "draw")){
+      if(want("draw") && fx.ga && (sd.deck || []).length && cost <= (sd.res || 0)) return {uid: b.uid, kind: "draw"};
+      continue;
+    }
+    if(ops.every(x => x[0] === "res")){
+      const nx = o.next && o.next.t === "play" ? zoneCard(o.next) : null;
+      if(want("res") && nx){
+        const c = effCost(nx, sd, PR.costCtx(g, seat));
+        if(c > (sd.res || 0) && c <= (sd.res || 0) + gain("res") - cost) return {uid: b.uid, kind: "res"};
+      }
+      continue;
+    }
+    if(ops.every(x => x[0] === "ap")){
+      if(want("ap") && o.next && o.next.t === "play" && (sd.ap || 0) === 1){
+        const plays = [];
+        [...(sd.hand || []), ...(sd.arsenal ? [sd.arsenal] : [])].forEach(c => {
+          const from = (sd.arsenal && c.uid === sd.arsenal.uid) ? "arsenal" : "hand";
+          if(c && !keepsActionPoint(g, seat, c.uid, from) && legal(g, {t: "play", uid: c.uid, from}, seat) == null)
+            plays.push(c);
+        });
+        plays.sort((a, c) => effCost(a, sd, PR.costCtx(g, seat)) - effCost(c, sd, PR.costCtx(g, seat)));
+        if(plays.length >= 2){
+          const need = effCost(plays[0], sd, PR.costCtx(g, seat)) + effCost(plays[1], sd, PR.costCtx(g, seat)) + cost;
+          if(need <= (sd.res || 0) + pitchOf([plays[0].uid, plays[1].uid])) return {uid: b.uid, kind: "ap"};
+        }
+      }
+      continue;
+    }
+  }
+  return null;
+};
 const keepsActionPoint = (g, seat, uid, from) => {
   const sd = at(g, seat);
   let c = null, route = from, atk = false;
@@ -3987,7 +4065,7 @@ function drawTo(g, i){
 }
 
 return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, chargePitchWanted, abAmpTakers, defendsNow, DEFENDS_OPS, abPieceForRes, abPieceResGain, boostShare, grantTakers, arcaneOf, chargeView,
+        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, chargePitchWanted, abAmpTakers, arenaUseful, defendsNow, DEFENDS_OPS, abPieceForRes, abPieceResGain, boostShare, grantTakers, arcaneOf, chargeView,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */

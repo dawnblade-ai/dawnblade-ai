@@ -1,3 +1,29 @@
+## v5.58 — The AI cashes in its treasure
+
+**QUEUE H20, policy.** Measured by a Sonnet agent and re-measured by the CEO thread.
+
+- **The AI now uses abilities of permanents in the arena** when they are a gain right now. It never
+  did before (`arena-ability-policy-declines`, v4.47). The new reader `judge.arenaUseful` weighs
+  four kinds where card text may be read, and `sparring.js` asks it, still reading no text:
+  - `arenaDraw`: Gold, Silver, Copper and Diamond (Gravy's economy), paid only from resources
+    already floating, never by pitching a card, with cards left to draw. Go again keeps the point.
+  - `arenaRes`: Energy Potion, when the next play costs more than the pool and the potion covers it.
+  - `arenaAP`: Timesnap Potion, when two plays each need an action point.
+  - `arenaPump`: Concealed Object's tap on the seat's own attack, in the reaction step.
+- It is asked after the ordinary choice and may replace it, because each one keeps the action point
+  or spends none. It steps aside for v5.56's `resUnlock`, whose payout is already promised.
+- Still declined, and recorded: Fealty, and any treasure that would need a card pitched to pay.
+- "[Hero]'s call" names it: "Use Gold" and four new reasons.
+- **Measured:** own-seat A/B against v5.56 over 72 seeds × 14 opponents, paired by seed. Lyath
+  259 -> 296 wins (t 4.6, up on 29 seeds, down on 6); Gravy 150 -> 172 (t 2.8, 25 up, 11 down);
+  Dorinthea and Fai unchanged. The potions fire about once in 42 games: gains by construction, not
+  measured.
+- **Full ladder, 630 games at 3 seeds:** 0 stalls, 0 refusals, 0 violations. Lyath 18 -> 23,
+  Gravy 15 -> 16, everyone else within 4.
+- Drills in `test/arenapolicy.test.js`: 10 paired fire / don't-fire drills, 11 of 12 sabotages
+  caught (the 12th is a redundant guard `legal` already enforces). The approx probe now asserts the
+  new state.
+
 ## v5.57 — A Cloaked piece shows its card back
 
 **The last OPEN approximation record, `cloaked-display`.** UI only. Built by a Sonnet agent, verified

@@ -326,25 +326,33 @@ const APPROX = {
       "three times on one turn it queued +1/+2/+3 for free — see "+
       "`arena-ability-policy-declines` for what is deliberately left to the seat."},
 
-/* THE POLICY DOES NOT ACTIVATE ONE, AND THAT IS v4.24's STANDING RULE. */
+/* THE POLICY ACTIVATES ONE ONLY WHERE `judge.arenaUseful` CALLS IT A NET GAIN NOW (QUEUE H20). */
 "arena-ability-policy-declines": {
   status:"stated", cr:null, board:"both", since:"v4.47", swept:"v4.47",
-  claim:"`sparring.act` never activates an arena permanent's ABILITY, so the route reads "+
-        "ZERO firings on the 210-game ladder however well it works. The table offers it "+
-        "(a human taps the arena tile) and so does the trainer; what has no caller is the "+
-        "POLICY.",
-  why:"v4.24's STANDING RULE: a price this policy cannot weigh is DECLINED, because "+
-      "declining can never make the seat stronger than printed. Six of the seven readable "+
-      "records pay with the PERMANENT ITSELF — `Action - {r}{r}, destroy this: Draw a "+
-      "card` — and whether a Gold is worth a card is a judgement about card text, which "+
-      "`sparring.js` reads none of by contract. v4.38 measured what happens when this "+
-      "policy is allowed a timing judgement it cannot make: three heroes with no attack "+
-      "reaction at all went 22 -> 4, 15 -> 2 and 16 -> 3. "+
-      "SO THE ZERO IS A NUMBER ABOUT THE POLICY, NOT THE ROUTE (v4.41's Burn Up, v4.33's "+
-      "charge, v4.29's forced exits) — and the route is DRIVEN instead, by "+
-      "`test/arenaability.test.js` through `judge.reduce`, so it is not left with no "+
-      "caller at all (v3.50). Asking judge would be in contract (`boardAbilityOf` exists "+
-      "for exactly that, v3.84's rule) the day somebody decides the ranking."},
+  claim:"`sparring.act` activates an arena permanent's ABILITY only where `judge.arenaUseful` "+
+        "calls it a net gain RIGHT NOW: a free pump on the seat's own attack (Concealed "+
+        "Object), a go-again draw paid out of resources ALREADY FLOATING (Gold, Silver, "+
+        "Copper, Diamond), resources for the play about to be paid (Energy Potion), action "+
+        "points for two plays that each need one (Timesnap Potion). It still DECLINES the "+
+        "rest: a treasure paid by pitching a card from hand, and Fealty's \"the next card you "+
+        "play this turn is Draconic\", which only a card with a Draconic payoff can use.",
+  why:"v4.24's STANDING RULE still holds for what is left: a price this policy cannot weigh is "+
+      "DECLINED, because declining can never make the seat stronger than printed. Until "+
+      "QUEUE H20 the zero was a number about the POLICY, not the route (the route was "+
+      "driven by `test/arenaability.test.js`), and the ladder read ZERO firings. The four "+
+      "kinds above are the ones whose worth is a number the seat can spend in the window "+
+      "it asks about, so `judge.arenaUseful` reads the card text and the policy only asks "+
+      "(v3.84's rule; `sparring.js` still reads none). MEASURED, own seat, 72 seeds x 14 "+
+      "foes (1008 games a side, against v5.56), paired by seed: Lyath 259 -> 296 wins (29 "+
+      "seeds up, 6 down, paired t about 4.6), Gravy Bones 150 -> 172 (25 up, 11 down, t "+
+      "about 2.8); the second 36 seeds alone agree in direction for both. Energy Potion "+
+      "and Timesnap Potion fire about once in 42 games and no ladder resolves them "+
+      "(Dorinthea 556 -> 554): they are kept as gains by construction, not as measured "+
+      "ones. A draw never spends the pool a v5.56 `resUnlock` is completing (0 of 184 "+
+      "such spends were replaced over 420 games, and it is guarded and drilled anyway). A draw paid "+
+      "by pitching a card was NOT tried: a Gold's draw replaces the hand card it "+
+      "pitched, and the hero's own loot (`Instant - {t}, destroy a Gold`) already "+
+      "spends 63 of Gravy's 64 Golds for free."},
 
 "ward-spend-order": {
   status:"stated", cr:"CR 4.1.8a", board:"both", since:"v4.34", swept:"v5.06",

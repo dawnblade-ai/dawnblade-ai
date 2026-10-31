@@ -432,6 +432,15 @@ function reaction(g, seat){
      105 pitches in 28 games) and began his own turn with two cards or fewer
      in about 70 of 219 turns. `judge.defendsNow` answers which cards defend. */
   const defending = g.pend && g.pend.by != null && g.pend.by !== seat;
+  /* THE ARENA'S PUMP COSTS NOTHING BUT ITS TAP (QUEUE H20). Concealed Object's
+     "target attack gets +1{p}" is only legal on an attack this seat is making,
+     so there is no timing judgement to decline: `judge.arenaUseful` answers.
+     The `defending` guard is belt and braces: `legal` already refuses the
+     opponent's link (`pumpTargetWhy`), and the CR would let a player name it. */
+  if(!defending){
+    const u = J.arenaUseful(g, seat, {kinds: ["pump"]});
+    if(u && legal(g, {t: "activate", uid: u.uid}, seat)) return tag("arenaPump", {t: "activate", uid: u.uid});
+  }
   const legalRx = from
     .filter(x => !defending || J.defendsNow(g, seat, x.c.uid, x.from))
     .filter(x => legal(g, {t: "play", uid: x.c.uid, from: x.from}, seat))
@@ -485,7 +494,29 @@ function reaction(g, seat){
   return ab ? tag("rxAbility", ab) : null;
 }
 
+/* ---- AN ARENA ABILITY IS CASHED WHEN IT IS A NET GAIN NOW (QUEUE H20) --
+   This policy never activated an arena permanent's ability
+   (`arena-ability-policy-declines`, v4.47): a price it cannot weigh is declined.
+   Four of the seven readable records pay a number the seat can spend at once,
+   and `judge.arenaUseful` weighs them where card text may be read: a go-again
+   draw paid out of resources already floating (Gold, Silver, Copper, Diamond),
+   resources for the play about to be paid, action points for two plays that
+   each need one, and (in `reaction`) a free pump on the seat's own attack.
+   It is asked AFTER the ordinary choice and may replace it, because every one
+   of them keeps the action point or spends none: the play it replaces is still
+   there next time, and the card a draw finds can be a better one. */
+const ARENA_KEY = {pump: "arenaPump", draw: "arenaDraw", res: "arenaRes", ap: "arenaAP"};
 function offence(g, seat, o){
+  const a = offenceBase(g, seat, o);
+  /* THE POOL IS SPOKEN FOR WHILE A RESOURCE PIECE IS BEING SPENT (v5.56's
+     `resUnlock`): the floating resources plus the piece's payout are what
+     make a held attack legal, so a draw paid out of them would undo it. */
+  const spoken = !!a && a.t === "activate" && J.abPieceResGain(g, seat, a.uid) > 0;
+  const u = J.arenaUseful(g, seat, {maxPitch: o.maxPitch, next: a, kinds: spoken ? ["res", "ap"] : ["draw", "res", "ap"]});
+  const x = u && {t: "activate", uid: u.uid};
+  return x && legal(g, x, seat) ? tag(ARENA_KEY[u.kind], x) : a;
+}
+function offenceBase(g, seat, o){
   const sd = g.sides[seat];
   /* ---- A GRANT WAITS FOR AN ATTACK TO TAKE IT (v5.38, QUEUE v4 H4) ---
      A non-attack whose whole payload is next-attack grants was played
@@ -986,6 +1017,10 @@ const CALL_WHY = {
   gearAbility: "Use your equipment's ability. Nothing better is left to do.",
   gearAmp: "Use your equipment's ability. You can pay for an arcane card to take its extra damage.",
   heroAbility: "Use your hero's ability. Nothing better is left for the action point.",
+  arenaPump: "Tap it. Your attack gets the extra damage for free.",
+  arenaDraw: "Cash it in. It draws a card for resources you already have floating, and it keeps your action point.",
+  arenaRes: "Break it open first. Its resources pay for what you are about to play, so no card has to be pitched.",
+  arenaAP: "Use it first. You hold more plays than action points, and it pays for itself.",
   arcaneFirst: "Play your biggest arcane first.",
   nonAttack: "Play the cheapest card you have left.",
   optKeep: "Leave them on top in this order.",
@@ -1025,6 +1060,7 @@ function lineOf(g, seat, a){
     case "activate": {
       if(a.uid === "hpow") return "Use " + short(sd.name) + "'s ability";
       const b = (sd.board || []).find(x => x && x.uid === a.uid);
+      if(b && !J.boardAttackOf(g, seat, a.uid)) return "Use " + nm(b.card);
       if(b){ const tg = a.target && a.target !== "hero" ? cardIn(g.sides[1 - seat], a.target) : null;
         return "Attack with " + nm(b.card) + (tg ? " at " + nm(tg) : ""); }
       const gp = String(a.uid).indexOf("gp") === 0 ? cardIn(sd, Number(String(a.uid).slice(2))) || cardIn(sd, String(a.uid).slice(2)) : null;
