@@ -138,7 +138,8 @@ npm run fairness      # is any card STRONGER than printed (exits non-zero on a f
   reproducible, not repeatable: the noise band is a median of ~3 wins and up to ~10, so
   a balance claim needs several seeds on both sides of the change.
 - UI changes: drive the real page at phone size (393×852) and assert on element boxes,
-  not screenshots.
+  not screenshots. `node tools/page.js` does it offline (CDNs and the card DB served
+  locally; deps in a scratch dir, see its header) and exports `open()` for drives.
 
 ## Engine map (`engine/`)
 
