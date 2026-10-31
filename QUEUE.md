@@ -31,6 +31,15 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
 - **Next: S15** (Display Loyalty's rider + the Fealty token), then **FEED 21**, then the open record
   `cloaked-display`. Use a fresh Sonnet shipper per job (a peer message cannot extend a session's
   assignment; give the whole job in its creation prompt).
+- **v5.53 (S15) SHIPPED by the CEO thread, 2026-10-31** (`434ac10`): Display Loyalty's rider reads
+  (`parser.quotedAtkHero`), Fealty reads in full (`dracCard` grant + `_drac` stamp; end-phase clock
+  with a turn-record reprieve, `hist.madeNames`). Found under it and fixed in the same release: no
+  ATTACK card ever entered `hist.playTy` (the attack branch returned before the only write), so
+  Static Shock / Star Fall never counted a Lightning attack. 3734 drills, 0 fail, 5 skipped; scenes
+  107/0; fairness clean; babel ok; 21 scripts + `.nojekyll`; ladder 0/0/0 and wins per seed
+  IDENTICAL to v5.52 (Fai 84 games: 28 Fealty made, 56 kept, 5 destroyed; Static Shock 18 -> 20).
+  `WIRE_V` 27. `quotedUnread` is no longer emitted by any pool record.
+- **Next: FEED 21**, then **R5 if the user rules** (below, NEEDS A RULING), then `cloaked-display`.
 - **Latent, recorded:** a non-permanent played FROM THE GRAVEYARD still files to banish (R2 covered
   banish only). Measured reach: every watery-grave card in the pool is an ally, which goes to the
   arena, so no pool card reaches that path today. Ask the user before changing it.
@@ -1326,6 +1335,23 @@ is the only place it is ever `false`. Build it this way:
   Report it, and don't retune the policy inside the rules fix.
 
 ## NEEDS A RULING FROM THE USER (do not build)
+
+- **R5 (asked 2026-10-31, CEO). Does an attack count ITS OWN chain link?** Fai's "If you control 2
+  or more Draconic chain links" cards (Cinderskin Devotion, Display Loyalty, Hot on Their Heels,
+  Phoenix Flame, Enflame's rungs, Searing Emberblade's static) are read at declaration against
+  `parser.dracLinks(chain)`, and the asking attack is not on the strip yet (`linkPayload` pushes
+  it). So the SECOND Draconic attack in a row does not get go again; the THIRD does. Driven
+  (`effects.execute`, Cinderskin/Display Loyalty/Enflame, 0/1/2 prior Draconic links): `ga` false,
+  false, true. Against it: the user's ruling of 2026-07-25 ("the first attack each turn is chain
+  link 1"), and the engine's own Rupture reader (`chainLinkGe`), which counts `chain.length + 1`.
+  If the attack counts itself, the fix is one reader (`dracLinks` plus a Draconic `pend`) and every
+  `dracN` gate, Fai's discount and Mounting Anger's bound move with it; Fai gets markedly stronger,
+  so it ships with a ladder at 3+ seeds. No CR quote in the repo; do not build until ruled.
+- **Latent, synthetic only (CEO, 2026-10-31):** a quoted rider whose payload is "gain 1{h}" is
+  RELOCATED: `"…this gets go again and \"When this attacks, gain 1{h}.\""` parses as `{drac2, life 1}`
+  with the go again lost and no `quotedUnread` flag (a loose life matcher claims the sentence ahead
+  of the "gets go again and" branch). No pool card prints it; `npm run unanchored` only walks the
+  pool. Record, don't build.
 
 - **ANSWERED 2026-10-31, see R2-R4.** **Where does a card played from the banished zone go after it resolves?** The graveyard, or
   back to banish? Blaze's ability, Pouncing Paws' Crouching Tiger, Mounting Anger and Rising
