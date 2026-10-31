@@ -298,6 +298,10 @@ function payAction(g, seat, p, o){
      rather than a new judgement about which card to lose (v4.81's rule for
      the chosen discard, one cost over). */
   if(p.kind === "discost") return tag("discost", {t: "discost", uid: (p.uids || [])[0]});
+  /* WHICH SOUL CARD A SOUL COST BANISHES (v5.59) — judge's `soulCostAnswer`,
+     the lowest-pitch candidate. The policy reads no card text and no pool
+     card reads the answer, so it is total and deterministic, nothing more. */
+  if(p.kind === "soulcost") return tag("soulcost", {t: "soulcost", uid: J.soulCostAnswer(g)});
   /* ---- A CHI COST ASKS A SECOND QUESTION OF THE SAME PITCH (v4.54) ---
      Enigma's ability prints "{c}{c}{c}", and a Chi pays a {c} cost where
      a resource point does not. `pitchPick` ranks on printed pitch, so a
@@ -996,6 +1000,7 @@ const CALL_WHY = {
   addPayNo: "Skip the extra cost. It isn't worth the cards.",
   xvalMax: "Make X as big as you can pay for.",
   discost: "Discard this card to pay the cost.",
+  soulcost: "Banish the soul card worth least as a resource. What counts is how many are in the soul, not which.",
   arsenalBest: "Keep your biggest attack face down. It is the card you most want to lead with next turn.",
   arsenalOther: "Keep it face down. It can be played from there.",
   arsenalSkip: "Keep your hand. Nothing in it can be played from the arsenal.",
@@ -1042,7 +1047,7 @@ function cardIn(sd, uid){
   if(uid == null) return null;
   const zones = [sd.hand || [], sd.arsenal ? [sd.arsenal] : [], sd.gear || [],
                  (sd.board || []).map(b => b && Object.assign({}, b.card, {uid: b.uid})),
-                 sd.grave || [], sd.banish || []];
+                 sd.grave || [], sd.banish || [], sd.soul || []];
   for(const z of zones) for(const c of z) if(c && c.uid === uid) return c;
   return null;
 }
@@ -1079,6 +1084,7 @@ function lineOf(g, seat, a){
     case "addPay": return a.yes ? "Pay the extra cost" : "Don't pay the extra cost";
     case "xval": return "Make X " + a.x;
     case "discost": return "Discard " + nm(c) + " for the cost";
+    case "soulcost": return "Banish " + nm(c) + " from the soul for the cost";
     case "promptSel": { const x = p && ((p.cards || [])[a.i] || (p.options || [])[a.i]);
       return "Choose " + ((x && (x.name || x.label)) || "it"); }
     case "promptChoose": return a.choice === "decline" ? "Decline"

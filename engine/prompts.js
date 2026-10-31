@@ -1037,6 +1037,37 @@ function discCostChoice(ab, sd){
   return uids.length >= 2 ? uids : null;
 }
 
+/* WHICH SOUL CARD A SOUL COST BANISHES (v5.59). Boltyn prints "Attack
+   Reaction - Banish a card from your soul:" and Radiant Touch "Banish this
+   and a card from your soul:", and `execute` banished the FRONT of the soul
+   (`soul-banish-cost-auto-picked`). A cost is paid before the ability
+   resolves, so this is not a sheet either (v3.34): it is a question asked
+   BEFORE the payment, `discCostChoice`'s shape one zone over.
+
+   IT ASKS ONLY WHEN THERE IS A CHOICE. Exactly as many cards as the cost
+   needs is nothing to choose, and two copies of one card are the same card
+   (name and pitch, v3.55) — the soul is public (ruling R4, 2026-10-31), so
+   this is a pick between things everyone can see. The uids come back in
+   SOUL ORDER, front first.
+
+   `taken` is what an earlier answer to this same cost has already chosen,
+   for a cost that banishes more than one ("banish 2 cards from your soul"
+   is a printed shape): it is asked again for the remainder until the cost
+   is met or nothing is left to choose between. */
+function soulCostChoice(ab, sd, taken){
+  const had = taken || [];
+  const need = P.abSoulCost(ab) - had.length;
+  const pool = ((sd && sd.soul) || []).filter(c => c && had.indexOf(c.uid) < 0);
+  if(need < 1 || pool.length <= need) return null;
+  const seen = new Set(), uids = [];
+  for(const c of pool){
+    const k = (c.name || "") + "|" + (c.pitch || 0);
+    if(seen.has(k)) continue;
+    seen.add(k); uids.push(c.uid);
+  }
+  return uids.length >= 2 ? uids : null;
+}
+
 /* Can this be confirmed as it stands? */
 function promptReady(prompt){
   if(!prompt) return false;
@@ -1457,6 +1488,6 @@ return {PROMPT_ZONES, promptZoneWord, promptDestWord, promptZone, promptSideZone
         promptMatchSet, promptMatchAssign,
         promptPickPool, promptPickAskable, buildPrompt,
         promptToggleSel, promptChoose, promptDecline, promptTakeBack, promptMove, optOrder, promptReady, promptForcedSel, promptLapse, promptDestroyGone, promptLapseLine,
-        promptDiscardDefault, discCostChoice,
+        promptDiscardDefault, discCostChoice, soulCostChoice,
         moveCards, applyPrompt};
 });

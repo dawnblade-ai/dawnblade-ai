@@ -272,6 +272,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 53 -> 54 AT v5.30: `look-named-in-shared-feed`. */
   /* 54 -> 55 AT v5.40: `soul-banish-cost-auto-picked`. */
   /* 55 -> 56 AT v5.42: `played-from-banish-files-to-banish`. */
+  /* v5.59 closes `soul-banish-cost-auto-picked` and adds nothing: the count
+     holds, and only the stated/closed split below moves. */
   assert.equal(Object.keys(APPROX).length, 56, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
@@ -327,7 +329,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 24 -> 25 AT v5.40: `soul-banish-cost-auto-picked`, QUEUE v4 S8. */
   /* 25 -> 26 AT v5.42: `played-from-banish-files-to-banish`, QUEUE v4 S9. */
   /* 26 -> 25 stated AT v5.51: `played-from-banish-files-to-banish` closed. */
-  assert.equal(n("stated"), 25, "stated count moved");
+  /* 25 -> 24 stated AT v5.59: `soul-banish-cost-auto-picked` closed. */
+  assert.equal(n("stated"), 24, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -388,7 +391,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 27 -> 28 AT v4.94: `cloaked-face-down-values`. */
   /* 29 -> 30 closed AT v5.51: `played-from-banish-files-to-banish`. */
   /* 30 -> 31 closed AT v5.57: `cloaked-display`. */
-  assert.equal(n("closed"), 31, "closed count moved");
+  /* 31 -> 32 closed AT v5.59: `soul-banish-cost-auto-picked`. */
+  assert.equal(n("closed"), 32, "closed count moved");
 });
 
 /* ============================================================
@@ -823,21 +827,34 @@ probe("played-from-banish-files-to-banish", () => {
   assert.ok(!g.sides[0].grave.some(c => c.uid === u), "an ephemeral card ceases to exist, graveyard included");
 });
 
+/* CLOSED AT v5.59 — the probe is turned round. It asserted that Boltyn's
+   ability took the FRONT of a two-card soul and nothing asked which, and it
+   asserts the seat is ASKED now, through `reduce` (the table's door; the
+   question is a judge pending and `execute` alone never asks). The card
+   still lands in the banished zone (v5.40), and test/soulcost.test.js
+   drives the choice, the exactly-enough case, the AI and the trainer. */
 probe("soul-banish-cost-auto-picked", () => {
-  /* DRIVEN: two cards in the soul and Boltyn's ability; the front one goes,
-     nothing asks, and it lands in the banished zone. */
+  /* DRIVEN: two cards in the soul and Boltyn's ability, activated at the
+     table in the reaction step of a pumped attack. */
   const W = require("./helpers/extract.js").loadData();
   const b = require("../engine/build.js").buildSide(W.HEROES.find(x => x.k === "boltyn"),
     require("../engine/game.js").parseDeck(W.DECKS.boltyn), H.db(), {},
     require("../engine/rng.js").make("approx-soul"), {n: 0}).b;
   const mk = (uid, p) => ({uid, name: "Soul " + uid, pitch: p, tt: "Light Action", ty: ["Light", "Action"], tx: "", kw: []});
   const atk = Object.assign({}, H.card("Brutal Assault", 1), {uid: "sa"});
-  const g = H.state({hand: [atk], res: 9, ap: 1, soul: [mk("s1", 2), mk("s2", 1)]}, {hp: 20},
-                    {actor: 0, turnPlayer: 0, turn: 3, builds: [b, {}]});
-  const n = H.execute(H.execute(g, atk, "hand", 0, {}), b.HPOW, "hero", 0, {});
-  assert.deepEqual(n.sides[0].soul.map(c => c.uid), ["s2"], "the FRONT card was banished — the record must move");
-  assert.ok(n.sides[0].banish.some(c => c.uid === "s1"), "into the banished zone");
-  assert.ok(!n.pending && !n.prompt && !(n.promptQ || []).length, "and nothing asked which");
+  let g = H.state({hand: [atk], res: 9, ap: 1, soul: [mk("s1", 2), mk("s2", 1)], buffNext: 2}, {hp: 20},
+                  {actor: 0, turnPlayer: 0, turn: 3, builds: [b, {}]});
+  g = Object.assign(g, {phase: "action", step: "layer", priority: 0, passed: []});
+  g = H.J.reduce(g, {t: "play", uid: "sa", from: "hand"}, 0).state;
+  for(let i = 0; i < 10 && g.step !== "reaction"; i++) g = H.move(g);
+  assert.equal(g.step, "reaction", "fixture: the attack did not reach its reaction step");
+  const asked = H.J.reduce(g, {t: "activate", uid: "hpow", from: "hero"}, 0).state;
+  assert.equal(asked.pending && asked.pending.kind, "soulcost", "the front card was banished without asking which");
+  assert.deepEqual(asked.pending.uids, ["s1", "s2"], "the candidates are the soul, front first");
+  assert.equal(asked.sides[0].soul.length, 2, "a card left the soul before the question was answered");
+  const n = H.J.reduce(asked, {t: "soulcost", uid: "s2"}, 0).state;
+  assert.deepEqual(n.sides[0].soul.map(c => c.uid), ["s1"], "the card the seat NAMED did not leave — the front did");
+  assert.ok(n.sides[0].banish.some(c => c.uid === "s2"), "and it lands in the banished zone");
 });
 
 probe("end-phase-unless-floating-only", () => {

@@ -204,11 +204,26 @@ function makeEffects(ctx){
      sliced off the soul into NO zone — invisible to invariants.js, which
      catches a card in two zones and not one in none. One body for every
      soul cost, so the next one inherits the destination. Which card is
-     the engine's choice (the front, the card most recently put there):
-     `soul-banish-cost-auto-picked` in tools/approx.js. */
-  const banishFromSoul = (n, k) => {
-    const taken = (act(n).soul || []).slice(0, k);
-    actMut(n).soul = act(n).soul.slice(k);
+     the seat's choice when it paid an ACTIVATION's cost (v5.59, `want`:
+     the uids it declared, `prompts.soulCostChoice`); otherwise, or for
+     whatever the declaration does not cover, the front of the soul, the
+     card most recently put there. The one caller with no declaration is
+     the `soulSpend` effect op, which no pool card reaches
+     (`soul-banish-cost-auto-picked` in tools/approx.js). */
+  const banishFromSoul = (n, k, want) => {
+    /* RE-DERIVED against the soul, because `reduce` is fed by JSON off a
+       wire (v2.04): a declared uid that is not in the soul, or one named
+       twice, takes nothing, and the front fills what is left — so the cost
+       is always paid in full and never with a card that is not there. */
+    const soul = act(n).soul || [];
+    const taken = [];
+    for(const u of (want || []))
+      if(taken.length < k && !taken.some(c => c.uid === u)){
+        const c = soul.find(x => x && x.uid === u);
+        if(c) taken.push(c);
+      }
+    for(const c of soul) if(taken.length < k && !taken.includes(c)) taken.push(c);
+    actMut(n).soul = soul.filter(c => !taken.includes(c));
     actMut(n).banish = [...taken, ...(act(n).banish || [])];
     return n;
   };
@@ -3454,6 +3469,12 @@ function makeEffects(ctx){
        still guarded, because `execute` is fed by `reduce`, which is fed by
        JSON off a wire. */
     { const _sc = P.abSoulCost(card);
+      /* THE DECLARED CARD, IF THERE IS ONE (v5.59) — asked before the
+         payment on both boards (`soulCostChoice`) and riding on the state
+         as `_soulCostUids`, like `_discCostUid`. Read and cleared before
+         anything can return, so it cannot answer the next activation. */
+      const _want = n._soulCostUids;
+      delete n._soulCostUids;
       if(_sc){
         /* AN UNPAYABLE COST IS INERT, NEVER FREE (v2.04). Both boards
            refuse it first, so reaching here short means a stale or crafted
@@ -3462,8 +3483,10 @@ function makeEffects(ctx){
         if((act(n).soul||[]).length < _sc)
           return L(n, `${card.name} — ${act(n).name}: ${(act(n).soul||[]).length} in the soul, and it costs ${_sc}. Nothing happens.`);
         else {
-          n = banishFromSoul(n, _sc);
-          n = L(n, `${act(n).name}: ${_sc} banished from the soul — the cost is paid.`);
+          const _before = act(n).soul || [];
+          n = banishFromSoul(n, _sc, _want);
+          const _gone = _before.filter(c => !(act(n).soul || []).includes(c));
+          n = L(n, `${act(n).name}: ${_gone.map(c => c.name).join(", ") || _sc} banished from the soul — the cost is paid.`);
         }
       } }
     /* A DISCARD IS PAID ON ACTIVATION TOO (v4.09), beside the soul banish

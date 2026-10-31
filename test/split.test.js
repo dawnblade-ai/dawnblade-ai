@@ -479,12 +479,17 @@ test("every pending kind judge can open has a branch at the table", () => {
   /* +discost AT v4.85: an activation's "Discard an Assassin card:" (the
      Agents) or "Discard an ally," (Carrion Crown) asks WHICH card before
      the payment — one button per card that could pay. */
-  assert.deepEqual([...kinds].sort(), ["addPay", "boost", "charge", "discost", "fuse", "pay", "split", "xval"]);
+  /* +soulcost AT v5.59: an activation's "Banish a card from your soul:"
+     (Boltyn's ability, Radiant Touch) asks WHICH soul card before the
+     payment — one button per card the cost could take. */
+  assert.deepEqual([...kinds].sort(), ["addPay", "boost", "charge", "discost", "fuse", "pay", "soulcost", "split", "xval"]);
   const strip = t => t.replace(/\/\*[\s\S]*?\*\//g, "");
   const htm = strip(fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8"));
   const i = htm.indexOf("const kindIs = k =>");
   assert.ok(i > 0, "the table's pending demux moved — re-anchor this drill");
-  const demux = htm.slice(i, i + 400);
+  /* 400 -> 460 AT v5.59: the demux gained a ninth `kindIs` line (`soulcost`),
+     and the window is the span those lines occupy, not a claim about them. */
+  const demux = htm.slice(i, i + 460);
   for(const k of kinds)
     assert.ok(demux.indexOf('kindIs("' + k + '")') > 0,
       'the table must demux "' + k + '" explicitly — a kind with no branch is a screen with no exit');

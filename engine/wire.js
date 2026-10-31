@@ -274,7 +274,14 @@
    attack's entry onto the strip, so `parser.dracLinksNow` stops counting the
    open attack a second time through the resolution step. `pend` is a
    GAME_KEY that ships whole, so the digest holds. By hand. */
-const WIRE_V = 28;
+/* 28 -> 29 AT v5.59: `pending` gains a KIND (`soulcost`, which soul card an
+   activation's "Banish a card from your soul" takes, declared before the
+   payment) and the game a declaration, `_soulCostUids`, which also rides in a
+   held play's `decl` (`judge.HELD_DECL`). A v28 peer answers no `soulcost` and
+   banishes the front of the soul where ours banishes the card the seat named,
+   so the pair desyncs on the first Boltyn activation with two cards in the
+   soul. Whole-shipped values: by hand, behind the release handshake. */
+const WIRE_V = 29;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

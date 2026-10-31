@@ -214,16 +214,27 @@ const APPROX = {
       "permanent for its next swing."},
 
 "soul-banish-cost-auto-picked": {
-  status:"stated", cr:null, board:"both", since:"v3.74", swept:"v5.40",
-  claim:"\"Banish a card from your soul\" (Boltyn's ability, Radiant Touch) banishes the "+
-        "FRONT of the soul, the card most recently put there, rather than asking which. "+
-        "Since v5.40 it lands in the banished zone; before, it landed in no zone at all.",
-  why:"A cost is paid before the ability resolves, so asking needs a PENDING (v3.34), "+
-      "and the soul banish has none on either board; v4.85's `discost` is the shape, "+
-      "and building it is a judge pending, a trainer sheet and a policy answer. No CR "+
-      "quote about who chooses a cost's object is sourced here. v5.40 made the gate "+
-      "that cared (Duty Bound Blitz) read the EVENT, so the choice decides less "+
-      "(QUEUE v4 S8)."},
+  status:"closed", cr:null, board:"both", since:"v3.74", swept:"v5.59",
+  claim:"WAS: \"Banish a card from your soul\" as an ACTIVATION's cost (Boltyn's ability, "+
+        "Radiant Touch) banished the FRONT of the soul, the card most recently put there, "+
+        "rather than asking which (into the banished zone since v5.40; before, into no "+
+        "zone at all). IS: when the soul holds more than the cost needs, in two different "+
+        "cards, the seat is asked which, before the payment, on both boards; with exactly "+
+        "enough, or two copies of one card, nothing is asked. A cost that banishes several "+
+        "is asked again for the rest. STILL THE FRONT: the `soulSpend` effect op (\"banish "+
+        "a card from your soul. If you do, …\"), which no pool card reaches.",
+  why:"CLOSED AT v5.59. `prompts.soulCostChoice` is the one reader; judge asks it as a "+
+      "`soulcost` PENDING (`discost`'s shape, v4.85, one zone over) on the hero, arena "+
+      "and equipment routes, and the trainer as `soulpick` through `tryPlay` and "+
+      "`activateInstant`. The answers ride on the state as `_soulCostUids` into "+
+      "`execute`, which re-derives them because `reduce` is fed by JSON off a wire. The "+
+      "AI answers `judge.soulCostAnswer`: the lowest printed pitch, then the uid — no "+
+      "pool card reads WHICH card is in the soul (the put is an EVENT, v5.40, and a "+
+      "banished soul card is never played), so the order only has to be total. THE "+
+      "PROBE IS TURNED ROUND: it asserted the front went and nothing asked, and asserts "+
+      "the question now. No CR quote about who chooses a cost's object is sourced here; "+
+      "the player chooses because the soul is public (ruling R4, 2026-10-31) and a "+
+      "player's own cost is theirs to name (QUEUE v4 S8)."},
 
 "look-named-in-shared-feed": {
   status:"stated", cr:null, board:"table", since:"v4.01", swept:"v5.30",

@@ -303,6 +303,7 @@ const ACTIONS = [
   "split",       /* {half}       declare which half of a split card is played */
   "xval",        /* {x}          declare X for a card whose cost prints X (v4.72) */
   "discost",     /* {uid}        which card an activation's discard cost spends (v4.85) */
+  "soulcost",    /* {uid}        which soul card an activation's soul banish takes (v5.59) */
   "defend",      /* {uid}        toggle a defender (hand card or gear)    */
   "pass",        /*              pass priority — CR 4.2.2                 */
   "arsenal",     /* {uid|null}   end-phase step (b); null leaves it empty */
@@ -339,7 +340,7 @@ const ACTIONS = [
 
    Exported so a board can be held to covering all of them rather than to
    remembering — the next kind added walks into the same fallback. */
-const PENDING_KINDS = ["pay", "boost", "addPay", "split", "fuse", "charge", "xval", "discost"];
+const PENDING_KINDS = ["pay", "boost", "addPay", "split", "fuse", "charge", "xval", "discost", "soulcost"];
 const PROMPT_ACTIONS = ["promptSel", "promptChoose", "promptConfirm", "promptDecline",
                         "promptTakeBack", "promptMove"];
 
@@ -914,6 +915,16 @@ function legal(g, a, seat){
     return null;
   }
   if(a.t === "discost") return "nothing is asking which card to discard";
+  /* WHICH SOUL CARD THE SOUL COST BANISHES (v5.59). The candidates ride on
+     the pending, taken off `soulCostChoice` when the question was asked, so
+     a wire answer naming a card that is not in the soul, or one already
+     chosen for this cost, is refused rather than banished. */
+  if(p && p.kind === "soulcost"){
+    if(a.t !== "soulcost") return "choose which soul card " + p.card.name + " banishes first";
+    if((p.uids || []).indexOf(a.uid) < 0) return "that card is not one the cost can banish";
+    return null;
+  }
+  if(a.t === "soulcost") return "nothing is asking which soul card to banish";
   if(p && p.kind === "addPay"){
     /* NO SEAT TEST HERE. A `pending` belongs to ONE seat and the general
        gate above this block already refuses the other with "Opponent is
@@ -2714,6 +2725,7 @@ function reduce(g, a, seat){
     case "split":     n = doSplit(n, a, seat); break;
     case "xval":      n = doXval(n, a, seat); break;
     case "discost":   n = doDiscCost(n, a, seat); break;
+    case "soulcost":  n = doSoulCost(n, a, seat); break;
     case "addPay":    n = doAddPay(n, a, seat); break;
     case "boost":     n = doBoost(n, a, seat); break;
     case "fuse":      n = doFuse(n, a, seat); break;
@@ -2939,7 +2951,7 @@ function doActivate(g, a, seat){
        `effCost` here would disagree with the charge in the other
        direction. Each read asks what its own charge site asks. */
     const ab = bOf(g, seat).HPOW;
-    { const q = askDiscCost(g, seat, ab, a); if(q) return q; }
+    { const q = askDiscCost(g, seat, ab, a) || askSoulCost(g, seat, ab, a); if(q) return q; }
     const acost = effCost(ab, sd, PR.costCtx(g, seat));
     if(acost > sd.res || chiShort(sd, ab) > 0)   /* v4.54 — see `chiShort` */
       return say({...g, pending: {kind: "pay", seat, card: ab, from: "hero", need: acost, target: null}},
@@ -2982,7 +2994,7 @@ function doActivate(g, a, seat){
          reason that version made `uid === "hpow"` the discriminator. */
       if(!_ally && !_aura){
         const ab = BD.boardPow(b);
-        { const q = askDiscCost(g, seat, ab, a); if(q) return q; }
+        { const q = askDiscCost(g, seat, ab, a) || askSoulCost(g, seat, ab, a); if(q) return q; }
         const bcost = effCost(ab, sd, PR.costCtx(g, seat));
         if(bcost > sd.res || chiShort(sd, ab) > 0)   /* v4.54 — see `chiShort` */
           return say({...g, pending: {kind: "pay", seat, card: ab, from: "board",
@@ -3016,7 +3028,7 @@ function doActivate(g, a, seat){
   /* THE SAME SPLIT, AND THE SAME ROUTE (v3.83) — see `legal`. */
   if(_abUid || !PR.isWeapon(piece)){
     const ab = piece.powCard;
-    { const q = askDiscCost(g, seat, ab, a); if(q) return q; }
+    { const q = askDiscCost(g, seat, ab, a) || askSoulCost(g, seat, ab, a); if(q) return q; }
     const acost = effCost(ab, sd, PR.costCtx(g, seat));   /* v3.80 — see doActivate's hero branch */
     if(acost > sd.res || chiShort(sd, ab) > 0)   /* v4.54 — see `chiShort` */
       return say({...g, pending: {kind: "pay", seat, card: ab, from: "hero", need: acost, target: null}},
@@ -3330,6 +3342,53 @@ function askDiscCost(g, seat, ab, a){
   return say({...g, pending: {kind: "discost", seat, card: ab, act: {...a}, uids}},
     ab.name + " costs a discard — which " + (ab._discardSubject || "card") + "?");
 }
+/* AN ACTIVATION'S SOUL BANISH ASKS WHICH CARD (v5.59) — `askDiscCost`'s
+   shape, one zone over, asked straight after it on the same three routes
+   (hero, arena, equipment) and for the same reason: the cost is paid when
+   the ability resolves and a queued sheet opens after that (v3.34). Only
+   with a real choice (`soulCostChoice`), and only once per activation: the
+   answers ride on the STATE as `_soulCostUids`, so re-entering `doActivate`
+   finds them and goes on. `picked` is what a cost that banishes several
+   cards has already been told; the question is asked again for the rest. */
+function askSoulCost(g, seat, ab, a, picked){
+  if(g._soulCostUids != null) return null;
+  const uids = PM.soulCostChoice(ab, at(g, seat), picked);
+  if(!uids) return null;
+  return say({...g, pending: {kind: "soulcost", seat, card: ab, act: {...a}, uids, picked: picked || []}},
+    String(ab.name).replace(/ — (?:ability|hero power)$/, "") + " costs a card from the soul — which one?");
+}
+function doSoulCost(g, a, seat){
+  const p = g.pending;
+  const picked = [...(p.picked || []), a.uid];
+  const n0 = {...g, pending: null};
+  const more = askSoulCost(n0, seat, p.card, p.act, picked);
+  if(more) return more;
+  const names = picked.map(u => ((at(g, seat).soul || []).find(x => x && x.uid === u) || {}).name || "that card");
+  const n = say({...n0, _soulCostUids: picked},
+    at(g, seat).name + " will banish " + names.join(" and ") + " from the soul to pay for "
+    + String(p.card.name).replace(/ — (?:ability|hero power)$/, "") + ".");
+  return doActivate(n, p.act, seat);
+}
+/* WHAT THE POLICY ANSWERS TO THAT QUESTION, as a uid (v5.59). `sparring.js`
+   reads no card text, so the order lives here, where judge already answers
+   the policy's other readers (`chargePitchWanted`, `chiNeed`).
+
+   NOTHING A POOL CARD READS CHANGES WITH THE ANSWER: "put into your soul
+   this turn" is an EVENT recorded when the card went in (v5.40), the soul
+   counts by number, and a banished soul card is never played. So the order
+   has only to be TOTAL and the same on every replay — lowest printed pitch
+   first, the card worth least as a resource and the charge policy's own
+   order (v3.80), then uid — which keeps the highest-pitched cards in the
+   soul for the day a card reads its contents. */
+function soulCostAnswer(g){
+  const p = pendingOf(g);
+  if(!p || p.kind !== "soulcost") return null;
+  const soul = at(g, p.seat).soul || [];
+  const c = (p.uids || []).map(u => soul.find(x => x && x.uid === u)).filter(Boolean)
+    .sort((x, y) => (+x.pitch || 0) - (+y.pitch || 0)
+                 || (String(x.uid) < String(y.uid) ? -1 : String(x.uid) > String(y.uid) ? 1 : 0))[0];
+  return c ? c.uid : (p.uids || [])[0];
+}
 function doDiscCost(g, a, seat){
   const p = g.pending;
   const c = (at(g, seat).hand || []).find(x => x && x.uid === a.uid);
@@ -3405,7 +3464,7 @@ function doBoost(g, a, seat){
    outcome of the window is the one this produces. It is also what keeps
    the change invisible to every game in which neither seat holds an
    instant-speed answer. */
-const HELD_DECL = ["_half", "_doBoost", "_addPaid", "_fuseUid", "_chargeUids", "_x", "_discCostUid", "_addDiscPaid"];
+const HELD_DECL = ["_half", "_doBoost", "_addPaid", "_fuseUid", "_chargeUids", "_x", "_discCostUid", "_addDiscPaid", "_soulCostUids"];
 const HELD_LIFT = {hand: 1, arsenal: 1, grave: 1, banish: 1};
 /* WHICH PLAYS WAIT: everything at ACTION speed. A card played in the
    action window, a weapon swing, an ally's or an aura's attack, and an
@@ -4065,7 +4124,7 @@ function drawTo(g, i){
 }
 
 return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, chargePitchWanted, abAmpTakers, arenaUseful, defendsNow, DEFENDS_OPS, abPieceForRes, abPieceResGain, boostShare, grantTakers, arcaneOf, chargeView,
+        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, chargePitchWanted, soulCostAnswer, abAmpTakers, arenaUseful, defendsNow, DEFENDS_OPS, abPieceForRes, abPieceResGain, boostShare, grantTakers, arcaneOf, chargeView,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */

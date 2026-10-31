@@ -1,3 +1,27 @@
+## v5.59 — A soul-banish cost asks which card
+
+**Approximation `soul-banish-cost-auto-picked`, closed.** Built by a Sonnet agent, verified and
+shipped by the CEO thread.
+
+- **"Banish a card from your soul" as a cost now asks which card** (Boltyn's ability, Radiant Touch).
+  It used to take the front of the soul. A sheet appears before the payment, with one "Banish <card>"
+  button per soul card; two printings of one name get a colour tag. With exactly enough cards, or
+  only copies of one card, nothing is asked. The soul is public (ruling R4).
+  - **Table:** a new `soulcost` pending on the hero, arena and equipment routes.
+  - **Trainer:** a `soulpick` mode through both doors, the action-phase play and the instant-speed
+    activation (Radiant Touch on the opponent's turn), with a cancel.
+- **The AI answers through `judge.soulCostAnswer`:** lowest printed pitch, then uid. No pool card asks
+  which soul card remains (the put is an event, `hist.soulPut`), so the answer only has to be
+  deterministic. It picked a card other than the front in 60 of 104 asks over the ladder, and no game
+  changed: the 3-seed report is byte-identical to v5.58.
+- **Proved on the real page at 393x852** (`tools/page.js`): three cards give three controls inside the
+  width and the chosen one is banished; one card asks nothing; cancel; both Radiant Touch doors. The
+  28-screen smoke check passes.
+- `soulSpend` as an effect (not a cost) still takes the front; no pool card reaches it, and the
+  ledger says so.
+- **`WIRE_V` 28 -> 29.** Drills in `test/soulcost.test.js` (18, 19 sabotages all caught); census pins
+  moved with reasons.
+
 ## v5.58 — The AI cashes in its treasure
 
 **QUEUE H20, policy.** Measured by a Sonnet agent and re-measured by the CEO thread.

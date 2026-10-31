@@ -354,7 +354,10 @@ test("WIRE_V moves when the payload shape moves, and only then", () => {
      and `hist` gains `madeNames` — inside a whole-shipped field. */
   /* 27 -> 28 AT v5.55: `pend.linked` — inside a GAME_KEY that ships whole,
      so the digest does not move. */
-  assert.equal(W.WIRE_V, 28,
+  /* 28 -> 29 AT v5.59: a pending KIND (`soulcost`) and a game declaration
+     (`_soulCostUids`) — both inside whole-shipped values, so the digest
+     holds. */
+  assert.equal(W.WIRE_V, 29,
     "WIRE_V moved — if the payload shape moved with it, update the digest below " +
     "in the same edit and say what changed in the header");
   assert.equal(h, 3759651216,

@@ -749,8 +749,9 @@ test("a `filters` prompt survives the wire, which is what the bump is ABOUT", ()
      21 -> 22 AT v4.92 (v4.91's `_addDiscPaid` in a held play's `decl`). */
   /* 23 -> 24 AT v5.06 (`wardNext` replaces `wardRider`, a side field). */
   /* 25 -> 26 AT v5.31 (`pend.power`). 26 -> 27 AT v5.53 (`dracCard`, a side
-     field, and `hist.madeNames`). 27 -> 28 AT v5.55 (`pend.linked`). */
-  assert.equal(W.WIRE_V, 28, "the bump moved — say what changed in wire.js's header");
+     field, and `hist.madeNames`). 27 -> 28 AT v5.55 (`pend.linked`). 28 -> 29 AT v5.59 (the `soulcost`
+     pending kind and the `_soulCostUids` declaration). */
+  assert.equal(W.WIRE_V, 29, "the bump moved — say what changed in wire.js's header");
   const g = H.state({grave: [RATK("a1"), RNON("n1")], res: 9, ap: 1}, {}, {actor: 0, turn: 3});
   g.prompt = sheet([RATK("a1"), RNON("n1")]);
   assert.ok(g.prompt && g.prompt.filters, "fixture: the sheet carries the field");
