@@ -1,3 +1,18 @@
+## v5.52 — An amp waits for its arcane card, and Light the Way charges the yellow
+
+**QUEUE H18 + Light the Way, two seat-policy fixes.** Built ungated behind judge readers.
+
+- **H18, `judge.abAmpTakers`.** Crucible of Aetherweave's whole payout is "the next card you play this
+  turn with an arcane damage effect … plus 1". The spare-action fallback activated it with nothing to
+  take the amp. An amp-only piece now waits until the seat can pay for both it and an arcane card in
+  hand or arsenal (printed costs, the rest of the hand pitching). Own reason, `gearAmp`. Spellfire
+  Cloak and Talismanic Lens are not amp-only and are unaffected. Measured by the CEO at 12 seeds:
+  Blaze +1.4, Iyslander +1.3 wins, paired.
+- **Light the Way reads its colour.** Its rider "When this hits, if a yellow card was charged this
+  way" lands in `condOnHit`, not `conds`, so `chargePitchWanted` answered null and the seat charged
+  the lowest pitch. The reader now looks at both.
+- Drills in `test/ampfirst.test.js`, each sabotaged to confirm it bites.
+
 ## v5.51 — A banished card is played to the graveyard, and Unity counts a hand-played reaction
 
 **QUEUE R2 + R3, the user's rulings of 2026-10-31.** Engine only; the AI is unchanged.

@@ -1847,8 +1847,29 @@ const arsenalAttack = (g, seat, uid) => {
 const chargePitchWanted = (g) => {
   const p = g && g.pending;
   if(!p || p.kind !== "charge" || !p.card) return null;
-  const hit = (PR.fxParse(p.card).conds || []).map(e => e && /^chargedPitch(\d)$/.exec(e.cond)).find(Boolean);
+  /* THE COLOUR RIDES ON THE ON-HIT CONDITION TOO: Light the Way's "When this hits, if a yellow card
+     was charged this way" is `condOnHit`, not `conds` (QUEUE v5.52). */
+  const fx = PR.fxParse(p.card);
+  const hit = [...(fx.conds || []), ...(fx.condOnHit || [])]
+    .map(e => e && /^chargedPitch(\d)$/.exec(e.cond)).find(Boolean);
   return hit ? +hit[1] : null;
+};
+/* AN AMP-ONLY ABILITY AND WHAT COULD TAKE IT (QUEUE v4 H18). Crucible of
+   Aetherweave's whole payout is "the next card you play this turn with an
+   arcane damage effect … plus 1", so activated with no arcane card to follow
+   it is a card pitched for nothing. null when the piece's payout is not amp
+   alone; otherwise its effective cost and the arcane cards in hand/arsenal. */
+const abAmpTakers = (g, seat, uid) => {
+  const sd = at(g, seat);
+  const piece = (sd.gear || []).find(x => x && x.uid === uid);
+  const pc = piece && !PR.isWeapon(piece) ? piece.powCard : null;
+  if(!pc) return null;
+  const ops = (PR.fxParse(pc).ops || []).filter(o => o && o[0] !== "noop");
+  if(!ops.length || !ops.every(o => o[0] === "amp")) return null;
+  const takers = [];
+  (sd.hand || []).forEach(c => { if(c && arcaneOf(g, seat, c.uid, "hand") > 0) takers.push({uid: c.uid, from: "hand", cost: c.cost}); });
+  if(sd.arsenal && arcaneOf(g, seat, sd.arsenal.uid, "arsenal") > 0) takers.push({uid: sd.arsenal.uid, from: "arsenal", cost: sd.arsenal.cost});
+  return {cost: effCost(pc, sd, PR.costCtx(g, seat)), takers};
 };
 const keepsActionPoint = (g, seat, uid, from) => {
   const sd = at(g, seat);
@@ -3956,7 +3977,7 @@ function drawTo(g, i){
 }
 
 return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, chargePitchWanted, defendsNow, DEFENDS_OPS, abPieceForRes, boostShare, grantTakers, arcaneOf, chargeView,
+        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, chargePitchWanted, abAmpTakers, defendsNow, DEFENDS_OPS, abPieceForRes, boostShare, grantTakers, arcaneOf, chargeView,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */

@@ -244,6 +244,12 @@ const drive = () => {
      Boltyn with Boltyn's chair first is the first to reach it. ADDED, for
      v4.58's reason; every other field it brings is pinned. */
   { const r = T.leg(E[5], E[11], "ch-5-11-a", 1); legs++; if(r && r.threw) threw++; }
+  /* AND THE 41st (QUEUE v4 H18): `defUid` and `tapUid` LEFT TOGETHER. An amp-only
+     ability now waits for an arcane card to take it, so the ring's games moved off the
+     defends payment and the tap payment. Measured over every pairing, both chairs, with
+     the seed named below: entrants 0 v 1 with entrant 0's chair first reaches both. ADDED,
+     for v4.58's reason; every other field it brings is already pinned. */
+  { const r = T.leg(E[0], E[1], "scan-0-1", 0); legs++; if(r && r.threw) threw++; }
 };
 
 /* BOUND A FUNCTION AT THE NEXT SAME-LEVEL DECLARATION, NEVER AT A CHAR
@@ -262,7 +268,7 @@ const fnBody = name => {
 
 test("the driven census is alive — the legs really ran", () => {
   drive();
-  assert.equal(legs, 40, "the leg count moved; the pinned field set is taken at 40 "
+  assert.equal(legs, 41, "the leg count moved; the pinned field set is taken at 41 "
     + "(32 in the ring, plus the six named legs that keep `keepTop`, `ctrStamp`, "
     + "`shuffleAfter`, crank's `avail`/`spendCtr` and `charge` in it — see `drive`)");
   assert.equal(threw, 0,

@@ -111,6 +111,15 @@ const byUid = (a, b) => String(a.uid) < String(b.uid) ? -1 : String(a.uid) > Str
 
 const legal = (g, a, seat) => J.legal(g, a, seat) == null;
 
+/* both the ability's cost and the taker's printed cost, out of the floating pool plus the rest of the hand */
+const affordsBoth = (sd, abCost, t, o) => {
+  const need = abCost + num(t, "cost") - (sd.res || 0);
+  if(need <= 0) return true;
+  const pool = (sd.hand || []).filter(c => c && c.uid !== t.uid && num(c, "pitch") > 0).map(c => num(c, "pitch")).sort((a, b) => b - a);
+  let got = 0; for(let i = 0; i < pool.length && i < o.maxPitch; i++){ got += pool[i]; if(got >= need) return true; }
+  return false;
+};
+
 /* THE BRANCH THAT DECIDED (QUEUE v4 S13). `explain` sets NOTE, calls `act`,
    and reads which return site tagged it; `act` alone leaves NOTE null, so
    the policy's own play cannot move. Each tag records the action OBJECT it
@@ -648,8 +657,12 @@ function offence(g, seat, o){
      player. `judge.abPieceForRes` answers. */
   const w = (sd.gear || []).slice().sort(byUid)
     .filter(x => !J.abPieceForRes(g, seat, x.uid))
+    /* AN AMP-ONLY ABILITY WAITS FOR AN ARCANE CARD IT CAN AFFORD WITH IT (QUEUE v4 H18).
+       `judge.abAmpTakers` answers; null means the piece's payout is not amp alone. */
+    .filter(x => { const v = J.abAmpTakers(g, seat, x.uid);
+      return !v || v.takers.some(t => affordsBoth(sd, v.cost, t, o)); })
     .find(x => legal(g, {t: "activate", uid: x.uid}, seat));
-  if(w) return tag(w.power != null ? "weapon" : "gearAbility", {t: "activate", uid: w.uid});
+  if(w) return tag(w.power != null ? "weapon" : J.abAmpTakers(g, seat, w.uid) ? "gearAmp" : "gearAbility", {t: "activate", uid: w.uid});
 
   /* THE HERO'S OWN ABILITY, last, and for the same reason it was missing:
      nothing proposed one in 210 games. It goes after the attacks because
@@ -940,6 +953,7 @@ const CALL_WHY = {
   biggestAttack: "Swing the biggest attack you can afford.",
   weapon: "Swing your weapon. It costs no card.",
   gearAbility: "Use your equipment's ability. Nothing better is left to do.",
+  gearAmp: "Use your equipment's ability. You can pay for an arcane card to take its extra damage.",
   heroAbility: "Use your hero's ability. Nothing better is left for the action point.",
   arcaneFirst: "Play your biggest arcane first.",
   nonAttack: "Play the cheapest card you have left.",
