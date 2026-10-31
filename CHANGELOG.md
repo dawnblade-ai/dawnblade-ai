@@ -1,3 +1,31 @@
+## v5.63 — The AI blocks with a card it could not spend
+
+**QUEUE H21b, policy, a deliberate field shift.** Found and measured by Sonnet agents, re-measured
+and shipped by the CEO thread. Revert this one commit to undo it.
+
+- **The rule (`sparring.nextBlocker`, reason `blockSpare`):** a hand bigger than `maxPitch + 1`
+  holds a spare card, and a spare card blocks a hit that would leak damage — but only when it stops
+  the WHOLE leak (H21b). Before, the AI took every hit of 3 or less to the face and kept the card,
+  even when it held more than its next turn could spend. A card that blocks is redrawn at the end of
+  the turn, so this is standard play. The hand-blocker cap and the lethal path are unchanged; no card
+  text is read (`judge.handFree`).
+- **Why the field moves, and why that is accepted.** Own-seat A/B (paired by seed): Bravo 8.1 -> 11.8
+  wins a seed (12 seeds up, 0 down), Blaze 7.6 -> 9.7, Gravy 4.2 -> 5.6, Enigma 10.2 -> 11.3, Kayo
+  73 -> 113 over 140 games (Kayo's own blocking). The chip-damage decks lose because EVERY opponent
+  now stops their small hits for free, which also denies their on-hit text. Their own play is not
+  worse: own-seat Arakni 0, Dorinthea +3, Boltyn 0; opponents-on Arakni -30, Dorinthea -41, Boltyn -19.
+  H21b's whole-leak condition is for Lyath: a hand of five with ~1.9 printed defence made 42% of its
+  spare blocks fall short, and Lyath's own-seat goes -1 -> +5 with it.
+- **Full ladder, 630 games at 3 seeds, v5.62 -> v5.63:** 0 stalls, 0 refusals, 0 violations,
+  1 draw (gravy-viserai-2, a dead position the engine now ends at turn 60). Games run longer (15.6 ->
+  19.3 turns). Wins: Kayo 43 -> 68, Bravo 25 -> 37, Enigma 26 -> 37, Blaze 20 -> 30, Gravy 17 -> 25,
+  Briar 74 -> 79; Dorinthea 51 -> 30, Arakni 47 -> 31, Boltyn 33 -> 23, Azalea 59 -> 51, Lyath 23 -> 16,
+  Dash 68 -> 62; the rest within 3. The spread is unchanged (stdev 17.2 -> 17.5): this reshuffles
+  the field rather than narrowing it, and the gain is the AI defending like a player.
+- Drills in `test/spareblock.test.js` (fire and don't-fire pairs, the cap, lethal, short blocks,
+  `explain.action` deep-equals `act`), each sabotaged. Pins moved with reasons (`sparring`,
+  `arenapolicy` searches six seeds, `explain`'s key list).
+
 ## v5.62 — A dead position is a draw
 
 **Ruling R6, the user's of 2026-10-31.** Built by a Sonnet agent, verified and shipped by the CEO

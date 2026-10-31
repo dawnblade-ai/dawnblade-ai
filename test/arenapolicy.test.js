@@ -201,13 +201,25 @@ function census(k0, k1, seed){
   return {keys, bad, over: !!g.over};
 }
 
+/* THE FIRST SEED THAT REACHES IT, not one named seed: a policy change anywhere
+   (the spare-card block, H21) moves every trajectory, and a drill pinned to one
+   game then fails for a game that no longer visits the route. The count stays
+   a real census: six seeds to find it, every game clean. */
+const reach = (k0, k1, key) => {
+  const seen = [];
+  for(let s = 0; s < 6; s++){
+    const r = census(k0, k1, s);
+    assert.deepEqual(r.bad, [], `${k0} v ${k1} seed ${s}`);
+    seen.push(r.keys);
+    if(r.keys[key] > 0) return {seed: s, seen};
+  }
+  return {seed: null, seen};
+};
 test("Lyath's pump and Gravy's draw are REACHED in real games, with no refusal", {skip}, () => {
-  const l = census("lyath", "viserai", 0);
-  assert.deepEqual(l.bad, []);
-  assert.ok(l.keys.arenaPump > 0, "Concealed Object was cashed: " + JSON.stringify(l.keys));
-  const g = census("gravy", "blaze", 0);
-  assert.deepEqual(g.bad, []);
-  assert.ok(g.keys.arenaDraw > 0, "a Gold was cashed: " + JSON.stringify(g.keys));
+  const l = reach("lyath", "viserai", "arenaPump");
+  assert.ok(l.seed != null, "Concealed Object was cashed: " + JSON.stringify(l.seen));
+  const g = reach("gravy", "blaze", "arenaDraw");
+  assert.ok(g.seed != null, "a Gold was cashed: " + JSON.stringify(g.seen));
 });
 
 test("every arena reason is a sentence in the coach's voice", () => {

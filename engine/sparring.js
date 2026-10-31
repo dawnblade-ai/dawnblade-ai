@@ -376,7 +376,28 @@ function nextBlocker(g, seat, o){
      alive and it blocks with everything it has. */
   const leak = incoming - wall;
   const lethal = leak >= sd.hp;
-  if(!lethal && leak <= o.takeUpTo) return null;
+  /* A CARD THE NEXT TURN CANNOT SPEND IS FREE TO BLOCK WITH (QUEUE v4 H21).
+     `takeUpTo` keeps a card for the hit that is worth it, and that is right
+     while the card has a use. A turn spends the play and the cards pitched to
+     pay for it (`maxPitch` + 1), so a hand bigger than that holds cards
+     the next turn will not touch: they sit, and each one in hand is a draw the
+     end of that turn does not make. Blocking with one costs nothing. Chip damage
+     was the leak: the seat took every hit of 3 or less to the face and spent
+     its hand at the end, on one hit it could no longer stop (Bravo's
+     own seat, 12 seeds: 8.1 -> 11.8 wins of 28, 12 seeds up, none down). The
+     hand-blocker cap still applies, and a hand at or below the line is held
+     exactly as before.
+
+     A SPARE CARD HAS TO STOP THE WHOLE HIT (H21b). A block that leaves any
+     leak is a hit all the same: the attack's on-hit text still fires and the
+     card bought `def` life and nothing else. Measured in the unrefined rule,
+     one hero spent its spare cards that way: Lyath (hand of five, printed
+     defence 1-2) blocked 7.5 times a game, 42% of them short of the leak and
+     79% followed by a hand it spent whole the next turn. Every other hero
+     measured (Kayo, Bravo, Blaze, Dorinthea, Arakni) was short of the leak
+     under 3% of the time, so the line below moves them not at all. */
+  const spare = J.handFree(sd).length > o.maxPitch + 1;
+  if(!lethal && leak <= o.takeUpTo && !spare) return null;
 
   /* Best defence first, and among equals the one least worth playing
      later. A defence reaction is never declared as a defender
@@ -387,7 +408,8 @@ function nextBlocker(g, seat, o){
     .filter(c => num(c, "def") > 0)
     .sort((a, b) => num(b, "def") - num(a, "def") || num(a, "power") - num(b, "power") || byUid(a, b))
     .find(c => legal(g, {t: "defend", uid: c.uid}, seat));
-  return card ? tag(lethal ? "blockLethal" : "blockHand", {t: "defend", uid: card.uid}) : null;
+  if(card && !lethal && leak <= o.takeUpTo && num(card, "def") < leak) return null;   /* the best spare card leaves a leak */
+  return card ? tag(lethal ? "blockLethal" : leak <= o.takeUpTo ? "blockSpare" : "blockHand", {t: "defend", uid: card.uid}) : null;
 }
 
 /* ---- the action phase -------------------------------------------------
@@ -1007,6 +1029,7 @@ const CALL_WHY = {
   blockGear: "Block with armour first. Equipment wears down instead of leaving your hand.",
   blockLethal: "Block with everything. This hit would kill you.",
   blockHand: "Block with your best defender. This hit is too big to take.",
+  blockSpare: "Block with a spare card. Your next turn cannot spend a hand this big, so the extra card stops this whole hit for free.",
   rxDefend: "Play it now. It protects you from this attack.",
   rxAttack: "React with your cheapest card to pump this attack.",
   rxAbility: "Use the ability. It is printed for this window.",

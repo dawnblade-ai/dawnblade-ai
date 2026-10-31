@@ -259,9 +259,14 @@ test("a seat with no window is given nothing to do", {skip}, () => {
    seats blocked 41 of 41 attacks and one of them finished a 21-turn game
    on full life — a regression run that never deals damage never exercises
    the damage step. */
+/* QUEUE v4 H21 narrows this claim, on purpose: a card in hand is
+   worth something while the next turn can spend it. A hand bigger than a
+   turn spends (`maxPitch` + 1) holds a spare, which blocks a small hit
+   (test/spareblock.test.js). The fixture keeps three cards, the line. */
 test("small hits are taken, not blocked — a card in hand is worth something", {skip}, () => {
-  const g = match({seed: "soak"});
+  let g = match({seed: "soak"});
   const seat = P.other(g.turnPlayer);
+  g = J.put(g, seat, s => ({...s, hand: s.hand.slice(0, 3)}));
   const sd = g.sides[seat];
   const tiny = {...g, step: "defend", attacker: g.turnPlayer, priority: g.turnPlayer,
                 chainOpen: true, pend: {name: "Pinprick", by: g.turnPlayer, total: 2,
