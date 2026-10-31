@@ -235,12 +235,23 @@ function payAction(g, seat, p, o){
      Disjoint from declining, and the two "take" readings overlap, so the
      choice between them is noise; the LOWEST pitch wins on a printed-number
      argument this file can make — it spends the card worth least as a
-     pitch — and on the stall. Ties on uid (v2.46). ONE charge: a `multi`
-     offer (V of the Vanguard) is declined once something is picked, which
-     leaves "any number of times" weaker than printed for this policy
-     alone. Still no card text: pitch is a printed number. */
+     pitch — and on the stall. Ties on uid (v2.46). ONE charge here: a `multi`
+     offer (V of the Vanguard) goes on from the card below (v5.67). Still no card text: pitch is a printed number. */
   if(p.kind === "charge"){
-    if((p.picked || []).length) return tag("chargeDone", {t: "charge", uid: null});
+    /* "ANY NUMBER OF TIMES" IS TAKEN (v5.67, H24). V of the Vanguard prints it, and the policy
+       answered "enough" after the first charge, so its pip per Light card was weaker than
+       printed for this policy alone. After the first card, charge another Light card the seat
+       does not need: `judge.chargeMore` names the Light cards in hand that leave it the next
+       play it could still afford (the whole hand when no action point survives the card), and
+       the one with the least printed defence goes (it blocks least), on pitch then uid. Measured
+       on Boltyn alone, paired by game over 144 fresh seeds, 2688 games: 79 -> 94 wins in the 325
+       games it touched (37 up, 22 down); by seed +0.16 a seed, t 2.0. */
+    if((p.picked || []).length){
+      const m = J.chargeMore(g, seat);
+      const more = m && (g.sides[seat].hand || []).filter(h => m.lights.indexOf(h.uid) >= 0)
+        .sort((a, b) => num(a, "def") - num(b, "def") || num(a, "pitch") - num(b, "pitch") || byUid(a, b))[0];
+      return more ? tag("chargeMore", {t: "charge", uid: more.uid}) : tag("chargeDone", {t: "charge", uid: null});
+    }
     const sd = g.sides[seat];
     const wantC = J.chargePitchWanted(g);
     const wantG = wantC == null ? J.gateColourWanted(g, seat) : null;
@@ -1060,6 +1071,7 @@ const CALL_WHY = {
   gateKeep: "Pitch a different card. The card you are waiting to play, and the colour you need to charge, stay in your hand.",
   gateFirst: "Lead with the attack your charge pumps. Pumped, it can take go again, and the card you are holding plays after it.",
   chargeNone: "Don't charge. There is no card worth giving up.",
+  chargeMore: "Charge another Light card. It is not needed for what comes next, and every Light card charged adds power to your attacks this chain.",
   chargeDone: "That is enough charging.",
   split: "Play the half you can play right now.",
   addPayNo: "Skip the extra cost. It isn't worth the cards.",

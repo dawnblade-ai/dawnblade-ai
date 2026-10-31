@@ -122,12 +122,13 @@ test("every reason is keyed from a site in the policy, and the census names what
   /* BOTH DIRECTIONS (v4.12): the keys 30 games never reach are pinned, so
      a policy change that starts or stops reaching one is a deliberate edit.
      Each still has a tag site above. H23 moved this pin: `chargeDone` is reached now (a second
-     charge window after one card was picked), and the three gate reasons are reached. */
+     charge window after one card was picked), and the three gate reasons are reached. v5.67 adds `chargeMore`: 30 games never hold two Light
+     cards at V of the Vanguard's sheet, so `test/vcharge.test.js` drives it instead. */
   const seen = census().keys;
   for(const k of Object.keys(seen)) assert.ok(SP.CALL_WHY[k], "reached key " + k + " has no reason");
   assert.deepEqual(keys.filter(k => !seen[k]).sort(),
     ["addPayNo", "allocAll", "allyTake", "answer", "arenaAP", "arenaRes", "arsenalSkip", "boostNo",
-     "chargeNone", "discost", "payCancel", "pitchChi"]);
+     "chargeMore", "chargeNone", "discost", "payCancel", "pitchChi"]);
 });
 
 test("every reason and every line reads as game text", () => {

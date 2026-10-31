@@ -1,3 +1,25 @@
+## v5.68 — V of the Vanguard charges every spare Light card
+
+**QUEUE H24, policy (Boltyn).** Found and measured by a Sonnet agent, re-measured and shipped by the
+CEO thread.
+
+- **The finding:** V of the Vanguard's "you may charge … any number of times" was capped at one by
+  the POLICY, not the engine. Both boards already re-open the charge offer after each pick and always
+  allow stopping (`test/vanguard.test.js` pins it), so a human could charge any number; the AI
+  answered "enough" after the first.
+- **The rule (reason `chargeMore`):** the new reader `judge.chargeMore` names the Light cards in hand
+  the seat can still charge without losing its best affordable next play. That play, and the card
+  that would pay for it, are kept back only when an action point survives V. The pool is read less
+  V's own cost, which comes out after the charge opens. The AI charges the spare Light card with the
+  lowest printed defence and stops otherwise. No card text in `sparring.js`.
+- **Own-seat A/B, Boltyn, paired by seed, two independent sets:** seeds 100-195, 79 -> 94 wins in the
+  touched games (37 up / 22 down, t 2.0); seeds 300-395, 79 -> 100 (39 / 18, t 3.0). Variants that
+  kept a card back, or charged Light cards first, showed no gain and were dropped.
+- **Ladder, 630 games at 3 seeds:** 0 stalls, 0 refusals, 0 violations, the same 2 draws; every
+  hero's wins identical to v5.67 (the 3-seed ladder is too coarse to show this one card).
+- Drills in `test/vcharge.test.js` (8, human and AI seats, the single-shot charge left alone), seven
+  sabotages all caught.
+
 ## v5.67 — A repeating dead position is a draw too
 
 **Ruling R6, tightened.** Built and measured by a Sonnet agent, verified and shipped by the CEO thread.

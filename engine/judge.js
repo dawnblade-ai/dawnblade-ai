@@ -2151,6 +2151,63 @@ const chargeView = (g, seat, uid, from) => {
   return {charged, offers: !!fx.chargeCost, gaIf: conds.some(e => e.op[0] === "ga"),
           base, power: base + ctr + pump};
 };
+/* ---- ANOTHER CHARGE, AND WHAT IT BUYS AND LEAVES (v5.67, QUEUE v4 H24) ----
+   V of the Vanguard prints "you may charge your soul ANY NUMBER OF TIMES" and
+   "+1{p} for each Light card charged this way". The sheet has offered the
+   repeated charge since v4.56; the AI answered "enough" after the first,
+   which left the printed cost weaker than printed for that policy alone.
+   `sparring.js` reads no card text, so this answers its questions for the
+   charge sheet that is open for `seat`; null when none is, when the offer is
+   not a repeating one, or when nothing the card prints is paid per Light card.
+     per     the +{p} each Light card charged this way adds (the printed pips of
+             the card's own `perChargedLight` payoff, off the parse);
+     lights  uids of the Light cards in hand that could be charged and still
+             leave the seat its next play, in no particular order;
+     spare   how many cards of any class the seat could part with the same way;
+     follow  an action point is left after this card, so there IS a next play.
+   THE NEXT PLAY IS KEPT. The resource cost is settled BEFORE the charge opens
+   (a pay sheet comes first), so the hand is what is left and the pool, less this
+   card's own cost, is what the next play can spend. When an
+   action point survives this card, the best action the seat can still afford
+   with what it holds, and the cards that would pay for it, stay out of
+   `lights` and `spare`: a charge that starved the follow-up would cost more
+   than the pip it buys. With no action point left nothing follows, and every
+   card not already chosen is spare. A card is "afforded" off the printed cost
+   against the pool and the pitch of the hand that would pay, two of them. */
+const chargeMore = (g, seat) => {
+  const p = g && g.pending;
+  if(!p || p.kind !== "charge" || !p.multi || !p.card || p.seat !== seat) return null;
+  const sd = at(g, seat);
+  const per = (PR.fxParse(p.card).ops || []).reduce((t, o) =>
+    t + (Array.isArray(o) && o[o.length - 1] === "perChargedLight" && +o[1] > 0 ? +o[1] : 0), 0);
+  if(!per) return null;
+  const taken = new Set([p.card.uid, ...(p.picked || [])]);
+  const rest = PR.handFree(sd, p.card).filter(c => c && !taken.has(c.uid));
+  const light = c => (c.ty || []).some(t => /^light$/i.test(String(t)));
+  const byU = (a, b) => String(a.uid) < String(b.uid) ? -1 : String(a.uid) > String(b.uid) ? 1 : 0;
+  const follow = (sd.ap || 0) - 1 + (keepsActionPoint(g, seat, p.card.uid, p.from) ? 1 : 0) > 0;
+  let hold = [];
+  if(follow){
+    /* the pool is read BEFORE this card's own cost comes out of it (`execute` takes it after the
+       charge), so what the next play can spend is what is left over */
+    const pool0 = Math.max(0, (sd.res || 0) - effCost(p.card, sd, PR.costCtx(g, seat)));
+    const nextOf = c => {
+      const need = effCost(c, sd, PR.costCtx(g, seat)) - pool0;
+      if(need <= 0) return [c];
+      const pool = rest.filter(h => h.uid !== c.uid && (+h.pitch || 0) > 0)
+        .sort((a, b) => (b.pitch - a.pitch) || ((light(a) ? 1 : 0) - (light(b) ? 1 : 0)) || byU(a, b));
+      const pay = []; let got = 0;
+      for(const h of pool){ if(got >= need || pay.length >= 2) break; pay.push(h); got += h.pitch; }
+      return got >= need ? [c, ...pay] : null;
+    };
+    const plays = rest.filter(c => (TY.isAction(c) || TY.isAttack(c)) && !TY.isAR(c) && !TY.isDR(c))
+      .map(c => ({c, set: nextOf(c)})).filter(x => x.set)
+      .sort((a, b) => (+b.c.power || 0) - (+a.c.power || 0) || byU(a.c, b.c));
+    if(plays.length) hold = plays[0].set.map(c => c.uid);
+  }
+  const free = rest.filter(c => hold.indexOf(c.uid) < 0);
+  return {per, follow, spare: free.length, lights: free.filter(light).sort(byU).map(c => c.uid)};
+};
 const targetOf = (g, seat, spec) => {
   const def = P.other(seat);
   if(spec == null || spec === "hero") return {kind: "hero", side: def, uid: null};
@@ -4305,7 +4362,7 @@ function drawTo(g, i){
 }
 
 return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, drawText, ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, arenaUseful, defendsNow, DEFENDS_OPS, abPieceForRes, abPieceResGain, boostShare, grantTakers, arcaneOf, chargeView,
+        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, arenaUseful, defendsNow, DEFENDS_OPS, abPieceForRes, abPieceResGain, boostShare, grantTakers, arcaneOf, chargeView, chargeMore,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */
