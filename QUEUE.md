@@ -9,7 +9,7 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-10-31, at v5.63)
+## HANDOFF — START HERE (CEO, 2026-10-31, at v5.64)
 
 **This section is the handoff.** Root `HANDOFF.md`/`WEEK.md` were retired to `docs/archive/` on
 2026-10-31; do not start a new root handoff file — rewrite this section instead.
@@ -49,6 +49,13 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
   17 -> 25; Dorinthea 51 -> 30, Arakni 47 -> 31, Boltyn 33 -> 23, Lyath 23 -> 16 (spread unchanged,
   stdev 17.2 -> 17.5). Revert `a1bf6c9` to undo. The losers' own play is unchanged; their chip hits
   now meet blocks. NEXT for balance: Lyath (16) and the chip decks; Briar still leads (79).
+- **v5.64** H22 `rxHold`: a defender holds its defence reaction when the wall already stops the hit
+  (37-51% of the chip decks' reactions were wasted). Ladder wins at 3 seeds now: briar 79 · kayo 67 ·
+  dash 53 · fai 52 · azalea 48 · viserai 46 · bravo 46 · enigma 44 · iyslander 43 · blaze 32 ·
+  dorinthea 29 · arakni 27 · gravy 22 · lyath 20 · boltyn 20; 0/0/0, 2 draws. Negatives measured with
+  it (not shipped): holding against small leaks, a one-point cushion, skipping an attacker's reaction
+  on a lookahead. NEXT for balance: Briar (79) and Kayo (67) lead by a wide margin; Boltyn, Lyath and
+  Gravy trail at ~20.
 - **Open for the next session:** the trainer's twin of the R6 draw and sudden death (both stated in
   `tools/approx.js`); 23 stated approximations remain (`node tools/approx.js`), 0 open.
 - **v5.59** soul-banish cost asks which card (`soul-banish-cost-auto-picked` CLOSED). **v5.60** the
