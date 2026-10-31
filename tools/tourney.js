@@ -1,4 +1,4 @@
-const {match, play, W, FAULTS, summaryLine, routeNames} = require("./selfplay.js");
+const {match, play, W, J, FAULTS, ladderLine, summaryLine, routeNames} = require("./selfplay.js");
 
 const keys = W.HEROES.map(h => h.k);
 /* An empty argument means "all of them" — "".split(",") is [""], which
@@ -53,6 +53,7 @@ const wins = {}, games = [];
    other. Across indices they are not, which is the point. */
 const winsBySeed = Array.from({length: SEEDS}, () => ({}));
 let refusals = [], viols = [], evts = {}, stalls = 0, turnsum = 0, n = 0;
+let draws = [], quietMax = {turns: 0, seed: null};   /* quietMax: the longest unchanged stretch a game that WENT ON came back from */
 /* KEYED BY FAULT KIND, from `selfplay.js`'s own census — never a bucket
    per fault declared here, which is the shape that let SECOND-PERSON be
    reported as a route (v4.17). */
@@ -69,7 +70,13 @@ for(const a of A) for(const b of B){
     n++;
     const over = r.game.over;
     if(!over){ stalls++; games.push({seed, a, b, result: "STALL", turn: r.game.turn, steps: r.steps}); }
+    else if(over.winner == null){
+      /* the engine's own DRAW (both decks spent, nothing moving): a result, not a win for anyone */
+      draws.push(seed); turnsum += r.game.turn;
+      games.push({seed, a, b, result: "DRAW", how: over.how, turn: r.game.turn, steps: r.steps, hp: r.game.sides.map(x => x.hp)});
+    }
     else {
+      if(r.longestQuiet > quietMax.turns) quietMax = {turns: r.longestQuiet, seed};
       const w = over.winner === 0 ? a : b;
       wins[w] = (wins[w] || 0) + 1;
       winsBySeed[s][w] = (winsBySeed[s][w] || 0) + 1;
@@ -82,7 +89,7 @@ for(const a of A) for(const b of B){
     for(const [k, line] of r.events){ (evts[k] = evts[k] || []).push(line); if(faults[k]) faults[k].push({seed, line}); }
   }
 }
-console.log(`GAMES ${n} · stalls ${stalls} · avg turns ${(turnsum/Math.max(1,n)).toFixed(1)}`);
+console.log(ladderLine(n, stalls, draws, turnsum));
 console.log(summaryLine(refusals, viols, faults));
 console.log("\nWINS:", Object.entries(wins).sort((x,y)=>y[1]-x[1]).map(([k,v])=>`${k} ${v}`).join(" · "));
 
@@ -108,6 +115,9 @@ if(SEEDS > 1){
 }
 const bad = games.filter(g => g.result === "STALL");
 if(bad.length) console.log("\nSTALLS:", JSON.stringify(bad.slice(0,6)));
+const dr = games.filter(g => g.result === "DRAW");
+if(dr.length) console.log("\nDRAWS (the engine ended them: both decks spent, nothing moving):", JSON.stringify(dr.slice(0,6)));
+console.log(`\nlongest unchanged stretch a decided game came back from: ${quietMax.turns} turns (${quietMax.seed}) \u2014 the engine draws at ${J.STALEMATE_TURNS}`);
 if(refusals.length) console.log("\nREFUSALS (first 8):", JSON.stringify(refusals.slice(0,8), null, 1));
 if(viols.length)    console.log("\nVIOLATIONS (first 8):", JSON.stringify(viols.slice(0,8), null, 1));
 for(const k of FAULTS)

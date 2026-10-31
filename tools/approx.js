@@ -1011,7 +1011,38 @@ const APPROX = {
       "ruling: that play would do nothing, which v4.49 and v5.00 already refuse. The "+
       "reading matters most for Enigma's Mystic instants, whose transcend still fires off "+
       "a play that targeted nothing. Recorded as a ruling to ask; the probe plays Pass "+
-      "Over into an empty graveyard and asserts it is legal."}
+      "Over into an empty graveyard and asserts it is legal."},
+
+/* ---- C. A GAME THAT CANNOT MOVE ANY MORE ------------------------------ */
+
+"trainer-no-stalemate-draw": {
+  status:"stated", cr:"CR 4.5.3", board:"trainer", since:"v5.62", swept:"v5.62",
+  claim:"The table ends a game as a DRAW when both decks are empty and nothing a "+
+        "seat holds has moved for twenty turns (`judge.stalemateCheck`). The trainer "+
+        "does not: `Battle` ends a game only on life, its own `over` is `{win}` rather "+
+        "than `{winner, how}`, and it keeps no stillness tracker, so a position that "+
+        "can no longer move would run on there.",
+  why:"RULING (user, 2026-10-31): \"A match can certainly end in a draw - in the future "+
+      "we may need a sudden death mechanic, there is one in place for tournaments "+
+      "already.\" The trainer shares no end check with the table (its `winCheck` is its "+
+      "own, and its `over` has a different shape that its win panel and its record "+
+      "call read), and its opponent is the training dummy, which swings every turn, so "+
+      "a decked-out solo game still ends on life (see trainer-fatigue-loss). Half "+
+      "building a draw into a board whose result screen has no draw would be worse "+
+      "than saying so. The probe drives the table side and pins the trainer's source."},
+
+"no-sudden-death": {
+  status:"stated", cr:null, board:"table", since:"v5.62", swept:"v5.62",
+  claim:"A drawn match is simply over: there is no sudden-death tiebreak. A dead "+
+        "position ends as a draw (`over: {winner: null, how: \"stalemate\"}`) and the "+
+        "engine invents nothing to decide it.",
+  why:"RULING (user, 2026-10-31): \"A match can certainly end in a draw - in the future "+
+      "we may need a sudden death mechanic, there is one in place for tournaments "+
+      "already.\" A future item, not built: what sudden death IS in FaB tournament "+
+      "play is not sourced here (rules.fabtcg.com is unreachable from this sandbox), "+
+      "so it waits on the user rather than on a guess. The probe asserts the draw is "+
+      "still a draw and that no engine source speaks of sudden death outside a comment, "+
+      "so it goes red the day somebody builds one and the record must move."}
 
 };
 

@@ -1,3 +1,28 @@
+## v5.62 — A dead position is a draw
+
+**Ruling R6, the user's of 2026-10-31.** Built by a Sonnet agent, verified and shipped by the CEO
+thread.
+
+> RULING (user, 2026-10-31): *"A match can certainly end in a draw - in the future we may need a
+> sudden death mechanic, there is one in place for tournaments already."*
+
+- **The table ends a dead position as a draw** (`judge.reduce`): both decks are empty and nothing has
+  changed for 20 turns (10 per seat). `over` becomes `{winner: null, how: "stalemate"}`. "Nothing"
+  covers each seat's life and the cards in deck, hand, pitch, grave, banish, soul, board, gear, arsenal
+  and intimidated. It is checked after every action, and a card left in either deck is never a draw.
+- **Why 20:** the longest unchanged stretch any decided game came back from is 1 turn on the 630-game
+  baseline (2 with the held H21). A new game key `still` carries the tracker. **`WIRE_V` 29 -> 30.**
+- **The result screen says** "Draw — both decks are spent and neither hero can win."
+  (`judge.drawText`). Not driven in the browser: reaching it means playing a 20-turn dead game. It
+  compiles, a source pin guards it, and the 28-screen smoke check passes.
+- **The ladder reports `draws` apart from `stalls`.** A stall (the step limit) is still a policy
+  loop and still fails a release. `CLAUDE.md` says so.
+- **Not built, recorded in `tools/approx.js`:** sudden death (the ruling's future mechanic), and the
+  same draw on the trainer, whose dummy is a different end check.
+- **Measured:** 630 games at 3 seeds: `stalls 0 · draws 0`, every hero's wins identical to v5.61; the
+  rule changes nothing in a game that can still end. Drills in `test/stalemate.test.js` (6 drills,
+  10 sabotages all caught).
+
 ## v5.61 — V of the Vanguard counts itself
 
 **Ruling R7, the user's of 2026-10-31.** Built by a Sonnet agent, verified and shipped by the CEO

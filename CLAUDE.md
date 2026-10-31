@@ -134,7 +134,8 @@ npm run fairness      # is any card STRONGER than printed (exits non-zero on a f
   (`presets:["react"], sourceType:"script"`), installed into a scratch dir so the repo
   keeps zero dependencies. Bracket balance alone cannot see a broken page.
 - After rules or AI changes: `npm run play '' '' 3` (630 self-play games). Read
-  POLICY REFUSALS · INVARIANT VIOLATIONS · stalls first — all must be 0. Win counts are
+  POLICY REFUSALS · INVARIANT VIOLATIONS · stalls first — all must be 0 (`draws`, the
+  engine ending a dead position, are reported apart and are not a failure). Win counts are
   reproducible, not repeatable: the noise band is a median of ~3 wins and up to ~10, so
   a balance claim needs several seeds on both sides of the change.
 - UI changes: drive the real page at phone size (393×852) and assert on element boxes,
@@ -185,7 +186,8 @@ Both resolve card text through `effects.js`.
   REPLACES. Pitch only on demand, never to bank (ruling 2026-08-01).
 - Prevented damage is not dealt and not a hit (CR 7.5.5); record a trace where the fact
   becomes true. The end phase is CR 4.4.3's fixed order, in `effects.beginEndPhase`.
-  There is no deck-out loss (CR 4.5.3).
+  There is no deck-out loss (CR 4.5.3); a dead position (both decks empty, nothing
+  changing for 20 turns) ends as a DRAW at the table (ruling R6, `judge.reduce`).
 - Attack-targets ride on the action as a SPEC (`judge.targetSpec`, CR 1.4.5); an attack
   on an ally cannot be defended (CR 7.3.2a).
 - Choices are `prompts.js` specs queued on `promptQ`, addressed to a side. A spec only

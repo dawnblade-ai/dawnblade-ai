@@ -218,6 +218,9 @@ const GAME_KEYS = [
   "prompt","promptQ","revealed","lastRoll","boostOn",
   "chain","chainHist","chainOpen","boostChain","stack","pend","featured",
   "hitSeq","lastDmg",
+  /* THE STALEMATE TRACKER (v5.62): the signature of the last state that moved and the turn
+     it moved on, which `judge.stalemateCheck` reads to end a dead position as a draw. */
+  "still",
   /* HYPER INFLATION'S TAX (v4.06). "Cards cost {r} more to play this turn"
      names no seat, so it taxes BOTH players and belongs to the game rather
      than to either side. It is read through `parser.costCtx` and cleared in
@@ -342,7 +345,7 @@ function makeGame(o){
     mode: "act", bphase: "defend", pending: null, incoming: 0,
     chain: [], chainHist: [], chainOpen: false, boostChain: 0,
     stack: [], pend: null, featured: null, hitSeq: 0, lastDmg: 0,
-    log: [], feed: [], flags: {}, over: null, inspect: false,
+    log: [], feed: [], flags: {}, over: null, still: null, inspect: false,
     prompt: null, promptQ: [], revealed: null, lastRoll: null, boostOn: true
   };
 }

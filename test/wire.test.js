@@ -357,7 +357,9 @@ test("WIRE_V moves when the payload shape moves, and only then", () => {
   /* 28 -> 29 AT v5.59: a pending KIND (`soulcost`) and a game declaration
      (`_soulCostUids`) — both inside whole-shipped values, so the digest
      holds. */
-  assert.equal(W.WIRE_V, 29,
+  /* 29 -> 30 AT v5.62: the game's `still` key (the stalemate tracker) and a
+     draw `over` (`winner: null`) — a GAME_KEY ships whole, so the digest holds. */
+  assert.equal(W.WIRE_V, 30,
     "WIRE_V moved — if the payload shape moved with it, update the digest below " +
     "in the same edit and say what changed in the header");
   assert.equal(h, 3759651216,

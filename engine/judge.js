@@ -2689,6 +2689,61 @@ const winCheck = (g, by) => {
   return g;
 };
 
+/* ---- A GAME THAT CANNOT MOVE ANY MORE IS A DRAW ------------------------
+   CR 4.5.3 has no deck-out loss, so a game whose decks are both empty and
+   whose seats can no longer pay for anything held never ends: each seat
+   passes the turn and nothing changes, forever. Measured on the self-play
+   ladder, never in the baseline and once in 630 games the day the AI began
+   blocking chip hits with spare cards (held policy H21) - the game ran to
+   the harness's step limit and read as a policy loop.
+
+   RULING (user, 2026-10-31): "A match can certainly end in a draw - in the
+   future we may need a sudden death mechanic, there is one in place for
+   tournaments already." So it ends as a DRAW, and nothing else is invented:
+   no sudden death (tools/approx.js records it as a stated future item).
+
+   THE DETECTION IS PRECISE, and each half is required. Both decks are empty,
+   AND nothing a seat can win with moved for STALEMATE_TURNS turns: each
+   seat's life and every zone's cards by uid (`stillSig`), compared after
+   EVERY action rather than at turn boundaries, so a card that leaves a zone
+   and returns inside a turn is movement, not quiet. A deck with a card in it
+   is never a draw: the next draw is a way out.
+
+   WHY 20. `turn` counts each seat's turn, so 20 is ten turns of EACH seat. With
+   no deck and no draw, nothing a seat holds becomes payable without a change
+   `stillSig` sees, so a dead position repeats exactly every turn. On the
+   v5.60 ladder (630 games) the longest unchanged stretch any game came back
+   from was one turn; with the AI blocking spare cards, two. Twenty is ten
+   times that and a dead position reaches it in about forty actions.
+   The tracker rides in `g.still` ({sig, since}), a game key. */
+const STALEMATE_TURNS = 20;
+const STILL_ZONES = ["deck", "hand", "pitch", "grave", "banish", "soul", "board", "gear"];
+const _uidList = z => (z || []).map(e => (e && e.uid != null) ? e.uid : (e && e.card ? e.card.uid : "?")).join(".");
+function stillSig(g){
+  return (g.sides || []).map(sd =>
+    sd.hp + "|" + STILL_ZONES.map(z => _uidList(sd[z])).join("/") + "|"
+    + (sd.arsenal && sd.arsenal.uid != null ? sd.arsenal.uid : "-") + "|" + _uidList(sd.intimidated)
+  ).join("||");
+}
+const decksSpent = g => (g.sides || []).every(sd => !(sd.deck || []).length);
+const DRAW_LINE = "Draw \u2014 both decks are spent and neither hero can win.";
+function stalemateCheck(g){
+  if(g.over) return g;
+  const sig = stillSig(g);
+  if(!g.still || g.still.sig !== sig) return {...g, still: {sig, since: g.turn}};
+  if(decksSpent(g) && g.turn - g.still.since >= STALEMATE_TURNS)
+    return say({...g, over: {winner: null, how: "stalemate"}, priority: null}, DRAW_LINE);
+  return g;
+}
+/* What the result screen says about a finished game, so the table board and
+   the drills read one copy. `null` for a game somebody won. */
+function drawText(over, sides){
+  if(!over || over.winner != null) return null;
+  return {status: DRAW_LINE, title: "A DRAW",
+          names: (sides[0] ? sides[0].name : "") + " and " + (sides[1] ? sides[1].name : ""),
+          note: "Both decks are spent and nothing has moved for ten turns each, so neither hero can win."};
+}
+
 /* ---- the reducer ------------------------------------------------------ */
 function reduce(g, a, seat){
   const why = legal(g, a, seat);
@@ -2743,7 +2798,7 @@ function reduce(g, a, seat){
       n = settle(P.pass(n));
       break;
   }
-  return {state: n, error: null};
+  return {state: stalemateCheck(n), error: null};
 }
 
 /* ---- play ------------------------------------------------------------- */
@@ -4123,7 +4178,7 @@ function drawTo(g, i){
   return n;
 }
 
-return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
+return {STALEMATE_TURNS, STILL_ZONES, stillSig, stalemateCheck, drawText, ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
         playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, chargePitchWanted, soulCostAnswer, abAmpTakers, arenaUseful, defendsNow, DEFENDS_OPS, abPieceForRes, abPieceResGain, boostShare, grantTakers, arcaneOf, chargeView,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
         handFree: PR.handFree,

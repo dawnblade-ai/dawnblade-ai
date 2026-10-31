@@ -274,7 +274,10 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 55 -> 56 AT v5.42: `played-from-banish-files-to-banish`. */
   /* v5.59 closes `soul-banish-cost-auto-picked` and adds nothing: the count
      holds, and only the stated/closed split below moves. */
-  assert.equal(Object.keys(APPROX).length, 56, "record count moved");
+  /* 56 -> 58 AT v5.62: `trainer-no-stalemate-draw` and `no-sudden-death`, both
+     `stated` (RULING (user, 2026-10-31): a match can end in a draw; sudden death
+     is a future item). */
+  assert.equal(Object.keys(APPROX).length, 58, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -332,7 +335,10 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 25 -> 24 stated AT v5.59: `soul-banish-cost-auto-picked` closed. */
   /* 24 -> 23 stated AT v5.61: `attack-grant-misses-own-attack` closed by the
      user's ruling of 2026-10-31 (V's grant includes V). */
-  assert.equal(n("stated"), 23, "stated count moved");
+  /* 23 -> 25 AT v5.62: `trainer-no-stalemate-draw` and `no-sudden-death`, both
+     `stated` (RULING (user, 2026-10-31): a match can end in a draw; sudden death
+     is a future item). */
+  assert.equal(n("stated"), 25, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -2164,4 +2170,39 @@ probe("peers-hold-full-state", () => {
   assert.deepEqual(oppHand, ["Secret"],
     "the wire no longer carries the opponent's hand — hidden information has been " +
     "built and the Phase B record must move");
+});
+
+/* A DEAD POSITION ENDS AS A DRAW AT THE TABLE AND NOT IN THE TRAINER (v5.62).
+   RULING (user, 2026-10-31). The table half is DRIVEN: a position with both
+   decks spent and a stillness a window old is a draw, and the same with a card
+   left in one deck is not. The trainer half is a claim about index.html's
+   babel blocks, which no drill can execute, so it is pinned in the source:
+   no stalemate tracker, and a game-over built only from `{win:` shapes. */
+probe("trainer-no-stalemate-draw", () => {
+  const g = H.state({deck:[], hand:[], hp:12}, {deck:[], hand:[], hp:12}, {turn: 30});
+  const still = {sig: J.stillSig(g), since: g.turn - J.STALEMATE_TURNS};
+  const end = J.stalemateCheck({...g, still});
+  assert.ok(end.over && end.over.winner === null, "the table no longer draws a dead position");
+  const stocked = H.state({deck:[], hand:[], hp:12}, {deck:[{uid:"z", name:"Z", pitch:1, tt:"Generic Action", ty:["Generic","Action"], tx:"", kw:[]}], hand:[], hp:12}, {turn: 30});
+  assert.ok(!J.stalemateCheck({...stocked, still: {sig: J.stillSig(stocked), since: stocked.turn - 99}}).over,
+    "a card left in a deck is a way out: the table must not draw it");
+  const html = HTML.replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.ok(!/stalemate|stillSig|\bstill\s*:/.test(html.slice(0, html.indexOf("function Table") > 0 ? html.indexOf("function Table") : undefined)),
+    "the trainer now keeps a stalemate tracker — the record must move");
+  assert.ok(/over\s*=\s*\{win:\s*false\}|over:\{win:true/.test(html),
+    "the trainer's game-over is no longer the {win} shape — the record must move");
+});
+
+/* NO SUDDEN DEATH (v5.62). Driven for the draw, scanned for the absence. */
+probe("no-sudden-death", () => {
+  const g = H.state({deck:[], hand:[], hp:12}, {deck:[], hand:[], hp:12}, {turn: 30});
+  const end = J.stalemateCheck({...g, still: {sig: J.stillSig(g), since: g.turn - J.STALEMATE_TURNS}});
+  assert.deepEqual(end.over, {winner: null, how: "stalemate"}, "a dead position is a plain draw");
+  assert.equal(end.sides[0].hp, 12, "and nothing was done to anyone to decide it");
+  assert.equal(end.sides[1].hp, 12);
+  for(const f of ["judge.js", "effects.js", "priority.js", "sides.js"]){
+    const src = require("fs").readFileSync(require("path").join(__dirname, "..", "engine", f), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+    assert.ok(!/sudden[ _-]?death/i.test(src), f + " now speaks of sudden death — build it from the ruling and move the record");
+  }
 });

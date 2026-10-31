@@ -245,7 +245,7 @@ function observe(tl){
    contribution. Drawn from the event's stream and stated, never hidden. */
 const BOOK = {viols: [], warns: [], refusals: [],
               faults: Object.fromEntries(FAULTS.map(k => [k, []])),
-              stalls: 0, games: 0, routes: {}, ties: []};
+              stalls: 0, draws: 0, games: 0, routes: {}, ties: []};
 
 function tie(e0, e1, round, idx, first, seed){
   const g = game(e0, e1, seed, first);
@@ -266,10 +266,11 @@ function tie(e0, e1, round, idx, first, seed){
     if(BOOK.faults[k]) BOOK.faults[k].push({where, seed, line});
   }
   if(!r.game.over) BOOK.stalls++;
+  else if(r.game.over.winner == null) BOOK.draws++;   /* the engine's own draw (judge.stalemateCheck) */
 
   const over = r.game.over;
   const t = {e0, e1, round, idx, first, seed, opening,
-             winner: over ? (over.winner === 0 ? e0 : e1) : null,
+             winner: over && over.winner != null ? (over.winner === 0 ? e0 : e1) : null,
              how: over ? over.how : "no result — step limit reached",
              hp: r.game.sides.map(s => s.hp), turns: r.game.turn,
              steps: r.steps, tl: r.timeline, end: r.game,
@@ -402,7 +403,7 @@ line(findings
   : GRN("  clean sheet — no violation, no refusal, no malformed line in any of the seven"));
 line("");
 line("  " + summaryLine(BOOK.refusals, BOOK.viols, faults)
-   + ` · STALLS ${BOOK.stalls} · WARN ${BOOK.warns.length}`);
+   + ` · STALLS ${BOOK.stalls} · DRAWS ${BOOK.draws} · WARN ${BOOK.warns.length}`);
 line("");
 line(B_("  THE SEVEN"));
 for(const t of all)

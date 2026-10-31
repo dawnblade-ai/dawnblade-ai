@@ -144,7 +144,7 @@ function game(e0, e1, seed, first){
 /* winner|loser -> games won, over the qualifier's two meetings. */
 const H2H = new Map();
 const BOOK = {viols: [], warns: [], refusals: [], faults: Object.fromEntries(FAULTS.map(k => [k, []])),
-              stalls: 0, games: 0, turns: 0, routes: {}};
+              stalls: 0, draws: 0, games: 0, turns: 0, routes: {}};
 
 function leg(e0, e1, seed, first, where){
   let r;
@@ -167,7 +167,8 @@ function leg(e0, e1, seed, first, where){
   const over = r.game.over;
   if(!over){ BOOK.stalls++; return {winner: null, stall: true, seed, first,
                                     hp: r.game.sides.map(s => s.hp), turns: r.game.turn}; }
-  return {winner: over.winner === 0 ? e0 : e1, how: over.how, seed, first,
+  if(over.winner == null) BOOK.draws++;   /* the engine's own draw: a leg nobody won (judge.stalemateCheck) */
+  return {winner: over.winner == null ? null : over.winner === 0 ? e0 : e1, how: over.how, seed, first,
           hp: r.game.sides.map(s => s.hp), turns: r.game.turn};
 }
 
@@ -390,7 +391,7 @@ console.log(`\n  THE JUDGES  (${BOOK.games} games, ${(BOOK.turns / Math.max(1, B
 console.log(`    HEAD JUDGE   invariants.errors on every intermediate state   ${BOOK.viols.length} violations`);
 console.log(`    FLOOR JUDGE  judge.reduce refusals (sparring's contract)     ${BOOK.refusals.length} refusals`);
 console.log(`    SCOREKEEPER  ${FAULTS.join(" · ")} · stalls`
-  + `        ${FAULTS.map(k => BOOK.faults[k].length).join(" · ")} · ${BOOK.stalls}`);
+  + `        ${FAULTS.map(k => BOOK.faults[k].length).join(" · ")} · ${BOOK.stalls} (draws ${BOOK.draws})`);
 console.log(`    DECK CHECK   invariants.check WARN band (never read before)     ${BOOK.warns.length} warnings`
   + (warnKinds.length ? `  [${warnKinds.join(", ")}]` : ""));
 for(const k of FAULTS) if(BOOK.faults[k].length) console.log(`\n    ${k}:`, JSON.stringify(BOOK.faults[k].slice(0, 5), null, 1));
@@ -431,6 +432,6 @@ fs.writeFileSync(path.join(out, "tournament.json"), JSON.stringify(
    ties: played.map(p => ({round: p.round, hi: p.hi, lo: p.lo, win: p.win, out: p.out, a: p.a, b: p.b, by: p.by,
                            legs: (p.legs || []).map(L => ({seed: L.seed, hiChair: L.hi, win: L.winner && L.winner.name, hp: L.hp, turns: L.turns, how: L.how}))})),
    judges: {violations: BOOK.viols, warnings: BOOK.warns, refusals: BOOK.refusals,
-            faults: BOOK.faults, stalls: BOOK.stalls, games: BOOK.games, clean: findings === 0},
+            faults: BOOK.faults, stalls: BOOK.stalls, draws: BOOK.draws, games: BOOK.games, clean: findings === 0},
    upsets, routes: BOOK.routes}, null, 1));
 console.log(`\n  full card written to tools/.cache/tournament.json\n`);

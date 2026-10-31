@@ -16,6 +16,8 @@
 
    Read the top three numbers first: policy refusals (always a bug in the
    policy, per sparring.js's contract), invariant violations, and STALLS.
+   A STALL is a game that hit the step limit; a DRAW is a game the engine itself
+   ended because both decks were spent and nothing moved (judge.stalemateCheck).
    The stall count is the cheapest livelock detector this project has and
    it is what found v3.49. See PLAYNOTES.md.
    ============================================================ */
@@ -74,6 +76,17 @@ function lostCards(before, after){
   return out;
 }
 
+/* WHAT A FINISHED DRIVE WAS (v5.62). A game the engine ended as a DRAW (both
+   decks spent, nothing moving: `judge.stalemateCheck`, RULING (user,
+   2026-10-31)) is a result, not a failure. A game that hit the step limit is
+   a STALL: a policy loop with progress still possible, and the thing CLAUDE.md
+   gates every release on at zero. They used to read as one number. Pure, so a
+   drill can hand it synthetic positions. */
+function classify(game){
+  if(!game.over) return "STALL";
+  return game.over.winner == null ? "DRAW" : "OVER";
+}
+
 /* Drive one game, auditing every state on the way. `sparring.run` returns
    only the end state, so the loop is inlined to get at the intermediates —
    a game that ends clean can still have passed through a broken board. */
@@ -88,7 +101,7 @@ function lostCards(before, after){
 function play(g, limit, opts){
   limit = limit || 4000;
   opts = opts || {};
-  let n = g, steps = 0;
+  let n = g, steps = 0, longestQuiet = 0;
   const errs = [], viols = [], warns = [], events = [], timeline = [];
   const feedSeen = new Set();
   for(let i = 0; i < limit && !n.over; i++){
@@ -100,6 +113,10 @@ function play(g, limit, opts){
       if(out.error){ errs.push({t: a.t, seat: s, why: out.error, turn: n.turn}); continue; }
       const before = n;
       n = out.state; steps++; moved = true;
+      /* the longest unchanged stretch the ENGINE's tracker has seen (turns since
+         `still.since`): what a ladder reads to say how far from the draw line a
+         game that went on really got */
+      if(n.still && n.turn - n.still.since > longestQuiet) longestQuiet = n.turn - n.still.since;
       /* A CARD IN NO ZONE (v5.40). `invariants.js` catches a card in TWO
          zones and cannot see one in NONE — it simply falls out of the
          census (v2.21, v3.07). Boltyn's soul-banish cost sliced cards off
@@ -510,7 +527,7 @@ function play(g, limit, opts){
     }
     if(!moved) break;
   }
-  return {game: n, steps, errs, viols, warns, events, feedSeen, timeline};
+  return {game: n, steps, errs, viols, warns, events, feedSeen, timeline, longestQuiet, verdict: classify(n)};
 }
 
 /* THE FAULT LIST IS A CENSUS, AND IT LIVES BESIDE THE COUNTERS (v4.17).
@@ -549,9 +566,16 @@ const FAULTS = ["MALFORMED", "SECOND-PERSON", "NO-ZONE"];
 const summaryLine = (refusals, viols, faults) =>
   `POLICY REFUSALS ${refusals.length} · INVARIANT VIOLATIONS ${viols.length} · `
   + FAULTS.map(k => `${k} ${(faults[k] || []).length}`).join(" · ");
+/* THE LADDER'S FIRST LINE. STALLS and DRAWS are two numbers because they are
+   two different things: a stall is a policy loop and is gated at zero; a draw
+   is the engine's own result for a dead position, listed with its seeds so it
+   can be replayed. Pure, so a drill can hand it synthetic counts. */
+const ladderLine = (games, stalls, draws, turnsum) =>
+  `GAMES ${games} \u00b7 stalls ${stalls} \u00b7 draws ${draws.length}${draws.length ? " (" + draws.join(" ") + ")" : ""}`
+  + ` \u00b7 avg turns ${(turnsum / Math.max(1, games)).toFixed(1)}`;
 const routeNames = evts => Object.keys(evts).filter(k => !FAULTS.includes(k)).sort();
 
-module.exports = {match, play, W, DB, J, SP, FAULTS, heldCards, lostCards, summaryLine, routeNames};
+module.exports = {match, play, W, DB, J, SP, FAULTS, classify, ladderLine, heldCards, lostCards, summaryLine, routeNames};
 
 if(require.main === module){
   const keys = W.HEROES.map(h => h.k);

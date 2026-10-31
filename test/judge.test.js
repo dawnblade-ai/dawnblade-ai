@@ -1411,10 +1411,15 @@ test("CR 4.5.3 — an empty deck is NOT a loss; the draw just takes what is ther
   assert.ok(!m.over);
 });
 
-test("the only ways the reducer ends a game are CR 4.5.3's", {skip}, () => {
+/* The CR's three ways to lose, plus ONE way to END with no loser: a game that
+   cannot move any more is a draw. RULING (user, 2026-10-31): "A match can
+   certainly end in a draw - in the future we may need a sudden death mechanic,
+   there is one in place for tournaments already." It is the ruling's, not an
+   invented loss: nobody loses, `winner` is null (test/stalemate.test.js). */
+test("the only ways the reducer ends a game are CR 4.5.3's, and the user's draw", {skip}, () => {
   const src = fs.readFileSync(path.join(__dirname, "..", "engine", "judge.js"), "utf8");
   const hows = [...src.matchAll(/how:\s*"([a-z]+)"/g)].map(m => m[1]).sort();
-  assert.deepEqual([...new Set(hows)], ["concession", "life"],
+  assert.deepEqual([...new Set(hows)], ["concession", "life", "stalemate"],
     "judge.js ends a game some way CR 4.5.3 does not name");
 });
 

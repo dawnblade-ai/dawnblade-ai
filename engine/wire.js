@@ -281,7 +281,14 @@
    banishes the front of the soul where ours banishes the card the seat named,
    so the pair desyncs on the first Boltyn activation with two cards in the
    soul. Whole-shipped values: by hand, behind the release handshake. */
-const WIRE_V = 29;
+/* 29 -> 30 AT v5.62: a dead position now ENDS (RULING (user, 2026-10-31): a
+   match can end in a draw). The game gains a top-level key, `still` (the
+   stalemate tracker `judge.stalemateCheck` reads), and `over` can carry
+   `{winner: null, how: "stalemate"}`. A v29 peer has no tracker and never
+   ends such a game, so the pair would disagree on whether it is over. A
+   game key ships inside the game object, which the shape digest does not
+   cover: by hand, behind the release handshake. */
+const WIRE_V = 30;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

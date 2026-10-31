@@ -825,7 +825,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "5.61"; /* v5.61 - V of the Vanguard gets its own bonus for each Light card it charges. See CHANGELOG.md. */
+window.APP_VER = "5.62"; /* v5.62 - a game where both decks are spent and nothing can change ends as a draw. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -7146,6 +7146,9 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
   const mine = a => DawnJudge.legal(g, a, mySeat) === null;
   const fire = a => { const why = sess.current.submit(a); setNote(why||null); };
   const over = g.over;
+  /* a game nobody can win (both decks spent, nothing moving) is a DRAW: `over.winner` is null
+     and the words are the engine's, so the board and the drills read one copy */
+  const drawText = DawnJudge.drawText(over, g.sides);
   /* A PENDING IS ONE FIELD AND FOUR KINDS (v3.35), so it is split by kind
      here rather than at each reader.
 
@@ -7557,7 +7560,9 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
 
               {/* The status line says what the CR machine is asking of
                   THIS seat, in the trainer's voice. */}
-              {over ? <div className="statusline">{over.winner===mySeat?"You win":"You lose"} — {g.sides[over.winner].name} takes it on {over.how}.</div>
+              {over ? <div className="statusline">{drawText
+                  ? drawText.status
+                  : <>{over.winner===mySeat?"You win":"You lose"} — {g.sides[over.winner].name} takes it on {over.how}.</>}</div>
                 : boost ? <div className="statusline">Boost <b>{boost.card.name}</b>? Banish the top card of your deck as an additional cost — a <b>Mechanologist</b> card grants go again.</div>
                 : fuse ? <div className="statusline">Fuse <b>{fuse.card.name}</b>? Reveal a {(fuse.types||[]).join("/")} card from your hand as an additional cost — <b>{them.name} sees it</b>.</div>
                 : charge ? <div className="statusline">Charge for <b>{charge.card.name}</b>? A card from your hand goes to your <b>soul</b> as an additional cost — you may decline.</div>
@@ -7873,15 +7878,15 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
           existing rule rather than overriding it. */}
       {over && local && over.winner===mySeat && onRecord
         ? <WinPanel score={g.turn + (me.wasted||0)} onExit={onExit}/>
-        : over && <div className={"reveal"+(over.winner===mySeat?"":" lose")} onClick={onExit}>
+        : over && <div className={"reveal"+(drawText||over.winner===mySeat?"":" lose")} onClick={onExit}>
         <h2 className="disp" style={{marginBottom:14}}>
-          {over.winner===mySeat ? "YOU TAKE IT" : "THEY TAKE IT"}</h2>
+          {drawText ? drawText.title : over.winner===mySeat ? "YOU TAKE IT" : "THEY TAKE IT"}</h2>
         <div className="card clip">
           <div className="rar">turn {g.turn} · table {code}</div>
-          <h3>{g.sides[over.winner].name} over {g.sides[1-over.winner].name}</h3>
+          <h3>{drawText ? drawText.names : <>{g.sides[over.winner].name} over {g.sides[1-over.winner].name}</>}</h3>
         </div>
         <p style={{marginTop:14,fontSize:13}}>
-          {over.how==="life" ? "Life to zero." : "The game ended on "+over.how+"."}
+          {drawText ? drawText.note : over.how==="life" ? "Life to zero." : "The game ended on "+over.how+"."}
           {" "}{me.hp>0 ? <>You finished on <b className="mono">{me.hp}</b>.</> : null} Tap anywhere.
         </p>
       </div>}
