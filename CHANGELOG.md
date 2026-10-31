@@ -1,3 +1,26 @@
+## v5.64 — The AI holds a defence reaction its blocks do not need
+
+**QUEUE H22, policy.** Found and measured by a Sonnet agent, re-measured and shipped by the CEO thread.
+
+- **The leak:** `sparring.reaction` cast the cheapest legal defence reaction in every reaction step,
+  even when the declared blocks already stopped the hit. After v5.63's `blockSpare` that threw away a
+  card and its cost: 37-51% of the chip decks' defence reactions met a link already stopped
+  (Dorinthea 84 of 166, Arakni 129 of 350, Lyath 64 of 148, Boltyn 55 of 137).
+- **The rule (reason `rxHold`):** the defender passes when the wall it already has — declared blocks
+  plus the defence reactions already played this link (`wallNow`) — is at least the attack's total. A
+  tie holds. Nothing is lost by waiting: the card is an instant and is asked again on the next link,
+  and a hit that leaks is met exactly as before. Numbers on the link only, no card text. The call
+  says: "Hold it. Your blocks already stop this whole hit, so the card stays in your hand."
+- **Own-seat A/B, 24 seeds paired, wins of 28:** Arakni 8.0 -> 10.1 (t 4.6, 18 up / 3 down),
+  Dorinthea 10.7 -> 11.75 (t 3.5), Boltyn 7.25 -> 7.8 (t 1.8), Lyath 6.8 -> 7.5 (t 2.1). Measured
+  negative, not shipped: holding against small leaks too (Arakni -2.6), a one-point cushion, and
+  skipping an attacker's reaction on a lookahead.
+- **Full ladder, 630 games at 3 seeds:** 0 stalls, 0 refusals, 0 violations, 2 draws. Every deck that
+  carries defence reactions gains, so the field absorbs most of it: Bravo 37 -> 46, Enigma 37 -> 44,
+  Viserai 41 -> 46, Lyath 16 -> 20; Dash 62 -> 53, Fai 59 -> 52. The last place is 20 wins, up from 16.
+- Drills in `test/rxhold.test.js` (8, fire and don't-fire pairs, `explain` deep-equals `act`), each
+  sabotaged; `explain`'s unreached-key pin moved with the census.
+
 ## v5.63 — The AI blocks with a card it could not spend
 
 **QUEUE H21b, policy, a deliberate field shift.** Found and measured by Sonnet agents, re-measured

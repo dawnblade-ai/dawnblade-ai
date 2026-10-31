@@ -347,6 +347,11 @@ function wallOf(sd){
     }, 0);
 }
 
+/* THE WALL AT THE REACTION STEP: declared blockers plus the printed defence of
+   every defence reaction already played this link, which is exactly what the
+   damage step will total (`judge.strike` adds `blockRx` to the wall). */
+const wallNow = sd => wallOf(sd) + (sd.blockRx || []).reduce((t, l) => t + ((l && l.def) || 0), 0);
+
 function nextBlocker(g, seat, o){
   const sd = g.sides[seat];
   const incoming = (g.pend && g.pend.total) || 0;
@@ -472,6 +477,25 @@ function reaction(g, seat){
     .filter(x => legal(g, {t: "play", uid: x.c.uid, from: x.from}, seat))
     .sort((a, b) => num(a.c, "cost") - num(b.c, "cost") || byUid(a.c, b.c));
   const pick = legalRx[0];
+  /* A DEFENCE REACTION IS HELD WHEN THE WALL ALREADY STOPS THE HIT (QUEUE v4 H22).
+     The cheapest legal defender was cast whether or not anything was left to
+     stop, so after `blockSpare` had stopped a hit for free the seat also spent
+     its Springboard Somersault, Oasis Respite or Trap on it: a card and its
+     cost for a hit that was already dead. Measured at 3 seeds with the four
+     chip decks on every opponent: 37-51% of their defence reactions were cast
+     against a link the declared blocks already stopped (Dorinthea 84 of 166).
+     Nothing is lost by waiting: the card is an instant, the defender is asked
+     again on the next link, and a hit that does leak is still met with it.
+     A tie holds too: of the casts this rule skips, only 1-6% saw the link
+     leak after all (a late +1), and a one-point cushion measured worse. A
+     hit that leaks, however small, is met exactly as before (a rule that also
+     held against small leaks cost Arakni 2.6 wins of 28 against no rule at all).
+     Own seat, 24 seeds paired, wins of 28: Arakni 8.0 -> 10.1, Dorinthea
+     10.7 -> 11.8, Boltyn 7.3 -> 7.8, Lyath 6.8 -> 7.5. The wall counts the
+     defence reactions already played (`wallNow`), so a second one is held too
+     when the first stopped the hit. */
+  if(pick && defending && wallNow(sd) >= ((g.pend && g.pend.total) || 0))
+    return tag("rxHold", {t: "pass"});
   if(pick) return tag(defending ? "rxDefend" : "rxAttack", {t: "play", uid: pick.c.uid, from: pick.from});
 
   /* ---- AN ACTIVATED ABILITY IS A REACTION TOO (v4.38) ----------------
@@ -1030,6 +1054,7 @@ const CALL_WHY = {
   blockLethal: "Block with everything. This hit would kill you.",
   blockHand: "Block with your best defender. This hit is too big to take.",
   blockSpare: "Block with a spare card. Your next turn cannot spend a hand this big, so the extra card stops this whole hit for free.",
+  rxHold: "Hold it. Your blocks already stop this whole hit, so the card stays in your hand.",
   rxDefend: "Play it now. It protects you from this attack.",
   rxAttack: "React with your cheapest card to pump this attack.",
   rxAbility: "Use the ability. It is printed for this window.",
