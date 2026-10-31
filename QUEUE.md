@@ -39,7 +39,13 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
   107/0; fairness clean; babel ok; 21 scripts + `.nojekyll`; ladder 0/0/0 and wins per seed
   IDENTICAL to v5.52 (Fai 84 games: 28 Fealty made, 56 kept, 5 destroyed; Static Shock 18 -> 20).
   `WIRE_V` 27. `quotedUnread` is no longer emitted by any pool record.
-- **Next: FEED 21**, then **R5 if the user rules** (below, NEEDS A RULING), then `cloaked-display`.
+- **v5.54 (FEED 21) SHIPPED by the CEO thread, 2026-10-31** (`1c0cb1c`): class/talent words
+  capitalised in grant lines (`parser.CLASS_TALENT_WORDS`, drilled against every pool type line),
+  riders say what they do (`effects.riderWords`), Flying High's colour after the pump. Voice only:
+  the 3-seed ladder report is byte-identical to v5.53 once `tools/selfplay.js`'s `gold` counter
+  stopped counting the new grant announcements (187 -> 286 -> 187). 3738 drills, 0 fail, 5 skipped.
+- **Next: R5 if the user rules** (below, NEEDS A RULING), then the open record `cloaked-display`
+  (a UI job: the card back on the board), then the H-items still listed as unresolved.
 - **Latent, recorded:** a non-permanent played FROM THE GRAVEYARD still files to banish (R2 covered
   banish only). Measured reach: every watery-grave card in the pool is an ally, which goes to the
   arena, so no pool card reaches that path today. Ask the user before changing it.
