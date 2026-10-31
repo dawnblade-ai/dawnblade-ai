@@ -186,3 +186,146 @@ test("the table board reads the draw through drawText, not through a winner (sou
     assert.ok(/\bdrawText\s*\?/.test(pre), "a winner-indexed read not behind a `drawText ?` branch: " + pre.slice(-90));
   }
 });
+
+/* ============================================================
+   A POSITION THAT CYCLES IS DEAD TOO (v5.67).
+
+   `lyath-boltyn-24` ran to the harness's step limit with both decks empty,
+   Lyath on 1 life against 5: every turn Lyath paid two cards for a Might token
+   (the cards went to the empty deck's bottom and straight back) and Boltyn
+   swung a weapon for nothing. The position repeated exactly, but a FRESH token
+   serial appeared each turn, so `stillSig` changed every turn and the first
+   test never fired. `still.loop` looks once a turn at `loopSig` (tokens by
+   NAME, zones as sets, counters, life) and ends the game when no new position
+   has appeared for `STALEMATE_TURNS` turns with both decks empty.
+
+   THE POSITIONS ARE CONSTRUCTED AND CYCLED BY HAND, through `stalemateCheck`
+   (the one function `reduce` calls after every action), because the real
+   game's cycle is the AI policy's and rots with it; the real game is replayed
+   in the release's validation. Each drill asks the other direction too: a
+   cycle with a life change in it, with a card in a deck, with a growing board
+   or a growing counter must NOT end, and the same cycle without that must.
+   ASSERTED ON STATE (over, turn, still), never on prose.
+   ============================================================ */
+const mintTok = (name, n) => { const c = {name, uid: "tok" + n, ty: ["Generic", "Token", "Aura"], tt: "Generic Token - Aura", pitch: 0}; return {card: c, uid: c.uid}; };
+const edit = (g, i, f) => ({...g, sides: g.sides.map((x, j) => j === i ? {...x, ...f(x)} : x)});
+
+/* Runs the cycle through `stalemateCheck`, one call per change, and hands every
+   state to `seen`. Each turn: the turn flips (the first look of the turn is the
+   boundary), seat 0 pitches its cards (a change), they come back in another
+   order, and the token is reminted under a new serial. `each(g, t)` may alter
+   the position on turn t. */
+function cycle(start, turns, each, seen){
+  let n = {...start, turn: 1, still: undefined}, serial = 100;
+  n = edit(n, 0, sd => ({board: [mintTok("Might", serial++)]}));
+  n = J.stalemateCheck(n);
+  for(let t = 0; t < turns && !n.over; t++){
+    n = J.stalemateCheck({...n, turn: n.turn + 1});
+    if(each) n = J.stalemateCheck(each(n, t));
+    if(n.over) break;
+    n = J.stalemateCheck(edit(n, 0, sd => ({hand: [], pitch: sd.pitch.concat(sd.hand)})));
+    n = J.stalemateCheck(edit(n, 0, sd => ({pitch: [], hand: sd.pitch.slice().reverse(), board: [mintTok("Might", serial++)]})));
+    if(seen) seen(n);
+  }
+  return n;
+}
+/* two cards in seat 0's hand, so the order they come back in can differ */
+const cycleStart = () => { const g = deadStart(); return edit(g, 0, sd => ({hand: sd.hand.concat(sd.hand.map(c => ({...c, uid: "x" + c.uid, name: c.name + " II"})))})); };
+
+test("a position that cycles with both decks empty ends as a draw, a full window after its last new position", () => {
+  const seen = [];
+  const end = cycle(cycleStart(), 200, null, s => seen.push(s));
+  assert.ok(end.over && end.over.winner === null && end.over.how === "stalemate", "the cycle ended as a draw (it used to run on)");
+  assert.deepEqual(end.sides.map(s => s.deck.length), [0, 0]);
+  assert.equal(end.turn - end.still.loop.since, J.STALEMATE_TURNS, "on the turn the window filled");
+  /* FIXTURE: this is the shape the first test cannot see - it moved every turn, so only the loop tracker is idle */
+  assert.ok(seen.every(s => s.turn - s.still.since <= 1), "fixture: the exact tracker never sat idle for even two turns");
+  assert.ok(seen.some(s => s.turn - s.still.loop.since === J.STALEMATE_TURNS - 1), "fixture: the window passed through N-1");
+  assert.ok(seen.every(s => !s.over && s.turn - s.still.loop.since < J.STALEMATE_TURNS), "and nothing ended earlier");
+  assert.ok(end.turn <= 30, "a cycle that has stopped finding anything new ends in about a window, not hundreds of turns (" + end.turn + ")");
+});
+
+test("the census reads a token by its name and a zone as a set; everything else still moves it", () => {
+  const g0 = edit(cycleStart(), 0, sd => ({board: [mintTok("Might", 1)]}));
+  const sig = J.loopSig(g0);
+  const swap = f => J.loopSig(edit(g0, 0, f));
+  assert.equal(swap(() => ({board: [mintTok("Might", 2)]})), sig, "a new serial of the same token is the same position");
+  assert.notEqual(J.stillSig(edit(g0, 0, () => ({board: [mintTok("Might", 2)]}))), J.stillSig(g0), "fixture: the exact census DOES see the serial");
+  assert.equal(swap(sd => ({hand: sd.hand.slice().reverse()})), sig, "the same cards in another order are the same position");
+  assert.notEqual(swap(() => ({board: [mintTok("Runechant", 1)]})), sig, "a different token");
+  assert.notEqual(swap(sd => ({board: sd.board.concat([mintTok("Might", 3)])})), sig, "one more of the same token");
+  assert.notEqual(swap(sd => ({hp: sd.hp - 1})), sig, "life");
+  assert.notEqual(swap(sd => ({hand: sd.hand.slice(1)})), sig, "a card gone from the hand");
+  assert.notEqual(swap(sd => ({hand: [], pitch: sd.hand})), sig, "a card in another zone");
+  assert.notEqual(swap(() => ({counters: {tok1: {pow: 1}}})), sig, "a counter on a token");
+  assert.equal(swap(() => ({counters: {tok1: {pow: 0}}})), sig, "a counter at zero is none");
+  assert.equal(swap(sd => ({heroTapped: !sd.heroTapped, res: 3})), sig, "tapped flags and resources are not progress");
+});
+
+test("a life change inside the window starts it again", () => {
+  const base = cycle(cycleStart(), 200);
+  const hit = cycle(cycleStart(), 200, (g, t) => t === 12 ? edit(g, 1, sd => ({hp: sd.hp + 1})) : g);
+  assert.ok(hit.over && hit.over.winner === null, "it is still a draw, later");
+  assert.ok(hit.turn > base.turn, "the change moved the draw back: " + base.turn + " -> " + hit.turn);
+  assert.ok(hit.turn - 13 >= J.STALEMATE_TURNS, "a full window after the change (turn 13 on), not after the start");
+  assert.equal(hit.turn - hit.still.loop.since, J.STALEMATE_TURNS);
+  /* and one point of life, taken a few turns before the draw, saves the game for another window */
+  const late = cycle(cycleStart(), 200, (g, t) => t === base.turn - 4 ? edit(g, 0, sd => ({hp: sd.hp + 1})) : g);
+  assert.ok(late.turn >= base.turn + J.STALEMATE_TURNS - 4, "a late change restarted the window (" + late.turn + " vs " + base.turn + ")");
+});
+
+test("a cycle with a card still in a deck does not end, and counts only the turns the decks are empty", () => {
+  const withDeck = g => edit(g, 1, sd => ({deck: [sd.hand[0]]}));
+  const held = cycle(withDeck(cycleStart()), 120, null);
+  assert.ok(!held.over, "a card in a deck is a way out (turn " + held.turn + ")");
+  assert.equal(held.still.loop.since, held.turn, "and the window never opened");
+  /* the deck empties at turn 15: the window opens THEN, not at the start */
+  let emptied = null;
+  const end = cycle(withDeck(cycleStart()), 200, (g, t) => { if(t === 15){ emptied = g.turn; return edit(g, 1, sd => ({deck: []})); } return g; });
+  assert.ok(end.over && end.over.winner === null);
+  assert.ok(end.turn - emptied >= J.STALEMATE_TURNS, "a full window after the deck emptied (" + (end.turn - emptied) + ")");
+  assert.ok(cycle(cycleStart(), 200).over, "control: the same cycle with empty decks ends");
+});
+
+test("a seat that keeps building, or keeps counting, is not idle; the same cycle that stops is", () => {
+  const grow = stopAt => cycle(cycleStart(), 100, (g, t) => t < stopAt ? edit(g, 1, sd => ({board: sd.board.concat([mintTok("Runechant", 500 + t)])})) : g);
+  const going = grow(1000);
+  assert.ok(!going.over, "one more Runechant every turn is progress toward something (turn " + going.turn + ")");
+  const stopped = grow(30);
+  assert.ok(stopped.over && stopped.over.winner === null, "control: the same board, once it stops growing, is dead");
+  assert.ok(stopped.turn - 30 >= J.STALEMATE_TURNS, "a full window after the last Runechant");
+  /* a counter that climbs each turn on a card in play */
+  const piece = cycleStart().sides[0].gear[0];
+  assert.ok(piece && piece.uid != null, "fixture: a real card in play to hold counters");
+  const count = stopAt => cycle(cycleStart(), 100, (g, t) => t < stopAt ? edit(g, 0, () => ({counters: {[piece.uid]: {pow: t + 1}}})) : g);
+  assert.ok(!count(1000).over, "a counter that keeps climbing is progress");
+  const settled = count(25);
+  assert.ok(settled.over && settled.turn - 25 >= J.STALEMATE_TURNS, "control: once it stops climbing the position is dead");
+});
+
+test("the loop tracker is a game key that rides the wire, and the first test is unchanged beside it", () => {
+  const end = cycle(cycleStart(), 5);
+  assert.ok(end.still.loop && Array.isArray(end.still.loop.ring) && end.still.loop.ring.length <= J.LOOP_RING);
+  const W = require("../engine/wire.js");
+  assert.deepEqual(W.decode(W.encode(end)).still, end.still, "the tracker, loop and all, rides the wire");
+  /* an old tracker ({sig, since}, no loop) still reads, and still draws by the first test */
+  const old = J.stalemateCheck({...deadStart(), still: {sig: J.stillSig(deadStart()), since: deadStart().turn - 99}});
+  assert.ok(old.over && old.over.how === "stalemate", "the first test is unchanged");
+  assert.ok(old.still.loop, "and a game that arrives without a loop tracker grows one");
+  /* the first look of a game with no tracker at all opens no window */
+  const fresh = J.stalemateCheck(deadStart());
+  assert.ok(!fresh.over && fresh.still.loop.since === fresh.turn);
+});
+
+test("a cycle of up to LOOP_RING positions is dead, and a longer one is a stated limit, not a draw", () => {
+  const pool = Array.from({length: J.LOOP_RING + 2}, (_, i) => ({uid: "b" + i, name: "Banished " + i, pitch: 1, cost: 0, tt: "Generic Action", ty: ["Generic", "Action"], tx: "", kw: []}));
+  /* the position at each turn's start walks through k different banish zones, then comes round again */
+  const walk = k => cycle(cycleStart(), 160, (g, t) => edit(g, 0, () => ({banish: pool.slice(0, t % k)})));
+  for(const k of [2, 3, J.LOOP_RING]){
+    const end = walk(k);
+    assert.ok(end.over && end.over.winner === null, "a cycle of " + k + " positions is dead (turn " + end.turn + ")");
+  }
+  const long = walk(J.LOOP_RING + 1);
+  assert.ok(!long.over, "STATED LIMIT: a cycle longer than the ring is not drawn (tools/approx.js, `trainer-no-stalemate-draw`) - turn " + long.turn);
+  assert.equal(J.LOOP_RING, 8, "the ring is the measured choice: change it with the numbers in the header of the cycle block in judge.js");
+});

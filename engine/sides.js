@@ -219,7 +219,9 @@ const GAME_KEYS = [
   "chain","chainHist","chainOpen","boostChain","stack","pend","featured",
   "hitSeq","lastDmg",
   /* THE STALEMATE TRACKER (v5.62): the signature of the last state that moved and the turn
-     it moved on, which `judge.stalemateCheck` reads to end a dead position as a draw. */
+     it moved on, plus `loop` (v5.67: the once-a-turn position ring, so a position that
+     only CYCLES is seen too), which `judge.stalemateCheck` reads to end a dead position
+     as a draw. */
   "still",
   /* HYPER INFLATION'S TAX (v4.06). "Cards cost {r} more to play this turn"
      names no seat, so it taxes BOTH players and belongs to the game rather

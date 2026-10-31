@@ -342,7 +342,7 @@ test("the one-board reader sets are pinned", {skip}, () => {
     assert.ok(both.includes(n), n + " is demonstrably asked by both boards");
 
   assert.deepEqual(onlyJ.sort(),
-    ["abilityGa", "arcAmount", "boostPays", "chiValue", "handFree", "isAtkActionCard", "isDeclaredDefender", "isDR",
+    ["abilityGa", "arcAmount", "boostPays", "chiValue", "handFree", "isAtkActionCard", "isDeclaredDefender", "isDR", "isToken",
      "printedKw", "qualMatches", "splitCostsAP", "weaponCost"].sort(),
     "a reader judge asks and the trainer does not. TWO LEFT this list at " +
     "v3.99: `tapsToActivate` (the trainer now refuses a tapped hero) and " +
@@ -377,7 +377,10 @@ test("the one-board reader sets are pinned", {skip}, () => {
     "`sparring.js` asks to rank its non-attacks by printed arcane without " +
     "reading card text. The trainer reaches it through the shared bodies that " +
     "price Blaze's ability (`prompts.js`'s filter, `effects.js`'s charge), and " +
-    "a human chooses which arcane card to play.");
+    "a human chooses which arcane card to play.\n" +
+    "v5.67: `isToken` ARRIVED, read inside `judge.loopSig`, the cycle tracker of the draw test " +
+    "(a token is counted by its name, since its uid is a serial minted fresh each time). " +
+    "The trainer keeps no stalemate tracker (`trainer-no-stalemate-draw`).");
 
   assert.deepEqual(onlyT.sort(),
     ["clean", "defCap", "dracLinksNow", "frostCount", "hasKwNow", "instantAbilityReady",

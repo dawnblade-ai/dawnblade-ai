@@ -1,3 +1,29 @@
+## v5.67 — A repeating dead position is a draw too
+
+**Ruling R6, tightened.** Built and measured by a Sonnet agent, verified and shipped by the CEO thread.
+
+- **The gap:** v5.62 draws when both decks are empty and NOTHING changes for 20 turns. In
+  `lyath-boltyn-24` (a 48-seed run, outside the ladder's seeds) the decks were empty from turn 28,
+  life sat at 1 vs 5 and no damage was ever dealt — but each Lyath turn her ability pitched two cards
+  (they return under the empty deck) and her Might token was replaced by a new one with a fresh uid.
+  The position repeated exactly while the uid-based signature changed every turn, so it never drew.
+- **The refinement (`judge.stalemateCheck`):** v5.62's test is untouched. A second tracker,
+  `still.loop`, samples the position once per turn by NAME rather than uid (each zone as a sorted
+  set, plus counters and life). It draws when both decks are empty and no position outside the last
+  8 turns' has appeared for 20 turns: a short cycle repeating is as dead as a still board. A card in a
+  deck reopens the window. A cycle longer than 8 turns stays a stall, recorded as a stated limit.
+- **Measured over 10,080 games** (every hero pair, seeds 0-47): the loop tracker's longest idle
+  stretch before a life move was 1 turn, so 20 is a 20x margin. Of 41 draws, 40 were already the old
+  test's; `lyath-boltyn-24` is the only new one, and it now draws at turn 50. A rule of "no life
+  change for M turns" was rejected: a life-neutral stretch of 8 turns was followed by a life move, and
+  a board can grow with life untouched.
+- **`WIRE_V` 30 -> 31.** Seven new drills in `test/stalemate.test.js`, nine sabotages all caught.
+  The 3-seed ladder is byte-identical to v5.66 (0 stalls, the same 2 draws).
+- **Found, not decided (asked of the user):** `blaze-enigma-46` still stalls, as it did on v5.66.
+  Enigma holds a full hand (4, her intellect) of cards she never plays, with 8 cards left in her deck
+  she can therefore never draw; Blaze has nothing; both on 1 life; nothing changes from turn 35 on.
+  The "a card in a deck keeps the game open" rule is not true there.
+
 ## v5.66 — The AI sets up Duty Bound Blitz
 
 **QUEUE H23, policy (Boltyn).** Found and measured by a Sonnet agent, re-measured and shipped by the

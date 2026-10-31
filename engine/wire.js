@@ -288,7 +288,12 @@
    ends such a game, so the pair would disagree on whether it is over. A
    game key ships inside the game object, which the shape digest does not
    cover: by hand, behind the release handshake. */
-const WIRE_V = 30;
+/* 30 -> 31 AT v5.67: `still` gains `loop` ({turn, ring, since}), the cycle
+   tracker: a dead position that CYCLES (a fresh token under a new serial every
+   turn, cards pitched and drawn back) now ends as a draw too. A v30 peer's
+   tracker has no `loop` and would never end such a game, and would drop the
+   key on its next check. Inside a game key that ships whole: the digest holds. */
+const WIRE_V = 31;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

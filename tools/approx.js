@@ -1018,7 +1018,12 @@ const APPROX = {
 "trainer-no-stalemate-draw": {
   status:"stated", cr:"CR 4.5.3", board:"trainer", since:"v5.62", swept:"v5.62",
   claim:"The table ends a game as a DRAW when both decks are empty and nothing a "+
-        "seat holds has moved for twenty turns (`judge.stalemateCheck`). The trainer "+
+        "seat holds has moved for twenty turns, or no position it has not seen "+
+        "before has appeared at a turn's start for twenty turns, a token counted by its "+
+        "name and not its serial (`judge.stalemateCheck`, v5.67: a cycle through the "+
+        "same few positions is as dead as no movement). A cycle longer than "+
+        "`judge.LOOP_RING` turns, and a change in a place the census does not read "+
+        "(a card's text is never consulted), is not seen. The trainer "+
         "does not: `Battle` ends a game only on life, its own `over` is `{win}` rather "+
         "than `{winner, how}`, and it keeps no stillness tracker, so a position that "+
         "can no longer move would run on there.",

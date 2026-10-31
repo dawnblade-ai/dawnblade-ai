@@ -113,10 +113,14 @@ function play(g, limit, opts){
       if(out.error){ errs.push({t: a.t, seat: s, why: out.error, turn: n.turn}); continue; }
       const before = n;
       n = out.state; steps++; moved = true;
-      /* the longest unchanged stretch the ENGINE's tracker has seen (turns since
-         `still.since`): what a ladder reads to say how far from the draw line a
-         game that went on really got */
-      if(n.still && n.turn - n.still.since > longestQuiet) longestQuiet = n.turn - n.still.since;
+      /* the longest unchanged stretch EITHER of the engine's trackers has seen
+         (turns since `still.since`, the exact one, or `still.loop.since`, the
+         once-a-turn cycle one): what a ladder reads to say how far from the draw
+         line a game that went on really got */
+      if(n.still){
+        const q = Math.max(n.turn - n.still.since, n.still.loop ? n.turn - n.still.loop.since : 0);
+        if(q > longestQuiet) longestQuiet = q;
+      }
       /* A CARD IN NO ZONE (v5.40). `invariants.js` catches a card in TWO
          zones and cannot see one in NONE — it simply falls out of the
          census (v2.21, v3.07). Boltyn's soul-banish cost sliced cards off

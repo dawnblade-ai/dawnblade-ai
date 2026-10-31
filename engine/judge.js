@@ -2771,8 +2771,45 @@ const winCheck = (g, by) => {
    v5.60 ladder (630 games) the longest unchanged stretch any game came back
    from was one turn; with the AI blocking spare cards, two. Twenty is ten
    times that and a dead position reaches it in about forty actions.
-   The tracker rides in `g.still` ({sig, since}), a game key. */
+   The tracker rides in `g.still` ({sig, since, loop}), a game key.
+
+   A POSITION THAT CYCLES IS DEAD TOO (v5.67). The test above sees only a
+   position that does not move at all. Lyath's hero ability pays two cards for
+   a Might token each turn: the two cards go to the (empty) deck's bottom and
+   come straight back, and a FRESH token takes the old one's place, so a
+   position that repeats exactly still shows a new uid in `stillSig` every
+   turn. Neither seat could ever win; `lyath-boltyn-24` ran to the harness's
+   step limit (1 life against 5, both decks empty, 350 turns of it). So a second
+   tracker, `still.loop`, looks ONCE A TURN, at the first state of the turn,
+   at `loopSig`: the same census with each piece's identity taken as what it
+   IS (a token by its NAME, since its uid is a serial; a zone as a SET, since the
+   cards come back in another order), plus the counters on each piece. A turn
+   whose position is one of the last `LOOP_RING` turns' positions, with both
+   decks empty, is a repeat; a position the ring has not seen, or a deck with a
+   card in it, starts the window again. The draw is the same twenty turns.
+   WHY THIS IS NARROW. It asks the same thing as the first test (did anything
+   a seat can win with change?) at the one place a cycle closes. Life is in the
+   position, so a single point of damage or life is new. A seat building a
+   board - a second Runechant, a Might token it did not have, a card in an
+   arsenal - is a position the ring has not seen. What it cannot see is a
+   change in a place the census does not read (a card's text is never
+   consulted), and that is the first test's own blind spot, not a new one. A
+   cycle longer than `LOOP_RING` turns is not seen either (a stated limit).
+
+   WHY NOT "DECKS EMPTY AND NO LIFE CHANGE FOR M TURNS". That is not sound as a
+   rule: with the decks empty a seat can still BUILD toward a win with life
+   untouched (a Runechant a turn, a counter a turn), and a stretch like that
+   is exactly what the ring sees as new. Measured, the simple rule would also
+   have little room: over 10,080 self-play games (the 210 ordered hero pairs,
+   seeds 0-47) 756 life moves came with both decks empty, and the longest
+   life-neutral stretch (both decks empty throughout) that a life move
+   followed was 8 turns. The longest stretch THIS tracker sat idle before a life
+   move was 1 turn (the exact tracker's: 2). Twenty is twenty times that.
+   Of the 41 draws, 40 were the first test's too; the one only this makes is
+   `lyath-boltyn-24` (decks empty from turn 28, its last new position at turn
+   30, drawn at turn 50). */
 const STALEMATE_TURNS = 20;
+const LOOP_RING = 8;
 const STILL_ZONES = ["deck", "hand", "pitch", "grave", "banish", "soul", "board", "gear"];
 const _uidList = z => (z || []).map(e => (e && e.uid != null) ? e.uid : (e && e.card ? e.card.uid : "?")).join(".");
 function stillSig(g){
@@ -2782,14 +2819,47 @@ function stillSig(g){
   ).join("||");
 }
 const decksSpent = g => (g.sides || []).every(sd => !(sd.deck || []).length);
+/* A piece's identity in the LOOP census: a token by its name (the serial in
+   its uid is minted fresh every time one is made), anything else by uid. */
+const _loopId = e => {
+  const c = e && e.card ? e.card : e;
+  if(!c) return "?";
+  if(PR.isToken(c)) return "~" + c.name;
+  return String(e.uid != null ? e.uid : (c.uid != null ? c.uid : "?"));
+};
+const _loopSet = z => (z || []).map(_loopId).sort().join(".");
+function loopSig(g){
+  return (g.sides || []).map(sd => {
+    const names = {};
+    for(const z of STILL_ZONES) for(const e of (sd[z] || [])){
+      const c = e && e.card ? e.card : e;
+      if(c && c.uid != null) names[c.uid] = _loopId(e);
+    }
+    const ctr = Object.keys(sd.counters || {}).map(u => {
+      const bag = sd.counters[u] || {};
+      const held = Object.keys(bag).filter(k => bag[k]).sort().map(k => k + bag[k]).join(",");
+      return held ? (names[u] || u) + "{" + held + "}" : "";
+    }).filter(Boolean).sort().join(";");
+    return sd.hp + "|" + STILL_ZONES.map(z => _loopSet(sd[z])).join("/") + "|"
+      + (sd.arsenal ? _loopId(sd.arsenal) : "-") + "|" + _loopSet(sd.intimidated) + "|" + ctr;
+  }).join("||");
+}
 const DRAW_LINE = "Draw \u2014 both decks are spent and neither hero can win.";
 function stalemateCheck(g){
   if(g.over) return g;
-  const sig = stillSig(g);
-  if(!g.still || g.still.sig !== sig) return {...g, still: {sig, since: g.turn}};
-  if(decksSpent(g) && g.turn - g.still.since >= STALEMATE_TURNS)
-    return say({...g, over: {winner: null, how: "stalemate"}, priority: null}, DRAW_LINE);
-  return g;
+  const was = g.still || {}, sig = stillSig(g), spent = decksSpent(g);
+  let still = was.sig === sig ? was : {...was, sig, since: g.turn};
+  /* the cycle tracker: one look per turn, at the first state the turn has */
+  const lp = was.loop;
+  if(!lp || lp.turn !== g.turn){
+    const ps = loopSig(g), ring = lp ? lp.ring : [];
+    still = {...still, loop: {turn: g.turn, ring: [ps].concat(ring).slice(0, LOOP_RING),
+                              since: (lp && spent && ring.includes(ps)) ? lp.since : g.turn}};
+  }
+  const idle = Math.max(g.turn - still.since, g.turn - still.loop.since);
+  if(spent && idle >= STALEMATE_TURNS)
+    return say({...g, still, over: {winner: null, how: "stalemate"}, priority: null}, DRAW_LINE);
+  return still === g.still ? g : {...g, still};
 }
 /* What the result screen says about a finished game, so the table board and
    the drills read one copy. `null` for a game somebody won. */
@@ -2797,7 +2867,7 @@ function drawText(over, sides){
   if(!over || over.winner != null) return null;
   return {status: DRAW_LINE, title: "A DRAW",
           names: (sides[0] ? sides[0].name : "") + " and " + (sides[1] ? sides[1].name : ""),
-          note: "Both decks are spent and nothing has moved for ten turns each, so neither hero can win."};
+          note: "Both decks are spent and nothing has changed for ten turns each, so neither hero can win."};
 }
 
 /* ---- the reducer ------------------------------------------------------ */
@@ -4234,7 +4304,7 @@ function drawTo(g, i){
   return n;
 }
 
-return {STALEMATE_TURNS, STILL_ZONES, stillSig, stalemateCheck, drawText, ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
+return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, drawText, ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
         playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, arenaUseful, defendsNow, DEFENDS_OPS, abPieceForRes, abPieceResGain, boostShare, grantTakers, arcaneOf, chargeView,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
         handFree: PR.handFree,
