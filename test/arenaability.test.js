@@ -466,15 +466,16 @@ test("the arena activation census is pinned, both halves", {skip}, () => {
     if(!pw.sd) noDestroy.add(c.name);
   }
   assert.deepEqual([...reads].sort(),
-    ["Concealed Object", "Copper", "Diamond", "Energy Potion", "Gold", "Silver",
+    ["Concealed Object", "Copper", "Diamond", "Energy Potion", "Fealty", "Gold", "Silver",
      "Timesnap Potion"],
     "the arena records whose ability READS — four decked (Lyath, Dorinthea, Fai, " +
-    "Gravy Bones) plus three treasure tokens with no creator yet");
+    "Gravy Bones), three treasure tokens with no creator yet, and Fealty (v5.53), " +
+    "whose creator is Display Loyalty's rider");
   assert.deepEqual([...refuses].sort(),
-    ["Bait", "Fealty", "Gate to i'Arathael", "Goldkiss Rum"],
-    "and the four that refuse — Bait's payload is its own +1{p} (v3.63), Fealty's " +
-    "\"the next CARD you play is Draconic\" has no reader, Gate plays from the " +
-    "banished zone, and Goldkiss Rum's cost is a compound {t}-your-hero");
+    ["Bait", "Gate to i'Arathael", "Goldkiss Rum"],
+    "and the three that refuse — Bait's payload is its own +1{p} (v3.63), Gate plays " +
+    "from the banished zone, and Goldkiss Rum's cost is a compound {t}-your-hero. " +
+    "Fealty left at v5.53, when \"the next CARD you play is Draconic\" got a reader");
   /* THE TAP IS THE SHARP HALF: exactly one record prints it, and it is the
      only one of the seven that does NOT print "destroy this" — which is
      why nothing else limited it and it pumped forever. */

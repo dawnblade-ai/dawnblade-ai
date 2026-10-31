@@ -78,7 +78,7 @@ const SIDE_FIELDS = [
      the field named a rule that does not exist AND was not the thing
      implementing it. Dead rules STATE is worse than dead code elsewhere
      — it reads as a rule somebody can reach. Do not reintroduce it. */
-  "arcShield","lifeLock","namedBuff","dracNext","dracChain","marked",
+  "arcShield","lifeLock","namedBuff","dracNext","dracChain","dracCard","marked",
   /* per-turn history — reset every turn, read by "second attack this turn"
      style conditions */
   "hist",
@@ -134,8 +134,12 @@ const SIDE_FIELDS = [
    missing. Quick Clicks and Swiftstrike Bracers print "Activate this only
    if you've played a NIMBLISM this turn", and Nimblism is a card NAME, so
    `playTy` (types) could never answer it. With no record the gate had no
-   answer, and the activation evaluator waved it through. */
-const freshHist = () => ({atk:0,non:0,arc:0,aura:0,made:0,booed:0,blue:0,red:0,trans:0,blueGY:0,atkNames:[],auraAtkNames:[],playTy:[],playNames:[],arcTaken:0,gyFirstKw:[],soulPut:[]});
+   answer, and the activation evaluator waved it through.
+
+   `madeNames` (v5.53) — the NAME of every token created this turn. `made`
+   is a count, and Fealty's clock asks "if you haven't created a FEALTY
+   token this turn", which is a name. */
+const freshHist = () => ({atk:0,non:0,arc:0,aura:0,made:0,booed:0,blue:0,red:0,trans:0,blueGY:0,atkNames:[],auraAtkNames:[],playTy:[],playNames:[],arcTaken:0,gyFirstKw:[],soulPut:[],madeNames:[]});
 
 function makeSide(o){
   o = o || {};
@@ -167,7 +171,7 @@ function makeSide(o){
        takes it (v4.06); "your ATTACKS are Draconic this combat chain" is
        never spent and applies to every one inside the window. Two records
        because they are two printed rules — v3.87's split, one grant over. */
-    arcShield: 0, lifeLock: false, namedBuff: null, dracNext: false, dracChain: false,
+    arcShield: 0, lifeLock: false, namedBuff: null, dracNext: false, dracChain: false, dracCard: false,
     marked: false,
     hist: freshHist(),
     nextTurn: [],

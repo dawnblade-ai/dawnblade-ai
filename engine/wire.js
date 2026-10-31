@@ -265,7 +265,12 @@
    the wall from. `pend` is a GAME_KEY that ships whole, so the digest
    cannot see it and a v25 peer hashes the link differently from the
    first damage step on. By hand. */
-const WIRE_V = 26;
+/* 26 -> 27 AT v5.53: the side field `dracCard` arrives (Fealty's "the next
+   card you play this turn is Draconic"), and `hist` gains `madeNames`, the
+   tokens created this turn by name, which Fealty's clock reads. A v26 peer
+   has neither, and the pair diverges at the first Fealty. The shape digest
+   moves with the side field. */
+const WIRE_V = 27;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------
@@ -289,7 +294,7 @@ const NON_CARD_SIDE_FIELDS = [
   "id","name","hero","heroKey","hp","maxHp","int","baseInt","intWas",
   "res","ap","wasted","counters","weaponUsed","heroTapped","buffNext","buffQ","atkBuff","defMod","gaNext","gaNextQ","costOff","instantNextQ","defCapNext","defActionBuff","wardNext","hitNext","ctrEnd",
   "runeHitNext","amp","ward","awd","wardTurn","awdTurn","arcShield",
-  "lifeLock","namedBuff","dracNext","dracChain","marked","hist",
+  "lifeLock","namedBuff","dracNext","dracChain","dracCard","marked","hist",
   "blockH","blockG","blockRx","blockedHand","chainBlocked","intimidated","paySel",
   "nextTurn"
 ];

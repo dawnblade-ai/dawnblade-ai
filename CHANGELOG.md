@@ -1,3 +1,41 @@
+## v5.53 — Display Loyalty makes its Fealty, Fealty works, and an attack counts as a card played
+
+**QUEUE S15, plus one defect found underneath it.** Engine only; the AI is unchanged.
+
+- **Display Loyalty's rider reads.** "…this gets go again and \"When this attacks a hero, create a
+  Fealty token.\"" was the pool's last unread quoted ability (`fx.quotedUnread`). A new reader,
+  `parser.quotedAtkHero`, files it as a second `drac2` condition entry carrying `atkHero`, so the
+  declaration loop runs it behind the same gate as the go again and only against a hero. A bare
+  granted "when this attacks" stays unread on purpose (no pool card prints one); the flag survives
+  as a guard and is drilled on a synthetic.
+- **Fealty reads in full** (token tier `none` -> `full`):
+  - *"Instant - Destroy this: The next card you play this turn is Draconic."* A new grant,
+    `dracCard`, beside `dracNext` and `dracChain`: any card PLAYED takes it (not a weapon swing),
+    and the card itself becomes Draconic. `execute` stamps `_drac` on the played instance and spends
+    the grant once the refusals above the condition loop have passed. Its chain link, "if it is
+    Draconic", a Draconic qualifier (`qualMatches`) and the play record all read the stamp. Filing
+    strips it (`spendPlayGrant`, which now also runs on the hand/arsenal filings and a permanent's
+    entry). Swept with the other "this turn" grants at the end phase.
+  - *"At the beginning of your end phase, if you haven't created a Fealty token or played a
+    Draconic card this turn, destroy this."* A turn-record reprieve on the `selfDestruct` op
+    (`{spare: [...]}`), paid in `sweepArena`. "Created a Fealty token" needed a record of its own:
+    `hist.madeNames`.
+- **An attack card is a card played (`hist.playTy`).** The record was written only after the
+  non-attack branch, and the attack branch returns before it, so no attack ever entered it. Fealty's
+  clock could not see a Draconic attack, and Briar's Static Shock and Star Fall ("if you've played a
+  Lightning card this turn") never counted Fry, Lightning Surge, Path of Same Ends, Rush of Power or
+  Second Strike. Recorded beside `playNames` now; one helper (`playTyOf`) builds both entries.
+- **The feed says a "condition not met" once per condition**, not once per payload behind it.
+- **Side field `dracCard`; `WIRE_V` 26 -> 27** (the shape digest moves).
+- **Measured, 630 games, 3 seeds:** 0 refusals, 0 violations, 0 stalls, and every hero's wins per
+  seed are identical to v5.52. The paths are reached: over Fai's 84 games, 28 Fealty tokens made, 56
+  end phases one stayed, 5 it was destroyed. Static Shock's arcane fired 20 times against 18. The AI
+  never activates an arena ability (v4.47), so the human playing Fai is the one who gets Fealty.
+- Drills in `test/fealty.test.js`, each sabotaged to confirm it bites (14 sabotages). Pins moved
+  with reasons: the rider census, the arena activation census, the token `none` set, the `fx.*`
+  census (`quotedUnread` no longer emitted), the `runOps` vocabulary, the side-field count, the
+  stamp list and the wire digest. AUDIT.md regenerated: 405 / 0 / 0, flags 14 -> 13.
+
 ## v5.52 — An amp waits for its arcane card, and Light the Way charges the yellow
 
 **QUEUE H18 + Light the Way, two seat-policy fixes.** Built ungated behind judge readers.

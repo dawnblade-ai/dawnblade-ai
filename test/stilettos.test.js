@@ -448,8 +448,12 @@ test(gate("exactly ONE pool record moves, and every sibling is unchanged"), () =
      play an Ice card during an opponent's turn, create a Frostbite…") stop
      being claimed by a LOOSE token/runechant rule that dropped the trigger.
      They are read by `build.js`'s own passive readers, so the old tier was
-     over-reporting, and the deck cards are untouched (405 / 0 / 0). */
-  assert.deepEqual(tiers, {full: 760, none: 13, part: 24});
+     over-reporting, and the deck cards are untouched (405 / 0 / 0).
+     RE-PINNED AGAIN AT v5.53, after reading the diff: the FEALTY token went
+     `none` -> `full` when its ability ("the next card you play this turn is
+     Draconic") and its end-phase clock got readers, so `full` 760 -> 761 and
+     `none` 13 -> 12. One record, and not a deck card. */
+  assert.deepEqual(tiers, {full: 761, none: 12, part: 24});
   assert.deepEqual([...carriers.allyDiesOrPhantasm], ["Silent Stilettos"]);
   /* PINNED BOTH SIDES (v4.17) — pinning the new trigger alone cannot see
      a record LEAVING one of the others, which is what merging two

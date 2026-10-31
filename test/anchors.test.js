@@ -132,8 +132,10 @@ test("`runOps`'s vocabulary and what the pool emits are pinned both ways", {skip
      no emitter and its case was deleted rather than kept (v4.11).
      97 -> 96 AT v5.26: `unpreventable` LEFT. It set a flag nothing read,
      at resolution, after the damage it governs; Murkmire Grapnel's clause
-     is a card fact (`fx.unpreventable`) read at the damage step now. */
-  assert.equal(r.dispatched, 96, "runOps's op vocabulary moved");
+     is a card fact (`fx.unpreventable`) read at the damage step now.
+     96 -> 97 AT v5.53: `dracCard`, Fealty's "the next card you play this turn
+     is Draconic" — spent by the card played (`execute` stamps `_drac`). */
+  assert.equal(r.dispatched, 97, "runOps's op vocabulary moved");
   /* DISPATCHED WITH NO EMITTER — the `perBoost` shape. Three have a
      producer that is not the parser and are named for it; two have none
      anywhere and are latent readers whose printed wording the pool only

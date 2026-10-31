@@ -401,9 +401,12 @@ test("symmetry gap: coverage — how much of a hero each seat carries", () => {
      and a counter Glisten never placed comes off. So the schedule
      belongs to the SIDE, and it ACCUMULATES: two Glistens are two
      printed sentences. */
-  assert.equal(gap.fields, 52);   /* +buffQ v2.30, -frost v2.74, -rot -fra v3.09, +nextTurn v3.29, +gaNextQ v3.31, +costOff v3.32, +instantNextQ v3.37, +heroTapped v3.48, +defCapNext v3.64, +wardRider v3.67, +defActionBuff v3.78, -rune v3.82, +atkBuff v3.87, +defMod v3.89, +wardTurn +awdTurn v4.07, +dracChain v4.19, -fatigue v4.26, +hitNext v4.41, +ctrEnd v4.44, -wardRider +wardNext v5.06 */
-  assert.equal(gap.player.length, 52);
-  assert.equal(gap.opponent.length, 52);
+  /* 52 -> 53 AT v5.53. `dracCard` arrives: Fealty's "the next CARD you play
+     THIS TURN is Draconic" — `dracNext`'s and `dracChain`'s third sibling,
+     because the printed words differ on both the taker and the window. */
+  assert.equal(gap.fields, 53);   /* +buffQ v2.30, -frost v2.74, -rot -fra v3.09, +nextTurn v3.29, +gaNextQ v3.31, +costOff v3.32, +instantNextQ v3.37, +heroTapped v3.48, +defCapNext v3.64, +wardRider v3.67, +defActionBuff v3.78, -rune v3.82, +atkBuff v3.87, +defMod v3.89, +wardTurn +awdTurn v4.07, +dracChain v4.19, -fatigue v4.26, +hitNext v4.41, +ctrEnd v4.44, -wardRider +wardNext v5.06, +dracCard v5.53 */
+  assert.equal(gap.player.length, 53);
+  assert.equal(gap.opponent.length, 53);
   assert.deepEqual(gap.missingForPlayer, []);
   assert.equal(gap.missingForOpponent.length, 0);
 });
@@ -413,8 +416,8 @@ test("symmetry gap: coverage — how much of a hero each seat carries", () => {
    must reach zero, and it is counters and statuses from here on. */
 test("symmetry gap: migration — what has moved onto sides[]", () => {
   const gap = S.symmetryGap();
-  assert.equal(gap.nativeForPlayer.length, 52);   /* … +heroTapped v3.48, +defCapNext v3.64, +wardRider v3.67, +defActionBuff v3.78, -rune v3.82, +atkBuff v3.87, +defDebuff v3.89, +wardTurn +awdTurn v4.07, +dracChain v4.19, -fatigue v4.26, +hitNext v4.41, +ctrEnd v4.44, -wardRider +wardNext v5.06 */
-  assert.equal(gap.nativeForOpponent.length, 52);
+  assert.equal(gap.nativeForPlayer.length, 53);   /* … +heroTapped v3.48, +defCapNext v3.64, +wardRider v3.67, +defActionBuff v3.78, -rune v3.82, +atkBuff v3.87, +defDebuff v3.89, +wardTurn +awdTurn v4.07, +dracChain v4.19, -fatigue v4.26, +hitNext v4.41, +ctrEnd v4.44, -wardRider +wardNext v5.06, +dracCard v5.53 */
+  assert.equal(gap.nativeForOpponent.length, 53);
   assert.equal(gap.flatRemaining, 0, "the migration is complete — nothing left flat");
 });
 

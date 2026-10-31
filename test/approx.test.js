@@ -1812,7 +1812,9 @@ probe("pool-deck-complete", () => {
     "Chaos — Trap-Door, refusing on its PAYLOAD (a deck search) rather than on " +
     "the cost; the rest are Arakni's own base form and heroes whose whole " +
     "printed line is read elsewhere, by `parseHeroPower` off the build");
-  assert.equal(none.token.length, 7,
+  /* 7 -> 6 AT v5.53: FEALTY left, built with its only creator (Display
+     Loyalty's rider, QUEUE S15) — leaving because it was built. */
+  assert.equal(none.token.length, 6,
     "the set of TOKENS reading nothing moved. It was EIGHT at v4.02 and the " +
     "eighth was INERTIA — a token that WORKED while reading nothing, because " +
     "`effects.isInertia` matched it by NAME (v3.22's Runechant shape exactly, " +

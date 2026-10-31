@@ -1,6 +1,6 @@
 {
- "generated": "2026-10-07T03:45:17.168Z",
- "appVer": "5.01",
+ "generated": "2026-10-31T02:20:49.651Z",
+ "appVer": "5.53",
  "dataVer": "sage-v14",
  "dbCount": 797,
  "poolUnique": 405,
@@ -418,7 +418,7 @@
    "tx": "Instant - Destroy this: The next card you play this turn is Draconic.\nAt the beginning of your end phase, if you haven't created a Fealty token or played a Draconic card this turn, destroy this.",
    "pw": null,
    "def": null,
-   "fx": "none"
+   "fx": "part"
   },
   "Flurry": {
    "found": true,
@@ -7556,9 +7556,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "If you control 2 or more Draconic chain links, this gets go again and \"When this attacks a hero, create a Fealty token.\"",
-   "flags": [
-    "granted ability in quotes has NO reader: \"when this attacks a hero, create a fealty token.\" — the head parses, this does not"
-   ]
+   "flags": []
   },
   "enflame the firebrand|1": {
    "name": "Enflame the Firebrand",

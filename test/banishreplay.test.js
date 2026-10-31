@@ -24,7 +24,7 @@ const skip = !H.hasDb() && "no cached card database";
 const REFUSED = /cannot be played from your banished zone/;
 /* A LITERAL, never `P.PLAY_GRANT_STAMPS`: a drill that iterates the list
    under test cannot see a stamp dropped from it. */
-const STAMPS = ["_playTurn", "_asInstant", "_banPow", "_banCostOff"];
+const STAMPS = ["_playTurn", "_asInstant", "_banPow", "_banCostOff", "_drac"];
 
 const table = g => ({...g, phase: "action", step: "layer", priority: 0, passed: []});
 function settle(g){
@@ -116,10 +116,11 @@ test("the TRAINER path (execute) spends the grant too", {skip}, () => {
   assert.equal(P.playableFromZone(back, "banish", {turn: 3}), false);
 });
 
-test("spendPlayGrant is a no-op copy-free on an unstamped card, and strips all four", () => {
+test("spendPlayGrant is a no-op copy-free on an unstamped card, and strips all five", () => {
   const plain = {name: "x"};
   assert.equal(P.spendPlayGrant(plain), plain);
-  const s = P.spendPlayGrant({name: "x", _playTurn: 3, _asInstant: true, _banPow: 1, _banCostOff: 1, _gy: 2});
+  /* `_drac` joined at v5.53 — Fealty's "the next card you play is Draconic". */
+  const s = P.spendPlayGrant({name: "x", _playTurn: 3, _asInstant: true, _banPow: 1, _banCostOff: 1, _drac: true, _gy: 2});
   assert.deepEqual(s, {name: "x", _gy: 2});
   assert.deepEqual([...P.PLAY_GRANT_STAMPS].sort(), [...STAMPS].sort());
 });

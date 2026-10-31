@@ -1999,7 +1999,10 @@ function makeEffects(ctx){
           else actMut(n).board = [...act(n).board, {card:tok, kind:"token", spent:false, uid:tok.uid, sd:_tsd}];
           _minted.push(tok);
         }
-        actMut(n).hist = {...act(n).hist, made:(act(n).hist.made||0)+1};
+        actMut(n).hist = {...act(n).hist, made:(act(n).hist.made||0)+1,
+          /* WHICH TOKENS, BY NAME (v5.53) — Fealty's clock asks "created a
+             Fealty token this turn"; `made` is a count and cannot say. */
+          madeNames: [...(act(n).hist.madeNames || []), norm(rec.name)]};
         if(/aura/i.test(rec.tt||"")) actMut(n).hist = {...act(n).hist, aura:(act(n).hist.aura||0)+1};
         /* NAME THE SEAT (v2.83's rule, v3.46's occasion). The feed is read
            by BOTH seats, and this line became actively misleading the
@@ -2702,6 +2705,10 @@ function makeEffects(ctx){
       }
       else if(k==="costTax"){ n.costTax = (n.costTax||0)+v; n = L(n, `Cards cost ${n.costTax} more for the rest of this turn.`); }
       else if(k==="dracNext"){ actMut(n).dracNext = true; n = L(n, `${srcName}: ${sp(act(n))} next attack this chain counts as Draconic.`); }
+      /* FEALTY'S GRANT (v5.53) — the next CARD played this turn, spent by
+         it in `execute`, swept with the "this turn" grants at the end phase. */
+      else if(k==="dracCard"){ actMut(n).dracCard = true;
+        n = L(n, `${String(srcName||"").replace(/ — ability$/, "")}: ${sp(act(n))} next card this turn is Draconic.`); }
       /* THE STANDING GRANT (v4.19) — never spent, so it is NOT the field
          above with a different name. `linkPayload` spends `dracNext` and
          deliberately leaves this one alone; `closeChainGrants` expires
@@ -3114,6 +3121,17 @@ function makeEffects(ctx){
        now, and it made Burn Up // Shock deal FIVE arcane on play. */
     const _half = P.isSplit(card) ? (s._half != null ? s._half : 0) : null;
     const fx = P.splitFx(card, _half);
+    /* ---- "THE NEXT CARD YOU PLAY THIS TURN IS DRACONIC" (v5.53) -------
+       Fealty's grant makes the PLAYED CARD Draconic, so the stamp rides on
+       this instance and every reader asks the card: its chain link
+       (`drac`), "if it is Draconic", a Draconic qualifier (`qualMatches`)
+       and the turn's play record (`hist.playTy`). Only a card PLAYED takes
+       it — a weapon swing or an ability is activated, not played (v5.05).
+       The grant is SPENT below, beside the condition loop, once every
+       refusal above it has had its say; filing strips the stamp
+       (`spendPlayGrant`), because a card that changes zones is a new
+       object and the effect does not follow it. */
+    if(card && P.isCardPlay(from) && act(s).dracCard && !card._drac) card = {...card, _drac: true};
     /* THE RUNECHANT TRIGGER FIRES ON *PLAY* (CR + the printed token):
        "When you play an attack action card or activate a weapon attack,
         destroy this and deal 1 arcane damage to target opposing hero."
@@ -4004,6 +4022,13 @@ function makeEffects(ctx){
        only op mints a Runechant. */
     if(isAtkActionCard(card) && from !== "weapon" && from !== "ally" && from !== "aura")
       n = ctrClock(n, "atkPlay");
+    if(card._drac && act(n).dracCard){
+      actMut(n).dracCard = false;
+      n = L(n, `${card.name} is Draconic \u2014 the grant is spent.`);
+    }
+    /* ONE "NOT MET" LINE PER CONDITION (v5.53). Display Loyalty prints two
+       payloads behind one gate, and the feed said the same refusal twice. */
+    const _notMetSaid = new Set();
     fx.conds.forEach(({cond,op,instead,atkHero,wpnOnly})=>{
       /* "THIS CARD'S ATTACKS GET …" IS ABOUT THE SWING, NOT THE CARD
          (v3.58). Three pool weapons print a conditional static on their
@@ -4171,7 +4196,7 @@ function makeEffects(ctx){
         : cond==="allyDied" ? (act(n).grave||[]).some(c=>c._gy===n.turn && /\bally\b/i.test(c.tt||""))
         : cond==="weaponSwung" ? Object.keys(act(n).weaponUsed||{}).length>0
         : cond==="dealtDmg" ? (act(n).hist.atk||0)>0 || (act(n).hist.arc||0)>0
-        : cond==="isDraconic" ? (/draconic/i.test(card.tt||"") || !!act(n).dracNext || !!act(n).dracChain)
+        : cond==="isDraconic" ? (/draconic/i.test(card.tt||"") || !!card._drac || !!act(n).dracNext || !!act(n).dracChain)
         : cond==="pitchOverBase" ? act(n).pitch.some(c=>(c.power||0) > (card.power||0))
         /* CHARGE (Boltyn): "charged" is a turn-scoped boolean; "chargedPitchN"
            asks about the SPECIFIC card just charged as THIS card's own cost
@@ -4224,7 +4249,10 @@ function makeEffects(ctx){
           })()
         : dracN!=null ? dracLinks >= dracN : false;
       const why = condWhy(n, cond, chargedWay);
-      if(!met){ n = L(n, `${card.name}: condition not met (${why}).`); return; }
+      if(!met){
+        if(!_notMetSaid.has(cond)) n = L(n, `${card.name}: condition not met (${why}).`);
+        _notMetSaid.add(cond);
+        return; }
       if(instead){ insteadKinds.add(op[0]);
         n = L(n, `${card.name}: the condition holds — ${op[0]} ${op[1]} REPLACES the printed value.`); }
       if(op[0]==="ga") ga = true;
@@ -4279,6 +4307,18 @@ function makeEffects(ctx){
        reader of that question, v4.86 — keeps them out. */
     if(!P.isActivation(card, from))
       actMut(n).hist = {...act(n).hist, playNames: [...(act(n).hist.playNames || []), norm(card.name)]};
+    /* AND AN ATTACK'S TYPE WORDS (v5.53). `hist.playTy` was written in ONE
+       place, after the non-attack branch — and the attack branch returns
+       before it — so no attack card ever entered the record. "If you've
+       played a Lightning card this turn" (Star Fall, Static Shock) never
+       counted Fry, Lightning Surge, Path of Same Ends, Rush of Power or
+       Second Strike, and Fealty's clock could not see a Draconic attack.
+       Recorded here, after the card's own conditions, for `playNames`'
+       reason one line up. A weapon swing is activated, not played. */
+    if(attacking && P.isCardPlay(from)){
+      const _ty = playTyOf(card);
+      if(_ty.length) actMut(n).hist = {...act(n).hist, playTy: [...(act(n).hist.playTy || []), _ty]};
+    }
     /* ---- THE LATE "…THIS WAY" PASS, ONE BODY, BOTH BRANCHES (v3.62) --
        `execute` evaluates `fx.conds` BEFORE it runs the card's ops, so a
        condition asking what its own resolution just did reads an empty
@@ -5439,8 +5479,8 @@ function makeEffects(ctx){
            `counters` bag keyed by uid. `ctrSelf` above now fills that bag
            for verse exactly as it does for steam, so there is one storage
            and one reader — the same deletion v3.82 made of `sd.rune`. */
-        actMut(n).board=[...act(n).board,{card,kind:fx.perm,spent:false,uid:card.uid,sd:_sd,susp:_susp}]; if(fx.perm==="aura") actMut(n).hist={...act(n).hist, aura:(act(n).hist.aura||0)+1}; n=L(n,`${card.name} enters play (${fx.perm})${_susp?` with ${_susp} suspense counters — it pays out when it leaves`:""}.`); }
-      else if((from==="hand"||from==="arsenal") && !_offGrave) actMut(n).grave=[...gy(n.turn, card),...act(n).grave];
+        actMut(n).board=[...act(n).board,{card:P.spendPlayGrant(card),kind:fx.perm,spent:false,uid:card.uid,sd:_sd,susp:_susp}]; if(fx.perm==="aura") actMut(n).hist={...act(n).hist, aura:(act(n).hist.aura||0)+1}; n=L(n,`${card.name} enters play (${fx.perm})${_susp?` with ${_susp} suspense counters — it pays out when it leaves`:""}.`); }
+      else if((from==="hand"||from==="arsenal") && !_offGrave) actMut(n).grave=[...gy(n.turn, P.spendPlayGrant(card)),...act(n).grave];
       else if(from==="banish") actMut(n).grave=[...gy(n.turn, P.spendPlayGrant(card)),...act(n).grave]; /* RULING (user, 2026-10-31): a card played from banish goes to the graveyard like any card */
       else if(from==="grave") actMut(n).banish=[P.spendPlayGrant(card),...act(n).banish];
       /* COUNTED ONLY FOR A NON-ATTACK ACTION CARD PLAYED (v5.05), which is
@@ -5511,12 +5551,12 @@ function makeEffects(ctx){
        THE STRUCTURED ARRAY, lowercased (v2.44). `tt` calls Den of the
        Spider an "Action Defense Reaction"; the array does not. */
     {
-      const _ty = (card.ty || []).map(t => String(t).toLowerCase());
+      const _ty = playTyOf(card);
       if(_ty.length) actMut(n).hist = {...act(n).hist,
         playTy: [...(act(n).hist.playTy || []), _ty]};
     }
     const delta = preHP - foe(n).hp;
-    if(delta>0){ n.chain=[...n.chain,{n:card.name,img:card.img,dbImg:card.dbImg,dmg:delta,ga,drac:/draconic/i.test(card.tt||"")||!!act(n).dracNext||!!act(n).dracChain,kind:(isAttack(card)||from==="weapon"||from==="ally")?"atk":"arc"}]; n.hitSeq=n.hitSeq+1; n.lastDmg=delta; }
+    if(delta>0){ n.chain=[...n.chain,{n:card.name,img:card.img,dbImg:card.dbImg,dmg:delta,ga,drac:/draconic/i.test(card.tt||"")||!!card._drac||!!act(n).dracNext||!!act(n).dracChain,kind:(isAttack(card)||from==="weapon"||from==="ally")?"atk":"arc"}]; n.hitSeq=n.hitSeq+1; n.lastDmg=delta; }
     /* THE ACTION POINT IS AN *ACTION'S* COST (CR 8.1.1 / 8.1.6 / 5.3.5).
        This used to read `ga ? keep : -1`, which charges every non-attack
        that resolves here — and an instant has no such cost, so playing one
@@ -6589,7 +6629,7 @@ function makeEffects(ctx){
   const fileAttack = (s2, card, from) => {
     let n = {...s2};
     if(from==="hand"||from==="arsenal"){
-      actMut(n).grave=[...gy(n.turn, card),...act(n).grave];
+      actMut(n).grave=[...gy(n.turn, P.spendPlayGrant(card)),...act(n).grave];
       if(card.pitch===3) actMut(n).hist = {...act(n).hist, blueGY:(act(n).hist.blueGY||0)+1};
     }
     if(from==="banish") actMut(n).grave=[...gy(n.turn, P.spendPlayGrant(card)),...act(n).grave];
@@ -7779,7 +7819,7 @@ function makeEffects(ctx){
     /* `ty` and `by` (v4.94): what the attack WAS and whose it is, so a
        question about a RESOLVED link can be answered — "if you control a
        Lightning attack" reads the whole chain (`chainAtkOf`). */
-    n.chain = [...n.chain, {n:pc.name, img:pc.img, dbImg:pc.dbImg, dmg:total, ga:n.pend.ga, drac:/draconic/i.test(pc.tt||"")||_dracGrant||_dracStand, kind:"atk",
+    n.chain = [...n.chain, {n:pc.name, img:pc.img, dbImg:pc.dbImg, dmg:total, ga:n.pend.ga, drac:/draconic/i.test(pc.tt||"")||!!pc._drac||_dracGrant||_dracStand, kind:"atk",
                             ty:(pc.ty || []).slice(), by:(n.pend.by != null ? n.pend.by : actorOf(n))}];
     if(_dracGrant){
       actMut(n).dracNext = false;
@@ -9538,6 +9578,15 @@ function heave(game, seat, uid){
    spend the counter this reprieve is holding. Declining is strictly
    dominated: the counter has no other consumer and the permanent dies.
    The feed says which counter was spent either way. */
+/* ONE ENTRY OF `hist.playTy` (v5.53): the structured type words, lowercased
+   (v2.44), plus Draconic when Fealty's grant made the card one — its own
+   clock asks "played a Draconic card this turn" of this record. */
+function playTyOf(card){
+  const ty = ((card && card.ty) || []).map(t => String(t).toLowerCase());
+  if(card && card._drac && ty.indexOf("draconic") < 0) ty.push("draconic");
+  return ty;
+}
+
 function sweepArena(game, seat, when){
   const sides = (game.sides || []).slice();
   const sd = Object.assign({}, sides[seat]);
@@ -9551,11 +9600,28 @@ function sweepArena(game, seat, when){
      never in `dying` and none of the payout machinery below can see it. */
   const counters = Object.assign({}, sd.counters || {});
   const spared = [];
+  const hist = sd.hist || {};
   const dying = board.filter(b => {
     if(!due(b)) return false;
     const op = (P.fxParse(b.card).ops || []).find(o => o[0] === "selfDestruct" && o[2]);
     const sp = op && op[2];
     if(!sp) return true;
+    /* A TURN-RECORD REPRIEVE (v5.53) — Fealty: "if you haven't created a
+       Fealty token or played a Draconic card this turn, destroy this". Any
+       one of the printed reasons spares it, and nothing is paid. Asked of
+       the CONTROLLER's record, which is still this turn's: the sweep runs
+       at the beginning of their own end phase. */
+    if(sp.spare){
+      const name = norm(b.card.name);
+      const kept = sp.spare.find(a =>
+        a.made ? (hist.madeNames || []).indexOf(a.made === "self" ? name : norm(a.made)) >= 0
+        : a.playedCls ? (hist.playTy || []).some(ty => (ty || []).indexOf(a.playedCls) >= 0)
+        : false);
+      if(!kept) return true;
+      spared.push({b, why: kept.made ? "a " + b.card.name + " token was created this turn"
+                              : "a " + kept.playedCls[0].toUpperCase() + kept.playedCls.slice(1) + " card was played this turn"});
+      return false;
+    }
     const bag = counters[b.uid] || {};
     if((bag[sp.kind] || 0) < sp.n) return true;
     counters[b.uid] = Object.assign({}, bag, {[sp.kind]: (bag[sp.kind] || 0) - sp.n});
@@ -9565,8 +9631,9 @@ function sweepArena(game, seat, when){
   if(!dying.length && !spared.length) return {game, fired: [], msgs: [], ops: []};
   sd.counters = counters;
   const msgs = [], fired = [], ops = [];
-  for(const {b, sp, left} of spared)
-    msgs.push(b.card.name + " pays a " + sp.kind + " counter and survives — " + left + " left.");
+  for(const {b, sp, left, why} of spared)
+    msgs.push(why ? b.card.name + " stays — " + why + "."
+                  : b.card.name + " pays a " + sp.kind + " counter and survives — " + left + " left.");
   if(!dying.length){
     sides[seat] = sd;
     return {game: Object.assign({}, game, {sides}), fired, msgs, ops};
@@ -10580,7 +10647,9 @@ function beginEndPhase(game, seat, db){
                   printed — the direction the one-sided sweep is built not
                   to look in. COUNTED here as well as swept below, or it
                   expires only on a turn something else happens to. */
-               + (sd.hitNext || []).length;
+               + (sd.hitNext || []).length
+               /* AND FEALTY'S "THE NEXT CARD YOU PLAY THIS TURN" (v5.53). */
+               + (sd.dracCard ? 1 : 0);
     if(!held) continue;
     const sides = n.sides.slice();
     sides[i] = Object.assign({}, sd,
@@ -10594,7 +10663,7 @@ function beginEndPhase(game, seat, db){
           unspent one followed its controller into every later turn.
           A grant that outlives its printed window is STRONGER than
           printed, which the one-sided fairness sweep cannot see. */
-       amp: 0, runeHitNext: 0, hitNext: [],
+       amp: 0, runeHitNext: 0, hitNext: [], dracCard: false,
        /* AND ONLY THE WINDOWED PART OF THE PREVENTION POOLS. Sweeping
           `ward` whole would have taken an aura's printed `Ward N` with it
           while the keyword still filled this pool. It no longer does

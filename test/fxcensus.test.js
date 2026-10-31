@@ -121,9 +121,12 @@ test("every `fx.*` field the pool emits is pinned", () => {
     "handAbility", "handWipe", "hitCounter", "hitWatch", "lifeTie", "millCost", "modes",
     "noDrx", "noEquipDefend", "onAtk", "onAtkHero", "onDeath", "onDestroy", "onHit",
     "onHitHero", "onLeave", "ops", "optCost", "payCost", "perm", "playIf",
-    "playable", "powFormula", "quotedUnread", "rustDestroy", "self", "selfQ",
+    "playable", "powFormula", "rustDestroy", "self", "selfQ",
     "tapCost", "tier", "unpreventable", "wipePowIfIdle",
   ]);
+  /* -quotedUnread v5.53 — Display Loyalty, the last pool record with an
+     unread quoted rider, got `quotedAtkHero`. The FLAG stays as a guard
+     (test/quoted.test.js drives it on a synthetic); the pool emits none. */
   /* +firstAtk v4.83 — The Suspense is Killing Me's "your first attack
      each turn gets +1{p}", a STANDING static on an aura. It was an op,
      `firstAtkBuff`, that fired once when the aura was PLAYED, so "each

@@ -227,13 +227,17 @@ test("driven: a stale pre-v3.42 grant is refused, not handed to any card", {skip
 test("a rider the reader cannot honestly read is dropped, and the head still lands", {skip}, () => {
   H.db();
   /* Display Loyalty's rider triggers on ATTACKS, not on hits — a different
-     SCHEDULE, which is why it is the one that stays: a payload with no
-     reader can be given one, and a trigger this engine does not model
-     cannot. Its head still lands, which is what leaves the gap visible in
-     the audit instead of hiding it behind a guess. */
+     SCHEDULE, and until v5.53 the one that stayed unread. It reads now
+     (`parser.quotedAtkHero`): a granted "when this attacks a HERO" is one
+     more condition entry behind the head's gate, carrying `atkHero`, which
+     the declaration loop has honoured since v3.46. It must still never be
+     mis-filed as on-hit. */
   const dl = fx("Display Loyalty", 1);
-  assert.deepEqual(dl.conds.map(x => [x.cond, x.op]), [["drac2", ["ga"]]], "the go again still lands");
+  assert.deepEqual(dl.conds.map(x => [x.cond, x.op, x.atkHero]),
+    [["drac2", ["ga"], false], ["drac2", ["token", "fealty", 1, "self"], true]],
+    "the go again still lands, and the rider rides behind the same gate, hero-gated");
   assert.deepEqual(dl.condOnHit || [], [], "and the attacks-trigger rider is not mis-filed as on-hit");
+  assert.deepEqual(dl.ops || [], [], "nor fired on play — the v3.10 relocation, which made a Fealty on play");
 
   /* GOON TACTICS LEFT THIS DRILL AT v3.96 and is the POSITIVE control
      now: "destroy the top card of their deck" got a reader, so the rider
@@ -271,10 +275,13 @@ test("the granted-rider census — pinned, so a regression is a number", {skip},
                              || (o[0]==="gaNext" && rd(o[2])))
        || (f.onHit || []).length || (f.onHitHero || []).length
        || (f.condOnHit || []).length || (f.ops || []).some(o => o[0] === "runeHitNext")
-       || (f.modes || []).some(m => m.riderOnHit)) carried++;
+       || (f.modes || []).some(m => m.riderOnHit)
+       /* v5.53: a granted attacks-a-hero trigger rides as a GATED condition
+          entry carrying `atkHero` (Display Loyalty). */
+       || (f.conds || []).some(x => x.atkHero)) carried++;
   }
   assert.equal(total, 28, "pool cards granting a quoted ability");
-  assert.equal(carried, 25, "carrying their rider — 7 before v3.10, 15 after it, " +
+  assert.equal(carried, 26, "carrying their rider — 7 before v3.10, 15 after it, " +
     "the targeted and modal shapes at v3.12, Avast Ye! at v3.42 (whose rider read " +
     "fine all along and was simply never asked for), Drop the Anchor at v3.48, " +
     "whose payload taps a hero and had no reader until the RULING settled what that " +
@@ -285,5 +292,8 @@ test("the granted-rider census — pinned, so a regression is a number", {skip},
     "whole until the second sentence could ride as a gate. The four that remain " +
     "unread are honest refusals: an `attacks` trigger rather than a hit, or a " +
     "payload with no reader. Goon Tactics joined at v3.96, when `foeDeckDestroy` " +
-    "was built.");
+    "was built, and Display Loyalty at v5.53, when its attacks-a-hero rider rode " +
+    "behind its gate as an `atkHero` condition. The two left uncounted are Release " +
+    "the Tension (a static restriction, `noDrx`, which this census does not ask) " +
+    "and Cosmo.");
 });

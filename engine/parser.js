@@ -453,6 +453,24 @@ function quotedStatic(txt){
   return sub && sub.status === "run" && sub.noDrx ? {noDrx: sub.noDrx} : null;
 }
 
+/* A GRANTED "WHEN THIS ATTACKS A HERO" (v5.53, QUEUE S15) — the third
+   reader beside the two above, and the family the note above named:
+   Display Loyalty's "When this attacks a hero, create a Fealty token."
+   v3.10 refused it because the engine had no schedule for an attacks-
+   trigger; it has had one since v3.46 (`atkHero`), and the condition loop
+   runs an attack's conditions at declaration, which is when this fires.
+
+   HERO-GATED ONLY. A bare granted "when this attacks" would need
+   `DECL_OPS`' allow-list asked as well (v4.08), and the pool prints none,
+   so it stays unread rather than given a reading nothing has measured. */
+function quotedAtkHero(txt){
+  const q = quotedText(txt);
+  if(q == null) return null;
+  const sub = classifyClause(q);
+  return sub && sub.status === "run" && sub.atkHero && !sub.cond && !sub.onHit
+    && (sub.ops || []).length ? sub.ops : null;
+}
+
 /* THE PICK SHAPES, NAMED ONCE. Each is matched twice — against the
    lowercased clause for the shape, and against the raw clause to recover
    the subject's printed capitalisation (see `cased` inside
@@ -2598,6 +2616,27 @@ function classifyClause(raw){
     return R([["selfDestruct","turn"]]);
   if(/^at the beginning of your end phase, destroy this$/.test(c))
     return R([["selfDestruct","end"]]);
+  /* "…IF YOU HAVEN'T <X> OR <Y> THIS TURN, DESTROY THIS" (v5.53, QUEUE
+     S15) — Fealty's clock, and the pool's only printing. The reprieve is
+     a TURN-RECORD question rather than a counter, so it rides on the
+     schedule in the slot the counter reprieve above uses (`op[2]`), as a
+     list of the things that spare it: any one of them done this turn and
+     the card stays.
+
+     EVERY ALTERNATIVE MUST READ, OR THE CLAUSE REFUSES (v2.29): sparing
+     the card on half its printed reasons would kill it on a turn it
+     survives. Two shapes are read — "created a <name> token" (the card's
+     own name arrives as "this", so `made: "self"`), and "played a <class>
+     card", which is `playedCls`'s question off `hist.playTy`. */
+  if(m=c.match(/^at the beginning of your end phase, if you haven'?t (.+) this turn, destroy (?:this|it)$/)){
+    const spare = m[1].split(/\s+or\s+/).map(alt => {
+      let a;
+      if(/^created an? this token$/.test(alt)) return {made: "self"};
+      if(a = alt.match(/^played an? ([a-z]+) card$/)) return {playedCls: a[1]};
+      return null;
+    });
+    if(spare.length && spare.every(Boolean)) return R([["selfDestruct", "end", {spare}]]);
+  }
   /* "…DESTROY THIS, **THEN** X" — THE SCHEDULE AND ITS PAYOUT (v3.07).
 
      The two rules above are anchored to the whole clause, so the far more
@@ -2854,7 +2893,11 @@ function classifyClause(raw){
   if(m=c.match(/^(?:this|it) (?:gains?|gets|has) (go again|\+\d+\s*\{p\}) and ["\u201c'].+["\u201d']$/)){
     const head = /go again/.test(m[1]) ? ["ga"] : ["self", +m[1].match(/\d+/)[0]];
     const rider = quotedRider(c);
-    return rider ? R([head], {riderOnHit: rider.ops, riderHeroOnly: rider.heroOnly}) : R([head]);
+    if(rider) return R([head], {riderOnHit: rider.ops, riderHeroOnly: rider.heroOnly});
+    /* …OR AN ATTACKS-A-HERO TRIGGER (v5.53) — `fxParse` files it as a
+       condition entry carrying `atkHero`, behind the same gate as the head. */
+    const atk = quotedAtkHero(c);
+    return atk ? R([head], {riderAtkHero: atk}) : R([head]);
   }
   if(m=c.match(/(?:your|the) next([^.+]{0,70}?)attack([^+]*)\+(\d+)\s*(?:\{p\}|power)/)){
     /* THE TAIL RESTRICTS TOO (v3.31). Nimblism's "action card with cost 1
@@ -3719,6 +3762,17 @@ function classifyClause(raw){
      bound. Enflame is in FAI's deck. */
   if(/^your attacks are draconic this combat chain(?: in addition to their other card types)?$/.test(c))
     return R([["dracChain",1]]);
+  /* ---- THE NEXT CARD, NOT THE NEXT ATTACK (v5.53, QUEUE S15) --------
+     Fealty: "The next CARD you play THIS TURN is Draconic." A third grant
+     beside the two above, because the printed words differ on both axes:
+     any card played (an instant, a defence reaction, a non-attack action)
+     where `dracNext` waits for an attack, and the turn where both of those
+     print the combat chain. Spent by the card that takes it (v4.06), and
+     the card itself is Draconic — `effects.execute` stamps `_drac` on the
+     played instance, so its chain link, "if it is Draconic", a Draconic
+     qualifier and the turn's play record all read one fact. */
+  if(/^the next card you play this turn is draconic(?: in addition to its other card types)?$/.test(c))
+    return R([["dracCard",1]]);
   /* "When it has none, destroy it" — the tail of a counter-tick sentence; the
      tick op that precedes it owns the destruction. */
   if(/^destroy it at the beginning of the end phase$/.test(c))
@@ -4118,7 +4172,9 @@ function qualMatches(qual, card, opts){
   opts = opts || {};
   const c = card || {};
   if(qual.g){
-    const tt = String(c.tt || "").toLowerCase();
+    /* A CARD FEALTY MADE DRACONIC IS ONE (v5.53) — the stamp is the played
+       instance's, set by `effects.execute` and stripped when it is filed. */
+    const tt = String(c.tt || "").toLowerCase() + (c._drac ? " draconic" : "");
     if(!qual.g.some(group => group.every(word => tt.indexOf(word) >= 0))) return false;
   }
   if(qual.aac && !isAtkActionCard(c)) return false;
@@ -6547,6 +6603,14 @@ function fxParse(card){
       else if(r.onDeath){ fx.onDeath.push(op); return; }
       else fx.ops.push(op);
     });
+    /* A GRANTED ATTACKS-A-HERO TRIGGER (v5.53) rides behind the head's
+       gate, after the head in printed order, as one more condition entry —
+       the declaration loop already runs those with the `atkHero` check
+       (v3.46). Ungated it is `onAtkHero`. */
+    if(r.riderAtkHero)
+      for(const rop of r.riderAtkHero)
+        if(r.cond) fx.conds.push({cond:r.cond, op:rop, instead:false, atkHero:true});
+        else       fx.onAtkHero.push(rop);
   });
 
   /* ---- THE GRANT'S CARD IS THE RIDER'S "IT" TOO (v4.13) ------------
@@ -6905,7 +6969,7 @@ function fxParse(card){
     if(cl.st !== "run") return;
     const low = levelIdiom(clean(cl.t).toLowerCase().replace(/\.$/,"").replace(/^-\s*/,""));
     const q = quotedText(low);
-    if(q == null || quotedOnHit(low) || quotedStatic(low)) return;
+    if(q == null || quotedOnHit(low) || quotedStatic(low) || quotedAtkHero(low)) return;
     /* A QUOTED ABILITY THE AURA-WEAPON GRANT CONSUMED HAS A READER
        (v3.84). This flag asks exactly one question — "is there a reader
        for this quoted ability" — and `auraWeaponGrant` is one: it hands
@@ -9666,8 +9730,11 @@ const playableFromZone = (c, zone, o) => !!c && !playZoneWhy(c, zone, o);
    limit. Every stamp the grant writes is the PLAY's, so the filing strips them
    all through this one body: `_playTurn` (the window), `_asInstant` (Blaze's
    speed grant), `_banPow` and `_banCostOff` (Mounting Anger / Rising
-   Resentment, "it gets +1{p}" / "it costs {r} less", read when it is played). */
-const PLAY_GRANT_STAMPS = ["_playTurn", "_asInstant", "_banPow", "_banCostOff"];
+   Resentment, "it gets +1{p}" / "it costs {r} less", read when it is played).
+   `_drac` (v5.53) is Fealty's "the next card you play is Draconic", stamped
+   by `effects.execute` on the instance played; it is stripped on the
+   hand/arsenal filings too, since a card that changes zones is a new object. */
+const PLAY_GRANT_STAMPS = ["_playTurn", "_asInstant", "_banPow", "_banCostOff", "_drac"];
 const spendPlayGrant = c => {
   if(!c || !PLAY_GRANT_STAMPS.some(k => k in c)) return c;
   const out = {...c};

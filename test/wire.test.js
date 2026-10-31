@@ -349,10 +349,13 @@ test("WIRE_V moves when the payload shape moves, and only then", () => {
      digest (which covers the field LISTS) does not move. */
   /* 25 -> 26 AT v5.31: `pend.power`, inside a GAME_KEY that ships whole,
      so the digest does not move. */
-  assert.equal(W.WIRE_V, 26,
+  /* 26 -> 27 AT v5.53, AND THE DIGEST MOVES: a SIDE FIELD arrives
+     (`dracCard`, Fealty's "the next card you play this turn is Draconic"),
+     and `hist` gains `madeNames` — inside a whole-shipped field. */
+  assert.equal(W.WIRE_V, 27,
     "WIRE_V moved — if the payload shape moved with it, update the digest below " +
     "in the same edit and say what changed in the header");
-  assert.equal(h, 2375092828,
+  assert.equal(h, 3759651216,
     "the payload SHAPE moved and WIRE_V did not. A stale key decodes fine (the " +
     "lists are read by name) — what breaks is the FINGERPRINT, so two honest " +
     "peers desync on the opening state instead of being refused at the handshake.");

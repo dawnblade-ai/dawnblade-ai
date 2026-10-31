@@ -94,7 +94,7 @@ function seat(sd){
          disagreed with it would send the reader hunting the wrong bug. */
       frost: PR.frostCount ? PR.frostCount(sd) : undefined,
       lifeLock: sd.lifeLock, marked: sd.marked, buffNext: sd.buffNext, buffQ: sd.buffQ,
-      dracNext: sd.dracNext, dracChain: sd.dracChain,
+      dracNext: sd.dracNext, dracChain: sd.dracChain, dracCard: sd.dracCard,
       atkBuff: sd.atkBuff, defMod: sd.defMod, gaNext: sd.gaNext, gaNextQ: sd.gaNextQ, costOff: sd.costOff, instantNextQ: sd.instantNextQ, defCapNext: sd.defCapNext, defActionBuff: sd.defActionBuff, wardNext: sd.wardNext, hitNext: sd.hitNext, ctrEnd: sd.ctrEnd, weaponUsed: sd.weaponUsed, heroTapped: sd.heroTapped},
     hist: sd.hist
   };
