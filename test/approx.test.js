@@ -330,7 +330,9 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 25 -> 26 AT v5.42: `played-from-banish-files-to-banish`, QUEUE v4 S9. */
   /* 26 -> 25 stated AT v5.51: `played-from-banish-files-to-banish` closed. */
   /* 25 -> 24 stated AT v5.59: `soul-banish-cost-auto-picked` closed. */
-  assert.equal(n("stated"), 24, "stated count moved");
+  /* 24 -> 23 stated AT v5.61: `attack-grant-misses-own-attack` closed by the
+     user's ruling of 2026-10-31 (V's grant includes V). */
+  assert.equal(n("stated"), 23, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -392,7 +394,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 29 -> 30 closed AT v5.51: `played-from-banish-files-to-banish`. */
   /* 30 -> 31 closed AT v5.57: `cloaked-display`. */
   /* 31 -> 32 closed AT v5.59: `soul-banish-cost-auto-picked`. */
-  assert.equal(n("closed"), 32, "closed count moved");
+  /* 32 -> 33 closed AT v5.61: `attack-grant-misses-own-attack`. */
+  assert.equal(n("closed"), 33, "closed count moved");
 });
 
 /* ============================================================
@@ -1381,9 +1384,12 @@ probe("instant-pump-own-attack-only", () => {
 });
 
 probe("attack-grant-misses-own-attack", () => {
-  /* DRIVEN AT THE TABLE, asserting the DEVIATION: V of the Vanguard with two
-     Light cards charged swings for its PRINTED power while the +2 it grants
-     waits for the next attack. The day V gets its own bonus, this goes red. */
+  /* CLOSED, PROBE TURNED ROUND. DRIVEN AT THE TABLE, asserting the thing is
+     BUILT: V of the Vanguard with two Light cards charged swings for its
+     printed power PLUS the +2 it grants. RULING (user, 2026-10-31): V's "Your
+     attacks this combat chain get +1{p} for each Light card charged this way"
+     includes V itself: "Yes." A regression back to the printed 3 is red.
+     (The numbers, the next link and the chain close are `vanguardself.test.js`.) */
   const db = H.db();
   if(!db) return;
   PR.fxReset();
@@ -1403,8 +1409,8 @@ probe("attack-grant-misses-own-attack", () => {
   }
   assert.equal(s.step, "resolution", "the drive never reached the resolution step");
   assert.deepEqual((s.sides[0].atkBuff || []).map(b => b.amt), [2], "fixture: two Light cards charged, +2 granted");
-  assert.equal(20 - s.sides[1].hp, v.power,
-    "V now deals more than its printed power — it gets its own grant, and the record must move");
+  assert.equal(20 - s.sides[1].hp, v.power + 2,
+    "V deals its printed power plus the +2 it grants (RULING user 2026-10-31) — it was the printed 3");
 });
 
 probe("played-target-partial-resolution", () => {

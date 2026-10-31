@@ -971,20 +971,32 @@ const APPROX = {
       "premise: a deck holding both halves is the day this needs a target choice."},
 
 "attack-grant-misses-own-attack": {
-  status:"stated", cr:null, board:"both", since:"v4.56", swept:"v5.03",
-  claim:"V of the Vanguard prints \"Your attacks this combat chain get +1{p} for each "+
-        "Light card charged this way.\" An attack card's ops ride to RESOLUTION with "+
-        "`pend.ops`, so the grant lands after V's own damage: driven with two Light "+
-        "cards charged, V deals its printed 3 and only the NEXT attack on the chain "+
-        "gets +2.",
-  why:"V is itself one of \"your attacks this combat chain\", and the reading under "+
-      "which its text is generated as the card resolves as a layer — before the "+
-      "defend step — gives V its own bonus. That reading is NOT SOURCED here: "+
-      "rules.fabtcg.com is unreachable from this sandbox and no release note or ruling "+
-      "was found, so moving it would be restating a rule from memory, in the STRONGER "+
-      "direction (v4.59's discipline). Measured at v5.03: V is the pool's only attack "+
-      "card carrying a standing grant (`atkBuff`), so the question is one card. "+
-      "Recorded as a ruling to ask for; the probe drives V and asserts the printed 3."},
+  status:"closed", cr:null, board:"both", since:"v4.56", swept:"v5.61",
+  claim:"WAS: V of the Vanguard prints \"Your attacks this combat chain get +1{p} for "+
+        "each Light card charged this way.\" An attack card's ops rode to RESOLUTION "+
+        "with `pend.ops`, so the grant landed after V's own damage: driven with two "+
+        "Light cards charged, V dealt its printed 3 and only the NEXT attack on the "+
+        "chain got +2. IS: V gets its own bonus (3 / 4 / 5 at 0 / 1 / 2 Light cards "+
+        "charged; a non-Light charge gives nothing) and every later link on the chain "+
+        "still does, once; it ends when the chain closes. Both boards.",
+  why:"CLOSED BY A RULING. RULING (user, 2026-10-31): V of the Vanguard's \"Your attacks "+
+      "this combat chain get +1{p} for each Light card charged this way\" includes V "+
+      "itself: \"Yes.\" The record had it as a ruling to ask for, because the CR site "+
+      "is unreachable from this sandbox and moving it would have been restating a rule "+
+      "from memory in the STRONGER direction (v4.59's discipline). THE FIX is one "+
+      "pre-run in `effects.execute`: an `atkBuff` op on an ATTACK (`attacking`) runs at "+
+      "declaration, beside `discardRandom` and `eachArsPut`, and is kept out of "+
+      "`pend.ops` by `preRan`, so the grant is made once. `linkPumps` stays the ONE "+
+      "reader of a standing grant, which is why V takes it once at its own link and "+
+      "every later link takes it once; and the trainer's `Battle` calls the same "+
+      "`execute`/`resolveStack`, so there is no second schedule to move. Measured by "+
+      "pool census (2026-10-31): V is the only ATTACK card whose ops carry `atkBuff` "+
+      "(Night's Embrace is an attack REACTION and makes its grant at its own "+
+      "resolution), so the blast radius is one card. THE PROBE IS TURNED ROUND: it "+
+      "asserted V dealt its printed 3 and asserts the bonus now; "+
+      "`test/vanguardself.test.js` drives 0 / 1 / 2 Light cards, the next link, and the "+
+      "chain close on both boards. The sibling record `attack-ops-at-resolution` still "+
+      "stands for the other payloads; this was the one whose reading was a ruling."},
 
 "played-target-partial-resolution": {
   status:"stated", cr:null, board:"both", since:"v5.07", swept:"v5.07",

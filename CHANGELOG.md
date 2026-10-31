@@ -1,3 +1,24 @@
+## v5.61 — V of the Vanguard counts itself
+
+**Ruling R7, the user's of 2026-10-31.** Built by a Sonnet agent, verified and shipped by the CEO
+thread.
+
+> RULING (user, 2026-10-31): V of the Vanguard's "Your attacks this combat chain get +1{p} for each
+> Light card charged this way" includes V itself: *"Yes."*
+
+- **V now gets its own bonus.** An attack card's ops ride to resolution in `pend.ops`, and
+  `linkPumps` (the only reader of a standing `atkBuff` grant) strikes the total before
+  `linkPayload` runs them, so V's grant was made after its own damage. In `execute`'s pre-run, an
+  `atkBuff` op on an ATTACKING card now runs at declaration and is marked `preRan`, which keeps it
+  out of `pend.ops`. The grant stands once; V and every later link take it once. Both boards.
+- **Blast radius:** V is the pool's only attack card with an `atkBuff` op. Night's Embrace carries
+  one but is an attack reaction, which the pre-run leaves alone. A census drill pins it.
+- Driven on both boards: V deals 3 / 4 / 5 with 0 / 1 / 2 Light cards charged (a Generic charge
+  gives 3); the next link takes the same bonus; it ends with the chain. A V observation joins
+  Boltyn's scene. The approx record `attack-grant-misses-own-attack` is closed.
+- **Measured:** 630 games at 3 seeds: 0 stalls, 0 refusals, 0 violations; Boltyn unchanged at 33;
+  nobody moved more than 1.
+
 ## v5.60 — No nameless "Go again granted."
 
 **Feed voice.** Found by the Sonnet agent measuring H21 (held; see QUEUE), split out and shipped

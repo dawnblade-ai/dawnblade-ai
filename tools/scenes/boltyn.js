@@ -527,7 +527,9 @@ module.exports = [
       "each charge was counted":                 sd.hist.charged,
       "the chain is still open at resolution":    n.step,
       "the grant is the printed pip TIMES the Light count": sd.atkBuff.map(b => b.amt).join(","),
-      "…with the printed window":                sd.atkBuff.map(b => b.until).join(",")
+      "…with the printed window":                sd.atkBuff.map(b => b.until).join(","),
+      /* RULING (user, 2026-10-31): V's grant includes V itself. Printed 3. */
+      "V itself deals its 3 plus the Light count": 20 - n.sides[1].hp
     };
   },
   want: {
@@ -537,7 +539,8 @@ module.exports = [
     "each charge was counted": 2,
     "the chain is still open at resolution": "resolution",
     "the grant is the printed pip TIMES the Light count": "2",
-    "…with the printed window": "chain"
+    "…with the printed window": "chain",
+    "V itself deals its 3 plus the Light count": 5
   }
 }
 ,

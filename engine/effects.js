@@ -4058,6 +4058,34 @@ function makeEffects(ctx){
       n = runOps(n, pre, card.name);
       pre.forEach(o=>preRan.add(o));
     }
+    /* A STANDING ATTACK GRANT PRINTED ON AN ATTACK IS PRE-RUN TOO, so it
+       reaches THAT ATTACK. RULING (user, 2026-10-31): V of the Vanguard's
+       "Your attacks this combat chain get +1{p} for each Light card charged
+       this way" includes V itself: "Yes."
+
+       An attack's `fx.ops` ride to RESOLUTION (`pend.ops`), and the standing
+       grant is READ in `linkPumps` — which has already struck the total by
+       the time `linkPayload` runs them — so the grant used to land after V's
+       own damage and only the NEXT attack carried it (the stated record
+       `attack-grant-misses-own-attack`). Made at declaration it is on the
+       side when `linkPumps` asks, which is the ONE reader: V takes it once
+       there, and the op is kept out of `pend.ops` below so it cannot be made
+       a second time at resolution (the grant would stack on every later
+       link twice).
+
+       THE COUNTABLE SURVIVES THE MOVE: `n._chgWay` was set from this very
+       play's charge cost above and no `pend` is open at a declaration, so
+       `chargedRec` reads the right record. THE GATE IS `attacking`, the
+       set whose ops ride `pend.ops`; a non-attack card's ops already run
+       when it resolves and an attack REACTION (Night's Embrace) is not one
+       of these — its grant is made at its own resolution, before the link's
+       `linkPumps`. Measured by pool census (2026-10-31): V is the only ATTACK
+       card whose ops carry an `atkBuff`. */
+    if(attacking && fx.ops.some(o=>o[0]==="atkBuff")){
+      const pre = fx.ops.filter(o=>o[0]==="atkBuff");
+      n = runOps(n, pre, card.name);
+      pre.forEach(o=>preRan.add(o));
+    }
     /* THE COUNTER CLOCK FIRES BEFORE THE CONDITIONS ARE READ (v5.19 moved
        it here from the attack branch, QUEUE N3). Malefic Incantation prints
        "when you PLAY an attack action card, remove a verse counter … create
