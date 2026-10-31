@@ -8577,7 +8577,8 @@ function effCost(c,sd,o){
 function costCtx(g, seat){
   g = g || {};
   const i = seat == null ? (g.actor || 0) : seat;
-  return {dracLinks: dracLinks(g.chain),
+  /* the open attack counts (v5.55, `dracLinksNow`) */
+  return {dracLinks: dracLinksNow(g, i),
           /* HYPER INFLATION'S TAX (v4.06). "Cards cost {r} more to play this
              turn" names no seat, so it is GAME state and taxes both players'
              cards — which is why it rides here rather than on a side. It was
@@ -8593,9 +8594,41 @@ function costCtx(g, seat){
 
 /* HOW MANY DRACONIC CHAIN LINKS ARE ON THE CHAIN. One reader — it was
    inline in `effects.js`'s condition loop, where the `dracN` gate uses
-   the same number, and Fai's discount is its second consumer. */
-function dracLinks(chain){
-  return (chain || []).filter(l => l && l.drac && l.kind === "atk").length;
+   the same number, and Fai's discount is its second consumer.
+
+   "…YOU CONTROL" (v5.55): with a seat, only that seat's links count. A
+   resolved link carries `by` (v4.94); an entry without one (a drill's
+   fixture) counts, as it always did. Only a Fai mirror can tell. */
+function dracLinks(chain, seat){
+  return (chain || []).filter(l => l && l.drac && l.kind === "atk"
+    && (seat == null || l.by == null || l.by === seat)).length;
+}
+
+/* ---- AN ATTACK COUNTS ITS OWN CHAIN LINK (v5.55) ----------------------
+   RULING (user, 2026-10-31): "Yes, an attack counts its own chain link."
+   The strip (`chain`) gets an attack's entry only when `linkPayload`
+   resolves it, so every reader asked BEFORE that — the declaration's
+   `dracN` gates, Fai's discount in a reaction window — was one link
+   short: Fai's SECOND Draconic attack in a row did not get Cinderskin
+   Devotion's go again; the third did. The user's 2026-07-25 ruling ("the
+   first attack each turn is chain link 1") and Rupture's reader
+   (`chain.length + 1`, v3.99) already said so.
+
+   `dracNow` is whether an attack about to be, or being, a link is
+   Draconic: by its printed talent, Fealty's stamp (v5.53), or a waiting
+   `dracNext` / standing `dracChain` grant — exactly the four facts
+   `linkPayload` stamps the entry's `drac` from, so the count before the
+   push and after it cannot disagree. `dracLinksNow` adds the OPEN attack
+   (`pend`) until its link is pushed (`pend.linked`, set at the push: the
+   table keeps `pend` through the resolution step). */
+const dracNow = (card, sd) => !!card && (/draconic/i.test(card.tt || "") || !!card._drac
+  || !!(sd && (sd.dracNext || sd.dracChain)));
+function dracLinksNow(g, seat){
+  g = g || {};
+  const p = g.pend;
+  const open = !!(p && p.card && !p.linked && (seat == null || p.by == null || p.by === seat)
+    && dracNow(p.card, (g.sides || [])[p.by != null ? p.by : (g.actor || 0)]));
+  return dracLinks(g.chain, seat) + (open ? 1 : 0);
 }
 
 /* HOW MANY ATTACKS HAVE HIT ON THIS COMBAT CHAIN — Salt the Wound (v4.48).
@@ -10642,7 +10675,7 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
   PER_COUNT, DEF_PER, perCountKey, chainHits, pickSubject, attackQual, markRed, costCtx, qualMatches, abWindow, defCap, defCounts, defCapWhy, isBlockCard,
         nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, qualColour, CLASS_TALENT_WORDS, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, isActionCard, costOffFor, heaveOf,
         classifyClause, fxParse, fxReset, playableFromZone, playZoneWhy, addCostWhy, isArrowCard, boostPays, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost, isActivation, isActionPaid, costTaxes, handAbilityTax,
-        DECL_OPS, dracLinks, weaponCost, payTrigger, OFFER_TRIGGERS, allyAttack, auraWeaponGrant, wardValue, wardBearers, wardTotal, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, routeCostsAP, rxAllowed, drxBarred, drxBarWhy, rxPump,
+        DECL_OPS, dracLinks, dracNow, dracLinksNow, weaponCost, payTrigger, OFFER_TRIGGERS, allyAttack, auraWeaponGrant, wardValue, wardBearers, wardTotal, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, routeCostsAP, rxAllowed, drxBarred, drxBarWhy, rxPump,
         idleCounterWipes, rustedThrough,
         isAtkActionCard, phantasmPops, zonePow, pow6, kwGated, hasKwNow, printedKw,
         crankCost, fusionOffer, chargeOffer,

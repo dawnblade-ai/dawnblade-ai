@@ -436,7 +436,9 @@ module.exports = [
        "clause was consumed, so coverage read it `tier: full`, and " +
        "COND-BYPASSED needs an unconditional TWIN to compare a gate " +
        "against, so a payload SUBSTITUTED onto the wrong gate leaves the " +
-       "fairness sweep nothing to see. Only DRIVING each threshold does.",
+       "fairness sweep nothing to see. Only DRIVING each threshold does. " +
+       "v5.55: the attack counts its OWN link (ruling 2026-10-31), so N links " +
+       "is N-1 before it plus Enflame itself.",
   run(c){
     const link = () => ({n: "x", kind: "atk", drac: true});
     const at = k => {
@@ -448,30 +450,32 @@ module.exports = [
       return {ga: out.pend.ga, stand: !!out.sides[0].dracChain,
               pump: out.pend.total - atk.power};
     };
-    const a = at(0), b = at(2), d = at(3), e = at(4);
+    /* `at(k)` is k links BEFORE it; Enflame is the next one. */
+    const a = at(0), b = at(1), d = at(2), e = at(3);
     return {
-      "0 links — go again":            a.ga,
-      "0 links — power over base":     a.pump,
-      "2 links — go again":            b.ga,
-      "2 links — power over base":     b.pump,
-      "2 links — attacks Draconic":    b.stand,
-      "3 links — attacks Draconic":    d.stand,
-      "3 links — power over base":     d.pump,
-      "4 links — power over base":     e.pump,
-      "4 links — go again":            e.ga
+      "1 link, itself — go again":            a.ga,
+      "1 link, itself — power over base":     a.pump,
+      "2 links with itself — go again":       b.ga,
+      "2 links with itself — power over base": b.pump,
+      "2 links with itself — attacks Draconic": b.stand,
+      "3 links with itself — attacks Draconic": d.stand,
+      "3 links with itself — power over base": d.pump,
+      "4 links with itself — power over base": e.pump,
+      "4 links with itself — go again":       e.ga
     };
   },
   want: {
-    "0 links — go again": false,
-    "0 links — power over base": 0,
-    "2 links — go again": true,
+    "1 link, itself — go again": false,
+    "1 link, itself — power over base": 0,
+    /* THE ROW R5 MOVED: Enflame as the SECOND Draconic link goes again. */
+    "2 links with itself — go again": true,
     /* THE ROW THAT BITES. The old engine gave +2 HERE and no go again. */
-    "2 links — power over base": 0,
-    "2 links — attacks Draconic": false,
-    "3 links — attacks Draconic": true,
-    "3 links — power over base": 0,
-    "4 links — power over base": 2,
-    "4 links — go again": true
+    "2 links with itself — power over base": 0,
+    "2 links with itself — attacks Draconic": false,
+    "3 links with itself — attacks Draconic": true,
+    "3 links with itself — power over base": 0,
+    "4 links with itself — power over base": 2,
+    "4 links with itself — go again": true
   }
 },
 

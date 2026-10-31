@@ -44,19 +44,20 @@ test("Display Loyalty's rider makes a Fealty at 2 Draconic links attacking a her
                      target ? {target} : undefined);
   };
   /* THE PAIR EITHER SIDE OF THE PRINTED THRESHOLD (v3.92) — and the gate is
-     the SAME `drac2` the head reads, so the go again moves with it. */
-  const below = swing(1);
+     the SAME `drac2` the head reads, so the go again moves with it. The
+     argument is the links BEFORE it: Display Loyalty counts its own (v5.55). */
+  const below = swing(0);
   assert.equal(fealtyOn(below.sides[0]).length, 0, "one link short: no Fealty");
   assert.equal(below.pend.ga, false, "and no go again — the same gate");
-  const at = swing(2);
+  const at = swing(1);
   assert.equal(fealtyOn(at.sides[0]).length, 1, "at the threshold, attacking a hero: one Fealty");
   assert.equal(at.pend.ga, true, "beside the head's go again");
   assert.deepEqual(at.sides[0].hist.madeNames, ["fealty"], "and the turn records which token was made");
   /* AT DECLARATION, NOT ON THE HIT: the token exists before any damage. */
-  assert.equal(at.chain.length, 2, "fixture: the attack has not resolved — its link is not on the strip");
+  assert.equal(at.chain.length, 1, "fixture: the attack has not resolved — its link is not on the strip");
   /* AND ONLY AT A HERO (v3.46): the near-miss is an ally target, where the
      head still lands and the rider does not fire. */
-  const ally = swing(2, {kind: "ally", uid: "x1"});
+  const ally = swing(1, {kind: "ally", uid: "x1"});
   assert.equal(fealtyOn(ally.sides[0]).length, 0, "attacking an ally: the trigger does not fire");
   assert.equal(ally.pend.ga, true, "while the go again, which names no target, still lands");
 });

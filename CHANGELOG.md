@@ -1,3 +1,37 @@
+## v5.55 — An attack counts its own chain link
+
+**QUEUE R5, the user's ruling of 2026-10-31.** Rules engine; the AI is unchanged.
+
+> RULING (user, 2026-10-31): *"Yes, an attack counts its own chain link."*
+
+- **The second Draconic attack in a row is two Draconic links.** An attack's entry reaches the strip
+  (`chain`) only when `linkPayload` resolves it, so a "Draconic chain links you control" gate read at
+  declaration counted only the links before it. Cinderskin Devotion, Display Loyalty, Hot on Their
+  Heels, Phoenix Flame, Enflame the Firebrand's rungs and Searing Emberblade's static all paid out one
+  link late. The declaration now adds the attack being declared when it is Draconic.
+- **One test of "is this attack Draconic": `parser.dracNow`.** It checks the printed talent, Fealty's
+  stamp, or a waiting `dracNext` / standing `dracChain` grant. These are the same four facts
+  `linkPayload` uses to mark the entry, so the count before and after the push agree. A Ninja attack
+  after one Draconic link is still one Draconic link; made Draconic by Brand or Fealty, it is two.
+- **Fai's discount counts the open attack** (`parser.dracLinksNow`, read by `costCtx`). In a reaction
+  window the attack in flight is a link Fai controls. `linkPayload` now marks `pend.linked` when it
+  pushes the entry, because the table keeps `pend` through the resolution step and would otherwise
+  count the attack twice.
+- **"…you control" is scoped to the seat** (`dracLinks(chain, seat)`), which only a Fai mirror can
+  tell apart: the opponent's Draconic links no longer discount Fai's ability.
+- The trainer's status rail ("draconic links N") uses the same reader, so it now includes the open
+  attack.
+- At-hit readers were already right (the link is pushed before the hit's triggers): Mounting Anger's
+  and Rising Resentment's bound and Hot on Their Heels' mark are unchanged. Before this release the
+  mark counted the attack itself while its go again did not; now both do.
+- **`WIRE_V` 27 -> 28** (`pend.linked`; the digest holds).
+- **Measured, 1260 games, 6 seeds, against v5.54 on the same seeds:** 0 refusals, 0 violations. Fai
+  105 -> 114 wins (per-seed mean 17.5 -> 19.0, up on 5 of 6 seeds); no other hero moves more than 4.
+  Two stalls at seeds 3 and 5 (azalea-gravy-3, arakni-dash-5) are present identically on v5.54, so
+  they predate this change and are recorded in QUEUE. The standard 3-seed ladder has none.
+- Drills in `test/ownlink.test.js`, each sabotaged (8 sabotages). Moved to the ruling: Enflame's rung
+  drill and scene, and v5.53's Fealty rider drill (each now counts the attack itself).
+
 ## v5.54 — A grant line capitalises its classes and says what its rider does
 
 **QUEUE FEED 21, voice only.** No state changes; the AI is unchanged.

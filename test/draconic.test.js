@@ -506,14 +506,17 @@ test("DRIVEN: each rung pays out at its OWN threshold and no sooner", {skip}, ()
      v3.99). The 2-link row is the one that bites: the old engine gave
      +2{p} there and no go again, which is this defect in both
      directions at once. */
+  /* `links` IS THE COUNT WITH ENFLAME ITSELF (v5.55, RULING 2026-10-31: an
+     attack counts its own chain link), so the fixture puts `links - 1`
+     before it. The pairs either side of each rung are 1|2, 2|3 and 3|4. */
   const rows = [
-    [0, false, false, 0],
+    [1, false, false, 0],
     [2, true,  false, 0],
     [3, true,  true,  0],
     [4, true,  true,  2],
   ];
   for(const [links, wantGa, wantStand, wantPump] of rows){
-    const {out, base} = declare(links);
+    const {out, base} = declare(links - 1);
     assert.equal(out.pend.ga, wantGa,
       links + " links: go again is the TWO-link rung");
     assert.equal(!!out.sides[0].dracChain, wantStand,

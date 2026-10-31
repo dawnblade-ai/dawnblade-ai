@@ -270,7 +270,11 @@
    tokens created this turn by name, which Fealty's clock reads. A v26 peer
    has neither, and the pair diverges at the first Fealty. The shape digest
    moves with the side field. */
-const WIRE_V = 27;
+/* 27 -> 28 AT v5.55: `pend` gains `linked`, set when `linkPayload` pushes the
+   attack's entry onto the strip, so `parser.dracLinksNow` stops counting the
+   open attack a second time through the resolution step. `pend` is a
+   GAME_KEY that ships whole, so the digest holds. By hand. */
+const WIRE_V = 28;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

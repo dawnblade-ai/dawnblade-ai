@@ -352,7 +352,9 @@ test("WIRE_V moves when the payload shape moves, and only then", () => {
   /* 26 -> 27 AT v5.53, AND THE DIGEST MOVES: a SIDE FIELD arrives
      (`dracCard`, Fealty's "the next card you play this turn is Draconic"),
      and `hist` gains `madeNames` — inside a whole-shipped field. */
-  assert.equal(W.WIRE_V, 27,
+  /* 27 -> 28 AT v5.55: `pend.linked` — inside a GAME_KEY that ships whole,
+     so the digest does not move. */
+  assert.equal(W.WIRE_V, 28,
     "WIRE_V moved — if the payload shape moved with it, update the digest below " +
     "in the same edit and say what changed in the header");
   assert.equal(h, 3759651216,

@@ -380,11 +380,14 @@ test("the one-board reader sets are pinned", {skip}, () => {
     "a human chooses which arcane card to play.");
 
   assert.deepEqual(onlyT.sort(),
-    ["clean", "defCap", "frostCount", "hasKwNow", "instantAbilityReady",
+    ["clean", "defCap", "dracLinksNow", "frostCount", "hasKwNow", "instantAbilityReady",
      "isAttack", "isInstantT", "isNonAtkActionCard", "isRx", "norm",
      "playableFromZone", "runeCount", "rxAllowed", "wardTotal"].sort(),
     "a reader the trainer asks and judge does not — mostly UI (`norm`, `clean`, " +
     "`instantAbilityReady`) or reached through types.js/effects.js on the other side. " +
+    "v5.55: `dracLinksNow` ARRIVED as a DISPLAY reader — the trainer's status rail " +
+    "counts Draconic links with it, the open attack included; judge renders nothing " +
+    "and reaches the same reader through `parser.costCtx` (Fai's discount). " +
     "v4.96: `defCap` ARRIVED — judge stopped asking it directly when the " +
     "defender cap became `defCapWhy`, which it and the trainer's defend door " +
     "both ask; the trainer's other caller is the DUMMY's own wall, which judge " +

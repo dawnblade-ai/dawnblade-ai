@@ -3046,7 +3046,7 @@ function makeEffects(ctx){
      differently — `pumped` is settled late, and `fused` there means the
      card WAS NOT fused, not that nothing could be revealed. A `way:` gate
      is `wayWhy`'s, at either site. */
-  function condWhy(n, cond, chargedWay, atHit){
+  function condWhy(n, cond, chargedWay, atHit, dracCount){
     if(/^way:/.test(String(cond || ""))) return wayWhy(cond);
     if(atHit){
       const h = {pumped:"its {p} isn't above its base", fused:"it wasn't fused",
@@ -3056,7 +3056,9 @@ function makeEffects(ctx){
       if(h) return h;
     }
     const dracN = /^drac(\d+)$/.test(cond) ? +cond.slice(4) : null;
-    const dracLinks = P.dracLinks(n.chain);
+    /* the caller's count when it has one — the declaration's includes the
+       attack being declared (v5.55) */
+    const dracLinks = dracCount != null ? dracCount : P.dracLinks(n.chain);
     chargedWay = chargedWay || [];
     return {atk:"no other attack yet", non:"no other non-attack yet",
       pitch6:`no 6+ power card in ${sp(act(n))} pitch zone`, arsenal:"not played from arsenal",
@@ -4133,7 +4135,13 @@ function makeEffects(ctx){
       /* RULING: links come from attacks — "the first attack each turn is chain
          link 1" — so non-attack arcane (kind "arc") and the dummy's swing
          (kind "foe") must not be counted. */
-      const dracLinks = P.dracLinks(n.chain);   /* one reader — v3.86 */
+      /* AN ATTACK COUNTS ITS OWN CHAIN LINK (v5.55, RULING 2026-10-31). Its
+         entry is pushed when it resolves, so at its declaration the strip
+         is one short: the attack being declared is added here when it is
+         Draconic (`parser.dracNow`, the same four facts `linkPayload`
+         stamps). A non-attack is no link (the ruling of 2026-07-25). */
+      const dracLinks = P.dracLinks(n.chain, actorOf(n))
+        + (attacking && P.dracNow(card, act(n)) ? 1 : 0);
       const met = cond==="atk" ? act(n).hist.atk>0 : cond==="non" ? act(n).hist.non>0
         /* what THIS resolution discarded, not what the turn did */
         : cond==="discard6way" ? (n._discWay||[]).some(c=>pow6(c, bAct(n)))
@@ -4273,7 +4281,7 @@ function makeEffects(ctx){
             return cond==="defGA" ? !!n.pend.ga : pendPumped(n);
           })()
         : dracN!=null ? dracLinks >= dracN : false;
-      const why = condWhy(n, cond, chargedWay);
+      const why = condWhy(n, cond, chargedWay, false, dracLinks);
       if(!met){
         if(!_notMetSaid.has(cond)) n = L(n, `${card.name}: condition not met (${why}).`);
         _notMetSaid.add(cond);
@@ -7846,6 +7854,9 @@ function makeEffects(ctx){
        Lightning attack" reads the whole chain (`chainAtkOf`). */
     n.chain = [...n.chain, {n:pc.name, img:pc.img, dbImg:pc.dbImg, dmg:total, ga:n.pend.ga, drac:/draconic/i.test(pc.tt||"")||!!pc._drac||_dracGrant||_dracStand, kind:"atk",
                             ty:(pc.ty || []).slice(), by:(n.pend.by != null ? n.pend.by : actorOf(n))}];
+    /* THE OPEN ATTACK IS ON THE STRIP NOW (v5.55) — `parser.dracLinksNow`
+       stops adding it. The table keeps `pend` through the resolution step. */
+    n.pend = {...n.pend, linked: true};
     if(_dracGrant){
       actMut(n).dracNext = false;
       n = L(n, `${pc.name} takes the Draconic grant \u2014 it is spent.`);
