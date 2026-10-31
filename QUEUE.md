@@ -9,7 +9,7 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-10-31, at v5.58)
+## HANDOFF — START HERE (CEO, 2026-10-31, at v5.60)
 
 **This section is the handoff.** Root `HANDOFF.md`/`WEEK.md` were retired to `docs/archive/` on
 2026-10-31; do not start a new root handoff file — rewrite this section instead.
@@ -35,7 +35,16 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
   ledger has 0 open records). **v5.58** H20: the AI cashes arena abilities (`judge.arenaUseful`;
   Lyath 259 -> 296, Gravy 150 -> 172 over 72 paired seeds). Agents do the build and measurement;
   the CEO verifies each patch on main (suite, scenes, fairness, babel, ladder, harness) and pushes.
-- **Two rulings asked of the user (2026-10-31), do not build until answered:**
+- **RULED 2026-10-31 (user), in flight with Sonnet agents:**
+  > RULING (user, 2026-10-31): *"A match can certainly end in a draw - in the future we may need a
+  > sudden death mechanic, there is one in place for tournaments already."*
+  > RULING (user, 2026-10-31): V of the Vanguard's bonus includes V itself: *"Yes."*
+  - R6 -> the table ends a dead position (both decks empty, nothing changing for N full turns) as a
+    DRAW; the ladder reports `draws` apart from `stalls`. Sudden death: record, don't build.
+  - R7 -> V of the Vanguard counts itself (closes `attack-grant-misses-own-attack`).
+- **v5.59** soul-banish cost asks which card (`soul-banish-cost-auto-picked` CLOSED). **v5.60** the
+  nameless "Go again granted." line removed (split out of H21).
+- **The two rulings as they were asked (2026-10-31):**
   - **R6, dead position.** `node tools/tourney.js '' '' 6` still has ONE stall (arakni-dash-5 or
     azalea-gravy-3 after v5.56): both decks empty, nobody can ever deal damage, CR 4.5.3 has no
     deck-out loss. Draw? AI concedes? Something else?
