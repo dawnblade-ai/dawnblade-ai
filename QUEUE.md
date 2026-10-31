@@ -9,7 +9,7 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-10-31, at v5.55)
+## HANDOFF — START HERE (CEO, 2026-10-31, at v5.58)
 
 **This section is the handoff.** Root `HANDOFF.md`/`WEEK.md` were retired to `docs/archive/` on
 2026-10-31; do not start a new root handoff file — rewrite this section instead.
@@ -28,18 +28,34 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
     `dracLinksNow`, `pend.linked`). 6 seeds vs v5.54: Fai 105 -> 114, nothing else moved > 4.
   - Docs: eleven finished plans/handoffs moved to `docs/archive/` (with an index); `CLAUDE.md` has a
     docs map and derives the version instead of stating it.
+- **Round 2 (CEO + Sonnet agents in worktrees, 2026-10-31):** `fe947a8` **`tools/page.js`**, an
+  offline harness that drives the real page at 393×852 (CDNs + card DB served locally; deps in a
+  scratch dir — see its header). **v5.56** Death Dealer's put never pitches its only arrow + AI
+  `resUnlock` (6-seed stalls 2 -> 1). **v5.57** Cloaked card back (`cloaked-display` CLOSED — the
+  ledger has 0 open records). **v5.58** H20: the AI cashes arena abilities (`judge.arenaUseful`;
+  Lyath 259 -> 296, Gravy 150 -> 172 over 72 paired seeds). Agents do the build and measurement;
+  the CEO verifies each patch on main (suite, scenes, fairness, babel, ladder, harness) and pushes.
+- **Two rulings asked of the user (2026-10-31), do not build until answered:**
+  - **R6, dead position.** `node tools/tourney.js '' '' 6` still has ONE stall (arakni-dash-5 or
+    azalea-gravy-3 after v5.56): both decks empty, nobody can ever deal damage, CR 4.5.3 has no
+    deck-out loss. Draw? AI concedes? Something else?
+  - **R7, V of the Vanguard** (`attack-grant-misses-own-attack`): does "Your attacks this combat
+    chain get +1{p} for each Light card charged this way" include V itself? Today only later attacks.
 - **How to work** (unchanged): `CLAUDE.md` is the core; one item per release; re-verify before
   fixing; sabotage every new drill; ladder at 3 seeds (6+ for a balance claim, both sides of the
   change). Work in fresh sessions. A Sonnet shipper suits a mechanical release; keep judgement work
   (rules readings, new mechanics) in Opus.
 - **NEXT, in order:**
-  1. **Two stalls outside the standard ladder** (CEO, 2026-10-31). `node tools/tourney.js '' '' 6`
+  1. ~~Two stalls outside the standard ladder~~ — one fixed at v5.56, the other is R6 (a ruling).
+     Original note: **Two stalls outside the standard ladder** (CEO, 2026-10-31). `node tools/tourney.js '' '' 6`
      stalls `azalea-gravy-3` (turn 686) and `arakni-dash-5` (turn 1768), identically on v5.54 and
      v5.55; seeds 0–2 have none, so `npm run play '' '' 3` does not see them. Replay one with
      `tools/selfplay.js` (`match(a, b, seed, first)` then `play`) and read what both seats do near
      the end before deciding: a policy loop is an H-item, a game with no way to end is a rules
      question for the user (CR 4.5.3: there is no deck-out loss).
-  2. **`cloaked-display`** (open approx record): the card back on the board. A UI job; read
+  2. ~~`cloaked-display`~~ SHIPPED v5.57. Next instead: weak-hero policy (Gravy, Blaze, Bravo,
+     Enigma trail at 5–9 wins a seed) and player-facing choices the ledger auto-picks
+     (`soul-banish-cost-auto-picked` was in flight at v5.58). Original note: **`cloaked-display`** (open approx record): the card back on the board. A UI job; read
      `UI-GUIDE.md` first and drive the page at 393×852 — which needs a machine that can reach the CDN.
   3. The unresolved H-items in THE ORDER below.
 - **Latent, recorded:** (a) a non-permanent played FROM THE GRAVEYARD still files to banish (R2
