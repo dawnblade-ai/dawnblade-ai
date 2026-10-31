@@ -9,6 +9,23 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
+## HANDOFF — START HERE (CEO, 2026-10-31)
+
+- **Live: v5.50** (`c24c6b4` + `11ee76a`), CEO-verified: 3720 drills, 0 fail, 5 skipped; scenes 107/0;
+  babel ok; scripts + `.nojekyll`; CI green; 3-seed ladder per-seed identical to the CEO's measurement,
+  0 refusals / 0 violations / 0 stalls; Azalea 7.3 -> 19.0.
+- **CLAUDE.md was slimmed to a 14 KB core on 2026-10-31**; the long history is `LESSONS.md` (grep it).
+  Work in FRESH sessions: a long session re-reads its whole context on every step. Use Sonnet for
+  mechanical releases (Shipper 3, `session_013xG9x9VCvPFxBfDXutTUeb`, shipped v5.50 in 11 minutes);
+  keep Opus for judgement. The old Shipper 2 session is idle and stays idle.
+- **Next release (v5.51), small and already measured:** (1) H18, an amp-only ability waits for an
+  arcane taker (patch `experiments/H18-amp-takers.patch`); (2) Light the Way reads its colour: its
+  rider is "When this hits, if a yellow card was charged this way, this gets go again", and `fxParse`
+  gives it no `chargedPitch` condition in `fx.conds`, so `judge.chargePitchWanted` answers null and the
+  AI still charges the lowest pitch (Shipper 3's finding). Teach the reader to look at the on-hit
+  condition too. Then **S15** (Display Loyalty's rider + the Fealty token), then FEED 21.
+- **Waiting on the user:** the three NEEDS A RULING questions at the bottom of this file.
+
 ## v4 — THE AI PILOTS HEROES (CEO, 2026-10-18)
 
 > RULING (user, 2026-10-18): *"Yes it is time for the ai to learn to play the heroes - I'm
@@ -629,6 +646,8 @@ Enigma 1). Repro: Fai v Kayo seed 0, turn 1, Ronin Renegade. Order the key `kap`
 charge rank; the action never moves, so the ladder stays byte-identical. Drill: `chargeFirst` only
 names a card whose `chargeView.offers` is true (Boltyn positive, Fai's Ronin Renegade near-miss).
 Sent to the Shipper 2026-10-26 with feed 19-20.
+
+**H12 + H13 + H14a SHIPPED as v5.50 (`c24c6b4`) by Shipper 3, CEO-verified 2026-10-31** (see HANDOFF).
 
 **H12 (policy, every hero with a free optional pick). MEASURED REAL — ship it.** `judge.autoAnswer` answers a
 `min:0` pick with an empty selection, so the AI declines every optional pick, including ones it has
