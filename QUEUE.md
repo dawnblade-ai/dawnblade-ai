@@ -41,6 +41,17 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
     deck-out loss. Draw? AI concedes? Something else?
   - **R7, V of the Vanguard** (`attack-grant-misses-own-attack`): does "Your attacks this combat
     chain get +1{p} for each Light card charged this way" include V itself? Today only later attacks.
+- **H21 (policy, MEASURED, HELD — CEO 2026-10-31).** `sparring.nextBlocker`: a hand bigger than
+  `maxPitch + 1` holds a spare card, and a spare card blocks any hit that would leak (reason
+  `blockSpare`, via `J.handFree`; patch `experiments/H21-spare-block.patch`, built by a Sonnet agent).
+  Own-seat A/B, 12 seeds paired: Bravo 8.1 -> 11.8 (t 5.9, 12/0), Blaze 7.6 -> 9.7 (t 4.2), Gravy
+  4.2 -> 5.6 (t 3.4), Enigma 10.2 -> 11.3 (t 2.1). **Not shipped:** with every seat on, the 3-seed
+  ladder has 1 stall (`gravy-viserai-2`, a dead position — R6's class) and the collateral is large
+  and unexplained: Kayo 14.3 -> 23.0, Arakni 15.7 -> 8.7, Dorinthea 17 -> 10.7, Lyath 7.7 -> 4.3.
+  Next: rule R6 first (dead positions), then find out why Kayo gains ~9 (likely her 6-power hits
+  meeting fewer blocks, or Kayo's own blocking changing) before shipping; consider the rule only
+  against hits that would actually leak damage the seat cannot afford. The patch also drops a
+  nameless "Go again granted." feed line in effects.js — split that out as its own FEED fix.
 - **How to work** (unchanged): `CLAUDE.md` is the core; one item per release; re-verify before
   fixing; sabotage every new drill; ladder at 3 seeds (6+ for a balance claim, both sides of the
   change). Work in fresh sessions. A Sonnet shipper suits a mechanical release; keep judgement work
