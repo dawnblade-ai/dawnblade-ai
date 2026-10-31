@@ -24,7 +24,31 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
   gives it no `chargedPitch` condition in `fx.conds`, so `judge.chargePitchWanted` answers null and the
   AI still charges the lowest pitch (Shipper 3's finding). Teach the reader to look at the on-hit
   condition too. Then **S15** (Display Loyalty's rider + the Fealty token), then FEED 21.
-- **Waiting on the user:** the three NEEDS A RULING questions at the bottom of this file.
+- **Rulings answered 2026-10-31** (R2-R4 below): next is v5.51 = R2 + R3 (engine), then v5.52 = H18 +
+  Light the Way (AI), then S15, then FEED 21.
+
+## R2-R4 — THREE RULINGS (user, 2026-10-31)
+
+> RULING (user, 2026-10-31): *"To grave like normal even if it is played from banish."*
+> RULING (user, 2026-10-31): Unity counts a defence reaction played from hand: *"Yes"*.
+> RULING (user, 2026-10-31): *"Soul is public."*
+
+- **R2 (engine): a card played from the banished zone goes to the GRAVEYARD after it resolves**, like
+  any card, turn-stamped (`_gy`). Today both filing paths put it back into banish: `effects.js`
+  `execute` (non-attacks) and `fileAttack` (attacks). S9's play-permission strip stays (the card must
+  not keep `_playTurn`/`_asInstant`). An ephemeral card (Crouching Tiger) still ceases to exist on its
+  way to the graveyard (`parser.ceasesToExist`). Close the approx record
+  `played-from-banish-files-to-banish` with its probe turned round. Drill the real routes: Blaze's
+  ability (Snapback), Pouncing Paws (Crouching Tiger), Mounting Anger / Rising Resentment's banished
+  attack. Check what else reads a banished card that was played (Art of Desire-style "banished" counts).
+- **R3 (engine): Unity counts a defence reaction played from hand.** Unity prints "When this defends
+  together with a card from hand"; `handDefenders` counts declared hand cards (`blockH`) only, so a
+  defence reaction played from hand later in the same link does not lift it (44 times at 3 seeds).
+  `parser.rxDefenders(..., fromHand)` (v5.21) is the reader that already knows those cards. Both boards.
+  Drill: Gauntlets/Helm of Unity defending with only a played-from-hand defence reaction gets its bonus;
+  one played from the ARSENAL does not.
+- **R4 (no change): the soul is public.** The feed lines that name charged/soul cards are right.
+  Nothing to build; recorded so nobody hides them.
 
 ## v4 — THE AI PILOTS HEROES (CEO, 2026-10-18)
 
@@ -1295,7 +1319,7 @@ is the only place it is ever `false`. Build it this way:
 
 ## NEEDS A RULING FROM THE USER (do not build)
 
-- **Where does a card played from the banished zone go after it resolves?** The graveyard, or
+- **ANSWERED 2026-10-31, see R2-R4.** **Where does a card played from the banished zone go after it resolves?** The graveyard, or
   back to banish? Blaze's ability, Pouncing Paws' Crouching Tiger, Mounting Anger and Rising
   Resentment grant "you may play it this turn" from banish, and none prints a destination. The
   engine files it back into banish (`effects.js:~5433`, `fileAttack`), and the repo has no CR quote
@@ -1304,11 +1328,11 @@ is the only place it is ever `false`. Build it this way:
 - ~~**May the AI pilot a hero?**~~ **RULED 2026-10-18, see v4 at the top.** Original note: (Stage §8.3.) RULING 2026-08-16 says a seat the dummy fills is
   always the vanilla pile (CLAUDE.md:12059). The Stage design's vs-AI tiers, its L9 lesson
   and AI-vs-AI exhibitions need a hero-piloting AI. Asked 2026-10-17.
-- **Unity and a defence reaction from hand.** Unity prints "When this defends together with
+- **ANSWERED 2026-10-31, see R2-R4.** **Unity and a defence reaction from hand.** Unity prints "When this defends together with
   a card from hand". `handDefenders` counts declared hand cards (`blockH`) only, so a defence
   reaction played from hand later does not lift it (44 times at 3 seeds). Timing says that is
   right; v5.21's rule (every count of a wall sees a played reaction) points the other way.
-- **Is the soul hidden?** Not sourced in the repo. If it is, "`X charges <card> into X's
+- **ANSWERED 2026-10-31, see R2-R4.** **Is the soul hidden?** Not sourced in the repo. If it is, "`X charges <card> into X's
   hero's soul`" (`effects.js:1099`, 127 lines), "`<card> goes from the hand to the soul`"
   (`prompts.js:1218`) and Banneret's pay-off line (`effects.js:1647`) name hidden cards too.
 
