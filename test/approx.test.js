@@ -277,6 +277,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 56 -> 58 AT v5.62: `trainer-no-stalemate-draw` and `no-sudden-death`, both
      `stated` (RULING (user, 2026-10-31): a match can end in a draw; sudden death
      is a future item). */
+  /* v5.70 closes `trainer-instant-doors-no-declarations` and adds nothing: the
+     count holds, and only the stated/closed split below moves. */
   assert.equal(Object.keys(APPROX).length, 58, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
@@ -338,7 +340,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 23 -> 25 AT v5.62: `trainer-no-stalemate-draw` and `no-sudden-death`, both
      `stated` (RULING (user, 2026-10-31): a match can end in a draw; sudden death
      is a future item). */
-  assert.equal(n("stated"), 25, "stated count moved");
+  /* 25 -> 24 stated AT v5.70: `trainer-instant-doors-no-declarations` closed. */
+  assert.equal(n("stated"), 24, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -401,7 +404,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 30 -> 31 closed AT v5.57: `cloaked-display`. */
   /* 31 -> 32 closed AT v5.59: `soul-banish-cost-auto-picked`. */
   /* 32 -> 33 closed AT v5.61: `attack-grant-misses-own-attack`. */
-  assert.equal(n("closed"), 33, "closed count moved");
+  /* 33 -> 34 closed AT v5.70: `trainer-instant-doors-no-declarations`. */
+  assert.equal(n("closed"), 34, "closed count moved");
 });
 
 /* ============================================================
@@ -1338,27 +1342,56 @@ probe("trainer-attack-target", () => {
    ============================================================ */
 
 /* An X cost and an X quantity are refused rather than guessed. */
-/* THE TRAINER'S INSTANT-SPEED DOORS ASK NO DECLARATION (v4.95). A source
-   probe, because the doors are closures inside `Battle`; it asserts the
-   DEVIATION — neither the arsenal-instant door nor the opponent's-turn door
-   pauses for fusion or an X — and the measurement half is DRIVEN: four of
-   the cards those doors can free print one. The day a door asks, this goes
-   red and the record must move. */
+/* BUILT AT v5.70, AND THE PROBE IS TURNED ROUND. It was `stated` from v4.95:
+   neither the arsenal-instant door nor the opponent's-turn door (nor the two
+   reaction doors) paused for fusion or an X. A source probe for the wiring,
+   because the doors are closures inside `Battle`, and DRIVEN for the effect:
+   Ice Eternal played from the arsenal on their turn with X = 2 and a revealed
+   Ice card mints two Frostbites and lands the fused arcane. The answers are
+   what the sheets leave on the state; `test/instantdecl.test.js` runs the
+   trainer's own question and sabotages each half. A regression to a door that
+   asks nothing is red. */
 probe("trainer-instant-doors-no-declarations", () => {
   const html = require("fs").readFileSync(require("path").join(__dirname, "..", "index.html"), "utf8")
     .replace(/\/\*[\s\S]*?\*\//g, "");
   const door = (a, b) => html.slice(html.indexOf(a), html.indexOf(b, html.indexOf(a) + 10));
-  const ai = door("const playArsenalInstant = () => setG", "const playFoeTurnRx = i => setG");
-  const ft = door("const playFoeTurnRx = i => setG", "const foePassWindow = ");
-  assert.ok(ai.length > 300 && ft.length > 300, "door anchors moved");
-  for(const [nm, body] of [["playArsenalInstant", ai], ["playFoeTurnRx", ft]])
-    assert.doesNotMatch(body, /fusepick|xpick|_fuseUid|fusionOffer|\bcx\b/,
-      nm + " now asks a declaration — the record must move");
+  for(const [nm, a, b] of [["playRx", "const playRx = (i, addPaid) => setG", "const playRxA = () => setG"],
+      ["playRxA", "const playRxA = () => setG", "const playArsenalInstant = () => setG"],
+      ["playArsenalInstant", "const playArsenalInstant = () => setG", "const playFoeTurnRx = i => setG"],
+      ["playFoeTurnRx", "const playFoeTurnRx = i => setG", "const foePassWindow = "]]){
+    const body = door(a, b);
+    assert.ok(body.length > 300, "door anchors moved");
+    assert.match(body, /askInstantDecl\(/, nm + " asks no declaration again — the record must move");
+  }
+  const ask = door("const askInstantDecl = ", "const redoDoor = ");
+  assert.match(ask, /askX\(/, "the instant doors never ask for X");
+  assert.match(ask, /DawnParser\.fusionOffer\(/, "the instant doors never offer fusion");
   H.db();
+  /* THE PREMISE: no reaction or instant prints either, so what reaches a door is a GRANT */
+  const direct = [];
+  for(const r of require("../data/pool.json")){
+    if(!/Instant|Reaction/.test(r.type_text || "")) continue;
+    for(const p of [1, 2, 3]){
+      let c; try { c = H.card(r.name, p); } catch(e){ continue; }
+      if(c && c.name && (PR.fxParse(c).fusionCost || c.cx)) direct.push(c.name + "|" + c.pitch);
+    }
+  }
+  assert.deepEqual([...new Set(direct)], [], "a printed instant or reaction now prints fusion or an X");
   const asks = ["Aether Icevein", "Brain Freeze", "Polar Cap", "Ice Eternal"]
     .filter(nm => { const c = H.card(nm, 3); return PR.fxParse(c).fusionCost || c.cx; });
   assert.deepEqual(asks, ["Aether Icevein", "Brain Freeze", "Polar Cap", "Ice Eternal"],
     "fixture: the blue cards the arsenal door can free stopped printing fusion or an X");
+  /* DRIVEN: the answers the sheets leave are honoured */
+  const fuel = n => ({name: "Fuel" + n, uid: "F" + n, pitch: 3, power: null, def: 2, cost: 0,
+    tt: "Generic Action - Attack", ty: ["Generic", "Action", "Attack"], tx: "", kw: []});
+  const ie = {...H.card("Ice Eternal", 3), uid: "IE"}, cs = {...H.card("Cold Snap", 3), uid: "CS"};
+  const g = {...H.state({res: 0, ap: 0, arsenal: ie, hand: [cs, fuel(1), fuel(2)]}, {res: 0},
+    {actor: 0, turnPlayer: 1}), mode: "foeturn", pend: null, _x: 2, _fuseUid: "CS"};
+  const out = H.fx(g, (f, n) => f.playAtSpeed(n, ie, "arsenal", {window: "instant"}));
+  assert.equal(out.why, null);
+  assert.equal(out.game.sides[1].board.filter(b => /frostbite/i.test(b.card.name)).length, 2,
+    "X = 2 declared at instant speed minted no Frostbites");
+  assert.equal(g.sides[1].hp - out.game.sides[1].hp, 2, "the revealed card did not fuse it");
 });
 
 probe("instant-pump-own-attack-only", () => {

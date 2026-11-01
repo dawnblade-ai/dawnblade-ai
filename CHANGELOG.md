@@ -1,3 +1,25 @@
+## v5.70 — The trainer asks fusion and X at instant speed
+
+**Approximation `trainer-instant-doors-no-declarations`, closed.** Built by a Sonnet agent, verified
+and shipped by the CEO thread. Trainer only; the table and the AI are unchanged.
+
+- **The gap:** the trainer's four instant-speed doors (a reaction from hand or arsenal, Iyslander's
+  arsenal instant, a card played on the opponent's turn) asked no declaration before the payment —
+  no fusion reveal, no X — where the table asks both for every play. No printed Instant prints
+  either, so the exposure is a GRANT that frees a card to instant speed: Iyslander's arsenal window
+  frees Aether Icevein, Brain Freeze and Ice Eternal (fusion; Ice Eternal also XX), and Stir the
+  Aetherwinds frees the next Wizard non-attack action (adding Aether Icevein and Polar Cap). Played
+  that way in the trainer, they could never be fused, and an X could not be declared.
+- **Now:** every instant door asks `askInstantDecl` after legality and before the payment, in the
+  table's order. X goes through `askX`, extracted from the action-speed play so both share one body
+  and one sheet; fusion through `fusionOffer` and its sheet. A reveal the payment would spend is not
+  offered, and the payment keeps the revealed card out of the pitch. Declining is always possible.
+- **Proved on the real page at 393x852** (`tools/page.js`), 91 assertions: Iyslander's arsenal door
+  (X sheet, fusion sheet, the fused rider, declined, X = 0) and the hand door (Brain Freeze fused);
+  sheets inside the width, the window restored, the answers spent. The 28-screen smoke check passes.
+- Drills in `test/instantdecl.test.js` (15 unit sabotages and 4 page sabotages all caught); pins
+  moved with reasons. The self-play ladder is identical to v5.69 (it plays the table).
+
 ## v5.69 — Arakni marks before she strikes
 
 **QUEUE H26, policy (Arakni).** Found and measured by a Sonnet agent, re-measured and shipped by the

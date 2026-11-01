@@ -5879,13 +5879,15 @@ function makeEffects(ctx){
      through `execute`, and only THEN ask what a defence reaction is worth
      — judge's order. `{game, why, dv}`; `why` means nothing moved.
 
-     WHAT THE TABLE ASKS AND THIS DOES NOT, STATED: fusion and an X are
-     declarations the table takes before the payment, and no reaction or
-     instant in the pool prints either — measured. Iyslander's arsenal
-     door can free a blue non-attack action card, and four of those do
-     (Aether Icevein, Brain Freeze, Polar Cap, Ice Eternal); through this
-     body they resolve unfused and with no X, which is weaker than
-     printed and visible (`trainer-instant-doors-no-declarations`). */
+     FUSION AND X ARE DECLARED BY THE DOOR, BEFORE THIS IS CALLED (v5.70).
+     The table takes both before the payment, and so does each trainer
+     door now (`askInstantDecl` in `Battle`): the answers arrive on the
+     state as `_fuseUid` and `_x`, `execute` reads them, and they are
+     spent here. No reaction or instant in the pool PRINTS either — what
+     reaches them is a card a grant frees to instant speed: Iyslander's
+     arsenal window (Aether Icevein, Brain Freeze, Ice Eternal in blue)
+     and Stir the Aetherwinds' next Wizard non-attack action (those, and
+     the red and yellow Aether Icevein and Polar Cap). */
   const playAtSpeed = (s, c, from, o) => {
     o = o || {};
     const fx = fxParse(c);
@@ -5907,7 +5909,11 @@ function makeEffects(ctx){
     { const pw = playTargetWhy(s, c, actorOf(s)); if(pw) return {game: s, dv: 0, why: pw}; }
     const cost = effCost(c, act(s), P.costCtx(s, actorOf(s)));
     const extra = (o.addPaid === true && fx.addPay) ? fx.addPay.cost : 0;
-    const n0 = act(s).res >= cost + extra ? s : autoPitch(s, cost + extra, [c.uid]);
+    /* A REVEALED CARD IS NOT PITCHED (v5.70) — a fusion's reveal is made
+       before this pays, and a pitched card is no longer in the hand the
+       bonus re-derives it from. */
+    const n0 = act(s).res >= cost + extra ? s
+      : autoPitch(s, cost + extra, s._fuseUid != null ? [c.uid, s._fuseUid] : [c.uid]);
     if(!n0) return {game: s, dv: 0,
       why: `${c.name} costs ${cost}${extra ? " and " + extra + " more" : ""} — not enough in hand to pitch for it at instant speed`};
     let n = {...n0, _addPaid: o.addPaid === true};
@@ -5916,7 +5922,10 @@ function makeEffects(ctx){
     n = execute(n, c, from, idx, {window: o.window,
       handBlockers: o.handBlockers || 0, defenders: o.defenders || []});
     const addPaid = n._addPaid === true;
-    n = {...n}; delete n._addPaid;
+    /* THE DECLARATIONS ARE SPENT (v5.70) — `_x` and `_fuseUid` ride in from
+       the door's sheets and `execute` has read them; left on the state, the
+       next X or fusion card would be played at this one's answer unasked. */
+    n = {...n}; delete n._addPaid; delete n._x; delete n._fuseUid;
     let dv = 0;
     if(o.window === "defense-reaction" && isDR(c)){
       dv = defendValue(act(n), c, {weaponAttack: !!o.weaponAttack, atkCard: o.atkCard || null,

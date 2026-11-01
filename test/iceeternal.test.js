@@ -280,11 +280,14 @@ const HTML = strip(fs.readFileSync(path.join(__dirname, "..", "index.html"), "ut
 test("the trainer asks the same question through its own door", () => {
   /* `Battle` cannot be loaded in Node, so this half is a scan — the WHOLE
      conditional, because `if(false && …)` keeps every name (v4.00, v4.55). */
-  assert.ok(HTML.includes("if(card.cx && s._x == null){"),
+  assert.ok(HTML.includes("if(card.cx && s._x == null) return askX(s, card, from, idx);"),
     "the trainer's tryPlay never asks for X — the card is played at X = 0 on the board a player uses");
+  /* v5.70: the question is `askX`, which the instant doors ask too */
+  assert.match(HTML, /const askInstantDecl = [\s\S]*?if\(card\.cx && s\._x == null\) return askX\(s, card, from, idx, dq\);/,
+    "the instant doors never ask for X");
   assert.ok(HTML.includes("const base = effCost(card, act(s), costCtx(s, actorOf(s)));"),
     "the trainer's bound is not priced with the game's half of the cost (a Frostbite tax, a costTax)");
-  assert.ok(HTML.includes("return {...s, mode:\"act\", xPick:null, _x:x};"),
+  assert.ok(HTML.includes("xPick:null, _x:x};"),
     "the trainer's answer does not ride on the state");
   /* AND THE DECLARATION IS FORGOTTEN on both ways out of a play */
   const cancel = HTML.slice(HTML.indexOf("const cancelPay = () => setG"));

@@ -825,7 +825,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "5.69"; /* v5.69 - the AI marks with a hand ability before a stealth attack that wants the mark. See CHANGELOG.md. */
+window.APP_VER = "5.70"; /* v5.70 - the trainer asks for a fusion reveal and an X when a card is played at instant speed. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -3535,6 +3535,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        the addition, counting what could be pitched. Otherwise it plays
        straight through unpaid and the rider simply does not fire, which is
        the same rule `buildPrompt` follows for a spec with nothing to ask. */
+    { const _dq = askInstantDecl(s, c, "hand", i, {k:"hand", i, addPaid}); if(_dq) return _dq; }
     if(addPaid === undefined && fx.addPay && bank >= cost + fx.addPay.cost)
       return L({...s, mode:"rxaddpay", rxAdd:{idx:i, name:c.name, cost:fx.addPay.cost}},
         `${c.name} has an additional cost — you may pay ${fx.addPay.cost} more for +${(fxParse(c).defSelf||{}).amt||0}{d}.`);
@@ -3552,7 +3553,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     const out = _EFX.playAtSpeed(s, c, "hand", {window: rxWin, addPaid,
       handBlockers: _wall.handBlockers, defenders: _wall.defenders,
       handDefenders: inAtk ? 0 : blockHandCount(s)});
-    if(out.why) return L(s, out.why + ".");
+    if(out.why) return L(spentDecl(s), out.why + ".");
     let n = out.game;
     if(inAtk) return L(n, `${foe(n).name} passes back.`);
     /* STRIPPED, like judge's. A sticky answer would pay for the next
@@ -3581,8 +3582,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       { const _tw = DawnEffects.rxNoTargetWhy(s, c, rxWall(s).defenders); if(_tw) return L(s, _tw + "."); }
       /* ONE BODY (v4.95): priced through `effCost`, pitched on demand,
          resolved through `execute` — see `playAtSpeed`. */
+      { const _dq = askInstantDecl(s, c, "arsenal", 0, {k:"arsenalRx"}); if(_dq) return _dq; }
       const out = _EFX.playAtSpeed(s, c, "arsenal", {window: "attack-reaction", ...rxWall(s)});
-      if(out.why) return L(s, out.why + ".");
+      if(out.why) return L(spentDecl(s), out.why + ".");
       return L(out.game, `${c.name} came from the arsenal. ${foe(out.game).name} passes back.`);
     }
     if(s.mode!=="block" || s.bphase!=="react" || !act(s).arsenal) return s;
@@ -3604,9 +3606,10 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     /* ONE BODY (v4.95) — `playAtSpeed`. From the ARSENAL, which is the
        one place `fromArsenal` is true: Springboard Somersault and Unmovable
        print exactly that. */
+    { const _dq = askInstantDecl(s, c, "arsenal", 0, {k:"arsenalRx"}); if(_dq) return _dq; }
     const out = _EFX.playAtSpeed(s, c, "arsenal", {window: "defense-reaction",
       handDefenders: blockHandCount(s)});
-    if(out.why) return L(s, out.why + ".");
+    if(out.why) return L(spentDecl(s), out.why + ".");
     return out.dv > 0 ? L(out.game, `${c.name} fired from the arsenal — defends for ${out.dv}.`) : out.game;
   });
   const playArsenalInstant = () => setG(s=>{
@@ -3658,8 +3661,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     /* ONE BODY (v4.95) — `playAtSpeed`: priced through `effCost`,
        resolved through `execute`, which spends the instant grant and runs
        her clause 2 itself, so neither is taken by hand here any more. */
+    { const _dq = askInstantDecl(s, c, "arsenal", 0, {k:"arsenalInstant"}); if(_dq) return _dq; }
     const out = _EFX.playAtSpeed(s, c, "arsenal", {window: "instant"});
-    if(out.why) return L(s, out.why + ".");
+    if(out.why) return L(spentDecl(s), out.why + ".");
     return L(out.game, `${c.name} struck from arsenal at instant speed — Iyslander bends winter on their turn.`);
   });
   /* Iyslander clause 2: "Whenever you play an Ice card during an opponent's
@@ -3704,8 +3708,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     /* ONE BODY (v4.95) — `playAtSpeed`. This route used to reach `runOps`
        directly, so it took the instant grant and ran `foeTurnIce` by hand;
        `execute` does both, ahead of the ops, and records the play. */
+    { const _dq = askInstantDecl(s, c, "hand", i, {k:"foeRx", i}); if(_dq) return _dq; }
     const out = _EFX.playAtSpeed(s, c, "hand", {window: "instant"});
-    if(out.why) return L(s, out.why + ".");
+    if(out.why) return L(spentDecl(s), out.why + ".");
     return L(out.game, `${c.name} played at instant speed on ${foe(out.game).name}'s turn.`);
   });
   /* CR 4.3.4 — both players pass in succession and the phase ends. */
@@ -3979,7 +3984,15 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     return off ? {...s, mode:"fusepick", pending:{card,from,idx,types:off.types,uids:off.uids}}
                : maybeBoost(s,card,from,idx);
   };
-  const confirmFuse = (uid) => setG(s=>{
+  const confirmFuse = (uid) => {
+    /* AN INSTANT DOOR'S FUSION re-enters the door (v5.70), as an X does. */
+    const pk = g.mode==="fusepick" && g.pending && g.pending.door;
+    if(!pk){ confirmFuseAt(uid); return; }
+    const pick = (uid != null && (g.pending.uids||[]).indexOf(uid) >= 0) ? uid : null;
+    setG(s => s.mode==="fusepick" ? {...s, mode:pk.back||"act", pending:null, _fuseUid:pick} : s);
+    redoDoor(pk);
+  };
+  const confirmFuseAt = (uid) => setG(s=>{
     if(s.mode!=="fusepick"||!s.pending) return s;
     const {card,from,idx,uids} = s.pending;
     const pick = (uid != null && (uids||[]).indexOf(uid) >= 0) ? uid : null;
@@ -3995,14 +4008,78 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     setG(s => { if(s.mode==="splitpick" && s.splitPick){ pick = s.splitPick; return {...s, mode:"act", splitPick:null}; } return s; });
     if(pick) tryPlay(pick.card, pick.from, pick.idx, half);
   };
+  /* HOW MUCH X? — ONE BODY FOR EVERY DOOR (v5.70). `tryPlay` asked this
+     inline, and the four instant-speed doors asked nothing, so an X card
+     freed to instant speed could not declare one. The bound is what the
+     seat could raise less the price at X = 0, per X in the printed cost,
+     and every value up to it is a button — a choice the payment would
+     refuse is never offered, and X = 0 always is. `door` is set only by
+     the instant doors: it names the door the answer re-enters. */
+  const askX = (s, card, from, idx, door) => {
+    const base = effCost(card, act(s), costCtx(s, actorOf(s)));
+    const ceil = act(s).res + act(s).hand.reduce((t, c, i) => t + (from==="hand" && i===idx ? 0 : (c.pitch||0)), 0);
+    const max = Math.max(0, Math.floor((ceil - base) / card.cx));
+    return L({...s, mode:"xpick", xPick:{card, from, idx, name:card.name, max, per:card.cx, door}},
+      `${card.name} costs X ${card.cx} times — declare X (0 to ${max}).`);
+  };
+  /* THE INSTANT-SPEED DOORS' DECLARATIONS (v5.70). A reaction, Iyslander's
+     arsenal instant and an instant on the opponent's turn all play through
+     `playAtSpeed`, which pays on demand and resolves — and none of them
+     asked the two declarations the table takes BEFORE the payment, so a
+     fusion card freed to instant speed (Aether Icevein, Brain Freeze, Ice
+     Eternal) never got its fused bonus, and Ice Eternal's X was inert. This
+     is `tryPlay`'s own step, door by door: X through `askX`, fusion through
+     the same `fusionOffer` reader and the same `fusepick` sheet, in the
+     table's order (X, then fusion). `null` means nothing is left to ask and
+     the door goes on to the payment.
+
+     THE ANSWERS RIDE ON THE STATE, and UNASKED is `undefined`: `_x` is a
+     number (0 declines), `_fuseUid` is the revealed uid or `null` (declined).
+     `execute` reads exactly those two fields, and `playAtSpeed` strips them
+     on every exit so the next card is asked afresh. `back` is the mode the
+     question was asked from, which the answer restores; `door` names the
+     door it re-enters (`redoDoor`), asked every gate again of the same state. */
+  const askInstantDecl = (s, card, from, idx, door) => {
+    const dq = {...door, back: s.mode};
+    if(card.cx && s._x == null) return askX(s, card, from, idx, dq);
+    if(s._fuseUid === undefined){
+      const off = DawnParser.fusionOffer(card, act(s), card.uid);
+      /* A REVEAL THE PAYMENT WOULD SPEND IS NOT OFFERED. The table pays
+         first and offers fusion from the hand that is left; these doors pay
+         on demand AFTER the question, so a card the price needs would be
+         pitched out from under its own reveal and the bonus lost in
+         silence. Only a card the cost can do without is a button, and
+         `playAtSpeed` keeps it out of the pitch. */
+      if(off){
+        const cost = effCost(card, act(s), costCtx(s, actorOf(s)));
+        const uids = off.uids.filter(u => act(s).res + DawnParser.payCeiling(
+          {...act(s), hand: act(s).hand.filter(h => h.uid !== u)}, card) >= cost);
+        if(uids.length) return {...s, mode:"fusepick", pending:{card, from, idx, types:off.types, uids, door:dq}};
+      }
+    }
+    return null;
+  };
+  const redoDoor = d => {
+    if(d.k === "hand") playRx(d.i, d.addPaid);
+    else if(d.k === "arsenalRx") playRxA();
+    else if(d.k === "arsenalInstant") playArsenalInstant();
+    else playFoeTurnRx(d.i);
+  };
+  /* A REFUSED PLAY SPENDS THE ANSWERS TOO — `playAtSpeed` strips them from
+     a play that resolved, and a refusal hands the door's own state back. */
+  const spentDecl = n => {
+    if(n._x === undefined && n._fuseUid === undefined) return n;
+    n = {...n}; delete n._x; delete n._fuseUid; return n;
+  };
   /* X, DECLARED (v4.72) — the same re-entry, for the same reason: one
      description of what playing a card does. The answer rides on the
      state as `_x`, beside `_half`, so `tryPlay`'s signature is the one
      every other door already calls (no pool card is both split and X). */
   const confirmX = x => {
     let pick = null;
-    setG(s => { if(s.mode==="xpick" && s.xPick){ pick = s.xPick; return {...s, mode:"act", xPick:null, _x:x}; } return s; });
-    if(pick) tryPlay(pick.card, pick.from, pick.idx);
+    setG(s => { if(s.mode==="xpick" && s.xPick){ pick = s.xPick; return {...s, mode:(pick.door&&pick.door.back)||"act", xPick:null, _x:x}; } return s; });
+    if(pick && pick.door) redoDoor(pick.door);
+    else if(pick) tryPlay(pick.card, pick.from, pick.idx);
   };
   /* WHAT A PLAY OR AN ACTIVATION COSTS ON THIS BOARD, IN ONE PLACE (v4.86).
      An ally's ATTACK prints its own cost (v3.44), and the pay sheet, its
@@ -4088,13 +4165,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        the price at X = 0, per X in the printed cost, and every value up to
        it is a button — so a choice the payment would refuse is never
        offered. */
-    if(card.cx && s._x == null){
-      const base = effCost(card, act(s), costCtx(s, actorOf(s)));
-      const ceil = act(s).res + act(s).hand.reduce((t, c, i) => t + (from==="hand" && i===idx ? 0 : (c.pitch||0)), 0);
-      const max = Math.max(0, Math.floor((ceil - base) / card.cx));
-      return L({...s, mode:"xpick", xPick:{card, from, idx, name:card.name, max, per:card.cx}},
-        `${card.name} costs X ${card.cx} times — declare X (0 to ${max}).`);
-    }
+    if(card.cx && s._x == null) return askX(s, card, from, idx);
     if(isRx(card))
       return L(s, `${card.name} is ${isAR(card)?"an attack":"a defense"} reaction — it can only be played in the reaction step`
                 + `${isAR(card)?", by the player who controls the attack":", by the player being attacked"}.`);

@@ -546,19 +546,33 @@ const APPROX = {
       "NONE, so an X nothing paid for is inert rather than free (v2.04)."},
 
 "trainer-instant-doors-no-declarations": {
-  status:"stated", cr:null, board:"trainer", since:"v4.95", swept:"v4.95",
-  claim:"The trainer's instant-speed doors (a reaction from hand or arsenal, "+
-        "Iyslander's arsenal instant, an instant on the opponent's turn) ask no "+
-        "DECLARATION before the payment: no fusion reveal and no X. The table asks "+
-        "both, as pendings, for every play.",
-  why:"Measured at v4.95, when the four doors became one body (`effects.playAtSpeed`): "+
-      "no reaction or instant in the pool prints fusion or an X, so the reaction "+
-      "doors lose nothing. Iyslander's arsenal door can free a BLUE non-attack action "+
-      "card, and four print Ice Fusion (Aether Icevein, Brain Freeze, Polar Cap) or "+
-      "an X (Ice Eternal) — through this route they resolve unfused, and Ice Eternal "+
-      "mints none, which is weaker than printed and visible (an undeclared X is inert, "+
-      "never free, v2.04). Asking needs the trainer's `fusepick`/`xpick` pauses taught "+
-      "to resume into an instant-speed door rather than into `tryPlay`."},
+  status:"closed", cr:null, board:"trainer", since:"v4.95", swept:"v5.70",
+  claim:"WAS: the trainer's instant-speed doors (a reaction from hand or arsenal, "+
+        "Iyslander's arsenal instant, an instant on the opponent's turn) asked no "+
+        "DECLARATION before the payment — no fusion reveal and no X — where the table "+
+        "asks both, as pendings, for every play. IS: each door asks `askInstantDecl` "+
+        "after its legality and before its payment: X first (the same `askX` and "+
+        "`xpick` sheet `tryPlay` uses, every value from 0 up to what the seat could "+
+        "raise), then fusion (the same `fusionOffer` reader and `fusepick` sheet), in "+
+        "the table's order and ahead of a reaction's additional cost. Declining is "+
+        "always a button. A fused Aether Icevein, Brain Freeze or Ice Eternal played at "+
+        "instant speed gets its rider, and Ice Eternal's X mints X Frostbites.",
+  why:"CLOSED AT v5.70. No reaction or instant in the pool PRINTS fusion or an X "+
+      "(measured over the pinned pool), so the exposure was a GRANT freeing a card to "+
+      "instant speed: Iyslander's arsenal window frees blue non-attack actions (Aether "+
+      "Icevein, Brain Freeze and Ice Eternal in blue) and Stir the Aetherwinds frees "+
+      "the next Wizard non-attack action from the hand. The answers ride on the state "+
+      "as `_x` and `_fuseUid`, `execute` reads them, and `playAtSpeed` spends them on "+
+      "every exit so the next card is asked afresh; the door restores the mode it was "+
+      "asked from (`back`) and re-enters through `redoDoor`, `confirmDiscCost`'s shape. "+
+      "TWO THINGS THE TABLE GETS FOR FREE AND THESE DOORS HAD TO BUILD: the table pays "+
+      "first and offers fusion from the hand that is LEFT, but these doors pay on demand "+
+      "after the question, so a revealed card the price needed would be pitched out from "+
+      "under its own reveal and the bonus lost in silence — the offer lists only cards "+
+      "the cost can do without, and `playAtSpeed` keeps the revealed card out of the "+
+      "pitch. CHARGE IS NOT THE SAME GAP: the one reaction that prints charge (Roaring "+
+      "Beam) charges as an EFFECT, answered by a prompt, so `chargeOffer` never offers "+
+      "it as an additional cost at any door."},
 
 "activation-choices-at-resolution": {
   status:"stated", cr:"CR 1.4.5", board:"both", since:"v2.17", swept:"v4.71",

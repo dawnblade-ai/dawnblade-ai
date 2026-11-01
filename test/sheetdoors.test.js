@@ -58,8 +58,11 @@ function doors(){
    prompt sheet's own controls, and the pre-payment and payment modes,
    which `tryPlay` (guarded) is the only way into. */
 const ANSWERS = ["promptToggle", "promptPick", "promptConfirm", "promptDecline", "promptTakeBackC", "promptMoveC",
-                 "confirmBoost", "confirmCharge", "confirmFuse", "confirmPay", "cancelPay", "cancelDiscCost",
+                 "confirmBoost", "confirmCharge", "confirmFuseAt", "confirmPay", "cancelPay", "cancelDiscCost",
                  "cancelSoulCost"];   /* +cancelSoulCost AT v5.59: the way out of the soul question, an ANSWER */
+/* `confirmFuse` -> `confirmFuseAt` AT v5.70: the sheet's button now calls a
+   wrapper that sends an instant door's answer back to the door (`redoDoor`)
+   and hands every other fusion to `confirmFuseAt`, the unchanged ANSWER. */
 const GUARDED = ["playRx", "playRxA", "playArsenalInstant", "playFoeTurnRx", "foePassWindow", "activateInstant",
                  "resolveStack", "tryPlay", "activateHand", "closeChain", "endTurn", "pickArsenal", "skipArsenal",
                  "doHeave", "toggleBlock", "moveToReact", "takeIt"];

@@ -187,10 +187,11 @@ test("a refusal `attackRx` answers is returned on the state BEFORE the card move
      returned on `s` — the state before anything moved. Its own guard asks
      `rxNoTargetWhy` before paying; that half is driven in
      test/playatspeed.test.js. */
-  assert.match(rx, /if\(out\.why\) return L\(s, out\.why \+ "\."\);/, "the hand door spent the card on a refusal");
+  /* `spentDecl(s)` (v5.70): still `s`, with the declarations' answers dropped. */
+  assert.match(rx, /if\(out\.why\) return L\(spentDecl\(s\), out\.why \+ "\."\);/, "the hand door spent the card on a refusal");
   assert.doesNotMatch(rx, /if\(out\.why\) return L\(n,/, "…returned on `n`, after the card left the hand");
   const c = code.indexOf("const playRxA = () => setG"), d = code.indexOf("\n  const ", c + 10);
-  assert.equal((code.slice(c, d).match(/if\(out\.why\) return L\(s, out\.why \+ "\."\);/g) || []).length, 2,
+  assert.equal((code.slice(c, d).match(/if\(out\.why\) return L\(spentDecl\(s\), out\.why \+ "\."\);/g) || []).length, 2,
     "and both arsenal branches the same");
 });
 
