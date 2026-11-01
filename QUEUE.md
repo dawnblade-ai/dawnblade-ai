@@ -9,7 +9,7 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-01, at v5.72)
+## HANDOFF — START HERE (CEO, 2026-11-01, at v5.73)
 
 **This section is the handoff.** Root `HANDOFF.md`/`WEEK.md` were retired to `docs/archive/` on
 2026-10-31; do not start a new root handoff file — rewrite this section instead.
@@ -87,6 +87,12 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
   (`trainer-no-stalemate-draw` CLOSED). Ledger: 0 open, 22 stated, 36 closed. NOTE: the held R9
   patch (base 71192de) touches `tools/approx.js` and `test/approx.test.js` counts too — when the
   user rules, apply it with `git apply --3way` on current main and re-pin the counts (stated/closed).
+- **v5.73** H29 (Lyath): a pump grant waits until it and its attack are affordable together, and the
+  pitch keeps that attack (`judge.grantReserve`, keys `grantKeep` / `grantWait`); Lyath 19 -> 28.
+  Ladder at v5.73: briar 78 · kayo 66 · dash 53 · fai 51 · azalea 49 · bravo 44 · viserai 42 ·
+  iyslander 42 · enigma 41 · blaze 31 · arakni 31 · dorinthea 31 · lyath 28 · boltyn 21 · gravy 20;
+  0/0/0, 2 draws. Bottom now: Gravy 20, Boltyn 21. A direction question is open with the user:
+  hidden hands for two-phone play (`peers-hold-full-state`) as the next big project?
 - **R10 ASKED of the user (2026-11-01), low stakes, not built:** does Dash's "You may start the game
   with a Mechanologist item with cost 2 or less in the arena" make the item ENTER the arena for
   Crank ("As this enters the arena, you may remove a steam counter from it. If you do, gain an action
