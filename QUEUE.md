@@ -9,7 +9,7 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-01, at v5.69)
+## HANDOFF — START HERE (CEO, 2026-11-01, at v5.71)
 
 **This section is the handoff.** Root `HANDOFF.md`/`WEEK.md` were retired to `docs/archive/` on
 2026-10-31; do not start a new root handoff file — rewrite this section instead.
@@ -75,6 +75,14 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
   stealth attack); Arakni 27 -> 33. **H27 NEGATIVE:** pay with the least-waste card (Gravy 8.00 ->
   3.38 naive, 7.63 value-safe) — highest-pitch-first is right. In flight: the other hand abilities
   the AI never uses (Agile Windup, Arcane Twining, Photon Splicing…).
+- **v5.70** the trainer's instant doors ask fusion and X (`trainer-instant-doors-no-declarations`
+  CLOSED). **v5.71** Bloodrot Pox payable by pitching (`end-phase-unless-floating-only` CLOSED;
+  `endHold` on the table, WIRE_V 32; a dummy's Pox no longer bills the player). Ledger: 0 open,
+  23 stated, 35 closed. Ladder at v5.71: briar 78 · kayo 66 · dash 54 · fai 51 · azalea 50 · bravo 45
+  · enigma 44 · viserai 42 · iyslander 41 · arakni 33 · blaze 32 · dorinthea 30 · boltyn 22 · gravy
+  21 · lyath 19; 0/0/0, 2 draws. Candidate next stated items for players: `trainer-no-stalemate-draw`
+  (R6's trainer twin), `activation-choices-at-resolution`, `start-item-crank-unasked`,
+  `peers-hold-full-state` (hidden hands over the network — large).
 - **H28 NOISE (2026-11-01):** the other hand abilities the AI never uses. Census: 12 printings in
   the pool, 5 cards in decks — Reaper's Call (done, v5.69), Arcane Twining and Photon Splicing (Amp 1;
   Iyslander, Blaze), Agile Windup (Agility token; Kayo), Rally the Coast Guard (+3 defence while
