@@ -9,7 +9,7 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-01, at v5.71)
+## HANDOFF — START HERE (CEO, 2026-11-01, at v5.72)
 
 **This section is the handoff.** Root `HANDOFF.md`/`WEEK.md` were retired to `docs/archive/` on
 2026-10-31; do not start a new root handoff file — rewrite this section instead.
@@ -83,6 +83,10 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
   21 · lyath 19; 0/0/0, 2 draws. Candidate next stated items for players: `trainer-no-stalemate-draw`
   (R6's trainer twin), `activation-choices-at-resolution`, `start-item-crank-unasked`,
   `peers-hold-full-state` (hidden hands over the network — large).
+- **v5.72** the trainer draws a dead position through the table's `judge.stalemateCheck`
+  (`trainer-no-stalemate-draw` CLOSED). Ledger: 0 open, 22 stated, 36 closed. NOTE: the held R9
+  patch (base 71192de) touches `tools/approx.js` and `test/approx.test.js` counts too — when the
+  user rules, apply it with `git apply --3way` on current main and re-pin the counts (stated/closed).
 - **R9 ASKED of the user (2026-11-01), BUILT AND HELD:** is an ACTIVATED ability's target (and X)
   declared when it is ACTIVATED, before the opponent may respond (as CR 1.4.5 says for an
   attack-target), or chosen when it resolves? The repo quotes no CR text for a non-attack ability's
