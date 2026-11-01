@@ -188,17 +188,32 @@ const APPROX = {
       "what the seat policy answers anyway (v4.24). A ruling to ask, not a build."},
 
 "end-phase-unless-floating-only": {
-  status:"stated", cr:"CR 4.4.1", board:"both", since:"v3.09", swept:"v5.24",
-  claim:"Bloodrot Pox's \"…it deals 2 damage to you unless you pay {r}{r}{r}\" is "+
-        "paid out of FLOATING resources only. A hand that could pitch the three is not "+
-        "asked, and the damage lands.",
-  why:"It fires at the beginning of the controller's end phase, where CR 4.4.1 gives "+
-      "nobody priority, so no sheet can be put to the player (a queued prompt there is "+
-      "silently never shown — v3.09 measured that). Pitching on the player's behalf "+
-      "would spend three cards to avoid 2 life, a losing trade made quietly, which is "+
-      "why `selfPayOr` never pitches. CENSUSED AT v5.24 when Look Tuff's own \"unless "+
-      "you pay\" became the player's call: the pool prints two self \"unless you pay\" "+
-      "clauses, and this is the one with no window to ask in."},
+  status:"closed", cr:"CR 4.4.1", board:"both", since:"v3.09", swept:"v5.71",
+  claim:"WAS: Bloodrot Pox's \"…it deals 2 damage to you unless you pay {r}{r}{r}\" was "+
+        "paid out of FLOATING resources only. A hand that could pitch the three was not "+
+        "asked, and the damage landed. IS: floating resources that cover it still pay "+
+        "without a question (they fizzle at CR 4.4.3e anyway); otherwise a seat whose "+
+        "floating pool plus pitchable hand reaches the cost is ASKED on the shared pay "+
+        "sheet — pay (the cards pitch on demand, by the advisor's own `advBestPitch`: the "+
+        "least waste, then the least value lost, never a card the cost did not need) "+
+        "or take the damage. A seat that cannot reach it even by pitching takes "+
+        "it unasked, and the line says why. Both boards.",
+  why:"CLOSED AT v5.71. The wall was never the CR, it was plumbing: CR 4.4.1 gives "+
+      "nobody priority in the end phase, and a queued prompt there was never drained "+
+      "(`openPrompt` runs at the tail of `execute`, which the end phase does not call — "+
+      "v3.09 measured the silent failure). A pay sheet is not a priority window — it "+
+      "is a choice inside a resolving effect, like Look Tuff's (v5.24) — so the fix is "+
+      "a PAUSE: `judge.doEndTurn` opens the queue after the beginning-of-end-phase "+
+      "triggers and holds the phase on `endHold` (a game key, WIRE_V 32) until the last "+
+      "sheet drains, `reduce` then resumes at (a); the trainer's `_endPending` rides "+
+      "`openPrompt` exactly as `_wallPending` does, for the player's end phase and the "+
+      "dummy's. `priority` stays null throughout and only the addressed seat may "+
+      "answer. The rest of v3.09's reasoning stands and is why the question is a "+
+      "CHOICE: three cards for 2 life is a trade, so it is the player's — and the AI "+
+      "answers with `payPolicy`, the pay sheet's one policy, unchanged. Pitching in "+
+      "the end phase is cheaper than v3.09 assumed: pitched cards go under the deck at "+
+      "CR 4.4.3c and (f) draws back up to intellect, so the price is which cards the "+
+      "seat keeps, not how many."},
 
 "attack-power-fixed-at-declaration": {
   status:"stated", cr:null, board:"both", since:"v3.84", swept:"v5.27",

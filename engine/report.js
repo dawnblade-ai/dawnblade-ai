@@ -140,7 +140,7 @@ function build(g, ctx){
     machine: {lang: (ctx.source === "table" ? "phase" : "mode"),
               mode: g.mode, bphase: g.bphase, incoming: g.incoming,
               phase: g.phase, step: g.step, priority: g.priority,
-              passed: g.passed, arsenalFor: g.arsenalFor},
+              passed: g.passed, arsenalFor: g.arsenalFor, endHold: g.endHold},
     /* WHO EACH SEAT CURRENTLY IS (v3.76). A hero can CHANGE mid-game —
        Arakni becomes a random Agent of Chaos at the beginning of her end
        phase — and a report that shows the deck's hero while the engine is

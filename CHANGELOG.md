@@ -1,3 +1,31 @@
+## v5.71 — Bloodrot Pox can be paid by pitching
+
+**Approximation `end-phase-unless-floating-only`, closed.** Built by a Sonnet agent, verified and
+shipped by the CEO thread.
+
+- **The gap:** Bloodrot Pox prints "At the beginning of your end phase, destroy this, then it deals 2
+  damage to you unless you pay {r}{r}{r}." Only FLOATING resources could pay it, so a player holding
+  pitchable cards took 2 damage the card lets them avoid.
+- **Now, both boards:**
+  - **Floating covers it:** it is paid silently and the hand is untouched.
+  - **Floating plus pitchable hand reaches it:** a "Pay 3 or Bloodrot Pox deals 2 damage" sheet
+    appears. Paying pitches only what the price needs (the advisor's own `advBestPitch`, opt-in
+    through a new `exactPitch` spec field). Declining takes the 2.
+  - **Nothing can cover it:** no question; the damage lands and the feed says why.
+- **Mechanics:**
+  - **Table:** the end phase holds on a new game key, `endHold`, until the sheet is answered.
+  - **Trainer:** `_endPending` rides the prompt, for the player's and the dummy's end phase alike.
+  - **Fixed on the way:** a dummy's Pox billed the PLAYER; the trainer now runs a seat's end-phase
+    ops as that seat.
+- **The AI answers with its existing `payPolicy`** (pay when it can, unless it is the last card).
+  Against never-pitching, measured over Arakni and Azalea at 6 seeds (168 games each), the wins were
+  identical; it paid 13 of 30 sheets.
+- **Proved on the real page at 393x852:** trainer, dummy and table drives pass on state and element
+  boxes; the 28-screen smoke check passes.
+- **`WIRE_V` 31 -> 32.** Drills in `test/endpay.test.js` (14, 18 sabotages all caught); pins moved
+  with reasons. Ladder at 3 seeds: 0 stalls, 0 refusals, 0 violations, 2 draws; no hero moved more
+  than 1.
+
 ## v5.70 — The trainer asks fusion and X at instant speed
 
 **Approximation `trainer-instant-doors-no-declarations`, closed.** Built by a Sonnet agent, verified

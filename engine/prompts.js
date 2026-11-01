@@ -614,6 +614,11 @@ function buildPrompt(game, spec){
       : (sd.res || 0) + (sd.hand || []).reduce((a, c) => a + ((c && c.pitch) || 0), 0);
     return {...base, cost, avail,
       ops: spec.ops || [],
+      /* PITCH ONLY WHAT THE COST NEEDS (v5.71) — `effects.autoPitch`'s `exact`: a
+         spec only carries fields `buildPrompt` knows about (v2.34), so this is
+         declared. Dropped, a Bloodrot Pox payment pitches the cheapest cards one
+         after another and can take three where one blue is exactly the price. */
+      exactPitch: !!spec.exactPitch,
       /* THE OTHER HALF OF "UNLESS". A `pay` spec used to carry only the
          reward for paying; an "unless they pay" clause needs the
          consequence of NOT paying, or declining silently does nothing and

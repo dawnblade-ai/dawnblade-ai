@@ -244,7 +244,9 @@ test("the trainer's end phase delegates the whole event, restating none of it", 
   assert.ok(!/DawnEffects\.(sweepArena|resolveInertia|thawFrost)\(/.test(body),
     "a board reaching past the shared body for one step of the event is that " +
     "board growing its own copy of the order again");
-  assert.match(body, /runOps\(n, r\.ops/,
+  /* `{...n, actor: si}` since v5.71: the trainer runs the ops AS the seat whose end phase it
+     is, as judge's `doEndTurn` does (`actor: seat`). Still the caller's run, not the event's. */
+  assert.match(body, /runOps\((?:n|\{\.\.\.n, actor: si\}), r\.ops/,
     "the ops come back rather than being run inside — an op is actor-relative " +
     "and the two boards reach runOps differently");
 });

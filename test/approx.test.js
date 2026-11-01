@@ -279,6 +279,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      is a future item). */
   /* v5.70 closes `trainer-instant-doors-no-declarations` and adds nothing: the
      count holds, and only the stated/closed split below moves. */
+  /* v5.71 closes `end-phase-unless-floating-only` and adds nothing: the count
+     holds, and only the stated/closed split below moves. */
   assert.equal(Object.keys(APPROX).length, 58, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
@@ -341,7 +343,9 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      `stated` (RULING (user, 2026-10-31): a match can end in a draw; sudden death
      is a future item). */
   /* 25 -> 24 stated AT v5.70: `trainer-instant-doors-no-declarations` closed. */
-  assert.equal(n("stated"), 24, "stated count moved");
+  /* 24 -> 23 stated AT v5.71: `end-phase-unless-floating-only` closed — Bloodrot
+     Pox's payment is asked when pitching can cover it, at both boards' end phase. */
+  assert.equal(n("stated"), 23, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -405,7 +409,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 31 -> 32 closed AT v5.59: `soul-banish-cost-auto-picked`. */
   /* 32 -> 33 closed AT v5.61: `attack-grant-misses-own-attack`. */
   /* 33 -> 34 closed AT v5.70: `trainer-instant-doors-no-declarations`. */
-  assert.equal(n("closed"), 34, "closed count moved");
+  /* 34 -> 35 closed AT v5.71: `end-phase-unless-floating-only`. */
+  assert.equal(n("closed"), 35, "closed count moved");
 });
 
 /* ============================================================
@@ -871,12 +876,41 @@ probe("soul-banish-cost-auto-picked", () => {
 });
 
 probe("end-phase-unless-floating-only", () => {
-  const g = H.state({hp: 20, res: 0, hand: [1, 2, 3].map(u => ({uid: u, name: "Blue " + u, pitch: 3,
-    tt: "Generic Action", ty: ["Generic", "Action"], cost: 0}))}, {hp: 20});
+  /* THE PROBE IS TURNED ROUND AT v5.71 (v4.02's two directions). It used to
+     assert the DEVIATION — the damage landing over a hand that could pay — and
+     went red the day the question was built, which is the whole point of a
+     `stated` record. It asserts the BRANCH now, so a regression is a red drill.
+
+     BOTH HALVES ARE DRIVEN. The op QUEUES the shared pay sheet when floating
+     plus pitchable hand reaches the cost; the table's end phase then HOLDS on it
+     (a sheet that nobody opens is the v3.09 failure: silent). The trainer's half
+     is `test/endpay.test.js`'s source pin, and the page drive — `Battle` is a
+     closure this file cannot call. */
+  const hand = [1, 2, 3].map(u => ({uid: u, name: "Blue " + u, pitch: 3,
+    tt: "Generic Action", ty: ["Generic", "Action"], cost: 0}));
+  const g = H.state({hp: 20, res: 0, hand}, {hp: 20});
   const n = H.runOps(g, [["selfPayOr", 3, [["dmgSelf", 2]]]], "Bloodrot Pox");
-  assert.equal(n.sides[0].hp, 18, "the damage lands — the hand could have paid");
+  assert.equal(n.sides[0].hp, 20, "the damage must wait for the player's answer — the record must move");
+  assert.equal((n.promptQ || []).length, 1, "a hand that could pitch the three is ASKED");
+  assert.equal(n.promptQ[0].tag, "pay");
+  assert.equal(n.promptQ[0].side, 0, "and the question is the Pox controller's");
+  assert.deepEqual(n.promptQ[0].elseOps, [["dmgSelf", 2]], "declining is what lets the damage land");
   assert.equal(n.sides[0].hand.length, 3, "and nothing was pitched for the player");
-  assert.ok(!n.prompt && !(n.promptQ || []).length, "and nothing asked");
+  /* THE OTHER SIDE OF THE LINE: a hand that cannot reach it is not asked. */
+  const poor = H.runOps(H.state({hp: 20, res: 0, hand: []}, {hp: 20}),
+    [["selfPayOr", 3, [["dmgSelf", 2]]]], "Bloodrot Pox");
+  assert.equal(poor.sides[0].hp, 18, "an unpayable cost is inert — the damage lands, unasked");
+  assert.equal((poor.promptQ || []).length, 0);
+  /* AND THE TABLE HOLDS ON IT — the real end phase, through `reduce` */
+  H.db();
+  const pox = H.card("Bloodrot Pox", 0);
+  let t = {...H.state({board: [{card: pox, kind: "token", spent: false, uid: pox.uid, sd: "end"}], hp: 20, res: 0, hand},
+                      {hp: 20}, {turn: 2}),
+           phase: "action", step: "layer", priority: 0, passed: [], firstPlayer: 0, round: 1, over: null};
+  t = H.J.reduce(t, {t: "endTurn"}, 0).state || t;
+  if(t.phase === "action" && t.priority != null) t = H.J.reduce(t, {t: "pass"}, t.priority).state || t;
+  assert.ok(t.prompt && t.prompt.tag === "pay" && t.endHold === 0 && t.phase === "end",
+    "the table's end phase does not hold on the sheet — the question is silently never asked (v3.09)");
 });
 
 /* Oasis Respite names a TARGET HERO and a SOURCE and the engine reads

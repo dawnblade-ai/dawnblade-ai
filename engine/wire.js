@@ -293,7 +293,14 @@
    turn, cards pitched and drawn back) now ends as a draw too. A v30 peer's
    tracker has no `loop` and would never end such a game, and would drop the
    key on its next check. Inside a game key that ships whole: the digest holds. */
-const WIRE_V = 31;
+/* 31 -> 32 AT v5.71: the game gains a top-level key, `endHold` (the seat whose
+   end phase is paused on a trigger's pay sheet; null otherwise). Bloodrot Pox's
+   "unless you pay" is now ASKED when pitching could cover it, and the end phase
+   waits on the sheet. A v31 peer has no such pause: it would run (a)-(f) over a
+   live sheet the other peer is answering, and drop the key on its next copy. A
+   game key ships inside the game object, which the shape digest does not cover:
+   by hand, behind the release handshake. */
+const WIRE_V = 32;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

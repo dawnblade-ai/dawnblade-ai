@@ -289,9 +289,14 @@ test("every spec field that reaches prompts.js is pinned", () => {
   assert.deepEqual([...reached].sort(), [
     "amount", "arsStamp", "avail", "banStamp", "by", "cards", "charge", "cost", "costRider",
     "ctrHeld", "ctrSpend", "ctrStamp", "defUid", "destroyUid", "discard", "elseOps", "equipStamp",
-    "faceUp", "filter", "hint", "jab", "keepTop", "lateGa", "max", "min", "moveFoe", "n",
+    "exactPitch", "faceUp", "filter", "hint", "jab", "keepTop", "lateGa", "max", "min", "moveFoe", "n",
     "ops", "optional", "options", "playThisTurn", "shuffleAfter", "side", "spendCtr",
     "src", "tag", "tapHero", "tapUid", "taps", "title", "to", "wayRider", "xPay", "zone",
+  /* +exactPitch v5.71 — Bloodrot Pox's pay sheet (`selfPayOr` asks when pitching can
+     cover the {r}{r}{r}) asks for the smallest pitch the cost allows. It arrives on the
+     legs where a seat holding cards has a Pox in front of it at its end phase — Arakni's
+     and Azalea's chairs put them there — with no leg written. Named in `buildPrompt`
+     (`exactPitch`), and `applyAnswer` and the trainer's seat-1 answer both read it. */
   /* +keepTop v4.91 — Spire Sniping's reorder (v3.72's `lookOrder`, which
      shares the opt sheet behind this flag). It arrived on the same 34 legs
      with no leg written, and the reason is the version's own rule: an arrow

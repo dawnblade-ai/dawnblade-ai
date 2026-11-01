@@ -3005,35 +3005,52 @@ function makeEffects(ctx){
          `1-actorOf(n)`; mixing them up bills the wrong player behind a
          perfectly plausible-looking prompt.
 
-         IT RESOLVES INLINE, AND IT PAYS ONLY FROM FLOATING RESOURCES.
-         Two reasons, both already settled in this project rather than
-         decided here:
+         IT PAYS FLOATING RESOURCES WITHOUT ASKING, AND ASKS BEFORE IT PITCHES
+         (v5.71). Two settled things and one that changed:
 
-         1. THERE IS NO WINDOW TO PAUSE IN. CR 4.4.1 gives nobody priority
-            in the end phase. The trainer's auto-pitch carries the same
-            ruling in as many words — "on your own turn `mode:"pay"` asks
-            with a sheet; in an instant window there is no room to pause
-            for one" — and a queued prompt here would simply never drain:
-            `openPrompt` runs at the tail of `execute`, which the end phase
-            does not call. That failure is SILENT, and it is what the first
-            build of this did: the feed said "it pays out as it goes" and
-            nothing happened.
+         1. FLOATING RESOURCES ARE FREE. They fizzle at CR 4.4.3e, so
+            spending them costs the player nothing they were keeping — the
+            one payment that can be made without asking.
 
-         2. IT MUST NOT PITCH ON THE PLAYER'S BEHALF. Pitching three cards
-            to avoid 2 damage is usually a losing trade, and a training sim
-            that quietly makes it is teaching bad play. Floating resources
-            are already spent-or-lost at CR 4.4.3e, so spending them here
-            costs the player nothing they were keeping — which is the one
-            payment that can be made without asking.
+         2. PITCHING IS THE PLAYER'S CALL, ON THE SHARED PAY SHEET. This
+            used to say "never pitches" and take the damage, because the end
+            phase had no way to put a sheet to anyone (CR 4.4.1 gives nobody
+            priority there, and `openPrompt` drains at the tail of
+            `execute`, which the end phase never calls — a queued prompt
+            was SILENTLY never shown, v3.09). The pause now exists on both
+            boards (`judge.doEndTurn`'s `endHold`, the trainer's
+            `_endPending`): it queues here exactly like Look Tuff's price
+            does (v5.24), the board opens it before (a), and the rest of the
+            end phase resumes when it drains. Priority is not what a choice
+            inside a resolving effect needs — the sheet is not a window.
+            Declining runs the damage (`elseOps`); a seat that cannot reach
+            the cost even by pitching takes it WITHOUT being asked, and the
+            line says why.
 
-         So: float 3 and Bloodrot is shrugged off; float less and you take
-         it. Declining is never silent — both branches say which happened. */
+            PITCHING IS ON DEMAND (RULING 2026-08-01): `applyAnswer` pitches
+            only what the cost needs (`autoPitch`'s `exact`, the advisor's own
+            `advBestPitch` — spec field `exactPitch`), so three resources never
+            cost a card the price did not need. Pitched cards sit in
+            the pitch zone until CR 4.4.3c sends them under the deck, and
+            (f) draws back up to intellect, so the price is which cards the
+            seat keeps, not how many.
+
+         So: float 3 and Bloodrot is shrugged off; hold the cards and you
+         are ASKED; hold neither and you take it. Every branch says which
+         happened. */
       else if(k==="selfPayOr"){
-        if(act(n).res >= v){
-          actMut(n).res = act(n).res - v;
+        const sdp = act(n), floating = sdp.res || 0;
+        if(floating >= v){
+          actMut(n).res = floating - v;
           n = L(n, `${srcName}: ${v} paid — shrugged off by ${act(n).name}.`);
+        } else if(floating + P.payCeiling(sdp) >= v){
+          const dmg = ((op[2] || []).find(o => o[0] === "dmgSelf") || [])[1];
+          n.promptQ = [...(n.promptQ||[]), {tag:"pay", side:actorOf(n), src:srcName, cost:v,
+            ops:[], elseOps: op[2] || [], exactPitch: true,
+            title: dmg ? `Pay ${v} or ${srcName} deals ${dmg} damage` : `Pay ${v} or ${srcName} lands`,
+            hint: `${srcName} prints ${dmg ? dmg + " damage to its controller" : "a penalty"} unless they pay ${v}. Pitching is on demand.`}];
         } else {
-          n = L(n, `${srcName}: only ${act(n).res} of ${v} floating — it lands on ${act(n).name}.`);
+          n = L(n, `${srcName}: only ${floating} of ${v} floating, and pitching the hand can't raise the rest — it lands on ${act(n).name}.`);
           n = runOps(n, op[2] || [], srcName);
         }
       }
@@ -5705,12 +5722,40 @@ function makeEffects(ctx){
      because forgiving an unaffordable payment hands out the effect free. */
   /* `keepUid` may be a LIST (v4.87): a hand ability keeps the card whose
      ability it is AND the card declared for its discard cost. */
-  const autoPitch = (s, cost, keepUid) => {
+  /* `o.exact` (v5.71) — THE CHEAPEST-FIRST LOOP BELOW STOPS AS SOON AS THE COST IS
+     MET, BUT IT CAN STILL PITCH A CARD THE COST DID NOT NEED: with a {r}{r}{r}
+     price and a hand of two reds and two blues it pitches red, red, then a blue
+     (five for three) where one blue is exactly three. `parser.pitchExcessWhy` is
+     the table's own rule for a hand-picked pitch — take any one card back and the
+     cost must go unpaid — and a sheet that makes a seat give up three cards for
+     what one pays turns a printed escape hatch into a trap. `exact` asks the
+     ADVISOR'S OWN CHOOSER, `advBestPitch` (the subset the Coach's call names for a
+     hand-picked pitch): the least waste, then the least advisor value lost, then
+     the fewest cards. One copy of "which cards do I give up", not a second
+     opinion. It is OPT-IN, a spec field (`exactPitch`), so every other pay sheet
+     and instant-speed pitch keeps the greedy answer the ladder was measured with. */
+  const autoPitch = (s, cost, keepUid, o) => {
     let n = {...s};
     const keep = [].concat(keepUid);
     /* never a declared defender (v5.04): it is on the chain, and pitched
        it would both block and pay — `parser.handFree` is the one reader */
     const spendable = () => P.handFree(act(n)).filter(h=>keep.indexOf(h.uid) < 0);
+    if(o && o.exact && act(n).res < cost){
+      const pool = spendable();
+      if(pool.length <= 12){
+        const set = A.advBestPitch(pool, cost - act(n).res, null,
+          h => advValue(h, n, {runeDmg: bAct(n).runeDmg}));
+        if(!set) return null;
+        for(const i of set.idxs){
+          const p = pool[i];
+          actMut(n).res += (p.pitch||0);
+          actMut(n).pitch = [...act(n).pitch, p];
+          actMut(n).hand = act(n).hand.filter(h=>h.uid!==p.uid);
+          n = L(n, `Pitched ${p.name} at instant speed (+${p.pitch||0}).`);
+        }
+        return act(n).res < cost ? null : n;
+      }
+    }
     while(act(n).res < cost && spendable().length){
       const pool = spendable();
       const p = pool.map(h=>({h,v:advValue(h,n,{runeDmg:bAct(n).runeDmg})})).sort((a,b)=>a.v-b.v || a.h.uid-b.h.uid)[0].h;
@@ -6158,7 +6203,7 @@ function makeEffects(ctx){
        pitch here the clamp would hand them the prevention for free, which
        is a keyword strictly better than printed. */
     if(r.pay > 0){
-      if(act(n).res < r.pay){ const paid = autoPitch(n, r.pay, null); if(paid) n = paid; }
+      if(act(n).res < r.pay){ const paid = autoPitch(n, r.pay, null, {exact: !!p.exactPitch}); if(paid) n = paid; }
       const ps = actMut(n); ps.res = Math.max(0, ps.res - r.pay);
     }
     /* …AND THE X THE CHOICE SETTLED (v4.71). Beckoning Haunt: X is the

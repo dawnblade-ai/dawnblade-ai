@@ -54,7 +54,7 @@ const ANCHORS = [
      things and quietly stops being a guard. `applyAnswer` is a rules
      function and is bounded here too; it is not on RULES_FNS because that
      list is the roadmap's seven, and adding to it is a separate decision. */
-  ["autoPitch",    "  const autoPitch = (s, cost, keepUid) => {",     "effects"],
+  ["autoPitch",    "  const autoPitch = (s, cost, keepUid, o) => {",     "effects"],
   ["applyAnswer",  "  const applyAnswer = (s, prompt) => {",          "effects"],
   ["fileAttack",   "  const fileAttack = (s2, card, from) => {",      "effects"],
   /* v4.57 LIFTED THE FOUR "when this defends" FAMILIES OUT of

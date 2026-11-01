@@ -361,7 +361,10 @@ test("WIRE_V moves when the payload shape moves, and only then", () => {
      draw `over` (`winner: null`) — a GAME_KEY ships whole, so the digest holds. */
   /* 30 -> 31 AT v5.67: `still.loop`, the cycle tracker — inside a GAME_KEY that
      ships whole, so the digest holds. */
-  assert.equal(W.WIRE_V, 31,
+  /* 31 -> 32 AT v5.71: the game's `endHold` key (the end phase paused on a
+     trigger's pay sheet) — a GAME_KEY-level field that ships whole, so the
+     digest holds. */
+  assert.equal(W.WIRE_V, 32,
     "WIRE_V moved — if the payload shape moved with it, update the digest below " +
     "in the same edit and say what changed in the header");
   assert.equal(h, 3759651216,

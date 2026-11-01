@@ -13857,6 +13857,27 @@ three cards for 2 life is usually a losing trade, and a training sim that
 quietly makes it is teaching bad play. Floating resources fizzle at CR
 4.4.3e anyway, so spending them costs nothing the player was keeping.
 
+> **SUPERSEDED AT v5.71 — the end phase can ASK.** The paragraph above is the
+> v3.09 reasoning and its facts still hold (no priority in the end phase; a queued
+> prompt that nothing drains is silently never shown; floating resources fizzle at
+> CR 4.4.3e so spending them is free), but "floating only, never pitches" is no
+> longer the rule. The wall was plumbing, not the CR: a pay sheet is a choice inside
+> a resolving effect, not a priority window, so `judge.doEndTurn` opens the queue
+> after the beginning-of-end-phase triggers and HOLDS the phase on `endHold` until
+> the last sheet drains (`reduce` resumes at (a)); the trainer's `_endPending` rides
+> `openPrompt` as `_wallPending` does, for the player's end phase and the dummy's.
+> `selfPayOr` pays floating without asking, ASKS when floating plus pitchable hand
+> reaches the cost, and says why when nothing can. The pitch is `autoPitch`'s
+> `exact` (spec field `exactPitch`): the advisor's own `advBestPitch` (least waste,
+> then least value lost, then fewest cards — what `parser.pitchExcessWhy` demands of
+> a hand-picked pitch: take any card back and the cost goes unpaid), because the
+> cheapest-first greedy would pitch red, red, blue (five for three) where one blue
+> is the price. Pitching
+> in the end phase is cheaper than v3.09 assumed — pitched cards go under the deck
+> at CR 4.4.3c and (f) draws back up to intellect — so the AI answers with the pay
+> sheet's one policy (`payPolicy`), unchanged. Record: `end-phase-unless-floating-only`
+> (closed). Drills: `test/endpay.test.js`.
+
 **`selfPayOr` is not `payOr`.** `payOr` is Cold Snap's shape ("target hero
 may pay") and bills `1-actorOf(n)`; this bills the actor. Same self/foe
 pairing `selfDiscard`/`foeDiscard` keep, and mixing them up hands the bill

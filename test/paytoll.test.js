@@ -271,9 +271,13 @@ test("it fires at the BEGINNING of the end phase, ahead of the arsenal step", {s
   const code = html.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
   /* It must precede (b), or the seat is invited to choose an arsenal card
      that is about to be swept into the deck anyway. Both seats reach it. */
-  assert.match(code, /n = beginEndPhase\(n, 0\);[\s\S]{0,200}n = endPhaseAllies\(n\);/,
+  /* THE WINDOW IS 400, NOT 200 (v5.71): a trigger that asks may now HOLD the end
+     phase between the event and (a) — `endTurn`/`foeEnd` open the queue and the
+     rest runs from `endTurnRest`/`foeEndRest`. Still ahead of (a)/(b); test/
+     endpay.test.js pins the hold itself. */
+  assert.match(code, /n = beginEndPhase\(n, 0\);[\s\S]{0,400}n = endPhaseAllies\(n\);/,
     "seat 0's end phase runs it before (a)/(b)");
-  assert.match(code, /n = beginEndPhase\(n, 1\);[\s\S]{0,200}n = endPhaseAllies\(n\);/,
+  assert.match(code, /n = beginEndPhase\(n, 1\);[\s\S]{0,400}n = endPhaseAllies\(n\);/,
     "and so does seat 1's");
   assert.match(code, /DawnEffects\.beginEndPhase\(s, si, db\)/,
     "one description, taking the seat — not two copies that can drift. Inertia " +

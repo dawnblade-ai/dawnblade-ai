@@ -3017,6 +3017,8 @@ function reduce(g, a, seat){
       n = settle(P.pass(n));
       break;
   }
+  /* THE END PHASE WAS HOLDING FOR THAT SHEET (v5.71) — see `doEndTurn`. */
+  if(n.endHold != null && !n.prompt && !n.over) n = resumeEnd(n);
   return {state: stalemateCheck(n), error: null};
 }
 
@@ -4150,6 +4152,12 @@ function doArsenal(g, a, seat){
 
    Split at (b) because the arsenal set is a CHOICE: the turn-player is
    asked, and the rest of the procedure runs when they answer. */
+/* THE SHEET THAT HELD THE END PHASE HAS DRAINED — carry on at (a). Called by
+   `reduce` after every answer; a state with no `endHold` never reaches it. */
+function resumeEnd(g){
+  const seat = g.endHold;
+  return endPhaseAfterBegin({...g, endHold: null}, seat);
+}
 function doEndTurn(g, seat){
   let n = say({...g}, "— End phase —");
   n = P.toPhase(n, "end");
@@ -4180,6 +4188,29 @@ function doEndTurn(g, seat){
     if(be.ops.length)
       n = withEffects({...n, actor: seat}, (fx, s2) => fx.runOps(s2, be.ops, be.fired.join(", ")));
   }
+
+  /* A TRIGGER THAT ASKS HOLDS THE END PHASE (v5.71). Bloodrot Pox's "…unless
+     you pay {r}{r}{r}" queues the shared pay sheet, and until now nothing in
+     this procedure drained a queue — `openPrompt` runs at the tail of
+     `execute`, which the end phase never calls — so the question could not
+     be put and the payment was floating-only. A sheet is not a priority
+     window (CR 4.4.1 still gives nobody priority here: `priority` stays
+     null, and only the seat the sheet is addressed to may answer). The
+     marker is the turn's own seat, and `reduce` resumes at (a) when the
+     last sheet drains (`resumeEnd`). A sheet that skips itself, or is
+     answered on the spot, never pauses anything. */
+  if((n.promptQ || []).length){
+    n = openPrompt(n);
+    if(n.prompt) return {...n, endHold: seat};
+  }
+  return endPhaseAfterBegin(n, seat);
+}
+
+/* THE REST OF THE BEGINNING OF THE END PHASE'S PROCEDURE, (a) onward. Split
+   from `doEndTurn` at the beat a trigger's question may hold it, the same
+   way `endPhaseAfterArsenal` is split at the arsenal set. */
+function endPhaseAfterBegin(g, seat){
+  let n = g;
 
   /* (a) all allies' life resets to base.
 
