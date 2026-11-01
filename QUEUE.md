@@ -101,6 +101,16 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
   lifted. Patch `experiments/H30-wasteblock-HELD.patch`. Leads it found: (1) 85% of Gravy's 503
   ally deploys die before swinging (the survivors swing ~6 times each) — deploy timing / protection;
   (2) Gold is rarely kept for the hero's loot ability because the arena draw spends it first.
+- **H31 NOISE (2026-11-01):** Gravy's allies dying unswung is BY DESIGN. 196 of 198 deploys spend the
+  turn's last action point and nothing in the deck lets an ally swing the turn it enters, so every
+  deploy is a one-swing decoy the opponent correctly kills next turn (`targetFor`, CR 7.3.2a; 197 of
+  198 killing attacks had 3+ power vs ally life 1-4). Every hold/deploy-first variant was negative;
+  "free ally first when none is out" pooled +0.09 of 14 over four clean 40-seed sets (noise). No other
+  hero has an ally. Patch `experiments/H31-ally-decoy-NOISE.patch`.
+- **THE AI-POLICY VEIN IS THIN:** of the last eight policy hunts, four shipped (H26, H29 and the
+  earlier H23/H24) and H25, H27, H28, H30, H31 did not. Further balance gains likely need a different
+  approach (e.g. a lookahead / search for the action choice, or deck-specific plans), which is a
+  direction question for the user rather than another leak hunt.
 - **R10 ASKED of the user (2026-11-01), low stakes, not built:** does Dash's "You may start the game
   with a Mechanologist item with cost 2 or less in the arena" make the item ENTER the arena for
   Crank ("As this enters the arena, you may remove a steam counter from it. If you do, gain an action
