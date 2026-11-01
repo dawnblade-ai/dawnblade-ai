@@ -93,6 +93,14 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
   iyslander 42 · enigma 41 · blaze 31 · arakni 31 · dorinthea 31 · lyath 28 · boltyn 21 · gravy 20;
   0/0/0, 2 draws. Bottom now: Gravy 20, Boltyn 21. A direction question is open with the user:
   hidden hands for two-phone play (`peers-hold-full-state`) as the next big project?
+- **H30 HELD (CEO, 2026-11-01):** block more when a seat fizzles resources (`judge.wastePerTurn` >= 0.5
+  per own turn lowers `takeUpTo` by one; key `blockWaste`). Gravy own-seat +1.08 (t 3.5) / +0.42
+  (t 1.0) / +0.38 (t 1.9) of 14 on three sets; ladder Gravy 20 -> 35 — BUT Lyath 28 -> 19 (own seat
+  -0.75, t -3.6, 3 up / 15 down), Dash -0.25..-0.4, Fai -0.1..-0.25, and it widened an existing
+  drill's band. Not shipped: no second independent set resolves, and it regresses the hero just
+  lifted. Patch `experiments/H30-wasteblock-HELD.patch`. Leads it found: (1) 85% of Gravy's 503
+  ally deploys die before swinging (the survivors swing ~6 times each) — deploy timing / protection;
+  (2) Gold is rarely kept for the hero's loot ability because the arena draw spends it first.
 - **R10 ASKED of the user (2026-11-01), low stakes, not built:** does Dash's "You may start the game
   with a Mechanologist item with cost 2 or less in the arena" make the item ENTER the arena for
   Crank ("As this enters the arena, you may remove a steam counter from it. If you do, gain an action
