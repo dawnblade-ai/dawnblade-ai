@@ -1,3 +1,23 @@
+## v5.72 — The trainer draws a dead position too
+
+**Ruling R6 on the second board; approximation `trainer-no-stalemate-draw`, closed.** Built by a
+Sonnet agent, verified and shipped by the CEO thread.
+
+- **One body, both boards.** The trainer's `setG` (its `reduce`) now runs every state it commits
+  through the table's `judge.stalemateCheck`, so the tracker, the 20-turn window, the by-name loop
+  ring and the draw are one copy. The trainer's result is `{winner: null, how: "stalemate"}` with the
+  table's wording on a `DrawPanel`; a draw records no score. `judge.drawText` now asks for a
+  `winner` that is exactly `null`, so the trainer's own `{win}` results are never read as draws.
+- **Reachability, recorded:** a real trainer game is unlikely to get there — the dummy recycles its
+  graveyard into its deck and its scripted swing moves life every turn — so the drills and the page
+  drive construct the position.
+- **Proved on the real page at 393x852:** an injected dead position shows nothing at 19 quiet turns
+  and the draw screen at 20, inside the width; a card left in the dummy's deck keeps a 99-turn-quiet
+  position open. The 28-screen smoke check passes.
+- Drills in `test/trainerdraw.test.js` (with `test/helpers/trainerfunnel.js`, which runs the real
+  `setG` source): the exact window, a card in either deck, a window restart, the token-cycle loop;
+  eight sabotages all caught. The self-play ladder is identical to v5.71.
+
 ## v5.71 — Bloodrot Pox can be paid by pitching
 
 **Approximation `end-phase-unless-floating-only`, closed.** Built by a Sonnet agent, verified and

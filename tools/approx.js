@@ -1045,25 +1045,33 @@ const APPROX = {
 /* ---- C. A GAME THAT CANNOT MOVE ANY MORE ------------------------------ */
 
 "trainer-no-stalemate-draw": {
-  status:"stated", cr:"CR 4.5.3", board:"trainer", since:"v5.62", swept:"v5.62",
-  claim:"The table ends a game as a DRAW when both decks are empty and nothing a "+
-        "seat holds has moved for twenty turns, or no position it has not seen "+
-        "before has appeared at a turn's start for twenty turns, a token counted by its "+
-        "name and not its serial (`judge.stalemateCheck`, v5.67: a cycle through the "+
-        "same few positions is as dead as no movement). A cycle longer than "+
-        "`judge.LOOP_RING` turns, and a change in a place the census does not read "+
-        "(a card's text is never consulted), is not seen. The trainer "+
-        "does not: `Battle` ends a game only on life, its own `over` is `{win}` rather "+
-        "than `{winner, how}`, and it keeps no stillness tracker, so a position that "+
-        "can no longer move would run on there.",
-  why:"RULING (user, 2026-10-31): \"A match can certainly end in a draw - in the future "+
-      "we may need a sudden death mechanic, there is one in place for tournaments "+
-      "already.\" The trainer shares no end check with the table (its `winCheck` is its "+
-      "own, and its `over` has a different shape that its win panel and its record "+
-      "call read), and its opponent is the training dummy, which swings every turn, so "+
-      "a decked-out solo game still ends on life (see trainer-fatigue-loss). Half "+
-      "building a draw into a board whose result screen has no draw would be worse "+
-      "than saying so. The probe drives the table side and pins the trainer's source."},
+  status:"closed", cr:"CR 4.5.3", board:"both", since:"v5.62", swept:"v5.72",
+  claim:"WAS: the table ended a game as a DRAW when both decks were empty and nothing a "+
+        "seat holds had moved for twenty turns (`judge.stalemateCheck`), and the trainer "+
+        "did not: `Battle` ended a game only on life, its own `over` is `{win}` rather "+
+        "than `{winner, how}`, and it kept no stillness tracker. IS: the trainer's `setG` "+
+        "- its `reduce` - runs every committed state through the SAME `judge.stalemateCheck` "+
+        "(no second copy: the tracker rides in `g.still`, the window is `STALEMATE_TURNS`, "+
+        "the cycle ring is `LOOP_RING`), and a dead position ends `over: {winner: null, "+
+        "how: \"stalemate\"}` with the table's words (`judge.drawText`) on a draw panel. "+
+        "The trainer's own results stay `{win}`; `drawText` reads only a `winner` that is "+
+        "exactly null as a draw. A cycle longer than `LOOP_RING` turns, and a change in a "+
+        "place the census does not read, is not seen on either board.",
+  why:"CLOSED AT v5.72. RULING (user, 2026-10-31): \"A match can certainly end in a draw - in "+
+      "the future we may need a sudden death mechanic, there is one in place for "+
+      "tournaments already.\" The first record held the trainer back because it shared no "+
+      "end check with the table and had no draw screen; both reasons were plumbing, and "+
+      "the trainer already had a funnel (`setG`, where `withPriority` and the invariants "+
+      "run), so the table's body is one call there. REACHABILITY, MEASURED: a real "+
+      "trainer game does not get there. The dummy recycles its graveyard into its deck "+
+      "when it draws short (`endPhaseCF` (f), gated on `_dummy`), so its deck is spent only "+
+      "if its whole pile is out of play; and its scripted swing moves the player's life or "+
+      "cards on every turn it is not wholly blocked by equipment that is not destroyed. "+
+      "So the draw is a net under the trainer, not a path through it, and it is drilled "+
+      "from constructed positions through the real `setG` source (test/trainerdraw.test.js) "+
+      "and shown on the real page by injecting the position (tools/page.js harness). The "+
+      "probe is turned round: it asserts the trainer's funnel ends the draw and that it is "+
+      "the table's body."},
 
 "no-sudden-death": {
   status:"stated", cr:null, board:"table", since:"v5.62", swept:"v5.62",

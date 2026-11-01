@@ -281,6 +281,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      count holds, and only the stated/closed split below moves. */
   /* v5.71 closes `end-phase-unless-floating-only` and adds nothing: the count
      holds, and only the stated/closed split below moves. */
+  /* v5.72 closes `trainer-no-stalemate-draw` and adds nothing: the count holds,
+     and only the stated/closed split below moves. */
   assert.equal(Object.keys(APPROX).length, 58, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
@@ -345,7 +347,9 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 25 -> 24 stated AT v5.70: `trainer-instant-doors-no-declarations` closed. */
   /* 24 -> 23 stated AT v5.71: `end-phase-unless-floating-only` closed — Bloodrot
      Pox's payment is asked when pitching can cover it, at both boards' end phase. */
-  assert.equal(n("stated"), 23, "stated count moved");
+  /* 23 -> 22 stated AT v5.72: `trainer-no-stalemate-draw` closed - the trainer's
+     `setG` runs the table's `stalemateCheck`. */
+  assert.equal(n("stated"), 22, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -410,7 +414,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 32 -> 33 closed AT v5.61: `attack-grant-misses-own-attack`. */
   /* 33 -> 34 closed AT v5.70: `trainer-instant-doors-no-declarations`. */
   /* 34 -> 35 closed AT v5.71: `end-phase-unless-floating-only`. */
-  assert.equal(n("closed"), 35, "closed count moved");
+  /* 35 -> 36 closed AT v5.72: `trainer-no-stalemate-draw`. */
+  assert.equal(n("closed"), 36, "closed count moved");
 });
 
 /* ============================================================
@@ -2239,12 +2244,16 @@ probe("peers-hold-full-state", () => {
     "built and the Phase B record must move");
 });
 
-/* A DEAD POSITION ENDS AS A DRAW AT THE TABLE AND NOT IN THE TRAINER (v5.62).
-   RULING (user, 2026-10-31). The table half is DRIVEN: a position with both
-   decks spent and a stillness a window old is a draw, and the same with a card
-   left in one deck is not. The trainer half is a claim about index.html's
-   babel blocks, which no drill can execute, so it is pinned in the source:
-   no stalemate tracker, and a game-over built only from `{win:` shapes. */
+/* A DEAD POSITION ENDS AS A DRAW AT THE TABLE AND IN THE TRAINER (v5.62, v5.72).
+   RULING (user, 2026-10-31). THE PROBE IS TURNED ROUND at v5.72 (v4.02's two
+   directions): it used to assert the DEVIATION - no tracker in the trainer's
+   source, a game-over built only from `{win:` shapes - and went red the day the
+   draw was built, which is what a `stated` record is for. It asserts the BUILT
+   thing now. BOTH HALVES ARE DRIVEN: the table's body ends a position with both
+   decks spent and a stillness a window old, and does not when a card is left in
+   a deck; the trainer's real `setG` source (test/helpers/trainerfunnel.js - `Battle`
+   is a closure no drill can call) runs the same states through the same body and
+   ends the same position, with the same words. The page is driven by tools/page.js. */
 probe("trainer-no-stalemate-draw", () => {
   const g = H.state({deck:[], hand:[], hp:12}, {deck:[], hand:[], hp:12}, {turn: 30});
   const still = {sig: J.stillSig(g), since: g.turn - J.STALEMATE_TURNS};
@@ -2253,11 +2262,21 @@ probe("trainer-no-stalemate-draw", () => {
   const stocked = H.state({deck:[], hand:[], hp:12}, {deck:[{uid:"z", name:"Z", pitch:1, tt:"Generic Action", ty:["Generic","Action"], tx:"", kw:[]}], hand:[], hp:12}, {turn: 30});
   assert.ok(!J.stalemateCheck({...stocked, still: {sig: J.stillSig(stocked), since: stocked.turn - 99}}).over,
     "a card left in a deck is a way out: the table must not draw it");
-  const html = HTML.replace(/\/\*[\s\S]*?\*\//g, "");
-  assert.ok(!/stalemate|stillSig|\bstill\s*:/.test(html.slice(0, html.indexOf("function Table") > 0 ? html.indexOf("function Table") : undefined)),
-    "the trainer now keeps a stalemate tracker — the record must move");
-  assert.ok(/over\s*=\s*\{win:\s*false\}|over:\{win:true/.test(html),
-    "the trainer's game-over is no longer the {win} shape — the record must move");
+  /* THE TRAINER, driven: the same two states through its own funnel */
+  const T = require("./helpers/trainerfunnel.js");
+  const trainer = T.trainerFunnel({...g, mode: "act", over: null, log: [], feed: [], still});
+  trainer.setG(s => s);
+  assert.deepEqual(trainer.g.over, {winner: null, how: "stalemate"},
+    "the trainer no longer draws a dead position through its funnel - the record must move");
+  const open = T.trainerFunnel({...stocked, mode: "act", over: null, log: [], feed: [], still: {sig: J.stillSig(stocked), since: stocked.turn - 99}});
+  open.setG(s => s);
+  assert.equal(open.g.over, null, "a card left in a deck is a way out in the trainer too");
+  /* ONE BODY: the trainer's source asks the engine and keeps no tracker of its own */
+  const html = T.HTML.replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.ok(/DawnJudge\.stalemateCheck\(/.test(html), "the trainer calls the table's check");
+  assert.ok(!/\bstillSig\b|\bloopSig\b|\bdecksSpent\b|\bSTALEMATE_TURNS\b/.test(html),
+    "the trainer re-declares the rule: it has one copy, in judge.js");
+  assert.ok(/<DrawPanel\b/.test(html), "and the trainer's result screen shows a draw");
 });
 
 /* NO SUDDEN DEATH (v5.62). Driven for the draw, scanned for the absence. */

@@ -187,7 +187,7 @@ Both resolve card text through `effects.js`.
 - Prevented damage is not dealt and not a hit (CR 7.5.5); record a trace where the fact
   becomes true. The end phase is CR 4.4.3's fixed order, in `effects.beginEndPhase`.
   There is no deck-out loss (CR 4.5.3); a dead position (both decks empty, nothing
-  changing for 20 turns) ends as a DRAW at the table (ruling R6, `judge.reduce`).
+  changing for 20 turns) ends as a DRAW on BOTH boards (ruling R6: one body, `judge.stalemateCheck`, run by `judge.reduce` and by the trainer's `setG`).
 - Attack-targets ride on the action as a SPEC (`judge.targetSpec`, CR 1.4.5); an attack
   on an ally cannot be defended (CR 7.3.2a).
 - Choices are `prompts.js` specs queued on `promptQ`, addressed to a side. A spec only

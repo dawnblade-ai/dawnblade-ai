@@ -380,7 +380,9 @@ test("the one-board reader sets are pinned", {skip}, () => {
     "a human chooses which arcane card to play.\n" +
     "v5.67: `isToken` ARRIVED, read inside `judge.loopSig`, the cycle tracker of the draw test " +
     "(a token is counted by its name, since its uid is a serial minted fresh each time). " +
-    "The trainer keeps no stalemate tracker (`trainer-no-stalemate-draw`).");
+    "The trainer reaches it through `DawnJudge.stalemateCheck`, which its `setG` runs on every " +
+    "state (v5.72, `trainer-no-stalemate-draw`, closed): one body, so the trainer's SOURCE never " +
+    "asks `isToken` and the name stays on this list for the right reason.");
 
   assert.deepEqual(onlyT.sort(),
     ["clean", "defCap", "dracLinksNow", "frostCount", "hasKwNow", "instantAbilityReady",

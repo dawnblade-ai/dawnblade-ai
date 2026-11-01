@@ -2900,7 +2900,15 @@ const winCheck = (g, by) => {
    move was 1 turn (the exact tracker's: 2). Twenty is twenty times that.
    Of the 41 draws, 40 were the first test's too; the one only this makes is
    `lyath-boltyn-24` (decks empty from turn 28, its last new position at turn
-   30, drawn at turn 50). */
+   30, drawn at turn 50).
+
+   THE TRAINER CALLS THIS BODY TOO (2026-11-01). `Battle`'s `setG` is the
+   trainer's `reduce`: every state it commits passes through `stalemateCheck`
+   first, so the tracker, the window and the draw are this one copy and the
+   trainer keeps no census of its own. The trainer's own results are `{win}`
+   shapes, which is why `drawText` asks for a `winner` that is exactly `null`:
+   a draw is the one result with that field set to nothing, and a `{win}` is
+   not one. */
 const STALEMATE_TURNS = 20;
 const LOOP_RING = 8;
 const STILL_ZONES = ["deck", "hand", "pitch", "grave", "banish", "soul", "board", "gear"];
@@ -2954,10 +2962,11 @@ function stalemateCheck(g){
     return say({...g, still, over: {winner: null, how: "stalemate"}, priority: null}, DRAW_LINE);
   return still === g.still ? g : {...g, still};
 }
-/* What the result screen says about a finished game, so the table board and
-   the drills read one copy. `null` for a game somebody won. */
+/* What the result screen says about a finished game, so the table board, the
+   trainer and the drills read one copy. `null` for a game somebody won, and for
+   any result whose `winner` is not exactly `null` (the trainer's `{win}`). */
 function drawText(over, sides){
-  if(!over || over.winner != null) return null;
+  if(!over || over.winner !== null) return null;
   return {status: DRAW_LINE, title: "A DRAW",
           names: (sides[0] ? sides[0].name : "") + " and " + (sides[1] ? sides[1].name : ""),
           note: "Both decks are spent and nothing has changed for ten turns each, so neither hero can win."};
