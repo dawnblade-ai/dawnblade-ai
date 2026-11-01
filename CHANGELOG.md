@@ -1,3 +1,29 @@
+## v5.69 — Arakni marks before she strikes
+
+**QUEUE H26, policy (Arakni).** Found and measured by a Sonnet agent, re-measured and shipped by the
+CEO thread.
+
+- **The leak:** the AI never activated a HAND ability. Reaper's Call ("Instant - Discard this: Mark
+  target opposing hero") was only ever swung as a small attack, so Arakni's passive (+1{p} and go
+  again on a stealth hit at a MARKED hero) cashed in only on marks other cards happened to leave:
+  stealth attacks met a marked hero about 2.5 times a game.
+- **The rule (reason `markFirst`):** the new reader `judge.markFirst` names a hand card whose ability
+  marks when the opponent is unmarked and a different stealth or marked-gated attack is playable;
+  `sparring.offence` asks it first. It is an instant, so it costs no action point (CR 8.1.6), and it
+  is asked again after a hit wears the mark off (ruling R1). "[Hero]'s call" says "Discard
+  <card>" for a hand activation.
+- **Own-seat A/B, wins of 28, two independent 24-seed sets:** 9.21 -> 9.92 (t 2.5, 14 up / 3 down)
+  and 9.04 -> 10.21 (t 3.1, 14 / 6). Dropped variants: Lair of the Spider against a hit the wall
+  already stops (noise), leading with Mark the Prey (unresolved), leading with the stealth attack
+  once marked (worse).
+- **Ladder, 630 games at 3 seeds:** 0 stalls, 0 refusals, 0 violations, 3 draws. Arakni 27 -> 33;
+  Viserai -3, Gravy -2, the rest within 1.
+- **Measured negative in the same pass, not shipped (H27):** paying with the card that wastes least
+  instead of the highest pitch. Naive: Gravy 8.00 -> 3.38 of 28 (24 of 24 seeds down — it spends the
+  red attackers and keeps blues); value-safe: 8.00 -> 7.63. Highest-pitch-first already trades card
+  value against floating resource correctly.
+- Drills in `test/markfirst.test.js` (7, eight sabotages all caught); `explain`'s census pin moved.
+
 ## v5.68 — V of the Vanguard charges every spare Light card
 
 **QUEUE H24, policy (Boltyn).** Found and measured by a Sonnet agent, re-measured and shipped by the

@@ -583,6 +583,13 @@ function reaction(g, seat){
    there next time, and the card a draw finds can be a better one. */
 const ARENA_KEY = {pump: "arenaPump", draw: "arenaDraw", res: "arenaRes", ap: "arenaAP"};
 function offence(g, seat, o){
+  /* A CARD THAT MARKS FROM THE HAND GOES BEFORE THE ATTACK THAT CASHES THE MARK (H26).
+     Instants cost no action point, so the discard is free of the turn's one point;
+     `judge.markFirst` answers which card, and only when a stealth (or marked-gated)
+     attack is there to spend the mark on. It is asked again after a hit wears the
+     mark off, so a chain that goes again can be marked again. */
+  const m = J.markFirst(g, seat);
+  if(m) return tag("markFirst", {t: "activate", from: "hand", uid: m.uid});
   const a = offenceBase(g, seat, o);
   /* THE POOL IS SPOKEN FOR WHILE A RESOURCE PIECE IS BEING SPENT (v5.56's
      `resUnlock`): the floating resources plus the piece's payout are what
@@ -1090,6 +1097,7 @@ const CALL_WHY = {
   rxAttack: "React with your cheapest card to pump this attack.",
   rxAbility: "Use the ability. It is printed for this window.",
   keepsAP: "Play it before you attack. It keeps your action point.",
+  markFirst: "Discard it to mark them before you attack. It costs no action point, and your stealth attack on a marked hero hits harder and goes again if it lands.",
   atkKeepsAP: "Lead with the attack that goes again. It keeps your action point.",
   chargeFirst: "Swing the attack that lets you charge first. Your other cards are waiting on a charge.",
   pumpedWeapon: "Swing the weapon. The charge pumped it.",
@@ -1149,6 +1157,7 @@ function lineOf(g, seat, a){
         return "Attack with " + nm(b.card) + (tg ? " at " + nm(tg) : ""); }
       const gp = String(a.uid).indexOf("gp") === 0 ? cardIn(sd, Number(String(a.uid).slice(2))) || cardIn(sd, String(a.uid).slice(2)) : null;
       if(gp) return "Activate " + nm(gp);
+      if(a.from === "hand") return "Discard " + nm(c) + " to use its ability";
       return (c && c.power != null ? "Swing " : "Activate ") + nm(c);
     }
     case "defend": return "Block with " + nm(c);

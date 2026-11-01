@@ -2098,6 +2098,42 @@ const grantTakers = (g, seat, uid, from) => {
       out.push({uid: w.uid, from: "weapon", cost: +w.cost || 0});
   return out;
 };
+/* ---- A CARD THAT MARKS FROM THE HAND, AND THE ATTACK THAT CASHES IT (H26) ----
+
+   Reaper's Call prints "Instant - Discard this: Mark target opposing hero",
+   and nothing in `sparring.js` ever activated a hand ability: the card was
+   only ever swung as a 1-3 power attack, so Arakni's mark engine (+1{p} and
+   go again on a stealth attack at a marked hero, the riders that read "hits
+   a marked hero") ran on whatever marks Mark the Prey and the daggers
+   happened to leave. An instant costs no action point (CR 8.1.6), so the
+   discard is free of the turn's one point and can come before the swing.
+
+   `markFirst` answers the uid of a hand card whose ability marks, when the
+   opposing hero is NOT yet marked and a DIFFERENT attack the seat could
+   play now (so it has the action point for it) would cash the mark: a stealth attack
+   when the hero reads marked-and-stealth (`stealthMarkedBuff`), or an attack
+   whose on-hit text is gated on a marked hero (`condOnHit`). Null otherwise:
+   a mark with nothing to spend it on is a card for nothing, and a hit wears
+   the mark off again (`effects.wearMark`), so it is asked again after one.
+   For `sparring.js`, which reads no card text. */
+const markFirst = (g, seat) => {
+  const sd = at(g, seat);
+  if(at(g, P.other(seat)).marked) return null;
+  const buff = (bOf(g, seat).stealthMarkedBuff || 0) > 0;
+  const cashes = c => TY.isAttack(c)
+    && ((buff && PR.printedKw(c, "stealth"))
+        || (PR.fxParse(c).condOnHit || []).some(e => e && e.cond === "marked"));
+  const marker = (sd.hand || []).filter(c => {
+    const ha = c && PR.fxParse(c).handAbility;
+    return ha && (ha.ops || []).some(o => o && o[0] === "mark");
+  }).sort((a, b) => String(a.uid) < String(b.uid) ? -1 : 1)
+    .find(c => legal(g, {t: "activate", from: "hand", uid: c.uid}, seat) == null);
+  if(!marker) return null;
+  const src = (sd.hand || []).map(c => ({c, f: "hand"})).concat(sd.arsenal ? [{c: sd.arsenal, f: "arsenal"}] : []);
+  const taker = src.find(x => x.c && x.c.uid !== marker.uid && cashes(x.c)
+    && legal(g, {t: "play", uid: x.c.uid, from: x.f, target: "hero"}, seat) == null);
+  return taker ? {uid: marker.uid, takers: [taker.c.uid]} : null;
+};
 /* ---- HOW MUCH OF THIS SEAT'S DECK WOULD A BOOST PAY OFF? (v5.37) ------
 
    `keepsActionPoint`'s sibling, for `sparring.js`, which reads no card text.
@@ -4362,7 +4398,7 @@ function drawTo(g, i){
 }
 
 return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, drawText, ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, arenaUseful, defendsNow, DEFENDS_OPS, abPieceForRes, abPieceResGain, boostShare, grantTakers, arcaneOf, chargeView, chargeMore,
+        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, abPieceForRes, abPieceResGain, boostShare, grantTakers, arcaneOf, chargeView, chargeMore,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */
