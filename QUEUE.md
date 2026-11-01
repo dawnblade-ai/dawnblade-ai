@@ -75,6 +75,13 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
   stealth attack); Arakni 27 -> 33. **H27 NEGATIVE:** pay with the least-waste card (Gravy 8.00 ->
   3.38 naive, 7.63 value-safe) — highest-pitch-first is right. In flight: the other hand abilities
   the AI never uses (Agile Windup, Arcane Twining, Photon Splicing…).
+- **H28 NOISE (2026-11-01):** the other hand abilities the AI never uses. Census: 12 printings in
+  the pool, 5 cards in decks — Reaper's Call (done, v5.69), Arcane Twining and Photon Splicing (Amp 1;
+  Iyslander, Blaze), Agile Windup (Agility token; Kayo), Rally the Coast Guard (+3 defence while
+  defending; Kayo, legal in only 10 states over 196 games). Iyslander amp, pooled over 396 seeds:
+  about +0.10 of 14 (noise); Blaze amp leans negative (-0.46 t -2.6 at worst, never positive); Kayo
+  token +0.06..+0.10 (noise). Patch `experiments/H28-hand-abilities-NOISE.patch` (env-gated, do
+  not apply). The AI-policy vein is thinning: H25, H27 negative and H28 noise in a row.
 - **H25 NEGATIVE (2026-11-01):** hold instants that change nothing on the seat's own turn
   (prevent-only cards, Glisten off a weapon link; reader `rxWaste`, key `rxWait`). Own-seat, 24
   paired seeds: Boltyn 7.04 -> 6.50 (t -1.4), Glisten-only -0.46 (t -1.8), Lyath 0, Gravy +0.17
