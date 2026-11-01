@@ -83,6 +83,14 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
   21 · lyath 19; 0/0/0, 2 draws. Candidate next stated items for players: `trainer-no-stalemate-draw`
   (R6's trainer twin), `activation-choices-at-resolution`, `start-item-crank-unasked`,
   `peers-hold-full-state` (hidden hands over the network — large).
+- **R9 ASKED of the user (2026-11-01), BUILT AND HELD:** is an ACTIVATED ability's target (and X)
+  declared when it is ACTIVATED, before the opponent may respond (as CR 1.4.5 says for an
+  attack-target), or chosen when it resolves? The repo quotes no CR text for a non-attack ability's
+  target. In the pool only Beckoning Haunt (Viserai; Action speed, rests on the stack, picks a card)
+  is affected; the other target-printing abilities are instant/reaction and resolve at once. Patch
+  `experiments/R9-activation-target-declared.patch` (base 71192de; table `abtarget` pending, trainer
+  `targetpick`, fizzle if the target is gone, WIRE_V 33; 3894 drills, 16 sabotages, page drive on
+  both boards, ladder byte-identical). Ship it if the user says "declared on activation".
 - **H28 NOISE (2026-11-01):** the other hand abilities the AI never uses. Census: 12 printings in
   the pool, 5 cards in decks — Reaper's Call (done, v5.69), Arcane Twining and Photon Splicing (Amp 1;
   Iyslander, Blaze), Agile Windup (Agility token; Kayo), Rally the Coast Guard (+3 defence while
