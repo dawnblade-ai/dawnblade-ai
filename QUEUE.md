@@ -9,7 +9,7 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-01, at v5.68)
+## HANDOFF — START HERE (CEO, 2026-11-01, at v5.69)
 
 **This section is the handoff.** Root `HANDOFF.md`/`WEEK.md` were retired to `docs/archive/` on
 2026-10-31; do not start a new root handoff file — rewrite this section instead.
@@ -71,6 +71,10 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
   her deck; Blaze has nothing; 1 life each; nothing changes from turn 35. Proposed: "nothing at all
   changes for 20 turns -> draw, even with cards in a deck" (trade-off: two humans idling that long
   get a forced draw).
+- **v5.69** H26 `markFirst`: the AI's FIRST hand-ability activation (Reaper's Call marks before a
+  stealth attack); Arakni 27 -> 33. **H27 NEGATIVE:** pay with the least-waste card (Gravy 8.00 ->
+  3.38 naive, 7.63 value-safe) — highest-pitch-first is right. In flight: the other hand abilities
+  the AI never uses (Agile Windup, Arcane Twining, Photon Splicing…).
 - **H25 NEGATIVE (2026-11-01):** hold instants that change nothing on the seat's own turn
   (prevent-only cards, Glisten off a weapon link; reader `rxWaste`, key `rxWait`). Own-seat, 24
   paired seeds: Boltyn 7.04 -> 6.50 (t -1.4), Glisten-only -0.46 (t -1.8), Lyath 0, Gravy +0.17
