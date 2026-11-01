@@ -2068,16 +2068,25 @@ const keepsActionPoint = (g, seat, uid, from) => {
    printed cost, so the caller asks its own affordability question.
    Matched through `qualMatches`, the matcher `execute` spends a grant with. */
 const GRANT_Q = {buffNext: 2, gaNext: 1};
+/* THE QUALIFIERS OF A PURE GRANT, or null for a card that is not one. A boo is a rider, not a
+   second payload (H29): Villainous Pose and Prime the Crowd are "your next attack gets +N" with
+   the crowd booing beside it, and they were played with no attack to take the +N because the
+   boo made them read as something else. Anything else printed on the card still disqualifies it. */
+const grantQs = c => {
+  const fx = PR.fxParse(c);
+  const ops = (fx.ops || []).filter(o => o && o[0] !== "noop");
+  if(!ops.length || (fx.conds || []).length || fx.optCost) return null;
+  if(!ops.every(o => GRANT_Q[o[0]] != null || o[0] === "boo")) return null;
+  const grants = ops.filter(o => GRANT_Q[o[0]] != null);
+  return grants.length ? grants.map(o => o[GRANT_Q[o[0]]] || null) : null;
+};
 const grantTakers = (g, seat, uid, from) => {
   const sd = at(g, seat);
   const c = from === "arsenal" ? (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null)
           : from === "hand" ? (sd.hand || []).find(x => x && x.uid === uid) : null;
   if(!c) return null;
-  const fx = PR.fxParse(c);
-  const ops = (fx.ops || []).filter(o => o && o[0] !== "noop");
-  if(!ops.length || (fx.conds || []).length || fx.optCost) return null;
-  if(!ops.every(o => GRANT_Q[o[0]] != null)) return null;
-  const qs = ops.map(o => o[GRANT_Q[o[0]]] || null);
+  const qs = grantQs(c);
+  if(!qs) return null;
   const takes = (card, route) => qs.some(q => !q || PR.qualMatches(q, card, {from: route, atk: true}));
   const out = [];
   const cards = (sd.hand || []).map(h => ({h, f: "hand"}))
@@ -2097,6 +2106,19 @@ const grantTakers = (g, seat, uid, from) => {
        && legal(g, {t: "activate", uid: w.uid}, seat) == null)
       out.push({uid: w.uid, from: "weapon", cost: +w.cost || 0});
   return out;
+};
+/* THE HAND ATTACKS A GRANT BEING PAID FOR STILL HAS TO TAKE (H29). While its payment is open the
+   card is lifted onto `pending`, where `grantTakers` cannot find it and `legal` refuses every
+   play, so this answers for the card itself and asks no legality: `{uid, cost, power}` of each
+   hand attack its qualifier admits, or null when the card is not a pure grant. An arsenal card
+   or a weapon cannot be pitched, so neither needs keeping. `sparring.js` keeps the best one
+   out of the pitch. */
+const grantReserve = (g, seat, card) => {
+  const qs = card && card.name ? grantQs(card) : null;
+  if(!qs) return null;
+  return (at(g, seat).hand || []).filter(h => h && h.uid !== card.uid && TY.isAttack(h)
+      && qs.some(q => !q || PR.qualMatches(q, h, {from: "hand", atk: true})))
+    .map(h => ({uid: h.uid, cost: +h.cost || 0, power: +h.power || 0}));
 };
 /* ---- A CARD THAT MARKS FROM THE HAND, AND THE ATTACK THAT CASHES IT (H26) ----
 
@@ -4438,7 +4460,7 @@ function drawTo(g, i){
 }
 
 return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, drawText, ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, abPieceForRes, abPieceResGain, boostShare, grantTakers, arcaneOf, chargeView, chargeMore,
+        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, arcaneOf, chargeView, chargeMore,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */

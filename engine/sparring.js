@@ -344,11 +344,20 @@ function payAction(g, seat, p, o){
     if(u != null) return tag("pitchChi", {t: "paySel", uid: u});
   }
   if(p.need - sd.res - J.paySum(sd) <= 0 && chi.short <= 0) return tag("payConfirm", {t: "payConfirm"});
-  const keep = J.gateReserve(g, seat, p.card);
+  const gate = J.gateReserve(g, seat, p.card);
   const owe = p.need - sd.res - J.paySum(sd);
+  /* THE ATTACK A GRANT IS FOR STAYS IN THE HAND (H29). `pitchPick` takes the highest pitch, and
+     in Lyath's hand that was the one attack Villainous Pose or Prime the Crowd was played to
+     pump: the +N then had nothing to land on. The best hand attack the grant admits, that the
+     rest of the hand can still pay for beside the grant, is passed over while anything else
+     can pay. `judge.grantReserve` names the attacks. */
+  const gr = gate ? null : J.grantReserve(g, seat, p.card);
+  const held = gr && gr.filter(k => (sd.paySel || []).indexOf(k.uid) < 0 && jointly(sd, p.card, k, o, owe))
+    .sort((a, b) => b.power - a.power || a.cost - b.cost || byUid(a, b))[0];
+  const keep = gate || (held ? [held.uid] : null);
   const c = pitchPick(sd, p.card, o, keep, owe);
-  /* the call names the gate only when keeping it changed the card pitched */
-  if(c && keep){ const plain = pitchPick(sd, p.card, o); if(plain && plain.uid !== c.uid) return tag("gateKeep", {t: "paySel", uid: c.uid}); }
+  /* the call names the gate, or the grant's attack, only when keeping it changed the card pitched */
+  if(c && keep){ const plain = pitchPick(sd, p.card, o); if(plain && plain.uid !== c.uid) return tag(gate ? "gateKeep" : "grantKeep", {t: "paySel", uid: c.uid}); }
   /* Unreachable after a play this policy proposed — `legal` guarantees
      the hand covers the cost. It is here for a payment the policy did not
      open: a human who taps a card and hands the seat over mid-decision
@@ -612,9 +621,11 @@ function offenceBase(g, seat, o){
   const grantOK = x => {
     const t = J.grantTakers(g, seat, x.uid, x.from);
     if(!t) return true;
-    const rest = Object.assign({}, sd, {hand: (sd.hand || []).filter(h => h.uid !== x.uid)});
-    return t.some(k => k.from === "board" || k.from === "weapon"
-                    || affordableWithin(rest, {uid: k.uid, cost: k.cost}, o));
+    /* THE GRANT'S COST AND THE ATTACK'S TOGETHER, a weapon's and an ally's cost included (H29).
+       The attack used to be checked against the hand without the grant's own payment, so the
+       one attack in hand was pitched to pay for the card that pumps it, and a weapon or an ally
+       was never asked about cost at all. */
+    return t.some(k => jointly(sd, x.c, k, o, null));
   };
   const from = [];
   (sd.hand || []).forEach(c => from.push({c, from: "hand"}));
@@ -684,16 +695,21 @@ function offenceBase(g, seat, o){
      `judge.keepsActionPoint` answers that, so this file still reads no
      card text. Cheapest first, ties on pitch then uid, as below. */
   const haveAtk = from.some(x => x.c && num(x.c, "power") > 0) || allies.length > 0;
+  /* a grant that is in hand, playable, and waiting on its attack (H29): the call says so */
+  let waiting = false;
   if(haveAtk){
-    const first = from
+    const cands = from
       .map(x => ({c: x.c, uid: x.c && x.c.uid, from: x.from}))
-      .filter(x => x.c && num(x.c, "power") <= 0 && J.keepsActionPoint(g, seat, x.uid, x.from))
+      .filter(x => x.c && num(x.c, "power") <= 0 && J.keepsActionPoint(g, seat, x.uid, x.from));
+    const first = cands
       .filter(x => grantOK(x))
       .filter(x => affordableWithin(sd, x.c, o))
       .sort((a, b) => num(a.c, "cost") - num(b.c, "cost")
                    || num(a.c, "pitch") - num(b.c, "pitch") || byUid(a, b))
       .find(x => legal(g, {t: "play", uid: x.uid, from: x.from}, seat));
     if(first) return tag("keepsAP", {t: "play", uid: first.uid, from: first.from});
+    waiting = cands.some(x => !grantOK(x) && affordableWithin(sd, x.c, o)
+                           && legal(g, {t: "play", uid: x.uid, from: x.from}, seat));
   }
 
   /* ---- THE ATTACK THAT KEEPS THE POINT GOES FIRST (v5.38, QUEUE v4 H4)
@@ -753,7 +769,7 @@ function offenceBase(g, seat, o){
   const pickWhy = x => x.weapon ? "pumpedWeapon"
     : x.kap ? "atkKeepsAP"
     : rankC(x) < 3 && x.cv && !x.cv.charged ? (x.gr && !x.cv.gaIf ? "gateFirst" : "chargeFirst")
-    : x.ally ? (targetFor(g, seat, x.c) !== "hero" ? "allyTake" : "allyIn") : "biggestAttack";
+    : x.ally ? (targetFor(g, seat, x.c) !== "hero" ? "allyTake" : "allyIn") : waiting ? "grantWait" : "biggestAttack";
   if(pick && pick.weapon) return tag(pickWhy(pick), {t: "activate", uid: pick.uid});
   if(pick) return tag(pickWhy(pick), pick.ally
     ? {t: "activate", uid: pick.uid, target: targetFor(g, seat, pick.c)}
@@ -897,6 +913,21 @@ function chargeRoom(sd, card, o){
   return got >= need && rest.length - k >= 1;
 }
 
+/* The grant's own cost AND the attack's, together (H29). `owe` is what an open payment still
+   asks of the hand; with none open it is the printed cost less what floats. The pool is every
+   pitchable card that is neither the grant nor the attack, so the attack is never its own
+   payment and is never pitched to pay for the card that pumps it. */
+function jointly(sd, gcard, k, o, owe){
+  const need = (owe != null ? owe : num(gcard, "cost") - (sd.res || 0)) + (k.cost || 0);
+  if(need <= 0) return true;
+  const sel = sd.paySel || [];
+  const pool = (sd.hand || [])
+    .filter(c => c && c.uid !== gcard.uid && c.uid !== k.uid && sel.indexOf(c.uid) < 0 && num(c, "pitch") > 0)
+    .map(c => num(c, "pitch")).sort((a, b) => b - a);
+  let got = 0;
+  for(let i = 0; i < pool.length && i < o.maxPitch; i++){ got += pool[i]; if(got >= need) return true; }
+  return false;
+}
 function affordableWithin(sd, card, o){
   const need = num(card, "cost") - (sd.res || 0);
   if(need <= 0) return true;
@@ -1076,6 +1107,7 @@ const CALL_WHY = {
   chargeColour: "Charge a COLOUR card. This card pays off for COLOUR.",
   gateColour: "Charge a COLOUR card. A card in your hand only plays once a COLOUR card has gone into your soul this turn.",
   gateKeep: "Pitch a different card. The card you are waiting to play, and the colour you need to charge, stay in your hand.",
+  grantKeep: "Pitch a different card. The attack this card pumps stays in your hand.",
   gateFirst: "Lead with the attack your charge pumps. Pumped, it can take go again, and the card you are holding plays after it.",
   chargeNone: "Don't charge. There is no card worth giving up.",
   chargeMore: "Charge another Light card. It is not needed for what comes next, and every Light card charged adds power to your attacks this chain.",
@@ -1104,6 +1136,7 @@ const CALL_WHY = {
   allyTake: "Attack the ally. This swing kills it, and an attack on an ally can't be blocked.",
   allyIn: "Send your ally in.",
   biggestAttack: "Swing the biggest attack you can afford.",
+  grantWait: "Swing the biggest attack you can afford, without the card that would pump it. Its cost can't be paid beside the attack's, so it stays in your hand.",
   weapon: "Swing your weapon. It costs no card.",
   resUnlock: "Spend the piece for its resource. It pays for an attack you are holding.",
   gearAbility: "Use your equipment's ability. Nothing better is left to do.",

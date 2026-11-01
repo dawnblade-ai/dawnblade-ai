@@ -1,3 +1,27 @@
+## v5.73 — Lyath keeps the attack her pump is for
+
+**QUEUE H29, policy (Lyath).** Found and measured by a Sonnet agent, re-measured and shipped by the
+CEO thread.
+
+- **The leak:** Lyath played a pump grant (Villainous Pose, Prime the Crowd, Sadistic Scowl) on 315
+  of 817 own turns over 84 games, and on 61 of them no attack followed at all. Two causes.
+  `judge.grantTakers` read a grant with a boo rider as no grant, so it was never made to wait for an
+  attack. And the check that an attack would follow ignored the grant's own payment, so the pitch
+  took the one attack in hand to pay for the card that pumps it; weapon and ally takers were never
+  costed.
+- **The rule:** `judge.grantTakers` treats a boo as a rider. A new reader, `judge.grantReserve`,
+  names the hand attacks a grant being paid for would still take. The AI holds a grant until it can
+  pay for the grant and an attack together (weapon and ally costs included). It pitches around the
+  attack the grant is for (`grantKeep`), and swings the attack instead when a grant must wait
+  (`grantWait`). No card text in `sparring.js`.
+- **Own-seat A/B, Lyath vs the other 14, 12 seeds paired, two independent sets:** 36 -> 56 wins
+  (+1.67 a seed, t 2.9, 8 up / 2 down) and 40 -> 52 (+1.00, t 3.3, 9 / 1). Ablation: the hold alone
+  is most of it (53), the pitch-keep alone 42.
+- **Ladder, 630 games at 3 seeds:** 0 stalls, 0 refusals, 0 violations, the same 2 draws. Lyath
+  19 -> 28 (6, 7, 6 -> 10, 9, 9 a seed), off the bottom; no other hero moved more than 3.
+- Drills in `test/grantwait.test.js` (10: the hold, don't-fire controls, weapon cost, the pitch
+  keep, `explain` deep-equals `act`), each rule sabotaged.
+
 ## v5.72 — The trainer draws a dead position too
 
 **Ruling R6 on the second board; approximation `trainer-no-stalemate-draw`, closed.** Built by a
