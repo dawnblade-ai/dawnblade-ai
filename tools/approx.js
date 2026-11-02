@@ -1057,7 +1057,8 @@ const APPROX = {
         "The trainer's own results stay `{win}`; `drawText` reads only a `winner` that is "+
         "exactly null as a draw. A cycle longer than `LOOP_RING` turns, and a change in a "+
         "place the census does not read, is not seen on either board.",
-  why:"CLOSED AT v5.72. RULING (user, 2026-10-31): \"A match can certainly end in a draw - in "+
+  why:"R8 (v5.74), RULING (user, 2026-11-02): \"Should 'nothing at all changes for 20 turns' end the game as a draw even when a deck still has cards?\" - \"Yes, draw\". The empty-decks precondition is gone on both boards (a deck is part of the census, so a deck still drawn from restarts the window). "+
+      "CLOSED AT v5.72. RULING (user, 2026-10-31): \"A match can certainly end in a draw - in "+
       "the future we may need a sudden death mechanic, there is one in place for "+
       "tournaments already.\" The first record held the trainer back because it shared no "+
       "end check with the table and had no draw screen; both reasons were plumbing, and "+

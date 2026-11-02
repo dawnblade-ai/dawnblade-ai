@@ -85,19 +85,24 @@ test("the trainer's funnel is the table's body: a dead position is a draw on the
   assert.deepEqual(T.g.over, {winner: null, how: "stalemate"}, "a finished game is left alone");
 });
 
-test("a card left in EITHER deck keeps the game open, however long it sits", () => {
+test("RULING (user, 2026-11-02): a card left in EITHER deck does not keep a dead trainer position open; a deck still drawn from does", () => {
   for(const seat of [0, 1]){
     const g0 = deadTrainer();
     const card = {...g0.sides[seat].hand[0], uid: "spare-" + seat, name: "Spare " + seat};
     const T = trainerFunnel(edit(g0, seat, () => ({deck: [card]})));
     T.setG(s => s);
-    for(let i = 0; i < 60; i++) T.setG(tick);
-    assert.equal(T.g.over, null, "seat " + seat + ": a deck with a card in it is a way out (idle " + (T.g.turn - T.g.still.since) + ")");
-    assert.ok(T.g.turn - T.g.still.since >= J.STALEMATE_TURNS, "fixture: genuinely quiet, so ONLY the deck keeps it going");
-    /* and taking the card away is what lets it end, a window later at most */
-    T.setG(s => edit(s, seat, () => ({deck: []})));
     for(let i = 0; i < J.STALEMATE_TURNS + 2 && !T.g.over; i++) T.setG(tick);
-    assert.deepEqual(T.g.over, {winner: null, how: "stalemate"}, "seat " + seat + ": the same position without the card is dead");
+    assert.deepEqual(T.g.over, {winner: null, how: "stalemate"}, "seat " + seat + ": the trainer draws with a card still in the deck");
+    assert.equal(T.g.sides[seat].deck.length, 1, "fixture: the card was still there");
+    /* twin: the same position, but a card is drawn out of a long deck every turn */
+    const long = Array.from({length: 60}, (_, k) => ({...card, uid: "L" + seat + "-" + k, name: "Long " + k}));
+    const U = trainerFunnel(edit(deadTrainer(), seat, () => ({deck: long})));
+    U.setG(s => s);
+    for(let i = 0; i < 50; i++){
+      U.setG(tick);
+      U.setG(s => edit(s, seat, sd => ({hand: sd.hand.concat([sd.deck[0]]), deck: sd.deck.slice(1)})));
+    }
+    assert.equal(U.g.over, null, "seat " + seat + ": a deck being drawn from is not dead");
   }
 });
 

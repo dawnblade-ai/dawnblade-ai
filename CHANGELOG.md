@@ -1,3 +1,19 @@
+## v5.75 — nothing changing for twenty turns is a draw, decks or no decks (R8)
+
+**RULING (user, 2026-11-02):** asked "Should 'nothing at all changes for 20 turns' end the game as a
+draw even when a deck still has cards?" the user answered "Yes, draw".
+
+- **The change:** `judge.stalemateCheck` no longer requires both decks empty, for the exact tracker
+  and for the `still.loop` cycle tracker. Still one body, run by the table's `reduce` and the
+  trainer's `setG`. The deck needs no special case: it is in `stillSig` (cards, in order) and
+  `loopSig` (as a set), so a deck still being drawn from or pitched into is a new position every
+  turn and restarts the window.
+- **The case:** `blaze-enigma-46` — Enigma held a full hand she never played, so never drew from
+  her 8 remaining cards; Blaze had nothing; 1 life each, nothing changing from turn 35.
+- **Player text:** the draw line and note no longer say "both decks are spent".
+- **Drills:** `test/stalemate.test.js` and `test/trainerdraw.test.js` — draw with cards in a deck
+  (table, cycle, trainer), and a position that draws a card every turn is not a draw; each
+  sabotaged and seen to fail. `WIRE_V` unchanged (no payload shape change).
 ## v5.74 — The page plays the pinned pool
 
 **RULING (user, 2026-11-02), "pinned pool only."** Asked what the page should load, the user chose
