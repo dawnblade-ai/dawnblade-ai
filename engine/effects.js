@@ -7982,7 +7982,9 @@ function makeEffects(ctx){
       n = L(n, `${pc.name} takes the Draconic grant \u2014 it is spent.`);
     }
     if(total+rd>0){ n.hitSeq = n.hitSeq+1; n.lastDmg = total+rd; }
-    n = L(n, `${pc.name} resolves for ${total}${pumps?` (+${pumps} reactions)`:""}.${blkNote}${runeMsg}`);
+    /* "+1 reactions" read as a count of cards; it is the POWER the reactions
+       added (rxPumpTotal), so it says where the +N came from (1.0 polish audit). */
+    n = L(n, `${pc.name} resolves for ${total}${pumps?` (+${pumps} from reactions)`:""}.${blkNote}${runeMsg}`);
     n = runOps(n, n.pend.ops, pc.name);
     /* ---- WHOSE HIT WAS IT? (CR 1.4.5, v3.45) ------------------------
        `heroHit` is the CALLER's answer, exactly as the wall is: judge

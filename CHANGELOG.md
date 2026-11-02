@@ -1,3 +1,12 @@
+## v5.NN — "+1 from reactions", not "+1 reactions"
+
+Found by the 1.0 polish audit (P3), Dorinthea's table feed: "Dawnblade resolves for 1 (+1 reactions)."
+The number is the power the reactions added, not a count of cards, so it now reads "(+1 from
+reactions)". One template in `effects.js`, both boards.
+
+- **Drill:** `test/feedvoice.test.js` reads the resolve line's one template (the line is the
+  observable). Sabotaged (the old wording): fails.
+
 ## v5.NN — No function names in the feed's keyword lines
 
 Found by the 1.0 polish audit (P2), reading Bravo's table feed: "Thunder Quake: printed keyword — the
