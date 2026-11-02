@@ -1000,7 +1000,9 @@ function actBase(g, seat, o){
   /* CR 7.3.2 — declaring defenders is free and simultaneous, and is the
      one thing a seat may do while the OTHER holds priority. It is asked
      before the priority question for exactly that reason. */
-  if(P.canDeclareDefenders(g, seat)){
+  /* `wallSet` (the search's rollouts only): this link's wall is already
+     chosen, so the seat adds nothing to it and plays on from there. */
+  if(P.canDeclareDefenders(g, seat) && !(o.wallSet && o.wallSet === linkOf(g))){
     const d = nextBlocker(g, seat, o);
     if(d) return d;
   }
@@ -1102,6 +1104,10 @@ const LA = {
   mu: envOf("SPXLA_MU") !== "" ? +envOf("SPXLA_MU") : 1.5,   /* life-points one held card is worth */
   margin: envOf("SPXLA_M") !== "" ? +envOf("SPXLA_M") : 0.5, /* an alternative must beat A0 by more than this */
   dets: envOf("SPXLA_K") !== "" ? +envOf("SPXLA_K") : 1,     /* determinizations per decision */
+  blocks: envOf("SPXLA_BLK") !== "" ? +envOf("SPXLA_BLK") : 1,   /* search the wall too (phase c) */
+  bMu: envOf("SPXLA_BMU") !== "" ? +envOf("SPXLA_BMU") : 2,  /* a held card's worth at a block (null: mu) */
+  bH: envOf("SPXLA_BH") || "own",           /* block rollouts: "next" to this seat's next decision; "own" through its next turn */
+  blockN: envOf("SPXLA_BN") !== "" ? +envOf("SPXLA_BN") : 4,      /* block sets kept besides the rules' and taking it */
   stepCap: 400,       /* per rollout */
   budget: envOf("SPXLA_B") !== "" ? +envOf("SPXLA_B") : 300,  /* engine steps per decision, all rollouts together; over it, A0 stands */
   stats: {decisions: 0, searched: 0, overruled: 0, steps: 0, ms: 0, maxSteps: 0, over: 0, hist: {}}
@@ -1115,11 +1121,11 @@ const canon = (a, b) => String(a.name) < String(b.name) ? -1 : String(a.name) > 
   : num(a, "pitch") - num(b, "pitch") || byUid(a, b);
 
 /* What the seat may know, as a playable state. `k` picks the determinization. */
-function laMask(g, seat, k){
+function laMask(g, seat, k, salt){
   const op = 1 - seat, sides = g.sides.slice();
   const me = sides[seat], o = sides[op];
   /* public facts only: turn, seat, phase position, zone SIZES, the seat's own hand */
-  const pub = [g.turn, seat, k, (g.feed || []).length, (o.hand || []).length, (o.deck || []).length,
+  const pub = [g.turn, seat, k, salt != null ? salt : (g.feed || []).length, (o.hand || []).length, (o.deck || []).length,
                (me.deck || []).length, (me.hand || []).map(c => c.uid).join(".")].join("|");
   let r = RNG.make("la|" + pub);
   const hidArs = !!(o.arsenal && !o.arsenal._faceUp);
@@ -1155,19 +1161,20 @@ function laCands(g, seat, a0){
 }
 
 const held = sd => (sd.hand || []).length + (sd.arsenal ? 1 : 0);
-function laEval(n, seat, root){
+function laEval(n, seat, root, mu){
   const me = n.sides[seat], op = n.sides[1 - seat], m0 = root.sides[seat], o0 = root.sides[1 - seat];
   if(n.over) return {v: n.over.winner === seat ? 1000 : n.over.winner == null ? 0 : -1000, dealt: 0, taken: 0, cards: 0, over: true};
   const dealt = (o0.hp - op.hp), taken = (m0.hp - me.hp), cards = held(me) - held(op);
-  return {v: dealt - taken + LA.mu * cards, dealt, taken, cards};
+  return {v: dealt - taken + (mu != null ? mu : LA.mu) * cards, dealt, taken, cards};
 }
-function laRollout(n, seat, root, spent){
+function laRollout(n, seat, root, spent, until, skip){
   const stop = root.turn + (LA.horizon === "own" ? 1 : 2);
+  const end = until || (x => x.turn >= stop);
   let steps = 0;
-  while(steps < LA.stepCap && !n.over && n.turn < stop && spent + steps < LA.budget){
+  while(steps < LA.stepCap && !n.over && !end(n) && spent + steps < LA.budget){
     let moved = false;
     for(const s of [0, 1]){
-      const a = actBase(n, s);
+      const a = actBase(n, s, skip && skip(n, s));
       if(!a) continue;
       const out = J.reduce(n, a, s);
       if(out.error) continue;
@@ -1175,7 +1182,7 @@ function laRollout(n, seat, root, spent){
     }
     if(!moved) break;
   }
-  return {n, steps, done: n.over || n.turn >= stop};
+  return {n, steps, done: !!n.over || end(n)};
 }
 function laSearch(g, seat, a0){
   LA.stats.decisions++;
@@ -1216,9 +1223,127 @@ function laWhy(b){
   const terms = [["laHit", dealt], ["laSafe", -taken], ["laKeep", LA.mu * cards]].sort((x, y) => y[1] - x[1]);
   return terms[0][0];
 }
+/* ---- THE WALL, SEARCHED (phase c) ---------------------------------------
+   Declaring defenders is a SET decision taken one card per call (CR 7.3.2
+   lets the defender toggle; `nextBlocker` adds one card at a time). The
+   search keeps that shape and stays stateless: at every call it lists the
+   block sets that contain what is already declared, plays each out from the
+   same masked view through the rest of the opponent's turn and up to this
+   seat's next decision, and returns the next card of the best set (or
+   nothing, when the best set is the wall already standing).
+
+   CANDIDATES: the rule policy's own completion (A0), taking the rest of the
+   hit (the wall as declared), and the `blockN` best of every other set of up
+   to three more defenders by a first-order score (life it stops, minus
+   `mu` per hand card it spends). A set where some card stops nothing the
+   others would not is never listed. Copies (same name, pitch, defence) are
+   one card.
+
+   ONE VIEW PER LINK. The masked root's seed leaves out the feed length
+   (each declaration adds a line) and names the link instead, so the second
+   call of one wall plays the same deal as the first and the search does not
+   change its mind between two cards of the set it chose.
+
+   SETTINGS (phase c, measured against v5.77's search — CHANGELOG): the
+   rollout runs through this seat's NEXT TURN ("own"), not just to its first
+   decision, because a card kept from a block is only worth what that turn
+   does with it: stopping at the decision gained +1.4 wins of 28 and lost
+   with Arakni; through the turn gained +4.1, no hero negative. A held card
+   is worth 2 life here (1.5 and 2.5 were within noise). Four sets besides
+   the rules' and taking it (2 and 8 measured the same). */
+const linkOf = g => [g.turn, (g.chain || []).length, g.pend && g.pend.card ? g.pend.card.uid : "-"].join("/");
+const laBlockPoint = (g, seat) => !g.prompt && !J.pendingOf(g) && P.canDeclareDefenders(g, seat)
+  && !!g.pend && GM.targetCanBeDefended(g.pend.target);
+const wallKey = (sd, uids) => uids.map(u => { const gr = (sd.gear || []).find(x => x && x.uid === u);
+  if(gr) return "g" + u; const c = (sd.hand || []).find(x => x && x.uid === u);
+  return "h" + (c ? c.name + "/" + num(c, "pitch") + "/" + num(c, "def") : u); }).sort().join("+");
+function laBlockSets(g, seat, o){
+  const sd = g.sides[seat], incoming = (g.pend && g.pend.total) || 0, wall0 = wallOf(sd);
+  /* A0: the rules' own wall, played forward from here on the real state
+     (declaring reads nothing hidden) */
+  let n = g; const a0 = [];
+  for(let i = 0; i < 12; i++){ const d = nextBlocker(n, seat, cfg(o)); if(!d) break;
+    const out = J.reduce(n, d, seat); if(out.error) break; n = out.state; a0.push(d.uid); }
+  const avail = (sd.gear || []).filter(x => x && (sd.blockG || []).indexOf(x.uid) < 0 && GM.gearDef(x) > 0)
+      .map(x => ({uid: x.uid, gear: true, def: GM.gearDef(x)}))
+    .concat(J.handFree(sd).filter(c => num(c, "def") > 0).map(c => ({uid: c.uid, gear: false, def: num(c, "def")})))
+    .filter(x => legal(g, {t: "defend", uid: x.uid}, seat))
+    .sort((a, b) => (b.gear - a.gear) || byUid(a, b));
+  const sets = [];
+  const walk = (i, cur) => {
+    if(cur.length){
+      const tot = wall0 + cur.reduce((t, x) => t + x.def, 0);
+      if(cur.every(x => tot - x.def < incoming)){
+        const stop = Math.min(incoming, tot) - Math.min(incoming, wall0);
+        sets.push({uids: cur.map(x => x.uid), s: stop - (LA.bMu != null ? LA.bMu : LA.mu) * cur.filter(x => !x.gear).length - 0.5 * cur.filter(x => x.gear).length});
+      }
+    }
+    if(cur.length >= 3) return;
+    for(let j = i; j < avail.length; j++) walk(j + 1, cur.concat([avail[j]]));
+  };
+  walk(0, []);
+  sets.sort((a, b) => b.s - a.s);
+  const out = [], seen = new Set();
+  const add = uids => { const k = wallKey(sd, uids); if(seen.has(k)) return; seen.add(k); out.push(uids); };
+  add(a0); add([]);
+  for(const x of sets){ if(out.length >= 2 + LA.blockN) break; add(x.uids); }
+  return out;
+}
+/* the order a set is declared in: armour first, then hand, each by uid */
+function wallOrder(sd, uids){
+  const isG = u => (sd.gear || []).some(x => x && x.uid === u);
+  return uids.slice().sort((a, b) => (isG(b) - isG(a)) || (String(a) < String(b) ? -1 : String(a) > String(b) ? 1 : 0));
+}
+function laBlockSearch(g, seat, o){
+  LA.stats.decisions++;
+  const t0 = Date.now(), keep = NOTE; NOTE = null; IN_SEARCH = true;
+  let best = null, spent = 0, cands = [];
+  try {
+    cands = laBlockSets(g, seat, o);
+    if(cands.length < 2) return null;
+    LA.stats.searched++; LA.stats.bSearched = (LA.stats.bSearched || 0) + 1;
+    const link = linkOf(g), sd = g.sides[seat];
+    const tot = cands.map(() => ({v: 0, dealt: 0, taken: 0, cards: 0}));
+    for(let k = 0; k < LA.dets; k++){
+      const root = laMask(g, seat, k, "blk" + link);
+      const until = LA.bH === "own" ? (x => x.turn >= root.turn + 2) : (x => x.turn > root.turn && laPoint(x, seat));
+      const fixed = {wallSet: link}, skip = (x, s) => s === seat ? fixed : undefined;
+      for(let i = 0; i < cands.length; i++){
+        let n = root, bad = false;
+        for(const u of wallOrder(sd, cands[i])){ const out = J.reduce(n, {t: "defend", uid: u}, seat);
+          if(out.error){ bad = true; break; } n = out.state; spent++; }
+        if(bad){ tot[i].v = -Infinity; continue; }
+        const r = laRollout(n, seat, root, spent, until, skip); spent += r.steps;
+        if(!r.done){ LA.stats.over++; return null; }
+        const e = laEval(r.n, seat, root, LA.bMu);
+        ["v", "dealt", "taken", "cards"].forEach(f => tot[i][f] += e[f]);
+      }
+    }
+    let bi = 0;
+    for(let i = 1; i < cands.length; i++) if(tot[i].v > tot[bi].v + (bi === 0 ? LA.margin : 0)) bi = i;
+    if(bi === 0) return null;
+    const next = wallOrder(sd, cands[bi])[0];
+    best = {a: next == null ? null : {t: "defend", uid: next}, why: next == null ? "laTake" : "laBlock"};
+    return best;
+  } finally {
+    IN_SEARCH = false; NOTE = keep;
+    LA.stats.steps += spent; LA.stats.maxSteps = Math.max(LA.stats.maxSteps, spent); LA.stats.ms += Date.now() - t0;
+    if(cands.length >= 2){ const b = Math.floor(spent / 10) * 10; LA.stats.hist[b] = (LA.stats.hist[b] || 0) + 1; }
+    if(best){ LA.stats.overruled++; LA.stats.bOverruled = (LA.stats.bOverruled || 0) + 1; }
+  }
+}
+
 function act(g, seat, o){
   const a0 = actBase(g, seat, o);
-  if(IN_SEARCH || !a0 || !laGated(g, seat, o) || !laPoint(g, seat)) return a0;
+  if(IN_SEARCH || !g || g.over || !laGated(g, seat, o)) return a0;
+  if(LA.blocks && laBlockPoint(g, seat)){
+    const b = laBlockSearch(g, seat, o);
+    if(!b) return a0;
+    /* stop here: the rules play on with this wall as it stands */
+    if(!b.a){ if(NOTE) NOTE.stop = b.why; return actBase(g, seat, Object.assign({}, o, {wallSet: linkOf(g)})); }
+    return legal(g, b.a, seat) ? tag(b.why, b.a) : a0;
+  }
+  if(!a0 || !laPoint(g, seat)) return a0;
   const b = laSearch(g, seat, a0);
   if(!b || !legal(g, b.a, seat)) return a0;
   return tag(laWhy(b), b.a);
@@ -1331,6 +1456,8 @@ const CALL_WHY = {
   laSafe: "Start with this. Played out to the end of your turn, it costs you the least life of any opening.",
   laKeep: "Start with this. Played out, it hits as hard as anything else and keeps more cards in hand for their swing back.",
   laHold: "Stop here and keep the rest. Played out, every card you could still play costs you more than it earns.",
+  laBlock: "Block with this. Play each wall out through their turn and yours, and this one leaves you best off.",
+  laTake: "Take the rest of this hit. Played out through their turn and yours, the cards you keep are worth more than the life they would save.",
   pass: "Nothing you hold is worth playing right now."
 };
 const BY_TYPE = {addPay: "addPayNo"};
@@ -1400,7 +1527,8 @@ function lineOf(g, seat, a){
    gets a fresh answer every time). */
 const EXPLAINED = typeof WeakMap === "function" ? new WeakMap() : null;
 const explainKey = (seat, o) => (o && Object.keys(o).some(k => k !== "search")) ? null
-  : [seat, o && o.search != null ? !!o.search : "-", LA.seats.join(","), LA.horizon, LA.budget, LA.mu, LA.margin, LA.dets, LA.stepCap].join("|");
+  : [seat, o && o.search != null ? !!o.search : "-", LA.seats.join(","), LA.horizon, LA.budget, LA.mu, LA.margin, LA.dets, LA.stepCap,
+     LA.blocks, LA.blockN, LA.bMu, LA.bH].join("|");
 function explain(g, seat, o){
   const key = EXPLAINED && g && typeof g === "object" ? explainKey(seat, o) : null;
   const memo = key && EXPLAINED.get(g);
@@ -1416,8 +1544,9 @@ function explainNow(g, seat, o){
   /* A SITE THAT A DRILL PINS VERBATIM STAYS UNTAGGED, and its reason is
      read off the action instead (`addPay` is pinned by sparring.test.js). */
   const hit = a && n.tags.find(t => t[1] === a);
-  const key = a ? ((hit && hit[0]) || BY_TYPE[a.t] || null) : null;
-  return {action: a, key, why: key ? (CALL_WHY[key] ? (key === "chargeColour" || key === "gateColour" ? CALL_WHY[key].replace(/COLOUR/g, ["", "red", "yellow", "blue"][key === "gateColour" ? J.gateColourWanted(g, seat) : J.chargePitchWanted(g)] || "matching") : CALL_WHY[key]) : null) : null, line: lineOf(g, seat, a)};
+  /* THE SEARCH CAN SAY "STOP BLOCKING" (phase c): no action, a reason */
+  const key = n.stop || (a ? ((hit && hit[0]) || BY_TYPE[a.t] || null) : null);
+  return {action: a, key, why: key ? (CALL_WHY[key] ? (key === "chargeColour" || key === "gateColour" ? CALL_WHY[key].replace(/COLOUR/g, ["", "red", "yellow", "blue"][key === "gateColour" ? J.gateColourWanted(g, seat) : J.chargePitchWanted(g)] || "matching") : CALL_WHY[key]) : null) : null, line: key !== "laTake" ? lineOf(g, seat, a) : (wallOf(g.sides[seat]) > 0 ? "Don't block any more" : "Don't block")};
 }
 
 return {DEFAULTS, act, actBase, LA, laMask, laCands, explain, CALL_WHY, run, pitchPick, nextBlocker, offence, wallOf, affordableWithin};

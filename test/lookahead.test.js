@@ -159,3 +159,67 @@ test("explain is memoized per state, seat and setting, and the memo is the same 
   }
   assert.ok(n >= 3, "reached " + n + " overruled positions");
 });
+
+/* PHASE (c): THE WALL AND THE ARSENAL ARE SEARCHED TOO, from the same
+   masked view. Each overruled block (more, other or fewer defenders than the
+   rules') and each overruled arsenal choice must survive the same scramble
+   of everything the seat cannot see. A "take the rest" verdict has no
+   action of its own when the seat holds no priority, so positions are kept
+   by their reason, not by their action. */
+function overrulesBy(k0, k1, seed, want, keys){
+  gate([k0]);
+  const found = [];
+  let g = match(k0, k1, seed, 0);
+  for(let i = 0; i < 3000 && !g.over && found.length < want; i++){
+    let moved = false;
+    for(const s of [0, 1]){
+      const x = s === 0 ? SP.explain(g, s) : {action: SP.act(g, s)};
+      if(s === 0 && keys.indexOf(x.key) >= 0) found.push({g, x, k0});
+      if(!x.action) continue;
+      const out = J.reduce(g, x.action, s);
+      if(out.error) continue;
+      g = out.state; moved = true; break;
+    }
+    if(!moved) break;
+  }
+  return found;
+}
+const withLA = (set, f) => { const keep = {...SP.LA}; Object.assign(SP.LA, set);
+  try { return f(); } finally { for(const k of Object.keys(set)) SP.LA[k] = keep[k]; gate([]); } };
+function scrambleHolds(pts){
+  for(const {g, x, k0} of pts){
+    gate([k0]);
+    const h = scramble(g, 0);
+    assert.notEqual(hiddenKey(h, 0), hiddenKey(g, 0), "the scramble moved the hidden cards");
+    const y = SP.explain(h, 0);
+    assert.deepEqual(y.action, x.action, "same action at turn " + g.turn + " (" + x.key + ")");
+    assert.equal(y.key, x.key, "same reason");
+  }
+}
+
+test("the searched wall is the same when the attacker's hidden cards and both deck orders are swapped", () => {
+  const keys = ["laBlock", "laTake"];
+  const pts = withLA({blocks: 1}, () => [].concat(overrulesBy("bravo", "kayo", "la-blk-1", 4, keys),
+    overrulesBy("lyath", "dash", "la-blk-2", 4, keys), overrulesBy("viserai", "briar", "la-blk-3", 4, keys)));
+  assert.ok(pts.length >= 6, "the search overruled the rules' wall in " + pts.length + " positions");
+  assert.ok(pts.some(p => p.x.key === "laBlock") && pts.some(p => p.x.key === "laTake"), "both verdicts are reached");
+  withLA({blocks: 1}, () => scrambleHolds(pts));
+});
+
+test("blocks off: the wall is the rules' even with the action search on", () => {
+  withLA({blocks: 0}, () => {
+    gate(["all"]);
+    let g = match("bravo", "kayo", "la-blk-off", 0), walls = 0;
+    for(let i = 0; i < 1500 && !g.over; i++){
+      let moved = false;
+      for(const s of [0, 1]){
+        const a = SP.act(g, s);
+        if(a && a.t === "defend"){ walls++; assert.deepEqual(a, SP.actBase(g, s)); }
+        if(!a) continue;
+        const out = J.reduce(g, a, s); if(out.error) continue; g = out.state; moved = true; break;
+      }
+      if(!moved) break;
+    }
+    assert.ok(walls >= 3, walls + " declarations");
+  });
+});
