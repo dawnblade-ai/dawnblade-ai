@@ -552,6 +552,7 @@ if(require.main === module){
       const foe = ((await foeBtn.getAttribute("aria-label")) || "").split(",")[0];
       if(!(await click(foeBtn, label + ": pick " + foe))) return;
       const best0 = await page.evaluate(() => { localStorage.removeItem("dawnblade.best"); return null; });
+      const rec0 = await page.evaluate(() => JSON.parse(localStorage.getItem("dawnblade.aiRecord") || "null"));
       if(who === 1) await page.evaluate(() => {   // the AI seat's next move is to concede
         const act = DawnSparring.act; DawnSparring.act = (st, i) => i === 1 ? { t: "concede" } : act(st, i);
         window.__restoreAct = () => { DawnSparring.act = act; };
@@ -565,6 +566,7 @@ if(require.main === module){
         /* one line of 9px type is 25px tall (the trainer's row); a wrap makes the WHOLE row 36 */
         row(nav.length && nav.every(b => b.h <= 30), label + ": the jump row is one line", nav.map(b => `${b.t} ${b.h}px`).join(", "));
       }
+      const foeKey = await page.evaluate(() => window.__dawnTable.session.state().sides[1].heroKey || null);
       if(who === 0) await page.evaluate(() => window.__dawnTable.session.submit({ t: "concede" }));
       const shown = await page.waitForSelector(".reveal", { timeout: 15000 }).then(() => page.locator(".reveal").innerText()).catch(() => "");
       await page.evaluate(() => window.__restoreAct && window.__restoreAct());
@@ -572,13 +574,80 @@ if(require.main === module){
       const head = shown.split("\n")[0].trim();
       const ok = want.head.test(head) && (want.records ? best1 !== best0 : best1 === best0);
       row(ok, label, `vs ${foe}: ${JSON.stringify(head)}` + (want.records ? "" : best1 === best0 ? ", best score untouched" : ", WROTE THE BEST SCORE"));
+      /* THE RECORD (v5.84): a finished game against an AI hero moves exactly
+         one counter, that hero's at the level it played (Sharp, as left by
+         the Sharp / Steady row); a game against the Dummy moves none. */
+      const rec1 = await page.evaluate(() => JSON.parse(localStorage.getItem("dawnblade.aiRecord") || "null"));
+      const flat = r => { const o = {}; for(const [k, f] of Object.entries((r && r.foes) || {})) for(const [lv, c] of Object.entries(f)) for(const x of ["w", "l", "d"]) o[k + "/" + lv + "/" + x] = c[x]; return o; };
+      const f0 = flat(rec0), f1 = flat(rec1);
+      const moved = [...new Set([...Object.keys(f0), ...Object.keys(f1)])].filter(k => (f1[k] || 0) !== (f0[k] || 0)).map(k => k + " " + ((f1[k] || 0) - (f0[k] || 0) > 0 ? "+" : "") + ((f1[k] || 0) - (f0[k] || 0)));
+      const wantMoved = want.rec ? [foeKey + "/sharp/" + want.rec + " +1"] : [];
+      row(JSON.stringify(moved) === JSON.stringify(wantMoved), label + ": the record",
+          `moved ${JSON.stringify(moved)}, want ${JSON.stringify(wantMoved)}`);
       await screen(label + " screen");
       await page.locator(".reveal").click().catch(() => {});
       await page.waitForSelector(".hgrid", { timeout: 5000 }).catch(() => {});
     };
-    await ending("Lyath", 1, { head: /^you take it$/i, records: false, navOneLine: true }, "table: win over an AI hero");
-    await ending(3, 0, { head: /^they take it$/i, records: false }, "table: loss to an AI hero");
+    await page.evaluate(() => localStorage.removeItem("dawnblade.aiRecord"));
+    await ending("Lyath", 1, { head: /^you take it$/i, records: false, navOneLine: true, rec: "w" }, "table: win over an AI hero");
+    await ending(3, 0, { head: /^they take it$/i, records: false, rec: "l" }, "table: loss to an AI hero");
     await ending(0, 1, { head: /^dummy destroyed$/i, records: true }, "table: win over the Dummy");
+
+    /* THE RECORD ON THE PICKER (v5.84). After the win and the concession
+       above, at Sharp: Lyath's tile reads 1–0 and the other foe's 0–1, every
+       other tile reads nothing; each label sits inside its tile, inside the
+       phone, on one line. At Steady (no games played there) no label shows. */
+    if(await toLoadout("record")){
+      const labels = () => page.evaluate(() => [...document.querySelectorAll(".aifoe button")].map(b => {
+        const f = b.querySelector(".frec"); if(!f) return null;
+        const r = f.getBoundingClientRect(), t = b.getBoundingClientRect();
+        return { foe: (b.getAttribute("aria-label") || "").split(",")[0], t: f.innerText.trim(), l: r.left, r: r.right, h: r.height,
+                 inTile: r.left >= t.left - 0.5 && r.right <= t.right + 0.5 && r.top >= t.top - 0.5 && r.bottom <= t.bottom + 0.5,
+                 fits: f.scrollWidth <= f.clientWidth + 1 };
+      }).filter(Boolean));
+      const sharp = await labels();
+      const okS = sharp.length === 2 && sharp.some(x => /^lyath/i.test(x.foe) && x.t === "1–0") && sharp.some(x => !/^lyath/i.test(x.foe) && x.t === "0–1")
+        && sharp.every(x => x.inTile && x.fits && x.l >= 0 && x.r <= W && x.h > 0 && x.h <= 14);
+      row(okS, "table: the record on the picker", JSON.stringify(sharp.map(x => [x.foe, x.t, Math.round(x.l), Math.round(x.r), Math.round(x.h), x.inTile, x.fits])));
+      await screen("table: the picker with a record");
+      const lv = page.locator(".ailevel button");
+      await click(page.locator(".aifoe button").nth(2), "pick an AI hero to show the level");
+      const tapped = await click(lv.nth(1), "Steady"); await page.waitForTimeout(150); const steady = await labels();
+      const note = await page.locator(".frecnote").count();
+      await lv.nth(0).click().catch(() => {});
+      row(tapped && steady.length === 0 && note === 0, "table: the record follows the level", `at Steady ${steady.length} labels, ${note} notes`);
+      await click(page.locator(".lo .screennav button", { hasText: "back" }), "leave the record loadout");
+      await page.locator(".rps .rback").click().catch(() => {});
+      await page.waitForSelector(".hgrid", { timeout: 5000 }).catch(() => {});
+    }
+
+    /* NO STORAGE AT ALL (v5.84). A private window or blocked site data makes
+       reading window.localStorage THROW. The page must still render the
+       picker, play a game against an AI hero to its end, and raise nothing. */
+    {
+      const k2 = await open({ w: W, h: H });
+      await k2.page.context().addInitScript(() => {
+        Object.defineProperty(window, "localStorage", { configurable: true, get(){ throw new DOMException("blocked", "SecurityError"); } }); });
+      await k2.page.reload(); await k2.page.waitForSelector(".hgrid", { timeout: 15000 }).catch(() => {});
+      const p2 = k2.page; let got = "";
+      try {
+        await p2.locator(".hcard").first().click(); await p2.getByRole("button", { name: /^Battle$/ }).click();
+        await p2.waitForSelector(".rseatpick, .actbar", { timeout: 8000 });
+        if(await p2.locator(".rseatpick").isVisible().catch(() => false)) await p2.locator(".rseatpick button").first().click();
+        await p2.waitForSelector(".lo .actbar", { timeout: 8000 });
+        const tiles = await p2.locator(".aifoe button").count(), recs = await p2.locator(".aifoe .frec").count();
+        await p2.locator(".aifoe button").nth(2).click();
+        await p2.getByRole("button", { name: /^Fight the new engine/ }).click();
+        await p2.waitForSelector(".board", { timeout: 15000 });
+        await p2.evaluate(() => window.__dawnTable.session.submit({ t: "concede" }));
+        const head = await p2.waitForSelector(".reveal", { timeout: 15000 }).then(() => p2.locator(".reveal h2").innerText()).catch(() => "(no reveal)");
+        got = `${tiles} tiles, ${recs} records, ended ${JSON.stringify(head)}`;
+        const thrown = await p2.evaluate(() => { try { void window.localStorage; return false; } catch(e){ return true; } });
+        row(tiles >= 3 && recs === 0 && /they take it/i.test(head) && thrown && !k2.errors.length, "table: no storage, the record stays out of the way",
+            got + (thrown ? "" : " (storage did NOT throw: the fixture is wrong)") + (k2.errors.length ? " errors: " + k2.errors.join(" | ") : ", 0 page errors"));
+      } catch(e){ row(false, "table: no storage, the record stays out of the way", got + " " + String(e.message).split("\n")[0] + " " + k2.errors.join(" | ")); }
+      await k2.close();
+    }
 
     const sw = errors.slice();
     if(sw.length){ console.log("\nPAGE ERRORS (" + sw.length + "):"); sw.forEach(e => console.log("  " + e)); }

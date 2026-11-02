@@ -394,7 +394,7 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        `function Loadout(` -> the APP banner. The growth is `sharp` on the
        table start with its comment, then the Sharp / Steady control
        (`aiLevel`, its two tiles, the note naming the level). Same anchors. */
-    "phasebar.test.js index.html 20880",
+    "phasebar.test.js index.html 21720",
     /* 63,730 -> 64,368 AT v5.57, READ FIRST: still the `<style>` block,
        `<style>` -> `</style>`; the growth is the Cloaked card back's three
        rules (`.deckback.gback`, `.gbtag`, `.gbname`).
@@ -411,7 +411,7 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        68,417 -> 68,639 AT v5.81, READ FIRST: still `<style>` -> `</style>`;
        the growth is the `.pip` tints PipLine draws a printed pip's word in,
        with their comment. */
-    "phasebar.test.js index.html 68639",
+    "phasebar.test.js index.html 68988",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
        `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
        `abPickBound` in the pick legality it extends. */

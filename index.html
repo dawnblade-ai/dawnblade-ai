@@ -739,6 +739,11 @@ img{display:block;max-width:100%}
 .aifoe .fport{width:100%;aspect-ratio:1/1;overflow:hidden;display:flex;align-items:center;
   justify-content:center;font-family:'Big Shoulders Display';font-weight:700;font-size:22px;color:var(--y)}
 .aifoe .fport .art,.aifoe .fport .fallbackart{width:100%;height:100%;object-fit:cover}
+/* YOUR RECORD under the name (v5.84): quiet, mono, one line; draws dimmer */
+.aifoe .frec{font-family:'Spline Sans Mono';font-size:9px;letter-spacing:.02em;color:var(--y);
+  line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.aifoe .frec .frecd{color:var(--bone-dim)}
+.frecnote{margin:8px 0 0;font-size:11px}
 .aifoe .fname{font-family:'Spline Sans Mono';font-size:8.5px;letter-spacing:.04em;
   text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 /* SHARP / STEADY (lookahead phase 2) — how the AI hero thinks. Two tiles,
@@ -893,7 +898,7 @@ img{display:block;max-width:100%}
    database + typographic fallbacks. Not affiliated with LSS.
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
-window.APP_VER = "5.83"; /* v5.83 - The table opponent picker gets its own loadout screen, so Sharp and Steady clear the bar and the trim grid gets its height back. See CHANGELOG.md. */
+window.APP_VER = "5.84"; /* v5.84 - A finished table game against an AI hero counts toward your record against that hero and level, shown on the picker. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -1632,6 +1637,10 @@ const store = {
   get(k,f){ try{const v=localStorage.getItem("dawnblade."+k); return v==null?f:JSON.parse(v);}catch(e){return f;} },
   set(k,v){ try{localStorage.setItem("dawnblade."+k, JSON.stringify(v));}catch(e){} }
 };
+/* the record against AI heroes (v5.84) reads and writes through engine/local.js,
+   which wraps every touch in try/catch; it is handed this THUNK because on some
+   browsers merely reading window.localStorage is what throws */
+const lsGet = () => window.localStorage;
 
 /* ---------- helpers ---------- */
 const PITCH_NAME = {1:"red",2:"yellow",3:"blue"};
@@ -6378,6 +6387,11 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
      one match — and Sharp is the default. */
   const [aiLevel,setAiLevelS] = uS(()=>store.get("aiLevel","sharp")==="steady" ? "steady" : "sharp");
   const setAiLevel = v => { store.set("aiLevel", v); setAiLevelS(v); };
+  /* YOUR RECORD AGAINST EACH AI HERO (v5.84), at the level chosen below. Read
+     once per visit; storage that is missing or throws reads as no record. */
+  const aiRec = uM(()=>DawnLocal.loadRecord(lsGet),[]);
+  const recOf = k => { const c = aiRec.foes[k] && aiRec.foes[k][aiLevel]; return c && (c.w + c.l + c.d) ? c : null; };
+  const anyRec = HEROES.some(x=>recOf(x.k));
   const item = i => gearR.find(x=>x.i===i);
   const hands = sel.filter(i=>["1h","2h","off"].includes(item(i).s.z)).reduce((a,i)=>a+item(i).s.h,0);
   const armorN = sel.filter(i=>ARMOR_Z.includes(item(i).s.z)||item(i).s.z==="misc").length;
@@ -6621,10 +6635,12 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
                 <div className="fport">✕</div><span className="fname">The Dummy</span></button>
               <button className={aiFoe==="random"?"on":""} onClick={()=>setAiFoe("random")} aria-label="A random hero">
                 <div className="fport">?</div><span className="fname">Random</span></button>
-              {HEROES.map(x=>
-                <button key={x.k} className={aiFoe===x.k?"on":""} onClick={()=>setAiFoe(x.k)} aria-label={x.n}>
+              {HEROES.map(x=>{ const r = recOf(x.k);
+                  return <button key={x.k} className={aiFoe===x.k?"on":""} onClick={()=>setAiFoe(x.k)} aria-label={x.n}>
                   <div className="fport"><HeroArt h={x} db={db} key={db.status}/></div>
-                  <span className="fname">{x.n.split(",")[0]}</span></button>)}
+                  <span className="fname">{x.n.split(",")[0]}</span>
+                  {r && <span className="frec" title={`${r.w} won, ${r.l} lost${r.d ? ", "+r.d+" drawn" : ""} at ${aiLevel==="sharp"?"Sharp":"Steady"}`}>
+                    {r.w}–{r.l}{r.d ? <span className="frecd"> · {r.d}d</span> : null}</span>}</button>; })}
             </div>
             <VsStrip hero={h} db={db} foe={aiFoe==="random" ? {mystery:true} : foeHero}/>
             {aiFoe!==null && <div className="ailevel" role="group" aria-label="How the AI plays">
@@ -6635,6 +6651,7 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
                 <span className="lvl">Steady</span>
                 <span className="lsub">Plays by its rules of thumb. Quicker to read, easier to beat.</span></button>
             </div>}
+            {anyRec && <p className="note frecnote">Under a hero: your wins–losses against it at {aiLevel==="sharp"?"Sharp":"Steady"}, and draws as "d". Kept on this device.</p>}
           </div>
         </div>}
       </div>
@@ -7471,6 +7488,16 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
   const beatDummy = !!(over && local && over.winner===mySeat && !them.heroKey);
   uE(()=>{ if(beatDummy && onRecord && heroKey)
              onRecord(heroKey, g.turn + (me.wasted||0)); },[g.over]);
+  /* THE RECORD AGAINST AN AI HERO (v5.84, decision D). A finished game
+     against an AI-piloted hero counts once, by that hero and the level it
+     played at: a win, a loss (a concession is one), or a draw. A game left
+     before it ends never has `over`, so it is never counted; a two-phone
+     table is not `local`, and the Dummy carries no hero key. The ref holds
+     the one `over` already counted, so no re-render can count it twice. */
+  const counted = uR(null);
+  uE(()=>{ if(!over || !local || !them.heroKey || counted.current === over) return;
+           counted.current = over;
+           DawnLocal.recordResult(lsGet, them.heroKey, !!match.sharp, over, mySeat); },[g.over]);
 
   const targets = DawnJudge.targets(g, 1-mySeat, them.heroCard);
   const [tgt,setTgt] = uS(null);

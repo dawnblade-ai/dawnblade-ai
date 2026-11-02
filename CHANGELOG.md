@@ -1,3 +1,39 @@
+## v5.84 — Your record against each AI hero
+
+**Decision D (CEO, 2026-11-02, under the user's trust grant).** A table win over an AI hero once paid
+the dummy's trophy and best score by mistake; v5.79 stopped that and it earned nothing. Now it earns a
+small, honest RECORD.
+
+- **What a player sees:** on the Foe screen's picker, a hero you have finished a game against shows
+  your record under its name in quiet gold mono: `3–1` (wins–losses), plus ` · 2d` in dim type when
+  there were draws. It is the record at the level chosen below (Sharp or Steady), so switching the level
+  switches the numbers; a one-line note under the level tiles says so, and only when there is a record.
+  No trophy, no best score, nothing pulled.
+- **What counts:** a FINISHED local table game against an AI-piloted hero, once, keyed by that hero
+  (a Random pick counts under the hero it dealt) and the level it played. A win, a loss (a concession is
+  a loss, CR 4.5.3c), or a draw (the engine's dead-position stalemate). A game left before it ends is
+  not counted. Two-phone games, games against the Dummy, and the trainer are untouched.
+- **Storage:** per device, `localStorage["dawnblade.aiRecord"]` =
+  `{v:1, foes:{<hero key>:{sharp:{w,l,d}, steady:{w,l,d}}}}` (only pairs played appear). The
+  bookkeeping is `engine/local.js` (`outcomeOf`, `bumpRecord`, `loadRecord`, `saveRecord`,
+  `recordResult`); every storage touch is in try/catch and the storage is handed in as a thunk, because
+  reading `window.localStorage` is itself what throws in some private windows. Missing, throwing or
+  garbage storage reads as no record; a failed write is reported and the game goes on.
+- **The board's call:** one effect in `TableBoard`, gated on `over`, `local` and the seat opposite
+  carrying a hero key, with a ref so a re-render cannot count one result twice.
+- **Drills:** `test/airecord.test.js` (6): outcomes from `over`; one bump moves exactly one counter
+  keyed by hero and level, refusing a missing hero / unknown level / unknown outcome; a finished game is
+  one write and an abandoned one none; four kinds of failing storage and five kinds of garbage; the
+  judge's own concession counted as one loss; the board's gate pinned. Sabotaged six ways (bump both
+  levels: 4 fail; no catch on read: 1; no catch on write: 1; count an unfinished game: 2; drop the
+  `local` gate: 1; a concession not a loss: 3).
+- **Drive:** `tools/page.js` checks the record after each real ending (win over Lyath: exactly
+  `lyath/sharp/w +1`; concession to Iyslander: `iyslander/sharp/l +1`; win over the Dummy: nothing), the
+  picker's labels (`1–0`, `0–1`, each inside its tile and the phone, one line, 10px tall), that Steady
+  shows none, and a second page whose `window.localStorage` throws: picker drawn, game played to its end,
+  0 page errors. Sabotaged: a long label (FAIL, overflows its box), no catch on read (FAIL, the page dies
+  at the loadout), the record keyed by the player's own hero (FAIL ×3).
+
 ## v5.83 — The opponent picker gets its own screen: Sharp / Steady clear the bar
 
 The 1.0 page audit (`tools/page-audit.js`) reported the Sharp / Steady tiles overlapping the loadout's

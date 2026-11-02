@@ -143,5 +143,95 @@ function createLocal(o){
   };
 }
 
-return {createLocal, STEP_LIMIT};
+/* ---- THE RECORD AGAINST AN AI HERO (v5.84, decision D, CEO 2026-11-02) ----
+   A table win over an AI hero once paid the dummy's trophy and best score by
+   mistake; v5.79 stopped that, and it earned nothing. This is what it earns
+   now: a count, per AI hero and per level (Sharp / Steady), of the finished
+   games played against it on this device. Nothing is pulled and nothing is
+   scored; a draw is a draw and a concession is a loss (CR 4.5.3c: the
+   player who concedes loses the game).
+
+   ONLY A FINISHED LOCAL GAME AGAINST A HERO. The board calls `recordResult`
+   once, when `over` arrives; a game left before that never reaches it, and
+   a two-phone table or the trainer never calls it at all.
+
+   STORAGE IS A CONVENIENCE AND MAY NOT EXIST. A private window, a phone with
+   site data blocked, or a full quota throws on access, on read or on write.
+   Every touch is inside try/catch: a read that fails is an empty record, a
+   write that fails is reported (false) and the game goes on. The storage is
+   handed in as a THUNK, because on some browsers merely reading
+   `window.localStorage` is what throws.
+
+   Shape, under RECORD_KEY:
+     {v: 1, foes: {<hero key>: {sharp: {w, l, d}, steady: {w, l, d}}}}
+   Only pairs that were played appear. Anything else found there (another
+   version, a hand edit, a half-written value) reads as empty rather than as
+   a number nobody counted. */
+const RECORD_KEY = "dawnblade.aiRecord";
+const LEVELS = ["sharp", "steady"];
+const OUTCOMES = ["w", "l", "d"];
+const count = n => (Number.isInteger(n) && n >= 0 ? n : 0);
+
+/* what one finished game was, from `mySeat`'s side: "w" | "l" | "d", or null
+   while there is no result (an unfinished or abandoned game) */
+function outcomeOf(over, mySeat){
+  if(!over || typeof over !== "object") return null;
+  if(over.winner === null || over.winner === undefined) return over.how ? "d" : null;
+  return over.winner === mySeat ? "w" : "l";
+}
+
+/* a clean copy: known heroes' known levels, non-negative whole counts */
+function cleanRecord(r){
+  const out = {v: 1, foes: {}};
+  if(!r || typeof r !== "object" || r.v !== 1 || !r.foes || typeof r.foes !== "object") return out;
+  for(const k of Object.keys(r.foes)){
+    const f = r.foes[k]; if(!f || typeof f !== "object") continue;
+    for(const lv of LEVELS){
+      const c = f[lv]; if(!c || typeof c !== "object") continue;
+      (out.foes[k] = out.foes[k] || {})[lv] = {w: count(c.w), l: count(c.l), d: count(c.d)};
+    }
+  }
+  return out;
+}
+
+/* a NEW record with exactly one counter one higher; the input is untouched.
+   An unknown level or outcome, or no hero, changes nothing. */
+function bumpRecord(r, foeKey, level, outcome){
+  const out = cleanRecord(r);
+  if(!foeKey || typeof foeKey !== "string" || !LEVELS.includes(level) || !OUTCOMES.includes(outcome)) return out;
+  const f = out.foes[foeKey] = out.foes[foeKey] || {};
+  const c = f[level] = f[level] || {w: 0, l: 0, d: 0};
+  c[outcome] += 1;
+  return out;
+}
+
+function loadRecord(getStorage){
+  try {
+    const ls = getStorage && getStorage(); if(!ls) return cleanRecord(null);
+    const raw = ls.getItem(RECORD_KEY);
+    return cleanRecord(raw == null ? null : JSON.parse(raw));
+  } catch(e){ return cleanRecord(null); }
+}
+
+function saveRecord(getStorage, r){
+  try {
+    const ls = getStorage && getStorage(); if(!ls) return false;
+    ls.setItem(RECORD_KEY, JSON.stringify(cleanRecord(r)));
+    return true;
+  } catch(e){ return false; }
+}
+
+/* the board's one call: read, bump, write. Answers the record it now holds
+   (the bumped one even when the write failed, so the screen can still show
+   it this session), or null when there was nothing to count. */
+function recordResult(getStorage, foeKey, sharp, over, mySeat){
+  const o = outcomeOf(over, mySeat);
+  if(!o || !foeKey) return null;
+  const r = bumpRecord(loadRecord(getStorage), foeKey, sharp ? "sharp" : "steady", o);
+  saveRecord(getStorage, r);
+  return r;
+}
+
+return {createLocal, STEP_LIMIT,
+        RECORD_KEY, outcomeOf, cleanRecord, bumpRecord, loadRecord, saveRecord, recordResult};
 });

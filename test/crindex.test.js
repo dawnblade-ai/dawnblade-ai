@@ -67,9 +67,12 @@ test("crindex — the verdict counts are pinned", () => {
      day that category emptied. A generated report is not documentation, so
      it is not an input now. (The rule numbers are deliberately not written
      here — this file is scanned, and naming them would cite them.) */
-  assert.equal(rs.length, 61, "the number of distinct CR rules this project cites moved");
+  /* 61 -> 62 and 51 -> 52 guarded AT v5.84: the concession rule, cited where
+     the record against an AI hero counts a concession as a loss and drilled
+     there (test/airecord.test.js). */
+  assert.equal(rs.length, 62, "the number of distinct CR rules this project cites moved");
   /* 50 -> 51 guarded and 6 -> 5 drill-only AT v4.66: CR 7.1.2, built. */
-  assert.equal(by(rs, "guarded").length,   51, "guarded count moved");
+  assert.equal(by(rs, "guarded").length,   52, "guarded count moved");
   assert.equal(by(rs, "UNGUARDED").length,  3, "UNGUARDED count moved");
   assert.equal(by(rs, "drill-only").length, 5, "drill-only count moved");
   assert.equal(by(rs, "prose").length,      2, "prose count moved");
