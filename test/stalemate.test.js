@@ -95,21 +95,31 @@ test("a dead position ends as a draw, on the turn the window fills and not one t
   assert.equal(J.legal(end, {t: "pass"}, 0) != null, true, "a finished game takes no more actions");
 });
 
-test("the same stillness with a card left in a deck does not end", () => {
-  /* Both seats only pass, from a real opening: hands stay at intellect and
-     nothing moves while the decks still hold cards. */
+test("RULING (user, 2026-11-02): the same stillness with cards left in the decks IS a draw; a deck still being drawn from is not", () => {
+  /* Both seats only pass, from a real opening: hands stay at intellect, so
+     neither seat ever draws and the decks keep their cards (blaze-enigma-46's shape). */
   const end = drive(S.match("kayo", "gravy", "loop-1", 0), quietAct(), 600);
-  assert.ok(!end.over, "nobody attacks: the game cannot end, and the engine did not end it");
+  assert.ok(end.over && end.over.winner === null && end.over.how === "stalemate", "nothing changes for a window: a draw");
   assert.ok(end.sides.every(s => s.deck.length > 0), "fixture: cards left in both decks");
-  assert.ok(end.turn - end.still.since >= J.STALEMATE_TURNS, "fixture: genuinely quiet, so ONLY the decks keep it going (quiet " + (end.turn - end.still.since) + ")");
-  assert.equal(S.classify(end), "STALL", "and the harness still calls it the loop it is");
-  /* one deck empty, one not, is the same: both must be spent */
+  assert.equal(end.turn - end.still.since, J.STALEMATE_TURNS, "on the turn the window filled");
+  assert.equal(S.classify(end), "DRAW");
+  /* one deck empty, one not: still a draw */
   const half = {...deadStart()};
-  half.sides = half.sides.map((sd, i) => i ? {...sd, deck: sd.deck.length ? sd.deck : [sd.hand[0]]} : sd);
+  half.sides = half.sides.map((sd, i) => i ? {...sd, deck: [sd.hand[0]]} : sd);
   const g1 = J.stalemateCheck({...half, still: {sig: J.stillSig(half), since: half.turn - 99}});
-  assert.ok(!g1.over, "a card in one deck is a way out");
-  const spent = J.stalemateCheck({...deadStart(), still: {sig: J.stillSig(deadStart()), since: deadStart().turn - 99}});
-  assert.ok(spent.over && spent.over.winner === null, "control: with both decks spent the same long stillness is a draw");
+  assert.ok(g1.over && g1.over.winner === null, "a card in one deck does not keep a dead position open");
+  /* a deck that is drawn from every turn is a change every turn: never a draw */
+  let n = J.stalemateCheck({...deadStart(), turn: 1, still: undefined});
+  n = edit(n, 0, sd => ({deck: sd.hand.map((c, k) => c).concat(Array.from({length: 60}, (_, k) => ({...sd.hand[0], uid: "d" + k, name: "Deck " + k})))}));
+  for(let t = 0; t < 50; t++){
+    n = J.stalemateCheck({...n, turn: n.turn + 1});
+    n = J.stalemateCheck(edit(n, 0, sd => ({hand: sd.hand.concat([sd.deck[sd.deck.length - 1]]), deck: sd.deck.slice(0, -1)})));
+    assert.ok(!n.over, "a position that draws a card each turn is not dead (turn " + n.turn + ")");
+  }
+  /* control: stop drawing and the same position ends within a window */
+  for(let t = 0; t < J.STALEMATE_TURNS + 2 && !n.over; t++) n = J.stalemateCheck({...n, turn: n.turn + 1});
+  assert.ok(n.over && n.over.winner === null, "control: stop drawing and it is a draw, with " + n.sides[0].deck.length + " cards still in the deck");
+  assert.ok(n.sides[0].deck.length > 0, "fixture: the deck still had cards");
 });
 
 test("a change after a long quiet spell starts the window again", () => {
@@ -153,7 +163,7 @@ test("the draw is said plainly, in words with no identifiers, and every reader h
   const end = drive(deadStart(), null, 800);
   const t = J.drawText(end.over, end.sides);
   assert.ok(t, "a draw has a text");
-  assert.equal(t.status, "Draw — both decks are spent and neither hero can win.");
+  assert.equal(t.status, "Draw — nothing can change any more, so neither hero can win.");
   /* the line IS the observable here: the feed carries exactly the status line */
   assert.ok(end.feed.includes(t.status), "the feed says it");
   for(const w of [t.status, t.title, t.names, t.note])
@@ -274,17 +284,16 @@ test("a life change inside the window starts it again", () => {
   assert.ok(late.turn >= base.turn + J.STALEMATE_TURNS - 4, "a late change restarted the window (" + late.turn + " vs " + base.turn + ")");
 });
 
-test("a cycle with a card still in a deck does not end, and counts only the turns the decks are empty", () => {
+test("a cycle with a card still in a deck is a draw too (RULING 2026-11-02); a deck that shrinks keeps it open", () => {
   const withDeck = g => edit(g, 1, sd => ({deck: [sd.hand[0]]}));
-  const held = cycle(withDeck(cycleStart()), 120, null);
-  assert.ok(!held.over, "a card in a deck is a way out (turn " + held.turn + ")");
-  assert.equal(held.still.loop.since, held.turn, "and the window never opened");
-  /* the deck empties at turn 15: the window opens THEN, not at the start */
-  let emptied = null;
-  const end = cycle(withDeck(cycleStart()), 200, (g, t) => { if(t === 15){ emptied = g.turn; return edit(g, 1, sd => ({deck: []})); } return g; });
-  assert.ok(end.over && end.over.winner === null);
-  assert.ok(end.turn - emptied >= J.STALEMATE_TURNS, "a full window after the deck emptied (" + (end.turn - emptied) + ")");
-  assert.ok(cycle(cycleStart(), 200).over, "control: the same cycle with empty decks ends");
+  const end = cycle(withDeck(cycleStart()), 200, null);
+  assert.ok(end.over && end.over.winner === null, "a cycle with a deck is dead as well (turn " + end.turn + ")");
+  assert.equal(end.sides[1].deck.length, 1, "fixture: the card was still in the deck");
+  assert.equal(end.turn - end.still.loop.since, J.STALEMATE_TURNS);
+  /* a deck losing a card every few turns is a new position each time */
+  const deck = g => edit(g, 1, sd => ({deck: Array.from({length: 40}, (_, k) => ({...sd.hand[0], uid: "dk" + k, name: "Dk " + k}))}));
+  const drawn = cycle(deck(cycleStart()), 30, (g, t) => edit(g, 1, sd => ({deck: sd.deck.slice(1)})));
+  assert.ok(!drawn.over, "a deck still being drawn from is never idle (turn " + drawn.turn + ")");
 });
 
 test("a seat that keeps building, or keeps counting, is not idle; the same cycle that stops is", () => {

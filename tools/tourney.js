@@ -71,7 +71,7 @@ for(const a of A) for(const b of B){
     const over = r.game.over;
     if(!over){ stalls++; games.push({seed, a, b, result: "STALL", turn: r.game.turn, steps: r.steps}); }
     else if(over.winner == null){
-      /* the engine's own DRAW (both decks spent, nothing moving): a result, not a win for anyone */
+      /* the engine's own DRAW (nothing changed for twenty turns): a result, not a win for anyone */
       draws.push(seed); turnsum += r.game.turn;
       games.push({seed, a, b, result: "DRAW", how: over.how, turn: r.game.turn, steps: r.steps, hp: r.game.sides.map(x => x.hp)});
     }
@@ -116,7 +116,7 @@ if(SEEDS > 1){
 const bad = games.filter(g => g.result === "STALL");
 if(bad.length) console.log("\nSTALLS:", JSON.stringify(bad.slice(0,6)));
 const dr = games.filter(g => g.result === "DRAW");
-if(dr.length) console.log("\nDRAWS (the engine ended them: both decks spent, nothing moving):", JSON.stringify(dr.slice(0,6)));
+if(dr.length) console.log("\nDRAWS (the engine ended them: nothing changed for twenty turns):", JSON.stringify(dr.slice(0,6)));
 console.log(`\nlongest unchanged stretch a decided game came back from: ${quietMax.turns} turns (${quietMax.seed}) \u2014 the engine draws at ${J.STALEMATE_TURNS}`);
 if(refusals.length) console.log("\nREFUSALS (first 8):", JSON.stringify(refusals.slice(0,8), null, 1));
 if(viols.length)    console.log("\nVIOLATIONS (first 8):", JSON.stringify(viols.slice(0,8), null, 1));

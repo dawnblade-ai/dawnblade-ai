@@ -2880,6 +2880,19 @@ const winCheck = (g, by) => {
    and returns inside a turn is movement, not quiet. A deck with a card in it
    is never a draw: the next draw is a way out.
 
+   RULING (user, 2026-11-02): asked "Should 'nothing at all changes for 20
+   turns' end the game as a draw even when a deck still has cards?" the user
+   answered "Yes, draw". So the empty-decks precondition is GONE (v5.75):
+   `blaze-enigma-46` had Enigma holding a full hand (= intellect) she never
+   plays, so she never drew from the 8 cards left in her deck, and Blaze had
+   nothing; 1 life each, nothing changing from turn 35. The deck needs no
+   special case: `stillSig` lists the deck's cards in order and `loopSig` as a
+   set, so a deck still being drawn from (or pitched into) is a changed
+   position every turn and restarts the window by itself. Where the paragraphs
+   below say "with both decks empty" or "a deck with a card in it starts the
+   window again", read them with this ruling: the deck is part of the census,
+   not a gate on it.
+
    WHY 20. `turn` counts each seat's turn, so 20 is ten turns of EACH seat. With
    no deck and no draw, nothing a seat holds becomes payable without a change
    `stillSig` sees, so a dead position repeats exactly every turn. On the
@@ -2967,20 +2980,20 @@ function loopSig(g){
       + (sd.arsenal ? _loopId(sd.arsenal) : "-") + "|" + _loopSet(sd.intimidated) + "|" + ctr;
   }).join("||");
 }
-const DRAW_LINE = "Draw \u2014 both decks are spent and neither hero can win.";
+const DRAW_LINE = "Draw \u2014 nothing can change any more, so neither hero can win.";
 function stalemateCheck(g){
   if(g.over) return g;
-  const was = g.still || {}, sig = stillSig(g), spent = decksSpent(g);
+  const was = g.still || {}, sig = stillSig(g);
   let still = was.sig === sig ? was : {...was, sig, since: g.turn};
   /* the cycle tracker: one look per turn, at the first state the turn has */
   const lp = was.loop;
   if(!lp || lp.turn !== g.turn){
     const ps = loopSig(g), ring = lp ? lp.ring : [];
     still = {...still, loop: {turn: g.turn, ring: [ps].concat(ring).slice(0, LOOP_RING),
-                              since: (lp && spent && ring.includes(ps)) ? lp.since : g.turn}};
+                              since: (lp && ring.includes(ps)) ? lp.since : g.turn}};
   }
   const idle = Math.max(g.turn - still.since, g.turn - still.loop.since);
-  if(spent && idle >= STALEMATE_TURNS)
+  if(idle >= STALEMATE_TURNS)
     return say({...g, still, over: {winner: null, how: "stalemate"}, priority: null}, DRAW_LINE);
   return still === g.still ? g : {...g, still};
 }
@@ -2991,7 +3004,7 @@ function drawText(over, sides){
   if(!over || over.winner !== null) return null;
   return {status: DRAW_LINE, title: "A DRAW",
           names: (sides[0] ? sides[0].name : "") + " and " + (sides[1] ? sides[1].name : ""),
-          note: "Both decks are spent and nothing has changed for ten turns each, so neither hero can win."};
+          note: "Nothing has changed for ten turns each, so neither hero can win."};
 }
 
 /* ---- the reducer ------------------------------------------------------ */

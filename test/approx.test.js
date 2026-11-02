@@ -2250,8 +2250,8 @@ probe("peers-hold-full-state", () => {
    source, a game-over built only from `{win:` shapes - and went red the day the
    draw was built, which is what a `stated` record is for. It asserts the BUILT
    thing now. BOTH HALVES ARE DRIVEN: the table's body ends a position with both
-   decks spent and a stillness a window old, and does not when a card is left in
-   a deck; the trainer's real `setG` source (test/helpers/trainerfunnel.js - `Battle`
+   decks spent and a stillness a window old, and, since R8 (2026-11-02), a card left
+   in a deck does not keep it open; the trainer's real `setG` source (test/helpers/trainerfunnel.js - `Battle`
    is a closure no drill can call) runs the same states through the same body and
    ends the same position, with the same words. The page is driven by tools/page.js. */
 probe("trainer-no-stalemate-draw", () => {
@@ -2260,8 +2260,11 @@ probe("trainer-no-stalemate-draw", () => {
   const end = J.stalemateCheck({...g, still});
   assert.ok(end.over && end.over.winner === null, "the table no longer draws a dead position");
   const stocked = H.state({deck:[], hand:[], hp:12}, {deck:[{uid:"z", name:"Z", pitch:1, tt:"Generic Action", ty:["Generic","Action"], tx:"", kw:[]}], hand:[], hp:12}, {turn: 30});
-  assert.ok(!J.stalemateCheck({...stocked, still: {sig: J.stillSig(stocked), since: stocked.turn - 99}}).over,
-    "a card left in a deck is a way out: the table must not draw it");
+  /* RULING (user, 2026-11-02): a card left in a deck is NOT a way out - nothing changing for a window draws */
+  assert.ok(J.stalemateCheck({...stocked, still: {sig: J.stillSig(stocked), since: stocked.turn - 99}}).over,
+    "a dead position with a card left in a deck is a draw too (R8)");
+  assert.ok(!J.stalemateCheck({...stocked, still: {sig: "a position the deck has since left", since: stocked.turn - 99}}).over,
+    "control: a position that moved (a deck drawn from) is not dead");
   /* THE TRAINER, driven: the same two states through its own funnel */
   const T = require("./helpers/trainerfunnel.js");
   const trainer = T.trainerFunnel({...g, mode: "act", over: null, log: [], feed: [], still});
@@ -2270,7 +2273,7 @@ probe("trainer-no-stalemate-draw", () => {
     "the trainer no longer draws a dead position through its funnel - the record must move");
   const open = T.trainerFunnel({...stocked, mode: "act", over: null, log: [], feed: [], still: {sig: J.stillSig(stocked), since: stocked.turn - 99}});
   open.setG(s => s);
-  assert.equal(open.g.over, null, "a card left in a deck is a way out in the trainer too");
+  assert.deepEqual(open.g.over, {winner: null, how: "stalemate"}, "a card left in a deck does not keep the trainer open either (R8)");
   /* ONE BODY: the trainer's source asks the engine and keeps no tracker of its own */
   const html = T.HTML.replace(/\/\*[\s\S]*?\*\//g, "");
   assert.ok(/DawnJudge\.stalemateCheck\(/.test(html), "the trainer calls the table's check");
