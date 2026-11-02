@@ -155,7 +155,7 @@ test("the printing loop is mirrored too — it decides which face a card wears",
 
 let _db = null, _pool = null;
 const DB = () => _db || (_db = C.buildMaps(
-  JSON.parse(fs.readFileSync(CACHE, "utf8")).filter(c => c && c.name).map(C.mapDbCard)));
+  require("./helpers/extract").readCards(CACHE).filter(c => c && c.name).map(C.mapDbCard)));
 
 function pool(){
   if(_pool) return _pool;
@@ -184,7 +184,7 @@ function recordFor(card){
 }
 
 /* ---- THE PINNED POOL IS THE WHOLE REASON THE SUITE NEEDS NO NETWORK ---
-   CLAUDE.md states what `data/pool.json` is in one sentence — "the pinned
+   CLAUDE.md states what `data/pool.js` is in one sentence — "the pinned
    pool, N records, every card the pool can reach" — and that sentence was
    the ONLY place the number lived. It read **764** while the file held
    **797**: a doc claim is a test with no assertion (v3.41), and this one
@@ -200,8 +200,7 @@ function recordFor(card){
    cached database; this one must not, because "the suite needs no
    network" is exactly the property it states. */
 test("the pinned pool carries every card a match can deal", () => {
-  const raw = JSON.parse(fs.readFileSync(
-    path.join(__dirname, "..", "data", "pool.json"), "utf8"));
+  const raw = require("./helpers/extract").readCards(path.join(__dirname, "..", "data", "pool.js"));
   assert.equal(raw.length, 797,
     "the pinned pool moved — re-derive CLAUDE.md's sentence with it");
 
@@ -339,7 +338,7 @@ test("every hero is seated at its PRINTED life and intellect", {skip}, () => {
    dangling) and it fails if the pinner stops keeping tokens by type. */
 test("every token the pool's cards can create resolves in the pool", {skip}, () => {
   const {tokenNames} = require("../tools/pin-pool.js");
-  const recs = JSON.parse(fs.readFileSync(CACHE, "utf8")).filter(c => c && c.name);
+  const recs = require("./helpers/extract").readCards(CACHE).filter(c => c && c.name);
   const db = C.buildMaps(recs.map(C.mapDbCard));
   const names = [...tokenNames(recs.map(c => ({functional_text: c.functional_text || ""})))];
 
@@ -379,10 +378,9 @@ test("the pinner keeps tokens by TYPE, the way the loader does", {skip}, () => {
      `drift.test.js` does. */
   const E = require("./helpers/extract");
   if(!E.hasLiveDb()) return;
-  const live = JSON.parse(fs.readFileSync(E.liveDbPath(), "utf8")).filter(c => c && c.name);
+  const live = require("./helpers/extract").readCards(E.liveDbPath()).filter(c => c && c.name);
   const isTok = c => /token/i.test(c.type_text || "") || /token/i.test((c.types || []).join(" "));
-  const pool = JSON.parse(fs.readFileSync(
-    path.join(__dirname, "..", "data", "pool.json"), "utf8"));
+  const pool = require("./helpers/extract").readCards(path.join(__dirname, "..", "data", "pool.js"));
   const have = new Set(pool.filter(isTok).map(c => c.name));
   const liveToks = live.filter(isTok).map(c => c.name);
   assert.ok(liveToks.length >= 40, "the live token scan found almost nothing — repoint it");

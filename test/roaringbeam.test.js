@@ -58,7 +58,7 @@ test("each half ALONE refuses — vocabulary with no claimant is not built", () 
 });
 
 test("the card reports FULL, and it is the pool's only claimant", {skip}, () => {
-  const pool = JSON.parse(fs.readFileSync(require("path").join(__dirname, "..", "data", "pool.json"), "utf8"));
+  const pool = require("./helpers/extract").readCards(require("path").join(__dirname, "..", "data", "pool.js"));
   const hits = [];
   for(const r of pool){
     const m = C.mapDbCard(r);

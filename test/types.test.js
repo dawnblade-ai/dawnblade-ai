@@ -32,7 +32,7 @@ const W = loadData();
 let _pool = null;
 function pool(){
   if(_pool) return _pool;
-  const db = C.buildMaps(JSON.parse(fs.readFileSync(CACHE, "utf8"))
+  const db = C.buildMaps(require("./helpers/extract").readCards(CACHE)
     .filter(c => c && c.name).map(C.mapDbCard));
   const seen = new Set(); const out = [];
   for(const h of W.HEROES){
@@ -58,7 +58,7 @@ function pool(){
 let _extra = null;
 function offDeck(){
   if(_extra) return _extra;
-  const db = C.buildMaps(JSON.parse(fs.readFileSync(CACHE, "utf8"))
+  const db = C.buildMaps(require("./helpers/extract").readCards(CACHE)
     .filter(c => c && c.name).map(C.mapDbCard));
   const out = [];
   const take = e => { const c = C.resolveEntry(db, e, null); if(c.resolved) out.push(c); };

@@ -55,7 +55,7 @@ const X  = require("./helpers/extract.js");
 const DATA = X.loadData();
 let _db = null;
 const db = () => _db || (_db = C.buildMaps(
-  JSON.parse(fs.readFileSync(X.cardDbPath(), "utf8")).filter(c => c && c.name).map(C.mapDbCard)));
+  require("./helpers/extract").readCards(X.cardDbPath()).filter(c => c && c.name).map(C.mapDbCard)));
 
 const heroBy = re => DATA.HEROES.find(h => re.test(h.n));
 

@@ -46,7 +46,7 @@ const skip = !hasLiveDb() && "no live database — run: node tools/audit.js --re
 
 const W = loadData();
 const RANK = {none: 0, part: 1, full: 2};
-const load = p => C.buildMaps(JSON.parse(fs.readFileSync(p, "utf8"))
+const load = p => C.buildMaps(require("./helpers/extract").readCards(p)
   .filter(c => c && c.name).map(C.mapDbCard));
 
 /* Every entry the pool actually plays, resolved the way the game resolves
@@ -91,8 +91,8 @@ test("no upstream rewording has cost a card its reading", {skip}, () => {
 
   assert.deepEqual(lost, [], lost.length + " card(s) read worse on the live database than on "
     + "the pinned pool — upstream reworded them and the parser's anchors no longer match. Teach "
-    + "the parser BOTH wordings (a warm localStorage cache still holds the old text, so the two "
-    + "populations coexist), then re-pin with `node tools/pin-pool.js`:" + "\n"
+    + "the parser BOTH wordings (the phone plays the pinned text until the re-pin, and a later "
+    + "rewording can flip it back), then re-pin with `node tools/pin-pool.js`:" + "\n"
     + lost.map(l => "  " + l.key + "  " + l.why
         + (l.pin ? "\n" + "      pinned: " + l.pin + "\n" + "      live:   " + l.now : "")).join("\n"));
 });
@@ -207,7 +207,7 @@ test("the pinned pool maps to the same cards the live database does", {skip}, ()
 test("upstream has not yet published the two precons we are waiting on", {skip}, () => {
   const NEW = JSON.parse(fs.readFileSync(
     require("path").join(__dirname, "..", "data", "newsets.json"), "utf8"));
-  const live = JSON.parse(fs.readFileSync(liveDbPath(), "utf8")).filter(c => c && c.name);
+  const live = require("./helpers/extract").readCards(liveDbPath()).filter(c => c && c.name);
 
   /* PROVE THE SCAN IS ALIVE BEFORE TRUSTING ITS GAPS (v4.00, v3.81). Its
      first draft read `set_printing_unique_id` and answered ABSENT for

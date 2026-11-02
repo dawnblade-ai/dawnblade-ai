@@ -55,7 +55,7 @@ These are not style preferences. Each one has broken the page in production.
 |---|---|
 | 10–12 | the three CDN tags (React, ReactDOM, Babel) |
 | 13–788 | the single `<style>` block |
-| 789–1383 | plain data script — `APP_VER`, `DATA_VER`, `HEROES`, `DECKS`, `DBSRC` |
+| 789–1383 | plain data script — `APP_VER`, `DATA_VER`, `HEROES`, `DECKS` (then `data/pool.js`, the cards) |
 | 1390–1454 | the 21 `engine/*.js` `<script src>` tags |
 | 1455–1527 | the **bridge** (plain JS, not babel) — lifts engine exports to bare names |
 | 1528–1847 | `script0` |
@@ -308,15 +308,15 @@ npm install --no-save --prefix "$SCRATCH" @babel/standalone
 
 ### c. The page can be DRIVEN at phone dimensions (v4.28)
 
-The three CDN tags and `DBSRC` are the only things a sandbox cannot fetch, and
+The three CDN tags are the only things a sandbox cannot fetch (the cards are
+`data/pool.js`, beside the page, since v5.75), and
 each is a one-line substitution into a **scratch copy** — `index.html` itself
 is never touched, so what runs is the real page with the real engine:
 
 ```sh
 npm install --no-save --prefix "$SCRATCH" react@18.2.0 react-dom@18.2.0 \
                                           @babel/standalone playwright
-curl -o "$SCRATCH/serve/card.json" "$DBSRC"      # the live database, ~23MB
-cp -r engine "$SCRATCH/serve/"                    # UMD modules, as authored
+cp -r engine data "$SCRATCH/serve/"               # UMD modules + the pinned pool, as authored
 sed -e 's|https://cdnjs[^"]*react.production.min.js|vendor/react.js|' … index.html \
     > "$SCRATCH/serve/index.html"
 python3 -m http.server -d "$SCRATCH/serve"
@@ -422,7 +422,7 @@ this file used to describe".
    readers for almost everything (`parser.js` alone exports ~140).
 
 2. **The golden rule.** *Never invent or hardcode card effects.* Card text
-   streams at runtime from the public FaB database. A screen that special-cases
+   is the public FaB database's, pinned in `data/pool.js`. A screen that special-cases
    a card by name breaks this at the UI layer — v3.22's Runechant and v4.04's
    Inertia are both that bug.
 

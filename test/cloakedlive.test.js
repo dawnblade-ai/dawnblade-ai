@@ -152,7 +152,7 @@ test("PREMISE: every Cloaked pool record prints no defence and its only activati
   /* What the ruling does NOT decide is whether a face-down piece keeps a
      printed DEFENCE. It is moot while no Cloaked record prints one, and
      this fails the day one arrives, so the question is asked then. */
-  const pool = JSON.parse(fs.readFileSync(path.join(ROOT, "data/pool.json"), "utf8"));
+  const pool = require("./helpers/extract").readCards(path.join(ROOT, "data/pool.js"));
   const recs = (Array.isArray(pool) ? pool : (pool.cards || Object.values(pool)))
     .filter(c => /\*\*Cloaked\*\*/.test(c.functional_text || ""));
   assert.ok(recs.length >= 1, "the scan found no Cloaked record — it stopped matching");

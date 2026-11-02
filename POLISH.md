@@ -97,7 +97,7 @@ built to last."* That is a statement about the SEAMS, and it is the one
 condition already largely met:
 
 - **a new deck is DATA.** Adding one must touch the deck list and nothing
-  else. Card text streams from the database and is read by the parser —
+  else. Card text comes from the pinned database pool and is read by the parser —
   never invented, never special-cased by name;
 - **one copy of every shared function** (`engine/`, the no-mirror rule);
 - **one copy of the card semantics** (`effects.js`), called by both turn
@@ -106,7 +106,7 @@ condition already largely met:
 
 **The test of this condition is a stranger.** Could someone who has never
 seen the codebase add the next hero's precon by editing one list? Today:
-close. `data/pool.json` needs a repin and `DATA_VER` a bump, and both are
+close. `data/pool.js` needs a repin and `DATA_VER` a bump, and both are
 documented — but neither is automatic.
 
 ---

@@ -188,7 +188,7 @@ test("both drains ask promptLapse before skipping a sheet", () => {
 
 function poolCards(){
   H.db();
-  const recs = JSON.parse(fs.readFileSync(require("./helpers/extract").cardDbPath(), "utf8"));
+  const recs = require("./helpers/extract").readCards(require("./helpers/extract").cardDbPath());
   const out = [], seen = new Set();
   for(const r of recs) for(const p of [0, 1, 2, 3]){
     let c; try { c = H.card(r.name, p); } catch(e){ continue; }

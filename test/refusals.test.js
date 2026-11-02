@@ -37,7 +37,7 @@ const J = require("../engine/judge.js");
 const {loadData} = require("./helpers/extract.js");
 
 const skip = !H.hasDb() && "no cached card database";
-const pool = require("../data/pool.json");
+const pool = require("../data/pool.js");
 const rec = n => pool.find(c => c.name === n);
 const asCard = (n, uid) => {
   const r = rec(n);

@@ -190,7 +190,7 @@ test("an on-hit trigger's SUBJECT is read — a third-person one refuses", () =>
 
 test("the pool's on-hit subjects are pinned as a SET, both halves", {skip}, () => {
   H.db();
-  const raw = require("../data/pool.json");
+  const raw = require("../data/pool.js");
   const self = [], other = [];
   for(const c of raw){
     for(const sent of (c.functional_text || "").split(/\n+/).flatMap(l => l.split(/(?<=\.)\s+/))){
@@ -290,7 +290,7 @@ test("a token minted under the OPPONENT's control gets ITS counters, not the act
 
 test("the enters-with-counters token census is pinned, both halves", {skip}, () => {
   H.db();
-  const raw = require("../data/pool.json");
+  const raw = require("../data/pool.js");
   const toks = raw.filter(c => /token/i.test(c.type_text || ""));
   const prints = toks.filter(c => /enters the arena with/i.test(c.functional_text || ""))
                      .map(c => c.name).sort();

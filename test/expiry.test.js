@@ -96,7 +96,7 @@ test("EVERY prevention the parser reads carries the window its clause prints", {
      question is asked of the PARSER: every op it emits, against the
      clause it emitted it from. */
   const fs = require("fs");
-  const raw = JSON.parse(fs.readFileSync(require("path").join(__dirname, "..", "data", "pool.json"), "utf8"));
+  const raw = require("./helpers/extract").readCards(require("path").join(__dirname, "..", "data", "pool.js"));
   const seen = new Set();
   let pools = 0, windowed = 0, keywords = 0;
   const wrong = [], unwindowed = [];

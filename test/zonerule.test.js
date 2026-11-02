@@ -366,7 +366,7 @@ test("PREMISE: Savage Feast is the pool's only additional discard, and its rider
      arriving with an additional discard AND a "this way" reader of it fails
      here, and that credit becomes observable and must be built. */
   H.db();
-  const pool = require("../data/pool.json"), found = new Set();
+  const pool = require("../data/pool.js"), found = new Set();
   for(const r of pool){
     const c = {name: r.name, tx: r.functional_text || "", tt: r.type_text, ty: r.types, kw: r.card_keywords,
                pitch: r.pitch, cost: r.cost, power: r.power, def: r.defense};

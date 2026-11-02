@@ -1017,7 +1017,7 @@ test("the pool's ability NAMES are exactly Briar's and Iyslander's", {skip}, () 
      count moves, the annotation is claiming something new and the reader
      should go and look rather than trust the flag. */
   const AUDIT = require("../tools/audit.js");
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const arr = Array.isArray(pool) ? pool : Object.values(pool);
   const odd = [];
   arr.forEach(c => (c.card_keywords || []).forEach(k => {

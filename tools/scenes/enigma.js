@@ -42,7 +42,7 @@ module.exports = [
        "Read the other way round her ability is \"pitch any blue card\" " +
        "and the transcend loop her deck is built around is decoration.",
   run(c){
-    const pool = require("../../data/pool.json");
+    const pool = require("../../data/pool.js");
     const ic = pool.find(x => x.name === "Inner Chi");
     const her = pool.find(x => x.name === "Enigma" && /Hero/.test(x.type_text || ""));
     const hp = c.P.parseHeroPower(her.functional_text, true);
@@ -171,7 +171,7 @@ module.exports = [
        "per Turn Action - {r}: Attack'\". Build Cosmo and the clause " +
        "becomes reachable; until then there is no such attack to discount.",
   run(c){
-    const pool = require("../../data/pool.json");
+    const pool = require("../../data/pool.js");
     const shield = pool.find(x => x.name === "Spectral Shield");
     const cosmo = pool.find(x => /^Cosmo/.test(x.name || ""));
     const cx = {name: cosmo.name, tt: cosmo.type_text, ty: cosmo.types,
@@ -283,7 +283,7 @@ module.exports = [
        "and all four cards read `tier: full` because the keyword line IS " +
        "consumed. Driving it is the only thing that sees it (v4.31).",
   run(c){
-    const pool = require("../../data/pool.json");
+    const pool = require("../../data/pool.js");
     const six = pool.filter(x => (+x.power || 0) >= 6
       && (x.types || []).some(t => /^illusionist$/i.test(String(t))));
     /* Her three, at every pitch, resolved the way the game resolves them. */

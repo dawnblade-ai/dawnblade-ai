@@ -46,7 +46,7 @@ const INV = require("../engine/invariants.js");
 
 const SRC = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8");
 const gate = t => H.hasDb() ? t : { skip: true };
-const pool = require("../data/pool.json");
+const pool = require("../data/pool.js");
 const rec = r => ({name: r.name, pitch: +(r.pitch || 0), tt: r.type_text, ty: r.types,
                    tx: r.functional_text, kw: r.card_keywords, cost: r.cost,
                    power: r.power, def: r.defense});

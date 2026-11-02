@@ -31,7 +31,7 @@ const skip = !fs.existsSync(CACHE) && "no cached card database";
 const DATA = skip ? null : require("./helpers/extract.js").loadData();
 let _db = null;
 const DB = () => _db || (_db = C.buildMaps(
-  JSON.parse(fs.readFileSync(CACHE, "utf8")).filter(c => c && c.name).map(C.mapDbCard)));
+  require("./helpers/extract").readCards(CACHE).filter(c => c && c.name).map(C.mapDbCard)));
 
 /* The board's own call, one hero per seat. */
 function tableMatch(k0, k1, seed){

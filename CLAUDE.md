@@ -73,20 +73,24 @@ serves the repo as authored, it is played on an iPhone, and it must run from
 
 ## Card data — the golden rule
 
-**Never invent or hardcode card effects.** Card text streams at runtime from the
-public card database and is parsed (`classifyClause`, `fxParse`). If a card does
+**Never invent or hardcode card effects.** Card text is the public card database's,
+pinned verbatim, and is parsed (`classifyClause`, `fxParse`). If a card does
 something new, teach the parser to read its text — never special-case a card by name.
 
-- **The text is upstream's and it moves.** The game streams the-fab-cube's `develop`
-  branch live. `data/pool.json` is the pinned fixture (fetched by `tools/pin-pool.js`,
-  never authored) that every drill reads, so the suite needs no network.
-  `test/drift.test.js` is the ONLY drill that reads the live wire; refresh with
-  `node tools/audit.js --refresh` at the start of a release cycle.
+- **The page plays the pinned pool and nothing else** — RULING (user, 2026-11-02),
+  "pinned pool only": phones play exactly the text the drills tested, the game survives
+  upstream moving or vanishing, and no 22 MB download. `data/pool.js` (raw the-fab-cube
+  records, written by `tools/pin-pool.js`, never authored; a `<script src>` because
+  file:// refuses fetch) is what the page loads AND every drill reads (`require` it, or
+  `readPool()` for a fresh copy). Upstream still moves: each release cycle re-pins on
+  purpose (`node tools/audit.js --refresh`, read `test/drift.test.js` — the ONLY drill
+  on the live wire — then `node tools/pin-pool.js`). `test/poolreach.test.js` proves the
+  pool holds every card the page resolves.
 - **Read both wordings.** Upstream prints contractions both ways at once. `parser.js`'s
   `SYNONYMS` levels idioms (synonyms only, never a change of meaning) before
   `classifyClause` sees a word — write anchors against the LEVELLED text.
-- **`DATA_VER`** keys the localStorage card cache: bump it whenever the loader's
-  schema or card-field handling changes. `mapDbCard` is mirrored in `index.html`'s
+- **`DATA_VER`** keys the table's build id (no card cache since v5.75): bump it whenever
+  the loader's schema, card-field handling or the pool's source changes. `mapDbCard` is mirrored in `index.html`'s
   `useCardDB` (a React hook) — change both; `test/loader.test.js` guards the field map.
 - **Types:** the structured array (`ty`) beats the type line (`tt`) where they conflict
   (ruling 2026-08-02). "Reaction" contains "action" — never substring-test types.
@@ -111,7 +115,7 @@ something new, teach the parser to read its text — never special-case a card b
 - **Verify the push:** every script the page loads exists in the pushed commit, and
   `.nojekyll` is present:
   ```sh
-  for f in $(git show origin/main:index.html | grep -o '<script src="engine/[a-z]*\.js"' | sed 's/.*src="//;s/"//' | sort -u) .nojekyll; do git cat-file -e origin/main:$f || echo MISSING $f; done
+  for f in $(git show origin/main:index.html | grep -oE '<script src="(engine|data)/[a-z]*\.js"' | sed 's/.*src="//;s/"//' | sort -u) .nojekyll; do git cat-file -e origin/main:$f || echo MISSING $f; done
   ```
   CI (`.github/workflows/ci.yml`) runs the suite on a fresh clone and checks the live
   URL after a push. If you cannot reach the live URL, say so.

@@ -92,7 +92,7 @@ test("dummy deck — the dummy draws to intellect", () => {
   let _db = null, _bySet = null;
   const load = () => {
     if(_bySet) return;
-    const raw = JSON.parse(fs.readFileSync(CACHE, "utf8")).filter(c => c && c.name);
+    const raw = require("./helpers/extract").readCards(CACHE).filter(c => c && c.name);
     _db = C.buildMaps(raw.map(C.mapDbCard));
     _bySet = {};
     for(const r of raw) for(const p of (r.printings || [])){

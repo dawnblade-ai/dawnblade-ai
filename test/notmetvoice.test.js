@@ -25,7 +25,7 @@ test("every 'condition not met' reason a pool card can print is a phrase, not an
   H.db(); P.fxReset();
   const seen = new Set(), raw = [];
   let driven = 0, lines = 0;
-  for(const r of require("../data/pool.json")) for(const p of [1, 2, 3]){
+  for(const r of require("../data/pool.js")) for(const p of [1, 2, 3]){
     let c; try { c = H.card(r.name, p); } catch(e){ continue; }
     if(!c || !c.name) continue;
     const k = c.name + "|" + c.pitch; if(seen.has(k)) continue; seen.add(k);

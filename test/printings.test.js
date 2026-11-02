@@ -34,7 +34,7 @@ const deckLines = (key) => {
 };
 
 const loadDb = () => {
-  const raw = JSON.parse(fs.readFileSync(CACHE, "utf8"));
+  const raw = require("./helpers/extract").readCards(CACHE);
   const arr = Array.isArray(raw) ? raw : (raw.data || Object.values(raw));
   return C.buildMaps(arr.map(C.mapDbCard));
 };

@@ -56,7 +56,7 @@ const codeOf = s => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, 
 
 /* The pinned pool, read directly: this census is about what the POOL prints
    and needs no live database (v4.17). */
-const POOL = JSON.parse(read("data/pool.json"));
+const POOL = require("./helpers/extract").readPool();
 
 /* ============================================================
    THE PREMISE, MEASURED OFF THE POOL
@@ -259,7 +259,7 @@ test("`drxBarred` and `drxBarWhy` are the only readers of the field", () => {
 
 let _db = null;
 const db = () => _db || (_db = C.buildMaps(
-  JSON.parse(fs.readFileSync(X.cardDbPath(), "utf8")).filter(c => c && c.name).map(C.mapDbCard)));
+  require("./helpers/extract").readCards(X.cardDbPath()).filter(c => c && c.name).map(C.mapDbCard)));
 const heroBy = re => DATA.HEROES.find(h => re.test(h.n));
 
 function table(seed, a, b){

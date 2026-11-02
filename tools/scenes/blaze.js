@@ -32,7 +32,7 @@ module.exports = [
        "charging 6 for a card that deals 4 is the wrong direction.",
   run(c){
     const b = built(c, "blaze");
-    const pool = require("../../data/pool.json");
+    const pool = require("../../data/pool.js");
     const es = pool.find(x => x.name === "Emeritus Scolding");
     const card = {name: "Emeritus Scolding probe", pitch: es.pitch, tt: es.type_text,
                   ty: es.types, kw: es.card_keywords, tx: es.functional_text};
@@ -63,7 +63,7 @@ module.exports = [
        "fire THIS hero's \"whenever you OPT\" energy trigger off a card " +
        "that does not opt. A card does not opt because it looks.",
   run(c){
-    const pool = require("../../data/pool.json");
+    const pool = require("../../data/pool.js");
     const ss = pool.find(x => x.name === "Spire Sniping");
     const fx = P.fxParse({name: "Spire Sniping probe", pitch: ss.pitch,
                           tt: ss.type_text, ty: ss.types, kw: ss.card_keywords,

@@ -38,7 +38,7 @@ const unwrap = o => (o && o.game) || o;
 const said = g => g.feed.map(f => (typeof f === "string" ? f : (f && f.t) || "")).join(" | ");
 
 const parse = c => { P.fxReset(); return P.fxParse(c); };
-const pool = () => { const p = require("../data/pool.json");
+const pool = () => { const p = require("../data/pool.js");
                      return Array.isArray(p) ? p : (p.cards || Object.values(p)); };
 const rec = (nm, pitch) => pool().find(c => c.name === nm && (pitch == null || +c.pitch === pitch));
 const asCard = r => ({name: r.name, pitch: +(r.pitch || 0), tt: r.type_text || "",

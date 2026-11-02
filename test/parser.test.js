@@ -194,7 +194,7 @@ test("fxParse — conditional go again stays conditional, not printed", () => {
    rider drill reads the printed form. */
 test("fxParse — the +1/2/3{p} shorthand has no claimant and is not invented into a number", () => {
   P.fxReset();
-  const pool = JSON.parse(require("fs").readFileSync(require("path").join(__dirname, "..", "data", "pool.json"), "utf8"));
+  const pool = require("./helpers/extract").readCards(require("path").join(__dirname, "..", "data", "pool.js"));
   assert.equal(pool.filter(c => /1\/2\/3/.test(c.functional_text || "")).length, 0,
     "a pool record prints the shorthand now — read it on purpose rather than through a fallback");
   for(const pitch of [1,2,3]){

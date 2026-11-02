@@ -20,7 +20,7 @@ const skip = !H.hasDb() && "no cached card database";
 const WHY = "it attacks through its own ability — the cost is paid each time it attacks";
 
 test("every carrier of the reason is an ally, a weapon or another permanent that attacks", {skip}, () => {
-  const raw = require("../data/pool.json");
+  const raw = require("../data/pool.js");
   const db = C.buildMaps(raw.filter(c => c && c.name).map(C.mapDbCard));
   const carriers = new Map();
   for(const r of raw){

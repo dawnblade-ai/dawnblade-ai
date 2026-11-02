@@ -274,7 +274,7 @@ test("PREMISE: every opponent discard in the pool is ONE card", () => {
   /* The loose discard rule reads no count and answers 1 — right for the
      pool, where every opponent discard prints "a card". Measured; a card
      printing two fails here rather than silently discarding one. */
-  const pool = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "pool.json"), "utf8"));
+  const pool = require("./helpers/extract").readCards(path.join(ROOT, "data", "pool.js"));
   const counts = new Set();
   for(const c of pool)
     for(const m of String(c.functional_text || "").matchAll(/(?:they|opponent|defending hero|target hero)[^.]{0,20}?discards? (a|an|one|two|three|\d+) /gi))

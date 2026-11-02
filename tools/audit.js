@@ -13,7 +13,7 @@
      node tools/audit.js --live           # audit the LIVE upstream database
      node tools/audit.js --refresh        # force re-download, then audit it
 
-   IT READS THE PINNED POOL BY DEFAULT (`data/pool.json`), so a fresh
+   IT READS THE PINNED POOL BY DEFAULT (`data/pool.js`), so a fresh
    clone can audit with no network and two machines produce the same
    AUDIT.md. `--live`/`--refresh` point it at the upstream database
    instead, which is how you see what has moved; `test/drift.test.js`
@@ -30,6 +30,11 @@ const { loadData, cardDbPath, hasLiveDb } = require("../test/helpers/extract");
 
 const ROOT = path.join(__dirname, "..");
 const CACHE = path.join(__dirname, ".cache", "card.json");
+/* UPSTREAM — the-fab-cube's live database. Only the tools read it (v5.75):
+   RULING (user, 2026-11-02), the page plays the pinned pool and nothing
+   else, so `index.html` no longer carries this URL. `--refresh` fetches it
+   here for `tools/pin-pool.js` and `test/drift.test.js`. */
+const UPSTREAM = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
 
 /* ---- hero static-ability recognizers — mirrors of Battle's `built`
    memo in index.html; if those regexes change, change these by hand ---- */
@@ -151,8 +156,8 @@ async function loadDB(refresh, DBSRC, live){
   /* The pinned pool is the default so this is reproducible offline. It
      holds every record the pool can reach and nothing else, which is all
      an audit of the pool ever looks at. */
-  if(!refresh && !live) return JSON.parse(fs.readFileSync(cardDbPath(), "utf8"));
-  if(!refresh && hasLiveDb()) return JSON.parse(fs.readFileSync(CACHE, "utf8"));
+  if(!refresh && !live) return require("../test/helpers/extract").readCards(cardDbPath());
+  if(!refresh && hasLiveDb()) return require("../test/helpers/extract").readCards(CACHE);
   console.log("Fetching card database:", DBSRC);
   const res = await fetch(DBSRC);
   if(!res.ok) throw new Error("HTTP " + res.status);
@@ -350,11 +355,11 @@ function analyzeHero(rec, heroName){
 }
 
 async function main(){
-  const W = loadData(); // window.* from index.html — DECKS, HEROES, DBSRC, DUMMY_GEAR, DATA_VER
+  const W = loadData(); // window.* from index.html — DECKS, HEROES, DUMMY_GEAR, DATA_VER
   const refresh = process.argv.includes("--refresh");
   const live = refresh || process.argv.includes("--live");
-  const raw = await loadDB(refresh, W.DBSRC, live);
-  if(live) console.log("Auditing the LIVE database — `data/pool.json` is what the drills read.");
+  const raw = await loadDB(refresh, UPSTREAM, live);
+  if(live) console.log("Auditing the LIVE database — `data/pool.js` is what the drills read.");
   const db = C.buildMaps(raw.filter(c=>c && c.name).map(C.mapDbCard));
   console.log("Database:", db.count, "cards mapped.");
   P.fxReset();

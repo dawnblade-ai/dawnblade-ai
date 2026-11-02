@@ -77,7 +77,7 @@ const PATTERNED_ELSEWHERE = [
 ];
 
 function poolConds(){
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const arr = Array.isArray(pool) ? pool : (pool.cards || Object.values(pool));
   const conds = new Set(), onHit = new Set();
   for(const c of arr){
@@ -211,7 +211,7 @@ test("the other three evaluators' vocabularies are closed too", {skip}, () => {
      function so that default is reachable by a drill — no card fixture
      can drive it, because the parser only emits what the evaluator
      knows). Pinned so a fourth vocabulary cannot appear unnoticed. */
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const arr = Array.isArray(pool) ? pool : (pool.cards || Object.values(pool));
   const defSelf = new Set(), defPer = new Set(), asInstant = new Set(), actIf = new Set();
   for(const c of arr){
@@ -286,7 +286,7 @@ test("every qualifier atom the pool emits is tested by `qualMatches`", {skip}, (
      grant's PAYLOAD into the object being matched. `amp` is not a
      question about the card, and every other family in the group has kept
      the two apart since it was built. The entry is `{q, amp}` now. */
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const arr = Array.isArray(pool) ? pool : (pool.cards || Object.values(pool));
   const atoms = new Set();
   const take = q => { if(q && typeof q === "object" && !Array.isArray(q))
@@ -451,7 +451,7 @@ test("driven: a stale defCap entry caps NOTHING", {skip}, () => {
 
 function allEmittedConds(legs){
   legs = legs || {card: 1, equip: 1, arena: 1, hero: 1};
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const arr = Array.isArray(pool) ? pool : (pool.cards || Object.values(pool));
   const B = require("../engine/build.js");
   const out = new Set(), seen = new WeakSet();

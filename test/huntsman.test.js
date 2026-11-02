@@ -45,7 +45,7 @@ const H = require("./helpers/judged.js");
 const J = H.J;
 
 const skip = !H.hasDb() && "no cached card database";
-const pool = require("../data/pool.json");
+const pool = require("../data/pool.js");
 const rec = r => ({name: r.name, pitch: +(r.pitch || 0), tt: r.type_text, ty: r.types,
                    tx: r.functional_text || "", kw: r.card_keywords, cost: r.cost,
                    power: (r.power === "" || r.power == null ? null : +r.power),

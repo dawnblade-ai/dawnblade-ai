@@ -259,7 +259,7 @@ test("the CARD credits the rider only because the route exists", {skip}, () => {
      ASSERT ON THE CLAUSE STATUS, not the tier (v3.63): a tier is
      determined by several other facts, and a drill written against it can
      be silent under sabotage. */
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const arr = Array.isArray(pool) ? pool : (pool.cards || Object.values(pool));
   const c = arr.find(x => x.name === "Halo of Illumination");
   P.fxReset();

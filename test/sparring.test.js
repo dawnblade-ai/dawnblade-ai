@@ -48,7 +48,7 @@ let _db = null;
    the database: a drill that quietly runs a REDUCED engine reports on the
    reduced one. */
 const DB = () => _db || (_db = (() => {
-  const m = C.buildMaps(JSON.parse(fs.readFileSync(CACHE, "utf8"))
+  const m = C.buildMaps(require("./helpers/extract").readCards(CACHE)
     .filter(c => c && c.name).map(C.mapDbCard));
   J.setDb(m);
   return m;

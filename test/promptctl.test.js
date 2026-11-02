@@ -141,7 +141,7 @@ test("the pool's optional-modal family is FOUR records over TWO cards, all full"
      `millCostSpec`'s only feeder, and `millCostSpec` is the only builder in
      the engine that sets `optional: true`. So this is the whole set of pool
      records whose printed "you may" reached a sheet with no way out. */
-  const recs = JSON.parse(read("data/pool.json"));
+  const recs = require("./helpers/extract").readPool();
   const pool = recs.cards || recs;
   const hits = [];
   for(const r of pool){

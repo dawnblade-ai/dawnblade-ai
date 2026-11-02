@@ -45,7 +45,7 @@ const hasDb = () => fs.existsSync(CACHE);
 let _db = null;
 function db(){
   if(_db) return _db;
-  _db = C.buildMaps(JSON.parse(fs.readFileSync(CACHE, "utf8"))
+  _db = C.buildMaps(require("./extract").readCards(CACHE)
     .filter(c => c && c.name).map(C.mapDbCard));
   J.setDb(_db);
   return _db;

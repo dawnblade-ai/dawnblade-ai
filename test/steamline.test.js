@@ -120,7 +120,7 @@ test("exactly ONE weapon has a non-attack line, so the door is exactly one card 
   /* THE MEASUREMENT THE DOOR RESTS ON — a weapon whose activation lines
      include one whose payload is not a bare Attack. A second arriving is a
      deliberate edit, not a quiet new button (v2.34's reason for `_armed`). */
-  const pool = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "data", "pool.json"), "utf8"));
+  const pool = require("./helpers/extract").readCards(path.join(__dirname, "..", "data", "pool.js"));
   const C = require("../engine/cards.js");
   const hit = [];
   for(const r of pool){
@@ -273,7 +273,7 @@ test("PREMISE: every `ctrSrc` the pool emits rides behind a `noCtr:` gate", {ski
      every record AND every powCard the equipment builder makes — the steam
      line lives only on the powCard, which the card's own parse files as a
      `noop` (the powCard is its reader). */
-  const pool = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "data", "pool.json"), "utf8"));
+  const pool = require("./helpers/extract").readCards(path.join(__dirname, "..", "data", "pool.js"));
   const C = require("../engine/cards.js");
   const seen = [];
   const walk = (fx, who) => {

@@ -76,7 +76,7 @@ function instrumented(){
 /* Every card a match can deal, resolved the way the game resolves it. */
 function poolCards(){
   const C = require(path.join(ROOT, "engine", "cards.js"));
-  const raw = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "pool.json"), "utf8"))
+  const raw = require("../test/helpers/extract").readCards(path.join(ROOT, "data", "pool.js"))
     .filter(c => c && c.name).map(C.mapDbCard);
   const db = C.buildMaps(raw);
   return raw.map(r => C.resolveEntry(db, {name: r.n, p: r.p || 0, code: null, q: 1})).filter(Boolean);

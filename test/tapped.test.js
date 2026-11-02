@@ -42,7 +42,7 @@ const {loadData} = require("./helpers/extract.js");
 
 const skip = !H.hasDb() && "no cached DB — run: node tools/audit.js";
 const W = loadData();
-const POOL = require("../data/pool.json");
+const POOL = require("../data/pool.js");
 const rec = nm => POOL.find(r => r.name === nm) || {};
 
 /* ---- 1. tapsToActivate — THE LIVE BUG THIS FOUND --------------------- */

@@ -181,7 +181,7 @@ test(gate("no token an engine can create carries an onLeave — measured"), () =
      NOTHING in the pool creates it — so the three token routes cannot
      today drop a payout. The day a card creates one, this fails and the
      exclusion has to be re-argued. */
-  const pool = require("../data/pool.json").filter(c => c && c.name).map(C.mapDbCard);
+  const pool = require("../data/pool.js").filter(c => c && c.name).map(C.mapDbCard);
   const seen = new Set(), toks = [];
   for(const r of pool){
     const k = r.n + "|" + r.p; if(seen.has(k)) continue; seen.add(k);
@@ -428,7 +428,7 @@ test("the gated-leave condition vocabulary is CLOSED, and the pool is inside it"
      condition the evaluator does not know answers FALSE — weaker than
      printed and visible — and this fails the day the pool emits one that
      is not named, rather than the payload quietly never firing. */
-  const pool = require("../data/pool.json").filter(c => c && c.name).map(C.mapDbCard);
+  const pool = require("../data/pool.js").filter(c => c && c.name).map(C.mapDbCard);
   const seen = new Set(), emitted = new Set(), cards = new Set();
   for(const r of pool){
     const k = r.n + "|" + r.p; if(seen.has(k)) continue; seen.add(k);

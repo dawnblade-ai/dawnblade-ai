@@ -111,7 +111,7 @@ test("…and a swing fully prevented is NOT a hit", {skip}, () => {
 
 test("Toe the Line's two halves are PAIRED, and the rider rides on the op", {skip}, () => {
   P.fxReset();
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const r = pool.find(x => x.name === "Toe the Line");
   const fx = P.fxParse({name: "toe|pair|" + r.pitch, tx: r.functional_text || "",
                         tt: r.type_text || "", ty: r.types || [], kw: r.card_keywords || [],
@@ -133,7 +133,7 @@ test("…and a ward with NO rider keeps its plain shape", {skip}, () => {
      every `ward` op in the pool. Cloud Cover prints the same prevention
      and no rider, and its parse must not move. */
   P.fxReset();
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const r = pool.find(x => x.name === "Cloud Cover");
   const fx = P.fxParse({name: "cloud|pair|" + r.pitch, tx: r.functional_text || "",
                         tt: r.type_text || "", ty: r.types || [], kw: r.card_keywords || [],
@@ -228,7 +228,7 @@ test("BOTH BOARDS ASK THE ONE BODY — neither keeps its own ward arithmetic", (
 
 test("Throw Caution's X is read off the reveal, not asked for", {skip}, () => {
   P.fxReset();
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const r = pool.find(x => x.name === "Throw Caution to the Wind");
   const fx = P.fxParse({name: "tc|x|" + r.pitch, tx: r.functional_text || "",
                         tt: r.type_text || "", ty: r.types || [], kw: r.card_keywords || [],
@@ -244,7 +244,7 @@ test("…and the two Rabbles keep spending it on POWER", {skip}, () => {
      parameter of a card's text — which is why `revPitch` and
      `revColorPitch` already stay apart. */
   P.fxReset();
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   for(const [nm, sign] of [["Murderous Rabble", 1], ["Ravenous Rabble", -1]]){
     const r = pool.find(x => x.name === nm);
     const fx = P.fxParse({name: nm + "|ctl|" + r.pitch, tx: r.functional_text || "",
@@ -329,7 +329,7 @@ test("DRIVEN: the granted ward actually prevents, through the shared body", {ski
    ============================================================ */
 
 const wardPool = () => {
-  const raw = require("../data/pool.json");
+  const raw = require("../data/pool.js");
   const seen = new Set(), out = [];
   for(const r of raw){
     if(!r || !r.name) continue;
@@ -816,7 +816,7 @@ test("a leave payout cannot deal damage, so the two bodies cannot recurse", {ski
      does — and this fails the day one is printed, rather than the engine
      hanging inside a reducer whose contract is that it never does. */
   H.db();
-  const raw = require("../data/pool.json");
+  const raw = require("../data/pool.js");
   const sd = S.makeSide({id: 0});
   sd.pitch = [{pitch: 3}];                       /* so a gated payout is reachable */
   const seen = new Set(), bad = [];
@@ -850,7 +850,7 @@ test("a leave payout cannot deal damage, so the two bodies cannot recurse", {ski
    ============================================================ */
 
 const oasisRecs = () => {
-  const raw = require("../data/pool.json");
+  const raw = require("../data/pool.js");
   return raw.filter(r => r && r.name === "Oasis Respite")
     .map(r => ({name: r.name, pitch: +(r.pitch || 0), tt: r.type_text || "", ty: r.types || [],
                 tx: r.functional_text || "", kw: r.card_keywords || [], cost: r.cost}));
@@ -873,7 +873,7 @@ test("all three printings read the rider, and NOTHING else in the pool does", ()
      your own fixture — the question is not who HAS the condition, it is
      who GAINED one, so the whole set is pinned and a fold that claims a
      tenth card fails here. */
-  const raw = require("../data/pool.json");
+  const raw = require("../data/pool.js");
   const seen = new Set(); const carriers = [];
   for(const r of raw){
     if(!r || !r.name) continue;
@@ -1039,7 +1039,7 @@ test("PREMISE: every rider on a prevention rides on a ONE-EVENT op", {skip}, () 
   H.db();
   const C = require("../engine/cards.js");
   const seen = new Set(), bad = [];
-  for(const r of require("../data/pool.json")){
+  for(const r of require("../data/pool.js")){
     const m = C.mapDbCard(r), c = C.resolveEntry(H.db(), {name: m.n, p: m.p == null ? 0 : m.p, code: null, q: 1});
     if(!c || seen.has(c.name)) continue; seen.add(c.name);
     for(const op of (P.fxParse(c).ops || []))

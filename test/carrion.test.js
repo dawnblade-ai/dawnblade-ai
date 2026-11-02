@@ -83,7 +83,7 @@ test("an ALLY is a printed type the cost reader can pin", {skip}, () => {
      records whose structured `types` array says Ally, and on nothing
      else — so the filter needs no word boundary and none is invented. */
   assert.deepEqual(P.optFilter("an ally"), {tt: "ally"});
-  const raw = require("../data/pool.json");
+  const raw = require("../data/pool.js");
   const arr = Array.isArray(raw) ? raw : (raw.cards || Object.values(raw));
   const ttSays = arr.filter(c => /ally/i.test(c.type_text || ""));
   const tySays = arr.filter(c => (c.types || []).some(t => /^ally$/i.test(t)));

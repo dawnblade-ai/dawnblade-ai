@@ -30,7 +30,7 @@ const skip = !fs.existsSync(CACHE) && "no cached DB";
 const W = loadData();
 let _db = null;
 const DB = () => _db || (_db = (() => {
-  const m = C.buildMaps(JSON.parse(fs.readFileSync(CACHE, "utf8"))
+  const m = C.buildMaps(require("./helpers/extract").readCards(CACHE)
     .filter(c => c && c.name).map(C.mapDbCard));
   J.setDb(m);
   return m;
@@ -59,7 +59,7 @@ test("parser.boostPays reads the structured array, with the printed line as a fa
 });
 
 test("boostPays agrees with the printed type line on every pinned pool record", {skip}, () => {
-  const recs = JSON.parse(fs.readFileSync(CACHE, "utf8")).filter(c => c && c.name).map(C.mapDbCard);
+  const recs = require("./helpers/extract").readCards(CACHE).filter(c => c && c.name).map(C.mapDbCard);
   assert.ok(recs.length > 700, "the pool scan is alive");
   const off = recs.filter(c => PR.boostPays(c) !== /mechanologist/i.test(c.tt || "")).map(c => c.name);
   assert.deepEqual(off, [], "tt and ty disagree about Mechanologist — the reader move changed an answer");

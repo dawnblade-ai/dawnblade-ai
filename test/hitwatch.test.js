@@ -386,7 +386,7 @@ test("DRIVEN: the OPPONENT's watcher does not read your swing", {skip}, () => {
 
 test("every third-person on-hit subject in the pool now has a route, and the SET is pinned", {skip}, () => {
   H.db();
-  const raw = require("../data/pool.json");
+  const raw = require("../data/pool.js");
   const C = require("../engine/cards.js");
   const db = C.buildMaps(raw.filter(c => c && c.name).map(C.mapDbCard));
   const rows = [];
