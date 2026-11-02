@@ -396,8 +396,12 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        rules (`.deckback.gback`, `.gbtag`, `.gbname`).
        64,368 -> 64,223 AT v5.74, READ FIRST: still `<style>` ->
        `</style>`; the shrink is the download progress bar's two `.prog`
-       rules, retired with the live card fetch. */
-    "phasebar.test.js index.html 64223",
+       rules, retired with the live card fetch.
+       64,223 -> 65,313 AT THE 1.0 POLISH PASS, READ FIRST: still `<style>` ->
+       `</style>`; the growth is the hit-area `::after` rules for JUDGE!! and
+       the status-line buttons, and the `.pip` tints for PipLine, each with
+       its comment. */
+    "phasebar.test.js index.html 65313",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
        `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
        `abPickBound` in the pick legality it extends. */

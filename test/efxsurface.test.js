@@ -24,14 +24,11 @@ const { ROOT, html } = require("./helpers/extract");
 const code = () => html().replace(/\/\*[\s\S]*?\*\//g, "");
 
 test("every _EFX.<name> the trainer calls is a member of the effects context", () => {
-  const E = require("../engine/effects");
-  const ctx = {};
-  /* makeEffects names its own required context when one is missing */
-  let need = [];
-  try { E.makeEffects({}); } catch(e){ need = (String(e.message).split("—")[1] || "").split(",").map(x => x.trim()).filter(Boolean); }
-  assert.ok(need.length, "makeEffects still names its required context");
-  for(const n of need) ctx[n] = () => {};
-  const have = new Set(Object.keys(E.makeEffects(ctx)));
+  /* the real context, from the sanctioned seam (test/helpers/judged.js) */
+  const H = require("./helpers/judged");
+  let have = null;
+  H.fx(H.state({name: "A"}, {name: "B"}), (f, n) => { have = new Set(Object.keys(f)); return n; });
+  assert.ok(have && have.has("runOps"), "the effects context was built");
   const used = [...new Set([...code().matchAll(/\b_EFX\.([A-Za-z_$][\w$]*)/g)].map(m => m[1]))];
   assert.ok(used.length > 5, "the trainer's calls were found: " + used.join(", "));
   assert.deepEqual(used.filter(u => !have.has(u)), [], "called on _EFX but not returned by makeEffects");

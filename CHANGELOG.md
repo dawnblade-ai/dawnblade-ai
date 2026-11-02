@@ -15,6 +15,10 @@ reach the call (a closure inside `Battle`) and the smoke walk only ever took the
 - **Page assertion:** `node tools/page.js` now hands the dummy the first turn, defends with the first
   card the rail offers and taps through to Resolve damage. Sabotaged (the old call): the board is gone
   and the page error is `_EFX.defendValue is not a function`.
+- **The drill that pinned the crash:** `test/staunch.test.js` counted two `_EFX.defendValue(` calls
+  in `finishBlock` — a text pin cannot tell a call from a crash. It counts the module's calls now and
+  refuses the context's. `test/slicecensus.test.js` repins the `<style>` slice (64,223 -> 65,313,
+  read: the hit-area and pip-tint rules).
 
 ## v5.NN — The Coach says "hero power" once, and "1 permanent"
 

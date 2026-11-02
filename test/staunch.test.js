@@ -227,8 +227,14 @@ test("the trainer's DEFENDING wall goes through defendValue", () => {
   /* TWO SINCE v4.95: the played-reaction paths ask it inside
      `effects.playAtSpeed`, AFTER the card's text has run — judge's order,
      which is what lets Sigil of Suffering's own arcane meet its own +1{d}. */
-  assert.equal((htm.match(/_EFX\.defendValue\(/g) || []).length, 2,
+  /* THE MODULE'S BODY, NOT THE CONTEXT'S (1.0 polish audit). This pin read
+     `_EFX.defendValue(` — and `makeEffects` never returned `defendValue`, so
+     the two sites it counted were two calls of `undefined`, and the first
+     player block in the trainer blanked the page. A text pin cannot tell a
+     call from a crash; test/efxsurface.test.js now asks the context. */
+  assert.equal((htm.match(/DawnEffects\.defendValue\(/g) || []).length, 2,
     "two sites: the hand wall and the gear wall");
+  assert.ok(!/_EFX\.defendValue\(/.test(htm), "defendValue is not a member of the effects context");
   const efx = strip(fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8"));
   const pas = efx.slice(efx.indexOf("const playAtSpeed = (s, c, from, o) =>"));
   assert.ok(pas.indexOf("defendValue(act(n), c,") > pas.indexOf("n = execute(n, c, from, idx,"),
