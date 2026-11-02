@@ -6783,11 +6783,13 @@ function TableScreen({onBack, onSeated}){
             true before v2.49 and has been wrong since: the table negotiates a
             hero, a throw and a sideboard and runs two real decks. Stale copy
             that UNDER-sells is still stale copy — it tells a player not to
-            bother with the screen. The lobby's own note already said this. */}
+            bother with the screen. The lobby's own note already said this.
+            And it said "card text does not resolve yet" until the 1.0 polish
+            audit, long after effects.js gave both boards one copy of it. */}
         <p className="mnote">
-          Table play runs <strong>two real hero decks</strong> — the CR turn structure,
-          priority, the combat chain and printed costs. Card text does not resolve
-          yet: the parser's effects still live in the solo trainer.
+          Table play runs <strong>two real hero decks</strong> — the full turn structure,
+          priority, the combat chain, printed costs, and the card text, read by the
+          same engine as the trainer.
         </p>
       </>}
 

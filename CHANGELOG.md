@@ -1,3 +1,14 @@
+## v5.NN — The table's note stops saying card text does not resolve there
+
+Found by the 1.0 polish audit (P2). The Find-an-opponent screen told a player "Card text does not
+resolve yet: the parser's effects still live in the solo trainer" — untrue since `engine/effects.js`
+gave both boards one copy of the card semantics, and "the parser's effects" is an identifier's words.
+It now says the table plays the card text through the same engine as the trainer.
+
+- **Drill:** `test/tablecopy.test.js` reads `TableScreen`'s player-visible text (comments stripped):
+  no "does not resolve", no engine identifiers, and it names the card text. Sabotaged (the old copy):
+  fails on the stale claim.
+
 ## v5.NN — Beating an AI hero at the table is not "DUMMY DESTROYED"
 
 Found by the 1.0 polish audit (`POLISH-AUDIT-1.0.md`, P1). At the table on one phone, a win over an
