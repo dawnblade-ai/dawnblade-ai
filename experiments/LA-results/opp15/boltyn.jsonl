@@ -1,0 +1,6 @@
+{"hero":"boltyn","s":0,"off":{"w":6,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":9,"ref":0,"viol":0,"stall":0,"draw":1,"sec":15.734,"searched":322,"overruled":90,"stepsPer":197.4,"msPer":33.96,"maxSteps":479}}
+{"hero":"boltyn","s":1,"off":{"w":7,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":11,"ref":0,"viol":0,"stall":0,"draw":0,"sec":12.053,"searched":279,"overruled":64,"stepsPer":200.8,"msPer":29.71,"maxSteps":740}}
+{"hero":"boltyn","s":2,"off":{"w":8,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":12,"ref":0,"viol":0,"stall":0,"draw":0,"sec":11.657,"searched":310,"overruled":89,"stepsPer":195.7,"msPer":25.76,"maxSteps":740}}
+{"hero":"boltyn","s":3,"off":{"w":6,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":4,"ref":0,"viol":0,"stall":0,"draw":0,"sec":12.637,"searched":318,"overruled":92,"stepsPer":198.2,"msPer":27.86,"maxSteps":740}}
+{"hero":"boltyn","s":4,"off":{"w":8,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":10,"ref":0,"viol":0,"stall":0,"draw":0,"sec":12.661,"searched":308,"overruled":83,"stepsPer":204.8,"msPer":28.93,"maxSteps":740}}
+{"hero":"boltyn","s":5,"off":{"w":6,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":12,"ref":0,"viol":0,"stall":0,"draw":0,"sec":8.863,"searched":244,"overruled":61,"stepsPer":211.5,"msPer":24.86,"maxSteps":740}}

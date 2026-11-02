@@ -1,0 +1,6 @@
+{"hero":"briar","s":6,"off":{"w":22,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":24,"ref":0,"viol":0,"stall":0,"draw":0,"sec":13.594,"searched":309,"overruled":45,"stepsPer":183.8,"msPer":33.66,"maxSteps":403}}
+{"hero":"briar","s":7,"off":{"w":25,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":26,"ref":0,"viol":0,"stall":0,"draw":0,"sec":15.702,"searched":396,"overruled":69,"stepsPer":184.1,"msPer":30.39,"maxSteps":541}}
+{"hero":"briar","s":8,"off":{"w":24,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":25,"ref":0,"viol":0,"stall":0,"draw":0,"sec":11.577,"searched":325,"overruled":63,"stepsPer":184.6,"msPer":27.06,"maxSteps":546}}
+{"hero":"briar","s":9,"off":{"w":26,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":25,"ref":0,"viol":0,"stall":0,"draw":0,"sec":11.024,"searched":367,"overruled":67,"stepsPer":184.9,"msPer":22.6,"maxSteps":546}}
+{"hero":"briar","s":10,"off":{"w":24,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":26,"ref":0,"viol":0,"stall":0,"draw":0,"sec":10.932,"searched":350,"overruled":74,"stepsPer":189.6,"msPer":23.59,"maxSteps":546}}
+{"hero":"briar","s":11,"off":{"w":22,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":22,"ref":0,"viol":0,"stall":0,"draw":0,"sec":9.172,"searched":336,"overruled":58,"stepsPer":185,"msPer":20.7,"maxSteps":546}}

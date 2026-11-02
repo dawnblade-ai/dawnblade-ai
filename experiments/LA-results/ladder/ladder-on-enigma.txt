@@ -1,0 +1,78 @@
+GAMES 42 · stalls 0 · draws 0 · avg turns 24.1
+POLICY REFUSALS 0 · INVARIANT VIOLATIONS 0 · MALFORMED 0 · SECOND-PERSON 0 · NO-ZONE 0
+
+WINS: enigma 26 · kayo 3 · fai 3 · dash 2 · bravo 2 · briar 2 · iyslander 1 · viserai 1 · azalea 1 · dorinthea 1
+
+PER SEED (3 samples of the same ladder — the engine never changed):
+  hero          s0  s1  s2   mean  spread
+  enigma        9   9   8    8.7      1
+  kayo          1   1   1    1.0      0
+  fai           1   1   1    1.0      0
+  dash          0   1   1    0.7      1
+  bravo         1   1   0    0.7      1
+  briar         1   1   0    0.7      1
+  iyslander     0   0   1    0.3      1
+  viserai       1   0   0    0.3      1
+  azalea        0   0   1    0.3      1
+  dorinthea     0   0   1    0.3      1
+  arakni        0   0   0    0.0      0
+  blaze         0   0   0    0.0      0
+  boltyn        0   0   0    0.0      0
+  gravy         0   0   0    0.0      0
+  lyath         0   0   0    0.0      0
+
+  NOISE BAND: min 0 · median 1 · MAX 1  — a version-to-version move smaller than this is not resolvable by one ladder.
+
+longest unchanged stretch a decided game came back from: 1 turns (enigma-iyslander-1) — the engine draws at 20
+
+ROUTE COVERAGE (times a feed line matched):
+  ally      27
+  allyatk   13
+  arsflip   2
+  boost     40
+  chi       22
+  crush     8
+  ctrWipe   4
+  death     27
+  defmod    4
+  destroycost 36
+  fusion    9
+  gold      48
+  halve     1
+  held      1045
+  hitnext   5
+  jab       3
+  layer     62
+  leave     13
+  powctr    22
+  reaction  47
+  search    2
+  shield    9
+  tap       44
+  ward      155
+  e.g. ally: Swabbie enters play (ally). | Barnacle enters play (ally). | Oysten, Heart of Gold enters play (ally).
+  e.g. allyatk: Gravy Bones sends Swabbie — 7 power on the chain. | Gravy Bones sends Riggermortis — 6 power on the chain. | Gravy Bones sends Cutty Shark, Quick Clip — 3 power on the chain.
+  e.g. arsflip: Mode chosen: Turn their arsenal card face up, then destroy a defense reaction.
+  e.g. boost: Boost: Under Loop banished — Mechanologist, go again! | Boost: Fender Bender banished — Mechanologist, go again! | Boost: Out Pace banished — Mechanologist, go again!
+  e.g. chi: Enigma: 3 Chi spent — a Chi pays for Chi and resource costs alike; a resource point pays only its own.
+  e.g. crush: Debilitate — crush: Enigma feels it next turn. | Boulder Drop — crush: a card is forced from Enigma's hand back on top of their deck. | Chokeslam — crush: Enigma feels it next turn.
+  e.g. ctrWipe: Raydn, Duskbane loses its 4 +1{p} counters — weapons you control are wiped at the beginning of this end phase.
+  e.g. death: Swabbie takes 3 and goes down — face-down in the graveyard, so it will not be replayed. | Barnacle takes 6 and goes down — face-down in the graveyard, so it will not be replayed. | Oysten, Heart of Go
+  e.g. defmod: Brothers in Arms defends for 2 more for the rest of this combat chain. | Shred: Enigma Chimera defends for 2 less for the rest of this combat chain. | Stonewall Impasse defends for 1 more until end of
+  e.g. destroycost: Kayo kept Beaten Trackers rather than destroy it. | Dorinthea kept Refraction Bolters rather than destroy it. | Arakni, Web of Deceit kept Mark of the Huntsman rather than destroy it.
+  e.g. fusion: Iyslander reveals Frosting from hand — Polar Cap is fused (Fusion). | Iyslander reveals Ice Bolt from hand — Ice Eternal is fused (Fusion). | Briar reveals Cloud Cover from hand — Entwine Lightning is
+  e.g. gold: Test of Strength: Gold created on Kayo's board — Action - {r}{r}, destroy this: Draw a card. | Test of Strength: Gold created on Enigma's board — Action - {r}{r}, destroy this: Draw a card. | Test of 
+  e.g. halve: Walk in My Shoes — crush: the base power and defence of Enigma's attack action cards are halved, rounded up, until the end of their next turn.
+  e.g. held: Bare Fangs is on the stack — either seat may answer at instant speed before it resolves. | Enigma Chimera is on the stack — either seat may answer at instant speed before it resolves. | Strongest Surv
+  e.g. hitnext: Banneret of Salvation: the next time Boltyn hits this turn, it pays off. | Burn Up // Shock: the next time Briar hits a hero this turn, it pays off.
+  e.g. jab: Danger Digits: Mark of the Huntsman lashes out at Enigma for 1.
+  e.g. layer: Pummel — +4 — the layer resolves. | Bolt'n Boots — ability — +0 — the layer resolves. | Ironsong Response — +3 — the layer resolves.
+  e.g. leave: Waning Vengeance leaves the arena — and it pays out. | Tension in the Air runs out of suspense and leaves the arena — and it pays out. | Act of Glory runs out of suspense and leaves the arena — and it
+  e.g. powctr: Spectral Shield takes 3 +1{p} counters — now 3. | Waning Vengeance takes 3 +1{p} counters — now 4. | Waning Vengeance takes 3 +1{p} counters — now 3.
+  e.g. reaction: Pummel on the stack (+4). | Ironsong Response on the stack (+3). | Agile Engagement on the stack (+3).
+  e.g. search: Flamecall Awakening: Fai's deck is shuffled.
+  e.g. shield: Toe the Line: 1 of that damage is prevented — the other 1 it could have stopped is lost with this hit. | Cloud Cover: 3 of that damage is prevented. | Throw Caution to the Wind: 1 of that damage is pr
+  e.g. tap: Gravy Bones — hero power: Gravy Bones taps to pay — tapped until their own untap step (CR 4.4.3d). | Concealed Object: Lyath Goldmane taps it to pay — untaps in their own untap step (CR 4.4.3d). | Lya
+  e.g. ward: Uphold Tradition destroys itself — ward soaks 1. | Waning Vengeance destroys itself — ward soaks 2 of the 3 it printed. | Waxing Specter destroys itself — ward soaks 3.
+
+longest 48 turns (enigma-dorinthea-1) · shortest 7 (enigma-bravo-2)

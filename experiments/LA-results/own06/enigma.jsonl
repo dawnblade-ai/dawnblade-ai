@@ -1,0 +1,6 @@
+{"hero":"enigma","s":0,"off":{"w":15,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":17,"ref":0,"viol":0,"stall":0,"draw":0,"sec":11.771,"searched":509,"overruled":102,"stepsPer":64.8,"msPer":11.07,"maxSteps":290}}
+{"hero":"enigma","s":1,"off":{"w":11,"ref":0,"viol":0,"stall":0,"draw":1},"on":{"w":18,"ref":0,"viol":0,"stall":0,"draw":0,"sec":10.953,"searched":481,"overruled":104,"stepsPer":73.8,"msPer":11.78,"maxSteps":334}}
+{"hero":"enigma","s":2,"off":{"w":15,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":17,"ref":0,"viol":0,"stall":0,"draw":0,"sec":9.701,"searched":467,"overruled":94,"stepsPer":68.8,"msPer":9.86,"maxSteps":334}}
+{"hero":"enigma","s":3,"off":{"w":14,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":13,"ref":0,"viol":0,"stall":0,"draw":0,"sec":8.899,"searched":453,"overruled":105,"stepsPer":68.6,"msPer":9.55,"maxSteps":334}}
+{"hero":"enigma","s":4,"off":{"w":14,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":18,"ref":0,"viol":0,"stall":0,"draw":0,"sec":9.341,"searched":467,"overruled":100,"stepsPer":73.4,"msPer":10.23,"maxSteps":334}}
+{"hero":"enigma","s":5,"off":{"w":15,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":17,"ref":0,"viol":0,"stall":0,"draw":0,"sec":9.567,"searched":506,"overruled":105,"stepsPer":69.9,"msPer":9.57,"maxSteps":334}}

@@ -1,0 +1,72 @@
+GAMES 42 · stalls 0 · draws 0 · avg turns 14.1
+POLICY REFUSALS 0 · INVARIANT VIOLATIONS 0 · MALFORMED 0 · SECOND-PERSON 0 · NO-ZONE 0
+
+WINS: dash 28 · dorinthea 3 · kayo 2 · briar 2 · viserai 1 · bravo 1 · azalea 1 · fai 1 · enigma 1 · arakni 1 · boltyn 1
+
+PER SEED (3 samples of the same ladder — the engine never changed):
+  hero          s0  s1  s2   mean  spread
+  dash         10   8  10    9.3      2
+  dorinthea     1   1   1    1.0      0
+  kayo          1   1   0    0.7      1
+  briar         1   1   0    0.7      1
+  viserai       1   0   0    0.3      1
+  bravo         0   1   0    0.3      1
+  azalea        0   0   1    0.3      1
+  fai           0   1   0    0.3      1
+  enigma        0   0   1    0.3      1
+  arakni        0   1   0    0.3      1
+  boltyn        0   0   1    0.3      1
+  iyslander     0   0   0    0.0      0
+  blaze         0   0   0    0.0      0
+  gravy         0   0   0    0.0      0
+  lyath         0   0   0    0.0      0
+
+  NOISE BAND: min 0 · median 1 · MAX 2  — a version-to-version move smaller than this is not resolvable by one ladder.
+
+longest unchanged stretch a decided game came back from: 1 turns (dash-enigma-2) — the engine draws at 20
+
+ROUTE COVERAGE (times a feed line matched):
+  ally      10
+  allyatk   2
+  boost     452
+  crush     3
+  ctrWipe   3
+  death     10
+  defmod    2
+  destroycost 32
+  fusion    3
+  gold      7
+  held      417
+  hitnext   3
+  hitwatch  28
+  jab       3
+  layer     30
+  leave     1
+  powctr    3
+  reaction  18
+  shield    9
+  tap       15
+  ward      10
+  e.g. ally: Oysten, Heart of Gold enters play (ally). | Swabbie enters play (ally). | Riggermortis enters play (ally).
+  e.g. allyatk: Gravy Bones sends Oysten, Heart of Gold — 3 power on the chain. | Gravy Bones sends Limpit, Hop-a-long — 2 power on the chain, and it goes again.
+  e.g. boost: Boost: Zero to Sixty banished — Mechanologist, go again! | Boost: Under Loop banished — Mechanologist, go again! | Boost: Zipper Hit banished — Mechanologist, go again!
+  e.g. crush: Cartilage Crush — crush: Dash feels it next turn. | Fault Line — crush: 1 arsenal card goes to the bottom of the deck. | Wee Wrecking Ball — crush: Dash's arsenal is empty.
+  e.g. ctrWipe: Raydn, Duskbane loses its 4 +1{p} counters — weapons you control are wiped at the beginning of this end phase.
+  e.g. death: Oysten, Heart of Gold takes 1 and goes down — face-down in the graveyard, so it will not be replayed. | Swabbie takes 8 and goes down — face-down in the graveyard, so it will not be replayed. | Rigger
+  e.g. defmod: Brothers in Arms defends for 2 more for the rest of this combat chain.
+  e.g. destroycost: Kayo kept Beaten Trackers rather than destroy it. | Dorinthea kept Refraction Bolters rather than destroy it. | Arakni, Web of Deceit kept Mark of the Huntsman rather than destroy it.
+  e.g. fusion: Iyslander reveals Cold Snap from hand — Aether Icevein is fused (Fusion). | Briar reveals Cloud Cover from hand — Entwine Lightning is fused (Fusion). | Briar reveals Lightning Press from hand — Arcan
+  e.g. gold: Test of Strength: Gold created on Dash's board — Action - {r}{r}, destroy this: Draw a card. | Test of Strength: Gold created on Enigma's board — Action - {r}{r}, destroy this: Draw a card. | Oysten, 
+  e.g. held: Clash of Might is on the stack — either seat may answer at instant speed before it resolves. | Rev Up is on the stack — either seat may answer at instant speed before it resolves. | Zipper Hit is on t
+  e.g. hitnext: Banneret of Salvation: the next time Boltyn hits this turn, it pays off. | Burn Up // Shock: the next time Briar hits a hero this turn, it pays off.
+  e.g. hitwatch: Boom Grenade goes off — Jump Start connected, so it is destroyed. | Boom Grenade goes off — Crankshaft connected, so it is destroyed. | Boom Grenade goes off — Under Loop connected, so it is destroyed
+  e.g. jab: Danger Digits: Mark of the Huntsman lashes out at Dash for 1.
+  e.g. layer: Bolt'n Boots — ability — +0 — the layer resolves. | Puncture — +3 — the layer resolves. | Nip at the Heels — +1 — the layer resolves.
+  e.g. leave: Waning Vengeance leaves the arena — and it pays out.
+  e.g. powctr: Raydn, Duskbane takes 4 +1{p} counters — now 4.
+  e.g. reaction: Puncture on the stack (+3). | Nip at the Heels on the stack (+1). | Agile Engagement on the stack (+3).
+  e.g. shield: Toe the Line: 2 of that damage is prevented. | Toe the Line: 1 of that damage is prevented — the other 1 it could have stopped is lost with this hit. | Cloud Cover: 1 of that damage is prevented — the
+  e.g. tap: Bravo — hero power: Bravo, Flattering Showman taps to pay — tapped until their own untap step (CR 4.4.3d). | Gravy Bones — hero power: Gravy Bones taps to pay — tapped until their own untap step (CR 4
+  e.g. ward: Uphold Tradition destroys itself — ward soaks 1. | Waning Vengeance destroys itself — ward soaks 1 of the 3 it printed. | Waxing Specter destroys itself — ward soaks 3.
+
+longest 26 turns (dash-enigma-2) · shortest 6 (dash-lyath-1)

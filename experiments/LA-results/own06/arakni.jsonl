@@ -1,0 +1,6 @@
+{"hero":"arakni","s":0,"off":{"w":11,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":20,"ref":0,"viol":0,"stall":0,"draw":0,"sec":10.572,"searched":344,"overruled":140,"stepsPer":86.7,"msPer":15.26,"maxSteps":325}}
+{"hero":"arakni","s":1,"off":{"w":11,"ref":0,"viol":0,"stall":0,"draw":1},"on":{"w":21,"ref":0,"viol":0,"stall":0,"draw":0,"sec":9.065,"searched":331,"overruled":141,"stepsPer":84.8,"msPer":14.08,"maxSteps":330}}
+{"hero":"arakni","s":2,"off":{"w":9,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":23,"ref":0,"viol":0,"stall":0,"draw":0,"sec":9.361,"searched":356,"overruled":154,"stepsPer":87.9,"msPer":13.57,"maxSteps":368}}
+{"hero":"arakni","s":3,"off":{"w":9,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":22,"ref":0,"viol":0,"stall":0,"draw":0,"sec":8.354,"searched":315,"overruled":127,"stepsPer":87.3,"msPer":13.03,"maxSteps":375}}
+{"hero":"arakni","s":4,"off":{"w":9,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":21,"ref":0,"viol":0,"stall":0,"draw":0,"sec":7.57,"searched":299,"overruled":124,"stepsPer":86.3,"msPer":12.45,"maxSteps":375}}
+{"hero":"arakni","s":5,"off":{"w":9,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":22,"ref":0,"viol":0,"stall":0,"draw":0,"sec":8.364,"searched":309,"overruled":132,"stepsPer":86.6,"msPer":13.59,"maxSteps":375}}
