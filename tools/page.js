@@ -445,6 +445,23 @@ if(require.main === module){
           const top = (await page.locator(".screennav").innerText()).replace(/\s+/g, " ");
           row(top.toLowerCase().includes(first.toLowerCase()), "table board is the AI table", `top nav ${JSON.stringify(top)} names ${first}`);
           await screen("table: board", "actions: " + names(await handBar()));
+          /* A CROWDED BAR STAYS ON SCREEN (1.0 polish audit). A cost picker
+             lays one button per card in the row (Boltyn's soul: the last
+             button at x 348..410). Lay seven long-named buttons in the live
+             bar for one measurement, then take them out again. On screen, and
+             no button taller than three lines of the bar's 16px type (96px). */
+          const crowd = await page.evaluate(() => {
+            const bar = document.querySelector(".board .actbar") || document.querySelector(".actbar");
+            if(!bar) return null;
+            const made = [];
+            for(let k = 0; k < 7; k++){ const b = document.createElement("button"); b.className = "a go"; b.textContent = "Banish Light the Way (" + k + ")"; bar.appendChild(b); made.push(b); }
+            const boxes = [...bar.querySelectorAll(":scope > .a")].map(b => b.getBoundingClientRect());
+            made.forEach(b => b.remove());
+            return { n: boxes.length, right: Math.round(Math.max(...boxes.map(r => r.right))), left: Math.round(Math.min(...boxes.map(r => r.left))),
+                     tall: Math.round(Math.max(...boxes.map(r => r.height))), top: Math.round(Math.min(...boxes.map(r => r.top))) };
+          });
+          row(!!crowd && crowd.right <= W && crowd.left >= 0 && crowd.tall <= 96 && crowd.top >= 0, "table: a crowded action bar stays on screen",
+            crowd ? `${crowd.n} buttons span x ${crowd.left}..${crowd.right}, tallest ${crowd.tall}px, top ${crowd.top}` : "no action bar");
           await nav("table", ["Chain"]); await hitCheck("table", ".board .judgebtn", 40);
           await nav("table", ["You", first]);
           await playOn("table");

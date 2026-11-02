@@ -466,6 +466,15 @@ img{display:block;max-width:100%}
    The inline margins on those four already spell a stack, so `gap:0`
    lets them govern rather than adding a second spacing rule. */
 .lo .actbar{flex-direction:column;gap:0;align-items:stretch}
+/* A BAR OF CHOICES WRAPS RATHER THAN RUNNING OFF THE SCREEN (1.0 polish audit).
+   The cost pickers put ONE BUTTON PER CARD in the board's row — "Banish <soul
+   card>", "Discard <card>", "X = n" — and Boltyn's soul held enough that the
+   last button sat at x 348..410 on a 393px screen, 62px wide and 121px tall,
+   its name stacked a word per line. Up to four buttons still share one row
+   (the board's normal bar); a fifth starts a second row, which grows the
+   fixed bar upward. */
+.actbar{flex-wrap:wrap}
+.actbar>.a{min-width:calc(25% - 7px)}
 /* AND THE PRIMARY IS WEARING THE HOME SCREEN'S TYPE. `.battlebtn` is the
    30px striped BATTLE plate, which is right where it is the only thing on
    the screen and oversized here, where it is one of two options with a

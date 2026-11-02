@@ -1,3 +1,17 @@
+## v5.NN — A bar of cost choices wraps instead of running off the screen
+
+Found by the 1.0 polish audit (P2), Boltyn at the table: a cost picker lays one button per card in the
+board's action bar ("Banish <soul card>", "Discard <card>", "X = n"), and with Boltyn's soul full the
+last button, "BANISH LIGHT THE WAY", sat at x 348..410 on a 393px screen, 62px wide and 121px tall,
+its name stacked a word per line. Both boards share the bar.
+
+- **Fix:** CSS. `.actbar` wraps, and each button keeps at least a quarter of the row, so the board's
+  normal bar (up to four buttons) is unchanged and a fifth starts a second row, growing the fixed bar
+  upward.
+- **Page assertion:** `node tools/page.js` lays seven long-named buttons into the live table bar for
+  one measurement: every button on screen, none taller than three lines (96px). Sabotaged (the old
+  CSS): they span x 8..597, the tallest 121px, and it fails.
+
 ## v5.NN — The table's jump row stays one line for Lyath Goldmane
 
 Found by the 1.0 polish audit (P3). At the table the jump row's first button names the foe hero; with
