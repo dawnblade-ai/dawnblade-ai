@@ -1,0 +1,86 @@
+
+> dawnblade@1.20.0 play
+> node tools/tourney.js   3
+
+GAMES 630 · stalls 0 · draws 2 (azalea-enigma-1 gravy-arakni-1) · avg turns 20.2
+POLICY REFUSALS 0 · INVARIANT VIOLATIONS 0 · MALFORMED 0 · SECOND-PERSON 0 · NO-ZONE 0
+
+WINS: briar 78 · kayo 66 · dash 53 · fai 51 · azalea 49 · bravo 44 · viserai 42 · iyslander 42 · enigma 41 · blaze 31 · arakni 31 · dorinthea 31 · lyath 28 · boltyn 21 · gravy 20
+
+PER SEED (3 samples of the same ladder — the engine never changed):
+  hero          s0  s1  s2   mean  spread
+  briar        27  26  25   26.0      2
+  kayo         24  23  19   22.0      5
+  dash         17  18  18   17.7      1
+  fai          17  16  18   17.0      2
+  azalea       14  14  21   16.3      7
+  bravo        13  17  14   14.7      4
+  iyslander    13  12  17   14.0      5
+  viserai      15  16  11   14.0      5
+  enigma       15  11  15   13.7      4
+  dorinthea    10  10  11   10.3      1
+  arakni       11  11   9   10.3      2
+  blaze        10  11  10   10.3      1
+  lyath        10   9   9    9.3      1
+  boltyn        6   7   8    7.0      2
+  gravy         8   7   5    6.7      3
+
+  NOISE BAND: min 1 · median 2 · MAX 7  — a version-to-version move smaller than this is not resolvable by one ladder.
+
+DRAWS (the engine ended them: nothing changed for twenty turns): [{"seed":"azalea-enigma-1","a":"azalea","b":"enigma","result":"DRAW","how":"stalemate","turn":54,"steps":707,"hp":[3,2]},{"seed":"gravy-arakni-1","a":"gravy","b":"arakni","result":"DRAW","how":"stalemate","turn":62,"steps":807,"hp":[13,1]}]
+
+longest unchanged stretch a decided game came back from: 2 turns (arakni-gravy-0) — the engine draws at 20
+
+ROUTE COVERAGE (times a feed line matched):
+  ally      498
+  allyatk   274
+  arsflip   43
+  boost     922
+  chi       52
+  crush     168
+  ctrWipe   52
+  death     432
+  defmod    71
+  destroycost 829
+  fusion    107
+  gold      242
+  halve     21
+  held      13023
+  hitnext   89
+  hitwatch  61
+  jab       95
+  layer     1203
+  leave     133
+  powctr    75
+  reaction  807
+  search    42
+  shield    177
+  tap       582
+  ward      359
+  e.g. ally: Barnacle enters play (ally). | Limpit, Hop-a-long enters play (ally). | Oysten, Heart of Gold enters play (ally).
+  e.g. allyatk: Gravy Bones sends Swabbie — 7 power on the chain. | Gravy Bones sends Riggermortis — 6 power on the chain, and it goes again. | Gravy Bones sends Riggermortis — 6 power on the chain.
+  e.g. arsflip: Mode chosen: Turn their arsenal card face up, then destroy a defense reaction.
+  e.g. boost: Boost: Zero to Sixty banished — Mechanologist, go again! | Boost: Overblast banished — Mechanologist, go again! | Boost: Crankshaft banished — Mechanologist, go again! Crankshaft's boost trigger fires
+  e.g. chi: Enigma: 3 Chi spent — a Chi pays for Chi and resource costs alike; a resource point pays only its own.
+  e.g. crush: Boulder Drop — crush: a card is forced from Kayo's hand back on top of their deck. | Walk in My Shoes — crush: the base power and defence of Kayo's attack action cards are halved, rounded up, until th
+  e.g. ctrWipe: Raydn, Duskbane loses its 4 +1{p} counters — weapons you control are wiped at the beginning of this end phase.
+  e.g. death: Barnacle takes 9 and goes down — face-down in the graveyard, so it will not be replayed. | Limpit, Hop-a-long takes 8 and goes down — face-down in the graveyard, so it will not be replayed. | Oysten, 
+  e.g. defmod: Brothers in Arms defends for 2 more for the rest of this combat chain. | Stonewall Impasse defends for 1 more until end of turn. | Shred: Runerager Swarm defends for 2 less for the rest of this combat
+  e.g. destroycost: Kayo kept Beaten Trackers rather than destroy it. | Dorinthea kept Refraction Bolters rather than destroy it. | Arakni, Web of Deceit kept Mark of the Huntsman rather than destroy it.
+  e.g. fusion: Briar reveals Lightning Press from hand — Entwine Lightning is fused (Fusion). | Briar reveals Rush of Power from hand — Arcanic Shockwave is fused (Fusion). | Iyslander reveals Ice Bolt from hand — B
+  e.g. gold: Test of Strength: Gold created on Kayo's board — Action - {r}{r}, destroy this: Draw a card. | Test of Strength: Gold created on Enigma's board — Action - {r}{r}, destroy this: Draw a card. | Portside
+  e.g. halve: Walk in My Shoes — crush: the base power and defence of Kayo's attack action cards are halved, rounded up, until the end of their next turn. | Walk in My Shoes — crush: the base power and defence of I
+  e.g. held: Bare Fangs is on the stack — either seat may answer at instant speed before it resolves. | Buckwild is on the stack — either seat may answer at instant speed before it resolves. | Knucklehead is on th
+  e.g. hitnext: Burn Up // Shock: the next time Briar hits a hero this turn, it pays off. | Banneret of Salvation: the next time Boltyn hits this turn, it pays off.
+  e.g. hitwatch: Boom Grenade goes off — Overblast connected, so it is destroyed. | Boom Grenade goes off — Throttle connected, so it is destroyed. | Boom Grenade goes off — Fender Bender connected, so it is destroyed
+  e.g. jab: Unexpected Backhand was the card revealed — it lashes out at Viserai for 1. | Unexpected Backhand was the card revealed — it lashes out at Fai for 1. | Unexpected Backhand was the card revealed — it l
+  e.g. layer: Pummel — +4 — the layer resolves. | Bolt'n Boots — ability — +0 — the layer resolves. | Agile Engagement — +3 — the layer resolves.
+  e.g. leave: Tension in the Air runs out of suspense and leaves the arena — and it pays out. | Act of Glory runs out of suspense and leaves the arena — and it pays out. | Edge of Their Seats runs out of suspense a
+  e.g. powctr: Raydn, Duskbane takes 4 +1{p} counters — now 4. | Spectral Shield takes 3 +1{p} counters — now 3. | Spectral Shield takes 3 +1{p} counters — now 6.
+  e.g. reaction: Pummel on the stack (+4). | Agile Engagement on the stack (+3). | Out for Blood on the stack (+3).
+  e.g. search: Flamecall Awakening: Fai's deck is shuffled.
+  e.g. shield: Toe the Line: 2 of that damage is prevented. | Toe the Line: 1 of that damage is prevented — the other 1 it could have stopped is lost with this hit. | Cloud Cover: 3 of that damage is prevented.
+  e.g. tap: Bravo — hero power: Bravo, Flattering Showman taps to pay — tapped until their own untap step (CR 4.4.3d). | Gravy Bones — hero power: Gravy Bones taps to pay — tapped until their own untap step (CR 4
+  e.g. ward: Uphold Tradition destroys itself — ward soaks 1. | Waning Vengeance destroys itself — ward soaks 3. | Waxing Specter destroys itself — ward soaks 2 of the 3 it printed.
+
+longest 62 turns (gravy-arakni-1) · shortest 6 (azalea-boltyn-0)

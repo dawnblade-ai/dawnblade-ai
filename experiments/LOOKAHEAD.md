@@ -243,3 +243,75 @@ p95 at any budget that keeps its gain. Held out, seeds 6–11: **+3.03, t 8.3** 
 seeds +3.06 (t 11.1), no hero negative. One synchronous call fits, so nothing yields.
 Ladder every seat on (`ladder-own300/`): 630 games, 0/0/0, 0 draws, spread 52 (v5.75 58).
 Search off: `npm run play '' '' 3` byte-identical to origin/main (v5.75).
+
+# PHASE (c) (research/lookahead-c, base v5.82 f6d59a6)
+
+Shipped on the branch as ONE piece (commit 63c76cd + CR-INDEX regen 4603d3f): **blocks**. The arsenal
+search and the action-search retune did not pay and are recorded here only.
+
+Method: own-seat paired A/B against **v5.77's search** (`experiments/LA-abc.js <hero> <from> <to>
+base|trial`, `LA-abcs.sh <snap> <out> …` 4 at a time from a frozen engine snapshot; `base` forces
+blocks off and v5.77 settings, `trial` reads the `SPXLA_*` env). One base arm for seeds 0–11
+(`LA-results/pc/base/`), summed with `LA-pair.js <base> <trial>`. Wins of 28 per hero-seed.
+
+## 1. Blocks — PAYS, shipped
+
+At each declaration (`canDeclareDefenders`, an attack on the hero) the candidates are block SETS that
+contain the wall already declared: the rules' own completion (`nextBlocker` iterated), taking the rest
+of the hit, and the `blockN` best other sets of 1–3 more defenders by a first-order score (life stopped
+minus μ_b per hand card, 0.5 per armour piece); a set with a card that stops nothing the rest would not
+is never listed; copies are one card. Each set is declared on the masked root (armour first, then hand,
+by uid), and the rollout's rule policy adds nothing more to that link (`wallSet`). The next card of the
+best set is returned; one call per card, stateless. The mask's seed names the link instead of the feed
+length, so every card of one wall plays the same deal. "Take the rest" has no action when the seat lacks
+priority: `act` returns the rules' move with the wall fixed, `explain` reports `laTake`.
+
+| setting (seeds 0–5) | pooled | t | neg | over budget | steps p50/p95 |
+|---|---|---|---|---|---|
+| horizon "next" (to the seat's next decision), N 4 | +1.44 | 5.5 | 3 (Arakni −1.33 t −4) | 0.4% | 60/180 |
+| "next", N 8 | +1.44 | 5.5 | 3 | 1.9% | 70/220 |
+| "next", N 2 | +1.47 | 5.6 | 3 | 0.2% | 50/160 |
+| "next", μ_b 2.5 | +1.82 | 7.5 | 1 | 0.4% | 60/180 |
+| **"own" (through the seat's next turn), μ_b 1.5** | +4.11 | 11.4 | 0 | 4.7% | 110/290 |
+| "own", μ_b 2.5 | +4.18 | 12.9 | 0 | 5.0% | 110/300 |
+| **"own", μ_b 2 (picked)** | **+4.43** | 12.2 | 0 | 4.8% | 110/290 |
+
+The three "own" settings are within noise; μ_b 2 had the best pooled. **Held out, seeds 6–11: +4.72,
+t 12.9, 14/15 t > 2, none negative.** All 12: **+4.58, t 17.8, 15/15 t > 2**, 0 refusals / violations
+/ stalls (17 draws over 2,520 games in the ON arm). Biggest: Bravo +10 / +8.8, Blaze +8.2 / +9.8,
+Boltyn +9.2 / +7.3, Iyslander +7.2 / +7.0. Why "own" matters: a card kept from a block is worth what the
+next turn does with it; to the decision only, μ is the only thing valuing it and Arakni (whose turn
+spends its whole hand on stealth/mark lines) blocked away its attacks.
+
+Ladder, every AI seat Sharp (`SPXLA=all tourney.js <hero> '' 3`, `LA-results/pc/ladder/`): 630 games,
+REFUSALS 0 · VIOLATIONS 0 · stalls 0 · draws 0; stdev 15.1, spread 58. Order: briar 71, kayo 62, dash 55,
+bravo 53, enigma 49, iyslander 49, dorinthea 45, azalea 42, viserai 40, fai 38, blaze 36, arakni 34,
+lyath 22, boltyn 21, gravy 13. Again a strength lift, not a balancer. Search off: `npm run play '' '' 3`
+byte-identical to v5.82.
+
+Phone (`LA-phonec.js 4 200 '{"blocks":1}'`, real page, CDP 4x throttling, 200 positions per type):
+
+| type | p50 | p95 | worst | steps p50/p95/max | ms/step |
+|---|---|---|---|---|---|
+| action | 35.4 | 96.0 | 158.3 | 83/220/288 | 0.44 |
+| block | 46.8 | 125.4 | 198.9 | 138/300/300 | 0.37 |
+
+Drills: `test/lookahead.test.js` — overruled walls (laBlock and laTake both reached) survive the scramble
+of every hidden card (sabotaged: the block search on the real state → fails); blocks off, the wall is
+the rules' with the action search on.
+
+## 2. Arsenal — does NOT pay, not shipped
+
+The arsenal step is a distinct action (`{t:"arsenal", uid|null}`, CR 4.4.3b). Candidates: the rules'
+card, each distinct hand card, none; rolled out from the masked view.
+- to the seat's next decision: **−0.11 (t −2.2)**, overruled 2% of 7,100 searched;
+- through the seat's next turn: **−0.22 (t −1.6)**, 9 heroes negative, overruled 11%.
+The rules' "biggest attack face down" is as good as the eval can see. Code removed from the branch.
+
+## 3. Tuning the action search (K / μ / margin) — does NOT pay
+
+Seeds 0–5 against v5.77's settings (K 1, μ 1.5, margin 0.5, own/300): K 2 −0.14 (over budget 12.4%:
+two deals do not fit 300 steps); μ 1 −0.24; μ 2 +0.13 (t 1.2); margin 0 −0.07; margin 1 −0.11. All
+noise; v5.77's settings stand.
+
+Rules questions: none arose. `LA-results/pc/`: base, blk-*, ars-*, tune-*, ladder, play-search-off.txt.

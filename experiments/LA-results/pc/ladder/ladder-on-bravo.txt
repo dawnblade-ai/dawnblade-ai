@@ -1,0 +1,74 @@
+GAMES 42 · stalls 0 · draws 0 · avg turns 21.6
+POLICY REFUSALS 0 · INVARIANT VIOLATIONS 0 · MALFORMED 0 · SECOND-PERSON 0 · NO-ZONE 0
+
+WINS: bravo 26 · blaze 3 · kayo 2 · briar 2 · iyslander 1 · viserai 1 · azalea 1 · dorinthea 1 · fai 1 · enigma 1 · boltyn 1 · gravy 1 · lyath 1
+
+PER SEED (3 samples of the same ladder — the engine never changed):
+  hero          s0  s1  s2   mean  spread
+  bravo        10   7   9    8.7      3
+  blaze         1   1   1    1.0      0
+  kayo          0   1   1    0.7      1
+  briar         1   1   0    0.7      1
+  iyslander     0   0   1    0.3      1
+  viserai       0   1   0    0.3      1
+  azalea        0   1   0    0.3      1
+  dorinthea     0   0   1    0.3      1
+  fai           1   0   0    0.3      1
+  enigma        1   0   0    0.3      1
+  boltyn        0   1   0    0.3      1
+  gravy         0   0   1    0.3      1
+  lyath         0   1   0    0.3      1
+  dash          0   0   0    0.0      0
+  arakni        0   0   0    0.0      0
+
+  NOISE BAND: min 0 · median 1 · MAX 3  — a version-to-version move smaller than this is not resolvable by one ladder.
+
+longest unchanged stretch a decided game came back from: 1 turns (bravo-dash-0) — the engine draws at 20
+
+ROUTE COVERAGE (times a feed line matched):
+  ally      7
+  allyatk   38
+  boost     40
+  chi       3
+  crush     66
+  ctrWipe   1
+  death     2
+  defmod    2
+  destroycost 42
+  fusion    1
+  gold      5
+  held      582
+  hitnext   3
+  jab       3
+  layer     87
+  leave     5
+  powctr    2
+  reaction  68
+  search    1
+  shield    8
+  tap       52
+  ward      16
+  e.g. ally: Barnacle enters play (ally). | Riggermortis enters play (ally). | Limpit, Hop-a-long enters play (ally).
+  e.g. allyatk: Gravy Bones sends Barnacle — 4 power on the chain. | Gravy Bones sends Limpit, Hop-a-long — 2 power on the chain, and it goes again. | Gravy Bones sends Swabbie — 7 power on the chain, and it goes aga
+  e.g. boost: Boost: Overblast banished — Mechanologist, go again! | Boost: Teklo Trebuchet 2000 banished — Mechanologist, go again! | Boost: Zero to Sixty banished — Mechanologist, go again!
+  e.g. chi: Enigma: 3 Chi spent — a Chi pays for Chi and resource costs alike; a resource point pays only its own.
+  e.g. crush: Boulder Drop — crush: a card is forced from Kayo's hand back on top of their deck. | Fault Line — crush: 1 arsenal card goes to the bottom of the deck. | Buckling Blow — crush: Iyslander has no equipm
+  e.g. ctrWipe: Raydn, Duskbane loses its 4 +1{p} counters — weapons you control are wiped at the beginning of this end phase.
+  e.g. death: Riggermortis takes 8 and goes down — face-down in the graveyard, so it will not be replayed. | Swabbie takes 5 and goes down — face-down in the graveyard, so it will not be replayed.
+  e.g. defmod: Brothers in Arms defends for 2 more for the rest of this combat chain.
+  e.g. destroycost: Kayo kept Beaten Trackers rather than destroy it. | Dorinthea kept Refraction Bolters rather than destroy it. | Arakni, Web of Deceit kept Mark of the Huntsman rather than destroy it.
+  e.g. fusion: Briar reveals Weave Lightning from hand — Arcanic Shockwave is fused (Fusion).
+  e.g. gold: Test of Strength: Gold created on Bravo, Flattering Showman's board — Action - {r}{r}, destroy this: Draw a card. | Portside Exchange: Gold created on Gravy Bones's board — Action - {r}{r}, destroy th
+  e.g. held: Sledge of Anvilheim is on the stack — either seat may answer at instant speed before it resolves. | Buckwild is on the stack — either seat may answer at instant speed before it resolves. | Wild Ride i
+  e.g. hitnext: Banneret of Salvation: the next time Boltyn hits this turn, it pays off. | Burn Up // Shock: the next time Briar hits a hero this turn, it pays off.
+  e.g. jab: Danger Digits: Mark of the Huntsman lashes out at Bravo, Flattering Showman for 1.
+  e.g. layer: Pummel — +4 — the layer resolves. | Bolt'n Boots — ability — +0 — the layer resolves. | Ironsong Response — +0 — the layer resolves.
+  e.g. leave: Waning Vengeance leaves the arena — and it pays out. | Edge of Their Seats runs out of suspense and leaves the arena — and it pays out. | Tension in the Air runs out of suspense and leaves the arena —
+  e.g. powctr: Waxing Specter takes 3 +1{p} counters — now 4. | Raydn, Duskbane takes 4 +1{p} counters — now 4.
+  e.g. reaction: Pummel on the stack (+4). | Ironsong Response on the stack (+0). | Out for Blood on the stack (+3).
+  e.g. search: Flamecall Awakening: Fai's deck is shuffled.
+  e.g. shield: Toe the Line: 2 of that damage is prevented. | Toe the Line: 1 of that damage is prevented — the other 1 it could have stopped is lost with this hit. | Cloud Cover: 1 of that damage is prevented — the
+  e.g. tap: Bravo — hero power: Bravo, Flattering Showman taps to pay — tapped until their own untap step (CR 4.4.3d). | Gravy Bones — hero power: Gravy Bones taps to pay — tapped until their own untap step (CR 4
+  e.g. ward: Uphold Tradition destroys itself — ward soaks 1. | Spectral Shield destroys itself — ward soaks 1. | Waning Vengeance destroys itself — ward soaks 3.
+
+longest 38 turns (bravo-enigma-1) · shortest 12 (bravo-fai-0)
