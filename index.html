@@ -6856,7 +6856,7 @@ function TableScreen({onBack, onSeated}){
       </>}
 
       {err && <div className="tblerr">{err}</div>}
-      <button className="a" onClick={onBack}>Back</button>
+      <button className="bigbtn alt" onClick={onBack}>Back</button>
     </div>
   );
 }
@@ -7006,7 +7006,7 @@ function TableRoom({table, host, code, db, onExit}){
       <div className="tblerr">{lob.fault}</div>
       <p className="mnote">Both phones must run the same version of the game.
         Reload the page on the older one to pick up the latest.</p>
-      <button className="a" onClick={onExit}>Leave the table</button>
+      <button className="bigbtn alt" onClick={onExit}>Leave the table</button>
     </div>
   );
 
@@ -7019,7 +7019,7 @@ function TableRoom({table, host, code, db, onExit}){
       <div className="tblwrap">{head}
         <div className="tblstat live"><span className="tbldot"></span>
           Sideboard locked — waiting on {foeH ? foeH.n.split(",")[0] : "them"}…</div>
-        <button className="a" onClick={onExit}>Leave the table</button>
+        <button className="bigbtn alt" onClick={onExit}>Leave the table</button>
       </div>
     );
     return <Loadout h={myH} db={db} netFoe={foeH} netOnPlay={lob.first === mySeat}
@@ -7099,7 +7099,7 @@ function TableRoom({table, host, code, db, onExit}){
         text</strong>, read by the same engine as the solo trainer. One copy
         of the rules, two seats.
       </p>
-      <button className="a" onClick={onExit}>Leave the table</button>
+      <button className="bigbtn alt" onClick={onExit}>Leave the table</button>
     </div>
   );
 }

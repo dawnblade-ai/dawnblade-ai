@@ -1,3 +1,13 @@
+## v5.NN — The lobby's Back and Leave are real buttons
+
+Found by the 1.0 polish audit (P2). The two-phone lobby's **Back** and the room's three **Leave the
+table** buttons carried `className="a"`, which is styled only inside the board's action bar; in the
+lobby they rendered as bare 16px-tall text across the screen (`Back` at 377x16 on Find an opponent).
+They take the lobby's own secondary style, `bigbtn alt` (42px).
+
+- **Page assertion:** `node tools/page.js` measures every button on the Find-an-opponent screen
+  (>= 40px tall). Sabotaged (the old class): `Back 16px`, fails.
+
 ## v5.NN — The table room stops naming files and a retired card cache
 
 Found by the 1.0 polish audit (P2). Two lines of the two-phone room's player copy: the hero-pick note

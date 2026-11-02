@@ -251,6 +251,11 @@ if(require.main === module){
     /* find an opponent: the code screen (no peer network is reached) */
     if(await click(btn(/^Find an opponent/), "find an opponent")){
       await page.waitForSelector(".tblwrap"); await screen("table: find an opponent");
+      /* the lobby's Back / Leave buttons were unstyled `.a` buttons, 16px tall
+         (1.0 polish audit): every button on the screen is a real button */
+      const lob = await page.evaluate(() => [...document.querySelectorAll(".tblwrap button")].filter(b => b.offsetParent)
+        .map(b => ({ t: b.innerText.trim(), h: Math.round(b.getBoundingClientRect().height) })));
+      row(lob.length > 0 && lob.every(b => b.h >= 40), "table: the lobby's buttons are thumb-sized", lob.map(b => `${b.t} ${b.h}px`).join(", "));
       await click(page.locator(".tblwrap button", { hasText: /back|leave|cancel/i }).first(), "leave the code screen");
     }
 
