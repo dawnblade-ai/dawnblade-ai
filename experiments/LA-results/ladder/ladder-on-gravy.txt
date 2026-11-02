@@ -1,0 +1,76 @@
+GAMES 42 · stalls 0 · draws 0 · avg turns 24.3
+POLICY REFUSALS 0 · INVARIANT VIOLATIONS 0 · MALFORMED 0 · SECOND-PERSON 0 · NO-ZONE 0
+
+WINS: gravy 13 · dorinthea 3 · fai 3 · enigma 3 · blaze 3 · lyath 3 · kayo 2 · iyslander 2 · viserai 2 · bravo 2 · arakni 2 · briar 2 · dash 1 · boltyn 1
+
+PER SEED (3 samples of the same ladder — the engine never changed):
+  hero          s0  s1  s2   mean  spread
+  gravy         6   2   5    4.3      4
+  dorinthea     1   1   1    1.0      0
+  fai           1   1   1    1.0      0
+  enigma        1   1   1    1.0      0
+  blaze         1   1   1    1.0      0
+  lyath         1   1   1    1.0      0
+  kayo          0   1   1    0.7      1
+  iyslander     0   1   1    0.7      1
+  viserai       1   1   0    0.7      1
+  bravo         1   1   0    0.7      1
+  arakni        0   1   1    0.7      1
+  briar         1   0   1    0.7      1
+  dash          0   1   0    0.3      1
+  boltyn        0   1   0    0.3      1
+  azalea        0   0   0    0.0      0
+
+  NOISE BAND: min 0 · median 1 · MAX 4  — a version-to-version move smaller than this is not resolvable by one ladder.
+
+longest unchanged stretch a decided game came back from: 1 turns (gravy-kayo-0) — the engine draws at 20
+
+ROUTE COVERAGE (times a feed line matched):
+  ally      236
+  allyatk   159
+  boost     39
+  chi       1
+  crush     7
+  ctrWipe   4
+  death     204
+  defmod    2
+  destroycost 37
+  fusion    8
+  gold      67
+  halve     2
+  held      1759
+  hitnext   3
+  hitwatch  1
+  jab       3
+  layer     48
+  leave     10
+  powctr    7
+  reaction  28
+  shield    33
+  tap       65
+  ward      7
+  e.g. ally: Swabbie enters play (ally). | Riggermortis enters play (ally). | Oysten, Heart of Gold enters play (ally).
+  e.g. allyatk: Gravy Bones sends Riggermortis — 6 power on the chain, and it goes again. | Gravy Bones sends Riggermortis — 6 power on the chain. | Gravy Bones sends Oysten, Heart of Gold — 3 power on the chain.
+  e.g. boost: Boost: Throttle banished — Mechanologist, go again! | Boost: Jump Start banished — Mechanologist, go again! | Boost: Zipper Hit banished — Mechanologist, go again!
+  e.g. chi: Enigma: 3 Chi spent — a Chi pays for Chi and resource costs alike; a resource point pays only its own.
+  e.g. crush: Cartilage Crush — crush: Gravy Bones feels it next turn. | Fault Line crushed an ally — crush asks for damage to a hero. | Disable crushed an ally — crush asks for damage to a hero.
+  e.g. ctrWipe: Raydn, Duskbane loses its 4 +1{p} counters — weapons you control are wiped at the beginning of this end phase.
+  e.g. death: Swabbie takes 6 and goes down — face-down in the graveyard, so it will not be replayed. | Riggermortis takes 8 and goes down — face-down in the graveyard, so it will not be replayed. | Oysten, Heart o
+  e.g. defmod: Brothers in Arms defends for 2 more for the rest of this combat chain. | Stonewall Impasse defends for 1 more until end of turn.
+  e.g. destroycost: Kayo kept Beaten Trackers rather than destroy it. | Dorinthea kept Refraction Bolters rather than destroy it. | Arakni, Web of Deceit kept Mark of the Huntsman rather than destroy it.
+  e.g. fusion: Iyslander reveals Frosting from hand — Aether Icevein is fused (Fusion). | Iyslander reveals Ice Bolt from hand — Aether Icevein is fused (Fusion). | Briar reveals Cloud Cover from hand — Entwine Ligh
+  e.g. gold: Riggermortis: Gold created on Gravy Bones's board — Action - {r}{r}, destroy this: Draw a card. | Oysten, Heart of Gold: Gold created on Gravy Bones's board — Action - {r}{r}, destroy this: Draw a car
+  e.g. halve: Walk in My Shoes — crush: the base power and defence of Gravy Bones's attack action cards are halved, rounded up, until the end of their next turn.
+  e.g. held: Swabbie is on the stack — either seat may answer at instant speed before it resolves. | Clash of Might is on the stack — either seat may answer at instant speed before it resolves. | Golden Tipple is 
+  e.g. hitnext: Banneret of Salvation: the next time Boltyn hits this turn, it pays off.
+  e.g. hitwatch: Boom Grenade goes off — Big Bertha connected, so it is destroyed.
+  e.g. jab: Danger Digits: Mark of the Huntsman lashes out at Gravy Bones for 1.
+  e.g. layer: Pummel — +4 — the layer resolves. | Bolt'n Boots — ability — +0 — the layer resolves. | Stroke of Foresight — +3 — the layer resolves.
+  e.g. leave: Edge of Their Seats runs out of suspense and leaves the arena — and it pays out. | Tension in the Air runs out of suspense and leaves the arena — and it pays out. | Act of Glory runs out of suspense a
+  e.g. powctr: Spectral Shield takes 3 +1{p} counters — now 6. | Waxing Specter takes 3 +1{p} counters — now 4. | Raydn, Duskbane takes 4 +1{p} counters — now 4.
+  e.g. reaction: Pummel on the stack (+4). | Stroke of Foresight on the stack (+3). | Agile Engagement on the stack (+3).
+  e.g. shield: Throw Caution to the Wind: 3 of that damage is prevented. | Throw Caution to the Wind: 1 of that damage is prevented — the other 2 it could have stopped is lost with this hit. | Throw Caution to the W
+  e.g. tap: Gravy Bones — hero power: Gravy Bones taps to pay — tapped until their own untap step (CR 4.4.3d). | Bravo — hero power: Bravo, Flattering Showman taps to pay — tapped until their own untap step (CR 4
+  e.g. ward: Waxing Specter destroys itself — ward soaks 2 of the 3 it printed. | Uphold Tradition destroys itself — ward soaks 1. | Spectral Shield destroys itself — ward soaks 1.
+
+longest 41 turns (gravy-viserai-2) · shortest 6 (gravy-dorinthea-2)

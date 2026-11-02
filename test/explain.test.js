@@ -125,12 +125,13 @@ test("every reason is keyed from a site in the policy, and the census names what
      charge window after one card was picked), and the three gate reasons are reached. v5.67 adds `chargeMore`: 30 games never hold two Light
      cards at V of the Vanguard's sheet, so `test/vcharge.test.js` drives it instead.
      H26 (`markFirst`) is reached by the census, and it re-routes an Arakni game or two: `discost` is reached now and
-     `chargeDone` is not (the census games are the same 30; the trajectories moved). */
+     `chargeDone` is not (the census games are the same 30; the trajectories moved). The four `la*`
+     reasons belong to the lookahead, gated off (`LA.seats` empty), so `test/lookahead.test.js` reaches them. */
   const seen = census().keys;
   for(const k of Object.keys(seen)) assert.ok(SP.CALL_WHY[k], "reached key " + k + " has no reason");
   assert.deepEqual(keys.filter(k => !seen[k]).sort(),
     ["addPayNo", "allocAll", "allyTake", "answer", "arenaAP", "arenaRes", "arsenalSkip", "boostNo",
-     "chargeDone", "chargeMore", "chargeNone", "payCancel", "pitchChi"]);
+     "chargeDone", "chargeMore", "chargeNone", "laHit", "laHold", "laKeep", "laSafe", "payCancel", "pitchChi"]);
 });
 
 test("every reason and every line reads as game text", () => {

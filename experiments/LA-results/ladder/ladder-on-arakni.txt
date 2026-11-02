@@ -1,0 +1,80 @@
+GAMES 42 · stalls 0 · draws 0 · avg turns 19.8
+POLICY REFUSALS 0 · INVARIANT VIOLATIONS 0 · MALFORMED 0 · SECOND-PERSON 0 · NO-ZONE 0
+
+WINS: arakni 21 · dorinthea 3 · fai 3 · briar 3 · kayo 2 · viserai 2 · azalea 2 · enigma 2 · bravo 1 · blaze 1 · gravy 1 · lyath 1
+
+PER SEED (3 samples of the same ladder — the engine never changed):
+  hero          s0  s1  s2   mean  spread
+  arakni        7   8   6    7.0      2
+  dorinthea     1   1   1    1.0      0
+  fai           1   1   1    1.0      0
+  briar         1   1   1    1.0      0
+  kayo          1   1   0    0.7      1
+  viserai       1   0   1    0.7      1
+  azalea        0   1   1    0.7      1
+  enigma        0   1   1    0.7      1
+  bravo         1   0   0    0.3      1
+  blaze         0   0   1    0.3      1
+  gravy         1   0   0    0.3      1
+  lyath         0   0   1    0.3      1
+  iyslander     0   0   0    0.0      0
+  dash          0   0   0    0.0      0
+  boltyn        0   0   0    0.0      0
+
+  NOISE BAND: min 0 · median 1 · MAX 2  — a version-to-version move smaller than this is not resolvable by one ladder.
+
+longest unchanged stretch a decided game came back from: 1 turns (arakni-bravo-0) — the engine draws at 20
+
+ROUTE COVERAGE (times a feed line matched):
+  ally      21
+  allyatk   9
+  arsflip   3
+  boost     19
+  chi       2
+  crush     6
+  ctrWipe   2
+  death     19
+  defmod    13
+  destroycost 85
+  fusion    4
+  gold      8
+  halve     2
+  held      665
+  hitnext   2
+  hitwatch  2
+  jab       42
+  layer     210
+  leave     10
+  powctr    3
+  reaction  157
+  search    4
+  shield    4
+  tap       30
+  ward      9
+  e.g. ally: Barnacle enters play (ally). | Swabbie enters play (ally). | Oysten, Heart of Gold enters play (ally).
+  e.g. allyatk: Gravy Bones sends Oysten, Heart of Gold — 3 power on the chain. | Gravy Bones sends Oysten, Heart of Gold — 3 power on the chain, and it goes again. | Gravy Bones sends Cutty Shark, Quick Clip — 3 pow
+  e.g. arsflip: Mode chosen: Turn their arsenal card face up, then destroy a defense reaction.
+  e.g. boost: Boost: Teklo Trebuchet 2000 banished — Mechanologist, go again! | Boost: Boom Grenade banished — Mechanologist, go again! | Boost: Throttle banished — Mechanologist, go again!
+  e.g. chi: Enigma: 3 Chi spent — a Chi pays for Chi and resource costs alike; a resource point pays only its own.
+  e.g. crush: Boulder Drop — crush: a card is forced from Arakni, Web of Deceit's hand back on top of their deck. | Buckling Blow — crush: Arakni, Web of Deceit has no equipment left to weaken. | Walk in My Shoes —
+  e.g. ctrWipe: Raydn, Duskbane loses its 4 +1{p} counters — weapons you control are wiped at the beginning of this end phase.
+  e.g. death: Barnacle takes 3 and goes down — face-down in the graveyard, so it will not be replayed. | Swabbie takes 3 and goes down — face-down in the graveyard, so it will not be replayed. | Oysten, Heart of Go
+  e.g. defmod: Shred: Zero to Sixty defends for 2 less for the rest of this combat chain. | Shred: Crankshaft defends for 2 less for the rest of this combat chain. | Shred: Flatten the Field defends for 2 less for t
+  e.g. destroycost: Kayo kept Beaten Trackers rather than destroy it. | Arakni, Web of Deceit kept Mark of the Huntsman rather than destroy it. | Dorinthea kept Refraction Bolters rather than destroy it.
+  e.g. fusion: Iyslander reveals Ice Bolt from hand — Aether Icevein is fused (Fusion). | Briar reveals Rush of Power from hand — Arcanic Shockwave is fused (Fusion). | Briar reveals Lightning Surge from hand — Entw
+  e.g. gold: Test of Strength: Gold created on Arakni, Web of Deceit's board — Action - {r}{r}, destroy this: Draw a card. | Test of Strength: Gold created on Enigma's board — Action - {r}{r}, destroy this: Draw a
+  e.g. halve: Walk in My Shoes — crush: the base power and defence of Arakni, Web of Deceit's attack action cards are halved, rounded up, until the end of their next turn.
+  e.g. held: Knucklehead is on the stack — either seat may answer at instant speed before it resolves. | Up Sticks and Run is on the stack — either seat may answer at instant speed before it resolves. | Concoct Di
+  e.g. hitnext: Burn Up // Shock: the next time Briar hits a hero this turn, it pays off.
+  e.g. hitwatch: Boom Grenade goes off — Overblast connected, so it is destroyed. | Boom Grenade goes off — Zipper Hit connected, so it is destroyed.
+  e.g. jab: Danger Digits: Mark of the Huntsman lashes out at Kayo for 1. | Danger Digits: Mark of the Huntsman lashes out at Iyslander for 1. | Danger Digits: Mark of the Huntsman lashes out at Viserai for 1.
+  e.g. layer: Prey Spotters — ability — +0 — the layer resolves. | Arakni, Black Widow — hero power — +3 — the layer resolves. | Stains of the Redback — +3 — the layer resolves.
+  e.g. leave: Tension in the Air runs out of suspense and leaves the arena — and it pays out. | Edge of Their Seats runs out of suspense and leaves the arena — and it pays out. | Act of Glory runs out of suspense a
+  e.g. powctr: Spectral Shield takes 3 +1{p} counters — now 6. | Raydn, Duskbane takes 4 +1{p} counters — now 4.
+  e.g. reaction: Arakni, Black Widow — hero power on the stack (+3). | Stains of the Redback on the stack (+3). | Scar Tissue on the stack (+3).
+  e.g. search: Flamecall Awakening: Fai's deck is shuffled.
+  e.g. shield: Toe the Line: 2 of that damage is prevented. | Cloud Cover: 3 of that damage is prevented. | Throw Caution to the Wind: 2 of that damage is prevented — the other 1 it could have stopped is lost with t
+  e.g. tap: Bravo — hero power: Bravo, Flattering Showman taps to pay — tapped until their own untap step (CR 4.4.3d). | Gravy Bones — hero power: Gravy Bones taps to pay — tapped until their own untap step (CR 4
+  e.g. ward: Uphold Tradition destroys itself — ward soaks 1. | Waning Vengeance destroys itself — ward soaks 1 of the 3 it printed. | Spectral Shield destroys itself — ward soaks 1.
+
+longest 39 turns (arakni-enigma-1) · shortest 7 (arakni-blaze-0)
