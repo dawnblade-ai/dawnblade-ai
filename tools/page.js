@@ -385,6 +385,38 @@ if(require.main === module){
       }
     }
 
+    /* ---- game over at the table ----
+       Three endings, each reached in one move: the AI seat concedes (a WIN),
+       you concede (a LOSS). A win over an AI HERO is not a win over the
+       dummy: it must not read "DUMMY DESTROYED" nor write the dummy's best
+       score (v5.74 did both). A win over the Dummy at the table still does. */
+    const ending = async (foeIdx, who, want, label) => {
+      if(!(await toLoadout("over"))) return;
+      const foeBtn = page.locator(".aifoe button").nth(foeIdx);
+      const foe = ((await foeBtn.getAttribute("aria-label")) || "").split(",")[0];
+      if(!(await click(foeBtn, label + ": pick " + foe))) return;
+      const best0 = await page.evaluate(() => { localStorage.removeItem("dawnblade.best"); return null; });
+      if(who === 1) await page.evaluate(() => {   // the AI seat's next move is to concede
+        const act = DawnSparring.act; DawnSparring.act = (st, i) => i === 1 ? { t: "concede" } : act(st, i);
+        window.__restoreAct = () => { DawnSparring.act = act; };
+      });
+      if(!(await click(btn(/^Fight the new engine/), label + ": fight"))) return;
+      await page.waitForSelector(".board", { timeout: 15000 });
+      if(who === 0) await page.evaluate(() => window.__dawnTable.session.submit({ t: "concede" }));
+      const shown = await page.waitForSelector(".reveal", { timeout: 15000 }).then(() => page.locator(".reveal").innerText()).catch(() => "");
+      await page.evaluate(() => window.__restoreAct && window.__restoreAct());
+      const best1 = await page.evaluate(() => localStorage.getItem("dawnblade.best"));
+      const head = shown.split("\n")[0].trim();
+      const ok = want.head.test(head) && (want.records ? best1 !== best0 : best1 === best0);
+      row(ok, label, `vs ${foe}: ${JSON.stringify(head)}` + (want.records ? "" : best1 === best0 ? ", best score untouched" : ", WROTE THE BEST SCORE"));
+      await screen(label + " screen");
+      await page.locator(".reveal").click().catch(() => {});
+      await page.waitForSelector(".hgrid", { timeout: 5000 }).catch(() => {});
+    };
+    await ending(3, 1, { head: /^you take it$/i, records: false }, "table: win over an AI hero");
+    await ending(3, 0, { head: /^they take it$/i, records: false }, "table: loss to an AI hero");
+    await ending(0, 1, { head: /^dummy destroyed$/i, records: true }, "table: win over the Dummy");
+
     const sw = errors.slice();
     if(sw.length){ console.log("\nPAGE ERRORS (" + sw.length + "):"); sw.forEach(e => console.log("  " + e)); }
     const bad = rows.filter(r => !r.ok).length;

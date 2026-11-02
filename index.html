@@ -832,7 +832,7 @@ img{display:block;max-width:100%}
    database + typographic fallbacks. Not affiliated with LSS.
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
-window.APP_VER = "5.78"; /* v5.78 - the loadout offers Sharp or Steady for how an AI hero plays, Sharp by default. See CHANGELOG.md. */
+window.APP_VER = "5.79"; /* v5.79 - a table win over an AI hero is no longer a dummy win, and the table's notes stop naming engine files. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -6817,11 +6817,13 @@ function TableScreen({onBack, onSeated}){
             true before v2.49 and has been wrong since: the table negotiates a
             hero, a throw and a sideboard and runs two real decks. Stale copy
             that UNDER-sells is still stale copy — it tells a player not to
-            bother with the screen. The lobby's own note already said this. */}
+            bother with the screen. The lobby's own note already said this.
+            And it said "card text does not resolve yet" until the 1.0 polish
+            audit, long after effects.js gave both boards one copy of it. */}
         <p className="mnote">
-          Table play runs <strong>two real hero decks</strong> — the CR turn structure,
-          priority, the combat chain and printed costs. Card text does not resolve
-          yet: the parser's effects still live in the solo trainer.
+          Table play runs <strong>two real hero decks</strong> — the full turn structure,
+          priority, the combat chain, printed costs, and the card text, read by the
+          same engine as the trainer.
         </p>
       </>}
 
@@ -6998,9 +7000,8 @@ function TableRoom({table, host, code, db, onExit}){
   if(step === "fault") return (
     <div className="tblwrap">{head}
       <div className="tblerr">{lob.fault}</div>
-      <p className="mnote">Both phones must hold the same card data. Reload the
-        page on the older one — the database is cached under its version key,
-        so a reload re-fetches it.</p>
+      <p className="mnote">Both phones must run the same version of the game.
+        Reload the page on the older one to pick up the latest.</p>
       <button className="a" onClick={onExit}>Leave the table</button>
     </div>
   );
@@ -7089,11 +7090,10 @@ function TableRoom({table, host, code, db, onExit}){
 
       {err && <div className="tblerr">{err}</div>}
       <p className="mnote">
-        Table play runs <strong>two real hero decks</strong> through
-        engine/judge.js — the CR turn structure, priority, the combat chain,
-        printed costs and <strong>card text</strong>, which resolves through
-        the same engine/effects.js the solo trainer uses. One copy of the
-        rules, two seats.
+        Table play runs <strong>two real hero decks</strong> — the full turn
+        structure, priority, the combat chain,
+        printed costs and <strong>card text</strong>, read by the same
+        engine as the solo trainer. One copy of the rules, two seats.
       </p>
       <button className="a" onClick={onExit}>Leave the table</button>
     </div>
@@ -7373,7 +7373,12 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
      for a local win — see the reveal block below for why beating a person
      earns no pull. Keyed off `g.over` exactly as the trainer's is, so a
      re-render cannot record twice. */
-  uE(()=>{ if(over && local && over.winner===mySeat && onRecord && heroKey)
+  /* A LOCAL WIN IS A DUMMY WIN ONLY WHEN THE DUMMY SAT OPPOSITE. Since the
+     ruling of 2026-10-18 an AI hero may pilot seat 1, and that seat carries
+     its hero's key; the vanilla pile carries none. Beating Azalea read
+     "DUMMY DESTROYED", pulled a trophy and wrote the dummy's best score. */
+  const beatDummy = !!(over && local && over.winner===mySeat && !them.heroKey);
+  uE(()=>{ if(beatDummy && onRecord && heroKey)
              onRecord(heroKey, g.turn + (me.wasted||0)); },[g.over]);
 
   const targets = DawnJudge.targets(g, 1-mySeat, them.heroCard);
@@ -8058,7 +8063,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
           A NETWORKED win is over a person and still gets the honest words
           and no reward. So the distinction is `local`, and it follows the
           existing rule rather than overriding it. */}
-      {over && local && over.winner===mySeat && onRecord
+      {beatDummy && onRecord
         ? <WinPanel score={g.turn + (me.wasted||0)} onExit={onExit}/>
         : over && <div className={"reveal"+(drawText||over.winner===mySeat?"":" lose")} onClick={onExit}>
         <h2 className="disp" style={{marginBottom:14}}>

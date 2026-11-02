@@ -1,3 +1,33 @@
+## v5.79 — Table results and copy: an AI-hero win is not a dummy win, and the table's notes tell the truth
+
+Three findings of the 1.0 polish audit (`docs/archive/POLISH-AUDIT-1.0.md`: #2 P1, #3 and #7 P2),
+fixed on `polish/one-oh` one commit each and shipped together.
+
+- **Beating an AI hero is not "DUMMY DESTROYED" (P1).** At the table on one phone, a win over an
+  AI-piloted hero (ruling 2026-10-18) showed the trainer's DUMMY DESTROYED panel, pulled a trophy and
+  wrote the win into the hero's best-vs-dummy score: the board decided "dummy win" from `local` alone,
+  a premise that stopped being true when an AI hero could sit in seat 1. A local win is now a dummy
+  win only when the seat opposite carries no hero key (the vanilla pile). A win over an AI hero gets
+  the table's own panel ("YOU TAKE IT") and records nothing. What such a win should earn is open
+  (decision D, deferred after 1.0).
+- **The Find-an-opponent note (P2)** said "Card text does not resolve yet: the parser's effects still
+  live in the solo trainer", untrue since `engine/effects.js` gave both boards one copy of the card
+  semantics, and in an identifier's words. It now says the table plays the card text through the
+  same engine as the trainer.
+- **The table room's copy (P2):** the hero-pick note named `engine/judge.js` and `engine/effects.js`,
+  and the version-mismatch screen said the card database "is cached under its version key, so a
+  reload re-fetches it" (no cache since v5.74). They now say the table plays the card text through
+  the same engine as the trainer, and that both phones must run the same version (reload the older
+  one). On rebasing onto v5.78 the room note keeps `printed costs and <strong>card text</strong>` on
+  one source line, which `test/flow.test.js`'s "the blurb says so" pins.
+- **Drills:** `test/tablecopy.test.js` (new) reads `TableScreen`'s and `TableRoom`'s player-visible
+  text, comments stripped: no "does not resolve", no filename or engine identifier, no "cached /
+  re-fetch / database", and the mismatch screen names the fix. Sabotaged (the old copy; a filename
+  put back in the room note on this rebase): fails. `node tools/page.js` ends three table games in
+  one move each (the AI seat concedes, you concede, the Dummy concedes) and checks the headline and
+  whether the best score was written; sabotaged with the old condition, the AI-hero win reads
+  DUMMY DESTROYED and fails.
+
 ## v5.78 — Sharp or Steady: one control for how the AI hero plays
 
 - **What changed for a player:** the loadout's "New engine opponent" panel shows two tiles under the
