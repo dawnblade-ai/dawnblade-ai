@@ -23,10 +23,15 @@ History goes in the archived handoffs below it and in CHANGELOG.md. Do not start
 
 **DECISIONS (user, 2026-11-02):**
 - **R8 — YES.** "Nothing at all changes for 20 turns" ends the game as a DRAW even with cards in a
-  deck (`blaze-enigma-46`). In flight: `ship/r8-draw` (v5.74).
-- **Card data — PINNED POOL ONLY.** The page loads the pinned pool (`tools/pin-pool.js`), never the
-  live the-fab-cube `develop` branch: phones play exactly the text the drills tested, the game
-  survives upstream moving, first load shrinks from 22 MB. In flight: `ship/pinned-pool` (v5.75).
+  deck (`blaze-enigma-46`). In flight: `ship/r8-draw` (now v5.75).
+- **Card data — PINNED POOL ONLY. SHIPPED v5.74** (`aa15b16`): `data/pool.js` (UMD, `window.DAWN_POOL`)
+  is the one copy the page loads and every drill requires; no live fetch, no card cache; first load
+  23.5 MB -> 1.43 MB. Verified by the CEO: 3896 drills 0 fail 5 skipped, scenes 107/0, fairness clean,
+  babel ok, `tools/page.js` 28/28. Open from it: (a) upstream reworded **Line Crossers** ("as a hero"
+  -> "as another hero"; the parser reads it part instead of full) — the pool keeps the old text until
+  a deliberate re-pin, which must decide whether that is errata or a database fix; (b) the old live
+  filter kept 19 extra hero printings (e.g. "Kayo, Berserker Runt"); pin-pool drops them and all 15
+  heroes resolve to the same record.
 - **Next big project — LOOKAHEAD AI** (chosen over hidden hands for two phones). Phase 1 spike in
   flight on `research/lookahead`: feasibility, one searched decision behind a gate, house A/B.
   Constraints: no hidden information, no card text, deterministic, `explain` keeps reason keys,
