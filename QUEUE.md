@@ -14,7 +14,7 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
 **Keep this section SHORT (under ~50 lines): current state, decisions, who is doing what, next.**
 History goes in the archived handoffs below it and in CHANGELOG.md. Do not start a root handoff file.
 
-- **Live: v5.73** (`218a5fe`). Baseline 2026-11-02: 3892 drills, 0 fail, 5 skipped. Ledger
+- **Live: v5.75** (`5c5553f`). Was v5.73 (`218a5fe`) at session start. Baseline 2026-11-02: 3892 drills, 0 fail, 5 skipped. Ledger
   (`node tools/approx.js`): 0 open, 22 stated, 36 closed.
 - **How the CEO works now (context is the scarce resource):** every build/measure job runs in its
   own cloud session (`create_session`, outcome branch `ship/*` or `research/*`), which messages the
@@ -23,7 +23,7 @@ History goes in the archived handoffs below it and in CHANGELOG.md. Do not start
 
 **DECISIONS (user, 2026-11-02):**
 - **R8 — YES.** "Nothing at all changes for 20 turns" ends the game as a DRAW even with cards in a
-  deck (`blaze-enigma-46`). In flight: `ship/r8-draw` (now v5.75).
+  deck (`blaze-enigma-46`). **SHIPPED v5.75** (`5c5553f`): ladder 0/0/0, same 2 draws; blaze-enigma-46 draws at turn 55.
 - **Card data — PINNED POOL ONLY. SHIPPED v5.74** (`aa15b16`): `data/pool.js` (UMD, `window.DAWN_POOL`)
   is the one copy the page loads and every drill requires; no live fetch, no card cache; first load
   23.5 MB -> 1.43 MB. Verified by the CEO: 3896 drills 0 fail 5 skipped, scenes 107/0, fairness clean,
@@ -36,6 +36,13 @@ History goes in the archived handoffs below it and in CHANGELOG.md. Do not start
   flight on `research/lookahead`: feasibility, one searched decision behind a gate, house A/B.
   Constraints: no hidden information, no card text, deterministic, `explain` keeps reason keys,
   phone budget well under 100 ms a decision.
+  **Phase 1 = GO** (`research/lookahead`, `experiments/LOOKAHEAD.md`): own-action search, rule policy
+  drives both seats in rollouts, hidden info masked (`laMask`), eval = life swing + 1.5 x cards held.
+  Own-seat A/B 12 seeds: every hero up, pooled +2.84 of 28, 12/15 at t>2; ladder 0/0/0 but the
+  spread is unchanged (stdev 15.7). **Phase 2 decisions (CEO):** purpose = a STRONGER partner on
+  every AI seat (no handicapping strong decks); loadout gets "Sharp" (search, default) / "Steady"
+  (rules); phone bound p95 < 150 ms, worst < 400 ms at 4x CPU throttle; ship (a) search default-on,
+  (b) the control, (c) arsenal/blocks later, each measured.
 - **R9 — UNDECIDED, research needed** (user: "Not sure on that, we'll have to research"). The
   sandbox's network policy blocks `rules.fabtcg.com` and `fabtcg.com`, so the CR text on when an
   activated ability declares its target could not be read. Unblock: the user allows those domains,
