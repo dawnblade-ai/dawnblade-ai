@@ -407,8 +407,11 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        the growth is the 1.0 polish pass's layout rules, each with its
        comment: the hit-area `::after` rules (JUDGE!!, the status line, and
        decision B's jump row and advisor header, whose cut corners moved to a
-       `::before`), the jump row's one-line rule and the action bar's wrap. */
-    "phasebar.test.js index.html 68417",
+       `::before`), the jump row's one-line rule and the action bar's wrap.
+       68,417 -> 68,639 AT v5.81, READ FIRST: still `<style>` -> `</style>`;
+       the growth is the `.pip` tints PipLine draws a printed pip's word in,
+       with their comment. */
+    "phasebar.test.js index.html 68639",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
        `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
        `abPickBound` in the pick legality it extends. */

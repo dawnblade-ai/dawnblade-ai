@@ -34,9 +34,9 @@ const HEROES = ["arakni", "azalea", "blaze", "boltyn", "bravo", "briar", "dash",
 
 /* The call is addressed to ONE player, so the second person is right here
    (it is banned in the shared feed only). A camelCase word is a key or an
-   identifier leaking onto the screen. */
-const CALL_VOICE = DEV_VOICE.filter(([, why]) => why !== "the second person")
-  .concat([[/\b[a-z]+[A-Z][A-Za-z]*\b/, "a camelCase identifier"]]);
+   identifier leaking onto the screen — a shape the shared list carries
+   since the 1.0 polish audit, when one reached the feed. */
+const CALL_VOICE = DEV_VOICE.filter(([, why]) => why !== "the second person");
 const faults = s => CALL_VOICE.filter(([rx]) => rx.test(s)).map(([, why]) => why);
 
 let CENSUS = null;
@@ -205,4 +205,14 @@ test("S14: \"charge first\" names only a card that offers a charge", () => {
   assert.ok(c.chargeOk.filter(l => /^boltyn\/|\/boltyn /.test(l)).length > 3,
     "the positive control: Boltyn's charge-first calls are still named (" + c.chargeOk.length + ")");
   assert.ok(c.keys.atkKeepsAP > 20, "the go-again attacks are named as keeping the point");
+});
+
+test("the turn-one read counts in English: one is singular (1.0 polish audit)", () => {
+  /* Iyslander's read said "1 permanents". Every hero's read, every count. */
+  for(const k of HEROES){
+    const r = match(k, "lyath", "read1", 0).builds[0].read;
+    assert.ok(!/(?:^|\D)1 (?:attacks|permanents)\b/.test(r), r);
+  }
+  assert.ok(/1 permanent\b/.test(match("iyslander", "lyath", "read1", 0).builds[0].read) ||
+            !/permanent/.test(match("iyslander", "lyath", "read1", 0).builds[0].read), "Iyslander's read");
 });

@@ -73,8 +73,8 @@ function poolNoopReasons(){
 test("the scan is ALIVE — a control string is flagged by every shape", () => {
   assert.deepEqual(faults("live — v4.24; see parser.crankCost() in engine/parser.js `here` via fxParse, off fx.noDrx by the weapon reader for you"),
     ["a version number", "a filename", "a function call", "a backtick", "an engine identifier",
-     "a parse field", "the word \"reader\"", "the second person"],
-    "all eight shapes fire, so a zero below means the reasons are clean " +
+     "a parse field", "the word \"reader\"", "a camelCase identifier", "the second person"],
+    "all nine shapes fire, so a zero below means the reasons are clean " +
     "rather than that the scan stopped matching");
   assert.deepEqual(faults("a defence restriction — the wall reads it when this attacks"), [],
     "and ordinary game text is not flagged");
@@ -92,8 +92,12 @@ test("no `noop` reason that reaches a pool card reads as developer text", {skip}
     "the census found " + reasons.size + " distinct reasons — too few to be " +
     "walking the pool at all");
   const bad = [];
+  /* THE FEED'S FORM (1.0 polish audit): a reason names its reader in a
+     trailing parenthetical for the audit, and `runOps` prints it through
+     `noopFeedText`, which drops exactly that. So the player's line is what
+     is held to game text — and a reader named anywhere ELSE still fails. */
   for(const [why, card] of reasons){
-    const f = faults(why);
+    const f = faults(P.noopFeedText(why));
     if(f.length) bad.push(card + ": \"" + why + "\" — " + f.join(", "));
   }
   assert.deepEqual(bad, [],
@@ -113,4 +117,21 @@ test("the three that were rewritten still say what is handled, in game words", {
   assert.match(say("Cloaked"), /face-down/);
   for(const t of ["Crank", "Dominate", "Intimidate", "Cloaked"])
     assert.deepEqual(faults(say(t)), [], t);
+});
+
+test("a reason names its reader for the audit, and the feed prints it without (1.0 polish audit)", () => {
+  /* "Thunder Quake: printed keyword — the arsenal-step offer, carried by
+     heaveOffer/heave." reached a driven table feed. The reader stays named
+     (v3.16), in the one place the feed strips. */
+  const say = t => (P.classifyClause(t) || {ops: [[0, ""]]}).ops[0][1];
+  for(const [t, reader] of [["Heave 2", "heaveOffer"], ["Arcane Barrier 1", "arcaneSoaks"], ["Inertia", "resolveInertia"]]){
+    const why = say(t);
+    assert.ok(why.includes("(" + reader + ")"), t + " names its reader: " + why);
+    assert.deepEqual(faults(P.noopFeedText(why)), [], t + " reads as game text in the feed: " + P.noopFeedText(why));
+  }
+  assert.equal(P.noopFeedText("a hand wipe (resolveInertia)"), "a hand wipe");
+  assert.equal(P.noopFeedText("enforced when played (Fusion)"), "enforced when played (Fusion)", "a game word in brackets stays");
+  /* and the one place that prints a noop prints the feed form */
+  const src = require("fs").readFileSync(require("path").join(__dirname, "..", "engine", "effects.js"), "utf8");
+  assert.match(src, /k==="noop"\)\{ n=L\(n,`\$\{srcName\}: \$\{P\.noopFeedText\(v\)\}\.`\); \}/);
 });

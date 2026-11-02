@@ -435,6 +435,10 @@ img{display:block;max-width:100%}
 .gamelog{display:flex;flex-direction:column;gap:5px}
 .gamelog .gl{font-size:12px;padding:5px 8px;background:var(--forge);border-left:2px solid var(--line)}
 .gamelog .gl:first-child{border-left-color:var(--y)}
+/* a printed pip, in words (PipLine): tinted like the icon it stands for */
+.pip{font-weight:600}
+.pip-p{color:#E0705F} .pip-d{color:#8FB0D8} .pip-h{color:var(--ok)} .pip-i{color:var(--bone)}
+.pip-r,.pip-c{color:var(--y)}
 .chand{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:6px}
 
 .wslot:not(.filled){flex:.5;min-height:44px}
@@ -878,7 +882,7 @@ img{display:block;max-width:100%}
    database + typographic fallbacks. Not affiliated with LSS.
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
-window.APP_VER = "5.80"; /* v5.80 - the preview clears skip and cancel, every small control takes a thumb-sized tap, and nothing runs off the screen. See CHANGELOG.md. */
+window.APP_VER = "5.81"; /* v5.81 - the feed reads printed pips as words, names no functions, and the Coach's lines agree with their counts. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -1574,7 +1578,7 @@ var rngMake = DawnRNG.make, rngNext = DawnRNG.next, rngInt = DawnRNG.int,
     rngSeedFrom = DawnRNG.seedFrom, rngRestore = DawnRNG.restore;
 var parseDeck = DawnGame.parseDeck, gearDef = DawnGame.gearDef,
     gearBlockApply = DawnGame.gearBlockApply, slotOf = DawnGame.slotOf,
-    typeAbbr = DawnGame.typeAbbr,
+    typeAbbr = DawnGame.typeAbbr, pipParts = DawnGame.pipParts,
     addRunechants = DawnGame.addRunechants, popRunechants = DawnGame.popRunechants,
     attackTargets = DawnGame.attackTargets, targetCanBeDefended = DawnGame.targetCanBeDefended,
     damageAlly = DawnGame.damageAlly, resetAllyLife = DawnGame.resetAllyLife,
@@ -2476,7 +2480,7 @@ function PromptSheet({p, me, onToggle, onPick, onTakeBack, onMove, onDecline, on
     <div className="ph"><span className="pt">{p.title}</span>
       <span className="psrc">{p.src}</span>
       {!mine && <span className="pside">opponent's call</span>}</div>
-    <div className="phint">{p.hint}</div>
+    <div className="phint"><PipLine s={p.hint}/></div>
 
     {/* AN OPT IS DRAWN IN THE ORDER THE PLAYER CHOOSES (v5.45, QUEUE v4
         S12). The cards stand in their RESULTING order, left to right as
@@ -2526,7 +2530,7 @@ function PromptSheet({p, me, onToggle, onPick, onTakeBack, onMove, onDecline, on
     {p.tag==="modal" && <div className="pmodal">
       {p.options.map((o,i)=>(
         <button key={i} className={"popt"+(p.choice===i?" on":"")} onClick={go(()=>onPick(i))}>
-          {o.label || String(o)}
+          <PipLine s={o.label || String(o)}/>
         </button>
       ))}
       {/* AN OPTIONAL MODAL HAD NO WAY OUT ON EITHER BOARD (v4.61).
@@ -2723,6 +2727,14 @@ function stepLabel(g, seat){
   return mine ? "your action phase" : "their action phase";
 }
 
+/* A FEED LINE WITH ITS PIPS IN WORDS (1.0 polish audit). The engine keeps
+   card text's icon tokens verbatim ("+1{p}", "{r}"); the screen showed them
+   raw. `pipParts` (engine/game.js) is the one body: each word that stands
+   for an icon is tinted with the icon's colour. The JUDGE!! report keeps
+   the raw line. */
+function PipLine({s}){
+  return <>{pipParts(s).map(([t,k],i)=> k ? <span key={i} className={"pip pip-"+k}>{t}</span> : t)}</>;
+}
 function Ticker({feed}){
   const [idx,setIdx]=uS(0);
   uE(()=>{
@@ -2736,7 +2748,7 @@ function Ticker({feed}){
   return (
     <div className="ticker">
       <span className="live"><span className="dot"/>LIVE</span>
-      <span className="cap" key={idx}>{shown}</span>
+      <span className="cap" key={idx}><PipLine s={shown}/></span>
       {backlog>1 && <span className="more">+{backlog}</span>}
     </div>
   );
@@ -2753,8 +2765,8 @@ function Advisor({g,ctx,read,label,call}){
     <div className="adv">
       <button className="advhead" onClick={()=>setOpen(o=>{store.set("adv",!o);return !o;})}>✦ {label||"Coach's call"} {open?"▾":"▸"}</button>
       {open && <div className="advbody">
-        <div>{rec.line}</div>
-        {rec.why ? <div className="advwhy">{rec.why}</div> : null}
+        <div><PipLine s={rec.line}/></div>
+        {rec.why ? <div className="advwhy"><PipLine s={rec.why}/></div> : null}
         {g.turn===1 && you(g).hist.atk===0 && you(g).hist.non===0 && read ? <div className="advwhy">{read}</div> : null}
       </div>}
     </div>
@@ -5882,7 +5894,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                   `mode` is live and authoritative, so it says so out loud;
                   the table derives the same answer with `advView`. */}
               <Advisor g={g} ctx={{window:g.mode, incoming:g.incoming, runeDmg:built.runeDmg, hpow:built.HPOW, boostOn:g.boostOn, dBlk:opp(g).gear.filter(x=>gearDef(x)>0).length + opp(g).hand.filter(c=>(c.def||0)>0).length, dDef:gearDef(opp(g).gear.find(x=>gearDef(x)>0)||{})||1}} read={built.read}/>
-              <div className="gamelog" style={{marginTop:8}}>{[...g.feed].reverse().map((l,i)=><div key={i} className="gl">{l}</div>)}</div>
+              <div className="gamelog" style={{marginTop:8}}>{[...g.feed].reverse().map((l,i)=><div key={i} className="gl"><PipLine s={l}/></div>)}</div>
             </div>
             {/* PANE 2 — PLAY: dummy hand · stack|card|defend · your hand+extras */}
             <div className="hpane playpane">
@@ -7772,7 +7784,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                   return {line: other ? them.name.split(",")[0] + " is deciding." : "Nothing to decide yet."};
                 }}
                 read={myBuild.read}/>}
-              <div className="gamelog" style={{marginTop:8}}>{[...(g.feed||[])].reverse().map((l,i)=><div key={i} className="gl">{l}</div>)}</div>
+              <div className="gamelog" style={{marginTop:8}}>{[...(g.feed||[])].reverse().map((l,i)=><div key={i} className="gl"><PipLine s={l}/></div>)}</div>
             </div>
 
             <div className="hpane playpane">

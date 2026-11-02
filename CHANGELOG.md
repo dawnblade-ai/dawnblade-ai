@@ -1,3 +1,42 @@
+## v5.81 — Feed and voice: pips as words, no function names, the Coach's grammar
+
+Five findings of the 1.0 polish audit (`docs/archive/POLISH-AUDIT-1.0.md`: #6 and #10 P2; #12, #14,
+#15 P3), fixed on `polish/one-oh` across six commits and shipped together.
+
+- **Pips as words (#6).** The feed printed card text's raw tokens: "Bare Fangs (7{p}) at random.",
+  "6 or more {p}", "a +1{p} counter". `game.pipParts` (engine/game.js, bridged) splits a line into
+  text and pip words: a stat pip is a noun ("+1{p}" -> "+1 power"), a resource or chi pip a count
+  ("{r}{r}{r}" -> "3 resources"), and an icon it does not know stays as printed. `PipLine` draws it,
+  tinted like the icon, on both boards' feed, the ticker, the advisor's call and the prompt sheet's
+  hint and modal options. The feed itself and the JUDGE!! report keep the raw line (the engine keeps
+  printed tokens; drawing them is presentation, as v4.98 said).
+- **No function names in the feed (#10).** A `noop` reason prints under the card's name, and four named
+  a function: "Thunder Quake: printed keyword — the arsenal-step offer, carried by heaveOffer/heave."
+  (also `arcaneSoaks`, `resolveInertia`, `frailtyCount`). CLAUDE.md asks a noop to name its reader;
+  the feed asks for game text. Both hold now: a reason names its reader in ONE place, a trailing
+  parenthetical of identifiers, and `parser.noopFeedText` drops exactly that where `runOps` prints.
+  Heave and Frailty were reworded into that shape; the claim each makes is unchanged.
+- **The Coach (#12, #15):** "Play Bravo — hero power — hero power" names the power once (`advise` tags
+  a hero-power source only when the name does not already say it); the read counts "1 permanent",
+  "1 attack" in the singular (`build.js`); the pay line says "(2 left floating — spend them before end
+  of turn)", "(1 left floating — spend it …)" instead of "2 floats: spend it".
+- **"+1 from reactions" (#14)**, not "+1 reactions": the number is power, not cards. One template in
+  `effects.js`, both boards.
+- **Drills:** `test/pipwords.test.js` (new, 4: the wording, the unknown-icon refusal, the parts, every
+  render site through `PipLine`); `test/helpers/voice.js` gains "a camelCase identifier" as a shared
+  shape, so `test/noopvoice.test.js`'s pool census holds the FEED form of every reason to it, plus a
+  drill that heave, Arcane Barrier and Inertia still name their readers and the one print site uses
+  `noopFeedText`; `test/advisor.test.js` (the power named once, a bare-named one still tagged, the
+  floating line at 2 and at 0); `test/explain.test.js` (no "1 attacks" / "1 permanents" in any hero's
+  read); `test/feedvoice.test.js` (the resolve template). `test/anchors.test.js` re-pins the Inertia
+  anchor's text. `node tools/page.js` fails any screen whose feed, ticker, advisor or sheet shows a
+  raw pip. Re-sabotaged on this rebase: the power word unmapped (pipwords fails 2), `runOps`
+  printing the raw reason (noopvoice), the old resolve wording (feedvoice), the old floating line
+  (advisor): each fails.
+- **Rebase notes:** the table room note's one-line `card text` phrase (part of 5527cd3) already landed
+  in v5.79. `slicecensus` repins the style block 68,417 -> 68,639 for the `.pip` tints.
+  `npm run anchors` / `npm run unanchored`: exit 0; `npm run audit`: no change but the timestamp.
+
 ## v5.80 — Layout and tap targets: no lost taps, thumb-sized hit areas, nothing off the screen
 
 Five findings of the 1.0 polish audit (`docs/archive/POLISH-AUDIT-1.0.md`: #4, #5, #8, #9 P2; #13

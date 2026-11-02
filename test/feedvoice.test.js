@@ -218,3 +218,15 @@ test("THE END PHASE names the seat whose turn it is — 'your turn', never 'You'
   const m = E.beginEndPhase(h, 1).msgs.find(x => /intimidated card/.test(x)) || "";
   assert.match(m, /^You take back 1 intimidated card/, m);
 });
+
+/* 1.0 POLISH AUDIT: "Dawnblade resolves for 1 (+1 reactions)." The number is
+   the POWER the reactions added (`rxPumpTotal`), not a count of reaction
+   cards, so "+1 reactions" read as a miscount. The line IS the observable
+   here, and the template is its one source. */
+test("the resolve line says where the +N came from: \"from reactions\"", () => {
+  const src = require("fs").readFileSync(require("path").join(__dirname, "..", "engine", "effects.js"), "utf8");
+  const tpl = (src.match(/resolves for \$\{total\}[^\n]*/) || [""])[0];
+  assert.ok(tpl, "the resolve line's template was found");
+  assert.ok(/\(\+\$\{pumps\} from reactions\)/.test(tpl), tpl);
+  assert.ok(!/\$\{pumps\} reactions\)/.test(tpl), tpl);
+});

@@ -222,9 +222,13 @@ if(require.main === module){
     const screen = async (name, extra) => {
       await page.waitForTimeout(250);
       const m = await widths(name), fresh = errors.length - errSeen; errSeen = errors.length;
-      const ok = m.sw <= W && !fresh;
+      /* no raw card-text pip ("+1{p}", "{r}") in what a player reads: the feed,
+         the ticker, the advisor, the prompt sheet (PipLine, 1.0 polish audit) */
+      const pip = await page.evaluate(() => [...document.querySelectorAll(".gamelog, .ticker, .adv, .psheet")]
+        .map(e => (e.innerText.match(/[^\n]{0,40}\{[pdrhicut]\}[^\n]{0,20}/) || [])[0]).find(Boolean) || null);
+      const ok = m.sw <= W && !fresh && !pip;
       row(ok, name, `scrollWidth ${m.sw}/${W}` + (m.sw > W && m.bad.length ? "  overflow: " + m.bad.join("; ") : "") +
-                    (fresh ? "  new errors: " + fresh : "") + (extra ? "  " + extra : ""));
+                    (fresh ? "  new errors: " + fresh : "") + (pip ? "  raw pip: " + JSON.stringify(pip) : "") + (extra ? "  " + extra : ""));
     };
     const click = async (loc, what) => { try { await loc.click({ timeout: 4000 }); return true; } catch(e){ row(false, what, "not clickable: " + String(e.message).split("\n")[0]); return false; } };
     const has = sel => page.locator(sel).first().isVisible().catch(() => false);

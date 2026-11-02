@@ -15,6 +15,14 @@
 })(typeof self!=="undefined" ? self : this, function(){
 
 const norm = s => s.toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+/* A NOOP'S REASON HAS TWO READERS, AND THIS IS WHERE THEY PART (1.0 polish
+   audit). The audit wants the reason to NAME THE READER that makes the clause
+   real (v3.16: "(resolveInertia)"); the player reads the same string in the
+   feed, under the card's name (v4.24), where "carried by heaveOffer/heave"
+   is a code comment. So a reason names its reader in ONE place — a trailing
+   parenthetical of identifiers — and the feed prints the reason without it. */
+const noopFeedText = why => String(why == null ? "" : why)
+  .replace(/\s*\((?:[a-z]+[A-Z][\w]*|[A-Za-z_$][\w$]*\.[\w$.]+)(?:\s*[\/,]\s*(?:[a-z]+[A-Z][\w]*|[A-Za-z_$][\w$]*\.[\w$.]+|[a-z]+))*\)\s*$/, "");
 const isAttack = c => /attack/i.test(c.tt) && /action/i.test(c.tt) && c.power!=null;
 const isArrow  = c => /arrow/i.test(c.tt);
 /* ---- DOES THIS PIECE PRINT ITS OWN WEAPON ATTACK? (v4.49) -----------
@@ -1712,7 +1720,7 @@ function classifyClause(raw){
      for, which every coverage tool then counts as read. `tools/ledger.js`
      is what keeps this honest: heave is `live` there, so `failstates.js`
      grades it against the claim rather than against a grep of the source. */
-  if(/^heave \d+$/.test(c)) return NOOP("printed keyword — the arsenal-step offer, carried by heaveOffer/heave");
+  if(/^heave \d+$/.test(c)) return NOOP("printed keyword — offered at the arsenal step, when the card can be heaved (heaveOffer)");
   /* ARCANE BARRIER / SPELLVOID are LIVE as of v2.74 — read off
      `card_keywords` by `arcaneBarrier`/`spellvoid` and offered by
      `arcaneSoaks` at the one place a hero takes arcane damage. The old
@@ -2344,7 +2352,7 @@ function classifyClause(raw){
      the rule is real and it is applied by a NAMED reader (`frailtyCount`,
      inside `execute`'s bonus), not on resolution. */
   if(/^attack action cards you'?(?:ve| have) played from arsenal and your weapon attacks get -1\{p\}$/.test(c))
-    return NOOP("frailty's debuff — read off the board by frailtyCount when an attack is declared");
+    return NOOP("frailty's debuff — read off the board when an attack is declared (frailtyCount)");
   /* "it gets -N{p}" while defending — the incoming swing is shaved */
   if(m=c.match(/^(?:this|it) gets -(\d+)\s*\{p\}$/)) return R([["atkMinus",+m[1]]]);
   /* "it gets -N{p} unless you pay {cost}" (Look Tuff) — this REDUCES ITS
@@ -10671,7 +10679,7 @@ function rustedThrough(gear, counters){
 /* test hook — fxParse memoizes on name|pitch; drills must clear between fixtures */
 const fxReset = () => FXMEMO.clear();
 
-return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter,
+return {norm, noopFeedText, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter,
   PER_COUNT, DEF_PER, perCountKey, chainHits, pickSubject, attackQual, markRed, costCtx, qualMatches, abWindow, defCap, defCounts, defCapWhy, isBlockCard,
         nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, qualColour, CLASS_TALENT_WORDS, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, isActionCard, costOffFor, heaveOf,
         classifyClause, fxParse, fxReset, playableFromZone, playZoneWhy, addCostWhy, isArrowCard, boostPays, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost, isActivation, isActionPaid, costTaxes, handAbilityTax,
