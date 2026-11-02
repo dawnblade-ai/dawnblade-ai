@@ -1,3 +1,26 @@
+## v5.76 — Blocking in the trainer no longer blanks the page
+
+Found by the 1.0 polish audit (**P0**). In the trainer, the first time the player defended with a card
+from hand (or a piece of gear) and tapped **Resolve damage**, the page went blank: the block wall
+summed its defenders with `_EFX.defendValue(...)`, and `defendValue` is a module export of
+`effects.js`, never a member of the `makeEffects` context. `undefined(...)` threw inside the reducer
+and React unmounted the whole screen. Every hero, every game where the player blocks. No drill could
+reach the call (a closure inside `Battle`) and the smoke walk only ever took the hit.
+
+- **Fix:** both sites call `DawnEffects.defendValue`, the one body the table already uses.
+- **Drill:** `test/efxsurface.test.js` (2) asks the engine rather than reading it: every `_EFX.<name>`
+  the page calls must be a key `makeEffects` returns, and every `Dawn<Module>.<name>` must be exported
+  by the module scripts the page loads, run in the page's order. Sabotaged twice (the old call; a
+  planted `DawnJudge.notAThing`): each fails.
+- **Page assertion:** `node tools/page.js` now hands the dummy the first turn, defends with the first
+  card the rail offers and taps through to Resolve damage. Sabotaged (the old call): the board is gone
+  and the page error is `_EFX.defendValue is not a function`.
+- **The drill that pinned the crash:** `test/staunch.test.js` counted two `_EFX.defendValue(` calls
+  in `finishBlock` — a text pin cannot tell a call from a crash. It counts the module's calls now and
+  refuses the context's. `test/slicecensus.test.js` repins the `<style>` slice (64,223 -> 65,313,
+  read: the hit-area and pip-tint rules).
+
+
 ## v5.75 — nothing changing for twenty turns is a draw, decks or no decks (R8)
 
 **RULING (user, 2026-11-02):** asked "Should 'nothing at all changes for 20 turns' end the game as a

@@ -822,7 +822,7 @@ img{display:block;max-width:100%}
    database + typographic fallbacks. Not affiliated with LSS.
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
-window.APP_VER = "5.75"; /* v5.75 - a position where nothing changes for twenty turns is a draw even with cards left in a deck (ruling R8). See CHANGELOG.md. */
+window.APP_VER = "5.76"; /* v5.76 - blocking in the trainer no longer blanks the page at Resolve damage. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -5274,13 +5274,17 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        is weaker than printed and visible. They come alive the moment seat
        1 swings a real card. */
     const _atkOpts = {weaponAttack:false, atkCard:null, handDefenders:bcards.length};
-    const dh = bcards.reduce((a,c)=>a+_EFX.defendValue(act(s), c, _atkOpts),0);
+    /* MODULE-LEVEL, NOT THE CONTEXT (1.0 polish audit). `defendValue` is an
+       export of effects.js, never a member of the `makeEffects` context, so
+       `_EFX.defendValue` was undefined and the first block the PLAYER made
+       in the trainer threw at "Resolve damage" and blanked the page. */
+    const dh = bcards.reduce((a,c)=>a+DawnEffects.defendValue(act(s), c, _atkOpts),0);
     const dg = act(s).blockG.reduce((a,i)=>{
       const piece = act(s).gear[i];
       /* the WEAR stays `gearDef`'s and rides in as `base` — re-deriving
          Guardwell, Temper, battleworn and destruction inside `defendValue`
          would be a second copy of the wear rules (v3.24). */
-      return a + _EFX.defendValue(act(s), piece, {..._atkOpts, base:gearDef(piece)});
+      return a + DawnEffects.defendValue(act(s), piece, {..._atkOpts, base:gearDef(piece)});
     },0);
     const drx = act(s).blockRx.reduce((a,l)=>a+l.def,0);
     /* NO `clashDef` TERM ANY MORE (v3.94). The clash defence bonus is a
