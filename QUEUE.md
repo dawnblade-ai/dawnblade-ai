@@ -14,10 +14,11 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
 **Keep this section SHORT (under ~50 lines): current state, decisions, who is doing what, next.**
 History goes in the archived handoffs below it and in CHANGELOG.md. Do not start a root handoff file.
 
-- **Live: v5.78** (`a8de082`). Session start was v5.73 (`218a5fe`). Shipped 2026-11-02: v5.74 pinned pool ·
-  v5.75 R8 draw · v5.76 P0 trainer block crash (found by the polish audit) · v5.77 lookahead search on
-  the AI hero (+3.06 of 28, t 11.1, 0/0/0; phone p95 96 ms) · v5.78 Sharp/Steady loadout tiles.
-  (`node tools/approx.js`): 0 open, 22 stated, 36 closed.
+- **Live: v5.82** (`f6d59a6`). Session start was v5.73 (`218a5fe`). Shipped 2026-11-02: v5.74 pinned pool ·
+  v5.75 R8 draw · v5.76 P0 trainer block crash · v5.77 lookahead search on the AI hero (+3.06 of 28,
+  t 11.1, 0/0/0; phone p95 96 ms) · v5.78 Sharp/Steady · v5.79 table results/copy · v5.80 layout + 44px
+  hit areas · v5.81 feed/voice · v5.82 home-screen icon (original, `icons/`, not standalone) · docs:
+  player README, `tools/page-audit.js`, `docs/archive/POLISH-AUDIT-1.0.md`.
 - **How the CEO works now (context is the scarce resource):** every build/measure job runs in its
   own cloud session (`create_session`, outcome branch `ship/*` or `research/*`), which messages the
   CEO a short report when its branch is pushed. Workers never push `main`; the CEO re-verifies
@@ -54,13 +55,12 @@ History goes in the archived handoffs below it and in CHANGELOG.md. Do not start
   pregame item would only spend a steam counter for an action point the action phase overwrites
   (`ap:1`), so no player would take it; `start-item-crank-unasked` stays stated, nothing to build.
 
-**IN FLIGHT:** `ship/polish` (session_013xG9x9dyWcLZep2tydngou) groups the polish fixes as v5.79 table
-results/copy · v5.80 layout + tap targets (decision B: invisible 44px hit areas) · v5.81 feed/voice ·
-v5.82 home-screen icon (decision C: original icon, NOT standalone) · README/docs commit.
+**IN FLIGHT:** `ship/record` (session_013xG9xC5fA6YQQWbcbBPX2z): v5.83 verify/fix the Sharp/Steady tiles vs
+the FIGHT bar (page-audit lead) · v5.84 decision D (CEO): a per-device W-L-D record per AI opponent and
+level, shown on the picker. `research/lookahead-c` (session_013xG9xAHie8avZKwibm7qx5): block search,
+arsenal search, K/mu/margin tuning — each ships only if it pays.
 **OPEN DECISIONS:** (A, USER) the coin screen says "the throw returns for launch" — bring back
-rock-paper-scissors for 1.0 or drop the line? (D, deferred past 1.0) what a win over an AI hero earns
-(CEO lean: a per-opponent W-L record). Lookahead (c) — arsenal/block search, K/mu/margin tuning — waits
-until polish lands. R9 still waits on the CR text. Parked: hidden hands, sudden death.
+rock-paper-scissors for 1.0 or drop the line? (D) decided: W-L record (in flight). R9 still waits on the CR text. Parked: hidden hands, sudden death.
 
 **AI policy hunts are paused:** H25, H27, H28, H30, H31 did not ship (the hand-written vein is
 thin; detail in the archive below). Their patches are in `experiments/`.
