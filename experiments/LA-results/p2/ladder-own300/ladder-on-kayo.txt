@@ -1,0 +1,76 @@
+GAMES 42 · stalls 0 · draws 0 · avg turns 19.7
+POLICY REFUSALS 0 · INVARIANT VIOLATIONS 0 · MALFORMED 0 · SECOND-PERSON 0 · NO-ZONE 0
+
+WINS: kayo 34 · briar 3 · iyslander 1 · bravo 1 · azalea 1 · arakni 1 · gravy 1
+
+PER SEED (3 samples of the same ladder — the engine never changed):
+  hero          s0  s1  s2   mean  spread
+  kayo         12  11  11   11.3      1
+  briar         1   1   1    1.0      0
+  iyslander     0   1   0    0.3      1
+  bravo         0   0   1    0.3      1
+  azalea        1   0   0    0.3      1
+  arakni        0   0   1    0.3      1
+  gravy         0   1   0    0.3      1
+  viserai       0   0   0    0.0      0
+  dash          0   0   0    0.0      0
+  dorinthea     0   0   0    0.0      0
+  fai           0   0   0    0.0      0
+  enigma        0   0   0    0.0      0
+  blaze         0   0   0    0.0      0
+  boltyn        0   0   0    0.0      0
+  lyath         0   0   0    0.0      0
+
+  NOISE BAND: min 0 · median 0 · MAX 1  — a version-to-version move smaller than this is not resolvable by one ladder.
+
+longest unchanged stretch a decided game came back from: 0 turns (null) — the engine draws at 20
+
+ROUTE COVERAGE (times a feed line matched):
+  ally      10
+  allyatk   14
+  boost     17
+  chi       1
+  crush     4
+  ctrWipe   1
+  death     8
+  defmod    3
+  destroycost 231
+  fusion    2
+  gold      9
+  halve     1
+  held      496
+  hitwatch  3
+  jab       8
+  layer     26
+  leave     2
+  powctr    1
+  reaction  13
+  search    1
+  shield    11
+  tap       13
+  ward      10
+  e.g. ally: Limpit, Hop-a-long enters play (ally). | Barnacle enters play (ally). | Cutty Shark, Quick Clip enters play (ally).
+  e.g. allyatk: Gravy Bones sends Limpit, Hop-a-long — 2 power on the chain, and it goes again. | Gravy Bones sends Barnacle — 4 power on the chain. | Gravy Bones sends Riggermortis — 6 power on the chain.
+  e.g. boost: Boost: Zero to Sixty banished — Mechanologist, go again! | Boost: Under Loop banished — Mechanologist, go again! | Boost: Zipper Hit banished — Mechanologist, go again!
+  e.g. chi: Enigma: 3 Chi spent — a Chi pays for Chi and resource costs alike; a resource point pays only its own.
+  e.g. crush: Chokeslam — crush: Kayo feels it next turn. | Debilitate — crush: Kayo feels it next turn. | Walk in My Shoes — crush: the base power and defence of Kayo's attack action cards are halved, rounded up, 
+  e.g. ctrWipe: Raydn, Duskbane loses its 4 +1{p} counters — weapons you control are wiped at the beginning of this end phase.
+  e.g. death: Limpit, Hop-a-long takes 8 and goes down — face-down in the graveyard, so it will not be replayed. | Barnacle takes 5 and goes down — face-down in the graveyard, so it will not be replayed. | Cutty Sh
+  e.g. defmod: Brothers in Arms defends for 2 more for the rest of this combat chain.
+  e.g. destroycost: Kayo kept Beaten Trackers rather than destroy it. | Dorinthea kept Refraction Bolters rather than destroy it. | Arakni, Web of Deceit kept Mark of the Huntsman rather than destroy it.
+  e.g. fusion: Briar reveals Cloud Cover from hand — Entwine Lightning is fused (Fusion). | Briar reveals Sizzle from hand — Arcanic Shockwave is fused (Fusion).
+  e.g. gold: Test of Strength: Gold created on Kayo's board — Action - {r}{r}, destroy this: Draw a card. | Oysten, Heart of Gold: Gold created on Gravy Bones's board — Action - {r}{r}, destroy this: Draw a card. 
+  e.g. halve: Walk in My Shoes — crush: the base power and defence of Kayo's attack action cards are halved, rounded up, until the end of their next turn.
+  e.g. held: Bare Fangs is on the stack — either seat may answer at instant speed before it resolves. | Aether Hail is on the stack — either seat may answer at instant speed before it resolves. | Buckwild is on th
+  e.g. hitwatch: Boom Grenade goes off — Overblast connected, so it is destroyed. | Boom Grenade goes off — Throttle connected, so it is destroyed. | Boom Grenade goes off — Fender Bender connected, so it is destroyed
+  e.g. jab: Unexpected Backhand was the card revealed — it lashes out at Viserai for 1. | Unexpected Backhand was the card revealed — it lashes out at Fai for 1. | Danger Digits: Mark of the Huntsman lashes out a
+  e.g. layer: Pummel — +4 — the layer resolves. | Bolt'n Boots — ability — +0 — the layer resolves. | Agile Engagement — +3 — the layer resolves.
+  e.g. leave: Tension in the Air runs out of suspense and leaves the arena — and it pays out. | Act of Glory runs out of suspense and leaves the arena — and it pays out.
+  e.g. powctr: Raydn, Duskbane takes 4 +1{p} counters — now 4.
+  e.g. reaction: Pummel on the stack (+4). | Agile Engagement on the stack (+3). | Out for Blood on the stack (+3).
+  e.g. search: Flamecall Awakening: Fai's deck is shuffled.
+  e.g. shield: Toe the Line: 2 of that damage is prevented. | Toe the Line: 1 of that damage is prevented — the other 1 it could have stopped is lost with this hit. | Cloud Cover: 1 of that damage is prevented — the
+  e.g. tap: Bravo — hero power: Bravo, Flattering Showman taps to pay — tapped until their own untap step (CR 4.4.3d). | Gravy Bones — hero power: Gravy Bones taps to pay — tapped until their own untap step (CR 4
+  e.g. ward: Uphold Tradition destroys itself — ward soaks 1. | Waning Vengeance destroys itself — ward soaks 3. | Waxing Specter destroys itself — ward soaks 3.
+
+longest 32 turns (kayo-enigma-1) · shortest 11 (kayo-iyslander-0)

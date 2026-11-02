@@ -1,0 +1,6 @@
+{"hero":"azalea","s":0,"off":{"w":14,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":18,"ref":0,"viol":0,"stall":0,"draw":0,"sec":11.939,"searched":655,"overruled":146,"stepsPer":70.5,"msPer":12.55,"maxSteps":282}}
+{"hero":"azalea","s":1,"off":{"w":14,"ref":0,"viol":0,"stall":0,"draw":1},"on":{"w":15,"ref":0,"viol":0,"stall":0,"draw":0,"sec":11.207,"searched":646,"overruled":152,"stepsPer":67.6,"msPer":11.78,"maxSteps":302}}
+{"hero":"azalea","s":2,"off":{"w":21,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":18,"ref":0,"viol":0,"stall":0,"draw":0,"sec":10.971,"searched":658,"overruled":150,"stepsPer":69.1,"msPer":11.42,"maxSteps":302}}
+{"hero":"azalea","s":3,"off":{"w":24,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":20,"ref":0,"viol":0,"stall":0,"draw":0,"sec":11.453,"searched":691,"overruled":148,"stepsPer":68.4,"msPer":11.32,"maxSteps":302}}
+{"hero":"azalea","s":4,"off":{"w":16,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":15,"ref":0,"viol":0,"stall":0,"draw":0,"sec":10.027,"searched":622,"overruled":145,"stepsPer":65.5,"msPer":10.6,"maxSteps":302}}
+{"hero":"azalea","s":5,"off":{"w":17,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":18,"ref":0,"viol":0,"stall":0,"draw":0,"sec":9.991,"searched":607,"overruled":133,"stepsPer":70,"msPer":11.27,"maxSteps":302}}

@@ -1,0 +1,6 @@
+{"hero":"dorinthea","s":0,"off":{"w":10,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":22,"ref":0,"viol":0,"stall":0,"draw":0,"sec":6.743,"searched":317,"overruled":127,"stepsPer":74.1,"msPer":10.56,"maxSteps":184}}
+{"hero":"dorinthea","s":1,"off":{"w":10,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":22,"ref":0,"viol":0,"stall":0,"draw":0,"sec":6.542,"searched":300,"overruled":148,"stepsPer":78.6,"msPer":11.22,"maxSteps":216}}
+{"hero":"dorinthea","s":2,"off":{"w":11,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":21,"ref":0,"viol":0,"stall":0,"draw":0,"sec":6.735,"searched":328,"overruled":128,"stepsPer":71.3,"msPer":9.49,"maxSteps":216}}
+{"hero":"dorinthea","s":3,"off":{"w":12,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":24,"ref":0,"viol":0,"stall":0,"draw":0,"sec":6.853,"searched":309,"overruled":142,"stepsPer":80.6,"msPer":11.43,"maxSteps":216}}
+{"hero":"dorinthea","s":4,"off":{"w":14,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":21,"ref":0,"viol":0,"stall":0,"draw":0,"sec":6.679,"searched":327,"overruled":123,"stepsPer":67.4,"msPer":9.46,"maxSteps":238}}
+{"hero":"dorinthea","s":5,"off":{"w":17,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":24,"ref":0,"viol":0,"stall":0,"draw":0,"sec":6.035,"searched":303,"overruled":137,"stepsPer":78,"msPer":10.02,"maxSteps":238}}

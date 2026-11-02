@@ -1,0 +1,76 @@
+GAMES 42 · stalls 0 · draws 0 · avg turns 18.0
+POLICY REFUSALS 0 · INVARIANT VIOLATIONS 0 · MALFORMED 0 · SECOND-PERSON 0 · NO-ZONE 0
+
+WINS: lyath 14 · kayo 3 · viserai 3 · dash 3 · dorinthea 3 · enigma 3 · arakni 3 · briar 3 · bravo 2 · fai 2 · azalea 1 · blaze 1 · boltyn 1
+
+PER SEED (3 samples of the same ladder — the engine never changed):
+  hero          s0  s1  s2   mean  spread
+  lyath         4   4   6    4.7      2
+  kayo          1   1   1    1.0      0
+  viserai       1   1   1    1.0      0
+  dash          1   1   1    1.0      0
+  dorinthea     1   1   1    1.0      0
+  enigma        1   1   1    1.0      0
+  arakni        1   1   1    1.0      0
+  briar         1   1   1    1.0      0
+  bravo         0   1   1    0.7      1
+  fai           1   1   0    0.7      1
+  azalea        1   0   0    0.3      1
+  blaze         1   0   0    0.3      1
+  boltyn        0   1   0    0.3      1
+  iyslander     0   0   0    0.0      0
+  gravy         0   0   0    0.0      0
+
+  NOISE BAND: min 0 · median 0 · MAX 2  — a version-to-version move smaller than this is not resolvable by one ladder.
+
+longest unchanged stretch a decided game came back from: 1 turns (lyath-arakni-2) — the engine draws at 20
+
+ROUTE COVERAGE (times a feed line matched):
+  ally      12
+  allyatk   9
+  boost     29
+  crush     31
+  ctrWipe   2
+  death     8
+  defmod    12
+  destroycost 30
+  fusion    2
+  gold      8
+  halve     8
+  held      997
+  hitnext   1
+  hitwatch  4
+  jab       4
+  layer     51
+  leave     68
+  powctr    4
+  reaction  37
+  search    1
+  shield    8
+  tap       217
+  ward      11
+  e.g. ally: Riggermortis enters play (ally). | Limpit, Hop-a-long enters play (ally). | Cutty Shark, Quick Clip enters play (ally).
+  e.g. allyatk: Gravy Bones sends Limpit, Hop-a-long — 2 power on the chain, and it goes again. | Gravy Bones sends Cutty Shark, Quick Clip — 3 power on the chain. | Gravy Bones sends Swabbie — 7 power on the chain.
+  e.g. boost: Boost: Zero to Sixty banished — Mechanologist, go again! | Boost: Zipper Hit banished — Mechanologist, go again! | Boost: Fender Bender banished — Mechanologist, go again!
+  e.g. crush: Walk in My Shoes — crush: the base power and defence of Kayo's attack action cards are halved, rounded up, until the end of their next turn. | Short Shrift — crush: Kayo discards Bare Fangs — 2 left i
+  e.g. ctrWipe: Raydn, Duskbane loses its 4 +1{p} counters — weapons you control are wiped at the beginning of this end phase.
+  e.g. death: Riggermortis takes 7 and goes down — face-down in the graveyard, so it will not be replayed. | Limpit, Hop-a-long takes 4 and goes down — face-down in the graveyard, so it will not be replayed. | Rigg
+  e.g. defmod: Stonewall Impasse defends for 1 more until end of turn. | Brothers in Arms defends for 2 more for the rest of this combat chain. | Shred: Booze! defends for 2 less for the rest of this combat chain.
+  e.g. destroycost: Kayo kept Beaten Trackers rather than destroy it. | Dorinthea kept Refraction Bolters rather than destroy it. | Arakni, Web of Deceit kept Mark of the Huntsman rather than destroy it.
+  e.g. fusion: Briar reveals Lightning Surge from hand — Entwine Lightning is fused (Fusion). | Briar reveals Burn Up // Shock from hand — Entwine Lightning is fused (Fusion).
+  e.g. gold: Test of Strength: Gold created on Lyath Goldmane's board — Action - {r}{r}, destroy this: Draw a card. | Test of Strength: Gold created on Enigma's board — Action - {r}{r}, destroy this: Draw a card. 
+  e.g. halve: Walk in My Shoes — crush: the base power and defence of Kayo's attack action cards are halved, rounded up, until the end of their next turn. | Walk in My Shoes — crush: the base power and defence of V
+  e.g. held: Titan's Fist is on the stack — either seat may answer at instant speed before it resolves. | Rough Up is on the stack — either seat may answer at instant speed before it resolves. | Full of Bravado is
+  e.g. hitnext: Burn Up // Shock: the next time Briar hits a hero this turn, it pays off.
+  e.g. hitwatch: Boom Grenade goes off — Out Pace connected, so it is destroyed. | Boom Grenade goes off — Jump Start connected, so it is destroyed. | Boom Grenade goes off — Fender Bender connected, so it is destroye
+  e.g. jab: Unexpected Backhand was the card revealed — it lashes out at Lyath Goldmane for 1. | Danger Digits: Mark of the Huntsman lashes out at Lyath Goldmane for 1.
+  e.g. layer: Pummel — +4 — the layer resolves. | Bolt'n Boots — ability — +0 — the layer resolves. | Ironsong Response — +0 — the layer resolves.
+  e.g. leave: Edge of Their Seats runs out of suspense and leaves the arena — and it pays out. | Tension in the Air runs out of suspense and leaves the arena — and it pays out. | Act of Glory runs out of suspense a
+  e.g. powctr: Spectral Shield takes 3 +1{p} counters — now 6. | Raydn, Duskbane takes 4 +1{p} counters — now 4.
+  e.g. reaction: Pummel on the stack (+4). | Ironsong Response on the stack (+0). | Puncture on the stack (+3).
+  e.g. search: Flamecall Awakening: Fai's deck is shuffled.
+  e.g. shield: Toe the Line: 2 of that damage is prevented. | Cloud Cover: 2 of that damage is prevented — the other 1 it could have stopped is lost with this hit. | Throw Caution to the Wind: 2 of that damage is pr
+  e.g. tap: Concealed Object: Lyath Goldmane taps it to pay — untaps in their own untap step (CR 4.4.3d). | Lyath Goldmane — hero power: Lyath Goldmane taps to pay — tapped until their own untap step (CR 4.4.3d).
+  e.g. ward: Spectral Shield destroys itself — ward soaks 1. | Waning Vengeance destroys itself — ward soaks 3. | Uphold Tradition destroys itself — ward soaks 1.
+
+longest 33 turns (lyath-enigma-1) · shortest 8 (lyath-briar-0)

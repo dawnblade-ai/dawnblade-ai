@@ -1,0 +1,76 @@
+GAMES 42 · stalls 0 · draws 0 · avg turns 14.4
+POLICY REFUSALS 0 · INVARIANT VIOLATIONS 0 · MALFORMED 0 · SECOND-PERSON 0 · NO-ZONE 0
+
+WINS: briar 38 · kayo 1 · dorinthea 1 · fai 1 · blaze 1
+
+PER SEED (3 samples of the same ladder — the engine never changed):
+  hero          s0  s1  s2   mean  spread
+  briar        14  13  11   12.7      3
+  kayo          0   0   1    0.3      1
+  dorinthea     0   0   1    0.3      1
+  fai           0   0   1    0.3      1
+  blaze         0   1   0    0.3      1
+  iyslander     0   0   0    0.0      0
+  viserai       0   0   0    0.0      0
+  dash          0   0   0    0.0      0
+  bravo         0   0   0    0.0      0
+  azalea        0   0   0    0.0      0
+  enigma        0   0   0    0.0      0
+  arakni        0   0   0    0.0      0
+  boltyn        0   0   0    0.0      0
+  gravy         0   0   0    0.0      0
+  lyath         0   0   0    0.0      0
+
+  NOISE BAND: min 0 · median 0 · MAX 3  — a version-to-version move smaller than this is not resolvable by one ladder.
+
+longest unchanged stretch a decided game came back from: 0 turns (null) — the engine draws at 20
+
+ROUTE COVERAGE (times a feed line matched):
+  ally      11
+  allyatk   4
+  arsflip   2
+  boost     26
+  chi       1
+  crush     5
+  death     11
+  defmod    4
+  destroycost 25
+  fusion    49
+  gold      4
+  held      700
+  hitnext   14
+  hitwatch  2
+  jab       3
+  layer     30
+  leave     4
+  powctr    2
+  reaction  18
+  search    2
+  shield    25
+  tap       12
+  ward      12
+  e.g. ally: Barnacle enters play (ally). | Swabbie enters play (ally). | Oysten, Heart of Gold enters play (ally).
+  e.g. allyatk: Gravy Bones sends Barnacle — 4 power on the chain. | Gravy Bones sends Swabbie — 7 power on the chain. | Gravy Bones sends Swabbie — 8 power on the chain (printed 7).
+  e.g. arsflip: Mode chosen: Turn their arsenal card face up, then destroy a defense reaction.
+  e.g. boost: Boost: Jump Start banished — Mechanologist, go again! | Boost: Zipper Hit banished — Mechanologist, go again! | Boost: Out Pace banished — Mechanologist, go again!
+  e.g. chi: Enigma: 3 Chi spent — a Chi pays for Chi and resource costs alike; a resource point pays only its own.
+  e.g. crush: Chokeslam — crush: Briar feels it next turn. | Debilitate — crush: Briar feels it next turn. | Wee Wrecking Ball — crush: Briar's arsenal is empty.
+  e.g. death: Barnacle takes 8 and goes down — face-down in the graveyard, so it will not be replayed. | Swabbie takes 7 and goes down — face-down in the graveyard, so it will not be replayed. | Barnacle takes 4 an
+  e.g. defmod: Shred: Arcanic Shockwave defends for 2 less for the rest of this combat chain. | Stonewall Impasse defends for 1 more until end of turn. | Brothers in Arms defends for 2 more for the rest of this comb
+  e.g. destroycost: Kayo kept Beaten Trackers rather than destroy it. | Dorinthea kept Refraction Bolters rather than destroy it. | Arakni, Web of Deceit kept Mark of the Huntsman rather than destroy it.
+  e.g. fusion: Briar reveals Fry from hand — Entwine Lightning is fused (Fusion). | Briar reveals Cloud Cover from hand — Entwine Lightning is fused (Fusion). | Briar reveals Rush of Power from hand — Entwine Lightn
+  e.g. gold: Test of Strength: Gold created on Enigma's board — Action - {r}{r}, destroy this: Draw a card. | Test of Strength: Gold created on Briar's board — Action - {r}{r}, destroy this: Draw a card. | Oysten,
+  e.g. held: Entwine Lightning is on the stack — either seat may answer at instant speed before it resolves. | Sprout Strength is on the stack — either seat may answer at instant speed before it resolves. | Fry is
+  e.g. hitnext: Burn Up // Shock: the next time Briar hits a hero this turn, it pays off.
+  e.g. hitwatch: Boom Grenade goes off — Jump Start connected, so it is destroyed. | Boom Grenade goes off — Zipper Hit connected, so it is destroyed.
+  e.g. jab: Danger Digits: Mark of the Huntsman lashes out at Briar for 1.
+  e.g. layer: Pummel — +4 — the layer resolves. | Bolt'n Boots — ability — +0 — the layer resolves. | Stroke of Foresight — +3 — the layer resolves.
+  e.g. leave: Waning Vengeance leaves the arena — and it pays out. | Edge of Their Seats runs out of suspense and leaves the arena — and it pays out. | Tension in the Air runs out of suspense and leaves the arena —
+  e.g. powctr: Spectral Shield takes 3 +1{p} counters — now 3. | Raydn, Duskbane takes 4 +1{p} counters — now 4.
+  e.g. reaction: Pummel on the stack (+4). | Stroke of Foresight on the stack (+3). | Run Through on the stack (+0).
+  e.g. search: Flamecall Awakening: Fai's deck is shuffled.
+  e.g. shield: Cloud Cover: 3 of that damage is prevented. | Cloud Cover: 2 of that damage is prevented — the other 1 it could have stopped is lost with this hit. | Cloud Cover: 1 of that damage is prevented — the o
+  e.g. tap: Bravo — hero power: Bravo, Flattering Showman taps to pay — tapped until their own untap step (CR 4.4.3d). | Gravy Bones — hero power: Gravy Bones taps to pay — tapped until their own untap step (CR 4
+  e.g. ward: Waning Vengeance destroys itself — ward soaks 3. | Uphold Tradition destroys itself — ward soaks 1. | Spectral Shield destroys itself — ward soaks 1.
+
+longest 25 turns (briar-enigma-2) · shortest 8 (briar-azalea-1)

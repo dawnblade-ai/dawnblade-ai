@@ -1,0 +1,78 @@
+GAMES 42 · stalls 0 · draws 0 · avg turns 15.5
+POLICY REFUSALS 0 · INVARIANT VIOLATIONS 0 · MALFORMED 0 · SECOND-PERSON 0 · NO-ZONE 0
+
+WINS: iyslander 18 · dash 3 · fai 3 · kayo 2 · bravo 2 · azalea 2 · dorinthea 2 · arakni 2 · blaze 2 · briar 2 · lyath 2 · viserai 1 · gravy 1
+
+PER SEED (3 samples of the same ladder — the engine never changed):
+  hero          s0  s1  s2   mean  spread
+  iyslander     4   5   9    6.0      5
+  dash          1   1   1    1.0      0
+  fai           1   1   1    1.0      0
+  kayo          0   1   1    0.7      1
+  bravo         1   1   0    0.7      1
+  azalea        1   0   1    0.7      1
+  dorinthea     1   0   1    0.7      1
+  arakni        1   1   0    0.7      1
+  blaze         1   1   0    0.7      1
+  briar         1   1   0    0.7      1
+  lyath         1   1   0    0.7      1
+  viserai       1   0   0    0.3      1
+  gravy         0   1   0    0.3      1
+  enigma        0   0   0    0.0      0
+  boltyn        0   0   0    0.0      0
+
+  NOISE BAND: min 0 · median 1 · MAX 5  — a version-to-version move smaller than this is not resolvable by one ladder.
+
+longest unchanged stretch a decided game came back from: 0 turns (null) — the engine draws at 20
+
+ROUTE COVERAGE (times a feed line matched):
+  ally      8
+  allyatk   13
+  arsflip   3
+  boost     29
+  chi       1
+  crush     5
+  ctrWipe   3
+  death     5
+  defmod    7
+  destroycost 30
+  fusion    20
+  gold      5
+  held      827
+  hitnext   3
+  hitwatch  3
+  jab       3
+  layer     56
+  leave     5
+  powctr    3
+  reaction  36
+  search    1
+  shield    1
+  tap       24
+  ward      16
+  e.g. ally: Riggermortis enters play (ally). | Swabbie enters play (ally). | Cutty Shark, Quick Clip enters play (ally).
+  e.g. allyatk: Gravy Bones sends Riggermortis — 6 power on the chain. | Gravy Bones sends Swabbie — 7 power on the chain. | Gravy Bones sends Cutty Shark, Quick Clip — 3 power on the chain.
+  e.g. arsflip: Mode chosen: Turn their arsenal card face up, then destroy a defense reaction.
+  e.g. boost: Boost: Zipper Hit banished — Mechanologist, go again! | Boost: Fender Bender banished — Mechanologist, go again! | Boost: Throttle banished — Mechanologist, go again!
+  e.g. chi: Enigma: 3 Chi spent — a Chi pays for Chi and resource costs alike; a resource point pays only its own.
+  e.g. crush: Chokeslam — crush: Iyslander feels it next turn. | Fault Line — crush: 1 arsenal card goes to the bottom of the deck. | Cartilage Crush — crush: Iyslander feels it next turn.
+  e.g. ctrWipe: Raydn, Duskbane loses its 4 +1{p} counters — weapons you control are wiped at the beginning of this end phase.
+  e.g. death: Swabbie takes 7 and goes down — face-down in the graveyard, so it will not be replayed. | Riggermortis takes 7 and goes down — face-down in the graveyard, so it will not be replayed. | Cutty Shark, Qu
+  e.g. defmod: Brothers in Arms defends for 2 more for the rest of this combat chain.
+  e.g. destroycost: Kayo kept Beaten Trackers rather than destroy it. | Dorinthea kept Refraction Bolters rather than destroy it. | Arakni, Web of Deceit kept Mark of the Huntsman rather than destroy it.
+  e.g. fusion: Iyslander reveals Winter's Bite from hand — Aether Icevein is fused (Fusion). | Iyslander reveals Ice Bolt from hand — Aether Icevein is fused (Fusion). | Iyslander reveals Cold Snap from hand — Aethe
+  e.g. gold: Test of Strength: Gold created on Enigma's board — Action - {r}{r}, destroy this: Draw a card. | Riggermortis: Gold created on Gravy Bones's board — Action - {r}{r}, destroy this: Draw a card. | Swabb
+  e.g. held: Bare Fangs is on the stack — either seat may answer at instant speed before it resolves. | Wounded Bull is on the stack — either seat may answer at instant speed before it resolves. | Strongest Surviv
+  e.g. hitnext: Burn Up // Shock: the next time Briar hits a hero this turn, it pays off.
+  e.g. hitwatch: Boom Grenade goes off — Crankshaft connected, so it is destroyed.
+  e.g. jab: Danger Digits: Mark of the Huntsman lashes out at Iyslander for 1.
+  e.g. layer: Pummel — +4 — the layer resolves. | Bolt'n Boots — ability — +0 — the layer resolves. | Stroke of Foresight — +3 — the layer resolves.
+  e.g. leave: Edge of Their Seats runs out of suspense and leaves the arena — and it pays out. | Tension in the Air runs out of suspense and leaves the arena — and it pays out.
+  e.g. powctr: Raydn, Duskbane takes 4 +1{p} counters — now 4.
+  e.g. reaction: Pummel on the stack (+4). | Stroke of Foresight on the stack (+3). | Out for Blood on the stack (+3).
+  e.g. search: Flamecall Awakening: Fai's deck is shuffled.
+  e.g. shield: Cloud Cover: 3 of that damage is prevented.
+  e.g. tap: Bravo — hero power: Bravo, Flattering Showman taps to pay — tapped until their own untap step (CR 4.4.3d). | Gravy Bones — hero power: Gravy Bones taps to pay — tapped until their own untap step (CR 4
+  e.g. ward: Waning Vengeance destroys itself — ward soaks 3. | Spectral Shield destroys itself — ward soaks 1. | Uphold Tradition destroys itself — ward soaks 1.
+
+longest 31 turns (iyslander-viserai-2) · shortest 9 (iyslander-dash-1)

@@ -1,0 +1,6 @@
+{"hero":"gravy","s":0,"off":{"w":8,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":10,"ref":0,"viol":0,"stall":0,"draw":0,"sec":15.395,"searched":533,"overruled":172,"stepsPer":97.8,"msPer":17.82,"maxSteps":351}}
+{"hero":"gravy","s":1,"off":{"w":7,"ref":0,"viol":0,"stall":0,"draw":1},"on":{"w":9,"ref":0,"viol":0,"stall":0,"draw":0,"sec":12.411,"searched":540,"overruled":177,"stepsPer":94.2,"msPer":13.95,"maxSteps":351}}
+{"hero":"gravy","s":2,"off":{"w":5,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":7,"ref":0,"viol":0,"stall":0,"draw":0,"sec":10.79,"searched":493,"overruled":177,"stepsPer":98.9,"msPer":13.1,"maxSteps":351}}
+{"hero":"gravy","s":3,"off":{"w":7,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":11,"ref":0,"viol":0,"stall":0,"draw":0,"sec":8.673,"searched":490,"overruled":154,"stepsPer":98.1,"msPer":10.64,"maxSteps":351}}
+{"hero":"gravy","s":4,"off":{"w":4,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":3,"ref":0,"viol":0,"stall":0,"draw":0,"sec":7.545,"searched":485,"overruled":167,"stepsPer":98.5,"msPer":9.35,"maxSteps":351}}
+{"hero":"gravy","s":5,"off":{"w":7,"ref":0,"viol":0,"stall":0,"draw":0},"on":{"w":8,"ref":0,"viol":0,"stall":0,"draw":0,"sec":7.845,"searched":535,"overruled":160,"stepsPer":89.2,"msPer":8.49,"maxSteps":367}}
