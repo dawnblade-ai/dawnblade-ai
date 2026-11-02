@@ -401,8 +401,48 @@ function popRunechants(game, side, limit, dmgEach){
           cards: popped};
 }
 
+/* THE PRINTED PIPS, IN WORDS, FOR THE SCREEN (1.0 polish audit). Card text
+   carries its icons as tokens — `+1{p}`, `{r}`, `{d}` — and the engine is
+   right to keep them in the feed verbatim (v4.98: "drawing it as an icon is
+   presentation"). The screen showed them raw: "discarded Bare Fangs (7{p})".
+   This splits a line into parts, `[text, pip]`, where `pip` names the icon a
+   word stands for (null for plain text), so each board draws the same words.
+
+   A stat pip (power, defense, life, intellect) is a NOUN: "+1{p}" reads
+   "+1 power", "6 or more {p}" reads "6 or more power". A resource or chi pip
+   is a COUNT: "{r}{r}" is "2 resources", "costs {r} less" is "1 resource
+   less". An icon this table does not know stays as printed — a raw token is
+   visible, a guessed word is not. Pure; the feed itself is never rewritten. */
+const PIP_WORD = {p: "power", d: "defense", h: "life", i: "intellect",
+                  r: "resource", c: "chi", t: "tap", u: "untap"};
+const PIP_COUNT = {r: "resources", c: "chi"};
+function pipParts(line){
+  const s = String(line == null ? "" : line), out = [];
+  const re = /(\d+)?((\{([a-z])\})\3*)/g;
+  let at = 0, m;
+  const text = t => { if(!t) return; const last = out[out.length - 1];
+    if(last && last[1] === null) last[0] += t; else out.push([t, null]); };
+  while((m = re.exec(s))){
+    const k = m[4], word = PIP_WORD[k];
+    if(!word){ continue; }
+    text(s.slice(at, m.index));
+    const run = m[2].length / 3, num = m[1];
+    if(PIP_COUNT[k]){
+      const n = num ? Number(num) * run : run;
+      out.push([n + " " + (n === 1 ? word : PIP_COUNT[k]), k]);
+    } else {
+      if(num) text(num + " ");
+      out.push([Array(run).fill(word).join(" "), k]);
+    }
+    at = m.index + m[0].length;
+  }
+  text(s.slice(at));
+  return out;
+}
+const pipWords = line => pipParts(line).map(x => x[0]).join("");
+
 return {parseDeck, gearDef, gearBlockApply, slotOf, HANDS, handsUsed, handsFree,
-  isSecondPerson, thirdPerson, svName, sv, spName, sp, typeAbbr,
+  isSecondPerson, thirdPerson, svName, sv, spName, sp, typeAbbr, pipParts, pipWords,
         ARMOR_SLOTS, exposedZones, hasExposedZone,
         isAlly, allyBaseLife, allyLife, isAttackable,
         attackTargets, targetCanBeDefended, damageAlly, resetAllyLife,

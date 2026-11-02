@@ -1,3 +1,21 @@
+## v5.NN — The feed says "+1 power", not "+1{p}"
+
+Found by the 1.0 polish audit (P2), reading Kayo's trainer feed at 393x852: "Bare Fangs: discarded
+Bare Fangs (7{p}) at random.", "Kayo's hero ability: the first card with 6 or more {p} Kayo has
+discarded…", "Uphold Tradition — ability: Enigma controls nothing that can take a +1{p} counter."
+v4.98 had left this for the UI pass in as many words: the engine keeps the printed tokens, drawing
+them is presentation.
+
+- **Fix:** `game.pipParts` (engine/game.js, bridged) splits a line into text and pip words: a stat pip
+  is a noun ("+1{p}" -> "+1 power", "6 or more {p}" -> "6 or more power"), a resource or chi pip a
+  count ("{r}{r}{r}" -> "3 resources"), and an icon it does not know stays as printed. `PipLine`
+  draws it, tinted like the icon, on both boards' feed, the ticker, the advisor's call and the prompt
+  sheet's hint and modal options. The feed itself, and the JUDGE!! report, keep the raw line.
+- **Drill:** `test/pipwords.test.js` (4): the wording, the unknown-icon refusal, the parts, and every
+  render site drawing through `PipLine`. Sabotaged twice (the power word unmapped; the table's feed
+  drawn raw): each fails. `node tools/page.js` also fails any screen whose feed, ticker, advisor or
+  sheet shows a raw pip — a guard only: the smoke walk does not happen to print one.
+
 ## v5.NN — JUDGE!!, "skip" and "✕ cancel" get a thumb-sized hit area
 
 Found by the 1.0 polish audit (P2). At 393x852 the JUDGE!! button drew 58x18 and the status line's
