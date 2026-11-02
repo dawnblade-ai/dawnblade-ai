@@ -7337,7 +7337,12 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
      for a local win — see the reveal block below for why beating a person
      earns no pull. Keyed off `g.over` exactly as the trainer's is, so a
      re-render cannot record twice. */
-  uE(()=>{ if(over && local && over.winner===mySeat && onRecord && heroKey)
+  /* A LOCAL WIN IS A DUMMY WIN ONLY WHEN THE DUMMY SAT OPPOSITE. Since the
+     ruling of 2026-10-18 an AI hero may pilot seat 1, and that seat carries
+     its hero's key; the vanilla pile carries none. Beating Azalea read
+     "DUMMY DESTROYED", pulled a trophy and wrote the dummy's best score. */
+  const beatDummy = !!(over && local && over.winner===mySeat && !them.heroKey);
+  uE(()=>{ if(beatDummy && onRecord && heroKey)
              onRecord(heroKey, g.turn + (me.wasted||0)); },[g.over]);
 
   const targets = DawnJudge.targets(g, 1-mySeat, them.heroCard);
@@ -8020,7 +8025,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
           A NETWORKED win is over a person and still gets the honest words
           and no reward. So the distinction is `local`, and it follows the
           existing rule rather than overriding it. */}
-      {over && local && over.winner===mySeat && onRecord
+      {beatDummy && onRecord
         ? <WinPanel score={g.turn + (me.wasted||0)} onExit={onExit}/>
         : over && <div className={"reveal"+(drawText||over.winner===mySeat?"":" lose")} onClick={onExit}>
         <h2 className="disp" style={{marginBottom:14}}>

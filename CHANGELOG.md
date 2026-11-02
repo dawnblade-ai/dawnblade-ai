@@ -1,3 +1,17 @@
+## v5.NN — Beating an AI hero at the table is not "DUMMY DESTROYED"
+
+Found by the 1.0 polish audit (`POLISH-AUDIT-1.0.md`, P1). At the table on one phone, a win over an
+AI-piloted hero (ruling 2026-10-18) showed the trainer's **DUMMY DESTROYED** panel, pulled a trophy,
+and wrote the win into the hero's best-vs-dummy score. The board decided "dummy win" from `local`
+alone, a premise that stopped being true when an AI hero could sit in seat 1.
+
+- **Fix:** a local win is a dummy win only when the seat opposite carries no hero key (the vanilla
+  pile). A win over an AI hero gets the table's own honest panel ("YOU TAKE IT") and records nothing.
+  Whether such a win should earn a trophy or a score of its own is listed under NEEDS A DECISION.
+- **Page assertion:** `node tools/page.js` now ends three table games in one move each (the AI seat
+  concedes, you concede, the Dummy concedes) and checks the headline and whether the best score was
+  written. Sabotaged (the old condition): the AI-hero win reads "DUMMY DESTROYED" and fails.
+
 ## v5.74 — The page plays the pinned pool
 
 **RULING (user, 2026-11-02), "pinned pool only."** Asked what the page should load, the user chose
