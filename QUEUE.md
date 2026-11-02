@@ -9,7 +9,46 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-01, at v5.73)
+## HANDOFF — START HERE (CEO, 2026-11-02, at v5.73)
+
+**Keep this section SHORT (under ~50 lines): current state, decisions, who is doing what, next.**
+History goes in the archived handoffs below it and in CHANGELOG.md. Do not start a root handoff file.
+
+- **Live: v5.73** (`218a5fe`). Baseline 2026-11-02: 3892 drills, 0 fail, 5 skipped. Ledger
+  (`node tools/approx.js`): 0 open, 22 stated, 36 closed.
+- **How the CEO works now (context is the scarce resource):** every build/measure job runs in its
+  own cloud session (`create_session`, outcome branch `ship/*` or `research/*`), which messages the
+  CEO a short report when its branch is pushed. Workers never push `main`; the CEO re-verifies
+  (suite, scenes, fairness, ladder) and deploys. One release = one item.
+
+**DECISIONS (user, 2026-11-02):**
+- **R8 — YES.** "Nothing at all changes for 20 turns" ends the game as a DRAW even with cards in a
+  deck (`blaze-enigma-46`). In flight: `ship/r8-draw` (v5.74).
+- **Card data — PINNED POOL ONLY.** The page loads the pinned pool (`tools/pin-pool.js`), never the
+  live the-fab-cube `develop` branch: phones play exactly the text the drills tested, the game
+  survives upstream moving, first load shrinks from 22 MB. In flight: `ship/pinned-pool` (v5.75).
+- **Next big project — LOOKAHEAD AI** (chosen over hidden hands for two phones). Phase 1 spike in
+  flight on `research/lookahead`: feasibility, one searched decision behind a gate, house A/B.
+  Constraints: no hidden information, no card text, deterministic, `explain` keeps reason keys,
+  phone budget well under 100 ms a decision.
+- **R9 — UNDECIDED, research needed** (user: "Not sure on that, we'll have to research"). The
+  sandbox's network policy blocks `rules.fabtcg.com` and `fabtcg.com`, so the CR text on when an
+  activated ability declares its target could not be read. Unblock: the user allows those domains,
+  or a desktop session quotes CR 5.2 / the play-steps rule verbatim. Patch still held:
+  `experiments/R9-activation-target-declared.patch` (base 71192de; re-pin approx counts on apply).
+- **R10 — CLOSED AS STATED (CEO, under the user's trust grant).** Accepting Crank on Dash's
+  pregame item would only spend a steam counter for an action point the action phase overwrites
+  (`ap:1`), so no player would take it; `start-item-crank-unasked` stays stated, nothing to build.
+
+**NEXT, in order:** (1) merge v5.74 R8, (2) merge v5.75 pinned pool, (3) 1.0 polish pass — drive
+every hero on both boards at 393×852 with `tools/page.js` against POLISH.md / UI-GUIDE.md, plus a
+player README, (4) lookahead phase 2 if the spike says go, (5) R9 once the CR text is in hand.
+Parked: hidden hands for two phones (`peers-hold-full-state`), sudden death (`no-sudden-death`).
+
+**AI policy hunts are paused:** H25, H27, H28, H30, H31 did not ship (the hand-written vein is
+thin; detail in the archive below). Their patches are in `experiments/`.
+
+## HANDOFF ARCHIVE (CEO, 2026-11-01, at v5.73) — superseded by the section above
 
 **This section is the handoff.** Root `HANDOFF.md`/`WEEK.md` were retired to `docs/archive/` on
 2026-10-31; do not start a new root handoff file — rewrite this section instead.
