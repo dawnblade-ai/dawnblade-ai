@@ -390,17 +390,20 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
     "drx.test.js index.html 8566",
     /* +instantpump AT v5.03: the same `tryPlay` -> `confirmPay` body. */
     "instantpump.test.js index.html 26201",
-    /* 18,386 -> 18,699 AT lookahead phase 2, READ FIRST: still TableBoard's
-       local session; the growth is the AI seat's policy and the call
-       passing `{search}` (sharp), with their comments. Same anchors. */
-    "phasebar.test.js index.html 18699",
+    /* 18,386 -> 18,699 -> 20,096 AT lookahead phase 2, READ FIRST: still
+       `function Loadout(` -> the APP banner. The growth is `sharp` on the
+       table start with its comment, then the Sharp / Steady control
+       (`aiLevel`, its two tiles, the note naming the level). Same anchors. */
+    "phasebar.test.js index.html 20096",
     /* 63,730 -> 64,368 AT v5.57, READ FIRST: still the `<style>` block,
        `<style>` -> `</style>`; the growth is the Cloaked card back's three
        rules (`.deckback.gback`, `.gbtag`, `.gbname`).
        64,368 -> 64,223 AT v5.74, READ FIRST: still `<style>` ->
        `</style>`; the shrink is the download progress bar's two `.prog`
-       rules, retired with the live card fetch. */
-    "phasebar.test.js index.html 64223",
+       rules, retired with the live card fetch.
+       64,223 -> 64,988 AT lookahead phase 2, READ FIRST: still the style
+       block; the growth is the `.ailevel` rules for Sharp / Steady. */
+    "phasebar.test.js index.html 64988",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
        `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
        `abPickBound` in the pick legality it extends. */

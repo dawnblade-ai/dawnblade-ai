@@ -1,3 +1,24 @@
+## v5.NN — Sharp or Steady: one control for how the AI hero plays
+
+- **What changed for a player:** the loadout's "New engine opponent" panel shows two tiles under the
+  matchup once an AI hero is picked: **Sharp** ("Plays out each way to start its turn, then picks the
+  best.", the default) and **Steady** ("Plays by its rules of thumb. Quicker to read, easier to
+  beat."). The note under "Fight the new engine" names the level. The Dummy has no level (it is
+  always the rule policy). The pick is remembered (`aiLevel` in localStorage) because it is the
+  player's taste, unlike the opponent, which stays a property of one match.
+- **The chain:** the tap sets `aiLevel` → the table start sends `sharp: !!pickedFoe && aiLevel ===
+  "sharp"` → the App seats it on the local match → the AI seat's policy and the player's call pass
+  `{search: !!match.sharp}` → `window.__dawnTable.report()` carries `sharp`. Steady is the rule
+  policy byte for byte. `WIRE_V` unchanged: the AI seat exists only in a local session.
+- **Drills:** `test/ailevel.test.js` (3) — every link of the chain on the comment-stripped source,
+  and at a real position where the two levels choose differently, Steady is `actBase` and Sharp's call
+  says it played the line out. Sabotaged twice (start ignores the level; Steady searches), each seen
+  to fail. `tools/page.js` drives the control at 393×852: both tiles inside the width and 66 px tall,
+  Sharp on by default, a tap moves the choice, and the board reports Sharp (sabotaged: default
+  flipped to Steady fails the row). `slicecensus` repins: `Loadout` 18,699 → 20,096, style 64,223 →
+  64,988, each with its reason.
+- **Engine unchanged from the previous entry:** the search-off ladder is still 0/0/0 (2 draws); the
+  A/B and the all-on ladder stand as measured there.
 ## v5.NN — the AI hero plays Sharp: it plays its openings out before it picks one (lookahead)
 
 **DECISION (CEO, under the user's trust grant, 2026-11-02):** the lookahead AI is a stronger
