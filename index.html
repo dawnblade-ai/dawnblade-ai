@@ -5308,13 +5308,17 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        is weaker than printed and visible. They come alive the moment seat
        1 swings a real card. */
     const _atkOpts = {weaponAttack:false, atkCard:null, handDefenders:bcards.length};
-    const dh = bcards.reduce((a,c)=>a+_EFX.defendValue(act(s), c, _atkOpts),0);
+    /* MODULE-LEVEL, NOT THE CONTEXT (1.0 polish audit). `defendValue` is an
+       export of effects.js, never a member of the `makeEffects` context, so
+       `_EFX.defendValue` was undefined and the first block the PLAYER made
+       in the trainer threw at "Resolve damage" and blanked the page. */
+    const dh = bcards.reduce((a,c)=>a+DawnEffects.defendValue(act(s), c, _atkOpts),0);
     const dg = act(s).blockG.reduce((a,i)=>{
       const piece = act(s).gear[i];
       /* the WEAR stays `gearDef`'s and rides in as `base` — re-deriving
          Guardwell, Temper, battleworn and destruction inside `defendValue`
          would be a second copy of the wear rules (v3.24). */
-      return a + _EFX.defendValue(act(s), piece, {..._atkOpts, base:gearDef(piece)});
+      return a + DawnEffects.defendValue(act(s), piece, {..._atkOpts, base:gearDef(piece)});
     },0);
     const drx = act(s).blockRx.reduce((a,l)=>a+l.def,0);
     /* NO `clashDef` TERM ANY MORE (v3.94). The clash defence bonus is a

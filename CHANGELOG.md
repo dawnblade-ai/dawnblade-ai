@@ -1,3 +1,21 @@
+## v5.NN — Blocking in the trainer no longer blanks the page
+
+Found by the 1.0 polish audit (**P0**). In the trainer, the first time the player defended with a card
+from hand (or a piece of gear) and tapped **Resolve damage**, the page went blank: the block wall
+summed its defenders with `_EFX.defendValue(...)`, and `defendValue` is a module export of
+`effects.js`, never a member of the `makeEffects` context. `undefined(...)` threw inside the reducer
+and React unmounted the whole screen. Every hero, every game where the player blocks. No drill could
+reach the call (a closure inside `Battle`) and the smoke walk only ever took the hit.
+
+- **Fix:** both sites call `DawnEffects.defendValue`, the one body the table already uses.
+- **Drill:** `test/efxsurface.test.js` (2) asks the engine rather than reading it: every `_EFX.<name>`
+  the page calls must be a key `makeEffects` returns, and every `Dawn<Module>.<name>` must be exported
+  by the module scripts the page loads, run in the page's order. Sabotaged twice (the old call; a
+  planted `DawnJudge.notAThing`): each fails.
+- **Page assertion:** `node tools/page.js` now hands the dummy the first turn, defends with the first
+  card the rail offers and taps through to Resolve damage. Sabotaged (the old call): the board is gone
+  and the page error is `_EFX.defendValue is not a function`.
+
 ## v5.NN — The Coach says "hero power" once, and "1 permanent"
 
 Found by the 1.0 polish audit (P3), reading the advisor at 393x852. Bravo's trainer call read "Play

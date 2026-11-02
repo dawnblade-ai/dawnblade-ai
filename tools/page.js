@@ -255,13 +255,13 @@ if(require.main === module){
     }
 
     /* seat a game: roster -> battle -> coin -> loadout. Returns when the loadout is up. */
-    const toLoadout = async prefix => {
+    const toLoadout = async (prefix, seat = 0) => {
       if(!(await has(".sheet")) && !(await click(page.locator(".hcard").first(), "pick a hero"))) return false;
       if(!(await click(btn(/^Battle$/), "battle"))) return false;
       await page.waitForSelector(".rps");
       await screen(prefix + ": the coin");
       await page.waitForSelector(".rseatpick, .actbar", { timeout: 8000 });
-      if(await has(".rseatpick")) await click(page.locator(".rseatpick .go"), "I go first");
+      if(await has(".rseatpick")) await click(page.locator(".rseatpick button").nth(seat), seat ? "it goes first" : "I go first");
       await page.waitForSelector(".actbar", { timeout: 8000 });
       return true;
     };
@@ -388,6 +388,41 @@ if(require.main === module){
         await nav("trainer", ["Chain"]); await hitCheck("trainer", ".board .judgebtn", 40);
         await nav("trainer", ["You", "Opp"]);
         await playOn("trainer");
+        await click(page.locator(".screennav button", { hasText: "leave" }), "leave the trainer");
+        await page.waitForSelector(".hgrid", { timeout: 5000 }).catch(() => {});
+      }
+    }
+
+    /* ---- the trainer: the PLAYER blocks (1.0 polish audit) ----
+       The walk above only ever takes the hit. The first block with a card
+       and "Resolve damage" threw (`_EFX.defendValue` was undefined) and
+       blanked the page. Hand the dummy the first turn, defend with the first
+       card the rail offers, and play the step out. */
+    if(await toLoadout("block", 1)){
+      if(await click(page.locator(".actbar .battlebtn"), "block: Fight")){
+        await page.waitForSelector(".board", { timeout: 8000 });
+        let bar = "";
+        for(let i = 0; i < 20 && !/take it/i.test(bar); i++){
+          bar = (await page.locator(".board .actbar").innerText().catch(() => "")).replace(/\s+/g, " ");
+          if(/take it/i.test(bar)) break;
+          const go = page.locator(".board .actbar button:not([disabled])", { hasText: /end turn|pass/i }).first();
+          if(await go.count()) await go.click().catch(() => {});
+          await page.waitForTimeout(600);
+        }
+        const card = page.locator(".board .phand .hc:not(.dis)").first();
+        const hp0 = await page.locator(".board").innerText();
+        await card.click().catch(() => {}); await page.waitForTimeout(250); await card.click().catch(() => {}); await page.waitForTimeout(350);
+        const steps = [];
+        for(let k = 0; k < 4; k++){
+          const b = page.locator(".board .actbar button:not([disabled])", { hasText: /defend|resolve|pass|done/i }).first();
+          if(!(await b.count())) break;
+          steps.push((await b.innerText()).replace(/\s+/g, " ").trim()); await b.click().catch(() => {}); await page.waitForTimeout(700);
+          if(/resolve/i.test(steps[steps.length - 1])) break;
+        }
+        const alive = await page.locator(".board").isVisible().catch(() => false);
+        row(alive && steps.some(t => /resolve/i.test(t)) && hp0 !== "", "trainer: the player blocks and the damage resolves",
+          `incoming bar ${JSON.stringify(bar)}; tapped ${steps.join(" > ") || "(nothing)"}; board ${alive ? "still up" : "GONE"}`);
+        await screen("trainer: after a block");
         await click(page.locator(".screennav button", { hasText: "leave" }), "leave the trainer");
         await page.waitForSelector(".hgrid", { timeout: 5000 }).catch(() => {});
       }
