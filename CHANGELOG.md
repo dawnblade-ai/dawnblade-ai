@@ -1,3 +1,17 @@
+## v5.NN — The card preview no longer covers "skip" and "✕ cancel"
+
+Found by the 1.0 polish audit (P2, POLISH.md's "the tap is never lost"). At 393x852 the two-tap
+preview sat 8px above the hand rail, which put its name bar over the status line between them, and
+that line holds the mode's own controls: "skip" at the arsenal step, "✕ cancel" while paying. With a
+card peeked, tapping "skip" (Bravo, trainer: `skip` at y 644, under the dock's "TAP AGAIN TO SET IN
+ARSENAL") only closed the preview.
+
+- **Fix:** `PeekDock` measures from the top of any `.statusline` / pip `.rail` stacked directly on
+  the rail it tracks, so the dock clears the line as well as the rail. Both boards, one component.
+- **Page assertion:** `node tools/page.js` peeks a hand card once per board while the status line
+  holds a button, and asks what is topmost at each button's centre. Sabotaged (the old offset): the
+  trainer's `skip` is under the dock's hint and fails.
+
 ## v5.NN — The table's note stops saying card text does not resolve there
 
 Found by the 1.0 polish audit (P2). The Find-an-opponent screen told a player "Card text does not

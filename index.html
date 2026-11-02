@@ -2284,16 +2284,27 @@ function PeekDock({card, verb, onClose}){
 
          Most-visible-wins needs no refs and no knowledge of which board is
          rendering, which is what keeps one component serving both. */
-      let r = null, seen = -1;
+      let r = null, seen = -1, railEl = null;
       for(const el of document.querySelectorAll(".phand, .chand, .hand")){
         const b = el.getBoundingClientRect();
         const vis = Math.min(b.bottom, window.innerHeight) - Math.max(b.top, 0);
-        if(vis > seen){ seen = vis; r = b; }
+        if(vis > seen){ seen = vis; r = b; railEl = el; }
       }
       /* nothing on screen to sit above: the old flat action-bar clearance is
          both right and safe, because there is no rail for it to cover.
          Otherwise the distance from the viewport bottom to the rail's TOP
          edge, plus a small gap — never less than that clearance. */
+      /* AND ABOVE THE STATUS LINE THAT SITS ON IT (1.0 polish audit). The
+         line right over the rail holds this mode's controls — "skip" at the
+         arsenal step, "✕ cancel" while paying — and the dock covered them, so
+         their tap closed the preview instead. Any `.statusline` / pip `.rail`
+         stacked directly on the rail is part of what the dock must clear. */
+      let el = r && railEl;
+      while(el && el.previousElementSibling && el.previousElementSibling.matches(".statusline, .rail")){
+        el = el.previousElementSibling;
+        const t = el.getBoundingClientRect();
+        if(t.height && t.top < r.top) r = {top: t.top};
+      }
       const bot = (!r || seen <= 0)
         ? 112 : Math.max(112, Math.round(window.innerHeight - r.top) + 8);
       if(bot !== last){ last = bot; root.style.setProperty("--peekbot", bot + "px"); }

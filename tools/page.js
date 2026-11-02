@@ -278,10 +278,36 @@ if(require.main === module){
        NEW action bar once. The board must change under the taps (the engine, and
        at the table the AI seat, are running in the page), and it must stay in. */
     const PICKS = [/^take it$/i, /^end turn$/i, /^pass$/i, /^(leave it empty|skip|done defending|decline|confirm)$/i];
+    /* THE PREVIEW CLEARS THE STATUS LINE'S CONTROLS (1.0 polish audit). Once
+       per board, when the line over the hand holds a button ("skip" at the
+       arsenal step, "✕ cancel" while paying), peek a hand card and ask what
+       is topmost at each button's centre: the button, never the dock. */
+    const peekChecked = new Set();
+    const peekClear = async prefix => {
+      if(peekChecked.has(prefix)) return;
+      const ctl = page.locator(".board .statusline button:visible");
+      const card = page.locator(".board .phand .hc:not(.dis):visible").first();
+      if(!(await ctl.count()) || !(await card.count())) return;
+      peekChecked.add(prefix);
+      await card.click({ timeout: 3000 }).catch(() => {});
+      await page.waitForTimeout(350);
+      const hit = await page.evaluate(() => [...document.querySelectorAll(".board .statusline button")].filter(b => b.offsetParent).map(b => {
+        const r = b.getBoundingClientRect(), top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return { t: b.innerText.trim(), y: Math.round(r.top), ok: !!top && (b.contains(top) || top.contains(b)), over: top ? top.className || top.tagName : "-" };
+      }));
+      const peeked = await page.locator(".peekwrap").isVisible().catch(() => false);
+      const bad = hit.filter(h => !h.ok);
+      row(peeked && !bad.length, prefix + ": the preview clears the status line",
+        peeked ? hit.map(h => `${h.t}@${h.y}` + (h.ok ? "" : " UNDER " + h.over)).join(", ") : "no preview opened");
+      await page.locator(".peekwrap").click({ position: { x: 5, y: 5 } }).catch(() => {});
+      await page.evaluate(() => { const w = document.querySelector(".peekwrap"); if(w) w.click(); });
+      await page.waitForTimeout(250);
+    };
     const playOn = async prefix => {
       const sigs = new Set(), board = () => page.locator(".board").innerText();
       let moved = 0, taps = 0;
       for(let i = 0; i < 14; i++){
+        await peekClear(prefix);
         /* a disabled bar is the other seat thinking: wait it out (6s), never tap it */
         let bar, pick;
         for(let w = 0; w < 20; w++){
