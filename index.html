@@ -4,6 +4,17 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 <title>DAWNBLADE — Silver Age Training Hall</title>
+<!-- ADD TO HOME SCREEN (decision C, CEO 2026-11-02): a proper name and an
+     original, self-hosted icon (icons/, from icons/icon.svg by tools/icon.js),
+     named relatively so file:// finds it. NOT standalone mode
+     (apple-mobile-web-app-capable): iOS keeps a standalone app's storage apart
+     from Safari's, and saved games must stay shared with Safari. -->
+<meta name="apple-mobile-web-app-title" content="Dawnblade"/>
+<meta name="application-name" content="Dawnblade"/>
+<meta name="theme-color" content="#14100E"/>
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png"/>
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png"/>
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800&family=Spline+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -882,7 +893,7 @@ img{display:block;max-width:100%}
    database + typographic fallbacks. Not affiliated with LSS.
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
-window.APP_VER = "5.81"; /* v5.81 - the feed reads printed pips as words, names no functions, and the Coach's lines agree with their counts. See CHANGELOG.md. */
+window.APP_VER = "5.82"; /* v5.82 - Add to Home Screen gets the name Dawnblade and an original, self-hosted icon. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a

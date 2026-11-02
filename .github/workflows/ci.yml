@@ -106,10 +106,16 @@ jobs:
             c=$(curl -s -o /dev/null -w '%{http_code}' "$URL/$f")
             [ "$c" = "200" ] || { echo "::error::$f is $c"; bad=1; }
           done
+          # and the home-screen icon and favicons the <head> names (v5.82),
+          # derived the same way: every relative icon link must 200.
+          for f in $(grep -oE '<link rel="(apple-touch-icon|icon)"[^>]*href="[^":]+"' index.html | sed 's/.*href="//;s/"//' | sort -u); do
+            c=$(curl -s -o /dev/null -w '%{http_code}' "$URL/$f")
+            [ "$c" = "200" ] || { echo "::error::$f is $c"; bad=1; }
+          done
           [ "$bad" = "0" ] || exit 1
 
           ver=$(curl -s "$URL/index.html" | grep -oP 'APP_VER = "\K[0-9.]+' | head -1)
           local=$(grep -oP 'APP_VER = "\K[0-9.]+' index.html | head -1)
           echo "live=$ver repo=$local"
           [ "$ver" = "$local" ] || { echo "::error::live is $ver, repo is $local"; exit 1; }
-          echo "verified: $URL serves v$ver and every script it loads 200s"
+          echo "verified: $URL serves v$ver and every script and icon it loads 200s"

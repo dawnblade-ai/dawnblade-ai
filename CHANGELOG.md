@@ -1,3 +1,27 @@
+## v5.82 — Add to Home Screen: a name and an original icon
+
+**Decision C (CEO, 2026-11-02)**, from the 1.0 polish audit's #17 (P3): an iPhone's Add to Home Screen
+used the page title and a screenshot, because the page named no icon.
+
+- **What changed for a player:** a saved Dawnblade is named "Dawnblade" on the home screen and wears
+  its own icon: a pale blade standing in a rising gold-and-red sun on the page's ink. The browser
+  tab gets the same glyph as a favicon. Opening it still opens Safari, as before.
+- **The art is original:** `icons/icon.svg`, plain shapes drawn for this page in its own palette
+  (`--ink`, `--r`, `--y`, `--bone`); no Legend Story Studios art or logos. `tools/icon.js` rasterizes
+  it with Playwright to `icons/apple-touch-icon.png` (180x180) and `icons/favicon-32.png` (32x32).
+  The PNGs are committed, so the page keeps its no-build-step rule; rerun the tool only when the SVG
+  changes.
+- **The `<head>`:** `apple-mobile-web-app-title` and `application-name` ("Dawnblade"), `theme-color`,
+  `apple-touch-icon` (180x180), a PNG and an SVG `icon`, every href relative so `file://` finds them.
+  **Not** standalone mode (`apple-mobile-web-app-capable`): iOS keeps a standalone app's storage apart
+  from Safari's, and trophies, loadouts and saved choices must stay shared with Safari.
+- **CI:** the live check (`.github/workflows/ci.yml`) now derives the icon links from `index.html` the
+  same way it derives the scripts, and fails if any of them does not 200 on Pages.
+- **Drill:** `test/homeicon.test.js` (3): the touch icon and a favicon are named, relative, present in
+  the repo and the right size (read from the PNG header); the home-screen title is set and standalone
+  mode is absent; the SVG holds shapes only (no image, text or external href). Sabotaged twice (standalone
+  mode added and the touch icon made absolute: 2 fail; the favicon PNG removed: 1 fails).
+
 ## v5.81 — Feed and voice: pips as words, no function names, the Coach's grammar
 
 Five findings of the 1.0 polish audit (`docs/archive/POLISH-AUDIT-1.0.md`: #6 and #10 P2; #12, #14,

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180">
+  <!-- Dawnblade's icon: original art, the page's own palette (index.html :root).
+       A blade standing in a rising sun. Source of icons/*.png: node tools/icon.js -->
+  <rect width="180" height="180" fill="#14100E"/>
+  <clipPath id="sky"><rect width="180" height="128"/></clipPath>
+  <circle cx="90" cy="128" r="58" fill="#C4302B" clip-path="url(#sky)"/>
+  <circle cx="90" cy="128" r="44" fill="#E8B33C" clip-path="url(#sky)"/>
+  <rect x="18" y="127" width="144" height="5" fill="#E8B33C"/>
+  <path d="M90 18 L100 36 L100 112 L80 112 L80 36 Z" fill="#E8DFD0"/>
+  <rect x="58" y="110" width="64" height="9" fill="#E8DFD0"/>
+  <rect x="85" y="119" width="10" height="28" fill="#E8DFD0"/>
+  <circle cx="90" cy="153" r="8" fill="#E8DFD0"/>
+  <path d="M90 26 L90 108" stroke="#14100E" stroke-width="2" opacity=".35"/>
+</svg>
