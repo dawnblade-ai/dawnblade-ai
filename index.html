@@ -7004,9 +7004,8 @@ function TableRoom({table, host, code, db, onExit}){
   if(step === "fault") return (
     <div className="tblwrap">{head}
       <div className="tblerr">{lob.fault}</div>
-      <p className="mnote">Both phones must hold the same card data. Reload the
-        page on the older one — the database is cached under its version key,
-        so a reload re-fetches it.</p>
+      <p className="mnote">Both phones must run the same version of the game.
+        Reload the page on the older one to pick up the latest.</p>
       <button className="a" onClick={onExit}>Leave the table</button>
     </div>
   );
@@ -7095,11 +7094,10 @@ function TableRoom({table, host, code, db, onExit}){
 
       {err && <div className="tblerr">{err}</div>}
       <p className="mnote">
-        Table play runs <strong>two real hero decks</strong> through
-        engine/judge.js — the CR turn structure, priority, the combat chain,
-        printed costs and <strong>card text</strong>, which resolves through
-        the same engine/effects.js the solo trainer uses. One copy of the
-        rules, two seats.
+        Table play runs <strong>two real hero decks</strong> — the full turn
+        structure, priority, the combat chain, printed costs and <strong>card
+        text</strong>, read by the same engine as the solo trainer. One copy
+        of the rules, two seats.
       </p>
       <button className="a" onClick={onExit}>Leave the table</button>
     </div>

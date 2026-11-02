@@ -1,3 +1,16 @@
+## v5.NN — The table room stops naming files and a retired card cache
+
+Found by the 1.0 polish audit (P2). Two lines of the two-phone room's player copy: the hero-pick note
+said the table runs "through engine/judge.js … the same engine/effects.js the solo trainer uses"
+(filenames, developer voice), and the version-mismatch screen said "the database is cached under its
+version key, so a reload re-fetches it" — no card database is cached or fetched since v5.74. They now
+say the table plays the card text through the same engine as the trainer, and that both phones must
+run the same version (reload the older one).
+
+- **Drill:** `test/tablecopy.test.js` reads `TableRoom`'s visible text too: no filename, no
+  "cached / re-fetch / database", and the mismatch screen names the fix. Sabotaged (the old copy):
+  fails.
+
 ## v5.NN — Blocking in the trainer no longer blanks the page
 
 Found by the 1.0 polish audit (**P0**). In the trainer, the first time the player defended with a card

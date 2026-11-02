@@ -32,3 +32,16 @@ test("the table note does not say card text is missing at the table", () => {
   assert.ok(!/parser|effects\.js|engine\/|\bfx[A-Z]/.test(t), "an identifier in player copy: " + t);
   assert.ok(/card text/i.test(t), "the note says the card text is played: " + t);
 });
+
+/* AND THE ROOM'S OWN COPY (same audit). The hero-pick note named two
+   filenames ("through engine/judge.js … the same engine/effects.js"), and
+   the version-mismatch screen still said "the database is cached under its
+   version key, so a reload re-fetches it" — no card database is cached or
+   fetched since v5.74. */
+test("the table room speaks to a player: no filenames, no card-database cache", () => {
+  const t = visibleText("TableRoom");
+  assert.ok(/two real hero decks/i.test(t), "the room's note is still there: " + t.slice(0, 200));
+  assert.ok(!/\.js\b|engine\//.test(t), "a filename in player copy: " + t);
+  assert.ok(!/cached|re-fetch|database/i.test(t), "the retired card-database cache: " + t);
+  assert.ok(/same version/i.test(t), "the mismatch screen says what to do: " + t);
+});
