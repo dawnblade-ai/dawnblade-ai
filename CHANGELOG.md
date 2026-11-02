@@ -1,3 +1,17 @@
+## v5.NN — The 1.0 polish audit, its drive, and a player README
+
+- **`POLISH-AUDIT-1.0.md`**: every hero as the player's pick on both boards at 393x852, judged on
+  element boxes (18 findings: P0 1, P1 1, P2 9, P3 7; 15 fixed in the entries above, 3 plus one
+  follow-up listed under NEEDS A DECISION — the coin's "while testing" line, a 44px floor, Add to Home
+  Screen, and what a win over an AI hero earns).
+- **`tools/page-audit.js`**: the drive that found them, on `tools/page.js`'s `open()`. The trainer is
+  tapped; at the table seat 0 is played by the seat policy through the page's own session, so whole
+  games run on the real board. Not part of `npm test`.
+- **README.md**: a player guide on top (the URL, iPhone and Add to Home Screen, the trainer and the
+  table, the advisor, the two-phone table, JUDGE!!), a short maintainer section pointing at CLAUDE.md,
+  no hard-coded counts; the Legend Story Studios line kept.
+- `CR-INDEX.md` regenerated (`npm run crindex`): line numbers moved with the edits.
+
 ## v5.NN — "2 left floating — spend them", not "2 floats: spend it"
 
 Found by the 1.0 polish audit (P3), Blaze's trainer: "Pitch Whisper of the Oracle — exactly 3 (2 floats:
