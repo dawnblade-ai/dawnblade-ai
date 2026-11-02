@@ -1,3 +1,20 @@
+## v5.NN — JUDGE!!, "skip" and "✕ cancel" get a thumb-sized hit area
+
+Found by the 1.0 polish audit (P2). At 393x852 the JUDGE!! button drew 58x18 and the status line's
+buttons ("skip" at the arsenal step, "✕ cancel" while paying, heave and the cost-pick cancels)
+drew 15px tall, targets a thumb misses on the phone this is played on.
+
+- **Fix:** CSS only, both boards. Each keeps its size on screen and gains an invisible `::after` hit
+  area: JUDGE!! takes taps over 42px (its pane clips 9px above it), the status-line buttons over
+  32px, reaching up only inside the line's own padding and down short of the hand rail's cards.
+  JUDGE!! stacks above the scoreboard, whose `clip-path` would otherwise paint over the hit area.
+- **Page assertion:** `node tools/page.js` measures, at each button's centre x, the vertical span over
+  which a tap lands on it (JUDGE!! >= 40px, the status line >= 30px), and checks every other visible
+  control on the board still takes the tap at its own centre. Sabotaged (`::after` hidden): JUDGE!!
+  18px and skip 16px, both fail.
+- The wider 44px question (the ▲ / Chain / ▼ row at 25px, the bottom tabs at 34px, the advisor
+  header at 26px) costs vertical room on a fixed-height board and is under NEEDS A DECISION.
+
 ## v5.NN — The card preview no longer covers "skip" and "✕ cancel"
 
 Found by the 1.0 polish audit (P2, POLISH.md's "the tap is never lost"). At 393x852 the two-tap

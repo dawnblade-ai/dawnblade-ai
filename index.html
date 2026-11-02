@@ -533,7 +533,13 @@ img{display:block;max-width:100%}
 .sidecol .mini{width:100%;box-sizing:border-box}
 .statusline{flex:none;font-size:10.5px;color:var(--bone-dim);padding:5px 8px;background:var(--forge);border-top:1px solid var(--line);border-bottom:1px solid var(--line);text-align:center}
 .statusline b{color:var(--y)}
-.statusline button{background:none;border:1px solid var(--line);color:var(--y);font-size:9px;padding:1px 6px;margin-left:5px}
+.statusline button{background:none;border:1px solid var(--line);color:var(--y);font-size:9px;padding:1px 6px;margin-left:5px;position:relative}
+/* A FINGER-SIZED HIT AREA ON A PRINT-SIZED BUTTON (1.0 polish audit). "skip" and
+   "✕ cancel" drew 15px tall, a target a thumb misses. The paint stays small; an
+   invisible ::after takes the tap. Up 6px stays inside the line's own padding and
+   border (nothing tappable above it); down 12px stops short of the hand rail's
+   cards, which sit behind its 7px padding. */
+.statusline button::after{content:"";position:absolute;inset:-6px -8px -12px}
 .phand{flex:none;display:flex;gap:5px;align-items:stretch;overflow-x:auto;padding:7px 8px;border-top:1px solid var(--line);background:var(--forge2);scroll-snap-type:x proximity}
 .phand .hlbl{align-self:center}
 .phand .hc{flex:none;width:80px;position:relative;padding:0;background:var(--forge);border:1px solid var(--line);scroll-snap-align:start;transition:transform .12s}
@@ -690,6 +696,11 @@ img{display:block;max-width:100%}
   font-family:'Spline Sans Mono',monospace;font-size:8.5px;font-weight:700;letter-spacing:.1em;
   padding:3px 8px;cursor:pointer;text-transform:uppercase;line-height:1.4}
 .judgebtn:active{transform:translateY(1px)}
+/* JUDGE!! drew 18px tall: the same invisible hit area, 44px, over text-only
+   neighbours (the pane flag's labels, the scoreboard below). It reaches only 8px
+   up because the pane clips at its own top edge, 9px above the button. */
+.judgebtn{position:relative;z-index:1}   /* above the clipped scoreboard, which paints later */
+.judgebtn::after{content:"";position:absolute;inset:-8px -6px -18px}
 .bugwrap{position:fixed;inset:0;z-index:80;background:rgba(8,6,5,.78);
   display:flex;align-items:flex-end;justify-content:center}
 .bugsheet{width:100%;max-width:560px;background:var(--forge);border-top:2px solid var(--r);

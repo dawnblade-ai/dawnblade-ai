@@ -282,6 +282,52 @@ if(require.main === module){
        per board, when the line over the hand holds a button ("skip" at the
        arsenal step, "✕ cancel" while paying), peek a hand card and ask what
        is topmost at each button's centre: the button, never the dock. */
+    /* HIT AREAS (1.0 polish audit). The tall span, at the button's centre x,
+       over which a tap lands on the button: JUDGE!! drew 18px and "skip" /
+       "✕ cancel" 15px, each given an invisible ::after hit area. And on the
+       board every visible control still takes the tap at its own centre, so a
+       hit area never steals a neighbour's. */
+    const hitSpan = async sel => {
+      const pick = sel => [...document.querySelectorAll(sel)].find(x => { const r = x.getBoundingClientRect(); return x.offsetParent && r.height && r.bottom > 0 && r.top < innerHeight; });
+      await page.evaluate(src => { window.__pickShown = new Function("sel", "return (" + src + ")(sel)"); }, pick.toString());
+      const there = await page.evaluate(sel => { const b = window.__pickShown(sel);
+        /* sideways only: the log pane sits left of the play pane, and a vertical
+           scroll would move the button off its snapped resting place */
+        for(let p = b && b.parentElement; p; p = p.parentElement) if(/auto|scroll/.test(getComputedStyle(p).overflowX)){
+          const q = p.getBoundingClientRect(), r = b.getBoundingClientRect();
+          if(r.left < q.left || r.right > q.right) p.scrollLeft += r.left - q.left - 8; }
+        return !!b; }, sel);
+      if(!there) return null;
+      await page.waitForTimeout(600);
+      return page.evaluate(sel => {
+      const b = window.__pickShown(sel);
+      if(!b) return null;
+      const r = b.getBoundingClientRect(), x = r.left + r.width / 2, on = y => { const t = document.elementFromPoint(x, y); return !!t && b.contains(t); };
+      let lo = r.top + r.height / 2, hi = lo;
+      while(lo > 0 && on(lo - 1)) lo--;
+      while(hi < innerHeight && on(hi + 1)) hi++;
+      const what = y => { const t = document.elementFromPoint(x, y); return t ? (t.className || t.tagName) : "-"; };
+      return { t: b.innerText.trim(), drawn: Math.round(r.height), hit: Math.round(hi - lo + 1),
+               at: `x ${Math.round(x)} y ${Math.round(r.top)}; above: ${what(lo - 2)}, below: ${what(hi + 2)}` };
+    }, sel); };
+    const ownTaps = () => page.evaluate(() => [...document.querySelectorAll(".board button")].filter(b => {
+      if(!b.offsetParent || b.closest(".peekwrap")) return false;
+      const r = b.getBoundingClientRect(); if(!r.width || r.bottom < 0 || r.top > innerHeight) return false;
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      if(cx < 0 || cx > innerWidth) return false;
+      for(let p = b.parentElement; p; p = p.parentElement){ const q = p.getBoundingClientRect(), o = getComputedStyle(p);
+        if((o.overflowX !== "visible" || o.overflowY !== "visible") && (cx < q.left || cx > q.right || cy < q.top || cy > q.bottom)) return false; }
+      const t = document.elementFromPoint(cx, cy);
+      return t && !b.contains(t) && !t.contains(b) && t.closest("button") && !t.closest(".peekwrap");
+    }).map(b => b.innerText.replace(/\s+/g, " ").trim().slice(0, 24)));
+    const hitChecked = new Set();
+    const hitCheck = async (prefix, sel, min) => {
+      if(hitChecked.has(prefix + sel)) return;
+      const h = await hitSpan(sel); if(!h) return;
+      hitChecked.add(prefix + sel);
+      const stolen = await ownTaps();
+      row(h.hit >= min && !stolen.length, `${prefix}: ${h.t} hit area`, `drawn ${h.drawn}px, takes taps over ${h.hit}px (want >= ${min})` + (h.hit < min ? "  " + h.at : "") + (stolen.length ? "  STOLEN: " + stolen.join(", ") : ""));
+    };
     const peekChecked = new Set();
     const peekClear = async prefix => {
       if(peekChecked.has(prefix)) return;
@@ -307,6 +353,7 @@ if(require.main === module){
       const sigs = new Set(), board = () => page.locator(".board").innerText();
       let moved = 0, taps = 0;
       for(let i = 0; i < 14; i++){
+        await hitCheck(prefix, ".board .statusline button", 30);
         await peekClear(prefix);
         /* a disabled bar is the other seat thinking: wait it out (6s), never tap it */
         let bar, pick;
@@ -334,7 +381,8 @@ if(require.main === module){
       if(await click(page.locator(".actbar .battlebtn"), "Fight")){
         await page.waitForSelector(".board", { timeout: 8000 });
         await screen("trainer: board", "actions: " + names(await handBar()));
-        await nav("trainer", ["Chain", "You", "Opp"]);
+        await nav("trainer", ["Chain"]); await hitCheck("trainer", ".board .judgebtn", 40);
+        await nav("trainer", ["You", "Opp"]);
         await playOn("trainer");
         await click(page.locator(".screennav button", { hasText: "leave" }), "leave the trainer");
         await page.waitForSelector(".hgrid", { timeout: 5000 }).catch(() => {});
@@ -353,7 +401,8 @@ if(require.main === module){
           const top = (await page.locator(".screennav").innerText()).replace(/\s+/g, " ");
           row(top.toLowerCase().includes(first.toLowerCase()), "table board is the AI table", `top nav ${JSON.stringify(top)} names ${first}`);
           await screen("table: board", "actions: " + names(await handBar()));
-          await nav("table", ["Chain", "You", first]);
+          await nav("table", ["Chain"]); await hitCheck("table", ".board .judgebtn", 40);
+          await nav("table", ["You", first]);
           await playOn("table");
           await click(page.locator(".screennav button", { hasText: "leave" }), "leave the table");
         }
