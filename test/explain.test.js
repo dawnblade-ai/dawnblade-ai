@@ -125,12 +125,14 @@ test("every reason is keyed from a site in the policy, and the census names what
      charge window after one card was picked), and the three gate reasons are reached. v5.67 adds `chargeMore`: 30 games never hold two Light
      cards at V of the Vanguard's sheet, so `test/vcharge.test.js` drives it instead.
      H26 (`markFirst`) is reached by the census, and it re-routes an Arakni game or two: `discost` is reached now and
-     `chargeDone` is not (the census games are the same 30; the trajectories moved). */
+     `chargeDone` is not (the census games are the same 30; the trajectories moved). The four `la*`
+     reasons belong to the lookahead, which only the table's AI seat and its call ask for (`{search: true}`);
+     the census runs the rule policy, so `test/lookahead.test.js` reaches them. */
   const seen = census().keys;
   for(const k of Object.keys(seen)) assert.ok(SP.CALL_WHY[k], "reached key " + k + " has no reason");
   assert.deepEqual(keys.filter(k => !seen[k]).sort(),
     ["addPayNo", "allocAll", "allyTake", "answer", "arenaAP", "arenaRes", "arsenalSkip", "boostNo",
-     "chargeDone", "chargeMore", "chargeNone", "payCancel", "pitchChi"]);
+     "chargeDone", "chargeMore", "chargeNone", "laHit", "laHold", "laKeep", "laSafe", "payCancel", "pitchChi"]);
 });
 
 test("every reason and every line reads as game text", () => {
@@ -178,7 +180,8 @@ test("the call is the hero's: no Claude's call anywhere, the trainer's is the Co
   assert.ok(t > 0, "the table's box was found");
   const box = html.slice(t, html.indexOf("read={myBuild.read}/>}", t));
   assert.match(box, /local && mySeat === 0 && <Advisor/, "local sessions and seat 0 only, as before");
-  assert.match(box, /DawnSparring\.explain\(g, mySeat\)/);
+  /* the call plays at the table's level (lookahead phase 2): searched when the AI seat is */
+  assert.match(box, /DawnSparring\.explain\(g, mySeat, \{search: !!match\.sharp\}\)/);
   assert.match(box, /\+ "'s call"/);
   assert.match(box, /" is deciding\."/, "when the seat cannot act, the box says who is deciding");
   assert.ok(!/advView|advise\(/.test(box), "the table no longer runs the coach's policy");

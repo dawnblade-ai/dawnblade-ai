@@ -61,9 +61,9 @@
    ============================================================ */
 (function(root, factory){
   if(typeof module==="object" && module.exports)
-    module.exports = factory(require("./judge.js"), require("./priority.js"), require("./game.js"));
-  else root.DawnSparring = factory(root.DawnJudge, root.DawnPriority, root.DawnGame);
-})(typeof self!=="undefined" ? self : this, function(J, P, GM){
+    module.exports = factory(require("./judge.js"), require("./priority.js"), require("./game.js"), require("./rng.js"));
+  else root.DawnSparring = factory(root.DawnJudge, root.DawnPriority, root.DawnGame, root.DawnRNG);
+})(typeof self!=="undefined" ? self : this, function(J, P, GM, RNG){
 
 /* How the policy plays, all of it in one place so a caller can retune
    without editing a heuristic. These are POLICY, not rules — nothing here
@@ -948,7 +948,7 @@ function affordableWithin(sd, card, o){
    now — which is the normal answer for most of the game, because for most
    of the game it is the other seat's window. A caller drives both seats
    and lets each one answer for itself. */
-function act(g, seat, o){
+function actBase(g, seat, o){
   o = cfg(o);
   if(!g || g.over || (seat !== 0 && seat !== 1)) return null;
 
@@ -1057,6 +1057,173 @@ function act(g, seat, o){
   return tag("pass", {t: "pass"});
 }
 
+/* ---- LOOKAHEAD (phase 1 research, phase 2 ships it on the AI seat) -----
+   At the seat's own action decision (priority, action speed, nothing on the
+   stack, no link open, no payment, no sheet) the rule policy above proposes
+   A0. The search then plays each distinct legal alternative — and A0 — out
+   through the real engine (`judge.reduce`), with THIS FILE'S OWN RULE POLICY
+   driving both seats for the rest of the horizon, and keeps the line whose
+   end state scores best. It is one step of policy improvement over the rule
+   policy (a rollout), not a tree: the rules above stay the default player
+   and the search only overrules them when it can show a better outcome.
+
+   NO HIDDEN INFORMATION. The search never runs on the real state. `laMask`
+   rebuilds the root from what the seat may know: the opponent's hand, its
+   face-down arsenal and its deck are pooled, sorted by name (never by where
+   they sat) and dealt back at random from a SEPARATE stream; the seat's own
+   deck order is reshuffled the same way; the game's rng is replaced, so a
+   rollout's draws and shuffles are not the real future. The stream's seed is
+   built from public facts only. Swapping any hidden card for another hidden
+   card leaves the pool, and so the choice, unchanged (test/lookahead.test.js).
+
+   NO CARD TEXT. Candidates are offered to `judge.legal`; outcomes are read
+   off life totals and card counts of the state the engine returns.
+
+   DETERMINISTIC. Total order (score, then A0, then candidate order, which is
+   zone order then uid), a step budget rather than a clock, `game.rng` never
+   touched (the masked root carries its own).
+
+   GATE, per call: `act(g, seat, {search: true})` searches (the table's AI
+   seat on Sharp, and the player's call beside it); `{search: false}` is the
+   rule policy byte for byte (Steady). With no `search` option the gate is
+   `LA.seats` — hero keys or "all" (env SPXLA; drivers edit it in place) —
+   empty by default, so self-play, the trainer and every drill run the rules.
+
+   SETTINGS (phase 2, measured — CHANGELOG): horizon "own" (to the end of
+   this seat's turn) and a budget of 300 engine steps per decision. Through
+   the opponent's next turn gained less at every budget tried and cost twice
+   the steps; 300 steps caps a decision at roughly 150 ms on the page under
+   4x CPU throttling and gives up nothing measurable against no cap. The
+   budget is counted in engine steps, never time, so two phones agree. */
+const envOf = k => (typeof process !== "undefined" && process.env && process.env[k]) || "";
+const LA = {
+  seats: envOf("SPXLA") ? envOf("SPXLA").split(",") : [],   /* "all" = every seat (drivers) */
+  horizon: envOf("SPXLA_H") || "own",        /* "own": to the end of this turn; "opp": through the opponent's next turn */
+  mu: envOf("SPXLA_MU") !== "" ? +envOf("SPXLA_MU") : 1.5,   /* life-points one held card is worth */
+  margin: envOf("SPXLA_M") !== "" ? +envOf("SPXLA_M") : 0.5, /* an alternative must beat A0 by more than this */
+  dets: envOf("SPXLA_K") !== "" ? +envOf("SPXLA_K") : 1,     /* determinizations per decision */
+  stepCap: 400,       /* per rollout */
+  budget: envOf("SPXLA_B") !== "" ? +envOf("SPXLA_B") : 300,  /* engine steps per decision, all rollouts together; over it, A0 stands */
+  stats: {decisions: 0, searched: 0, overruled: 0, steps: 0, ms: 0, maxSteps: 0, over: 0, hist: {}}
+};
+let IN_SEARCH = false;
+const laGated = (g, seat, o) => { if(o && o.search != null) return !!o.search;
+  const sd = g && g.sides && g.sides[seat]; return !!(sd && (LA.seats.indexOf("all") >= 0 || LA.seats.indexOf(sd.heroKey) >= 0)); };
+const laPoint = (g, seat) => !g.prompt && !J.pendingOf(g) && g.arsenalFor !== seat && !g.pend
+  && !(g.stack || []).length && P.hasPriority(g, seat) && P.speedAllowed(g, seat).indexOf("action") >= 0;
+const canon = (a, b) => String(a.name) < String(b.name) ? -1 : String(a.name) > String(b.name) ? 1
+  : num(a, "pitch") - num(b, "pitch") || byUid(a, b);
+
+/* What the seat may know, as a playable state. `k` picks the determinization. */
+function laMask(g, seat, k){
+  const op = 1 - seat, sides = g.sides.slice();
+  const me = sides[seat], o = sides[op];
+  /* public facts only: turn, seat, phase position, zone SIZES, the seat's own hand */
+  const pub = [g.turn, seat, k, (g.feed || []).length, (o.hand || []).length, (o.deck || []).length,
+               (me.deck || []).length, (me.hand || []).map(c => c.uid).join(".")].join("|");
+  let r = RNG.make("la|" + pub);
+  const hidArs = !!(o.arsenal && !o.arsenal._faceUp);
+  const pool = (o.hand || []).concat(o.deck || [], hidArs ? [o.arsenal] : []).slice().sort(canon);
+  let sh = RNG.shuffle(r, pool); r = sh.rng;
+  const nh = (o.hand || []).length;
+  sides[op] = {...o, hand: sh.arr.slice(0, nh), arsenal: hidArs ? sh.arr[nh] : o.arsenal,
+               deck: sh.arr.slice(nh + (hidArs ? 1 : 0))};
+  sh = RNG.shuffle(r, (me.deck || []).slice().sort(canon)); r = sh.rng;
+  sides[seat] = {...me, deck: sh.arr};
+  return {...g, sides, rng: RNG.make("la-game|" + pub), feed: [], log: []};
+}
+
+/* Every distinct thing the seat could start now. Two copies of one card in
+   one zone lead to the same game, so only the first (zone order) is kept. */
+function laCands(g, seat, a0){
+  const sd = g.sides[seat], out = [], seen = new Set();
+  const keyOf = a => {
+    const c = a.uid != null && a.uid !== "hpow" ? cardIn(sd, a.uid) : null;
+    return a.t + "|" + (a.from || "") + "|" + (c && (a.t === "play") ? c.name + "/" + num(c, "pitch") : a.uid) + "|" + (a.target || "");
+  };
+  const add = a => { if(!legal(g, a, seat)) return; const k = keyOf(a); if(seen.has(k)) return; seen.add(k); out.push(a); };
+  if(a0) add(a0);
+  const atk = c => num(c, "power") > 0 ? {target: targetFor(g, seat, c)} : {};
+  (sd.hand || []).forEach(c => c && add({t: "play", uid: c.uid, from: "hand", ...atk(c)}));
+  if(sd.arsenal) add({t: "play", uid: sd.arsenal.uid, from: "arsenal", ...atk(sd.arsenal)});
+  (sd.gear || []).forEach(c => c && add({t: "activate", uid: c.uid}));
+  (sd.board || []).forEach(b => { if(!b) return; const at = J.boardAttackOf(g, seat, b.uid);
+    add(at ? {t: "activate", uid: b.uid, target: targetFor(g, seat, Object.assign({}, b.card, {power: at.power}))} : {t: "activate", uid: b.uid}); });
+  add({t: "activate", from: "hero", uid: "hpow"});
+  add({t: "endTurn"});
+  return out;
+}
+
+const held = sd => (sd.hand || []).length + (sd.arsenal ? 1 : 0);
+function laEval(n, seat, root){
+  const me = n.sides[seat], op = n.sides[1 - seat], m0 = root.sides[seat], o0 = root.sides[1 - seat];
+  if(n.over) return {v: n.over.winner === seat ? 1000 : n.over.winner == null ? 0 : -1000, dealt: 0, taken: 0, cards: 0, over: true};
+  const dealt = (o0.hp - op.hp), taken = (m0.hp - me.hp), cards = held(me) - held(op);
+  return {v: dealt - taken + LA.mu * cards, dealt, taken, cards};
+}
+function laRollout(n, seat, root, spent){
+  const stop = root.turn + (LA.horizon === "own" ? 1 : 2);
+  let steps = 0;
+  while(steps < LA.stepCap && !n.over && n.turn < stop && spent + steps < LA.budget){
+    let moved = false;
+    for(const s of [0, 1]){
+      const a = actBase(n, s);
+      if(!a) continue;
+      const out = J.reduce(n, a, s);
+      if(out.error) continue;
+      n = out.state; steps++; moved = true; break;
+    }
+    if(!moved) break;
+  }
+  return {n, steps, done: n.over || n.turn >= stop};
+}
+function laSearch(g, seat, a0){
+  LA.stats.decisions++;
+  const t0 = Date.now(), keep = NOTE; NOTE = null; IN_SEARCH = true;
+  let best = null, spent = 0, cands = [];
+  try {
+    cands = laCands(g, seat, a0);
+    if(cands.length < 2) return null;
+    LA.stats.searched++;
+    const tot = cands.map(() => ({v: 0, dealt: 0, taken: 0, cards: 0}));
+    for(let k = 0; k < LA.dets; k++){
+      const root = laMask(g, seat, k);
+      for(let i = 0; i < cands.length; i++){
+        const out = J.reduce(root, cands[i], seat);
+        if(out.error){ tot[i].v = -Infinity; continue; }
+        const r = laRollout(out.state, seat, root, spent); spent += r.steps + 1;
+        if(!r.done){ LA.stats.over++; return null; }   /* over budget: the rule policy's move stands */
+        const e = laEval(r.n, seat, root);
+        ["v", "dealt", "taken", "cards"].forEach(f => tot[i][f] += e[f]);
+      }
+    }
+    let bi = 0;
+    for(let i = 1; i < cands.length; i++) if(tot[i].v > tot[bi].v + (bi === 0 ? LA.margin : 0)) bi = i;
+    best = bi === 0 ? null : {a: cands[bi], d: ["dealt", "taken", "cards"].reduce((m, f) => (m[f] = (tot[bi][f] - tot[0][f]) / LA.dets, m), {})};
+    return best;
+  } finally {
+    IN_SEARCH = false; NOTE = keep;
+    LA.stats.steps += spent; LA.stats.maxSteps = Math.max(LA.stats.maxSteps, spent); LA.stats.ms += Date.now() - t0;
+    if(cands.length >= 2){ const b = Math.floor(spent / 10) * 10; LA.stats.hist[b] = (LA.stats.hist[b] || 0) + 1; }
+    if(best) LA.stats.overruled++;
+  }
+}
+/* WHY THE SEARCH OVERRULED THE RULES, in the coach's voice: the term of the
+   score that moved most between its line and the rule policy's. */
+function laWhy(b){
+  const {dealt, taken, cards} = b.d;
+  if(b.a.t === "endTurn") return "laHold";
+  const terms = [["laHit", dealt], ["laSafe", -taken], ["laKeep", LA.mu * cards]].sort((x, y) => y[1] - x[1]);
+  return terms[0][0];
+}
+function act(g, seat, o){
+  const a0 = actBase(g, seat, o);
+  if(IN_SEARCH || !a0 || !laGated(g, seat, o) || !laPoint(g, seat)) return a0;
+  const b = laSearch(g, seat, a0);
+  if(!b || !legal(g, b.a, seat)) return a0;
+  return tag(laWhy(b), b.a);
+}
+
 /* ---- driving -----------------------------------------------------------
    Step the game until nobody has anything to do. `seats` is which chairs
    the policy is sitting in: `[1]` is the solo trainer, `[0,1]` is the
@@ -1160,6 +1327,10 @@ const CALL_WHY = {
   declineOptional: "Decline. It is optional, and not worth it here.",
   answer: "Answer it and play on.",
   endTurn: "End your turn. Nothing worth doing is left.",
+  laHit: "Start with this. Play each opening out to the end of your turn and this one lands the most damage once they block.",
+  laSafe: "Start with this. Played out to the end of your turn, it costs you the least life of any opening.",
+  laKeep: "Start with this. Played out, it hits as hard as anything else and keeps more cards in hand for their swing back.",
+  laHold: "Stop here and keep the rest. Played out, every card you could still play costs you more than it earns.",
   pass: "Nothing you hold is worth playing right now."
 };
 const BY_TYPE = {addPay: "addPayNo"};
@@ -1219,7 +1390,26 @@ function lineOf(g, seat, a){
   }
   return a.t;
 }
+/* EXPLAIN IS MEMOIZED PER STATE. The table's advisor box asks for the
+   call on every render, for both seats, and with the search on one call
+   is a few hundred engine steps. A state is never edited after `reduce`
+   returns it (every write goes to a shallow copy), so the same object
+   always earns the same call: it is kept on the object itself, in a
+   WeakMap, keyed by the seat and every setting the search reads. Options
+   other than `search` are not memoized (a driver passing policy tunings
+   gets a fresh answer every time). */
+const EXPLAINED = typeof WeakMap === "function" ? new WeakMap() : null;
+const explainKey = (seat, o) => (o && Object.keys(o).some(k => k !== "search")) ? null
+  : [seat, o && o.search != null ? !!o.search : "-", LA.seats.join(","), LA.horizon, LA.budget, LA.mu, LA.margin, LA.dets, LA.stepCap].join("|");
 function explain(g, seat, o){
+  const key = EXPLAINED && g && typeof g === "object" ? explainKey(seat, o) : null;
+  const memo = key && EXPLAINED.get(g);
+  if(memo && memo.has(key)) return memo.get(key);
+  const e = explainNow(g, seat, o);
+  if(key){ const m = memo || new Map(); m.set(key, e); if(!memo) EXPLAINED.set(g, m); }
+  return e;
+}
+function explainNow(g, seat, o){
   NOTE = {tags: []};
   let a = null, n = null;
   try { a = act(g, seat, o); } finally { n = NOTE; NOTE = null; }
@@ -1230,5 +1420,5 @@ function explain(g, seat, o){
   return {action: a, key, why: key ? (CALL_WHY[key] ? (key === "chargeColour" || key === "gateColour" ? CALL_WHY[key].replace(/COLOUR/g, ["", "red", "yellow", "blue"][key === "gateColour" ? J.gateColourWanted(g, seat) : J.chargePitchWanted(g)] || "matching") : CALL_WHY[key]) : null) : null, line: lineOf(g, seat, a)};
 }
 
-return {DEFAULTS, act, explain, CALL_WHY, run, pitchPick, nextBlocker, offence, wallOf, affordableWithin};
+return {DEFAULTS, act, actBase, LA, laMask, laCands, explain, CALL_WHY, run, pitchPick, nextBlocker, offence, wallOf, affordableWithin};
 });
