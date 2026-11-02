@@ -101,7 +101,8 @@ jobs:
           # DERIVE THE COUNT, NEVER STATE IT (CLAUDE.md). This line used to
           # read "all 15 engine files" when the real number was 21.
           bad=0
-          for f in $(grep -o '<script src="engine/[a-z]*\.js"' index.html | sed 's/.*src="//;s/"//' | sort -u); do
+          # data/ too since v5.74: the pinned pool is a script the page loads.
+          for f in $(grep -oE '<script src="(engine|data)/[a-z]*\.js"' index.html | sed 's/.*src="//;s/"//' | sort -u); do
             c=$(curl -s -o /dev/null -w '%{http_code}' "$URL/$f")
             [ "$c" = "200" ] || { echo "::error::$f is $c"; bad=1; }
           done
@@ -111,4 +112,4 @@ jobs:
           local=$(grep -oP 'APP_VER = "\K[0-9.]+' index.html | head -1)
           echo "live=$ver repo=$local"
           [ "$ver" = "$local" ] || { echo "::error::live is $ver, repo is $local"; exit 1; }
-          echo "verified: $URL serves v$ver and every engine module 200s"
+          echo "verified: $URL serves v$ver and every script it loads 200s"
