@@ -14,7 +14,9 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
 **Keep this section SHORT (under ~50 lines): current state, decisions, who is doing what, next.**
 History goes in the archived handoffs below it and in CHANGELOG.md. Do not start a root handoff file.
 
-- **Live: v5.75** (`5c5553f`). Was v5.73 (`218a5fe`) at session start. Baseline 2026-11-02: 3892 drills, 0 fail, 5 skipped. Ledger
+- **Live: v5.78** (`a8de082`). Session start was v5.73 (`218a5fe`). Shipped 2026-11-02: v5.74 pinned pool ·
+  v5.75 R8 draw · v5.76 P0 trainer block crash (found by the polish audit) · v5.77 lookahead search on
+  the AI hero (+3.06 of 28, t 11.1, 0/0/0; phone p95 96 ms) · v5.78 Sharp/Steady loadout tiles.
   (`node tools/approx.js`): 0 open, 22 stated, 36 closed.
 - **How the CEO works now (context is the scarce resource):** every build/measure job runs in its
   own cloud session (`create_session`, outcome branch `ship/*` or `research/*`), which messages the
@@ -52,10 +54,13 @@ History goes in the archived handoffs below it and in CHANGELOG.md. Do not start
   pregame item would only spend a steam counter for an action point the action phase overwrites
   (`ap:1`), so no player would take it; `start-item-crank-unasked` stays stated, nothing to build.
 
-**NEXT, in order:** (1) merge v5.74 R8, (2) merge v5.75 pinned pool, (3) 1.0 polish pass — drive
-every hero on both boards at 393×852 with `tools/page.js` against POLISH.md / UI-GUIDE.md, plus a
-player README, (4) lookahead phase 2 if the spike says go, (5) R9 once the CR text is in hand.
-Parked: hidden hands for two phones (`peers-hold-full-state`), sudden death (`no-sudden-death`).
+**IN FLIGHT:** `ship/polish` (session_013xG9x9dyWcLZep2tydngou) groups the polish fixes as v5.79 table
+results/copy · v5.80 layout + tap targets (decision B: invisible 44px hit areas) · v5.81 feed/voice ·
+v5.82 home-screen icon (decision C: original icon, NOT standalone) · README/docs commit.
+**OPEN DECISIONS:** (A, USER) the coin screen says "the throw returns for launch" — bring back
+rock-paper-scissors for 1.0 or drop the line? (D, deferred past 1.0) what a win over an AI hero earns
+(CEO lean: a per-opponent W-L record). Lookahead (c) — arsenal/block search, K/mu/margin tuning — waits
+until polish lands. R9 still waits on the CR text. Parked: hidden hands, sudden death.
 
 **AI policy hunts are paused:** H25, H27, H28, H30, H31 did not ship (the hand-written vein is
 thin; detail in the archive below). Their patches are in `experiments/`.
