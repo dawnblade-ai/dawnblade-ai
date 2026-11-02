@@ -3054,7 +3054,8 @@ function makeEffects(ctx){
           n = runOps(n, op[2] || [], srcName);
         }
       }
-      else if(k==="noop"){ n=L(n,`${srcName}: ${v}.`); }
+      /* the feed gets the reason WITHOUT the reader it names (parser.noopFeedText) */
+      else if(k==="noop"){ n=L(n,`${srcName}: ${P.noopFeedText(v)}.`); }
     });
     return n;
   };

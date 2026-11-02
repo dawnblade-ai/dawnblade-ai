@@ -76,7 +76,7 @@ test("every parser reading the pool never reaches is pinned", {skip}, () => {
        Latent readers with correct anchors — and asking THIS one is what
        put `weaponCost`'s cost read in front of somebody. */
     "if(/^(?:you may )?\\{t\\} your hero$/.test(c)) return R([[\"tapSelfHero\",1]]);",
-    "if(/^inertia$/.test(c)) return NOOP(\"live — a hand wipe at the beginning of its controller's end phase\");",
+    "if(/^inertia$/.test(c)) return NOOP(\"live — a hand wipe at the beginning of its controller's end phase (resolveInertia)\");",
     "if(/^reprise$/.test(c)) return NOOP(\"qualifier — the payload clause below carries the condition\");",
     "if(/inertia/.test(c)) return NOOP(\"live — see the Inertia token; the wipe resolves in its controller's end phase\");",
     /* THREE READINGS WHOSE OP KIND IS LIVE THROUGH A DIFFERENT ANCHOR.

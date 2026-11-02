@@ -21,14 +21,20 @@ reactions)". One template in `effects.js`, both boards.
 Found by the 1.0 polish audit (P2), reading Bravo's table feed: "Thunder Quake: printed keyword — the
 arsenal-step offer, carried by heaveOffer/heave." A `noop` reason is printed verbatim under the card's
 name, and four of them named a function: `heaveOffer/heave` (heave), `(arcaneSoaks)` (Arcane Barrier,
-Spellvoid), `(resolveInertia)` (Inertia), `by frailtyCount` (Frailty). They say what happens at the
-table and nothing else now; the claim each makes (that something reads the clause) is unchanged.
+Spellvoid), `(resolveInertia)` (Inertia), `frailtyCount` (Frailty).
 
-- **Drill:** `test/helpers/voice.js` gains the shape "a camelCase identifier" (the seat's-call census
-  carried it privately since v5.47; it is the shared list's now), so `test/noopvoice.test.js`'s pool
-  census holds every reason to it, and its control string proves all nine shapes fire.
-  `test/anchors.test.js` re-pins the Inertia anchor's text. Sabotaged (the old reasons): the census
-  names Achilles Accelerator, Frailty and Thunder Quake. `npm run audit`: no change but the timestamp.
+- **Two readers, one string.** CLAUDE.md asks a noop to name the reader that makes it real (v3.16, and
+  `tools/approx.js`'s `inertia-noop` probe and `test/pox.test.js` hold that); v4.24 asks the same string
+  to read as game text in the feed. Both now hold: a reason names its reader in ONE place, a trailing
+  parenthetical of identifiers, and `parser.noopFeedText` drops exactly that where `runOps` prints it.
+  Heave and Frailty were reworded into that shape ("offered at the arsenal step, when the card can be
+  heaved (heaveOffer)", "read off the board when an attack is declared (frailtyCount)").
+- **Drills:** `test/helpers/voice.js` gains the shape "a camelCase identifier" (the seat's-call census
+  carried it privately since v5.47; it is the shared list's now), and `test/noopvoice.test.js`'s pool
+  census holds the FEED form of every reason to it; a new drill checks heave, Arcane Barrier and Inertia
+  still name their readers, read clean in the feed, and that the one print site uses `noopFeedText`.
+  Sabotaged twice (the old heave reason; `runOps` printing the raw reason): each fails.
+  `npm run audit`: no change but the timestamp.
 
 ## v5.NN — A bar of cost choices wraps instead of running off the screen
 
