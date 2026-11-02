@@ -1,3 +1,17 @@
+## v5.NN — No function names in the feed's keyword lines
+
+Found by the 1.0 polish audit (P2), reading Bravo's table feed: "Thunder Quake: printed keyword — the
+arsenal-step offer, carried by heaveOffer/heave." A `noop` reason is printed verbatim under the card's
+name, and four of them named a function: `heaveOffer/heave` (heave), `(arcaneSoaks)` (Arcane Barrier,
+Spellvoid), `(resolveInertia)` (Inertia), `by frailtyCount` (Frailty). They say what happens at the
+table and nothing else now; the claim each makes (that something reads the clause) is unchanged.
+
+- **Drill:** `test/helpers/voice.js` gains the shape "a camelCase identifier" (the seat's-call census
+  carried it privately since v5.47; it is the shared list's now), so `test/noopvoice.test.js`'s pool
+  census holds every reason to it, and its control string proves all nine shapes fire.
+  `test/anchors.test.js` re-pins the Inertia anchor's text. Sabotaged (the old reasons): the census
+  names Achilles Accelerator, Frailty and Thunder Quake. `npm run audit`: no change but the timestamp.
+
 ## v5.NN — A bar of cost choices wraps instead of running off the screen
 
 Found by the 1.0 polish audit (P2), Boltyn at the table: a cost picker lays one button per card in the

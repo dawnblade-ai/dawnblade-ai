@@ -1712,7 +1712,7 @@ function classifyClause(raw){
      for, which every coverage tool then counts as read. `tools/ledger.js`
      is what keeps this honest: heave is `live` there, so `failstates.js`
      grades it against the claim rather than against a grep of the source. */
-  if(/^heave \d+$/.test(c)) return NOOP("printed keyword — the arsenal-step offer, carried by heaveOffer/heave");
+  if(/^heave \d+$/.test(c)) return NOOP("printed keyword — offered at the arsenal step, when the card can be heaved");
   /* ARCANE BARRIER / SPELLVOID are LIVE as of v2.74 — read off
      `card_keywords` by `arcaneBarrier`/`spellvoid` and offered by
      `arcaneSoaks` at the one place a hero takes arcane damage. The old
@@ -1722,7 +1722,7 @@ function classifyClause(raw){
      rule hangs off the damage event, not off the clause — which is the
      same bookkeeping "watery grave" above uses to credit a hero ability
      for a different card's keyword. */
-  if(/^(?:arcane barrier|spellvoid)(?: \d+| x)?$/.test(c)) return NOOP("live — paid at the moment arcane damage is dealt (arcaneSoaks)");
+  if(/^(?:arcane barrier|spellvoid)(?: \d+| x)?$/.test(c)) return NOOP("live — paid at the moment arcane damage is dealt");
   /* INERTIA IS LIVE (v2.75), and the reason this line used to give was
      wrong about the MECHANIC, not just about the prop. It never taxed an
      action phase: the printed token is "At the beginning of your end
@@ -1731,7 +1731,7 @@ function classifyClause(raw){
      `DawnEffects.resolveInertia` at the beginning of its controller's end
      phase. `noop` here because the printed keyword line carries no payload
      of its own, the same bookkeeping "arcane barrier" above uses. */
-  if(/^inertia$/.test(c)) return NOOP("live — a hand wipe at the beginning of its controller's end phase (resolveInertia)");
+  if(/^inertia$/.test(c)) return NOOP("live — a hand wipe at the beginning of its controller's end phase");
   if(/^watery grave$/.test(c)) return NOOP("a hero ability lets it be played from the graveyard");
   /* VERSE COUNTERS (Malefic Incantation): the unwind-into-a-Runechant is
      read directly off the board in execute() at declaration (it scans
@@ -2344,7 +2344,7 @@ function classifyClause(raw){
      the rule is real and it is applied by a NAMED reader (`frailtyCount`,
      inside `execute`'s bonus), not on resolution. */
   if(/^attack action cards you'?(?:ve| have) played from arsenal and your weapon attacks get -1\{p\}$/.test(c))
-    return NOOP("frailty's debuff — read off the board by frailtyCount when an attack is declared");
+    return NOOP("frailty's debuff — read off the board when an attack is declared");
   /* "it gets -N{p}" while defending — the incoming swing is shaved */
   if(m=c.match(/^(?:this|it) gets -(\d+)\s*\{p\}$/)) return R([["atkMinus",+m[1]]]);
   /* "it gets -N{p} unless you pay {cost}" (Look Tuff) — this REDUCES ITS

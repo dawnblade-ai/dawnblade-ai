@@ -34,9 +34,9 @@ const HEROES = ["arakni", "azalea", "blaze", "boltyn", "bravo", "briar", "dash",
 
 /* The call is addressed to ONE player, so the second person is right here
    (it is banned in the shared feed only). A camelCase word is a key or an
-   identifier leaking onto the screen. */
-const CALL_VOICE = DEV_VOICE.filter(([, why]) => why !== "the second person")
-  .concat([[/\b[a-z]+[A-Z][A-Za-z]*\b/, "a camelCase identifier"]]);
+   identifier leaking onto the screen — a shape the shared list carries
+   since the 1.0 polish audit, when one reached the feed. */
+const CALL_VOICE = DEV_VOICE.filter(([, why]) => why !== "the second person");
 const faults = s => CALL_VOICE.filter(([rx]) => rx.test(s)).map(([, why]) => why);
 
 let CENSUS = null;

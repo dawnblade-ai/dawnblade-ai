@@ -23,6 +23,11 @@ const DEV_VOICE = [
   /* v5.33 (QUEUE v3 S3): `runOps` prints a noop reason into the feed both
      seats read (v2.83), so "you" is a different player depending on who
      reads it. 299 lines a ladder said "your graveyard" off one reason. */
+  /* 1.0 POLISH AUDIT: "Thunder Quake: printed keyword — the arsenal-step
+     offer, carried by heaveOffer/heave." reached a driven table feed, and
+     three more reasons named a function in parentheses (arcaneSoaks,
+     resolveInertia, frailtyCount). A lowerCamelCase word is an identifier. */
+  [/\b[a-z]+[A-Z][A-Za-z]*\b/,   "a camelCase identifier"],
   [/\byour?\b/i,              "the second person"]
 ];
 

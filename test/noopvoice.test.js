@@ -73,8 +73,8 @@ function poolNoopReasons(){
 test("the scan is ALIVE — a control string is flagged by every shape", () => {
   assert.deepEqual(faults("live — v4.24; see parser.crankCost() in engine/parser.js `here` via fxParse, off fx.noDrx by the weapon reader for you"),
     ["a version number", "a filename", "a function call", "a backtick", "an engine identifier",
-     "a parse field", "the word \"reader\"", "the second person"],
-    "all eight shapes fire, so a zero below means the reasons are clean " +
+     "a parse field", "the word \"reader\"", "a camelCase identifier", "the second person"],
+    "all nine shapes fire, so a zero below means the reasons are clean " +
     "rather than that the scan stopped matching");
   assert.deepEqual(faults("a defence restriction — the wall reads it when this attacks"), [],
     "and ordinary game text is not flagged");
