@@ -348,6 +348,10 @@ img{display:block;max-width:100%}
 .hpane{flex:0 0 100%;max-width:100%;overflow-y:auto;padding:5px 6px 10px;box-sizing:border-box;scroll-snap-align:start;scroll-snap-stop:always}
 .screennav{display:flex;gap:5px;margin:6px 0 0}
 .screennav button{flex:1;padding:6px 0;font-family:'Spline Sans Mono';font-size:9px;letter-spacing:.12em;text-transform:uppercase;background:var(--forge2);border:1px solid var(--line);color:var(--bone-dim)}
+/* ONE LINE, ALWAYS (1.0 polish audit). At the table the first button names the
+   foe hero, and "▲ LYATH GOLDMANE" wrapped to two lines at 393px: the row grew
+   11px and pushed the fixed-height board down the page. A long name ellipsizes. */
+.screennav button{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;padding-left:3px;padding-right:3px}
 .paneflag{text-align:center;font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--bone-dim);padding:0 0 6px;display:flex;justify-content:space-between;align-items:center;gap:6px}
 .modehint{font-size:10px;color:var(--y);text-align:center;padding:3px 0 6px;letter-spacing:.05em;text-transform:uppercase}
 .gyrow{display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start}

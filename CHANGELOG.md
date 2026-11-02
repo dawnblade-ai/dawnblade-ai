@@ -1,3 +1,13 @@
+## v5.NN — The table's jump row stays one line for Lyath Goldmane
+
+Found by the 1.0 polish audit (P3). At the table the jump row's first button names the foe hero; with
+"▲ LYATH GOLDMANE" it wrapped to two lines at 393px and the whole row grew from 25px to 36px, pushing
+the fixed-height board 11px further down the page. The row's buttons are one line now (no wrap,
+ellipsis for anything longer, 3px side padding instead of none), which fits the longest name in the pool.
+
+- **Page assertion:** `node tools/page.js` seats Lyath Goldmane as the AI foe for its win-over-a-hero
+  ending and checks every jump-row button is one line (<= 30px). Sabotaged (the old CSS): 36px, fails.
+
 ## v5.NN — The lobby's Back and Leave are real buttons
 
 Found by the 1.0 polish audit (P2). The two-phone lobby's **Back** and the room's three **Leave the

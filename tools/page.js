@@ -460,7 +460,7 @@ if(require.main === module){
        score (v5.74 did both). A win over the Dummy at the table still does. */
     const ending = async (foeIdx, who, want, label) => {
       if(!(await toLoadout("over"))) return;
-      const foeBtn = page.locator(".aifoe button").nth(foeIdx);
+      const foeBtn = typeof foeIdx === "string" ? page.locator(`.aifoe button[aria-label^="${foeIdx}"]`).first() : page.locator(".aifoe button").nth(foeIdx);
       const foe = ((await foeBtn.getAttribute("aria-label")) || "").split(",")[0];
       if(!(await click(foeBtn, label + ": pick " + foe))) return;
       const best0 = await page.evaluate(() => { localStorage.removeItem("dawnblade.best"); return null; });
@@ -470,6 +470,13 @@ if(require.main === module){
       });
       if(!(await click(btn(/^Fight the new engine/), label + ": fight"))) return;
       await page.waitForSelector(".board", { timeout: 15000 });
+      /* the jump row stays one line with the longest foe name in the pool
+         ("▲ LYATH GOLDMANE" wrapped and grew the row, 1.0 polish audit) */
+      if(want.navOneLine){
+        const nav = await page.evaluate(() => [...document.querySelectorAll(".screennav button")].map(b => ({ t: b.innerText.trim(), h: Math.round(b.getBoundingClientRect().height) })));
+        /* one line of 9px type is 25px tall (the trainer's row); a wrap makes the WHOLE row 36 */
+        row(nav.length && nav.every(b => b.h <= 30), label + ": the jump row is one line", nav.map(b => `${b.t} ${b.h}px`).join(", "));
+      }
       if(who === 0) await page.evaluate(() => window.__dawnTable.session.submit({ t: "concede" }));
       const shown = await page.waitForSelector(".reveal", { timeout: 15000 }).then(() => page.locator(".reveal").innerText()).catch(() => "");
       await page.evaluate(() => window.__restoreAct && window.__restoreAct());
@@ -481,7 +488,7 @@ if(require.main === module){
       await page.locator(".reveal").click().catch(() => {});
       await page.waitForSelector(".hgrid", { timeout: 5000 }).catch(() => {});
     };
-    await ending(3, 1, { head: /^you take it$/i, records: false }, "table: win over an AI hero");
+    await ending("Lyath", 1, { head: /^you take it$/i, records: false, navOneLine: true }, "table: win over an AI hero");
     await ending(3, 0, { head: /^they take it$/i, records: false }, "table: loss to an AI hero");
     await ending(0, 1, { head: /^dummy destroyed$/i, records: true }, "table: win over the Dummy");
 
