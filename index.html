@@ -224,6 +224,18 @@ img{display:block;max-width:100%}
 @keyframes capin{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
 .adv{border:1px solid var(--y);background:rgba(232,179,60,.06)}
 .advhead{width:100%;text-align:left;padding:7px 10px;font-family:'Spline Sans Mono';font-size:10px;letter-spacing:.14em;color:var(--y);text-transform:uppercase}
+/* THE ADVISOR HEADER'S HIT AREA (decision B, CEO 2026-11-02). It draws 26px; an
+   invisible ::after reaches 44px DOWNWARD only: above it sits the sticky ticker
+   (z-index 35, which would eat the taps and must keep painting over the box when
+   the log scrolls), below it the advice text, or with the box closed the feed's
+   lines, neither a control. The box's cut corners used to be a clip-path on the
+   box itself, which clipped that ::after to the closed box's 28px; they are drawn
+   by a ::before layer now, the same polygon, border and fill, so nothing moves. */
+.adv{position:relative;isolation:isolate;border-color:transparent;background:none}
+.adv::before{content:"";position:absolute;inset:-1px;z-index:-1;border:1px solid var(--y);background:rgba(232,179,60,.06);
+  clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px))}
+.advhead{position:relative}
+.advhead::after{content:"";position:absolute;inset:0 0 -18px}
 .advbody{padding:0 10px 9px;font-size:13px}
 .advwhy{font-size:11px;color:var(--bone-dim);margin-top:3px;line-height:1.4}
 
@@ -348,6 +360,20 @@ img{display:block;max-width:100%}
 .hpane{flex:0 0 100%;max-width:100%;overflow-y:auto;padding:5px 6px 10px;box-sizing:border-box;scroll-snap-align:start;scroll-snap-stop:always}
 .screennav{display:flex;gap:5px;margin:6px 0 0}
 .screennav button{flex:1;padding:6px 0;font-family:'Spline Sans Mono';font-size:9px;letter-spacing:.12em;text-transform:uppercase;background:var(--forge2);border:1px solid var(--line);color:var(--bone-dim)}
+/* ONE LINE, ALWAYS (1.0 polish audit). At the table the first button names the
+   foe hero, and "▲ LYATH GOLDMANE" wrapped to two lines at 393px: the row grew
+   11px and pushed the fixed-height board down the page. A long name ellipsizes. */
+.screennav button{white-space:nowrap;min-width:0;padding-left:3px;padding-right:3px}
+.screennav button .navtx{display:block;overflow:hidden;text-overflow:ellipsis}
+/* A THUMB-SIZED HIT AREA ON THE JUMP ROW (decision B, CEO 2026-11-02). The row
+   draws 25px; an invisible ::after takes the tap over 44px with no layout change.
+   Up 16px lands on the board's top margin or the loadout's top bar (no control
+   in either); down 4px stops at the top edge of the screens below, whose panes
+   scroll controls under their padding. Never sideways: the buttons sit 5px
+   apart. This is why the ellipsis lives on an inner span: overflow:hidden on
+   the button itself would clip its own ::after. */
+.screennav button{position:relative}
+.screennav button::after{content:"";position:absolute;inset:-16px 0 -4px}
 .paneflag{text-align:center;font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--bone-dim);padding:0 0 6px;display:flex;justify-content:space-between;align-items:center;gap:6px}
 .modehint{font-size:10px;color:var(--y);text-align:center;padding:3px 0 6px;letter-spacing:.05em;text-transform:uppercase}
 .gyrow{display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start}
@@ -458,6 +484,15 @@ img{display:block;max-width:100%}
    The inline margins on those four already spell a stack, so `gap:0`
    lets them govern rather than adding a second spacing rule. */
 .lo .actbar{flex-direction:column;gap:0;align-items:stretch}
+/* A BAR OF CHOICES WRAPS RATHER THAN RUNNING OFF THE SCREEN (1.0 polish audit).
+   The cost pickers put ONE BUTTON PER CARD in the board's row — "Banish <soul
+   card>", "Discard <card>", "X = n" — and Boltyn's soul held enough that the
+   last button sat at x 348..410 on a 393px screen, 62px wide and 121px tall,
+   its name stacked a word per line. Up to four buttons still share one row
+   (the board's normal bar); a fifth starts a second row, which grows the
+   fixed bar upward. */
+.actbar{flex-wrap:wrap}
+.actbar>.a{min-width:calc(25% - 7px)}
 /* AND THE PRIMARY IS WEARING THE HOME SCREEN'S TYPE. `.battlebtn` is the
    30px striped BATTLE plate, which is right where it is the only thing on
    the screen and oversized here, where it is one of two options with a
@@ -533,7 +568,13 @@ img{display:block;max-width:100%}
 .sidecol .mini{width:100%;box-sizing:border-box}
 .statusline{flex:none;font-size:10.5px;color:var(--bone-dim);padding:5px 8px;background:var(--forge);border-top:1px solid var(--line);border-bottom:1px solid var(--line);text-align:center}
 .statusline b{color:var(--y)}
-.statusline button{background:none;border:1px solid var(--line);color:var(--y);font-size:9px;padding:1px 6px;margin-left:5px}
+.statusline button{background:none;border:1px solid var(--line);color:var(--y);font-size:9px;padding:1px 6px;margin-left:5px;position:relative}
+/* A FINGER-SIZED HIT AREA ON A PRINT-SIZED BUTTON (1.0 polish audit). "skip" and
+   "✕ cancel" drew 15px tall, a target a thumb misses. The paint stays small; an
+   invisible ::after takes the tap. Up 6px stays inside the line's own padding and
+   border (nothing tappable above it); down 12px stops short of the hand rail's
+   cards, which sit behind its 7px padding. */
+.statusline button::after{content:"";position:absolute;inset:-6px -8px -12px}
 .phand{flex:none;display:flex;gap:5px;align-items:stretch;overflow-x:auto;padding:7px 8px;border-top:1px solid var(--line);background:var(--forge2);scroll-snap-type:x proximity}
 .phand .hlbl{align-self:center}
 .phand .hc{flex:none;width:80px;position:relative;padding:0;background:var(--forge);border:1px solid var(--line);scroll-snap-align:start;transition:transform .12s}
@@ -700,6 +741,11 @@ img{display:block;max-width:100%}
   font-family:'Spline Sans Mono',monospace;font-size:8.5px;font-weight:700;letter-spacing:.1em;
   padding:3px 8px;cursor:pointer;text-transform:uppercase;line-height:1.4}
 .judgebtn:active{transform:translateY(1px)}
+/* JUDGE!! drew 18px tall: the same invisible hit area, 44px, over text-only
+   neighbours (the pane flag's labels, the scoreboard below). It reaches only 8px
+   up because the pane clips at its own top edge, 9px above the button. */
+.judgebtn{position:relative;z-index:1}   /* above the clipped scoreboard, which paints later */
+.judgebtn::after{content:"";position:absolute;inset:-8px -6px -18px}
 .bugwrap{position:fixed;inset:0;z-index:80;background:rgba(8,6,5,.78);
   display:flex;align-items:flex-end;justify-content:center}
 .bugsheet{width:100%;max-width:560px;background:var(--forge);border-top:2px solid var(--r);
@@ -832,7 +878,7 @@ img{display:block;max-width:100%}
    database + typographic fallbacks. Not affiliated with LSS.
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
-window.APP_VER = "5.79"; /* v5.79 - a table win over an AI hero is no longer a dummy win, and the table's notes stop naming engine files. See CHANGELOG.md. */
+window.APP_VER = "5.80"; /* v5.80 - the preview clears skip and cancel, every small control takes a thumb-sized tap, and nothing runs off the screen. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -2294,16 +2340,27 @@ function PeekDock({card, verb, onClose}){
 
          Most-visible-wins needs no refs and no knowledge of which board is
          rendering, which is what keeps one component serving both. */
-      let r = null, seen = -1;
+      let r = null, seen = -1, railEl = null;
       for(const el of document.querySelectorAll(".phand, .chand, .hand")){
         const b = el.getBoundingClientRect();
         const vis = Math.min(b.bottom, window.innerHeight) - Math.max(b.top, 0);
-        if(vis > seen){ seen = vis; r = b; }
+        if(vis > seen){ seen = vis; r = b; railEl = el; }
       }
       /* nothing on screen to sit above: the old flat action-bar clearance is
          both right and safe, because there is no rail for it to cover.
          Otherwise the distance from the viewport bottom to the rail's TOP
          edge, plus a small gap — never less than that clearance. */
+      /* AND ABOVE THE STATUS LINE THAT SITS ON IT (1.0 polish audit). The
+         line right over the rail holds this mode's controls — "skip" at the
+         arsenal step, "✕ cancel" while paying — and the dock covered them, so
+         their tap closed the preview instead. Any `.statusline` / pip `.rail`
+         stacked directly on the rail is part of what the dock must clear. */
+      let el = r && railEl;
+      while(el && el.previousElementSibling && el.previousElementSibling.matches(".statusline, .rail")){
+        el = el.previousElementSibling;
+        const t = el.getBoundingClientRect();
+        if(t.height && t.top < r.top) r = {top: t.top};
+      }
       const bot = (!r || seen <= 0)
         ? 112 : Math.max(112, Math.round(window.innerHeight - r.top) + 8);
       if(bot !== last){ last = bot; root.style.setProperty("--peekbot", bot + "px"); }
@@ -2693,7 +2750,7 @@ function Advisor({g,ctx,read,label,call}){
   const rec = uM(()=>{ try{return call ? call() : advise(g,ctx);}catch(e){return {line:"(advisor hiccup)",why:String(e)};} },[g]);
   if(g.over) return null;
   return (
-    <div className="adv clip-sm">
+    <div className="adv">
       <button className="advhead" onClick={()=>setOpen(o=>{store.set("adv",!o);return !o;})}>✦ {label||"Coach's call"} {open?"▾":"▸"}</button>
       {open && <div className="advbody">
         <div>{rec.line}</div>
@@ -6852,7 +6909,7 @@ function TableScreen({onBack, onSeated}){
       </>}
 
       {err && <div className="tblerr">{err}</div>}
-      <button className="a" onClick={onBack}>Back</button>
+      <button className="bigbtn alt" onClick={onBack}>Back</button>
     </div>
   );
 }
@@ -7002,7 +7059,7 @@ function TableRoom({table, host, code, db, onExit}){
       <div className="tblerr">{lob.fault}</div>
       <p className="mnote">Both phones must run the same version of the game.
         Reload the page on the older one to pick up the latest.</p>
-      <button className="a" onClick={onExit}>Leave the table</button>
+      <button className="bigbtn alt" onClick={onExit}>Leave the table</button>
     </div>
   );
 
@@ -7015,7 +7072,7 @@ function TableRoom({table, host, code, db, onExit}){
       <div className="tblwrap">{head}
         <div className="tblstat live"><span className="tbldot"></span>
           Sideboard locked — waiting on {foeH ? foeH.n.split(",")[0] : "them"}…</div>
-        <button className="a" onClick={onExit}>Leave the table</button>
+        <button className="bigbtn alt" onClick={onExit}>Leave the table</button>
       </div>
     );
     return <Loadout h={myH} db={db} netFoe={foeH} netOnPlay={lob.first === mySeat}
@@ -7095,7 +7152,7 @@ function TableRoom({table, host, code, db, onExit}){
         printed costs and <strong>card text</strong>, read by the same
         engine as the solo trainer. One copy of the rules, two seats.
       </p>
-      <button className="a" onClick={onExit}>Leave the table</button>
+      <button className="bigbtn alt" onClick={onExit}>Leave the table</button>
     </div>
   );
 }
@@ -7598,7 +7655,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
     <div className="board">
       <div className="screennav">
         <button onClick={onExit} style={{flex:.7}}>✕ leave</button>
-        <button onClick={()=>jump(oppRef)}>▲ {foeH?foeH.n.split(",")[0]:"Opp"}</button>
+        <button onClick={()=>jump(oppRef)}><span className="navtx">▲ {foeH?foeH.n.split(",")[0]:"Opp"}</span></button>
         <button onClick={()=>jump(chainRef)}>Chain</button>
         <button onClick={()=>jump(youRef)}>You ▼</button>
       </div>

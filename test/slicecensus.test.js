@@ -402,8 +402,13 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        `</style>`; the shrink is the download progress bar's two `.prog`
        rules, retired with the live card fetch.
        64,223 -> 64,988 AT lookahead phase 2, READ FIRST: still the style
-       block; the growth is the `.ailevel` rules for Sharp / Steady. */
-    "phasebar.test.js index.html 64988",
+       block; the growth is the `.ailevel` rules for Sharp / Steady.
+       64,988 -> 68,417 AT v5.80, READ FIRST: still `<style>` -> `</style>`;
+       the growth is the 1.0 polish pass's layout rules, each with its
+       comment: the hit-area `::after` rules (JUDGE!!, the status line, and
+       decision B's jump row and advisor header, whose cut corners moved to a
+       `::before`), the jump row's one-line rule and the action bar's wrap. */
+    "phasebar.test.js index.html 68417",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
        `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
        `abPickBound` in the pick legality it extends. */

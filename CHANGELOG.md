@@ -1,3 +1,49 @@
+## v5.80 — Layout and tap targets: no lost taps, thumb-sized hit areas, nothing off the screen
+
+Five findings of the 1.0 polish audit (`docs/archive/POLISH-AUDIT-1.0.md`: #4, #5, #8, #9 P2; #13
+P3), fixed on `polish/one-oh` one commit each, plus **decision B** (CEO, 2026-11-02): the jump row
+and the advisor header get invisible hit areas reaching 44px, with no visual layout change.
+
+- **The card preview clears the status line (#4).** The two-tap preview sat 8px above the hand rail,
+  so its name bar covered the status line between them, which holds the mode's own controls ("skip"
+  at the arsenal step, "✕ cancel" while paying): with a card peeked, tapping "skip" only closed the
+  preview. `PeekDock` now measures from the top of any `.statusline` / pip `.rail` stacked directly
+  on the rail it tracks. Both boards, one component.
+- **JUDGE!!, "skip" and "✕ cancel" hit areas (#5).** JUDGE!! drew 58x18 and the status line's buttons
+  15px tall. CSS only: each keeps its size on screen and gains an invisible `::after` hit area,
+  JUDGE!! over 42px (its pane clips 9px above it), the status-line buttons over 32px. JUDGE!! stacks
+  above the scoreboard, whose `clip-path` would otherwise paint over its hit area.
+- **Decision B — the jump row (25px) and the advisor header (26px).** The same technique. The jump
+  row's `::after` reaches 16px up (the board's top margin, or the loadout's top bar: no control
+  there) and 4px down, stopping at the top edge of the screens below, whose panes scroll controls
+  under their padding; never sideways (the buttons sit 5px apart). The ellipsis for a long foe name
+  moved to an inner span on that one button, because `overflow:hidden` on the button would clip its
+  own `::after`. The advisor header's reaches 18px **down** only: above it is the sticky ticker
+  (z-index 35), which must keep painting over the box when the log scrolls; below it is the advice
+  text, or with the box closed the feed's lines, neither a control. The box's cut corners were a
+  `clip-path` on the box itself, which clipped that hit area to the closed box's 28px; a `::before`
+  layer now draws the same polygon, border and fill, so nothing moves. (Tapping the advice's first
+  line now folds the box, as the header does.)
+- **The lobby's Back and Leave (#8)** carried `className="a"`, styled only in the action bar, and
+  rendered as bare 16px text across the screen. They take the lobby's `bigbtn alt` (42px).
+- **The jump row stays one line for Lyath Goldmane (#13).** "▲ LYATH GOLDMANE" wrapped and grew the row
+  from 25px to 36px, pushing the fixed-height board down. No wrap, an ellipsis for anything longer,
+  3px side padding.
+- **A bar of cost choices wraps (#9).** Boltyn's soul-cost picker put "BANISH LIGHT THE WAY" at
+  x 348..410 on a 393px screen, a word per line. `.actbar` wraps, each button keeps at least a
+  quarter of the row: the normal bar (up to four buttons) is unchanged, a fifth starts a second row.
+- **Page assertions (`node tools/page.js`):** the preview never covers a status-line button (sabotaged,
+  the old offset: fails); JUDGE!! >= 40px and the status line >= 30px of hit span while every other
+  board control keeps the tap at its centre (sabotaged, `::after` hidden: 18px / 16px, fails); every
+  lobby button >= 40px (old class: 16px, fails); the Lyath jump row one line (old CSS: 36px, fails);
+  seven long cost buttons stay on screen, none over 96px (old CSS: x 8..597, fails). New for
+  decision B: every jump-row button on the loadout, the trainer, the table and the Lyath table DRAWS
+  <= 30px and takes taps over >= 44px, with no control in that screen losing its own centre tap; the
+  advisor header on both boards draws <= 30px and takes >= 44px, open AND closed. Sabotaged (both `::after` rules
+  hidden): every jump row takes 26px and the header 26px, open and closed, five rows fail. The box
+  and the row were screenshotted with and without decision B's rules: pixel-identical.
+- **`slicecensus`** repins the style block 64,988 -> 68,417, with its reason.
+
 ## v5.79 — Table results and copy: an AI-hero win is not a dummy win, and the table's notes tell the truth
 
 Three findings of the 1.0 polish audit (`docs/archive/POLISH-AUDIT-1.0.md`: #2 P1, #3 and #7 P2),

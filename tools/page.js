@@ -247,6 +247,11 @@ if(require.main === module){
     /* find an opponent: the code screen (no peer network is reached) */
     if(await click(btn(/^Find an opponent/), "find an opponent")){
       await page.waitForSelector(".tblwrap"); await screen("table: find an opponent");
+      /* the lobby's Back / Leave buttons were unstyled `.a` buttons, 16px tall
+         (1.0 polish audit): every button on the screen is a real button */
+      const lob = await page.evaluate(() => [...document.querySelectorAll(".tblwrap button")].filter(b => b.offsetParent)
+        .map(b => ({ t: b.innerText.trim(), h: Math.round(b.getBoundingClientRect().height) })));
+      row(lob.length > 0 && lob.every(b => b.h >= 40), "table: the lobby's buttons are thumb-sized", lob.map(b => `${b.t} ${b.h}px`).join(", "));
       await click(page.locator(".tblwrap button", { hasText: /back|leave|cancel/i }).first(), "leave the code screen");
     }
 
@@ -278,10 +283,111 @@ if(require.main === module){
        NEW action bar once. The board must change under the taps (the engine, and
        at the table the AI seat, are running in the page), and it must stay in. */
     const PICKS = [/^take it$/i, /^end turn$/i, /^pass$/i, /^(leave it empty|skip|done defending|decline|confirm)$/i];
+    /* THE PREVIEW CLEARS THE STATUS LINE'S CONTROLS (1.0 polish audit). Once
+       per board, when the line over the hand holds a button ("skip" at the
+       arsenal step, "✕ cancel" while paying), peek a hand card and ask what
+       is topmost at each button's centre: the button, never the dock. */
+    /* HIT AREAS (1.0 polish audit). The tall span, at the button's centre x,
+       over which a tap lands on the button: JUDGE!! drew 18px and "skip" /
+       "✕ cancel" 15px, each given an invisible ::after hit area. And on the
+       board every visible control still takes the tap at its own centre, so a
+       hit area never steals a neighbour's. */
+    const hitSpan = async sel => {
+      const pick = sel => [...document.querySelectorAll(sel)].find(x => { const r = x.getBoundingClientRect(); return x.offsetParent && r.height && r.bottom > 0 && r.top < innerHeight; });
+      await page.evaluate(src => { window.__pickShown = new Function("sel", "return (" + src + ")(sel)"); }, pick.toString());
+      const there = await page.evaluate(sel => { const b = window.__pickShown(sel);
+        /* sideways only: the log pane sits left of the play pane, and a vertical
+           scroll would move the button off its snapped resting place */
+        for(let p = b && b.parentElement; p; p = p.parentElement) if(/auto|scroll/.test(getComputedStyle(p).overflowX)){
+          const q = p.getBoundingClientRect(), r = b.getBoundingClientRect();
+          if(r.left < q.left || r.right > q.right) p.scrollLeft += r.left - q.left - 8; }
+        return !!b; }, sel);
+      if(!there) return null;
+      await page.waitForTimeout(600);
+      return page.evaluate(sel => {
+      const b = window.__pickShown(sel);
+      if(!b) return null;
+      const r = b.getBoundingClientRect(), x = r.left + r.width / 2, on = y => { const t = document.elementFromPoint(x, y); return !!t && b.contains(t); };
+      let lo = r.top + r.height / 2, hi = lo;
+      while(lo > 0 && on(lo - 1)) lo--;
+      while(hi < innerHeight && on(hi + 1)) hi++;
+      const what = y => { const t = document.elementFromPoint(x, y); return t ? (t.className || t.tagName) : "-"; };
+      return { t: b.innerText.trim(), drawn: Math.round(r.height), hit: Math.round(hi - lo + 1),
+               at: `x ${Math.round(x)} y ${Math.round(r.top)}; above: ${what(lo - 2)}, below: ${what(hi + 2)}` };
+    }, sel); };
+    const ownTaps = (scope = ".board") => page.evaluate(scope => [...document.querySelectorAll(scope + " button")].filter(b => {
+      if(!b.offsetParent || b.closest(".peekwrap")) return false;
+      const r = b.getBoundingClientRect(); if(!r.width || r.bottom < 0 || r.top > innerHeight) return false;
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      if(cx < 0 || cx > innerWidth) return false;
+      for(let p = b.parentElement; p; p = p.parentElement){ const q = p.getBoundingClientRect(), o = getComputedStyle(p);
+        if((o.overflowX !== "visible" || o.overflowY !== "visible") && (cx < q.left || cx > q.right || cy < q.top || cy > q.bottom)) return false; }
+      const t = document.elementFromPoint(cx, cy);
+      return t && !b.contains(t) && !t.contains(b) && t.closest("button") && !t.closest(".peekwrap");
+    }).map(b => b.innerText.replace(/\s+/g, " ").trim().slice(0, 24)), scope);
+    const hitChecked = new Set();
+    const hitCheck = async (prefix, sel, min) => {
+      if(hitChecked.has(prefix + sel)) return;
+      const h = await hitSpan(sel); if(!h) return;
+      hitChecked.add(prefix + sel);
+      const stolen = await ownTaps();
+      row(h.hit >= min && !stolen.length, `${prefix}: ${h.t} hit area`, `drawn ${h.drawn}px, takes taps over ${h.hit}px (want >= ${min})` + (h.hit < min ? "  " + h.at : "") + (stolen.length ? "  STOLEN: " + stolen.join(", ") : ""));
+    };
+    /* DECISION B (CEO, 2026-11-02): the jump row (drawn 25px) and the advisor
+       header (drawn 26px) take taps over 44px, through invisible hit areas,
+       with NO layout change: every jump-row button must still DRAW at most
+       30px (one line), the header at most 30px, and no control in `scope`
+       may lose the tap at its own centre. The advisor is measured open and
+       closed (closed, its box is 28px tall: the hit area must reach past it). */
+    const jumpHits = async (prefix, scope) => {
+      const spans = [];
+      for(let i = 0; i < 4; i++){
+        const sel = `.screennav button:nth-child(${i + 1})`, h = await hitSpan(sel);
+        if(h) spans.push(h);
+      }
+      const stolen = await ownTaps(scope);
+      row(spans.length === 4 && spans.every(h => h.hit >= 44 && h.drawn <= 30) && !stolen.length, `${prefix}: the jump row's hit areas`,
+        spans.map(h => `${h.t} drawn ${h.drawn} hit ${h.hit}` + (h.hit < 44 ? " (" + h.at + ")" : "")).join(", ") + (stolen.length ? "  STOLEN: " + stolen.join(", ") : ""));
+    };
+    const advHits = async prefix => {
+      const out = [];
+      for(const state of ["open", "closed"]){
+        const h = await hitSpan(".advhead"); if(!h){ out.push(state + ": no header"); break; }
+        const stolen = await ownTaps();
+        out.push({ state, ok: h.hit >= 44 && h.drawn <= 30 && !stolen.length,
+                   say: `${state} drawn ${h.drawn} hit ${h.hit}` + (h.hit < 44 ? " (" + h.at + ")" : "") + (stolen.length ? " STOLEN: " + stolen.join(", ") : "") });
+        await page.locator(".advhead:visible").first().click();   // open -> closed -> open again (the choice is stored)
+        await page.waitForTimeout(250);
+      }
+      row(out.length === 2 && out.every(o => o.ok), `${prefix}: the advisor header's hit area`, out.map(o => o.say || o).join("; "));
+    };
+    const peekChecked = new Set();
+    const peekClear = async prefix => {
+      if(peekChecked.has(prefix)) return;
+      const ctl = page.locator(".board .statusline button:visible");
+      const card = page.locator(".board .phand .hc:not(.dis):visible").first();
+      if(!(await ctl.count()) || !(await card.count())) return;
+      peekChecked.add(prefix);
+      await card.click({ timeout: 3000 }).catch(() => {});
+      await page.waitForTimeout(350);
+      const hit = await page.evaluate(() => [...document.querySelectorAll(".board .statusline button")].filter(b => b.offsetParent).map(b => {
+        const r = b.getBoundingClientRect(), top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return { t: b.innerText.trim(), y: Math.round(r.top), ok: !!top && (b.contains(top) || top.contains(b)), over: top ? top.className || top.tagName : "-" };
+      }));
+      const peeked = await page.locator(".peekwrap").isVisible().catch(() => false);
+      const bad = hit.filter(h => !h.ok);
+      row(peeked && !bad.length, prefix + ": the preview clears the status line",
+        peeked ? hit.map(h => `${h.t}@${h.y}` + (h.ok ? "" : " UNDER " + h.over)).join(", ") : "no preview opened");
+      await page.locator(".peekwrap").click({ position: { x: 5, y: 5 } }).catch(() => {});
+      await page.evaluate(() => { const w = document.querySelector(".peekwrap"); if(w) w.click(); });
+      await page.waitForTimeout(250);
+    };
     const playOn = async prefix => {
       const sigs = new Set(), board = () => page.locator(".board").innerText();
       let moved = 0, taps = 0;
       for(let i = 0; i < 14; i++){
+        await hitCheck(prefix, ".board .statusline button", 30);
+        await peekClear(prefix);
         /* a disabled bar is the other seat thinking: wait it out (6s), never tap it */
         let bar, pick;
         for(let w = 0; w < 20; w++){
@@ -305,10 +411,13 @@ if(require.main === module){
     /* ---- the trainer ---- */
     if(await toLoadout("trainer")){
       await screen("trainer: loadout");
+      await jumpHits("trainer: loadout", ".lo");
       if(await click(page.locator(".actbar .battlebtn"), "Fight")){
         await page.waitForSelector(".board", { timeout: 8000 });
         await screen("trainer: board", "actions: " + names(await handBar()));
-        await nav("trainer", ["Chain", "You", "Opp"]);
+        await jumpHits("trainer", ".board");
+        await nav("trainer", ["Chain"]); await hitCheck("trainer", ".board .judgebtn", 40); await advHits("trainer");
+        await nav("trainer", ["You", "Opp"]);
         await playOn("trainer");
         await click(page.locator(".screennav button", { hasText: "leave" }), "leave the trainer");
         await page.waitForSelector(".hgrid", { timeout: 5000 }).catch(() => {});
@@ -378,7 +487,26 @@ if(require.main === module){
           const lvl = await page.evaluate(() => window.__dawnTable && window.__dawnTable.report().sharp);
           row(lvl === true, "table: the AI seat plays Sharp", "report().sharp " + lvl);
           await screen("table: board", "actions: " + names(await handBar()));
-          await nav("table", ["Chain", "You", first]);
+          /* A CROWDED BAR STAYS ON SCREEN (1.0 polish audit). A cost picker
+             lays one button per card in the row (Boltyn's soul: the last
+             button at x 348..410). Lay seven long-named buttons in the live
+             bar for one measurement, then take them out again. On screen, and
+             no button taller than three lines of the bar's 16px type (96px). */
+          const crowd = await page.evaluate(() => {
+            const bar = document.querySelector(".board .actbar") || document.querySelector(".actbar");
+            if(!bar) return null;
+            const made = [];
+            for(let k = 0; k < 7; k++){ const b = document.createElement("button"); b.className = "a go"; b.textContent = "Banish Light the Way (" + k + ")"; bar.appendChild(b); made.push(b); }
+            const boxes = [...bar.querySelectorAll(":scope > .a")].map(b => b.getBoundingClientRect());
+            made.forEach(b => b.remove());
+            return { n: boxes.length, right: Math.round(Math.max(...boxes.map(r => r.right))), left: Math.round(Math.min(...boxes.map(r => r.left))),
+                     tall: Math.round(Math.max(...boxes.map(r => r.height))), top: Math.round(Math.min(...boxes.map(r => r.top))) };
+          });
+          row(!!crowd && crowd.right <= W && crowd.left >= 0 && crowd.tall <= 96 && crowd.top >= 0, "table: a crowded action bar stays on screen",
+            crowd ? `${crowd.n} buttons span x ${crowd.left}..${crowd.right}, tallest ${crowd.tall}px, top ${crowd.top}` : "no action bar");
+          await jumpHits("table", ".board");
+          await nav("table", ["Chain"]); await hitCheck("table", ".board .judgebtn", 40); await advHits("table");
+          await nav("table", ["You", first]);
           await playOn("table");
           await click(page.locator(".screennav button", { hasText: "leave" }), "leave the table");
         }
@@ -392,7 +520,7 @@ if(require.main === module){
        score (v5.74 did both). A win over the Dummy at the table still does. */
     const ending = async (foeIdx, who, want, label) => {
       if(!(await toLoadout("over"))) return;
-      const foeBtn = page.locator(".aifoe button").nth(foeIdx);
+      const foeBtn = typeof foeIdx === "string" ? page.locator(`.aifoe button[aria-label^="${foeIdx}"]`).first() : page.locator(".aifoe button").nth(foeIdx);
       const foe = ((await foeBtn.getAttribute("aria-label")) || "").split(",")[0];
       if(!(await click(foeBtn, label + ": pick " + foe))) return;
       const best0 = await page.evaluate(() => { localStorage.removeItem("dawnblade.best"); return null; });
@@ -402,6 +530,13 @@ if(require.main === module){
       });
       if(!(await click(btn(/^Fight the new engine/), label + ": fight"))) return;
       await page.waitForSelector(".board", { timeout: 15000 });
+      /* the jump row stays one line with the longest foe name in the pool
+         ("▲ LYATH GOLDMANE" wrapped and grew the row, 1.0 polish audit) */
+      if(want.navOneLine){
+        const nav = await page.evaluate(() => [...document.querySelectorAll(".screennav button")].map(b => ({ t: b.innerText.trim(), h: Math.round(b.getBoundingClientRect().height) })));
+        /* one line of 9px type is 25px tall (the trainer's row); a wrap makes the WHOLE row 36 */
+        row(nav.length && nav.every(b => b.h <= 30), label + ": the jump row is one line", nav.map(b => `${b.t} ${b.h}px`).join(", "));
+      }
       if(who === 0) await page.evaluate(() => window.__dawnTable.session.submit({ t: "concede" }));
       const shown = await page.waitForSelector(".reveal", { timeout: 15000 }).then(() => page.locator(".reveal").innerText()).catch(() => "");
       await page.evaluate(() => window.__restoreAct && window.__restoreAct());
@@ -413,7 +548,7 @@ if(require.main === module){
       await page.locator(".reveal").click().catch(() => {});
       await page.waitForSelector(".hgrid", { timeout: 5000 }).catch(() => {});
     };
-    await ending(3, 1, { head: /^you take it$/i, records: false }, "table: win over an AI hero");
+    await ending("Lyath", 1, { head: /^you take it$/i, records: false, navOneLine: true }, "table: win over an AI hero");
     await ending(3, 0, { head: /^they take it$/i, records: false }, "table: loss to an AI hero");
     await ending(0, 1, { head: /^dummy destroyed$/i, records: true }, "table: win over the Dummy");
 
