@@ -685,6 +685,16 @@ img{display:block;max-width:100%}
 .aifoe .fport .art,.aifoe .fport .fallbackart{width:100%;height:100%;object-fit:cover}
 .aifoe .fname{font-family:'Spline Sans Mono';font-size:8.5px;letter-spacing:.04em;
   text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+/* SHARP / STEADY (lookahead phase 2) — how the AI hero thinks. Two tiles,
+   same idiom as the picker above it; the Dummy has no level. */
+.ailevel{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0 0}
+.ailevel button{background:var(--forge);border:1px solid var(--line);border-radius:3px;
+  padding:8px 8px 7px;color:var(--bone);text-align:left;min-width:0;min-height:44px;cursor:pointer}
+.ailevel button.on{border-color:var(--b);box-shadow:inset 0 0 0 1px var(--b)}
+.ailevel .lvl{display:block;font-family:'Big Shoulders Display';font-weight:700;font-size:15px;
+  letter-spacing:.04em;text-transform:uppercase}
+.ailevel button.on .lvl{color:var(--y)}
+.ailevel .lsub{display:block;font-size:11px;line-height:1.3;color:var(--bone-dim);margin-top:2px}
 /* ---- JUDGE!! — the in-game bug report (v2.22) ---- */
 .judgebtn{flex:none;background:var(--r);color:var(--bone);border:none;border-radius:2px;
   font-family:'Spline Sans Mono',monospace;font-size:8.5px;font-weight:700;letter-spacing:.1em;
@@ -822,7 +832,7 @@ img{display:block;max-width:100%}
    database + typographic fallbacks. Not affiliated with LSS.
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
-window.APP_VER = "5.77"; /* v5.77 - an AI hero at the table plays its openings out through the engine before it picks one (lookahead). See CHANGELOG.md. */
+window.APP_VER = "5.78"; /* v5.78 - the loadout offers Sharp or Steady for how an AI hero plays, Sharp by default. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -6281,6 +6291,13 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
      the Dummy, and it reaches only the new engine's table: the trainer
      keeps its tuned pile. */
   const [aiFoe,setAiFoe] = uS(null);
+  /* SHARP OR STEADY (lookahead phase 2). How an AI hero thinks: Sharp plays
+     each way to start its turn out through the engine before it picks one
+     (sparring.js, LOOKAHEAD); Steady is the rule policy alone. Unlike the
+     opponent it IS remembered — it is the player's taste, not a property of
+     one match — and Sharp is the default. */
+  const [aiLevel,setAiLevelS] = uS(()=>store.get("aiLevel","sharp")==="steady" ? "steady" : "sharp");
+  const setAiLevel = v => { store.set("aiLevel", v); setAiLevelS(v); };
   const item = i => gearR.find(x=>x.i===i);
   const hands = sel.filter(i=>["1h","2h","off"].includes(item(i).s.z)).reduce((a,i)=>a+item(i).s.h,0);
   const armorN = sel.filter(i=>ARMOR_Z.includes(item(i).s.z)||item(i).s.z==="misc").length;
@@ -6318,7 +6335,7 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
        decision it plays each way to start out through the real engine
        and keeps the best (sparring.js, LOOKAHEAD). The Dummy stays on the
        rule policy: it is the regression harness, not a sparring partner. */
-    onStart({gearIdx:sel, cuts, table:true, aiFoe: pickedFoe, sharp: !!pickedFoe});
+    onStart({gearIdx:sel, cuts, table:true, aiFoe: pickedFoe, sharp: !!pickedFoe && aiLevel==="sharp"});
   };
   const foeHero = aiFoe && aiFoe !== "random" ? HEROES.find(x=>x.k===aiFoe) : null;
   const deckRows = d.deck.map((e,ei)=>({ei, e, c:resolveEntry(db,e,saSet)}));
@@ -6519,6 +6536,14 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
                   <span className="fname">{x.n.split(",")[0]}</span></button>)}
             </div>
             <VsStrip hero={h} db={db} foe={aiFoe==="random" ? {mystery:true} : foeHero}/>
+            {aiFoe!==null && <div className="ailevel" role="group" aria-label="How the AI plays">
+              <button className={aiLevel==="sharp"?"on":""} aria-pressed={aiLevel==="sharp"} onClick={()=>setAiLevel("sharp")}>
+                <span className="lvl">Sharp</span>
+                <span className="lsub">Plays out each way to start its turn, then picks the best.</span></button>
+              <button className={aiLevel==="steady"?"on":""} aria-pressed={aiLevel==="steady"} onClick={()=>setAiLevel("steady")}>
+                <span className="lvl">Steady</span>
+                <span className="lsub">Plays by its rules of thumb. Quicker to read, easier to beat.</span></button>
+            </div>}
           </div>}
         </div>
       </div>
@@ -6565,8 +6590,9 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
                   ? <>The same 30-card pile, but played as a real seat: it holds a hand,
                     pays costs and blocks like a person. <b>Untuned and currently
                     winning most games.</b> This is the engine a second player will sit at.</>
-                  : <>An AI pilots {foeHero ? foeHero.n.split(",")[0] : "a random hero"} with
-                    the policy self-play uses. <b>Untuned.</b> Pick the opponent above.</>}
+                  : <>An AI pilots {foeHero ? foeHero.n.split(",")[0] : "a random hero"}, playing <b>{aiLevel==="sharp"
+                    ? "Sharp: it plays out each way to start its turn before it commits"
+                    : "Steady: the rules of thumb self-play uses"}</b>. Pick the opponent and how it plays above.</>}
               </p>
             </>}
       </div>

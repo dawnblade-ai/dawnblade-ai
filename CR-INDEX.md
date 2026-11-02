@@ -111,13 +111,13 @@ rule's number *or a neighbouring one*. Only then is it a gap.
 
 Only rules cited in code. A rules revision is a lookup here, not an archaeology dig.
 
-**CR 4.3.1** — index.html:5509  
+**CR 4.3.1** — index.html:5519  
 *no drill*
 
-**CR 4.4** — index.html:4691, index.html:4714, index.html:5130  
+**CR 4.4** — index.html:4701, index.html:4724, index.html:5140  
 *no drill*
 
-**CR 7** — engine/effects.js:4967, index.html:3912  
+**CR 7** — engine/effects.js:4967, index.html:3922  
 *no drill*
 
 **CR 5.3.5** — engine/effects.js:426, engine/effects.js:441, engine/effects.js:453, engine/effects.js:574, engine/effects.js:3780, engine/effects.js:4377, engine/effects.js:4440, engine/effects.js:4620, engine/effects.js:5664, engine/effects.js:5695, engine/effects.js:8317, engine/judge.js:54, engine/judge.js:2741, engine/judge.js:2782, engine/parser.js:2250, engine/parser.js:3058, engine/parser.js:6106, engine/parser.js:6660, engine/parser.js:7098  
@@ -126,28 +126,28 @@ Only rules cited in code. A rules revision is a lookup here, not an archaeology 
 **CR 7.5.5** — engine/actions.js:252, engine/effects.js:658, engine/effects.js:810, engine/effects.js:827, engine/effects.js:852, engine/effects.js:876, engine/effects.js:896, engine/effects.js:1097, engine/effects.js:1103, engine/effects.js:5308, engine/effects.js:7781, engine/effects.js:7819, engine/effects.js:7875, engine/effects.js:7907, engine/effects.js:8033, engine/effects.js:8237, engine/effects.js:8294, engine/effects.js:8527, engine/judge.js:2769, engine/parser.js:1342, engine/parser.js:5932, engine/parser.js:8637  
 *drills:* test/arakni.test.js:471, test/blaze.test.js:305, test/briar.test.js:154, test/censusfinds.test.js:81, test/charge.test.js:519, test/condgate.test.js:280, test/condgate.test.js:297, test/destroycost.test.js:245, test/dorinthea.test.js:411, test/draconic.test.js:268, test/drawthen.test.js:290, test/foreach.test.js:391, test/foreach.test.js:395, test/hitnext.test.js:193, test/hitwatch.test.js:239, test/hitwatch.test.js:248, test/huntsman.test.js:332, test/jab.test.js:330, test/markwear.test.js:58, test/markwear.test.js:130, test/runechant.test.js:236, test/thisway.test.js:154, test/thisway.test.js:238, test/waiting.test.js:21, test/waiting.test.js:207, test/ward.test.js:21, test/ward.test.js:93, test/ward.test.js:107, test/ward.test.js:164, test/ward.test.js:471, test/ward.test.js:586, test/ward.test.js:729, test/ward.test.js:1017, test/wreckhavoc.test.js:256
 
-**CR 1.4.5** — engine/cards.js:104, engine/effects.js:662, engine/effects.js:3165, engine/effects.js:4701, engine/effects.js:7131, engine/effects.js:7785, engine/effects.js:7987, engine/game.js:189, engine/game.js:195, engine/judge.js:56, engine/judge.js:570, engine/judge.js:1704, engine/judge.js:2674, engine/judge.js:2686, engine/judge.js:2760, engine/judge.js:3113, engine/judge.js:3435, engine/judge.js:4063, engine/parser.js:1262, engine/prompts.js:738, engine/prompts.js:850, engine/prompts.js:1096, engine/prompts.js:1472, engine/sparring.js:460, index.html:4732, index.html:7341, index.html:7364, index.html:7747, index.html:7826  
+**CR 1.4.5** — engine/cards.js:104, engine/effects.js:662, engine/effects.js:3165, engine/effects.js:4701, engine/effects.js:7131, engine/effects.js:7785, engine/effects.js:7987, engine/game.js:189, engine/game.js:195, engine/judge.js:56, engine/judge.js:570, engine/judge.js:1704, engine/judge.js:2674, engine/judge.js:2686, engine/judge.js:2760, engine/judge.js:3113, engine/judge.js:3435, engine/judge.js:4063, engine/parser.js:1262, engine/prompts.js:738, engine/prompts.js:850, engine/prompts.js:1096, engine/prompts.js:1472, engine/sparring.js:460, index.html:4742, index.html:7367, index.html:7390, index.html:7773, index.html:7852  
 *drills:* test/allyseat.test.js:104, test/approx.test.js:1361, test/approx.test.js:1376, test/arakni.test.js:117, test/arakni.test.js:506, test/arakni.test.js:529, test/arakni.test.js:535, test/briar.test.js:206, test/briar.test.js:215, test/cosmo.test.js:15, test/dorinthea.test.js:288, test/herohit.test.js:2, test/herohit.test.js:172, test/hitwatch.test.js:209, test/judge.test.js:487, test/judge.test.js:512, test/promptctl.test.js:252, test/promptctl.test.js:429, test/sparring.test.js:597, test/tabletarget.test.js:2, test/tabletarget.test.js:6, test/tabletarget.test.js:127, test/tabletarget.test.js:184, test/targets.test.js:1, test/targets.test.js:5, test/targets.test.js:82, test/targets.test.js:101
 
-**CR 4.4.3d** — engine/effects.js:3385, engine/effects.js:3404, engine/effects.js:3430, engine/effects.js:3442, engine/effects.js:3463, engine/effects.js:3479, engine/effects.js:3672, engine/effects.js:3690, engine/effects.js:5633, engine/effects.js:6235, engine/effects.js:6472, engine/effects.js:8850, engine/effects.js:9037, engine/effects.js:9590, engine/judge.js:1198, engine/judge.js:1312, engine/judge.js:1494, engine/judge.js:4438, engine/parser.js:5677, engine/parser.js:5940, engine/parser.js:8710, engine/parser.js:8971, engine/parser.js:10313, engine/prompts.js:637, index.html:4303, index.html:4326, index.html:4431, index.html:4878, index.html:4892, index.html:5500  
+**CR 4.4.3d** — engine/effects.js:3385, engine/effects.js:3404, engine/effects.js:3430, engine/effects.js:3442, engine/effects.js:3463, engine/effects.js:3479, engine/effects.js:3672, engine/effects.js:3690, engine/effects.js:5633, engine/effects.js:6235, engine/effects.js:6472, engine/effects.js:8850, engine/effects.js:9037, engine/effects.js:9590, engine/judge.js:1198, engine/judge.js:1312, engine/judge.js:1494, engine/judge.js:4438, engine/parser.js:5677, engine/parser.js:5940, engine/parser.js:8710, engine/parser.js:8971, engine/parser.js:10313, engine/prompts.js:637, index.html:4313, index.html:4336, index.html:4441, index.html:4888, index.html:4902, index.html:5510  
 *drills:* test/allies.test.js:199, test/arenaability.test.js:175, test/arenaability.test.js:188, test/arenaability.test.js:201, test/bravo.test.js:234, test/gravy.test.js:270, test/jackbequick.test.js:122, test/judge.test.js:416, test/judge.test.js:421, test/judge.test.js:434, test/judge.test.js:439, test/judge.test.js:447, test/judge.test.js:473, test/judge.test.js:915, test/mirror.test.js:517, test/parser.test.js:332, test/parser.test.js:1847, test/priority.test.js:732, test/priority.test.js:737, test/priority.test.js:740, test/priority.test.js:750, test/sides.test.js:348, test/slicecensus.test.js:10, test/tapcount.test.js:24, test/tapcount.test.js:48, test/tapcount.test.js:57, test/tapped.test.js:68, test/tapped.test.js:319, test/tapped.test.js:329, test/waiting.test.js:26, test/waiting.test.js:219
 
-**CR 4.4.3e** — engine/actions.js:365, engine/effects.js:3011, engine/effects.js:5911, engine/effects.js:9693, engine/effects.js:10779, engine/effects.js:10786, engine/invariants.js:22, engine/invariants.js:238, engine/judge.js:1228, engine/judge.js:1463, engine/judge.js:1529, engine/judge.js:3195, engine/judge.js:3265, engine/judge.js:4310, engine/parser.js:5130, engine/parser.js:10580, engine/priority.js:330, index.html:3555, index.html:4903, index.html:5175, index.html:5409, index.html:7346  
+**CR 4.4.3e** — engine/actions.js:365, engine/effects.js:3011, engine/effects.js:5911, engine/effects.js:9693, engine/effects.js:10779, engine/effects.js:10786, engine/invariants.js:22, engine/invariants.js:238, engine/judge.js:1228, engine/judge.js:1463, engine/judge.js:1529, engine/judge.js:3195, engine/judge.js:3265, engine/judge.js:4310, engine/parser.js:5130, engine/parser.js:10580, engine/priority.js:330, index.html:3565, index.html:4913, index.html:5185, index.html:5419, index.html:7372  
 *drills:* test/actcost.test.js:18, test/actcost.test.js:145, test/actions.test.js:239, test/approx.test.js:381, test/arenaability.test.js:120, test/asinstant.test.js:15, test/asinstant.test.js:158, test/cosmo.test.js:240, test/defwall.test.js:21, test/defwall.test.js:390, test/defwall.test.js:397, test/hitnext.test.js:280, test/invariants.test.js:125, test/judge.test.js:478, test/keycensus.test.js:24, test/keycensus.test.js:214, test/lyath.test.js:256, test/mirror.test.js:567, test/nextturn.test.js:309, test/nextturn.test.js:324, test/playatspeed.test.js:12, test/playatspeed.test.js:56, test/playatspeed.test.js:189, test/priority.test.js:458, test/priority.test.js:462, test/priority.test.js:716, test/priority.test.js:725, test/priority.test.js:750, test/routeap.test.js:12, test/slicecensus.test.js:83, test/stir.test.js:240, test/ward.test.js:494
 
-**CR 8.1.6** — engine/advisor.js:165, engine/effects.js:5664, engine/judge.js:55, engine/judge.js:1156, engine/judge.js:1217, engine/judge.js:1449, engine/judge.js:1586, engine/judge.js:1613, engine/judge.js:2130, engine/parser.js:5128, engine/parser.js:9152, engine/parser.js:9978, engine/parser.js:9984, engine/parser.js:10073, engine/parser.js:10076, engine/types.js:290, index.html:3656, index.html:3669, index.html:3803, index.html:4146, index.html:4211, index.html:5033, index.html:5567, index.html:5668  
+**CR 8.1.6** — engine/advisor.js:165, engine/effects.js:5664, engine/judge.js:55, engine/judge.js:1156, engine/judge.js:1217, engine/judge.js:1449, engine/judge.js:1586, engine/judge.js:1613, engine/judge.js:2130, engine/parser.js:5128, engine/parser.js:9152, engine/parser.js:9978, engine/parser.js:9984, engine/parser.js:10073, engine/parser.js:10076, engine/types.js:290, index.html:3666, index.html:3679, index.html:3813, index.html:4156, index.html:4221, index.html:5043, index.html:5577, index.html:5678  
 *drills:* test/arenaability.test.js:80, test/arenaability.test.js:427, test/arenaability.test.js:434, test/asinstant.test.js:13, test/asinstant.test.js:161, test/asinstant.test.js:227, test/asinstant.test.js:282, test/asinstant.test.js:357, test/blaze.test.js:211, test/blaze.test.js:232, test/fealty.test.js:81, test/handability.test.js:80, test/iceeternal.test.js:240, test/judge.test.js:841, test/judge.test.js:854, test/keycensus.test.js:274, test/markfirst.test.js:55, test/mirror.test.js:309, test/mirror.test.js:312, test/mirror.test.js:413, test/parser.test.js:1877, test/parser.test.js:1897, test/parser.test.js:1965, test/playatspeed.test.js:188, test/priority.test.js:581, test/priority.test.js:974, test/priority.test.js:988, test/priority.test.js:997, test/routeap.test.js:54, test/rxability.test.js:417, test/split.test.js:196, test/split.test.js:383, test/stir.test.js:204
 
-**CR 4.5.3** — engine/effects.js:6295, engine/judge.js:2864, engine/judge.js:4452, engine/judge.js:4471, engine/sides.js:77, engine/wire.js:125, index.html:4963, index.html:4993  
+**CR 4.5.3** — engine/effects.js:6295, engine/judge.js:2864, engine/judge.js:4452, engine/judge.js:4471, engine/sides.js:77, engine/wire.js:125, index.html:4973, index.html:5003  
 *drills:* test/aiseat.test.js:84, test/approx.test.js:1222, test/approx.test.js:1239, test/arspay.test.js:9, test/judge.test.js:372, test/judge.test.js:1390, test/judge.test.js:1396, test/judge.test.js:1401, test/judge.test.js:1419, test/judge.test.js:1423, test/sides.test.js:381, test/sides.test.js:461, test/sides.test.js:472, test/sides.test.js:478, test/stalemate.test.js:8, test/table.test.js:203, test/tournament.test.js:105
 
-**CR 7.3.2** — engine/actions.js:17, engine/actions.js:140, engine/advisor.js:94, engine/judge.js:47, engine/judge.js:970, engine/judge.js:2541, engine/judge.js:2615, engine/judge.js:4120, engine/judge.js:4136, engine/lobby.js:26, engine/net.js:43, engine/priority.js:197, engine/priority.js:236, engine/priority.js:386, engine/sparring.js:368, engine/sparring.js:1000, engine/types.js:230, index.html:3475, index.html:5217  
+**CR 7.3.2** — engine/actions.js:17, engine/actions.js:140, engine/advisor.js:94, engine/judge.js:47, engine/judge.js:970, engine/judge.js:2541, engine/judge.js:2615, engine/judge.js:4120, engine/judge.js:4136, engine/lobby.js:26, engine/net.js:43, engine/priority.js:197, engine/priority.js:236, engine/priority.js:386, engine/sparring.js:368, engine/sparring.js:1000, engine/types.js:230, index.html:3485, index.html:5227  
 *drills:* test/actions.test.js:109, test/advisor.test.js:137, test/defreaction.test.js:135, test/judge.test.js:697, test/lobby.test.js:4, test/net.test.js:196, test/priority.test.js:115, test/priority.test.js:156, test/priority.test.js:605, test/priority.test.js:861
 
-**CR 4.3.4** — engine/judge.js:1057, engine/judge.js:1072, engine/judge.js:2396, engine/judge.js:3055, engine/judge.js:3994, engine/priority.js:114, engine/priority.js:148, engine/priority.js:399, engine/sparring.js:1053, index.html:3744, index.html:5117, index.html:5126, index.html:6105, index.html:7904  
+**CR 4.3.4** — engine/judge.js:1057, engine/judge.js:1072, engine/judge.js:2396, engine/judge.js:3055, engine/judge.js:3994, engine/priority.js:114, engine/priority.js:148, engine/priority.js:399, engine/sparring.js:1053, index.html:3754, index.html:5127, index.html:5136, index.html:6115, index.html:7930  
 *drills:* test/arena.test.js:169, test/judge.test.js:162, test/judge.test.js:176, test/judge.test.js:566, test/judge.test.js:623, test/judge.test.js:628, test/judge.test.js:642, test/judge.test.js:648, test/judge.test.js:660, test/judge.test.js:1148, test/priority.test.js:220, test/priority.test.js:285, test/priority.test.js:577, test/priority.test.js:589, test/suspense.test.js:121
 
-**CR 7.3.2b** — engine/actions.js:149, engine/actions.js:287, engine/effects.js:9999, engine/invariants.js:20, engine/invariants.js:283, engine/invariants.js:297, engine/judge.js:992, engine/judge.js:2618, engine/sparring.js:403, index.html:2952, index.html:5230, index.html:5314, index.html:5319  
+**CR 7.3.2b** — engine/actions.js:149, engine/actions.js:287, engine/effects.js:9999, engine/invariants.js:20, engine/invariants.js:283, engine/invariants.js:297, engine/judge.js:992, engine/judge.js:2618, engine/sparring.js:403, index.html:2962, index.html:5240, index.html:5324, index.html:5329  
 *drills:* test/actions.test.js:122, test/defcap.test.js:272, test/defcap.test.js:291, test/defenddoor.test.js:9, test/defenddoor.test.js:71, test/defenderzone.test.js:12, test/invariants.test.js:141, test/invariants.test.js:142, test/judge.test.js:980, test/judge.test.js:993, test/judge.test.js:1044
 
 **CR 4.4.4** — engine/effects.js:1317, engine/effects.js:3832, engine/effects.js:8213, engine/effects.js:8252, engine/effects.js:10162, engine/judge.js:2187, engine/judge.js:4324, engine/judge.js:4355, engine/parser.js:8930, engine/parser.js:10212, engine/sides.js:96, engine/sides.js:124  
@@ -156,49 +156,49 @@ Only rules cited in code. A rules revision is a lookup here, not an archaeology 
 **CR 8.1.1** — engine/effects.js:5664, engine/effects.js:5698, engine/judge.js:1217, engine/judge.js:1449, engine/judge.js:1613, engine/parser.js:9152, engine/parser.js:10073, engine/parser.js:10074, engine/parser.js:10087, engine/parser.js:10561, engine/types.js:290  
 *drills:* test/arenaability.test.js:426, test/arenaability.test.js:432, test/cosmo.test.js:184, test/dichotomy.test.js:394, test/judge.test.js:859, test/keycensus.test.js:278, test/mirror.test.js:312, test/mirror.test.js:380, test/parser.test.js:1877, test/parser.test.js:1890, test/playatspeed.test.js:70, test/priority.test.js:974, test/priority.test.js:1001, test/priority.test.js:1025, test/priority.test.js:1068, test/rxability.test.js:197, test/split.test.js:196
 
-**CR 8.1.3a** — engine/advisor.js:179, engine/effects.js:11120, engine/judge.js:997, engine/judge.js:3964, engine/parser.js:8197, engine/parser.js:9978, engine/parser.js:9981, engine/sparring.js:444, engine/types.js:230, index.html:3483, index.html:4168, index.html:5211, index.html:5603, index.html:5663  
+**CR 8.1.3a** — engine/advisor.js:179, engine/effects.js:11120, engine/judge.js:997, engine/judge.js:3964, engine/parser.js:8197, engine/parser.js:9978, engine/parser.js:9981, engine/sparring.js:444, engine/types.js:230, index.html:3493, index.html:4178, index.html:5221, index.html:5613, index.html:5673  
 *drills:* test/defreaction.test.js:152, test/journey.test.js:374, test/journey.test.js:387, test/journey.test.js:395, test/judge.test.js:830, test/judge.test.js:959, test/parser.test.js:1940, test/parser.test.js:1960, test/priority.test.js:1094, test/priority.test.js:1099, test/priority.test.js:1116
 
-**CR 4.2.2** — engine/actions.js:215, engine/effects.js:11036, engine/judge.js:308, engine/judge.js:2410, engine/judge.js:2461, engine/judge.js:3759, engine/judge.js:3996, engine/priority.js:46, engine/priority.js:90, engine/priority.js:120, engine/priority.js:206, engine/priority.js:291, index.html:7735  
+**CR 4.2.2** — engine/actions.js:215, engine/effects.js:11036, engine/judge.js:308, engine/judge.js:2410, engine/judge.js:2461, engine/judge.js:3759, engine/judge.js:3996, engine/priority.js:46, engine/priority.js:90, engine/priority.js:120, engine/priority.js:206, engine/priority.js:291, index.html:7761  
 *drills:* test/judge.test.js:569, test/judge.test.js:604, test/priority.test.js:225, test/priority.test.js:241, test/priority.test.js:256, test/rxlayer.test.js:10, test/rxlayer.test.js:168, test/rxlayer.test.js:177, test/sparring.test.js:728, test/tablestack.test.js:6
 
-**CR 4.4.1** — engine/effects.js:3017, engine/effects.js:9665, engine/invariants.js:264, engine/invariants.js:268, engine/judge.js:4145, engine/judge.js:4241, engine/priority.js:155, engine/priority.js:312, engine/priority.js:422, index.html:4693  
+**CR 4.4.1** — engine/effects.js:3017, engine/effects.js:9665, engine/invariants.js:264, engine/invariants.js:268, engine/judge.js:4145, engine/judge.js:4241, engine/priority.js:155, engine/priority.js:312, engine/priority.js:422, index.html:4703  
 *drills:* test/approx.test.js:1120, test/approx.test.js:1182, test/endpay.test.js:86, test/invariants.test.js:187, test/priority.test.js:44, test/priority.test.js:537, test/priority.test.js:543, test/priority.test.js:628
 
-**CR 7.3.3** — engine/advisor.js:95, engine/judge.js:46, engine/net.js:44, engine/priority.js:195, index.html:126, index.html:3805, index.html:8003  
+**CR 7.3.3** — engine/advisor.js:95, engine/judge.js:46, engine/net.js:44, engine/priority.js:195, index.html:126, index.html:3815, index.html:8029  
 *drills:* test/actions.test.js:109, test/arenaability.test.js:409, test/arenaability.test.js:417, test/drx.test.js:332, test/judge.test.js:691, test/mirror.test.js:396, test/net.test.js:196, test/priority.test.js:116, test/priority.test.js:120, test/priority.test.js:154, test/tablerail.test.js:115
 
-**CR 4.3.2** — engine/actions.js:104, engine/actions.js:372, engine/judge.js:754, engine/judge.js:4433, engine/parser.js:5130, engine/priority.js:316, engine/priority.js:337, engine/sides.js:319, index.html:5075, index.html:5169, index.html:5499  
+**CR 4.3.2** — engine/actions.js:104, engine/actions.js:372, engine/judge.js:754, engine/judge.js:4433, engine/parser.js:5130, engine/priority.js:316, engine/priority.js:337, engine/sides.js:319, index.html:5085, index.html:5179, index.html:5509  
 *drills:* test/actions.test.js:91, test/actions.test.js:245, test/approx.test.js:2090, test/asinstant.test.js:15, test/judge.test.js:672, test/mirror.test.js:271, test/mirror.test.js:564, test/priority.test.js:34, test/priority.test.js:454, test/priority.test.js:757
 
-**CR 7.2** — engine/effects.js:5123, engine/effects.js:10046, engine/judge.js:4103, engine/parser.js:122, engine/parser.js:1119, engine/parser.js:8275, engine/priority.js:230, index.html:3916  
+**CR 7.2** — engine/effects.js:5123, engine/effects.js:10046, engine/judge.js:4103, engine/parser.js:122, engine/parser.js:1119, engine/parser.js:8275, engine/priority.js:230, index.html:3926  
 *drills:* test/costtax.test.js:70, test/decksearch.test.js:176, test/decksearch.test.js:367, test/declsheet.test.js:4, test/declsheet.test.js:72, test/onatk.test.js:2, test/onatk.test.js:19, test/onatk.test.js:241, test/priority.test.js:151, test/spellvoidx.test.js:55
 
 **CR 4.1.8a** — engine/effects.js:4906, engine/effects.js:7047, engine/effects.js:7099, engine/effects.js:8003, engine/effects.js:8038, engine/effects.js:9672, engine/effects.js:10226, engine/effects.js:10906, engine/judge.js:4223  
 *drills:* test/approx.test.js:663, test/approx.test.js:744, test/endphase.test.js:7, test/endphase.test.js:257, test/endphase.test.js:263
 
-**CR 4.4.3f** — engine/actions.js:367, engine/judge.js:4320, engine/judge.js:4339, index.html:4845, index.html:4919, index.html:4945, index.html:4958, index.html:5162, index.html:5338, index.html:5426  
+**CR 4.4.3f** — engine/actions.js:367, engine/judge.js:4320, engine/judge.js:4339, index.html:4855, index.html:4929, index.html:4955, index.html:4968, index.html:5172, index.html:5348, index.html:5436  
 *drills:* test/actions.test.js:244, test/judge.test.js:334, test/judge.test.js:339, test/judge.test.js:353, test/judge.test.js:365, test/judge.test.js:367, test/judge.test.js:372, test/judge.test.js:1136, test/priority.test.js:725
 
-**CR 7.3.2a** — engine/game.js:210, engine/game.js:250, engine/judge.js:976, engine/judge.js:984, engine/judge.js:2687, engine/prompts.js:752, engine/prompts.js:1481, engine/sparring.js:475, engine/sparring.js:666, index.html:7750  
+**CR 7.3.2a** — engine/game.js:210, engine/game.js:250, engine/judge.js:976, engine/judge.js:984, engine/judge.js:2687, engine/prompts.js:752, engine/prompts.js:1481, engine/sparring.js:475, engine/sparring.js:666, index.html:7776  
 *drills:* test/judge.test.js:494, test/judge.test.js:524, test/sparring.test.js:609, test/targets.test.js:11, test/targets.test.js:76, test/targets.test.js:77
 
-**CR 4.4.3a** — engine/game.js:216, engine/game.js:315, engine/judge.js:56, engine/sparring.js:668, index.html:4730, index.html:4777, index.html:5142, index.html:7751  
+**CR 4.4.3a** — engine/game.js:216, engine/game.js:315, engine/judge.js:56, engine/sparring.js:668, index.html:4740, index.html:4787, index.html:5152, index.html:7777  
 *drills:* test/frostbite.test.js:295, test/judge.test.js:389, test/judge.test.js:400, test/nextturn.test.js:333, test/sparring.test.js:611, test/sparring.test.js:628, test/targets.test.js:12, test/targets.test.js:170, test/targets.test.js:171
 
-**CR 4.2.1** — engine/effects.js:9756, engine/invariants.js:264, engine/invariants.js:268, engine/judge.js:4380, engine/judge.js:4388, engine/priority.js:75, engine/priority.js:155, engine/priority.js:312, engine/sides.js:341, index.html:5505  
+**CR 4.2.1** — engine/effects.js:9756, engine/invariants.js:264, engine/invariants.js:268, engine/judge.js:4380, engine/judge.js:4388, engine/priority.js:75, engine/priority.js:155, engine/priority.js:312, engine/sides.js:341, index.html:5515  
 *drills:* test/approx.test.js:1186, test/approx.test.js:1196, test/approx.test.js:1219, test/invariants.test.js:187, test/priority.test.js:22
 
-**CR 4.4.3c** — engine/actions.js:362, engine/effects.js:3034, engine/effects.js:8937, engine/effects.js:9148, engine/effects.js:9692, engine/effects.js:10883, engine/parser.js:1438, engine/parser.js:8105, index.html:4866  
+**CR 4.4.3c** — engine/actions.js:362, engine/effects.js:3034, engine/effects.js:8937, engine/effects.js:9148, engine/effects.js:9692, engine/effects.js:10883, engine/parser.js:1438, engine/parser.js:8105, index.html:4876  
 *drills:* test/actions.test.js:237, test/chi.test.js:108, test/counters.test.js:376, test/judge.test.js:1113
 
-**CR 8.1.2a** — engine/advisor.js:104, engine/advisor.js:179, engine/effects.js:5376, engine/effects.js:5464, engine/parser.js:9978, engine/parser.js:9979, index.html:3483, index.html:3594, index.html:4166, index.html:5603, index.html:5663  
+**CR 8.1.2a** — engine/advisor.js:104, engine/advisor.js:179, engine/effects.js:5376, engine/effects.js:5464, engine/parser.js:9978, engine/parser.js:9979, index.html:3493, index.html:3604, index.html:4176, index.html:5613, index.html:5673  
 *drills:* test/advisor.test.js:150, test/journey.test.js:374, test/judge.test.js:948, test/parser.test.js:1940, test/parser.test.js:1962, test/priority.test.js:1094, test/priority.test.js:1099, test/priority.test.js:1116
 
 **CR 1.4.5a** — engine/cards.js:107, engine/game.js:198, engine/judge.js:1351, engine/judge.js:1707, engine/prompts.js:751  
 *drills:* test/judge.test.js:488, test/judge.test.js:761, test/loader.test.js:34, test/loader.test.js:289, test/tabletarget.test.js:85, test/targets.test.js:7, test/targets.test.js:36, test/types.test.js:354, test/types.test.js:400
 
-**CR 4.4.3** — engine/actions.js:356, engine/judge.js:4189, index.html:4694, index.html:5051  
+**CR 4.4.3** — engine/actions.js:356, engine/judge.js:4189, index.html:4704, index.html:5061  
 *drills:* test/actions.test.js:229, test/actor.test.js:102, test/judge.test.js:331, test/mirror.test.js:322, test/priority.test.js:686, test/priority.test.js:697, test/priority.test.js:707, test/priority.test.js:712
 
 **CR 7.3.4** — engine/judge.js:2507, engine/judge.js:3994, engine/judge.js:4133, engine/priority.js:45, engine/priority.js:110, engine/sparring.js:371  
@@ -216,19 +216,19 @@ Only rules cited in code. A rules revision is a lookup here, not an archaeology 
 **CR 7.6.4** — engine/judge.js:3994, engine/priority.js:45, engine/priority.js:112, engine/priority.js:299  
 *drills:* test/judge.test.js:566, test/priority.test.js:148, test/priority.test.js:171, test/priority.test.js:188, test/priority.test.js:218, test/priority.test.js:251
 
-**CR 4.4.3b** — engine/advisor.js:91, engine/judge.js:4143, engine/priority.js:421, engine/sparring.js:989, index.html:4735, index.html:5144  
+**CR 4.4.3b** — engine/advisor.js:91, engine/judge.js:4143, engine/priority.js:421, engine/sparring.js:989, index.html:4745, index.html:5154  
 *drills:* test/advisor.test.js:160, test/priority.test.js:536, test/walkinmyshoes.test.js:194
 
-**CR 7.1.2** — engine/judge.js:3758, index.html:7735  
+**CR 7.1.2** — engine/judge.js:3758, index.html:7761  
 *drills:* test/approx.test.js:425, test/crindex.test.js:71, test/tablestack.test.js:4
 
-**CR 4.2** — index.html:5060, index.html:5434, index.html:5505  
+**CR 4.2** — index.html:5070, index.html:5444, index.html:5515  
 *drills:* test/priority.test.js:11, test/priority.test.js:758, test/priority.test.js:762
 
-**CR 4.3.3** — engine/priority.js:76, engine/priority.js:311, engine/sides.js:342, index.html:5509  
+**CR 4.3.3** — engine/priority.js:76, engine/priority.js:311, engine/sides.js:342, index.html:5519  
 *drills:* test/priority.test.js:29, test/priority.test.js:494
 
-**CR 4.4.2** — engine/effects.js:10205, engine/judge.js:4209, index.html:4743  
+**CR 4.4.2** — engine/effects.js:10205, engine/judge.js:4209, index.html:4753  
 *drills:* test/endphase.test.js:1, test/endphase.test.js:84, test/endphase.test.js:145, test/endphase.test.js:183
 
 **CR 7.5** — engine/judge.js:2426, engine/judge.js:2502, engine/priority.js:244  
@@ -246,7 +246,7 @@ Only rules cited in code. A rules revision is a lookup here, not an archaeology 
 **CR 7.6.3** — engine/effects.js:8544, engine/priority.js:244, engine/priority.js:431  
 *drills:* test/effects.test.js:100, test/priority.test.js:507, test/priority.test.js:509
 
-**CR 4.3** — index.html:5078, index.html:5182, index.html:5511  
+**CR 4.3** — index.html:5088, index.html:5192, index.html:5521  
 *drills:* test/priority.test.js:762, test/priority.test.js:764
 
 **CR 7.1** — engine/priority.js:38, engine/priority.js:206  

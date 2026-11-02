@@ -356,11 +356,27 @@ if(require.main === module){
       const foeName = (await foeBtn.getAttribute("aria-label")) || "", first = foeName.split(",")[0];
       if(await click(foeBtn, "pick an AI hero")){
         await screen("table: loadout, AI foe picked", foeName);
+        /* SHARP / STEADY (lookahead phase 2): two tiles under the picker, Sharp
+           on by default, both inside the phone's width and a thumb tall, and a
+           tap moves the choice. Left on Sharp, which the board must then report. */
+        const lv = page.locator(".ailevel button");
+        const boxes = await lv.evaluateAll(bs => bs.map(b => { const r = b.getBoundingClientRect();
+          return {t: b.innerText.split("\n")[0].trim(), on: b.classList.contains("on"), l: r.left, r: r.right, h: r.height}; }));
+        row(boxes.length === 2 && /sharp/i.test(boxes[0].t) && /steady/i.test(boxes[1].t) && boxes[0].on && !boxes[1].on
+            && boxes.every(x => x.l >= 0 && x.r <= W && x.h >= 44),
+            "table: Sharp / Steady", JSON.stringify(boxes.map(x => [x.t, x.on, Math.round(x.l), Math.round(x.r), Math.round(x.h)])));
+        if(boxes.length === 2){
+          await lv.nth(1).click(); const st = await lv.evaluateAll(bs => bs.map(b => b.classList.contains("on")));
+          await lv.nth(0).click(); const sh = await lv.evaluateAll(bs => bs.map(b => b.classList.contains("on")));
+          row(!st[0] && st[1] && sh[0] && !sh[1], "table: the level follows the tap", `steady ${st} · sharp ${sh}`);
+        }
         if(await click(btn(/^Fight the new engine/), "Fight the new engine")){
           await page.waitForSelector(".board", { timeout: 15000 });
           /* the top nav names the foe hero only on the table board (the trainer says "Opp") */
           const top = (await page.locator(".screennav").innerText()).replace(/\s+/g, " ");
           row(top.toLowerCase().includes(first.toLowerCase()), "table board is the AI table", `top nav ${JSON.stringify(top)} names ${first}`);
+          const lvl = await page.evaluate(() => window.__dawnTable && window.__dawnTable.report().sharp);
+          row(lvl === true, "table: the AI seat plays Sharp", "report().sharp " + lvl);
           await screen("table: board", "actions: " + names(await handBar()));
           await nav("table", ["Chain", "You", first]);
           await playOn("table");
