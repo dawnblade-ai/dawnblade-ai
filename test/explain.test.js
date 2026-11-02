@@ -132,7 +132,8 @@ test("every reason is keyed from a site in the policy, and the census names what
   for(const k of Object.keys(seen)) assert.ok(SP.CALL_WHY[k], "reached key " + k + " has no reason");
   assert.deepEqual(keys.filter(k => !seen[k]).sort(),
     ["addPayNo", "allocAll", "allyTake", "answer", "arenaAP", "arenaRes", "arsenalSkip", "boostNo",
-     "chargeDone", "chargeMore", "chargeNone", "laHit", "laHold", "laKeep", "laSafe", "payCancel", "pitchChi"]);
+     "chargeDone", "chargeMore", "chargeNone", "laBlock", "laHit", "laHold", "laKeep", "laSafe", "laTake",
+     "payCancel", "pitchChi"]);
 });
 
 test("every reason and every line reads as game text", () => {

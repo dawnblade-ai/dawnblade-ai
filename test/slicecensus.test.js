@@ -393,8 +393,10 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
     /* 18,386 -> 18,699 -> 20,096 AT lookahead phase 2, READ FIRST: still
        `function Loadout(` -> the APP banner. The growth is `sharp` on the
        table start with its comment, then the Sharp / Steady control
-       (`aiLevel`, its two tiles, the note naming the level). Same anchors. */
-    "phasebar.test.js index.html 21720",
+       (`aiLevel`, its two tiles, the note naming the level). Same anchors.
+       21,720 -> 21,768 AT v5.85: the block search's note says Sharp also
+       plays out each way to block. Same anchors. */
+    "phasebar.test.js index.html 21768",
     /* 63,730 -> 64,368 AT v5.57, READ FIRST: still the `<style>` block,
        `<style>` -> `</style>`; the growth is the Cloaked card back's three
        rules (`.deckback.gback`, `.gbtag`, `.gbname`).

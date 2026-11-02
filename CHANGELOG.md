@@ -1,3 +1,41 @@
+## v5.85 — Sharp blocks: the AI plays out its walls
+
+Lookahead phase (c), piece 1 (`research/lookahead-c`). v5.77's search decides how an AI hero STARTS
+each action; its blocks were still the rule policy's (`nextBlocker`: armour first, take small hits,
+everything against lethal). On Sharp the wall is searched too.
+
+- **What changed for a player:** a Sharp AI hero blocks better, and the "<Hero>'s call" beside a Sharp
+  table searches your blocks the same way. A call to stop blocking ("Don't block", "Don't block any
+  more") is now shown; it has no action of its own, so the advisor box reads the reason.
+- **How:** at every declaration the search lists the block SETS containing what is already declared:
+  the rules' own wall, taking the rest of the hit, and the 4 best others of up to three more defenders
+  by a first-order score (life stopped minus 2 per hand card). A set where some card stops nothing the
+  others would not is never listed. Each is played out through `judge.reduce`, the rule policy driving
+  both seats, through the rest of the opponent's turn AND this seat's next turn, scored like the
+  action search (life swing + 2 per held card, at the block). The best set's next card is declared
+  (armour first, then hand, by uid); one call per card, stateless. The masked view's seed names the
+  chain link instead of the feed length, so each card of one wall plays the same deal.
+- **Same contract as v5.77:** no hidden information (`laMask`; the attacker's hand, face-down arsenal
+  and deck are pooled and re-dealt), no card text, deterministic, 300 engine steps per decision (over
+  it, the rules' card stands: 5% of block decisions). Steady (`{search: false}`) is the rule policy
+  byte for byte; self-play with no gate is unchanged.
+- **Measured** (own seat, paired, against v5.77's search; wins of 28 per hero-seed):
+  seeds 0–5 **+4.43 (t 12.2)**, held-out seeds 6–11 **+4.72 (t 12.9)**, no hero negative on either set.
+  All 12: **+4.58 (t 17.8)**, every hero t > 2. Own-seat arms 0 refusals / 0 violations / 0 stalls.
+  Ladder, every AI seat Sharp (`SPXLA=all`, 630 games): REFUSALS 0 · VIOLATIONS 0 · stalls 0 · draws 0,
+  stdev 15.1, spread 58. Search off, `npm run play '' '' 3` is byte-identical to v5.82.
+  Phone (the real page, CDP 4x CPU throttling, 200 positions per type): block decisions p50 47 ms,
+  p95 125 ms, worst 199 ms; action decisions p50 35 ms, p95 96 ms, worst 158 ms.
+  Stopping the rollout at this seat's next DECISION (not through its turn) gained only +1.44 and lost
+  with Arakni (−1.33, t −4): a card kept from a block is worth what the next turn does with it.
+- **Reasons:** `laBlock` ("Block with this. Play each wall out through their turn and yours …") and
+  `laTake` ("Take the rest of this hit …"); `explain` reports `laTake` with no action.
+- **Drills:** `test/lookahead.test.js` +2: overruled walls (both verdicts) survive the scramble of every
+  hidden card (sabotaged: the block search on the real state fails it); blocks off, the wall is the rules'
+  with the action search on.
+- **Did not pay** (recorded in `experiments/LOOKAHEAD.md` on findings/queue): the arsenal step searched
+  (−0.11 and −0.22 at two horizons), and retuning the action search (K 2, mu 1 or 2, margin 0 or 1: all
+  within ±0.25 of v5.77's settings).
 ## v5.84 — Your record against each AI hero
 
 **Decision D (CEO, 2026-11-02, under the user's trust grant).** A table win over an AI hero once paid

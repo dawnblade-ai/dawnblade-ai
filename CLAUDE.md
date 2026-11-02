@@ -212,6 +212,10 @@ Both resolve card text through `effects.js`.
   `abPieceForRes`, …). Deterministic: total orders, uid tie-breaks, never `game.rng`.
 - `explain` = `act` plus the reason key at the branch that decided (`CALL_WHY`); it
   powers "<Hero>'s call". Every new decision gets its own key.
+- **Sharp** (`act(g, seat, {search:true})`, the AI hero's default) plays candidate actions and
+  block sets out through `judge.reduce` from `laMask`'s view: it NEVER sees hidden cards (the
+  scramble drill in `test/lookahead.test.js`), its budget is engine STEPS, and Steady/no option is
+  the rule policy byte for byte. Phone bound: p95 < 150 ms, worst < 400 ms at 4x CPU throttle.
 - A policy change ships only when measured: gate it per seat (`SPX`), A/B the hero's
   own seat at 3 seeds (6–12 if unresolved), then the full ladder with every seat on
   (0 refusals / violations / stalls). Record results that do not resolve in QUEUE.md;

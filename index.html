@@ -898,7 +898,7 @@ img{display:block;max-width:100%}
    database + typographic fallbacks. Not affiliated with LSS.
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
-window.APP_VER = "5.84"; /* v5.84 - A finished table game against an AI hero counts toward your record against that hero and level, shown on the picker. See CHANGELOG.md. */
+window.APP_VER = "5.85"; /* v5.85 - a Sharp AI hero plays out its blocks through the next turn before it commits a wall. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -6381,7 +6381,7 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
      keeps its tuned pile. */
   const [aiFoe,setAiFoe] = uS(null);
   /* SHARP OR STEADY (lookahead phase 2). How an AI hero thinks: Sharp plays
-     each way to start its turn out through the engine before it picks one
+     each way to start its turn, and each way to block, out through the engine before it picks one
      (sparring.js, LOOKAHEAD); Steady is the rule policy alone. Unlike the
      opponent it IS remembered — it is the player's taste, not a property of
      one match — and Sharp is the default. */
@@ -6699,7 +6699,7 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
                     pays costs and blocks like a person. <b>Untuned and currently
                     winning most games.</b> This is the engine a second player will sit at.</>
                   : <>An AI pilots {foeHero ? foeHero.n.split(",")[0] : "a random hero"}, playing <b>{aiLevel==="sharp"
-                    ? "Sharp: it plays out each way to start its turn before it commits"
+                    ? "Sharp: it plays out each way to start its turn, and each way to block, before it commits"
                     : "Steady: the rules of thumb self-play uses"}</b>. Pick the opponent and how it plays on the Foe screen.</>}
               </p>
             </>}
@@ -7354,8 +7354,8 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
         state: match.g,
         reduce: DawnJudge.reduce,
         legal:  DawnJudge.legal,
-        /* `match.sharp`: the AI seat searches its own action decisions
-           (sparring.js, LOOKAHEAD); false is the rule policy, byte for byte. */
+        /* `match.sharp`: the AI seat searches its own action decisions and
+           its blocks (sparring.js, LOOKAHEAD); false is the rule policy, byte for byte. */
         policy: (st, i) => DawnSparring.act(st, i, {search: !!match.sharp}),
         hash:   st => st ? DawnWire.hash(st) : null,
         onState: st => { setG(st); setNote(null); audit(st); },
@@ -7828,7 +7828,8 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                   /* the call plays at the table's level: searched when the
                      AI seat is, memoized per state (sparring.explain) */
                   const e = DawnSparring.explain(g, mySeat, {search: !!match.sharp});
-                  if(e.action) return {line: e.line, why: e.why};
+                  /* "don't block" (the searched wall) is a call with no action of its own */
+                  if(e.action || e.key === "laTake") return {line: e.line, why: e.why};
                   const other = DawnSparring.explain(g, 1 - mySeat, {search: false}).action;
                   return {line: other ? them.name.split(",")[0] + " is deciding." : "Nothing to decide yet."};
                 }}
