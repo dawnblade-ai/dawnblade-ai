@@ -179,3 +179,16 @@ test("advise — the hero power is named once, not twice", () => {
   const r2 = A.advise(gameWith({weaponUsed:{}, hist:{atk:0,non:0}, ap:1, res:0}), {runeDmg:1, window:"act", hpow:bare});
   assert.match(r2.line, /Adv-drill Bare Power — hero power/, r2.line);
 });
+
+/* 1.0 POLISH AUDIT: "Pitch Whisper of the Oracle — exactly 3 (2 floats:
+   spend it before end of turn)." The count and the pronoun agree now. */
+test("advise — the pay line counts what floats in English", () => {
+  P.fxReset();
+  const play = {name:"adv-drill-cost1", pitch:1, tt:"Attack Action", power:3, def:2, cost:1, kw:[], tx:"", uid:"p1"};
+  const blue = n => ({name:"adv-drill-blue"+n, pitch:3, tt:"Attack Action", power:1, def:2, cost:0, kw:[], tx:"", uid:"b"+n});
+  const red  = {name:"adv-drill-red", pitch:1, tt:"Attack Action", power:1, def:2, cost:0, kw:[], tx:"", uid:"r1"};
+  const two = A.advise(gameWith({hand:[play, blue(1)], res:0}, {pending:{card:play, from:"hand", idx:0}}), {runeDmg:1, window:"pay"});
+  assert.match(two.line, /exactly 3 \(2 left floating — spend them before end of turn\)\./, two.line);
+  const none = A.advise(gameWith({hand:[play, red], res:0}, {pending:{card:play, from:"hand", idx:0}}), {runeDmg:1, window:"pay"});
+  assert.ok(!/floating/.test(none.line), none.line);
+});

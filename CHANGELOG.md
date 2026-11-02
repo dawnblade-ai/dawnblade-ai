@@ -1,3 +1,12 @@
+## v5.NN — "2 left floating — spend them", not "2 floats: spend it"
+
+Found by the 1.0 polish audit (P3), Blaze's trainer: "Pitch Whisper of the Oracle — exactly 3 (2 floats:
+spend it before end of turn)." The Coach's pay line now agrees with its count: "(2 left floating —
+spend them before end of turn)", "(1 left floating — spend it …)".
+
+- **Drill:** `test/advisor.test.js` drives the pay window with a blue over a 1-cost card (2 floating)
+  and with an exact pitch (nothing floating). Sabotaged (the old line): fails.
+
 ## v5.NN — "+1 from reactions", not "+1 reactions"
 
 Found by the 1.0 polish audit (P3), Dorinthea's table feed: "Dawnblade resolves for 1 (+1 reactions)."

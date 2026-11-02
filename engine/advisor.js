@@ -127,7 +127,9 @@ function advise(g, ctx){
     const set = advBestPitch(you(g).hand, need, g.pending.from==="hand"?g.pending.idx:null, PV);
     if(!set) return {line:"Cancel — you can't cover this cost.", why:"Not enough pitch in hand. Pick a cheaper line."};
     const names = set.idxs.map(i=>nm(you(g).hand[i])).join(" + ");
-    return {line:`Pitch ${names} — exactly ${set.gain}${set.waste?` (${set.waste} floats: spend it before end of turn)`:""}.`,
+    /* "(2 floats: spend it …)" — one noun for any count (1.0 polish audit) */
+    const left = set.waste ? ` (${set.waste} left floating — spend ${set.waste>1?"them":"it"} before end of turn)` : "";
+    return {line:`Pitch ${names} — exactly ${set.gain}${left}.`,
             why:"Fodder first — feed the fire with the cards you'd least like to swing."};
   }
   if(win==="stack"){
