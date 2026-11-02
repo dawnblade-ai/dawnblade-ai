@@ -1,0 +1,78 @@
+GAMES 42 · stalls 0 · draws 0 · avg turns 17.1
+POLICY REFUSALS 0 · INVARIANT VIOLATIONS 0 · MALFORMED 0 · SECOND-PERSON 0 · NO-ZONE 0
+
+WINS: boltyn 10 · viserai 3 · azalea 3 · dorinthea 3 · fai 3 · enigma 3 · arakni 3 · lyath 3 · kayo 2 · dash 2 · bravo 2 · blaze 2 · briar 2 · gravy 1
+
+PER SEED (3 samples of the same ladder — the engine never changed):
+  hero          s0  s1  s2   mean  spread
+  boltyn        5   2   3    3.3      3
+  viserai       1   1   1    1.0      0
+  azalea        1   1   1    1.0      0
+  dorinthea     1   1   1    1.0      0
+  fai           1   1   1    1.0      0
+  enigma        1   1   1    1.0      0
+  arakni        1   1   1    1.0      0
+  lyath         1   1   1    1.0      0
+  kayo          0   1   1    0.7      1
+  dash          0   1   1    0.7      1
+  bravo         0   1   1    0.7      1
+  blaze         1   1   0    0.7      1
+  briar         0   1   1    0.7      1
+  gravy         1   0   0    0.3      1
+  iyslander     0   0   0    0.0      0
+
+  NOISE BAND: min 0 · median 0 · MAX 3  — a version-to-version move smaller than this is not resolvable by one ladder.
+
+longest unchanged stretch a decided game came back from: 1 turns (boltyn-dash-0) — the engine draws at 20
+
+ROUTE COVERAGE (times a feed line matched):
+  ally      12
+  allyatk   7
+  arsflip   1
+  boost     34
+  chi       1
+  crush     7
+  ctrWipe   17
+  death     9
+  destroycost 37
+  fusion    3
+  gold      6
+  halve     1
+  held      665
+  hitnext   17
+  hitwatch  1
+  jab       3
+  layer     200
+  leave     10
+  powctr    21
+  reaction  79
+  search    3
+  shield    34
+  tap       21
+  ward      12
+  e.g. ally: Swabbie enters play (ally). | Cutty Shark, Quick Clip enters play (ally). | Limpit, Hop-a-long enters play (ally).
+  e.g. allyatk: Gravy Bones sends Swabbie — 7 power on the chain. | Gravy Bones sends Cutty Shark, Quick Clip — 3 power on the chain.
+  e.g. arsflip: Mode chosen: Turn their arsenal card face up, then destroy a defense reaction.
+  e.g. boost: Boost: Zipper Hit banished — Mechanologist, go again! | Boost: Zero to Sixty banished — Mechanologist, go again! | Boost: Under Loop banished — Mechanologist, go again!
+  e.g. chi: Enigma: 3 Chi spent — a Chi pays for Chi and resource costs alike; a resource point pays only its own.
+  e.g. crush: Fault Line — crush: 1 arsenal card goes to the bottom of the deck. | Fault Line — crush: 2 arsenal cards go to the bottom of the deck. | Debilitate — crush: Boltyn feels it next turn.
+  e.g. ctrWipe: Raydn, Duskbane loses its 4 +1{p} counters — weapons you control are wiped at the beginning of this end phase.
+  e.g. death: Swabbie takes 4 and goes down — face-down in the graveyard, so it will not be replayed. | Cutty Shark, Quick Clip takes 4 and goes down — face-down in the graveyard, so it will not be replayed. | Limp
+  e.g. destroycost: Kayo kept Beaten Trackers rather than destroy it. | Dorinthea kept Refraction Bolters rather than destroy it. | Arakni, Web of Deceit kept Mark of the Huntsman rather than destroy it.
+  e.g. fusion: Iyslander reveals Frosting from hand — Polar Cap is fused (Fusion). | Briar reveals Sizzle from hand — Entwine Lightning is fused (Fusion).
+  e.g. gold: Test of Strength: Gold created on Boltyn's board — Action - {r}{r}, destroy this: Draw a card. | Test of Strength: Gold created on Enigma's board — Action - {r}{r}, destroy this: Draw a card. | Oysten
+  e.g. halve: Walk in My Shoes — crush: the base power and defence of Boltyn's attack action cards are halved, rounded up, until the end of their next turn.
+  e.g. held: Illuminate is on the stack — either seat may answer at instant speed before it resolves. | Mandible Claw is on the stack — either seat may answer at instant speed before it resolves. | Pulping is on t
+  e.g. hitnext: Banneret of Salvation: the next time Boltyn hits this turn, it pays off. | Burn Up // Shock: the next time Briar hits a hero this turn, it pays off.
+  e.g. hitwatch: Boom Grenade goes off — Crankshaft connected, so it is destroyed.
+  e.g. jab: Danger Digits: Mark of the Huntsman lashes out at Boltyn for 1.
+  e.g. layer: Boltyn — hero power — +0 — the layer resolves. | Courageous Steelhand — +3 — the layer resolves. | Courageous Steelhand — +0 — the layer resolves.
+  e.g. leave: Waning Vengeance leaves the arena — and it pays out. | Tension in the Air runs out of suspense and leaves the arena — and it pays out. | Edge of Their Seats runs out of suspense and leaves the arena —
+  e.g. powctr: Raydn, Duskbane takes 4 +1{p} counters — now 4.
+  e.g. reaction: Courageous Steelhand on the stack (+3). | Courageous Steelhand on the stack (+0). | Roaring Beam on the stack (+0).
+  e.g. search: Flamecall Awakening: Fai's deck is shuffled.
+  e.g. shield: Toe the Line: 1 of that damage is prevented — the other 1 it could have stopped is lost with this hit. | Toe the Line: 2 of that damage is prevented. | Throw Caution to the Wind: 2 of that damage is p
+  e.g. tap: Bravo — hero power: Bravo, Flattering Showman taps to pay — tapped until their own untap step (CR 4.4.3d). | Gravy Bones — hero power: Gravy Bones taps to pay — tapped until their own untap step (CR 4
+  e.g. ward: Waxing Specter destroys itself — ward soaks 3. | Uphold Tradition destroys itself — ward soaks 1. | Waning Vengeance destroys itself — ward soaks 3.
+
+longest 31 turns (boltyn-enigma-1) · shortest 8 (boltyn-azalea-0)

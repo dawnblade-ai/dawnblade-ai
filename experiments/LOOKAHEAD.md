@@ -210,3 +210,36 @@ shipped budget.
 - `experiments/LA-probe.js` (feasibility), `LA-ab.js` + `LA-abs.sh` + `LA-sum.js` (own-seat A/B,
   every hero, 4 at a time), `LA-why.js` (what the search overrules, by card), `LA-ladder.js` (sums the sliced all-on ladder).
 - `experiments/LA-results/` — the raw runs: `opp15` (seeds 0–5), `opp612` (6–11), `own06`, `ladder/`.
+
+# PHASE 2 (ship/lookahead, rebased on v5.75)
+
+## (a) the search on for the table's AI hero — settings chosen inside the phone bound
+
+Sweep, own-seat paired A/B, seeds 0–5 (`experiments/LA-results/p2/`, one OFF arm `off/` for seeds
+0–11, summed by `node experiments/LA-pair.js <off> <on>`):
+
+| setting | pooled /28 | t | over budget | steps p50 / p95 / max |
+|---|---|---|---|---|
+| own/2400 | +3.11 | 7.4 | 0% | 70 / 190 / 490 |
+| own/600 | +3.11 | 7.4 | 0% | (identical: no decision reaches 600) |
+| **own/300** | **+3.09** | 7.4 | 0.6% | 70 / 190 / 300 |
+| own/150 | +2.92 | 7.9 | 12.2% | 70 / 150 / 150 |
+| opp/600 | +2.86 | 7.3 | 0.3% | 170 / 380 / 600 |
+| opp/300 | +2.47 | 6.9 | 14.3% | 170 / 300 / 300 |
+
+Page, 4x CPU throttling, 400 positions where node's search ran (`experiments/LA-phone.js`):
+
+| setting | p50 | p95 | worst | ms/step |
+|---|---|---|---|---|
+| own/2400 | 36.5 | 104.8 | 208.9 | 0.47 |
+| **own/300** | **33.7** | **95.8** | **152.8** | 0.43 |
+| own/150 | 36.2 | 89.9 | 182.7 | 0.50 |
+| opp/600 | 94.8 | 221.5 | 319.4 | 0.49 |
+| opp/300 | 93.8 | 200.3 | 331.7 | 0.52 |
+
+Pick **own/300**: the most gain the bound allows (own/2400's extra +0.02 is noise, and its worst case
+is unbounded by construction), and the cap makes the worst case ~300 × 0.5 ms plus GC. `opp` fails
+p95 at any budget that keeps its gain. Held out, seeds 6–11: **+3.03, t 8.3** (`own-300-ho/`); all 12
+seeds +3.06 (t 11.1), no hero negative. One synchronous call fits, so nothing yields.
+Ladder every seat on (`ladder-own300/`): 630 games, 0/0/0, 0 draws, spread 52 (v5.75 58).
+Search off: `npm run play '' '' 3` byte-identical to origin/main (v5.75).

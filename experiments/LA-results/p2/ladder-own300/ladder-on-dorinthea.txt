@@ -1,0 +1,72 @@
+GAMES 42 · stalls 0 · draws 0 · avg turns 15.5
+POLICY REFUSALS 0 · INVARIANT VIOLATIONS 0 · MALFORMED 0 · SECOND-PERSON 0 · NO-ZONE 0
+
+WINS: dorinthea 29 · briar 3 · kayo 2 · dash 2 · bravo 2 · arakni 2 · iyslander 1 · enigma 1
+
+PER SEED (3 samples of the same ladder — the engine never changed):
+  hero          s0  s1  s2   mean  spread
+  dorinthea    10   9  10    9.7      1
+  briar         1   1   1    1.0      0
+  kayo          1   0   1    0.7      1
+  dash          0   1   1    0.7      1
+  bravo         1   0   1    0.7      1
+  arakni        1   1   0    0.7      1
+  iyslander     0   1   0    0.3      1
+  enigma        0   1   0    0.3      1
+  viserai       0   0   0    0.0      0
+  azalea        0   0   0    0.0      0
+  fai           0   0   0    0.0      0
+  blaze         0   0   0    0.0      0
+  boltyn        0   0   0    0.0      0
+  gravy         0   0   0    0.0      0
+  lyath         0   0   0    0.0      0
+
+  NOISE BAND: min 0 · median 0 · MAX 1  — a version-to-version move smaller than this is not resolvable by one ladder.
+
+longest unchanged stretch a decided game came back from: 1 turns (dorinthea-dash-0) — the engine draws at 20
+
+ROUTE COVERAGE (times a feed line matched):
+  ally      8
+  allyatk   20
+  arsflip   21
+  boost     36
+  crush     3
+  ctrWipe   2
+  death     5
+  defmod    4
+  destroycost 211
+  fusion    3
+  gold      5
+  held      503
+  hitwatch  1
+  jab       4
+  layer     176
+  leave     5
+  powctr    3
+  reaction  165
+  shield    6
+  tap       18
+  ward      8
+  e.g. ally: Riggermortis enters play (ally). | Cutty Shark, Quick Clip enters play (ally). | Barnacle enters play (ally).
+  e.g. allyatk: Gravy Bones sends Riggermortis — 6 power on the chain. | Gravy Bones sends Riggermortis — 6 power on the chain, and it goes again. | Gravy Bones sends Cutty Shark, Quick Clip — 3 power on the chain.
+  e.g. arsflip: Mode chosen: Turn their arsenal card face up, then destroy a defense reaction.
+  e.g. boost: Boost: Zero to Sixty banished — Mechanologist, go again! | Boost: Overblast banished — Mechanologist, go again! | Boost: Re-Charge! banished — Mechanologist, go again!
+  e.g. crush: Fault Line — crush: 1 arsenal card goes to the bottom of the deck. | Buckling Blow — crush: Dorinthea has no equipment left to weaken. | Cartilage Crush — crush: Dorinthea feels it next turn.
+  e.g. ctrWipe: Raydn, Duskbane loses its 4 +1{p} counters — weapons you control are wiped at the beginning of this end phase.
+  e.g. death: Riggermortis takes 6 and goes down — face-down in the graveyard, so it will not be replayed. | Barnacle takes 6 and goes down — face-down in the graveyard, so it will not be replayed. | Oysten, Heart 
+  e.g. defmod: Shred: Warrior's Valor defends for 2 less for the rest of this combat chain. | Stonewall Impasse defends for 1 more until end of turn. | Brothers in Arms defends for 2 more for the rest of this combat
+  e.g. destroycost: Dorinthea kept Refraction Bolters rather than destroy it. | Kayo kept Beaten Trackers rather than destroy it. | Arakni, Web of Deceit kept Mark of the Huntsman rather than destroy it.
+  e.g. fusion: Iyslander reveals Ice Bolt from hand — Aether Icevein is fused (Fusion). | Briar reveals Lightning Press from hand — Arcanic Shockwave is fused (Fusion). | Briar reveals Lightning Surge from hand — Ar
+  e.g. gold: Test of Strength: Gold created on Enigma's board — Action - {r}{r}, destroy this: Draw a card. | Portside Exchange: Gold created on Gravy Bones's board — Action - {r}{r}, destroy this: Draw a card. | 
+  e.g. held: Dawnblade is on the stack — either seat may answer at instant speed before it resolves. | Pulping is on the stack — either seat may answer at instant speed before it resolves. | Savage Feast is on the
+  e.g. hitwatch: Boom Grenade goes off — Big Bertha connected, so it is destroyed.
+  e.g. jab: Unexpected Backhand was the card revealed — it lashes out at Dorinthea for 1. | Danger Digits: Mark of the Huntsman lashes out at Dorinthea for 1.
+  e.g. layer: Stroke of Foresight — +3 — the layer resolves. | Ironsong Response — +3 — the layer resolves. | Ironsong Response — +0 — the layer resolves.
+  e.g. leave: Tension in the Air runs out of suspense and leaves the arena — and it pays out. | Act of Glory runs out of suspense and leaves the arena — and it pays out.
+  e.g. powctr: Waxing Specter takes 3 +1{p} counters — now 4. | Raydn, Duskbane takes 4 +1{p} counters — now 4.
+  e.g. reaction: Stroke of Foresight on the stack (+3). | Ironsong Response on the stack (+3). | Ironsong Response on the stack (+0).
+  e.g. shield: Toe the Line: 2 of that damage is prevented. | Cloud Cover: 3 of that damage is prevented. | Throw Caution to the Wind: 1 of that damage is prevented.
+  e.g. tap: Bravo — hero power: Bravo, Flattering Showman taps to pay — tapped until their own untap step (CR 4.4.3d). | Gravy Bones — hero power: Gravy Bones taps to pay — tapped until their own untap step (CR 4
+  e.g. ward: Uphold Tradition destroys itself — ward soaks 1. | Spectral Shield destroys itself — ward soaks 1. | Waning Vengeance destroys itself — ward soaks 3.
+
+longest 34 turns (dorinthea-bravo-2) · shortest 7 (dorinthea-fai-0)

@@ -65,7 +65,8 @@ function overrules(k0, k1, seed, want){
 
 test("the search's choice is the same when the opponent's hidden cards and both deck orders are swapped", () => {
   const pts = [].concat(overrules("briar", "kayo", "la-hid-1", 4), overrules("dash", "azalea", "la-hid-2", 4),
-                        overrules("bravo", "fai", "la-hid-3", 4));
+                        overrules("bravo", "fai", "la-hid-3", 4),
+                        overrules("dorinthea", "viserai", "la-hid-4", 4));
   try {
     assert.ok(pts.length >= 6, "the search overruled the rules in " + pts.length + " positions");
     for(const {g, x, k0} of pts){
@@ -105,4 +106,56 @@ test("gate off (main): act is the rule policy, move for move", () => {
     }
     if(!moved) break;
   }
+});
+
+/* PHASE 2: the page asks for the search per call (`{search: true}` for a
+   Sharp AI seat, `{search: false}` for Steady), not per hero key. */
+test("{search: false} is the rule policy even with the gate on; {search: true} searches with the gate off", () => {
+  gate(["all"]);
+  let g = match("arakni", "bravo", "la-opt", 0), over = 0;
+  try {
+    for(let i = 0; i < 600 && !g.over; i++){
+      let moved = false;
+      for(const s of [0, 1]){
+        assert.deepEqual(SP.act(g, s, {search: false}), SP.actBase(g, s), "Steady is the rule policy");
+        gate([]);
+        const a = SP.act(g, s, {search: true});
+        gate(["all"]);
+        if(!a) continue;
+        if(JSON.stringify(a) !== JSON.stringify(SP.actBase(g, s))) over++;
+        const out = J.reduce(g, a, s);
+        assert.ok(!out.error, "a searched move is legal");
+        g = out.state; moved = true; break;
+      }
+      if(!moved) break;
+    }
+    assert.ok(over >= 3, "the search overruled the rules " + over + " times with the gate off");
+  } finally { gate([]); }
+});
+
+/* The advisor asks for the call on every render, for both seats: the
+   second ask of the same state is the stored answer, and a different
+   setting is a different answer. */
+test("explain is memoized per state, seat and setting, and the memo is the same call", () => {
+  gate([]);
+  let g = match("dorinthea", "kayo", "la-memo", 0), n = 0;
+  for(let i = 0; i < 300 && !g.over && n < 6; i++){
+    let a = null, s;
+    for(s of [0, 1]){ a = SP.act(g, s, {search: true}); if(a) break; }
+    if(!a) break;
+    const e1 = SP.explain(g, s, {search: true});
+    if(/^la[A-Z]/.test(e1.key || "")){
+      n++;
+      assert.equal(SP.explain(g, s, {search: true}), e1, "the second ask is the stored answer");
+      assert.deepEqual(SP.explain({...g}, s, {search: true}), e1, "a fresh copy earns the same call");
+      const steady = SP.explain(g, s, {search: false});
+      assert.notEqual(steady.key, e1.key, "Steady's call is its own, not the stored Sharp one");
+      assert.deepEqual(steady.action, SP.actBase(g, s));
+      const b = SP.LA.budget; SP.LA.budget = 0;
+      try { assert.ok(!/^la[A-Z]/.test(SP.explain(g, s, {search: true}).key || ""), "a new budget is a new call"); }
+      finally { SP.LA.budget = b; }
+    }
+    const out = J.reduce(g, a, s); if(out.error) break; g = out.state;
+  }
+  assert.ok(n >= 3, "reached " + n + " overruled positions");
 });

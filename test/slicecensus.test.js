@@ -390,7 +390,10 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
     "drx.test.js index.html 8566",
     /* +instantpump AT v5.03: the same `tryPlay` -> `confirmPay` body. */
     "instantpump.test.js index.html 26201",
-    "phasebar.test.js index.html 18386",
+    /* 18,386 -> 18,699 AT lookahead phase 2, READ FIRST: still TableBoard's
+       local session; the growth is the AI seat's policy and the call
+       passing `{search}` (sharp), with their comments. Same anchors. */
+    "phasebar.test.js index.html 18699",
     /* 63,730 -> 64,368 AT v5.57, READ FIRST: still the `<style>` block,
        `<style>` -> `</style>`; the growth is the Cloaked card back's three
        rules (`.deckback.gback`, `.gbtag`, `.gbname`).

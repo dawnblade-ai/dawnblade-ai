@@ -1,3 +1,39 @@
+## v5.NN — the AI hero plays Sharp: it plays its openings out before it picks one (lookahead)
+
+**DECISION (CEO, under the user's trust grant, 2026-11-02):** the lookahead AI is a stronger
+sparring partner on every AI seat, inside a phone bound (p95 < 150 ms, worst < 400 ms per searched
+decision on the real page under 4x CPU throttling). Phase 1 is `experiments/LOOKAHEAD.md`.
+
+- **What changed for a player:** at the table, an AI-piloted hero searches its own action decision:
+  it lists every distinct way to start from here, plays each one out to the end of its turn through
+  `judge.reduce` (the rule policy driving both seats, the opponent's hidden cards re-dealt at random
+  from what the seat may know), and keeps the best by life swing plus cards held. The "<Hero>'s call"
+  beside you plays at the same level, so the advice is the stronger line too. The Dummy stays on the
+  rule policy: it is the regression harness.
+- **The gate is per call:** `sparring.act(g, seat, {search: true})`; `{search: false}` is the rule
+  policy byte for byte. With no option the gate is `LA.seats` (empty), so self-play, the trainer and
+  every drill play the rules: the search-off 630-game ladder is byte-identical to v5.75's.
+- **Settings, measured:** horizon `own`, budget **300 engine steps** per decision (steps, never time,
+  so peers agree; over budget the rule policy's move stands, 0.6% of searched decisions). Own-seat
+  A/B, wins of 28 per hero-seed, seeds 0–5: own/2400 +3.11 · own/600 +3.11 · own/300 +3.09 ·
+  own/150 +2.92 · opp/600 +2.86 · opp/300 +2.47. On the page at 4x throttling (400 positions):
+  own/300 p50 34 ms · p95 96 ms · worst 153 ms; opp/600 p95 222 ms (out of bound).
+- **Held out:** own/300 on seeds 6–11 +3.03 (t 8.3); all 12 seeds +3.06 (t 11.1), no hero negative,
+  10/15 at t > 2 (Arakni +9.9, Dorinthea +9.5, Boltyn +3.8 … Gravy +0.6).
+- **Every seat on (`SPXLA=all`), 630 games:** 0 refusals · 0 violations · 0 stalls · 0 draws; spread
+  52 (v5.75: 58). A stronger partner, not a balancer.
+- **`explain` is memoized per state** (a WeakMap on the state object, keyed by seat and every search
+  setting): the advisor asks on every render, and a state is never edited after `reduce` returns it.
+- **The call's four new reasons** speak as the coach: "Start with this. Play each opening out to the
+  end of your turn and this one lands the most damage once they block." (`laHit`, `laSafe`, `laKeep`,
+  `laHold`).
+- **Drills:** `test/lookahead.test.js` (5): the hidden-card scramble now over four games; `{search:
+  false}` is the rule policy with the gate on and `{search: true}` searches with it off; the memo
+  returns the stored call, a copy earns the same one, Steady and a new budget earn their own. Both new
+  drills sabotaged (gate ignores the option; memo key ignores it) and seen to fail. `WIRE_V` unchanged:
+  the AI seat exists only in a local session, so nothing new crosses the wire.
+- **Tools:** `experiments/LA-phone.js` (throttled page timing), `LA-pair.js` (one OFF arm, many ON
+  arms); raw runs in `experiments/LA-results/p2/`.
 ## v5.75 — nothing changing for twenty turns is a draw, decks or no decks (R8)
 
 **RULING (user, 2026-11-02):** asked "Should 'nothing at all changes for 20 turns' end the game as a

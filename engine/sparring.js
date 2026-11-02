@@ -1057,7 +1057,7 @@ function actBase(g, seat, o){
   return tag("pass", {t: "pass"});
 }
 
-/* ---- LOOKAHEAD (research/lookahead, phase 1 — GATED OFF) ---------------
+/* ---- LOOKAHEAD (phase 1 research, phase 2 ships it on the AI seat) -----
    At the seat's own action decision (priority, action speed, nothing on the
    stack, no link open, no payment, no sheet) the rule policy above proposes
    A0. The search then plays each distinct legal alternative — and A0 — out
@@ -1083,21 +1083,32 @@ function actBase(g, seat, o){
    zone order then uid), a step budget rather than a clock, `game.rng` never
    touched (the masked root carries its own).
 
-   GATE: `LA.seats` — hero keys (env SPXLA, comma list; a driver may edit the
-   array in place). Empty on main, so nothing here runs. */
+   GATE, per call: `act(g, seat, {search: true})` searches (the table's AI
+   seat on Sharp, and the player's call beside it); `{search: false}` is the
+   rule policy byte for byte (Steady). With no `search` option the gate is
+   `LA.seats` — hero keys or "all" (env SPXLA; drivers edit it in place) —
+   empty by default, so self-play, the trainer and every drill run the rules.
+
+   SETTINGS (phase 2, measured — CHANGELOG): horizon "own" (to the end of
+   this seat's turn) and a budget of 300 engine steps per decision. Through
+   the opponent's next turn gained less at every budget tried and cost twice
+   the steps; 300 steps caps a decision at roughly 150 ms on the page under
+   4x CPU throttling and gives up nothing measurable against no cap. The
+   budget is counted in engine steps, never time, so two phones agree. */
 const envOf = k => (typeof process !== "undefined" && process.env && process.env[k]) || "";
 const LA = {
-  seats: envOf("SPXLA") ? envOf("SPXLA").split(",") : [],
-  horizon: envOf("SPXLA_H") || "opp",        /* "own": to the end of this turn; "opp": through the opponent's next turn */
+  seats: envOf("SPXLA") ? envOf("SPXLA").split(",") : [],   /* "all" = every seat (drivers) */
+  horizon: envOf("SPXLA_H") || "own",        /* "own": to the end of this turn; "opp": through the opponent's next turn */
   mu: envOf("SPXLA_MU") !== "" ? +envOf("SPXLA_MU") : 1.5,   /* life-points one held card is worth */
   margin: envOf("SPXLA_M") !== "" ? +envOf("SPXLA_M") : 0.5, /* an alternative must beat A0 by more than this */
   dets: envOf("SPXLA_K") !== "" ? +envOf("SPXLA_K") : 1,     /* determinizations per decision */
   stepCap: 400,       /* per rollout */
-  budget: 2400,       /* engine steps per decision, all rollouts together; over it, A0 stands */
-  stats: {decisions: 0, searched: 0, overruled: 0, steps: 0, ms: 0, maxSteps: 0}
+  budget: envOf("SPXLA_B") !== "" ? +envOf("SPXLA_B") : 300,  /* engine steps per decision, all rollouts together; over it, A0 stands */
+  stats: {decisions: 0, searched: 0, overruled: 0, steps: 0, ms: 0, maxSteps: 0, over: 0, hist: {}}
 };
 let IN_SEARCH = false;
-const laGated = (g, seat) => { const sd = g && g.sides && g.sides[seat]; return !!(sd && LA.seats.indexOf(sd.heroKey) >= 0); };
+const laGated = (g, seat, o) => { if(o && o.search != null) return !!o.search;
+  const sd = g && g.sides && g.sides[seat]; return !!(sd && (LA.seats.indexOf("all") >= 0 || LA.seats.indexOf(sd.heroKey) >= 0)); };
 const laPoint = (g, seat) => !g.prompt && !J.pendingOf(g) && g.arsenalFor !== seat && !g.pend
   && !(g.stack || []).length && P.hasPriority(g, seat) && P.speedAllowed(g, seat).indexOf("action") >= 0;
 const canon = (a, b) => String(a.name) < String(b.name) ? -1 : String(a.name) > String(b.name) ? 1
@@ -1181,7 +1192,7 @@ function laSearch(g, seat, a0){
         const out = J.reduce(root, cands[i], seat);
         if(out.error){ tot[i].v = -Infinity; continue; }
         const r = laRollout(out.state, seat, root, spent); spent += r.steps + 1;
-        if(!r.done) return null;                 /* over budget: the rule policy's move stands */
+        if(!r.done){ LA.stats.over++; return null; }   /* over budget: the rule policy's move stands */
         const e = laEval(r.n, seat, root);
         ["v", "dealt", "taken", "cards"].forEach(f => tot[i][f] += e[f]);
       }
@@ -1193,6 +1204,7 @@ function laSearch(g, seat, a0){
   } finally {
     IN_SEARCH = false; NOTE = keep;
     LA.stats.steps += spent; LA.stats.maxSteps = Math.max(LA.stats.maxSteps, spent); LA.stats.ms += Date.now() - t0;
+    if(cands.length >= 2){ const b = Math.floor(spent / 10) * 10; LA.stats.hist[b] = (LA.stats.hist[b] || 0) + 1; }
     if(best) LA.stats.overruled++;
   }
 }
@@ -1206,7 +1218,7 @@ function laWhy(b){
 }
 function act(g, seat, o){
   const a0 = actBase(g, seat, o);
-  if(IN_SEARCH || !a0 || !laGated(g, seat) || !laPoint(g, seat)) return a0;
+  if(IN_SEARCH || !a0 || !laGated(g, seat, o) || !laPoint(g, seat)) return a0;
   const b = laSearch(g, seat, a0);
   if(!b || !legal(g, b.a, seat)) return a0;
   return tag(laWhy(b), b.a);
@@ -1315,10 +1327,10 @@ const CALL_WHY = {
   declineOptional: "Decline. It is optional, and not worth it here.",
   answer: "Answer it and play on.",
   endTurn: "End your turn. Nothing worth doing is left.",
-  laHit: "Played out, every other way to start this turn lands less once they block. This one hits hardest.",
-  laSafe: "Played out through their next turn, this line leaves you taking the least back.",
-  laKeep: "Played out, this line does as much and leaves you more cards for next turn.",
-  laHold: "Stop here. Played out, every card you could still play costs you more than it gets you.",
+  laHit: "Start with this. Play each opening out to the end of your turn and this one lands the most damage once they block.",
+  laSafe: "Start with this. Played out to the end of your turn, it costs you the least life of any opening.",
+  laKeep: "Start with this. Played out, it hits as hard as anything else and keeps more cards in hand for their swing back.",
+  laHold: "Stop here and keep the rest. Played out, every card you could still play costs you more than it earns.",
   pass: "Nothing you hold is worth playing right now."
 };
 const BY_TYPE = {addPay: "addPayNo"};
@@ -1378,7 +1390,26 @@ function lineOf(g, seat, a){
   }
   return a.t;
 }
+/* EXPLAIN IS MEMOIZED PER STATE. The table's advisor box asks for the
+   call on every render, for both seats, and with the search on one call
+   is a few hundred engine steps. A state is never edited after `reduce`
+   returns it (every write goes to a shallow copy), so the same object
+   always earns the same call: it is kept on the object itself, in a
+   WeakMap, keyed by the seat and every setting the search reads. Options
+   other than `search` are not memoized (a driver passing policy tunings
+   gets a fresh answer every time). */
+const EXPLAINED = typeof WeakMap === "function" ? new WeakMap() : null;
+const explainKey = (seat, o) => (o && Object.keys(o).some(k => k !== "search")) ? null
+  : [seat, o && o.search != null ? !!o.search : "-", LA.seats.join(","), LA.horizon, LA.budget, LA.mu, LA.margin, LA.dets, LA.stepCap].join("|");
 function explain(g, seat, o){
+  const key = EXPLAINED && g && typeof g === "object" ? explainKey(seat, o) : null;
+  const memo = key && EXPLAINED.get(g);
+  if(memo && memo.has(key)) return memo.get(key);
+  const e = explainNow(g, seat, o);
+  if(key){ const m = memo || new Map(); m.set(key, e); if(!memo) EXPLAINED.set(g, m); }
+  return e;
+}
+function explainNow(g, seat, o){
   NOTE = {tags: []};
   let a = null, n = null;
   try { a = act(g, seat, o); } finally { n = NOTE; NOTE = null; }

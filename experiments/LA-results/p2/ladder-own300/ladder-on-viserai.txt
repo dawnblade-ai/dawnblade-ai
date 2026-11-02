@@ -1,0 +1,78 @@
+GAMES 42 · stalls 0 · draws 0 · avg turns 17.2
+POLICY REFUSALS 0 · INVARIANT VIOLATIONS 0 · MALFORMED 0 · SECOND-PERSON 0 · NO-ZONE 0
+
+WINS: viserai 22 · kayo 3 · arakni 3 · briar 3 · iyslander 2 · dash 2 · boltyn 2 · azalea 1 · dorinthea 1 · fai 1 · blaze 1 · gravy 1
+
+PER SEED (3 samples of the same ladder — the engine never changed):
+  hero          s0  s1  s2   mean  spread
+  viserai       8   6   8    7.3      2
+  kayo          1   1   1    1.0      0
+  arakni        1   1   1    1.0      0
+  briar         1   1   1    1.0      0
+  iyslander     0   1   1    0.7      1
+  dash          1   0   1    0.7      1
+  boltyn        1   1   0    0.7      1
+  azalea        0   1   0    0.3      1
+  dorinthea     0   1   0    0.3      1
+  fai           0   1   0    0.3      1
+  blaze         0   0   1    0.3      1
+  gravy         1   0   0    0.3      1
+  bravo         0   0   0    0.0      0
+  enigma        0   0   0    0.0      0
+  lyath         0   0   0    0.0      0
+
+  NOISE BAND: min 0 · median 1 · MAX 2  — a version-to-version move smaller than this is not resolvable by one ladder.
+
+longest unchanged stretch a decided game came back from: 0 turns (null) — the engine draws at 20
+
+ROUTE COVERAGE (times a feed line matched):
+  ally      7
+  allyatk   19
+  arsflip   1
+  boost     34
+  chi       1
+  crush     2
+  ctrWipe   1
+  death     4
+  defmod    1
+  destroycost 33
+  fusion    6
+  gold      5
+  held      522
+  hitnext   3
+  hitwatch  3
+  jab       5
+  layer     45
+  leave     9
+  powctr    1
+  reaction  26
+  search    3
+  shield    9
+  tap       24
+  ward      15
+  e.g. ally: Riggermortis enters play (ally). | Swabbie enters play (ally). | Barnacle enters play (ally).
+  e.g. allyatk: Gravy Bones sends Riggermortis — 6 power on the chain. | Gravy Bones sends Swabbie — 7 power on the chain. | Gravy Bones sends Riggermortis — 6 power on the chain, and it goes again.
+  e.g. arsflip: Mode chosen: Turn their arsenal card face up, then destroy a defense reaction.
+  e.g. boost: Boost: Jump Start banished — Mechanologist, go again! | Boost: Throttle banished — Mechanologist, go again! | Boost: Zero to Sixty banished — Mechanologist, go again!
+  e.g. chi: Enigma: 3 Chi spent — a Chi pays for Chi and resource costs alike; a resource point pays only its own.
+  e.g. crush: Disable — crush: Viserai's arsenal is empty. | Wee Wrecking Ball — crush: Runic Fellingsong is destroyed in Viserai's arsenal.
+  e.g. ctrWipe: Raydn, Duskbane loses its 4 +1{p} counters — weapons you control are wiped at the beginning of this end phase.
+  e.g. death: Riggermortis takes 1 and goes down — face-down in the graveyard, so it will not be replayed. | Riggermortis takes 3 and goes down — face-down in the graveyard, so it will not be replayed. | Oysten, He
+  e.g. defmod: Shred: Condemn to Slaughter defends for 2 less for the rest of this combat chain.
+  e.g. destroycost: Kayo kept Beaten Trackers rather than destroy it. | Dorinthea kept Refraction Bolters rather than destroy it. | Arakni, Web of Deceit kept Mark of the Huntsman rather than destroy it.
+  e.g. fusion: Iyslander reveals Frost Spike from hand — Aether Icevein is fused (Fusion). | Iyslander reveals Frost Spike from hand — Polar Cap is fused (Fusion). | Briar reveals Path of Same Ends from hand — Entwi
+  e.g. gold: Test of Strength: Gold created on Enigma's board — Action - {r}{r}, destroy this: Draw a card. | Swabbie: Gold created on Gravy Bones's board — Action - {r}{r}, destroy this: Draw a card. | Barnacle: 
+  e.g. held: Savage Feast is on the stack — either seat may answer at instant speed before it resolves. | Knucklehead is on the stack — either seat may answer at instant speed before it resolves. | Rough Up is on 
+  e.g. hitnext: Banneret of Salvation: the next time Boltyn hits this turn, it pays off. | Burn Up // Shock: the next time Briar hits a hero this turn, it pays off.
+  e.g. hitwatch: Boom Grenade goes off — Overblast connected, so it is destroyed. | Boom Grenade goes off — Rev Up connected, so it is destroyed. | Boom Grenade goes off — Fender Bender connected, so it is destroyed.
+  e.g. jab: Unexpected Backhand was the card revealed — it lashes out at Viserai for 1. | Danger Digits: Mark of the Huntsman lashes out at Viserai for 1.
+  e.g. layer: Bolt'n Boots — ability — +0 — the layer resolves. | Ironsong Response — +3 — the layer resolves. | Agile Engagement — +3 — the layer resolves.
+  e.g. leave: Waning Vengeance leaves the arena — and it pays out. | Edge of Their Seats runs out of suspense and leaves the arena — and it pays out. | Tension in the Air runs out of suspense and leaves the arena —
+  e.g. powctr: Raydn, Duskbane takes 4 +1{p} counters — now 4.
+  e.g. reaction: Ironsong Response on the stack (+3). | Agile Engagement on the stack (+3). | Stroke of Foresight on the stack (+3).
+  e.g. search: Flamecall Awakening: Fai's deck is shuffled.
+  e.g. shield: Toe the Line: 1 of that damage is prevented — the other 1 it could have stopped is lost with this hit. | Toe the Line: 2 of that damage is prevented. | Cloud Cover: 1 of that damage is prevented — the
+  e.g. tap: Bravo — hero power: Bravo, Flattering Showman taps to pay — tapped until their own untap step (CR 4.4.3d). | Gravy Bones — hero power: Gravy Bones taps to pay — tapped until their own untap step (CR 4
+  e.g. ward: Spectral Shield destroys itself — ward soaks 1. | Uphold Tradition destroys itself — ward soaks 1. | Waxing Specter destroys itself — ward soaks 1 of the 3 it printed.
+
+longest 34 turns (viserai-gravy-0) · shortest 8 (viserai-azalea-0)

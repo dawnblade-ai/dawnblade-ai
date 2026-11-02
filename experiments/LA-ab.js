@@ -22,10 +22,12 @@ function run(on, s){
 for(let s = from; s < to; s++){
   const row = {hero, s};
   if(mode !== "on") row.off = run(false, s);
-  if(mode !== "off"){ const st0 = {...SP.LA.stats}; const t0 = Date.now(); row.on = run(true, s); row.on.sec = (Date.now() - t0) / 1e3;
+  if(mode !== "off"){ const st0 = {...SP.LA.stats, hist: {...SP.LA.stats.hist}}; const t0 = Date.now(); row.on = run(true, s); row.on.sec = (Date.now() - t0) / 1e3;
     row.on.searched = SP.LA.stats.searched - st0.searched; row.on.overruled = SP.LA.stats.overruled - st0.overruled;
     row.on.stepsPer = +((SP.LA.stats.steps - st0.steps) / Math.max(1, SP.LA.stats.searched - st0.searched)).toFixed(1);
     row.on.msPer = +((SP.LA.stats.ms - st0.ms) / Math.max(1, SP.LA.stats.searched - st0.searched)).toFixed(2);
-    row.on.maxSteps = SP.LA.stats.maxSteps; }
+    row.on.maxSteps = SP.LA.stats.maxSteps; row.on.over = SP.LA.stats.over - st0.over;
+    row.on.hist = Object.fromEntries(Object.entries(SP.LA.stats.hist).map(([k, v]) => [k, v - ((st0.hist || {})[k] || 0)]).filter(e => e[1]));
+    }
   console.log(JSON.stringify(row));
 }

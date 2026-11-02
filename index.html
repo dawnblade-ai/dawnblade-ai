@@ -6310,7 +6310,11 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
     /* RANDOM is settled here, at the tap, so the key the match is built
        from is a real hero and a replay of the spec deals the same game. */
     const pickedFoe = aiFoe === "random" ? HEROES[Math.floor(Math.random()*HEROES.length)].k : aiFoe;
-    onStart({gearIdx:sel, cuts, table:true, aiFoe: pickedFoe});
+    /* AN AI HERO PLAYS SHARP (lookahead, phase 2): at its own action
+       decision it plays each way to start out through the real engine
+       and keeps the best (sparring.js, LOOKAHEAD). The Dummy stays on the
+       rule policy: it is the regression harness, not a sparring partner. */
+    onStart({gearIdx:sel, cuts, table:true, aiFoe: pickedFoe, sharp: !!pickedFoe});
   };
   const foeHero = aiFoe && aiFoe !== "random" ? HEROES.find(x=>x.k===aiFoe) : null;
   const deckRows = d.deck.map((e,ei)=>({ei, e, c:resolveEntry(db,e,saSet)}));
@@ -7212,7 +7216,9 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
         state: match.g,
         reduce: DawnJudge.reduce,
         legal:  DawnJudge.legal,
-        policy: (st, i) => DawnSparring.act(st, i),
+        /* `match.sharp`: the AI seat searches its own action decisions
+           (sparring.js, LOOKAHEAD); false is the rule policy, byte for byte. */
+        policy: (st, i) => DawnSparring.act(st, i, {search: !!match.sharp}),
         hash:   st => st ? DawnWire.hash(st) : null,
         onState: st => { setG(st); setNote(null); audit(st); },
         onEvent: e => {
@@ -7228,7 +7234,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
       });
       sess.current = s; netRef.current = null;
       window.__dawnTable = {session: s, seat: mySeat, host: true, code: "local",
-        report: () => ({seat: mySeat, local: true, status: s.status(), seq: s.seq(),
+        report: () => ({seat: mySeat, local: true, sharp: !!match.sharp, status: s.status(), seq: s.seq(),
                         hash: s.hash(), stats: s.stats(),
                         phase: (s.state()||{}).phase, step: (s.state()||{}).step,
                         priority: (s.state()||{}).priority})};
@@ -7666,9 +7672,11 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
               {local && mySeat === 0 && <Advisor g={g}
                 label={String((myH && myH.n) || me.name).split(",")[0] + "'s call"}
                 call={() => {
-                  const e = DawnSparring.explain(g, mySeat);
+                  /* the call plays at the table's level: searched when the
+                     AI seat is, memoized per state (sparring.explain) */
+                  const e = DawnSparring.explain(g, mySeat, {search: !!match.sharp});
                   if(e.action) return {line: e.line, why: e.why};
-                  const other = DawnSparring.explain(g, 1 - mySeat).action;
+                  const other = DawnSparring.explain(g, 1 - mySeat, {search: false}).action;
                   return {line: other ? them.name.split(",")[0] + " is deciding." : "Nothing to decide yet."};
                 }}
                 read={myBuild.read}/>}
@@ -8172,7 +8180,7 @@ function App(){
                   decks: Object.fromEntries(HEROES.map(x=>[x.k,PARSED[x.k]])),
                   vanilla: {deck: DUMMY_DECK, gear: DUMMY_GEAR, hp: 42,
                             int: DUMMY_INT, name: "The Dummy"}});
-              setLocalTable({...m, g: DawnJudge.newMatch({builds:m.builds, names:m.names,
+              setLocalTable({...m, sharp: !!cfg.sharp, g: DawnJudge.newMatch({builds:m.builds, names:m.names,
                 heroKeys:m.heroKeys, first:m.first, seed:m.seed})});
               setSeating(null);
               return;

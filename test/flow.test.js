@@ -100,7 +100,7 @@ test("the table seats exactly the chosen key, or null for the Dummy", () => {
     "and an AI seat wears the self-play default, never `{}` (every printed piece, v2.41)");
   assert.match(CODE, /const \[aiFoe,setAiFoe\] = uS\(null\)/,
     "the Dummy is the default the screen opens on");
-  assert.match(CODE, /onStart\(\{gearIdx:sel, cuts, table:true, aiFoe: pickedFoe\}\)/,
+  assert.match(CODE, /onStart\(\{gearIdx:sel, cuts, table:true, aiFoe: pickedFoe, sharp: [^}]*\}\)/,
     "the choice rides only on the TABLE start");
   assert.ok(!/onStart\(\{gearIdx:sel, cuts\}\)[^;]*aiFoe/.test(CODE),
     "and never on the trainer's");
