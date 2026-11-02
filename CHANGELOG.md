@@ -1,3 +1,16 @@
+## v5.NN — The Coach says "hero power" once, and "1 permanent"
+
+Found by the 1.0 polish audit (P3), reading the advisor at 393x852. Bravo's trainer call read "Play
+Bravo — hero power — hero power (pitch Pummel + Crash and Bash) → go again.": the hero power's card is
+built named "<Hero> — hero power" and `advise` tagged the source again. Iyslander's turn-one read
+said "24 arcane, 1 permanents".
+
+- **Fix:** `advise` tags a hero-power source only when the card's name does not already say it;
+  the read (`build.js`) counts "attack(s)" and "permanent(s)" in the singular at one.
+- **Drills:** `test/advisor.test.js` (the hero power named once, and a bare-named one still tagged),
+  `test/explain.test.js` (every hero's read: no "1 attacks", no "1 permanents"). Sabotaged (both
+  fixes reverted): both fail.
+
 ## v5.NN — The feed says "+1 power", not "+1{p}"
 
 Found by the 1.0 polish audit (P2), reading Kayo's trainer feed at 393x852: "Bare Fangs: discarded

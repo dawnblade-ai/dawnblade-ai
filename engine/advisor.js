@@ -222,7 +222,10 @@ function advise(g, ctx){
   const fx=fxParse(best.c);
   const out = advCardOut(best.c,g,ctx);
   const pitchTxt = best.set.idxs.length ? ` (pitch ${best.set.idxs.map(i=>nm(you(g).hand[i])).join(" + ")})` : "";
-  const srcTxt = best.from==="arsenal" ? " from arsenal" : best.from==="hero" ? " — hero power" : best.from==="weapon" ? " — weapon swing" : best.from==="ally" ? " — send the ally in" : "";
+  /* THE HERO POWER IS ALREADY NAMED (1.0 polish audit). Its card is built
+     as "<Hero> — hero power" (build.js), so the source tag read "Play Bravo —
+     hero power — hero power". Tag it only when the name does not say it. */
+  const srcTxt = best.from==="arsenal" ? " from arsenal" : best.from==="hero" ? (/hero power$/i.test(nm(best.c)) ? "" : " — hero power") : best.from==="weapon" ? " — weapon swing" : best.from==="ally" ? " — send the ally in" : "";
   const bits=[]; if(out>0) bits.push(out+" dmg"); if(fx.ga) bits.push("go again");
   fx.ops.forEach(op=>{ if(op[0]==="draw") bits.push("draw "+op[1]); if(op[0]==="rune") bits.push("+"+op[1]+" runechant"); if(op[0]==="amp") bits.push("amp "+op[1]); });
   const why = fx.ga ? `Chain it: go again keeps your action point${best.next?` — ${Math.round(best.next)} more damage is waiting behind it`:""}.`

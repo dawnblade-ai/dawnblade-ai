@@ -203,3 +203,13 @@ test("S14: \"charge first\" names only a card that offers a charge", () => {
     "the positive control: Boltyn's charge-first calls are still named (" + c.chargeOk.length + ")");
   assert.ok(c.keys.atkKeepsAP > 20, "the go-again attacks are named as keeping the point");
 });
+
+test("the turn-one read counts in English: one is singular (1.0 polish audit)", () => {
+  /* Iyslander's read said "1 permanents". Every hero's read, every count. */
+  for(const k of HEROES){
+    const r = match(k, "lyath", "read1", 0).builds[0].read;
+    assert.ok(!/(?:^|\D)1 (?:attacks|permanents)\b/.test(r), r);
+  }
+  assert.ok(/1 permanent\b/.test(match("iyslander", "lyath", "read1", 0).builds[0].read) ||
+            !/permanent/.test(match("iyslander", "lyath", "read1", 0).builds[0].read), "Iyslander's read");
+});

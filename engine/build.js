@@ -814,8 +814,10 @@ function buildSide(h, d, db, opts, rng, ctr){
   const _avg = _atk.length ? _atk.reduce((a,c)=>a+(c.power||0),0)/_atk.length : 0;
   /* THE READ IS THE HERO'S OWN (v5.47): it names the hero whose deck it
      reads, by the part of the name before the comma. */
-  const read = String(d.hero.name||"Your hero").split(",")[0]+"'s read: "+_atk.length+" attacks avg "+_avg.toFixed(1)+" power, "+_ga+" go-again, "+_blue+" blue fuel"
-    +(_arc?", "+_arc+" arcane":"")+(_perm?", "+_perm+" permanents":"")+". "+(function(){
+  /* ONE IS SINGULAR (1.0 polish audit): Iyslander's read said "1 permanents". */
+  const _n = (n, one, many) => n + " " + (n === 1 ? one : many);
+  const read = String(d.hero.name||"Your hero").split(",")[0]+"'s read: "+_n(_atk.length, "attack", "attacks")+" avg "+_avg.toFixed(1)+" power, "+_ga+" go-again, "+_blue+" blue fuel"
+    +(_arc?", "+_arc+" arcane":"")+(_perm?", "+_n(_perm, "permanent", "permanents"):"")+". "+(function(){
       const cnt = k => deck.filter(c=>hasKw(c,k)).length;
       const soulN = deck.filter(c=>/into your (?:hero'?s? )?soul/i.test(c.tx||"")).length;
       const m = [["boost",cnt("boost")],["clash",cnt("clash")],["soul",soulN],["rune",deck.filter(c=>/runechant/i.test(c.tx||"")).length],["arcane",_arc],["ally",deck.filter(c=>fxParse(c).perm==="ally").length]].sort((a,b)=>b[1]-a[1])[0];
