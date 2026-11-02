@@ -1,3 +1,32 @@
+## v5.83 — The opponent picker gets its own screen: Sharp / Steady clear the bar
+
+The 1.0 page audit (`tools/page-audit.js`) reported the Sharp / Steady tiles overlapping the loadout's
+fixed bar on every table loadout (tiles y 647–713, bar from 683, at 393x852). **Verified real, not an
+audit artefact:** the gear-pick report was a pane scrolled under the bar; this one was not scrollable away.
+
+- **Why:** the opponent picker shared the Deck screen as a second `.hpane`, and `.hpane`'s
+  `flex:0 0 100%` (written for the sideways swipe) made it a whole screen tall in the screen's column.
+  The trim grid above it was crushed to its 15px of padding (the deck could not be trimmed outside a
+  two-phone game), and the picker ran 25px past the screen's `overflow:hidden` bottom. Scrolling the
+  picker's pane to its end left the tiles at 625–691: still cut by the screen edge (676) and under the
+  bar (683), the centre tap landing elsewhere.
+- **Fix:** the picker is a fourth loadout screen, **Foe**, with its own jump button (`▲ Scout · Loadout ·
+  Deck · Foe ▼`; absent in a two-phone game, which has no picker). The trim grid gets the Deck screen's
+  full height back, and the picker's pane scrolls inside itself on a phone shorter than it. Measured with
+  the pane scrolled to its end: tiles 600–666 under a bar at 683 (393x852), 457–537 under 554 (360x740),
+  541–607 under 1011 (820x1180), each taking a tap at its centre; the jump row stays one line at 360px.
+- **The audit tells scrolled-under from unreachable:** `tools/page-audit.js` judged a control by its
+  full box, so a tile scrolled half out of its pane "overlapped" the bar below it, and a card scrolled out
+  of the Deck screen "overlapped" the Foe screen's tiles. A control is now cut to every clipping ancestor
+  and overlap and the centre tap use the visible part (the size test keeps the full box). A cut made by
+  an ancestor a thumb cannot scroll (`overflow:hidden`/`clip`, or nothing to scroll) is a new kind,
+  **`unreachable`**: on v5.82 it names both tiles, "cut by div.vscreen (overflow hidden) at 94..676",
+  and on v5.83 it is empty.
+- **Drive:** `tools/page.js` row "table: Sharp / Steady clear the bar" jumps to Foe, scrolls the pane to
+  its end, and asserts both tiles inside their screen, above the bar, hit at the centre, and the trim
+  grid at least 200px tall. Sabotaged with the old shared-screen layout plus a Foe jump: FAIL, tiles
+  625..691, trim grid 15px.
+
 ## v5.82 — Add to Home Screen: a name and an original icon
 
 **Decision C (CEO, 2026-11-02)**, from the 1.0 polish audit's #17 (P3): an iPhone's Add to Home Screen

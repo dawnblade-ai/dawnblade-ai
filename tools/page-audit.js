@@ -40,39 +40,60 @@ const feedLines = {}, advLines = {}, promptKinds = {}, screensSeen = [];
 
 /* the box judge — runs in the page */
 function judgeBoxes({ W, H }) {
-  const out = { sw: document.scrollingElement.scrollWidth, small: [], overlap: [], spill: [], occluded: [], offscreen: [] };
-  const vis = el => { const r = el.getBoundingClientRect(); if (!r.width || !r.height) return null;
+  const out = { sw: document.scrollingElement.scrollWidth, small: [], overlap: [], spill: [], occluded: [], offscreen: [], unreachable: [] };
+  /* SCROLLED UNDER IS NOT UNREACHABLE (v5.83). A control partly scrolled out
+     of its pane is judged on the part a player can SEE: its box is cut to
+     every clipping ancestor, innermost first. The size test keeps the full
+     box (a thumb scrolls it into view), but overlap and the centre tap use
+     the visible part — the Sharp / Steady report and the gear-pick report
+     were both full boxes reaching under the bar from inside a scrolled pane.
+     A cut made by an ancestor a thumb CANNOT scroll (overflow hidden or
+     clip, or nothing to scroll) is the real fault, and is its own kind:
+     no scroll anywhere brings that part back. */
+  const scrolls = (ps, p, ax) => /auto|scroll/.test(ax === "y" ? ps.overflowY : ps.overflowX) &&
+    (ax === "y" ? p.scrollHeight > p.clientHeight + 1 : p.scrollWidth > p.clientWidth + 1);
+  const vis = (el, cut) => { const r0 = el.getBoundingClientRect(); if (!r0.width || !r0.height) return null;
     const cs = getComputedStyle(el); if (cs.visibility === "hidden" || cs.display === "none" || +cs.opacity === 0) return null;
-    if (r.bottom <= 0 || r.top >= H || r.right <= 0 || r.left >= W) return null;
-    /* clipped away by an ancestor scroller? */
+    let r = { left: r0.left, top: r0.top, right: r0.right, bottom: r0.bottom };
     for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
-      const ps = getComputedStyle(p); if (ps.overflowX !== "visible" || ps.overflowY !== "visible") {
-        const pr = p.getBoundingClientRect();
-        if (r.right <= pr.left + 1 || r.left >= pr.right - 1 || r.bottom <= pr.top + 1 || r.top >= pr.bottom - 1) return null;
-      } }
+      const ps = getComputedStyle(p); if (ps.overflowX === "visible" && ps.overflowY === "visible") continue;
+      const pr = p.getBoundingClientRect();
+      if (r.right <= pr.left + 1 || r.left >= pr.right - 1 || r.bottom <= pr.top + 1 || r.top >= pr.bottom - 1) return null;
+      const outY = r.top < pr.top - 1 || r.bottom > pr.bottom + 1, outX = r.left < pr.left - 1 || r.right > pr.right + 1;
+      if (cut && ((outY && !scrolls(ps, p, "y")) || (outX && !scrolls(ps, p, "x"))))
+        cut.push(`cut by ${p.tagName.toLowerCase()}.${String(p.className).trim().split(/\s+/).join(".")} (overflow ${ps.overflowX}/${ps.overflowY}) at ${Math.round(pr.top)}..${Math.round(pr.bottom)}`);
+      r = { left: Math.max(r.left, pr.left), top: Math.max(r.top, pr.top), right: Math.min(r.right, pr.right), bottom: Math.min(r.bottom, pr.bottom) };
+    }
+    r = { left: Math.max(r.left, 0), top: Math.max(r.top, 0), right: Math.min(r.right, W), bottom: Math.min(r.bottom, H) };
+    if (r.right - r.left < 1 || r.bottom - r.top < 1) return null;
+    r.width = r.right - r.left; r.height = r.bottom - r.top; r.full = r0;
     return r; };
   const name = el => el.tagName.toLowerCase() + (typeof el.className === "string" && el.className ? "." + el.className.trim().split(/\s+/).join(".") : "") +
     " \"" + (el.innerText || el.getAttribute("aria-label") || el.value || "").replace(/\s+/g, " ").trim().slice(0, 40) + "\"";
   const box = r => `[${Math.round(r.left)},${Math.round(r.top)} ${Math.round(r.width)}x${Math.round(r.height)}]`;
   const modal = [...document.querySelectorAll(".bugwrap, .reveal, .modal, .zoomwrap")].find(m => m.getBoundingClientRect().height > 0);
   const ctl = [...(modal || document).querySelectorAll("button, a[href], input, textarea, select, [role=button]")]
-    .map(el => ({ el, r: vis(el) })).filter(x => x.r && !x.el.disabled);
-  for (const { el, r } of ctl) {
+    .map(el => { const cut = []; return { el, r: vis(el, cut), cut }; }).filter(x => x.r && !x.el.disabled);
+  for (const { el, r: rv, cut } of ctl) {
+    const r = rv.full;
+    if (cut.length) out.unreachable.push(name(el) + " " + box(r) + " " + cut[0]);
     if (r.width < 44 || r.height < 44) out.small.push(name(el) + " " + box(r));
     let scroller = false; for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) { if (getComputedStyle(p).overflowX !== "visible") { scroller = true; break; } }
     if (!scroller && (r.right > W + 0.5 || r.left < -0.5)) out.offscreen.push(name(el) + " " + box(r));
     /* topmost at the center must be the control or inside it */
-    const cx = Math.min(W - 1, Math.max(0, r.left + r.width / 2)), cy = Math.min(H - 1, Math.max(0, r.top + r.height / 2));
+    const cx = Math.min(W - 1, Math.max(0, rv.left + rv.width / 2)), cy = Math.min(H - 1, Math.max(0, rv.top + rv.height / 2));
     const top = document.elementFromPoint(cx, cy);
     if (top && !el.contains(top) && !top.contains(el)) {
       const pc = getComputedStyle(top).pointerEvents;
-      if (pc !== "none") out.occluded.push(name(el) + " " + box(r) + " under " + name(top));
+      if (pc !== "none") out.occluded.push(name(el) + " " + box(rv) + " under " + name(top));
     }
   }
   for (let i = 0; i < ctl.length; i++) for (let j = i + 1; j < ctl.length; j++) {
     const a = ctl[i], b = ctl[j]; if (a.el.contains(b.el) || b.el.contains(a.el)) continue;
     const ix = Math.min(a.r.right, b.r.right) - Math.max(a.r.left, b.r.left), iy = Math.min(a.r.bottom, b.r.bottom) - Math.max(a.r.top, b.r.top);
     if (ix > 2 && iy > 2) out.overlap.push(name(a.el) + " " + box(a.r) + " x " + name(b.el) + " " + box(b.r));
+    /* (a.r / b.r are the VISIBLE parts: two controls in different panes that
+       only meet where one is scrolled out of sight do not overlap) */
   }
   /* text that spills its box: an element with its own text whose content is wider than it */
   for (const el of document.querySelectorAll("body *")) {
@@ -102,6 +123,7 @@ function judgeBoxes({ W, H }) {
     m.spill.forEach(s => note("spill", where, s));
     m.occluded.forEach(s => note("occluded", where, s));
     m.offscreen.forEach(s => note("offscreen", where, s));
+    m.unreachable.forEach(s => note("unreachable", where, s));
     if (errors.length > errSeen) { errors.slice(errSeen).forEach(e => note("page-error", where, e)); errSeen = errors.length; }
   };
   const click = async (loc, what, where) => { try { await loc.click({ timeout: 4000 }); return true; } catch (e) { note("dead-tap", where, what + ": " + String(e.message).split("\n")[0]); return false; } };

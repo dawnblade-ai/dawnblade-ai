@@ -893,7 +893,7 @@ img{display:block;max-width:100%}
    database + typographic fallbacks. Not affiliated with LSS.
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
-window.APP_VER = "5.82"; /* v5.82 - Add to Home Screen gets the name Dawnblade and an original, self-hosted icon. See CHANGELOG.md. */
+window.APP_VER = "5.83"; /* v5.83 - The table opponent picker gets its own loadout screen, so Sharp and Steady clear the bar and the trim grid gets its height back. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -6430,7 +6430,7 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
         {on && <span className="chk">✓</span>}
       </button>);
   };
-  const sc1=uR(null), sc2=uR(null), sc3=uR(null);
+  const sc1=uR(null), sc2=uR(null), sc3=uR(null), sc4=uR(null);
   const bar=uR(null), wrap=uR(null);
   /* --lochrome: EVERYTHING THE THREE FLICK SCREENS DO NOT GET, MEASURED.
      It was the literal 236 in the rule above, written when the action bar
@@ -6497,7 +6497,8 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
         <button onClick={onBack} style={{flex:.7}}>✕ back</button>
         <button onClick={()=>jumpL(sc1)}>▲ Scout</button>
         <button onClick={()=>jumpL(sc2)}>Loadout</button>
-        <button onClick={()=>jumpL(sc3)}>Deck ▼</button>
+        <button onClick={()=>jumpL(sc3)}>{netFoe ? "Deck ▼" : "Deck"}</button>
+        {!netFoe && <button onClick={()=>jumpL(sc4)}>Foe ▼</button>}
       </div>
       <div className="tablewrap" ref={wrap}>
         {/* ---- SCOUT: hero card only ---- */}
@@ -6603,7 +6604,17 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
             </div>
             <p className="note">Blitz runs exactly 40 — cut what your plan won't miss. Loadout and cuts saved per hero.</p>
           </div>
-          {!netFoe && <div className="hpane" style={{marginTop:10}}>
+        </div>
+        {/* THE OPPONENT GETS ITS OWN SCREEN (v5.83). It shared the deck
+            screen as a second pane, and `.hpane`'s `flex:0 0 100%` (written
+            for the sideways swipe) made it a whole screen tall in a column:
+            the trim grid above it was crushed to its 15px of padding and the
+            picker ran 25px past the screen's clipped bottom, so the Sharp /
+            Steady tiles were cut through the middle just above the fixed bar
+            and no scroll could bring them up. One screen each, and the pane
+            scrolls inside itself if a phone is shorter than the picker. */}
+        {!netFoe && <div className="vscreen" ref={sc4}>
+          <div className="hpane" style={{flex:1}}>
             <div className="paneflag"><span>New engine opponent</span><span>the trainer always faces the Dummy</span></div>
             <div className="aifoe">
               <button className={aiFoe===null?"on":""} onClick={()=>setAiFoe(null)} aria-label="The Dummy">
@@ -6624,8 +6635,8 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
                 <span className="lvl">Steady</span>
                 <span className="lsub">Plays by its rules of thumb. Quicker to read, easier to beat.</span></button>
             </div>}
-          </div>}
-        </div>
+          </div>
+        </div>}
       </div>
       <div className="actbar" ref={bar}>
         {/* AT A TABLE THERE IS NOTHING TO START. This screen is the
@@ -6672,7 +6683,7 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
                     winning most games.</b> This is the engine a second player will sit at.</>
                   : <>An AI pilots {foeHero ? foeHero.n.split(",")[0] : "a random hero"}, playing <b>{aiLevel==="sharp"
                     ? "Sharp: it plays out each way to start its turn before it commits"
-                    : "Steady: the rules of thumb self-play uses"}</b>. Pick the opponent and how it plays above.</>}
+                    : "Steady: the rules of thumb self-play uses"}</b>. Pick the opponent and how it plays on the Foe screen.</>}
               </p>
             </>}
       </div>

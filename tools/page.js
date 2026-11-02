@@ -478,6 +478,30 @@ if(require.main === module){
         row(boxes.length === 2 && /sharp/i.test(boxes[0].t) && /steady/i.test(boxes[1].t) && boxes[0].on && !boxes[1].on
             && boxes.every(x => x.l >= 0 && x.r <= W && x.h >= 44),
             "table: Sharp / Steady", JSON.stringify(boxes.map(x => [x.t, x.on, Math.round(x.l), Math.round(x.r), Math.round(x.h)])));
+        /* THE TILES CAN BE REACHED (v5.83). They sat 647..713 against a bar
+           starting at 683, cut by their own screen's clipped bottom: the picker
+           shared the deck screen and `.hpane`'s 100% basis made it a whole
+           screen tall. Jump to the Foe screen, scroll its pane to the end (what
+           a thumb can do), and every tile must sit inside the screen, above the
+           bar, and take a tap at its centre. The deck screen's trim grid must
+           keep real height (it was crushed to 15px of padding). */
+        const reach = await page.evaluate(async () => {
+          const jump = [...document.querySelectorAll(".lo .screennav button")].find(b => /foe/i.test(b.innerText));
+          if(!jump) return {err: "no Foe jump"};
+          jump.click(); await new Promise(r => setTimeout(r, 700));
+          const t0 = document.querySelector(".ailevel"); const pane = t0 && t0.closest(".hpane"), scr = t0 && t0.closest(".vscreen");
+          if(!pane) return {err: "no level tiles"};
+          pane.scrollTop = pane.scrollHeight; await new Promise(r => setTimeout(r, 300));
+          const bar = document.querySelector(".lo .actbar").getBoundingClientRect(), sr = scr.getBoundingClientRect();
+          const tiles = [...document.querySelectorAll(".ailevel button")].map(b => { const r = b.getBoundingClientRect();
+            const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            return {t: b.innerText.split("\n")[0].trim(), top: Math.round(r.top), bot: Math.round(r.bottom), hit: !!hit && b.contains(hit)}; });
+          const cut = document.querySelector(".cutgrid").closest(".hpane").getBoundingClientRect().height;
+          return {tiles, bar: Math.round(bar.top), scr: [Math.round(sr.top), Math.round(sr.bottom)], cut: Math.round(cut)};
+        });
+        row(!reach.err && reach.tiles.length === 2 && reach.tiles.every(x => x.hit && x.top >= reach.scr[0] && x.bot <= reach.scr[1] && x.bot <= reach.bar)
+            && reach.cut >= 200, "table: Sharp / Steady clear the bar",
+            reach.err || `tiles ${reach.tiles.map(x => `${x.t} ${x.top}..${x.bot}${x.hit ? "" : " (tap lands elsewhere)"}`).join(", ")}; screen ${reach.scr.join("..")}; bar ${reach.bar}; trim grid ${reach.cut}px`);
         if(boxes.length === 2){
           await lv.nth(1).click(); const st = await lv.evaluateAll(bs => bs.map(b => b.classList.contains("on")));
           await lv.nth(0).click(); const sh = await lv.evaluateAll(bs => bs.map(b => b.classList.contains("on")));

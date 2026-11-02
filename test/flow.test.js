@@ -117,8 +117,11 @@ test("the picker is the P1 roster, not a second one", () => {
 });
 
 test("the networked lobby offers no AI pick", () => {
-  assert.match(CODE, /\{!netFoe && <div className="hpane" style=\{\{marginTop:10\}\}>\s*<div className="paneflag"><span>New engine opponent/,
+  /* v5.83: the picker has its own loadout screen (Foe), gated whole, and so
+     is the jump to it. */
+  assert.match(CODE, /\{!netFoe && <div className="vscreen" ref=\{sc4\}>\s*<div className="hpane" style=\{\{flex:1\}\}>\s*<div className="paneflag"><span>New engine opponent/,
     "at a table the seat across is a person, so the sideboard step shows no picker");
+  assert.match(CODE, /\{!netFoe && <button onClick=\{\(\)=>jumpL\(sc4\)\}>/, "and no jump to one");
 });
 
 test("the table button is no longer gated on choosing a hero", () => {
