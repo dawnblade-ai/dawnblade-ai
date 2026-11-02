@@ -138,7 +138,7 @@ test("the pool-wide count is PINNED, so a new one cannot arrive unnoticed", {ski
   /* A census that quietly stopped finding anything would pass by finding
      nothing — the failure mode this whole file exists because of. */
   const C = require("../engine/cards.js");
-  const arr = require("../data/pool.json");
+  const arr = require("../data/pool.js");
   const found = [];
   for(const rec of arr){
     const m = C.mapDbCard(rec); if(!m || !m.tx) continue;

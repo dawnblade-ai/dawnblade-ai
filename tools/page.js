@@ -5,8 +5,8 @@
 
    CLAUDE.md says a UI change is checked by driving the real page at
    393x852 and asserting on element boxes. A sandbox whose egress proxy
-   blocks the CDNs cannot do that: React, Babel, the fonts, the card
-   database and the card art all come from other people's servers, and a
+   blocks the CDNs cannot do that: React, Babel, the fonts and the card
+   art all come from other people's servers, and a
    blank page reports as a blank page, not as an error. This file answers
    those requests with `page.route` instead of rewriting the page, so what
    is driven is index.html and engine/*.js byte for byte, loaded from
@@ -19,8 +19,10 @@
      unpkg peerjs (loaded lazily by engine/room.js) npm peerjs
      fonts.googleapis.com css2                    generated @font-face over @fontsource files
      fonts.gstatic.com                            the @fontsource woff2 files
-     raw.githubusercontent.com card.json          the pinned pool (test/helpers/extract.js cardDbPath())
      any image or font from any other host        a 5:7 grey PNG / an empty 200
+   The card text is NOT routed: since v5.74 the page loads data/pool.js
+   from beside itself (RULING user 2026-11-02, "pinned pool only"), so a
+   request to raw.githubusercontent.com is a regression and lands below.
    Anything ELSE that leaves the page is answered 404 and recorded as an
    error, so a new external dependency fails the smoke check by name
    instead of by a blank screen. CDN versions are read from the URL the
@@ -88,7 +90,6 @@ const CDN_PKG = { "react": "react", "react-dom": "react-dom", "babel-standalone"
 /* Returns answer(url, resourceType) -> {status, contentType, body} | {error}. */
 function makeAnswer(deps){
   const nm = (...p) => path.join(deps, "node_modules", ...p);
-  const db = require(path.join(ROOT, "test", "helpers", "extract.js")).cardDbPath();
   const png = grayPng(50, 70);
   const read = f => fs.readFileSync(f);
   const ok = (contentType, body) => ({ status: 200, contentType, body });
@@ -133,7 +134,6 @@ function makeAnswer(deps){
       const f = meta && nm(meta[0], "files", file);
       return f && fs.existsSync(f) ? ok("font/woff2", read(f)) : ok("font/woff2", Buffer.alloc(0));
     }
-    if(h === "raw.githubusercontent.com" && /card\.json$/.test(u.pathname)) return ok("application/json", read(db));
     if(type === "image") return ok("image/png", png);
     if(type === "font") return ok("font/woff2", Buffer.alloc(0));
     return { status: 404, contentType: "text/plain", body: Buffer.from("offline harness: unrouted"),

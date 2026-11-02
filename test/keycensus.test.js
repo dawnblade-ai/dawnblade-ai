@@ -75,7 +75,7 @@ function bodyOf(src, header){
    ------------------------------------------------------------------ */
 
 function emittedFilterKeys(){
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const arr = Array.isArray(pool) ? pool : (pool.cards || Object.values(pool));
   const keys = new Set();
   const walk = f => { if(f && typeof f === "object") Object.keys(f).forEach(k => keys.add(k)); };

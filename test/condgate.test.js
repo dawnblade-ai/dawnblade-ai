@@ -74,7 +74,7 @@ test("every condition the POOL puts into condOnHit is in the census", {skip}, ()
   /* THE MEASUREMENT THAT FOUND THE GAP, kept as the guard. A condition
      the parser emits and the evaluator does not know answers FALSE —
      silently, correctly (v3.26), and with the card doing nothing. */
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const arr = Array.isArray(pool) ? pool : (pool.cards || Object.values(pool));
   const seen = new Set();
   for(const c of arr){

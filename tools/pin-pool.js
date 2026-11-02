@@ -8,12 +8,22 @@
    "1053 green on the machine that happened to have fetched", and on this
    one it hid 22 pool cards that had quietly stopped resolving.
 
-   So the pool's own records are pinned in the repo. What this writes is
-   NOT a second source of truth for the game: `index.html` still streams
-   the live database at runtime, which is what keeps errata reaching a
-   player. It is (a) the fixture every drill runs on, so a clone with no
-   network measures the same engine, and (b) the reference the drift
-   guard diffs the live text against.
+   So the pool's own records are pinned in the repo. Since v5.74 it is the
+   ONLY card text there is: RULING (user, 2026-11-02), "pinned pool only"
+   — `index.html` loads this file and fetches no card database at all, so
+   the phone plays exactly the text the drills tested. It is (a) what the
+   page plays, (b) the fixture every drill runs on, so a clone with no
+   network measures the same engine, and (c) the reference the drift
+   guard diffs the live text against at the start of a release cycle.
+
+   IT IS A SCRIPT, NOT A .json (v5.74). Safari and Chrome refuse fetch()
+   of a local file from file://, and the page must run from file://, so
+   the records ride in a `<script src>` that assigns `window.DAWN_POOL`
+   (and is `module.exports` under Node, so `require` hands a drill the
+   array). The array itself is plain JSON, one record per line, between
+   the wrapper's first and last lines — `readPool` in
+   test/helpers/extract.js slices it out for a fresh copy. ONE copy of the
+   data in the repo: there is no pool.json twin.
 
    IT IS FETCHED DATA, NEVER AUTHORED. Nothing here edits a card's text;
    the golden rule is about not inventing effects, and pinning the source
@@ -27,7 +37,7 @@
    not taken on trust: `test/pool.test.js` asserts the pinned records and
    the live ones map to byte-identical cards.
 
-     node tools/pin-pool.js            # rewrite data/pool.json
+     node tools/pin-pool.js            # rewrite data/pool.js
      node tools/pin-pool.js --check    # exit 1 if it would change
    ============================================================ */
 const fs = require("fs");
@@ -37,7 +47,7 @@ const { loadData } = require("../test/helpers/extract.js");
 
 const ROOT = path.join(__dirname, "..");
 const CACHE = path.join(ROOT, "tools", ".cache", "card.json");
-const OUT = path.join(ROOT, "data", "pool.json");
+const OUT = path.join(ROOT, "data", "pool.js");
 
 const norm = s => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
@@ -139,20 +149,34 @@ function build(db, W){
   return keep.map(c => ({...c, printings: (c.printings || []).map(slimPrinting)}));
 }
 
+/* THE FILE'S SHAPE. The wrapper is fixed text; the array between its
+   first `\n[` and its last `]` is JSON, so a reader that wants a fresh
+   copy (or the raw text) never has to evaluate the script. */
+const HEAD = "/* THE PINNED POOL — every card the game can play, as the-fab-cube printed it.\n"
+  + "   Written by tools/pin-pool.js; fetched data, NEVER AUTHORED — do not edit by hand.\n"
+  + "   RULING (user, 2026-11-02): the page loads this and no live card database. */\n"
+  + "(function(root, records){\n"
+  + "  if(typeof module === \"object\" && module.exports) module.exports = records;\n"
+  + "  else root.DAWN_POOL = records;\n"
+  + "})(typeof window !== \"undefined\" ? window : this,\n";
+function serialize(pool){
+  return HEAD + "[\n" + pool.map(r => JSON.stringify(r)).join(",\n") + "\n]);\n";
+}
+
 function main(){
   if(!fs.existsSync(CACHE)){
     console.error("no live database at " + path.relative(ROOT, CACHE) + " — run: node tools/audit.js");
     process.exit(2);
   }
   const W = loadData();
-  const db = JSON.parse(fs.readFileSync(CACHE, "utf8"));
+  const db = require("../test/helpers/extract").readCards(CACHE);
   const pool = build(db, W);
-  const text = JSON.stringify(pool, null, 0) + "\n";
+  const text = serialize(pool);
   const prev = fs.existsSync(OUT) ? fs.readFileSync(OUT, "utf8") : null;
 
   if(process.argv.includes("--check")){
-    if(prev === text){ console.log("data/pool.json is current (" + pool.length + " records)."); return; }
-    console.error("data/pool.json is STALE — the live database has moved under it.");
+    if(prev === text){ console.log("data/pool.js is current (" + pool.length + " records)."); return; }
+    console.error("data/pool.js is STALE — the live database has moved under it.");
     console.error("Review the drift, then: node tools/pin-pool.js");
     process.exit(1);
   }
@@ -163,4 +187,4 @@ function main(){
 }
 
 if(require.main === module) main();
-module.exports = {build, neededNames, tokenNames, slimPrinting, OUT, CACHE};
+module.exports = {build, neededNames, tokenNames, slimPrinting, serialize, OUT, CACHE};

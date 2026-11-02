@@ -360,7 +360,7 @@ test("classifyClause answers exactly two shapes, and the rider leans on it", {sk
      property of `classifyClause`, not of the rider — so it is DRIVEN
      over the pinned pool here rather than asserted in prose, and a third
      answer shape fails this drill on the day it is added. */
-  const raw = require("../data/pool.json");
+  const raw = require("../data/pool.js");
   const pool = (Array.isArray(raw) ? raw : (raw.cards || Object.values(raw))).map(c => ({
     name: c.name, pitch: +(c.pitch || 0), tt: c.type_text || "", ty: c.types || [],
     tx: c.functional_text || "", kw: c.card_keywords || [],

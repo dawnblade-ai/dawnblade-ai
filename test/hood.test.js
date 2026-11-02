@@ -141,7 +141,7 @@ test("the COST half was never the blocker — the diagnostic that proves it", {s
 });
 
 test("the pool emits `shuffleDraw` from EXACTLY ONE record, and the census is both-sided", {skip}, () => {
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const recs = Array.isArray(pool) ? pool : Object.values(pool);
   const emit = [], mentions = [];
   for(const raw of recs){

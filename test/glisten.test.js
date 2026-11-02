@@ -34,9 +34,9 @@ const H  = require("./helpers/judged.js");
 const fs = require("fs");
 const path = require("path");
 
-const POOL = path.join(__dirname, "..", "data", "pool.json");
+const POOL = path.join(__dirname, "..", "data", "pool.js");
 let _pool = null;
-const pool = () => _pool || (_pool = JSON.parse(fs.readFileSync(POOL, "utf8"))
+const pool = () => _pool || (_pool = require("./helpers/extract").readCards(POOL)
   .filter(c => c && c.name).map(C.mapDbCard)
   .map(m => ({name:m.n, pitch:m.p, cost:m.c, power:m.pw, def:m.d,
               tt:m.tt, ty:m.ty, tx:m.tx, kw:m.kw, gkw:m.gkw})));

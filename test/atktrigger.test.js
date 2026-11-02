@@ -29,8 +29,7 @@ const H = require("./helpers/judged.js");
 
 const skip = H.hasDb() ? false : "no card database";
 
-const POOL = () => JSON.parse(fs.readFileSync(
-  require("./helpers/extract").cardDbPath(), "utf8"));
+const POOL = () => require("./helpers/extract").readCards(require("./helpers/extract").cardDbPath());
 const rec = nm => POOL().find(c => c.name === nm);
 const cardOf = nm => { const r = rec(nm); return {name: r.name, pitch: +(r.pitch || 0),
   tt: r.type_text, ty: r.types, kw: r.card_keywords || [],
@@ -331,7 +330,7 @@ test("the payload vocabulary on the NON-ATTACK route is pinned to what the pool 
      drill pins that measurement, so a pool card printing something else
      fails HERE rather than quietly doing nothing at the pop site — the
      same call v3.53 made for its own measurement. */
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const mk = r => ({name: r.name + "|nonatk|" + r.pitch, tx: r.functional_text || "",
                     tt: r.type_text || "", ty: r.types || [], kw: r.card_keywords || [],
                     pitch: r.pitch, cost: r.cost, power: r.power, def: r.defense});

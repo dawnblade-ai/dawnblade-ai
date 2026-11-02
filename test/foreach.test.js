@@ -52,7 +52,7 @@ const ROOT = path.join(__dirname, "..");
 
 /* THE POOL IS THE FIXTURE — 797 records, no network (v3.00). */
 const pool = (() => {
-  const j = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "pool.json"), "utf8"));
+  const j = require("./helpers/extract").readCards(path.join(ROOT, "data", "pool.js"));
   const recs = j.cards || j;
   return recs.map(r => {
     const m = C.mapDbCard(r);

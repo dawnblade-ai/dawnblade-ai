@@ -243,7 +243,7 @@ test("the class/talent vocabulary matches the pool's own type lines, both ways",
   const TY = require("../engine/types.js");
   const C = require("../engine/cards.js");
   const classes = new Set(), others = new Set();
-  for(const rec of require("../data/pool.json")){
+  for(const rec of require("../data/pool.js")){
     const m = C.mapDbCard(rec); if(!m) continue;
     const t = TY.cardType({tt: m.tt, ty: m.ty});
     /* a two-word type ("Defense Reaction") is split into its words */

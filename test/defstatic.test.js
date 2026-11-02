@@ -30,7 +30,7 @@ const P = require("../engine/parser.js");
 const CACHE = require("./helpers/extract").cardDbPath();
 const skip = !fs.existsSync(CACHE) && "no cached DB";
 
-const rec = nm => JSON.parse(fs.readFileSync(CACHE, "utf8")).find(c => c.name === nm);
+const rec = nm => require("./helpers/extract").readCards(CACHE).find(c => c.name === nm);
 const earth = uid => { const r = rec("Embodiment of Earth"); return {
   card: {name: r.name, tt: r.type_text, ty: r.types,
          tx: (r.functional_text || "").replace(/\*\*/g, ""), uid}, kind: "aura", uid}; };
@@ -56,7 +56,7 @@ test("it is the ONLY card in the pool that grants one, and the self-buffs are no
      ITSELF under its own condition, which is a different shape, and
      claiming them here would grant conditions nobody has built. This
      reader takes only the one that buffs OTHER cards. */
-  const pool = JSON.parse(fs.readFileSync(CACHE, "utf8"));
+  const pool = require("./helpers/extract").readCards(CACHE);
   const claimed = [];
   for(const c of pool){
     P.fxReset();
@@ -175,7 +175,7 @@ const helm = o => { const r = rec("Blade Beckoner Helm"); return Object.assign({
   tx: (r.functional_text || "").replace(/\*\*/g, "")}, o || {}); };
 
 test("the four Blade Beckoner pieces read the clause, and only they", {skip}, () => {
-  const pool = JSON.parse(fs.readFileSync(CACHE, "utf8"));
+  const pool = require("./helpers/extract").readCards(CACHE);
   const claimed = new Set();
   for(const c of pool){
     P.fxReset();
@@ -409,7 +409,7 @@ const G = require("../engine/game.js");
 test("the trainer's wall counts its hand defenders too", {skip}, () => {
   P.fxReset();
   const CD = require("../engine/cards.js");
-  const db = CD.buildMaps(JSON.parse(fs.readFileSync(CACHE, "utf8"))
+  const db = CD.buildMaps(require("./helpers/extract").readCards(CACHE)
     .filter(c => c && c.name).map(CD.mapDbCard));
   const helm = Object.assign({},
     CD.resolveEntry(db, {name: "Helm of Unity", p: 0, code: null, q: 1}), {uid: "helm1"});

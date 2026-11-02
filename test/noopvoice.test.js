@@ -52,7 +52,7 @@ const {DEV_VOICE} = require("./helpers/voice.js");
 const faults = s => DEV_VOICE.filter(([rx]) => rx.test(s)).map(([, why]) => why);
 
 function poolNoopReasons(){
-  const raw = require("../data/pool.json");
+  const raw = require("../data/pool.js");
   const db = C.buildMaps(raw.filter(c => c && c.name).map(C.mapDbCard));
   const out = new Map();
   for(const r of raw){

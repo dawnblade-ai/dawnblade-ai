@@ -39,7 +39,7 @@ test("the equip reads, and the family is exactly what was measured", {skip}, () 
 
   /* MEASURED BEFORE BUILDING (v3.33), and pinned so the reader cannot
      quietly claim a family it was never shown. */
-  const raw = require("../data/pool.json");
+  const raw = require("../data/pool.js");
   const arr = Array.isArray(raw) ? raw : (raw.cards || Object.values(raw));
   const prints = arr.filter(c => /\bequip an? .* token\b/i.test(c.functional_text || ""));
   assert.deepEqual([...new Set(prints.map(c => c.name))].sort(),
@@ -58,7 +58,7 @@ test("the equip reads, and the family is exactly what was measured", {skip}, () 
 
 test("all three Spinneret printings read in full", {skip}, () => {
   P.fxReset();
-  const raw = require("../data/pool.json");
+  const raw = require("../data/pool.js");
   const arr = Array.isArray(raw) ? raw : (raw.cards || Object.values(raw));
   const amt = {1: 3, 2: 2, 3: 1};
   for(const c of arr.filter(x => x.name === "Orb-Weaver Spinneret")){
@@ -300,7 +300,7 @@ test("the second wording reads, and carries the hero gate", {skip}, () => {
 
 test("the token reads in full, and Mark of the Huntsman does not move", {skip}, () => {
   P.fxReset();
-  const raw = require("../data/pool.json");
+  const raw = require("../data/pool.js");
   const arr = Array.isArray(raw) ? raw : (raw.cards || Object.values(raw));
   const mk = c => ({name: c.name, pitch: +(c.pitch || 0), tt: c.type_text || "",
     ty: c.types || [], tx: c.functional_text || "", kw: c.card_keywords || [],

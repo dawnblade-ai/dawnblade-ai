@@ -56,7 +56,7 @@ const RNG = require(path.join(ROOT, "engine", "rng.js"));
 const C = require(path.join(ROOT, "engine", "cards.js"));
 const {loadData} = require(path.join(ROOT, "test", "helpers", "extract.js"));
 
-const pool = require(path.join(ROOT, "data", "pool.json"));
+const pool = require(path.join(ROOT, "data", "pool.js"));
 const rec = r => ({name: r.name, pitch: r.pitch === "" || r.pitch == null ? 0 : +r.pitch,
                    tt: r.type_text, ty: r.types || [], kw: r.card_keywords || [],
                    tx: r.functional_text_plain || r.functional_text || ""});

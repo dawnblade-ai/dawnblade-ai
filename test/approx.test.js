@@ -63,7 +63,7 @@ const HTML = X.html();
    about. `resolveEntry`'s output is what a card IS at the table; this is
    one step below it and is the right level for a pool-wide TEXT census. */
 let _pool = null;
-const pool = () => _pool || (_pool = JSON.parse(fs.readFileSync(X.POOL, "utf8"))
+const pool = () => _pool || (_pool = require("./helpers/extract").readCards(X.POOL)
   .filter(c => c && c.name).map(C.mapDbCard)
   .map(m => ({name:m.n, pitch:m.p, cost:m.c, power:m.pw, def:m.d,
               tt:m.tt, ty:m.ty, tx:m.tx, kw:m.kw, gkw:m.gkw})));
@@ -79,7 +79,7 @@ const G  = require("../engine/game.js");
 const BL = require("../engine/build.js");
 let _tdb = null;
 const tdb = () => _tdb || (_tdb = C.buildMaps(
-  JSON.parse(fs.readFileSync(X.cardDbPath(), "utf8")).filter(c => c && c.name).map(C.mapDbCard)));
+  require("./helpers/extract").readCards(X.cardDbPath()).filter(c => c && c.name).map(C.mapDbCard)));
 function table(o){
   o = o || {};
   const W2 = X.loadData();
@@ -433,7 +433,7 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
 probe("chi-floating-is-a-bound", () => {
   /* THE PREMISE THE RECORD RESTS ON, MEASURED RATHER THAN ASSERTED IN
      PROSE (v3.41): one claimant, and it is Once per Turn. */
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const prints = pool.filter(r => /\{c\}/.test(r.functional_text_plain || r.functional_text || ""));
   assert.deepEqual([...new Set(prints.map(r => r.name))], ["Enigma"],
     "a second {c} cost makes the bound reachable — close the record or bank the count");
@@ -529,7 +529,7 @@ probe("trainer-blocks-wall-no-defends-body", () => {
 
      THE PREMISE STAYS DRIVEN: two pool families emit a `defends` trigger
      that is NOT the payCost the trainer's old scan handled. */
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const arr = Array.isArray(pool) ? pool : (pool.cards || Object.values(pool));
   const orphan = new Set();
   for(const c of arr){
@@ -1408,7 +1408,7 @@ probe("trainer-instant-doors-no-declarations", () => {
   H.db();
   /* THE PREMISE: no reaction or instant prints either, so what reaches a door is a GRANT */
   const direct = [];
-  for(const r of require("../data/pool.json")){
+  for(const r of require("../data/pool.js")){
     if(!/Instant|Reaction/.test(r.type_text || "")) continue;
     for(const p of [1, 2, 3]){
       let c; try { c = H.card(r.name, p); } catch(e){ continue; }
@@ -2220,7 +2220,7 @@ probe("cloaked-display", () => {
   /* 4. THE PREMISE: the pool's only Cloaked record is armour (Enigma's Uphold
      Tradition, Arms), so no Cloaked weapon sits outside ArmorGrid. The day one
      does, the hero row needs the same back. */
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const cloaked = pool.filter(r => (r.card_keywords || []).some(k => /^cloaked$/i.test(k)));
   assert.deepEqual(cloaked.map(r => r.name), ["Uphold Tradition"],
     "a second Cloaked record is in the pool — is it a weapon? the hero row draws it face-up");

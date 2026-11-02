@@ -117,7 +117,7 @@ module.exports = [
        "this project says so in four places — so judge's reader matched " +
        "nothing, ever, on BOTH of its graveyard paths.",
   run(c){
-    const pool = require("../../data/pool.json");
+    const pool = require("../../data/pool.js");
     const EPH = /if it would be put into a graveyard from anywhere, instead it ceases to exist/i;
     const ct = pool.find(x => /Crouching Tiger/.test(x.name || ""));
     const card = {name: ct.name, tt: ct.type_text, ty: ct.types,
@@ -168,7 +168,7 @@ module.exports = [
        "GAME was handed back to the player. Judge had TWO graveyard paths " +
        "and both carried the dead regex.",
   run(c){
-    const pool = require("../../data/pool.json");
+    const pool = require("../../data/pool.js");
     const ct = pool.find(x => /Crouching Tiger/.test(x.name || ""));
     const card = {name: ct.name, uid: 990, pitch: ct.pitch, cost: ct.cost,
                   power: ct.power, def: ct.defense, tt: ct.type_text,

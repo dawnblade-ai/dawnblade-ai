@@ -116,7 +116,7 @@ test("UNEXPECTED BACKHAND gets NO `fx.clash` — it is not a defending clasher",
 
 test("the whole-pool measurement that makes the predicate the wrong question",
      {skip}, () => {
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const arr = Array.isArray(pool) ? pool : (pool.cards || Object.values(pool));
   const loose = new Set(), strict = new Set(), parsed = new Set();
   for(const c of arr){

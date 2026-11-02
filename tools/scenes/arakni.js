@@ -205,7 +205,7 @@ module.exports = [
   run(c){
     const piece = c.card("Stalker's Steps", 0, 73);
     const ab = ability(c.P, piece, 73);
-    const pool = require("../../data/pool.json");
+    const pool = require("../../data/pool.js");
     const rec = pool.find(r => c.P.isAttack({tt: r.type_text || "", ty: r.types || [], power: r.power})
       && c.P.printedKw({tx: r.functional_text || "", kw: r.card_keywords || []}, "stealth"));
     const stealthy = c.card(rec.name, rec.pitch, 74);

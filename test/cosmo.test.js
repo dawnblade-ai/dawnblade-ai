@@ -34,7 +34,7 @@ const H = require("./helpers/judged.js");
 const {loadData} = require("./helpers/extract.js");
 
 const skip = !H.hasDb() && "no cached card database";
-const pool = require("../data/pool.json");
+const pool = require("../data/pool.js");
 const mk = n => { const r = pool.find(x => x.name === n);
   return {name: r.name, tt: r.type_text, ty: r.types, kw: r.card_keywords,
           tx: r.functional_text, power: r.power, pitch: r.pitch, uid: 1}; };

@@ -38,8 +38,7 @@ const J = require("../engine/judge.js");
 const H = require("./helpers/judged.js");
 
 const skip = !H.hasDb() && "no cached DB — run: node tools/audit.js";
-const pool = () => JSON.parse(fs.readFileSync(
-  path.join(__dirname, "..", "data", "pool.json"), "utf8"));
+const pool = () => require("./helpers/extract").readCards(path.join(__dirname, "..", "data", "pool.js"));
 const mk = c => ({name: c.name, pitch: +(c.pitch || 0), tt: c.type_text || "",
   ty: c.types || [], tx: c.functional_text || "", kw: c.card_keywords || [],
   cost: c.cost, power: c.power, def: c.defense});

@@ -41,7 +41,7 @@ const SETS = ["prism", "viseraiBetweenWorlds"];
 
 let _pool = null;
 const pool = () => _pool || (_pool = (() => {
-  const raw = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "data", "pool.json"), "utf8"))
+  const raw = require("./helpers/extract").readCards(path.join(__dirname, "..", "data", "pool.js"))
     .filter(c => c && c.name);
   return {raw, byName: new Set(raw.map(c => String(c.name).toLowerCase().trim()))};
 })());
@@ -103,7 +103,7 @@ test("neither set is in the pinned pool — building one would invent card text"
 
 test("the recorded upstream gap is internally consistent with the lists", () => {
   /* THE POOL IS THE WRONG ORACLE FOR THIS QUESTION, and the first draft
-     of this drill asked it anyway. `data/pool.json` is what the FIFTEEN
+     of this drill asked it anyway. `data/pool.js` is what the FIFTEEN
      precons can reach — 797 records — so almost every card in a
      sixteenth list is "missing" from it, and the answer looked like a
      finding. A scan aimed at the wrong data set fails exactly as a real

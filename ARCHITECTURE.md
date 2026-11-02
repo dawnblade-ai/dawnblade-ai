@@ -32,12 +32,11 @@ copyrightable — the code here is entirely original and implements procedures,
 not card text. (Orientation, not legal advice.)
 
 **The engine implements procedures; the cards are read, never written.** No card
-effect is hardcoded anywhere in this repository. Card text streams at runtime
-from the public community dataset and is interpreted by a parser, so what ships
+effect is hardcoded anywhere in this repository. Card text is the public
+community dataset's, pinned verbatim, and is interpreted by a parser, so what ships
 is a reader — not a transcription of anyone's rules text. That is the golden
 rule in `CLAUDE.md`, and it is also why the legal posture above is comfortable:
-the only card text in the repo is fetched data, pinned for the offline test
-suite and never authored.
+the only card text in the repo is fetched data, pinned and never authored.
 
 ## What we take from Talishar's workflow
 
@@ -168,39 +167,38 @@ rather than before it (`docs/archive/FINISH.md`).
 
 ## Card data pipeline
 
-Card stats are never typed from memory, and there are two consumers with two
-different needs.
+Card stats are never typed from memory. **One pinned copy feeds both the game
+and the drills** — RULING (user, 2026-11-02), "pinned pool only" (v5.74).
 
-**The game streams the live database** — the-fab-cube's
-`flesh-and-blood-cards`, `develop` branch:
+`tools/pin-pool.js` writes `data/pool.js` — raw upstream records from the-fab-cube's
+`flesh-and-blood-cards` `develop` branch, in the database's own schema, never
+authored:
 
 ```sh
-grep -o 'window.DBSRC = "[^"]*"' index.html
+node -e 'console.log(require("./data/pool.js").length)'
 ```
 
-`index.html` fetches it, keeps the records the pool can reach (every deck entry,
-plus tokens and Demi-Heroes by *type*, plus a small `NEEDED` set for cards an
-effect can mint), maps them into the engine's shape and caches the result in
-`localStorage` under `window.DATA_VER`. **Streaming is deliberate: it is what
-lets errata reach a player.** Bump `DATA_VER` whenever the loader's schema or
-field handling changes, or a warm cache will serve the old shape — the
-`DATA_VER` comment in `index.html` is a running list of exactly what each bump
-was for.
+It is a script, not a `.json`, because Safari and Chrome refuse `fetch()` of a
+local file over `file://`: the page loads it with a `<script src>` (it assigns
+`window.DAWN_POOL`), and under Node it is `module.exports`. `readPool()` in
+`test/helpers/extract.js` slices out the JSON array for a fresh copy.
+
+`index.html`'s `useCardDB` keeps the records the pool can reach (every deck
+entry, plus tokens and Demi-Heroes by *type*, plus a small `NEEDED` set for
+cards an effect can mint) and maps them into the engine's shape. There is no
+download, no progress bar and no `localStorage` card cache: the phone plays
+exactly the text the drills tested, the game survives upstream moving or
+disappearing, and the first load is the pool instead of a 22 MB file. The cost
+is that errata reach a player only when a release re-pins. `DATA_VER` (the
+table's build id) bumps when the loader's schema, field handling or source
+changes; its comment in `index.html` is a running list of exactly what each
+bump was for. `test/poolreach.test.js` runs the page's own loader against the
+pool and asserts every name the page resolves is in it.
 
 Two field maps have to agree — `engine/cards.js`'s `mapDbCard` and the mirror
-inside `index.html`'s loader hook, which cannot be shared because it lives
-inside a React hook. `test/loader.test.js` guards the pair as a field map and
-pins the field list, so adding one is a deliberate edit. **That is where the
-reminder to bump `DATA_VER` lives.**
-
-**The tools and the drills read a pinned copy.**
-
-`tools/pin-pool.js` writes `data/pool.json` — **797 raw upstream records**,
-fetched data in the database's own schema, never authored:
-
-```sh
-node -e 'console.log(require("./data/pool.json").length)'     # 797
-```
+inside `index.html`'s loader, which lives beside a React hook. `test/loader.test.js`
+guards the pair as a field map and pins the field list, so adding one is a
+deliberate edit. **That is where the reminder to bump `DATA_VER` lives.**
 
 That file is why `npm test` needs no network and skips nothing. Before it
 existed a fresh clone ran 749 passes and **304 silent skips**, which hid 22 pool
@@ -215,7 +213,9 @@ tool here reported success).
 `test/drift.test.js` is the one drill allowed to read the live wire; it compares
 what the *parser* makes of each database rather than the text, so a rewording
 read identically is not an event. Refresh with `node tools/audit.js --refresh`
-at the start of a release cycle.
+at the start of a release cycle, read the drift, then re-pin with
+`node tools/pin-pool.js` — since v5.74 that re-pin is the only way new card
+text reaches a phone.
 
 ## How much of the pool is actually read
 
@@ -271,7 +271,7 @@ need were deleted.
 |---|---|
 | `demo.js` · `sim/demo.js` | byte-identical duplicates (`md5 aeb68bb7…`); import `engine/state.js` and `engine/engine.js`, which do not exist |
 | `data/demo-cards.js` | **invented placeholder cards** — hand-typed stats and abilities. Imported only by the two dead demos |
-| `data/ingest-fab-cube.js` | emits `data/sage-pool.json`, which does not exist. The real pipeline is `tools/pin-pool.js` → `data/pool.json` |
+| `data/ingest-fab-cube.js` | emits `data/sage-pool.json`, which does not exist. The real pipeline is `tools/pin-pool.js` → `data/pool.js` |
 
 They are recorded here rather than quietly deleted, because that is a call for
 the repo's owner to make — but the debt is real and it is the reason this file

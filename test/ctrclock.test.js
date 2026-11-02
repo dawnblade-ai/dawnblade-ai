@@ -411,7 +411,7 @@ test("DRIVEN: Boom Grenade buys one turn with its steam counter, then dies", {sk
 /* ---- 6. THE CENSUS ------------------------------------------------ */
 
 test("every pool record that prints a counter clock is READ (both halves pinned)", {skip}, () => {
-  const raw = require("../data/pool.json");
+  const raw = require("../data/pool.js");
   const C = require("../engine/cards.js");
   const db = C.buildMaps(raw.filter(c => c && c.name).map(C.mapDbCard));
   const tick = [], empty = [], spare = [];

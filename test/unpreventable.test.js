@@ -31,7 +31,7 @@ test("the parse: a card fact, and no op", {skip}, () => {
 });
 
 test("CENSUS: Murkmire Grapnel is the pool's only record printing it", () => {
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const recs = Array.isArray(pool) ? pool : (pool.cards || Object.values(pool));
   const hits = recs.filter(r => /can'?t be prevented/i.test(r.functional_text || ""));
   assert.deepEqual([...new Set(hits.map(r => r.name))], ["Murkmire Grapnel"]);

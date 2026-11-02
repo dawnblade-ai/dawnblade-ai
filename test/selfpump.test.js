@@ -30,7 +30,7 @@ const skip = !H.hasDb() && "no cached card database";
 const ent = (n, p, uid) => Object.assign({}, C.resolveEntry(H.db(), {name: n, p: p, code: null, q: 1}), {uid});
 
 function poolCards(){
-  const raw = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "data", "pool.json"), "utf8"));
+  const raw = require("./helpers/extract").readCards(path.join(__dirname, "..", "data", "pool.js"));
   const seen = new Set(), out = [];
   for(const r of raw){
     if(!r || !r.name) continue;

@@ -128,7 +128,7 @@ test("THE FAMILY: the readers this asks are exactly the instant pumps the pool p
      because `boardPow` reads a weapon's swing line, which no board entry
      can ever be. Pinned as a SET so a third arriving is a decision. */
   const db = H.db();
-  const raw = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "data", "pool.json"), "utf8"));
+  const raw = require("./helpers/extract").readCards(path.join(__dirname, "..", "data", "pool.js"));
   const C = require("../engine/cards.js");
   const names = new Set(), seen = new Set();
   let uid = 970000;

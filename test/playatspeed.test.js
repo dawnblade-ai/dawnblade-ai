@@ -240,7 +240,7 @@ test("PREMISE: no pool reaction emits a `defBuff` op, so neither board extracts 
      no reaction prints one — measured over the pinned pool. */
   H.db();
   const seen = new Set(), bad = [];
-  for(const r of require("../data/pool.json")) for(const p of [1, 2, 3]){
+  for(const r of require("../data/pool.js")) for(const p of [1, 2, 3]){
     let c; try { c = H.card(r.name, p); } catch(e){ continue; }
     if(!c || !c.name || !P.isRx(c)) continue;
     const k = c.name + "|" + c.pitch; if(seen.has(k)) continue; seen.add(k);

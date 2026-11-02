@@ -49,7 +49,7 @@ test("`defBuffOf` sums, and answers 0 rather than throwing", () => {
 });
 
 test("no pool record prints two defBuff ops in one payload — the premise, measured", {skip}, () => {
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const arr = Array.isArray(pool) ? pool : (pool.cards || Object.values(pool));
   const twos = [];
   for(const c of arr){
@@ -232,7 +232,7 @@ test("`defUid` survives buildPrompt and comes back out of applyPrompt", () => {
 /* ---- THE CENSUS, BOTH DIRECTIONS (v4.17) ------------------------------ */
 
 test("the pool's `defends` families are exactly these, and each has a site", {skip}, () => {
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const arr = Array.isArray(pool) ? pool : (pool.cards || Object.values(pool));
   const fam = {payCost: [], optCost: [], millCost: []};
   for(const c of arr){

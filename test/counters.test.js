@@ -255,7 +255,7 @@ test("PREMISE: nothing but a Hyper Driver's own clock takes a steam counter off 
      one thing that can empty it, and "when this has none" destroys it on
      the spot. A card that takes a steam counter off ANOTHER permanent
      fails here, and the order has to be re-measured. */
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const hits = {};
   for(const r of pool){
     const m = String(r.functional_text || "").match(/remove[^.]*steam counter[^.:]*/gi);
@@ -521,7 +521,7 @@ test("the THRESHOLD is the card's own number, not a literal", {skip}, () => {
      so a hardcoded number is right for one printing and silently wrong for
      the others — `rustDestroy` (v3.17), heave (v3.32) and `ctrPut`'s own
      amount (v3.55) are the same rule. */
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const mkc = r => ({name: r.name + "|thr|" + r.pitch, tx: r.functional_text || "",
                      tt: r.type_text || "", ty: r.types || [], kw: r.card_keywords || [],
                      pitch: r.pitch, cost: r.cost, power: r.power, def: r.defense});
@@ -655,7 +655,7 @@ test("…and adding it moved exactly the card that needed it", () => {
      for its own reasons) and ally (Scuttle Toes, which has its own
      reader). A drill pins that census, so a future widening has to be a
      deliberate edit here. */
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const subs = new Set();
   for(const r of pool)
     for(const m of (r.functional_text || "").matchAll(/target ([a-z]+) you control/gi))

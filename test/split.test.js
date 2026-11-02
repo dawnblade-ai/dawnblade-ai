@@ -39,7 +39,7 @@ test("the database names them, and it is exactly two", {skip}, () => {
   H.db();
   /* `played_horizontally` is the authority. `//` in the type line is how
      two typeboxes are RENDERED — a spelling, not a fact about the card. */
-  const pool = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "data", "pool.json"), "utf8"));
+  const pool = require("./helpers/extract").readCards(path.join(__dirname, "..", "data", "pool.js"));
   const recs = Array.isArray(pool) ? pool : (pool.cards || Object.values(pool));
   const hz = recs.filter(r => r.played_horizontally).map(r => r.name).sort();
   assert.deepEqual([...new Set(hz)], SPLITS);

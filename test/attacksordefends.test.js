@@ -79,7 +79,7 @@ test("an unknown gate on the defend half answers FALSE", () => {
 test("CENSUS: every defend-half gate the pool prints is in the closed vocabulary, and every one is GATED", {skip}, () => {
   H.db(); P.fxReset();
   const seen = new Set(), gates = new Set(), ungated = [];
-  for(const r of require("../data/pool.json")) for(const p of [1, 2, 3]){
+  for(const r of require("../data/pool.js")) for(const p of [1, 2, 3]){
     let c; try { c = H.card(r.name, p); } catch(e){ continue; }
     if(!c || !c.name) continue;
     const k = c.name + "|" + c.pitch; if(seen.has(k)) continue; seen.add(k);
@@ -102,7 +102,7 @@ test("'when this enters the arena' fires as the permanent resolves — and only 
      v3.20. Measured over the pool, one record reaches the enters reader. */
   H.db(); P.fxReset();
   const seen = new Set(), reach = [];
-  for(const r of require("../data/pool.json")) for(const p of [1, 2, 3, 0]){
+  for(const r of require("../data/pool.js")) for(const p of [1, 2, 3, 0]){
     let c; try { c = H.card(r.name, p); } catch(e){ continue; }
     if(!c || !c.name) continue;
     const k = c.name + "|" + c.pitch; if(seen.has(k)) continue; seen.add(k);

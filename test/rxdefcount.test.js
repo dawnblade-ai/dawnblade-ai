@@ -194,7 +194,7 @@ test("DRIVEN: the trainer's `resolveStack` counts a played DR too", () => {
    declared from hand) and the only other defender is the played DR. */
 const unityHelm = () => {
   const CD = require("../engine/cards.js");
-  const db = CD.buildMaps(JSON.parse(fs.readFileSync(require("./helpers/extract").cardDbPath(), "utf8"))
+  const db = CD.buildMaps(require("./helpers/extract").readCards(require("./helpers/extract").cardDbPath())
     .filter(c => c && c.name).map(CD.mapDbCard));
   return Object.assign({}, CD.resolveEntry(db, {name: "Helm of Unity", p: 0, code: null, q: 1}),
     {uid: "helm1", curDef: null, destroyed: false});

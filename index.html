@@ -47,8 +47,6 @@ img{display:block;max-width:100%}
 .dbbar.err .dot{background:var(--r);animation:none}
 @keyframes pulse{to{opacity:.25}}
 .dbbar .retry{margin-left:auto;color:var(--y);font-weight:600;text-transform:uppercase;font-size:11px;letter-spacing:.08em}
-.prog{height:3px;background:var(--forge2);margin-top:5px;width:100%}
-.prog i{display:block;height:100%;background:var(--y);transition:width .3s}
 
 /* hero select — full roster on one screen, smash-style */
 .hgrid{display:flex;flex-wrap:wrap;gap:4px;justify-content:center}
@@ -824,8 +822,7 @@ img{display:block;max-width:100%}
    database + typographic fallbacks. Not affiliated with LSS.
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
-window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "5.73"; /* v5.73 - the AI keeps the attack its pump card is for, and holds the pump until it can pay for both. See CHANGELOG.md. */
+window.APP_VER = "5.74"; /* v5.74 - the page plays the pinned card pool the drills tested and downloads no card database. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -842,7 +839,7 @@ window.APP_VER = "5.73"; /* v5.73 - the AI keeps the attack its pump card is for
    rule, not a feature of throwing hands. A coin that seated you directly
    would be a rules change wearing a convenience hat. */
 window.THROW_MODE = "coin";   /* "coin" (fast) | "rps" (the real thing) */
-window.DATA_VER = "sage-v14"; /* v4.72: cards carry `cx`, the X count of a printed "XX" cost — a warm sage-v13 cache has none, so Ice Eternal's X would be free. v3.76: the loader keeps DEMI-HERO records by type, the way it already keeps tokens. Arakni prints "you become a random Agent of Chaos" and the six Agents are Demi-Heroes no deck lists, so a warm sage-v12 cache has none of them and her hero ability finds nothing to become. v3.34: cards carry `hz` (`played_horizontally`), which is the database SAYING a card is a SPLIT card — two halves on one card, told apart by `tt`, playable one or both (Meld). A warm sage-v11 cache has no `hz` on any card, so both split cards would silently keep running BOTH halves for free with no choice offered. v2.44: cards carry `ty`, the STRUCTURED type array. `tt` is a display string and the two disagree on 5 database records — it calls Den of the Spider an "Action Defense Reaction", and a reaction cannot be an action. A warm sage-v10 cache has no `ty` on any card, so every type question would fall back to parsing the display string. v2.35: cards carry `prs` (image per SET), which is what lets a card resolve to its Silver Age printing instead of the database's arbitrary first — a warm sage-v9 cache has no `prs` at all and every card would fall back. v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
+window.DATA_VER = "sage-v15"; /* v5.74: the cards come from the PINNED POOL (data/pool.js) and nowhere else — RULING (user, 2026-11-02) — so there is no localStorage card cache any more; the bump retires every sage-v14 build id, so a table never seats a phone still playing live upstream text against one playing the pool. v4.72: cards carry `cx`, the X count of a printed "XX" cost — a warm sage-v13 cache has none, so Ice Eternal's X would be free. v3.76: the loader keeps DEMI-HERO records by type, the way it already keeps tokens. Arakni prints "you become a random Agent of Chaos" and the six Agents are Demi-Heroes no deck lists, so a warm sage-v12 cache has none of them and her hero ability finds nothing to become. v3.34: cards carry `hz` (`played_horizontally`), which is the database SAYING a card is a SPLIT card — two halves on one card, told apart by `tt`, playable one or both (Meld). A warm sage-v11 cache has no `hz` on any card, so both split cards would silently keep running BOTH halves for free with no choice offered. v2.44: cards carry `ty`, the STRUCTURED type array. `tt` is a display string and the two disagree on 5 database records — it calls Den of the Spider an "Action Defense Reaction", and a reaction cannot be an action. A warm sage-v10 cache has no `ty` on any card, so every type question would fall back to parsing the display string. v2.35: cards carry `prs` (image per SET), which is what lets a card resolve to its Silver Age printing instead of the database's arbitrary first — a warm sage-v9 cache has no `prs` at all and every card would fall back. v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 /* The dummy's 30-card pile: [name, pitch, copies]. Every one is a real
    Silver-Age-legal Generic attack action with NO rules text, chosen on
@@ -1406,6 +1403,12 @@ window.TROPHIES = [
      there is only one copy of each function in the project. Plain UMD
      scripts — no build step, no modules, still fine over file://.
      Order matters only in that parser.js must precede its dependents. -->
+<!-- THE CARDS (v5.74). RULING (user, 2026-11-02), "pinned pool only": the
+     page plays exactly the card text the drills tested — the raw upstream
+     records `tools/pin-pool.js` pinned — and fetches no card database. A
+     script, not a .json, because fetch() of a local file is refused over
+     file://. It assigns window.DAWN_POOL; useCardDB maps it. -->
+<script src="data/pool.js"></script>
 <script src="engine/rng.js"></script>
 <script src="engine/parser.js"></script>
 <script src="engine/game.js"></script>
@@ -1581,108 +1584,116 @@ DUMMY_DECK.forEach(([nm])=>NEEDED.add(norm(nm)));
 /* cards the pool never lists but effects can mint at runtime */
 ["Crouching Tiger","Inner Chi"].forEach(nm=>NEEDED.add(norm(nm)));
 
-/* ---------- card database (the-fab-cube, open data) ---------- */
+/* ---------- card database: the PINNED POOL (data/pool.js) ----------
+   RULING (user, 2026-11-02), "pinned pool only". Asked what the page should
+   load, the user chose the pinned pool over the live the-fab-cube database:
+   a phone plays exactly the card text the drills tested, the game survives
+   upstream moving or disappearing, and the first load is the pool (~1.4 MB)
+   instead of a 22 MB download. Each release cycle re-pins deliberately
+   (`node tools/audit.js --refresh`, `node tools/pin-pool.js`), and
+   `test/drift.test.js` is where upstream's moves are noticed.
+
+   So there is no fetch, no progress bar and no localStorage card cache:
+   the records are already in memory when this runs (a `<script src>`
+   above), and mapping ~800 of them is instant. The records are RAW
+   upstream records, mapped exactly as the live ones were — the field map
+   below mirrors the one in engine/cards.js, guarded by test/loader.test.js. The
+   keep-filter stays too: the pool is already only what the pool can
+   reach, and the filter is how the page has always said which records
+   it wants (test/poolreach.test.js asserts the two agree). */
+function poolCards(all){
+  const cards = [];
+  all.forEach(c=>{
+    if(!c || !c.name) return;
+    const nm = norm(c.name);
+    const isTok = /token/i.test(c.type_text||"") || /token/i.test((c.types||[]).join(" "));
+    /* A DEMI-HERO IS KEPT BY ITS TYPE (v3.76), the same way a token
+       is, and `tools/pin-pool.js` keeps them by the identical test.
+       Arakni prints "you become a random Agent of Chaos" and the six
+       Agents are Demi-Hero records no deck lists — so without this
+       the PHONE could not mint what the pinned pool can see, which
+       is v3.21's fixture-and-production split with the sign flipped.
+
+       The name-stem test above cannot reach them: `isHero` requires
+       the record's name to CONTAIN a deck hero's full name, and
+       "Arakni, Black Widow" does not contain "Arakni, Web of
+       Deceit". */
+    const isDemi = /demi-hero/i.test(c.type_text||"")
+                || (c.types||[]).some(t=>/^demi-hero$/i.test(t));
+    /* MIRRORS cards.js mapDbCard — see its header note. `bySet` is what
+       lets a card wear its Silver Age face instead of whatever printing
+       the database listed first; first printing per set wins, which is
+       stable because foiling and art variations share one image_url. */
+    const prints={}, bySet={};
+    (c.printings||[]).forEach(pr=>{
+      const id = pr.id || pr.identifier || pr.set_printing_unique_id || null;
+      const url = pr.image_url || pr.image || null;
+      if(url){
+        if(id) prints[id]=url;
+        if(pr.set_id && !bySet[pr.set_id]) bySet[pr.set_id]=url;
+        if(!prints._first) prints._first=url;
+      }
+    });
+    const isHero = /hero/i.test(c.type_text||"") && HERO_STEMS.some(st=>nm.includes(st));
+    const hasCode = Object.keys(prints).some(id=>id!=="_first" && CODES.has(id));
+    if(!NEEDED.has(nm) && !isTok && !isDemi && !isHero && !hasCode) return;
+    cards.push({
+      n:c.name, p:toNum(c.pitch), c:toNum(c.cost), pw:toNum(c.power),
+      d:toNum(c.defense), hp:toNum(c.health), int:toNum(c.intelligence),
+      tt:c.type_text||((c.types||[]).join(" ")),
+      /* mirrors engine/cards.js mapDbCard — the STRUCTURED type array,
+         which is the authority where `tt` is only a display string.
+         They disagree on 5 records and it is not cosmetic: `tt` calls
+         Den of the Spider an "Action Defense Reaction", which would
+         make a defence reaction playable on your own turn. Change
+         both, and bump DATA_VER when you do. */
+      /* IS THIS A SPLIT CARD? (v3.34) The database says so itself, and the
+         flag is the authority — `//` in the type line is how two typeboxes
+         are RENDERED, not what makes a card a split card. Exactly two
+         records in this pool carry it, and both print Meld.
+
+         A split card is ONE card with two halves: one pitch value, one
+         defence value, one card in hand and one card in the graveyard. The
+         halves are told apart by `tt`, which is the one place the boundary
+         survives — the structured `ty` array flattens both faces into a
+         single list (v2.39). */
+      hz:!!c.played_horizontally,
+      /* mirrors cards.js (v4.72): the X count of Ice Eternal's "XX". */
+      cx:(String(c.cost||"").match(/x/gi)||[]).length||undefined,
+      ty:(c.types||[]).slice(),
+      kw:(c.card_keywords||[]), gkw:(c.granted_keywords||[]),
+      tx:c.functional_text_plain||c.functional_text||"", pr:prints, prs:bySet
+    });
+  });
+  return cards;
+}
+function loadPool(){
+  const all = window.DAWN_POOL;
+  if(!Array.isArray(all)) throw new Error("the card pool did not load");
+  const cards = poolCards(all);
+  const byNP={}, byName={}, byCode={};
+  cards.forEach(c=>{
+    const k=norm(c.n);
+    byNP[k+"|"+(c.p==null?0:c.p)]=c;
+    (byName[k]=byName[k]||[]).push(c);
+    Object.keys(c.pr||{}).forEach(id=>{ if(id!=="_first") byCode[id]=c; });
+  });
+  return {status:"ready",byNP,byName,byCode,count:cards.length,err:null};
+}
 function useCardDB(){
-  const [state,setState] = useState({status:"idle",pct:0,byNP:{},byName:{},byCode:{},count:0,err:null});
-  const load = useCallback(async(force)=>{
-    setState(s=>({...s,status:"loading",pct:0,err:null}));
-    try{
-      let cards = null;
-      if(!force){
-        const cached = store.get("dbcache_"+DATA_VER, null);
-        if(cached && Array.isArray(cached)) cards = cached;
-      }
-      if(!cards){
-        const res = await fetch(DBSRC);
-        if(!res.ok) throw new Error("HTTP "+res.status);
-        const total = +res.headers.get("content-length") || 0;
-        let text;
-        if(res.body && total){
-          const reader = res.body.getReader(); const chunks=[]; let got=0;
-          for(;;){ const {done,value}=await reader.read(); if(done)break;
-            chunks.push(value); got+=value.length;
-            setState(s=>({...s,pct:Math.min(99,Math.round(got/total*100))})); }
-          const buf=new Uint8Array(got); let o=0; chunks.forEach(c=>{buf.set(c,o);o+=c.length;});
-          text = new TextDecoder().decode(buf);
-        } else { text = await res.text(); }
-        const all = JSON.parse(text);
-        cards = [];
-        all.forEach(c=>{
-          if(!c || !c.name) return;
-          const nm = norm(c.name);
-          const isTok = /token/i.test(c.type_text||"") || /token/i.test((c.types||[]).join(" "));
-          /* A DEMI-HERO IS KEPT BY ITS TYPE (v3.76), the same way a token
-             is, and `tools/pin-pool.js` keeps them by the identical test.
-             Arakni prints "you become a random Agent of Chaos" and the six
-             Agents are Demi-Hero records no deck lists — so without this
-             the PHONE could not mint what the pinned pool can see, which
-             is v3.21's fixture-and-production split with the sign flipped.
-
-             The name-stem test above cannot reach them: `isHero` requires
-             the record's name to CONTAIN a deck hero's full name, and
-             "Arakni, Black Widow" does not contain "Arakni, Web of
-             Deceit". */
-          const isDemi = /demi-hero/i.test(c.type_text||"")
-                      || (c.types||[]).some(t=>/^demi-hero$/i.test(t));
-          /* MIRRORS cards.js mapDbCard — see its header note. `bySet` is what
-             lets a card wear its Silver Age face instead of whatever printing
-             the database listed first; first printing per set wins, which is
-             stable because foiling and art variations share one image_url. */
-          const prints={}, bySet={};
-          (c.printings||[]).forEach(pr=>{
-            const id = pr.id || pr.identifier || pr.set_printing_unique_id || null;
-            const url = pr.image_url || pr.image || null;
-            if(url){
-              if(id) prints[id]=url;
-              if(pr.set_id && !bySet[pr.set_id]) bySet[pr.set_id]=url;
-              if(!prints._first) prints._first=url;
-            }
-          });
-          const isHero = /hero/i.test(c.type_text||"") && HERO_STEMS.some(st=>nm.includes(st));
-          const hasCode = Object.keys(prints).some(id=>id!=="_first" && CODES.has(id));
-          if(!NEEDED.has(nm) && !isTok && !isDemi && !isHero && !hasCode) return;
-          cards.push({
-            n:c.name, p:toNum(c.pitch), c:toNum(c.cost), pw:toNum(c.power),
-            d:toNum(c.defense), hp:toNum(c.health), int:toNum(c.intelligence),
-            tt:c.type_text||((c.types||[]).join(" ")),
-            /* mirrors engine/cards.js mapDbCard — the STRUCTURED type array,
-               which is the authority where `tt` is only a display string.
-               They disagree on 5 records and it is not cosmetic: `tt` calls
-               Den of the Spider an "Action Defense Reaction", which would
-               make a defence reaction playable on your own turn. Change
-               both, and bump DATA_VER when you do. */
-            /* IS THIS A SPLIT CARD? (v3.34) The database says so itself, and the
-               flag is the authority — `//` in the type line is how two typeboxes
-               are RENDERED, not what makes a card a split card. Exactly two
-               records in this pool carry it, and both print Meld.
-
-               A split card is ONE card with two halves: one pitch value, one
-               defence value, one card in hand and one card in the graveyard. The
-               halves are told apart by `tt`, which is the one place the boundary
-               survives — the structured `ty` array flattens both faces into a
-               single list (v2.39). */
-            hz:!!c.played_horizontally,
-            /* mirrors cards.js (v4.72): the X count of Ice Eternal's "XX". */
-            cx:(String(c.cost||"").match(/x/gi)||[]).length||undefined,
-            ty:(c.types||[]).slice(),
-            kw:(c.card_keywords||[]), gkw:(c.granted_keywords||[]),
-            tx:c.functional_text_plain||c.functional_text||"", pr:prints, prs:bySet
-          });
-        });
-        store.set("dbcache_"+DATA_VER, cards);
-      }
-      const byNP={}, byName={}, byCode={};
-      cards.forEach(c=>{
-        const k=norm(c.n);
-        byNP[k+"|"+(c.p==null?0:c.p)]=c;
-        (byName[k]=byName[k]||[]).push(c);
-        Object.keys(c.pr||{}).forEach(id=>{ if(id!=="_first") byCode[id]=c; });
-      });
-      setState({status:"ready",pct:100,byNP,byName,byCode,count:cards.length,err:null});
-    }catch(e){ setState(s=>({...s,status:"error",err:String(e&&e.message||e)})); }
+  /* Ready on the first render — there is nothing to wait for. */
+  const [state] = useState(()=>{
+    try{ return loadPool(); }
+    catch(e){ return {status:"error",byNP:{},byName:{},byCode:{},count:0,err:String(e&&e.message||e)}; }
+  });
+  /* The live-database era cached its mapped cards under "dbcache_<DATA_VER>";
+     nothing reads those keys now, so free the phone's storage once. */
+  useEffect(()=>{
+    try{ Object.keys(localStorage).forEach(k=>{ if(k.indexOf("dawnblade.dbcache_")===0) localStorage.removeItem(k); }); }catch(e){}
   },[]);
-  useEffect(()=>{ load(false); },[load]);
-  return [state,load];
+  /* A pool that failed to load is a page that failed to load: Retry reloads it. */
+  const reload = useCallback(()=>{ try{ window.location.reload(); }catch(e){} },[]);
+  return [state,reload];
 }
 
 
@@ -1716,16 +1727,13 @@ function CardModal({card,onClose}){
     </div>
   );
 }
+/* Only a failure has anything to say: the pool is bundled with the page,
+   so there is no download to show progress for (v5.74). */
 function DbBanner({db,reload}){
-  if(db.status==="ready") return null;
-  if(db.status==="error") return (
-    <div className="dbbar err"><span className="dot"/><span>Database fetch failed: {db.err}. Art still loads; stats need the DB.</span>
-      <button className="retry" onClick={()=>reload(true)}>Retry</button></div>
-  );
+  if(db.status!=="error") return null;
   return (
-    <div className="dbbar"><span className="dot"/>
-      <span style={{flex:1}}>Forging card database — first visit only<div className="prog"><i style={{width:db.pct+"%"}}/></div></span>
-    </div>
+    <div className="dbbar err"><span className="dot"/><span>The card pool did not load ({db.err}). Art still loads; stats need the pool.</span>
+      <button className="retry" onClick={()=>reload()}>Retry</button></div>
   );
 }
 

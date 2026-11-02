@@ -53,7 +53,7 @@ function pool(){
   const CACHE = require("../test/helpers/extract").cardDbPath();
   const imgs = {}, byName = {};
   if(fs.existsSync(CACHE)){
-    for(const c of JSON.parse(fs.readFileSync(CACHE, "utf8"))){
+    for(const c of require("../test/helpers/extract").readCards(CACHE)){
       if(!c || !c.name) continue;
       const url = ((c.printings||[]).find(p=>p.image_url)||{}).image_url;
       const p = (c.pitch === null || c.pitch === undefined || c.pitch === "") ? 0 : c.pitch;

@@ -441,7 +441,7 @@ test("the arena activation census is pinned, both halves", {skip}, () => {
      is a deliberate edit. Both halves are pinned — the seven that READ and
      the four that REFUSE — because pinning the readers alone cannot see a
      name leaving the list (v4.29). */
-  const raw = JSON.parse(fs.readFileSync(require("./helpers/extract").cardDbPath(), "utf8"));
+  const raw = require("./helpers/extract").readCards(require("./helpers/extract").cardDbPath());
   const all = raw.filter(c => c && c.name).map(c => {
     const m = CD.mapDbCard(c);
     return {name: m.n, pitch: m.p, cost: m.c, power: m.pw, def: m.d, life: m.hp,

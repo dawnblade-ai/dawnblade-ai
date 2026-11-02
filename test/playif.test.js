@@ -133,7 +133,7 @@ test("every writer that ADDS to a soul records the event", {skip}, () => {
 });
 
 test("the evaluator answers every kind the pool emits, and refuses one it does not know", {skip}, () => {
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const arr = Array.isArray(pool) ? pool : Object.values(pool);
   const kinds = new Set();
   for(const c of arr){

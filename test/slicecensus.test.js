@@ -393,8 +393,11 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
     "phasebar.test.js index.html 18386",
     /* 63,730 -> 64,368 AT v5.57, READ FIRST: still the `<style>` block,
        `<style>` -> `</style>`; the growth is the Cloaked card back's three
-       rules (`.deckback.gback`, `.gbtag`, `.gbname`). */
-    "phasebar.test.js index.html 64368",
+       rules (`.deckback.gback`, `.gbtag`, `.gbname`).
+       64,368 -> 64,223 AT v5.74, READ FIRST: still `<style>` ->
+       `</style>`; the shrink is the download progress bar's two `.prog`
+       rules, retired with the live card fetch. */
+    "phasebar.test.js index.html 64223",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
        `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
        `abPickBound` in the pick legality it extends. */

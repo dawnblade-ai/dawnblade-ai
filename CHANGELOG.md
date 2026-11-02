@@ -1,3 +1,31 @@
+## v5.74 — The page plays the pinned pool
+
+**RULING (user, 2026-11-02), "pinned pool only."** Asked what the page should load, the user chose
+the pinned pool over the live the-fab-cube database.
+
+- **What changed for a player:** the page loads `data/pool.js` (the 797 raw upstream records the drills
+  already read) and fetches no card database. A phone plays exactly the card text the suite tested,
+  the game survives upstream moving or disappearing, and the first load is the pool, 1.4 MB
+  (~125 KB gzipped), instead of the 22 MB live `card.json`. Errata reach a player only when a release
+  re-pins (`node tools/audit.js --refresh`, read `test/drift.test.js`, `node tools/pin-pool.js`).
+- **One copy of the data:** `data/pool.json` became `data/pool.js`, a script, because file:// refuses
+  `fetch()`. It assigns `window.DAWN_POOL` in the page and is `module.exports` under Node; the array
+  inside is plain JSON, one record per line. `tools/pin-pool.js` writes the new shape. Every drill and
+  tool that read the old file moved with it (`require("…/data/pool.js")`, or
+  `readCards` / `readPool` in `test/helpers/extract.js` for a fresh copy).
+- **Retired:** the live fetch, `DBSRC` (the URL now lives in `tools/audit.js`, the only reader), the
+  download progress bar and its CSS, and the localStorage card cache (old `dbcache_*` keys are deleted
+  on load). The banner speaks only if the pool fails to load, and Retry reloads the page.
+  `DATA_VER` sage-v14 -> sage-v15, so a phone still on live text cannot share a table with one on the
+  pool. `useCardDB` maps the raw records exactly as before (`test/loader.test.js` field map unchanged).
+- **Drills:** `test/poolreach.test.js` (4) runs the page's own loader against the pool: every name the
+  page resolves (decks, heroes, gear, the dummy's pile, the runtime-minted cards) is a pool record, the
+  page keeps every pool record, tokens and Demi-Heroes included, a missing pool is an error, and the
+  page names no upstream host and loads the pool before any engine script. Five sabotages, each caught.
+- **Tools:** `tools/page.js` no longer routes `raw.githubusercontent.com`, so a request there fails the
+  smoke check; `tools/phone/serve.sh` copies `data/pool.js` and downloads nothing. CLAUDE.md's release
+  check also verifies `data/*.js` scripts are in the pushed commit.
+
 ## v5.73 — Lyath keeps the attack her pump is for
 
 **QUEUE H29, policy (Lyath).** Found and measured by a Sonnet agent, re-measured and shipped by the

@@ -36,7 +36,7 @@ const W = loadData();
 
 let _db = null;
 const DB = () => _db || (_db = C.buildMaps(
-  JSON.parse(fs.readFileSync(require("./helpers/extract").cardDbPath(), "utf8"))
+  require("./helpers/extract").readCards(require("./helpers/extract").cardDbPath())
     .filter(c => c && c.name).map(C.mapDbCard)));
 
 const briarBuild = () => {

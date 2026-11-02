@@ -247,7 +247,7 @@ const noDb = !fs.existsSync(CACHE) && "no cached card database";
 const W = noDb ? null : require("./helpers/extract.js").loadData();
 let _db = null;
 const DB = () => _db || (_db = C.buildMaps(
-  JSON.parse(fs.readFileSync(CACHE, "utf8")).filter(c => c && c.name).map(C.mapDbCard)));
+  require("./helpers/extract").readCards(CACHE).filter(c => c && c.name).map(C.mapDbCard)));
 
 function realMatch(k0, k1, seed){
   const hero = k => W.HEROES.find(h => new RegExp(k, "i").test(h.n));

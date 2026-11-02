@@ -92,7 +92,7 @@ test("the talent comes off the STRUCTURED ARRAY, and the pool agrees today", {sk
      card whose `tt` plainly contains the word. Check your own fixture
      (twelfth time); the honest answer is ZERO. */
   const C = require("../engine/cards.js");
-  const raw = require("../data/pool.json");
+  const raw = require("../data/pool.js");
   const db = C.buildMaps(raw.filter(c => c && c.name).map(C.mapDbCard));
   let n = 0, disagree = 0;
   for(const r of raw){
@@ -280,7 +280,7 @@ test("the policy answers the kind, deterministically, and takes it", {skip}, () 
 test("the pool's fusion records are pinned, and every one already read `full`", {skip}, () => {
   H.db();
   const C = require("../engine/cards.js");
-  const raw = require("../data/pool.json");
+  const raw = require("../data/pool.js");
   const db = C.buildMaps(raw.filter(c => c && c.name).map(C.mapDbCard));
   const names = new Set(); let n = 0;
   for(const r of raw){

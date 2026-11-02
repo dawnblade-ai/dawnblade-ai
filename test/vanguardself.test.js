@@ -220,7 +220,7 @@ test(gate("CENSUS: V is the only ATTACK card in the pool whose ops carry a stand
   const fs = require("fs");
   const X = require("./helpers/extract.js");
   const TY = require("../engine/types.js");
-  const pool = JSON.parse(fs.readFileSync(X.POOL, "utf8")).filter(c => c && c.name).map(C.mapDbCard)
+  const pool = require("./helpers/extract").readCards(X.POOL).filter(c => c && c.name).map(C.mapDbCard)
     .map(m => ({name: m.n, pitch: m.p, cost: m.c, power: m.pw, def: m.d, tt: m.tt, ty: m.ty, tx: m.tx, kw: m.kw, gkw: m.gkw}));
   const seen = new Set(), hit = [];
   for(const c of pool){

@@ -76,7 +76,7 @@ test("THE CENSUS: every condition the pool emits gets WORDS from `condWhy`, at b
     if(typeof o.cond === "string") conds.add(o.cond);
     for(const k in o) walk(o[k], d + 1);
   };
-  for(const r of require("../data/pool.json")) for(const p of [0, 1, 2, 3]){
+  for(const r of require("../data/pool.js")) for(const p of [0, 1, 2, 3]){
     let c; try { c = H.card(r.name, p); } catch(e){ continue; }
     if(!c || !c.name || seen.has(c.name + "|" + c.pitch)) continue;
     seen.add(c.name + "|" + c.pitch);

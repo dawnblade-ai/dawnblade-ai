@@ -294,7 +294,7 @@ const { loadData, cardDbPath } = require("./helpers/extract");
 const W = loadData();
 let _db = null;
 const DB = () => _db || (_db = C.buildMaps(
-  JSON.parse(fs.readFileSync(cardDbPath(), "utf8")).filter(c => c && c.name).map(C.mapDbCard)));
+  require("./helpers/extract").readCards(cardDbPath()).filter(c => c && c.name).map(C.mapDbCard)));
 
 test("driven: Dash's Talishar shatters at the table, through judge.reduce", {skip}, () => {
   /* The drills above call `beginEndPhase` directly, which proves the body

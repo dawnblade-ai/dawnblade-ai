@@ -132,7 +132,7 @@ test("38 of the pool's 39 destroy-costs destroy THIS — the measurement", {skip
   const recs = [];
   const seen = new Set();
   Object.keys(W.DECKS).forEach(k => {});
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const arr = Array.isArray(pool) ? pool : Object.values(pool);
   let self = 0, other = 0;
   arr.forEach(c => {

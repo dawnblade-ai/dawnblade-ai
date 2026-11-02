@@ -17,7 +17,7 @@ const ready = fs.existsSync(CACHE) && fs.existsSync(BASELINE);
 
 test("pool coverage — no card degrades below the pinned baseline", {skip: !ready && "no cached DB/baseline — run: node tools/audit.js --write-baseline"}, () => {
   const W = loadData();
-  const raw = JSON.parse(fs.readFileSync(CACHE, "utf8"));
+  const raw = require("./helpers/extract").readCards(CACHE);
   const db = C.buildMaps(raw.filter(c=>c && c.name).map(C.mapDbCard));
   const baseline = JSON.parse(fs.readFileSync(BASELINE, "utf8"));
   const rank = {none:0, part:1, full:2};

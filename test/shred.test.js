@@ -437,7 +437,7 @@ test("DRIVEN: …and the positive control — an Assassin attack and a defender"
 test("`defDebuff` is the qualifier's FOURTH home, and Shred is its only claimant", {skip}, () => {
   /* the day a second card arrives here, its target is asked the same way */
   H.db();
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const all = Array.isArray(pool) ? pool : (pool.cards || Object.values(pool));
   const names = [...new Set(all.filter(c => c && c.name && P.fxParse(c).defDebuff).map(c => c.name))];
   assert.deepEqual(names, ["Shred"]);

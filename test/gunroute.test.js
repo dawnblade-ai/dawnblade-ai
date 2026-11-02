@@ -44,7 +44,7 @@ const ROOT = path.join(__dirname, "..");
 const HTML = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
 
 const pool = (() => {
-  const j = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "pool.json"), "utf8"));
+  const j = require("./helpers/extract").readCards(path.join(ROOT, "data", "pool.js"));
   return (j.cards || j).map(r => {
     const m = C.mapDbCard(r);
     return {name: m.n, pitch: m.p, cost: m.c, power: m.pw, def: m.d, tt: m.tt,

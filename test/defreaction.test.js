@@ -29,7 +29,7 @@ const skip = !fs.existsSync(CACHE) && "no cached DB";
 
 let _db = null;
 const DB = () => _db || (_db = (() => {
-  const d = C.buildMaps(JSON.parse(fs.readFileSync(CACHE, "utf8"))
+  const d = C.buildMaps(require("./helpers/extract").readCards(CACHE)
     .filter(c => c && c.name).map(C.mapDbCard));
   J.setDb(d); return d;
 })());

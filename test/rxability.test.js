@@ -224,7 +224,7 @@ test("DRIVEN: Stalker's Steps grants go again to a stealth attack on the link", 
   /* Pick a real pool attack that PRINTS stealth on its own line — the
      qualifier asks `printedKw`, so a card that merely mentions the word
      must not qualify. */
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const rec = pool.find(r => P.isAttack({tt: r.type_text || "", ty: r.types || [], power: r.power})
                           && P.printedKw({tx: r.functional_text || "", kw: r.card_keywords || []}, "stealth"));
   assert.ok(rec, "the pool must contain a printed-stealth attack, or this drill proves nothing");
@@ -274,7 +274,7 @@ test("DRIVEN: the ops run ONCE, not once here and once on the link", {skip}, () 
 test("DRIVEN: Bolt'n Boots needs the arrow to be PUMPED above its base", {skip}, () => {
   H.db();
   const gr = gearOf("azalea", "Bolt'n Boots");
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   /* "Ranger Action - Arrow Attack" — `attack action` is not a substring of
      that line, and asking for one is how a fixture search finds nothing and
      the drill passes by proving nothing. Ask the predicate. */
@@ -470,7 +470,7 @@ test("THE CREDIT IS CONDITIONAL — the clauses that refuse stay `skip`", {skip}
      unread clause that pins them at `part` whatever the credit does — a
      derived aggregate that other facts also determine cannot see a change
      to one of them. The clause status is what the credit writes. */
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const mk = r => ({name: r.name + "|rxcredit|" + r.pitch, tx: r.functional_text || "",
                     tt: r.type_text || "", ty: r.types || [], kw: r.card_keywords || [],
                     pitch: r.pitch, cost: r.cost, power: r.power, def: r.defense});
@@ -507,7 +507,7 @@ test("THE CREDIT IS CONDITIONAL — the clauses that refuse stay `skip`", {skip}
 });
 
 test("…while the three that DO have a route are credited", {skip}, () => {
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const mk = r => ({name: r.name + "|rxok|" + r.pitch, tx: r.functional_text || "",
                     tt: r.type_text || "", ty: r.types || [], kw: r.card_keywords || [],
                     pitch: r.pitch, cost: r.cost, power: r.power, def: r.defense});

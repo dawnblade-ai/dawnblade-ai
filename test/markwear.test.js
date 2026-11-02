@@ -93,7 +93,7 @@ test("non-attack damage does not clear a mark (the effect must SAY so)", {skip},
 test("CENSUS: no pool record removes a mark", () => {
   /* The effect half of the ruling has nothing to build because nothing
      prints it. The day a card does, this fails and it is a decision. */
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const recs = Array.isArray(pool) ? pool : (pool.cards || Object.values(pool));
   const txt = r => r.functional_text || r.tx || "";
   const mention = recs.filter(r => /\bmark/i.test(txt(r)));

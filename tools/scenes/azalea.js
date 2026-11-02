@@ -289,7 +289,7 @@ module.exports = [
     const RNG = require("../../engine/rng.js");
     const J = require("../../engine/judge.js");
     const {loadData} = require("../../test/helpers/extract.js");
-    const pool = require("../../data/pool.json");
+    const pool = require("../../data/pool.js");
     const W = loadData();
     const db = c.H.db();
     const b = B.buildSide(W.HEROES.find(x => x.k === "azalea"),

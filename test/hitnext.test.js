@@ -103,7 +103,7 @@ test("THE BOUND IS THE PRINTED WORD \"hit\", AND IT IS A MEASUREMENT", {skip}, (
      reading. */
   H.db();
   const hit = [], other = [];
-  for(const rec of H.poolRecords ? H.poolRecords() : require("../data/pool.json")){
+  for(const rec of H.poolRecords ? H.poolRecords() : require("../data/pool.js")){
     const tx = String((rec.functional_text != null ? rec.functional_text : rec.tx) || "");
     for(const one of (tx.match(/the next time ([^,]*) this turn,/ig) || [])){
       const subj = one.replace(/^the next time /i, "").replace(/ this turn,$/i, "");

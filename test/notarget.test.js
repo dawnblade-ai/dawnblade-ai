@@ -94,7 +94,7 @@ test("THE READER ignores attacks — their targeted text is a trigger's", {skip}
 
 test("BRAVO: the ability is refused on an empty or face-up arsenal, and legal with a face-down card", {skip}, () => {
   const db = H.db();
-  const rec = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "data", "pool.json"), "utf8"))
+  const rec = require("./helpers/extract").readCards(path.join(__dirname, "..", "data", "pool.js"))
     .find(x => /^Bravo, Flattering/.test(x.name));
   const ab = B.heroAbilities({name: rec.name, tx: rec.functional_text, ty: rec.types}, rec.name, "").HPOW;
   assert.deepEqual(P.fxParse(ab).ops.map(o => o[0]), ["arsTurn"], "fixture: the turn is the whole payload");
@@ -110,7 +110,7 @@ test("THE FAMILY, pinned both ways: which played cards refuse and which resolve 
   const db = H.db();
   const C = require("../engine/cards.js");
   const refused = new Set(), seen = new Set();
-  for(const r of require("../data/pool.json")){
+  for(const r of require("../data/pool.js")){
     const m = C.mapDbCard(r), c = C.resolveEntry(db, {name: m.n, p: m.p == null ? 0 : m.p, code: null, q: 1});
     if(!c || seen.has(c.name)) continue; seen.add(c.name);
     c.uid = "Z";
@@ -127,7 +127,7 @@ test("PREMISE: every targeted foePick or 'target attack' payload prints somethin
   const db = H.db();
   const C = require("../engine/cards.js");
   const bare = [], claim = new Set(), seen = new Set();
-  for(const r of require("../data/pool.json")){
+  for(const r of require("../data/pool.js")){
     const m = C.mapDbCard(r), c = C.resolveEntry(db, {name: m.n, p: m.p == null ? 0 : m.p, code: null, q: 1});
     if(!c || seen.has(c.name) || P.isAttack(c) || P.isDR(c)) continue; seen.add(c.name);
     const fx = P.fxParse(c), ops = (fx.ops || []).filter(o => o[0] !== "noop");
@@ -163,7 +163,7 @@ test("N6: the `target` flag is the printed word — the pool's ctrPut emitters, 
       o.forEach(x => walk(x, name));
     } else if(o && typeof o === "object") Object.values(o).forEach(x => walk(x, name));
   };
-  for(const r of require("../data/pool.json")){
+  for(const r of require("../data/pool.js")){
     const m = C.mapDbCard(r), c = C.resolveEntry(db, {name: m.n, p: m.p == null ? 0 : m.p, code: null, q: 1});
     if(c) walk(P.fxParse(c), c.name);
   }

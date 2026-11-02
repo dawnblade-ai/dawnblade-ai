@@ -53,7 +53,7 @@ const X = require("./helpers/extract.js");
 const skip = H.db() ? false : "no card database";
 const ROOT = path.join(__dirname, "..");
 const pool = (() => {
-  const j = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "pool.json"), "utf8"));
+  const j = require("./helpers/extract").readCards(path.join(ROOT, "data", "pool.js"));
   return j.cards || j;
 })();
 const LINE = "put target Runeblade attack action card and target Runeblade "

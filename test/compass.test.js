@@ -112,7 +112,7 @@ test("an unreadable qualifier refuses the clause", {skip}, () => {
    `with <keyword>` vocabulary, which `optFilter`'s reveal branch also
    reads — so the question is what ELSE moved. */
 test("the vocabulary widening moved exactly one record", {skip}, () => {
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const arr = Array.isArray(pool) ? pool : (pool.cards || Object.values(pool));
   const hits = [];
   for(const c of arr){

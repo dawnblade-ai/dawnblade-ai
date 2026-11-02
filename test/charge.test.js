@@ -61,7 +61,7 @@ const CARDS = ["Beaming Bravado", "Bolt of Courage", "Engulfing Light",
 /* ---- the pool census, pinned as a SET ------------------------------- */
 
 const POOL = () => {
-  const raw = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "data", "pool.json"), "utf8"))
+  const raw = require("./helpers/extract").readCards(path.join(__dirname, "..", "data", "pool.js"))
     .filter(c => c && c.name).map(C.mapDbCard);
   const maps = C.buildMaps(raw);
   const out = [], seen = new Set();

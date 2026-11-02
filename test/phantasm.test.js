@@ -97,7 +97,7 @@ test("`phantasmPops` reads NON-Illusionist, off the structured array", () => {
 /* ---- the pool census, pinned as SETS -------------------------------- */
 
 const POOL = () => {
-  const raw = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "data", "pool.json"), "utf8"))
+  const raw = require("./helpers/extract").readCards(path.join(__dirname, "..", "data", "pool.js"))
     .filter(c => c && c.name).map(C.mapDbCard);
   const maps = C.buildMaps(raw);
   const out = [];

@@ -50,8 +50,8 @@ const skip = !H.hasDb() && "no cached card database";
 
 /* The pinned pool, read directly — this census is about what the POOL
    prints and needs no live database (v4.17). */
-const POOL = JSON.parse(fs.readFileSync(require("path")
-  .join(__dirname, "..", "data", "pool.json"), "utf8"));
+const POOL = require("./helpers/extract").readCards(require("path")
+  .join(__dirname, "..", "data", "pool.js"));
 
 const clean = t => (t||"").replace(/\*\*?/g,"").replace(/__?/g,"").replace(/\s+/g," ").trim();
 /* `parseHeroPower`'s own anchor, so the census reads exactly the strings

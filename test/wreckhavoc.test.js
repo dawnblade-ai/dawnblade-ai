@@ -37,7 +37,7 @@ const S  = require("../engine/sparring.js");
 const H  = require("./helpers/judged.js");
 
 const skip = !H.hasDb() && "no cached card database";
-const pool = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "data", "pool.json"), "utf8"));
+const pool = require("./helpers/extract").readCards(path.join(__dirname, "..", "data", "pool.js"));
 const recs = pool.cards || pool;
 
 /* ============================================================

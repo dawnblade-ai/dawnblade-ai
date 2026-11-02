@@ -53,7 +53,7 @@ test("NOTHING IN THE POOL GRANTS STEALTH, which is why `printedKw` is right", {s
      GRANTS stealth this fails, and the right answer then is `hasKwNow`
      plus `_kwGrant` — which is a decision, not a silent widening. */
   H.db();
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const mk = r => ({name: r.name, pitch: r.pitch, tt: r.tt || r.type_text,
                     ty: r.ty || r.types, tx: r.tx || r.functional_text,
                     kw: r.kw || r.card_keywords || [], power: r.power});
@@ -642,7 +642,7 @@ test("the pinned pool carries the Agents at all", {skip}, () => {
      loader keeps one by the identical test — so the Node tools and the
      browser can both see what Arakni becomes. Without it the fixture and
      production reason about different pools, each internally consistent. */
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const demi = pool.filter(c => /demi-hero/i.test(c.type_text || ""));
   assert.ok(demi.length >= 6, "the pool must carry the Demi-Heroes");
   const html = require("fs").readFileSync(

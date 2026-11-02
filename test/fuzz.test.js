@@ -44,7 +44,7 @@ const skip = !fs.existsSync(CACHE) && "no cached DB — run: node tools/audit.js
 const W = loadData();
 let _db = null;
 const DB = () => _db || (_db = C.buildMaps(
-  JSON.parse(fs.readFileSync(CACHE, "utf8")).filter(c => c && c.name).map(C.mapDbCard)));
+  require("./helpers/extract").readCards(CACHE).filter(c => c && c.name).map(C.mapDbCard)));
 
 function match(seed){
   const h0 = W.HEROES.find(h => /kayo/i.test(h.n)), h1 = W.HEROES.find(h => /dorinthea/i.test(h.n));

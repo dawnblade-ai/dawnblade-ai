@@ -43,7 +43,7 @@ const J = require("../engine/judge.js");
 const skip = !H.hasDb() && "no cached card database";
 const ROOT = path.join(__dirname, "..");
 const pool = (() => {
-  const j = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "pool.json"), "utf8"));
+  const j = require("./helpers/extract").readCards(path.join(ROOT, "data", "pool.js"));
   return j.cards || j;
 })();
 

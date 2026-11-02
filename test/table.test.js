@@ -40,7 +40,7 @@ const skip = !ready && "no cached DB — run: node tools/audit.js";
 
 let db = null;
 const DB = () => db || (db = C.buildMaps(
-  JSON.parse(fs.readFileSync(CACHE, "utf8")).filter(c => c && c.name).map(C.mapDbCard)));
+  require("./helpers/extract").readCards(CACHE).filter(c => c && c.name).map(C.mapDbCard)));
 
 const W = loadData();
 const DATA_VER = W.DATA_VER || "sage-v11";

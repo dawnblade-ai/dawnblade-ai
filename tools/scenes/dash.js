@@ -54,7 +54,7 @@ module.exports = [
        "(the TAP is a state, and a tapped permanent does not untap until " +
        "CR 4.4.3d). `weaponCost` returns both and both must be honoured.",
   run(c){
-    const pool = require("../../data/pool.json");
+    const pool = require("../../data/pool.js");
     const line = n => (pool.find(x => x.name === n) || {}).functional_text || "";
     const sledge = P.weaponCost(line("Sledge of Anvilheim"));
     const scorpio = P.weaponCost(line("Scorpio, Comet Tail"));

@@ -169,7 +169,7 @@ test("PREMISE: every pool card printing the limit is a DEFENCE REACTION", {skip}
      declaration door: a declarable card printing it would meet no check.
      The day one arrives, this fails and somebody builds that half. */
   H.db();
-  const pool = require("../data/pool.json");
+  const pool = require("../data/pool.js");
   const with_ = [];
   for(const r of pool){
     const c = {name: r.name, tx: r.functional_text || "", tt: r.type_text, ty: r.types, kw: r.card_keywords,

@@ -5,7 +5,7 @@
 # argument — only nobody had written the twenty lines.
 #
 # It runs on a FRESH CLONE with no card-database cache, which is the state
-# v3.00 made green on purpose: `data/pool.json` pins every record the pool
+# v3.00 made green on purpose: `data/pool.js` pins every record the pool
 # can reach, so the suite measures the same engine on every machine. The
 # only drills that skip are the 4 in test/drift.test.js, which read the live
 # database deliberately — and the skip count is ASSERTED below, because

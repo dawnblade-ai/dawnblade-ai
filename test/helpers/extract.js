@@ -49,14 +49,29 @@ function loadData(){
    `test/drift.test.js`, which reads the live copy on purpose and
    compares what the parser makes of each.
 
-   `data/pool.json` is written by `tools/pin-pool.js` and is fetched
-   data, never authored. The GAME still streams the live database at
-   runtime; pinning the fixture does not pin the player. */
-const POOL = path.join(ROOT, "data", "pool.json");
+   `data/pool.js` is written by `tools/pin-pool.js` and is fetched
+   data, never authored. Since v5.74 it is also what the GAME plays —
+   RULING (user, 2026-11-02), "pinned pool only": the page loads it by
+   `<script src>` and fetches no card database, so the fixture IS the
+   player's card text. */
+const POOL = path.join(ROOT, "data", "pool.js");
 const LIVE = path.join(ROOT, "tools", ".cache", "card.json");
 
 const cardDbPath = () => fs.existsSync(POOL) ? POOL : LIVE;
 const hasLiveDb  = () => fs.existsSync(LIVE);
 const liveDbPath = () => LIVE;
 
-module.exports = { ROOT, html, effects, loadData, cardDbPath, hasLiveDb, liveDbPath, POOL, LIVE };
+/* READ A CARD FILE — a FRESH array every call. The pinned pool is a script
+   (`window.DAWN_POOL = [...]` for the page, `module.exports` for Node);
+   its array is plain JSON between the wrapper's first `\n[` and its last
+   `]`, so this slices it out rather than evaluating the file. The live
+   cache is a plain .json. `require("data/pool.js")` is the shared,
+   cached copy — use this where a drill may mutate what it reads. */
+const poolJson = text => text.slice(text.indexOf("\n[") + 1, text.lastIndexOf("]") + 1);
+function readCards(p){
+  const text = fs.readFileSync(p, "utf8");
+  return JSON.parse(/\.js$/.test(p) ? poolJson(text) : text);
+}
+const readPool = () => readCards(POOL);
+
+module.exports = { ROOT, html, effects, loadData, cardDbPath, hasLiveDb, liveDbPath, readCards, readPool, poolJson, POOL, LIVE };

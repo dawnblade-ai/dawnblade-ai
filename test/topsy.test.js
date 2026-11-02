@@ -280,7 +280,7 @@ test("THE LADDER CANNOT SEE IT, AND THAT IS THE LOADOUT — pinned as a premise"
   const C = require("../engine/cards.js");
   const G = require("../engine/game.js");
   const {loadData, cardDbPath} = require("./helpers/extract.js");
-  const db = C.buildMaps(JSON.parse(fs.readFileSync(cardDbPath(), "utf8")).filter(c => c && c.name).map(C.mapDbCard));
+  const db = C.buildMaps(require("./helpers/extract").readCards(cardDbPath()).filter(c => c && c.name).map(C.mapDbCard));
   const W = loadData();
   const list = B.gearSlots(G.parseDeck(W.DECKS.arakni).gear.map(e => C.resolveEntry(db, e, "SAR")));
   const worn = B.defaultPicks(list).map(i => list.find(x => x.i === i).c.name);
