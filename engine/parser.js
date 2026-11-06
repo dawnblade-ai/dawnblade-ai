@@ -10582,6 +10582,40 @@ function defCapWhy(pend, declared, card, fromGear){
        + (cap.count === "hand" ? " from hand" : "");
 }
 
+/* …AND A DEFENCE REACTION PLAYED INTO THE CAP COUNTS TOO (S-1, QA-A).
+   `defCapWhy` was asked on the DECLARE route only, so after one card from
+   hand was declared against a dominate attack, a defence reaction from hand
+   was still playable and became a second hand defender. CR (verbatim,
+   rules.fabtcg.com) CR 8.3.4: "Dominate is a static ability that means "This
+   can't be defended by more than one card from hand."" 8.3.4b: "If an attack
+   with dominate is currently defended by a card from hand on the activate
+   chain link, defense reaction cards cannot be played from hand.[7.4.2c]"
+   CR 7.4.2c: "A defense reaction card cannot be played if a rule or effect would
+   prevent the player from defending with that card." So this is a PLAY gate,
+   asked before the card leaves the hand (both boards' doors). `declared` is
+   the caller's `[{card, gear}]` as for `defCapWhy`; `rx` is
+   `rxDefenders(sd)` — a played defence reaction is a defending card (v5.21),
+   never declared. `zone` is where the new card comes FROM: dominate counts
+   cards from hand only, so one from the arsenal is never refused by it.
+   Overpower's ACTION set cannot read a played reaction (its entry keeps no
+   card), so only the declared ones count there: the narrow reading. */
+function defCapRxWhy(pend, declared, rx, card, zone){
+  const cap = defCap(pend && pend.card, pend && pend.defCap);
+  if(!cap) return null;
+  const ds = declared || [], r = rx || {all: 0, fromHand: 0};
+  let n;
+  if(cap.count === "hand"){
+    if(zone !== "hand") return null;
+    n = ds.filter(d => d && !d.gear).length + (r.fromHand || 0);
+  } else {
+    if(!defCounts(cap, card, false)) return null;
+    n = ds.filter(d => d && (d.card ? defCounts(cap, d.card, !!d.gear) : !!d.gear)).length
+      + (cap.count === "nonBlock" ? (r.all || 0) : 0);
+  }
+  if(n < cap.n) return null;
+  return defCapWhy(pend, Array.from({length: n}, () => ({card, gear: false})), card, false);
+}
+
 const costsAP = (c, window) => {
   /* An ACTIVATED ATTACK REACTION is never played in the action window
      (v3.63), so it never carries CR 8.1.1's point — the same reading this
@@ -10698,7 +10732,7 @@ function rustedThrough(gear, counters){
 const fxReset = () => FXMEMO.clear();
 
 return {norm, noopFeedText, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter,
-  PER_COUNT, DEF_PER, perCountKey, chainHits, pickSubject, attackQual, markRed, costCtx, qualMatches, abWindow, defCap, defCounts, defCapWhy, isBlockCard,
+  PER_COUNT, DEF_PER, perCountKey, chainHits, pickSubject, attackQual, markRed, costCtx, qualMatches, abWindow, defCap, defCounts, defCapWhy, defCapRxWhy, isBlockCard,
         nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, qualColour, CLASS_TALENT_WORDS, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, isActionCard, costOffFor, heaveOf,
         classifyClause, fxParse, fxReset, playableFromZone, playZoneWhy, addCostWhy, isArrowCard, boostPays, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost, isActivation, isActionPaid, costTaxes, handAbilityTax,
         DECL_OPS, dracLinks, dracNow, dracLinksNow, weaponCost, payTrigger, OFFER_TRIGGERS, allyAttack, auraWeaponGrant, wardValue, wardBearers, wardTotal, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, routeCostsAP, rxAllowed, drxBarred, drxBarWhy, rxPump,

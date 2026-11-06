@@ -1,3 +1,17 @@
+## v5.87 — dominate counts a defence reaction played from hand
+
+QA-A S-1 (P1). Only the DECLARE route asked the defender cap, so after one card from hand defended a
+dominate attack, a defence reaction from hand was still playable and became a second hand defender
+(Arakni's Spike with Bloodrot + Lair of the Spider into Pulping; Viserai's Shrill + Sigil into Drill Shot).
+
+- CR 8.3.4b (verbatim): "If an attack with dominate is currently defended by a card from hand on the
+  activate chain link, defense reaction cards cannot be played from hand.[7.4.2c]"
+- `parser.defCapRxWhy` is the one body, asked by `judge.playableWhy` and the trainer's hand door before
+  the card leaves the hand. It counts declared hand defenders plus played ones (`rxDefenders`); a
+  defence reaction from the ARSENAL is not refused by dominate. Drills in `test/defcap.test.js`.
+- Not built: CR 7.4's example of two defence reactions on the STACK at once (the second "will fail to
+  resolve"); the gate sees only those already resolved.
+
 ## v5.86 — R9: an activated ability's target is declared on activation
 
 The held R9 patch (`experiments/R9-activation-target-declared.patch`, base 71192de), applied on v5.85

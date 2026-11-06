@@ -14372,3 +14372,12 @@ needs the verbatim quote IN THE REPO (source comment, `tools/approx.js` record, 
 - CR 5.3.4b: "If an effect fails, any remaining effects continue to be generated.[1.8.9]"
 - So: declared on activation; a target gone at resolution fails THAT effect only, the rest of the
   ability still resolves, and nothing refunds the paid cost.
+
+### S-1 — dominate against a played defence reaction (ship/rules-qa)
+- CR 8.3.4: "Dominate is a static ability that means "This can't be defended by more than one card from hand.""
+- CR 8.3.4b: "If an attack with dominate is currently defended by a card from hand on the activate chain
+  link, defense reaction cards cannot be played from hand.[7.4.2c]"
+- CR 7.4.2c: "A defense reaction card cannot be played if a rule or effect would prevent the player from
+  defending with that card." Example under it: "…if there are two defense reactions on the stack, the
+  first one will resolve and become a defending card, but the second one will fail to resolve because
+  dominate prevents it from becoming a defending card." (that stack case is not built.)

@@ -1681,6 +1681,13 @@ function playableWhy(g, seat, c, win, zone){
   if(open.indexOf("defense-reaction") >= 0){
     const barred = PR.drxBarWhy(g.pend, c, zone);
     if(barred) return barred;
+    /* AND THE DEFENDER CAP COUNTS A PLAYED ONE (S-1): `parser.defCapRxWhy`,
+       the one body both boards' doors ask — CR 8.3.4b, quoted there. */
+    { const dsd = at(g, seat);
+      const decl = (dsd.blockH || []).map(u => ({card: (dsd.hand || []).find(x => x.uid === u), gear: false}))
+        .concat((dsd.blockG || []).map(u => ({card: (dsd.gear || []).find(x => x.uid === u), gear: true})));
+      const capWhy = PR.defCapRxWhy(g.pend, decl, PR.rxDefenders(dsd), c, zone);
+      if(capWhy) return capWhy; }
     /* AND THE CARD CAN NAME WHICH ATTACKS IT MAY DEFEND (v4.92) — Put in
        Context's "3 or less base {p}", enforced on neither board until now.
        `effects.defLimitWhy` is the one body, the open link's base is

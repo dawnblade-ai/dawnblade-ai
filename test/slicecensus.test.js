@@ -341,8 +341,10 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        gained one line, `askInstantDecl`, asking X and fusion before the
        payment. Same anchors. And 26,601 -> 26,201 for the `tryPlay` ->
        `confirmPay` rows: its X question moved out into `askX`, which the
-       instant doors share with it. */
-    "basepow.test.js index.html 8566",
+       instant doors share with it.
+       8,566 -> 8,982 AT S-1: the hand door asks `parser.defCapRxWhy` (dominate
+       against a played defence reaction). Same anchors. */
+    "basepow.test.js index.html 8982",
     /* +costtaxes AT v4.86: `tryPlay` -> `confirmPay`, the same body the
        rows below take, for the claim that its cost line asks `payCost`. */
     /* 22,716 -> 23,598 AT v4.91, READ FIRST, for all six rows of this body:
@@ -398,8 +400,8 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        still `playRx` -> `playRxA`. The growth is Put in Context's limit
        asked in the defence branch through `effects.defLimitWhy`, beside the
        `drxBarWhy` bar it sits with. Same anchors, same body. */
-    "dorinthea.test.js index.html 8566",
-    "drx.test.js index.html 8566",
+    "dorinthea.test.js index.html 8982",
+    "drx.test.js index.html 8982",
     /* +instantpump AT v5.03: the same `tryPlay` -> `confirmPay` body. */
     "instantpump.test.js index.html 26656",
     /* 18,386 -> 18,699 -> 20,096 AT lookahead phase 2, READ FIRST: still
@@ -460,10 +462,10 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
     /* 10,264 -> 8,459 AT v4.95, READ FIRST, for the five `playRx` -> `playRxA`
        rows: still the hand door, bounded at the arsenal door. It SHRANK —
        the charge, the resolution and the wall are `effects.playAtSpeed` now. */
-    "priority.test.js index.html 8566",
+    "priority.test.js index.html 8982",
     "routeap.test.js index.html 26656",
     "rxability.test.js index.html 26656",
-    "rxability.test.js index.html 8566",
+    "rxability.test.js index.html 8982",
     /* +soulcost AT v5.59: the same `tryPlay` -> `confirmPay` body, for the
        claim that the soul question sits after every legality and the
        discard's question and before the payment. */
