@@ -595,6 +595,15 @@ function reaction(g, seat){
    of them keeps the action point or spends none: the play it replaces is still
    there next time, and the card a draw finds can be a better one. */
 const ARENA_KEY = {pump: "arenaPump", draw: "arenaDraw", res: "arenaRes", ap: "arenaAP"};
+/* the banished cards `legal` lets this seat play now, in uid order */
+const banishPlays = (g, seat) => (g.sides[seat].banish || []).filter(c => c && c.uid != null
+  && legal(g, {t: "play", uid: c.uid, from: "banish"}, seat)).slice().sort(byUid);
+/* every weapon swing this seat could ask for (a gear entry that prints power), in uid order.
+   QA-A H-2: a resource piece that pays for a WEAPON swing is a resource with something
+   to spend on too. Dorinthea passed at an action point with Blossom of Spring and an
+   unswung Dawnblade beside Warrior's Valor's +3, at a 4-life Arakni. */
+const weaponSwings = sd => (sd.gear || []).filter(x => x && x.power != null).slice().sort(byUid)
+  .map(x => ({t: "activate", uid: x.uid}));
 function offence(g, seat, o){
   /* A CARD THAT MARKS FROM THE HAND GOES BEFORE THE ATTACK THAT CASHES THE MARK (H26).
      Instants cost no action point, so the discard is free of the turn's one point;
@@ -634,6 +643,13 @@ function offenceBase(g, seat, o){
   const from = [];
   (sd.hand || []).forEach(c => from.push({c, from: "hand"}));
   if(sd.arsenal) from.push({c: sd.arsenal, from: "arsenal"});
+  /* A CARD THE JUDGE LETS YOU PLAY FROM BANISHMENT IS A CARD YOU HOLD (QA-B H-1).
+     Pouncing Paws makes a Crouching Tiger "you may play this turn" in the
+     banished zone, and this list never looked there: Fai destroyed two
+     pieces of equipment for a go-again attack and then passed with it legal
+     and the action point unspent. `legal` answers which banished cards are
+     playable now, so this reads no card text; one that is not is not listed. */
+  banishPlays(g, seat).forEach(c => from.push({c, from: "banish"}));
 
   /* ---- AN ALLY IS A THIRD SOURCE OF ATTACKS (v3.50) ------------------
      Allies have attacked since v3.44 and this policy had never heard of
@@ -795,19 +811,23 @@ function offenceBase(g, seat, o){
   const unlockOf = gain => {
     const rich = Object.assign({}, g, {sides: g.sides.map((s, i) => i === seat
       ? Object.assign({}, s, {res: (s.res || 0) + gain}) : s)});
-    return from
+    const opens = a => !legal(g, a, seat) && legal(rich, a, seat);
+    if(from
       .map(x => ({c: x.c, uid: x.c && x.c.uid, from: x.from}))
       .concat(allies)
       .filter(x => x.c && num(x.c, "power") > 0)
       .map(x => x.ally ? {t: "activate", uid: x.uid, target: targetFor(g, seat, x.c)}
                        : {t: "play", uid: x.uid, from: x.from, target: targetFor(g, seat, x.c)})
-      .some(a => !legal(g, a, seat) && legal(rich, a, seat));
+      .some(opens)) return "resUnlock";
+    /* a weapon swing it pays for (QA-A H-2), under its own reason */
+    return weaponSwings(sd).some(opens) ? "resUnlockWeapon" : null;
   };
   const unlock = (sd.gear || []).slice().sort(byUid)
     .map(w => ({w, gain: J.abPieceResGain(g, seat, w.uid)}))
     .filter(x => x.gain > 0 && legal(g, {t: "activate", uid: x.w.uid}, seat))
-    .find(x => unlockOf(x.gain));
-  if(unlock) return tag("resUnlock", {t: "activate", uid: unlock.w.uid});
+    .map(x => Object.assign(x, {why: unlockOf(x.gain)}))
+    .find(x => x.why);
+  if(unlock) return tag(unlock.why, {t: "activate", uid: unlock.w.uid});
 
   /* A weapon swing is an attack that comes from the gear zone. `legal`
      owns both of its limits — the printed `Once per Turn` and the tap —
@@ -1108,6 +1128,7 @@ const LA = {
   mu: envOf("SPXLA_MU") !== "" ? +envOf("SPXLA_MU") : 1.5,   /* life-points one held card is worth */
   margin: envOf("SPXLA_M") !== "" ? +envOf("SPXLA_M") : 0.5, /* an alternative must beat A0 by more than this */
   dets: envOf("SPXLA_K") !== "" ? +envOf("SPXLA_K") : 1,     /* determinizations per decision */
+  verify: envOf("SPXLA_V") !== "" ? +envOf("SPXLA_V") : 4,   /* deals an overrule is checked on (A0 vs the winner) */
   blocks: envOf("SPXLA_BLK") !== "" ? +envOf("SPXLA_BLK") : 1,   /* search the wall too (phase c) */
   bMu: envOf("SPXLA_BMU") !== "" ? +envOf("SPXLA_BMU") : 2,  /* a held card's worth at a block (null: mu) */
   bH: envOf("SPXLA_BH") || "own",           /* block rollouts: "next" to this seat's next decision; "own" through its next turn */
@@ -1156,6 +1177,7 @@ function laCands(g, seat, a0){
   const atk = c => num(c, "power") > 0 ? {target: targetFor(g, seat, c)} : {};
   (sd.hand || []).forEach(c => c && add({t: "play", uid: c.uid, from: "hand", ...atk(c)}));
   if(sd.arsenal) add({t: "play", uid: sd.arsenal.uid, from: "arsenal", ...atk(sd.arsenal)});
+  banishPlays(g, seat).forEach(c => add({t: "play", uid: c.uid, from: "banish", ...atk(c)}));
   (sd.gear || []).forEach(c => c && add({t: "activate", uid: c.uid}));
   (sd.board || []).forEach(b => { if(!b) return; const at = J.boardAttackOf(g, seat, b.uid);
     add(at ? {t: "activate", uid: b.uid, target: targetFor(g, seat, Object.assign({}, b.card, {power: at.power}))} : {t: "activate", uid: b.uid}); });
@@ -1210,7 +1232,28 @@ function laSearch(g, seat, a0){
     }
     let bi = 0;
     for(let i = 1; i < cands.length; i++) if(tot[i].v > tot[bi].v + (bi === 0 ? LA.margin : 0)) bi = i;
-    best = bi === 0 ? null : {a: cands[bi], d: ["dealt", "taken", "cards"].reduce((m, f) => (m[f] = (tot[bi][f] - tot[0][f]) / LA.dets, m), {})};
+    if(bi === 0) return null;
+    /* AN OVERRULE MUST HOLD ON MORE THAN ONE DEAL. The search sees one masked
+       deal; a line that wins only because that deal put a good card on top of
+       this seat's own deck (a flip, a reveal, a draw played this turn) is luck,
+       not a better move. So the winner is replayed against the rule policy's
+       line on `verify` more deals, and overrules only if it still wins on the
+       mean. A line that wins on what the seat can see wins on every deal. */
+    let dn = LA.dets;
+    for(let k = LA.dets; k < LA.verify; k++){
+      const root = laMask(g, seat, k);
+      for(const i of [0, bi]){
+        const out = J.reduce(root, cands[i], seat);
+        if(out.error){ tot[i].v = -Infinity; continue; }
+        const r = laRollout(out.state, seat, root, spent); spent += r.steps + 1;
+        if(!r.done){ LA.stats.over++; return null; }
+        const e = laEval(r.n, seat, root);
+        ["v", "dealt", "taken", "cards"].forEach(f => tot[i][f] += e[f]);
+      }
+      dn++;
+    }
+    if(dn > LA.dets && !(tot[bi].v > tot[0].v + LA.margin * dn)){ LA.stats.unverified = (LA.stats.unverified || 0) + 1; return null; }
+    best = {a: cands[bi], d: ["dealt", "taken", "cards"].reduce((m, f) => (m[f] = (tot[bi][f] - tot[0][f]) / dn, m), {})};
     return best;
   } finally {
     IN_SEARCH = false; NOTE = keep;
@@ -1436,6 +1479,7 @@ const CALL_WHY = {
   grantWait: "Swing the biggest attack you can afford, without the card that would pump it. Its cost can't be paid beside the attack's, so it stays in your hand.",
   weapon: "Swing your weapon. It costs no card.",
   resUnlock: "Spend the piece for its resource. It pays for an attack you are holding.",
+  resUnlockWeapon: "Spend the piece for its resource. It pays for a swing of your weapon.",
   gearAbility: "Use your equipment's ability. Nothing better is left to do.",
   gearAmp: "Use your equipment's ability. You can pay for an arcane card to take its extra damage.",
   heroAbility: "Use your hero's ability. Nothing better is left for the action point.",
@@ -1459,7 +1503,7 @@ const CALL_WHY = {
   endTurn: "End your turn. Nothing worth doing is left.",
   laHit: "Start with this. Play each opening out to the end of your turn and this one lands the most damage once they block.",
   laSafe: "Start with this. Played out to the end of your turn, it costs you the least life of any opening.",
-  laKeep: "Start with this. Played out, it hits as hard as anything else and keeps more cards in hand for their swing back.",
+  laKeep: "Start with this. Played out to the end of your turn, it keeps more cards in hand for their swing back.",
   laHold: "Stop here and keep the rest. Played out, every card you could still play costs you more than it earns.",
   laBlock: "Block with this. Play each wall out through their turn and yours, and this one leaves you best off.",
   laTake: "Take the rest of this hit. Played out through their turn and yours, the cards you keep are worth more than the life they would save.",
