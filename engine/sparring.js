@@ -324,6 +324,10 @@ function payAction(g, seat, p, o){
      the lowest-pitch candidate. The policy reads no card text and no pool
      card reads the answer, so it is total and deterministic, nothing more. */
   if(p.kind === "soulcost") return tag("soulcost", {t: "soulcost", uid: J.soulCostAnswer(g)});
+  /* THE TARGET AN ACTIVATED ABILITY DECLARES (v5.72) — judge's
+     `abTargetAnswer`. The policy reads no card text: the order is the one
+     the pick sheet used when this was chosen at the resolution. */
+  if(p.kind === "abtarget") return tag("abtarget", {t: "abtarget", uid: J.abTargetAnswer(g)});
   /* ---- A CHI COST ASKS A SECOND QUESTION OF THE SAME PITCH (v4.54) ---
      Enigma's ability prints "{c}{c}{c}", and a Chi pays a {c} cost where
      a resource point does not. `pitchPick` ranks on printed pitch, so a
@@ -1408,6 +1412,7 @@ const CALL_WHY = {
   addPayNo: "Skip the extra cost. It isn't worth the cards.",
   xvalMax: "Make X as big as you can pay for.",
   discost: "Discard this card to pay the cost.",
+  abtarget: "Aim it at the best card it can reach. The target is named now, before the other seat can answer.",
   soulcost: "Banish the soul card worth least as a resource. What counts is how many are in the soul, not which.",
   arsenalBest: "Keep your biggest attack face down. It is the card you most want to lead with next turn.",
   arsenalOther: "Keep it face down. It can be played from there.",
@@ -1504,6 +1509,7 @@ function lineOf(g, seat, a){
     case "xval": return "Make X " + a.x;
     case "discost": return "Discard " + nm(c) + " for the cost";
     case "soulcost": return "Banish " + nm(c) + " from the soul for the cost";
+    case "abtarget": return "Aim it at " + nm(c);
     case "promptSel": { const x = p && ((p.cards || [])[a.i] || (p.options || [])[a.i]);
       return "Choose " + ((x && (x.name || x.label)) || "it"); }
     case "promptChoose": return a.choice === "decline" ? "Decline"

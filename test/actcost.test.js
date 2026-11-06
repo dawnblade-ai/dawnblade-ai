@@ -179,8 +179,10 @@ test("all three activation branches ask effCost, and the ALLY one does not", {sk
      (`askDiscCost`) now sits between each branch's `ab` and its cost read,
      so the equipment branch's one-line `piece.powCard, acost = …` became
      two statements. Each branch is found off its own `ab` binding. */
-  assert.match(body, /HPOW;[\s\S]{0,120}const acost = effCost\(ab, sd, PR\.costCtx\(g, seat\)\)/, "the hero branch");
-  assert.match(body, /const ab = piece\.powCard;[\s\S]{0,120}const acost = effCost\(ab, sd, PR\.costCtx\(g, seat\)\)/,
+  /* RE-ANCHORED AT v5.72, the property unchanged: `askAbTarget` joined the one
+     question line between `ab` and the cost read, so the window is wider. */
+  assert.match(body, /HPOW;[\s\S]{0,190}const acost = effCost\(ab, sd, PR\.costCtx\(g, seat\)\)/, "the hero branch");
+  assert.match(body, /const ab = piece\.powCard;[\s\S]{0,190}const acost = effCost\(ab, sd, PR\.costCtx\(g, seat\)\)/,
     "the equipment-ability branch");
   assert.match(body, /const cost = effCost\(piece, sd, PR\.costCtx\(g, seat\)\);/, "the weapon branch");
   /* THE ALLY BRANCH PRICES THE ATTACK'S OWN LINE, WITH ITS TAXES (v4.86).

@@ -291,7 +291,7 @@ test("every spec field that reaches prompts.js is pinned", () => {
     "ctrHeld", "ctrSpend", "ctrStamp", "defUid", "destroyUid", "discard", "elseOps", "equipStamp",
     "exactPitch", "faceUp", "filter", "hint", "jab", "keepTop", "lateGa", "max", "min", "moveFoe", "n",
     "ops", "optional", "options", "playThisTurn", "shuffleAfter", "side", "spendCtr",
-    "src", "tag", "tapHero", "tapUid", "taps", "title", "to", "wayRider", "xPay", "zone",
+    "src", "tag", "tapHero", "tapUid", "taps", "title", "to", "wayRider", "zone",
   /* +exactPitch v5.71 — Bloodrot Pox's pay sheet (`selfPayOr` asks when pitching can
      cover the {r}{r}{r}) asks for the smallest pitch the cost allows. It arrives on the
      legs where a seat holding cards has a Pox in front of it at its end phase — Arakni's
@@ -314,11 +314,12 @@ test("every spec field that reaches prompts.js is pinned", () => {
      barrier really is hit by one of those cards in a driven game — which is
      why their riders being answered FALSE against a barrier was a live
      defect, not a latent one. */
-  /* +xPay v4.71 — Beckoning Haunt's X, paid once per {x} pip for the aura
-     the pick returns. It arrived on the same 34 legs with no leg written,
-     so Viserai really does activate the piece in a driven game. The parse's
-     own `xOf` is deleted at the queue site so that only the field
-     `buildPrompt` reads travels (v2.34). */
+  /* -xPay v5.72 — Beckoning Haunt's X is declared with its target when the
+     ability is ACTIVATED and priced off the declared `_x` (`effCost`), so no
+     pick settles an X and the field that carried it (+xPay, v4.71) left the
+     census: the pick the declaration narrows (`filter.onlyUid`) is an
+     ordinary single-card pick. The parse's `tgt` and `xOf` are deleted at
+     the queue site, so neither travels. */
   /* +charge v4.64 — Roaring Beam's charge made as an EFFECT, and it arrived
      on the same 34 legs with no leg written, so Boltyn really does play it
      into an empty soul in a driven game: the route is not latent. */

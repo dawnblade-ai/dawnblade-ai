@@ -304,6 +304,7 @@ const ACTIONS = [
   "xval",        /* {x}          declare X for a card whose cost prints X (v4.72) */
   "discost",     /* {uid}        which card an activation's discard cost spends (v4.85) */
   "soulcost",    /* {uid}        which soul card an activation's soul banish takes (v5.59) */
+  "abtarget",    /* {uid}        the target an activated ability declares, before the cost (v5.72) */
   "defend",      /* {uid}        toggle a defender (hand card or gear)    */
   "pass",        /*              pass priority — CR 4.2.2                 */
   "arsenal",     /* {uid|null}   end-phase step (b); null leaves it empty */
@@ -340,7 +341,7 @@ const ACTIONS = [
 
    Exported so a board can be held to covering all of them rather than to
    remembering — the next kind added walks into the same fallback. */
-const PENDING_KINDS = ["pay", "boost", "addPay", "split", "fuse", "charge", "xval", "discost", "soulcost"];
+const PENDING_KINDS = ["pay", "boost", "addPay", "split", "fuse", "charge", "xval", "discost", "soulcost", "abtarget"];
 const PROMPT_ACTIONS = ["promptSel", "promptChoose", "promptConfirm", "promptDecline",
                         "promptTakeBack", "promptMove"];
 
@@ -925,6 +926,17 @@ function legal(g, a, seat){
     return null;
   }
   if(a.t === "soulcost") return "nothing is asking which soul card to banish";
+  /* THE TARGET AN ACTIVATED ABILITY DECLARES (v5.72). The candidates ride on
+     the pending, taken off the same pool the activation's legality asked, so
+     a wire answer naming anything else is refused rather than declared. A
+     declaration may be WITHDRAWN while nothing has been paid: `payCancel`. */
+  if(p && p.kind === "abtarget"){
+    if(a.t === "payCancel") return null;
+    if(a.t !== "abtarget") return "declare the target of " + String(p.card.name).replace(/ — (?:ability|hero power)$/, "") + " first";
+    if((p.uids || []).indexOf(a.uid) < 0) return "that is not a legal target for " + String(p.card.name).replace(/ — (?:ability|hero power)$/, "");
+    return null;
+  }
+  if(a.t === "abtarget") return "nothing is asking for a target";
   if(p && p.kind === "addPay"){
     /* NO SEAT TEST HERE. A `pending` belongs to ONE seat and the general
        gate above this block already refuses the other with "Opponent is
@@ -3044,6 +3056,7 @@ function reduce(g, a, seat){
     case "xval":      n = doXval(n, a, seat); break;
     case "discost":   n = doDiscCost(n, a, seat); break;
     case "soulcost":  n = doSoulCost(n, a, seat); break;
+    case "abtarget":  n = doAbTarget(n, a, seat); break;
     case "addPay":    n = doAddPay(n, a, seat); break;
     case "boost":     n = doBoost(n, a, seat); break;
     case "fuse":      n = doFuse(n, a, seat); break;
@@ -3271,7 +3284,7 @@ function doActivate(g, a, seat){
        `effCost` here would disagree with the charge in the other
        direction. Each read asks what its own charge site asks. */
     const ab = bOf(g, seat).HPOW;
-    { const q = askDiscCost(g, seat, ab, a) || askSoulCost(g, seat, ab, a); if(q) return q; }
+    { const q = askDiscCost(g, seat, ab, a) || askSoulCost(g, seat, ab, a) || askAbTarget(g, seat, ab, a); if(q) return q; }
     const acost = effCost(ab, sd, PR.costCtx(g, seat));
     if(acost > sd.res || chiShort(sd, ab) > 0)   /* v4.54 — see `chiShort` */
       return say({...g, pending: {kind: "pay", seat, card: ab, from: "hero", need: acost, target: null}},
@@ -3314,7 +3327,7 @@ function doActivate(g, a, seat){
          reason that version made `uid === "hpow"` the discriminator. */
       if(!_ally && !_aura){
         const ab = BD.boardPow(b);
-        { const q = askDiscCost(g, seat, ab, a) || askSoulCost(g, seat, ab, a); if(q) return q; }
+        { const q = askDiscCost(g, seat, ab, a) || askSoulCost(g, seat, ab, a) || askAbTarget(g, seat, ab, a); if(q) return q; }
         const bcost = effCost(ab, sd, PR.costCtx(g, seat));
         if(bcost > sd.res || chiShort(sd, ab) > 0)   /* v4.54 — see `chiShort` */
           return say({...g, pending: {kind: "pay", seat, card: ab, from: "board",
@@ -3348,7 +3361,7 @@ function doActivate(g, a, seat){
   /* THE SAME SPLIT, AND THE SAME ROUTE (v3.83) — see `legal`. */
   if(_abUid || !PR.isWeapon(piece)){
     const ab = piece.powCard;
-    { const q = askDiscCost(g, seat, ab, a) || askSoulCost(g, seat, ab, a); if(q) return q; }
+    { const q = askDiscCost(g, seat, ab, a) || askSoulCost(g, seat, ab, a) || askAbTarget(g, seat, ab, a); if(q) return q; }
     const acost = effCost(ab, sd, PR.costCtx(g, seat));   /* v3.80 — see doActivate's hero branch */
     if(acost > sd.res || chiShort(sd, ab) > 0)   /* v4.54 — see `chiShort` */
       return say({...g, pending: {kind: "pay", seat, card: ab, from: "hero", need: acost, target: null}},
@@ -3709,6 +3722,66 @@ function soulCostAnswer(g){
                  || (String(x.uid) < String(y.uid) ? -1 : String(x.uid) > String(y.uid) ? 1 : 0))[0];
   return c ? c.uid : (p.uids || [])[0];
 }
+/* AN ACTIVATED ABILITY'S TARGET IS DECLARED WHEN IT IS ACTIVATED (v5.72).
+   CR 1.4.5's moment, for an ability: before the cost is paid and before
+   anyone may respond. Until v5.72 the pick the payload queues opened when
+   the ability RESOLVED (`activation-choices-at-resolution`, now `activation-target-declared`), so since v4.66
+   the other seat answered an Action-speed activation without knowing its
+   target and the controller chose after seeing the answer.
+
+   `askDiscCost`'s shape: asked before the payment decision, because the
+   declaration fixes the price (an X cost is the target's cost), and only
+   once per activation — the answer rides on the STATE as `_actTarget`
+   ({uid, name}, and `_x` when the pick settles an X), so re-entering
+   `doActivate` finds it and goes on, and `HELD_DECL` carries both onto the
+   stack layer. The pool is the one the legality asked (`abPickBound`, X
+   bound included), so no refused target can be offered. Exactly ONE
+   candidate is not a question (v3.55): it is declared on the spot, and the
+   feed says so. Only a printed TARGET declares (`abTargetSpec`); a pick
+   that prints none is a choice and stays with the resolution. */
+const abName = ab => String(ab.name).replace(/ — (?:ability|hero power)$/, "");
+function abTargetPool(g, seat, ab){
+  const sd = at(g, seat);
+  const spec = PR.abPickBound(sd, ab, PR.costCtx(g, seat));
+  return spec ? PM.promptPickPool(sd, spec) : [];
+}
+function declareAbTarget(g, seat, ab, card){
+  const x = PR.abTargetSpec(ab).xOf === "cost" ? (card.cost || 0) : null;
+  return say({...g, _actTarget: {uid: card.uid, name: card.name}, ...(x != null ? {_x: x} : {})},
+    GM.sv(at(g, seat), "declare") + " " + card.name + " as the target of " + abName(ab)
+    + (x != null ? " — X is " + x + "." : "."));
+}
+function askAbTarget(g, seat, ab, a){
+  if(g._actTarget !== undefined) return null;
+  if(!PR.abTargetSpec(ab)) return null;
+  const pool = abTargetPool(g, seat, ab);
+  if(pool.length === 1) return doActivate(declareAbTarget(g, seat, ab, pool[0]), a, seat);
+  if(!pool.length) return doActivate({...g, _actTarget: null}, a, seat);   /* `legal` refused this; a wire state may not have */
+  return say({...g, pending: {kind: "abtarget", seat, card: ab, act: {...a}, uids: pool.map(c => c.uid)}},
+    GM.sv(at(g, seat), "activate") + " " + abName(ab) + " — choose its target.");
+}
+function doAbTarget(g, a, seat){
+  const p = g.pending;
+  const card = abTargetPool(g, seat, p.card).find(c => c.uid === a.uid);
+  const n = {...g, pending: null};
+  return doActivate(declareAbTarget(n, seat, p.card, card), p.act, seat);
+}
+/* WHAT THE POLICY DECLARES, as a uid (v5.72). Judge answers the policy's
+   readers, so `sparring.js` reads no card text: the highest printed power,
+   then the lowest uid — the order the pick sheet's `autoAnswer` used when
+   this choice was made at the resolution, so the ladder measures the route
+   and not a new judgement about which aura to take back. Total and
+   deterministic. */
+function abTargetAnswer(g){
+  const p = pendingOf(g);
+  if(!p || p.kind !== "abtarget") return null;
+  const cs = abTargetPool(g, p.seat, p.card).filter(c => (p.uids || []).indexOf(c.uid) >= 0);
+  let best = null;
+  for(const c of cs)
+    if(!best || (c.power || 0) > (best.power || 0)
+             || ((c.power || 0) === (best.power || 0) && String(c.uid) < String(best.uid))) best = c;
+  return best ? best.uid : (p.uids || [])[0];
+}
 function doDiscCost(g, a, seat){
   const p = g.pending;
   const c = (at(g, seat).hand || []).find(x => x && x.uid === a.uid);
@@ -3784,7 +3857,7 @@ function doBoost(g, a, seat){
    outcome of the window is the one this produces. It is also what keeps
    the change invisible to every game in which neither seat holds an
    instant-speed answer. */
-const HELD_DECL = ["_half", "_doBoost", "_addPaid", "_fuseUid", "_chargeUids", "_x", "_discCostUid", "_addDiscPaid", "_soulCostUids"];
+const HELD_DECL = ["_half", "_doBoost", "_addPaid", "_fuseUid", "_chargeUids", "_x", "_discCostUid", "_addDiscPaid", "_soulCostUids", "_actTarget"];
 const HELD_LIFT = {hand: 1, arsenal: 1, grave: 1, banish: 1};
 /* WHICH PLAYS WAIT: everything at ACTION speed. A card played in the
    action window, a weapon swing, an ally's or an aura's attack, and an
@@ -3847,7 +3920,10 @@ function holdPlay(g, card, zone, seat, window, target){
     }
   }
   const shown = String(card.name || "").replace(/ — (?:ability|hero power)$/, "");
-  const layer = {k: "play", label: shown + " (on the stack)", seat, card, zone, window,
+  /* THE DECLARED TARGET IS ON THE LAYER'S FACE (v5.72): the other seat
+     answers knowing what the ability is aimed at. */
+  const aimed = decl._actTarget && decl._actTarget.name ? " → " + decl._actTarget.name : "";
+  const layer = {k: "play", label: shown + aimed + " (on the stack)", seat, card, zone, window,
                  target: target || null, decl, res: sd.res || 0, lifted};
   n = {...n, stack: [...(n.stack || []), layer],
            featured: {card, chip: "ON THE STACK"}};
@@ -3943,6 +4019,11 @@ function commitPlay(g, card, zone, seat, window, target){
     (fx, s) => fx.execute(s, card, zone, idx,
       {window, target, handBlockers: _wall.handBlockers, defenders: _wall.defenders}));
 
+  /* AN ABILITY'S DECLARED TARGET (and the X it settled) IS SPENT BY ITS
+     RESOLUTION (v5.72) — an instant-speed activation never rides a layer, so
+     nothing else would clear it. A card play's `_x` is stripped by
+     `commitPlayBoosted`; an activation's is stripped here. */
+  if(zone === "hero" || zone === "board"){ delete n._actTarget; delete n._x; }
   if(n._declared){
     const d = n._declared; delete n._declared;
     return declareAttack(n, card, seat, zone, target, d);
@@ -4473,7 +4554,7 @@ function drawTo(g, i){
 }
 
 return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, drawText, ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, arcaneOf, chargeView, chargeMore,
+        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, arcaneOf, chargeView, chargeMore,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */

@@ -898,7 +898,7 @@ img{display:block;max-width:100%}
    database + typographic fallbacks. Not affiliated with LSS.
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
-window.APP_VER = "5.85"; /* v5.85 - a Sharp AI hero plays out its blocks through the next turn before it commits a wall. See CHANGELOG.md. */
+window.APP_VER = "5.86"; /* v5.86 - an activated ability's target is declared when it is activated, per the Comprehensive Rules. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -3895,10 +3895,33 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     return L({...s, mode:"soulpick", soulPick:{card, from, idx, uids, picked:[], back:s.mode, redo, name}},
       `${name} costs a card from the soul — which one?`);
   };
+  /* THE TARGET AN ACTIVATED ABILITY DECLARES (v5.72) — CR 1.4.5's moment,
+     for an ability: named when it is activated, before the cost is paid,
+     not chosen when it resolves. The reader is `DawnParser.abTargetSpec`
+     (a printed "target"; a pick that prints none stays a choice at the
+     resolution) over the pool `abPickBound` bounds, the one `judge.js`'s
+     `askAbTarget` asks, so the two boards offer the same targets. Exactly
+     one candidate is declared on the spot; more open `targetpick`. The
+     answer rides on the state as `_actTarget` ({uid, name}), and as `_x`
+     when the pick settles an X — the price, read by `effCost`. Answers
+     the state declared, a question, or null when there is none to ask. */
+  const askAbTarget = (s, card, from, idx, redo) => {
+    if(s._actTarget !== undefined || !DawnParser.abTargetSpec(card)) return null;
+    const sd = act(s), name = card.name.replace(/ — ability$/, "");
+    const spec = DawnParser.abPickBound(sd, card, costCtx(s, actorOf(s)));
+    const pool = promptPickPool(sd, spec);
+    const decl = c => L({...s, _actTarget:{uid:c.uid, name:c.name},
+                         ...(spec.xOf === "cost" ? {_x: c.cost || 0} : {})},
+      `${DawnGame.sv(sd, "declare")} ${c.name} as the target of ${name}${spec.xOf === "cost" ? ` — X is ${c.cost || 0}` : ""}.`);
+    if(pool.length === 1) return decl(pool[0]);
+    if(!pool.length) return {...s, _actTarget: null};
+    return L({...s, mode:"targetpick", targetPick:{card, from, idx, uids:pool.map(c=>c.uid), back:s.mode, redo, name, x: spec.xOf === "cost"}},
+      `${name} — choose its target.`);
+  };
   const activateInstant = (card, from, idx) => setG(s=>{
     if(s.over) return s;
     { const _w = sheetFirst(s); if(_w) return _w; }   /* a live sheet stops the game (v4.80), and says so (v4.88) */
-    if(s.mode === "discpick" || s.mode === "soulpick") return s;   /* …and so does a cost's question (v4.85, v5.59) */
+    if(s.mode === "discpick" || s.mode === "soulpick" || s.mode === "targetpick") return s;   /* …and so does a cost's question (v4.85, v5.59, v5.72) */
     /* CR 8.1.6 — an instant is legal in any window where you hold
        priority. Asked of priority.js, never restated: in the DEFEND step
        the turn-player holds it (CR 7.3.3), so this correctly refuses
@@ -3922,9 +3945,13 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       const _scq = askSoulCost(s, card, from, idx, "instant");
       if(_scq) return _scq;
     }
+    /* THE ABILITY'S TARGET (v5.72), then the price it settles */
+    { const _atq = askAbTarget(s, card, from, idx, "instant");
+      if(_atq && _atq.mode === "targetpick") return _atq;
+      if(_atq) s = _atq; }
     const cost = effCost(card, act(s), costCtx(s, actorOf(s)));
     const paid = autoPitch(s, cost, null);
-    if(!paid){ const back = {...s}; delete back._soulCostUids;
+    if(!paid){ const back = {...s}; delete back._soulCostUids; delete back._actTarget; delete back._x;
       return L(back, `${card.name} costs ${cost} — not enough in hand to pitch for it at instant speed.`); }
     /* NO CAPTURE-AND-RESTORE ANY MORE (v2.73). v2.72 had to save
        `mode`/`bphase` around this call because `execute` opened with
@@ -3932,7 +3959,8 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        player their own action phase, sev-3. `execute` states no phase at
        all now, so the window simply survives, which is the split doing its
        job rather than a patch working around it. */
-    const out = execute(paid, card, from, idx);
+    let out = execute(paid, card, from, idx);
+    if(out._actTarget !== undefined){ out = {...out}; delete out._actTarget; delete out._x; }   /* spent (v5.72) */
     /* An activated ability is never an attack, so nothing should be left
        awaiting defenders. Say so rather than dropping a dangling
        `_declared` that a later play would resolve as if it were its own. */
@@ -3993,6 +4021,8 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     /* AND X (v4.72), for the identical reason — left on the state, the next
        X card would be played at this one's X without asking. */
     if(n._x !== undefined){ n = {...n}; delete n._x; }
+    /* AND SO IS AN ABILITY'S DECLARED TARGET (v5.72) */
+    if(n._actTarget !== undefined){ n = {...n}; delete n._actTarget; }
     /* AND THE FUSION ANSWER IS SPENT TOO (v4.27), for `_half`'s reason:
        left on the state the next fusion card is played as whatever the
        last one revealed, without asking. */
@@ -4254,7 +4284,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        a dead tap (Lyath's Stand Strong, found by the sweep). */
     if(!s.over && !s.inspect && s.mode==="stack" && !(card&&(card._attackRx||card._instant)))
       return L(s, `${card ? card.name : "That"} is action speed — this is the reaction step. Pass to resolve the chain link first.`);
-    if(s.over||s.mode==="block"||s.mode==="arsenal"||s.mode==="boostpick"||s.mode==="fusepick"||s.mode==="chargepick"||s.mode==="splitpick"||s.mode==="xpick"||s.mode==="discpick"||s.mode==="soulpick"||s.mode==="rxaddpay"||s.mode==="foeturn") return s;
+    if(s.over||s.mode==="block"||s.mode==="arsenal"||s.mode==="boostpick"||s.mode==="fusepick"||s.mode==="chargepick"||s.mode==="splitpick"||s.mode==="xpick"||s.mode==="discpick"||s.mode==="soulpick"||s.mode==="targetpick"||s.mode==="rxaddpay"||s.mode==="foeturn") return s;
     if(s.inspect){ setZoom(card); return s; }
     if(s.mode==="pay"){
       if(from!=="hand" || (s.pending&&s.pending.from==="hand"&&s.pending.idx===idx)) return s;
@@ -4580,6 +4610,13 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       const _scq = askSoulCost(s, card, from, idx);
       if(_scq) return _scq;
     }
+    /* THE ABILITY'S TARGET (v5.72) — asked after the costs' questions and
+       before the payment, because the declaration fixes the price: Beckoning
+       Haunt's X is its target's cost. `askAbTarget` is the body both doors
+       share; the answer comes back through `confirmAbTarget`. */
+    { const _atq = askAbTarget(s, card, from, idx);
+      if(_atq && _atq.mode === "targetpick") return _atq;
+      if(_atq) s = _atq; }
     /* THE ATTACK'S COST IS NOT THE CARD'S. An ally's `.cost` is what it
        cost to DEPLOY; its attack prints its own. */
     const cost = payCost(s, card, from);
@@ -4644,7 +4681,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
   /* …AND SO DOES THE DISCARD DECLARED FOR A COST (v4.85), and the payment
      returns to the window it opened from — the reaction window, for an
      activated attack reaction. */
-  const cancelPay = () => setG(s=>{ const n = {...s, mode:(s.pending&&s.pending.back)||"act", pending:null}; youMut(n).paySel = []; delete n._half; delete n._x; delete n._discCostUid; delete n._soulCostUids; return n; });
+  const cancelPay = () => setG(s=>{ const n = {...s, mode:(s.pending&&s.pending.back)||"act", pending:null}; youMut(n).paySel = []; delete n._half; delete n._x; delete n._discCostUid; delete n._soulCostUids; delete n._actTarget; return n; });
   /* THE DISCARD, DECLARED (v4.85) — confirmX's re-entry, so there is one
      description of what activating does. The pick is read off the RENDERED
      state rather than captured inside an updater, and the two updaters run
@@ -4676,6 +4713,23 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
   };
   const cancelSoulCost = () => setG(s => s.mode === "soulpick" && s.soulPick
     ? {...s, mode:s.soulPick.back||"act", soulPick:null} : s);
+  /* THE ABILITY'S TARGET, DECLARED (v5.72) — `confirmSoulCost`'s twin. The
+     answer rides on the state (`_actTarget`, and `_x` when the choice settles
+     an X) and the activation is asked every gate again of that state. The
+     candidates are read off the RENDERED state, so a stale tap names nothing. */
+  const confirmAbTarget = uid => {
+    const pk = g.mode === "targetpick" && g.targetPick;
+    if(!pk || (pk.uids||[]).indexOf(uid) < 0) return;
+    const c = (you(g).grave||[]).find(x => x && x.uid === uid) || (you(g).hand||[]).find(x => x && x.uid === uid);
+    if(!c) return;
+    setG(s => s.mode === "targetpick" ? L({...s, mode:pk.back||"act", targetPick:null,
+      _actTarget:{uid:c.uid, name:c.name}, ...(pk.x ? {_x: c.cost || 0} : {})},
+      `${DawnGame.sv(you(s), "declare")} ${c.name} as the target of ${pk.name}${pk.x ? ` — X is ${c.cost || 0}` : ""}.`) : s);
+    if(pk.redo === "instant") activateInstant(pk.card, pk.from, pk.idx);
+    else tryPlay(pk.card, pk.from, pk.idx);
+  };
+  const cancelAbTarget = () => setG(s => s.mode === "targetpick" && s.targetPick
+    ? {...s, mode:s.targetPick.back||"act", targetPick:null} : s);
 
   /* THE ACTIVATED ABILITY OF A CARD IN THE ARENA — `build.boardPow`
      (v2.35, SHARED at v4.47).
@@ -4718,7 +4772,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      adds only the trainer's own busy-modes, which are not a rule about
      the ability: a sheet is open, so nothing else may start. */
   const handAbilityOK = (s, c) => {
-    if(["pay","arsenal","boostpick","fusepick","chargepick","discpick","soulpick"].indexOf(s.mode) >= 0) return false;
+    if(["pay","arsenal","boostpick","fusepick","chargepick","discpick","soulpick","targetpick"].indexOf(s.mode) >= 0) return false;
     return DawnEffects.handAbilityOK(s, c);
   };
   /* THE PAYMENT, THE OPS **AND** THE DEFENCE BUFF ARE ALL SHARED (v4.53).
@@ -4731,7 +4785,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      lands it now, so there is nothing here to route. */
   const activateHand = c => setG(s=>{
     { const _w = sheetFirst(s); if(_w) return _w; }
-    if(["pay","arsenal","boostpick","fusepick","chargepick","discpick","soulpick"].indexOf(s.mode) >= 0) return s;
+    if(["pay","arsenal","boostpick","fusepick","chargepick","discpick","soulpick","targetpick"].indexOf(s.mode) >= 0) return s;
     /* WHICH CARD "Discard a card:" SPENDS (v4.87) — Rally the Coast
        Guard's, asked through the one reader both boards ask
        (`discCostChoice`), and answered by `confirmDiscCost`, which comes
@@ -5966,6 +6020,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
               {g.mode==="soulpick" && g.soulPick && <div className="statusline">
                 <b>{g.soulPick.name}</b> costs a card from your soul — which one?<button onClick={cancelSoulCost}>✕ cancel</button>
               </div>}
+              {g.mode==="targetpick" && g.targetPick && <div className="statusline">
+                <b>{g.targetPick.name}</b> — choose its target. It is named now, before the cost is paid.<button onClick={cancelAbTarget}>✕ cancel</button>
+              </div>}
               {g.mode==="rxaddpay" && g.rxAdd && <div className="statusline">
                 <b>{g.rxAdd.name}</b> — pay <b>{g.rxAdd.cost}</b> more as an additional cost? You have {you(g).res} floating.
               </div>}
@@ -6195,6 +6252,16 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
             const twin = c && (g.soulPick.uids||[]).some(v => v !== u && (((you(g).soul||[]).find(x=>x.uid===v)||{}).name === c.name));
             return <button key={u} className="a go" onClick={()=>confirmSoulCost(u)}>
               Banish {c ? c.name : "card"}{twin ? " ("+(["","red","yellow","blue"][c.pitch]||"pitch "+c.pitch)+")" : ""}</button>;
+          })}
+        </>) : g.mode==="targetpick" ? (<>
+          {/* ONE BUTTON PER TARGET THE ABILITY MAY NAME (v5.72), off
+              `abPickBound`, the pool the legality and `judge.js` ask. A
+              target whose cost settles an X shows what it will cost. */}
+          {(g.targetPick?.uids||[]).map(u => {
+            const c = (you(g).grave||[]).find(x=>x.uid===u) || (you(g).hand||[]).find(x=>x.uid===u);
+            const twin = c && (g.targetPick.uids||[]).some(v => v !== u && ((((you(g).grave||[]).find(x=>x.uid===v)||{}).name) === c.name));
+            return <button key={u} className="a go" onClick={()=>confirmAbTarget(u)}>
+              {c ? c.name : "card"}{twin ? " ("+(["","red","yellow","blue"][c.pitch]||"pitch "+c.pitch)+")" : ""}{c && g.targetPick.x ? " · X = "+(c.cost||0) : ""}</button>;
           })}
         </>) : g.mode==="rxaddpay" ? (<>
           <button className="a go" onClick={()=>confirmRxAdd(true)}>Pay {g.rxAdd?g.rxAdd.cost:0} more</button>
@@ -7462,6 +7529,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
   const xval   = kindIs("xval");
   const discost = kindIs("discost");
   const soulcost = kindIs("soulcost");
+  const abtarget = kindIs("abtarget");
   const theirPay  = g.pending && g.pending.seat !== mySeat;
   const myArsStep = g.phase === "end" && g.arsenalFor === mySeat;
   const defending = DawnPriority.canDeclareDefenders(g, mySeat);
@@ -8101,6 +8169,20 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                 return <button key={u} className="a go" onClick={()=>fire({t:"soulcost",uid:u})}>
                   Banish {c ? c.name : "card"}{twin ? " ("+(["","red","yellow","blue"][c.pitch]||"pitch "+c.pitch)+")" : ""}</button>;
               })}
+            </>
+          /* THE TARGET AN ACTIVATED ABILITY DECLARES (v5.72) — one button per
+             card it may name, off `abPickBound`'s pool: the one the legality
+             asked, so no refused target is offered. Declared BEFORE the cost
+             and before the other seat's window; Cancel withdraws it while
+             nothing has been paid. A target whose cost settles an X shows it. */
+          : abtarget ? <>
+              {(abtarget.uids||[]).map(u => {
+                const c = (me.grave||[]).find(x=>x.uid===u);
+                const twin = c && (abtarget.uids||[]).some(v => v !== u && (((me.grave||[]).find(x=>x.uid===v)||{}).name === c.name));
+                return <button key={u} className="a go" onClick={()=>fire({t:"abtarget",uid:u})}>
+                  {c ? c.name : "card"}{twin ? " ("+(["","red","yellow","blue"][c.pitch]||"pitch "+c.pitch)+")" : ""}{c && abtarget.card && abtarget.card._xPips ? " · X = "+(c.cost||0) : ""}</button>;
+              })}
+              <button className="a" onClick={()=>fire({t:"payCancel"})}>Cancel</button>
             </>
           : xval ? <>
               {Array.from({length: (xval.max||0) + 1}, (_, x) =>

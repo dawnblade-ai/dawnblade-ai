@@ -343,7 +343,7 @@ test("activateInstant asks too — Radiant Touch in the defend step is the other
   assert.ok(ask < INST.indexOf("const cost = effCost(card, act(s)"), "asked after the payment");
   assert.match(INST, /askSoulCost\(s, card, from, idx, "instant"\)/,
     "the answer would re-enter tryPlay and PLAY the ability from the wrong door");
-  assert.match(INST, /s\.mode === "soulpick"\) return s;/, "a tap during the question activates it again");
+  assert.match(INST, /s\.mode === "soulpick"(?: \|\| s\.mode === "targetpick")?\) return s;/, "a tap during the question activates it again");
   assert.match(INST, /delete back\._soulCostUids;/, "a refused activation leaves the soul card declared");
 });
 
@@ -364,7 +364,7 @@ test("the table demuxes the pending and the trainer's busy lists name the new mo
   assert.match(HTML, /const soulcost = kindIs\("soulcost"\);/);
   assert.match(HTML, /: soulcost \? <>/, "the table's action bar has no branch for the question");
   assert.match(HTML, /fire\(\{t:"soulcost",uid:u\}\)/, "the table's button answers with the wrong action");
-  const lists = HTML.match(/\["pay","arsenal","boostpick","fusepick","chargepick","discpick"(?:,"soulpick")?\]/g) || [];
+  const lists = HTML.match(/\["pay","arsenal","boostpick","fusepick","chargepick","discpick"(?:,"soulpick")?(?:,"targetpick")?\]/g) || [];
   assert.equal(lists.length, 2, "a hand-ability busy list moved — re-anchor this drill");
   for(const l of lists) assert.match(l, /"soulpick"/, "a sheet is open and the hand ability may still start: " + l);
 });

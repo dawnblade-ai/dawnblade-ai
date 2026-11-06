@@ -2286,24 +2286,44 @@ function makeEffects(ctx){
           spec.filter = Object.assign({}, spec.filter, {arcLe: held});
           spec.ctrHeld = held;
         }
-        /* …AND AN X PAID IN RESOURCES (v4.71), the same rule one currency
-           over. Beckoning Haunt's X is the chosen aura's cost, paid once per
-           {x} pip; the pips ride on the RESOLVING powCard, which only
-           `execute` hands this function (v4.63's opt-in fourth argument).
-           The fixed part is already paid, so the bound is the floating pool
-           plus the hand's pitch. A pick that settles an X nothing prices is
-           refused rather than read as free (v2.04). */
-        if(v && v.xOf){
-          const per = (srcCard && srcCard._xPips) || 0;
-          if(!(per > 0)){ n = L(n, `${srcName}: X has no price to settle — nothing is returned.`); return; }
-          const avail = (act(n).res || 0) + P.handPitch(act(n));
-          spec.filter = Object.assign({}, spec.filter, {costLe: Math.floor(avail / per)});
-          /* THE PARSE'S NAME FOR IT DOES NOT TRAVEL: a spec only carries
-             fields `buildPrompt` reads (v2.34, `test/speccensus.test.js`),
-             and `xPay` is the one it reads. */
-          spec.xPay = {per, of: v.xOf};
-          delete spec.xOf;
+        /* AN ACTIVATED ABILITY'S TARGET IS DECLARED, NOT CHOSEN HERE (v5.72).
+           CR 1.4.5's moment, for an ability: the door declared it when the
+           ability was activated, before anyone could respond, and it rides
+           in as `_actTarget` ({uid, name}). The sheet this queues is narrowed
+           to that ONE card (`onlyUid`), so the move runs through the same
+           answer path as any pick and `openPrompt` confirms it on the spot
+           (`promptForcedSel`). If the card is no longer a legal target — it
+           left the zone while the ability waited on the stack — nothing is
+           left to pick and the ability FIZZLES for it: the cost was paid on
+           activation and is not refunded. An X is part of that cost
+           (`effCost` priced it off the declared `_x`), so no pick settles
+           one. A pick that prints no target (`tgt`) is a choice and is
+           still made right here. The declaration is read once: judge strips
+           it off the state when the ability has resolved.
+           Verbatim (rules.fabtcg.com): CR 5.2.2b activation follows "steps
+           [5.1.3]-[5.1.10]"; CR 5.1.4a "the player must declare all legal
+           targets for those effects"; CR 1.8.5 the target parameters "are
+           declared as the layer ... is put onto the stack"; CR 1.8.9 "An
+           effect fails if (A) it is a targeted effect and all declared
+           target(s) are no longer legal or have ceased to exist"; CR 5.3.4b
+           "If an effect fails, any remaining effects continue to be
+           generated." Hence `return` (this op only). */
+        if(v && v.tgt && n._actTarget !== undefined){
+          const dt = n._actTarget;
+          spec.filter = Object.assign({}, spec.filter, {onlyUid: dt ? dt.uid : -1});
+          if(v.xOf) spec.filter = Object.assign(spec.filter, {costLe: n._x || 0, costGe: n._x || 0});
+          if(!PR.promptPickAskable(PR.promptPickPool(act(n), spec), spec)){
+            n = L(n, `${srcName}: ${dt && dt.name ? dt.name : "the declared target"} is no longer a legal target `
+                   + "— the ability fizzles for it. What was paid stays paid.");
+            return;
+          }
         }
+        else if(v && v.xOf){
+          /* AN X NO DOOR DECLARED prices nothing (v2.04: inert, never free) */
+          n = L(n, `${srcName}: X was never declared — nothing is returned.`);
+          return;
+        }
+        delete spec.tgt; delete spec.xOf;
         n.promptQ = [...(n.promptQ||[]), spec];
       }
       /* RELOAD — CR: only legal while the arsenal is EMPTY, and no type
@@ -6143,15 +6163,6 @@ function makeEffects(ctx){
   const applyAnswerInner = (s, prompt) => {
     const p = prompt;
     if(!p || !promptReady(p)) return s;
-    /* AN X THE SEAT CANNOT PAY IS NOT AN ANSWER (v4.71). The queue site
-       bounds the sheet to what is affordable, so no sheet a board renders
-       can reach this; it is here because `reduce` is fed by JSON off a
-       wire (v2.04) — an unpayable cost is INERT, never free. */
-    if(p.tag === "pick" && p.xPay){
-      const ch = (p.cards || [])[(p.sel || [])[0]];
-      const sdP = (s.sides || [])[p.side || 0] || {};
-      if(ch && p.xPay.per * (ch.cost || 0) > (sdP.res || 0) + P.handPitch(sdP)) return s;
-    }
     /* AND A "DESTROY THIS" PRICE WHOSE PIECE IS GONE IS NOT AN ANSWER
        (v5.17). No sheet a board renders reaches this — `buildPrompt` lapses
        it at the drain — but `reduce` is fed by JSON off a wire (v2.04), and
@@ -6206,21 +6217,6 @@ function makeEffects(ctx){
     if(r.pay > 0){
       if(act(n).res < r.pay){ const paid = autoPitch(n, r.pay, null, {exact: !!p.exactPitch}); if(paid) n = paid; }
       const ps = actMut(n); ps.res = Math.max(0, ps.res - r.pay);
-    }
-    /* …AND THE X THE CHOICE SETTLED (v4.71). Beckoning Haunt: X is the
-       returned aura's printed cost, paid once per {x} pip, pitching on
-       demand (RULING 2026-08-01) — and never pitching the aura it just
-       returned, which is in the hand by now. The guard at the top of this
-       function has already refused an answer the seat cannot pay. */
-    if(p.tag === "pick" && p.xPay && (r.picked || []).length){
-      const chosen = r.picked[0];
-      const amt = p.xPay.per * ((chosen && chosen.cost) || 0);
-      if(amt > 0){
-        if(act(n).res < amt){ const paid = autoPitch(n, amt, chosen.uid); if(paid) n = paid; }
-        const ps = actMut(n); ps.res = Math.max(0, ps.res - amt);
-      }
-      n = L(n, `${String(p.src || "").replace(/ — ability$/, "")}: X is ${(chosen && chosen.cost) || 0}`
-             + ` — ${amt} paid for ${chosen.name}.`);
     }
     /* THE TAP IS PAID BEFORE THE RIDER RUNS (v3.33), for the reason
        Frostbite's order is a whole ruling: the permanent that pays is

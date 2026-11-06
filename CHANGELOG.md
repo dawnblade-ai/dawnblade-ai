@@ -1,3 +1,20 @@
+## v5.86 — R9: an activated ability's target is declared on activation
+
+The held R9 patch (`experiments/R9-activation-target-declared.patch`, base 71192de), applied on v5.85
+and now decided on the CR text, read verbatim at rules.fabtcg.com:
+CR 5.2.2b "The remainder of the process for activating an activated ability is identical to the process
+for playing a card listed in steps [5.1.3]-[5.1.10]…", CR 5.1.4a "…the player must declare all legal
+targets for those effects.[1.8.5]", CR 1.8.5 "…the target parameters are declared as the layer… is put
+onto the stack."
+
+- **Both boards:** a printed target (Beckoning Haunt, and the X it settles) is asked after the legality
+  check and before the payment (`abtarget` pending at the table, `targetpick` in the trainer), rides the
+  stack layer, and the other seat answers knowing it. `WIRE_V` 32 -> 33.
+- **At resolution:** CR 1.8.9 "An effect fails if (A) it is a targeted effect and all declared target(s)
+  are no longer legal or have ceased to exist…" and CR 5.3.4b "If an effect fails, any remaining effects
+  continue to be generated." A gone target fails that effect only; the cost stays paid.
+- `activation-target-declared` (tools/approx.js) carries the quotes; stated 22 -> 21, closed 36 -> 37.
+
 ## v5.85 — Sharp blocks: the AI plays out its walls
 
 Lookahead phase (c), piece 1 (`research/lookahead-c`). v5.77's search decides how an AI hero STARTS

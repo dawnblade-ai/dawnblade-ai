@@ -364,7 +364,10 @@ test("WIRE_V moves when the payload shape moves, and only then", () => {
   /* 31 -> 32 AT v5.71: the game's `endHold` key (the end phase paused on a
      trigger's pay sheet) — a GAME_KEY-level field that ships whole, so the
      digest holds. */
-  assert.equal(W.WIRE_V, 32,
+  /* 32 -> 33 AT v5.72: `pending` gains the `abtarget` kind and the game the
+     `_actTarget` declaration (and `xPay` leaves the pick spec) — whole-shipped
+     values, so the digest holds. */
+  assert.equal(W.WIRE_V, 33,
     "WIRE_V moved — if the payload shape moved with it, update the digest below " +
     "in the same edit and say what changed in the header");
   assert.equal(h, 3759651216,
