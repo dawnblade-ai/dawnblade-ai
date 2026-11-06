@@ -59,7 +59,13 @@ History goes in the archived handoffs below it and in CHANGELOG.md. Do not start
   pregame item would only spend a steam counter for an action point the action phase overwrites
   (`ap:1`), so no player would take it; `start-item-crank-unasked` stays stated, nothing to build.
 
-**IN FLIGHT:** (see the next CEO note)
+**IN FLIGHT:** QA readers A (session_013xG9xC23NRXauvfF8rpiu7, findings/qa-a: arakni azalea blaze boltyn
+bravo briar dash dorinthea) and B (session_013xG9xApamFrSvk3ippatFs, findings/qa-b: enigma fai gravy
+iyslander kayo lyath viserai), read-only, Sharp games vs card text. Both stopped at the WEEKLY USAGE
+LIMIT on 2026-11-02 18:03 and were asked on 11-06 to write up what they had rather than restart.
+**BUDGET LESSON (CEO, 2026-11-06):** five concurrent Opus worker sessions in one day spent the account's
+weekly limit and froze everything for four days. Run at most two workers at once, use Sonnet for
+mechanical merges/shippers, and keep Opus for rules reading, search design and audits.
 **OPEN DECISIONS:** (A, USER) the coin screen says "the throw returns for launch" — bring back
 rock-paper-scissors for 1.0 or drop the line? (D) SHIPPED v5.84. R9 still waits on the CR text. Parked: hidden hands, sudden death.
 
