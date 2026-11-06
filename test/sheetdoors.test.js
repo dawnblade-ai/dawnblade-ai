@@ -59,7 +59,7 @@ function doors(){
    which `tryPlay` (guarded) is the only way into. */
 const ANSWERS = ["promptToggle", "promptPick", "promptConfirm", "promptDecline", "promptTakeBackC", "promptMoveC",
                  "confirmBoost", "confirmCharge", "confirmFuseAt", "confirmPay", "cancelPay", "cancelDiscCost",
-                 "cancelSoulCost"];   /* +cancelSoulCost AT v5.59: the way out of the soul question, an ANSWER */
+                 "cancelSoulCost", "cancelAbTarget"];   /* +cancelSoulCost AT v5.59: the way out of the soul question, an ANSWER; +cancelAbTarget AT v5.72: the way out of an ability's target question, the same */
 /* `confirmFuse` -> `confirmFuseAt` AT v5.70: the sheet's button now calls a
    wrapper that sends an instant door's answer back to the door (`redoDoor`)
    and hands every other fusion to `confirmFuseAt`, the unchanged ANSWER. */

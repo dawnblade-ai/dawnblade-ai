@@ -754,7 +754,8 @@ test("a `filters` prompt survives the wire, which is what the bump is ABOUT", ()
   /* 29 -> 30 AT v5.62: the game's `still` key and a draw `over` (`winner: null`). */
   /* 31 -> 32 AT v5.71: `endHold` — the end phase held on a trigger's pay
      sheet (Bloodrot Pox's "unless you pay" is asked when pitching can cover it). */
-  assert.equal(W.WIRE_V, 32, "the bump moved — say what changed in wire.js's header");
+  /* 32 -> 33 AT v5.72: the `abtarget` pending kind, the `_actTarget` declaration, `xPay` gone. */
+  assert.equal(W.WIRE_V, 33, "the bump moved — say what changed in wire.js's header");
   const g = H.state({grave: [RATK("a1"), RNON("n1")], res: 9, ap: 1}, {}, {actor: 0, turn: 3});
   g.prompt = sheet([RATK("a1"), RNON("n1")]);
   assert.ok(g.prompt && g.prompt.filters, "fixture: the sheet carries the field");

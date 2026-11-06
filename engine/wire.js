@@ -300,7 +300,16 @@
    live sheet the other peer is answering, and drop the key on its next copy. A
    game key ships inside the game object, which the shape digest does not cover:
    by hand, behind the release handshake. */
-const WIRE_V = 32;
+/* 32 -> 33 AT v5.72: `pending` gains a KIND (`abtarget`, the target an
+   activated ability declares when it is activated, before the cost) and the
+   game a declaration, `_actTarget` ({uid, name}), which rides in a held
+   play's `decl` (`judge.HELD_DECL`) and shows on the layer's label. The pick
+   a payload queues no longer opens at resolution for such an ability, and
+   `xPay` (16 -> 17's field) is gone: X is priced off the declared `_x`. A
+   v32 peer answers no `abtarget` and opens the sheet only once the ability
+   resolves, so the pair desyncs on the first Beckoning Haunt. Whole-shipped
+   values again: by hand, behind the release handshake. */
+const WIRE_V = 33;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

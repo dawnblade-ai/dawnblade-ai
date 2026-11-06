@@ -3393,7 +3393,9 @@ function classifyClause(raw){
      deck reader above consumes it in its own pattern; this one captured
      it, and `optFilter` read it as a CLASS. */
   if(m=c.match(RX_GY_HAND)){
-    let sub = cased(RX_GY_HAND, 2, m[2]).replace(/^target\s+/i, "");
+    let sub = cased(RX_GY_HAND, 2, m[2]);
+    const tgt = /^target\s+/i.test(sub);
+    sub = sub.replace(/^target\s+/i, "");
     const xm = sub.match(/^(.+?) with cost x$/i);
     if(xm) sub = xm[1];
     const filter = pickSubject(sub);
@@ -3405,7 +3407,7 @@ function classifyClause(raw){
          : may ? "Return a card from your graveyard to your hand?"
                : "Return a card from your graveyard to your hand",
       hint: xm ? "Only what you can pay for is offered." : may ? "Optional — choose none to decline." : undefined},
-      xm ? {xOf: "cost"} : {})]]);
+      xm ? {xOf: "cost"} : {}, tgt ? {tgt: true} : {})]]);
   }
   /* THE DECK SEARCH — see RX_DECK_SEARCH's header for why the disposition
      is anchored and why the shuffle is the price of looking.
@@ -8560,7 +8562,11 @@ function effCost(c,sd,o){
      `cx` 2, and X is the DECLARED value riding on the game (`costCtx`), so
      it is inside the floor like any printed cost, where a discount can
      reach it. A caller that says nothing prices X at 0. */
-  const xPart = (c && c.cx) ? c.cx * (o.x || 0) : 0;
+  /* …AND AN ACTIVATION'S {x} PIPS ARE THE SAME PRICE (v5.72) — Beckoning
+     Haunt's "{x}{x}{r}" is `_xPips` 2 on its powCard, and the X its target
+     settles is declared with the target, BEFORE the payment, so the whole
+     price is known when anyone may respond. */
+  const xPart = (c && (c.cx || c._xPips)) ? (c.cx || c._xPips) * (o.x || 0) : 0;
   return Math.max(0,(c.cost||0)+xPart-runeRed(c)*runeCount(sd)-boardRed(c,sd)-costOffFor(c,sd)-dyn)
        + costTaxes(c, sd, o);
 }
@@ -10310,10 +10316,22 @@ function abPickBound(sd, ab, ctx){
   const spec = abPickSpec(ab);
   if(!spec || !spec.xOf) return spec;
   const per = (ab && ab._xPips) || 0;
-  const fixed = effCost(ab, sd || {}, ctx);
+  const fixed = effCost(ab, sd || {}, Object.assign({}, ctx, {x: 0}));   /* the FIXED part: X is what the pick settles */
   const avail = ((sd && sd.res) || 0) + handPitch(sd) - fixed;
   const bound = per > 0 ? Math.floor(Math.max(0, avail) / per) : -1;
   return Object.assign({}, spec, {filter: Object.assign({}, spec.filter || {}, {costLe: bound})});
+}
+/* ---- THE TARGET AN ACTIVATION DECLARES (v5.72) ------------------------
+   An activated ability's printed TARGET is declared when it is activated,
+   before anyone may respond (CR 1.4.5's moment, for an ability), and the
+   fixed part of an X cost with it. `abPickSpec` answers the pick the payload
+   queues; this answers whether that pick is a printed "target" — the
+   parser marks it (`tgt`) where it reads the word — as opposed to a choice
+   made while the ability resolves ("put a card from your hand into your
+   soul", which prints no target). Null for anything that declares nothing. */
+function abTargetSpec(ab){
+  const sp = abPickSpec(ab);
+  return sp && sp.tgt ? sp : null;
 }
 /* ---- HAS THIS WEAPON SPENT ITS SWING? (v5.01) --------------------------
    Two printed limits, and only a weapon that prints one of them is limited
@@ -10691,6 +10709,6 @@ return {norm, noopFeedText, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, 
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, spellvoidX, linksControlled, arcaneSoaks,
         ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
-        chiValue, chiSum, chiFloating, pitchExcessWhy, chiCeiling, payCeiling, handFree, isDeclaredDefender, rxDefenders, PLAY_ROUTES, isCardPlay, isNonAtkActionPlay, abChiCost, abSoulCost, soulPutNote, soulPutThisTurn, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, swingSpentWhy, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, abilitiesLive, boardEntryNamed, isEphemeral, isToken, ceasesToExist, PLAY_GRANT_STAMPS, spendPlayGrant, ARENA_ZONES, isHandWipe, gyFirstGaKw, gyFirstGaSource,
+        chiValue, chiSum, chiFloating, pitchExcessWhy, chiCeiling, payCeiling, handFree, isDeclaredDefender, rxDefenders, PLAY_ROUTES, isCardPlay, isNonAtkActionPlay, abChiCost, abSoulCost, soulPutNote, soulPutThisTurn, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, abTargetSpec, swingSpentWhy, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, abilitiesLive, boardEntryNamed, isEphemeral, isToken, ceasesToExist, PLAY_GRANT_STAMPS, spendPlayGrant, ARENA_ZONES, isHandWipe, gyFirstGaKw, gyFirstGaSource,
         CARD_OVERRIDES};
 });

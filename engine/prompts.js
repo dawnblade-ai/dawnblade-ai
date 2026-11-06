@@ -117,6 +117,14 @@ function promptFilter(spec){
        sev-3 the refusal it replaced was protecting against. */
     if(spec.costLtDrac) return false;
     if(spec.notUid != null && c.uid === spec.notUid) return false;
+    /* THE ONE CARD A DECLARATION NAMED (v5.72) — an activated ability's
+       target is declared when it is activated, and when the ability
+       resolves the pick it queues is narrowed to exactly that card. A
+       target that has left the zone leaves the pool empty, which is how a
+       fizzle is read. The QUEUE SITE supplies it, never the parse
+       (`fxParse` memoizes on name|pitch: a uid in a parse names whichever
+       copy parsed first). */
+    if(spec.onlyUid != null && c.uid !== spec.onlyUid) return false;
     if(spec.type === "attack" && !isAttack(c)) return false;
     if(spec.type === "nonAttack" && isAttack(c)) return false;
     if(spec.tt != null && !new RegExp(spec.tt, "i").test(c.tt||"")) return false;
@@ -421,11 +429,9 @@ function buildPrompt(game, spec){
       ctrSpend: spec.ctrSpend || null,
       ctrHeld: spec.ctrHeld != null ? spec.ctrHeld : null,
       playThisTurn: !!spec.playThisTurn,
-      /* AN X SETTLED BY THE CHOICE (v4.71) — Beckoning Haunt pays X once per
-         pip, X being the chosen aura's cost. The same rule as the counter
-         cost above: data, never ops, and dropped here the aura comes back
-         for FREE. OPT-IN, so no other pick changes shape (v3.58). */
-      ...(spec.xPay ? {xPay: spec.xPay} : {}),
+      /* (v5.72: Beckoning Haunt's X is declared with its target at ACTIVATION
+         and paid with the cost, so no pick settles an X any more and the
+         `xPay` field that did is gone.) */
       /* THE BANISH RIDER'S STAMP (v3.92) — data the answer applies to the
          card that MOVED. A spec only carries fields `buildPrompt` knows
          about (v2.34, v3.33, v3.53), so a field threaded through and

@@ -14350,3 +14350,25 @@ phase-free as of v2.73, but still takes ~19 trainer closures.
 
 The advisor and log speak like a sharp, warm coach at the table — concise, evocative,
 never patronizing. Keep that voice in any new game text.
+
+## CR READINGS — rules.fabtcg.com, verbatim (rules shipper, 2026-11-06)
+
+From 2026-11-06 the `dawnblade-ai` cloud environment can read the Comprehensive Rules
+(https://rules.fabtcg.com/en/cr/, sections 01-game-concepts … 09-additional-rules). A decision still
+needs the verbatim quote IN THE REPO (source comment, `tools/approx.js` record, and here).
+
+### R9 — an activated ability's target (ship/rules-qa)
+- CR 5.2.2b: "The remainder of the process for activating an activated ability is identical to the
+  process for playing a card listed in steps [5.1.3]-[5.1.10], substituting "play" for 'activate`, and
+  "card" for "ability.""
+- CR 5.1.4a: "If the card has any modal resolution abilities, the player must declare the modes for
+  those abilities.[1.7.5] Then, if any resolution abilities generate effects that require a target, the
+  player must declare all legal targets for those effects.[1.8.5]"
+- CR 1.8.5: "A targeted effect is an effect where the target parameters are declared as the layer, with
+  an ability that generates the targeted effect, is put onto the stack."
+- CR 1.8.9: "An effect fails if (A) it is a targeted effect and all declared target(s) are no longer
+  legal or have ceased to exist, (B) the effect requires additional parameters and there are no legal
+  parameters that can be chosen, or (C) if all the events it creates fail to occur."
+- CR 5.3.4b: "If an effect fails, any remaining effects continue to be generated.[1.8.9]"
+- So: declared on activation; a target gone at resolution fails THAT effect only, the rest of the
+  ability still resolves, and nothing refunds the paid cost.

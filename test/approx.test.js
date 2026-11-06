@@ -349,7 +349,10 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      Pox's payment is asked when pitching can cover it, at both boards' end phase. */
   /* 23 -> 22 stated AT v5.72: `trainer-no-stalemate-draw` closed - the trainer's
      `setG` runs the table's `stalemateCheck`. */
-  assert.equal(n("stated"), 22, "stated count moved");
+  /* 22 -> 21 stated AT R9: `activation-choices-at-resolution` was built and is
+     `activation-target-declared` — an ability's printed target is declared at
+     activation, at both boards. */
+  assert.equal(n("stated"), 21, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -415,7 +418,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 33 -> 34 closed AT v5.70: `trainer-instant-doors-no-declarations`. */
   /* 34 -> 35 closed AT v5.71: `end-phase-unless-floating-only`. */
   /* 35 -> 36 closed AT v5.72: `trainer-no-stalemate-draw`. */
-  assert.equal(n("closed"), 36, "closed count moved");
+  /* 36 -> 37 closed AT R9: `activation-target-declared`. */
+  assert.equal(n("closed"), 37, "closed count moved");
 });
 
 /* ============================================================
@@ -1508,12 +1512,11 @@ probe("played-target-partial-resolution", () => {
     /can be its target/);
 });
 
-probe("activation-choices-at-resolution", () => {
-  /* DRIVEN AT THE TABLE, and it asserts the DEVIATION: Beckoning Haunt's
-     activation is HELD on the stack for the other seat's window with no
-     target and no X chosen, and the pick opens only once it resolves. The
-     day the choice is declared at activation, the held layer carries it
-     (or a sheet opens first) and this goes red. */
+/* CLOSED AT v5.72 — the probe turned round (v4.02). It asserted the
+   DEVIATION for fifty versions (the activation held on the stack with no
+   target and no X, the pick opening only as it resolved); it now DRIVES the
+   declaration at the table and asserts the layer carries it. */
+probe("activation-target-declared", () => {
   const db = H.db();
   if(!db) return;
   const B = require("../engine/build.js");
@@ -1525,14 +1528,19 @@ probe("activation-choices-at-resolution", () => {
                       {turn: 3, actor: 0, turnPlayer: 0}),
            phase: "action", step: "layer", priority: 0, passed: [false, false],
            stack: [], chain: [], chainCards: []};
-  const n = J.reduce(g, {t: "activate", uid: 41, from: "gear"}, 0).state;
+  const asked = J.reduce(g, {t: "activate", uid: 41, from: "gear"}, 0).state;
+  assert.equal(asked.pending && asked.pending.kind, "abtarget",
+    "no target was asked for at ACTIVATION — it is being chosen at resolution again");
+  assert.ok(!(asked.stack || []).length, "the activation reached the stack before its target was declared");
+  const n = J.reduce(asked, {t: "abtarget", uid: "wv"}, 0).state;
   const layer = (n.stack || []).find(l => l && l.k === "play");
-  assert.ok(layer, "the activation was not held for the other seat's window — re-measure this record");
-  assert.ok(!n.prompt, "a sheet opened at ACTIVATION — the choice is declared now; this record is stale");
-  assert.ok(!JSON.stringify(layer.decl || {}).match(/"(?:wv|mi)"/),
-    "the held layer carries a chosen target — declared at activation; this record is stale");
-  const r = H.drain(n);
-  assert.ok(r.prompt && r.prompt.tag === "pick", "the pick no longer opens when the ability resolves");
+  assert.ok(layer, "the activation was not held for the other seat's window");
+  assert.ok(!n.prompt, "a sheet opened at ACTIVATION — the pick belongs to the declaration");
+  assert.equal(layer.decl._actTarget && layer.decl._actTarget.uid, "wv", "the held layer does not carry the declared target");
+  assert.equal(layer.decl._x, 1, "the held layer does not carry the declared X");
+  const r = H.drain(J.reduce(J.reduce(n, {t: "pass"}, 0).state, {t: "pass"}, 1).state);
+  assert.ok(r.sides[0].hand.some(x => x.uid === "wv") && !r.prompt,
+    "the declared target did not come back without a second choice");
 });
 
 /* CLOSED AT v4.72 — the probe turned round (v4.02). It asserted the

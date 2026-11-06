@@ -104,38 +104,46 @@ function table(res, hand){
           phase: "action", step: "layer", priority: 0, passed: [false, false],
           stack: [], chain: [], chainCards: []};
 }
-const activate = g => H.drain(J.reduce(g, {t: "activate", uid: 41, from: "gear"}, 0).state);
-const offered = n => (n.prompt ? n.prompt.cards : []).map(x => x.name).sort();
+/* v5.72: the target is DECLARED at activation — a `pending` opened before the
+   cost, answered by `abtarget` — so these drills ask the question, answer it,
+   and then read the resolution. (They read a SHEET at the resolution until
+   then; `test/abdecl.test.js` holds the declaration itself.) */
+const activate = g => J.reduce(g, {t: "activate", uid: 41, from: "gear"}, 0).state;
+const declare = (n, uid) => H.drain(J.reduce(n, {t: "abtarget", uid}, 0).state);
+const offered = n => ((n.pending && n.pending.uids) || []).map(u => n.sides[0].grave.find(x => x.uid === u).name).sort();
 
-test("the sheet offers ONLY what the seat can pay X for, after the fixed {r}", {skip}, () => {
+test("the question offers ONLY what the seat can pay X for, after the fixed {r}", {skip}, () => {
   /* 3 floating: {r} paid, 2 left, X pips 2 — so cost 1 at most. */
   const n = activate(table(3));
+  assert.equal(n.pending && n.pending.kind, "abtarget", "no target was asked for at activation");
   assert.deepEqual(offered(n), ["Malefic Incantation", "Waning Vengeance"],
     "an aura the seat cannot pay X for was offered — the choice would be refused after the cost is paid");
-  assert.ok(H.filed(n.sides[0], 41), "destroy this is paid on activation — and filed (v4.79)");
+  assert.ok(!H.filed(n.sides[0], 41), "nothing is paid until the target is declared");
+  assert.ok(H.filed(declare(n, "wv").sides[0], 41), "destroy this is paid on activation — and filed (v4.79)");
 });
 
-test("the answer RETURNS the aura and CHARGES X per pip", {skip}, () => {
-  let n = activate(table(3));
-  n = J.reduce(n, {t: "promptSel", i: n.prompt.cards.findIndex(x => x.uid === "wv")}, 0).state;
-  n = J.reduce(n, {t: "promptConfirm"}, 0).state;
+test("the declaration RETURNS the aura and CHARGES X per pip", {skip}, () => {
+  const n = declare(activate(table(3)), "wv");
   assert.ok(n.sides[0].hand.some(x => x.uid === "wv"), "the aura never came back");
   assert.ok(!n.sides[0].grave.some(x => x.uid === "wv"), "…and is still in the graveyard too");
   assert.equal(n.sides[0].res, 0, "X is 1 and it is paid TWICE: 3 - 1 - 2");
 });
 
-test("X is paid by pitching on demand — and NEVER by pitching the aura it returned", {skip}, () => {
-  /* 1 floating pays the {r}; two 3-pitch cards cover up to X = 3. The
-     returned aura is in the hand by the time X is charged, and pitching it
-     would pay for the card with the card. */
+test("X is paid by pitching on demand — the aura is in the graveyard while it is paid", {skip}, () => {
+  /* 1 floating pays the {r}; two 3-pitch cards cover up to X = 3. Since v5.72
+     the price is paid BEFORE the aura returns, so pitching it to pay for
+     itself is impossible by construction, not by a guard. */
   const f1 = c("Raging Onslaught", 3, "f1"), f2 = c("Raging Onslaught", 3, "f2");
   let n = activate(table(1, [f1, f2]));
   assert.deepEqual(offered(n), ["Malefic Incantation", "Pyroglyphic Protection", "Waning Vengeance"]);
-  n = J.reduce(n, {t: "promptSel", i: n.prompt.cards.findIndex(x => x.uid === "pp")}, 0).state;
-  n = J.reduce(n, {t: "promptConfirm"}, 0).state;
-  assert.ok(n.sides[0].hand.some(x => x.uid === "pp"), "the returned aura was pitched to pay for itself");
-  assert.equal(n.sides[0].pitch.length, 2, "X is 2, paid twice: 4 needs both pitch cards");
-  assert.equal(n.sides[0].res, 2, "6 pitched, 4 paid, 2 floating");
+  n = J.reduce(n, {t: "abtarget", uid: "pp"}, 0).state;
+  assert.equal(n.pending && n.pending.kind, "pay", "X = 2 costs 5 and the seat holds 1: a payment must open");
+  assert.equal(n.pending.need, 5, "the whole price — {r} and X twice — is what the payment asks for");
+  for(const u of ["f1", "f2"]) n = J.reduce(n, {t: "paySel", uid: u}, 0).state;
+  n = H.drain(J.reduce(n, {t: "payConfirm"}, 0).state);
+  assert.ok(n.sides[0].hand.some(x => x.uid === "pp"), "the aura did not return");
+  assert.equal(n.sides[0].pitch.length, 2, "X is 2, paid twice: 5 needs both pitch cards");
+  assert.equal(n.sides[0].res, 2, "6 pitched + 1 floating, 5 paid, 2 floating");
 });
 
 test("THE LEGALITY: nothing affordable refuses by name, before the piece is destroyed", {skip}, () => {
@@ -162,21 +170,25 @@ test("THE LEGALITY: nothing affordable refuses by name, before the piece is dest
     "the affordable case was refused — a legality that refuses everything is not a check");
 });
 
-test("ONE affordable aura is not a choice — it returns on the spot (v4.68)", {skip}, () => {
-  const n = activate(table(1));
-  assert.ok(!n.prompt, "a forced choice of one opened a sheet");
+test("ONE affordable aura is not a choice — it is declared on the spot (v4.68, v5.72)", {skip}, () => {
+  const n = H.drain(activate(table(1)));
+  assert.ok(!n.pending && !n.prompt, "a forced choice of one asked a question");
   assert.ok(n.sides[0].hand.some(x => x.uid === "mi"), "the only affordable aura (X = 0) did not return");
   assert.equal(n.sides[0].res, 0, "X = 0 costs nothing past the {r}");
+  assert.ok(n.log.some(l => /declare.*Malefic Incantation.*target of Beckoning Haunt/.test(l.t || l)),
+    "the feed does not say what was declared — the one line that names the choice made for the player");
 });
 
-test("an unaffordable answer off a wire is INERT, never free (v2.04)", {skip}, () => {
-  /* The sheet cannot offer it; a crafted prompt can. */
-  let n = activate(table(3));
-  const crafted = {...n.prompt, cards: [...n.prompt.cards, n.sides[0].grave.find(x => x.uid === "pp")]};
-  crafted.sel = [crafted.cards.length - 1];
-  const out = H.fx(n, (fx, s) => fx.applyAnswer(s, crafted));
+test("an unaffordable target off a wire is REFUSED, and an unpaid X is INERT, never free (v2.04)", {skip}, () => {
+  const n = activate(table(3));
+  /* the question cannot offer it; a crafted answer can name it */
+  assert.match(String(J.legal(n, {t: "abtarget", uid: "pp"}, 0)), /not a legal target/,
+    "an aura the seat cannot pay X for was accepted as the target");
+  /* and a declaration that never priced its X (a crafted state) returns nothing */
+  const crafted = {...table(9), _actTarget: {uid: "pp", name: "Pyroglyphic Protection"}};
+  const out = H.drain(J.reduce(crafted, {t: "activate", uid: 41, from: "gear"}, 0).state);
   assert.ok(!out.sides[0].hand.some(x => x.uid === "pp"),
-    "an aura the seat cannot pay X for was returned — the X was free");
+    "an aura of cost 2 returned against X = 0 — the X was free");
 });
 
 /* ---- 3. THE TRAINER ASKS THE SAME BOUNDED READER ------------------------ */

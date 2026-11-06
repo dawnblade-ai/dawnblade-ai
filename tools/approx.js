@@ -589,23 +589,55 @@ const APPROX = {
       "Beam) charges as an EFFECT, answered by a prompt, so `chargeOffer` never offers "+
       "it as an additional cost at any door."},
 
-"activation-choices-at-resolution": {
-  status:"stated", cr:"CR 1.4.5", board:"both", since:"v2.17", swept:"v4.71",
-  claim:"The target (and, for Beckoning Haunt, the X) of an ACTIVATED ability is "+
-        "chosen when it RESOLVES, through the pick sheet its payload queues. In the "+
-        "CR both are declared when the ability is activated, before anyone may "+
-        "respond. Recorded at v4.71, when an X cost made the choice part of the "+
-        "PRICE: the fixed part is paid on activation and X when the pick settles it.",
-  why:"Every activation pick in the pool works this way (Fai, Halo of "+
-      "Illumination, Hope Merchant's Hood, Crown of Dichotomy, Blaze, and now "+
-      "Beckoning Haunt), and the legality asks the same pool the sheet will, so "+
-      "an activation with no legal choice is refused before its cost is paid "+
-      "(v4.59). What differs is observable only in the window between: since "+
-      "v4.66 the table holds an Action-speed activation on the stack, so the "+
-      "other seat answers without knowing the target, and the controller "+
-      "chooses after seeing that answer. Declaring at activation needs the "+
-      "choice as a PENDING before payment (boost's and fusion's shape), which "+
-      "is its own piece of work across every activation pick."},
+"activation-target-declared": {
+  status:"closed", cr:"CR 5.2.2b, 5.1.4a, 1.8.5, 1.8.9", board:"both", since:"v2.17", swept:"v5.72",
+  claim:"The target of an ACTIVATED ability that prints one — and, for Beckoning "+
+        "Haunt, the X that target settles — is DECLARED when the ability is activated, "+
+        "before its cost is paid and before either seat may respond. BUILT AT v5.72; "+
+        "this record was `activation-choices-at-resolution`, `stated` from v4.71. At "+
+        "both boards a `pending` (`abtarget`, the trainer's `targetpick`) asks for it "+
+        "after the legality and before the payment; the declaration rides the state as "+
+        "`_actTarget` ({uid, name}) and `_x`, `HELD_DECL` carries both onto the stack "+
+        "layer (its label names the target, so the other seat answers knowing it), and "+
+        "when the ability resolves the pick it queues is narrowed to that ONE card. A "+
+        "target no longer legal then FIZZLES for it, in the feed, with the price paid "+
+        "and not refunded. X is part of the price: `effCost` reads the declared `_x` "+
+        "per {x} pip, so one payment covers the {r} and X together.",
+  why:"WHAT THE RECORD SAID AND WHAT THE CENSUS FOUND. It listed six activation "+
+      "picks (Fai, Halo of Illumination, Hope Merchant's Hood, Crown of Dichotomy, "+
+      "Blaze, Beckoning Haunt). Only Beckoning Haunt prints a TARGET: the other five "+
+      "are choices made as the ability resolves (\"put a card from your hand into "+
+      "your soul\", \"return a Phoenix Flame\") and every one is an Instant, so none "+
+      "has a window to answer into. Measured over the fifteen decks, six activated "+
+      "abilities print the word target (Beckoning Haunt; Boltyn's hero power, Bolt'n "+
+      "Boots, Concealed Object, Danger Digits, Prey Spotters) and a seventh by text is "+
+      "Reaper's Call (a hand ability marking the opposing hero). Beckoning Haunt is the "+
+      "only one at ACTION speed, the only one that rests on the stack with a window, "+
+      "and the only one whose target is a card the player picks; the rest resolve on "+
+      "the spot (`instant-speed-plays-resolve-on-play`, stated) and aim at the attack "+
+      "in flight or the one opposing hero. So the parser marks a pick as a printed "+
+      "target where it reads the word (`tgt`; `parser.abTargetSpec` is the reader) and "+
+      "only that declares. WHAT IT COST TO LEAVE: the other seat answered a held "+
+      "activation without knowing what it was aimed at, and the controller then chose "+
+      "after seeing the answer. WHAT CHANGED WITH IT: `xPay` (v4.71, the field that "+
+      "charged X as the pick settled) is gone, because nothing settles an X at "+
+      "resolution any more; an undeclared X returns nothing rather than returning free "+
+      "(v2.04). THE POLICY declares through `judge.abTargetAnswer` (the order the sheet "+
+      "used: highest printed power, then lowest uid), so the ladder measured the route "+
+      "and not a new judgement. DECIDED ON THE CR (read at rules.fabtcg.com, "+
+      "2026-11-06): CR 5.2.2b \"The remainder of the process for activating an "+
+      "activated ability is identical to the process for playing a card listed in "+
+      "steps [5.1.3]-[5.1.10], substituting 'play' for 'activate`, and 'card' "+
+      "for 'ability.'\"; CR 5.1.4a \"…Then, if any resolution abilities generate "+
+      "effects that require a target, the player must declare all legal targets for "+
+      "those effects.[1.8.5]\"; CR 1.8.5 \"A targeted effect is an effect where the "+
+      "target parameters are declared as the layer, with an ability that generates the "+
+      "targeted effect, is put onto the stack.\" AT RESOLUTION, CR 1.8.9 \"An effect "+
+      "fails if (A) it is a targeted effect and all declared target(s) are no longer "+
+      "legal or have ceased to exist…\" and CR 5.3.4b \"If an effect fails, any "+
+      "remaining effects continue to be generated.[1.8.9]\" — so the fizzle is the "+
+      "targeted effect alone (the pick op returns; the ability's other ops still run) "+
+      "and nothing in 5.1 refunds a paid cost."},
 
 "spellvoid-x-read": {
   status:"closed", cr:null, board:"both", since:"v2.32", swept:"v4.75",
