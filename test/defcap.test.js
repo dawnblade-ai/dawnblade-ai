@@ -295,3 +295,43 @@ test("…and a piece already spent on this chain cannot block again (CR 7.3.2b)"
   const g = {...g0, sides: g0.sides.map((sd, i) => i === 1 ? {...sd, chainBlocked: [9]} : sd)};
   assert.ok(/already blocked this chain/.test(String(J.legal(g, {t: "defend", uid: 9}, 1))));
 });
+
+/* ---- 4. S-1 (QA-A, v5.85): a defence reaction PLAYED from hand counts --
+   CR 8.3.4b (verbatim, rules.fabtcg.com): "If an attack with dominate is
+   currently defended by a card from hand on the activate chain link, defense
+   reaction cards cannot be played from hand.[7.4.2c]" Only the declare route
+   asked the cap, so Lair of the Spider went down beside a declared Bloodrot.
+   Also held here: CR 8.3.4 (dominate's meaning) and CR 7.4.2c (a defence
+   reaction that could not defend cannot be played). */
+const DR = (uid, o) => Object.assign({uid, name: "Rx probe " + uid, tt: "Generic Defense Reaction",
+  ty: ["Generic", "Defense Reaction"], pitch: 1, cost: 0, power: null, def: 3, kw: [], tx: ""}, o || {});
+const rxStep = g => ({...g, step: "reaction", priority: 1, passed: []});
+
+test("DRIVEN S-1: dominate refuses a defence reaction from hand after a hand card defends", () => {
+  const g = wallState(DOM, [blocker(1), DR(2)]);
+  const g2 = rxStep(J.reduce(g, {t: "defend", uid: 1}, 1).state);
+  assert.deepEqual(g2.sides[1].blockH, [1], "the declared card must be on the wall");
+  const why = J.legal(g2, {t: "play", uid: 2}, 1);
+  assert.ok(why && /more than 1 card from hand/.test(String(why)),
+    "a second hand defender against dominate — got: " + String(why));
+});
+
+test("…and one PLAYED from hand counts the same as one declared", () => {
+  const g = rxStep(wallState(DOM, [DR(2)]));
+  const g2 = {...g, sides: g.sides.map((s, i) => i === 1 ? {...s, blockRx: [{label: "x 3", def: 3, from: "hand"}]} : s)};
+  assert.ok(/more than 1 card from hand/.test(String(J.legal(g2, {t: "play", uid: 2}, 1))));
+});
+
+test("…the controls: no hand defender yet, a plain attack, and a defence reaction from the ARSENAL", () => {
+  const empty = rxStep(wallState(DOM, [DR(2)]));
+  assert.equal(J.legal(empty, {t: "play", uid: 2}, 1), null, "the first hand defender is legal");
+  const plain = rxStep(J.reduce(wallState(PLAIN, [blocker(1), DR(2)]), {t: "defend", uid: 1}, 1).state);
+  assert.equal(J.legal(plain, {t: "play", uid: 2}, 1), null, "no dominate, no cap");
+  assert.equal(P.defCapRxWhy({card: DOM}, [{card: blocker(1), gear: false}], {all: 0, fromHand: 0}, DR(2), "arsenal"), null,
+    "dominate counts cards from hand; one from the arsenal is not refused by it");
+});
+
+test("the trainer's hand door asks the same body", () => {
+  const src = require("fs").readFileSync(require("path").join(__dirname, "..", "index.html"), "utf8");
+  assert.ok(/DawnParser\.defCapRxWhy\(s\.pend, _decl, DawnParser\.rxDefenders\(_ds\), c, "hand"\)/.test(src));
+});

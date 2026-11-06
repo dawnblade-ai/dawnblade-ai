@@ -3642,6 +3642,12 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     if(!inAtk){
       const drxBar = DawnParser.drxBarWhy(s.pend, c, "hand");
       if(drxBar) return L(s, drxBar);
+      /* THE DEFENDER CAP COUNTS A PLAYED DEFENCE REACTION (S-1) — the one
+         body `judge` asks (`parser.defCapRxWhy`, CR 8.3.4b). */
+      { const _ds = you(s);
+        const _decl = (_ds.blockH || []).map(u => ({card: _ds.hand.find(x => x.uid === u), gear: false}));
+        const _cr = DawnParser.defCapRxWhy(s.pend, _decl, DawnParser.rxDefenders(_ds), c, "hand");
+        if(_cr) return L(s, _cr + "."); }
       /* PUT IN CONTEXT (v4.92) — `effects.defLimitWhy`, the body
          `judge.legal` asks. The dummy's swing carries no card, so its base
          is the number it swings for (`incoming`). */

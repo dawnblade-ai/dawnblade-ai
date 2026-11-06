@@ -74,9 +74,11 @@ test("crindex — the verdict counts are pinned", () => {
      activated ability's declared target and a failed targeted effect, read
      verbatim at rules.fabtcg.com, cited where it is built and drilled
      (effects.js, test/abdecl.test.js). */
-  assert.equal(rs.length, 67, "the number of distinct CR rules this project cites moved");
+  /* 67 -> 70 and 57 -> 60 guarded AT S-1: CR 8.3.4, 8.3.4b, 7.4.2c — dominate against a
+     played defence reaction (parser.defCapRxWhy, test/defcap.test.js). */
+  assert.equal(rs.length, 70, "the number of distinct CR rules this project cites moved");
   /* 50 -> 51 guarded and 6 -> 5 drill-only AT v4.66: CR 7.1.2, built. */
-  assert.equal(by(rs, "guarded").length,   57, "guarded count moved");
+  assert.equal(by(rs, "guarded").length,   60, "guarded count moved");
   assert.equal(by(rs, "UNGUARDED").length,  3, "UNGUARDED count moved");
   assert.equal(by(rs, "drill-only").length, 5, "drill-only count moved");
   assert.equal(by(rs, "prose").length,      2, "prose count moved");
