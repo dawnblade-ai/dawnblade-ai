@@ -68,7 +68,7 @@ function census(){
           /* THE FALLBACK never burns one; the unlock (test/arspay.test.js) is
              a different branch with its own key, spending the piece for an
              attack it makes affordable. */
-          if(a.t === "activate" && J.abPieceForRes(g, s, a.uid) && e.key !== "resUnlock")
+          if(a.t === "activate" && J.abPieceForRes(g, s, a.uid) && e.key !== "resUnlock" && e.key !== "resUnlockWeapon")
             out.resBurn.push(`${k0}/${k1} seat ${s}: ${a.uid}`);
           const o = J.reduce(g, a, s);
           if(o.error) continue;
