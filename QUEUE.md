@@ -59,15 +59,22 @@ History goes in the archived handoffs below it and in CHANGELOG.md. Do not start
   pregame item would only spend a steam counter for an action point the action phase overwrites
   (`ap:1`), so no player would take it; `start-item-crank-unasked` stays stated, nothing to build.
 
-**IN FLIGHT:** QA readers A (session_013xG9xC23NRXauvfF8rpiu7, findings/qa-a: arakni azalea blaze boltyn
-bravo briar dash dorinthea) and B (session_013xG9xApamFrSvk3ippatFs, findings/qa-b: enigma fai gravy
-iyslander kayo lyath viserai), read-only, Sharp games vs card text. Both stopped at the WEEKLY USAGE
-LIMIT on 2026-11-02 18:03 and were asked on 11-06 to write up what they had rather than restart.
+**QA SWEEP DONE (v5.85):** findings/qa-a (S 4 incl. P1 S-1 dominate vs hand defence reactions, P1 S-2
+Sadistic Scowl Intimidate noop at the table; H 5 incl. P1 Azalea bins arrow, P1 Dorinthea passes with AP;
+FEED 4; RULING R-a, R-b) and findings/qa-b (no S; H 5 incl. Fai never plays Crouching Tiger; FEED 7;
+RULING Preserve Tradition with no target). Trainer feeds NOT COVERED by either reader.
+**CR IS REACHABLE (2026-11-06):** the user approved a personal cloud environment `dawnblade-ai`
+(env_011rwpp2MyBTt3cEsZKDoVGk) that allows rules.fabtcg.com + fabtcg.com. Start rules work there.
+R9 SETTLED by verbatim CR 5.2.2b + 5.1.4a + 1.8.5: targets are declared on activation.
+**IN FLIGHT (2 workers max):** `ship/rules-qa` (session_013xG9x8JzyWMJX5n3ZNsYKZ): R9 patch, S-1, S-2+FEED-1,
+S-4+FEED-4, rulings R-a/R-b/Preserve Tradition decided only on a verbatim quote. `ship/ai-qa`
+(session_013xG9x9RQUUXyy2kUSkqSWW): Sharp misplays (Azalea arrow, Dorinthea pass, Fai Tiger, Kayo opener...).
+NEXT: the FEED P3 batch (Sonnet), then a trainer-feed read.
 **BUDGET LESSON (CEO, 2026-11-06):** five concurrent Opus worker sessions in one day spent the account's
 weekly limit and froze everything for four days. Run at most two workers at once, use Sonnet for
 mechanical merges/shippers, and keep Opus for rules reading, search design and audits.
 **OPEN DECISIONS:** (A, USER) the coin screen says "the throw returns for launch" — bring back
-rock-paper-scissors for 1.0 or drop the line? (D) SHIPPED v5.84. R9 still waits on the CR text. Parked: hidden hands, sudden death.
+rock-paper-scissors for 1.0 or drop the line? (D) SHIPPED v5.84. Parked: hidden hands, sudden death.
 
 **AI policy hunts are paused:** H25, H27, H28, H30, H31 did not ship (the hand-written vein is
 thin; detail in the archive below). Their patches are in `experiments/`.
