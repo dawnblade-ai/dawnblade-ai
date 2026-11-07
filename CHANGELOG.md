@@ -1,3 +1,24 @@
+## v5.99 — The trainer's text says what happened, to whom, in order
+
+QA-C FEED-1…FEED-7 (v5.96 trainer read).
+- **FEED-1 · the instant-speed pitch names its seat:** `autoPitch` logged "Pitched X at instant speed" for either seat;
+  it is now `sv(act(n), "pitch")` — "You pitch…" / "The Dummy pitches…". Shared code, both boards.
+- **FEED-2 · Lightning Press:** the trainer's `!fx.playable` gate called any non-attack with only a self-pump "no
+  scripted effect yet". It is scripted; what it lacks in the action phase is an attack to target, so the gate now
+  asks `pumpTargetWhy` first and names that. The "unbuilt" line stays for cards that really are.
+- **FEED-3 · "You draws":** the first-turn draw line built its verb by hand; now `sv(foe(n), "draw")`.
+- **FEED-4 · "You" mid-sentence, "their" for seat 0:** `mid` lower-cases the seat's name where it is not a sentence
+  start (Kayo's ability, Banneret, Toe the Line, Cloud Cover's shield, piercing, the "condition not met (…)" reasons);
+  `theirs` makes Seismic Surge's lines read "your next …" for seat 0. `seatvoice`'s pin of "You are not behind on
+  life" now pins the lower-case form (it sits inside a parenthesis).
+- **FEED-5 · "Pay 0":** a destroy-only price (Beaten Trackers) now offers "Destroy it" with "the piece itself is the price".
+- **FEED-6 · "Take it":** with defenders selected the bar says "Defend — no reactions" (the button declares them).
+- **FEED-7 · order, partly:** a paid price is logged after the pitch that paid it ("Pitched …" then "paid 1 and tapped …").
+  NOT FIXED, reported: Big Bertha's "nothing to take a steam counter" before its boost banish, and Oasis Respite's
+  "+1 life" (the pitched Goblet) before "You play Oasis Respite" — both come from the order the play path announces versus
+  runs the pitch and the trigger, a restructuring of every play line, not a text fix.
+- **Drills:** `test/qacfeed.test.js` (each with its sabotage); `slicecensus` pins moved for the larger `index.html`.
+
 ## v5.98 — The Coach stops coaching plays the game refuses
 
 QA-C COACH-2, COACH-3, COACH-4 (P2).

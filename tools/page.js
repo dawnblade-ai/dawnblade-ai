@@ -449,7 +449,7 @@ if(require.main === module){
         await card.click().catch(() => {}); await page.waitForTimeout(250); await card.click().catch(() => {}); await page.waitForTimeout(350);
         const steps = [];
         for(let k = 0; k < 4; k++){
-          const b = page.locator(".board .actbar button:not([disabled])", { hasText: /defend|resolve|pass|done/i }).first();
+          const b = page.locator(".board .actbar button:not([disabled])", { hasText: /defend\s*→|resolve|pass|done/i }).first();
           if(!(await b.count())) break;
           steps.push((await b.innerText()).replace(/\s+/g, " ").trim()); await b.click().catch(() => {}); await page.waitForTimeout(700);
           if(/resolve/i.test(steps[steps.length - 1])) break;

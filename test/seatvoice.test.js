@@ -55,7 +55,7 @@ test("EVERY condWhy PHRASE names the seat: no you/your for a named actor", {skip
 test("A SEAT NAMED 'You' still agrees: 'You are', 'You have'", {skip}, () => {
   H.db();
   J.withEffects(H.state({name: "You", hp: 20}, {name: "Bob", hp: 10}), (fx, n) => {
-    assert.equal(fx.condWhy(n, "lifeLt", [], false), "You are not behind on life");
+    assert.equal(fx.condWhy(n, "lifeLt", [], false), "you are not behind on life");
     return n;
   });
   J.withEffects(H.state({name: "Alice", hp: 20}, {name: "Bob", hp: 10}), (fx, n) => {
