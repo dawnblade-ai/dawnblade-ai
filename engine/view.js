@@ -22,9 +22,9 @@
    WHAT IS HIDDEN, for seat S (opponent O):
      O.hand              placeholders, count kept (minus the public cards above)
      O.arsenal           a placeholder unless `_faceUp`
-     O.intimidated       placeholders; S.intimidated too unless a switch says
+     O.intimidated       placeholders (S sees its own: RULING 2026-11-07)
      O face-down gear    placeholders
-     O.soul              placeholders unless a switch says (charge)
+     O.soul              shown: the soul is public (RULING 2026-11-07)
      BOTH decks          order hidden, count kept. S's own deck is shown as its
                          COMPOSITION: real cards in canonical order, the range
                          flagged `_unordered` (a seat knows its decklist minus
@@ -54,17 +54,19 @@
   else root.DawnView = factory(root.DawnRNG);
 })(typeof self!=="undefined" ? self : this, function(RNG){
 
-/* OPEN RULES QUESTIONS (HIDDEN-HANDS.md §7) — NOT DECIDED HERE. Each is one
-   named switch, defaulting to the MORE HIDDEN reading, until the user rules.
-   SOUL_PUBLIC            §7 q1: is the soul public? (charge, Boltyn)
-   OWNER_SEES_INTIMIDATED §7 q2: may an owner look at their own face-down
-                          intimidated card? (They can deduce WHICH cards from
-                          their deck's composition; this decides whether the
-                          view shows them.)
-   PITCH_ORDER_PUBLIC     §7 q3: does the opponent know the ORDER of pitched
-                          cards on the deck bottom? false: the known bottom
-                          block is a set (canonical order) to the opponent. */
-const SWITCHES = {SOUL_PUBLIC: false, OWNER_SEES_INTIMIDATED: false, PITCH_ORDER_PUBLIC: false};
+/* THE THREE VISIBILITY QUESTIONS (HIDDEN-HANDS.md §7) — DECIDED. Each stays
+   one named switch, so the view reads it in one place.
+   RULING (user, 2026-11-07), asked and answered verbatim:
+   SOUL_PUBLIC            "Is the soul public?" — "Yes". Both seats see the
+                          cards in a hero's soul (charge, Boltyn).
+   OWNER_SEES_INTIMIDATED "May an owner look at their own face-down
+                          intimidated card?" — "Yes". The owner's view shows
+                          its own intimidated cards; the opponent's does not.
+   PITCH_ORDER_PUBLIC     "Is the order of pitched cards on the deck bottom
+                          known to the opponent?" — "No". The known bottom
+                          block is a set (canonical order) to the opponent;
+                          its owner knows the order. */
+const SWITCHES = {SOUL_PUBLIC: true, OWNER_SEES_INTIMIDATED: true, PITCH_ORDER_PUBLIC: false};
 
 /* THE CARRIER CENSUS. Key: a game field, or `sides.<field>` for a per-side
    field outside the zones. Rule:

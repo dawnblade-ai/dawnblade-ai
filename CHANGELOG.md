@@ -1,3 +1,20 @@
+## v6.04 — Hidden hands: the three visibility rulings
+
+RULING (user, 2026-11-07), asked and answered: *"Is the soul public?"* — *"Yes."* *"May an owner look at their
+own face-down intimidated card?"* — *"Yes."* *"Is the order of pitched cards on the deck bottom known to the
+opponent?"* — *"No."*
+- **`view.SWITCHES`** = `SOUL_PUBLIC: true`, `OWNER_SEES_INTIMIDATED: true`, `PITCH_ORDER_PUBLIC: false`, each
+  with its question and answer verbatim in the source. Both seats see a soul; an owner sees its own intimidated
+  cards and the opponent still does not; the pitched bottom block stays a set to the opponent.
+- **Charge's feed line** names the charged card, untagged, and that is now correct. The feed-leak drills (view and
+  referee) dropped their charge carve-out, so the line passes because the card is public in the view.
+- **Sharp now reads the soul and its own intimidated cards** (its lookahead root is `determinize(view)`). laMask
+  identity: the "soul" and "own intimidated" buckets are gone (6355 of 6438 positions match v5.37's deal).
+  Measured: see the A/B below.
+- HIDDEN-HANDS.md §7 records the three as decided; LESSONS.md has the entry.
+- **Drill:** `test/view.test.js` asserts each ruling as view behaviour from both seats, and flips each switch as
+  its sabotage.
+
 ## v6.03 — Hidden hands H2 (1 of 3): the referee, headless; the throw sealed
 
 RULING (user, 2026-11-07): "Hidden hands is a must." H2 of HIDDEN-HANDS.md §6, first increment. The engine half;

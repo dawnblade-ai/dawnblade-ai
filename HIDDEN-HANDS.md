@@ -96,7 +96,7 @@ op heads plus `hasKw`), and cross-checked against the printed text. Counts are
 | Face-down arsenal leaves or flips (`foeArs*`, `allArsBottom`) | 7 | Disable, Fault Line, Wreck Havoc, Loot the Arsenal |
 | Top of a deck leaves face-up (`foeBanish*`, `foeDeckDestroy`) + kw **boost** | 5 + 20 | Arakni's Marks, Art of Desire, Goon Tactics; all of Dash's boost |
 | Both deck tops revealed: kw **clash** | 8 | Kayo's Clash of Might/Agility/Vigor, Test of Might |
-| Hand → soul: kw **charge** | 12 | Boltyn's deck (the soul's visibility is an open rules question, §7) |
+| Hand → soul: kw **charge** | 12 | Boltyn's deck (the soul is public: RULING 2026-11-07, §7) |
 | Die roll (`intRoll`) | 1 | Knucklehead |
 | **Text only** (the parser has no op head for them) | 9 | Flamecall Awakening (the pool's ONLY **search + shuffle**), Reincarnate and Beaten Trackers (react to a *random* discard), Savage Feast (random discard as a cost), Compass of Sunken Depths (look at top), Preserve Tradition and Rising Sun, Setting Moon (to the bottom of a deck), heroes Azalea (arsenal → bottom, top → face-up arsenal), Bravo (flip a face-down arsenal card), Arakni (becomes a *random* Agent of Chaos) |
 
@@ -214,7 +214,8 @@ view.js; the own deck is its composition (`_unordered`), the foe gets
 that stayed on top (the table never clears `revealed`, so a stale reveal cannot
 be told from a live one, and opt reorders unseen; it needs its own mark), a
 card a reveal showed in a hand, and Brain Freeze's hand-to-top. The three §7
-questions are switches in view.js (`SWITCHES`), all on the hidden side.
+questions are switches in view.js (`SWITCHES`), set by the user's ruling of
+2026-11-07 (§7).
 The text below is the spike's design, kept as written.
 
 Redacts, for seat S: the foe's hand, face-down arsenal, intimidated cards and
@@ -352,21 +353,19 @@ can see everything. The host still could, and the game says so.
 
 ---
 
-## 7. Open rules questions (recorded, not decided)
+## 7. Visibility rules questions (DECIDED)
 
-1. **Is the soul public?** CR 3.0.4a lists the *hero* zone as public. The zones
-   chapter says *"A hero's soul refers to the collection of sub-objects under the
-   hero card."* The text fetched does not state the soul's visibility. This
-   decides whether **charge** (12 printings, Boltyn) reveals the charged card.
-2. **Who may look at a face-down banished card?** CR 8.5.10: *"they banish a
-   random card from their hand face-down, and then at the beginning of the end
-   phase, it returns it to their hand."* CR 3.0.4c makes it a private object.
-   Whether its *owner* may look at it is in the object-visibility rules of the CR's first section, not
-   fetched here.
-3. **What does the opponent know about the order of pitched cards on the deck
-   bottom?** CR 4.4.3's end phase puts the pitch zone on the bottom of the deck.
-   Both players saw the cards. Whether the order is chosen privately decides
-   whether P12's known slots are ordered or a set.
+**RULING (user, 2026-11-07)**, each asked and answered verbatim. Each is one
+switch in `engine/view.js` (`SWITCHES`); drilled in `test/view.test.js`.
 
-Next step for each: curl the CR section (CLAUDE.md, "Rules questions"), quote
-it here, and ask the user.
+1. *"Is the soul public?"* — **"Yes."** `SOUL_PUBLIC: true`. Both seats see the
+   cards in a hero's soul, so **charge** (12 printings, Boltyn) shows the charged
+   card, and its feed line naming it is fine. CR 3.0.4a lists the *hero* zone as
+   public; the zones chapter says *"A hero's soul refers to the collection of
+   sub-objects under the hero card."*
+2. *"May an owner look at their own face-down intimidated card?"* — **"Yes."**
+   `OWNER_SEES_INTIMIDATED: true`. The owner's view shows its own intimidated
+   cards; the opponent's view does not (CR 8.5.10, CR 3.0.4c).
+3. *"Is the order of pitched cards on the deck bottom known to the opponent?"* —
+   **"No."** `PITCH_ORDER_PUBLIC: false`. The known bottom block (CR 4.4.3's end
+   phase) is a set to the opponent, in canonical order; its owner knows the order.

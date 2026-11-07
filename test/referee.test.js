@@ -62,10 +62,8 @@ const leakedUids = (v, hid) => [...new Set(tokens(v).filter(u => hid.has(u)))];
 
 /* H1's feed-leak test, read on what the guest actually holds. */
 const REVEAL_LINE = /\breveal(?:s|ed)?\b|\bflips to\b|\bfused\b/;
-/* OPEN (HIDDEN-HANDS.md §7 q1, view.SWITCHES.SOUL_PUBLIC): charge names the
-   card it puts in the soul. Public if the soul is; if the user rules it
-   private, effects.js tags the line for its owner and this carve-out goes. */
-const CHARGE_LINE = /\(Charge\)/;
+/* Charge's line names the card it puts in the soul: public since the soul is
+   (RULING user 2026-11-07, HIDDEN-HANDS.md §7 q1), so no carve-out. */
 const named = (line, nm) => new RegExp("(^|[^A-Za-z'])" + nm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "($|[^A-Za-z'])").test(line);
 const scalars = (v, out) => { if(Array.isArray(v)) v.forEach(x => scalars(x, out));
   else if(v && typeof v === "object") Object.values(v).forEach(x => scalars(x, out));
@@ -142,7 +140,7 @@ function loopback(k0, k1, seed, first, o){
       for(const line of fresh) if(REVEAL_LINE.test(line)) for(const [, rr] of V.hiddenUids(n, GUEST)) if(named(line, rr.card.name)) ever.add(rr.card.name);
       const secret = [...new Set([...V.hiddenUids(n, GUEST).values()].map(rr => rr.card.name))].filter(nm => nm && !ever.has(nm));
       for(const line of fresh){
-        if(REVEAL_LINE.test(line) || (!V.SWITCHES.SOUL_PUBLIC && CHARGE_LINE.test(line))) continue;
+        if(REVEAL_LINE.test(line)) continue;
         for(const nm of secret) if(named(String(line), nm)) out.nameLeaks.push(r.seq + ": " + line);
       }
       break;

@@ -106,28 +106,36 @@ test("CR 3.0.4c — an intimidated card is hidden from the other seat, and REVEA
   assert.ok(!uids(back.sides[1].unseen).includes(c.uid), "a revealed card leaves the unseen multiset");
 });
 
-/* HIDDEN-HANDS.md §7: three open rules questions, one switch each, MORE HIDDEN
-   by default. Not decided here; the drill pins that each switch does what it
-   names and that the default is the hidden side. */
-test("the open rules questions are switches, and each defaults to the more hidden reading", () => {
-  assert.deepEqual(V.SWITCHES, {SOUL_PUBLIC: false, OWNER_SEES_INTIMIDATED: false, PITCH_ORDER_PUBLIC: false});
+/* HIDDEN-HANDS.md §7 — RULING (user, 2026-11-07): "Is the soul public?" —
+   "Yes"; "May an owner look at their own face-down intimidated card?" — "Yes";
+   "Is the order of pitched cards on the deck bottom known to the opponent?" —
+   "No". The drill pins each ruling as the view's behaviour, and that the
+   switch is what does it (flipped, the behaviour flips: the sabotage). */
+test("RULING 2026-11-07 — the soul is public, an owner sees its own intimidated cards, the pitch-bottom order is a set to the opponent", () => {
+  assert.deepEqual(V.SWITCHES, {SOUL_PUBLIC: true, OWNER_SEES_INTIMIDATED: true, PITCH_ORDER_PUBLIC: false});
   const g = match("boltyn", "kayo", "view-sw", 0);
   const me = g.sides[0], o = g.sides[1];
+  /* seat 0 has one card intimidated; seat 1 has one card in its soul */
   const g2 = {...g, sides: [{...me, hand: me.hand.slice(1), intimidated: [me.hand[0]]},
                             {...o, hand: o.hand.slice(1), soul: [o.hand[0]]}]};
-  const flip = (k, fn) => { V.SWITCHES[k] = true; try { return fn(); } finally { V.SWITCHES[k] = false; } };
-  assert.ok(hiddenCard(V.view(g2, 0).sides[1].soul[0]), "soul hidden by default (§7 q1)");
-  assert.equal(flip("SOUL_PUBLIC", () => V.view(g2, 0).sides[1].soul[0].uid), o.hand[0].uid);
-  assert.ok(hiddenCard(V.view(g2, 0).sides[0].intimidated[0]), "own intimidated hidden by default (§7 q2)");
-  assert.equal(flip("OWNER_SEES_INTIMIDATED", () => V.view(g2, 0).sides[0].intimidated[0].uid), me.hand[0].uid);
-  /* §7 q3: a known bottom block of three, in a non-canonical order */
+  const flip = (k, fn) => { const was = V.SWITCHES[k]; V.SWITCHES[k] = !was; try { return fn(); } finally { V.SWITCHES[k] = was; } };
+  /* q1: the soul, to BOTH seats */
+  assert.equal(V.view(g2, 0).sides[1].soul[0].uid, o.hand[0].uid, "the opponent sees the soul (§7 q1)");
+  assert.equal(V.view(g2, 1).sides[1].soul[0].uid, o.hand[0].uid, "and so does its owner");
+  assert.ok(!V.hiddenUids(g2, 0).has(String(o.hand[0].uid)), "a soul card is not a hidden card");
+  assert.ok(hiddenCard(flip("SOUL_PUBLIC", () => V.view(g2, 0).sides[1].soul[0])), "SABOTAGE: switched off, the soul hides");
+  /* q2: the owner sees its own intimidated card; the opponent still does not */
+  assert.equal(V.view(g2, 0).sides[0].intimidated[0].uid, me.hand[0].uid, "the owner sees its intimidated card (§7 q2)");
+  assert.ok(hiddenCard(V.view(g2, 1).sides[0].intimidated[0]), "the opponent does not");
+  assert.ok(hiddenCard(flip("OWNER_SEES_INTIMIDATED", () => V.view(g2, 0).sides[0].intimidated[0])), "SABOTAGE: switched off, the owner is blind too");
+  /* q3: a known bottom block of three, in a non-canonical order */
   const blk = o.deck.slice(-3).map(c => ({...c, _kb: true}));
   const order = blk.slice().sort(V.canon).reverse();
   const g3 = {...g, sides: [g.sides[0], {...o, deck: o.deck.slice(0, -3).concat(order)}]};
   const tail = vv => uids(vv.sides[1].deck.slice(-3));
   assert.deepEqual(tail(V.view(g3, 0)), uids(order.slice().sort(V.canon)), "the opponent sees the block as a SET (§7 q3)");
-  assert.deepEqual(flip("PITCH_ORDER_PUBLIC", () => tail(V.view(g3, 0))), uids(order), "the switch shows the order");
   assert.deepEqual(tail(V.view(g3, 1)), uids(order), "the owner knows its own order");
+  assert.deepEqual(flip("PITCH_ORDER_PUBLIC", () => tail(V.view(g3, 0))), uids(order), "SABOTAGE: switched on, the order shows");
 });
 
 /* ---- known slots ------------------------------------------------------ */
@@ -289,10 +297,9 @@ test("LEGAL ON THE VIEW — every action taken is legal judged from the actor's 
    in a hidden slot that appears nowhere public in the seat's view before or
    after the step. */
 const REVEAL_LINE = /\breveal(?:s|ed)?\b|\bflips to\b|\bfused\b/;
-/* OPEN (HIDDEN-HANDS.md §7 q1): charge names the card it puts in the soul.
-   Public if the soul is; if the user rules it private, this line must be
-   tagged and this carve-out goes. */
-const CHARGE_LINE = /\(Charge\)/;
+/* Charge names the card it puts in the soul, untagged: the soul is public
+   (RULING user 2026-11-07, HIDDEN-HANDS.md §7 q1), so the card is in a public
+   zone after the step and the drill passes it for that reason, not a carve-out. */
 const named = (line, nm) => new RegExp("(^|[^A-Za-z'])" + nm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "($|[^A-Za-z'])").test(line);
 const scalars = (v, out) => { if(Array.isArray(v)) v.forEach(x => scalars(x, out));
   else if(v && typeof v === "object") Object.values(v).forEach(x => scalars(x, out));
@@ -311,7 +318,7 @@ function feedLeaks(steps){
       const secret = new Set(cands.filter(nm => !readable.some(l => REVEAL_LINE.test(l) && named(l, nm))));
       fresh.forEach((line, i) => {
         if(to[at + i] != null && to[at + i] !== v) return;   /* addressed to the other seat */
-        if(REVEAL_LINE.test(line) || (!V.SWITCHES.SOUL_PUBLIC && CHARGE_LINE.test(line))) return;
+        if(REVEAL_LINE.test(line)) return;
         for(const nm of secret) if(named(String(line), nm)) out.push("seat " + v + " reads: " + line);
       });
     }
@@ -340,8 +347,7 @@ test("the feed-leak drill can fail: Compass's look, run at the table, names the 
 /* ONE BODY WITH laMask: Sharp's lookahead root is determinize(view). Here is
    v5.37's laMask, kept as the REFERENCE it must reproduce. It read the real
    state, so it saw what the view rightly withholds: the foe's intimidated
-   cards (dealt back at random now), hidden copies in carrier fields and the two open
-   §7 questions' cards (soul, own intimidated). Those positions are counted
+   cards (dealt back at random now) and hidden copies in carrier fields. Those positions are counted
    apart; every other position must match byte for byte. */
 const num = (c, k) => (c && c[k] != null) ? c[k] : 0;
 const oldCanon = (a, b) => String(a.name) < String(b.name) ? -1 : String(a.name) > String(b.name) ? 1
@@ -363,8 +369,8 @@ function oldLaMask(g, seat, k, salt){
 function peeked(g, seat){
   const o = g.sides[1 - seat], me = g.sides[seat];
   if((o.intimidated || []).length) return "foe intimidated";
-  if(!V.SWITCHES.SOUL_PUBLIC && (o.soul || []).length) return "soul (§7 q1)";
-  if(!V.SWITCHES.OWNER_SEES_INTIMIDATED && (me.intimidated || []).length) return "own intimidated (§7 q2)";
+  /* the soul and the seat's own intimidated cards are in its view (RULING
+     2026-11-07), so v5.37's deal saw nothing hidden there */
   const hid = V.hiddenUids(g, seat);
   for(const k of Object.keys(V.CARRIERS)) if(["sweep", "addressed"].includes(V.CARRIERS[k]) && g[k] != null){
     const s = new Set(); JSON.stringify(g[k], (kk, vv) => { if(kk === "uid") s.add(String(vv)); return vv; });

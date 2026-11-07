@@ -14435,3 +14435,15 @@ needs the verbatim quote IN THE REPO (source comment, `tools/approx.js` record, 
   able) and the hero will be marked (if able)."
 - Lesson: v5.17 decided "an unpayable cost is inert" for this card without the CR; the CR's own example
   said otherwise. "May X" and "may choose to X" are different rules.
+
+### HIDDEN HANDS — THE THREE VISIBILITY RULINGS (v6.04)
+> RULING (user, 2026-11-07): *"Is the soul public?"* — *"Yes."* *"May an owner look at their own
+> face-down intimidated card?"* — *"Yes."* *"Is the order of pitched cards on the deck bottom known to the
+> opponent?"* — *"No."*
+- `view.SWITCHES` = `{SOUL_PUBLIC: true, OWNER_SEES_INTIMIDATED: true, PITCH_ORDER_PUBLIC: false}`. H1 held
+  each at the more hidden reading until asked; HIDDEN-HANDS.md §7 records them as decided.
+- Charge's feed line names the charged card untagged, and that is now correct: the card is in a public
+  zone. The feed-leak drills' charge carve-out was removed rather than left dormant, so the drill passes
+  the line for the right reason (the name is public in the view), not by exemption.
+- Lesson: an open visibility question was a SWITCH with a drill that flips it, so the ruling was a
+  one-line change plus re-measuring Sharp, which read the soul it could not see before.
