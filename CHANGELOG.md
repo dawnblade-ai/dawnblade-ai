@@ -1,3 +1,26 @@
+## v6.06 — Hidden hands H2 (3 of 3): verify, resume, rejoin, and the honest line
+
+H2 of HIDDEN-HANDS.md §6, third increment: what a player sees of the host holding the deck.
+- **The honest line:** the find-an-opponent screen says "The host's phone holds the deck": it deals and runs the
+  game, the guest's phone sees only the guest's own hand, the host's phone could look, so play people you trust,
+  and the guest can verify every shuffle after the game.
+- **Verify this game:** the guest's result screen offers it. The host's revealed half of the seed must open the
+  commitment it made in the lobby, and the whole game replayed from that seed and the log must show the guest's
+  phone exactly what it was shown, move for move, and end the same way (`referee.verifyGame`).
+- **Resume and rejoin:** a host whose phone reloads finds "Resume table XXXX" on the find-an-opponent screen; the
+  table reopens from the game the host saved after its last action, without the lobby. The paused guest's banner
+  ("the host's phone holds the deck and has left the table") has a Rejoin button: the same code, a new channel, a
+  snapshot of its view. A finished game is no longer saved. While paused no choice sheet shows (an open one
+  covered the Rejoin button, found by the two-page drive).
+- **The AI table filters its feed by `feedTo`** (a private look the AI took is not shown) and shows the AI's
+  face-down arsenal card face down (it showed the card until now).
+- **Release check fixed:** CLAUDE.md's post-push loop, CI's script check and `test/efxsurface.test.js` matched
+  `[a-z]*\.js` and so skipped `engine/sha256.js`; they match digits now.
+- **`tools/twophone.js`** now plays 80 actions, reloads the host's page, resumes, rejoins the guest, finishes the
+  game and taps Verify: views agreed throughout, the host resumed at the saved sequence, "Verified", 0 page errors.
+- **Not built (H1 leftovers, next):** a known slot for a revealed top card, a card a reveal showed in a hand,
+  Brain Freeze's hand-to-top.
+
 ## v6.05 — Hidden hands H2 (2 of 3): the host holds the deck
 
 H2 of HIDDEN-HANDS.md §6, second increment. **A two-phone table now runs the referee:** the guest's phone holds

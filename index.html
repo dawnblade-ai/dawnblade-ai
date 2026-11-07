@@ -6972,7 +6972,7 @@ function TableScreen({onBack, onSeated}){
     dialling:"Knocking on the table…", connected:"Seated."
   };
 
-  const sit = (host, c) => {
+  const sit = (host, c, resume) => {
     setErr(null); setBusy(true); setStat("loading");
     DawnRoom.open({
       code:c, host,
@@ -6980,7 +6980,7 @@ function TableScreen({onBack, onSeated}){
       onClose:()=>{ if(live.current){ setErr("The other phone left the table."); setBusy(false); } }
     }).then(table=>{
       if(!live.current){ table.close(); return; }
-      onSeated({table, host, code:table.code});
+      onSeated({table, host, code:table.code, resume: resume || null});
     }).catch(e=>{
       if(!live.current) return;
       setErr((e && e.message) || String(e)); setStat(null); setBusy(false);
@@ -6988,6 +6988,16 @@ function TableScreen({onBack, onSeated}){
   };
 
   const openTable = () => { const c = DawnRoom.makeCode(); setCode(c); setMode("host"); sit(true, c); };
+  /* A TABLE THIS PHONE WAS HOSTING (HIDDEN HANDS H2). The host's phone holds
+     the deck and saves the game after every action, so a reload does not end
+     it: the host reopens the same table and the guest rejoins. */
+  const saved = uM(()=>{ try {
+    const ls = window.localStorage, out = [];
+    for(let i = 0; i < ls.length; i++){ const k = ls.key(i); if(!/^dawnblade\.table\./.test(k)) continue;
+      const v = JSON.parse(ls.getItem(k)); if(v && v.saved && v.spec) out.push({code: k.split(".").pop(), resume: v}); }
+    return out.slice(0, 1);
+  } catch(_){ return []; } },[]);
+  const resumeTable = r => { setCode(r.code); setMode("host"); sit(true, r.code, r.resume); };
   const joinTable = () => {
     if(!DawnRoom.isValid(code)) return setErr("A table code is "+DawnRoom.CODE_LEN+" characters.");
     sit(false, code);
@@ -7008,6 +7018,7 @@ function TableScreen({onBack, onSeated}){
         <div className="tblrow">
           <button className="bigbtn" onClick={openTable}>Open a table</button>
           <button className="bigbtn alt" onClick={()=>setMode("join")}>Join a table</button>
+          {saved.map(r=><button key={r.code} className="bigbtn alt" onClick={()=>resumeTable(r)}>Resume table {r.code}</button>)}
         </div>
         {/* This said "the drill decks — blank cards" until v2.52, which was
             true before v2.49 and has been wrong since: the table negotiates a
@@ -7020,6 +7031,14 @@ function TableScreen({onBack, onSeated}){
           Table play runs <strong>two real hero decks</strong> — the full turn structure,
           priority, the combat chain, printed costs, and the card text, read by the
           same engine as the trainer.
+        </p>
+        {/* THE HONEST LINE (HIDDEN HANDS H2): what the guest's phone cannot see,
+            and what the host's phone could. */}
+        <p className="mnote">
+          <strong>The host's phone holds the deck.</strong> It deals and runs the game;
+          the guest's phone sees only the guest's own hand, never the host's hand, either
+          deck or the next draw. The host's phone could look, so play people you trust.
+          When the game ends, the guest can verify every shuffle and draw.
         </p>
       </>}
 
@@ -7110,7 +7129,7 @@ const CH_LOBBY = "lobby", CH_NET = "net";
    spelled by the lobby module so the two sites cannot disagree. */
 const TABLE_BUILD = DawnLobby.buildId(window.APP_VER, window.DATA_VER);
 
-function TableRoom({table, host, code, db, onExit}){
+function TableRoom({table, host, code, db, onExit, resume}){
   /* `mySeat`, NOT `seat`. engine/priority.js exports a `seat` helper
      meaning "seat a game with this first player"; a local `seat` meaning
      "which chair is this client in" is the same-name-different-meaning
@@ -7167,6 +7186,7 @@ function TableRoom({table, host, code, db, onExit}){
        the same deck list into different cards, or the same play into
        different rules — silently, and consistently enough that a state
        hash cannot describe it usefully. The release is half of it (v4.69). */
+    if(resume){ seedRef.current = resume.seedH; return ()=>{ try{ table.close(); }catch(_){} }; }
     say(DawnLobby.hello(mySeat, TABLE_BUILD));
     if(host){ const sc = DawnLobby.seedCommitMsg(); seedRef.current = sc.seedH; say(sc.msg); }
     return ()=>{ try{ table.close(); }catch(_){} };
@@ -7183,9 +7203,29 @@ function TableRoom({table, host, code, db, onExit}){
     if(!host && lob.seedC && lob.seedG == null && !seedRef.current){ seedRef.current = "sent"; say(DawnLobby.seedAnswer()); }
   },[lob]);
 
+  /* How a seed becomes the opening, for "verify this game" and a resumed host:
+     the lobby's spec, the card database, build.js and judge.newMatch. */
+  const dealFrom = (spec, seed) => {
+    const m = DawnBuild.buildMatch({...spec, seed}, {
+      db, heroes: Object.fromEntries(HEROES.map(h=>[h.k,h])),
+      decks: Object.fromEntries(HEROES.map(h=>[h.k,PARSED[h.k]]))});
+    return {m, g: DawnJudge.newMatch({builds:m.builds, names:m.names, heroKeys:m.heroKeys, first:m.first, seed:m.seed})};
+  };
+  /* A RESUMED TABLE: the host rebuilds the match from its saved spec and
+     half of the seed, and the session takes back the saved game. */
+  uE(()=>{
+    if(!resume || match) return;
+    try {
+      const seed = DawnSHA.seedOf(resume.seedH, resume.spec.seedG);
+      const {m, g} = dealFrom(resume.spec, seed);
+      setMatch({...m, spec: resume.spec, seedH: resume.seedH, restore: resume.saved, g,
+                start: sd => dealFrom(resume.spec, sd).g});
+    } catch(e){ setErr("Could not resume the table: " + (e.message||e)); }
+  },[]);
+
   /* ---- ready: build the match, identically on both phones ------------ */
   uE(()=>{
-    if(step !== "ready" || match) return;
+    if(resume || step !== "ready" || match) return;
     /* ONLY THE HOST DEALS (H2). The guest builds a BLIND match from the same
        spec with a seed of its own: the same cards (for the catalog and its
        own build's passives), never the game — the host's referee sends it a
@@ -7200,6 +7240,7 @@ function TableRoom({table, host, code, db, onExit}){
         decks:  Object.fromEntries(HEROES.map(h=>[h.k,PARSED[h.k]]))
       });
       setMatch({...m, spec: spec0, seedH: host ? seedRef.current : null,
+        start: sd => dealFrom(spec0, sd).g,
         g: DawnJudge.newMatch({builds:m.builds, names:m.names,
         heroKeys:m.heroKeys, first:m.first, seed:m.seed})});
     } catch(e){ setErr("Could not deal the match: " + (e.message||e)); }
@@ -7406,6 +7447,10 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
   const [bug,setBug] = uS(false);
   const sess = uR(null);
   const savedAt = uR(-1);   /* host: the sequence last kept on the phone */
+  /* THE CHANNEL, BEHIND A REF: a guest whose host dropped rejoins on a NEW
+     channel to the same table, and the session's `send` follows it. */
+  const tableRef = uR(table);
+  const [verdict,setVerdict] = uS(null);   /* "verify this game": null | "busy" | the result */
 
   /* THE INVARIANT JUDGE, ON THE TABLE'S OWN FUNNEL. In the trainer every
      state change passes through `setG`, which is where the judge is
@@ -7514,7 +7559,9 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
          the SAME value, or the belt checks a different thing (v4.69). */
       build:  TABLE_BUILD,
       state:  host ? match.g : null,
-      send:   m => table.send({ch:CH_NET, m}),
+      /* a reloaded host takes back the game it saved (TableScreen's resume) */
+      restore: host ? (match.restore || null) : null,
+      send:   m => tableRef.current && tableRef.current.send({ch:CH_NET, m}),
       onState: st => { setG(st); setNote(null);
         /* the invariant judge runs on the FULL game, which only the host holds;
            the guest checks its view's own shape (referee.viewCensus) */
@@ -7530,6 +7577,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
       }
     });
     sess.current = s; netRef.current = s;
+    if(host && match.restore) setG(s.state());
     /* THE INTERNAL TESTING HOOK. Same reasoning as JUDGE!! in the
        trainer: the expensive part of a two-phone bug is never noticing
        it, it is reconstructing what each side thought was true. One
@@ -7552,10 +7600,10 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
     const watch = setInterval(()=>{
       /* THE HOST'S PHONE LEFT: the game pauses (HIDDEN HANDS H2). The guest
          holds no hidden card, so it cannot carry the game on. */
-      if(!host && s.status() !== "paused" && table.status && table.status() === "closed")
+      if(!host && s.status() !== "paused" && tableRef.current.status && tableRef.current.status() === "closed")
         s.pause("the host's phone left the table");
       /* the host keeps its game on the phone, so a reload resumes it */
-      if(host && s.seq() !== savedAt.current) try {
+      if(host && s.seq() !== savedAt.current && !(s.full() || {}).over) try {
         lsGet().setItem("dawnblade.table." + code, JSON.stringify({spec: match.spec, seedH: match.seedH, saved: s.persist()}));
         savedAt.current = s.seq();
       } catch(_){}
@@ -7566,9 +7614,46 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
   },[]);
 
   /* THE GAME IS OVER: the host reveals its half of the seed and the whole
-     log, so the guest's phone can replay every shuffle — HIDDEN HANDS H2. */
-  uE(()=>{ if(g.over && !local && host && sess.current && sess.current.reveal)
-             sess.current.reveal({seedH: match.seedH}); },[g.over]);
+     log, so the guest's phone can replay every shuffle — HIDDEN HANDS H2.
+     A finished game is no longer offered for resuming. */
+  uE(()=>{ if(g.over && !local && host && sess.current && sess.current.reveal){
+             sess.current.reveal({seedH: match.seedH});
+             try { lsGet().removeItem("dawnblade.table." + code); } catch(_){} } },[g.over]);
+
+  /* THE GUEST REJOINS a table whose host dropped: the same code, a new
+     channel, and net.js's join lands it on a snapshot of its view. */
+  const [rejoining,setRejoining] = uS(false);
+  const rejoin = () => {
+    setRejoining(true); setNote(null);
+    DawnRoom.open({code, host:false}).then(h => {
+      tableRef.current = h;
+      h.listen(f => { if(f && f.ch === CH_NET && sess.current) sess.current.receive(f.m); });
+      sess.current.join(); setRejoining(false);
+    }).catch(e => { setRejoining(false); setNote("Could not rejoin: " + ((e && e.message) || e)); });
+  };
+
+  /* VERIFY THIS GAME (HIDDEN HANDS H2): the host's revealed half of the seed
+     must open the commitment it made in the lobby, and the whole game,
+     replayed through the rules from that seed and the log, must show this
+     phone exactly what it was shown, move for move, and end the same way. */
+  const verify = e => {
+    if(e) e.stopPropagation();
+    const rv = sess.current && sess.current.revealed && sess.current.revealed();
+    if(!rv){ setVerdict({ok:false, why:"the host's phone has not sent the seed and the log yet"}); return; }
+    setVerdict("busy");
+    setTimeout(()=>{
+      try {
+        setVerdict(DawnReferee.verifyGame({seedC: match.spec.seedC, seedG: match.spec.seedG, seedH: rv.seedH,
+          start: match.start, reduce: DawnJudge.reduce, seat: mySeat, log: rv.log,
+          hashes: sess.current.hashes(), over: rv.over}));
+      } catch(err){ setVerdict({ok:false, why: String((err && err.message) || err)}); }
+    }, 30);
+  };
+
+  /* THE FEED THIS SEAT MAY READ: a line tagged for the other seat, `feedTo`
+     for a private look, is not shown. A two-phone view is already filtered by the
+     host's referee; the AI table holds the whole game and filters here. */
+  const feedShown = uM(()=>DawnReferee.seatFeed(g, mySeat).feed, [g.feed, g.feedTo]);
 
   const me = g.sides[mySeat], them = g.sides[1-mySeat];
   const myH  = HEROES.find(x=>x.k===me.heroKey);
@@ -7875,8 +7960,9 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                 <ArmorGrid gear={armorOf(them)} own={false} cell={gearTile(false)}/>
                 <div className="arscol">
                   <div className="slot clip-sm" style={{width:"100%"}}>{them.arsenal
-                    ? (DawnView.isPh(them.arsenal)
-                        /* face down: the view holds a placeholder, never the card */
+                    ? ((DawnView.isPh(them.arsenal) || !them.arsenal._faceUp)
+                        /* face down: a two-phone view holds a placeholder, never the card;
+                           the AI table holds the card and does not show it */
                         ? <div className="dcardph" title="face-down arsenal"/>
                         : <button style={{padding:0,width:"100%"}} onClick={()=>setZoom(them.arsenal)}>
                             <CardFrame card={them.arsenal} className="sm"/></button>)
@@ -7937,7 +8023,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                 <span>turn <b>{g.turn}</b></span>
                 <span className="ph">{stepLabel(g, mySeat)}</span>
               </div>
-              <div style={{marginTop:6}}><Ticker feed={g.feed}/></div>
+              <div style={{marginTop:6}}><Ticker feed={feedShown}/></div>
               {/* ---- THE CALL, AT THE TABLE (v2.83) -----------------------
                   This board had no advisor, and the stated reason — that it
                   "would coach card text that does not resolve here" — has
@@ -7981,7 +8067,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                   return {line: other ? them.name.split(",")[0] + " is deciding." : "Nothing to decide yet."};
                 }}
                 read={myBuild.read}/>}
-              <div className="gamelog" style={{marginTop:8}}>{[...(g.feed||[])].reverse().map((l,i)=><div key={i} className="gl"><PipLine s={l}/></div>)}</div>
+              <div className="gamelog" style={{marginTop:8}}>{[...feedShown].reverse().map((l,i)=><div key={i} className="gl"><PipLine s={l}/></div>)}</div>
             </div>
 
             <div className="hpane playpane">
@@ -8356,9 +8442,25 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
           {drawText ? drawText.note : over.how==="life" ? "Life to zero." : "The game ended on "+over.how+"."}
           {" "}{me.hp>0 ? <>You finished on <b className="mono">{me.hp}</b>.</> : null} Tap anywhere.
         </p>
+        {!local && !host && <div onClick={e=>e.stopPropagation()} style={{marginTop:10}}>
+          <p style={{fontSize:12}}>The host's phone held the deck. It has now sent its half of the seed and every move.</p>
+          <button className="bigbtn alt" disabled={verdict==="busy"} onClick={verify}>
+            {verdict==="busy" ? "Verifying…" : "Verify this game"}</button>
+          {verdict && verdict!=="busy" && <p className={verdict.ok ? "note" : "tblerr"} style={{fontSize:13}}>
+            {verdict.ok
+              ? "Verified: every shuffle and draw came from the seed both phones fixed, and every move replays to exactly what you saw."
+              : "Not verified: " + verdict.why + "."}</p>}
+        </div>}
       </div>}
 
       {note && <div className="tblerr">{note}</div>}
+      {/* THE HOST'S PHONE LEFT (HIDDEN HANDS H2): the game waits for it. The
+          guest holds no hidden card, so it cannot carry the game on. */}
+      {!local && !host && link === "paused" && !over && <div className="tblerr">
+        The game is paused: the host's phone holds the deck and has left the table.
+        It resumes when the host reopens table {code}.
+        {" "}<button className="a go" disabled={rejoining} onClick={rejoin}>{rejoining ? "Rejoining…" : "Rejoin"}</button>
+      </div>}
       <CardModal card={zoom} onClose={()=>setZoom(null)}/>
       <JudgeSheet open={bug} onClose={()=>setBug(false)} warn={judgeN}
         meta={`v${window.APP_VER} · table ${code} · seat ${mySeat} · turn ${g.turn} · ${g.phase}/${g.step}`}
@@ -8385,7 +8487,9 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
           in the sequenced state and two peers must agree about what has
           been chosen. Hidden while a prompt is open, the peek dock docks
           in exactly this spot (v2.52's measurement). */}
-      <PromptSheet p={over ? null : g.prompt} me={mySeat}
+      {/* while the game is PAUSED (the host's phone left) no sheet can be
+          answered, and an open one would cover the Rejoin button */}
+      <PromptSheet p={over || link === "paused" ? null : g.prompt} me={mySeat}
         onToggle={i=>fire({t:"promptSel", i})}
         onPick={choice=>fire({t:"promptChoose", choice})}
         onTakeBack={()=>fire({t:"promptTakeBack"})}
@@ -8443,7 +8547,7 @@ function App(){
           that has not finished loading its own. */}
       {table && table!=="find" && (db.status==="ready"
         ? <TableRoom table={table.table} host={table.host} code={table.code} db={db}
-            onExit={()=>setTable(null)}/>
+            resume={table.resume} onExit={()=>setTable(null)}/>
         : <div className="tblwrap">
             <div className="tblhead">Table {table.code}</div>
             <div className="tblstat live"><span className="tbldot"></span>Forging the card pool…</div>
