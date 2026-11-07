@@ -175,6 +175,10 @@ async function open({ w = 393, h = 852, deps = depsDir() } = {}){
   const check = () => { if(errors.length) throw new Error(errors.length + " page error(s):\n  " + errors.join("\n  ")); };
   const close = () => browser.close();
   try {
+    /* THE SAME DEAL EVERY RUN: the AI table is seeded by the clock, so which
+       opportunistic checks run used to depend on the hand dealt (70-73 screens
+       on one page). index.html's `battleSeed` reads this instead. */
+    await page.addInitScript(() => { window.__dawnSeedFix = 1730000000000; });
     await page.goto(pathToFileURL(INDEX).href);
     await page.waitForSelector(".shell", { timeout: 15000 });
     await page.waitForFunction(() => /\d+ cards/.test((document.querySelector(".topbar .tag") || {}).textContent || ""), null, { timeout: 30000 });

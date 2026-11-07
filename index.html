@@ -1651,6 +1651,10 @@ const store = {
    which wraps every touch in try/catch; it is handed this THUNK because on some
    browsers merely reading window.localStorage is what throws */
 const lsGet = () => window.localStorage;
+/* THE SEED OF A GAME AGAINST THE AI: the clock, so every game deals afresh.
+   A page DRIVE (tools/page.js) sets `window.__dawnSeedFix` so the same hands
+   are dealt every run and its screen count is stable; a player never sets it. */
+const battleSeed = () => window.__dawnSeedFix != null ? window.__dawnSeedFix : Date.now();
 
 /* ---------- helpers ---------- */
 const PITCH_NAME = {1:"red",2:"yellow",3:"blue"};
@@ -8528,7 +8532,7 @@ function App(){
       <DbBanner db={db} reload={reload}/>
       {tab==="heroes" && idle && <>
         <HeroGrid best={best} onPick={p=>setHero(p&&p.random ? {...HEROES[Math.floor(Math.random()*HEROES.length)], mystery:true} : p)} db={db} selected={hero}/>
-        {hero && <button className="battlebtn clip" disabled={db.status!=="ready"} onClick={()=>setLoHero({...hero, seed:Date.now()})}><span>{db.status==="ready"?"Battle":"Forging…"}</span></button>}
+        {hero && <button className="battlebtn clip" disabled={db.status!=="ready"} onClick={()=>setLoHero({...hero, seed:battleSeed()})}><span>{db.status==="ready"?"Battle":"Forging…"}</span></button>}
         <button className="bigbtn alt" style={{marginTop:8}} onClick={()=>setTable("find")}>Find an opponent</button>
         {/* THE FORMAT, SAID WHERE A PLAYER LOOKS (v4.76). Dawnblade does not
             follow Silver Age's rolling ban list or its hero bench — see
