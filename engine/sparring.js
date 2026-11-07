@@ -1249,13 +1249,14 @@ function laSearch(g, seat, a0){
        search sees one masked deal; a line that wins only because that deal put
        a good card on top of this seat's own deck (Azalea's flip) or rolled
        high (Knucklehead's die) is luck, not a better move. So a winner whose
-       line LEANED on the hidden deal (`laLucky`) is replayed against the rule
-       policy's line on `verify` deals in all, and overrules only if it still
-       wins on the mean. A line that used nothing hidden is not re-run:
-       checking every overrule spent the budget on certain lines and lost a
-       third of them (measured, CHANGELOG). */
+       line LEANED on the hidden deal (`laLucky`) while the rule policy's line
+       did not - a gamble against a sure thing - is replayed against it on
+       `verify` deals in all, and overrules only if it still wins on the mean.
+       Checking every overrule spent the budget on certain lines and lost a
+       third of them; checking every lucky one cost Dash and Fai, whose rule
+       lines gamble too (measured, CHANGELOG). */
     let dn = LA.dets;
-    for(let k = LA.dets; luck[bi] && k < LA.verify; k++){
+    for(let k = LA.dets; luck[bi] && !luck[0] && k < LA.verify; k++){
       const root = laMask(g, seat, k);
       for(const i of [0, bi]){
         const out = J.reduce(root, cands[i], seat);
