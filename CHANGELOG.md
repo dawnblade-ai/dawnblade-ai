@@ -42,9 +42,6 @@ H2 of HIDDEN-HANDS.md §6, third increment: what a player sees of the host holdi
   face-down arsenal card face down (it showed the card until now).
 - **Release check fixed:** CLAUDE.md's post-push loop, CI's script check and `test/efxsurface.test.js` matched
   `[a-z]*\.js` and so skipped `engine/sha256.js`; they match digits now.
-- **`tools/page.js` deals the same AI table every run:** the game against the AI is seeded by the clock
-  (`battleSeed`), and a page drive pins it through `window.__dawnSeedFix`, so the screen count is stable (two
-  runs: 73/73, identical screen lists). A player's game still deals from the clock.
 - **`tools/twophone.js`** now plays 80 actions, reloads the host's page, resumes, rejoins the guest, finishes the
   game and taps Verify: views agreed throughout, the host resumed at the saved sequence, "Verified", 0 page errors.
 - **Not built (H1 leftovers, next):** a known slot for a revealed top card, a card a reveal showed in a hand,
