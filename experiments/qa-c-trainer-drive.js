@@ -72,7 +72,7 @@ function readState() {
         if (!s || s.err) { G.errors.push("state: " + (s && s.err)); break; }
         if (s.over) { G.over = s.over; break; }
         if (s.turn > TURNS) { G.over = { cut: "turn cap" }; break; }
-        if (s.adv && s.adv !== lastAdv) { G.adv.push({ turn: s.turn, mode: s.mode, hp: s.hp, adv: s.adv }); lastAdv = s.adv; }
+        if (s.adv && s.adv !== lastAdv) { G.adv.push({ turn: s.turn, mode: s.mode, hp: s.hp, res: s.res, ap: s.ap, inc: s.incoming, hand: s.hand.map(c => c.name + "/" + c.pitch + "/" + c.pow + "/" + c.def), ars: s.arsenal && s.arsenal.name, gear: s.gear.filter(x => !x.destroyed).map(x => x.name), adv: s.adv }); lastAdv = s.adv; }
         const sig = JSON.stringify([s.mode, s.bphase, s.feedN, s.hand.length, s.paySel, s.blockH, s.res, s.ap, s.prompt, s.sheet.length]);
         if (sig === lastSig) { if (++same > 6) { G.errors.push("STUCK " + JSON.stringify({ mode: s.mode, bphase: s.bphase, bar: s.bar, stat: s.stat, sheet: s.sheet, prompt: s.prompt, last: G.steps.slice(-3), feed: s.feed.slice(-4) })); break; } } else same = 0;
         lastSig = sig;
