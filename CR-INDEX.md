@@ -215,7 +215,7 @@ Only rules cited in code. A rules revision is a lookup here, not an archaeology 
 *drills:* test/approx.test.js:1201, test/approx.test.js:1211, test/approx.test.js:1234, test/invariants.test.js:187, test/priority.test.js:22
 
 **CR 4.4.3** — engine/actions.js:356, engine/judge.js:4302, index.html:4868, index.html:5225  
-*drills:* test/actions.test.js:229, test/actor.test.js:102, test/judge.test.js:331, test/mirror.test.js:322, test/priority.test.js:686, test/priority.test.js:697, test/priority.test.js:707, test/priority.test.js:712, test/view.test.js:135
+*drills:* test/actions.test.js:229, test/actor.test.js:102, test/judge.test.js:331, test/mirror.test.js:322, test/priority.test.js:686, test/priority.test.js:697, test/priority.test.js:707, test/priority.test.js:712, test/view.test.js:143
 
 **CR 8.1.2a** — engine/advisor.js:114, engine/advisor.js:191, engine/advisor.js:200, engine/effects.js:5468, engine/effects.js:5556, engine/parser.js:10021, engine/parser.js:10022, index.html:3592, index.html:3709, index.html:4311, index.html:5777, index.html:5837  
 *drills:* test/advisor.test.js:150, test/journey.test.js:378, test/judge.test.js:948, test/parser.test.js:1941, test/parser.test.js:1963, test/priority.test.js:1094, test/priority.test.js:1099, test/priority.test.js:1116
@@ -280,7 +280,7 @@ Only rules cited in code. A rules revision is a lookup here, not an archaeology 
 **CR 3.0.4b** — engine/effects.js:6834, engine/parser.js:3183, engine/view.js:12  
 *drills:* test/crindex.test.js:90, test/view.test.js:56, test/view.test.js:57
 
-**CR 3.0.4d** — engine/view.js:17, engine/view.js:124  
+**CR 3.0.4d** — engine/view.js:17, engine/view.js:126  
 *drills:* test/crindex.test.js:91, test/view.test.js:83, test/view.test.js:85
 
 **CR 6.2.3d** — engine/effects.js:4800  
