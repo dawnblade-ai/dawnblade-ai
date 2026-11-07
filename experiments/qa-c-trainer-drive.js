@@ -61,6 +61,7 @@ function readState() {
       if (await has(".rseatpick")) await page.locator(".rseatpick .go").click();
       await page.waitForSelector(".actbar"); await page.locator(".actbar .battlebtn").click();
       await page.waitForSelector(".board", { timeout: 8000 });
+      page.setDefaultTimeout(4000);
       /* open the advisor if collapsed */
       if (!(await has(".adv .advbody"))) await page.locator(".adv .advhead").click({ force: true }).catch(() => {});
       let same = 0, lastSig = "", lastAdv = "";
@@ -81,7 +82,7 @@ function readState() {
         try {
           if (s.sheet.length) {
             const pick = s.sheet.find(b => /confirm|done|keep|accept|ok|take|yes/i.test(b.t)) || s.sheet[Math.floor(rnd() * s.sheet.length)];
-            await page.locator(".psheet button").filter({ hasText: pick.t }).first().click({ force: true }); did = "sheet:" + pick.t;
+            await page.evaluate(k => [...document.querySelectorAll(".psheet button")].filter(e => e.offsetParent && !e.disabled)[k].click(), pick.k); did = "sheet:" + pick.t;
           } else if (s.mode === "pay") {
             const pool = s.hand.map((c, i) => ({ c, i })).filter(x => !s.paySel.includes(x.i) && x.c.uid !== (s.pend && s.pend.uid));
             if (/covered/.test(s.status)) { did = "confirm " + await bar(/Pitch & play/); }
