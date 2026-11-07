@@ -997,7 +997,7 @@ function actBase(g, seat, o){
     const k = !ans ? null
       : pt === "opt" ? "optKeep"
       : pt === "soak" ? "soak"
-      : pt === "pay" ? ((ans.choice || g.prompt.choice) === "decline" ? "payNo" : "payYes")
+      : pt === "pay" ? ((ans.choice || g.prompt.choice) === "decline" ? (g.prompt.destroyUid != null ? "payNoPiece" : "payNo") : "payYes")
       : pt === "modal" || pt === "target" ? "firstOption"
       : pt === "alloc" ? "allocAll"
       : pt === "pick" ? (ans.t === "promptSel" ? (J.freePick(g.prompt) ? "pickFree" : "pickMin") : (g.prompt.sel || []).length ? "pickDone" : "declineOptional")
@@ -1509,6 +1509,7 @@ const CALL_WHY = {
   soak: "Pay to soak only what the damage is worth.",
   payYes: "Pay it.",
   payNo: "Don't pay. It isn't worth the cards.",
+  payNoPiece: "Don't pay. Keeping the piece is worth more than what destroying it buys.",
   firstOption: "Take the first option.",
   allocAll: "Place every counter on your strongest piece.",
   pickMin: "Choose this one.",
@@ -1517,6 +1518,7 @@ const CALL_WHY = {
   declineOptional: "Decline. It is optional, and not worth it here.",
   answer: "Answer it and play on.",
   endTurn: "End your turn. Nothing worth doing is left.",
+  endTurnKeep: "End your turn. What you could still play is worth more held back than spent now.",
   laHit: "Start with this. Play each opening out to the end of your turn and this one lands the most damage once they block.",
   laSafe: "Start with this. Played out to the end of your turn, it costs you the least life of any opening.",
   laKeep: "Start with this. Played out to the end of your turn, it keeps more cards in hand for their swing back.",
@@ -1611,7 +1613,10 @@ function explainNow(g, seat, o){
      read off the action instead (`addPay` is pinned by sparring.test.js). */
   const hit = a && n.tags.find(t => t[1] === a);
   /* THE SEARCH CAN SAY "STOP BLOCKING" (phase c): no action, a reason */
-  const key = n.stop || (a ? ((hit && hit[0]) || BY_TYPE[a.t] || null) : null);
+  let key = n.stop || (a ? ((hit && hit[0]) || BY_TYPE[a.t] || null) : null);
+  /* "NOTHING WORTH DOING IS LEFT" ONLY WHEN NOTHING IS LEFT (QA-B FEED-1). With
+     a play still legal the call says the seat is holding it, not that there is none. */
+  if(key === "endTurn" && laCands(g, seat, null).some(x => x.t !== "endTurn")) key = "endTurnKeep";
   return {action: a, key, why: key ? (CALL_WHY[key] ? (key === "chargeColour" || key === "gateColour" ? CALL_WHY[key].replace(/COLOUR/g, ["", "red", "yellow", "blue"][key === "gateColour" ? J.gateColourWanted(g, seat) : J.chargePitchWanted(g)] || "matching") : CALL_WHY[key]) : null) : null, line: key !== "laTake" ? lineOf(g, seat, a) : (wallOf(g.sides[seat]) > 0 ? "Don't block any more" : "Don't block")};
 }
 
