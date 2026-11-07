@@ -101,9 +101,9 @@ function readState() {
             const chosen = s.btns.filter(b => b.sel).length;
             const blockers = live.filter(b => !b.sel);
             if (s.incoming >= 3 && chosen < 2 && blockers.length && rnd() < 0.75) { const b = blockers[Math.floor(rnd() * blockers.length)]; await tap2(b.k); did = "block " + b.txt; }
-            else did = "defend->react " + await bar(/Defend|Take it/);
+            else did = "defend->react " + (await bar(chosen > 0 || rnd() < 0.5 ? /Defend/ : /Take it/) || await bar(/Take it/));
           } else if (s.mode === "block") {
-            if (live.length && rnd() < 0.6 && !G.steps.slice(-2).some(x => x.did.startsWith("dr"))) { const b = live[Math.floor(rnd() * live.length)]; await tap2(b.k); did = "dr " + b.txt; }
+            if (live.length && rnd() < 0.8 && !G.steps.slice(-2).some(x => x.did.startsWith("dr"))) { const b = live[Math.floor(rnd() * live.length)]; await tap2(b.k); did = "dr " + b.txt; }
             else did = "resolve " + await bar(/Resolve damage/);
           } else if (s.mode === "stack") {
             if (live.length && rnd() < 0.5 && !G.steps.slice(-2).some(x => x.did.startsWith("ar"))) { const b = live[Math.floor(rnd() * live.length)]; await tap2(b.k); did = "ar " + b.txt; }
