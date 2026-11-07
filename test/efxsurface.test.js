@@ -36,7 +36,7 @@ test("every _EFX.<name> the trainer calls is a member of the effects context", (
 
 test("every Dawn<Module>.<name> the page calls is exported by that module", () => {
   const src = html();
-  const order = [...src.matchAll(/<script src="((?:engine|data)\/[a-z]+\.js)"/g)].map(m => m[1]);
+  const order = [...src.matchAll(/<script src="((?:engine|data)\/[a-z0-9]+\.js)"/g)].map(m => m[1]);
   const win = {}; win.window = win; win.self = win;
   const ctx = vm.createContext(win);
   for(const f of order) vm.runInContext(fs.readFileSync(path.join(ROOT, f), "utf8"), ctx, { filename: f });

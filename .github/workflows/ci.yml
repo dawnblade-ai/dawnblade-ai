@@ -106,7 +106,7 @@ jobs:
           # read "all 15 engine files" when the real number was 21.
           bad=0
           # data/ too since v5.74: the pinned pool is a script the page loads.
-          for f in $(grep -oE '<script src="(engine|data)/[a-z]*\.js"' index.html | sed 's/.*src="//;s/"//' | sort -u); do
+          for f in $(grep -oE '<script src="(engine|data)/[a-z0-9]*\.js"' index.html | sed 's/.*src="//;s/"//' | sort -u); do
             c=$(curl -s -o /dev/null -w '%{http_code}' "$URL/$f")
             [ "$c" = "200" ] || { echo "::error::$f is $c"; bad=1; }
           done
