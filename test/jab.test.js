@@ -312,18 +312,19 @@ test("DRIVEN: the FICTION fires, and it fires BEFORE the destroy", {skip}, () =>
   const g = H.state({gear: [dd, mark], res: 9, ap: 1, hand: [atk]}, {hp: 20},
                     {actor: 0, turnPlayer: 0, turn: 3, builds: [bd, {}]});
   const n = H.execute(H.execute(g, atk, "hand", 0, {}), dd.powCard, "hero", 0, {});
-  /* v5.17: Mark's offer is QUEUED by the fiction and then LAPSES, because
-     the jab's last printed sentence has already destroyed the dagger it
-     would pay with (QUEUE item 4 — accepting used to mark for free). The
-     state is identical to a fiction that never fired (no sheet, nobody
-     marked), so the lapse line is the observable here (v3.60): and it is
-     only printed if the offer was queued, which `offerPayCost` refuses for
-     a destroyed piece — so it still pins the ORDER. */
-  assert.ok(!n.prompt, "no sheet for a price that is already gone");
-  assert.ok(!n.sides[1].marked, "and nobody is marked for free");
-  assert.match((n.feed || []).map(f => f.t || f).join(" | "),
-    /Mark of the Huntsman is already gone — its price is to destroy it/,
-    "the fiction fired: Mark's own offer was queued, and lapsed");
+  /* RULING-B (ship/rules-qa) REVERSES v5.17's lapse. CR 1.8.3b (verbatim):
+     "If the optional effects are phrased with "may choose to" then the player
+     may choose to generate the effects regardless of their outcome." — and
+     its example is this card: "…Mark of the Huntsman will be destroyed (if
+     able) and the hero will be marked (if able)." So the offer queued by
+     the fiction is still asked after the jab's own destroy, and choosing it
+     marks them. The sheet exists only if the fiction fired, and
+     `offerPayCost` refuses a destroyed piece, so it still pins the ORDER. */
+  assert.ok(n.prompt && n.prompt.tag === "pay" && n.prompt.destroyEffect,
+    "Mark's own offer is asked though the dagger is already gone");
+  assert.ok(!n.sides[1].marked, "nobody is marked before it is chosen");
+  const after = H.answerAll(n);
+  assert.ok(after.sides[1].marked, "choosing it marks them — the destroy was made 'if able'");
   assert.ok(H.filed(n.sides[0], 60), "the drawback still lands");
 });
 
@@ -354,14 +355,12 @@ test("DRIVEN: a fully prevented jab does NOT hit (CR 7.5.5)", {skip}, () => {
     return H.execute(H.execute(g, atk, "hand", 0, {}), dd.powCard, "hero", 0, {});
   };
   const hit = run(0), warded = run(5);
-  const said = n => (n.feed || []).map(f => f.t || f).join(" | ");
-  const lapsed = /Mark of the Huntsman is already gone/;
   assert.equal(hit.sides[1].hp, 19, "the control: it lands");
-  assert.match(said(hit), lapsed, "…so the fiction fires and Mark's own offer is queued (and lapses, v5.17)");
+  assert.ok(hit.prompt && hit.prompt.src === "Mark of the Huntsman",
+    "…so the fiction fires and Mark's own offer is queued (RULING-B: asked, not lapsed)");
 
   assert.equal(warded.sides[1].hp, 20, "the ward eats it");
-  assert.doesNotMatch(said(warded), lapsed, "so nothing hit, and nothing fires");
-  assert.ok(!warded.prompt);
+  assert.ok(!warded.prompt, "so nothing hit, and nothing fires");
   assert.match((warded.feed || []).map(f => f.t || f).join(" | "), /did not hit/i);
   assert.ok(H.filed(warded.sides[0], 60),
     "…and the drawback lands regardless — the card does not condition it");

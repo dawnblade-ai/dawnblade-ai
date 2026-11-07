@@ -650,6 +650,9 @@ function buildPrompt(game, spec){
          the equipment is never spent and the rider is FREE, which is
          precisely the bug v2.04 fixed. */
       destroyUid: spec.destroyUid,
+      /* RULING-B (CR 1.8.3b): "may choose to destroy this and …" — the
+         destroy is an effect made if able, so a gone piece does not lapse. */
+      destroyEffect: !!spec.destroyEffect,
       /* AND THE FOURTH COST VERB (v4.24) — "remove a <kind> counter from
          it", which is what CRANK spends. A spec only carries fields
          `buildPrompt` knows about (v2.34, v3.33, v3.91, v3.93), so this
@@ -978,6 +981,9 @@ function promptForcedSel(prompt){
    than lapsing every time. */
 function promptDestroyGone(game, spec){
   if(!spec || spec.tag !== "pay" || spec.destroyUid == null) return false;
+  /* RULING-B: "may choose to" (CR 1.8.3b, quoted at parser's payCost
+     reader) — the destroy is not a price, so its absence lapses nothing. */
+  if(spec.destroyEffect) return false;
   const sd = ((game && game.sides) || [])[spec.side != null ? spec.side : 0] || {};
   return !(sd.gear || []).some(x => x && x.uid === spec.destroyUid && !x.destroyed);
 }

@@ -5853,7 +5853,20 @@ function fxParse(card){
     if(!trig1 || OFFER_TRIGGERS.indexOf(trig1.trigger) < 0) continue;   /* see OFFER_TRIGGERS */
     const rr1 = classifyClause(dm1[2].trim());
     if(!rr1 || rr1.status !== "run" || !rr1.ops || !rr1.ops.length) continue;
-    fx.payCost = Object.assign({cost: 0, taps: false, destroySelf: true, ops: rr1.ops}, trig1);
+    /* "MAY CHOOSE TO" MAKES THE DESTROY PART OF THE EFFECT, NOT ITS PRICE
+       (RULING-B, ship/rules-qa). CR 1.8.3b (verbatim, rules.fabtcg.com):
+       "If the optional effects are phrased with "may choose to" then the
+       player may choose to generate the effects regardless of their
+       outcome." Its own example is this card: "Mark of the Huntsman has the
+       text "When this hits a hero, you may choose to destroy this and mark
+       them." Even if Mark of the Huntsman cannot be destroyed or the hero is
+       already marked, the player may choose to generate the optional
+       effects, in which case Mark of the Huntsman will be destroyed (if
+       able) and the hero will be marked (if able)." `chooseTo` carries it to
+       `payCostSpec` (`destroyEffect`): a piece already gone does not lapse
+       the offer. Without "choose to", the v5.17 lapse stands. */
+    fx.payCost = Object.assign({cost: 0, taps: false, destroySelf: true, ops: rr1.ops},
+      /\byou may choose to destroy\b/i.test(clauses[i]) ? {chooseTo: true} : {}, trig1);
     handled.add(i);
     break;                                     /* one pay-cost rider per card in the pool */
   }

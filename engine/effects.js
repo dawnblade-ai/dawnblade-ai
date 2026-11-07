@@ -9609,12 +9609,18 @@ function payCostSpec(px, card, side){
      (pay or decline, and the rider resolves only if you pay); what
      changes is what is spent, so the resource cost is 0 and `destroyUid`
      names the permanent. */
-  if(px.destroySelf) return {
+  if(px.destroySelf) return Object.assign({
     tag:"pay", side, src:card.name,
     cost:0, ops:px.ops, taps:false, destroyUid:card.uid,
     title:"Destroy " + card.name + "?",
     hint:"Optional — decline and the rider does not resolve. Destroyed gear goes to the graveyard."
-  };
+  }, px.chooseTo ? {
+    /* RULING-B (CR 1.8.3b, quoted at `parser`'s payCost reader): the destroy
+       is one of the effects, made "if able" — so a piece already gone never
+       lapses the offer, and the rest still resolves. */
+    destroyEffect: true,
+    hint:"Optional — choosing destroys " + card.name + " if it is still there, and the rest resolves either way."
+  } : {});
   /* A DESTROY CAN RIDE WITH A RESOURCE COST (v4.52) — Silent Stilettos
      prints "you may pay {r}{r}{r}. If you do, DESTROY THIS and gain 1
      action point", so the piece is spent as well as the resources.
@@ -11423,7 +11429,11 @@ function payPolicy(live, sd){
      IT IS THE SHAPE, NOT THE VERB. Any spec carrying a non-resource price
      falls here, so the next cost verb inherits the answer rather than
      rediscovering it (v3.43: a guard belongs to the shape). */
-  const otherPrice = live.destroyUid != null || !!live.tapHero
+  /* RULING-B: a "may choose to" destroy whose piece is already gone spends
+     nothing (CR 1.8.3b), so it is not a price to weigh. */
+  const _gone = live.destroyEffect && live.destroyUid != null
+    && !((sd && sd.gear) || []).some(x => x && x.uid === live.destroyUid && !x.destroyed);
+  const otherPrice = (live.destroyUid != null && !_gone) || !!live.tapHero
                   || !!live.spendCtr || (!!live.taps && live.tapUid != null);
   if(cost <= 0) return !otherPrice;
   if(otherPrice) return false;

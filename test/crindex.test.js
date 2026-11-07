@@ -82,9 +82,11 @@ test("crindex — the verdict counts are pinned", () => {
      not damage (effects `loseLife`, test/loselife.test.js). */
   /* 75 -> 80 and 65 -> 70 guarded AT RULING-A: CR 5.4.2, 6.2.2d, 6.2.3, 6.2.3c, 6.2.3d — Arakni's
      static is read continuously (effects linkPumps, test/arakni.test.js). */
-  assert.equal(rs.length, 80, "the number of distinct CR rules this project cites moved");
+  /* 80 -> 81 and 70 -> 71 guarded AT RULING-B: CR 1.8.3b — "may choose to"
+     destroy is an effect made if able (parser payCost, test/jab.test.js). */
+  assert.equal(rs.length, 81, "the number of distinct CR rules this project cites moved");
   /* 50 -> 51 guarded and 6 -> 5 drill-only AT v4.66: CR 7.1.2, built. */
-  assert.equal(by(rs, "guarded").length,   70, "guarded count moved");
+  assert.equal(by(rs, "guarded").length,   71, "guarded count moved");
   assert.equal(by(rs, "UNGUARDED").length,  3, "UNGUARDED count moved");
   assert.equal(by(rs, "drill-only").length, 5, "drill-only count moved");
   assert.equal(by(rs, "prose").length,      2, "prose count moved");

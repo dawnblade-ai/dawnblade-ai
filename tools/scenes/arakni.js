@@ -265,10 +265,13 @@ module.exports = [
       "the defending hero takes the jab":   20 - m.sides[1].hp,
       "the chosen dagger is destroyed":     c.H.filed(m.sides[0], gear[1].uid),
       "the other dagger is still equipped": gz(gear[2].uid).uid === gear[2].uid && !gz(gear[2].uid).destroyed,
-      /* v5.17: its own "destroy this and mark them" offer LAPSES — the jab
-         has already destroyed the dagger it would pay with, and accepting
-         used to mark for free (QUEUE item 4). */
-      "…and its own offer lapses, nobody marked free": !m.prompt && !m.sides[1].marked
+      /* RULING-B (ship/rules-qa) reverses v5.17's lapse: CR 1.8.3b's own
+         example — "Mark of the Huntsman will be destroyed (if able) and the
+         hero will be marked (if able)." The dagger's offer is still asked
+         after the jab destroyed it, and choosing it marks them. */
+      "…and its own offer is still asked, and choosing it marks them":
+        !!(m.prompt && m.prompt.destroyEffect) && !m.sides[1].marked
+        && !!c.H.answerAll(m).sides[1].marked
     };
   },
   want: {
@@ -278,7 +281,7 @@ module.exports = [
     "the defending hero takes the jab":   1,
     "the chosen dagger is destroyed":     true,
     "the other dagger is still equipped": true,
-    "…and its own offer lapses, nobody marked free": true
+    "…and its own offer is still asked, and choosing it marks them": true
   }
 },
 

@@ -1,3 +1,20 @@
+## v5.NN — Mark of the Huntsman still marks after Danger Digits destroys it
+
+QA-A R-b, decided on the CR, and it REVERSES v5.17's lapse. Danger Digits: "…If damage is dealt this way,
+the dagger has hit. Destroy the dagger." Mark of the Huntsman: "When this hits a hero, you may choose to
+destroy this and mark them." The engine read the destroy as a PRICE, so with the dagger already gone the
+offer lapsed and nobody was marked.
+
+- CR 1.8.3b (verbatim): "If the optional effects are phrased with "may choose to" then the player may
+  choose to generate the effects regardless of their outcome." Its example is this card: "…Even if Mark of
+  the Huntsman cannot be destroyed or the hero is already marked, the player may choose to generate the
+  optional effects, in which case Mark of the Huntsman will be destroyed (if able) and the hero will be
+  marked (if able)."
+- The parser tags the "may choose to destroy this and …" form `chooseTo`; its sheet carries
+  `destroyEffect`, never lapses (`promptDestroyGone`), and `payPolicy` takes it free when the piece is
+  gone. The plain "you may destroy this. If you do, …" form (Refraction Bolters) keeps the lapse.
+- Drills: `test/jab.test.js`, `test/huntsman.test.js`, the Danger Digits scene.
+
 ## v5.NN — Arakni's stealth bonus reads the mark at the damage step
 
 QA-A R-a, decided on the CR, which fixes S-3 (P2). Arakni, Web of Deceit: "Your attacks with stealth that are
