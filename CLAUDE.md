@@ -117,7 +117,7 @@ something new, teach the parser to read its text — never special-case a card b
 - **Verify the push:** every script the page loads exists in the pushed commit, and
   `.nojekyll` is present:
   ```sh
-  for f in $(git show origin/main:index.html | grep -oE '<script src="(engine|data)/[a-z]*\.js"' | sed 's/.*src="//;s/"//' | sort -u) .nojekyll; do git cat-file -e origin/main:$f || echo MISSING $f; done
+  for f in $(git show origin/main:index.html | grep -oE '<script src="(engine|data)/[a-z0-9]*\.js"' | sed 's/.*src="//;s/"//' | sort -u) .nojekyll; do git cat-file -e origin/main:$f || echo MISSING $f; done
   ```
   CI (`.github/workflows/ci.yml`) runs the suite on a fresh clone and checks the live
   URL after a push. If you cannot reach the live URL, say so.

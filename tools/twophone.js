@@ -91,33 +91,60 @@ const STUB = `(() => {
     host: await H.evaluate(() => { const s = window.__dawnTable.session; return {status: s.status(), seq: s.seq(), referee: !!s.isReferee,
       guestWant: DawnWire.hash(DawnReferee.seatView(s.full(), 1))}; }),
     guest: await Gp.evaluate(() => { const s = window.__dawnTable.session, v = s.state(); return {status: s.status(), seq: s.seq(), hash: s.hash(),
-      viewSeat: v.viewSeat, foeHandHidden: v.sides[0].hand.every(c => DawnView.isPh(c)), foeDeckHidden: v.sides[0].deck.filter(c=>!c._kb).every(c => DawnView.isPh(c)),
+      viewSeat: v.viewSeat, foeHandHidden: v.sides[0].hand.every(c => DawnView.isPh(c) || (v.sides[0].blockH || []).concat(v.sides[0].paySel || []).includes(c.uid) || (v.pending && v.pending.card && v.pending.card.uid === c.uid)), foeDeckHidden: v.sides[0].deck.filter(c=>!c._kb).every(c => DawnView.isPh(c)),
       rngHidden: !!v.rng.hidden, ownHand: v.sides[1].hand.map(c => c.name).length}; })});
   let x = await info(); console.log(JSON.stringify(x));
   /* play: each phone submits for its own seat through its own session */
   let acts = 0;
-  for(let i = 0; i < 4000; i++){
-    const done = await H.evaluate(() => !!window.__dawnTable.session.full().over);
-    if(done) break;
-    const hostMoved = await H.evaluate(() => { const s = window.__dawnTable.session, a = DawnSparring.act(s.full(), 0, {search: false}); if(!a) return false; return s.submit(a) || true; });
-    if(hostMoved === true){ acts++; await H.waitForTimeout(5); continue; }
-    if(hostMoved) { console.log("host refused", hostMoved); break; }
-    const g = await Gp.evaluate(() => { const s = window.__dawnTable.session, a = DawnSparring.act(s.state(), 1, {search: false}); if(!a) return false; return s.submit(a) || true; });
-    if(g === true){ acts++; await Gp.waitForTimeout(15); continue; }
-    if(g){ console.log("guest refused", g); await Gp.waitForTimeout(50); continue; }
-    await Gp.waitForTimeout(50);
-  }
-  await Gp.waitForTimeout(500);
+  const play = async limit => {
+    for(let i = 0; i < limit; i++){
+      const done = await H.evaluate(() => !!window.__dawnTable.session.full().over);
+      if(done) return true;
+      const hostMoved = await H.evaluate(() => { const s = window.__dawnTable.session, a = DawnSparring.act(s.full(), 0, {search: false}); if(!a) return false; return s.submit(a) || true; });
+      if(hostMoved === true){ acts++; await H.waitForTimeout(5); continue; }
+      if(hostMoved) { console.log("host refused", hostMoved); return false; }
+      const g = await Gp.evaluate(() => { const s = window.__dawnTable.session, a = DawnSparring.act(s.state(), 1, {search: false}); if(!a) return false; return s.submit(a) || true; });
+      if(g === true){ acts++; await Gp.waitForTimeout(15); continue; }
+      if(g){ await Gp.waitForTimeout(50); continue; }
+      await Gp.waitForTimeout(50);
+    }
+    return false;
+  };
+  await play(80);
+  await Gp.waitForTimeout(400);
   x = await info(); console.log("after", acts, "actions:", JSON.stringify(x), "agree:", x.guest.hash === x.host.guestWant);
-  const foeArs = await Gp.evaluate(() => { const v = window.__dawnTable.session.state(); return v.sides[0].arsenal ? (DawnView.isPh(v.sides[0].arsenal) ? "face-down placeholder" : "face-up " + v.sides[0].arsenal.name) : "empty"; });
-  console.log("guest sees host arsenal:", foeArs, "· guest pip/link:", await Gp.evaluate(() => (document.querySelector(".topbar")||document.body).innerText.slice(0,80).replace(/\s+/g," ")));
-  /* the host's saved game */
   console.log("host saved:", await H.evaluate(() => Object.keys(localStorage).filter(k => /dawnblade.table/.test(k)).map(k => k + " " + localStorage.getItem(k).length)));
-  /* host drop: close the host's channel */
-  await H.evaluate(() => window.__conn.close());
+
+  /* THE HOST'S PHONE RELOADS mid-game: its channel dies with the page */
+  const seqAt = x.host.seq;
+  await Gp.evaluate(() => window.__closed());
+  await H.reload();
+  await H.waitForFunction(() => /\d+ cards/.test((document.querySelector(".topbar .tag") || {}).textContent || ""), null, {timeout: 30000});
   await Gp.waitForTimeout(1600);
-  console.log("guest after host drop:", await Gp.evaluate(() => window.__dawnTable.session.status()), await Gp.evaluate(() => window.__dawnTable.session.submit({t: "pass"})));
-  console.log("revealed (if over):", await Gp.evaluate(() => { const r = window.__dawnTable.session.revealed(); return r ? r.log.length + " log entries, seedH " + !!r.seedH : null; }));
+  console.log("guest while the host is gone:", await Gp.evaluate(() => window.__dawnTable.session.status()), "·",
+    await Gp.evaluate(() => window.__dawnTable.session.submit({t: "pass"})), "· banner:",
+    await Gp.evaluate(() => { const e = [...document.querySelectorAll(".tblerr")].find(d => /paused/.test(d.innerText)); return e ? e.innerText.slice(0, 60) : null; }));
+  /* the host reopens the same table from what it saved */
+  await btn(H, /^Find an opponent/).click(); await H.waitForSelector(".tblwrap");
+  await btn(H, /^Resume table/).click();
+  await H.waitForTimeout(300);
+  /* the guest rejoins (the host's table opens when a guest sits down) */
+  await btn(Gp, /^Rejoin$/).click();
+  await H.waitForFunction(() => window.__dawnTable && window.__dawnTable.session && window.__dawnTable.session.full, null, {timeout: 15000});
+  console.log("host resumed at seq", await H.evaluate(() => window.__dawnTable.session.seq()), "(saved at " + seqAt + ")");
+  await Gp.waitForFunction(() => window.__dawnTable.session.status() === "ready", null, {timeout: 10000});
+  x = await info(); console.log("after rejoin:", JSON.stringify(x.guest), "agree:", x.guest.hash === x.host.guestWant);
+  const finished = await play(4000);
+  await Gp.waitForTimeout(800);
+  x = await info(); console.log("finished:", finished, "after", acts, "actions · agree:", x.guest.hash === x.host.guestWant);
+  console.log("revealed:", await Gp.evaluate(() => { const r = window.__dawnTable.session.revealed(); return r ? r.log.length + " log entries, seedH " + !!r.seedH : null; }));
+  /* VERIFY THIS GAME, tapped on the guest's phone */
+  if(await Gp.locator("button", {hasText: /^Verify this game/}).count()){
+    await btn(Gp, /^Verify this game/).click();
+    await Gp.waitForFunction(() => /Verified:|Not verified:/.test(document.body.innerText), null, {timeout: 60000});
+    console.log("verdict:", await Gp.evaluate(() => (document.body.innerText.match(/(Verified:|Not verified:)[^\n]*/) || [""])[0]));
+  } else console.log("verdict: no verify button");
+  console.log("host saved after the end:", await H.evaluate(() => Object.keys(localStorage).filter(k => /dawnblade.table/.test(k)).length));
   console.log("frames", frames, "ERRORS", errors.length); errors.slice(0, 10).forEach(e => console.log("  " + e));
   await browser.close();
 })().catch(e => { console.error("DRIVE FAILED", e); process.exit(1); });
