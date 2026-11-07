@@ -134,8 +134,10 @@ test("`runOps`'s vocabulary and what the pool emits are pinned both ways", {skip
      at resolution, after the damage it governs; Murkmire Grapnel's clause
      is a card fact (`fx.unpreventable`) read at the damage step now.
      96 -> 97 AT v5.53: `dracCard`, Fealty's "the next card you play this turn
-     is Draconic" — spent by the card played (`execute` stamps `_drac`). */
-  assert.equal(r.dispatched, 97, "runOps's op vocabulary moved");
+     is Draconic" — spent by the card played (`execute` stamps `_drac`).
+     97 -> 98 AT S-2: `intimidate`, Sadistic Scowl's "Intimidate target
+     hero" on a non-attack (`effects.intimidateFoe`, the one body). */
+  assert.equal(r.dispatched, 98, "runOps's op vocabulary moved");
   /* DISPATCHED WITH NO EMITTER — the `perBoost` shape. Three have a
      producer that is not the parser and are named for it; two have none
      anywhere and are latent readers whose printed wording the pool only

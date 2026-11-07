@@ -1,3 +1,17 @@
+## v5.NN — Sadistic Scowl intimidates (both boards)
+
+QA-A S-2 (P1) + FEED-1. "Intimidate target hero" on Sadistic Scowl parsed as a NOOP whose text described
+the trainer dummy ("the dummy loses a card at random when this attacks" — printed at the table too), and
+nothing ran: the opposing hand kept every card. The real intimidate lived inline in the attack
+declaration only, for an attack carrying the keyword.
+
+- CR 8.5.10 (verbatim): "To intimidate a player, they banish a random card from their hand face-down, and
+  then at the beginning of the end phase, it returns it to their hand." 8.5.10a: "The player is
+  considered to have been intimidated, even if they did not banish a card from their hand."
+- `effects.intimidateFoe` is the one body (seeded off the shared stream); the attack keyword and the new
+  `intimidate` op both call it, and the end phase returns the card as before. The clause is an op now
+  (`runOps` vocabulary 97 -> 98). Drills: `test/intimidateop.test.js`.
+
 ## v5.NN — dominate counts a defence reaction played from hand
 
 QA-A S-1 (P1). Only the DECLARE route asked the defender cap, so after one card from hand defended a

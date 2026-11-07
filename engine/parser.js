@@ -3726,7 +3726,11 @@ function classifyClause(raw){
      declaration, and applies while the attack is the turn's first. */
   if(m=c.match(/^your first attack each turn gets \+(\d+)\s*\{p\}$/))
     return R([["noop", "static — read off the arena at the turn's first attack"]], {firstAtk: +m[1]});
-  if(/^intimidate target hero$/.test(c)) return NOOP("live — the dummy loses a card at random when this attacks");
+  /* "INTIMIDATE TARGET HERO" IS AN OP (S-2, QA-A). It was a NOOP whose text
+     described the trainer dummy ("live — the dummy loses a card…") and
+     nothing ran: the real intimidate lived only on an attack carrying the
+     keyword. CR 8.5.10 is quoted at `effects.intimidateFoe`, the one body. */
+  if(/^intimidate target hero$/.test(c)) return R([["intimidate"]]);
   /* RULING 2026-07-25 (Ninja / Crouching Tiger) — a card minted straight into
      the banished zone, playable that turn. Written generically off the name in
      the text, so it is not Crouching-Tiger-specific. */
