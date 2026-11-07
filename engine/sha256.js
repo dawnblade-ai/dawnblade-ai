@@ -124,6 +124,9 @@ const opens = (c, value, n) => typeof c === "string" && typeof n === "string" &&
 /* THE MATCH SEED from the two halves: the host's secret and the guest's
    public answer. Order-fixed (host first), so both phones derive one seed. */
 const seedOf = (seedH, seedG) => sha256("dawnblade-seed|" + String(seedH) + "|" + String(seedG));
+/* The host's commitment to its half. seedH is 128 random bits, so it needs no
+   nonce of its own: nobody can hash their way to it. */
+const seedCommit = seedH => sha256("dawnblade-seedc|" + String(seedH));
 
-return {sha256, digestBytes, utf8, nonce, makeCommit, commitOf, opens, seedOf};
+return {sha256, digestBytes, utf8, nonce, makeCommit, commitOf, opens, seedOf, seedCommit};
 });
