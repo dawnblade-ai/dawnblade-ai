@@ -11,6 +11,12 @@
       with it legal and the action point unspent - and the call said
       "Nothing worth doing is left".
 
+   2. A RESOURCE PIECE WAS NEVER SPENT FOR A WEAPON SWING (QA-A H-2).
+      v5.56's unlock spends Blossom of Spring when its {r} makes a held
+      ATTACK CARD playable, and asked only the hand, the arsenal and the
+      allies. Dorinthea passed at an action point with Blossom and an
+      unswung Dawnblade at a 4-life Arakni, and died the next turn.
+
    DRIVEN through `sparring.act`, `judge.legal` and `judge.reduce`, with the
    sabotage (the old behaviour) asked beside every new answer.
    ====================================================================== */
@@ -55,4 +61,32 @@ test("a Crouching Tiger playable from banishment is played, not passed on", {ski
   const stale = {...g, sides: [{...g.sides[0], banish: [{...tiger, _playTurn: g.turn - 2}]}, g.sides[1]]};
   assert.notEqual(J.legal(stale, play, 0), null, "control: a Tiger from an earlier turn is refused");
   for(const search of [false, true]) assert.notEqual((SP.act(stale, 0, {search}) || {}).from, "banish", "a refused banished card is not proposed");
+});
+
+/* ---- 2. Blossom pays for the Dawnblade swing -------------------------- */
+function bladeTurn(gear){
+  const g = H.state({name: "Dorinthea", gear, hand: [], arsenal: null, res: 0, ap: 1},
+    {hp: 4, hand: []}, {actor: 0, turnPlayer: 0, turn: 5});
+  return atLayer(g);
+}
+const SWING = {t: "activate", uid: 42}, BLOSSOM = {t: "activate", uid: 41};
+
+test("Blossom of Spring is spent when its resource pays for a weapon swing, under its own reason", {skip}, () => {
+  let g = bladeTurn([piece("Blossom of Spring", 41), piece("Dawnblade", 42)]);
+  assert.notEqual(J.legal(g, SWING, 0), null, "control: the Dawnblade costs {r} the seat cannot raise yet");
+  assert.equal(J.legal(g, BLOSSOM, 0), null, "control: Blossom is legal");
+  const x = SP.explain(g, 0, {search: false});
+  assert.deepEqual(x.action, BLOSSOM, "spends the piece: " + JSON.stringify(x.action));
+  assert.equal(x.key, "resUnlockWeapon");
+  assert.match(x.why, /weapon/);
+  g = settle(J.reduce(g, x.action, 0).state);
+  assert.equal(g.sides[0].res, 1, "Blossom paid its resource");
+  assert.equal(g.sides[0].ap, 1, "and kept the action point");
+  assert.deepEqual(SP.act(g, 0, {search: false}), SWING, "then the Dawnblade swings");
+});
+
+test("H11 stays: with no weapon to pay for, Blossom is held", {skip}, () => {
+  const g = bladeTurn([piece("Blossom of Spring", 41)]);
+  assert.equal(J.legal(g, BLOSSOM, 0), null, "control: Blossom is legal");
+  assert.notDeepEqual(SP.act(g, 0, {search: false}), BLOSSOM, "nothing waits on the resource");
 });

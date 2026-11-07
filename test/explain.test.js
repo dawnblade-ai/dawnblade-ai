@@ -68,7 +68,7 @@ function census(){
           /* THE FALLBACK never burns one; the unlock (test/arspay.test.js) is
              a different branch with its own key, spending the piece for an
              attack it makes affordable. */
-          if(a.t === "activate" && J.abPieceForRes(g, s, a.uid) && e.key !== "resUnlock")
+          if(a.t === "activate" && J.abPieceForRes(g, s, a.uid) && e.key !== "resUnlock" && e.key !== "resUnlockWeapon")
             out.resBurn.push(`${k0}/${k1} seat ${s}: ${a.uid}`);
           const o = J.reduce(g, a, s);
           if(o.error) continue;
@@ -127,12 +127,14 @@ test("every reason is keyed from a site in the policy, and the census names what
      H26 (`markFirst`) is reached by the census, and it re-routes an Arakni game or two: `discost` is reached now and
      `chargeDone` is not (the census games are the same 30; the trajectories moved). The four `la*`
      reasons belong to the lookahead, which only the table's AI seat and its call ask for (`{search: true}`);
-     the census runs the rule policy, so `test/lookahead.test.js` reaches them. */
+     the census runs the rule policy, so `test/lookahead.test.js` reaches them.
+     A resource piece that pays for a weapon swing (QA-A H-2) re-routes the census again: `discost`
+     is not reached now (test/discost.test.js drives the AI's answer). */
   const seen = census().keys;
   for(const k of Object.keys(seen)) assert.ok(SP.CALL_WHY[k], "reached key " + k + " has no reason");
   assert.deepEqual(keys.filter(k => !seen[k]).sort(),
     ["addPayNo", "allocAll", "allyTake", "answer", "arenaAP", "arenaRes", "arsenalSkip", "boostNo",
-     "chargeDone", "chargeMore", "chargeNone", "laBlock", "laHit", "laHold", "laKeep", "laSafe", "laTake",
+     "chargeDone", "chargeMore", "chargeNone", "discost", "laBlock", "laHit", "laHold", "laKeep", "laSafe", "laTake",
      "payCancel", "pitchChi"]);
 });
 

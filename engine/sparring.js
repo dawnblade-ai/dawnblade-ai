@@ -598,6 +598,12 @@ const ARENA_KEY = {pump: "arenaPump", draw: "arenaDraw", res: "arenaRes", ap: "a
 /* the banished cards `legal` lets this seat play now, in uid order */
 const banishPlays = (g, seat) => (g.sides[seat].banish || []).filter(c => c && c.uid != null
   && legal(g, {t: "play", uid: c.uid, from: "banish"}, seat)).slice().sort(byUid);
+/* every weapon swing this seat could ask for (a gear entry that prints power), in uid order.
+   QA-A H-2: a resource piece that pays for a WEAPON swing is a resource with something
+   to spend on too. Dorinthea passed at an action point with Blossom of Spring and an
+   unswung Dawnblade beside Warrior's Valor's +3, at a 4-life Arakni. */
+const weaponSwings = sd => (sd.gear || []).filter(x => x && x.power != null).slice().sort(byUid)
+  .map(x => ({t: "activate", uid: x.uid}));
 function offence(g, seat, o){
   /* A CARD THAT MARKS FROM THE HAND GOES BEFORE THE ATTACK THAT CASHES THE MARK (H26).
      Instants cost no action point, so the discard is free of the turn's one point;
@@ -805,19 +811,23 @@ function offenceBase(g, seat, o){
   const unlockOf = gain => {
     const rich = Object.assign({}, g, {sides: g.sides.map((s, i) => i === seat
       ? Object.assign({}, s, {res: (s.res || 0) + gain}) : s)});
-    return from
+    const opens = a => !legal(g, a, seat) && legal(rich, a, seat);
+    if(from
       .map(x => ({c: x.c, uid: x.c && x.c.uid, from: x.from}))
       .concat(allies)
       .filter(x => x.c && num(x.c, "power") > 0)
       .map(x => x.ally ? {t: "activate", uid: x.uid, target: targetFor(g, seat, x.c)}
                        : {t: "play", uid: x.uid, from: x.from, target: targetFor(g, seat, x.c)})
-      .some(a => !legal(g, a, seat) && legal(rich, a, seat));
+      .some(opens)) return "resUnlock";
+    /* a weapon swing it pays for (QA-A H-2), under its own reason */
+    return weaponSwings(sd).some(opens) ? "resUnlockWeapon" : null;
   };
   const unlock = (sd.gear || []).slice().sort(byUid)
     .map(w => ({w, gain: J.abPieceResGain(g, seat, w.uid)}))
     .filter(x => x.gain > 0 && legal(g, {t: "activate", uid: x.w.uid}, seat))
-    .find(x => unlockOf(x.gain));
-  if(unlock) return tag("resUnlock", {t: "activate", uid: unlock.w.uid});
+    .map(x => Object.assign(x, {why: unlockOf(x.gain)}))
+    .find(x => x.why);
+  if(unlock) return tag(unlock.why, {t: "activate", uid: unlock.w.uid});
 
   /* A weapon swing is an attack that comes from the gear zone. `legal`
      owns both of its limits — the printed `Once per Turn` and the tap —
@@ -1447,6 +1457,7 @@ const CALL_WHY = {
   grantWait: "Swing the biggest attack you can afford, without the card that would pump it. Its cost can't be paid beside the attack's, so it stays in your hand.",
   weapon: "Swing your weapon. It costs no card.",
   resUnlock: "Spend the piece for its resource. It pays for an attack you are holding.",
+  resUnlockWeapon: "Spend the piece for its resource. It pays for a swing of your weapon.",
   gearAbility: "Use your equipment's ability. Nothing better is left to do.",
   gearAmp: "Use your equipment's ability. You can pay for an arcane card to take its extra damage.",
   heroAbility: "Use your hero's ability. Nothing better is left for the action point.",
