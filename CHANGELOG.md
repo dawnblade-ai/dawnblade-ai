@@ -1,3 +1,26 @@
+## v5.94 — A resource piece pays for a weapon swing too
+
+QA-A H-2 (v5.85 sweep, P1).
+- **The misplay:** Dorinthea (1 life) played Warrior's Valor (+3 on her next weapon attack), swung a
+  non-weapon, then ended the turn at an action point with Blossom of Spring ("Destroy this: Gain {r}")
+  and an unswung Dawnblade ({r}: Attack) while Arakni stood at 4. She died the next turn. A probe
+  over Dorinthea's games found the same pass again and again, across seeds, opponents and life totals.
+- **Cause:** v5.56's unlock spends a resource-only piece when its payout makes a held ATTACK CARD
+  playable, and it asked only the hand, the arsenal and the allies. A weapon swing was never asked, so
+  QUEUE v4 H11's hold ("a piece that pays with itself is not a spare action") kept Blossom.
+- **Fix:** the unlock also asks every weapon swing (`weaponSwings`: gear that prints power), with
+  `judge.legal` on a copy of the state holding the payout, exactly as for a card. It has its own reason,
+  `resUnlockWeapon`: "Spend the piece for its resource. It pays for a swing of your weapon." H11 stands:
+  with no weapon (or card) to pay for, the piece is still held.
+- **Measured** (own seat, paired, the change gated to the hero's seat, the 8 heroes with a resource piece
+  and a weapon; wins of 28 per seed): seeds 0–5 pooled **+0.08 (t 0.5)**, held out 6–11 **+0.10 (t 0.8)**;
+  Dorinthea +0.17 / **+0.83 (t 2.1)**, Kayo +0.17 / +0.67, no hero below −0.33 on either set. Rebased on
+  v5.91, Arakni −0.17 (t −0.3). Noise-sized overall; it ships because a lethal swing was being passed on
+  and the call said nothing was left. 0 refusals / 0 violations / 0 stalls.
+- **Drills:** `test/aiqa.test.js` §2: Blossom first under its reason, then the Dawnblade swings; with no
+  weapon Blossom is held (sabotaged: without the weapon ask the first fails). The census pin in
+  `test/explain.test.js` moves: `discost` is no longer reached by its 30 games (its drill drives it).
+
 ## v5.93 — An AI hero plays the card it made playable from banishment
 
 QA-B H-1 (v5.85 sweep), seen in 3 of 4 Fai games, on Steady and on Sharp.
