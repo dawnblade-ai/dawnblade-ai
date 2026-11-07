@@ -12,6 +12,11 @@
      2. which hero is each seat piloting?
      3. who takes the first turn?                 (the throw, CR-adjacent)
      4. what did each seat sideboard?
+     5. the SEED, by commit-reveal (HIDDEN HANDS H2): the host commits
+        H(seedH), the guest answers seedG, and the match seed is
+        H(seedH|seedG). The host cannot bias a shuffle (it committed
+        first); the guest cannot predict a draw (seedH stays on the host's
+        phone, outside this shared state, until the game is over).
 
    Then both peers build the SAME two decks from the SAME seed and hand
    them to `judge.newMatch`. What crosses the wire is the CHOICE, never
@@ -69,7 +74,8 @@
    spec one of them cannot build. Same discipline as room.js's ROOM_V
    keying the table id and DATA_VER keying the card cache. */
 /* 1 -> 2 AT HIDDEN HANDS H2: the throw is SEALED then OPENED (commit-reveal),
-   so a modified client can no longer wait for the other throw and answer it. */
+   so a modified client can no longer wait for the other throw and answer it;
+   and the seed is committed (`seedc`/`seedg`), no longer the table code. */
 const LOBBY_V = 2;
 
 const MSG = {
@@ -78,10 +84,12 @@ const MSG = {
   THROW: "throw",   /* seat -> seat: my SEALED throw for round N (a commitment) */
   OPEN:  "open",    /* seat -> seat: my throw and its nonce, once both are sealed */
   SEAT:  "seat",    /* winner -> loser: this is who goes first      */
-  BOARD: "board"    /* seat -> seat: this is what I sideboarded     */
+  BOARD: "board",   /* seat -> seat: this is what I sideboarded     */
+  SEEDC: "seedc",   /* host -> guest: my commitment to my half of the seed */
+  SEEDG: "seedg"    /* guest -> host: my half, answered after the commitment */
 };
 
-const STEPS = ["fault", "hero", "throw", "seat", "board", "ready"];
+const STEPS = ["fault", "hero", "throw", "seat", "board", "seed", "ready"];
 
 /* ---- the state --------------------------------------------------------
    Nine fields, and every one of them is either write-once per seat or
@@ -101,6 +109,8 @@ function newLobby(o){
     winner: null,                  /* who won the throw                      */
     first: null,                   /* who takes the first turn               */
     boards: [null, null],          /* {gearIdx, cuts}                        */
+    seedC: null,                   /* the host's commitment, H(seedH)        */
+    seedG: null,                   /* the guest's half, in the clear         */
     fault: null                    /* set once; the lobby cannot continue    */
   };
 }
@@ -115,6 +125,7 @@ function stepOf(s){
   if(s.winner == null) return "throw";
   if(s.first == null) return "seat";
   if(s.boards[0] == null || s.boards[1] == null) return "board";
+  if(s.seedC == null || s.seedG == null) return "seed";
   return "ready";
 }
 
@@ -259,6 +270,25 @@ function reduce(s, m){
                         cuts};
       return {state: {...s, boards}, error: null};
     }
+
+    /* THE SEED. Exchanged from the first moment (it waits on nothing), and
+       it closes the negotiation only when everything else has: `seed` is
+       the last step before `ready`. ORDER IS THE SECURITY: the guest's half
+       is refused before the host's commitment, because a host that saw
+       seedG first could pick seedH to stack its own deck. */
+    case MSG.SEEDC: {
+      if(m.seat !== 0) return no("only the host commits to the seed");
+      if(s.seedC != null) return no("the host has already committed to the seed", true);
+      if(typeof m.c !== "string" || !/^[0-9a-f]{64}$/.test(m.c)) return no("a seed commitment is a sha256");
+      return {state: {...s, seedC: m.c}, error: null};
+    }
+    case MSG.SEEDG: {
+      if(m.seat !== 1) return no("only the guest answers the seed");
+      if(s.seedC == null) return no("too early: the guest answers the host's seed commitment, never before it");
+      if(s.seedG != null) return no("the guest has already answered the seed", true);
+      if(typeof m.g !== "string" || !/^[0-9a-f]{16,128}$/.test(m.g)) return no("the guest's half of the seed is hex");
+      return {state: {...s, seedG: m.g}, error: null};
+    }
   }
   return no("unknown lobby message: " + m.t);
 }
@@ -270,10 +300,19 @@ function reduce(s, m){
    THIS IS THE WHOLE CONTRACT WITH THE CARD LAYER, and it is deliberately
    small: two hero keys, two loadouts, one seat index and one seed. Both
    peers derive everything else. */
-function matchSpec(s){
+/* THE SEED IS NOT IN THE SHARED STATE (H2). The host hands in its secret
+   half: the spec carries the real seed only if seedH opens the commitment.
+   The guest calls it without one and gets `seed: null` (it builds a BLIND
+   match for the card catalog only; the host's referee deals the game). */
+function matchSpec(s, seedH){
   if(stepOf(s) !== "ready") return null;
+  let seed = null;
+  if(seedH != null){
+    if(SHA.seedCommit(seedH) !== s.seedC) return null;
+    seed = SHA.seedOf(seedH, s.seedG);
+  }
   return {heroes: s.heroes.slice(), boards: s.boards.map(b => ({gearIdx: b.gearIdx.slice(), cuts: {...b.cuts}})),
-          first: s.first, seed: s.code, build: s.builds[0]};
+          first: s.first, seed, seedC: s.seedC, seedG: s.seedG, build: s.builds[0]};
 }
 
 /* Messages, built here so the two phones cannot spell them differently.
@@ -292,6 +331,9 @@ const hello = (seat, build) => ({t: MSG.HELLO, v: LOBBY_V, seat, build});
    card cache and says nothing about the rules the cards run inside. */
 const buildId = (appVer, dataVer) => "v" + appVer + " · " + dataVer;
 const hero  = (seat, key)   => ({t: MSG.HERO,  v: LOBBY_V, seat, key});
+/* The host's half: keep `seedH` on the phone, send `msg`. */
+function seedCommitMsg(rand){ const seedH = SHA.nonce(rand); return {seedH, msg: {t: MSG.SEEDC, v: LOBBY_V, seat: 0, c: SHA.seedCommit(seedH)}}; }
+const seedAnswer = (rand) => ({t: MSG.SEEDG, v: LOBBY_V, seat: 1, g: SHA.nonce(rand)});
 /* What a throw seal commits to: the round and seat ride inside, so a seal
    from one round or seat cannot be opened as another's. */
 const throwValue = (round, seat, pick) => "throw|" + round + "|" + seat + "|" + pick;
@@ -316,10 +358,12 @@ function waitingOn(s){
     case "throw": return [s.seals[0] == null ? 0 : null, s.seals[1] == null ? 1 : null].filter(x => x != null);
     case "seat":  return s.winner == null ? [] : [s.winner];
     case "board": return [s.boards[0] == null ? 0 : null, s.boards[1] == null ? 1 : null].filter(x => x != null);
+    case "seed":  return [s.seedC == null ? 0 : 1];
     default: return [];
   }
 }
 
 return {LOBBY_V, MSG, STEPS, newLobby, stepOf, reduce, matchSpec,
-        waitingOn, hello, buildId, hero, throwSeal, throwValue, canOpen, seating, sideboard};
+        waitingOn, hello, buildId, hero, throwSeal, throwValue, canOpen, seating, sideboard,
+        seedCommitMsg, seedAnswer};
 });

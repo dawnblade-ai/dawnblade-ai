@@ -22,6 +22,8 @@ const CODE = "K7QM";
    build byte-identical messages and the permutation drills can compare. */
 const seeded = n => { let x = (n * 2654435761) >>> 0 || 1; return () => { x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0; return x / 4294967296; }; };
 const K = (seat, round, pick) => L.throwSeal(seat, round, pick, seeded(1 + seat * 7 + round * 13 + pick.length * 31));
+/* THE SEED (HIDDEN HANDS H2): the host's secret half stays outside the lobby */
+const SEED = L.seedCommitMsg(seeded(99)), SEED_H = SEED.seedH, SEEDG = L.seedAnswer(seeded(98));
 /* a whole round: both seals, then both opens */
 const TP = (round, p0, p1) => { const a = K(0, round, p0), b = K(1, round, p1); return [a.seal, b.seal, a.open, b.open]; };
 const mk = () => L.newLobby({code: CODE});
@@ -46,7 +48,8 @@ const FULL = [
   L.hero(0, "kayo"),      L.hero(1, "dorinthea"),
   ...TP(0, "paper", "rock"),
   L.seating(0, "first"),
-  L.sideboard(0, [1, 3], {2: 1}), L.sideboard(1, [0], {})
+  L.sideboard(0, [1, 3], {2: 1}), L.sideboard(1, [0], {}),
+  SEED.msg, SEEDG
 ];
 
 /* Every ordering that respects causality. A throw cannot be answered
@@ -70,7 +73,8 @@ test("ORDER CANNOT MATTER: every interleaving of a negotiation lands in one stat
     [K(0, 0, "paper").seal, K(1, 0, "rock").seal],
     [K(0, 0, "paper").open, K(1, 0, "rock").open],
     [L.seating(0, "first")],
-    [L.sideboard(0, [1, 3], {2: 1}), L.sideboard(1, [0], {})]
+    [L.sideboard(0, [1, 3], {2: 1}), L.sideboard(1, [0], {})],
+    [SEED.msg], [SEEDG]
   ];
   const want = JSON.stringify(run(FULL).s);
   let seen = 0;
@@ -110,12 +114,12 @@ test("the state is returned UNCHANGED on a refusal", () => {
 
 /* ---- the step is derived ---------------------------------------------- */
 
-test("the step walks hero -> throw -> seat -> board -> ready", () => {
+test("the step walks hero -> throw -> seat -> board -> seed -> ready", () => {
   const seen = [];
   let s = mk();
   seen.push(L.stepOf(s));
   for(const m of FULL){ s = L.reduce(s, m).state; seen.push(L.stepOf(s)); }
-  assert.deepEqual([...new Set(seen)], ["hero", "throw", "seat", "board", "ready"]);
+  assert.deepEqual([...new Set(seen)], ["hero", "throw", "seat", "board", "seed", "ready"]);
 });
 
 test("the step is a function of the slots, never a stored field", () => {
@@ -316,10 +320,20 @@ test("matchSpec is null until every slot is filled", () => {
 });
 
 test("matchSpec carries the two heroes, the two boards, the seating and the seed", () => {
-  const spec = L.matchSpec(run(FULL).s);
+  const s = run(FULL).s;
+  const spec = L.matchSpec(s, SEED_H);
   assert.deepEqual(spec.heroes, ["kayo", "dorinthea"]);
   assert.equal(spec.first, 0);
-  assert.equal(spec.seed, CODE, "the table code is the match seed");
+  const SHA = require("../engine/sha256.js");
+  assert.equal(spec.seed, SHA.seedOf(SEED_H, SEEDG.g), "the seed is H(seedH|seedG), not the table code");
+  assert.notEqual(spec.seed, CODE);
+  /* the guest, holding no seedH, gets the spec without the seed */
+  const blind = L.matchSpec(s);
+  assert.equal(blind.seed, null, "the guest cannot know the seed");
+  assert.deepEqual(blind.heroes, spec.heroes);
+  assert.equal(JSON.stringify(s).indexOf(SEED_H), -1, "the host's half is nowhere in the shared state");
+  /* a seedH that does not open the commitment builds nothing */
+  assert.equal(L.matchSpec(s, "0".repeat(32)), null);
   assert.deepEqual(spec.boards[0].gearIdx, [1, 3]);
   assert.deepEqual(spec.boards[1].cuts, {});
   assert.equal(spec.build, "sage-v11");
@@ -338,6 +352,22 @@ test("matchSpec is a COPY — mutating it cannot reach the lobby", () => {
 
 /* ---- what the UI asks --------------------------------------------------- */
 
+test("THE SEED COMMIT DRILL — the guest's half is refused before the host commits; neither half is rewritable", () => {
+  let s = run(FULL.slice(0, FULL.length - 2)).s;
+  assert.equal(L.stepOf(s), "seed");
+  /* the guest answering first would let the host choose seedH after seeing it */
+  let r = L.reduce(s, SEEDG);
+  assert.ok(r.error && /too early/.test(r.error.why), "seedG before seedC is refused");
+  /* only the host commits; only the guest answers */
+  assert.ok(L.reduce(s, {...SEED.msg, seat: 1}).error);
+  s = L.reduce(s, SEED.msg).state;
+  assert.ok(L.reduce(s, L.seedCommitMsg(seeded(5)).msg).error.dup, "the commitment is write-once");
+  assert.ok(L.reduce(s, {...SEEDG, seat: 0}).error);
+  s = L.reduce(s, SEEDG).state;
+  assert.ok(L.reduce(s, L.seedAnswer(seeded(6))).error.dup, "the answer is write-once");
+  assert.equal(L.stepOf(s), "ready");
+});
+
 test("waitingOn names the seats that have not committed at this step", () => {
   let s = mk();
   assert.deepEqual(L.waitingOn(s), [0, 1]);
@@ -354,6 +384,10 @@ test("waitingOn names the seats that have not committed at this step", () => {
   s = L.reduce(s, L.seating(0, "first")).state;
   assert.deepEqual(L.waitingOn(s), [0, 1]);
   s = run([L.sideboard(0, [], {}), L.sideboard(1, [], {})], s).s;
+  assert.deepEqual(L.waitingOn(s), [0], "the host has not committed to its half of the seed");
+  s = run([SEED.msg], s).s;
+  assert.deepEqual(L.waitingOn(s), [1]);
+  s = run([SEEDG], s).s;
   assert.deepEqual(L.waitingOn(s), [], "a ready lobby waits on nobody");
 });
 

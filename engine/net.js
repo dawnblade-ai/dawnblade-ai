@@ -75,15 +75,32 @@
    Phones background aggressively and drop channels — on mobile this path
    is normal operation, not an error case.
 
+   ---- REFEREE MODE (HIDDEN HANDS H2, `o.referee`) ----------------------
+   Lockstep gives both phones the full state: the other hand, both decks'
+   order and the seed (HIDDEN-HANDS.md §1). In referee mode the HOST runs
+   `referee.js` on the full state and is the only phone that reduces; the
+   guest holds a MIRROR of its own seat's view and applies per-seat commits
+   (an action with slot handles, a delta, the view's fingerprint). The guest
+   sends intents only, and the host refuses one that names the host's seat.
+   The canary, the journal, catch-up and snapshots are the same machinery on
+   views instead of states. The host's own screen gets ITS seat's view too.
+
+   WHEN THE HOST DROPS the game PAUSES (`pause`): the guest cannot take over,
+   because it holds no hidden card — that is the point. The host persists
+   (`persist`) after every commit, a restarted host session takes it back
+   (`o.restore`), and the guest's `join` lands it on SNAPSHOT(seatView).
+   At game end the host sends REVEAL: the seed's secret half and the full
+   log, so the guest can replay every shuffle (`referee.verifyGame`).
+
    ---- NO TIMERS -------------------------------------------------------
    Nothing here calls setInterval. Heartbeats are driven by the app
    calling `tick()`, which keeps the module testable and keeps a
    backgrounded phone from being declared dead by its own code.
    ============================================================ */
 (function(root, factory){
-  if(typeof module==="object" && module.exports) module.exports = factory(require("./wire.js"));
-  else root.DawnNet = factory(root.DawnWire);
-})(typeof self!=="undefined" ? self : this, function(W){
+  if(typeof module==="object" && module.exports) module.exports = factory(require("./wire.js"), require("./referee.js"));
+  else root.DawnNet = factory(root.DawnWire, root.DawnReferee);
+})(typeof self!=="undefined" ? self : this, function(W, R){
 
 const PROTO = W.PROTO;
 
@@ -98,6 +115,8 @@ const MSG = {
   NACK:     "nack",      /* host -> guest: refused, and why                */
   RESYNC:   "resync",    /* peer -> host:  I am at N, catch me up          */
   CATCHUP:  "catchup",   /* host -> peer:  here are the commits you missed */
+  REVEAL:   "reveal",    /* host -> guest: the game is over; the seed and the full log */
+  PART:     "part",      /* host -> guest: one piece of a message too big for one frame */
   PING:     "ping",
   PONG:     "pong"
 };
@@ -106,6 +125,13 @@ const MSG = {
    several turns of a real game and a few KB of memory; past that a
    snapshot is both simpler and smaller than the replay would be. */
 const JOURNAL = 20;
+
+/* THE LARGEST FRAME A REFEREE SESSION SENDS. test/table.test.js pins 16KB
+   as what a WebRTC data channel carries reliably (a 97KB snapshot was once
+   dropped with no error). A guest's view grows with the feed — a reconnect
+   late in a game measured ~40KB — so a bigger message is sent in PARTs of
+   this many characters and reassembled. */
+const CHUNK = 12000;
 
 function createSession(o){
   o = o || {};
@@ -124,6 +150,7 @@ function createSession(o){
   const build   = o.build || null;
 
   if(typeof reduce !== "function") throw new Error("net: a reduce(state, action, seat) is required");
+  if(o.referee) return createRefereeSession(o);
 
   let state    = o.state || null;
   let seq      = 0;
@@ -404,6 +431,268 @@ function createSession(o){
   };
 }
 
+/* ---- referee mode ------------------------------------------------------ */
+function createRefereeSession(o){
+  const seat    = o.seat != null ? o.seat : 0;
+  const host    = !!o.host;
+  const foe     = 1 - seat;
+  const legal   = o.legal || (() => null);
+  const catalog = o.catalog || null;
+  const send    = o.send || (() => {});
+  const onState = o.onState || (() => {});
+  const onEvent = o.onEvent || (() => {});
+  const build   = o.build || null;
+
+  let ref = null, mir = null;
+  if(host){
+    ref = R.createReferee({state: o.state, reduce: o.reduce, legal, check: o.check || null, catalog});
+    if(o.restore) ref.restore(decodeSaved(o.restore, catalog));
+  } else mir = R.createMirror({catalog, seat});
+
+  let view    = host ? ref.view(seat) : null;   /* what this phone shows: its own seat's view */
+  let seq     = host ? ref.seq() : 0;
+  let status  = host ? "ready" : "new";
+  let pausedWhy = null;
+  let journal = [];                 /* host: recent guest commits, for catch-up */
+  let inflight = null, queued = [], nextId = 1;
+  let revealed = null;              /* guest: the host's post-game reveal */
+  const hashes = {};                /* guest: seq -> the view fingerprint it was shown */
+  const stats = {sent: 0, recv: 0, commits: 0, desyncs: 0, resyncs: 0, nacks: 0, snapshots: 0, bytesOut: 0, rtt: null};
+  const out = m => { stats.sent++; stats.bytesOut += JSON.stringify(m).length; send(m); };
+  const evt = (t, d) => onEvent({t, seat, seq, ...(d || {})});
+  const now = () => (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+  const show = (source, action, bySeat) => onState(view, {seq, action: action || null, seat: bySeat != null ? bySeat : null, source, hash: W.hash(view)});
+
+  const snapshotMsg = () => {
+    const snap = ref.snapshot(foe);
+    stats.snapshots++;
+    const wire = W.encode(snap.view, {catalog});
+    return {t: MSG.SNAPSHOT, seq: snap.seq, wire, h: snap.h, size: W.sizeOf(wire)};
+  };
+  /* Send `m` whole, or in parts no bigger than CHUNK. */
+  let partId = 0;
+  const outBig = m => {
+    const str = JSON.stringify(m);
+    if(str.length <= CHUNK) return out(m);
+    const id = ++partId, n = Math.ceil(str.length / CHUNK);
+    for(let i = 0; i < n; i++) out({t: MSG.PART, id, i, n, s: str.slice(i * CHUNK, (i + 1) * CHUNK)});
+  };
+  let parts = null;   /* guest: the pieces of the message being reassembled */
+
+  /* the host: one funnel, local and remote intents alike */
+  function sequence(action, bySeat, id){
+    const r = ref.intent(bySeat, action);
+    if(r.error){ stats.nacks++; if(bySeat !== seat) out({t: MSG.NACK, id, reason: r.error}); evt("refused", {reason: r.error, action}); return r.error; }
+    seq = r.seq;
+    const c = {t: MSG.COMMIT, id, ...r.commits[foe]};
+    journal.push(c);
+    if(journal.length > JOURNAL) journal = journal.slice(-JOURNAL);
+    stats.commits++;
+    out(c);
+    view = ref.view(seat);
+    show(bySeat === seat ? "local" : "remote", r.commits[seat].action, bySeat);
+    return null;
+  }
+
+  function submit(action){
+    if(status === "paused") return "the game is paused — " + (pausedWhy || "waiting for the host's phone");
+    if(status !== "ready") return "session is " + status;
+    const why = legal(view, action, seat);
+    if(why){ evt("refused", {reason: why, action, local: true}); return why; }
+    if(host) return sequence(action, seat, 0);
+    if(inflight){ queued.push(action); return null; }
+    inflight = {id: nextId++, action};
+    out({t: MSG.INTENT, id: inflight.id, seat, action});
+    return null;
+  }
+  function pump(){
+    if(host || inflight || !queued.length || status !== "ready") return;
+    const a = queued.shift();
+    const why = legal(view, a, seat);
+    if(why){ evt("refused", {reason: why, action: a, local: true}); return pump(); }
+    inflight = {id: nextId++, action: a};
+    out({t: MSG.INTENT, id: inflight.id, seat, action: a});
+  }
+  function requestResync(reason, force){
+    stats.resyncs++; status = "resyncing";
+    evt("resync-requested", {reason, have: seq, force: !!force});
+    out({t: MSG.RESYNC, have: seq, seat, force: !!force});
+  }
+  /* the guest: apply one commit to the mirror; on distrust, ask for a repair */
+  function applyCommit(c){
+    const why = mir.commit(c);
+    if(why === "gap"){ requestResync("sequence gap: at " + seq + ", received " + c.seq); return false; }
+    if(why){
+      stats.desyncs++;
+      evt("desync", {reason: why, at: c.seq});
+      requestResync(why + " at seq " + c.seq, true);
+      return false;
+    }
+    seq = mir.seq(); view = mir.view(); hashes[seq] = c.h;
+    stats.commits++;
+    show(c.seat === seat ? "local" : "remote", c.action, c.seat);
+    return true;
+  }
+
+  function vet(m){
+    if(m.proto !== PROTO)     return "protocol mismatch: " + m.proto + " vs " + PROTO;
+    if(m.wireV !== W.WIRE_V)  return "wire version mismatch: v" + m.wireV + " vs v" + W.WIRE_V;
+    if(build && m.build && m.build !== build)
+      return "build mismatch: " + m.build + " vs " + build + " — check APP_VER / DATA_VER on both clients";
+    const mine = catalog ? W.catalogHash(catalog) : null;
+    if(mine && m.catalog && mine !== m.catalog) return "card data mismatch — one client is on a stale DATA_VER cache";
+    if(m.seat === seat) return "seat " + seat + " is taken";
+    return null;
+  }
+
+  function receive(m){
+    if(!m || typeof m !== "object") return;
+    stats.recv++;
+    switch(m.t){
+      case MSG.HELLO: {
+        if(!host) return;
+        const why = vet(m);
+        if(why){ out({t: MSG.WELCOME, accepted: false, reason: why}); evt("refused-peer", {reason: why}); return; }
+        out({t: MSG.WELCOME, accepted: true, seat: foe, proto: PROTO, wireV: W.WIRE_V, seq, referee: true});
+        outBig(snapshotMsg());
+        evt("peer-joined", {});
+        if(ref.over() && revealedOut) outBig(revealedOut);
+        return;
+      }
+      case MSG.WELCOME: {
+        if(host) return;
+        if(!m.accepted){ status = "refused"; evt("refused-by-host", {reason: m.reason}); return; }
+        status = "handshaking";
+        return;
+      }
+      case MSG.SNAPSHOT: {
+        if(host) return;
+        try {
+          const v = W.decode(m.wire, {catalog});
+          if(mir.load({seq: m.seq, view: v, h: m.h})) throw new Error("the snapshot does not match its fingerprint");
+          view = mir.view(); seq = m.seq; hashes[seq] = m.h;
+          status = "ready"; pausedWhy = null; inflight = null;
+          evt("snapshot-applied", {size: m.size});
+          show("snapshot");
+          pump();
+        } catch(e){ status = "refused"; evt("snapshot-failed", {reason: String(e.message || e)}); }
+        return;
+      }
+      case MSG.INTENT: {
+        if(!host || status !== "ready") return;
+        /* THE GUEST ACTS FOR ITS OWN SEAT ONLY. In lockstep both phones ran
+           the reducer and a forged seat desynced; here the host's word is
+           the game, so it checks. */
+        if(m.seat !== foe){ stats.nacks++; out({t: MSG.NACK, id: m.id, reason: "you sit in seat " + foe}); return; }
+        sequence(m.action, foe, m.id);
+        return;
+      }
+      case MSG.COMMIT: {
+        if(host) return;
+        if(m.id && inflight && inflight.id === m.id) inflight = null;
+        if(status === "resyncing") return;
+        if(m.seq <= seq) return;
+        if(applyCommit(m)) pump();
+        return;
+      }
+      case MSG.NACK: {
+        stats.nacks++;
+        if(inflight && inflight.id === m.id) inflight = null;
+        evt("nacked", {reason: m.reason});
+        pump();
+        return;
+      }
+      case MSG.RESYNC: {
+        if(!host) return;
+        const from = m.have | 0;
+        const have = journal.length ? journal[0].seq : seq + 1;
+        if(m.force){ outBig(snapshotMsg()); evt("snapshot-sent", {from, forced: true}); return; }
+        if(from >= have - 1 && from < seq){
+          outBig({t: MSG.CATCHUP, from, commits: journal.filter(c => c.seq > from)});
+          evt("catchup-sent", {from, count: seq - from});
+        } else if(from !== seq){ outBig(snapshotMsg()); evt("snapshot-sent", {from}); }
+        return;
+      }
+      case MSG.CATCHUP: {
+        if(host) return;
+        status = "ready";
+        for(const c of m.commits || []){
+          if(c.seq <= seq) continue;
+          if(!applyCommit(c)) return;
+        }
+        evt("catchup-applied", {to: seq});
+        pump();
+        return;
+      }
+      case MSG.PART: {
+        if(host) return;
+        if(!parts || parts.id !== m.id) parts = {id: m.id, n: m.n, got: 0, s: new Array(m.n)};
+        if(parts.s[m.i] == null){ parts.s[m.i] = String(m.s); parts.got++; }
+        if(parts.got === parts.n){
+          const whole = parts.s.join(""); parts = null;
+          let msg; try { msg = JSON.parse(whole); } catch(_){ requestResync("a message arrived broken", true); return; }
+          stats.recv--;
+          receive(msg);
+        }
+        return;
+      }
+      case MSG.REVEAL: {
+        if(host) return;
+        revealed = {seedH: m.seedH, log: m.log || [], over: m.over || null, seq: m.seq};
+        evt("revealed", {over: m.over});
+        return;
+      }
+      case MSG.PING:  out({t: MSG.PONG, t0: m.t0}); return;
+      case MSG.PONG:  if(m.t0 != null) stats.rtt = now() - m.t0; return;
+    }
+  }
+
+  let revealedOut = null;
+  return {
+    join(){
+      if(host) return;
+      status = "handshaking";
+      out({t: MSG.HELLO, proto: PROTO, wireV: W.WIRE_V, seat, build, catalog: catalog ? W.catalogHash(catalog) : null});
+    },
+    submit, receive,
+    tick(){ if(status === "ready") out({t: MSG.PING, t0: now()}); },
+    resync(){ requestResync("requested by the app"); },
+    /* the guest's channel to the host closed: nothing it holds can carry
+       the game on, so it waits. `join` on the new channel resumes. */
+    pause(why){ if(host) return; status = "paused"; pausedWhy = why || null; inflight = null; queued = []; evt("paused", {reason: why}); },
+    /* the host, once the game is over: the seed's secret half and the log */
+    reveal(extra){
+      if(!host || !ref.over()) return "the game is not over";
+      revealedOut = {t: MSG.REVEAL, seq, log: ref.log(), over: JSON.parse(JSON.stringify(ref.state().over)), ...(extra || {})};
+      outBig(revealedOut);
+      return null;
+    },
+    revealed: () => revealed,
+    hashes: () => ({...hashes}),
+    state:    () => view,
+    seq:      () => seq,
+    seat:     () => seat,
+    isHost:   () => host,
+    isReferee: () => true,
+    status:   () => status,
+    hash:     () => (view ? W.hash(view) : null),
+    snapshot: () => W.encode(view, {catalog}),
+    stats:    () => ({...stats}),
+    /* host only: what to keep on the phone so a reload resumes the game */
+    persist:  () => host ? encodeSaved(ref.persist(), catalog) : null,
+    log:      () => host ? ref.log() : null,
+    full:     () => host ? ref.state() : null,
+    violations: () => host ? ref.violations() : []
+  };
+}
+/* The host's saved game: the full state on the wire format (catalog-interned)
+   plus the sequence and log. */
+const encodeSaved = (p, catalog) => ({v: W.WIRE_V, seq: p.seq, log: p.log, wire: W.encode(p.state, {catalog})});
+const decodeSaved = (s, catalog) => {
+  if(!s || s.v !== W.WIRE_V) throw new Error("net: a saved game from another wire version cannot resume");
+  return {seq: s.seq, log: s.log || [], state: W.decode(s.wire, {catalog})};
+};
+
 /* ---- transports ------------------------------------------------------ */
 
 /* Two ends of a wire, in memory. Everything crossing it is round-tripped
@@ -461,5 +750,5 @@ function wsAdapter(socket){
 
    — and it belongs in the page that loaded the library, not in here. */
 
-return {PROTO, MSG, JOURNAL, createSession, loopback, wsAdapter};
+return {PROTO, MSG, JOURNAL, CHUNK, createSession, loopback, wsAdapter, encodeSaved, decodeSaved};
 });

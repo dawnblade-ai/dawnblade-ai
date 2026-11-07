@@ -77,9 +77,9 @@
    test/referee.test.js drills it over an in-memory JSON loopback.
    ============================================================ */
 (function(root, factory){
-  if(typeof module==="object" && module.exports) module.exports = factory(require("./view.js"), require("./wire.js"));
-  else root.DawnReferee = factory(root.DawnView, root.DawnWire);
-})(typeof self!=="undefined" ? self : this, function(V, W){
+  if(typeof module==="object" && module.exports) module.exports = factory(require("./view.js"), require("./wire.js"), require("./sha256.js"));
+  else root.DawnReferee = factory(root.DawnView, root.DawnWire, root.DawnSHA);
+})(typeof self!=="undefined" ? self : this, function(V, W, SHA){
 
 const LOG_KEEP = 40;    /* judge.js's `say` keeps this many log lines */
 
@@ -426,6 +426,20 @@ function replay(o){
   return {ok: true, over: g.over || null, state: g};
 }
 
-return {seatView, seatFeed, publicStill, scrubUids, UID_KEY, redactAction, slotMap, delta, applyDelta, pack, unpack, same,
+/* VERIFY THIS GAME, from the host's reveal. o: {seedC, seedG, seedH, start:
+   seed -> opening state (build.buildMatch + judge.newMatch on the lobby's
+   spec), reduce, seat, log, hashes, over}. Checks the host's half opens its
+   commitment, derives the seed both halves fix, and replays. */
+function verifyGame(o){
+  if(typeof o.seedH !== "string" || SHA.seedCommit(o.seedH) !== o.seedC)
+    return {ok: false, at: null, why: "the host's revealed seed does not open the commitment it made before the game"};
+  const seed = SHA.seedOf(o.seedH, o.seedG);
+  let start;
+  try { start = o.start(seed); } catch(e){ return {ok: false, at: null, why: "could not rebuild the opening: " + (e.message || e)}; }
+  const r = replay({start, log: o.log, reduce: o.reduce, seat: o.seat, hashes: o.hashes, over: o.over});
+  return {...r, seed};
+}
+
+return {verifyGame, seatView, seatFeed, publicStill, scrubUids, UID_KEY, redactAction, slotMap, delta, applyDelta, pack, unpack, same,
         viewCensus, createReferee, createMirror, replay, LOG_KEEP};
 });
