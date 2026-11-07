@@ -264,6 +264,11 @@ if(require.main === module){
       if(!(await has(".sheet")) && !(await click(page.locator(".hcard").first(), "pick a hero"))) return false;
       if(!(await click(btn(/^Battle$/), "battle"))) return false;
       await page.waitForSelector(".rps");
+      /* THE COIN IS PERMANENT AGAINST THE AI (v6.01, RULING user 2026-11-07):
+         the screen says so, and no longer calls itself a testing stopgap. */
+      { const sub = await page.locator(".rps .rsub").innerText();
+        row(/Against the AI a coin decides it/.test(sub) && /ranked ladder/.test(sub) && !/testing|launch/i.test(sub),
+          prefix + ": the coin screen says the coin is how the AI game is seated", sub.replace(/\s+/g, " ")); }
       await screen(prefix + ": the coin");
       await page.waitForSelector(".rseatpick, .actbar", { timeout: 8000 });
       if(await has(".rseatpick")) await click(page.locator(".rseatpick button").nth(seat), seat ? "it goes first" : "I go first");

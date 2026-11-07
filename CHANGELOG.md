@@ -1,3 +1,14 @@
+## v6.01 — The coin screen
+
+RULING (user, 2026-11-07): "Keep the coin flip for now I like the speed of it. Let's plan for the ranked Elo ladder
+we will use rock paper scissors but for vs ai use coin flip."
+- **The coin screen** no longer reads "Coin for speed while testing — the throw returns for launch". Against the AI
+  the coin is the permanent way to decide who goes first: "Against the AI a coin decides it. Rock-paper-scissors is
+  saved for the ranked ladder." The winner still chooses the seating.
+- **Unchanged:** two-phone casual games keep their rock-paper-scissors throw; `engine/rps.js` stays drilled for the
+  ranked ladder (ROADMAP-MULTIPLAYER.md). The "HOW SEATING IS DECIDED" comment cites the new ruling.
+- `tools/page.js` asserts the new text on the coin screen at phone size.
+
 ## v6.00 — A target is required
 
 RULING (user, 2026-11-07): asked whether Preserve Tradition can be played with no legal target — "You're right -

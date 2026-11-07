@@ -898,16 +898,19 @@ img{display:block;max-width:100%}
    database + typographic fallbacks. Not affiliated with LSS.
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
-window.APP_VER = "6.00"; /* v6.00 - a card or ability with a printed target cannot be played when no legal target exists. See CHANGELOG.md. */
-/* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
-   the rock-paper-scissors throw is fine at a table and slow when you are
-   starting your ninth Kayo game of the afternoon, and its ties replay, so a
-   run of them can cost half a dozen taps before a game begins.
+window.APP_VER = "6.01"; /* v6.01 - against the AI the coin flip is the permanent way to decide who goes first. See CHANGELOG.md. */
+/* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
+   now I like the speed of it. Let's plan for the ranked Elo ladder we will
+   use rock paper scissors but for vs ai use coin flip." So against the AI the
+   COIN IS PERMANENT — no longer the testing affordance the 2026-08-08 ruling
+   made it (the throw is slow when you are starting your ninth Kayo game of
+   the afternoon, and its ties replay). Rock-paper-scissors is reserved for
+   the future ranked ladder (ROADMAP-MULTIPLAYER.md); two-phone casual games
+   keep the throw they already use (`TableThrow`, `engine/lobby.js`).
 
    `engine/rps.js` IS UNTOUCHED AND STILL DRILLED, and so is every line of
-   the throw UI below — this is a flag, not a deletion, because it is going
-   back in for launch. Set it to "rps" and the throw returns exactly as it
-   was.
+   the throw UI below — set this to "rps" and the throw returns here exactly
+   as it was.
 
    WHAT DOES NOT CHANGE: the flip is drawn from the SAME seeded sub-stream
    the throw used, so a match is still reproducible from its seed; and the
@@ -6819,7 +6822,7 @@ function Pregame({h, seed, onSeated, onBack}){
      and ties replay by drawing again rather than by re-rendering. */
   const rps = uR(rngMake(rngSeedFrom(String(seed==null?0:seed) + ":rps")));
 
-  /* THE COIN (v2.57) — a testing affordance, see window.THROW_MODE. It draws
+  /* THE COIN (v2.57; permanent against the AI, v6.01) — see window.THROW_MODE. It draws
      from the same seeded sub-stream the throw uses, so a match is still
      reproducible from its seed, and it cannot tie, which is the whole point.
      The winner still CHOOSES the seating below: that is the rule. */
@@ -6886,7 +6889,7 @@ function Pregame({h, seed, onSeated, onBack}){
     <div className="rps">
       <div className="rtitle">{coinMode ? "The Coin" : "The Throw"}</div>
       <p className="rsub">Winner decides who takes the first turn.<br/>Going first buys initiative; going second keeps a card.
-        {coinMode && <><br/><span style={{opacity:.65}}>Coin for speed while testing — the throw returns for launch.</span></>}</p>
+        {coinMode && <><br/><span style={{opacity:.65}}>Against the AI a coin decides it. Rock-paper-scissors is saved for the ranked ladder.</span></>}</p>
       <div className="rtable">
         <div className={"rseat"+(winner===0?" win":"")}>
           <span className="rwho">You · {h.n}</span>
