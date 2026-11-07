@@ -87,9 +87,11 @@ test("crindex — the verdict counts are pinned", () => {
   /* 81 -> 82 and 71 -> 72 guarded AT v6.00: a target is required — the
      legal-play check, cited where it is built and drilled (effects.js,
      test/targetreq.test.js). */
-  assert.equal(rs.length, 82, "the number of distinct CR rules this project cites moved");
+  /* 82 -> 85 and 72 -> 75 guarded AT HIDDEN HANDS (research): CR 3.0.4a, 3.0.4b,
+     3.0.4c — private and public zones (engine/view.js, test/view.test.js). */
+  assert.equal(rs.length, 85, "the number of distinct CR rules this project cites moved");
   /* 50 -> 51 guarded and 6 -> 5 drill-only AT v4.66: CR 7.1.2, built. */
-  assert.equal(by(rs, "guarded").length,   72, "guarded count moved");
+  assert.equal(by(rs, "guarded").length,   75, "guarded count moved");
   assert.equal(by(rs, "UNGUARDED").length,  3, "UNGUARDED count moved");
   assert.equal(by(rs, "drill-only").length, 5, "drill-only count moved");
   assert.equal(by(rs, "prose").length,      2, "prose count moved");
