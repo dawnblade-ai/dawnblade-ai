@@ -93,3 +93,25 @@ from the sandbox on 2026-09-26, eight days after the street date: still 15
 Silver Age sets, 0 SAT and 0 SBW printings. `test/drift.test.js` goes red
 by itself the day they arrive. No desktop work is needed; this is here so
 nobody goes looking.
+
+---
+
+## Two real phones over a real connection — never tested yet
+
+Every two-phone check so far (v6.03–v6.07, Hidden hands H2) ran over a
+stubbed network: two browser pages in one sandbox. Nobody has played the
+two-phone table on two real phones over real PeerJS, and the sandbox cannot.
+
+**What to do (about 15 minutes, two phones, any Wi-Fi or mobile data):**
+1. On both phones open https://dawnblade-ai.github.io/dawnblade-ai/ and
+   check the version in the corner matches.
+2. Phone A: find an opponent, host. Phone B: join with A's code.
+3. Play the throw, pick heroes, and play at least five turns.
+4. Mid-game, lock phone B for a minute, unlock it: does it pause and
+   **Rejoin**? Reload phone A's page: does **Resume** bring the table back?
+5. Finish the game (concede is fine) and press **Verify this game** on
+   phone B: it should say Verified.
+
+**Report back:** which step failed (if any), the phones and browsers, and
+whether it was Wi-Fi or mobile data. A failure here is a top-priority
+S-item. The JUDGE!! button files a bug report from either phone.
