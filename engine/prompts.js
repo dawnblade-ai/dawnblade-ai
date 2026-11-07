@@ -1268,6 +1268,9 @@ function applyPrompt(game, prompt){
        seat that draws through every card above it. */
     const _flip = P.deckTopTo(game) === "deckBottom";
     const _rest = (s.deck||[]).slice(prompt.cards.length);
+    /* A PRIVATE REORDER ENDS A KNOWN TOP (engine/view.js): the opponent saw
+       the card on top, not where its owner put it back. */
+    for(const arr of [keep, bottom]) for(let j = 0; j < arr.length; j++) arr[j] = GM.unmark(arr[j], "_kt");
     s.deck = _flip ? [..._rest, ...keep, ...bottom]
       : prompt.keepTop
       ? [...keep, ...bottom, ..._rest]

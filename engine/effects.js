@@ -2687,6 +2687,9 @@ function makeEffects(ctx){
       }
       /* the dummy holds a hand now, so showing it is real information */
       else if(k==="foeReveal"){
+        /* both players saw the hand: every card in it is KNOWN until the hand
+           changes in private (judge.js clearKnown, engine/view.js) */
+        if(foe(n).hand.length) foeMut(n).hand = foe(n).hand.map(c => G.markKnown(c, "_kh"));
         n = L(n, foe(n).hand.length
           ? `${sv(foe(n), "show")} a hand: ${foe(n).hand.map(c=>c.name).join(", ")}.`
           : `${sp(foe(n))} hand is empty — nothing to show.`);
@@ -2866,6 +2869,8 @@ function makeEffects(ctx){
           return;
         }
         n.revealed = top;
+        /* both players saw it, and it stays on top: a KNOWN TOP (engine/view.js) */
+        actMut(n).deck = G.markTop(act(n).deck);
         n = L(n, `${srcName} reveals ${top.name} (pitch ${top.pitch}) off the top — it stays there.`);
       }
       else if(k==="revPitch"){
@@ -4064,6 +4069,8 @@ function makeEffects(ctx){
       const pick  = (offer && n._fuseUid != null && offer.uids.indexOf(n._fuseUid) >= 0)
         ? act(n).hand.find(c2 => c2 && c2.uid === n._fuseUid) : null;
       fused = !!pick;
+      /* the revealed card stays in the hand, KNOWN to both (engine/view.js) */
+      if(pick) actMut(n).hand = act(n).hand.map(c2 => c2 && c2.uid === pick.uid ? G.markKnown(c2, "_kh") : c2);
       /* THE FEED IS THE REVEAL. A log line is read by BOTH seats (v2.83),
          so naming the card here is what the printed cost actually does —
          and the seat is NAMED rather than second-personed, because the
@@ -6777,9 +6784,12 @@ function makeEffects(ctx){
       if(((foe(n)[from])||[]).some(x => x.uid === got.uid)){
         const fs = foeMut(n);
         fs[from] = (fs[from]||[]).filter(x => x.uid !== got.uid);
-        if(to === "deckTop")         fs.deck = [got, ...(fs.deck||[])];
-        else if(to === "deckBottom") fs.deck = [...(fs.deck||[]), got];
-        else                         fs[to]  = [got, ...(fs[to]||[])];
+        /* Both players saw WHICH card moved (the chooser named it from a
+           revealed zone): put on top it is a KNOWN TOP, on the bottom a
+           KNOWN BOTTOM (engine/view.js); anywhere else it carries no mark. */
+        if(to === "deckTop")         fs.deck = [G.markKnown(got, "_kt"), ...(fs.deck||[])];
+        else if(to === "deckBottom") fs.deck = [...(fs.deck||[]), G.markKnown(got, "_kb")];
+        else                         fs[to]  = [G.unknown(got), ...(fs[to]||[])];
         /* NAME THE SEAT (v2.83). This line goes to the shared feed, which
            both seats read, so "their deck" is only right from one chair. */
         const where = to === "deckTop"    ? `on top of ${sp(foe(n))} deck`
@@ -6935,6 +6945,9 @@ function makeEffects(ctx){
         /* A TIE IS NO WINNER — CONFIRMED (user, 2026-08-19), so it is
            settled rather than assumed. */
         + (tie ? "a tie, no winner." : win ? `${sv(act(n), "win")}.` : `${sv(foe(n), "win")}.`));
+      /* both tops were revealed and stay on top: KNOWN TOPS (engine/view.js) */
+      if(myTop && act(n).deck[0] === myTop) actMut(n).deck = G.markTop(act(n).deck);
+      if(foeTop && foe(n).deck[0] === foeTop) foeMut(n).deck = G.markTop(foe(n).deck);
       if(tie) continue;
       /* THE TOKEN GOES TO THE WINNER, whichever side that is — the card
          says "the winner", not "you". */

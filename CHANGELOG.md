@@ -1,3 +1,29 @@
+## v6.07 — Hidden hands H2.4: what both players saw stays seen
+
+The three known slots H1 left open (HIDDEN-HANDS.md §4.1). Until now a card both players had seen went back
+into hiding the moment it sat in a private zone; it now stays face up in both views for as long as it is truly
+known, and stops the moment it is not.
+- **Two more marks beside `_kb`** (game.js `KNOWN_MARKS`): `_kt`, a known TOP (a public reveal of the top, both
+  tops after a clash, Brain Freeze's hand-to-top) and `_kh`, known in HAND (a hand reveal, a fusion reveal, a
+  known top card drawn). Brain Freeze's card put on the bottom under Topsy Turvy is a known bottom (`_kb`).
+- **Each goes stale, and `judge.clearKnown` (now run against the state before the action) drops it:** a private
+  reorder (opt) ends a known top at once; a card put above it in private breaks the block; a known top DRAWN
+  becomes known in hand, but only when the deck simply lost its top cards (a search that took it, then a
+  shuffle, does not count: the opponent did not see which card it took). Any card of a hand going somewhere
+  hidden (a face-down arsenal, the deck, intimidate's face-down banish) without a public mark ends every `_kh` in
+  that hand; a `_kh` card outside a hand loses its mark.
+- **`view.js`** shows the known top block and known hand cards; the own deck is "known top, then composition".
+  Sharp's deal is unchanged (402 decisions compared against v6.06 in Kayo, Iyslander and Boltyn games, 0 differ).
+- **Measured in self-play** (the 15 loopback games): 818 positions with a known top, 536 with a known hand card,
+  every one shown to the opponent; the loopback leak, scramble and view-equality drills still hold.
+- **WIRE_V 35 -> 36** (the two marks).
+- **`tools/page.js` deals the same AI table every run** (`battleSeed` / `window.__dawnSeedFix`); a player's game
+  still deals from the clock.
+- **Drills:** `test/known.test.js` (known top shown, a look is not, drawn becomes known in hand, a search is not,
+  opt and a card above end it, hand reveal kept through a public change and dropped by a private one or
+  intimidate, Brain Freeze's top plus the rest of the hand, fusion), each with its sabotage; the three engine
+  rules were sabotaged too (each caught). The wire scramble keeps the public known top in place.
+
 ## v6.06 — Hidden hands H2 (3 of 3): verify, resume, rejoin, and the honest line
 
 H2 of HIDDEN-HANDS.md §6, third increment: what a player sees of the host holding the deck.

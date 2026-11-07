@@ -319,7 +319,9 @@
    view-only `unseen`/`unseenGear` lists interned, VIEW_ZONES) and COMMIT is
    per seat — {seq, seat, action (slot handles), d (a delta), h (the view's
    fingerprint)}; REVEAL is new. A v34 guest would run a reducer on a view. */
-const WIRE_V = 35;
+/* 35 -> 36 AT HIDDEN HANDS H2.4: two more known-slot instance marks, `_kt`
+   (a known top) and `_kh` (known in hand), beside `_kb` (game.js KNOWN_MARKS). */
+const WIRE_V = 36;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

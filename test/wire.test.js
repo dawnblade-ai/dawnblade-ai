@@ -373,7 +373,8 @@ test("WIRE_V moves when the payload shape moves, and only then", () => {
      seat's VIEW, COMMIT is per seat (slot-handled action, delta, view hash),
      REVEAL and PART are new, and the view-only lists ride as VIEW_ZONES
      (outside the four ledger lists, so the digest holds). */
-  assert.equal(W.WIRE_V, 35,
+  /* 35 -> 36 AT HIDDEN HANDS H2.4: the `_kt` / `_kh` known-slot marks — instance keys, so the digest holds. */
+  assert.equal(W.WIRE_V, 36,
     "WIRE_V moved — if the payload shape moved with it, update the digest below " +
     "in the same edit and say what changed in the header");
   assert.equal(h, 3759651216,

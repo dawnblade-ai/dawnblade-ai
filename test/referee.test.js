@@ -239,9 +239,11 @@ function scramble(g){
   f.hand = f.hand.map(put); f.deck = f.deck.map(put);
   if(f.arsenal && !f.arsenal._faceUp) f.arsenal = put(f.arsenal);
   sides[0] = f;
-  /* the guest's own deck order: reversed, except the known bottom block (`_kb`), whose slots are public */
+  /* the guest's own deck order: reversed, except the known bottom block (`_kb`)
+     and the known top block (`_kt`), whose slots are public */
   const d = sides[GUEST].deck, kb = (() => { let k = 0; for(let i = d.length - 1; i >= 0 && d[i]._kb; i--) k++; return k; })();
-  const me = {...sides[GUEST], deck: d.slice(0, d.length - kb).reverse().concat(d.slice(d.length - kb))};
+  const kt = (() => { let k = 0; while(k < d.length - kb && d[k]._kt) k++; return k; })();
+  const me = {...sides[GUEST], deck: d.slice(0, kt).concat(d.slice(kt, d.length - kb).reverse(), d.slice(d.length - kb))};
   sides[GUEST] = me;
   return {...g, sides};
 }

@@ -441,15 +441,27 @@ function pipParts(line){
 }
 const pipWords = line => pipParts(line).map(x => x[0]).join("");
 
-/* A card without its KNOWN-SLOT mark (`_kb`: both players saw it go to the
-   bottom of the deck — judge.js endPhaseAfterArsenal, engine/view.js). The
-   same card when it carries none. */
-const unknown = c => (c && c._kb) ? (({_kb, ...rest}) => rest)(c) : c;
+/* KNOWN-SLOT MARKS (HIDDEN HANDS, engine/view.js): what BOTH players saw of a
+   card sitting in a private zone. `_kb` it went to the bottom of the deck
+   (judge.js endPhaseAfterArsenal); `_kt` it is on top of the deck (a public
+   reveal of the top, a clash, Brain Freeze's hand-to-top); `_kh` it is in its
+   owner's hand (a hand reveal, a fusion reveal, a known top card drawn).
+   judge.js `clearKnown` drops a mark the moment it goes stale. */
+const KNOWN_MARKS = ["_kb", "_kt", "_kh"];
+/* The card with no known-slot mark at all (a shuffle ends every one). */
+const unknown = c => (c && (c._kb || c._kt || c._kh)) ? (({_kb, _kt, _kh, ...rest}) => rest)(c) : c;
+/* The card without ONE mark. */
+const unmark = (c, k) => (c && c[k]) ? (({[k]: _drop, ...rest}) => rest)(c) : c;
+/* The card with ONE mark and none of the others (a card is known in one place). */
+const markKnown = (c, k) => c ? {...unknown(c), [k]: true} : c;
+/* The deck with its top card marked a known top. No card moves, so it is not
+   a put on top (test/topsy.test.js's census of deck-top writers). */
+const markTop = deck => (deck || []).map((c, j) => j === 0 ? markKnown(c, "_kt") : c);
 
 return {parseDeck, gearDef, gearBlockApply, slotOf, HANDS, handsUsed, handsFree,
   isSecondPerson, thirdPerson, svName, sv, spName, sp, typeAbbr, pipParts, pipWords,
         ARMOR_SLOTS, exposedZones, hasExposedZone,
         isAlly, allyBaseLife, allyLife, isAttackable,
         attackTargets, targetCanBeDefended, damageAlly, resetAllyLife,
-        isRunechantEntry, addRunechants, popRunechants, unknown};
+        isRunechantEntry, addRunechants, popRunechants, unknown, unmark, markKnown, markTop, KNOWN_MARKS};
 });

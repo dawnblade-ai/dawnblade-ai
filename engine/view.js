@@ -36,10 +36,11 @@
                          O.unseenGear (the loadout minus its face-up pieces):
                          equipment is never dealt into a hand or a deck.
      game.rng            a constant: the seed IS every future draw.
-   KNOWN SLOTS stay face-up to both: the bottom block put there from the pitch
-   zone at the end phase (`_kb`, judge.js endPhaseAfterArsenal). Not yet: a
-   revealed top card that stayed there, a card a reveal showed in a hand, and
-   Brain Freeze's hand-to-top (HIDDEN-HANDS.md §4.1).
+   KNOWN SLOTS stay face-up to both (game.js KNOWN_MARKS; judge.clearKnown
+   drops a stale one): the bottom block put there from the pitch zone at the
+   end phase (`_kb`); the top block a public reveal, a clash or Brain Freeze's
+   hand-to-top left there (`_kt`); a card a reveal showed in a hand, or a known
+   top card drawn (`_kh`), until the hand changes in private.
 
    A placeholder has no text and a POSITIONAL uid (`?<owner><zone><i>`); in a
    carrier field it is `?<owner>x`. A real uid is the card's index in the PUBLIC
@@ -136,6 +137,8 @@ const revealFor = (g, seat) => {
   const r = g.revealed;
   return r && (r._to == null || r._to === seat) ? r : null;
 };
+/* The leading block of cards both players saw on top (never reaching into the known bottom). */
+const knownTop = (deck, kb) => { let k = 0; while(k < deck.length - (kb || 0) && deck[k] && deck[k]._kt) k++; return k; };
 /* The trailing block of cards put on the bottom from the pitch zone. */
 const knownBottom = deck => { let k = 0; for(let i = deck.length - 1; i >= 0 && deck[i] && deck[i]._kb; i--) k++; return k; };
 
@@ -146,15 +149,18 @@ function slots(g, seat){
   const pub = publicUids(g, seat);
   return g.sides.map((sd, owner) => {
     const deck = sd.deck || [], kb = knownBottom(deck);
-    /* A KNOWN TOP is not modelled: the table never clears `revealed`, so a
-       stale reveal cannot tell "still on top" from "drawn, shuffled back and
-       on top by chance", and a private reorder (opt) moves it unseen. */
-    const top = 0;
+    /* A KNOWN TOP (`_kt`, game.js KNOWN_MARKS): the unbroken block at the very
+       top that both players saw there. `revealed` cannot say it (the table
+       never clears it); the mark can, because judge.clearKnown drops it the
+       moment it goes stale and a private reorder (opt) drops it at once. */
+    const top = knownTop(deck, kb);
     const out = {deck: [], kb, top, hand: [], arsenal: [], intimidated: [], gear: [], soul: []};
     for(let i = top; i < deck.length - kb; i++) if(!(deck[i] && pub.has(String(deck[i].uid)))) out.deck.push(i);
     const foe = owner !== seat;
     if(foe){
-      (sd.hand || []).forEach((c, i) => { if(c && !pub.has(String(c.uid))) out.hand.push(i); });
+      /* a card both players saw in this hand (`_kh`: a hand reveal, a fusion
+         reveal, a known top drawn) stays face up until the hand changes in private */
+      (sd.hand || []).forEach((c, i) => { if(c && !c._kh && !pub.has(String(c.uid))) out.hand.push(i); });
       if(sd.arsenal && !sd.arsenal._faceUp && !pub.has(String(sd.arsenal.uid))) out.arsenal.push(0);
       (sd.gear || []).forEach((c, i) => { if(c && c._faceDown && !pub.has(String(c.uid))) out.gear.push(i); });
       if(!SWITCHES.SOUL_PUBLIC) (sd.soul || []).forEach((c, i) => { if(c && !pub.has(String(c.uid))) out.soul.push(i); });

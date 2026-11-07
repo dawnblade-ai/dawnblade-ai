@@ -210,10 +210,13 @@ an authority and the follower stops running the reducer on full state.
 built and drilled in `test/view.test.js`: the census is `CARRIERS` in
 view.js; the own deck is its composition (`_unordered`), the foe gets
 `unseen`; the known slot built is the pitch-zone bottom block (`_kb`);
-`laMask` is `determinize(view)`. Known slots NOT built: a revealed top card
-that stayed on top (the table never clears `revealed`, so a stale reveal cannot
-be told from a live one, and opt reorders unseen; it needs its own mark), a
-card a reveal showed in a hand, and Brain Freeze's hand-to-top. The three §7
+`laMask` is `determinize(view)`. **H2.4 built the rest** as two more marks
+(game.js `KNOWN_MARKS`, cleared when stale by `judge.clearKnown`, drilled in
+`test/known.test.js`): `_kt`, a known top (a public reveal of the top, a clash,
+Brain Freeze's hand-to-top; a private reorder or a card put above it ends it;
+drawn, it becomes known in hand), and `_kh`, known in hand (a hand reveal, a
+fusion reveal, a known top drawn; any card of that hand going somewhere hidden
+ends it for the whole hand). The three §7
 questions are switches in view.js (`SWITCHES`), set by the user's ruling of
 2026-11-07 (§7).
 The text below is the spike's design, kept as written.

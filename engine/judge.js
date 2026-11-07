@@ -3086,27 +3086,96 @@ function reduce(g, a, seat){
   }
   /* THE END PHASE WAS HOLDING FOR THAT SHEET (v5.71) — see `doEndTurn`. */
   if(n.endHold != null && !n.prompt && !n.over) n = resumeEnd(n);
-  return {state: stalemateCheck(clearKnown(n)), error: null};
+  return {state: stalemateCheck(clearKnown(n, g)), error: null};
 }
 
-/* A KNOWN-SLOT MARK (`_kb`, endPhaseAfterArsenal) means "both players saw
-   this card go to the bottom", and engine/view.js trusts it only for the
-   unbroken block at the very bottom. It goes stale two ways, and is cleared
-   both: the card is drawn or put in the arsenal (put back on the bottom from
-   there, it would show a card the opponent never saw), or something was put
-   UNDER the block in private (the block no longer sits at the bottom; the
-   view would read the wrong cards as known if those left again). Allocates
-   only when a stale mark is found. */
-function clearKnown(g){
+/* KNOWN-SLOT MARKS (game.js KNOWN_MARKS; engine/view.js trusts them) say
+   what BOTH players saw of a card in a private zone, and each goes stale.
+   Run once per action on the state the action produced (`g`), against the
+   state before it (`prev`). Allocates only when a stale mark is found.
+
+   `_kb` (a known BOTTOM: the pitch zone put there at the end phase) holds
+   only for the unbroken block at the very bottom. It is cleared when the
+   card is drawn or put in the arsenal (put back on the bottom from there it
+   would show a card the opponent never saw), or when something was put
+   UNDER the block in private (the view would read the wrong cards as known
+   if those left again).
+
+   `_kt` (a known TOP: a public reveal of the top, a clash, Brain Freeze's
+   hand-to-top) holds only for the unbroken block at the very top. A card
+   put above it in private breaks the block (cleared below the break); a
+   private reorder clears it at the reorder (prompts.js, opt). DRAWN, it
+   becomes `_kh`: a draw takes the top, and both players saw the top.
+
+   `_kh` (known in HAND: a hand reveal, a fusion reveal, a known top drawn)
+   holds while the hand changes only in public. When ANY card of a hand goes
+   to a hidden place (the deck, a face-down arsenal, intimidate's face-down
+   banish) without a public mark of its own, the opponent no longer knows
+   which cards remain, so every `_kh` in that hand is cleared; and a `_kh`
+   card anywhere but a hand loses the mark. */
+function clearKnown(g, prev){
   let out = g;
   (g.sides || []).forEach((sd, i) => {
-    const hasH = (sd.hand || []).some(c => c && c._kb), hasA = !!(sd.arsenal && sd.arsenal._kb);
-    const deck = sd.deck || [];
+    const deck = sd.deck || [], hand = sd.hand || [];
+    const anyMark = c => c && (c._kb || c._kt || c._kh);
+    const hasMark = anyMark(sd.arsenal) || hand.some(anyMark) || deck.some(anyMark) || (sd.intimidated || []).some(anyMark);
+    if(!hasMark) return;
     let kb = 0; while(kb < deck.length && deck[deck.length - 1 - kb] && deck[deck.length - 1 - kb]._kb) kb++;
-    let hasD = false; for(let j = 0; j < deck.length - kb; j++) if(deck[j] && deck[j]._kb){ hasD = true; break; }
-    if(!hasH && !hasA && !hasD) return;
-    out = put(out, i, s => ({...s, hand: hasH ? s.hand.map(GM.unknown) : s.hand, arsenal: hasA ? GM.unknown(s.arsenal) : s.arsenal,
-      deck: hasD ? s.deck.map((c, j) => j < s.deck.length - kb ? GM.unknown(c) : c) : s.deck}));
+    let kt = 0; while(kt < deck.length - kb && deck[kt] && deck[kt]._kt) kt++;
+    /* did a hand card go somewhere hidden, unmarked, by this action? */
+    let privateOut = false;
+    const was = prev && prev.sides && prev.sides[i];
+    if(was){
+      const now = new Set(hand.map(c => c && String(c.uid)));
+      const hiddenNow = new Map();
+      deck.forEach(c => c && hiddenNow.set(String(c.uid), c));
+      if(sd.arsenal && !sd.arsenal._faceUp) hiddenNow.set(String(sd.arsenal.uid), sd.arsenal);
+      (sd.intimidated || []).forEach(c => c && hiddenNow.set(String(c.uid), c));
+      for(const c of (was.hand || [])){
+        if(!c || now.has(String(c.uid))) continue;
+        const went = hiddenNow.get(String(c.uid));
+        if(went && !went._kt && !went._kb){ privateOut = true; break; }
+      }
+    }
+    if((sd.intimidated || []).length) privateOut = privateOut || hand.some(c => c && c._kh);
+    /* a known top in the hand came by a DRAW only if the deck simply lost its
+       top cards (a search, then a shuffle, does not look like that, and the
+       opponent did not see which card it took) */
+    let drewTop = new Set();
+    if(was && hand.some(c => c && c._kt)){
+      const pd = (was.deck || []).map(c => c && String(c.uid)), nd0 = deck.map(c => c && String(c.uid));
+      /* the old deck minus its top m cards still leads the new one (cards put
+         on the BOTTOM in the same action, the end phase's pitch, are fine) */
+      const m = nd0.length ? pd.indexOf(nd0[0]) : pd.length;
+      const old = new Set(pd);
+      if(m > 0 && pd.slice(m).join(",") === nd0.slice(0, pd.length - m).join(",")
+         && nd0.slice(pd.length - m).every(u => !old.has(u))) drewTop = new Set(pd.slice(0, m));
+    }
+    let ch = false;
+    const fixHand = c => {
+      if(!c) return c;
+      let x = c;
+      if(x._kb) x = GM.unmark(x, "_kb");
+      if(x._kt) x = drewTop.has(String(x.uid)) ? GM.markKnown(x, "_kh") : GM.unmark(x, "_kt");
+      if(x._kh && privateOut) x = GM.unmark(x, "_kh");
+      if(x !== c) ch = true;
+      return x;
+    };
+    const fixDeck = (c, j) => {
+      if(!c) return c;
+      let x = c;
+      if(x._kh) x = GM.unmark(x, "_kh");
+      if(x._kb && j < deck.length - kb) x = GM.unmark(x, "_kb");
+      if(x._kt && j >= kt) x = GM.unmark(x, "_kt");
+      if(x !== c) ch = true;
+      return x;
+    };
+    const fixElse = c => { const x = GM.unknown(c); if(x !== c) ch = true; return x; };
+    const nh = hand.map(fixHand), nd = deck.map(fixDeck);
+    const na = sd.arsenal ? fixElse(sd.arsenal) : sd.arsenal;
+    const ni = (sd.intimidated || []).map(fixElse);
+    if(!ch) return;
+    out = put(out, i, s => ({...s, hand: nh, deck: nd, arsenal: na, intimidated: ni}));
   });
   return out;
 }
@@ -4589,7 +4658,7 @@ function drawTo(g, i){
   return n;
 }
 
-return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, drawText, ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
+return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
         playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, arcaneOf, chargeView, chargeMore,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
         handFree: PR.handFree,
