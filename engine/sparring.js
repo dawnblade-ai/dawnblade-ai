@@ -1210,6 +1210,17 @@ function laRollout(n, seat, root, spent, until, skip){
   }
   return {n, steps, done: !!n.over || end(n)};
 }
+/* DID THIS LINE LEAN ON WHAT THE SEAT CANNOT SEE? A card that began in its
+   own deck and ended the line outside the deck AND the hand was revealed,
+   flipped, milled or drawn and played: which card it was came from the
+   deal. A drawn card still held counts in the score by number only. And a
+   line that drew from the game's random stream (a die, a random pick) rolled
+   on the deal's seed. Public facts only: the masked root and its own line. */
+function laLucky(root, n, seat){
+  if(JSON.stringify(n.rng) !== JSON.stringify(root.rng)) return true;
+  const me = n.sides[seat], kept = new Set((me.deck || []).concat(me.hand || []).map(c => c && c.uid));
+  return (root.sides[seat].deck || []).some(c => c && !kept.has(c.uid));
+}
 function laSearch(g, seat, a0){
   LA.stats.decisions++;
   const t0 = Date.now(), keep = NOTE; NOTE = null; IN_SEARCH = true;
@@ -1218,7 +1229,7 @@ function laSearch(g, seat, a0){
     cands = laCands(g, seat, a0);
     if(cands.length < 2) return null;
     LA.stats.searched++;
-    const tot = cands.map(() => ({v: 0, dealt: 0, taken: 0, cards: 0}));
+    const tot = cands.map(() => ({v: 0, dealt: 0, taken: 0, cards: 0})), luck = cands.map(() => false);
     for(let k = 0; k < LA.dets; k++){
       const root = laMask(g, seat, k);
       for(let i = 0; i < cands.length; i++){
@@ -1226,6 +1237,7 @@ function laSearch(g, seat, a0){
         if(out.error){ tot[i].v = -Infinity; continue; }
         const r = laRollout(out.state, seat, root, spent); spent += r.steps + 1;
         if(!r.done){ LA.stats.over++; return null; }   /* over budget: the rule policy's move stands */
+        if(laLucky(root, r.n, seat)) luck[i] = true;
         const e = laEval(r.n, seat, root);
         ["v", "dealt", "taken", "cards"].forEach(f => tot[i][f] += e[f]);
       }
@@ -1233,14 +1245,17 @@ function laSearch(g, seat, a0){
     let bi = 0;
     for(let i = 1; i < cands.length; i++) if(tot[i].v > tot[bi].v + (bi === 0 ? LA.margin : 0)) bi = i;
     if(bi === 0) return null;
-    /* AN OVERRULE MUST HOLD ON MORE THAN ONE DEAL. The search sees one masked
-       deal; a line that wins only because that deal put a good card on top of
-       this seat's own deck (a flip, a reveal, a draw played this turn) is luck,
-       not a better move. So the winner is replayed against the rule policy's
-       line on `verify` more deals, and overrules only if it still wins on the
-       mean. A line that wins on what the seat can see wins on every deal. */
+    /* A LUCKY LINE MUST HOLD ON MORE THAN ONE DEAL (QA-A H-1, QA-B H-2). The
+       search sees one masked deal; a line that wins only because that deal put
+       a good card on top of this seat's own deck (Azalea's flip) or rolled
+       high (Knucklehead's die) is luck, not a better move. So a winner whose
+       line LEANED on the hidden deal (`laLucky`) is replayed against the rule
+       policy's line on `verify` deals in all, and overrules only if it still
+       wins on the mean. A line that used nothing hidden is not re-run:
+       checking every overrule spent the budget on certain lines and lost a
+       third of them (measured, CHANGELOG). */
     let dn = LA.dets;
-    for(let k = LA.dets; k < LA.verify; k++){
+    for(let k = LA.dets; luck[bi] && k < LA.verify; k++){
       const root = laMask(g, seat, k);
       for(const i of [0, bi]){
         const out = J.reduce(root, cands[i], seat);
