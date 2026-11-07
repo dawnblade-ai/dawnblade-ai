@@ -77,7 +77,7 @@ piece (resUnlockWeapon) · Sharp re-checks a lucky-deal winner on 4 deals (laLuc
 · honest endTurnKeep / payNoPiece reasons. Did NOT pay: verifying every overrule (-0.37), every lucky winner.
 **TRAINER QA (findings/qa-c, v5.96):** 10 games / 9 heroes on the page: 0 crashes, 0 state defects. COACH
 P1: the Coach never advises a weapon swing (advisor advCardOut uses isAttack). 3 COACH P2 + 7 FEED/UI.
-In flight: `ship/coach-qa` (Sonnet, session_013xG9xAWpPVf...). Not covered: Fai, Enigma, Arakni, Blaze,
+In flight: `ship/coach-qa` (Sonnet, session_013xG9x8sbnApWDKKTYGSjpn). Not covered: Fai, Enigma, Arakni, Blaze,
 Gravy, Lyath trainer games; a trainer win.
 **CI FIX (7a511fd):** the deploy check now waits for the pushed APP_VER (v5.92's red run was Pages lag).
 **OPEN H-ITEMS (not built, measured leads):** QA-A H-3 Refraction Bolters never destroyed for go again
