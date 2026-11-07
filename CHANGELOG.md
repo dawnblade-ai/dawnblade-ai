@@ -1,3 +1,17 @@
+## v5.98 — The Coach stops coaching plays the game refuses
+
+QA-C COACH-2, COACH-3, COACH-4 (P2).
+- **A defence reaction in the arsenal** (Viserai's Sigil of Suffering) was coached as an action-phase play: the hand
+  candidates skipped `isRx`, the arsenal candidate did not. Same filter now.
+- **Azalea's hero power with an empty arsenal:** the `hpow` candidate was checked for cost and use only. The trainer
+  passes `effects.arsNoOpWhy` (the reader its own door asks; the advisor cannot require effects) as `ctx.noOpWhy`, and
+  a power that would do nothing is not coached.
+- **Oasis Respite on your own turn:** `ward` ops were a flat 0.4 each in every window. A "this turn" prevention is
+  worth nothing in your own action phase against a dummy that only hits on its own turn, so the `act` window values it 0;
+  the block window and the pitch/arsenal rankings are unchanged.
+- **Drills:** `test/advisor.test.js` COACH-2/3/4, each with its sabotage (the same slot holding an attack, an arsenal
+  holding a card, the block window).
+
 ## v5.97 — The Coach's call swings the weapon
 
 QA-C COACH-1 (P1, v5.96 trainer read).

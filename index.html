@@ -898,7 +898,7 @@ img{display:block;max-width:100%}
    database + typographic fallbacks. Not affiliated with LSS.
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
-window.APP_VER = "5.97"; /* v5.97 - the Coach's call swings the weapon. See CHANGELOG.md. */
+window.APP_VER = "5.98"; /* v5.98 - the Coach stops coaching plays the game refuses. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -5973,7 +5973,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                   the first draw to the last point of life. The trainer's
                   `mode` is live and authoritative, so it says so out loud;
                   the table derives the same answer with `advView`. */}
-              <Advisor g={g} ctx={{window:g.mode, incoming:g.incoming, runeDmg:built.runeDmg, hpow:built.HPOW, boostOn:g.boostOn, dBlk:opp(g).gear.filter(x=>gearDef(x)>0).length + opp(g).hand.filter(c=>(c.def||0)>0).length, dDef:gearDef(opp(g).gear.find(x=>gearDef(x)>0)||{})||1}} read={built.read}/>
+              <Advisor g={g} ctx={{window:g.mode, incoming:g.incoming, runeDmg:built.runeDmg, hpow:built.HPOW, noOpWhy:DawnEffects.arsNoOpWhy, boostOn:g.boostOn, dBlk:opp(g).gear.filter(x=>gearDef(x)>0).length + opp(g).hand.filter(c=>(c.def||0)>0).length, dDef:gearDef(opp(g).gear.find(x=>gearDef(x)>0)||{})||1}} read={built.read}/>
               <div className="gamelog" style={{marginTop:8}}>{[...g.feed].reverse().map((l,i)=><div key={i} className="gl"><PipLine s={l}/></div>)}</div>
             </div>
             {/* PANE 2 — PLAY: dummy hand · stack|card|defend · your hand+extras */}

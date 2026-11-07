@@ -46,7 +46,9 @@ function advValue(c, g, ctx){
     else if(op[0]==="rune") v += ctx.runeDmg*op[1]*0.9;
     else if(op[0]==="buffNext") v += op[1]*0.6;
     else if(op[0]==="life") v += op[1]*0.4;
-    else if(op[0]==="ward") v += op[1]*0.4;
+    /* A "this turn" prevention is worth nothing in YOUR action phase: the
+       dummy only hits on its own turn, so it expires unspent (QA-C COACH-4). */
+    else if(op[0]==="ward") v += ctx.window==="act" ? 0 : op[1]*0.4;
     else if(op[0]==="awd") v += op[1]*0.1;
     else if(op[0]==="amp") v += op[1]*0.7;
     /* `rot` RETIRED in v3.09 — Bloodrot Pox is a real token now, so it is
@@ -194,11 +196,17 @@ function advise(g, ctx){
     if(effCost(c, you(g)) > you(g).res + advPitchPotential(you(g).hand,i)) return;
     cands.push({c,from:"hand",idx:i,excl:i});
   });
-  if(you(g).arsenal && (isAttack(you(g).arsenal)||fxParse(you(g).arsenal).playable) && (you(g).arsenal.cost||0)<=you(g).res+advPitchPotential(you(g).hand,null)
+  /* The arsenal card is the same card as one in hand: a reaction waits for its
+     step (CR 8.1.2a / 8.1.3a), so it is no action-phase candidate there either. */
+  if(you(g).arsenal && !isRx(you(g).arsenal) && (isAttack(you(g).arsenal)||fxParse(you(g).arsenal).playable) && (you(g).arsenal.cost||0)<=you(g).res+advPitchPotential(you(g).hand,null)
      && !P.playZoneWhy(you(g).arsenal, "arsenal", {}) && !P.addCostWhy(you(g), you(g).arsenal, effCost(you(g).arsenal, you(g))))
     cands.push({c:you(g).arsenal,from:"arsenal",idx:0,excl:null});
   you(g).gear.forEach((w,i)=>{ if(isWeapon(w)&&!you(g).weaponUsed[w.uid]&&(w.cost||0)<=you(g).res+advPitchPotential(you(g).hand,null)) cands.push({c:w,from:"weapon",idx:i,excl:null}); });
-  if(ctx.hpow && !you(g).weaponUsed["hpow"] && (ctx.hpow.cost||0)<=you(g).res+advPitchPotential(you(g).hand,null))
+  /* `ctx.noOpWhy` is effects.arsNoOpWhy — the reader the trainer's own door asks
+     (it cannot be required here: effects requires this module). A power that
+     would do nothing now (Azalea with an empty arsenal) is not coached. */
+  if(ctx.hpow && !you(g).weaponUsed["hpow"] && (ctx.hpow.cost||0)<=you(g).res+advPitchPotential(you(g).hand,null)
+     && !(ctx.noOpWhy && ctx.noOpWhy(you(g), ctx.hpow, effCost(ctx.hpow, you(g)))))
     cands.push({c:ctx.hpow,from:"hero",idx:0,excl:null});
   you(g).board.forEach((b,i)=>{ if(b.kind==="ally"&&!b.spent&&b.card.power>0) cands.push({c:b.card,from:"ally",idx:i,excl:null,free:true}); });
   /* With the action point gone, only the instants are still legal — plus the

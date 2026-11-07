@@ -213,3 +213,35 @@ test("COACH-1 — a powerless weapon (nothing to swing) is not a candidate worth
   const dud = {...dawn, uid:"w2", name:"coach-qa Dawnblade dud", power:0};
   assert.match(call(sided({res:3, gear:[dud]})).line, /^End turn/);
 });
+
+test("COACH-2 — a defense reaction in the arsenal is not an action-phase play", () => {
+  const sig = {uid:"a1", name:"coach-qa Sigil of Suffering", tt:"Runeblade Defense Reaction", ty:["Runeblade","Defense Reaction"], pitch:1, cost:0, def:3, power:null, kw:[],
+    tx:"Deal 1 arcane damage to the attacking hero.\nIf you've dealt arcane damage this turn, this gets +1{d}."};
+  const r = call(sided({arsenal:sig}), {runeDmg:1});
+  assert.doesNotMatch(r.line, /Sigil/, r.line);
+  /* sabotage: a plain action in the same slot IS coached, so the filter is the reaction test */
+  const act = {uid:"a2", name:"coach-qa arsenal strike", tt:"Action - Attack", ty:["Action","Attack"], pitch:1, cost:0, power:4, kw:[], tx:""};
+  assert.match(call(sided({arsenal:act})).line, /arsenal strike from arsenal/);
+});
+
+test("COACH-3 — a hero power that would do nothing now is not coached (empty arsenal)", () => {
+  const E = require("../engine/effects");
+  const hpow = {name:"coach-qa Azalea — hero power", pitch:0, cost:0, power:null, def:null, tt:"Hero Ability", kw:["Go again"], uid:"hpow",
+    tx:"Put a card from your arsenal on the bottom of your deck. If you do, put the top card of your deck face-up into your arsenal. If it's an arrow, it gets dominate until end of turn. Go again"};
+  assert.equal(typeof E.arsNoOpWhy, "function");
+  const empty = call(sided({arsenal:null}), {hpow, noOpWhy:E.arsNoOpWhy});
+  assert.match(empty.line, /^End turn/, empty.line);
+  /* sabotage: with a card in the arsenal the same power IS the call */
+  const held = {uid:"a3", name:"coach-qa held card", tt:"Action", ty:["Action"], pitch:1, cost:9, kw:[], tx:""};
+  assert.match(call(sided({arsenal:held}), {hpow, noOpWhy:E.arsNoOpWhy}).line, /^Play coach-qa Azalea/);
+});
+
+test("COACH-4 — a this-turn prevention is worth nothing in your own action phase", () => {
+  const oasis = {uid:"h1", name:"coach-qa Oasis Respite", tt:"Generic Action", ty:["Generic","Action"], pitch:3, cost:0, power:null, kw:[],
+    tx:"Prevent the next 4 damage that would be dealt to target hero this turn by a source of your choice."};
+  assert.ok(P.fxParse(oasis).ops.some(o => o[0]==="ward"), "fixture: the text reads as a ward");
+  const r = call(sided({hand:[oasis], res:3}));
+  assert.match(r.line, /^End turn/, r.line);
+  /* sabotage: the same card in the blocking window keeps its value */
+  assert.ok(A.advValue(oasis, sided({}), {runeDmg:0, window:"block"}) > A.advValue(oasis, sided({}), {runeDmg:0, window:"act"}));
+});
