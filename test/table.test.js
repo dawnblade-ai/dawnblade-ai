@@ -89,9 +89,14 @@ function negotiate(o){
   /* THE SEED (HIDDEN HANDS H2): the host commits, the guest answers. The
      host's half stays here, on "the host's phone" — `peers.seedH` — and is
      never sent (a property on the array: JSON.stringify(peers[i]) is the lobby). */
-  const sc = L.seedCommitMsg();
+  /* PINNED: seed halves from a stream seeded by the matchup and options, so a
+     drill deals the same game every run (crypto nonces dealt a new one each time) */
+  let x = 2166136261; for(const ch of keys.join("|") + "|" + JSON.stringify(o)) x = Math.imul(x ^ ch.charCodeAt(0), 16777619) >>> 0;
+  x = x || 1;
+  const rand = () => { x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0; return x / 4294967296; };
+  const sc = L.seedCommitMsg(rand);
   send(sc.msg);
-  send(L.seedAnswer());
+  send(L.seedAnswer(rand));
   peers.seedH = sc.seedH;
   return {peers, errs};
 }

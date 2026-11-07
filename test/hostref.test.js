@@ -33,12 +33,19 @@ function deal(k0, k1, seed, first){
   const b1 = B.buildSideDefault(h1, G.parseDeck(W.DECKS[h1.k]), S.DB, rng, ctr); rng = b1.rng;
   return J.newMatch({builds: [b0.b, b1.b], names: [h0.n, h1.n], heroKeys: [h0.k, h1.k], rng, first: first || 0, tokSeq: ctr.n});
 }
+/* a deterministic [0,1) stream from a string */
+const seeded = str => { let x = 2166136261; for(let i = 0; i < str.length; i++) x = Math.imul(x ^ str.charCodeAt(i), 16777619) >>> 0;
+  x = x || 1; return () => { x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0; return x / 4294967296; }; };
 const catalogOf = g => Wr.makeCatalog([].concat(...g.sides.map(sd => [...sd.deck, ...sd.hand, ...sd.gear])));
 
 /* a table: the lobby's seed exchange, the host's deal, two referee sessions */
 function table(k0, k1, o){
   o = o || {};
-  const sc = L.seedCommitMsg(), g1 = L.seedAnswer();
+  /* PINNED: the seed halves come from a stream seeded by the matchup, so every
+     run deals the same game (crypto nonces made this drill a different game
+     each run, and it flaked on the deals where a known top showed) */
+  const rand = seeded(k0 + "|" + k1 + "|" + (o.salt || ""));
+  const sc = L.seedCommitMsg(rand), g1 = L.seedAnswer(rand);
   const seed = SHA.seedOf(sc.seedH, g1.g);
   const g0 = deal(k0, k1, seed, o.first || 0);
   const catalog = catalogOf(g0);
@@ -107,7 +114,7 @@ test("A WHOLE GAME, host and guest: the guest's view agrees after every commit; 
   assert.deepEqual(t.host.violations(), []);
   /* the guest never ran the reducer: it holds a view, with the foe's hand as placeholders */
   assert.equal(t.guest.state().viewSeat, 1);
-  assert.ok(t.guest.state().sides[0].deck.filter(c => !c._kb).every(V.isPh), "the host's deck is placeholders on the guest's phone (bar the known bottom block)");
+  assert.ok(t.guest.state().sides[0].deck.filter(c => !c._kb && !c._kt).every(V.isPh), "the host's deck is placeholders on the guest's phone (bar the known bottom and top blocks, public by their marks)");
 });
 
 test("SABOTAGE — the same scan over a lockstep session (both phones hold the game) finds the leak", () => {
@@ -199,7 +206,7 @@ test("HOST DROP — the game pauses, the guest cannot act or take over; the host
   assert.equal(JSON.stringify(guest.state()), viewAt, "and its view did not move");
   assert.equal(guest.status(), "paused");
   /* the guest holds no hidden card from which to carry on: the host's hand and deck are placeholders */
-  assert.ok(guest.state().sides[0].deck.filter(c => !c._kb).every(V.isPh), "the guest cannot take over: it has no deck to deal from");
+  assert.ok(guest.state().sides[0].deck.filter(c => !c._kb && !c._kt).every(V.isPh), "the guest cannot take over: it has no deck to deal from");
   assert.ok(guest.state().rng.hidden, "and no seed");
   assert.ok(String(JSON.stringify(saved)).length > 1000, "the host saved its game");
   /* the host comes back from what it saved; the guest rejoins */
