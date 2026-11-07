@@ -314,7 +314,12 @@
    look at the top of a deck sets `revealed` with `_to` (the seat that looked).
    Deck cards put on the bottom from the pitch zone carry `_kb` (a known slot).
    Behind the release handshake, by hand. */
-const WIRE_V = 34;
+/* 34 -> 35 AT HIDDEN HANDS H2: the referee protocol. A guest no longer
+   receives the game: SNAPSHOT carries `seatView(state, guest)` (with the
+   view-only `unseen`/`unseenGear` lists interned, VIEW_ZONES) and COMMIT is
+   per seat — {seq, seat, action (slot handles), d (a delta), h (the view's
+   fingerprint)}; REVEAL is new. A v34 guest would run a reducer on a view. */
+const WIRE_V = 35;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------
@@ -331,6 +336,12 @@ const PROTO  = "dawnblade/1";
 const CARD_ZONES  = ["deck","hand","pitch","grave","banish","soul","gear"];
 const SLOT_ZONES  = ["arsenal"];                 /* one card, or null */
 const ENTRY_ZONES = ["board"];                   /* {card, kind, spent, uid} */
+/* VIEW-ONLY card lists (HIDDEN HANDS, view.js): a seat's view of a side
+   carries the composition multisets. They are not SIDE_FIELDS (a full state
+   never has them), so they sit outside the ledger the drills hold against
+   sides.js, and are interned like a zone so a guest's snapshot fits a data
+   channel. */
+const VIEW_ZONES  = ["unseen", "unseenGear"];
 
 /* Side fields that are NOT card containers. Listed so the drill can prove
    every SIDE_FIELD is accounted for one way or the other. */
@@ -601,6 +612,7 @@ function mapZones(side, fn){
   if(!side) return side;
   const out = {...side};
   for(const z of CARD_ZONES)  if(Array.isArray(side[z])) out[z] = side[z].map(fn);
+  for(const z of VIEW_ZONES)  if(Array.isArray(side[z])) out[z] = side[z].map(fn);
   for(const z of SLOT_ZONES)  if(side[z]) out[z] = fn(side[z]);
   for(const z of ENTRY_ZONES) if(Array.isArray(side[z]))
     out[z] = side[z].map(e => (e && e.card) ? {...e, card: fn(e.card)} : e);
@@ -622,7 +634,7 @@ const sizeOf = w => JSON.stringify(w).length;
 
 return {
   WIRE_V, PROTO,
-  CARD_ZONES, SLOT_ZONES, ENTRY_ZONES, NON_CARD_SIDE_FIELDS,
+  CARD_ZONES, SLOT_ZONES, ENTRY_ZONES, VIEW_ZONES, NON_CARD_SIDE_FIELDS,
   VOLATILE_GAME, VOLATILE_CARD, VOLATILE,
   canon, hash, diffPaths,
   cardKey, catalogHash, makeCatalog, stripInstance, overrides,

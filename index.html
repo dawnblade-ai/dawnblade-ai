@@ -1540,6 +1540,13 @@ window.TROPHIES = [
      two seats can both drive. They converge when `runOps`/`execute`
      become a shared engine/effects.js, which is the next pass. -->
 <script src="engine/wire.js"></script>
+<!-- HIDDEN HANDS: the game as one seat may know it (H1), SHA-256 seals and
+     the host's referee (H2). net.js's referee mode is built on the referee,
+     so these load before it; sparring.js builds its lookahead root from the
+     view, so view loads before sparring too. -->
+<script src="engine/view.js"></script>
+<script src="engine/sha256.js"></script>
+<script src="engine/referee.js"></script>
 <script src="engine/net.js"></script>
 <script src="engine/judge.js"></script>
 <!-- SEAT 1 WHEN IT IS NOT A PERSON, and the session that lets a player
@@ -1549,15 +1556,8 @@ window.TROPHIES = [
      sitting beside a trainer with its own dummy is a second quiet engine.
      Something calls it now. Both must load AFTER judge.js — sparring asks
      it for every legality question, and local.js drives it. -->
-<!-- HIDDEN HANDS H1: the game as one seat may know it. sparring.js builds
-     its lookahead root from that seat's view, so it loads before sparring. -->
-<script src="engine/view.js"></script>
 <script src="engine/sparring.js"></script>
 <script src="engine/local.js"></script>
-<!-- HIDDEN HANDS H2: SHA-256 by hand (no crypto.subtle off a secure
-     context, so it runs from file://). The lobby seals each throw with it,
-     so it loads before lobby.js. -->
-<script src="engine/sha256.js"></script>
 <script src="engine/lobby.js"></script>
 <script src="engine/room.js"></script>
 <script>
@@ -7127,6 +7127,10 @@ function TableRoom({table, host, code, db, onExit}){
   /* THE THROW'S OPENING, held on this phone until both seats have sealed
      (HIDDEN HANDS H2). It never enters the shared lobby state until then. */
   const openRef = uR(null);
+  /* THE HOST'S HALF OF THE SEED (HIDDEN HANDS H2). It never enters the
+     shared lobby state: only its commitment does, and the half itself is
+     revealed when the game is over so the guest can verify every shuffle. */
+  const seedRef = uR(null);
 
   /* Apply locally and put it on the wire. BOTH peers run the same
      reducer over the same messages — the lobby is order-independent and
@@ -7164,6 +7168,7 @@ function TableRoom({table, host, code, db, onExit}){
        different rules — silently, and consistently enough that a state
        hash cannot describe it usefully. The release is half of it (v4.69). */
     say(DawnLobby.hello(mySeat, TABLE_BUILD));
+    if(host){ const sc = DawnLobby.seedCommitMsg(); seedRef.current = sc.seedH; say(sc.msg); }
     return ()=>{ try{ table.close(); }catch(_){} };
   },[]);
 
@@ -7174,19 +7179,28 @@ function TableRoom({table, host, code, db, onExit}){
   uE(()=>{
     const k = openRef.current;
     if(k && k.round === lob.round && DawnLobby.canOpen(lob, mySeat)){ openRef.current = null; say(k); }
+    /* the guest answers the host's seed commitment, never before it */
+    if(!host && lob.seedC && lob.seedG == null && !seedRef.current){ seedRef.current = "sent"; say(DawnLobby.seedAnswer()); }
   },[lob]);
 
   /* ---- ready: build the match, identically on both phones ------------ */
   uE(()=>{
     if(step !== "ready" || match) return;
-    const spec = DawnLobby.matchSpec(lob);
+    /* ONLY THE HOST DEALS (H2). The guest builds a BLIND match from the same
+       spec with a seed of its own: the same cards (for the catalog and its
+       own build's passives), never the game — the host's referee sends it a
+       view of the real one. */
+    const spec0 = host ? DawnLobby.matchSpec(lob, seedRef.current) : DawnLobby.matchSpec(lob);
+    if(!spec0){ setErr("The seed did not open its commitment — leave and open a new table."); return; }
+    const spec = host ? spec0 : {...spec0, seed: "blind|" + spec0.seedC};
     try {
       const m = DawnBuild.buildMatch(spec, {
         db,
         heroes: Object.fromEntries(HEROES.map(h=>[h.k,h])),
         decks:  Object.fromEntries(HEROES.map(h=>[h.k,PARSED[h.k]]))
       });
-      setMatch({...m, g: DawnJudge.newMatch({builds:m.builds, names:m.names,
+      setMatch({...m, spec: spec0, seedH: host ? seedRef.current : null,
+        g: DawnJudge.newMatch({builds:m.builds, names:m.names,
         heroKeys:m.heroKeys, first:m.first, seed:m.seed})});
     } catch(e){ setErr("Could not deal the match: " + (e.message||e)); }
   },[step, match]);
@@ -7380,13 +7394,18 @@ function TableThrow({lob, mySeat, myH, foeH, onThrow}){
    predict.
    ============================================================ */
 function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit, local, heroKey, onRecord}){
-  const [g,setG]     = uS(match.g);
+  /* AT A TWO-PHONE TABLE THIS PHONE SHOWS ITS OWN SEAT'S VIEW (HIDDEN HANDS
+     H2). The host's referee holds the game; until the guest's first snapshot
+     lands, the guest shows its blind deal as seen from NEITHER seat: every
+     hand and deck face down, so no card on it is a guess. */
+  const [g,setG]     = uS(()=> local ? match.g : DawnReferee.seatView(match.g, host ? mySeat : -1));
   const [note,setNote] = uS(null);
   const [link,setLink] = uS("connected");
   const [zoom,setZoom] = uS(null);
   const [inspect,setInspect] = uS(false);
   const [bug,setBug] = uS(false);
   const sess = uR(null);
+  const savedAt = uR(-1);   /* host: the sequence last kept on the phone */
 
   /* THE INVARIANT JUDGE, ON THE TABLE'S OWN FUNNEL. In the trainer every
      state change passes through `setG`, which is where the judge is
@@ -7483,6 +7502,10 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
     }
     const s = DawnNet.createSession({
       seat: mySeat, host,
+      /* REFEREE MODE: the host runs the referee on the full game and is the
+         only phone that reduces; the guest holds a view — see the net.js header. */
+      referee: true,
+      check:  DawnInvariants.errors,
       reduce: DawnJudge.reduce,
       legal:  DawnJudge.legal,
       catalog,
@@ -7492,9 +7515,14 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
       build:  TABLE_BUILD,
       state:  host ? match.g : null,
       send:   m => table.send({ch:CH_NET, m}),
-      onState: st => { setG(st); setNote(null); audit(st); },
+      onState: st => { setG(st); setNote(null);
+        /* the invariant judge runs on the FULL game, which only the host holds;
+           the guest checks its view's own shape (referee.viewCensus) */
+        if(host && sess.current) audit(sess.current.full());
+        else { const bad = DawnReferee.viewCensus(st); if(bad.length) console.error("[dawnblade view census] " + bad[0]); } },
       onEvent: e => {
         if(e.t==="refused")             setNote(e.reason);
+        else if(e.t==="paused")         setLink("paused");
         else if(e.t==="desync")         setLink("repairing");
         else if(e.t==="snapshot-applied"||e.t==="catchup-applied") setLink("connected");
         else if(e.t==="refused-by-host")setNote("Refused: "+e.reason);
@@ -7522,11 +7550,25 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
        said "waiting on them" forever. The status was the only thing that
        knew, so it goes on the screen. */
     const watch = setInterval(()=>{
+      /* THE HOST'S PHONE LEFT: the game pauses (HIDDEN HANDS H2). The guest
+         holds no hidden card, so it cannot carry the game on. */
+      if(!host && s.status() !== "paused" && table.status && table.status() === "closed")
+        s.pause("the host's phone left the table");
+      /* the host keeps its game on the phone, so a reload resumes it */
+      if(host && s.seq() !== savedAt.current) try {
+        lsGet().setItem("dawnblade.table." + code, JSON.stringify({spec: match.spec, seedH: match.seedH, saved: s.persist()}));
+        savedAt.current = s.seq();
+      } catch(_){}
       const st = s.status();
       setLink(st === "ready" ? l => l==="repairing" ? l : "connected" : st);
     }, 1200);
     return ()=>{ clearInterval(watch); netRef.current = null; };
   },[]);
+
+  /* THE GAME IS OVER: the host reveals its half of the seed and the whole
+     log, so the guest's phone can replay every shuffle — HIDDEN HANDS H2. */
+  uE(()=>{ if(g.over && !local && host && sess.current && sess.current.reveal)
+             sess.current.reveal({seedH: match.seedH}); },[g.over]);
 
   const me = g.sides[mySeat], them = g.sides[1-mySeat];
   const myH  = HEROES.find(x=>x.k===me.heroKey);
@@ -7833,8 +7875,11 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                 <ArmorGrid gear={armorOf(them)} own={false} cell={gearTile(false)}/>
                 <div className="arscol">
                   <div className="slot clip-sm" style={{width:"100%"}}>{them.arsenal
-                    ? <button style={{padding:0,width:"100%"}} onClick={()=>setZoom(them.arsenal)}>
-                        <CardFrame card={them.arsenal} className="sm"/></button>
+                    ? (DawnView.isPh(them.arsenal)
+                        /* face down: the view holds a placeholder, never the card */
+                        ? <div className="dcardph" title="face-down arsenal"/>
+                        : <button style={{padding:0,width:"100%"}} onClick={()=>setZoom(them.arsenal)}>
+                            <CardFrame card={them.arsenal} className="sm"/></button>)
                     : "arsenal —"}</div>
                   <span className="zlbl">holds {them.hand.length} · blocks from hand</span>
                 </div>

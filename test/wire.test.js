@@ -369,7 +369,11 @@ test("WIRE_V moves when the payload shape moves, and only then", () => {
      values, so the digest holds. */
   /* 33 -> 34 AT v6.02 (HIDDEN HANDS H1): the `feedTo` game key, `revealed._to`
      and the `_kb` card mark — a GAME_KEY and instance keys, so the digest holds. */
-  assert.equal(W.WIRE_V, 34,
+  /* 34 -> 35 AT HIDDEN HANDS H2: the referee protocol — SNAPSHOT carries a
+     seat's VIEW, COMMIT is per seat (slot-handled action, delta, view hash),
+     REVEAL and PART are new, and the view-only lists ride as VIEW_ZONES
+     (outside the four ledger lists, so the digest holds). */
+  assert.equal(W.WIRE_V, 35,
     "WIRE_V moved — if the payload shape moved with it, update the digest below " +
     "in the same edit and say what changed in the header");
   assert.equal(h, 3759651216,
@@ -443,10 +447,9 @@ test("every engine module is loaded by index.html, or declared headless", () => 
 
      The MODULE stays: its 21 drills are a specification for priority.js
      that nothing else provides. Only the script tag went. */
-  /* `referee` (HIDDEN HANDS H2) is headless for ONE increment: the host's
-     session drives it once net.js speaks the referee protocol, and that is
-     the edit that moves it to test/sync.test.js's MODULES. */
-  const HEADLESS = ["actions", "referee"];
+  /* `referee` (HIDDEN HANDS H2) was headless for one increment, until
+     net.js's referee mode drove it; it moved to sync.test's MODULES then. */
+  const HEADLESS = ["actions"];
   const dir = path.join(__dirname, "..", "engine");
   const mods = fs.readdirSync(dir).filter(f => f.endsWith(".js")).map(f => f.slice(0, -3));
   const src = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");

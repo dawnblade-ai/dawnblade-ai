@@ -86,6 +86,13 @@ function negotiate(o){
   send(L.seating(0, o.choice || "first"));
   send(L.sideboard(0, picks(keys[0]), o.cuts0 || {}));
   send(L.sideboard(1, picks(keys[1]), o.cuts1 || {}));
+  /* THE SEED (HIDDEN HANDS H2): the host commits, the guest answers. The
+     host's half stays here, on "the host's phone" — `peers.seedH` — and is
+     never sent (a property on the array: JSON.stringify(peers[i]) is the lobby). */
+  const sc = L.seedCommitMsg();
+  send(sc.msg);
+  send(L.seedAnswer());
+  peers.seedH = sc.seedH;
   return {peers, errs};
 }
 
@@ -115,17 +122,23 @@ test("the winner electing SECOND seats the other player", {skip}, () => {
 
 /* ---- the join ---------------------------------------------------------- */
 
-test("BOTH PEERS BUILD THE SAME GAME from the negotiated spec", {skip}, () => {
+/* HIDDEN HANDS H2: ONLY THE HOST CAN DEAL. Until v6.02 both phones built the
+   same game from the spec, which is exactly why each phone held everything.
+   Now the guest's spec carries no seed: the host's phone deals, and the
+   deal is still a pure function of the spec plus the host's half. */
+test("ONLY THE HOST CAN DEAL: the guest's spec has no seed, and the host's deal is a pure function of spec + seedH", {skip}, () => {
   const {peers} = negotiate();
-  const a = gameFrom(L.matchSpec(peers[0]));
-  const b = gameFrom(L.matchSpec(peers[1]));
-  assert.equal(JSON.stringify(a.g), JSON.stringify(b.g),
-    "two phones dealt different games from one negotiation");
+  const host = L.matchSpec(peers[0], peers.seedH), guest = L.matchSpec(peers[1]);
+  assert.equal(guest.seed, null, "the guest holds no seed");
+  assert.deepEqual({...guest, seed: null}, {...host, seed: null}, "both phones agree on everything else");
+  const a = gameFrom(host), b = gameFrom(L.matchSpec(peers[0], peers.seedH));
+  assert.equal(JSON.stringify(a.g), JSON.stringify(b.g), "the host dealt two different games from one spec");
+  assert.notEqual(host.seed, "K7QM", "the table code is no longer the seed");
 });
 
 test("the dealt game is a real one: printed life, printed intellect, two full hands", {skip}, () => {
   const {peers} = negotiate();
-  const {g} = gameFrom(L.matchSpec(peers[0]));
+  const {g} = gameFrom(L.matchSpec(peers[0], peers.seedH));
   assert.deepEqual(g.sides.map(s => s.name), ["Kayo", "Dorinthea"]);
   assert.equal(g.turn, 1);
   assert.equal(g.phase, "action");
@@ -145,7 +158,7 @@ test("the dealt game is a real one: printed life, printed intellect, two full ha
    printed pieces). Here both go through one `buildMatch`. */
 test("the two seats are symmetric and legally equipped", {skip}, () => {
   const {peers} = negotiate({heroes: ["azalea", "azalea"]});
-  const {g} = gameFrom(L.matchSpec(peers[0]));
+  const {g} = gameFrom(L.matchSpec(peers[0], peers.seedH));
   assert.deepEqual(Object.keys(g.sides[0]).sort(), Object.keys(g.sides[1]).sort());
   assert.equal(g.sides[0].gear.length, g.sides[1].gear.length,
     "a mirror match equipped the two seats differently");
@@ -162,11 +175,12 @@ test("the two seats are symmetric and legally equipped", {skip}, () => {
 function playOut(o){
   o = o || {};
   const {peers} = negotiate(o);
-  const {g} = gameFrom(L.matchSpec(peers[0]));
+  const {g} = gameFrom(L.matchSpec(peers[0], peers.seedH));
   const lb = N.loopback();
   const ev = [];
+  /* REFEREE MODE (HIDDEN HANDS H2): the host holds the game, the guest a view */
   const mk = (seat, host, state, end) => N.createSession({
-    seat, host, reduce: J.reduce, legal: J.legal, build: DATA_VER, state,
+    seat, host, referee: true, reduce: J.reduce, legal: J.legal, check: IV.errors, build: DATA_VER, state,
     send: m => end.send(m), onState: () => {},
     onEvent: e => { if(e.t === "desync" || e.t === "refused-by-host" || e.t === "snapshot-failed") ev.push(e); }
   });
@@ -175,8 +189,8 @@ function playOut(o){
   guest.join();
 
   let steps = 0, refusals = 0, stuck = null;
-  while(!host.state().over && steps < 6000){
-    const st = host.state();
+  while(!host.full().over && steps < 6000){
+    const st = host.full();
     const seat = [0, 1].find(i => SP.act(st, i) != null);
     if(seat == null){ stuck = st.phase + "/" + st.step + " pri " + st.priority; break; }
     const why = (seat === 0 ? host : guest).submit(SP.act(st, seat));
@@ -194,8 +208,11 @@ test("A WHOLE GAME crosses the wire, and the two peers agree at the end", {skip}
   assert.deepEqual(r.ev, [], "the session reported " + JSON.stringify(r.ev));
   assert.ok(r.host.state().over, "the game did not finish in 6000 actions");
   assert.ok(r.steps > 100, "the game finished in " + r.steps + " actions — it barely played");
-  assert.equal(r.host.hash(), r.guest.hash(),
-    "the two phones ended the game holding different states");
+  /* the guest holds a VIEW: it equals the referee's view of the host's game for seat 1 */
+  const Rf = require("../engine/referee.js");
+  assert.equal(r.guest.hash(), WI.hash(Rf.seatView(r.host.full(), 1)),
+    "the guest ended the game holding a view that is not the host's game");
+  assert.deepEqual(r.host.violations(), [], "the referee's invariant judge objected");
 });
 
 test("the finish is a LIFE total, never an invented loss", {skip}, () => {
@@ -250,8 +267,8 @@ test("the chair is not deciding — neither seat sweeps", {skip}, () => {
 
 test("the state stays clean under the invariant judge for a whole game", {skip}, () => {
   const r = playOut();
-  assert.deepEqual(IV.errors(r.host.state()), [],
-    "the finished state breaks a rule: " + JSON.stringify(IV.errors(r.host.state())));
+  assert.deepEqual(IV.errors(r.host.full()), [],
+    "the finished state breaks a rule: " + JSON.stringify(IV.errors(r.host.full())));
 });
 
 /* ---- what must be refused ---------------------------------------------- */
@@ -270,7 +287,7 @@ test("a card-data skew faults the lobby before a deck is dealt", {skip}, () => {
 
 test("a seat cannot play the other seat's cards across the wire", {skip}, () => {
   const {peers} = negotiate();
-  const {g} = gameFrom(L.matchSpec(peers[0]));
+  const {g} = gameFrom(L.matchSpec(peers[0], peers.seedH));
   const theirs = g.sides[0].hand[0];
   assert.ok(theirs);
   const why = J.legal(g, {t: "play", uid: theirs.uid, from: "hand"}, 1);
@@ -283,7 +300,7 @@ test("all 15 heroes deal a legal opening from a negotiated lobby", {skip}, () =>
   for(const h of W.HEROES){
     const {peers, errs} = negotiate({heroes: [h.k, "kayo"]});
     assert.deepEqual(errs, [], h.k + " could not negotiate: " + JSON.stringify(errs));
-    const {g} = gameFrom(L.matchSpec(peers[0]));
+    const {g} = gameFrom(L.matchSpec(peers[0], peers.seedH));
     assert.equal(g.sides[0].hand.length, g.sides[0].int, h.k + " was not dealt to intellect");
     assert.deepEqual(IV.errors(g), [], h.k + " opens on a broken state");
     /* And the opening seat can actually do something, which is the
@@ -340,7 +357,7 @@ test("the opening snapshot fits a data channel, for every matchup", {skip}, () =
 
 test("a build's deck and gear are construction inputs, not state", {skip}, () => {
   const {peers} = negotiate();
-  const {m, g} = gameFrom(L.matchSpec(peers[0]));
+  const {m, g} = gameFrom(L.matchSpec(peers[0], peers.seedH));
   assert.ok(m.builds[0].deck.length > 30, "buildMatch must still return the dealt deck");
   g.builds.forEach((b, i) => {
     assert.equal(b.deck, undefined,
@@ -358,7 +375,8 @@ test("a build's deck and gear are construction inputs, not state", {skip}, () =>
 
 test("the catalog is what does the compressing, and both peers derive the same one", {skip}, () => {
   const {peers} = negotiate();
-  const a = gameFrom(L.matchSpec(peers[0])), b = gameFrom(L.matchSpec(peers[1]));
+  /* the guest builds a BLIND match (any seed): the same cards, for the catalog only */
+  const a = gameFrom(L.matchSpec(peers[0], peers.seedH)), b = gameFrom({...L.matchSpec(peers[1]), seed: "blind"});
   const catOf = m => WI.makeCatalog(m.builds.flatMap(x =>
     [...(x.deck || []), ...(x.gear || []), ...(x.startItem ? [x.startItem.card] : [])]));
   const ca = catOf(a.m), cb = catOf(b.m);
@@ -374,7 +392,7 @@ test("the catalog is what does the compressing, and both peers derive the same o
    round trip is asserted rather than assumed. */
 test("the opening snapshot round-trips through the wire unchanged", {skip}, () => {
   const {peers} = negotiate();
-  const {m, g} = gameFrom(L.matchSpec(peers[0]));
+  const {m, g} = gameFrom(L.matchSpec(peers[0], peers.seedH));
   const cat = WI.makeCatalog(m.builds.flatMap(x =>
     [...(x.deck || []), ...(x.gear || []), ...(x.startItem ? [x.startItem.card] : [])]));
   const back = WI.decode(WI.encode(g, {catalog: cat}), {catalog: cat});
