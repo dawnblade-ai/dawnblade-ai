@@ -14,7 +14,7 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
 **Keep this section SHORT (under ~50 lines): current state, decisions, who is doing what, next.**
 History goes in the archived handoffs below it and in CHANGELOG.md. Do not start a root handoff file.
 
-- **Live: v5.91** (`f1970c3`). Session start was v5.73 (`218a5fe`). Shipped 2026-11-02: v5.74 pinned pool ·
+- **Live: v5.92** (`35bb8e9`, feed-text batch from the QA sweep). Session start was v5.73 (`218a5fe`). Shipped 2026-11-02: v5.74 pinned pool ·
   v5.75 R8 draw · v5.76 P0 trainer block crash · v5.77 lookahead search on the AI hero (+3.06 of 28,
   t 11.1, 0/0/0; phone p95 96 ms) · v5.78 Sharp/Steady · v5.79 table results/copy · v5.80 layout + 44px
   hit areas · v5.81 feed/voice · v5.82 home-screen icon (original, `icons/`, not standalone) · docs:
