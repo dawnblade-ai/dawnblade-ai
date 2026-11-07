@@ -14,7 +14,7 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
 **Keep this section SHORT (under ~50 lines): current state, decisions, who is doing what, next.**
 History goes in the archived handoffs below it and in CHANGELOG.md. Do not start a root handoff file.
 
-- **Live: v5.92** (`35bb8e9`, feed-text batch from the QA sweep). Session start was v5.73 (`218a5fe`). Shipped 2026-11-02: v5.74 pinned pool ·
+- **Live: v5.96** (`ddbc581`). Session start was v5.73 (`218a5fe`). Shipped 2026-11-02: v5.74 pinned pool ·
   v5.75 R8 draw · v5.76 P0 trainer block crash · v5.77 lookahead search on the AI hero (+3.06 of 28,
   t 11.1, 0/0/0; phone p95 96 ms) · v5.78 Sharp/Steady · v5.79 table results/copy · v5.80 layout + 44px
   hit areas · v5.81 feed/voice · v5.82 home-screen icon (original, `icons/`, not standalone) · docs:
@@ -72,7 +72,7 @@ life loss is not damage (8.5.12b) · Arakni's bonus read continuously (6.2.3c/d)
 after Danger Digits (1.8.3b's own example; reverses v5.17). Quotes in LESSONS.md "CR READINGS".
 **NEEDS A RULING (user):** Preserve Tradition / Pass Over with NO legal target: playable? (CR 5.1.4a/5.1.5 do
 not say outright; 6.6.6a covers triggers only.) CEO lean: not playable.
-**AI-QA (v5.93-v5.96, merging):** Fai plays banished cards (banishPlays) · weapons unlock a held resource
+**AI-QA SHIPPED v5.93-v5.96:** Fai plays banished cards (banishPlays) · weapons unlock a held resource
 piece (resUnlockWeapon) · Sharp re-checks a lucky-deal winner on 4 deals (laLucky; Azalea +2.67/+1.33 t>=3.7)
 · honest endTurnKeep / payNoPiece reasons. Did NOT pay: verifying every overrule (-0.37), every lucky winner.
 **OPEN H-ITEMS (not built, measured leads):** QA-A H-3 Refraction Bolters never destroyed for go again
