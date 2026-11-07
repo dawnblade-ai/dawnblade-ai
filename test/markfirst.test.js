@@ -59,8 +59,11 @@ test("H26: the discard marks them, spends no action point, and the next play is 
   assert.deepEqual([a.t, a.uid], ["play", "bw"], "now the stealth attack: " + JSON.stringify(a));
   const p = J.reduce(n, a, 0);
   assert.ok(p.state && !p.error, JSON.stringify(p).slice(0, 160));
-  assert.ok(p.state.feed.some(l => /strikes from stealth at a marked hero/.test(l)),
-    "the swing reads the mark: +1 and go again if it lands");
+  /* RULING-A (ship/rules-qa): the mark is read at the damage step (CR 6.2.3d,
+     continuous), so ask `linkPumps` — the state, not the feed line. */
+  const st = J.withEffects(p.state, (fx, s) => fx.linkPumps(s, {}));
+  assert.equal(st.total, p.state.pend.total + 1, "the swing reads the mark: +1");
+  assert.deepEqual(st.game.pend.onHit.filter(o => o[0] === "ga"), [["ga"]], "…and go again if it lands");
 });
 
 test("H26 pair: already marked, nothing to do first", {skip}, () => {

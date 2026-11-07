@@ -1,3 +1,19 @@
+## v5.90 — Arakni's stealth bonus reads the mark at the damage step
+
+QA-A R-a, decided on the CR, which fixes S-3 (P2). Arakni, Web of Deceit: "Your attacks with stealth that are
+attacking a marked hero get +1{p} and "When this hits, this gets go again."" was settled at declaration,
+so a Prey Spotters mark placed in the reaction step was ignored and a mark cleared by Danger Digits' hit
+kept its +1.
+
+- CR 5.4.2: "Static abilities that are functional generate static continuous effects.[6.2.3]" CR 6.2.3c:
+  "A static-continuous effect only applies to an object while it has the properties described by the
+  effect - if the properties of an object change, the static effect may no longer apply to that object."
+  CR 6.2.3d: "…its condition is evaluated at all times."
+- Stealth and the hero target stay declaration facts; the mark is asked in `linkPumps` (both boards), where
+  the standing grants are read, and the on-hit go again joins `onHit` there. `pend._sm` carries the
+  magnitude (a pend field; WIRE_V was bumped in R9 on this branch).
+- Drills: `test/arakni.test.js` (late mark counts, cleared mark does not), `test/markfirst.test.js`.
+
 ## v5.89 — life loss is not damage
 
 QA-A S-4 (P2) + FEED-4. "They lose N{h}" (Searing Shot, Arakni, Tarantula) parsed as `dmg`: it ran through

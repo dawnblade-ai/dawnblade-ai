@@ -80,9 +80,11 @@ test("crindex — the verdict counts are pinned", () => {
      intimidate as one body (effects.intimidateFoe, test/intimidateop.test.js). */
   /* 73 -> 75 and 63 -> 65 guarded AT S-4: CR 8.5.12a, 8.5.12b — life loss is
      not damage (effects `loseLife`, test/loselife.test.js). */
-  assert.equal(rs.length, 75, "the number of distinct CR rules this project cites moved");
+  /* 75 -> 80 and 65 -> 70 guarded AT RULING-A: CR 5.4.2, 6.2.2d, 6.2.3, 6.2.3c, 6.2.3d — Arakni's
+     static is read continuously (effects linkPumps, test/arakni.test.js). */
+  assert.equal(rs.length, 80, "the number of distinct CR rules this project cites moved");
   /* 50 -> 51 guarded and 6 -> 5 drill-only AT v4.66: CR 7.1.2, built. */
-  assert.equal(by(rs, "guarded").length,   65, "guarded count moved");
+  assert.equal(by(rs, "guarded").length,   70, "guarded count moved");
   assert.equal(by(rs, "UNGUARDED").length,  3, "UNGUARDED count moved");
   assert.equal(by(rs, "drill-only").length, 5, "drill-only count moved");
   assert.equal(by(rs, "prose").length,      2, "prose count moved");

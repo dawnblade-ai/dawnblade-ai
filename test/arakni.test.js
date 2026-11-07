@@ -96,6 +96,15 @@ function swing(o){
   const n = H.execute(g, atk, "hand", 0, o.target ? {target: o.target} : {});
   return n;
 }
+/* THE STRUCK POWER AND THE RIDER ARE READ AT THE DAMAGE STEP (RULING-A,
+   ship/rules-qa): CR 5.4.2 (a functional static generates a static
+   continuous effect), CR 6.2.3, CR 6.2.3c and CR 6.2.3d make Arakni's line
+   continuous — unlike CR 6.2.2d's layer effect, read once — so the mark
+   is asked in `linkPumps`. `struck` is that read; `pend.total` is the
+   declaration's number and no longer carries the +1. */
+const struck = n => J.withEffects(n, (fx, st) => fx.linkPumps(st, {}));
+const strikePow = n => struck(n).total;
+const strikeRider = n => struck(n).game.pend.onHit;
 const stealthAtk = () => build("arakni").deck.find(c => P.printedKw(c, "stealth") && P.isAttack(c));
 const plainAtk   = () => build("arakni").deck.find(c => !P.printedKw(c, "stealth") && P.isAttack(c));
 
@@ -107,13 +116,13 @@ test("DRIVEN: all three gates, and each one alone is not enough", {skip}, () => 
   const s = stealthAtk(), p = plainAtk();
   assert.ok(s && p, "her real deck supplies both fixtures");
   const base = s.power || 0;
-  assert.equal(swing({card: s, marked: true}).pend.total, base + 1);
-  assert.equal(swing({card: s, marked: false}).pend.total, base,
+  assert.equal(strikePow(swing({card: s, marked: true})), base + 1);
+  assert.equal(strikePow(swing({card: s, marked: false})), base,
     "no mark: no bonus");
-  assert.equal(swing({card: p, marked: true}).pend.total, p.power || 0,
+  assert.equal(strikePow(swing({card: p, marked: true})), p.power || 0,
     "no stealth: no bonus");
-  assert.equal(swing({card: s, marked: true,
-    target: {kind: "ally", uid: 99, side: 1}}).pend.total, base,
+  assert.equal(strikePow(swing({card: s, marked: true,
+    target: {kind: "ally", uid: 99, side: 1}})), base,
     "CR 1.4.5 — an attack on an ALLY is not attacking a hero, marked or not");
 });
 
@@ -138,7 +147,7 @@ test("DRIVEN: an attack that only MENTIONS stealth does not have it", {skip}, ()
                 tx: "The web trembles where stealth has passed."};
   assert.equal(P.hasKw(bait, "stealth"), true, "it does name stealth…");
   assert.equal(P.printedKw(bait, "stealth"), false, "…and it does not carry it");
-  assert.equal(swing({card: bait, marked: true}).pend.total, 3,
+  assert.equal(strikePow(swing({card: bait, marked: true})), 3,
     "so it gets no bonus");
   /* the positive control, in the same shape, or this passes against a
      passive that fires for nobody */
@@ -147,7 +156,7 @@ test("DRIVEN: an attack that only MENTIONS stealth does not have it", {skip}, ()
   assert.equal(P.fxParse(bait).self || 0, 0,
     "and the bait must pump NOTHING of its own, or it passes for the wrong reason");
   assert.equal(P.printedKw(real, "stealth"), true);
-  assert.equal(swing({card: real, marked: true}).pend.total, 4);
+  assert.equal(strikePow(swing({card: real, marked: true})), 4);
 });
 
 test("DRIVEN: the rider is an ON-HIT go again, not an unconditional one", {skip}, () => {
@@ -156,9 +165,25 @@ test("DRIVEN: the rider is an ON-HIT go again, not an unconditional one", {skip}
      direction that steals games. */
   H.db();
   const s = stealthAtk();
-  assert.deepEqual(swing({card: s, marked: true}).pend.onHit, [["ga"]]);
-  assert.deepEqual(swing({card: s, marked: false}).pend.onHit, [],
+  assert.deepEqual(strikeRider(swing({card: s, marked: true})), [["ga"]]);
+  assert.deepEqual(strikeRider(swing({card: s, marked: false})), [],
     "and an ungated swing carries no rider at all");
+});
+
+test("DRIVEN RULING-A: a mark that ARRIVES after declaration counts, and one that LEAVES does not", {skip}, () => {
+  /* QA-A S-3: Prey Spotters marked Bravo during the reaction step and the
+     +1 never came; Danger Digits' hit cleared Dorinthea's mark and the +1
+     stayed. CR 6.2.3d: "its condition is evaluated at all times." */
+  H.db();
+  const s = stealthAtk(), base = s.power || 0;
+  const late = swing({card: s, marked: false});
+  const markedNow = {...late, sides: late.sides.map((x, i) => i === 1 ? {...x, marked: 1} : x)};
+  assert.equal(strikePow(markedNow), base + 1, "marked in the reaction step: the bonus applies");
+  assert.deepEqual(strikeRider(markedNow), [["ga"]], "…with its on-hit rider");
+  const early = swing({card: s, marked: true});
+  const cleared = {...early, sides: early.sides.map((x, i) => i === 1 ? {...x, marked: 0} : x)};
+  assert.equal(strikePow(cleared), base, "the mark wore off before damage: no bonus");
+  assert.deepEqual(strikeRider(cleared), [], "…and no rider");
 });
 
 test("DRIVEN: it lands on a hit and fizzles on a full block", {skip}, () => {
