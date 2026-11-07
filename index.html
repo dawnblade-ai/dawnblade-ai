@@ -898,7 +898,7 @@ img{display:block;max-width:100%}
    database + typographic fallbacks. Not affiliated with LSS.
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
-window.APP_VER = "5.91"; /* v5.91 - Mark of the Huntsman still marks when Danger Digits destroys the dagger. See CHANGELOG.md. */
+window.APP_VER = "5.92"; /* v5.92 - the feed reads cleaner: standing facts stay quiet, sources are named once, and a few lines are fixed. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -4678,7 +4678,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     paySide.res = you(s).res + gain;
     paySide.hand = keepIdx.map(i=>you(s).hand[i]);
     paySide.pitch = [...you(s).pitch,...pitched];
-    n = L(n, `Pitched ${pitched.map(c=>c.name).join(", ")} for ${gain}.`);
+    n = L(n, `Pitched ${pitched.map(c=>c.name).join(" and ")} for ${gain}.`);
     return maybeCharge(n, s.pending.card, s.pending.from, pendIdx);
   });
   /* A CANCELLED PAYMENT TAKES ITS DECLARATIONS WITH IT (v4.72) — the half
@@ -7015,7 +7015,7 @@ function TableScreen({onBack, onSeated}){
         </div>
         <div className={"tblstat"+(stat==="waiting"?" live":"")}>
           {stat==="waiting" && <span className="tbldot"></span>}
-          {PHRASE[stat]||"…"}
+          {err ? "" : (PHRASE[stat]||"…")}
         </div>
       </>}
 

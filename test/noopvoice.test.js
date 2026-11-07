@@ -133,5 +133,16 @@ test("a reason names its reader for the audit, and the feed prints it without (1
   assert.equal(P.noopFeedText("enforced when played (Fusion)"), "enforced when played (Fusion)", "a game word in brackets stays");
   /* and the one place that prints a noop prints the feed form */
   const src = require("fs").readFileSync(require("path").join(__dirname, "..", "engine", "effects.js"), "utf8");
-  assert.match(src, /k==="noop"\)\{ n=L\(n,`\$\{srcName\}: \$\{P\.noopFeedText\(v\)\}\.`\); \}/);
+  assert.match(src, /k==="noop"\)\{ if\(!P\.noopIsQuiet\(v\)\) n=L\(n,`\$\{srcName\}: \$\{P\.noopFeedText\(v\)\}\.`\); \}/);
+});
+
+test("a noop that only describes a standing fact stays out of the feed (QA v5.85 FEED-2)", () => {
+  /* The line IS the observable here: these are feed prose. */
+  const say = t => (P.classifyClause(t) || {ops: [[0, ""]]}).ops[0][1];
+  for(const t of ["Boost", "Heave 2", "Legendary", "Stealth", "Mark"])
+    assert.ok(P.noopIsQuiet(say(t)), t + " describes a standing fact: " + say(t));
+  /* sabotage: an honest gap is NOT quiet, or the filter would hide unbuilt clauses */
+  assert.ok(!P.noopIsQuiet("live — see the Inertia token; the wipe resolves in its controller's end phase"));
+  assert.ok(!P.noopIsQuiet("playable this turn — the flag is set when the card is created"));
+  assert.deepEqual(faults("printed keyword — carried by the engine's keyword system"), ["the engine named"], "the shape is alive");
 });

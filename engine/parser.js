@@ -23,6 +23,12 @@ const norm = s => s.toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
    parenthetical of identifiers — and the feed prints the reason without it. */
 const noopFeedText = why => String(why == null ? "" : why)
   .replace(/\s*\((?:[a-z]+[A-Z][\w]*|[A-Za-z_$][\w$]*\.[\w$.]+)(?:\s*[\/,]\s*(?:[a-z]+[A-Z][\w]*|[A-Za-z_$][\w$]*\.[\w$.]+|[a-z]+))*\)\s*$/, "");
+/* A noop that DESCRIBES A STANDING FACT (a printed keyword, a cost cut, a marker
+   other cards read) is not an event at resolution: printing it reads as engine
+   talk, or as if the card just did it (QA v5.85 FEED-2). The reason stays in
+   source for the audit; the feed stays quiet. A noop that names an unbuilt or
+   deferred clause is NOT quiet: an honest gap stays visible. */
+const noopIsQuiet = why => /^(?:printed keyword|a cost reduction|a condition on the ability|deckbuilding marker|hero-locked card|qualifier|ward \d|Revered is a static)/.test(String(why == null ? "" : why));
 const isAttack = c => /attack/i.test(c.tt) && /action/i.test(c.tt) && c.power!=null;
 const isArrow  = c => /arrow/i.test(c.tt);
 /* ---- DOES THIS PIECE PRINT ITS OWN WEAPON ATTACK? (v4.49) -----------
@@ -1710,7 +1716,7 @@ function classifyClause(raw){
      boost prompt, the crush threshold — or they are honestly inert
      against a hand-less dummy. Pending and unreviewed keywords are
      deliberately absent: they must keep surfacing as coverage gaps. */
-  if(/^(?:boost|battleworn|temper|guardwell|blade break|crush)$/.test(c)) return NOOP("printed keyword — carried by the engine's keyword system");
+  if(/^(?:boost|battleworn|temper|guardwell|blade break|crush)$/.test(c)) return NOOP("printed keyword — applied by the rules when the card is used");
   /* HEAVE N (v3.32). This line is a `noop` for the same reason as the ones
      above and for NO OTHER: the keyword is carried, by `heaveOf` /
      `heaveOffer` / `heave`, and both boards offer it at the arsenal step.
@@ -10750,7 +10756,7 @@ function rustedThrough(gear, counters){
 /* test hook — fxParse memoizes on name|pitch; drills must clear between fixtures */
 const fxReset = () => FXMEMO.clear();
 
-return {norm, noopFeedText, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter,
+return {norm, noopFeedText, noopIsQuiet, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter,
   PER_COUNT, DEF_PER, perCountKey, chainHits, pickSubject, attackQual, markRed, costCtx, qualMatches, abWindow, defCap, defCounts, defCapWhy, defCapRxWhy, isBlockCard,
         nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, qualColour, CLASS_TALENT_WORDS, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, isActionCard, costOffFor, heaveOf,
         classifyClause, fxParse, fxReset, playableFromZone, playZoneWhy, addCostWhy, isArrowCard, boostPays, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost, isActivation, isActionPaid, costTaxes, handAbilityTax,
