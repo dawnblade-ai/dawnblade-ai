@@ -28,6 +28,7 @@ const DEV_VOICE = [
      three more reasons named a function in parentheses (arcaneSoaks,
      resolveInertia, frailtyCount). A lowerCamelCase word is an identifier. */
   [/\b[a-z]+[A-Z][A-Za-z]*\b/,   "a camelCase identifier"],
+  [/\bthe engine\b/i,         "the engine named"],
   [/\byour?\b/i,              "the second person"]
 ];
 

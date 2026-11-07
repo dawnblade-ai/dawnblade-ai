@@ -3424,7 +3424,7 @@ function doPayConfirm(g, seat){
     pitch: [...(s.pitch || []), ...pitched],
     res: (s.res || 0) + gained,
     paySel: []}));
-  n = say(n, "Pitched " + pitched.map(c => c.name).join(", ") + " for " + gained + ".");
+  n = say(n, "Pitched " + pitched.map(c => c.name).join(" and ") + " for " + gained + ".");
   n = {...n, pending: null};
   /* A HAND ABILITY'S TAX WAS THE PAYMENT (v4.87): it goes back through the
      activation, which finds the resources raised and resolves. Never
@@ -4318,7 +4318,7 @@ function doEndTurn(g, seat){
     n = be.game;
     for(const m of be.msgs) n = say(n, m);
     if(be.ops.length)
-      n = withEffects({...n, actor: seat}, (fx, s2) => fx.runOps(s2, be.ops, be.fired.join(", ")));
+      n = withEffects({...n, actor: seat}, (fx, s2) => fx.runOps(s2, be.ops, be.src || be.fired.join(", ")));
   }
 
   /* A TRIGGER THAT ASKS HOLDS THE END PHASE (v5.71). Bloodrot Pox's "…unless
@@ -4502,7 +4502,7 @@ function endPhaseAfterArsenal(g, seat){
       /* the payload is the LEAVING controller's, so it resolves with that
          seat as the actor — `buffNext` is written to `act(n)`. */
       if(sp.ops.length)
-        n = withEffects({...n, actor: inc}, (fx, s2) => fx.runOps(s2, sp.ops, sp.fired.join(", ")));
+        n = withEffects({...n, actor: inc}, (fx, s2) => fx.runOps(s2, sp.ops, sp.src || sp.fired.join(", ")));
     }
     /* "AT THE BEGINNING OF YOUR ACTION PHASE, DESTROY THIS" (v3.07). The
        trainer swept these inline inside `newTurn`, so the table kept them
@@ -4514,7 +4514,7 @@ function endPhaseAfterArsenal(g, seat){
       n = sw.game;
       for(const m of sw.msgs) n = say(n, m);
       if(sw.ops.length)
-        n = withEffects({...n, actor: inc}, (fx, s2) => fx.runOps(s2, sw.ops, sw.fired.join(", ")));
+        n = withEffects({...n, actor: inc}, (fx, s2) => fx.runOps(s2, sw.ops, sw.src || sw.fired.join(", ")));
     }
   }
 

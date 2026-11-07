@@ -120,7 +120,7 @@ const rngRoll = R.roll, rngInt = R.int, rngShuffle = R.shuffle;
 const tokenWords = nm => String(nm || "").split(" ").map(w => w ? w[0].toUpperCase() + w.slice(1) : w).join(" ");
 const RIDER_OP_WORDS = {
   ga:            () => "it goes again",
-  token:         o => "create " + ((o[2] || 1) === 1 ? "a" : o[2]) + " " + tokenWords(o[1]) + " token"
+  token:         o => "create " + ((o[2] || 1) === 1 ? (/^[aeiou]/i.test(tokenWords(o[1])) ? "an" : "a") : o[2]) + " " + tokenWords(o[1]) + " token"
                     + ((o[2] || 1) === 1 ? "" : "s") + (o[3] === "foe" ? " under their control" : ""),
   foeDiscard:    o => "they discard " + ((o[1] || 1) === 1 ? "a card" : o[1] + " cards"),
   foeArsDestroy: () => "destroy the card in their arsenal",
@@ -423,7 +423,7 @@ function makeEffects(ctx){
     const sw = sweepArena(s, seat, "empty");
     let n = sw.game;
     for(const m of sw.msgs) n = L(n, m);
-    if(sw.ops && sw.ops.length) n = runOps(n, sw.ops, sw.fired.join(", "));
+    if(sw.ops && sw.ops.length) n = runOps(n, sw.ops, sw.src || sw.fired.join(", "));
     return n;
   }
 
@@ -1185,7 +1185,7 @@ function makeEffects(ctx){
   const creditCharge = (s, picked) => {
     let n = s;
     actMut(n).hist = {...act(n).hist, charged:(act(n).hist.charged||0)+1};
-    n = L(n, `${sv(act(n), "charge")} ${picked.name} into ${sp(act(n))} hero's soul (Charge).`);
+    n = L(n, `${sv(act(n), "charge")} ${picked.name} into ${sp(act(n))} soul (Charge).`);
     const _cs = fxParse(picked).chargeSoul;
     if(_cs && _cs.length) n = runOps(n, _cs, picked.name);
     return n;
@@ -1818,7 +1818,7 @@ function makeEffects(ctx){
            both seats read, so "your next attack" is a lie to one of them
            the moment seat 1 plays a card. The `gaNext` line above is part
            of that ledger's 44-line debt; this one does not join it. */
-        n = L(n, `${act(n).name}: the next ${P.qualLabel(cq).replace(/^an? /,"")} played this turn can't be defended by more than ${op[1]} ${cnt==="nonBlock"?"non-block":"hand"} card${op[1]===1?"":"s"}.`);
+        n = L(n, `${srcName}: the next ${P.qualLabel(cq).replace(/^an? /,"")} played this turn can't be defended by more than ${op[1]} ${cnt==="nonBlock"?"non-block":"hand"} card${op[1]===1?"":"s"}.`);
       }
       /* A COUNT, NOT A FLAG (v3.10). Mauvrion Skies prints 3 Runechants at
          red, 2 at yellow and 1 at blue; this was a boolean, so it could
@@ -3119,7 +3119,7 @@ function makeEffects(ctx){
         }
       }
       /* the feed gets the reason WITHOUT the reader it names (parser.noopFeedText) */
-      else if(k==="noop"){ n=L(n,`${srcName}: ${P.noopFeedText(v)}.`); }
+      else if(k==="noop"){ if(!P.noopIsQuiet(v)) n=L(n,`${srcName}: ${P.noopFeedText(v)}.`); }
     });
     return n;
   };
@@ -4729,7 +4729,7 @@ function makeEffects(ctx){
       if(payOrLose){
         const [,penAmt,cost] = payOrLose;
         const reach = act(n).res + P.payCeiling(act(n), card);
-        if(reach < cost){ payPenalty = -penAmt; n = L(n, `${card.name}: ${cost} can't be raised, even by pitching — it takes -${penAmt}{p}.`); }
+        if(reach < cost){ payPenalty = -penAmt; n = L(n, `${card.name}: the cost can't be paid, even by pitching — it gets -${penAmt}{p}.`); }
         else n.promptQ = [...(n.promptQ||[]), {tag:"pay", side:actorOf(n), src:card.name, cost,
           ops:[], elseOps:[["self", -penAmt]],
           title:`Pay ${cost} or ${card.name} loses ${penAmt}{p}`,
@@ -5116,7 +5116,7 @@ function makeEffects(ctx){
               else if(op[0] === "wpnAgain"){
                 const wu = {...(act(n).weaponUsed || {})}; delete wu[card.uid];
                 actMut(n).weaponUsed = wu;
-                declNote += ` ${x.b.card.name} pops — ${card.name} may swing once more this turn.`;
+                { const _m = ` ${x.b.card.name} pops — ${card.name} may swing once more this turn.`; if(!declNote.includes(_m)) declNote += _m; }
               }
               else if(op[0] === "arcane"){ arcCount++; arcDmg += op[1]; arcName = x.b.card.name;
                 /* EACH TOKEN IS ITS OWN SOURCE — said here since v2.23, and
@@ -8073,12 +8073,12 @@ function makeEffects(ctx){
     const _atHit = n;
     if(heroHit) n = wearMark(n);
     if(total>0) n = runOps(n, n.pend.onHit, pc.name);
-    else if(n.pend.onHit.length) n = L(n, "Fully blocked — on-hit effects fizzle.");
+    else if(n.pend.onHit.length) n = L(n, "No damage got through — on-hit effects fizzle.");
     const _oh = n.pend.onHitHero || [];
     if(_oh.length){
       if(heroHit) n = runOps(n, _oh, pc.name);
       else if(total>0) n = L(n, `${pc.name} hit an ally — its "when this hits a hero" ability does not fire.`);
-      else n = L(n, "Fully blocked — on-hit effects fizzle.");
+      else n = L(n, "No damage got through — on-hit effects fizzle.");
     }
     /* ---- THE DELAYED ON-HIT GRANT COMES DUE (v4.41) -------------------
 
@@ -9050,7 +9050,7 @@ function tickSuspense(game, seat){
   const sides = (game.sides || []).slice();
   const sd = Object.assign({}, sides[seat]);
   const board = sd.board || [];
-  if(!board.some(b => (b.susp || 0) > 0)) return {game, fired: [], msgs: [], ops: []};
+  if(!board.some(b => (b.susp || 0) > 0)) return {game, fired: [], msgs: [], ops: [], src: ""};
 
   const msgs = [], fired = [], ops = [], keep = [], grave = [];
   for(const b of board){
@@ -9071,13 +9071,13 @@ function tickSuspense(game, seat){
     msgs.push(b.card.name + " runs out of suspense and leaves the arena" +
       (pay.length ? " — and it pays out." : "."));
   }
-  if(!fired.length && !msgs.length) return {game, fired: [], msgs: [], ops: []};
+  if(!fired.length && !msgs.length) return {game, fired: [], msgs: [], ops: [], src: ""};
   sd.board = keep;
   /* a token that runs out of suspense ceases to exist (v5.16) */
   const filed = grave.filter(c => !P.ceasesToExist(c));
   if(filed.length) sd.grave = [...filed.map(c => Object.assign({}, c, {_gy: game.turn})), ...(sd.grave || [])];
   sides[seat] = sd;
-  return {game: Object.assign({}, game, {sides}), fired, msgs, ops};
+  return {game: Object.assign({}, game, {sides}), fired, msgs, ops, src: ""};
 }
 
 /* ---- THE ARENA HAS A CLOCK, AND IT RUNS ON BOTH BOARDS (v3.07) ------
@@ -9879,15 +9879,15 @@ function sweepArena(game, seat, when){
     spared.push({b, sp, left: (bag[sp.kind] || 0) - sp.n});
     return false;
   });
-  if(!dying.length && !spared.length) return {game, fired: [], msgs: [], ops: []};
+  if(!dying.length && !spared.length) return {game, fired: [], msgs: [], ops: [], src: ""};
   sd.counters = counters;
-  const msgs = [], fired = [], ops = [];
+  const msgs = [], fired = [], ops = [], payers = [];
   for(const {b, sp, left, why} of spared)
     msgs.push(why ? b.card.name + " stays — " + why + "."
                   : b.card.name + " pays a " + sp.kind + " counter and survives — " + left + " left.");
   if(!dying.length){
     sides[seat] = sd;
-    return {game: Object.assign({}, game, {sides}), fired, msgs, ops};
+    return {game: Object.assign({}, game, {sides}), fired, msgs, ops, src: payers.join(", ")};
   }
   const kept = board.filter(b => dying.indexOf(b) < 0);
   for(const b of dying){
@@ -9947,6 +9947,7 @@ function sweepArena(game, seat, when){
        end phase, so the actor is already the right one. */
     if(G.isAlly(b) && (f.onDeath || []).length) pay.push(...f.onDeath);
     ops.push(...pay);
+    if(pay.length && !payers.includes(b.card.name)) payers.push(b.card.name);
     msgs.push(b.card.name + (when === "turn"
       ? " crumbles at the top of the turn."
       : when === "empty"
@@ -10007,7 +10008,7 @@ function sweepArena(game, seat, when){
   if(sd.lifeLock && !stillGrants("lifeLock")) sd.lifeLock = false;
 
   sides[seat] = sd;
-  return {game: Object.assign({}, game, {sides}), fired, msgs, ops};
+  return {game: Object.assign({}, game, {sides}), fired, msgs, ops, src: payers.join(", ")};
 }
 
 /* ---- FREEZE LIFTS AT THE START OF THE FREEZING PLAYER'S TURN --------

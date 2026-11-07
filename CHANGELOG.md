@@ -1,3 +1,13 @@
+## v5.NN — Feed text from the v5.85 QA sweep
+
+Text and its plumbing only; no rules change. A noop that only describes a standing fact (printed keyword,
+cost cut, marker, ward, Revered) no longer prints at resolution, and "the engine's keyword system" is gone
+(`parser.noopIsQuiet`; the voice list now flags "the engine"). Grouped end-phase payouts name only the cards
+that pay, once ("Bloodrot Pox", not "Bloodrot Pox, Frailty"). Three Flurries popping print one go-again line.
+"into Boltyn's soul". "No damage got through" where nothing was blocked. Pitch lines join with "and". Look Tuff
+reads "the cost can't be paid". "an Inertia". Confidence's payout names Confidence. The host's lobby status
+drops the stray "…" after an error. Drills: `test/feedqa.test.js`, `noopvoice.test.js`.
+
 ## v5.91 — Mark of the Huntsman still marks after Danger Digits destroys it
 
 QA-A R-b, decided on the CR, and it REVERSES v5.17's lapse. Danger Digits: "…If damage is dealt this way,

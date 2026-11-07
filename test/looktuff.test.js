@@ -64,7 +64,7 @@ test("DRIVEN: a seat that cannot reach the cost even by pitching takes it withou
   const s = declare(board([], 3));
   assert.ok(!s.prompt, "nothing to ask");
   assert.equal(s.pend.total, 7);
-  assert.ok((s.feed || []).some(l => /can't be raised, even by pitching/.test(l)), "and the line is true");
+  assert.ok((s.feed || []).some(l => /can't be paid, even by pitching/.test(l)), "and the line is true");
 });
 
 test("a negative `self` floors at zero and reads as a minus", () => {
