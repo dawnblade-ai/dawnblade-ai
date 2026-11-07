@@ -1,3 +1,21 @@
+## v5.NN — An AI hero plays the card it made playable from banishment
+
+QA-B H-1 (v5.85 sweep), seen in 3 of 4 Fai games, on Steady and on Sharp.
+- **The misplay:** Fai destroyed Pouncing Paws ("Create a Crouching Tiger in your banished zone. You may
+  play it this turn") and Tearing Shuko (+2{p} on it), then ended the turn at an action point with the
+  Tiger legal (2 power, go again), and the call said "Nothing worth doing is left".
+- **Cause:** no candidate list in `sparring.js` looked at the banished zone. The rule policy's offence
+  list held the hand and the arsenal, and the search's start set (`laCands`) did too.
+- **Fix:** `banishPlays` lists the banished cards `judge.legal` lets the seat play now (uid order). They
+  join the offence list (so they rank like any hand card) and the search's start set. No card text: a
+  banished card the judge refuses (a Tiger from an earlier turn) is never listed.
+- **Measured** (own seat, paired, Fai only, the change gated to Fai's seat; wins of 28 per seed): seeds
+  0–5 **+0.33 (t 1.0)**, held out 6–11 **+0.33 (t 1.6)**. Noise-sized, no seed below −1; it ships because
+  the call showed a player wrong advice. 0 refusals / 0 violations / 0 stalls.
+- **Drill:** `test/aiqa.test.js` §1: the Tiger is played from banishment on Steady and on Sharp and goes
+  again; a Tiger from an earlier turn is refused by the judge and not proposed (sabotaged: without the
+  banished list the drill fails).
+
 ## v5.92 — Feed text from the v5.85 QA sweep
 
 Text and its plumbing only; no rules change. A noop that only describes a standing fact (printed keyword,

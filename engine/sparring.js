@@ -595,6 +595,9 @@ function reaction(g, seat){
    of them keeps the action point or spends none: the play it replaces is still
    there next time, and the card a draw finds can be a better one. */
 const ARENA_KEY = {pump: "arenaPump", draw: "arenaDraw", res: "arenaRes", ap: "arenaAP"};
+/* the banished cards `legal` lets this seat play now, in uid order */
+const banishPlays = (g, seat) => (g.sides[seat].banish || []).filter(c => c && c.uid != null
+  && legal(g, {t: "play", uid: c.uid, from: "banish"}, seat)).slice().sort(byUid);
 function offence(g, seat, o){
   /* A CARD THAT MARKS FROM THE HAND GOES BEFORE THE ATTACK THAT CASHES THE MARK (H26).
      Instants cost no action point, so the discard is free of the turn's one point;
@@ -634,6 +637,13 @@ function offenceBase(g, seat, o){
   const from = [];
   (sd.hand || []).forEach(c => from.push({c, from: "hand"}));
   if(sd.arsenal) from.push({c: sd.arsenal, from: "arsenal"});
+  /* A CARD THE JUDGE LETS YOU PLAY FROM BANISHMENT IS A CARD YOU HOLD (QA-B H-1).
+     Pouncing Paws makes a Crouching Tiger "you may play this turn" in the
+     banished zone, and this list never looked there: Fai destroyed two
+     pieces of equipment for a go-again attack and then passed with it legal
+     and the action point unspent. `legal` answers which banished cards are
+     playable now, so this reads no card text; one that is not is not listed. */
+  banishPlays(g, seat).forEach(c => from.push({c, from: "banish"}));
 
   /* ---- AN ALLY IS A THIRD SOURCE OF ATTACKS (v3.50) ------------------
      Allies have attacked since v3.44 and this policy had never heard of
@@ -1156,6 +1166,7 @@ function laCands(g, seat, a0){
   const atk = c => num(c, "power") > 0 ? {target: targetFor(g, seat, c)} : {};
   (sd.hand || []).forEach(c => c && add({t: "play", uid: c.uid, from: "hand", ...atk(c)}));
   if(sd.arsenal) add({t: "play", uid: sd.arsenal.uid, from: "arsenal", ...atk(sd.arsenal)});
+  banishPlays(g, seat).forEach(c => add({t: "play", uid: c.uid, from: "banish", ...atk(c)}));
   (sd.gear || []).forEach(c => c && add({t: "activate", uid: c.uid}));
   (sd.board || []).forEach(b => { if(!b) return; const at = J.boardAttackOf(g, seat, b.uid);
     add(at ? {t: "activate", uid: b.uid, target: targetFor(g, seat, Object.assign({}, b.card, {power: at.power}))} : {t: "activate", uid: b.uid}); });
