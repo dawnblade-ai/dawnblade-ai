@@ -9,7 +9,46 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-07, at v6.02)
+## HANDOFF — START HERE (CEO, 2026-11-07, at v6.07)
+
+**Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
+and `docs/progress/` on main. Do not start a root handoff file.
+
+- **Live: v6.07** (main `843053b`; report `beec9cf`). Progress report: `docs/progress/v6.07.md`.
+- **MISSION (user, 2026-11-07):** the ultimate FaB Silver Age precon competitive gaming environment and
+  judging engine — 100% fan-made, non-profit, for fun and glory, no ads, forever.
+- **CADENCE (user, 2026-11-07):** "With each version make a progress report and start a new CEO thread."
+- **HOW TO WORK:** workers as cloud sessions in env_011rwpp2MyBTt3cEsZKDoVGk, at most TWO at once, Sonnet
+  mechanical / Opus rules-AI-design; workers push `ship/*` and report under 30 lines via send_message; the CEO
+  re-validates on the MERGED tree (suite fail 0 / skipped 5, scenes, fairness, babel, `tools/page.js` screens
+  + FAILs, `tools/twophone.js` for table work, the 630-game ladder), is the only one who pushes main, then
+  confirms CI. **Loop any new multi-game drill (≥10x) before trusting it** (v6.07's candidate flaked 1 in 2).
+  The account's 5-hour usage limit can stop a worker: tell workers to push each increment as soon as it is green.
+
+**H2 SHIPPED (v6.03–v6.07):** sha256 + sealed throw (LOBBY_V 2); `engine/referee.js` host authority; the
+two-phone table runs through it (guest holds only its view, seed commit-reveal, pause/persist/resume/rejoin,
+post-game reveal + Verify this game); honest "host's phone holds the deck" line; AI table filters feed by
+`feedTo`; known top `_kt` / known in hand `_kh` (game.js KNOWN_MARKS). WIRE_V 36.
+**RULINGS (user, 2026-11-07), now in view.SWITCHES:** SOUL_PUBLIC true, OWNER_SEES_INTIMIDATED true,
+PITCH_ORDER_PUBLIC false. Soul public moved Azalea's Sharp −0.25/14 over 12 seeds (all vs Boltyn).
+
+**NOT YET TESTED:** two real phones over real PeerJS (every check used a stubbed network). Worth a
+DESKTOP-TASKS.md entry or asking the user to play one game across two phones.
+
+**NEXT — H3 · neutral referee (M–L, 2–3 sessions):** the same `referee.js` in a third browser (judge mode
+for a store table) and proven server-side behind `net.wsAdapter`. Scope and drills: HIDDEN-HANDS.md §6.
+Then H4 (ranked: accounts, Elo, result authority).
+
+**SMALLER OPEN ITEMS:** NEW: counters bag outlives its card leaving the arena (Malefic Incantation bounced
+to hand may re-enter with stale counters — S-item) · hand-reveal variants beyond foeReveal/fusion (clash,
+Strongest Survive…) are not marked known (stay hidden, the safe side) · Scout the Periphery reads "target
+hero's deck" but the engine looks at the actor's own deck (S-item, rules). CARRIED: six AI misplays (Refraction
+Bolters go-again, soak pitching, Bolt'n Boots on an arrow with go again, Gravy's boots taker, Enigma Uphold,
+Frost Spike) · play-line ORDER in the feed (Big Bertha / Oasis) · trainer QA for Fai, Enigma, Arakni, Blaze,
+Gravy, Lyath · Line Crossers re-pin · parked: sudden death. RESOLVED this thread: page.js screen count (AI
+table now seeded in drives; 73/73) and the 4 old layout FAILs (absent on every v6.03–v6.07 run).
+
+## HANDOFF ARCHIVE (CEO, 2026-11-07, at v6.02) — superseded by the section above
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
