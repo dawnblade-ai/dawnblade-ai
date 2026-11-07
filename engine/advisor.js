@@ -18,21 +18,29 @@ const you = s => s.sides[0];
 const opp = s => s.sides[1];
 
 function advPitchPotential(hand, excl){ return hand.reduce((a,c,i)=> i===excl ? a : a+(c.pitch||0), 0); }
+/* A SWING IS A CARD THAT MAKES AN ATTACK. `parser.isAttack` reads the type line
+   for attack + action, so a weapon ("Weapon - Sword (2H)") is never one — its
+   "Attack" is the activated ability. The table's seat policy values a weapon
+   swing too (it asks the judge's readers); this is the advisor's reading of the
+   same fact: `parser.isWeapon` is a weapon TYPE that prints a weapon attack
+   (not Cosmo's or the Crucible's quoted grants), so a swing is priced by its
+   power plus the pending next-attack grants. */
+const swings = c => isAttack(c) || (isWeapon(c) && (c.power||0) > 0);
 function advCardOut(c, g, ctx){
   const fx = fxParse(c);
   let dmg = 0;
-  if(isAttack(c)){
+  if(swings(c)){
     dmg = (c.power||0) + (fx.self||0) + you(g).buffNext + runeCount(you(g))*ctx.runeDmg;
     fx.conds.forEach(cd=>{ if(cd.op[0]==="self" && ((cd.cond==="atk"&&you(g).hist.atk>0)||(cd.cond==="non"&&you(g).hist.non>0))) dmg += cd.op[1]; });
     if((ctx.dBlk||0)>0 && dmg>=4) dmg = Math.max(0, dmg-(ctx.dDef||1));
   }
-  fx.ops.concat(isAttack(c)?fx.onHit:[]).forEach(op=>{ if(op[0]==="arcane") dmg += op[1] + you(g).amp; });
+  fx.ops.concat(swings(c)?fx.onHit:[]).forEach(op=>{ if(op[0]==="arcane") dmg += op[1] + you(g).amp; });
   return dmg;
 }
 function advValue(c, g, ctx){
   const fx = fxParse(c);
   let v = advCardOut(c,g,ctx);
-  fx.ops.concat(isAttack(c)?fx.onHit:[]).forEach(op=>{
+  fx.ops.concat(swings(c)?fx.onHit:[]).forEach(op=>{
     if(op[0]==="draw") v += 1.6*op[1];
     else if(op[0]==="res") v += op[1];
     else if(op[0]==="rune") v += ctx.runeDmg*op[1]*0.9;
@@ -231,7 +239,7 @@ function advise(g, ctx){
   const bits=[]; if(out>0) bits.push(out+" dmg"); if(fx.ga) bits.push("go again");
   fx.ops.forEach(op=>{ if(op[0]==="draw") bits.push("draw "+op[1]); if(op[0]==="rune") bits.push("+"+op[1]+" runechant"); if(op[0]==="amp") bits.push("amp "+op[1]); });
   const why = fx.ga ? `Chain it: go again keeps your action point${best.next?` — ${Math.round(best.next)} more damage is waiting behind it`:""}.`
-    : runeCount(you(g))>0 && isAttack(best.c) ? `Your ${runeCount(you(g))} runechant${runeCount(you(g))>1?"s":""} pop on this swing — cash them in.`
+    : runeCount(you(g))>0 && swings(best.c) ? `Your ${runeCount(you(g))} runechant${runeCount(you(g))>1?"s":""} pop on this swing — cash them in.`
     : out>=5 ? "Biggest clean hit on the table; anything smaller wastes the turn."
     : "Best value line available right now.";
   return {line:`Play ${nm(best.c)}${srcTxt}${pitchTxt} → ${bits.join(", ")||"effect"}.`, why};

@@ -192,3 +192,24 @@ test("advise — the pay line counts what floats in English", () => {
   const none = A.advise(gameWith({hand:[play, red], res:0}, {pending:{card:play, from:"hand", idx:0}}), {runeDmg:1, window:"pay"});
   assert.ok(!/floating/.test(none.line), none.line);
 });
+
+/* ---- QA-C (v5.96 trainer read): the Coach's act-window call ---------------
+   Each fixture has a unique name (fxParse memo) and asks `advise` for the call. */
+const call = (g, ctx) => A.advise(g, Object.assign({runeDmg:0, window:"act"}, ctx||{}));
+const dawn = {uid:"w1", name:"coach-qa Dawnblade", tt:"Weapon - Sword (2H)", ty:["Weapon","Sword","2H"], power:3, cost:1, kw:[],
+  tx:"Once per Turn Action - {r}: Attack\nThe second time this hits each turn, put a +1{p} counter on it."};
+
+test("COACH-1 — a weapon swing is valued and coached, with its pending +power", () => {
+  assert.equal(P.isAttack(dawn), false, "the premise: the type line says Weapon, not attack action");
+  const g = sided({res:3, buffNext:5, gear:[dawn]});
+  assert.equal(A.advCardOut(dawn, g, {runeDmg:0}), 8, "printed 3 + the +5 already paid for");
+  const r = call(g);
+  assert.match(r.line, /^Play coach-qa Dawnblade — weapon swing → 8 dmg/, "never 'End turn' over a pumped weapon: " + r.line);
+  /* sabotage: the same state with the swing already spent coaches the end of turn */
+  assert.match(call(sided({res:3, buffNext:5, gear:[dawn], weaponUsed:{w1:true}})).line, /^End turn/);
+});
+
+test("COACH-1 — a powerless weapon (nothing to swing) is not a candidate worth coaching", () => {
+  const dud = {...dawn, uid:"w2", name:"coach-qa Dawnblade dud", power:0};
+  assert.match(call(sided({res:3, gear:[dud]})).line, /^End turn/);
+});

@@ -1,3 +1,15 @@
+## v5.97 — The Coach's call swings the weapon
+
+QA-C COACH-1 (P1, v5.96 trainer read).
+- **Cause:** `advCardOut` priced damage only `if(isAttack(c))`, and `parser.isAttack` reads the type line for
+  attack + action, which a "Weapon - Sword" never is. Every weapon swing scored `0 − cost×0.15`, never cleared the 0.4
+  floor, and the call said "End turn — save the hand" over a Dawnblade with +5 already paid for.
+- **Fix:** the advisor asks `swings(c)` = `isAttack` or `parser.isWeapon` (a weapon type that prints a weapon
+  attack; the same reader the weapon candidates already use) with power. A swing is priced by its power plus the pending
+  next-attack grants (`buffNext`), runechants and arcane riders, like any attack.
+- **Drill:** `test/advisor.test.js` COACH-1 — the reproduced position (3 floating, +5 pending) now advises the swing at
+  8 damage; the spent weapon and a powerless one still end the turn.
+
 ## v5.96 — The call never says "nothing is left" when something is
 
 QA-B FEED-1 and QA-A H-3's reason line (v5.85 sweep).
