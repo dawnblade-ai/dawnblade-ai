@@ -2531,6 +2531,19 @@ function makeEffects(ctx){
                               : `${srcName}: every point of it prevented.`);
         if(pv.dealt > 0) foeMut(n).hp -= pv.dealt;
       }
+      /* LIFE LOSS IS NOT DAMAGE (S-4, QA-A). "They lose 1{h}" (Searing Shot,
+         Arakni, Tarantula) read as `dmg`, so prevention could eat it and the
+         feed said "1 damage". CR 8.5.12a (verbatim, rules.fabtcg.com): "If a
+         living-card lose {h}, its life total is decreased by the specified
+         amount." CR 8.5.12b: "Losing life is not considered as damage being
+         dealt, unless it is the result of a damage effect.[8.5.3] Losing life
+         is not considered as a hit…" So: no `preventDamage`, no hit, its own
+         verb. The opposing hero, as every "they / target hero" payload here. */
+      else if(k==="loseLife"){
+        const amt = Math.max(0, v || 0);
+        if(amt > 0) foeMut(n).hp -= amt;
+        n = L(n, `${srcName}: ${sv(foe(n), "lose")} ${amt} life — life loss, not damage, so nothing prevents it.`);
+      }
       /* RULING (Pouncing Paws): mint a real card into the banished zone,
          playable this turn only. Resolved from the database like any card. */
       /* "INTIMIDATE TARGET HERO" ON A NON-ATTACK (S-2) — Sadistic Scowl. The

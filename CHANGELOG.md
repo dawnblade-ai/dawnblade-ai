@@ -1,3 +1,14 @@
+## v5.89 — life loss is not damage
+
+QA-A S-4 (P2) + FEED-4. "They lose N{h}" (Searing Shot, Arakni, Tarantula) parsed as `dmg`: it ran through
+prevention (a source-chosen shield could eat it) and the feed said "Searing Shot: 1 damage."
+
+- CR 8.5.12b (verbatim): "Losing life is not considered as damage being dealt, unless it is the result of
+  a damage effect.[8.5.3] Losing life is not considered as a hit, unless it is the result of damage being
+  dealt by an attack during the damage step of combat.[7.5.5]"
+- New op `loseLife` (no `preventDamage`, no hit, its own feed line: "… loses 1 life — life loss, not
+  damage, so nothing prevents it."). `runOps` vocabulary 98 -> 99. Drills: `test/loselife.test.js`.
+
 ## v5.88 — Sadistic Scowl intimidates (both boards)
 
 QA-A S-2 (P1) + FEED-1. "Intimidate target hero" on Sadistic Scowl parsed as a NOOP whose text described

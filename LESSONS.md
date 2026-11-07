@@ -14390,3 +14390,10 @@ needs the verbatim quote IN THE REPO (source comment, `tools/approx.js` record, 
   their hand." CR 8.5.10b: "If a player is not specified, the intimidate is a targeted effect.[1.8.5]"
 - Lesson: a keyword that is ALSO printed as an instruction ("Intimidate target hero") needs its body
   outside the keyword's own trigger site, or the instruction has nothing to call.
+
+### S-4 — life loss is not damage (ship/rules-qa)
+- CR 8.5.12a: "If a living-card lose {h}, its life total is decreased by the specified amount. If the
+  object does not have the life property, then the lose effect fails."
+- CR 8.5.12b: "Losing life is not considered as damage being dealt, unless it is the result of a damage
+  effect.[8.5.3] Losing life is not considered as a hit, unless it is the result of damage being dealt by
+  an attack during the damage step of combat.[7.5.5]"

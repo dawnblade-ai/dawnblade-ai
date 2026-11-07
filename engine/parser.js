@@ -2330,7 +2330,9 @@ function classifyClause(raw){
     return R([["ga", 1, q2]]);
   }
   /* "they lose N{h}" is damage to the opposing hero */
-  if(m=c.match(/^(?:they|the defending hero|target hero) loses? (\d+)\s*\{h\}$/)) return R([["dmg",+m[1]]]);
+  /* LIFE LOSS, NOT DAMAGE (S-4): `loseLife`, not `dmg` — CR 8.5.12b is
+     quoted at the op in effects.js. */
+  if(m=c.match(/^(?:they|the defending hero|target hero) loses? (\d+)\s*\{h\}$/)) return R([["loseLife",+m[1]]]);
   /* BLOODROT POX PRINTS AN ESCAPE HATCH (v3.09) — "…then it deals 2 damage
      to you unless you pay {r}{r}{r}". The `rot` counter this replaced
      offered no payment and never expired, so it was a permanent

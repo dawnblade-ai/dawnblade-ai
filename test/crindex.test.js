@@ -78,9 +78,11 @@ test("crindex — the verdict counts are pinned", () => {
      played defence reaction (parser.defCapRxWhy, test/defcap.test.js). */
   /* 70 -> 73 and 60 -> 63 guarded AT S-2: CR 8.5.10, 8.5.10a, 8.5.10b —
      intimidate as one body (effects.intimidateFoe, test/intimidateop.test.js). */
-  assert.equal(rs.length, 73, "the number of distinct CR rules this project cites moved");
+  /* 73 -> 75 and 63 -> 65 guarded AT S-4: CR 8.5.12a, 8.5.12b — life loss is
+     not damage (effects `loseLife`, test/loselife.test.js). */
+  assert.equal(rs.length, 75, "the number of distinct CR rules this project cites moved");
   /* 50 -> 51 guarded and 6 -> 5 drill-only AT v4.66: CR 7.1.2, built. */
-  assert.equal(by(rs, "guarded").length,   63, "guarded count moved");
+  assert.equal(by(rs, "guarded").length,   65, "guarded count moved");
   assert.equal(by(rs, "UNGUARDED").length,  3, "UNGUARDED count moved");
   assert.equal(by(rs, "drill-only").length, 5, "drill-only count moved");
   assert.equal(by(rs, "prose").length,      2, "prose count moved");
