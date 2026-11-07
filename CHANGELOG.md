@@ -1,3 +1,20 @@
+## v5.NN — The call never says "nothing is left" when something is
+
+QA-B FEED-1 and QA-A H-3's reason line (v5.85 sweep).
+- **Ending the turn:** the call read "End your turn. Nothing worth doing is left." whenever the policy
+  ended the turn, including while a play was still legal (Fai's banished Tiger before the banished-zone fix; a Blossom
+  of Spring held by QUEUE v4 H11). When any start is still legal, it now reads `endTurnKeep`: "End your
+  turn. What you could still play is worth more held back than spent now." `explain` asks the
+  search's own candidate list (`laCands`, every start `judge.legal` accepts), so the move is unchanged.
+- **Declining a destroy-this price:** "Don't pay. It isn't worth the cards." was shown for Refraction
+  Bolters, whose price is the piece itself. A pay sheet that carries a piece to destroy now reads
+  `payNoPiece`: "Don't pay. Keeping the piece is worth more than what destroying it buys." The
+  decision itself (QA-A H-3: Dorinthea never destroys the Bolters for go again) is not changed here;
+  it is recorded for the queue.
+- **Reason text only:** no action changes, so self-play is byte-identical to the commit before.
+- **Drills:** `test/aiqa.test.js` §4: a held Blossom gives `endTurnKeep` and an empty board gives
+  `endTurn` (the sabotage). A free destroy price declined gives `payNoPiece` and a {r} price gives `payNo`.
+
 ## v5.NN — Sharp does not trade a sure line for a lucky deal
 
 QA-A H-1 (v5.85 sweep, P1) and QA-B H-2, with QA-B FEED-2.

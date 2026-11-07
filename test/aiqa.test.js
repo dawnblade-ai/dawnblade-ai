@@ -24,6 +24,10 @@
       known arrow, and Sharp threw it away. Kayo's Knucklehead rolled high on
       its one deal. An overrule is now checked on `LA.verify` deals.
 
+   4. TWO REASON LINES SAID SOMETHING FALSE (QA-B FEED-1, QA-A H-3). The
+      call said "Nothing worth doing is left" with a play still legal, and
+      declining a destroy-this price said "It isn't worth the cards".
+
    DRIVEN through `sparring.act`, `judge.legal` and `judge.reduce`, with the
    sabotage (the old behaviour) asked beside every new answer.
    ====================================================================== */
@@ -137,4 +141,28 @@ test("the verified call reads nothing hidden: scrambled hidden cards give the sa
 test("the laKeep reason claims cards kept, not damage dealt", () => {
   assert.doesNotMatch(SP.CALL_WHY.laKeep, /hits|damage|hard/);
   assert.match(SP.CALL_WHY.laKeep, /cards in hand/);
+});
+
+/* ---- the reason lines (QA-B FEED-1, QA-A H-3's reason) ----------------- */
+test("ending the turn with a play still legal says it is held, not that nothing is left", {skip}, () => {
+  const held = bladeTurn([piece("Blossom of Spring", 41)]);
+  const x = SP.explain(held, 0, {search: false});
+  assert.equal(x.action && x.action.t, "endTurn", "control: the rules end the turn");
+  assert.equal(x.key, "endTurnKeep", "Blossom is still legal, so the call says it is held");
+  /* sabotage: with nothing legal the old line stands */
+  const bare = bladeTurn([]);
+  assert.equal(SP.explain(bare, 0, {search: false}).key, "endTurn");
+});
+
+test("declining a destroy-this price names the piece, not cards", {skip}, () => {
+  const PRM = require("../engine/prompts.js");
+  const base = bladeTurn([piece("Refraction Bolters", 43)]);
+  const ask = (destroyUid, cost) => ({...base, prompt: PRM.buildPrompt(base, {tag: "pay", side: 0, cost, destroyUid,
+    title: "Destroy Refraction Bolters?", card: base.sides[0].gear[0]})});
+  const decline = g => { const x = SP.explain(g, 0, {search: false}); return x.key === "payYes" ? null : x; };
+  /* the piece's price is free; the other is {r} the seat (no hand, nothing floating) cannot raise */
+  const piece1 = decline(ask(43, 0)), cards = decline(ask(null, 1));
+  assert.ok(piece1 && cards, "control: the policy declines both");
+  assert.equal(piece1.key, "payNoPiece");
+  assert.equal(cards.key, "payNo", "sabotage: a price with no piece keeps the cards line");
 });
