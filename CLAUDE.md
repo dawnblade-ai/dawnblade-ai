@@ -201,8 +201,10 @@ Both resolve card text through `effects.js`.
 - Tokens are real cards on the board (Runechant, Frostbite… are auras); token uids are
   namespaced; a token leaving the arena ceases to exist (`parser.ceasesToExist`).
   Graveyard entries are turn-stamped (`_gy`).
-- Rules questions: the CR site is unreachable from the sandbox. Without a verbatim
-  quote in the repo, do not decide it — record it in `tools/approx.js` and ask the user.
+- Rules questions: the `dawnblade-ai` cloud environment can read the CR at
+  https://rules.fabtcg.com/en/cr/ (`curl` a section, strip the HTML). A decision still needs the
+  VERBATIM quote in the repo (source comment, `tools/approx.js`, LESSONS.md "CR READINGS"); if the
+  text does not settle it, record it in `tools/approx.js` and ask the user.
   User rulings are marked `RULING (user, date)`; grep LESSONS.md and the source.
 
 **The AI (`sparring.js`)**
