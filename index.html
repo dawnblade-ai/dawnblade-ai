@@ -2590,11 +2590,11 @@ function PromptSheet({p, me, onToggle, onPick, onTakeBack, onMove, onDecline, on
     {p.tag==="pay" && <div className="pmodal">
       <button className={"popt"+(p.choice==="pay"?" on":"")}
         disabled={p.avail < p.cost} onClick={go(()=>onPick("pay"))}>
-        Pay {p.cost}
+        {p.destroyUid!=null && !p.cost ? "Destroy it" : <>Pay {p.cost}</>}
         {/* `avail` IS THE POOL PLUS WHAT THE HAND CAN PITCH (v2.75), never the pool
             alone — "5 floating" over an empty pool read as a number that was not
             there. Pitching is on demand, so the sub says where the price comes from. */}
-        <span className="sub">{p.avail < p.cost ? `only ${p.avail} from pool and hand` : `${p.avail} from pool and hand`}</span>
+        <span className="sub">{p.destroyUid!=null && !p.cost ? "the piece itself is the price" : p.avail < p.cost ? `only ${p.avail} from pool and hand` : `${p.avail} from pool and hand`}</span>
       </button>
       <button className={"popt"+(p.choice==="decline"?" on":"")} onClick={go(()=>onPick("decline"))}>
         {/* AN "UNLESS" PRICE HAS NO RIDER — declining is what lets its penalty land (v5.24's
@@ -4386,7 +4386,12 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                                                        blueGY: (act(s).hist||{}).blueGY||0, turn: s.turn});
       if(_zw) return L(s, `${card.name} can't be played from your ${DawnPrompts.promptZoneWord(from)} — ${_zw}.`);
     }
-    if(from!=="weapon" && from!=="hero" && !isAttack(card) && !fx.playable) return L(s,`${card.name}: no scripted effect yet — pitch it, block with it, or ℹ to read it.`);
+    /* A SELF-PUMP INSTANT IS SCRIPTED (Lightning Press: `fxParse` self 3); what it lacks in the action phase is an
+       attack to target. `pumpTargetWhy` names that, so a learner is not told a built card is unbuilt (QA-C FEED-2). */
+    if(from!=="weapon" && from!=="hero" && !isAttack(card) && !fx.playable){
+      const _pw0 = DawnEffects.pumpTargetWhy(s, card, actorOf(s));
+      return L(s, _pw0 ? _pw0 + "." : `${card.name}: no scripted effect yet — pitch it, block with it, or ℹ to read it.`);
+    }
     if(from==="hero" && act(s).weaponUsed[card.uid]) return L(s, "Already used this turn.");
     /* A SWING IS SPENT ONLY WHERE THE WEAPON PRINTS A LIMIT (v5.01) —
        `parser.swingSpentWhy`, the reader judge asks. This refused every
@@ -5114,7 +5119,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       if(oNeed > 0){
         const os = foeMut(n); const take = foe(n).deck.slice(0,oNeed);
         os.hand = [...foe(n).hand, ...take]; os.deck = foe(n).deck.slice(take.length);
-        if(take.length) n = L(n, `${foe(n).name} draws back up to ${foe(n).int} — first turn of the game (CR 4.4.3f).`);
+        if(take.length) n = L(n, `${DawnGame.sv(foe(n),"draw")} back up to ${foe(n).int} — first turn of the game (CR 4.4.3f).`);
       }
     }
 
@@ -6196,7 +6201,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
         </> : g.mode==="stack" ? (
           <button className="a go" onClick={resolveStack}>Pass — resolve</button>
         ) : g.mode==="block" ? ( g.bphase==="defend" ? <>
-          <button className="a" onClick={takeIt}>Take it</button>
+          <button className="a" onClick={takeIt}>{you(g).blockH.length||you(g).blockG.length ? "Defend — no reactions" : "Take it"}</button>
           <button className="a go" onClick={moveToReact}>Defend → reactions</button>
         </> : (
           <button className="a go" onClick={takeIt}>Resolve damage</button>

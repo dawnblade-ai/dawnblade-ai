@@ -91,6 +91,11 @@ const RX_CONDS = ["reprise", "charged", "defAtkAction"];
    needs them too, and two copies of a conjugation rule is the no-mirror
    rule broken over the prose the player reads. */
 const {popRunechants, gearDef, gearBlockApply, hasExposedZone, isSecondPerson, sv, sp} = G;
+/* A SEAT'S NAME MID-SENTENCE (QA-C FEED-4). Seat 0 is literally "You", so a clause that carries the
+   name or an `sv` phrase after a colon or a comma must lower-case the one capital that is not a sentence
+   start; a hero's name keeps its own. And `theirs` is the possessive for "their next …" lines. */
+const mid = str => { const w = String(str).split(" "); return isSecondPerson(w[0]) ? [w[0].toLowerCase()].concat(w.slice(1)).join(" ") : String(str); };
+const theirs = sd => isSecondPerson(sd && sd.name) ? sp(sd) : "their";
 const {advValue} = A;
 /* prompts.js is a NEW factory argument in v2.74 and the load order already
    allowed it — prompts.js is script tag 1341, effects.js 1353. `arcaneHit`
@@ -656,7 +661,7 @@ function makeEffects(ctx){
     actMut(n).hist = {...act(n).hist, might6:1};
     /* NAMED OFF THE HERO CARD, NOT WRITTEN AS "Kayo" (v5.33): the engine names no hero (golden
        rule), and the seat is inflected through `sv` because both seats read this (QUEUE v3 S3/S4). */
-    n = L(n, `${heroAbilityName(n)}: the first card with 6 or more {p} ${sv(act(n), "have")} discarded this action phase makes a Might token.`);
+    n = L(n, `${heroAbilityName(n)}: the first card with 6 or more {p} ${mid(sv(act(n), "have"))} discarded this action phase makes a Might token.`);
     return runOps(n, [["token","Might",1,"self"]], "Kayo");
   };
 
@@ -1737,7 +1742,7 @@ function makeEffects(ctx){
         const ops = Array.isArray(v) ? v : [];
         if(ops.length){
           actMut(n).hitNext = [...(act(n).hitNext||[]), {ops, heroOnly: !!op[2], src: srcName}];
-          n = L(n, `${srcName}: the next time ${sv(act(n), "hit")}${op[2] ? " a hero" : ""} this turn, it pays off.`);
+          n = L(n, `${srcName}: the next time ${mid(sv(act(n), "hit"))}${op[2] ? " a hero" : ""} this turn, it pays off.`);
         }
       }
       /* a keyword this resolution has GRANTED — read beside the printed
@@ -1765,7 +1770,7 @@ function makeEffects(ctx){
       else if(k==="costOff"){
         actMut(n).costOff = [...(act(n).costOff||[]), {amt:v, q:op[2]||null}];
         /* THE FEED IS READ BY BOTH SEATS, so it names one (v2.83). */
-        n=L(n,`${act(n).name}: their next ${P.qualLabel(op[2]||null).replace(/^an? /,"")} costs ${v} less.`);
+        n=L(n,`${act(n).name}: ${theirs(act(n))} next ${P.qualLabel(op[2]||null).replace(/^an? /,"")} costs ${v} less.`);
       }
       /* A ONE-SHOT SPEED GRANT, WAITING FOR THE CARD IT NAMES (v3.37).
          Stir the Aetherwinds, and the FOURTH of the qualified single-shot
@@ -1782,7 +1787,7 @@ function makeEffects(ctx){
         if(!iq) return;
         actMut(n).instantNextQ = [...(act(n).instantNextQ||[]), iq];
         /* THE FEED IS READ BY BOTH SEATS, so it names one (v2.83). */
-        n=L(n,`${act(n).name}: their next ${P.qualLabel(iq.q).replace(/^an? /,"")} may be played at instant speed`
+        n=L(n,`${act(n).name}: ${theirs(act(n))} next ${P.qualLabel(iq.q).replace(/^an? /,"")} may be played at instant speed`
              + (iq.amp ? ` and deals +${iq.amp} arcane.` : "."));
       }
       else if(k==="gaNext"){
@@ -1839,7 +1844,7 @@ function makeEffects(ctx){
            way" names this prevention and no other. */
         actMut(n).wardNext = [...(act(n).wardNext || []),
           {n: v, src: srcName, ops: (op[2].ops || []).slice()}];
-        n = L(n, `${srcName}: the next time ${act(n).name} would be dealt damage this turn, ${v} of it is prevented.`);
+        n = L(n, `${srcName}: the next time ${mid(act(n).name)} would be dealt damage this turn, ${v} of it is prevented.`);
       }
       else if(k==="ward"){
         actMut(n).ward+=v;
@@ -1956,7 +1961,7 @@ function makeEffects(ctx){
           n.pend = {...n.pend, lateOps: [...(n.pend.lateOps||[]), ["piercing", v]]};
           n = L(n, `${srcName}: ${n.pend.card.name} has piercing ${v} — +${v} power if an equipment blocks.`);
         }
-        else n = L(n, `${srcName}: piercing ${v}, but ${sv(act(n), "have")} no attack in flight.`);
+        else n = L(n, `${srcName}: piercing ${v}, but ${mid(sv(act(n), "have"))} no attack in flight.`);
       }
       else if(k==="soulSpend"){
         if((act(n).soul||[]).length >= v){ n = banishFromSoul(n, v); n = L(n,`${v} banished from the soul.`); n = runOps(n, op[2]||[], srcName); }
@@ -2873,7 +2878,7 @@ function makeEffects(ctx){
            damage", the same shape as Cloud Cover, so it is a shield on
            `wardNext` (windowed by the end-phase sweep, v4.34's point). */
         actMut(n).wardNext = [...(act(n).wardNext || []), {n: p, src: srcName, ops: []}];
-        n = L(n, `${n.revealed.name} is pitch ${p} — the next time ${act(n).name} would be dealt damage this turn, ${p} of it is prevented.`);
+        n = L(n, `${n.revealed.name} is pitch ${p} — the next time ${mid(act(n).name)} would be dealt damage this turn, ${p} of it is prevented.`);
       }
       /* RULING (Saltwater Swell): reads the SAME n.revealed the reveal op
          just set (both ops run together in declOps), and if it matches,
@@ -3162,19 +3167,19 @@ function makeEffects(ctx){
     chargedWay = chargedWay || [];
     return {atk:"no other attack yet", non:"no other non-attack yet",
       pitch6:`no 6+ power card in ${sp(act(n))} pitch zone`, arsenal:"not played from arsenal",
-      lifeLt:`${sv(act(n), "are")} not behind on life`, lifeGt:`${sv(act(n), "are")} not ahead on life`,
+      lifeLt:`${mid(sv(act(n), "are"))} not behind on life`, lifeGt:`${mid(sv(act(n), "are"))} not ahead on life`,
       marked:`${foe(n).name} isn't marked`, foeTurn:`it is ${sp(act(n))} turn, not ${sp(foe(n))}`,
       arcDealt:"no arcane damage dealt yet this turn",
       auraTurn:"no aura played or created this turn",
       madeCard:"nothing created this turn", booed:"no boo from the crowd this turn",
       blue:"no other blue card played this turn", red:"no other red card played this turn",
-      transcended:`${sv(act(n), "have")} not transcended this turn`,
+      transcended:`${mid(sv(act(n), "have"))} not transcended this turn`,
       aim:"no aim counter on it", hasArsenal:`${sp(act(n))} arsenal is empty`,
       seismic:`no Seismic Surge token on ${sp(act(n))} board`,
       suspenseAura:`no aura of Suspense on ${sp(act(n))} board`,
       allyDied:`no ally has hit ${sp(act(n))} graveyard this turn`,
-      weaponSwung:`${sv(act(n), "have")} not attacked with a weapon this turn`,
-      dealtDmg:`${sv(act(n), "have")} not dealt damage this turn`,
+      weaponSwung:`${mid(sv(act(n), "have"))} not attacked with a weapon this turn`,
+      dealtDmg:`${mid(sv(act(n), "have"))} not dealt damage this turn`,
       isDraconic:"this isn't Draconic",
       pitchOverBase:`nothing in ${sp(act(n))} pitch zone beats its base power`,
       charged:"no card charged to the soul this turn",
@@ -3185,7 +3190,7 @@ function makeEffects(ctx){
          Pulping and Bare Fangs printed "condition not met (discard6way)"
          on every miss, 4 times in 210 games */
       discard6way:"no card with 6 or more {p} was discarded this way",
-      arcTakenTurn:`${sv(act(n), "have")} taken no arcane damage this turn`,
+      arcTakenTurn:`${mid(sv(act(n), "have"))} taken no arcane damage this turn`,
       /* the two reaction gates answer FALSE here only off the reaction
          route (`attackRx` owns them on it), and still read as words */
       reprise:"the defending hero hasn't defended with a card from hand",
@@ -5824,7 +5829,7 @@ function makeEffects(ctx){
           actMut(n).res += (p.pitch||0);
           actMut(n).pitch = [...act(n).pitch, p];
           actMut(n).hand = act(n).hand.filter(h=>h.uid!==p.uid);
-          n = L(n, `Pitched ${p.name} at instant speed (+${p.pitch||0}).`);
+          n = L(n, `${sv(act(n), "pitch")} ${p.name} at instant speed (+${p.pitch||0}).`);
         }
         return act(n).res < cost ? null : n;
       }
@@ -5835,7 +5840,7 @@ function makeEffects(ctx){
       actMut(n).res += (p.pitch||0);
       actMut(n).pitch = [...act(n).pitch, p];
       actMut(n).hand = act(n).hand.filter(h=>h.uid!==p.uid);
-      n = L(n, `Pitched ${p.name} at instant speed (+${p.pitch||0}).`);
+      n = L(n, `${sv(act(n), "pitch")} ${p.name} at instant speed (+${p.pitch||0}).`);
     }
     return act(n).res < cost ? null : n;
   };
@@ -6223,7 +6228,10 @@ function makeEffects(ctx){
     const r = applyPrompt({...s, prompt:null}, p);
     let n = r.game;
     n.prompt = null;
-    r.msgs.forEach(m => { n = L(n, m); });
+    /* A PAID PRICE IS LOGGED AFTER ITS PITCH (QA-C FEED-7): "paid 1 and tapped X" read before the "Pitched …"
+       line that paid it. Every other answer logs here, ahead of its consequences. */
+    const _lateMsgs = p.tag === "pay" && p.choice === "pay";
+    if(!_lateMsgs) r.msgs.forEach(m => { n = L(n, m); });
     /* A PROMPT IS ADDRESSED TO A SIDE, AND SO IS ITS PAYOUT (v2.65).
        `spec.side` has meant "whose call is this" since v2.17 — Cold Snap's
        ruling has the OPPONENT choosing whether to pay — but this function
@@ -6270,6 +6278,7 @@ function makeEffects(ctx){
       if(act(n).res < r.pay){ const paid = autoPitch(n, r.pay, null, {exact: !!p.exactPitch}); if(paid) n = paid; }
       const ps = actMut(n); ps.res = Math.max(0, ps.res - r.pay);
     }
+    if(_lateMsgs) r.msgs.forEach(m => { n = L(n, m); });
     /* THE TAP IS PAID BEFORE THE RIDER RUNS (v3.33), for the reason
        Frostbite's order is a whole ruling: the permanent that pays is
        tapped by the very activation it pays for. `weaponUsed` is the
