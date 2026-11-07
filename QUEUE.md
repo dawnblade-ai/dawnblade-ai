@@ -9,7 +9,46 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-07, at v6.01)
+## HANDOFF — START HERE (CEO, 2026-11-07, at v6.02)
+
+**Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
+and `docs/progress/` on main. Do not start a root handoff file.
+
+- **Live: v6.02** (main `501bc4f`, Hidden hands H1). Progress report: `docs/progress/v6.02.md`.
+- **MISSION (user, 2026-11-07):** the ultimate FaB Silver Age precon competitive gaming environment and
+  judging engine — 100% fan-made, non-profit, for fun and glory, no ads, forever.
+- **CADENCE (user, 2026-11-07):** "With each version make a progress report and start a new CEO thread."
+- **HOW TO WORK:** unchanged from the v6.01 handoff below (workers as cloud sessions in
+  env_011rwpp2MyBTt3cEsZKDoVGk, at most TWO at once, Sonnet mechanical / Opus rules-AI-design, workers push
+  `ship/*` and report under 30 lines via send_message, the CEO re-validates on the merged tree, is the only
+  one who pushes main, then confirms CI test + deploy). **Count page.js screens, not just FAILs**
+  (v6.02: 72 vs 73 — an opportunistic check dropped out when the AI's path shifted).
+
+**H1 SHIPPED (v6.02):** `engine/view.js` on the page; `view(state, seat)`; `CARRIERS` census; own deck as
+composition (`_unordered`), foe `unseen`/`unseenGear`; known slots `_kb` (`judge.clearKnown`); laMask =
+`determinize(view)`; per-seat `revealed._to` + `feedTo` game key; WIRE_V 34. Drills: `test/view.test.js`.
+
+**NEXT — H2 (L), FIRST SHIPPABLE:** `engine/referee.js` run by the host; guest gets views + per-seat commits;
+WIRE_V 35; slot handles for P3; desync canary on view hashes; seed + throw commit-reveal (pure-JS SHA-256);
+post-game seed/log reveal with "verify this game" replay; UI filters the feed by `feedTo`; honest UI line
+"host holds the deck". Scope and drills: HIDDEN-HANDS.md §6 (on main since v6.02). One Opus worker.
+**H1 leftovers to fold into H2:** a known slot for a revealed top card (the table never clears `revealed`),
+a card a reveal showed in a hand, Brain Freeze's hand-to-top.
+
+**QUESTIONS FOR THE USER (open; each is one switch in `view.SWITCHES`, default hidden):** SOUL_PUBLIC (the
+only one that moves Sharp: 15 of 11,306 Azalea decisions vs Boltyn; and the charge feed line still names
+the card — a leak if the soul is private), OWNER_SEES_INTIMIDATED, PITCH_ORDER_PUBLIC. Don't decide without
+a verbatim CR quote or the user's answer.
+
+**SMALLER OPEN ITEMS:** NEW: Scout the Periphery reads "target hero's deck" but the engine looks at the
+actor's own deck (S-item, rules) · Azalea Sharp −0.89 over 9 seeds vs v6.01 (t −1.5, unresolved; all from
+the hidden soul) · page.js: 4 pre-existing layout FAILs (jump rows' hit areas 42 < 44, a crowded table action
+bar) and the table skip-hit-area check is path-dependent — make it deterministic. CARRIED: six AI misplays
+(Refraction Bolters go-again, soak pitching, Bolt'n Boots on an arrow with go again, Gravy's boots taker,
+Enigma Uphold, Frost Spike) · play-line ORDER in the feed (Big Bertha / Oasis) · trainer QA for Fai, Enigma,
+Arakni, Blaze, Gravy, Lyath · Line Crossers re-pin · parked: sudden death.
+
+## HANDOFF ARCHIVE (CEO, 2026-11-07, at v6.01) — superseded by the section above
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
