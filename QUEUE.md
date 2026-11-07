@@ -14,7 +14,7 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
 **Keep this section SHORT (under ~50 lines): current state, decisions, who is doing what, next.**
 History goes in the archived handoffs below it and in CHANGELOG.md. Do not start a root handoff file.
 
-- **Live: v5.96** (`ddbc581`). Session start was v5.73 (`218a5fe`). Shipped 2026-11-02: v5.74 pinned pool ·
+- **Live: v5.96** (`ddbc581`; CI green incl. the live check). Session start was v5.73 (`218a5fe`). Shipped 2026-11-02: v5.74 pinned pool ·
   v5.75 R8 draw · v5.76 P0 trainer block crash · v5.77 lookahead search on the AI hero (+3.06 of 28,
   t 11.1, 0/0/0; phone p95 96 ms) · v5.78 Sharp/Steady · v5.79 table results/copy · v5.80 layout + 44px
   hit areas · v5.81 feed/voice · v5.82 home-screen icon (original, `icons/`, not standalone) · docs:
@@ -75,6 +75,11 @@ not say outright; 6.6.6a covers triggers only.) CEO lean: not playable.
 **AI-QA SHIPPED v5.93-v5.96:** Fai plays banished cards (banishPlays) · weapons unlock a held resource
 piece (resUnlockWeapon) · Sharp re-checks a lucky-deal winner on 4 deals (laLucky; Azalea +2.67/+1.33 t>=3.7)
 · honest endTurnKeep / payNoPiece reasons. Did NOT pay: verifying every overrule (-0.37), every lucky winner.
+**TRAINER QA (findings/qa-c, v5.96):** 10 games / 9 heroes on the page: 0 crashes, 0 state defects. COACH
+P1: the Coach never advises a weapon swing (advisor advCardOut uses isAttack). 3 COACH P2 + 7 FEED/UI.
+In flight: `ship/coach-qa` (Sonnet, session_013xG9xAWpPVf...). Not covered: Fai, Enigma, Arakni, Blaze,
+Gravy, Lyath trainer games; a trainer win.
+**CI FIX (7a511fd):** the deploy check now waits for the pushed APP_VER (v5.92's red run was Pages lag).
 **OPEN H-ITEMS (not built, measured leads):** QA-A H-3 Refraction Bolters never destroyed for go again
 (effects.payPolicy/autoAnswer) · H-4 soaks pitch a whole card for 1 point (effects.soakPolicy) · H-5 Bolt'n
 Boots on an arrow that already has go again · QA-B H-3 Gravy pays for Mage Master Boots with no taker (needs
