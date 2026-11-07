@@ -17,6 +17,13 @@
       allies. Dorinthea passed at an action point with Blossom and an
       unswung Dawnblade at a 4-life Arakni, and died the next turn.
 
+   3. ONE LUCKY DEAL OVERRULED THE RULES (QA-A H-1, QA-B H-2). The search
+      plays every opening out on ONE masked deal, the seat's own deck order
+      included. Azalea's ability bins the arrow in the arsenal and flips the
+      top card; on a deal with a good arrow on top, the flip outscored the
+      known arrow, and Sharp threw it away. Kayo's Knucklehead rolled high on
+      its one deal. An overrule is now checked on `LA.verify` deals.
+
    DRIVEN through `sparring.act`, `judge.legal` and `judge.reduce`, with the
    sabotage (the old behaviour) asked beside every new answer.
    ====================================================================== */
@@ -27,6 +34,7 @@ const J = require("../engine/judge.js");
 const SP = require("../engine/sparring.js");
 const B = require("../engine/build.js");
 const H = require("./helpers/judged.js");
+const {match} = require("../tools/selfplay.js");
 
 const skip = !H.hasDb() && "no cached card database";
 const ent = (n, p, uid) => Object.assign({}, H.card(n, p), {uid});
@@ -89,4 +97,44 @@ test("H11 stays: with no weapon to pay for, Blossom is held", {skip}, () => {
   const g = bladeTurn([piece("Blossom of Spring", 41)]);
   assert.equal(J.legal(g, BLOSSOM, 0), null, "control: Blossom is legal");
   assert.notDeepEqual(SP.act(g, 0, {search: false}), BLOSSOM, "nothing waits on the resource");
+});
+
+/* ---- 3. an overrule holds on more than one deal ----------------------- */
+/* Azalea's opening hand with one of its arrows set in the arsenal. On the
+   search's first deal the flip finds a better arrow; on four it does not. */
+function azalea(){
+  const g0 = match("azalea", "viserai", "az6", 0), sd = g0.sides[0];
+  const arr = sd.hand.find(c => /Arrow/.test(c.tt || ""));
+  return {...g0, sides: [{...sd, arsenal: arr, hand: sd.hand.filter(c => c !== arr)}, g0.sides[1]]};
+}
+const withLA = (o, f) => { const keep = {...SP.LA}; Object.assign(SP.LA, o); try { return f(); } finally { Object.assign(SP.LA, keep); } };
+
+test("Sharp does not bin a known arrow for a flip that won on one deal", {skip}, () => {
+  const g = azalea(), HPOW = {t: "activate", from: "hero", uid: "hpow"};
+  assert.equal(J.legal(g, HPOW, 0), null, "control: the ability is legal");
+  assert.notEqual(SP.act(g, 0, {search: false}).uid, "hpow", "control: the rules do not flip");
+  /* sabotage: one deal (the old search) takes the flip */
+  assert.deepEqual(withLA({verify: 1}, () => SP.act(g, 0, {search: true})), HPOW, "one deal overrules into the flip");
+  const a = withLA({verify: 4}, () => SP.act(g, 0, {search: true}));
+  assert.notEqual(a.uid, "hpow", "four deals keep the arrow: " + JSON.stringify(a));
+  assert.deepEqual(a, SP.act(g, 0, {search: false}), "and the rule policy's move stands");
+});
+
+test("the verified call reads nothing hidden: scrambled hidden cards give the same call", {skip}, () => {
+  const RNG = require("../engine/rng.js");
+  const g = azalea(), o = g.sides[1], me = g.sides[0];
+  const hand = o.hand.slice(), deck = o.deck.slice(), j = deck.findIndex(c => c.name !== hand[0].name);
+  [hand[0], deck[j]] = [deck[j], hand[0]];
+  const h = {...g, rng: RNG.make("scrambled"), sides: [{...me, deck: me.deck.slice().reverse()}, {...o, hand, deck: deck.reverse()}]};
+  assert.notDeepEqual(h.sides[0].deck.map(c => c.uid), g.sides[0].deck.map(c => c.uid), "the scramble moved this seat's deck");
+  for(const verify of [1, 4]){
+    const a = withLA({verify}, () => SP.explain(g, 0, {search: true})), b = withLA({verify}, () => SP.explain(h, 0, {search: true}));
+    assert.deepEqual(b.action, a.action, "verify " + verify + ": the same action");
+    assert.equal(b.key, a.key, "verify " + verify + ": the same reason");
+  }
+});
+
+test("the laKeep reason claims cards kept, not damage dealt", () => {
+  assert.doesNotMatch(SP.CALL_WHY.laKeep, /hits|damage|hard/);
+  assert.match(SP.CALL_WHY.laKeep, /cards in hand/);
 });
