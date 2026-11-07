@@ -35,10 +35,7 @@ post-game seed/log reveal with "verify this game" replay; UI filters the feed by
 **H1 leftovers to fold into H2:** a known slot for a revealed top card (the table never clears `revealed`),
 a card a reveal showed in a hand, Brain Freeze's hand-to-top.
 
-**QUESTIONS FOR THE USER (open; each is one switch in `view.SWITCHES`, default hidden):** SOUL_PUBLIC (the
-only one that moves Sharp: 15 of 11,306 Azalea decisions vs Boltyn; and the charge feed line still names
-the card — a leak if the soul is private), OWNER_SEES_INTIMIDATED, PITCH_ORDER_PUBLIC. Don't decide without
-a verbatim CR quote or the user's answer.
+**RULINGS (user, 2026-11-07) — the three view questions are ANSWERED:** SOUL_PUBLIC = true ("Yes"), OWNER_SEES_INTIMIDATED = true ("Yes"), PITCH_ORDER_PUBLIC = false ("No"). Being built by the H2 worker (session_013xG9xCX29A7TysLXVsSQNC) as `ship/h2-rulings` → v6.03, measured (SOUL_PUBLIC moves Azalea's Sharp), then H2 continues on top.
 
 **SMALLER OPEN ITEMS:** NEW: Scout the Periphery reads "target hero's deck" but the engine looks at the
 actor's own deck (S-item, rules) · Azalea Sharp −0.89 over 9 seeds vs v6.01 (t −1.5, unresolved; all from
