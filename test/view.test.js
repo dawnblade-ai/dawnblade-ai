@@ -213,7 +213,7 @@ test("no uid hidden from a seat appears anywhere in its view, carriers included 
       const walk = (x, p) => { if(x == null || typeof x !== "object") return;
         if(Array.isArray(x)) return x.forEach((y, i) => walk(y, p + "/" + i));
         if(x.uid != null && hid.has(String(x.uid))) found.push(p);
-        for(const k of Object.keys(x)) if(k !== "unseen" && k !== "unseenGear" && k !== "feed" && k !== "log" && k !== "builds") walk(x[k], p + "/" + k); };
+        for(const k of Object.keys(x)) if(k !== "unseen" && k !== "unseenGear" && k !== "feed" && k !== "log") walk(x[k], p + "/" + k); };
       walk(v, "");
       assert.deepEqual(found, [], hero + " turn " + g.turn + " seat " + seat);
       n++;

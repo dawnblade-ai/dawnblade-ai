@@ -60,20 +60,23 @@
    caller builds the decks.
    ============================================================ */
 (function(root, factory){
-  if(typeof module==="object" && module.exports) module.exports = factory(require("./rps.js"));
-  else root.DawnLobby = factory(root.DawnRPS);
-})(typeof self!=="undefined" ? self : this, function(RPS){
+  if(typeof module==="object" && module.exports) module.exports = factory(require("./rps.js"), require("./sha256.js"));
+  else root.DawnLobby = factory(root.DawnRPS, root.DawnSHA);
+})(typeof self!=="undefined" ? self : this, function(RPS, SHA){
 
 /* Bumped when the message set or the match spec changes. Two clients on
    different lobby versions must not negotiate: they would agree on a
    spec one of them cannot build. Same discipline as room.js's ROOM_V
    keying the table id and DATA_VER keying the card cache. */
-const LOBBY_V = 1;
+/* 1 -> 2 AT HIDDEN HANDS H2: the throw is SEALED then OPENED (commit-reveal),
+   so a modified client can no longer wait for the other throw and answer it. */
+const LOBBY_V = 2;
 
 const MSG = {
   HELLO: "hello",   /* seat -> seat: this is the card data I hold   */
   HERO:  "hero",    /* seat -> seat: I am piloting this hero        */
-  THROW: "throw",   /* seat -> seat: my throw for round N           */
+  THROW: "throw",   /* seat -> seat: my SEALED throw for round N (a commitment) */
+  OPEN:  "open",    /* seat -> seat: my throw and its nonce, once both are sealed */
   SEAT:  "seat",    /* winner -> loser: this is who goes first      */
   BOARD: "board"    /* seat -> seat: this is what I sideboarded     */
 };
@@ -91,7 +94,8 @@ function newLobby(o){
     builds: [null, null],          /* each seat's DATA_VER                   */
     heroes: [null, null],          /* hero keys                              */
     round: 0,                      /* which throw round is live              */
-    throws: [null, null],          /* this round's throws                    */
+    seals: [null, null],           /* this round's commitments, H(nonce|throw) */
+    throws: [null, null],          /* this round's throws, once opened       */
     rounds: [],                    /* every resolved round, for the log      */
     ties: 0,
     winner: null,                  /* who won the throw                      */
@@ -174,17 +178,43 @@ function reduce(s, m){
        late throw from the previous round refusable instead of landing in
        the next one — and it is causally safe: a seat cannot know a round
        tied until it holds the other seat's throw for that round, so the
-       two peers can never be more than one round apart. */
+       two peers can never be more than one round apart.
+
+       SEALED, THEN OPENED (HIDDEN HANDS H2). Until LOBBY_V 2 a throw crossed
+       the wire in the clear, so a modified client could hold its own throw,
+       read the other one off the channel, and answer it (HIDDEN-HANDS.md §1).
+       Now a seat first sends a COMMITMENT (sha256.js: H(nonce|throw)) and
+       opens it only once BOTH seats have sealed. An OPEN before both seals
+       is refused, so no honest phone ever shows its throw to a seat that has
+       not committed; an OPEN with no seal is refused (an uncommitted throw);
+       an OPEN that does not match its seal is refused (a changed throw).
+       Causally safe on an ordered channel: a seat opens only after it holds
+       the other seal, and its own seal went out before its open. */
     case MSG.THROW: {
       if(stepOf(s) !== "throw") return no("the throw is settled", true);
       if(m.round !== s.round) return no("throw for round " + m.round + ", we are on " + s.round, true);
-      if(s.throws[m.seat] != null) return no("seat " + m.seat + " has already thrown this round", true);
+      if(s.seals[m.seat] != null) return no("seat " + m.seat + " has already thrown this round", true);
+      if(m.pick != null) return no("an uncommitted throw is refused: seal it first");
+      if(typeof m.c !== "string" || !/^[0-9a-f]{64}$/.test(m.c)) return no("a throw is sealed with a commitment");
+      const seals = s.seals.slice();
+      seals[m.seat] = m.c;
+      return {state: {...s, seals}, error: null};
+    }
+
+    case MSG.OPEN: {
+      if(stepOf(s) !== "throw") return no("the throw is settled", true);
+      if(m.round !== s.round) return no("throw for round " + m.round + ", we are on " + s.round, true);
+      if(s.seals[m.seat] == null) return no("an uncommitted throw is refused: seat " + m.seat + " never sealed one");
+      if(s.seals[1 - m.seat] == null) return no("too early: seat " + (1 - m.seat) + " has not sealed its throw, and a throw shown now could be answered");
+      if(s.throws[m.seat] != null) return no("seat " + m.seat + " has already opened this round", true);
       /* `pick`, NOT `v`. Every message carries `v` as the LOBBY VERSION,
          and naming the throw the same thing shadowed it in the object
          literal — so the version guard read "paper" and refused every
          throw in the game. Same-name-different-meaning, caught by the
          drills rather than at the table this time. */
       if(RPS.RPS_THROWS.indexOf(m.pick) < 0) return no("not a throw: " + m.pick);
+      if(!SHA.opens(s.seals[m.seat], throwValue(m.round, m.seat, m.pick), m.nonce))
+        return no("seat " + m.seat + "'s throw does not open its seal — a throw cannot change once sealed");
       const throws = s.throws.slice();
       throws[m.seat] = m.pick;
       if(throws[0] == null || throws[1] == null) return {state: {...s, throws}, error: null};
@@ -192,7 +222,7 @@ function reduce(s, m){
       /* Both are in. Resolve — symmetric, so both phones agree. */
       const v = RPS.rpsResolve(throws[0], throws[1]);
       const rounds = [...s.rounds, [throws[0], throws[1]]];
-      if(v === 0) return {state: {...s, rounds, throws: [null, null],
+      if(v === 0) return {state: {...s, rounds, throws: [null, null], seals: [null, null],
                                   round: s.round + 1, ties: s.ties + 1}, error: null};
       return {state: {...s, rounds, throws, winner: v === 1 ? 0 : 1}, error: null};
     }
@@ -262,7 +292,18 @@ const hello = (seat, build) => ({t: MSG.HELLO, v: LOBBY_V, seat, build});
    card cache and says nothing about the rules the cards run inside. */
 const buildId = (appVer, dataVer) => "v" + appVer + " · " + dataVer;
 const hero  = (seat, key)   => ({t: MSG.HERO,  v: LOBBY_V, seat, key});
-const throwIt = (seat, round, pick) => ({t: MSG.THROW, v: LOBBY_V, seat, round, pick});
+/* What a throw seal commits to: the round and seat ride inside, so a seal
+   from one round or seat cannot be opened as another's. */
+const throwValue = (round, seat, pick) => "throw|" + round + "|" + seat + "|" + pick;
+/* A sealed throw: send `seal` now and keep `open` until both seats have
+   sealed (`canOpen`). `rand` is for drills; the page uses crypto. */
+function throwSeal(seat, round, pick, rand){
+  const k = SHA.makeCommit(throwValue(round, seat, pick), rand);
+  return {seal: {t: MSG.THROW, v: LOBBY_V, seat, round, c: k.c},
+          open: {t: MSG.OPEN,  v: LOBBY_V, seat, round, pick, nonce: k.nonce}};
+}
+/* May `seat` open now? Both seals in, its own throw not yet shown. */
+const canOpen = (s, seat) => !!s && stepOf(s) === "throw" && s.seals[0] != null && s.seals[1] != null && s.throws[seat] == null;
 const seating = (seat, choice)   => ({t: MSG.SEAT,  v: LOBBY_V, seat, choice});
 const sideboard = (seat, gearIdx, cuts) => ({t: MSG.BOARD, v: LOBBY_V, seat, gearIdx, cuts});
 
@@ -272,7 +313,7 @@ const sideboard = (seat, gearIdx, cuts) => ({t: MSG.BOARD, v: LOBBY_V, seat, gea
 function waitingOn(s){
   switch(stepOf(s)){
     case "hero":  return [s.heroes[0] == null ? 0 : null, s.heroes[1] == null ? 1 : null].filter(x => x != null);
-    case "throw": return [s.throws[0] == null ? 0 : null, s.throws[1] == null ? 1 : null].filter(x => x != null);
+    case "throw": return [s.seals[0] == null ? 0 : null, s.seals[1] == null ? 1 : null].filter(x => x != null);
     case "seat":  return s.winner == null ? [] : [s.winner];
     case "board": return [s.boards[0] == null ? 0 : null, s.boards[1] == null ? 1 : null].filter(x => x != null);
     default: return [];
@@ -280,5 +321,5 @@ function waitingOn(s){
 }
 
 return {LOBBY_V, MSG, STEPS, newLobby, stepOf, reduce, matchSpec,
-        waitingOn, hello, buildId, hero, throwIt, seating, sideboard};
+        waitingOn, hello, buildId, hero, throwSeal, throwValue, canOpen, seating, sideboard};
 });

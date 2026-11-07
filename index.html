@@ -1554,6 +1554,10 @@ window.TROPHIES = [
 <script src="engine/view.js"></script>
 <script src="engine/sparring.js"></script>
 <script src="engine/local.js"></script>
+<!-- HIDDEN HANDS H2: SHA-256 by hand (no crypto.subtle off a secure
+     context, so it runs from file://). The lobby seals each throw with it,
+     so it loads before lobby.js. -->
+<script src="engine/sha256.js"></script>
 <script src="engine/lobby.js"></script>
 <script src="engine/room.js"></script>
 <script>
@@ -7120,6 +7124,9 @@ function TableRoom({table, host, code, db, onExit}){
   const lobRef = uR(null); lobRef.current = lob;
   const netRef = uR(null);
   const netQ   = uR([]);                  /* net frames that beat the session */
+  /* THE THROW'S OPENING, held on this phone until both seats have sealed
+     (HIDDEN HANDS H2). It never enters the shared lobby state until then. */
+  const openRef = uR(null);
 
   /* Apply locally and put it on the wire. BOTH peers run the same
      reducer over the same messages — the lobby is order-independent and
@@ -7161,6 +7168,13 @@ function TableRoom({table, host, code, db, onExit}){
   },[]);
 
   const step = DawnLobby.stepOf(lob);
+
+  /* Both seals are in: open ours. The lobby refuses an open before both
+     seals, so this is the earliest moment the throw may be shown. */
+  uE(()=>{
+    const k = openRef.current;
+    if(k && k.round === lob.round && DawnLobby.canOpen(lob, mySeat)){ openRef.current = null; say(k); }
+  },[lob]);
 
   /* ---- ready: build the match, identically on both phones ------------ */
   uE(()=>{
@@ -7252,7 +7266,8 @@ function TableRoom({table, host, code, db, onExit}){
 
       {/* ---- 2. the throw ---- */}
       {step === "throw" && <TableThrow lob={lob} mySeat={mySeat} myH={myH} foeH={foeH}
-        onThrow={t=>say(DawnLobby.throwIt(mySeat, lob.round, t))}/>}
+        onThrow={t=>{ const k = DawnLobby.throwSeal(mySeat, lob.round, t);
+                      openRef.current = k.open; say(k.seal); }}/>}
 
       {/* ---- 3. the seating call ---- */}
       {/* `rps` as well as `lobseat`: .rtitle/.rsub/.rseatpick are all scoped
@@ -7296,8 +7311,10 @@ function TableRoom({table, host, code, db, onExit}){
    alternative is a screen that shows you the answer before it asks the
    question. Ties replay rather than counting, which is rps.js's rule. */
 function TableThrow({lob, mySeat, myH, foeH, onThrow}){
-  const mine = lob.throws[mySeat], theirs = lob.throws[1-mySeat];
-  const both = mine != null && theirs != null;
+  /* A SEALED throw shows as locked until both are opened (HIDDEN HANDS H2). */
+  const mine = lob.throws[mySeat] || (lob.seals[mySeat] ? "sealed" : null);
+  const theirs = lob.throws[1-mySeat] || (lob.seals[1-mySeat] ? "sealed" : null);
+  const both = lob.throws[mySeat] != null && lob.throws[1-mySeat] != null;
   const last = lob.rounds[lob.rounds.length-1] || null;
   return (
     <div className="rps">

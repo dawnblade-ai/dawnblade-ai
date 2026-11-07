@@ -17,6 +17,13 @@ const fs = require("fs");
 const path = require("path");
 
 const CODE = "K7QM";
+/* A SEALED THROW (HIDDEN HANDS H2): `seal` goes out first, `open` once both
+   seats have sealed. A seeded nonce per (seat, round, pick), so two calls
+   build byte-identical messages and the permutation drills can compare. */
+const seeded = n => { let x = (n * 2654435761) >>> 0 || 1; return () => { x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0; return x / 4294967296; }; };
+const K = (seat, round, pick) => L.throwSeal(seat, round, pick, seeded(1 + seat * 7 + round * 13 + pick.length * 31));
+/* a whole round: both seals, then both opens */
+const TP = (round, p0, p1) => { const a = K(0, round, p0), b = K(1, round, p1); return [a.seal, b.seal, a.open, b.open]; };
 const mk = () => L.newLobby({code: CODE});
 
 /* Drive a message list through a fresh lobby. Refusals are collected
@@ -37,7 +44,7 @@ function run(msgs, s0){
 const FULL = [
   L.hello(0, "sage-v11"), L.hello(1, "sage-v11"),
   L.hero(0, "kayo"),      L.hero(1, "dorinthea"),
-  L.throwIt(0, 0, "paper"), L.throwIt(1, 0, "rock"),
+  ...TP(0, "paper", "rock"),
   L.seating(0, "first"),
   L.sideboard(0, [1, 3], {2: 1}), L.sideboard(1, [0], {})
 ];
@@ -60,13 +67,14 @@ test("ORDER CANNOT MATTER: every interleaving of a negotiation lands in one stat
   const stages = [
     [L.hello(0, "sage-v11"), L.hello(1, "sage-v11")],
     [L.hero(0, "kayo"), L.hero(1, "dorinthea")],
-    [L.throwIt(0, 0, "paper"), L.throwIt(1, 0, "rock")],
+    [K(0, 0, "paper").seal, K(1, 0, "rock").seal],
+    [K(0, 0, "paper").open, K(1, 0, "rock").open],
     [L.seating(0, "first")],
     [L.sideboard(0, [1, 3], {2: 1}), L.sideboard(1, [0], {})]
   ];
   const want = JSON.stringify(run(FULL).s);
   let seen = 0;
-  /* Cartesian product of each stage's permutations. 2*2*2*1*2 = 16
+  /* Cartesian product of each stage's permutations. 2*2*2*2*1*2 = 32 (seals, then opens)
      orderings — small, and it is the whole space that matters. */
   const walk = (i, acc) => {
     if(i === stages.length){
@@ -79,7 +87,7 @@ test("ORDER CANNOT MATTER: every interleaving of a negotiation lands in one stat
     for(const p of perms(stages[i])) walk(i + 1, acc.concat(p));
   };
   walk(0, []);
-  assert.equal(seen, 16, "the permutation walk stopped driving — it proved nothing");
+  assert.equal(seen, 32, "the permutation walk stopped driving — it proved nothing");
 });
 
 test("IDEMPOTENT: replaying every message changes nothing", () => {
@@ -122,10 +130,10 @@ test("WRITE-ONCE: a hero, a throw, a seating and a board each land once", () => 
   let s = run([L.hero(0, "kayo")]).s;
   assert.ok(L.reduce(s, L.hero(0, "bravo")).error.dup, "hero is write-once");
 
-  s = run([L.hero(0, "kayo"), L.hero(1, "bravo"), L.throwIt(0, 0, "rock")]).s;
-  assert.ok(L.reduce(s, L.throwIt(0, 0, "paper")).error.dup, "a throw is write-once per round");
+  s = run([L.hero(0, "kayo"), L.hero(1, "bravo"), K(0, 0, "rock").seal]).s;
+  assert.ok(L.reduce(s, K(0, 0, "paper").seal).error.dup, "a throw is write-once per round");
 
-  s = run(FULL.slice(0, 7)).s;                       /* through the seating */
+  s = run(FULL.slice(0, 9)).s;                       /* through the seating */
   assert.ok(L.reduce(s, L.seating(0, "second")).error.dup, "seating is write-once");
 
   s = run(FULL).s;
@@ -151,7 +159,7 @@ test("mismatched card data FAULTS the lobby before a card is resolved", () => {
 
 test("a faulted lobby refuses everything and cannot be driven past it", () => {
   const {s} = run([L.hello(0, "a"), L.hello(1, "b")]);
-  for(const m of [L.hero(0, "kayo"), L.throwIt(0, 0, "rock"), L.seating(0, "first"), L.sideboard(0, [], {})]){
+  for(const m of [L.hero(0, "kayo"), K(0, 0, "rock").seal, L.seating(0, "first"), L.sideboard(0, [], {})]){
     const r = L.reduce(s, m);
     assert.ok(r.error, m.t + " was accepted by a faulted lobby");
     assert.equal(L.stepOf(r.state), "fault");
@@ -167,27 +175,27 @@ test("both peers reach the SAME fault, in either order", () => {
 /* ---- the throw --------------------------------------------------------- */
 
 test("a tie replays: the round advances and both throws clear", () => {
-  const {s} = run([L.hero(0, "kayo"), L.hero(1, "bravo"),
-                   L.throwIt(0, 0, "rock"), L.throwIt(1, 0, "rock")]);
+  const {s} = run([L.hero(0, "kayo"), L.hero(1, "bravo"), ...TP(0, "rock", "rock")]);
   assert.equal(s.winner, null, "a tie has no winner");
   assert.equal(s.round, 1);
   assert.equal(s.ties, 1);
   assert.deepEqual(s.throws, [null, null]);
+  assert.deepEqual(s.seals, [null, null], "and both seals: the next round is sealed afresh");
   assert.equal(L.stepOf(s), "throw");
 });
 
 test("a stale-round throw is refused rather than landing in the next round", () => {
-  const {s} = run([L.hero(0, "kayo"), L.hero(1, "bravo"),
-                   L.throwIt(0, 0, "rock"), L.throwIt(1, 0, "rock")]);
-  const r = L.reduce(s, L.throwIt(0, 0, "paper"));
+  const {s} = run([L.hero(0, "kayo"), L.hero(1, "bravo"), ...TP(0, "rock", "rock")]);
+  const r = L.reduce(s, K(0, 0, "paper").seal);
   assert.ok(r.error, "a round-0 throw must not be accepted in round 1");
   assert.ok(r.error.dup);
-  assert.deepEqual(r.state.throws, [null, null]);
+  assert.deepEqual(r.state.seals, [null, null]);
 });
 
 test("the throw resolves the same way whichever throw arrives first", () => {
-  const a = run([L.hero(0, "k"), L.hero(1, "b"), L.throwIt(0, 0, "paper"), L.throwIt(1, 0, "rock")]).s;
-  const b = run([L.hero(0, "k"), L.hero(1, "b"), L.throwIt(1, 0, "rock"), L.throwIt(0, 0, "paper")]).s;
+  const P = K(0, 0, "paper"), R = K(1, 0, "rock");
+  const a = run([L.hero(0, "k"), L.hero(1, "b"), P.seal, R.seal, P.open, R.open]).s;
+  const b = run([L.hero(0, "k"), L.hero(1, "b"), R.seal, P.seal, R.open, P.open]).s;
   assert.equal(a.winner, 0);
   assert.equal(a.winner, b.winner);
   assert.deepEqual(a.rounds, b.rounds);
@@ -200,21 +208,65 @@ test("the throw resolves the same way whichever throw arrives first", () => {
    one letter. Same-name-different-meaning, which is the trap
    test/sync.test.js polices for the engine's globals. */
 test("a throw carries `pick`, and `v` stays the lobby version", () => {
-  const m = L.throwIt(0, 0, "rock");
+  const {seal, open: m} = K(0, 0, "rock");
   assert.equal(m.pick, "rock");
   assert.equal(m.v, L.LOBBY_V, "the throw value must not shadow the version field");
+  assert.equal(seal.pick, undefined, "the seal names no throw");
 });
 
 test("a throw that is not a throw is refused, and is not a duplicate", () => {
-  const s = run([L.hero(0, "k"), L.hero(1, "b")]).s;
-  const r = L.reduce(s, L.throwIt(0, 0, "dynamite"));
+  const s = run([L.hero(0, "k"), L.hero(1, "b"), K(0, 0, "dynamite").seal, K(1, 0, "rock").seal]).s;
+  const r = L.reduce(s, K(0, 0, "dynamite").open);
   assert.ok(r.error && !r.error.dup, "a malformed throw is a fault in the sender, not a replay");
+});
+
+/* ---- THE THROW COMMIT DRILL (HIDDEN HANDS H2) ----------------------------
+   HIDDEN-HANDS.md §1: "The first-player throw: lobby.js THROW is sent seat
+   to seat in the clear: a modified client can wait for the other throw and
+   then answer it." Each refusal below is one way to answer a throw late. */
+test("THE THROW COMMIT DRILL — a late, uncommitted, early or changed throw is refused", () => {
+  const s0 = run([L.hero(0, "k"), L.hero(1, "b")]).s;
+  /* an UNCOMMITTED throw: a bare pick, the v1 message */
+  let r = L.reduce(s0, {t: "throw", v: L.LOBBY_V, seat: 1, round: 0, pick: "paper"});
+  assert.ok(r.error && !r.error.dup && /uncommitted/.test(r.error.why), "a bare throw is refused: " + (r.error && r.error.why));
+  /* an OPEN with no seal behind it */
+  const P = K(0, 0, "rock"), Q = K(1, 0, "paper");
+  r = L.reduce(run([P.seal], s0).s, Q.open);
+  assert.ok(r.error && /uncommitted/.test(r.error.why), "an open with no seal is refused");
+  /* TOO EARLY: seat 0 sealed, seat 1 has not — seat 0's open would let seat 1 answer it */
+  const s1 = run([P.seal], s0).s;
+  r = L.reduce(s1, P.open);
+  assert.ok(r.error && /too early/.test(r.error.why), "an open before the other seal is refused: " + (r.error && r.error.why));
+  assert.equal(r.state.throws[0], null, "and the throw stays hidden");
+  /* so the late thrower never sees it: seat 1 seals blind, and only then do the opens land */
+  const s2 = run([Q.seal], s1).s;
+  assert.ok(L.canOpen(s2, 0));
+  /* a CHANGED throw: seat 1 sealed paper and tries to open scissors */
+  const forged = {...Q.open, pick: "scissors"};
+  r = L.reduce(s2, forged);
+  assert.ok(r.error && /does not open its seal/.test(r.error.why), "a changed throw is refused");
+  /* a seal opened as the other seat's, or as another round's */
+  r = L.reduce(s2, {...P.open, seat: 1});
+  assert.ok(r.error && /does not open/.test(r.error.why), "seat 0's opening cannot be replayed as seat 1's");
+  /* the honest pair resolves */
+  const s3 = run([P.open, Q.open], s2);
+  assert.deepEqual(s3.errs, []);
+  assert.equal(s3.s.winner, 1, "paper over rock");
+});
+
+test("a seal from a tied round cannot be opened in the next one", () => {
+  const s = run([L.hero(0, "k"), L.hero(1, "b"), ...TP(0, "rock", "rock")]).s;
+  assert.equal(s.round, 1);
+  /* round 1: both seal; seat 0 tries to replay its round-0 opening */
+  const s2 = run([K(0, 1, "paper").seal, K(1, 1, "rock").seal], s).s;
+  const r = L.reduce(s2, {...K(0, 0, "rock").open, round: 1});
+  assert.ok(r.error && /does not open/.test(r.error.why), "the round rides inside the seal");
 });
 
 /* ---- the seating call -------------------------------------------------- */
 
 test("THE WINNER CHOOSES — and the loser cannot call it", () => {
-  const s = run(FULL.slice(0, 6)).s;                 /* seat 0 won the throw */
+  const s = run(FULL.slice(0, 8)).s;                 /* seat 0 won the throw */
   assert.equal(s.winner, 0);
   const bad = L.reduce(s, L.seating(1, "first"));
   assert.ok(bad.error, "the loser called the seating");
@@ -223,13 +275,13 @@ test("THE WINNER CHOOSES — and the loser cannot call it", () => {
 });
 
 test("the winner may elect to go SECOND, and it seats the other player", () => {
-  let s = run(FULL.slice(0, 6)).s;
+  let s = run(FULL.slice(0, 8)).s;
   s = L.reduce(s, L.seating(0, "second")).state;
   assert.equal(s.first, 1, "electing second must hand the first turn over, not take it");
 });
 
 test("a seating call that is neither first nor second is refused", () => {
-  const s = run(FULL.slice(0, 6)).s;
+  const s = run(FULL.slice(0, 8)).s;
   const r = L.reduce(s, L.seating(0, "whenever"));
   assert.ok(r.error && !r.error.dup);
   assert.equal(r.state.first, null);
@@ -238,7 +290,7 @@ test("a seating call that is neither first nor second is refused", () => {
 /* ---- the board --------------------------------------------------------- */
 
 test("a board is NORMALISED on the way in, so two peers hold one spec", () => {
-  let s = run(FULL.slice(0, 7)).s;
+  let s = run(FULL.slice(0, 9)).s;
   s = L.reduce(s, L.sideboard(0, [3, 1, 1], {"2": 1, "bad": 4, "5": 0, "6": -2})).state;
   assert.deepEqual(s.boards[0].gearIdx, [1, 1, 3], "gear picks must arrive sorted");
   assert.deepEqual(s.boards[0].cuts, {"2": 1},
@@ -246,7 +298,7 @@ test("a board is NORMALISED on the way in, so two peers hold one spec", () => {
 });
 
 test("a board with no gear list is refused", () => {
-  const s = run(FULL.slice(0, 7)).s;
+  const s = run(FULL.slice(0, 9)).s;
   assert.ok(L.reduce(s, {t: "board", v: L.LOBBY_V, seat: 0, cuts: {}}).error);
 });
 
@@ -293,7 +345,11 @@ test("waitingOn names the seats that have not committed at this step", () => {
   assert.deepEqual(L.waitingOn(s), [1], "seat 0 has chosen — the UI must say 'waiting on them'");
   s = L.reduce(s, L.hero(1, "bravo")).state;
   assert.deepEqual(L.waitingOn(s), [0, 1], "and the throw is nobody's yet");
-  s = run([L.throwIt(0, 0, "paper"), L.throwIt(1, 0, "rock")], s).s;
+  s = run([K(0, 0, "paper").seal], s).s;
+  assert.deepEqual(L.waitingOn(s), [1], "seat 0 has sealed: waiting on the other seal");
+  s = run([K(1, 0, "rock").seal], s).s;
+  assert.ok(L.canOpen(s, 0) && L.canOpen(s, 1), "both sealed: both may open");
+  s = run([K(0, 0, "paper").open, K(1, 0, "rock").open], s).s;
   assert.deepEqual(L.waitingOn(s), [0], "only the winner may call the seating");
   s = L.reduce(s, L.seating(0, "first")).state;
   assert.deepEqual(L.waitingOn(s), [0, 1]);
@@ -350,8 +406,8 @@ test("it reads no card text and resolves no card", () => {
   }
 });
 
-test("its only engine dependency is rps.js", () => {
+test("its only engine dependencies are rps.js and sha256.js (the throw seal)", () => {
   const src = fs.readFileSync(path.join(__dirname, "..", "engine", "lobby.js"), "utf8");
   const deps = [...src.matchAll(/require\("\.\/(\w+)\.js"\)/g)].map(m => m[1]);
-  assert.deepEqual([...new Set(deps)], ["rps"]);
+  assert.deepEqual([...new Set(deps)], ["rps", "sha256"]);
 });

@@ -1,3 +1,37 @@
+## v6.03 — Hidden hands H2 (1 of 3): the referee, headless; the throw sealed
+
+RULING (user, 2026-11-07): "Hidden hands is a must." H2 of HIDDEN-HANDS.md §6, first increment. The engine half;
+the two-phone table still runs lockstep until increment 2 wires the referee into net.js.
+- **`engine/sha256.js`** (new, on the page): SHA-256 by hand (FIPS 180-4; no `crypto.subtle`, which needs a secure
+  context that `file://` on iOS cannot promise), plus commit-reveal (`makeCommit`, `opens`) and `seedOf` for H2's
+  seed commitment.
+- **The throw is sealed (LOBBY_V 1 -> 2).** A seat sends `H(nonce|round|seat|throw)` first and opens it only when
+  both seals are in. Refused: a bare (uncommitted) throw, an open before the other seal ("too early … could be
+  answered"), an open that does not match its seal, a seal replayed as the other seat's or another round's. The
+  table's throw screen seals on tap and opens automatically.
+- **`engine/referee.js`** (new, headless for one increment): the host's authority. It holds the full state, runs
+  `judge.reduce` and `invariants` on it, and sends each seat `seatView` (= `view` plus cuts) as a snapshot, then a
+  per-seat COMMIT per action: the action with SLOT HANDLES (a uid the receiver may not see becomes its
+  positional placeholder, P3), a structural DELTA against the last view that seat was sent (cards interned against
+  the catalog), and `h`, the view's fingerprint (the desync canary). `createMirror` is the guest side: it never
+  reduces. `replay` is "verify this game": the opening plus the full log through `judge.reduce`, checked against
+  every view hash the guest saw and the result. `viewCensus` is a phone's own shape check.
+- **The cuts on top of `view`** (each found or proven by the loopback drill): the feed and log filtered by
+  `feedTo`; `still` reduced to its public clocks (its `stillSig` held every zone's uids in order: both decks and
+  the foe's hand); the composition multisets' uids renamed; uid-keyed `counters` entries for hidden cards dropped
+  (Malefic Incantation back in a hand kept its key); bare uids under uid keys scrubbed (`pending.uids`, a fusion's
+  `_fuseUid`, a face-down piece's `_flipGear` and its ability's derived `gp<uid>`).
+- **`view.js`: `builds` is swept.** Fai's `startGrave` is a copy of a dealt card that can return to a hand (Phoenix
+  Flame), and H1's own no-hidden-uid drill skipped `builds`; it no longer does. Only `judge.newMatch` reads those
+  inputs: 400 Sharp decisions compared against v6.02, 0 differ.
+- **Drills** (`test/referee.test.js`, `test/sha256.test.js`, lobby): the loopback over one game per hero for all
+  15 (guest view equals the referee's after every commit; it is `view` plus exactly the cuts; no hidden uid in
+  anything the guest holds or receives, dealt with uids from 100000 so any scalar under any key counts; no feed
+  line names a hidden card; 0 invariant violations), the scramble on the wire, the canary (tamper, wrong hash,
+  gap, duplicate), slot handles, verify-this-game, and the throw commit drill. Each has a sabotage that fails.
+- **Found, not fixed (S-item):** a `counters` bag entry outlives its card leaving the arena (Malefic Incantation
+  bounced to hand). If it is replayed it may re-enter with stale counters — a rules question for its own release.
+
 ## v6.02 — Hidden hands H1: the view, for real
 
 RULING (user, 2026-11-07): "Hidden hands is a must." H1 of HIDDEN-HANDS.md §6 (engine only, no UI).

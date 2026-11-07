@@ -84,7 +84,12 @@ const SWITCHES = {SOUL_PUBLIC: false, OWNER_SEES_INTIMIDATED: false, PITCH_ORDER
    Every rule but `names` is swept too, as defence. */
 const CARRIERS = {
   pending: "public", pend: "public", chainCards: "public", featured: "public", stack: "public",
-  _actTarget: "public", builds: "public",
+  _actTarget: "public",
+  /* `builds` is swept (HIDDEN HANDS H2, found by the loopback drill): a
+     build keeps construction inputs, and Fai's `startGrave` is a COPY of a
+     dealt card that can come back to a hand (Phoenix Flame), naming it. Only
+     judge.newMatch reads those inputs, so the sweep moves no rule. */
+  builds: "sweep",
   prompt: "addressed",
   promptQ: "sweep", _discWay: "sweep", _costWay: "sweep", _tookWay: "sweep",
   revealed: "revealed",
@@ -119,7 +124,7 @@ const uidsIn = (v, out, d) => { if(v == null || typeof v !== "object" || (d || 0
 /* Cards that went public while sitting in a private zone (CR 3.0.4d). */
 function publicUids(g, seat){
   const s = new Set();
-  for(const k of Object.keys(CARRIERS)) if(CARRIERS[k] === "public" && k !== "builds") uidsIn(g[k], s);
+  for(const k of Object.keys(CARRIERS)) if(CARRIERS[k] === "public") uidsIn(g[k], s);
   if(g.prompt && g.prompt.side === seat) uidsIn(g.prompt, s);
   for(const sd of g.sides) for(const u of [...(sd.blockH || []), ...(sd.paySel || [])]) s.add(String(u));
   return s;
@@ -212,7 +217,7 @@ function view(g, seat){
   });
   const out = {...g, sides, rng: RNG_HIDDEN, viewSeat: seat};
   for(const k of Object.keys(CARRIERS)){
-    if(k.indexOf(".") >= 0 || g[k] == null || k === "builds") continue;
+    if(k.indexOf(".") >= 0 || g[k] == null) continue;
     const rule = CARRIERS[k];
     if(rule === "names") continue;
     if(rule === "revealed"){ out.revealed = sweep(revealFor(g, seat), hid); continue; }

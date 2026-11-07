@@ -78,10 +78,11 @@ function negotiate(o){
   /* A tie first, on purpose: the replay path is the one with a round
      counter in it, and a lobby that only ever sees a clean throw never
      exercises it. */
-  send(L.throwIt(0, 0, "rock"));
-  send(L.throwIt(1, 0, "rock"));
-  send(L.throwIt(0, 1, "paper"));
-  send(L.throwIt(1, 1, "rock"));
+  /* each round: both seals, then both opens (HIDDEN HANDS H2) */
+  const round = (r, p0, p1) => { const a = L.throwSeal(0, r, p0), b = L.throwSeal(1, r, p1);
+    send(a.seal); send(b.seal); send(a.open); send(b.open); };
+  round(0, "rock", "rock");
+  round(1, "paper", "rock");
   send(L.seating(0, o.choice || "first"));
   send(L.sideboard(0, picks(keys[0]), o.cuts0 || {}));
   send(L.sideboard(1, picks(keys[1]), o.cuts1 || {}));

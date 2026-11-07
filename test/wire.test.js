@@ -443,7 +443,10 @@ test("every engine module is loaded by index.html, or declared headless", () => 
 
      The MODULE stays: its 21 drills are a specification for priority.js
      that nothing else provides. Only the script tag went. */
-  const HEADLESS = ["actions"];
+  /* `referee` (HIDDEN HANDS H2) is headless for ONE increment: the host's
+     session drives it once net.js speaks the referee protocol, and that is
+     the edit that moves it to test/sync.test.js's MODULES. */
+  const HEADLESS = ["actions", "referee"];
   const dir = path.join(__dirname, "..", "engine");
   const mods = fs.readdirSync(dir).filter(f => f.endsWith(".js")).map(f => f.slice(0, -3));
   const src = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
