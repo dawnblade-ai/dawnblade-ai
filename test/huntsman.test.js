@@ -66,7 +66,7 @@ test("the one-sentence form reads as `payCost`, and the destroy is carried", {sk
   P.fxReset();
   const fx = P.fxParse(H.card("Mark of the Huntsman", 0));
   assert.deepEqual(fx.payCost,
-    {cost: 0, taps: false, destroySelf: true, ops: [["mark", 1]], trigger: "selfHitHero"});
+    {cost: 0, taps: false, destroySelf: true, ops: [["mark", 1]], chooseTo: true, trigger: "selfHitHero"});
   /* AND THE CLAUSE IS NO LONGER THE CARD'S OWN on-hit payload — that is
      the half that was firing free, so asserting the new field alone
      cannot see a reader that claims the clause twice. */
@@ -95,7 +95,15 @@ test('"choose to" is an OPTIONAL MIDDLE, not a second reader', () => {
   P.fxReset();
   const long  = P.fxParse(syn("When this hits a hero, you may choose to destroy this and mark them."));
   const short = P.fxParse(syn("When this hits a hero, you may destroy this and mark them."));
-  assert.deepEqual(short.payCost, long.payCost);
+  /* …ONE READER, BUT THE TWO WORDINGS ARE NOT THE SAME RULE (RULING-B,
+     ship/rules-qa). CR 1.8.3b: "If the optional effects are phrased with
+     "may choose to" then the player may choose to generate the effects
+     regardless of their outcome." So the long form carries `chooseTo` (the
+     destroy is an effect made if able) and the short form does not (the
+     destroy stays a price, and a gone piece lapses the offer — v5.17). */
+  const {chooseTo, ...rest} = long.payCost;
+  assert.equal(chooseTo, true, "the long form is CR 1.8.3b's wording");
+  assert.deepEqual(short.payCost, rest, "the short form reads the same, minus `chooseTo`");
   P.fxReset();
 });
 
@@ -142,7 +150,7 @@ test("THE TRIGGER VOCABULARY IS CLOSED — an unknown event leaves the card uncl
   P.fxReset();
   assert.ok(P.OFFER_TRIGGERS.indexOf("playAura") >= 0, "the premise for the control");
   assert.deepEqual(P.fxParse(syn("When you play an aura, you may choose to destroy this and mark them.")).payCost,
-    {cost: 0, taps: false, destroySelf: true, ops: [["mark", 1]], trigger: "playAura"},
+    {cost: 0, taps: false, destroySelf: true, ops: [["mark", 1]], chooseTo: true, trigger: "playAura"},
     "a trigger `offerPayCost` DOES fire reads in full — so the refusals above are the rule, not a dead reader");
   P.fxReset();
 });

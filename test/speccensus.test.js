@@ -288,10 +288,14 @@ test("every spec field that reaches prompts.js is pinned", () => {
   drive();
   assert.deepEqual([...reached].sort(), [
     "amount", "arsStamp", "avail", "banStamp", "by", "cards", "charge", "cost", "costRider",
-    "ctrHeld", "ctrSpend", "ctrStamp", "defUid", "destroyUid", "discard", "elseOps", "equipStamp",
+    "ctrHeld", "ctrSpend", "ctrStamp", "defUid", "destroyEffect", "destroyUid", "discard", "elseOps", "equipStamp",
     "exactPitch", "faceUp", "filter", "hint", "jab", "keepTop", "lateGa", "max", "min", "moveFoe", "n",
     "ops", "optional", "options", "playThisTurn", "shuffleAfter", "side", "spendCtr",
     "src", "tag", "tapHero", "tapUid", "taps", "title", "to", "wayRider", "zone",
+  /* +destroyEffect RULING-B (ship/rules-qa) — Mark of the Huntsman's "you may CHOOSE TO
+     destroy this and mark them": CR 1.8.3b makes the destroy an effect made if able, so
+     the sheet is asked though the piece is gone. Named in `buildPrompt`; read by
+     `promptDestroyGone` and `payPolicy`. */
   /* +exactPitch v5.71 — Bloodrot Pox's pay sheet (`selfPayOr` asks when pitching can
      cover the {r}{r}{r}) asks for the smallest pitch the cost allows. It arrives on the
      legs where a seat holding cards has a Pox in front of it at its end phase — Arakni's

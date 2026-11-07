@@ -14410,3 +14410,16 @@ needs the verbatim quote IN THE REPO (source comment, `tools/approx.js` record, 
   condition is not met."
 - Contrast, for LAYER effects (a card's resolution): CR 6.2.2d "its condition is evaluated only once, at
   the time the effect would be generated." A hero's or permanent's printed "your attacks … get" is static.
+
+### RULING-B — "may choose to destroy this and …" (ship/rules-qa)
+- CR 1.8.3b: "If any of the optional effects cannot be generated due to a rule or effect, cannot resolve
+  successfully based on the current game state, or contain an asset-cost which cannot be paid,[1.14.2]
+  the effect cannot be generated/applied and the player cannot choose to generate/apply the effect. If the
+  optional effects are phrased with "may choose to" then the player may choose to generate the effects
+  regardless of their outcome."
+- Its example: "Mark of the Huntsman has the text "When this hits a hero, you may choose to destroy this and
+  mark them." Even if Mark of the Huntsman cannot be destroyed or the hero is already marked, the player
+  may choose to generate the optional effects, in which case Mark of the Huntsman will be destroyed (if
+  able) and the hero will be marked (if able)."
+- Lesson: v5.17 decided "an unpayable cost is inert" for this card without the CR; the CR's own example
+  said otherwise. "May X" and "may choose to X" are different rules.
