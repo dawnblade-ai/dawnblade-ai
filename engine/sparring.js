@@ -1128,6 +1128,7 @@ const LA = {
   mu: envOf("SPXLA_MU") !== "" ? +envOf("SPXLA_MU") : 1.5,   /* life-points one held card is worth */
   margin: envOf("SPXLA_M") !== "" ? +envOf("SPXLA_M") : 0.5, /* an alternative must beat A0 by more than this */
   dets: envOf("SPXLA_K") !== "" ? +envOf("SPXLA_K") : 1,     /* determinizations per decision */
+  verify: envOf("SPXLA_V") !== "" ? +envOf("SPXLA_V") : 4,   /* deals a gamble that overrules a sure line is checked on */
   blocks: envOf("SPXLA_BLK") !== "" ? +envOf("SPXLA_BLK") : 1,   /* search the wall too (phase c) */
   bMu: envOf("SPXLA_BMU") !== "" ? +envOf("SPXLA_BMU") : 2,  /* a held card's worth at a block (null: mu) */
   bH: envOf("SPXLA_BH") || "own",           /* block rollouts: "next" to this seat's next decision; "own" through its next turn */
@@ -1209,6 +1210,17 @@ function laRollout(n, seat, root, spent, until, skip){
   }
   return {n, steps, done: !!n.over || end(n)};
 }
+/* DID THIS LINE LEAN ON WHAT THE SEAT CANNOT SEE? A card that began in its
+   own deck and ended the line outside the deck AND the hand was revealed,
+   flipped, milled or drawn and played: which card it was came from the
+   deal. A drawn card still held counts in the score by number only. And a
+   line that drew from the game's random stream (a die, a random pick) rolled
+   on the deal's seed. Public facts only: the masked root and its own line. */
+function laLucky(root, n, seat){
+  if(JSON.stringify(n.rng) !== JSON.stringify(root.rng)) return true;
+  const me = n.sides[seat], kept = new Set((me.deck || []).concat(me.hand || []).map(c => c && c.uid));
+  return (root.sides[seat].deck || []).some(c => c && !kept.has(c.uid));
+}
 function laSearch(g, seat, a0){
   LA.stats.decisions++;
   const t0 = Date.now(), keep = NOTE; NOTE = null; IN_SEARCH = true;
@@ -1217,7 +1229,7 @@ function laSearch(g, seat, a0){
     cands = laCands(g, seat, a0);
     if(cands.length < 2) return null;
     LA.stats.searched++;
-    const tot = cands.map(() => ({v: 0, dealt: 0, taken: 0, cards: 0}));
+    const tot = cands.map(() => ({v: 0, dealt: 0, taken: 0, cards: 0})), luck = cands.map(() => false);
     for(let k = 0; k < LA.dets; k++){
       const root = laMask(g, seat, k);
       for(let i = 0; i < cands.length; i++){
@@ -1225,13 +1237,39 @@ function laSearch(g, seat, a0){
         if(out.error){ tot[i].v = -Infinity; continue; }
         const r = laRollout(out.state, seat, root, spent); spent += r.steps + 1;
         if(!r.done){ LA.stats.over++; return null; }   /* over budget: the rule policy's move stands */
+        if(laLucky(root, r.n, seat)) luck[i] = true;
         const e = laEval(r.n, seat, root);
         ["v", "dealt", "taken", "cards"].forEach(f => tot[i][f] += e[f]);
       }
     }
     let bi = 0;
     for(let i = 1; i < cands.length; i++) if(tot[i].v > tot[bi].v + (bi === 0 ? LA.margin : 0)) bi = i;
-    best = bi === 0 ? null : {a: cands[bi], d: ["dealt", "taken", "cards"].reduce((m, f) => (m[f] = (tot[bi][f] - tot[0][f]) / LA.dets, m), {})};
+    if(bi === 0) return null;
+    /* A LUCKY LINE MUST HOLD ON MORE THAN ONE DEAL (QA-A H-1, QA-B H-2). The
+       search sees one masked deal; a line that wins only because that deal put
+       a good card on top of this seat's own deck (Azalea's flip) or rolled
+       high (Knucklehead's die) is luck, not a better move. So a winner whose
+       line LEANED on the hidden deal (`laLucky`) while the rule policy's line
+       did not - a gamble against a sure thing - is replayed against it on
+       `verify` deals in all, and overrules only if it still wins on the mean.
+       Checking every overrule spent the budget on certain lines and lost a
+       third of them; checking every lucky one cost Dash and Fai, whose rule
+       lines gamble too (measured, CHANGELOG). */
+    let dn = LA.dets;
+    for(let k = LA.dets; luck[bi] && !luck[0] && k < LA.verify; k++){
+      const root = laMask(g, seat, k);
+      for(const i of [0, bi]){
+        const out = J.reduce(root, cands[i], seat);
+        if(out.error){ tot[i].v = -Infinity; continue; }
+        const r = laRollout(out.state, seat, root, spent); spent += r.steps + 1;
+        if(!r.done){ LA.stats.over++; return null; }
+        const e = laEval(r.n, seat, root);
+        ["v", "dealt", "taken", "cards"].forEach(f => tot[i][f] += e[f]);
+      }
+      dn++;
+    }
+    if(dn > LA.dets && !(tot[bi].v > tot[0].v + LA.margin * dn)){ LA.stats.unverified = (LA.stats.unverified || 0) + 1; return null; }
+    best = {a: cands[bi], d: ["dealt", "taken", "cards"].reduce((m, f) => (m[f] = (tot[bi][f] - tot[0][f]) / dn, m), {})};
     return best;
   } finally {
     IN_SEARCH = false; NOTE = keep;
@@ -1481,7 +1519,7 @@ const CALL_WHY = {
   endTurn: "End your turn. Nothing worth doing is left.",
   laHit: "Start with this. Play each opening out to the end of your turn and this one lands the most damage once they block.",
   laSafe: "Start with this. Played out to the end of your turn, it costs you the least life of any opening.",
-  laKeep: "Start with this. Played out, it hits as hard as anything else and keeps more cards in hand for their swing back.",
+  laKeep: "Start with this. Played out to the end of your turn, it keeps more cards in hand for their swing back.",
   laHold: "Stop here and keep the rest. Played out, every card you could still play costs you more than it earns.",
   laBlock: "Block with this. Play each wall out through their turn and yours, and this one leaves you best off.",
   laTake: "Take the rest of this hit. Played out through their turn and yours, the cards you keep are worth more than the life they would save.",

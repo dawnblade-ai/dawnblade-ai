@@ -1,3 +1,35 @@
+## v5.95 — Sharp does not trade a sure line for a lucky deal
+
+QA-A H-1 (v5.85 sweep, P1) and QA-B H-2, with QA-B FEED-2.
+- **The misplays:** Sharp Azalea loaded a known arrow (three "next arrow" grants, 13 power) and then
+  used her hero ability, which puts the arsenal card on the bottom of the deck and flips the top card,
+  hoping for another arrow. The grants expired unused. Steady plays the arrow. Sharp Kayo opened turn 1
+  by destroying Knucklehead (roll a d6, base intellect becomes the roll). It rolled 1 and Kayo dealt
+  nothing. Steady swings Rough Up. Kayo's call claimed the move "hits as hard as anything else".
+- **Cause:** the search plays every opening out on ONE masked deal (`dets: 1`). The seat's own deck order
+  and the game's random stream are part of that deal. On a deal with a good arrow on top, or a high
+  roll, the gamble outscored the sure line. The reason text (`laKeep`) claimed damage parity for any
+  overrule its card term won, including a 0–0 tie.
+- **Fix:** `laLucky` asks whether a line leaned on what the seat cannot see. That means a card that
+  began in its own deck ended the line outside the deck and the hand (revealed, flipped, or drawn and
+  played), or the line drew from the random stream. It reads public facts only: the masked root and the
+  line. When the winning line is lucky and the rule policy's line is not, the two are replayed on
+  `LA.verify` (4) deals in all, and the overrule stands only if it still wins on the mean. `laKeep` now
+  reads "Played out to the end of your turn, it keeps more cards in hand for their swing back."
+- **What did not pay:** verifying EVERY overrule (seeds 0–5: pooled −0.37, t −1.7). It cut action
+  overrules by a third and nearly doubled over-budget searches. Verifying every lucky winner (pooled
+  −0.03; Fai −0.50, t −2.2, and Dash −0.83) did not pay either: their own rule lines gamble too.
+- **Measured** (own seat, paired, against v5.91; wins of 28 per hero-seed): seeds 0–5 pooled **+0.22
+  (t 2.4)**, Azalea **+2.67 (t 3.7)**. Held out 6–11: pooled +0.07 (t 1.0), Azalea **+1.33 (t 4.0)**. All 12:
+  **+0.14 (t 2.5)**. Every other hero is within ±0.33 on both sets. Fai is −0.33 on both (4 games of 336;
+  in probe games its verification almost never fires), recorded as noise. 0 refusals / violations /
+  stalls. The step budget is unchanged (300; over it the rules' move stands). Phone (the real page,
+  4x CPU throttle, 100 positions each): action p95 78 ms, worst 126 ms; block p95 103 ms, worst 163 ms.
+- **Drills:** `test/aiqa.test.js` §3: in Azalea's position one deal (`verify: 1`, the old search)
+  overrules into the flip, while four keep the rule policy's move (the sabotage is the first assert).
+  The verified call is unchanged when the hidden cards and this seat's deck order are scrambled. The
+  `laKeep` text claims no damage.
+
 ## v5.94 — A resource piece pays for a weapon swing too
 
 QA-A H-2 (v5.85 sweep, P1).
