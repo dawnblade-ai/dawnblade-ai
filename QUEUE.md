@@ -89,7 +89,18 @@ a grantTakers-style reader for gear) · H-4 Enigma Uphold · H-5 Frost Spike.
 **BUDGET LESSON (CEO, 2026-11-06):** five concurrent Opus worker sessions in one day spent the account's
 weekly limit and froze everything for four days. Run at most two workers at once, use Sonnet for
 mechanical merges/shippers, and keep Opus for rules reading, search design and audits.
-**OPEN DECISIONS:** (A, USER) the coin screen says "the throw returns for launch" — bring back
+**MISSION (user, 2026-11-07):** "the ultimate FABTCG silver age precon competitive gaming environment and
+judging engine. 100% fan made non profit for fun for glory no ads forever."
+**RULINGS (user, 2026-11-07):**
+- COIN: "Keep the coin flip for now I like the speed of it. Let's plan for the ranked Elo ladder we will use
+  rock paper scissors but for vs ai use coin flip." -> vs AI = coin (permanent); RPS = the future ranked ladder.
+- HIDDEN HANDS: "Hidden hands is a must." -> the next big project (`peers-hold-full-state`); prerequisite for
+  a ranked ladder.
+- PRESERVE TRADITION / PASS OVER: "You're right - target required." -> a card whose effect needs a target
+  cannot be played without a legal target (CR 5.1.4a + 5.1.5 + this ruling).
+**CADENCE (user, 2026-11-07):** "With each version make a progress report and start a new CEO thread." ->
+each shipped release wave gets `docs/progress/vX.YY.md` + a fresh CEO session that starts from this handoff.
+**OPEN DECISIONS (older; A, PT and hidden hands now RULED above):** (A, USER) the coin screen says "the throw returns for launch" — bring back
 rock-paper-scissors for 1.0 or drop the line? (D) SHIPPED v5.84. Parked: hidden hands, sudden death.
 
 **AI policy hunts are paused:** H25, H27, H28, H30, H31 did not ship (the hand-written vein is
