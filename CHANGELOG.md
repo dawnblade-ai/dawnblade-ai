@@ -1,3 +1,34 @@
+## v6.05 — Hidden hands H2 (2 of 3): the host holds the deck
+
+H2 of HIDDEN-HANDS.md §6, second increment. **A two-phone table now runs the referee:** the guest's phone holds
+its own seat's view and never the game.
+- **`net.js` referee mode** (`referee: true`, the table's only mode): the host runs `referee.js` on the full game
+  and is the only phone that reduces; the guest holds a mirror of its view and sends intents only. The host
+  refuses an intent naming the host's seat. Journal, catch-up, the canary (now on view fingerprints) and
+  snapshots are the same machinery on views. A message bigger than 12,000 characters (a reconnect late in a game
+  measured ~40KB) goes in PART frames, so no frame exceeds the 16KB data-channel budget.
+- **The seed is committed (lobby, LOBBY_V 2):** the host sends `H(seedH)`, the guest answers `seedG` (refused
+  before the commitment), the seed is `H(seedH|seedG)`. seedH never enters the shared lobby state; the guest
+  builds a BLIND match (same cards, for the catalog) and gets the game only as views. The table code is no
+  longer the seed.
+- **Host drop pauses the game** (`pause`): the guest's actions are refused and it cannot take over (no hidden
+  card, no seed). The host saves its game to the phone after every commit (`persist`), a restored host session
+  (`restore`) takes it back, and the guest's `join` lands it on a snapshot.
+- **Post-game REVEAL:** at the end the host sends seedH and the full log; `referee.verifyGame` checks seedH opens
+  the commitment and replays the game against every view fingerprint the guest was shown.
+- **WIRE_V 34 -> 35**; the view-only `unseen`/`unseenGear` lists are interned on the wire (`VIEW_ZONES`).
+- **Page:** the referee and SHA-256 load before net.js; the host commits its seed half, the guest answers; the
+  board shows this seat's view (the guest's foe arsenal face down as a placeholder); a host drop shows "paused".
+- **Drills:** `test/hostref.test.js` — a whole game (views agree after every commit, no frame carries a hidden uid
+  or exceeds 16KB), forged seat refused, gap caught up, desync repaired by snapshot, HOST DROP (pause, refused
+  actions, restore, same final game as uninterrupted), chunked reconnect, verify and a lying reveal (another
+  seedH, a doctored log, a deal from another seed). Lobby: the seed commit drill. table.test plays in referee
+  mode. Each sabotaged.
+- **`tools/twophone.js`:** two real pages, PeerJS stubbed, frames relayed through node. A full game: sealed throw,
+  seed exchange, guest view agreed at every commit, host drop paused the guest, reveal received, 0 page errors.
+- **Not yet (increment 3):** a "verify this game" button, the honest "the host's phone holds the deck" line, a
+  resume prompt for a reloaded host, the local AI table filtering its feed by `feedTo`.
+
 ## v6.04 — Hidden hands: the three visibility rulings
 
 RULING (user, 2026-11-07), asked and answered: *"Is the soul public?"* — *"Yes."* *"May an owner look at their
