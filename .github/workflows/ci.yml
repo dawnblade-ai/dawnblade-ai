@@ -91,10 +91,14 @@ jobs:
       - name: wait for Pages, then verify the page AND every script it loads
         run: |
           URL=https://dawnblade-ai.github.io/dawnblade-ai
-          for i in 1 2 3 4 5 6; do
+          # Wait for THIS version, not just a 200: Pages can serve the previous
+          # build for a minute or more after the push (v5.92 failed that race).
+          want=$(grep -oP 'APP_VER = "\K[0-9.]+' index.html | head -1)
+          for i in $(seq 1 30); do
             code=$(curl -s -o /dev/null -w '%{http_code}' "$URL/")
-            [ "$code" = "200" ] && break
-            echo "attempt $i: $code — waiting for the deploy"; sleep 20
+            got=$(curl -s "$URL/index.html?ci=$GITHUB_RUN_ID-$i" | grep -oP 'APP_VER = "\K[0-9.]+' | head -1)
+            [ "$code" = "200" ] && [ "$got" = "$want" ] && break
+            echo "attempt $i: $code, live v$got, want v$want — waiting for the deploy"; sleep 20
           done
           [ "$code" = "200" ] || { echo "::error::index.html is $code"; exit 1; }
 
