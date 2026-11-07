@@ -441,7 +441,7 @@ test("every engine module is loaded by index.html, or declared headless", () => 
 
      The MODULE stays: its 21 drills are a specification for priority.js
      that nothing else provides. Only the script tag went. */
-  const HEADLESS = ["actions"];
+  const HEADLESS = ["actions", "view"];   /* view: HIDDEN HANDS spike (research/hidden-hands), not on the page yet */
   const dir = path.join(__dirname, "..", "engine");
   const mods = fs.readdirSync(dir).filter(f => f.endsWith(".js")).map(f => f.slice(0, -3));
   const src = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
