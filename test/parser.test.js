@@ -61,7 +61,8 @@ test("classifyClause — unmet condition wrapper with unparsed body returns null
 
 test("classifyClause — op vocabulary", () => {
   assert.deepEqual(cc("Target defending card gains +2 {d}.").ops, [["defBuff",2]]);
-  assert.deepEqual(cc("Target attack gets -1 {p}.").ops, [["atkMinus",1]]);
+  /* the printed "target" rides as a flag (v6.00, a target is required) */
+  assert.deepEqual(cc("Target attack gets -1 {p}.").ops, [["atkMinus",1,{target:true}]]);
   /* THE `Ward N` KEYWORD IS NOT AN OP (v4.34) — it is a number the
      permanent carries, spent by destroying it. `parser.wardValue` reads
      it and `effects.preventDamage` spends it; see the pin below. */

@@ -245,7 +245,7 @@ test("a card played in an open window lands in the zone its TYPE sends it to", {
        empty state holds none — the same kind of refusal: a printed
        condition this census cannot meet, pinned below and driven with the
        target present in test/instantpump.test.js. */
-    if(why && /targets an attack you control|nothing it can target|can be its target/.test(why)){ untargeted.push(card.name); continue; }
+    if(why && /targets an attack you control|nothing it can target|can be its target|no attack is on the chain/.test(why)){ untargeted.push(card.name); continue; }
     if(why){ bad.push(card.name + " is playable by type and was refused: " + why); continue; }
     const want = TY.destination(card);
     const got = whereIs(settle(J.reduce(g, {t: "play", uid: "UT", from: zone}, SEAT).state), "UT");
@@ -263,14 +263,18 @@ test("a card played in an open window lands in the zone its TYPE sends it to", {
      effect is a printed target is refused when the target is absent, and an
      empty state holds no aura with ward and no graveyard. Driven with the
      target present in test/notarget.test.js. */
-  assert.deepEqual(untargeted.sort(), ["Astral Etchings", "Lightning Press", "Memorial Ground"],
-    "the cards refused for want of a printed TARGET in an empty state moved (v5.03, v5.07)");
+  /* +A Drop in the Ocean, +Edict of Steel, +Pass Over, +Preserve Tradition AT
+     v6.00: a target is required (RULING user 2026-11-07), even on a card that
+     prints something beside it. Driven in test/targetreq.test.js. */
+  assert.deepEqual(untargeted.sort(), ["A Drop in the Ocean", "Astral Etchings", "Edict of Steel", "Lightning Press", "Memorial Ground", "Pass Over", "Preserve Tradition"],
+    "the cards refused for want of a printed TARGET in an empty state moved (v5.03, v5.07, v6.00)");
   /* grave 91 -> 90 AT v5.03: Lightning Press is an instant, and the
      census can no longer reach its play without an attack to target. ONE
      record, not three: this census walks the DECK LISTS, and Briar decks
      the red printing alone (the pool file holds all three pitches). */
   /* grave 90 -> 88 AT v5.07: Astral Etchings and Memorial Ground above. */
-  assert.deepEqual(tally, {chain: 171, arena: 23, grave: 88},
+  /* grave 88 -> 84 AT v6.00: the four the target rule added above. */
+  assert.deepEqual(tally, {chain: 171, arena: 23, grave: 84},
     "the pool's play destinations moved — that is a rules change, so it is a deliberate edit here");
   /* AND EVERY ARROW WAS REFUSED FROM THE HAND (v4.91). Twelve records,
      eleven names (Infecting Shot is printed at two pitches in the pool) —

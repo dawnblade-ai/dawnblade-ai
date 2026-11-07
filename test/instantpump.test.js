@@ -165,10 +165,11 @@ test("EVERY DOOR ASKS IT, as a whole conditional (v4.55: an identifier alone sur
     "the trainer's play door asks it before anything is paid");
   const ai = html.slice(html.indexOf("const activateInstant = "), html.indexOf("\n  const ", html.indexOf("const activateInstant = ") + 30));
   assert.ok(ai.length > 200, "activateInstant anchors moved");
-  assert.match(ai, /\{ const _pw = DawnEffects\.pumpTargetWhy\(s, card, actorOf\(s\)\); if\(_pw\) return L\(s, _pw \+ "\."\); \}/,
+  /* v6.00: every printed target, through `playTargetWhy` (which asks the pump reader first) */
+  assert.match(ai, /\{ const _pw = DawnEffects\.playTargetWhy\(s, card, actorOf\(s\)\); if\(_pw\) return L\(s, _pw \+ "\."\); \}/,
     "the trainer's instant-ability door asks it, before the ability is paid");
   assert.match(judge, /\{ const pw = E\.playTargetWhy\(g, c, seat\); if\(pw\) return pw; \}/, "judge's play branch asks it");
-  assert.match(judge, /if\(want !== "attack-reaction"\) return E\.pumpTargetWhy\(g, ab, seat\);/,
+  assert.match(judge, /if\(want !== "attack-reaction"\) return E\.playTargetWhy\(g, ab, seat\);/,
     "and every activation route, through `rxTargetWhy`");
   assert.match(efx, /\{ const pw = playTargetWhy\(s, c, actorOf\(s\)\); if\(pw\) return \{game: s, dv: 0, why: pw\}; \}/,
     "`playAtSpeed` asks it");

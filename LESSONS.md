@@ -14373,6 +14373,18 @@ needs the verbatim quote IN THE REPO (source comment, `tools/approx.js` record, 
 - So: declared on activation; a target gone at resolution fails THAT effect only, the rest of the
   ability still resolves, and nothing refunds the paid cost.
 
+### v6.00 — a target is required (RULING user, 2026-11-07)
+- Asked whether Preserve Tradition ("Put target action card from your graveyard on the bottom of your
+  deck.") can be played with no legal target, the user answered "You're right - target required."
+- CR 5.1.4a: "…if any resolution abilities generate effects that require a target, the player must
+  declare all legal targets for those effects.[1.8.5]"
+- CR 5.1.5: "Fourth, the card is evaluated if it is legal to play before any costs are paid. If a rule
+  or effect prevents the card from being played, or the parameters of the proposed card are illegal, the
+  card is illegal to play and the game state is reversed to before the card was announced.[1.10.3]"
+- So: a card or activation with a targeted effect and no legal target is ILLEGAL to play, even when it
+  prints something else beside the target (v5.07's partial reading is closed). One body,
+  `effects.playTargetWhy`, both boards. An attack's target is a hero (CR 1.4.5), so attacks never meet it.
+
 ### S-1 — dominate against a played defence reaction (ship/rules-qa)
 - CR 8.3.4: "Dominate is a static ability that means "This can't be defended by more than one card from hand.""
 - CR 8.3.4b: "If an attack with dominate is currently defended by a card from hand on the activate chain

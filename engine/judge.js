@@ -269,7 +269,10 @@ function rxTargetWhy(g, sd, ab, want, seat){
      (v5.03) — Concealed Object's "Instant - {t}: Target attack gets
      +1{p}". `effects.pumpTargetWhy` is the one reader, and it answers
      null for anything that is not such a pump. */
-  if(want !== "attack-reaction") return E.pumpTargetWhy(g, ab, seat);
+  /* AND EVERY OTHER PRINTED TARGET (v6.00, a target is required — CR
+     5.2.2b sends an activation through 5.1.4a's declaration):
+     `effects.playTargetWhy` asks the pump reader first, then the rest. */
+  if(want !== "attack-reaction") return E.playTargetWhy(g, ab, seat);
   /* A TARGETED JAB NAMES A PERMANENT IN YOUR OWN GEAR (v4.38), not the
      attack on the chain — so it is a different target question from the
      qualifier below, asked of a different object. It is still a LEGALITY:

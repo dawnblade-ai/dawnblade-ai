@@ -1060,19 +1060,23 @@ const APPROX = {
       "stands for the other payloads; this was the one whose reading was a ruling."},
 
 "played-target-partial-resolution": {
-  status:"stated", cr:null, board:"both", since:"v5.07", swept:"v5.07",
-  claim:"A played card whose printed target has nothing to name is refused only when "+
-        "that target is its WHOLE payload (Astral Etchings, Memorial Ground). A card "+
-        "printing something beside it is played and resolves the rest: Re-Charge!'s "+
-        "+4{p}, Edict of Steel's go again, and the transcend on Pass Over, Preserve "+
-        "Tradition and A Drop in the Ocean.",
-  why:"Whether the CR lets a card with one unfillable target be played at all is not "+
-      "sourced here (rules.fabtcg.com is unreachable from this sandbox), and an existing "+
-      "drill pins the partial reading for Re-Charge!. The whole-payload refusal needs no "+
-      "ruling: that play would do nothing, which v4.49 and v5.00 already refuse. The "+
-      "reading matters most for Enigma's Mystic instants, whose transcend still fires off "+
-      "a play that targeted nothing. Recorded as a ruling to ask; the probe plays Pass "+
-      "Over into an empty graveyard and asserts it is legal."},
+  status:"closed", cr:"CR 5.1.4a", board:"both", since:"v5.07", swept:"v6.00",
+  claim:"WAS: a played card whose printed target had nothing to name was refused only "+
+        "when that target was its WHOLE payload (Astral Etchings, Memorial Ground); a card "+
+        "printing something beside it was played and resolved the rest - Edict of Steel's "+
+        "go again, and the transcend on Pass Over, Preserve Tradition and A Drop in the "+
+        "Ocean, a Chi loop fed by a play that targeted nothing. IS: every targeted op asks "+
+        "for a legal target before the card is played or the ability activated "+
+        "(`effects.playTargetWhy`, one body: `judge.playableWhy`, every activation route "+
+        "through `rxTargetWhy`, the trainer's play and instant doors). Untargeted text "+
+        "(Re-Charge!'s \"a\") and attacks (their target is a hero, CR 1.4.5) ask nothing.",
+  why:"RULING (user, 2026-11-07), asked whether Preserve Tradition can be played with no "+
+      "legal target: \"You're right - target required.\" Read verbatim at rules.fabtcg.com: "+
+      "CR 5.1.4a \"...if any resolution abilities generate effects that require a target, "+
+      "the player must declare all legal targets for those effects.\" CR 5.1.5 \"...or the "+
+      "parameters of the proposed card are illegal, the card is illegal to play...\" "+
+      "test/targetreq.test.js drives Preserve Tradition and Pass Over and pins the census; "+
+      "the probe is turned round and asserts the refusal."},
 
 /* ---- C. A GAME THAT CANNOT MOVE ANY MORE ------------------------------ */
 

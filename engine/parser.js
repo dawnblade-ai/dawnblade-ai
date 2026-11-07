@@ -2232,7 +2232,10 @@ function classifyClause(raw){
   }
   if(m=c.match(/(?:target )?defending card (?:gains?|gets?) \+(\d+)\s*(?:\{d\}|defense)/)) return R([["defBuff",+m[1]]]);
   if(m=c.match(/(?:^|this |it )(?:gains?|gets?|has) \+(\d+)\s*(?:\{d\}|defense)/)) return R([["defBuff",+m[1]]]);
-  if(m=c.match(/(?:target )?attack(?:ing card)? (?:gets?|gains?) -(\d+)\s*(?:\{p\}|power)/)) return R([["atkMinus",+m[1]]]);
+  /* the printed "target" rides as a flag (v6.00): `effects.playTargetWhy`
+     refuses the play when no attack is there to be its target */
+  if(m=c.match(/(?:target )?attack(?:ing card)? (?:gets?|gains?) -(\d+)\s*(?:\{p\}|power)/))
+    return R([/^target /.test(m[0]) ? ["atkMinus",+m[1],{target:true}] : ["atkMinus",+m[1]]]);
   /* "Target <weapon/sword/dagger/…> attack gains +N{p}" — the pump a
      reaction hands the attack it is targeting. playRx folds fx.self into
      the chain link, so self is the faithful op here.

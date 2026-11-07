@@ -352,7 +352,9 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 22 -> 21 stated AT R9: `activation-choices-at-resolution` was built and is
      `activation-target-declared` — an ability's printed target is declared at
      activation, at both boards. */
-  assert.equal(n("stated"), 21, "stated count moved");
+  /* 21 -> 20 stated AT v6.00: `played-target-partial-resolution` closed — a
+     target is required (RULING user 2026-11-07). */
+  assert.equal(n("stated"), 20, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -419,7 +421,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 34 -> 35 closed AT v5.71: `end-phase-unless-floating-only`. */
   /* 35 -> 36 closed AT v5.72: `trainer-no-stalemate-draw`. */
   /* 36 -> 37 closed AT R9: `activation-target-declared`. */
-  assert.equal(n("closed"), 37, "closed count moved");
+  /* 37 -> 38 closed AT v6.00: `played-target-partial-resolution`. */
+  assert.equal(n("closed"), 38, "closed count moved");
 });
 
 /* ============================================================
@@ -1496,20 +1499,19 @@ probe("attack-grant-misses-own-attack", () => {
 });
 
 probe("played-target-partial-resolution", () => {
-  /* DRIVEN AT THE TABLE, asserting the DEVIATION: Pass Over has no card in
-     the opponent's graveyard to banish, and is still legal because it also
-     prints a transcend. The day a ruling refuses it, this goes red. */
+  /* CLOSED AT v6.00 — the probe turned round. It asserted Pass Over was LEGAL
+     with nothing to banish because it also prints a transcend; a target is
+     required (RULING user 2026-11-07), so it now asserts the refusal, and
+     the legal play once a target exists. */
   const db = H.db();
   if(!db) return;
   const po = {...C.resolveEntry(db, {name: "Pass Over", p: 1, code: null, q: 1}), uid: "PO"};
-  const g = {...H.state({hand: [po], res: 9, ap: 1}, {grave: []}, {turn: 3, actor: 0, turnPlayer: 0}),
-    phase: "action", step: "layer", priority: 0, passed: [false, false], stack: [], chain: [], chainCards: []};
-  assert.equal(J.legal(g, {t: "play", uid: "PO", from: "hand"}, 0), null,
-    "Pass Over with nothing to target is now refused — the record must move");
-  /* and the whole-payload half is refused, or the record's claim is false */
-  const mg = {...C.resolveEntry(db, {name: "Memorial Ground", p: 1, code: null, q: 1}), uid: "MG"};
-  assert.match(String(J.legal({...g, sides: [{...g.sides[0], hand: [mg]}, g.sides[1]]}, {t: "play", uid: "MG", from: "hand"}, 0)),
-    /can be its target/);
+  const mk = foeGrave => ({...H.state({hand: [po], res: 9, ap: 1}, {grave: foeGrave}, {turn: 3, actor: 0, turnPlayer: 0}),
+    phase: "action", step: "layer", priority: 0, passed: [false, false], stack: [], chain: [], chainCards: []});
+  assert.match(String(J.legal(mk([]), {t: "play", uid: "PO", from: "hand"}, 0)), /can be its target/,
+    "Pass Over with nothing to target is legal again — the record must move");
+  const wb = {...C.resolveEntry(db, {name: "Wounding Blow", p: 1, code: null, q: 1}), uid: "wb"};
+  assert.equal(J.legal(mk([wb]), {t: "play", uid: "PO", from: "hand"}, 0), null);
 });
 
 /* CLOSED AT v5.72 — the probe turned round (v4.02). It asserted the

@@ -84,9 +84,12 @@ test("crindex — the verdict counts are pinned", () => {
      static is read continuously (effects linkPumps, test/arakni.test.js). */
   /* 80 -> 81 and 70 -> 71 guarded AT RULING-B: CR 1.8.3b — "may choose to"
      destroy is an effect made if able (parser payCost, test/jab.test.js). */
-  assert.equal(rs.length, 81, "the number of distinct CR rules this project cites moved");
+  /* 81 -> 82 and 71 -> 72 guarded AT v6.00: a target is required — the
+     legal-play check, cited where it is built and drilled (effects.js,
+     test/targetreq.test.js). */
+  assert.equal(rs.length, 82, "the number of distinct CR rules this project cites moved");
   /* 50 -> 51 guarded and 6 -> 5 drill-only AT v4.66: CR 7.1.2, built. */
-  assert.equal(by(rs, "guarded").length,   71, "guarded count moved");
+  assert.equal(by(rs, "guarded").length,   72, "guarded count moved");
   assert.equal(by(rs, "UNGUARDED").length,  3, "UNGUARDED count moved");
   assert.equal(by(rs, "drill-only").length, 5, "drill-only count moved");
   assert.equal(by(rs, "prose").length,      2, "prose count moved");

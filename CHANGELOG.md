@@ -1,3 +1,22 @@
+## v6.00 — A target is required
+
+RULING (user, 2026-11-07): asked whether Preserve Tradition can be played with no legal target — "You're right -
+target required." CR 5.1.4a ("…the player must declare all legal targets for those effects") and CR 5.1.5 ("…or the
+parameters of the proposed card are illegal, the card is illegal to play…"), read verbatim at rules.fabtcg.com.
+- **A general rule, one body:** `effects.playTargetWhy` asks every targeted op for a legal target — a counter on
+  "target aura/sword you control", "target … from your graveyard", Pass Over's "target card from an opposing hero's
+  graveyard", and "target attack" (the parser now flags the printed word on `atkMinus`). v5.07's exemption for a
+  card that prints something beside its target is gone: Edict of Steel and the Mystic instants (Pass Over,
+  Preserve Tradition, A Drop in the Ocean) are refused with nothing to target, so no transcend off a play that
+  targeted nothing. The table asks it in `playableWhy` and on every activation route (`rxTargetWhy`); the trainer
+  in its play door, `playAtSpeed`, and its instant-ability door. The AI inherits it (act proposes, legal disposes).
+- **Untouched:** untargeted text (Re-Charge!'s "a", Uphold Tradition's "an aura") and attacks (their target is a
+  hero, CR 1.4.5).
+- **Census** (`test/targetreq.test.js`, every pool card and granted ability, empty state): A Drop in the Ocean,
+  Astral Etchings, Edict of Steel, Lightning Press, Memorial Ground, Pass Over, Preserve Tradition, and the
+  abilities of Beckoning Haunt, Concealed Object, Crown of Dichotomy and Fai.
+- `played-target-partial-resolution` (tools/approx.js) closed, probe turned round; stated 21 -> 20, closed 37 -> 38.
+
 ## v5.99 — The trainer's text says what happened, to whom, in order
 
 QA-C FEED-1…FEED-7 (v5.96 trainer read).

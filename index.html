@@ -898,7 +898,7 @@ img{display:block;max-width:100%}
    database + typographic fallbacks. Not affiliated with LSS.
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
-window.APP_VER = "5.99"; /* v5.99 - the trainer's text says what happened, to whom, in order. See CHANGELOG.md. */
+window.APP_VER = "6.00"; /* v6.00 - a card or ability with a printed target cannot be played when no legal target exists. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -3938,7 +3938,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       return L(s, `${card?card.name:"That ability"} is action speed — it can only be activated in your own action phase.`);
     if(act(s).weaponUsed[card.uid]) return L(s, `${card.name} has already been used this turn.`);
     /* a "target attack" pump needs one, refused before it is paid (v5.03) */
-    { const _pw = DawnEffects.pumpTargetWhy(s, card, actorOf(s)); if(_pw) return L(s, _pw + "."); }
+    { const _pw = DawnEffects.playTargetWhy(s, card, actorOf(s)); if(_pw) return L(s, _pw + "."); }
     const afx = fxParse(card);
     if(afx.activateIf && !activateIfOk(s, afx.activateIf))
       return L(s, `${card.name} can't be activated — ${afx.activateIf.why}.`);

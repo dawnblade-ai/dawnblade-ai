@@ -11314,42 +11314,49 @@ function ctrPutCands(sd, spec){
    a trigger's, and a trigger with no target does nothing while the attack
    stays legal.
 
-   MEASURED: of the six, TWO print nothing else (Astral Etchings, Memorial
-   Ground) and are refused; the other four are the stated partial case. */
+   v5.07 refused only the TWO that print nothing else (Astral Etchings,
+   Memorial Ground); v6.00 refuses all six (a target is required, below). */
 function playTargetWhy(s, c, seat){
   if(!c || P.isAttack(c) || c._attackRx) return null;
   const pw = pumpTargetWhy(s, c, seat);
   if(pw) return pw;
   if(typeof c.name !== "string") return null;
   const sd = (s && s.sides && s.sides[seat]) || {};
+  const foeSd = (s && s.sides && s.sides[seat === 0 ? 1 : 0]) || {};
   const fx = P.fxParse(c);
-  /* ONLY WHEN THE TARGET IS THE WHOLE PAYLOAD. Whether a card with one
-     unfillable target may be played at all is not sourced here (the CR site
-     is unreachable from this sandbox), and the two readings part exactly on
-     cards that print something else beside it — Re-Charge!'s +4{p}, Edict of
-     Steel's go again, the Mystic instants' transcend. Those keep resolving
-     the rest (`played-target-partial-resolution`, stated). A card whose ONLY
-     effect is the targeted one would do nothing at all, which is the paid
-     no-op v4.49 and v5.00 refuse without needing the targeting rule. */
-  const rest = op => (fx.ops || []).some(o => o !== op && o[0] !== "noop")
-    || (fx.conds || []).length > 0 || !!fx.ga
-    || (fx.onHit || []).length > 0 || (fx.onHitHero || []).length > 0;
+  /* A TARGET IS REQUIRED (v6.00). RULING (user, 2026-11-07), asked whether
+     Preserve Tradition can be played with no legal target: "You're right -
+     target required." CR 5.1.4a "…if any resolution abilities generate
+     effects that require a target, the player must declare all legal
+     targets for those effects." CR 5.1.5 "…or the parameters of the
+     proposed card are illegal, the card is illegal to play…"
+
+     So EVERY targeted op asks, and the v5.07 exemption is gone — a card that
+     prints something beside its target (Edict of Steel's go again, the
+     Mystic instants' transcend) is refused like one that prints nothing
+     else. An untargeted op ("an aura you control", Re-Charge!'s "a") asks
+     nothing: there is no parameter to declare. */
   for(const op of (fx.ops || [])){
     const k = op[0], spec = op[1] || {};
     /* A REFUSAL IS READ BY WHOEVER ATTEMPTED IT, so "you" is right here
        (v2.83); the opponent's zone is named through `sp`. */
-    let why = null;
     if(k === "ctrPut" && spec.target && !ctrPutCands(sd, spec).length)
-      why = c.name + ": you control nothing it can target";
-    else if(k === "pickPrompt" && spec.zone === "grave" && (spec.min == null || spec.min >= 1)
+      return c.name + ": you control nothing it can target";
+    if(k === "pickPrompt" && spec.zone === "grave" && (spec.min == null || spec.min >= 1)
        && !PR.promptPickAskable(PR.promptPickPool(sd, spec), spec))
-      why = c.name + ": nothing in your graveyard can be its target";
-    /* NO `foePick` OR `atkMinus` BRANCH, MEASURED: their only targeted
-       claimants (Pass Over, A Drop in the Ocean) also print a transcend, so
-       they are the stated partial case and a refusal there could never fire
-       — vocabulary with no claimant is dead rules code (v4.11, v4.52).
-       test/notarget.test.js fails the day a whole-payload one arrives. */
-    if(why && !rest(op)) return why;
+      return c.name + ": nothing in your graveyard can be its target";
+    /* Pass Over — the candidates `runOps`' own `foePick` branch reads. Only
+       the graveyard form names a CARD as its target; the hand form's target
+       is a hero, which always exists. */
+    if(k === "foePick" && spec.zone === "grave"
+       && !((foeSd.grave || []).filter(promptFilter(spec.filter))).length)
+      return c.name + ": nothing in " + sp(foeSd) + " graveyard can be its target";
+    /* A Drop in the Ocean — "target attack" is any attack on the chain:
+       the open link, or the trainer's scripted swing (`incoming`, which
+       never opens a `pend`). The parser flags the printed word. */
+    if(k === "atkMinus" && op[2] && op[2].target
+       && !((s && s.pend && s.pend.card) || ((s && s.incoming) || 0) > 0))
+      return c.name + ": no attack is on the chain for it to target";
   }
   return null;
 }
