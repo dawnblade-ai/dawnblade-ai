@@ -14,7 +14,7 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
 **Keep this section SHORT (under ~50 lines): current state, decisions, who is doing what, next.**
 History goes in the archived handoffs below it and in CHANGELOG.md. Do not start a root handoff file.
 
-- **Live: v5.96** (`ddbc581`; CI green incl. the live check). Session start was v5.73 (`218a5fe`). Shipped 2026-11-02: v5.74 pinned pool ·
+- **Live: v5.99** (`841f322`). Session start was v5.73 (`218a5fe`). Shipped 2026-11-02: v5.74 pinned pool ·
   v5.75 R8 draw · v5.76 P0 trainer block crash · v5.77 lookahead search on the AI hero (+3.06 of 28,
   t 11.1, 0/0/0; phone p95 96 ms) · v5.78 Sharp/Steady · v5.79 table results/copy · v5.80 layout + 44px
   hit areas · v5.81 feed/voice · v5.82 home-screen icon (original, `icons/`, not standalone) · docs:
@@ -77,7 +77,9 @@ piece (resUnlockWeapon) · Sharp re-checks a lucky-deal winner on 4 deals (laLuc
 · honest endTurnKeep / payNoPiece reasons. Did NOT pay: verifying every overrule (-0.37), every lucky winner.
 **TRAINER QA (findings/qa-c, v5.96):** 10 games / 9 heroes on the page: 0 crashes, 0 state defects. COACH
 P1: the Coach never advises a weapon swing (advisor advCardOut uses isAttack). 3 COACH P2 + 7 FEED/UI.
-In flight: `ship/coach-qa` (Sonnet, session_013xG9x8sbnApWDKKTYGSjpn). Not covered: Fai, Enigma, Arakni, Blaze,
+SHIPPED v5.97 (Coach advises weapon swings) · v5.98 (COACH-2/3/4) · v5.99 (trainer FEED-1..7). Left: FEED-7's
+play-line ORDER (Big Bertha before the boost banish; Oasis +1 life before the play line) needs a restructure
+of the play path's announce/pitch/trigger order; COACH-5 (P3). Not covered: Fai, Enigma, Arakni, Blaze,
 Gravy, Lyath trainer games; a trainer win.
 **CI FIX (7a511fd):** the deploy check now waits for the pushed APP_VER (v5.92's red run was Pages lag).
 **OPEN H-ITEMS (not built, measured leads):** QA-A H-3 Refraction Bolters never destroyed for go again
