@@ -3180,9 +3180,10 @@ function classifyClause(raw){
      that card's PITCH — red 1, yellow 2, blue 3. The reveal itself is
      information both players see; the maths is what the engine needs. */
   if(/^reveal the top card of your deck$/.test(c)) return R([["reveal",1]]);
-  /* looking is private where revealing is public, but for the trainer both
-     just put the top card in front of you. */
-  if(/^look at the top card of (?:your|target hero'?s?) deck$/.test(c)) return R([["reveal",1]]);
+  /* LOOKING IS PRIVATE where revealing is public (CR 3.0.4b, the deck is a
+     private zone): the third element says so, and effects.js tells only the
+     seat that looked (HIDDEN HANDS H1). */
+  if(/^look at the top card of (?:your|target hero'?s?) deck$/.test(c)) return R([["reveal",1,"look"]]);
   if(m=c.match(/this gets ([+-])x\s*\{p\}, where x is the pitch value of the card revealed/))
     return R([["revPitch", m[1]==="-" ? -1 : 1]]);
   /* THE SAME REVEAL, A DIFFERENT CONSUMER (v3.68). Three pool records

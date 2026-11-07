@@ -898,7 +898,7 @@ img{display:block;max-width:100%}
    database + typographic fallbacks. Not affiliated with LSS.
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
-window.APP_VER = "6.01"; /* v6.01 - against the AI the coin flip is the permanent way to decide who goes first. See CHANGELOG.md. */
+window.APP_VER = "6.02"; /* v6.02 - the engine can show the game as one seat may know it, and the AI's lookahead reads only that view. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -1549,6 +1549,9 @@ window.TROPHIES = [
      sitting beside a trainer with its own dummy is a second quiet engine.
      Something calls it now. Both must load AFTER judge.js — sparring asks
      it for every legality question, and local.js drives it. -->
+<!-- HIDDEN HANDS H1: the game as one seat may know it. sparring.js builds
+     its lookahead root from that seat's view, so it loads before sparring. -->
+<script src="engine/view.js"></script>
 <script src="engine/sparring.js"></script>
 <script src="engine/local.js"></script>
 <script src="engine/lobby.js"></script>

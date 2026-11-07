@@ -441,10 +441,15 @@ function pipParts(line){
 }
 const pipWords = line => pipParts(line).map(x => x[0]).join("");
 
+/* A card without its KNOWN-SLOT mark (`_kb`: both players saw it go to the
+   bottom of the deck — judge.js endPhaseAfterArsenal, engine/view.js). The
+   same card when it carries none. */
+const unknown = c => (c && c._kb) ? (({_kb, ...rest}) => rest)(c) : c;
+
 return {parseDeck, gearDef, gearBlockApply, slotOf, HANDS, handsUsed, handsFree,
   isSecondPerson, thirdPerson, svName, sv, spName, sp, typeAbbr, pipParts, pipWords,
         ARMOR_SLOTS, exposedZones, hasExposedZone,
         isAlly, allyBaseLife, allyLife, isAttackable,
         attackTargets, targetCanBeDefended, damageAlly, resetAllyLife,
-        isRunechantEntry, addRunechants, popRunechants};
+        isRunechantEntry, addRunechants, popRunechants, unknown};
 });

@@ -61,9 +61,9 @@
    ============================================================ */
 (function(root, factory){
   if(typeof module==="object" && module.exports)
-    module.exports = factory(require("./judge.js"), require("./priority.js"), require("./game.js"), require("./rng.js"));
-  else root.DawnSparring = factory(root.DawnJudge, root.DawnPriority, root.DawnGame, root.DawnRNG);
-})(typeof self!=="undefined" ? self : this, function(J, P, GM, RNG){
+    module.exports = factory(require("./judge.js"), require("./priority.js"), require("./game.js"), require("./rng.js"), require("./view.js"));
+  else root.DawnSparring = factory(root.DawnJudge, root.DawnPriority, root.DawnGame, root.DawnRNG, root.DawnView);
+})(typeof self!=="undefined" ? self : this, function(J, P, GM, RNG, V){
 
 /* How the policy plays, all of it in one place so a caller can retune
    without editing a heuristic. These are POLICY, not rules — nothing here
@@ -1142,26 +1142,12 @@ const laGated = (g, seat, o) => { if(o && o.search != null) return !!o.search;
   const sd = g && g.sides && g.sides[seat]; return !!(sd && (LA.seats.indexOf("all") >= 0 || LA.seats.indexOf(sd.heroKey) >= 0)); };
 const laPoint = (g, seat) => !g.prompt && !J.pendingOf(g) && g.arsenalFor !== seat && !g.pend
   && !(g.stack || []).length && P.hasPriority(g, seat) && P.speedAllowed(g, seat).indexOf("action") >= 0;
-const canon = (a, b) => String(a.name) < String(b.name) ? -1 : String(a.name) > String(b.name) ? 1
-  : num(a, "pitch") - num(b, "pitch") || byUid(a, b);
-
-/* What the seat may know, as a playable state. `k` picks the determinization. */
+/* What the seat may know, as a playable state. `k` picks the determinization.
+   ONE BODY WITH THE VIEW (HIDDEN HANDS H1): the root is `determinize(view(g,
+   seat), k)` (engine/view.js), so the search sees exactly what the seat's view
+   holds and nothing the view withholds. */
 function laMask(g, seat, k, salt){
-  const op = 1 - seat, sides = g.sides.slice();
-  const me = sides[seat], o = sides[op];
-  /* public facts only: turn, seat, phase position, zone SIZES, the seat's own hand */
-  const pub = [g.turn, seat, k, salt != null ? salt : (g.feed || []).length, (o.hand || []).length, (o.deck || []).length,
-               (me.deck || []).length, (me.hand || []).map(c => c.uid).join(".")].join("|");
-  let r = RNG.make("la|" + pub);
-  const hidArs = !!(o.arsenal && !o.arsenal._faceUp);
-  const pool = (o.hand || []).concat(o.deck || [], hidArs ? [o.arsenal] : []).slice().sort(canon);
-  let sh = RNG.shuffle(r, pool); r = sh.rng;
-  const nh = (o.hand || []).length;
-  sides[op] = {...o, hand: sh.arr.slice(0, nh), arsenal: hidArs ? sh.arr[nh] : o.arsenal,
-               deck: sh.arr.slice(nh + (hidArs ? 1 : 0))};
-  sh = RNG.shuffle(r, (me.deck || []).slice().sort(canon)); r = sh.rng;
-  sides[seat] = {...me, deck: sh.arr};
-  return {...g, sides, rng: RNG.make("la-game|" + pub), feed: [], log: []};
+  return V.determinize(V.view(g, seat), k, salt);
 }
 
 /* Every distinct thing the seat could start now. Two copies of one card in

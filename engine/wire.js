@@ -309,7 +309,12 @@
    v32 peer answers no `abtarget` and opens the sheet only once the ability
    resolves, so the pair desyncs on the first Beckoning Haunt. Whole-shipped
    values again: by hand, behind the release handshake. */
-const WIRE_V = 33;
+/* 33 -> 34 AT v6.02 (HIDDEN HANDS H1): a new game key, `feedTo` ({feed index:
+   seat}), tags the feed lines only one seat may read (a private look), and a
+   look at the top of a deck sets `revealed` with `_to` (the seat that looked).
+   Deck cards put on the bottom from the pitch zone carry `_kb` (a known slot).
+   Behind the release handshake, by hand. */
+const WIRE_V = 34;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------
@@ -346,7 +351,7 @@ const NON_CARD_SIDE_FIELDS = [
 const isInstanceKey = k => k === "uid" || k.charCodeAt(0) === 95 /* _ */;
 
 /* Excluded from the rules fingerprint. See the header for why each. */
-const VOLATILE_GAME = ["log","feed","inspect","boostOn","_unmapped"];
+const VOLATILE_GAME = ["log","feed","feedTo","inspect","boostOn","_unmapped"];
 const VOLATILE_CARD = ["img","dbImg","prs"];
 const VOLATILE = new Set([...VOLATILE_GAME, ...VOLATILE_CARD]);
 
@@ -538,7 +543,7 @@ function encode(game, opts){
   };
 
   const out = {...game, sides: (game.sides || []).map(sd => mapZones(sd, encCard))};
-  if(opts.log === false){ delete out.log; delete out.feed; }
+  if(opts.log === false){ delete out.log; delete out.feed; delete out.feedTo; }
 
   return {
     v: WIRE_V, proto: PROTO,

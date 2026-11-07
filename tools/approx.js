@@ -252,14 +252,18 @@ const APPROX = {
       "player's own cost is theirs to name (QUEUE v4 S8)."},
 
 "look-named-in-shared-feed": {
-  status:"stated", cr:null, board:"table", since:"v4.01", swept:"v5.30",
+  status:"closed", cr:"3.0.4b", board:"table", since:"v4.01", swept:"v6.02",
   claim:"A card that LOOKS at the top card of a deck (Compass of Sunken Depths, Scout the "+
-        "Periphery) is read as a reveal, so the shared table feed NAMES the card to both "+
-        "seats. Looking is private; this leaks hidden information at the table.",
+        "Periphery) is read as a private look: no feed line both seats read names the card, "+
+        "and the line that does is tagged for the seat that looked.",
   why:"The feed is one list both seats read, and the parser files a look as `reveal` on "+
       "purpose (\"for the trainer both just put the top card in front of you\"), where "+
       "the opponent is a dummy and nothing is hidden from anyone. A per-seat feed is a UI "+
-      "decision, not a rules fix, so it is recorded here rather than built (QUEUE item 15)."},
+      "decision, not a rules fix, so it is recorded here rather than built (QUEUE item 15). "+
+      "CLOSED AT v6.02 (HIDDEN HANDS H1): a look is read as `[\"reveal\",1,\"look\"]`; "+
+      "`revealed` carries `_to`, the shared line only says a look happened, and the line "+
+      "naming the card is tagged for the looker (`feedTo`). Showing that line to the looker "+
+      "only is the referee's job (HIDDEN-HANDS.md H2)."},
 
 "played-from-banish-files-to-banish": {
   status:"closed", cr:null, board:"both", since:"v2.20", swept:"v5.51",

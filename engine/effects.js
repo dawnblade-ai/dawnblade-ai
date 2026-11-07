@@ -91,6 +91,10 @@ const RX_CONDS = ["reprise", "charged", "defAtkAction"];
    needs them too, and two copies of a conjugation rule is the no-mirror
    rule broken over the prose the player reads. */
 const {popRunechants, gearDef, gearBlockApply, hasExposedZone, isSecondPerson, sv, sp} = G;
+/* A FEED LINE FOR ONE SEAT (HIDDEN HANDS H1): tag the line just written as
+   readable by `seat` alone (`feedTo`, sides.js GAME_KEYS). Tagged at the
+   source, so a referee can filter the feed without reading its prose. */
+const toSeat = (n, seat) => ({...n, feedTo: {...(n.feedTo || {}), [(n.feed || []).length - 1]: seat}});
 /* A SEAT'S NAME MID-SENTENCE (QA-C FEED-4). Seat 0 is literally "You", so a clause that carries the
    name or an `sv` phrase after a colon or a comma must lower-case the one capital that is not a sentence
    start; a hero's name keeps its own. And `theirs` is the possessive for "their next …" lines. */
@@ -2851,6 +2855,16 @@ function makeEffects(ctx){
       else if(k==="reveal"){
         const top = act(n).deck[0];
         if(!top){ n = L(n, `${srcName}: deck is empty — nothing to reveal.`); return; }
+        /* A LOOK is not a reveal (HIDDEN HANDS H1): the card is shown to the
+           seat that looked and nobody else. `revealed` carries `_to`, and the
+           line naming the card is tagged for that seat alone (`feedTo`);
+           the shared line says only that a look happened. */
+        if(op[2] === "look"){
+          n.revealed = {...top, _to: actorOf(n)};
+          n = L(n, `${srcName}: ${sv(act(n), "look")} at the top card of ${sp(act(n))} deck.`);
+          n = toSeat(L(n, `${srcName}: the top card is ${top.name} (pitch ${top.pitch}) — it stays there.`), actorOf(n));
+          return;
+        }
         n.revealed = top;
         n = L(n, `${srcName} reveals ${top.name} (pitch ${top.pitch}) off the top — it stays there.`);
       }
@@ -6366,7 +6380,7 @@ function makeEffects(ctx){
        `act(n)` rather than the ambient actor (v3.46's inversion). */
     if(p.tag === "pick" && p.shuffleDraw && (r.picked || []).length){
       const back = r.picked.length;
-      const sh = rngShuffle(n.rng, act(n).deck || []);
+      const sh = rngShuffle(n.rng, (act(n).deck || []).map(G.unknown));  /* a shuffle ends every known slot (engine/view.js) */
       n.rng = sh.rng;
       actMut(n).deck = sh.arr;
       /* NO VERB TO INFLECT, AND THE SEAT IS STILL NAMED (v2.83, v4.22).
@@ -6407,7 +6421,7 @@ function makeEffects(ctx){
        itself, which is what the printed REVEAL is, so this line says only
        what the shuffle did. */
     if(p.tag === "pick" && p.shuffleAfter){
-      const sh = rngShuffle(n.rng, act(n).deck || []);
+      const sh = rngShuffle(n.rng, (act(n).deck || []).map(G.unknown));  /* a shuffle ends every known slot (engine/view.js) */
       n.rng = sh.rng;
       actMut(n).deck = sh.arr;
       n = L(n, `${p.src || "Search"}: ${sp(act(n))} deck is shuffled.`);
@@ -6817,7 +6831,10 @@ function makeEffects(ctx){
        default — face DOWN, which is what an ordinary arsenal set is. */
     if(p.tag === "pick" && p.to === "arsenal" && !p.faceUp && (act(n).arsenal || {})._faceUp !== true){
       const put = act(n).arsenal;
-      if(put) n = L(n, `${act(n).name}: ${put.name} goes into the arsenal face down.`);
+      /* FACE DOWN IS PRIVATE (CR 3.0.4b, HIDDEN HANDS H1): the line both
+         seats read does not name the card. Its owner chose it on the sheet
+         and sees it in the arsenal. */
+      if(put) n = L(n, `${sv(act(n), "set")} a card face down in the arsenal.`);
     }
     if(p.tag === "pick" && p.to === "arsenal" && p.faceUp)
       n = faceUpArsenal(n, p.arsStamp || [], p.src, p.zone || "hand");

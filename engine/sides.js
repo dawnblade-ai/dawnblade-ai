@@ -229,6 +229,10 @@ const GAME_KEYS = [
      `effects.beginEndPhase`; before v4.06 it was written by one line and
      read by nothing at all. */
   "costTax",
+  /* WHO MAY READ A FEED LINE (HIDDEN HANDS H1). {feed index: seat} for the
+     lines one seat alone may read (a private look); a line not listed is
+     public. Set at the source (effects.js `toSeat`), absent until one is. */
+  "feedTo",
   /* TOPSY TURVY'S REPLACEMENT (v4.65) — "if one or more cards would be put
      on top of a DECK, instead they're put on the bottom". "A deck" names no
      seat, so it is the game's, for `costTax`'s reason one line up. Read by

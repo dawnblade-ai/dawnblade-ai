@@ -3086,7 +3086,29 @@ function reduce(g, a, seat){
   }
   /* THE END PHASE WAS HOLDING FOR THAT SHEET (v5.71) — see `doEndTurn`. */
   if(n.endHold != null && !n.prompt && !n.over) n = resumeEnd(n);
-  return {state: stalemateCheck(n), error: null};
+  return {state: stalemateCheck(clearKnown(n)), error: null};
+}
+
+/* A KNOWN-SLOT MARK (`_kb`, endPhaseAfterArsenal) means "both players saw
+   this card go to the bottom", and engine/view.js trusts it only for the
+   unbroken block at the very bottom. It goes stale two ways, and is cleared
+   both: the card is drawn or put in the arsenal (put back on the bottom from
+   there, it would show a card the opponent never saw), or something was put
+   UNDER the block in private (the block no longer sits at the bottom; the
+   view would read the wrong cards as known if those left again). Allocates
+   only when a stale mark is found. */
+function clearKnown(g){
+  let out = g;
+  (g.sides || []).forEach((sd, i) => {
+    const hasH = (sd.hand || []).some(c => c && c._kb), hasA = !!(sd.arsenal && sd.arsenal._kb);
+    const deck = sd.deck || [];
+    let kb = 0; while(kb < deck.length && deck[deck.length - 1 - kb] && deck[deck.length - 1 - kb]._kb) kb++;
+    let hasD = false; for(let j = 0; j < deck.length - kb; j++) if(deck[j] && deck[j]._kb){ hasD = true; break; }
+    if(!hasH && !hasA && !hasD) return;
+    out = put(out, i, s => ({...s, hand: hasH ? s.hand.map(GM.unknown) : s.hand, arsenal: hasA ? GM.unknown(s.arsenal) : s.arsenal,
+      deck: hasD ? s.deck.map((c, j) => j < s.deck.length - kb ? GM.unknown(c) : c) : s.deck}));
+  });
+  return out;
 }
 
 /* ---- play ------------------------------------------------------------- */
@@ -4372,7 +4394,11 @@ function endPhaseAfterArsenal(g, seat){
   /* (c) ALL players put their pitch zones on the bottom of their decks. */
   for(let i = 0; i < 2; i++){
     const pz = at(n, i).pitch || [];
-    if(pz.length) n = put(n, i, s => ({...s, deck: [...s.deck, ...pz], pitch: []}));
+    /* KNOWN SLOTS (HIDDEN HANDS H1): both players saw these cards, so the
+       block they form at the bottom stays face-up to both in engine/view.js.
+       `_kb` marks it; a shuffle clears it (effects.js) and so does leaving
+       the deck for a private zone (`clearKnown`, in `reduce`). */
+    if(pz.length) n = put(n, i, s => ({...s, deck: [...s.deck, ...pz.map(c => c && !c._kb ? {...c, _kb: true} : c)], pitch: []}));
   }
   n = say(n, "(c) Pitch zones go to the bottom of their decks.");
 

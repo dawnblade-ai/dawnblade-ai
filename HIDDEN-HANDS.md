@@ -204,7 +204,19 @@ an authority and the follower stops running the reducer on full state.
 
 ## 4. Engine changes
 
-### 4.1 `view(state, seat)`: `engine/view.js` (spike, headless)
+### 4.1 `view(state, seat)`: `engine/view.js` (built in H1, v6.02)
+
+**Status at v6.02:** on the page (sparring.js calls it). Items 1–4 below are
+built and drilled in `test/view.test.js`: the census is `CARRIERS` in
+view.js; the own deck is its composition (`_unordered`), the foe gets
+`unseen`; the known slot built is the pitch-zone bottom block (`_kb`);
+`laMask` is `determinize(view)`. Known slots NOT built: a revealed top card
+that stayed on top (the table never clears `revealed`, so a stale reveal cannot
+be told from a live one, and opt reorders unseen; it needs its own mark), a
+card a reveal showed in a hand, and Brain Freeze's hand-to-top. The three §7
+questions are switches in view.js (`SWITCHES`), all on the hidden side.
+The text below is the spike's design, kept as written.
+
 Redacts, for seat S: the foe's hand, face-down arsenal, intimidated cards and
 face-down gear; **both decks** (count kept); and **`game.rng`**. A placeholder
 has no text and a **positional** uid (`?<seat><zone><i>`), because a real uid
@@ -325,8 +337,8 @@ That is the measured case for the referee design.
 
 | release | scope | estimate | proving drills |
 |---|---|---|---|
-| **H1 · the view, for real** (engine only, no UI) | `engine/view.js` on the page; card-carrier census; composition and known slots; `laMask = determinize(view)`; per-seat `revealed`; feed `to` tags at the source | **M** · 2 sessions | the scramble drill over self-play for 15 heroes; policy-on-view equals policy (0 misses); spike as a drill: 0 legal refusals on the actor's view; feed-leak drill: no line names a card hidden from its reader unless the line is a reveal |
-| **H2 · Hidden hands, casual** (**first shippable**) | `engine/referee.js` run by the host; guest gets views plus per-seat commits; WIRE_V 34; slot handles for P3; desync canary on view hashes; seed and **throw** commit-reveal (pure-JS SHA-256); post-game seed and log reveal with a "verify this game" replay; honest UI line "host holds the deck" | **L** · 3–4 sessions | loopback drill: over a full game for all 15 heroes the guest's memory holds **no hidden uid or name**; guest view after every commit equals `view(hostState, guest)`; reconnect and host-drop pause drills; throw commit drill (a late throw is refused) |
+| **H1 · the view, for real** (engine only, no UI) · **built v6.02** | `engine/view.js` on the page; card-carrier census; composition and known slots; `laMask = determinize(view)`; per-seat `revealed`; feed `to` tags at the source | **M** · 2 sessions | the scramble drill over self-play for 15 heroes; policy-on-view equals policy (0 misses); spike as a drill: 0 legal refusals on the actor's view; feed-leak drill: no line names a card hidden from its reader unless the line is a reveal |
+| **H2 · Hidden hands, casual** (**first shippable**) | `engine/referee.js` run by the host; guest gets views plus per-seat commits; WIRE_V 35 (H1 took 34); the feed filtered by `feedTo`; slot handles for P3; desync canary on view hashes; seed and **throw** commit-reveal (pure-JS SHA-256); post-game seed and log reveal with a "verify this game" replay; honest UI line "host holds the deck" | **L** · 3–4 sessions | loopback drill: over a full game for all 15 heroes the guest's memory holds **no hidden uid or name**; guest view after every commit equals `view(hostState, guest)`; reconnect and host-drop pause drills; throw commit drill (a late throw is refused) |
 | **H3 · Neutral referee** | the same `referee.js` in a third browser (judge mode for a store table) and proven server-side (Durable Object or Edge Function) behind `net.wsAdapter` | **M–L** · 2–3 sessions | the server suite runs `test/` referee drills under Deno or Workers unchanged; a two-phone loopback through the referee; both players' phones are blind |
 | **H4 · Ranked** | accounts (SUPABASE.md steps 1–2), the referee writes results and Elo, throw at the referee, forfeit clocks, published game logs and replays | **L** · 3–4 sessions | result-authority drills (a client cannot write a result); disconnect forfeit; Elo math drills |
 | H5 · (optional) trustless P2P | mental poker plus audit, only if serverless ranked becomes a requirement | XL · 8–12 | not recommended now |
@@ -349,7 +361,7 @@ can see everything. The host still could, and the game says so.
 2. **Who may look at a face-down banished card?** CR 8.5.10: *"they banish a
    random card from their hand face-down, and then at the beginning of the end
    phase, it returns it to their hand."* CR 3.0.4c makes it a private object.
-   Whether its *owner* may look at it is in CR 1's object-visibility rules, not
+   Whether its *owner* may look at it is in the object-visibility rules of the CR's first section, not
    fetched here.
 3. **What does the opponent know about the order of pitched cards on the deck
    bottom?** CR 4.4.3's end phase puts the pitch zone on the bottom of the deck.

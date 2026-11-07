@@ -367,7 +367,9 @@ test("WIRE_V moves when the payload shape moves, and only then", () => {
   /* 32 -> 33 AT v5.72: `pending` gains the `abtarget` kind and the game the
      `_actTarget` declaration (and `xPay` leaves the pick spec) — whole-shipped
      values, so the digest holds. */
-  assert.equal(W.WIRE_V, 33,
+  /* 33 -> 34 AT v6.02 (HIDDEN HANDS H1): the `feedTo` game key, `revealed._to`
+     and the `_kb` card mark — a GAME_KEY and instance keys, so the digest holds. */
+  assert.equal(W.WIRE_V, 34,
     "WIRE_V moved — if the payload shape moved with it, update the digest below " +
     "in the same edit and say what changed in the header");
   assert.equal(h, 3759651216,
@@ -441,7 +443,7 @@ test("every engine module is loaded by index.html, or declared headless", () => 
 
      The MODULE stays: its 21 drills are a specification for priority.js
      that nothing else provides. Only the script tag went. */
-  const HEADLESS = ["actions", "view"];   /* view: HIDDEN HANDS spike (research/hidden-hands), not on the page yet */
+  const HEADLESS = ["actions"];
   const dir = path.join(__dirname, "..", "engine");
   const mods = fs.readdirSync(dir).filter(f => f.endsWith(".js")).map(f => f.slice(0, -3));
   const src = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");

@@ -162,6 +162,7 @@ npm run fairness      # is any card STRONGER than printed (exits non-zero on a f
 | `effects.js` | ALL card semantics (`execute`, `runOps`, `linkPumps`, `linkPayload`, `beginEndPhase`…) — one copy, both boards call it |
 | `judge.js` | `reduce(state, action, seat)` / `legal` — the CR turn structure; the table's engine; readers the AI asks |
 | `build.js` | how a seat becomes a hero (`buildSide`, `buildMatch`, `buildVanilla`, powCard builders) |
+| `view.js` | `view(state, seat)`: the game as one seat may know it; `determinize` (Sharp's root) |
 | `sparring.js` | the AI seat policy: `act(game, seat)`, `explain(game, seat)` |
 | `advisor.js` | the trainer's Coach's call (`advise`) |
 | `invariants.js` | state judge (`check`), wired into every state change and self-play |
@@ -182,7 +183,8 @@ Both resolve card text through `effects.js`.
   shallow-copied). Never write a per-side field as a top-level game key. Builds: `bAct(s)`.
 - A seat the dummy fills is always the vanilla pile; a person picks their own hero. An
   AI hero may pilot seat 1 at the table (ruling 2026-10-18).
-- When you add a zone or a per-side field, check `invariants.js`'s census sees it.
+- When you add a zone or a per-side field, check `invariants.js`'s census sees it. A field
+  that copies a card or names one needs a visibility rule in `view.js`'s `CARRIERS`.
 
 **Rules engine**
 - A rule, schedule, route or gate that lives on one board does not exist on the other:

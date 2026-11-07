@@ -1,3 +1,34 @@
+## v6.02 — Hidden hands H1: the view, for real
+
+RULING (user, 2026-11-07): "Hidden hands is a must." H1 of HIDDEN-HANDS.md §6 (engine only, no UI).
+- **`engine/view.js` is a real module, on the page.** `view(state, seat)` hides the foe's hand, face-down arsenal,
+  intimidated cards, face-down gear, both decks' order and `game.rng`; placeholders carry no text and a positional
+  uid. It shows what went public while still in the hand (`blockH`, `paySel`, `pending`, a face-down piece turned
+  up as a cost; CR 3.0.4d). The seat's own deck is its COMPOSITION (canonical order, `_unordered`); the foe gets
+  `unseen`, the multiset behind its placeholders, and `unseenGear` for face-down equipment (never dealt into a hand).
+- **Known slots:** the pitch zone put on the deck bottom at the end phase carries `_kb` and stays face-up to both;
+  a shuffle, a draw, or a card put under it in private clears the mark (`judge.clearKnown`, `game.unknown`).
+- **The carrier census:** `CARRIERS` rules every field that copies a card or names one (`pend`, `chainCards`,
+  `featured`, `stack`, `prompt`, `promptQ`, `_discWay`, `_costWay`, `_tookWay`, `revealed`, `chainHist`, …);
+  self-play fails the drill when a new one appears unruled.
+- **One body with laMask:** Sharp's lookahead root is `determinize(view(g, seat), k)`. It reproduces v5.37's deal
+  byte for byte wherever that deal saw nothing hidden; where it differs, the old deal had read the foe's
+  intimidated cards, a hidden card copied into a carrier, or a soul / own intimidated card (the open questions
+  below). A first cut pooled face-down gear with the deck and Azalea's own seat lost ~1 game in 28 (9 seeds,
+  t −2.0); gear now deals from its own multiset.
+- **A look is private:** "look at the top card of …" parses `["reveal",1,"look"]`; `revealed` carries `_to`, the
+  shared line says only that a look happened, and the line naming the card is tagged for the looker in the new
+  `feedTo` game key (tags at the source; filtering is H2's referee). Reload's face-down arsenal line no longer names
+  the card. `look-named-in-shared-feed` (tools/approx.js) closed; stated 20 -> 19, closed 38 -> 39.
+- **Open rules questions, not decided** (HIDDEN-HANDS.md §7): `view.SWITCHES` — `SOUL_PUBLIC`,
+  `OWNER_SEES_INTIMIDATED`, `PITCH_ORDER_PUBLIC` — each defaults to the more hidden reading.
+- **WIRE_V 33 -> 34** (`feedTo`, `revealed._to`, `_kb`).
+- **Drills** (`test/view.test.js`, self-play for all 15 heroes): the scramble, no hidden uid anywhere in a view,
+  the carrier census, policy on the view (0 misses; the spike's 22 Dash boost misses are gone), legal on the view
+  (0 refusals), the feed-leak drill, and laMask identity. Each was sabotaged and caught.
+- **Not built:** a revealed top card that stays on top, a card a reveal showed in a hand, Brain Freeze's
+  hand-to-top. Charge names the charged card in the shared feed: fine if the soul is public, a leak if not (§7 q1).
+
 ## v6.01 — The coin screen
 
 RULING (user, 2026-11-07): "Keep the coin flip for now I like the speed of it. Let's plan for the ranked Elo ladder

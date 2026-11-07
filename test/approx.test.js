@@ -354,7 +354,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      activation, at both boards. */
   /* 21 -> 20 stated AT v6.00: `played-target-partial-resolution` closed — a
      target is required (RULING user 2026-11-07). */
-  assert.equal(n("stated"), 20, "stated count moved");
+  /* 20 -> 19 stated AT v6.02: `look-named-in-shared-feed` closed (HIDDEN HANDS H1). */
+  assert.equal(n("stated"), 19, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -422,7 +423,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 35 -> 36 closed AT v5.72: `trainer-no-stalemate-draw`. */
   /* 36 -> 37 closed AT R9: `activation-target-declared`. */
   /* 37 -> 38 closed AT v6.00: `played-target-partial-resolution`. */
-  assert.equal(n("closed"), 38, "closed count moved");
+  /* 38 -> 39 closed AT v6.02: `look-named-in-shared-feed`. */
+  assert.equal(n("closed"), 39, "closed count moved");
 });
 
 /* ============================================================
@@ -825,19 +827,25 @@ probe("attack-power-fixed-at-declaration", () => {
     "a counter put on the aura after the declaration now reaches the attack — the record must move");
 });
 
-/* QUEUE item 15. Compass's printed LOOK resolves as the reveal op, and the
-   line it prints names the card in the feed both seats read. */
+/* QUEUE item 15, CLOSED AT v6.02 (HIDDEN HANDS H1) — the probe is turned
+   round. A LOOK is its own reading of the reveal op: `revealed` carries `_to`
+   (the seat that looked) and the one line naming the card is tagged for that
+   seat (`feedTo`). Every untagged line, the ones both seats read, is silent
+   about the card. The line text IS the observable here: the leak is prose. */
 probe("look-named-in-shared-feed", () => {
   const fx = PR.fxParse(one("Compass of Sunken Depths"));
   const look = PR.classifyClause("Look at the top card of your deck.");
-  assert.deepEqual(look && look.ops, [["reveal", 1]], "fixture: a look is read as the reveal op");
+  assert.deepEqual(look && look.ops, [["reveal", 1, "look"]], "a look is read as a private look");
   const top = {uid: "tp", name: "Hidden Probe", pitch: 2, tt: "Generic Action", ty: ["Generic", "Action"], tx: ""};
   const g = H.state({name: "Gravy", deck: [top]}, {name: "Bob"});
   const n = H.runOps(g, look.ops, "Compass of Sunken Depths");
   assert.equal(n.sides[0].deck[0].uid, "tp", "the card stays on top");
-  const feed = n.feed.map(f => (typeof f === "string" ? f : f.t)).join(" | ");
-  assert.match(feed, /Hidden Probe/,
-    "the looked-at card is no longer named in the shared feed — the record must move");
+  assert.equal(n.revealed && n.revealed._to, 0, "the look is addressed to the seat that looked");
+  const fresh = n.feed.slice((g.feed || []).length), at = (g.feed || []).length, to = n.feedTo || {};
+  const shared = fresh.filter((l, i) => to[at + i] == null).join(" | ");
+  const mine = fresh.filter((l, i) => to[at + i] === 0).join(" | ");
+  assert.doesNotMatch(shared, /Hidden Probe/, "no line both seats read names the card");
+  assert.match(mine, /Hidden Probe/, "the seat that looked is told what it saw");
   assert.ok(fx, "and Compass parses");
 });
 
