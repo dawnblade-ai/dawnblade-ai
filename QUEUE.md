@@ -9,7 +9,52 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-02, at v5.73)
+## HANDOFF — START HERE (CEO, 2026-11-07, at v6.01)
+
+**Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
+and `docs/progress/` on main. Do not start a root handoff file.
+
+- **Live: v6.01** (main `5beae0e`). Progress report: `docs/progress/v6.01.md` (covers v5.73 -> v6.01).
+- **MISSION (user, 2026-11-07):** the ultimate FaB Silver Age precon competitive gaming environment and
+  judging engine — 100% fan-made, non-profit, for fun and glory, no ads, forever.
+- **CADENCE (user, 2026-11-07):** "With each version make a progress report and start a new CEO thread."
+  Each shipped release wave -> `docs/progress/vX.YY.md` on main + a fresh CEO session from this handoff;
+  the old CEO stands down.
+- **HOW TO WORK (lessons paid for):** the CEO stays small and dispatches workers as cloud sessions
+  (`create_session`, `environment_id` env_011rwpp2MyBTt3cEsZKDoVGk = the `dawnblade-ai` environment,
+  which can read rules.fabtcg.com). **At most two workers at once** (five Opus workers spent the weekly
+  usage limit in a day once and froze work for four days). Sonnet for mechanical shippers, Opus for
+  rules, AI and design. Workers push `ship/*` / `research/*` / `findings/*` branches and report in
+  under 30 lines via send_message; the CEO renumbers if needed (APP_VER + CHANGELOG per commit),
+  re-validates on the merged tree (suite, scenes, fairness, babel, `tools/page.js`, ladder; plus
+  `SPXLA=all` for AI changes) and pushes main. Then confirm CI (test + deploy jobs) green.
+- **RULINGS 2026-11-07:** coin = vs AI forever, rock-paper-scissors = ranked ladder · hidden hands is
+  a must · a card that needs a target needs a legal one (shipped v6.00).
+
+**NEXT — HIDDEN HANDS (the big project).** Design: `research/hidden-hands` -> `HIDDEN-HANDS.md`,
+`engine/view.js` (spike), `test/view.test.js`, `tools/hidden-census.js`, `tools/hidden-spike.js`.
+One `engine/referee.js` holds the full state and sends each seat `view(state, seat)` + reveals; judge
+stays the one rules body. Spike: 13,231/13,231 actions legal from the actor's own view; 5.8% of steps
+need a mid-resolution reveal; 2.2% can't be observer-validated (affordability before pitch).
+Leaks to close: game.rng in shared state (future draws computable), uids name cards (decklist index),
+the lobby throw is sent in the clear, Compass's private look sits in shared `revealed`.
+Census: 117 printings / 87 names touch hidden info, 13 protocol cases (hardest: random pick from a
+hidden hand, Flamecall Awakening search+shuffle, legality that reads a hidden hand, Clash, boost).
+- **H1 (M):** real `view()` + card-carrier census + scramble drill; laMask = determinize(view); per-seat
+  feed and `revealed`.  **H2 (L) FIRST SHIPPABLE:** host-as-referee, WIRE_V 34, seed + throw
+  commit-reveal, post-game replay verify; guest sees nothing hidden (host still can — say so in the UI).
+  **H3 (M-L):** neutral referee (third device / free-tier server).  **H4 (L):** ranked Elo ladder.
+- **QUESTIONS FOR THE USER (asked in docs/progress/v6.01.md):** is the soul public (charge)? may the
+  owner look at their face-down intimidated card? is the order of pitched cards on the deck bottom known
+  to the opponent? Do not decide without a verbatim CR quote or the user's answer.
+
+**SMALLER OPEN ITEMS:** six AI misplays with causes (Refraction Bolters go-again, soak pitching, Bolt'n
+Boots on an arrow with go again, Gravy's boots taker, Enigma Uphold, Frost Spike) · play-line ORDER in the
+feed (Big Bertha before the boost banish; Oasis +1 life before the play line) · trainer QA not yet
+covering Fai, Enigma, Arakni, Blaze, Gravy, Lyath · Line Crossers upstream rewording waits for a
+deliberate re-pin · parked: sudden death.
+
+## HANDOFF ARCHIVE (CEO, 2026-11-02..07, v5.73 -> v6.01) — superseded by the section above
 
 **Keep this section SHORT (under ~50 lines): current state, decisions, who is doing what, next.**
 History goes in the archived handoffs below it and in CHANGELOG.md. Do not start a root handoff file.
