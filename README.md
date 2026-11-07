@@ -6,6 +6,10 @@ Dawnblade is a **Flesh and Blood** sparring simulator for your phone. Pick one o
 the Silver Age precon heroes, play the real deck card for card, and get coached
 while you do it. Nothing to install, no account.
 
+**What it is for:** the ultimate place to play and get judged on Flesh and Blood's
+Silver Age precons, competitively — 100% fan-made, non-profit, for fun and glory.
+No ads, forever.
+
 ## Playing
 
 **On an iPhone.** Open the link in Safari. To keep it like an app: tap the Share

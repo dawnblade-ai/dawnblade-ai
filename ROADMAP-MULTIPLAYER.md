@@ -189,6 +189,21 @@ and it validates the entire rules core before any networking risk is added.
 11. **ELO** over the 15 Silver Age decks, plus the deck-legality checks the
     trainer already has the data for.
 
+### Ranked Elo ladder (planned, user 2026-11-07)
+
+- **Who goes first: rock-paper-scissors.** RULING (user, 2026-11-07): "Keep the
+  coin flip for now I like the speed of it. Let's plan for the ranked Elo ladder
+  we will use rock paper scissors but for vs ai use coin flip." Against the AI the
+  coin stays (v6.01); ranked games throw, through the `engine/rps.js` /
+  `engine/lobby.js` path the two-phone table already uses. The winner chooses.
+- **Prerequisites.** (1) Hidden hands — no peer may hold the other's hand; being
+  designed now (`peers-hold-full-state`, step 10 above). (2) A neutral referee for
+  results: a submitted game is replayed from its seed and action log and rejected
+  if it does not reproduce (`SUPABASE.md`). An Elo number either peer can forge is
+  not a ladder.
+- **No ads, non-profit.** Fan-made, for fun and glory; the ladder never carries ads
+  or charges to play.
+
 ---
 
 ## Phase D — the broadcast view (recorded 2026-08-23, not scheduled)

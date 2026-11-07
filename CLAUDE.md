@@ -5,6 +5,8 @@ hero deck, either against an iron-armored training dummy (the trainer) or agains
 AI-piloted hero (the table), with an advisor reading the board ("<Hero>'s call" at
 the table, "Coach's call" in the trainer).
 
+**Mission (user, 2026-11-07):** the ultimate FaB Silver Age precon competitive gaming environment and judging engine — 100% fan-made, non-profit, for fun and glory, no ads, forever.
+
 **It plays DAWNBLADE, a fan-made sub-format of Silver Age (declared 2026-09-26).**
 The pool is FROZEN at the fifteen Chapter 1–3 precons as printed, and it does
 NOT follow Silver Age's rolling ban list or its seasonal hero bench: a card
