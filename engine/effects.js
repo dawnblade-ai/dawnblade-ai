@@ -251,6 +251,30 @@ function makeEffects(ctx){
      `ok` IS THE TRIGGER'S OWN EXTRA QUESTION, asked per watcher, because
      the threshold travels with the trigger rather than being known here
      (v3.88). A trigger that asks nothing more passes nothing. */
+  /* INTIMIDATE, ONE BODY (S-2, QA-A). CR 8.5.10 (verbatim, rules.fabtcg.com):
+     "Intimidate is a discrete effect and delayed-triggered effect. To
+     intimidate a player, they banish a random card from their hand
+     face-down, and then at the beginning of the end phase, it returns it to
+     their hand." CR 8.5.10a: "The player is considered to have been
+     intimidated, even if they did not banish a card from their hand."
+     It lived inline in the attack declaration only, so a non-attack action
+     that prints "Intimidate target hero" (Sadistic Scowl) read as a noop.
+     Both the keyword on an attack and the op `intimidate` call this; the
+     end phase (`beginEndPhase` step 5) returns `intimidated`. SEEDED: which
+     card goes is hidden information, so it comes off the shared stream.
+     Returns {game, note} — the note is the caller's to place. */
+  const intimidateFoe = (n0) => {
+    let n = n0;
+    if(!(foe(n).hand || []).length)
+      return {game: n, note: `${sv(foe(n), "have")} no card in hand to banish.`};
+    const _ip = rngInt(n.rng, foe(n).hand.length); n.rng = _ip.rng;
+    const lost = foe(n).hand[_ip.v];
+    foeMut(n).hand = foe(n).hand.filter((_, i) => i !== _ip.v);
+    foeMut(n).intimidated = [...(foe(n).intimidated || []), lost];
+    return {game: n, note: `a card is pulled at random from ${sp(foe(n))} hand`
+      + ` and banished face-down (${foe(n).hand.length} left); it comes back at the end phase.`};
+  };
+
   function offerPayCost(s, trigger, ok, extra){
     let n = s;
     const watchers = [...(act(n).gear||[]), ...((act(n).board||[]).map(b => b && b.card))]
@@ -2509,6 +2533,13 @@ function makeEffects(ctx){
       }
       /* RULING (Pouncing Paws): mint a real card into the banished zone,
          playable this turn only. Resolved from the database like any card. */
+      /* "INTIMIDATE TARGET HERO" ON A NON-ATTACK (S-2) — Sadistic Scowl. The
+         target is the opposing hero, as every "target hero" payload here
+         reads it (CR 8.5.10b: with no player named it is a targeted effect). */
+      else if(k==="intimidate"){
+        const _it = intimidateFoe(n); n = _it.game;
+        n = L(n, `${srcName}: intimidate — ${_it.note}`);
+      }
       else if(k==="mkBanish"){
         const rec = resolveEntry(db, {name:v, p:0, code:null, q:1});
         if(!rec.resolved){ n = L(n, `${srcName}: no card named "${v}" in the database.`); return; }
@@ -5235,16 +5266,9 @@ function makeEffects(ctx){
         n.promptQ = [...(n.promptQ||[]), millCostSpec(fx.millCost, card, actorOf(n))];
       }
       if(hasKw(card,"intimidate") && foe(n).hand.length){
-        /* SEEDED: which card intimidate strips is hidden information in a
-           real game, so it MUST come from the shared stream — two peers
-           rolling it independently would diverge on the spot. */
-        const _ip = rngInt(n.rng, foe(n).hand.length); n.rng = _ip.rng;
-        const pick = _ip.v;
-        const lost = foe(n).hand[pick];
-        foeMut(n).hand = foe(n).hand.filter((_,i)=>i!==pick);
-        foeMut(n).intimidated = [...(foe(n).intimidated||[]), lost];
-        declNote += ` Intimidate — a card is pulled at random from ${sp(foe(n))} hand`
-          + ` and banished face-down (${foe(n).hand.length} left); it comes back at the end phase.`;
+        /* SEEDED, one body: `intimidateFoe` (S-2). */
+        const _it = intimidateFoe(n); n = _it.game;
+        declNote += ` Intimidate — ${_it.note}`;
       }
       /* NAME THE ATTACK YOU JUST DECLARED (v2.63). Reported from play: the
          feed showed the pitch that paid for a card and then the opponent's

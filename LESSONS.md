@@ -14381,3 +14381,12 @@ needs the verbatim quote IN THE REPO (source comment, `tools/approx.js` record, 
   defending with that card." Example under it: "…if there are two defense reactions on the stack, the
   first one will resolve and become a defending card, but the second one will fail to resolve because
   dominate prevents it from becoming a defending card." (that stack case is not built.)
+
+### S-2 — intimidate on a non-attack (ship/rules-qa)
+- CR 8.5.10: "Intimidate is a discrete effect and delayed-triggered effect. To intimidate a player, they
+  banish a random card from their hand face-down, and then at the beginning of the end phase, it returns
+  it to their hand."
+- CR 8.5.10a: "The player is considered to have been intimidated, even if they did not banish a card from
+  their hand." CR 8.5.10b: "If a player is not specified, the intimidate is a targeted effect.[1.8.5]"
+- Lesson: a keyword that is ALSO printed as an instruction ("Intimidate target hero") needs its body
+  outside the keyword's own trigger site, or the instruction has nothing to call.
