@@ -140,29 +140,25 @@ const fixOn = (g, seat) => {
   const sd = g && g.sides && g.sides[seat];
   return !!(sd && SPXFIX.split(",").indexOf(sd.heroKey) >= 0);
 };
-/* The soak card price measures on its own gate (`SPXSOAK`, same reading as SPXFIX)
-   so it is A/B'd against the fixes already shipped rather than with them. */
-const SPXSOAK = (typeof process !== "undefined" && process.env && process.env.SPXSOAK) || "";
-const soakOn = (g, seat) => {
-  if(!fixOn(g, seat)) return false;
-  if(!SPXSOAK) return true;
-  if(SPXSOAK === "none") return false;
-  const sd = g && g.sides && g.sides[seat];
-  return !!(sd && SPXSOAK.split(",").indexOf(sd.heroKey) >= 0);
+/* EACH FIX ALSO HAS ITS OWN GATE, read the way SPXFIX is (unset = on, "none" = off,
+   a hero list = those seats), inside SPXFIX, so one fix can be A/B'd against the
+   others: SPXSOAK the soak card price, SPXLOOK whose deck a look reads, SPXPAY a
+   piece paid for go again, SPXIDLE the holds (land nothing, a go again already had). */
+const subGate = k => {
+  const v = (typeof process !== "undefined" && process.env && process.env[k]) || "";
+  return (g, seat) => {
+    if(!fixOn(g, seat)) return false;
+    if(!v) return true;
+    if(v === "none") return false;
+    const sd = g && g.sides && g.sides[seat];
+    return !!(sd && v.split(",").indexOf(sd.heroKey) >= 0);
+  };
 };
-/* Whose deck a "target hero's deck" look reads measures on its own gate too (`SPXLOOK`). */
-const SPXLOOK = (typeof process !== "undefined" && process.env && process.env.SPXLOOK) || "";
-const lookOn = (g, seat) => {
-  if(!fixOn(g, seat)) return false;
-  if(!SPXLOOK) return true;
-  if(SPXLOOK === "none") return false;
-  const sd = g && g.sides && g.sides[seat];
-  return !!(sd && SPXLOOK.split(",").indexOf(sd.heroKey) >= 0);
-};
+const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate("SPXPAY"), idleOn = subGate("SPXIDLE");
 /* A card or ability that would land nothing right now is held (`judge.landsNothing`).
    Noted so the call can say why the turn ends with it still in hand. */
 const idleOK = (g, seat, uid, from) => {
-  if(!fixOn(g, seat) || !J.landsNothing(g, seat, uid, from)) return true;
+  if(!idleOn(g, seat) || !J.landsNothing(g, seat, uid, from)) return true;
   if(NOTE) NOTE.idle = true;
   return false;
 };
@@ -623,7 +619,7 @@ function reaction(g, seat){
        Bolt'n Boots was destroyed and a card pitched for Bolt'n' Shot pumped above
        base (its own go again) and for Swift Shot turned face up. `judge.
        gaAbilityRedundant` answers; held, the call says why (`rxGaHeld`). */
-    .filter(uid => { if(uid === "hpow" || !fixOn(g, seat) || !J.gaAbilityRedundant(g, seat, uid)) return true;
+    .filter(uid => { if(uid === "hpow" || !idleOn(g, seat) || !J.gaAbilityRedundant(g, seat, uid)) return true;
       gaHeld = true; return false; })
     .map(uid => uid === "hpow" ? {t: "activate", from: "hero", uid} : {t: "activate", uid})
     .find(a => legal(g, a, seat));
@@ -1062,7 +1058,7 @@ function actBase(g, seat, o){
        declined). `judge.payBuysGoAgain` answers whether the action point it keeps
        buys a swing; the confirm that follows is the ordinary answer. */
     if(g.prompt.tag === "pay" && g.prompt.choice == null && (g.prompt.side || 0) === seat
-       && fixOn(g, seat) && J.payBuysGoAgain(g, seat))
+       && payOn(g, seat) && J.payBuysGoAgain(g, seat))
       return tag("payGoAgain", {t: "promptChoose", choice: "pay"});
     /* WHOSE DECK TO LOOK AT (Scout the Periphery). The modal's first mode is the
        opponent's deck; `judge.lookChoice` answers which look adds information. */
