@@ -344,6 +344,20 @@ That is the measured case for the referee design.
 | **H1 · the view, for real** (engine only, no UI) · **built v6.02** | `engine/view.js` on the page; card-carrier census; composition and known slots; `laMask = determinize(view)`; per-seat `revealed`; feed `to` tags at the source | **M** · 2 sessions | the scramble drill over self-play for 15 heroes; policy-on-view equals policy (0 misses); spike as a drill: 0 legal refusals on the actor's view; feed-leak drill: no line names a card hidden from its reader unless the line is a reveal |
 | **H2 · Hidden hands, casual** (**first shippable**) | `engine/referee.js` run by the host; guest gets views plus per-seat commits; WIRE_V 35 (H1 took 34); the feed filtered by `feedTo`; slot handles for P3; desync canary on view hashes; seed and **throw** commit-reveal (pure-JS SHA-256); post-game seed and log reveal with a "verify this game" replay; honest UI line "host holds the deck" | **L** · 3–4 sessions | loopback drill: over a full game for all 15 heroes the guest's memory holds **no hidden uid or name**; guest view after every commit equals `view(hostState, guest)`; reconnect and host-drop pause drills; throw commit drill (a late throw is refused) |
 | **H3 · Neutral referee** | the same `referee.js` in a third browser (judge mode for a store table) and proven server-side (Durable Object or Edge Function) behind `net.wsAdapter` | **M–L** · 2–3 sessions | the server suite runs `test/` referee drills under Deno or Workers unchanged; a two-phone loopback through the referee; both players' phones are blind |
+
+**H3 increment 1 (judge mode in the browser), built on `ship/h3-referee`.** `engine/hub.js`
+is the judge's table, transport-free: it binds channels to seats (each seat's phone is dealt
+a secret KEY; a returning phone reclaims its seat with it, a stranger with the code is seated
+nowhere), relays the write-once lobby, says hello as lobby seat 2 and commits to the seed
+(lobby.js judge mode, LOBBY_V 3: BOTH players answer, `seed = H(judge's half | g0 g1)`), deals
+with the caller's `deal(spec)`, and runs `net.createJudgeSession` — `refereeHost` with BOTH
+seats remote, the body H2's host now shares. Both phones are plain referee guests. The judge's
+own screen shows the public view (`seatView(state, -1)`). room.js `openJudge` takes many
+channels on one code; a phone sitting down reads the first frame (`first()`) to tell a judge
+from a host. Drills: `test/judgetable.test.js` over `test/helpers/judgetable.js` (all 15 heroes
+in eight judged games; each phone's view equals the referee's view of that seat after every
+commit; no frame names a uid hidden from its phone; player drop, judge drop, judge resumed from
+an older save; both phones verify). `tools/twophone.js judge` drives three real pages.
 | **H4 · Ranked** | accounts (SUPABASE.md steps 1–2), the referee writes results and Elo, throw at the referee, forfeit clocks, published game logs and replays | **L** · 3–4 sessions | result-authority drills (a client cannot write a result); disconnect forfeit; Elo math drills |
 | H5 · (optional) trustless P2P | mental poker plus audit, only if serverless ranked becomes a requirement | XL · 8–12 | not recommended now |
 

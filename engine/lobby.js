@@ -76,7 +76,14 @@
 /* 1 -> 2 AT HIDDEN HANDS H2: the throw is SEALED then OPENED (commit-reveal),
    so a modified client can no longer wait for the other throw and answer it;
    and the seed is committed (`seedc`/`seedg`), no longer the table code. */
-const LOBBY_V = 2;
+/* 2 -> 3 AT HIDDEN HANDS H3: JUDGE MODE. A third device (the judge's) sits
+   at the table as seat 2: it says hello with its build and commits to the
+   seed, and BOTH players answer it (`seedGs`). A judge-mode message and a
+   plain one cannot be told apart by a v2 lobby, so the version moves. */
+const LOBBY_V = 3;
+/* The judge's seat in the lobby. It never sits in a game seat: it only says
+   hello (its build must match both players') and commits to the seed. */
+const JUDGE = 2;
 
 const MSG = {
   HELLO: "hello",   /* seat -> seat: this is the card data I hold   */
@@ -85,8 +92,8 @@ const MSG = {
   OPEN:  "open",    /* seat -> seat: my throw and its nonce, once both are sealed */
   SEAT:  "seat",    /* winner -> loser: this is who goes first      */
   BOARD: "board",   /* seat -> seat: this is what I sideboarded     */
-  SEEDC: "seedc",   /* host -> guest: my commitment to my half of the seed */
-  SEEDG: "seedg"    /* guest -> host: my half, answered after the commitment */
+  SEEDC: "seedc",   /* host (or judge) -> guest(s): my commitment to my half of the seed */
+  SEEDG: "seedg"    /* guest (or each player) -> host (or judge): my half, answered after the commitment */
 };
 
 const STEPS = ["fault", "hero", "throw", "seat", "board", "seed", "ready"];
@@ -96,10 +103,14 @@ const STEPS = ["fault", "hero", "throw", "seat", "board", "seed", "ready"];
    derived from ones that are. `ties` and `round` only ever count up. */
 function newLobby(o){
   o = o || {};
+  const judge = !!o.judge;
   return {
     v: LOBBY_V,
     code: o.code || null,          /* the table number — also the match seed */
-    builds: [null, null],          /* each seat's DATA_VER                   */
+    /* JUDGE MODE (H3): a third device holds the deck. It is seat 2 here,
+       and both players answer its seed commitment (`seedGs`). */
+    judge,
+    builds: judge ? [null, null, null] : [null, null],   /* each seat's build (the judge's third) */
     heroes: [null, null],          /* hero keys                              */
     round: 0,                      /* which throw round is live              */
     seals: [null, null],           /* this round's commitments, H(nonce|throw) */
@@ -110,7 +121,8 @@ function newLobby(o){
     first: null,                   /* who takes the first turn               */
     boards: [null, null],          /* {gearIdx, cuts}                        */
     seedC: null,                   /* the host's commitment, H(seedH)        */
-    seedG: null,                   /* the guest's half, in the clear         */
+    seedG: null,                   /* the guest's half, in the clear (judge mode: both players' halves, joined) */
+    seedGs: judge ? [null, null] : undefined,   /* judge mode: each player's half */
     fault: null                    /* set once; the lobby cannot continue    */
   };
 }
@@ -144,7 +156,9 @@ function reduce(s, m){
   if(!s) return {state: s, error: {why: "no lobby state"}};
   if(!m || typeof m !== "object") return no("not a message");
   if(m.v != null && m.v !== s.v) return no("lobby version mismatch: " + m.v + " vs " + s.v);
-  if(!isSeat(m.seat)) return no("no such seat: " + m.seat);
+  /* the judge's seat speaks twice: its hello and its seed commitment */
+  const judgeMsg = s.judge && m.seat === JUDGE && (m.t === MSG.HELLO || m.t === MSG.SEEDC);
+  if(!isSeat(m.seat) && !judgeMsg) return no("no such seat: " + m.seat);
   if(s.fault && m.t !== MSG.HELLO) return no("the lobby has faulted: " + s.fault);
 
   switch(m.t){
@@ -173,6 +187,10 @@ function reduce(s, m){
       if(builds[0] != null && builds[1] != null && builds[0] !== builds[1])
         n = {...n, fault: "the two phones run different builds — seat 0 runs " + builds[0] +
                           ", seat 1 runs " + builds[1] + ". Reload the page on both."};
+      /* judge mode: the judge's device runs the rules, so it must match both */
+      else if(s.judge && builds[JUDGE] != null && [0, 1].some(i => builds[i] != null && builds[i] !== builds[JUDGE]))
+        n = {...n, fault: "a phone runs a different build from the judge's device — the judge runs " + builds[JUDGE] +
+                          ", seat 0 runs " + builds[0] + ", seat 1 runs " + builds[1] + ". Reload the page on every device."};
       return {state: n, error: null};
     }
 
@@ -277,12 +295,23 @@ function reduce(s, m){
        is refused before the host's commitment, because a host that saw
        seedG first could pick seedH to stack its own deck. */
     case MSG.SEEDC: {
-      if(m.seat !== 0) return no("only the host commits to the seed");
+      if(s.judge ? m.seat !== JUDGE : m.seat !== 0) return no(s.judge ? "only the judge commits to the seed" : "only the host commits to the seed");
       if(s.seedC != null) return no("the host has already committed to the seed", true);
       if(typeof m.c !== "string" || !/^[0-9a-f]{64}$/.test(m.c)) return no("a seed commitment is a sha256");
       return {state: {...s, seedC: m.c}, error: null};
     }
     case MSG.SEEDG: {
+      /* JUDGE MODE: both players answer, each once, and the seed's public
+         half is the two answers joined (seat 0's first). Neither player can
+         bias it alone, and the judge committed before seeing either. */
+      if(s.judge){
+        if(s.seedC == null) return no("too early: a player answers the judge's seed commitment, never before it");
+        if(s.seedGs[m.seat] != null) return no("seat " + m.seat + " has already answered the seed", true);
+        if(typeof m.g !== "string" || !/^[0-9a-f]{16,64}$/.test(m.g)) return no("a player's half of the seed is hex");
+        const seedGs = s.seedGs.slice();
+        seedGs[m.seat] = m.g;
+        return {state: {...s, seedGs, seedG: seedGs[0] != null && seedGs[1] != null ? seedGs[0] + seedGs[1] : null}, error: null};
+      }
       if(m.seat !== 1) return no("only the guest answers the seed");
       if(s.seedC == null) return no("too early: the guest answers the host's seed commitment, never before it");
       if(s.seedG != null) return no("the guest has already answered the seed", true);
@@ -332,8 +361,10 @@ const hello = (seat, build) => ({t: MSG.HELLO, v: LOBBY_V, seat, build});
 const buildId = (appVer, dataVer) => "v" + appVer + " · " + dataVer;
 const hero  = (seat, key)   => ({t: MSG.HERO,  v: LOBBY_V, seat, key});
 /* The host's half: keep `seedH` on the phone, send `msg`. */
-function seedCommitMsg(rand){ const seedH = SHA.nonce(rand); return {seedH, msg: {t: MSG.SEEDC, v: LOBBY_V, seat: 0, c: SHA.seedCommit(seedH)}}; }
-const seedAnswer = (rand) => ({t: MSG.SEEDG, v: LOBBY_V, seat: 1, g: SHA.nonce(rand)});
+/* `seat`: 0 (the host) by default, JUDGE at a judged table. */
+function seedCommitMsg(rand, seat){ const seedH = SHA.nonce(rand); return {seedH, msg: {t: MSG.SEEDC, v: LOBBY_V, seat: seat == null ? 0 : seat, c: SHA.seedCommit(seedH)}}; }
+/* `seat`: 1 (the guest) by default; at a judged table each player answers. */
+const seedAnswer = (rand, seat) => ({t: MSG.SEEDG, v: LOBBY_V, seat: seat == null ? 1 : seat, g: SHA.nonce(rand)});
 /* What a throw seal commits to: the round and seat ride inside, so a seal
    from one round or seat cannot be opened as another's. */
 const throwValue = (round, seat, pick) => "throw|" + round + "|" + seat + "|" + pick;
@@ -358,12 +389,13 @@ function waitingOn(s){
     case "throw": return [s.seals[0] == null ? 0 : null, s.seals[1] == null ? 1 : null].filter(x => x != null);
     case "seat":  return s.winner == null ? [] : [s.winner];
     case "board": return [s.boards[0] == null ? 0 : null, s.boards[1] == null ? 1 : null].filter(x => x != null);
-    case "seed":  return [s.seedC == null ? 0 : 1];
+    case "seed":  return s.judge ? (s.seedC == null ? [JUDGE] : [0, 1].filter(i => s.seedGs[i] == null))
+                                 : [s.seedC == null ? 0 : 1];
     default: return [];
   }
 }
 
-return {LOBBY_V, MSG, STEPS, newLobby, stepOf, reduce, matchSpec,
+return {LOBBY_V, JUDGE, MSG, STEPS, newLobby, stepOf, reduce, matchSpec,
         waitingOn, hello, buildId, hero, throwSeal, throwValue, canOpen, seating, sideboard,
         seedCommitMsg, seedAnswer};
 });

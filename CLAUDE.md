@@ -167,7 +167,7 @@ npm run fairness      # is any card STRONGER than printed (exits non-zero on a f
 | `advisor.js` | the trainer's Coach's call (`advise`) |
 | `invariants.js` | state judge (`check`), wired into every state change and self-play |
 | `report.js` | JUDGE!! bug reports, both boards |
-| `local.js` `lobby.js` `room.js` `net.js` `wire.js` | play alone / two-phone table (PeerJS), negotiation, sync, serialization |
+| `local.js` `lobby.js` `room.js` `net.js` `wire.js` `hub.js` | play alone / two-phone table (PeerJS), negotiation, sync, serialization; `hub.js` = the judge's table (H3: a third device holds the deck) |
 | `cards.js` · `actions.js` | card resolver (printings) · blank reference reducer (headless, not on the page) |
 
 **Two boards.** The TABLE (`judge.js`) is the CR-exact engine and seats a person or the

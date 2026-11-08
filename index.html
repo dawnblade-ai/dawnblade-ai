@@ -1560,6 +1560,10 @@ window.TROPHIES = [
 <script src="engine/local.js"></script>
 <script src="engine/lobby.js"></script>
 <script src="engine/room.js"></script>
+<!-- THE JUDGE'S TABLE (HIDDEN HANDS H3): a third device holds the deck and
+     both phones are guests. Reached as DawnHub.* only. It drives lobby.js and
+     net.js, so it loads after both. -->
+<script src="engine/hub.js"></script>
 <script>
 /* The bridge: lift the engine's exports into the bare names the two
    babel blocks already call. Every name here used to be a hand-mirrored
@@ -6973,7 +6977,7 @@ function TableScreen({onBack, onSeated}){
   const PHRASE = {
     loading:"Fetching the transport…", connecting:"Reaching the relay…",
     waiting:"Table open — waiting for your opponent…",
-    dialling:"Knocking on the table…", connected:"Seated."
+    dialling:"Knocking on the table…", connected:"Seated.", seating:"Taking a seat…"
   };
 
   const sit = (host, c, resume) => {
@@ -6984,7 +6988,17 @@ function TableScreen({onBack, onSeated}){
       onClose:()=>{ if(live.current){ setErr("The other phone left the table."); setBusy(false); } }
     }).then(table=>{
       if(!live.current){ table.close(); return; }
-      onSeated({table, host, code:table.code, resume: resume || null});
+      if(host) return onSeated({table, host, code:table.code, resume: resume || null});
+      /* A PHONE CANNOT TELL A HOST FROM A JUDGE UNTIL IT SPEAKS (H3): a
+         judge's first frame offers this phone a seat; a host's is its lobby
+         hello. The frame stays queued for the room either way. */
+      setStat("seating");
+      return table.first(2500).then(f=>{
+        if(!live.current){ table.close(); return; }
+        if(f && f.ch === "judge" && f.full){ table.close(); setErr("That judged table already has two players."); setStat(null); setBusy(false); return; }
+        const judged = f && f.ch === "judge" && (f.seat === 0 || f.seat === 1) ? {seat: f.seat, key: f.key || null} : null;
+        onSeated({table, host:false, code:table.code, judged});
+      });
     }).catch(e=>{
       if(!live.current) return;
       setErr((e && e.message) || String(e)); setStat(null); setBusy(false);
@@ -7002,6 +7016,25 @@ function TableScreen({onBack, onSeated}){
     return out.slice(0, 1);
   } catch(_){ return []; } },[]);
   const resumeTable = r => { setCode(r.code); setMode("host"); sit(true, r.code, r.resume); };
+  /* JUDGE MODE (HIDDEN HANDS H3): this device holds the deck for two players
+     who both join as guests. A judged table it was running resumes too. */
+  const judgeTable = (c, resume) => {
+    setErr(null); setBusy(true); setStat("loading"); setCode(c); setMode("judge");
+    /* channels that open before the judge's screen mounts wait in `q` */
+    const conns = {q: [], on: null};
+    DawnRoom.openJudge({code:c, onStatus:st=>{ if(live.current) setStat(st); },
+      onConnection: ch => conns.on ? conns.on(ch) : conns.q.push(ch)
+    }).then(handle=>{
+      if(!live.current){ handle.close(); return; }
+      onSeated({judge:true, handle, code:handle.code, conns, resume: resume || null});
+    }).catch(e=>{ if(!live.current) return; setErr((e && e.message) || String(e)); setStat(null); setBusy(false); });
+  };
+  const savedJudge = uM(()=>{ try {
+    const ls = window.localStorage, out = [];
+    for(let i = 0; i < ls.length; i++){ const k = ls.key(i); if(!/^dawnblade\.judge\./.test(k)) continue;
+      const v = JSON.parse(ls.getItem(k)); if(v && v.saved && v.spec) out.push({code: k.split(".").pop(), resume: v}); }
+    return out.slice(0, 1);
+  } catch(_){ return []; } },[]);
   const joinTable = () => {
     if(!DawnRoom.isValid(code)) return setErr("A table code is "+DawnRoom.CODE_LEN+" characters.");
     sit(false, code);
@@ -7023,6 +7056,8 @@ function TableScreen({onBack, onSeated}){
           <button className="bigbtn" onClick={openTable}>Open a table</button>
           <button className="bigbtn alt" onClick={()=>setMode("join")}>Join a table</button>
           {saved.map(r=><button key={r.code} className="bigbtn alt" onClick={()=>resumeTable(r)}>Resume table {r.code}</button>)}
+          <button className="bigbtn alt" onClick={()=>judgeTable(DawnRoom.makeCode())}>Judge a table</button>
+          {savedJudge.map(r=><button key={"j"+r.code} className="bigbtn alt" onClick={()=>judgeTable(r.code, r.resume)}>Resume judging {r.code}</button>)}
         </div>
         {/* This said "the drill decks — blank cards" until v2.52, which was
             true before v2.49 and has been wrong since: the table negotiates a
@@ -7044,6 +7079,15 @@ function TableScreen({onBack, onSeated}){
           deck or the next draw. The host's phone could look, so play people you trust.
           When the game ends, the guest can verify every shuffle and draw.
         </p>
+        {/* THE HONEST LINE FOR A JUDGED TABLE (HIDDEN HANDS H3) */}
+        <p className="mnote">
+          <strong>At a judged table, the judge's device holds the deck.</strong> A third
+          phone or tablet (a store judge's, or a friend's) taps <em>Judge a table</em> and
+          reads out its code; both players join it. Neither player's phone holds the
+          other's hand, either deck or the next draw. The judge's device could look, so
+          both players must trust the judge. When the game ends, both phones can verify
+          every shuffle and draw.
+        </p>
       </>}
 
       {mode==="host" && <>
@@ -7055,6 +7099,14 @@ function TableScreen({onBack, onSeated}){
           {stat==="waiting" && <span className="tbldot"></span>}
           {err ? "" : (PHRASE[stat]||"…")}
         </div>
+      </>}
+
+      {mode==="judge" && <>
+        <div className="tblcard">
+          <div className="tblstat">Judge's table number</div>
+          <div className="tblcode">{code}</div>
+        </div>
+        <div className="tblstat">{err ? "" : (PHRASE[stat]||"…")}</div>
       </>}
 
       {mode==="join" && <>
@@ -7133,14 +7185,16 @@ const CH_LOBBY = "lobby", CH_NET = "net";
    spelled by the lobby module so the two sites cannot disagree. */
 const TABLE_BUILD = DawnLobby.buildId(window.APP_VER, window.DATA_VER);
 
-function TableRoom({table, host, code, db, onExit, resume}){
+function TableRoom({table, host, code, db, onExit, resume, judged}){
   /* `mySeat`, NOT `seat`. engine/priority.js exports a `seat` helper
      meaning "seat a game with this first player"; a local `seat` meaning
      "which chair is this client in" is the same-name-different-meaning
      trap test/sync.test.js pins, and it caught exactly this name on the
      first build of the table screen. */
-  const mySeat = host ? 0 : 1;
-  const [lob,setLob] = uS(()=>DawnLobby.newLobby({code}));
+  /* AT A JUDGED TABLE (HIDDEN HANDS H3) both phones are guests and the
+     judge's device chose this phone's seat. */
+  const mySeat = judged ? judged.seat : host ? 0 : 1;
+  const [lob,setLob] = uS(()=>DawnLobby.newLobby({code, judge: !!judged}));
   const [pick,setPick] = uS(null);        /* an UNSENT hero choice */
   const [err,setErr] = uS(null);
   const [match,setMatch] = uS(null);      /* the built game, once ready */
@@ -7204,7 +7258,9 @@ function TableRoom({table, host, code, db, onExit, resume}){
     const k = openRef.current;
     if(k && k.round === lob.round && DawnLobby.canOpen(lob, mySeat)){ openRef.current = null; say(k); }
     /* the guest answers the host's seed commitment, never before it */
-    if(!host && lob.seedC && lob.seedG == null && !seedRef.current){ seedRef.current = "sent"; say(DawnLobby.seedAnswer()); }
+    /* at a judged table each player answers the judge's commitment */
+    if(!host && lob.seedC && (judged ? lob.seedGs[mySeat] == null : lob.seedG == null) && !seedRef.current){
+      seedRef.current = "sent"; say(DawnLobby.seedAnswer(undefined, mySeat)); }
   },[lob]);
 
   /* How a seed becomes the opening, for "verify this game" and a resumed host:
@@ -7259,7 +7315,7 @@ function TableRoom({table, host, code, db, onExit, resume}){
 
   const head = (
     <div className="tblhead">Table {code}
-      <span className="tblseat">seat {mySeat} · {host ? "host" : "guest"}</span></div>
+      <span className="tblseat">seat {mySeat} · {host ? "host" : judged ? "judged table" : "guest"}</span></div>
   );
 
   if(step === "fault") return (
@@ -7272,7 +7328,7 @@ function TableRoom({table, host, code, db, onExit, resume}){
   );
 
   if(match) return <TableBoard match={match} mySeat={mySeat} host={host} code={code} db={db}
-    table={table} netRef={netRef} netQ={netQ} onExit={onExit}/>;
+    table={table} netRef={netRef} netQ={netQ} onExit={onExit} judged={judged}/>;
 
   /* ---- the sideboard: the trainer's own loadout screen ---------------- */
   if(step === "board" && myH){
@@ -7366,6 +7422,107 @@ function TableRoom({table, host, code, db, onExit, resume}){
   );
 }
 
+/* ============================================================
+   THE JUDGE'S DEVICE — a judged table (HIDDEN HANDS H3)
+
+   A third phone or tablet holds the deck: engine/hub.js runs the referee
+   with BOTH seats remote, so neither player's phone hosts and both are blind.
+   This screen is the judge's: the table code, who has sat down, the lobby's
+   progress, and then the game as the PUBLIC sees it (seatView from no seat:
+   every hand and deck face down). A judge who wanted to look would have to go
+   out of their way — and the copy says plainly that the device could.
+
+   The hub takes channels, not a network: room.js's openJudge hands each new
+   PeerJS channel over (`conns` holds any that opened before this mounted).
+   The game is kept on the device after every action, so a reload resumes it
+   ("Resume judging"), and at the end both phones get the seed and the log.
+   ============================================================ */
+function JudgeRoom({handle, conns, code, db, resume, onExit}){
+  const [info,setInfo] = uS(null);
+  const [pub,setPub]   = uS(null);
+  const hubRef = uR(null);
+  const savedAt = uR(-1);
+  /* the deal, as TableRoom's dealFrom: the lobby's spec, the card database,
+     build.js and judge.newMatch; the catalog as TableBoard builds it */
+  const deal = spec => {
+    const m = DawnBuild.buildMatch(spec, {
+      db, heroes: Object.fromEntries(HEROES.map(h=>[h.k,h])),
+      decks: Object.fromEntries(HEROES.map(h=>[h.k,PARSED[h.k]]))});
+    const state = DawnJudge.newMatch({builds:m.builds, names:m.names, heroKeys:m.heroKeys, first:m.first, seed:m.seed});
+    const catalog = DawnWire.makeCatalog(m.builds.flatMap(b=>[...(b.deck||[]), ...(b.gear||[]),
+                                                              ...(b.startItem?[b.startItem.card]:[])]));
+    return {state, catalog};
+  };
+  uE(()=>{
+    /* EVERY CHANGE IS KEPT ON THE DEVICE AT ONCE, not on a timer: a judge
+       that reloads must resume at the action the phones last saw */
+    const keep = h => { const p = h.persist(), i = h.info();
+      if(i.over){ try { lsGet().removeItem("dawnblade.judge." + code); } catch(_){} return; }
+      if(p && i.seq !== savedAt.current) try { lsGet().setItem("dawnblade.judge." + code, JSON.stringify(p)); savedAt.current = i.seq; } catch(_){} };
+    const refresh = () => { const h = hubRef.current; if(!h) return;
+      keep(h); setInfo(h.info()); const ss = h.session(); setPub(ss ? ss.state() : null); };
+    let hub;
+    try {
+      hub = DawnHub.createHub({code, build: TABLE_BUILD, deal, reduce: DawnJudge.reduce, legal: DawnJudge.legal,
+        check: DawnInvariants.errors, resume: resume || null, onChange: refresh,
+        onEvent: e => { if(e.t === "fault") console.error("[dawnblade judge] " + e.reason); }});
+    } catch(e){ setInfo({fault: "Could not open the judged table: " + (e.message || e)}); return ()=>{ try{ handle.close(); }catch(_){} }; }
+    hubRef.current = hub;
+    const take = ch => { const link = hub.connect({send: f => ch.send(f), close: () => ch.close()});
+      ch.listen(f => link.receive(f)); ch.onClose(() => link.closed()); };
+    if(conns){ conns.q.splice(0).forEach(take); conns.on = take; }   /* and every later one straight here */
+    window.__dawnJudgeTable = {hub, code};
+    refresh();
+    const watch = setInterval(()=>hub.tick(), 1200);
+    return ()=>{ clearInterval(watch); try{ handle.close(); }catch(_){} };
+  },[]);
+
+  const lob = info && info.lobby;
+  const heroName = k => { const h = k && HEROES.find(x=>x.k===k); return h ? h.n.split(",")[0] : null; };
+  const seatLine = i => {
+    const sat = info && info.seats[i];
+    const nm = pub ? pub.sides[i].name.split(",")[0] : lob && heroName(lob.heroes[i]);
+    return <div key={i} className="tblstat">{"Seat " + i + " · "}{nm || "—"}{" · "}
+      <b>{sat ? "connected" : (info && info.dealt ? "away — the game waits for this phone" : "waiting for a player")}</b>
+      {pub ? <span className="mono">{" · " + pub.sides[i].hp + " life"}</span> : null}</div>;
+  };
+  const shown = pub ? DawnReferee.seatFeed(pub, -1).feed.slice(-6).reverse() : [];
+  const over = info && info.over;
+  return (
+    <div className="tblwrap judgeroom">
+      <div className="tblhead">Judging table {code}<span className="tblseat">judge's device</span></div>
+      <div className="tblcard">
+        <div className="tblstat">Players join with this table number</div>
+        <div className="tblcode">{code}</div>
+      </div>
+      {info && info.fault && <div className="tblerr">{info.fault}</div>}
+      {[0,1].map(seatLine)}
+      {info && !info.dealt && <div className="lobsteps">
+        {["hero","throw","board","seed"].map(st=>(
+          <span key={st} className={"lobstep"+(st===info.step?" on":"")
+            +(DawnLobby.STEPS.indexOf(st) < DawnLobby.STEPS.indexOf(info.step)?" done":"")}>{st}</span>))}
+      </div>}
+      {pub && <div className="tblcard">
+        <div className="tblstat">{over
+          ? (over.winner == null ? "The game is a draw." : pub.sides[over.winner].name.split(",")[0] + " wins.")
+          : "Turn " + pub.turn + " · " + pub.phase + (pub.step ? " / " + pub.step : "") + " · action " + info.seq}</div>
+        {shown.map((l,i)=><div key={i} className="note" style={{margin:"2px 0"}}>{l}</div>)}
+      </div>}
+      {over && <p className="mnote">Both phones have been sent this device's half of the seed and every move,
+        so each player can verify every shuffle and draw.</p>}
+      {/* THE HONEST LINE (H3): who holds the deck, and what that means */}
+      <p className="mnote">
+        <strong>This device holds the deck.</strong> It deals and runs the game; each player's
+        phone is sent only that player's own view, so neither phone holds the other's hand,
+        either deck or the next draw. This screen shows only what both players can see — but
+        the device itself could look, so the players are trusting the judge. Keep this page
+        open until the game ends; if it closes, the game pauses and resumes from here.
+      </p>
+      <button className="bigbtn alt" onClick={onExit}>{over ? "Close the table" : "Leave (the game pauses)"}</button>
+    </div>
+  );
+}
+
 /* The throw. Both seats commit before either reveals — cheap, and the
    alternative is a screen that shows you the answer before it asks the
    question. Ties replay rather than counting, which is rps.js's rule. */
@@ -7438,7 +7595,7 @@ function TableThrow({lob, mySeat, myH, foeH, onThrow}){
    next-swing prediction — seat 1 is a person, so there is nothing to
    predict.
    ============================================================ */
-function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit, local, heroKey, onRecord}){
+function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit, local, heroKey, onRecord, judged}){
   /* AT A TWO-PHONE TABLE THIS PHONE SHOWS ITS OWN SEAT'S VIEW (HIDDEN HANDS
      H2). The host's referee holds the game; until the guest's first snapshot
      lands, the guest shows its blind deal as seen from NEITHER seat: every
@@ -7451,6 +7608,14 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
   const [bug,setBug] = uS(false);
   const sess = uR(null);
   const savedAt = uR(-1);   /* host: the sequence last kept on the phone */
+  /* THE HOST KEEPS ITS GAME ON THE PHONE after EVERY commit (not on the
+     1.2s watch alone: tools/twophone.js measured a reload resuming 29
+     actions back), so a reload resumes at the action the guest last saw */
+  const keepHost = s => {
+    if(s.seq() === savedAt.current || (s.full() || {}).over) return;
+    try { lsGet().setItem("dawnblade.table." + code, JSON.stringify({spec: match.spec, seedH: match.seedH, saved: s.persist()}));
+          savedAt.current = s.seq(); } catch(_){}
+  };
   /* THE CHANNEL, BEHIND A REF: a guest whose host dropped rejoins on a NEW
      channel to the same table, and the session's `send` follows it. */
   const tableRef = uR(table);
@@ -7569,7 +7734,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
       onState: st => { setG(st); setNote(null);
         /* the invariant judge runs on the FULL game, which only the host holds;
            the guest checks its view's own shape (referee.viewCensus) */
-        if(host && sess.current) audit(sess.current.full());
+        if(host && sess.current){ audit(sess.current.full()); keepHost(sess.current); }
         else { const bad = DawnReferee.viewCensus(st); if(bad.length) console.error("[dawnblade view census] " + bad[0]); } },
       onEvent: e => {
         if(e.t==="refused")             setNote(e.reason);
@@ -7605,12 +7770,8 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
       /* THE HOST'S PHONE LEFT: the game pauses (HIDDEN HANDS H2). The guest
          holds no hidden card, so it cannot carry the game on. */
       if(!host && s.status() !== "paused" && tableRef.current.status && tableRef.current.status() === "closed")
-        s.pause("the host's phone left the table");
-      /* the host keeps its game on the phone, so a reload resumes it */
-      if(host && s.seq() !== savedAt.current && !(s.full() || {}).over) try {
-        lsGet().setItem("dawnblade.table." + code, JSON.stringify({spec: match.spec, seedH: match.seedH, saved: s.persist()}));
-        savedAt.current = s.seq();
-      } catch(_){}
+        s.pause(judged ? "the judge's device left the table" : "the host's phone left the table");
+      if(host) keepHost(s);
       const st = s.status();
       setLink(st === "ready" ? l => l==="repairing" ? l : "connected" : st);
     }, 1200);
@@ -7632,6 +7793,9 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
     DawnRoom.open({code, host:false}).then(h => {
       tableRef.current = h;
       h.listen(f => { if(f && f.ch === CH_NET && sess.current) sess.current.receive(f.m); });
+      /* a judged table: claim this phone's seat back with the key the judge
+         dealt it (a stranger with the code alone is seated nowhere) */
+      if(judged) h.send({ch: "judge", claim: mySeat, key: judged.key});
       sess.current.join(); setRejoining(false);
     }).catch(e => { setRejoining(false); setNote("Could not rejoin: " + ((e && e.message) || e)); });
   };
@@ -8447,7 +8611,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
           {" "}{me.hp>0 ? <>You finished on <b className="mono">{me.hp}</b>.</> : null} Tap anywhere.
         </p>
         {!local && !host && <div onClick={e=>e.stopPropagation()} style={{marginTop:10}}>
-          <p style={{fontSize:12}}>The host's phone held the deck. It has now sent its half of the seed and every move.</p>
+          <p style={{fontSize:12}}>{judged ? "The judge's device" : "The host's phone"} held the deck. It has now sent its half of the seed and every move.</p>
           <button className="bigbtn alt" disabled={verdict==="busy"} onClick={verify}>
             {verdict==="busy" ? "Verifying…" : "Verify this game"}</button>
           {verdict && verdict!=="busy" && <p className={verdict.ok ? "note" : "tblerr"} style={{fontSize:13}}>
@@ -8461,8 +8625,11 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
       {/* THE HOST'S PHONE LEFT (HIDDEN HANDS H2): the game waits for it. The
           guest holds no hidden card, so it cannot carry the game on. */}
       {!local && !host && link === "paused" && !over && <div className="tblerr">
-        The game is paused: the host's phone holds the deck and has left the table.
-        It resumes when the host reopens table {code}.
+        {judged
+          ? <>The game is paused: this phone has lost its link to the judge's device, which
+              holds the deck. Rejoin once the judge's table {code} is open again.</>
+          : <>The game is paused: the host's phone holds the deck and has left the table.
+              It resumes when the host reopens table {code}.</>}
         {" "}<button className="a go" disabled={rejoining} onClick={rejoin}>{rejoining ? "Rejoining…" : "Rejoin"}</button>
       </div>}
       <CardModal card={zoom} onClose={()=>setZoom(null)}/>
@@ -8550,8 +8717,11 @@ function App(){
           DATA_VER check catches a version skew; this catches a client
           that has not finished loading its own. */}
       {table && table!=="find" && (db.status==="ready"
-        ? <TableRoom table={table.table} host={table.host} code={table.code} db={db}
-            resume={table.resume} onExit={()=>setTable(null)}/>
+        ? (table.judge
+          ? <JudgeRoom handle={table.handle} conns={table.conns} code={table.code} db={db}
+              resume={table.resume} onExit={()=>setTable(null)}/>
+          : <TableRoom table={table.table} host={table.host} code={table.code} db={db}
+              judged={table.judged || null} resume={table.resume} onExit={()=>setTable(null)}/>)
         : <div className="tblwrap">
             <div className="tblhead">Table {table.code}</div>
             <div className="tblstat live"><span className="tbldot"></span>Forging the card pool…</div>

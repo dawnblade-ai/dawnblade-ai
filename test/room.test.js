@@ -269,3 +269,62 @@ test("the table code is the match seed, so a game is reproducible from it", asyn
   assert.notDeepEqual(a.sides[0].hand.map(c => c.uid),
                       A.newMatch({seed: "ZZ99", first: 0}).sides[0].hand.map(c => c.uid));
 });
+
+/* ---- the judge's table (HIDDEN HANDS H3) ------------------------------- */
+test("JUDGE MODE — the judge's device claims the table and takes TWO phones on one code; each channel is its own", async () => {
+  const Peer = fakePeerLib();
+  const chans = [];
+  const judge = await R.openJudge({code: "JDG2", Peer, onConnection: c => chans.push(c)});
+  assert.equal(judge.status(), "waiting");
+  const a = await R.open({code: "jdg2", host: false, Peer});
+  const b = await R.open({code: "JDG2", host: false, Peer});
+  await tick();
+  assert.equal(chans.length, 2, "two channels on one table");
+  assert.equal(judge.channels(), 2);
+  const got = [[], []];
+  chans.forEach((c, i) => c.listen(m => got[i].push(m)));
+  a.send({hi: "a"}); b.send({hi: "b"});
+  await tick();
+  assert.deepEqual(got, [[{hi: "a"}], [{hi: "b"}]], "each phone's frames arrive on its own channel");
+  const seenA = [], seenB = [];
+  a.listen(m => seenA.push(m)); b.listen(m => seenB.push(m));
+  chans[1].send({to: "b"});
+  await tick();
+  assert.deepEqual(seenA, [], "a frame for one phone reaches only that phone");
+  assert.deepEqual(seenB, [{to: "b"}]);
+  /* a phone leaving closes only its own channel */
+  let closedB = false;
+  chans[1].onClose(() => { closedB = true; });
+  b.close();
+  await tick();
+  assert.ok(closedB);
+  assert.equal(judge.channels(), 1);
+  /* SABOTAGE: a plain host on the same fake relay turns the second phone away
+     (the multi-channel table is openJudge's, not open's) */
+  const Peer2 = fakePeerLib();
+  const hostP = R.open({code: "JDG3", host: true, Peer: Peer2});
+  await tick();
+  await R.open({code: "JDG3", host: false, Peer: Peer2});
+  await hostP;
+  const second = R.open({code: "JDG3", host: false, Peer: Peer2});
+  const r = await Promise.race([second.then(() => "connected"), new Promise(res => setTimeout(() => res("turned away"), 50))]);
+  assert.equal(r, "turned away");
+  judge.close();
+});
+
+test("first() reads a phone's first frame without consuming it (a judge's seat offer vs an H2 host's hello)", async () => {
+  const Peer = fakePeerLib();
+  let chan = null;
+  await R.openJudge({code: "JDG4", Peer, onConnection: c => { chan = c; c.send({ch: "judge", seat: 0}); c.send({ch: "lobby", m: 1}); }});
+  const g = await R.open({code: "JDG4", host: false, Peer});
+  const f = await g.first(200);
+  assert.deepEqual(f, {ch: "judge", seat: 0});
+  const all = [];
+  g.listen(m => all.push(m));
+  assert.deepEqual(all, [{ch: "judge", seat: 0}, {ch: "lobby", m: 1}], "nothing lost, nothing reordered");
+  /* nobody speaks: null after the wait */
+  const Peer2 = fakePeerLib();
+  await R.openJudge({code: "JDG5", Peer: Peer2});
+  const g2 = await R.open({code: "JDG5", host: false, Peer: Peer2});
+  assert.equal(await g2.first(30), null);
+});

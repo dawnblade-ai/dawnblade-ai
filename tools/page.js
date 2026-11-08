@@ -263,6 +263,47 @@ if(require.main === module){
       await click(page.locator(".tblwrap button", { hasText: /back|leave|cancel/i }).first(), "leave the code screen");
     }
 
+    /* JUDGE MODE (HIDDEN HANDS H3): this page as the judge's device. PeerJS is
+       stubbed (no relay is reached); two fake channels sit down and negotiate
+       the lobby with the page's own engine, and the judge's screen is checked
+       at each stage: waiting, the lobby, the game dealt. */
+    if(await click(btn(/^Find an opponent/), "find an opponent (judge)")){
+      await page.waitForSelector(".tblwrap");
+      const honest = await page.evaluate(() => /judge's device holds the deck/.test(document.body.innerText));
+      row(honest, "table: the find screen says a judged table's deck is on the judge's device");
+      await page.evaluate(() => { window.Peer = class { constructor(id){ this.h = {}; window.__jpeer = this; setTimeout(() => this.emit("open", id), 10); }
+        on(e, f){ (this.h[e] = this.h[e] || []).push(f); } emit(e, ...a){ (this.h[e] || []).forEach(f => f(...a)); } destroy(){} connect(){ return null; } }; });
+      if(await click(btn(/^Judge a table/), "judge a table")){
+        await page.waitForSelector(".judgeroom", { timeout: 8000 });
+        await screen("table: judge's device, waiting for players");
+        await page.evaluate(() => {
+          const mk = () => ({open: false, h: {}, got: [], on(e, f){ (this.h[e] = this.h[e] || []).push(f); }, emit(e, ...a){ (this.h[e] || []).forEach(f => f(...a)); },
+            send(m){ this.got.push(JSON.parse(JSON.stringify(m))); }, close(){ this.open = false; this.emit("close"); }});
+          const cs = window.__jc = [mk(), mk()];
+          cs.forEach(c => { window.__jpeer.emit("connection", c); c.open = true; c.emit("open"); });
+          const say = window.__jsay = (i, m) => cs[i].emit("data", {ch: "lobby", m});
+          [0, 1].forEach(i => say(i, DawnLobby.hello(i, TABLE_BUILD)));
+          say(0, DawnLobby.hero(0, "kayo"));
+        });
+        await screen("table: judge's device, the lobby");
+        await page.evaluate(() => { const say = window.__jsay;
+          say(1, DawnLobby.hero(1, "azalea"));
+          const t0 = DawnLobby.throwSeal(0, 0, "paper"), t1 = DawnLobby.throwSeal(1, 0, "rock");
+          say(0, t0.seal); say(1, t1.seal); say(0, t0.open); say(1, t1.open);
+          say(0, DawnLobby.seating(0, "first")); say(0, DawnLobby.sideboard(0, [], {})); say(1, DawnLobby.sideboard(1, [], {}));
+          [0, 1].forEach(i => say(i, DawnLobby.seedAnswer(undefined, i))); });
+        await page.waitForFunction(() => /Turn \d/.test((document.querySelector(".judgeroom") || {}).innerText || ""), null, { timeout: 8000 }).catch(() => {});
+        await screen("table: judge's device, the game dealt");
+        const j = await page.evaluate(() => { const t = (document.querySelector(".judgeroom") || {}).innerText || "";
+          const seen = window.__jc.map(c => c.got.some(f => f.ch === "judge" && f.key));
+          return {dealt: /Turn \d/.test(t), holds: /This device holds the deck/.test(t), keys: seen.every(Boolean)}; });
+        row(j.dealt && j.holds && j.keys, "table: the judge's device seats two phones (each dealt a key), deals, and says it holds the deck", JSON.stringify(j));
+        await click(page.locator(".judgeroom button", { hasText: /^Leave/ }).first(), "leave the judged table");
+      }
+      await page.evaluate(() => { delete window.Peer; try { Object.keys(localStorage).filter(k => /^dawnblade\.judge\./.test(k)).forEach(k => localStorage.removeItem(k)); } catch(_){} });
+      if(await has(".tblwrap")) await click(page.locator(".tblwrap button", { hasText: /^Back$/ }).first(), "leave the code screen (judge)");
+    }
+
     /* seat a game: roster -> battle -> coin -> loadout. Returns when the loadout is up. */
     const toLoadout = async (prefix, seat = 0) => {
       if(!(await has(".sheet")) && !(await click(page.locator(".hcard").first(), "pick a hero"))) return false;

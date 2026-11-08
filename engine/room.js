@@ -173,6 +173,19 @@ function open(o){
         if(sink && backlog.length){ const q = backlog; backlog = []; q.forEach(m => sink(m)); }
       },
       send: m => { if(conn && conn.open) conn.send(m); },
+      /* THE FIRST FRAME, WITHOUT CONSUMING IT (HIDDEN HANDS H3). A phone that
+         sits down cannot tell an H2 host from a judge until the other end
+         speaks: a judge's first frame is its seat offer. Resolves with that
+         frame (or null after `ms`), and leaves it at the front of the backlog
+         for whoever `listen`s next. */
+      first(ms){
+        return new Promise(res => {
+          if(backlog.length) return res(backlog[0]);
+          const prev = sink; let done = false;
+          sink = m => { backlog.push(m); if(!done){ done = true; sink = prev; res(m); } };
+          setTimeout(() => { if(!done){ done = true; sink = prev; res(null); } }, ms || 2500);
+        });
+      },
       close(){
         closed = true;
         try { if(conn) conn.close(); } catch(_){}
@@ -224,10 +237,73 @@ function open(o){
   }));
 }
 
+/* ---- the judge's table (HIDDEN HANDS H3) -----------------------------
+   A THIRD DEVICE holds the deck, so it must take TWO channels, not one.
+   It claims the table's id exactly as a host does (a player dials the same
+   code either way) and, instead of resolving on the first connection,
+   resolves once the id is claimed and hands every channel to
+   `o.onConnection(chan)` as it opens. Who sits where is not decided here:
+   hub.js binds channels to seats. Each `chan` has the host handle's shape —
+   {send, listen, close, onClose} — and buffers until somebody listens. */
+function openJudge(o){
+  o = o || {};
+  const code = normalize(o.code);
+  const onStatus = o.onStatus || (() => {});
+  const onConnection = o.onConnection || (() => {});
+  if(!isValid(code)) return Promise.reject(new Error("ROOM-CODE: a table code is " + CODE_LEN + " characters"));
+  let peer = null, status = "loading", closed = false;
+  const chans = new Set();
+  const set = (st, detail) => { status = st; onStatus(st, detail); };
+  set("loading");
+  return loadLib(o).then(Peer => new Promise((resolve, reject) => {
+    set("connecting");
+    peer = new Peer(peerIdFor(code), o.peerOpts || undefined);
+    const handle = {
+      code,
+      close(){
+        closed = true;
+        for(const c of chans) try { c.close(); } catch(_){}
+        try { if(peer) peer.destroy(); } catch(_){}
+        set("closed", "you closed the table");
+      },
+      status: () => status,
+      channels: () => chans.size,
+      peer: () => peer
+    };
+    peer.on("error", e => {
+      const t = (e && e.type) || "";
+      const msg = t === "unavailable-id" ? "That table is already taken — try another code."
+        : t === "browser-incompatible" ? "This browser cannot open a table (no WebRTC)."
+        : t === "network" || t === "server-error" ? "Cannot reach the matchmaking relay — check the connection."
+        : String((e && e.message) || e);
+      set("error", msg);
+      reject(Object.assign(new Error(msg), {type: t, handle}));
+    });
+    peer.on("open", () => {
+      set("waiting", code);
+      peer.on("connection", c => {
+        let sink = null, backlog = [], onClose = null, gone = false;
+        const chan = {
+          send: m => { if(c.open) c.send(m); },
+          listen(fn){ sink = fn || null; if(sink && backlog.length){ const q = backlog; backlog = []; q.forEach(m => sink(m)); } },
+          onClose(fn){ onClose = fn; if(gone && fn) fn(); },
+          close(){ try { c.close(); } catch(_){} }
+        };
+        const bye = () => { if(gone) return; gone = true; chans.delete(chan); if(onClose) onClose(); };
+        c.on("data", d => { try { const m = typeof d === "string" ? JSON.parse(d) : d; if(sink) sink(m); else backlog.push(m); } catch(_){} });
+        c.on("close", bye);
+        c.on("error", bye);
+        c.on("open", () => { if(closed) return; chans.add(chan); set("connected", chans.size); onConnection(chan); });
+      });
+      resolve(handle);
+    });
+  }));
+}
+
 /* Test seam: the drills inject a fake Peer, so the memoized real library
    must be forgettable between them. */
 function _resetLib(){ libPromise = null; }
 
 return {ROOM_V, NS, LIB_URL, ALPHABET, CODE_LEN,
-        makeCode, normalize, isValid, peerIdFor, loadLib, open, _resetLib};
+        makeCode, normalize, isValid, peerIdFor, loadLib, open, openJudge, _resetLib};
 });
