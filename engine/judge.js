@@ -3004,6 +3004,10 @@ function loopSig(g){
 }
 const DRAW_LINE = "Draw \u2014 nothing can change any more, so neither hero can win.";
 function stalemateCheck(g){
+  /* CR 3.0.9 / 1.15.3 — a card that left the arena took its counters with
+     it. `game.js resetLeavers` is the one body; it runs here because this
+     is the one function both boards pass every committed state through. */
+  g = GM.resetLeavers(g);
   if(g.over) return g;
   const was = g.still || {}, sig = stillSig(g);
   let still = was.sig === sig ? was : {...was, sig, since: g.turn};
