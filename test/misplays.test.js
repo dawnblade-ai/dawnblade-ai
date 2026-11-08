@@ -176,3 +176,37 @@ test("Scout the Periphery's look goes where it adds information: their deck, unl
   assert.equal(J.lookChoice(other, 0), null);
   assert.equal(SP.explain(other, 0).key, "firstOption");
 });
+
+/* ---- TRAINER QA CENSUS: the defence reaction that stops the whole leak ---- */
+
+test("defending, the cheapest reaction that stops the whole leak by itself goes first — and cheapest-first stands when the cheapest covers", {skip}, () => {
+  const {match} = SPP();
+  /* replayed to the first reaction window where Enigma defends and the cheapest legal
+     defender leaves a leak a dearer one would close alone (enigma-kayo-0, census probe) */
+  let n = match("enigma", "kayo", "enigma-kayo-0", 0), at = null;
+  for(let i = 0; i < 6000 && !n.over && !at; i++){
+    let moved = false;
+    for(const seat of [0, 1]){
+      const e = SP.explain(n, seat);
+      if(seat === 0 && e.key === "rxFit"){ at = {n, e}; break; }
+      if(!e.action) continue;
+      const r = J.reduce(n, e.action, seat); if(r.error) continue;
+      n = r.state; moved = true;
+    }
+    if(!moved) break;
+  }
+  assert.ok(at, "the fixture game reaches a fit");
+  const sd = at.n.sides[0], hand = sd.hand.concat(sd.arsenal ? [sd.arsenal] : []);
+  const wall = SP.wallOf(sd) + (sd.blockRx || []).reduce((t, l) => t + ((l && l.def) || 0), 0);
+  const leak = at.n.pend.total - wall;
+  const chosen = hand.find(c => c.uid === at.e.action.uid);
+  assert.ok(chosen && (chosen.def || 0) >= leak, "the chosen card stops the whole leak by itself");
+  const legal = hand.filter(c => J.legal(at.n, {t: "play", uid: c.uid, from: sd.arsenal && c.uid === sd.arsenal.uid ? "arsenal" : "hand"}, 0) == null
+    && J.defendsNow(at.n, 0, c.uid, sd.arsenal && c.uid === sd.arsenal.uid ? "arsenal" : "hand"));
+  const cheapest = legal.slice().sort((a, b) => (a.cost || 0) - (b.cost || 0) || (String(a.uid) < String(b.uid) ? -1 : 1))[0];
+  assert.ok(cheapest && cheapest.uid !== chosen.uid && (cheapest.def || 0) < leak,
+    "the cheapest legal defender would have left a leak — the case the fit is for");
+  /* the refusal: shrink the attack until the cheapest card covers it — the fit does not fire */
+  const small = {...at.n, pend: {...at.n.pend, total: wall + (cheapest.def || 0)}};
+  assert.notEqual(SP.explain(small, 0).key, "rxFit");
+});

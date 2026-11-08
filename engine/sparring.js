@@ -143,7 +143,8 @@ const fixOn = (g, seat) => {
 /* EACH FIX ALSO HAS ITS OWN GATE, read the way SPXFIX is (unset = on, "none" = off,
    a hero list = those seats), inside SPXFIX, so one fix can be A/B'd against the
    others: SPXSOAK the soak card price, SPXLOOK whose deck a look reads, SPXPAY a
-   piece paid for go again, SPXIDLE the holds (land nothing, a go again already had). */
+   piece paid for go again, SPXIDLE the holds (land nothing, a go again already had),
+   SPXRXFIT the defence reaction that stops the whole leak by itself. */
 const subGate = k => {
   const v = (typeof process !== "undefined" && process.env && process.env[k]) || "";
   return (g, seat) => {
@@ -154,7 +155,8 @@ const subGate = k => {
     return !!(sd && v.split(",").indexOf(sd.heroKey) >= 0);
   };
 };
-const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate("SPXPAY"), idleOn = subGate("SPXIDLE");
+const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate("SPXPAY"), idleOn = subGate("SPXIDLE"),
+      fitOn = subGate("SPXRXFIT");
 /* A card or ability that would land nothing right now is held (`judge.landsNothing`).
    Noted so the call can say why the turn ends with it still in hand. */
 const idleOK = (g, seat, uid, from) => {
@@ -571,6 +573,17 @@ function reaction(g, seat){
      when the first stopped the hit. */
   if(pick && defending && wallNow(sd) >= ((g.pend && g.pend.total) || 0))
     return tag("rxHold", {t: "pass"});
+  /* THE ONE THAT STOPS THE WHOLE LEAK, IF ONE DOES (trainer QA census). Cheapest first cast
+     Big Blue Sky (+2) into a leak of 3, then paid a card for Unmovable (+7) to stop the last
+     point: three cards where Unmovable alone was two. Among the legal defenders, the
+     cheapest whose own printed defence covers what the wall leaves goes first; when none
+     covers it, cheapest first stands. Printed numbers only, ties on defence then uid. */
+  if(pick && defending && fitOn(g, seat)){
+    const leak = ((g.pend && g.pend.total) || 0) - wallNow(sd);
+    const fit = legalRx.filter(x => num(x.c, "def") >= leak)
+      .sort((a, b) => num(a.c, "cost") - num(b.c, "cost") || num(a.c, "def") - num(b.c, "def") || byUid(a.c, b.c))[0];
+    if(fit && fit !== pick) return tag("rxFit", {t: "play", uid: fit.c.uid, from: fit.from});
+  }
   if(pick) return tag(defending ? "rxDefend" : "rxAttack", {t: "play", uid: pick.c.uid, from: pick.from});
 
   /* ---- AN ACTIVATED ABILITY IS A REACTION TOO (v4.38) ----------------
@@ -1547,6 +1560,7 @@ const CALL_WHY = {
   blockSpare: "Block with a spare card. Your next turn cannot spend a hand this big, so the extra card stops this whole hit for free.",
   rxHold: "Hold it. Your blocks already stop this whole hit, so the card stays in your hand.",
   rxDefend: "Play it now. It protects you from this attack.",
+  rxFit: "Play this one. It stops everything your blocks leave on its own, so no second card is needed.",
   rxAttack: "React with your cheapest card to pump this attack.",
   rxAbility: "Use the ability. It is printed for this window.",
   rxGaHeld: "Keep the piece. This attack already goes again, so its ability would buy nothing.",
