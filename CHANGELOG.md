@@ -1,3 +1,13 @@
+## v6.13 — the feed announces a play before what it sets off
+
+- **Feed order (FEED-7)**, one body in `effects.execute`, so both boards: Big Bertha's boost line, its "banished
+  from boosting" trigger and the Hyper Driver clock now print just after "Dash plays Crankshaft", not before it;
+  Oasis Respite's play line now prints before its "+1 life." rider. `test/feedorder.test.js` asserts the line
+  ORDER (the order is the observable). Ladder identical to v6.12 (same wins per hero).
+- **One gate per AI misplay fix** (`SPXPAY`, `SPXIDLE` beside `SPXSOAK`, `SPXLOOK`; default unchanged), so each
+  fix A/Bs on its own. It settled v6.10's open question: Dorinthea's 11.67 → 17.33 is ALL the Refraction
+  Bolters payment (Bolters only 17.33, everything but Bolters 11.67; her seat, 3 seeds, wins of 28).
+
 ## v6.12 — two more AI fixes: Mage Master Boots' taker, Scout the Periphery's deck
 
 - **Mage Master Boots kept for a real taker** (`judge.takerPlays`): `landsNothing` counted Loot the Arsenal (a
