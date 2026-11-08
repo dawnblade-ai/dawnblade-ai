@@ -9,7 +9,48 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-08, at v6.14)
+## HANDOFF — START HERE (CEO, 2026-11-08, at v6.15)
+
+**Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
+and `docs/progress/` on main. Do not start a root handoff file.
+
+- **Live: v6.15** (WIRE_V 39). Progress reports: `docs/progress/v6.14.md`, `v6.15.md`.
+- **MISSION (user, 2026-11-07):** the ultimate FaB Silver Age precon competitive gaming environment and
+  judging engine — 100% fan-made, non-profit, for fun and glory, no ads, forever.
+- **CADENCE (user, 2026-11-07):** "With each version make a progress report and start a new CEO thread."
+- **HOW TO WORK:** unchanged (workers in env_011rwpp2MyBTt3cEsZKDoVGk, at most TWO, replay each ship/* branch
+  onto main, re-validate, CEO alone pushes main, confirm CI `drills`). Workers hit the 5-hour limit with NO
+  report: get_session (status_bucket failed) and nudge after the reset.
+
+**v6.15:** grantSwing (`SPXGRANTSWING`, `judge.grantedSwings`, key `grantSwing`): a weapon a pending grant
+pumps ranks at its pumped power. H-DAGGER: lost dagger grants 34/38 → 19/39; Arakni rule 11.67→12.67, Sharp
+23.00→24.33; Dorinthea 16.67→18.00 (3 seeds). Ladder 0/0/0/0.
+
+**AI OPEN:**
+- **H-OVERBLOCK** Enigma: blocks a hand card, then casts a reaction that alone covered it. ASSIGNED to
+  `session_013xG9xCgDniyTy1T4jVmNfK` (branch `ship/h-overblock`, gate SPXOVERBLOCK; if it loses, patch to
+  experiments/spxoverblock.patch).
+- **H-SHIELD** Gravy's Throw Caution on ally attacks: SPXSHIELD lost wins at 12 seeds; patch at
+  `experiments/spxshield.patch` (on ship/s-items-counters-scout, 220758e — not shipped).
+- **H-DAGGER residue:** 19 grants still lost, mostly trading the dagger's {r}{r} for a go-again hand attack.
+- **UNRESOLVED (carried):** Blaze soak A/B 12 seeds (8.50→8.25, t≈−0.8), shipped because it corrects the call.
+
+**WAITING ON THE USER (asked 2026-11-08, re-asked at v6.15):** (1) server for the referee: Cloudflare
+Workers+DO (recommended), Supabase Edge (also H4 accounts), or neither — needs an account; build nothing until
+they answer. (2) a real two-phone (and judge) game — DESKTOP-TASKS.md. If they report, act on it first.
+
+**WORKERS (both report to the current CEO):**
+- `session_013xG9xCgDniyTy1T4jVmNfK` (Opus, H3 author): on H-OVERBLOCK; first in line for the server deploy.
+- `session_013xG9xAMN9v4UxqgJGzXBSH` (Opus, AI, pushes ONLY `ship/s-items-counters-scout`): H-DAGGER shipped;
+  free for the next AI item (suggest H-SHIELD's re-think or the H-DAGGER residue).
+
+**NEXT:** the server deploy (a WebSocket URL + "join a server table"), then **H4 · ranked** (HIDDEN-HANDS.md
+§6: accounts, Elo, result authority, forfeit clocks).
+
+**SMALLER OPEN ITEMS:** a board→arsenal move would keep counters (no route today) · Line Crossers re-pin ·
+parked: sudden death.
+
+## HANDOFF ARCHIVE (CEO, 2026-11-08, at v6.14) — superseded by the section above
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
