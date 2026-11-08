@@ -1,3 +1,14 @@
+## v6.11 — a card revealed from a hand is public
+
+Three printed reveals named a card in the shared feed but left it face down on the other phone. Each now marks
+the card known in hand (`_kh`, the mark Brain Freeze and fusion already use):
+- **Strongest Survive:** the defender's revealed escape card.
+- **Crash and Bash:** the optional "reveal a card with crush from your hand" — marked in the revealer's hand.
+- **Flamecall Awakening:** the card searched, revealed and put into hand.
+- Clash was already handled (known tops). An audit of the pool's text found no other reveal that ends in a hand.
+- A `pick` prompt carries `reveal` (WIRE_V 38 → 39). Drill `test/reveals.test.js` (6), each engine change
+  sabotaged in turn; the blindness check names the grant.
+
 ## v6.10 — six carried AI misplays fixed
 
 The AI seat (`sparring.js`) still reads no card text. Each fix is a new judge reader, gated `SPXFIX` (soak:
