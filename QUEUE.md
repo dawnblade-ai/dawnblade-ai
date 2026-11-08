@@ -9,7 +9,49 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-08, at v6.13)
+## HANDOFF — START HERE (CEO, 2026-11-08, at v6.14)
+
+**Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
+and `docs/progress/` on main. Do not start a root handoff file.
+
+- **Live: v6.14** (WIRE_V 39). Progress reports: `docs/progress/v6.13.md`, `v6.14.md`.
+- **MISSION (user, 2026-11-07):** the ultimate FaB Silver Age precon competitive gaming environment and
+  judging engine — 100% fan-made, non-profit, for fun and glory, no ads, forever.
+- **CADENCE (user, 2026-11-07):** "With each version make a progress report and start a new CEO thread."
+- **HOW TO WORK:** unchanged from the archive below (workers in env_011rwpp2MyBTt3cEsZKDoVGk, at most TWO,
+  replay each ship/* branch onto main, re-validate, CEO alone pushes main, confirm CI `drills`). Workers hit the
+  5-hour limit with NO report: get_session (status_bucket failed) and nudge after the reset.
+
+**v6.14:** rxFit (`SPXRXFIT`, key `rxFit`): defending, the reaction that alone covers the leak goes first.
+Enigma rule 13.67→14.50 (6 seeds, t≈3.5), Sharp noise. FEED-7 CLOSED: Bravo's Carapace order was already right
+since v5.99; `test/payorder.test.js` pins it on both boards.
+
+**AI OPEN (from the v6.14 census, Sharp, 84 games/hero):**
+- **H-SHIELD** Gravy's Throw Caution: 14 of 20 unused shields were cast at attacks on his ALLIES (CR 7.3.2a).
+  A hold (SPXSHIELD, linkAtAlly + own-turn self-shield) cut unused 20→1 but lost wins at 12 seeds (rule
+  6.25→5.50, t≈−1.7; ally-only 6.25→5.75). Not shipped. Patch in worker session_013xG9xAMN9v4UxqgJGzXBSH's
+  scratchpad. Suspects: a shield still catches a later hero hit; Pirate-card synergies.
+- **H-DAGGER** Arakni: Up Sticks and Run's +4 dagger grant lost when Danger Digits throws the dagger (51/38/8).
+- **H-OVERBLOCK** Enigma: block-step planning blocks a hand card, then casts a reaction that alone covered it.
+- Probe artefacts, not misplays: Lyath/Enigma wards as "grantExpired", Gravy resFizzle, Blaze Absorb rider.
+- **UNRESOLVED (carried):** Blaze soak A/B 12 seeds (8.50→8.25, t≈−0.8), shipped because it corrects the call.
+
+**WAITING ON THE USER (asked 2026-11-08):** (1) server for the referee: Cloudflare Workers+DO (recommended),
+Supabase Edge (also H4 accounts), or neither — needs an account; build nothing until they answer. (2) a real
+two-phone (and judge) game — DESKTOP-TASKS.md, never tested on real PeerJS. If they report, act on it first.
+
+**WORKERS (both report to the current CEO):**
+- `session_013xG9xCgDniyTy1T4jVmNfK` (Opus, H3 author): IDLE, standing by for the server deploy.
+- `session_013xG9xAMN9v4UxqgJGzXBSH` (Opus, AI, pushes ONLY `ship/s-items-counters-scout`): assigned
+  H-DAGGER at v6.14; merges main (dc44922) in first.
+
+**NEXT:** the server deploy (a WebSocket URL + "join a server table"), then **H4 · ranked** (HIDDEN-HANDS.md
+§6: accounts, Elo, result authority, forfeit clocks).
+
+**SMALLER OPEN ITEMS:** a board→arsenal move would keep counters (no route today) · Line Crossers re-pin ·
+parked: sudden death.
+
+## HANDOFF ARCHIVE (CEO, 2026-11-08, at v6.13) — superseded by the section above
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
