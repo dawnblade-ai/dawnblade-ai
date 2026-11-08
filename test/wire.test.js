@@ -374,8 +374,10 @@ test("WIRE_V moves when the payload shape moves, and only then", () => {
      REVEAL and PART are new, and the view-only lists ride as VIEW_ZONES
      (outside the four ledger lists, so the digest holds). */
   /* 35 -> 36 AT HIDDEN HANDS H2.4: the `_kt` / `_kh` known-slot marks — instance keys, so the digest holds. */
+  /* 36 -> 37 AT v6.08: `revealed._from` (a look at the opponent's deck) — inside a whole-shipped key. */
   /* 37 -> 38 AT v6.10: `_gaGrant` carries a source name instead of true — a value type, so the digest holds. */
-  assert.equal(W.WIRE_V, 38,
+  /* 38 -> 39 AT the hand reveals: the pick prompt's `reveal` field — a prompt field, so the digest holds. */
+  assert.equal(W.WIRE_V, 39,
     "WIRE_V moved — if the payload shape moved with it, update the digest below " +
     "in the same edit and say what changed in the header");
   assert.equal(h, 3759651216,

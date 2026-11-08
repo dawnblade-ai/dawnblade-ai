@@ -325,7 +325,10 @@
    (Scout the Periphery reads target hero's deck), and the look op names whose deck. */
 /* 37 -> 38 AT v6.10: the game key `_gaGrant` carries the granting source's name
    (a string) instead of `true`, so the late go-again line can name its source. */
-const WIRE_V = 38;
+/* 38 -> 39 AT v6.11 (hand reveals): a `pick` prompt carries `reveal` (Crash and
+   Bash's reveal cost, Flamecall Awakening's search) and the card picked becomes
+   known in hand (`_kh`), as does Strongest Survive's escape card. */
+const WIRE_V = 39;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------
