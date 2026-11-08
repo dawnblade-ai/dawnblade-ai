@@ -24,7 +24,9 @@ and `docs/progress/` on main. Do not start a root handoff file.
 
 **v6.16:** grantHold (`SPXGRANTPAY`, `judge.grantTakers` o.idlePick, key `grantHold`): a grant waits when no
 swing it pumps can be paid for. Lost dagger grants 19→6; Arakni rule 12.33→13.00, Sharp 24.33→26.00 (3 seeds).
-Ladder 0/0/0/0.
+Ladder 0/0/0/0. CI green on main 53f7c7c (drills run 42534449390, live URL verified).
+**CEO SUCCESSION:** session_013xG9xCnjwgSC6P9f3uUE9W hit the lineage-depth limit (8) and cannot spawn the next CEO;
+the user must start it. The new CEO tells both workers its id.
 
 **CLOSED / PARKED (v6.16 wave):**
 - **H-OVERBLOCK** CLOSED, not a misplay: filter −1.83 (t −3.19); Sharp price SPXOBPRICE 1/2/4 → +0.00/−0.17/−1.17.
