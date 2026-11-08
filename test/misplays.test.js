@@ -70,6 +70,14 @@ test("Mage Master Boots' non-attack grant lands nothing with only an attack and 
   g = side(g, 0, {hand: [barque, throwC], arsenal: null, grave: [], banish: [], res: 1});
   assert.equal(J.landsNothing(g, 0, boots.uid, "gear"), true,
     "an attack takes no non-attack grant, and an instant is not an action card");
+  /* Loot the Arsenal is a non-attack action card, but its whole text is a grant for a
+     Pirate ALLY attack: with none to take it, the seat holds it (grant-wait), so it is
+     no taker for the boots either (gravy-kayo-1). */
+  const loot = pick(/Loot the Arsenal/);
+  assert.ok(loot, "Gravy decks Loot the Arsenal");
+  g = side(g, 0, {hand: [barque, throwC, loot]});
+  assert.ok(J.legal(g, {t: "play", uid: loot.uid, from: "hand"}, 0) == null, "Loot is legal to play");
+  assert.equal(J.landsNothing(g, 0, boots.uid, "gear"), true, "but a grant the seat will hold is no taker");
   g = side(g, 0, {hand: [barque, throwC, portside]});
   assert.equal(J.landsNothing(g, 0, boots.uid, "gear"), false, "Portside Exchange is a non-attack action card");
 });

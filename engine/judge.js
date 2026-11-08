@@ -2151,13 +2151,34 @@ const grantTakers = (g, seat, uid, from) => {
    "nothing", so the answer is false: the reader only speaks where it can
    prove the payout empty, and the policy otherwise plays as it did. */
 const LANDS_ZONES = ["hand", "arsenal", "grave", "banish"];
+/* A TAKER COUNTS ONLY IF THE SEAT WOULD PLAY IT (gravy-kayo-1, v6.10's open item).
+   Loot the Arsenal is a non-attack action card, legal and free, and its whole text
+   is a grant for "your next Pirate ALLY attack": with no ally attack to take that,
+   the grant-wait rule (`grantTakers`, v5.38) holds it to the end of the turn — so
+   Mage Master Boots was destroyed for a go again that card was never going to use.
+   A pure grant with no taker, or a card that would itself land nothing, is no taker. */
+const takerPlays = (g, seat, uid, z) => {
+  if(z === "hand" || z === "arsenal"){
+    const t = grantTakers(g, seat, uid, z);
+    if(t && !t.length) return false;
+    /* one level deep: two cards that each grant a non-attack go again would
+       otherwise ask each other forever; at depth the taker is taken at its word */
+    if(TAKER_DEPTH < 1){
+      TAKER_DEPTH++;
+      try { if(landsNothing(g, seat, uid, z)) return false; } finally { TAKER_DEPTH--; }
+    }
+  }
+  return true;
+};
+let TAKER_DEPTH = 0;
 const nonAtkPlayable = (g, seat, except) => {
   const sd = at(g, seat);
   for(const z of LANDS_ZONES){
     const cs = z === "arsenal" ? (sd.arsenal ? [sd.arsenal] : []) : (sd[z] || []);
     for(const c of cs)
       if(c && c.uid != null && c.uid !== except && TY.isAction(c) && !TY.isAttack(c)
-         && legal(g, {t: "play", uid: c.uid, from: z}, seat) == null) return true;
+         && legal(g, {t: "play", uid: c.uid, from: z}, seat) == null
+         && takerPlays(g, seat, c.uid, z)) return true;
   }
   return false;
 };
