@@ -150,6 +150,15 @@ const soakOn = (g, seat) => {
   const sd = g && g.sides && g.sides[seat];
   return !!(sd && SPXSOAK.split(",").indexOf(sd.heroKey) >= 0);
 };
+/* Whose deck a "target hero's deck" look reads measures on its own gate too (`SPXLOOK`). */
+const SPXLOOK = (typeof process !== "undefined" && process.env && process.env.SPXLOOK) || "";
+const lookOn = (g, seat) => {
+  if(!fixOn(g, seat)) return false;
+  if(!SPXLOOK) return true;
+  if(SPXLOOK === "none") return false;
+  const sd = g && g.sides && g.sides[seat];
+  return !!(sd && SPXLOOK.split(",").indexOf(sd.heroKey) >= 0);
+};
 /* A card or ability that would land nothing right now is held (`judge.landsNothing`).
    Noted so the call can say why the turn ends with it still in hand. */
 const idleOK = (g, seat, uid, from) => {
@@ -1055,6 +1064,12 @@ function actBase(g, seat, o){
     if(g.prompt.tag === "pay" && g.prompt.choice == null && (g.prompt.side || 0) === seat
        && fixOn(g, seat) && J.payBuysGoAgain(g, seat))
       return tag("payGoAgain", {t: "promptChoose", choice: "pay"});
+    /* WHOSE DECK TO LOOK AT (Scout the Periphery). The modal's first mode is the
+       opponent's deck; `judge.lookChoice` answers which look adds information. */
+    if(g.prompt.tag === "modal" && g.prompt.choice == null && (g.prompt.side || 0) === seat && lookOn(g, seat)){
+      const lc = J.lookChoice(g, seat);
+      if(lc) return tag(lc.own ? "lookOwn" : "lookFoe", {t: "promptChoose", choice: lc.i});
+    }
     /* A SOAK PITCHED FOR IS PRICED AS THE CARD (QA-A H-4): `effects.soakPolicy`'s
        card price, asked through the one answer body. */
     const ans = J.autoAnswer(g, g.prompt.tag === "soak" && soakOn(g, seat) ? {cardPrice: true} : null), pt = g.prompt.tag;
@@ -1568,6 +1583,8 @@ const CALL_WHY = {
   payNoPiece: "Don't pay. Keeping the piece is worth more than what destroying it buys.",
   payGoAgain: "Destroy it. The attack goes again, and you have another attack to spend the action point on.",
   firstOption: "Take the first option.",
+  lookFoe: "Look at their deck. You can't already know their next card, and now you will.",
+  lookOwn: "Look at your own deck. You already know their top card, so yours is the one worth seeing.",
   allocAll: "Place every counter on your strongest piece.",
   pickMin: "Choose this one.",
   pickFree: "Take it. It costs you nothing.",
