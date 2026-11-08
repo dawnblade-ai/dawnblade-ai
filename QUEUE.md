@@ -9,7 +9,50 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-08, at v6.12)
+## HANDOFF — START HERE (CEO, 2026-11-08, at v6.13)
+
+**Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
+and `docs/progress/` on main. Do not start a root handoff file.
+
+- **Live: v6.13** (WIRE_V 39). Progress reports: `docs/progress/v6.12.md`, `v6.13.md`.
+- **MISSION (user, 2026-11-07):** the ultimate FaB Silver Age precon competitive gaming environment and
+  judging engine — 100% fan-made, non-profit, for fun and glory, no ads, forever.
+- **CADENCE (user, 2026-11-07):** "With each version make a progress report and start a new CEO thread."
+- **HOW TO WORK:** workers as cloud sessions in env_011rwpp2MyBTt3cEsZKDoVGk, at most TWO at once, Sonnet
+  mechanical / Opus rules-AI-design; workers push `ship/*` and report under 30 lines via send_message. The CEO
+  **replays each branch onto current main** (cherry-pick; regenerate CR-INDEX.md on conflict with
+  `npm run crindex`, never hand-merge it), re-validates there (suite fail 0 / skipped 5, scenes, fairness,
+  babel if index.html's babel blocks moved, `tools/page.js` for UI, `TWOPHONE_SEED=N node tools/twophone.js`
+  + `... judge` for table work, `tools/serverrun.js` DENO=<bin> for referee work, the 630-game ladder), is the
+  only one who pushes main, and confirms CI (`drills`). Page deps + deno go in a scratch dir (tools/page.js
+  header; `npm install --prefix <dir> deno`). **WIRE_V:** the second branch to ship takes the next number.
+  **Workers hit the 5-hour usage limit and a limit stop sends NO report.** Check idle workers with
+  get_session (status_bucket failed) and nudge them. Tell them to push after every green fix.
+  **Never instruct a worker to force-push** (the auto-mode classifier blocks it): have it merge main in.
+
+**v6.13:** FEED-7 play-line order (Big Bertha, Oasis Respite; `test/feedorder.test.js`) and one SPX gate per
+AI misplay fix (SPXPAY, SPXIDLE, SPXSOAK, SPXLOOK inside SPXFIX). Dorinthea's v6.10 jump is ALL the Bolters fix.
+**UNRESOLVED (carried):** Blaze soak A/B at 12 seeds (8.50→8.25, t≈−0.8), shipped because it corrects the call.
+
+**WAITING ON THE USER (asked 2026-11-08):** (1) server for the referee: Cloudflare Workers+DO (recommended),
+Supabase Edge (also H4 accounts), or neither — needs an account; build nothing until they answer. (2) a real
+two-phone (and judge) game — DESKTOP-TASKS.md, never tested on real PeerJS. If they report, act on it first.
+
+**WORKERS IN FLIGHT (both assigned 2026-11-08 ~15:00Z by CEO session_013xG9xAQUh8vzsEbNZBXUNs):**
+- `session_013xG9xAMN9v4UxqgJGzXBSH` (Opus, AI, may push ONLY `ship/s-items-counters-scout`): misplay census
+  of the AI hero for Fai, Enigma, Arakni, Blaze, Gravy, Lyath; fix the top one or two via judge readers, each
+  its own SPX gate + CALL_WHY key; A/B own seat 3 seeds (6–12 if unresolved), ladder. Merges main in first.
+- `session_013xG9xCgDniyTy1T4jVmNfK` (Opus, H3 author): FEED-7's Bravo case ("paid 1 and tapped Magmatic
+  Carapace" prints before the pitch, pay-sheet path) on `ship/feed-order-bravo` from cace5fc; drill both
+  boards; ladder identical. Reuse it for the server deploy once a provider is chosen.
+
+**NEXT:** the server deploy (a WebSocket URL + "join a server table"), then **H4 · ranked** (HIDDEN-HANDS.md
+§6: accounts, Elo, result authority, forfeit clocks).
+
+**SMALLER OPEN ITEMS:** a board→arsenal move would keep counters (no route today) · Line Crossers re-pin ·
+parked: sudden death.
+
+## HANDOFF ARCHIVE (CEO, 2026-11-08, at v6.12) — superseded by the section above
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
