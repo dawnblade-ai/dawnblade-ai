@@ -272,3 +272,35 @@ test("Up Sticks and Run waits when the dagger's {r}{r} is out of reach — and i
   const a = SP.act(rich, 0);
   assert.ok(a && a.t === "play" && a.uid === us.uid, "with the swing payable it is played: " + JSON.stringify(a));
 });
+
+/* ---- a grant goes before the only attack left, a weapon swing it pumps (v6.16 open item) ---- */
+
+test("with only a weapon to follow, the grant that pumps it goes first — and the swing goes alone when both cannot be paid", {skip}, () => {
+  const {match} = SPP();
+  /* Kayo vs Dorinthea, seed 0: her turn-2 hand is Warrior's Valor and three attack reactions */
+  let n = match("kayo", "dorinthea", "kayo-dorinthea-0", 0), at = null;
+  for(let i = 0; i < 6000 && !n.over && !at; i++){
+    let moved = false;
+    for(const seat of [0, 1]){
+      const e = SP.explain(n, seat);
+      if(seat === 1 && e.key === "grantBeforeSwing"){ at = {n, e}; break; }
+      if(!e.action) continue;
+      const r = J.reduce(n, e.action, seat); if(r.error) continue;
+      n = r.state; moved = true;
+    }
+    if(!moved) break;
+  }
+  assert.ok(at, "the fixture game reaches the decision");
+  const sd = at.n.sides[1];
+  const grant = sd.hand.find(c => c.uid === at.e.action.uid);
+  assert.equal(at.e.action.t, "play");
+  assert.ok(grant && !(+grant.power > 0), "a non-attack card is played first");
+  assert.ok(!sd.hand.some(c => +c.power > 0 && J.legal(at.n, {t: "play", uid: c.uid, from: "hand", target: "hero"}, 1) == null),
+    "no hand attack is playable: only the weapon follows");
+  const t = J.grantTakers(at.n, 1, grant.uid, "hand", {idlePick: true});
+  assert.ok(t && t.some(k => k.from === "weapon"), "and the weapon swing is what the grant pumps");
+  /* the refusal: nothing left to pitch, so the grant and the swing cannot both be paid */
+  const poor = {...at.n, sides: at.n.sides.map((s, i) => i === 1 ? {...s, hand: [grant], res: 0} : s)};
+  const e2 = SP.explain(poor, 1);
+  assert.notEqual(e2.key, "grantBeforeSwing");
+});

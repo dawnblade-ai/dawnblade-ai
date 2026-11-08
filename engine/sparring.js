@@ -146,7 +146,8 @@ const fixOn = (g, seat) => {
    piece paid for go again, SPXIDLE the holds (land nothing, a go again already had),
    SPXRXFIT the defence reaction that stops the whole leak by itself, SPXGRANTSWING a
    weapon swing ranked with the pending grant that pumps it, SPXGRANTPAY a grant whose only
-   other text is an optional pick it cannot use, held for a taker it can pay for. */
+   other text is an optional pick it cannot use, held for a taker it can pay for,
+   SPXWPNFIRST a grant played before the only attack left, a weapon swing it pumps. */
 const subGate = k => {
   const v = (typeof process !== "undefined" && process.env && process.env[k]) || "";
   return (g, seat) => {
@@ -158,7 +159,8 @@ const subGate = k => {
   };
 };
 const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate("SPXPAY"), idleOn = subGate("SPXIDLE"),
-      fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY");
+      fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
+      wpnFirstOn = subGate("SPXWPNFIRST");
 /* A card or ability that would land nothing right now is held (`judge.landsNothing`).
    Noted so the call can say why the turn ends with it still in hand. */
 const idleOK = (g, seat, uid, from) => {
@@ -786,10 +788,19 @@ function offenceBase(g, seat, o){
   const haveAtk = from.some(x => x.c && num(x.c, "power") > 0) || allies.length > 0;
   /* a grant that is in hand, playable, and waiting on its attack (H29): the call says so */
   let waiting = false;
-  if(haveAtk){
+  /* A WEAPON SWING IS AN ATTACK TO FOLLOW TOO (v6.16's open item). With no attack in hand or
+     arsenal this branch never ran, so the swing went first and the grant in hand that pumps it
+     was spent after, on nothing: Dorinthea swung Dawnblade past a payable Warrior's Valor,
+     Trot Along or Sharpen Steel 85 times in 28 games (her other cards were attack reactions).
+     Only then, only a grant a weapon swing takes (`judge.grantTakers`) is a candidate. */
+  const viaWeapon = !haveAtk && wpnFirstOn(g, seat) && weaponSwings(sd).some(a => legal(g, a, seat));
+  if(haveAtk || viaWeapon){
     const cands = from
       .map(x => ({c: x.c, uid: x.c && x.c.uid, from: x.from}))
-      .filter(x => x.c && num(x.c, "power") <= 0 && J.keepsActionPoint(g, seat, x.uid, x.from));
+      .filter(x => x.c && num(x.c, "power") <= 0 && J.keepsActionPoint(g, seat, x.uid, x.from))
+      .filter(x => { if(!viaWeapon) return true;
+        const t = J.grantTakers(g, seat, x.uid, x.from, grantPayOn(g, seat) ? {idlePick: true} : null);
+        return !!t && t.some(k => k.from === "weapon"); });
     const first = cands
       .filter(x => grantOK(x))
       .filter(x => idleOK(g, seat, x.uid, x.from))
@@ -797,7 +808,7 @@ function offenceBase(g, seat, o){
       .sort((a, b) => num(a.c, "cost") - num(b.c, "cost")
                    || num(a.c, "pitch") - num(b.c, "pitch") || byUid(a, b))
       .find(x => legal(g, {t: "play", uid: x.uid, from: x.from}, seat));
-    if(first) return tag("keepsAP", {t: "play", uid: first.uid, from: first.from});
+    if(first) return tag(viaWeapon ? "grantBeforeSwing" : "keepsAP", {t: "play", uid: first.uid, from: first.from});
     waiting = cands.some(x => !grantOK(x) && affordableWithin(sd, x.c, o)
                            && legal(g, {t: "play", uid: x.uid, from: x.from}, seat));
   }
@@ -1582,6 +1593,7 @@ const CALL_WHY = {
   rxAbility: "Use the ability. It is printed for this window.",
   rxGaHeld: "Keep the piece. This attack already goes again, so its ability would buy nothing.",
   keepsAP: "Play it before you attack. It keeps your action point.",
+  grantBeforeSwing: "Play it before you swing. It keeps your action point, and your weapon's swing takes what it gives.",
   markFirst: "Discard it to mark them before you attack. It costs no action point, and your stealth attack on a marked hero hits harder and goes again if it lands.",
   atkKeepsAP: "Lead with the attack that goes again. It keeps your action point.",
   chargeFirst: "Swing the attack that lets you charge first. Your other cards are waiting on a charge.",
