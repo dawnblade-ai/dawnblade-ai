@@ -32,6 +32,25 @@ const path = require("path"), {pathToFileURL} = require("url");
 const P = require("./page.js");
 const {chromium} = require("playwright");
 const INDEX = path.join(__dirname, "..", "index.html");
+/* SEEDED PAGES. Every random draw a page makes at a table (the seed halves,
+   the sealed throws, the seat keys: sha256.js's nonce reads
+   crypto.getRandomValues; anything else reads Math.random) comes from a
+   stream seeded by TWOPHONE_SEED and the page's name, so a run reproduces
+   (bar the relay's timing). */
+const SEED = process.env.TWOPHONE_SEED || "1";
+const seedScript = who => `(() => {
+  let x = 2166136261; const str = ${JSON.stringify(SEED)} + "|" + ${JSON.stringify(who)};
+  for(let i = 0; i < str.length; i++) x = Math.imul(x ^ str.charCodeAt(i), 16777619) >>> 0;
+  const next = () => { x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0; return x; };
+  Math.random = () => next() / 4294967296;
+  const c = window.crypto; if(c) c.getRandomValues = a => { for(let i = 0; i < a.length; i++) a[i] = next() & (a.BYTES_PER_ELEMENT === 1 ? 255 : a.BYTES_PER_ELEMENT === 2 ? 65535 : 4294967295); return a; };
+})();`;
+/* BOTH PHONES BLIND — test/helpers/blind.js's check (the legitimate grants,
+   named one by one), injected into each page as source, so this drive and
+   test/blind.test.js run the same function on the phone's own view. */
+const BLIND = "window.__blind = (v, me, full) => (" + require("../test/helpers/blind.js").blind.toString() + ")(v, me, full, DawnView.isPh);";
+const blindFails = [];
+const grantSeen = {};   /* which legitimate grants showed a card, and how often */
 const STUB = `(() => {
   const mk = () => ({open:false, h:{}, on(e,f){ (this.h[e]=this.h[e]||[]).push(f); }, emit(e,...a){ (this.h[e]||[]).forEach(f=>f(...a)); },
     send(m){ window.__relay(JSON.stringify(m)); }, close(){ this.open=false; window.__relayClose(); }});
@@ -56,6 +75,7 @@ const STUB = `(() => {
     const page = await ctx.newPage();
     page.on("pageerror", e => errors.push(who + " pageerror: " + String(e.stack || e).split("\n").slice(0, 3).join(" | ")));
     page.on("console", m => { if(m.type() === "error") errors.push(who + " console: " + m.text()); });
+    await page.addInitScript(seedScript(who)); await page.addInitScript(BLIND);
     await page.addInitScript(STUB);
     pages.push(page);
   }
@@ -99,9 +119,11 @@ const STUB = `(() => {
   const info = async () => ({
     host: await H.evaluate(() => { const s = window.__dawnTable.session; return {status: s.status(), seq: s.seq(), referee: !!s.isReferee,
       guestWant: DawnWire.hash(DawnReferee.seatView(s.full(), 1))}; }),
-    guest: await Gp.evaluate(() => { const s = window.__dawnTable.session, v = s.state(); return {status: s.status(), seq: s.seq(), hash: s.hash(),
-      viewSeat: v.viewSeat, foeHandHidden: v.sides[0].hand.every(c => DawnView.isPh(c) || (v.sides[0].blockH || []).concat(v.sides[0].paySel || []).includes(c.uid) || (v.pending && v.pending.card && v.pending.card.uid === c.uid)), foeDeckHidden: v.sides[0].deck.filter(c=>!c._kb).every(c => DawnView.isPh(c)),
-      rngHidden: !!v.rng.hidden, ownHand: v.sides[1].hand.map(c => c.name).length}; })});
+    guest: await Gp.evaluate(() => { const s = window.__dawnTable.session, v = s.state(), b = window.__blind(v, 1, s.full());
+      return {status: s.status(), seq: s.seq(), hash: s.hash(), viewSeat: v.viewSeat, blind: b.ok || b.bad, grants: b.grants,
+      ownHand: v.sides[1].hand.map(c => c.name).length}; })});
+  const blindNow = async at => { const b = await Gp.evaluate(() => { const s = window.__dawnTable.session; return window.__blind(s.state(), 1, s.full()); });
+    if(!b.ok) blindFails.push("guest at " + at + ": " + b.bad.join("; ")); };
   let x = await info(); console.log(JSON.stringify(x));
   /* play: each phone submits for its own seat through its own session */
   let acts = 0;
@@ -110,10 +132,10 @@ const STUB = `(() => {
       const done = await H.evaluate(() => !!window.__dawnTable.session.full().over);
       if(done) return true;
       const hostMoved = await H.evaluate(() => { const s = window.__dawnTable.session, a = DawnSparring.act(s.full(), 0, {search: false}); if(!a) return false; return s.submit(a) || true; });
-      if(hostMoved === true){ acts++; await H.waitForTimeout(5); continue; }
+      if(hostMoved === true){ acts++; await H.waitForTimeout(5); await blindNow("action " + acts); continue; }
       if(hostMoved) { console.log("host refused", hostMoved); return false; }
       const g = await Gp.evaluate(() => { const s = window.__dawnTable.session, a = DawnSparring.act(s.state(), 1, {search: false}); if(!a) return false; return s.submit(a) || true; });
-      if(g === true){ acts++; await Gp.waitForTimeout(15); continue; }
+      if(g === true){ acts++; await Gp.waitForTimeout(15); await blindNow("action " + acts); continue; }
       if(g){ await Gp.waitForTimeout(50); continue; }
       await Gp.waitForTimeout(50);
     }
@@ -156,6 +178,7 @@ const STUB = `(() => {
   console.log("host saved after the end:", await H.evaluate(() => Object.keys(localStorage).filter(k => /dawnblade.table/.test(k)).length));
   console.log("frames", frames, "ERRORS", errors.length); errors.slice(0, 10).forEach(e => console.log("  " + e));
   await browser.close();
+  finish(errors);
 })().catch(e => { console.error("DRIVE FAILED", e); process.exit(1); });
 
 /* ---- THREE PAGES: a judged table (HIDDEN HANDS H3) ------------------------ */
@@ -182,6 +205,7 @@ async function judgeRun(){
     const page = await ctx.newPage();
     page.on("pageerror", e => errors.push(who + " pageerror: " + String(e.stack || e).split("\n").slice(0, 3).join(" | ")));
     page.on("console", m => { if(m.type() === "error") errors.push(who + " console: " + m.text()); });
+    await page.addInitScript(seedScript(who)); await page.addInitScript(BLIND);
     await page.addInitScript(STUB3);
     return page;
   };
@@ -232,22 +256,28 @@ async function judgeRun(){
     return {seq: s.seq(), over: f.over || null, want: [0, 1].map(x => DawnWire.hash(DawnReferee.seatView(f, x))),
             screenLeaks: toks.filter(u => both.has(u)).length,
             screen: (document.querySelector(".judgeroom") || {}).innerText || ""}; });
-  const phone = p => p.evaluate(() => { const s = window.__dawnTable.session, v = s.state(), me = s.seat(), foe = v.sides[1 - me];
-    return {seat: me, status: s.status(), seq: s.seq(), hash: s.hash(), full: !!s.full(),
-      /* a face-up card in the other hand must be public by a mark: defending
-         (blockH), picked to pitch (paySel), being played (pending), or KNOWN
-         in hand after a reveal (_kh, game.js KNOWN_MARKS) */
-      foeOpen: foe.hand.filter(c => !(DawnView.isPh(c) || (foe.blockH || []).concat(foe.paySel || []).includes(c.uid) || (v.pending && v.pending.card && v.pending.card.uid === c.uid))).map(c => c.name + (c._kh ? "(_kh)" : "")),
-      foeHandHidden: foe.hand.every(c => DawnView.isPh(c) || c._kh || (foe.blockH || []).concat(foe.paySel || []).includes(c.uid) || (v.pending && v.pending.card && v.pending.card.uid === c.uid)),
-      foeDeckHidden: foe.deck.filter(c => !c._kb && !c._kt).every(c => DawnView.isPh(c)), rngHidden: !!(v.rng && v.rng.hidden)}; });
+  const phone = p => p.evaluate(() => { const s = window.__dawnTable.session, v = s.state(), me = s.seat();
+    return {seat: me, status: s.status(), seq: s.seq(), hash: s.hash(), ...window.__blind(v, me, s.full())}; });
+  const blindNow = async at => { for(const [nm, p] of [["A", A], ["B", Bp]]){ const x = await phone(p); if(!x.ok) blindFails.push(nm + " (seat " + x.seat + ") at " + at + ": " + x.bad.join("; "));
+    for(const g of x.grants){ const k = (g.match(/\[([^\]]*)\]$/) || [])[1]; if(k){ grantSeen[k] = (grantSeen[k] || 0) + 1;
+      if(/look/.test(k) && !grantSeen["first look"]){ grantSeen["first look"] = nm + " at " + at + ": " + g; } } } } };
   const report = async label => { const j = await judgeInfo(), a = await phone(A), b = await phone(Bp);
     const agree = [a, b].map(x => x.hash === j.want[x.seat]);
+    for(const [nm, x] of [["A", a], ["B", b]]) if(!x.ok) blindFails.push(nm + " (seat " + x.seat + ") at " + label + " " + x.bad.join("; "));
+    if(agree.some(v => !v)) blindFails.push("a phone's view disagreed with the referee at " + label);
     console.log(label, JSON.stringify({seq: j.seq, agree, screenLeaks: j.screenLeaks,
-      blind: [a, b].map(x => x.foeHandHidden && x.foeDeckHidden && x.rngHidden && !x.full ? true : [x.foeHandHidden, x.foeDeckHidden, x.rngHidden, !x.full].join("/")),
-      faceUp: [a, b].map(x => x.foeOpen.join(",")),
+      blind: [a, b].map(x => x.ok || x.bad), grants: [a, b].map(x => x.grants.join(", ")),
       status: [a.status, b.status]})); return {j, a, b, agree}; };
   let x = await report("dealt:");
   console.log("judge screen says it holds the deck:", /This device holds the deck/.test(x.j.screen));
+  /* SABOTAGE: the check can fail — a doctored copy of A's view with one of A's
+     own cards face up, unmarked, in the other seat's deck, and with the rng
+     shown, must be refused on both counts */
+  const sab = await A.evaluate(() => { const s = window.__dawnTable.session, v = JSON.parse(JSON.stringify(s.state())), me = s.seat();
+    const mine = v.sides[me].hand.find(c => !DawnView.isPh(c)); const c = {...mine}; delete c._kt; delete c._kb;
+    v.sides[1 - me].deck[1] = c; v.rng = {seed: 1, s: 1, n: 0}; return window.__blind(v, me, null); });
+  console.log("sabotage caught:", !sab.ok && sab.bad.length === 2, JSON.stringify(sab.bad));
+  if(sab.ok || sab.bad.length !== 2) blindFails.push("the sabotaged view passed the blindness check");
   let acts = 0;
   const play = async limit => {
     for(let i = 0; i < limit; i++){
@@ -256,7 +286,7 @@ async function judgeRun(){
       for(const p of [A, Bp]){
         const r = await p.evaluate(() => { const s = window.__dawnTable.session; if(s.status() !== "ready") return false;
           const a = DawnSparring.act(s.state(), s.seat(), {search: false}); if(!a) return false; return s.submit(a) || true; });
-        if(r === true){ acts++; moved = true; await p.waitForTimeout(10); break; }
+        if(r === true){ acts++; moved = true; await p.waitForTimeout(10); await blindNow("action " + acts); break; }
         if(r){ console.log("refused on its own view:", r); return false; }
       }
       if(!moved) await A.waitForTimeout(50);
@@ -303,4 +333,14 @@ async function judgeRun(){
   console.log("judge saved after the end:", await Jp.evaluate(() => Object.keys(localStorage).filter(k => /dawnblade.judge/.test(k)).length));
   console.log("frames", frames, "ERRORS", errors.length); errors.slice(0, 10).forEach(e => console.log("  " + e));
   await browser.close();
+  finish(errors);
+}
+/* THE VERDICT: a blindness or agreement failure, or a page error, fails the
+   drive (exit 1) — it is not just printed. */
+function finish(errors){
+  const n = blindFails.length + errors.length;
+  console.log("grants seen: " + JSON.stringify(grantSeen));
+  console.log("seed " + SEED + " · blind failures " + blindFails.length); blindFails.slice(0, 10).forEach(f => console.log("  BLIND FAIL " + f));
+  console.log(n ? "FAIL" : "PASS");
+  if(n) process.exit(1);
 }
