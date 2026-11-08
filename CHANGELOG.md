@@ -1,3 +1,17 @@
+## v6.17 — the AI plays the weapon bonus before the weapon swing
+
+- **grantBeforeSwing** (`engine/sparring.js`, gate `SPXWPNFIRST`, key `grantBeforeSwing`): in `offenceBase`'s
+  grant-first branch a legal weapon swing now counts as an attack to follow when there is no hand or arsenal
+  attack, and then only a grant whose takers (`judge.grantTakers`, idle-pick reading) include a weapon swing is a
+  candidate; the joint-affordability check still applies. Dorinthea swung her sword and then played Warrior's
+  Valor, wasting it (`haveAtk` counted hand and arsenal attacks only). Census (rule policy, 210 pairings, 1 seed):
+  100 swings made while holding a payable grant for them (Dorinthea 85, Viserai 10, Arakni 4, Lyath 1) → 0.
+  A/B own seat, both chairs, 3 seeds, wins of 28: Dorinthea 18.00 → 19.00 (+1 every seed), Sharp 26.00 → 26.67;
+  Viserai 12.33 → 13.00, Arakni 13.00 → 13.67 (every seed ≥); Lyath 3.33 → 3.00 (one game; census moved by 1).
+  Drill in `test/misplays.test.js`. Pin moved: the explain census lists arsenalSkip as unreached again.
+- Open: Arakni still loses 7 of 28 dagger grants where a go-again hand attack spends the pitch first
+  (the atkKeepsAP-first ordering: when is keeping the action point worth less than the grant's +4?).
+
 ## v6.16 — the AI holds a weapon bonus it cannot swing
 
 - **grantHold** (`engine/sparring.js`, gate `SPXGRANTPAY`, key `grantHold`; reader `judge.grantTakers` gains
