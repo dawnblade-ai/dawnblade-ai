@@ -4229,6 +4229,15 @@ function makeEffects(ctx){
       actMut(n).dracCard = false;
       n = L(n, `${card.name} is Draconic \u2014 the grant is spent.`);
     }
+    /* A NON-ATTACK PLAY IS ANNOUNCED BEFORE IT DOES ANYTHING (FEED-7, QA-C).
+       The play line used to be printed in the non-attack branch below, AFTER
+       this loop had already run every conditional rider — so Oasis Respite
+       read "+1 life." and then "You play Oasis Respite.", and the gain looked
+       like the card pitched on the line above. Announced here, the play comes
+       first on both boards (one copy of `execute`). An attack's declaration
+       line stays in its branch: it prints the total and go again, which are
+       only known there. */
+    if(!attacking) n = L(n, `${act(n).name} ${/^you$/i.test(act(n).name||"") ? "play" : "plays"} ${card.name}${from==="weapon"||from==="hero"||from==="board" ? " — activated" : ""}.`);
     /* ONE "NOT MET" LINE PER CONDITION (v5.53). Display Loyalty prints two
        payloads behind one gate, and the feed said the same refusal twice. */
     const _notMetSaid = new Set();
@@ -5004,13 +5013,21 @@ function makeEffects(ctx){
         n=L(n,`${card.name}: no card in hand to discard to the cost — bonus skips.`);
       }
       let declNote = "";
+      let boostAfter = null;
       if(isBoostPlay(n, card)){
         const top = act(n).deck[0];
         actMut(n).deck = act(n).deck.slice(1); actMut(n).banish = [...act(n).banish, top];
         n.boostChain = (n.boostChain||0)+1;
         const mech = P.boostPays(top);
         if(mech) ga = true;
-        declNote += ` Boost: ${top.name} banished${mech?" — Mechanologist, go again!":"."}`;
+        /* THE BOOST LINE AND WHAT IT SETS OFF ARE PRINTED AFTER THE PLAY LINE
+           (FEED-7, QA-C): `boostAfter` below. They used to split — the banish
+           rode in `declNote` (printed by the caller, after the declaration)
+           while Big Bertha's trigger logged here at once, so the feed read
+           "Big Bertha: nothing can take a steam counter", then "Dash plays
+           Crankshaft", then the banish that caused it. The banish and the go
+           again it grants stay HERE (the declaration prints `ga`). */
+        boostAfter = {top, line: `Boost: ${top.name} banished${mech?" — Mechanologist, go again!":"."}`};
         /* THE COUNTER CLOCK, ON THE BOOST ROUTE (v4.23). Hyper Driver
            prints "Once per turn, when you BOOST a card, remove a steam
            counter from this and gain {r}" — a WATCHER, so it is asked of
@@ -5062,12 +5079,7 @@ function makeEffects(ctx){
            and "a Hyper Driver you control" is this seat's, so no seat is
            borrowed. Run AFTER the banish and the chain increment, because
            the trigger is printed about a boost that has happened. */
-        const bb = (fxParse(top).boostBanish) || [];
-        if(bb.length){
-          n = runOps(n, bb, top.name);
-          declNote += ` ${top.name}'s boost trigger fires.`;
-        }
-        n = ctrClock(n, "boost");
+        /* (run after the declaration line: `boostAfter`) */
       }
       /* MANDIBLE CLAW'S RIDER IS THE PARSER'S NOW (v3.58). It used to be
          an inline regex here — one card special-cased by name, with the
@@ -5366,6 +5378,17 @@ function makeEffects(ctx){
              + ` ${total} power on the chain`
              + (total !== _printed ? ` (printed ${_printed})` : "")
              + (ga ? ", and it goes again" : "") + ".");
+      /* THE BOOST, AFTER THE PLAY IT WAS PAID FOR (FEED-7): the banish, then
+         the banished card's own "when this is banished from boosting"
+         trigger, then the Hyper Driver's clock — in that order, which is the
+         order the comments above argue (put before tick). */
+      if(boostAfter){
+        const top = boostAfter.top;
+        const bb = (fxParse(top).boostBanish) || [];
+        n = L(n, boostAfter.line + (bb.length ? ` ${top.name}'s boost trigger fires.` : ""));
+        if(bb.length) n = runOps(n, bb, top.name);
+        n = ctrClock(n, "boost");
+      }
       /* THE DECLARATION ENDS HERE (v2.73).
 
          This used to call `dummyDefence` inline and then set `mode:"stack"`
@@ -5386,10 +5409,9 @@ function makeEffects(ctx){
         if(n._addDiscPaid) delete n._addDiscPaid;
         else n = payAddCost(n, card, fx).game;
       }
-      /* the same gap on the non-attack side: the effects were logged, the
-         PLAY was not, so a card that resolved to nothing visible left no
-         trace of having been played at all */
-      n = L(n, `${act(n).name} ${/^you$/i.test(act(n).name||"") ? "play" : "plays"} ${card.name}${from==="weapon"||from==="hero"||from==="board" ? " — activated" : ""}.`);
+      /* (the non-attack PLAY line is printed before the conditions loop,
+         above — FEED-7 — so a card that resolves to nothing visible still
+         leaves its trace, and a rider never precedes its card) */
       /* A "DESTROY THIS:" COST IS PAID BEFORE THE EFFECT (v5.28, QUEUE item
          14 [18]). The piece was marked after `runOps`, so it was live during
          its own effect and the feed printed the effect, then "cost paid". */

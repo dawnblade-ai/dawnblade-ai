@@ -106,7 +106,9 @@ test("PREMISE: only Dash's deck prints boost, and its share at the deal is 1", {
 test("the boost route counter spells the engine's own phrase (v3.81)", () => {
   const fx = fs.readFileSync(path.join(ROOT, "engine/effects.js"), "utf8");
   const sp = fs.readFileSync(path.join(ROOT, "tools/selfplay.js"), "utf8");
-  assert.ok(fx.indexOf("declNote += ` Boost: ${top.name} banished") >= 0, "the engine's boost line moved");
+  /* FEED-7: the boost line is printed after the declaration line now (`boostAfter`),
+     still opening with "Boost:", so the selfplay counter below still matches it */
+  assert.ok(fx.indexOf("line: `Boost: ${top.name} banished") >= 0, "the engine's boost line moved");
   assert.ok(sp.indexOf('/(?:^| )Boost: .+ banished/') >= 0, "the selfplay counter no longer spells it");
 });
 
