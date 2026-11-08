@@ -1,0 +1,122 @@
+H-OVERBLOCK, the PRICED version (Sharp's block search) — NOT SHIPPED: no win. Against main 56e9a80 (v6.15).
+Instead of filtering block sets (spxoverblock.patch: Sharp -1.83, t -3.19), the search charges each
+candidate set LA.obPrice life (env SPXLA_OBP) per hand card per determinization when a defence reaction
+the seat can pay for alone covers what the set's armour leaves (non-lethal). Gate SPXOBPRICE; call key
+laOverblock when the price flips the search's choice. Rule policy byte for byte (only laBlockSearch).
+Own-seat A/B, Enigma's seat on Sharp vs the 14 others (rule policy), both seat orders, 28 games/seed,
+12 seeds paired, wins of 28 (off 21.25):
+  price 1: 21.25 -> 21.25 (+0.00, t 0.00)
+  price 2: 21.25 -> 21.08 (-0.17, t -0.46)   per seed 22→22 20→20 22→20 22→23 22→21 21→21 23→21 20→19 24→25 18→17 20→21 21→23
+  price 4: 21.25 -> 20.08 (-1.17, t -2.13)
+Monotone: the more the waste is priced, the worse. The search's own block sets already beat both a ban
+and a price — the "wasted" hand block is not waste on average (a guess: it keeps the reaction for a
+later link or a bigger hit). 0 refusals / violations / stalls in every run. Ladder and phone bound not
+run (not shipping). Apply: git apply experiments/spxobprice.patch
+Suggest closing H-OVERBLOCK.
+
+diff --git a/engine/sparring.js b/engine/sparring.js
+index d487ca5..e25c679 100644
+--- a/engine/sparring.js
++++ b/engine/sparring.js
+@@ -145,7 +145,8 @@ const fixOn = (g, seat) => {
+    others: SPXSOAK the soak card price, SPXLOOK whose deck a look reads, SPXPAY a
+    piece paid for go again, SPXIDLE the holds (land nothing, a go again already had),
+    SPXRXFIT the defence reaction that stops the whole leak by itself, SPXGRANTSWING a
+-   weapon swing ranked with the pending grant that pumps it. */
++   weapon swing ranked with the pending grant that pumps it, SPXOBPRICE the search's price on
++   a hand blocker beside a defence reaction that stops the leak by itself. */
+ const subGate = k => {
+   const v = (typeof process !== "undefined" && process.env && process.env[k]) || "";
+   return (g, seat) => {
+@@ -157,7 +158,7 @@ const subGate = k => {
+   };
+ };
+ const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate("SPXPAY"), idleOn = subGate("SPXIDLE"),
+-      fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING");
++      fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), obPriceOn = subGate("SPXOBPRICE");
+ /* A card or ability that would land nothing right now is held (`judge.landsNothing`).
+    Noted so the call can say why the turn ends with it still in hand. */
+ const idleOK = (g, seat, uid, from) => {
+@@ -428,6 +429,23 @@ function wallOf(sd){
+    damage step will total (`judge.strike` adds `blockRx` to the wall). */
+ const wallNow = sd => wallOf(sd) + (sd.blockRx || []).reduce((t, l) => t + ((l && l.def) || 0), 0);
+ 
++/* A DEFENCE REACTION THIS SEAT HOLDS WHOSE PRINTED DEFENCE ALONE COVERS `leak`, AND
++   THAT IT CAN PAY FOR, or null (H-OVERBLOCK). `defendsNow` answers what defends (no card
++   text here); the cost is printed and paid from floating resources plus the pitch of the
++   free hand (not the card itself, not a declared defender). Cheapest, then defence, then uid. */
++function coveringRx(g, seat, leak){
++  const sd = g.sides[seat];
++  const held = (sd.hand || []).map(c => ({c, from: "hand"})).concat(sd.arsenal ? [{c: sd.arsenal, from: "arsenal"}] : []);
++  return held
++    .filter(x => x.c && num(x.c, "def") >= leak && J.defendsNow(g, seat, x.c.uid, x.from))
++    .filter(x => {
++      const need = num(x.c, "cost") - (sd.res || 0);
++      if(need <= 0) return true;
++      return J.handFree(sd).filter(h => h.uid !== x.c.uid).reduce((t, h) => t + num(h, "pitch"), 0) >= need;
++    })
++    .sort((a, b) => num(a.c, "cost") - num(b.c, "cost") || num(a.c, "def") - num(b.c, "def") || byUid(a.c, b.c))[0] || null;
++}
++
+ function nextBlocker(g, seat, o){
+   const sd = g.sides[seat];
+   const incoming = (g.pend && g.pend.total) || 0;
+@@ -1230,6 +1248,7 @@ const LA = {
+   verify: envOf("SPXLA_V") !== "" ? +envOf("SPXLA_V") : 4,   /* deals a gamble that overrules a sure line is checked on */
+   blocks: envOf("SPXLA_BLK") !== "" ? +envOf("SPXLA_BLK") : 1,   /* search the wall too (phase c) */
+   bMu: envOf("SPXLA_BMU") !== "" ? +envOf("SPXLA_BMU") : 2,  /* a held card's worth at a block (null: mu) */
++  obPrice: envOf("SPXLA_OBP") !== "" ? +envOf("SPXLA_OBP") : 2,  /* SPXOBPRICE: life per hand card blocked beside a covering reaction */
+   bH: envOf("SPXLA_BH") || "own",           /* block rollouts: "next" to this seat's next decision; "own" through its next turn */
+   blockN: envOf("SPXLA_BN") !== "" ? +envOf("SPXLA_BN") : 4,      /* block sets kept besides the rules' and taking it */
+   stepCap: 400,       /* per rollout */
+@@ -1471,11 +1490,30 @@ function laBlockSearch(g, seat, o){
+         ["v", "dealt", "taken", "cards"].forEach(f => tot[i][f] += e[f]);
+       }
+     }
+-    let bi = 0;
+-    for(let i = 1; i < cands.length; i++) if(tot[i].v > tot[bi].v + (bi === 0 ? LA.margin : 0)) bi = i;
++    const pick = vs => { let b = 0; for(let i = 1; i < cands.length; i++) if(vs[i] > vs[b] + (b === 0 ? LA.margin : 0)) b = i; return b; };
++    const raw = tot.map(t => t.v);
++    /* THE PRICE OF A WASTED BLOCK (H-OVERBLOCK, the search's half). A set that declares a
++       hand card where a defence reaction alone covers what the set's armour leaves pays
++       `obPrice` per hand card, per determinization, on top of what the rollouts saw: the
++       hard filter (drop such sets) cost Enigma's Sharp 1.83 wins of 28 at 12 seeds, so the
++       search keeps the choice and the waste is priced. Not on a lethal hit. Own gate. */
++    let vs = raw;
++    if(obPriceOn(g, seat)){
++      const incoming = (g.pend && g.pend.total) || 0, wall0 = wallOf(sd);
++      vs = raw.map((v, i) => {
++        const isG = u => (sd.gear || []).some(x => x && x.uid === u);
++        const hand = cands[i].filter(u => !isG(u)).length;
++        if(!hand) return v;
++        const gearTot = wall0 + cands[i].filter(isG).reduce((t, u) => t + GM.gearDef((sd.gear || []).find(x => x && x.uid === u)), 0);
++        const leak = incoming - gearTot;
++        if(leak <= 0 || leak >= sd.hp || !coveringRx(g, seat, leak)) return v;
++        return v - LA.dets * LA.obPrice * hand;
++      });
++    }
++    const bi = pick(vs), bRaw = pick(raw);
+     if(bi === 0) return null;
+     const next = wallOrder(sd, cands[bi])[0];
+-    best = {a: next == null ? null : {t: "defend", uid: next}, why: next == null ? "laTake" : "laBlock"};
++    best = {a: next == null ? null : {t: "defend", uid: next}, why: bi !== bRaw ? "laOverblock" : next == null ? "laTake" : "laBlock"};
+     return best;
+   } finally {
+     IN_SEARCH = false; NOTE = keep;
+@@ -1621,6 +1659,7 @@ const CALL_WHY = {
+   laKeep: "Start with this. Played out to the end of your turn, it keeps more cards in hand for their swing back.",
+   laHold: "Stop here and keep the rest. Played out, every card you could still play costs you more than it earns.",
+   laBlock: "Block with this. Play each wall out through their turn and yours, and this one leaves you best off.",
++  laOverblock: "Keep the card. A defence reaction in your hand stops this hit on its own, and played out, this wall wins without throwing a card at it.",
+   laTake: "Take the rest of this hit. Played out through their turn and yours, the cards you keep are worth more than the life they would save.",
+   pass: "Nothing you hold is worth playing right now."
+ };
+@@ -1716,7 +1755,7 @@ function explainNow(g, seat, o){
+   if(key === "endTurn" && laCands(g, seat, null).some(x => x.t !== "endTurn")) key = "endTurnKeep";
+   /* AND WHEN WHAT IS HELD WOULD LAND NOTHING, the call says that (ship/ai-misplays). */
+   if((key === "endTurn" || key === "endTurnKeep") && n.idle) key = "endTurnIdle";
+-  return {action: a, key, why: key ? (CALL_WHY[key] ? (key === "chargeColour" || key === "gateColour" ? CALL_WHY[key].replace(/COLOUR/g, ["", "red", "yellow", "blue"][key === "gateColour" ? J.gateColourWanted(g, seat) : J.chargePitchWanted(g)] || "matching") : CALL_WHY[key]) : null) : null, line: key !== "laTake" ? lineOf(g, seat, a) : (wallOf(g.sides[seat]) > 0 ? "Don't block any more" : "Don't block")};
++  return {action: a, key, why: key ? (CALL_WHY[key] ? (key === "chargeColour" || key === "gateColour" ? CALL_WHY[key].replace(/COLOUR/g, ["", "red", "yellow", "blue"][key === "gateColour" ? J.gateColourWanted(g, seat) : J.chargePitchWanted(g)] || "matching") : CALL_WHY[key]) : null) : null, line: !(key === "laTake" || (key === "laOverblock" && !a)) ? lineOf(g, seat, a) : (wallOf(g.sides[seat]) > 0 ? "Don't block any more" : "Don't block")};
+ }
+ 
+ return {DEFAULTS, act, actBase, LA, laMask, laCands, explain, CALL_WHY, run, pitchPick, nextBlocker, offence, wallOf, affordableWithin};
