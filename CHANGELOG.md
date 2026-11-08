@@ -1,3 +1,20 @@
+## v6.16 — the AI holds a weapon bonus it cannot swing
+
+- **grantHold** (`engine/sparring.js`, gate `SPXGRANTPAY`, key `grantHold`; reader `judge.grantTakers` gains
+  `o.idlePick`): an optional pick (min 0) no longer counts as a second payload when there is nothing to pick,
+  when it has a price (this seat declines every priced pick, H12), or when it costs more than is left once the
+  card is paid. The existing joint-affordability check then holds the grant. Arakni played Up Sticks and Run
+  for its go again with the dagger's {r}{r} out of reach; its optional retrieve hid it from the grant-wait rule.
+  Census (rule policy, 28 games): Up Sticks played 39 → 27, grants lost 19 → 6 (the 6 left are payable swings
+  a go-again hand attack spent first). A/B Arakni's seat, both chairs, 3 seeds, wins of 28: rule 12.33 → 13.00,
+  Sharp 24.33 → 26.00 (every seed ≥ in both); Fai (the only other grant with an optional pick) unchanged at 17.00.
+  Drill in `test/misplays.test.js`.
+- Measured, not shipped: H-OVERBLOCK closed as not a misplay (filter t −3.19; Sharp price 1/2/4 → +0.00/−0.17/−1.17);
+  H-SHIELD's narrow hold SPXSHIELD2 split the policies (rule t≈−2.2, Sharp t≈+1.7). Patches in `experiments/`
+  on `findings/queue`.
+- Open: with only a weapon to follow (no hand or arsenal attack), the grant-first branch does not run, so the swing
+  goes first and a later grant is wasted (`haveAtk` counts hand and arsenal attacks only).
+
 ## v6.15 — the AI swings the weapon its own grant pumps
 
 - **grantSwing** (`engine/sparring.js`, gate `SPXGRANTSWING`, key `grantSwing`; reader `judge.grantedSwings`):
