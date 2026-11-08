@@ -1,0 +1,149 @@
+SHARP IN REACTION WINDOWS — NOT SHIPPED: no win. Against main 56e9a80 (v6.15).
+laRxSearch: with a link open or a layer on the stack and the seat holding priority (not its declare-defenders
+point), the rule move A0, passing, and every distinct legal play/activation are played out from laMask's view
+(no hidden card) through judge.reduce, rule policy on both seats; horizon = the wall's (opponent's turn:
+through this seat's next turn, bMu per held card; own turn: to its end); same 300-step budget; A0 must be
+beaten by rxMargin (env SPXLA_RXM; default = LA.margin 0.5). Gate SPXLARX; keys laRxHold / laRxPlay.
+Steady (search:false) untouched. Smoke: 4 Sharp-v-Sharp games, 415 reaction searches, 22 overrules, 0/0/0.
+Own-seat A/B, hero on Sharp vs the 14 others (rule), both seat orders, 28 games/seed, 12 seeds paired:
+  margin 0.5  Gravy     7.92 -> 8.42  (+0.50, t 0.60)   13→10 9→8 7→10 9→11 3→8 9→6 9→8 6→11 6→6 6→6 12→9 6→8
+              Dorinthea 25.58 -> 24.58 (-1.00, t -3.07) 25→23 26→26 27→27 25→24 25→23 26→26 25→23 25→26 26→24 26→24 26→24 25→25
+  margin 2    Gravy     7.92 -> 8.08  (+0.17, t 0.46)
+              Dorinthea 25.58 -> 25.00 (-0.58, t -1.86)
+0 refusals / violations / stalls everywhere. Phone bound and full ladder not run (not shipping).
+Leads: one masked deal is too noisy for reaction-sized differences (try dets 2-4 only here, budget permitting);
+the horizon through the next turn may be too long for a 1-card decision (try "to this seat's next decision").
+Apply: git apply experiments/sharp-reactions.patch
+
+diff --git a/engine/sparring.js b/engine/sparring.js
+index d487ca5..cc8f168 100644
+--- a/engine/sparring.js
++++ b/engine/sparring.js
+@@ -145,7 +145,8 @@ const fixOn = (g, seat) => {
+    others: SPXSOAK the soak card price, SPXLOOK whose deck a look reads, SPXPAY a
+    piece paid for go again, SPXIDLE the holds (land nothing, a go again already had),
+    SPXRXFIT the defence reaction that stops the whole leak by itself, SPXGRANTSWING a
+-   weapon swing ranked with the pending grant that pumps it. */
++   weapon swing ranked with the pending grant that pumps it, SPXLARX Sharp's search at a
++   reaction window (only where Sharp is on). */
+ const subGate = k => {
+   const v = (typeof process !== "undefined" && process.env && process.env[k]) || "";
+   return (g, seat) => {
+@@ -157,7 +158,7 @@ const subGate = k => {
+   };
+ };
+ const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate("SPXPAY"), idleOn = subGate("SPXIDLE"),
+-      fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING");
++      fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), rxSearchOn = subGate("SPXLARX");
+ /* A card or ability that would land nothing right now is held (`judge.landsNothing`).
+    Noted so the call can say why the turn ends with it still in hand. */
+ const idleOK = (g, seat, uid, from) => {
+@@ -1232,6 +1233,7 @@ const LA = {
+   bMu: envOf("SPXLA_BMU") !== "" ? +envOf("SPXLA_BMU") : 2,  /* a held card's worth at a block (null: mu) */
+   bH: envOf("SPXLA_BH") || "own",           /* block rollouts: "next" to this seat's next decision; "own" through its next turn */
+   blockN: envOf("SPXLA_BN") !== "" ? +envOf("SPXLA_BN") : 4,      /* block sets kept besides the rules' and taking it */
++  rxMargin: envOf("SPXLA_RXM") !== "" ? +envOf("SPXLA_RXM") : null,  /* a reaction-window line must beat A0 by this (null: margin) */
+   stepCap: 400,       /* per rollout */
+   budget: envOf("SPXLA_B") !== "" ? +envOf("SPXLA_B") : 300,  /* engine steps per decision, all rollouts together; over it, A0 stands */
+   stats: {decisions: 0, searched: 0, overruled: 0, steps: 0, ms: 0, maxSteps: 0, over: 0, hist: {}}
+@@ -1251,7 +1253,7 @@ function laMask(g, seat, k, salt){
+ 
+ /* Every distinct thing the seat could start now. Two copies of one card in
+    one zone lead to the same game, so only the first (zone order) is kept. */
+-function laCands(g, seat, a0){
++function laCands(g, seat, a0, rx){
+   const sd = g.sides[seat], out = [], seen = new Set();
+   const keyOf = a => {
+     const c = a.uid != null && a.uid !== "hpow" ? cardIn(sd, a.uid) : null;
+@@ -1271,7 +1273,9 @@ function laCands(g, seat, a0){
+   (sd.board || []).forEach(b => { if(!b) return; const at = J.boardAttackOf(g, seat, b.uid);
+     add(at ? {t: "activate", uid: b.uid, target: targetFor(g, seat, Object.assign({}, b.card, {power: at.power}))} : {t: "activate", uid: b.uid}); });
+   add({t: "activate", from: "hero", uid: "hpow"});
+-  add({t: "endTurn"});
++  /* a reaction window (laRxSearch) has no turn to end: passing priority is the
++     "do nothing" line there */
++  if(rx) add({t: "pass"}); else add({t: "endTurn"});
+   return out;
+ }
+ 
+@@ -1485,6 +1489,57 @@ function laBlockSearch(g, seat, o){
+   }
+ }
+ 
++/* ---- A REACTION WINDOW, SEARCHED (ship/sharp-reactions) ------------------
++   The action point and the wall were searched; a reaction window was the rules'
++   alone, so Sharp cast Gravy's Throw Caution, a defence reaction or an attack
++   reaction exactly as Steady did (QUEUE H-SHIELD: a hold the rules could not
++   afford, Sharp could). Here the window is searched the way the wall is: with a
++   link open or a layer on the stack and this seat holding priority (and not at
++   its declare-defenders point, which `laBlockSearch` owns), every distinct legal
++   play or activation, passing, and the rule policy's own choice (A0) are each
++   played out from the same masked view (`laMask`: no hidden card) through
++   `judge.reduce`, with the rule policy driving both seats. The horizon is the
++   wall's: on the opponent's turn through this seat's next turn, on its own turn
++   to the end of it; a held card is worth `bMu` on the opponent's turn. A0 wins
++   ties and must be beaten by `margin`. Budget: the same engine steps. */
++const laRxPoint = (g, seat) => !g.prompt && !J.pendingOf(g) && g.arsenalFor !== seat
++  && (!!g.pend || (g.stack || []).length > 0) && P.hasPriority(g, seat) && !laBlockPoint(g, seat);
++function laRxSearch(g, seat, a0){
++  LA.stats.decisions++;
++  const t0 = Date.now(), keep = NOTE; NOTE = null; IN_SEARCH = true;
++  let best = null, spent = 0, cands = [];
++  try {
++    cands = laCands(g, seat, a0, true);
++    if(cands.length < 2) return null;
++    LA.stats.searched++; LA.stats.rSearched = (LA.stats.rSearched || 0) + 1;
++    const mine = g.turnPlayer === seat;
++    const salt = "rx" + linkOf(g) + "/" + (g.stack || []).length + "/" + ((g.sides[seat].blockRx || []).length);
++    const tot = cands.map(() => 0);
++    for(let k = 0; k < LA.dets; k++){
++      const root = laMask(g, seat, k, salt);
++      const until = mine ? (x => x.turn >= root.turn + 1) : (x => x.turn >= root.turn + 2);
++      for(let i = 0; i < cands.length; i++){
++        const out = J.reduce(root, cands[i], seat);
++        if(out.error){ tot[i] = -Infinity; continue; }
++        const r = laRollout(out.state, seat, root, spent, until); spent += r.steps + 1;
++        if(!r.done){ LA.stats.over++; return null; }
++        tot[i] += laEval(r.n, seat, root, mine ? null : LA.bMu).v;
++      }
++    }
++    let bi = 0;
++    const m = LA.rxMargin != null ? LA.rxMargin : LA.margin;
++    for(let i = 1; i < cands.length; i++) if(tot[i] > tot[bi] + (bi === 0 ? m * LA.dets : 0)) bi = i;
++    if(bi === 0) return null;
++    best = cands[bi];
++    return best;
++  } finally {
++    IN_SEARCH = false; NOTE = keep;
++    LA.stats.steps += spent; LA.stats.maxSteps = Math.max(LA.stats.maxSteps, spent); LA.stats.ms += Date.now() - t0;
++    if(cands.length >= 2){ const b = Math.floor(spent / 10) * 10; LA.stats.hist[b] = (LA.stats.hist[b] || 0) + 1; }
++    if(best){ LA.stats.overruled++; LA.stats.rOverruled = (LA.stats.rOverruled || 0) + 1; }
++  }
++}
++
+ function act(g, seat, o){
+   const a0 = actBase(g, seat, o);
+   if(IN_SEARCH || !g || g.over || !laGated(g, seat, o)) return a0;
+@@ -1495,6 +1550,13 @@ function act(g, seat, o){
+     if(!b.a){ if(NOTE) NOTE.stop = b.why; return actBase(g, seat, Object.assign({}, o, {wallSet: linkOf(g)})); }
+     return legal(g, b.a, seat) ? tag(b.why, b.a) : a0;
+   }
++  /* A REACTION WINDOW, SEARCHED (ship/sharp-reactions): the rule policy's reaction
++     (or its pass) against every other legal play, played out like the wall. */
++  if(a0 && rxSearchOn(g, seat) && laRxPoint(g, seat)){
++    const b = laRxSearch(g, seat, a0);
++    if(!b) return a0;
++    return legal(g, b, seat) ? tag(b.t === "pass" ? "laRxHold" : "laRxPlay", b) : a0;
++  }
+   if(!a0 || !laPoint(g, seat)) return a0;
+   const b = laSearch(g, seat, a0);
+   if(!b || !legal(g, b.a, seat)) return a0;
+@@ -1619,6 +1681,8 @@ const CALL_WHY = {
+   laHit: "Start with this. Play each opening out to the end of your turn and this one lands the most damage once they block.",
+   laSafe: "Start with this. Played out to the end of your turn, it costs you the least life of any opening.",
+   laKeep: "Start with this. Played out to the end of your turn, it keeps more cards in hand for their swing back.",
++  laRxHold: "Hold it. Played out through their turn and yours, keeping this card beats spending it here.",
++  laRxPlay: "Play this now. Played out through their turn and yours, it leaves you better off than holding or playing anything else here.",
+   laHold: "Stop here and keep the rest. Played out, every card you could still play costs you more than it earns.",
+   laBlock: "Block with this. Play each wall out through their turn and yours, and this one leaves you best off.",
+   laTake: "Take the rest of this hit. Played out through their turn and yours, the cards you keep are worth more than the life they would save.",
