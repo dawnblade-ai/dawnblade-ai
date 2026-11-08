@@ -2095,20 +2095,37 @@ const GRANT_Q = {buffNext: 2, gaNext: 1};
    second payload (H29): Villainous Pose and Prime the Crowd are "your next attack gets +N" with
    the crowd booing beside it, and they were played with no attack to take the +N because the
    boo made them read as something else. Anything else printed on the card still disqualifies it. */
-const grantQs = c => {
+/* AN OPTIONAL PICK THE SEAT CANNOT USE IS NOT A SECOND PAYLOAD (H-DAGGER residue, `o.idlePick`).
+   Up Sticks and Run prints "you may retrieve a dagger from your graveyard" (an optional pick,
+   {r} to equip) beside "your next dagger attack this turn gets +4". With nothing in the
+   graveyard to pick, or a pick with a price (the seat's own answer declines every priced
+   pick), the retrieve does not happen, so
+   the card is a pure grant and waits for a swing it can pay for. Measured: 19 of 39 grants
+   were lost, every one with the dagger's {r}{r} out of reach after Up Sticks. */
+const idlePick = (op, c, sd) => {
+  if(!op || op[0] !== "pickPrompt" || !op[1] || op[1].min !== 0) return false;
+  if(!(PM.promptPickPool(sd || {}, op[1]) || []).length) return true;
+  /* A PRICED optional pick is one this seat's own answer declines (`autoAnswer`: H12 takes
+     only free picks, and every priced pick keeps its refusal), so it never happens either. */
+  if((op[1].cost || 0) > 0) return true;
+  const left = ((sd && sd.res) || 0) - (+c.cost || 0)
+    + ((sd && sd.hand) || []).reduce((t, h) => t + (h && h.uid !== c.uid ? (+h.pitch || 0) : 0), 0);
+  return (op[1].cost || 0) > left;
+};
+const grantQs = (c, sd, o) => {
   const fx = PR.fxParse(c);
-  const ops = (fx.ops || []).filter(o => o && o[0] !== "noop");
+  const ops = (fx.ops || []).filter(x => x && x[0] !== "noop" && !(o && o.idlePick && idlePick(x, c, sd)));
   if(!ops.length || (fx.conds || []).length || fx.optCost) return null;
   if(!ops.every(o => GRANT_Q[o[0]] != null || o[0] === "boo")) return null;
   const grants = ops.filter(o => GRANT_Q[o[0]] != null);
   return grants.length ? grants.map(o => o[GRANT_Q[o[0]]] || null) : null;
 };
-const grantTakers = (g, seat, uid, from) => {
+const grantTakers = (g, seat, uid, from, o) => {
   const sd = at(g, seat);
   const c = from === "arsenal" ? (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null)
           : from === "hand" ? (sd.hand || []).find(x => x && x.uid === uid) : null;
   if(!c) return null;
-  const qs = grantQs(c);
+  const qs = grantQs(c, sd, o);
   if(!qs) return null;
   const takes = (card, route) => qs.some(q => !q || PR.qualMatches(q, card, {from: route, atk: true}));
   const out = [];
