@@ -321,7 +321,9 @@
    fingerprint)}; REVEAL is new. A v34 guest would run a reducer on a view. */
 /* 35 -> 36 AT HIDDEN HANDS H2.4: two more known-slot instance marks, `_kt`
    (a known top) and `_kh` (known in hand), beside `_kb` (game.js KNOWN_MARKS). */
-const WIRE_V = 36;
+/* 36 -> 37 AT v6.08: a look into the opponent's deck stamps `revealed._from`
+   (Scout the Periphery reads target hero's deck), and the look op names whose deck. */
+const WIRE_V = 37;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

@@ -1,3 +1,18 @@
+## v6.08 — two rules fixes: counters reset, Scout the Periphery
+
+- **Counters end when their card leaves the arena** (CR 3.0.9: an object entering a zone outside the arena
+  "resets - its previous existence ceases to exist"; CR 1.15.3: "When an object ceases to exist, the counters on
+  that object cease to exist"). `game.resetLeavers` drops a counters bag keyed by a card now in a hand, deck,
+  pitch, graveyard, banished zone or soul, on either seat; `judge.stalemateCheck` runs it at the commit point of
+  both boards. Malefic Incantation bounced to hand now re-enters with 1 verse counter, not 4. The arsenal is not
+  swept (Crow's Nest puts aim counters on an arrow already there). New invariant COUNTERS-OUTLIVE-CARD.
+- **Scout the Periphery looks at the deck it targets.** The parser had folded "target hero's deck" into "your
+  deck"; it is now a choice (opposing hero's deck first), the look op names whose deck, and the looked-at top
+  card stays visible to the looker while it stays on top (`judge.clearKnown` drops it once that deck changes).
+  The AI picks the opponent's deck; not weighed as a policy.
+- **WIRE_V 36 -> 37** (`revealed._from`, the look op's owner).
+- **Drills:** `test/ctrreset.test.js`, `test/scout.test.js`, each sabotaged and caught.
+
 ## v6.07 — Hidden hands H2.4: what both players saw stays seen
 
 The three known slots H1 left open (HIDDEN-HANDS.md §4.1). Until now a card both players had seen went back
