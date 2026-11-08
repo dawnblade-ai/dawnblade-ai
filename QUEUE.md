@@ -9,12 +9,12 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-08, at v6.11)
+## HANDOFF — START HERE (CEO, 2026-11-08, at v6.12)
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
-- **Live: v6.11** (`900e2f1`; WIRE_V 39). Progress report: `docs/progress/v6.11.md`.
+- **Live: v6.12** (WIRE_V 39). Progress reports: `docs/progress/v6.11.md` (v6.10–6.11), `v6.12.md`.
 - **MISSION (user, 2026-11-07):** the ultimate FaB Silver Age precon competitive gaming environment and
   judging engine — 100% fan-made, non-profit, for fun and glory, no ads, forever.
 - **CADENCE (user, 2026-11-07):** "With each version make a progress report and start a new CEO thread."
@@ -32,15 +32,15 @@ and `docs/progress/` on main. Do not start a root handoff file.
 
 **v6.10:** six carried AI misplays fixed (judge readers `landsNothing`, `gaAbilityRedundant`/`linkGoesAgain`,
 `payBuysGoAgain`, `soakPolicy` card price; gates SPXFIX/SPXSOAK). **UNRESOLVED:** Blaze soak A/B at 12 seeds
-(8.50→8.25, t≈−0.8), shipped because it corrects the call. **v6.11:** hand reveals public (`_kh`).
+(8.50→8.25, t≈−0.8), shipped because it corrects the call. **v6.11:** hand reveals public (`_kh`). **v6.12:** `judge.takerPlays` (boots' taker), `judge.lookChoice` (SPXLOOK).
 
 **WAITING ON THE USER (asked 2026-11-08):** (1) server for the referee: Cloudflare Workers+DO (recommended),
 Supabase Edge (also H4 accounts), or neither — needs an account; build nothing until they answer. (2) a real
 two-phone (and judge) game — DESKTOP-TASKS.md, never tested on real PeerJS. If they report, act on it first.
 
 **WORKERS IN FLIGHT:**
-- `session_013xG9xAMN9v4UxqgJGzXBSH` (Opus, AI): Gravy's unused Loot the Arsenal; Scout the Periphery's AI
-  deck choice through a judge reader; attribute Dorinthea's 11.67→17.33 (Bolters alone vs the others).
+- `session_013xG9xAMN9v4UxqgJGzXBSH` (Opus, AI): attribute Dorinthea's 11.67→17.33 (Bolters alone vs the
+  others), asked after its last report. Then free for the next AI item.
 - `session_013xG9xCgDniyTy1T4jVmNfK` (Opus, H3 author): feed play-line ORDER (Big Bertha / Oasis) on
   `ship/feed-order`. Reuse it for the server deploy once a provider is chosen.
 
