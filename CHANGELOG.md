@@ -1,3 +1,15 @@
+## v6.12 — two more AI fixes: Mage Master Boots' taker, Scout the Periphery's deck
+
+- **Mage Master Boots kept for a real taker** (`judge.takerPlays`): `landsNothing` counted Loot the Arsenal (a
+  pure grant for a Pirate ally attack) as a non-attack taker, so Gravy destroyed the boots for a go again
+  nothing used. A pure grant with no taker, or a card that itself lands nothing (one level deep), is no taker.
+  Boots grants left unused in 16 Gravy games under Sharp: 2 → 0. Holding Loot itself was correct (grant-wait).
+  A/B Gravy, 3 seeds, wins of 28: rule 7.00 → 6.67, Sharp 10.67 → 11.00 (neutral).
+- **Scout the Periphery looks where it learns something** (`judge.lookChoice`, gate `SPXLOOK`, keys
+  `lookFoe`/`lookOwn`): the deck whose top card the seat does not already know; the opponent's if neither or
+  both. In self-play the opponent's top is never already known, so the A/B is identical (Azalea 16.33 vs
+  16.33); ships as a call correction. Both branches drilled in `test/misplays.test.js`.
+
 ## v6.11 — a card revealed from a hand is public
 
 Three printed reveals named a card in the shared feed but left it face down on the other phone. Each now marks
