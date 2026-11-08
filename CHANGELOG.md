@@ -1,3 +1,17 @@
+## v6.14 — the AI defends with the one reaction that stops the whole hit
+
+- **rxFit** (`engine/sparring.js`, gate `SPXRXFIT`, key `rxFit`): defending, the cheapest legal defence
+  reaction whose printed defence covers everything the blocks leave goes first; when none covers it,
+  cheapest-first stands. Enigma cast Big Blue Sky (+2) into a leak of 3 and then paid a card for Unmovable (+7).
+  A/B Enigma's seat, wins of 28: rule 13.67 → 14.50 at 6 seeds (every seed ≥, paired t≈3.5); Sharp
+  22.00 → 21.50 (t≈−0.6, noise). Dorinthea and Briar unchanged at 3 seeds. Drill in `test/misplays.test.js`.
+- **Misplay census** (Sharp, Fai/Enigma/Arakni/Blaze/Gravy/Lyath, 84 games each): most flags were probe
+  artefacts (Lyath's and Enigma's own wards, Gravy's pitch granularity, Blaze's Absorb in Aether rider). Real
+  and open: Arakni's +4 dagger grant lost to a thrown dagger; Gravy's Throw Caution shields (a hold, SPXSHIELD,
+  cut unused shields 20 → 1 but cost wins at 12 seeds, so it was not shipped); Enigma's block-step overblocks.
+- **FEED-7 Bravo closed, drill only**: Magmatic Carapace's "paid 1 and tapped" line already printed after the
+  pitch since v5.99 (shared `applyAnswer`). `test/payorder.test.js` now pins it on both boards.
+
 ## v6.13 — the feed announces a play before what it sets off
 
 - **Feed order (FEED-7)**, one body in `effects.execute`, so both boards: Big Bertha's boost line, its "banished
