@@ -39,9 +39,11 @@ Workers+DO (recommended), Supabase Edge (also H4 accounts), or neither — needs
 they answer. (2) a real two-phone (and judge) game — DESKTOP-TASKS.md. If they report, act on it first.
 
 **WORKERS (both report to the current CEO):**
-- `session_013xG9xCgDniyTy1T4jVmNfK` (Opus, H3 author): H-OVERBLOCK done (unresolved); IDLE, first in line for the server deploy.
-- `session_013xG9xAMN9v4UxqgJGzXBSH` (Opus, AI, pushes ONLY `ship/s-items-counters-scout`): H-DAGGER shipped;
-  free for the next AI item (suggest H-SHIELD's re-think or the H-DAGGER residue).
+- CEO since 2026-11-08 (after v6.15): `session_013xG9xCnjwgSC6P9f3uUE9W`.
+- `session_013xG9xCgDniyTy1T4jVmNfK` (Opus, H3 author): ASSIGNED H-OVERBLOCK take 2 (price it in Sharp's laEval,
+  pushes `ship/h-overblock`); first in line for the server deploy.
+- `session_013xG9xAMN9v4UxqgJGzXBSH` (Opus, AI, pushes ONLY `ship/s-items-counters-scout`): ASSIGNED H-SHIELD
+  re-think (diagnose the lost wins first) + a count of how many of the 19 lost dagger grants were correct trades.
 
 **NEXT:** the server deploy (a WebSocket URL + "join a server table"), then **H4 · ranked** (HIDDEN-HANDS.md
 §6: accounts, Elo, result authority, forfeit clocks).
