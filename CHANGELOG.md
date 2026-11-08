@@ -1,3 +1,14 @@
+## v6.15 — the AI swings the weapon its own grant pumps
+
+- **grantSwing** (`engine/sparring.js`, gate `SPXGRANTSWING`, key `grantSwing`; reader `judge.grantedSwings`):
+  a weapon a pending "your next … attack this turn gets +N" admits now ranks among the hand attacks at its
+  pumped power (printed + {p} counters + grant). Arakni played Up Sticks and Run (+4 to the next dagger attack),
+  then led with Mark the Prey (3) over the dagger that would have swung for 5. A policy fix, not a rules one.
+  Dagger grants expired 34/38 → 19/39 (rule policy, 28 games). A/B own seat, 3 seeds, wins of 28: Arakni rule
+  11.67 → 12.67, Sharp 23.00 → 24.33; Dorinthea 16.67 → 18.00 (every seed ≥); Boltyn, Fai unchanged.
+  Drill in `test/misplays.test.js`. Pins whose games moved were re-anchored (freepick, feedsource, explain census).
+- Open: the remaining 19 lost grants mostly trade the dagger's {r}{r} for a go-again hand attack (Sharp-level weighing).
+
 ## v6.14 — the AI defends with the one reaction that stops the whole hit
 
 - **rxFit** (`engine/sparring.js`, gate `SPXRXFIT`, key `rxFit`): defending, the cheapest legal defence
