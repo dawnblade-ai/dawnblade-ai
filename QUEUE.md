@@ -39,7 +39,10 @@ the user must start it. The new CEO tells both workers its id.
 
 **IN FLIGHT:**
 - `session_013xG9xCgDniyTy1T4jVmNfK` (Opus, H3 author): **Sharp reaction search**, extending Sharp's search into
-  reaction windows (H-SHIELD's real fix). May send a plan first. First in line for the server deploy.
+  reaction windows (H-SHIELD's real fix). Pass 1 (SPXLARX, `experiments/sharp-reactions.patch` f02e548) NO WIN at 12
+  seeds: Gravy +0.50 (t 0.60), Dorinthea −1.00 (t −3.07); margin 2 shrinks the loss, no gain. ASSIGNED pass 2: more
+  deals at reaction windows + horizon to the next decision; park if 6 seeds don't show Dor ≥0 and Gravy >0.
+  First in line for the server deploy.
 - `session_013xG9xAMN9v4UxqgJGzXBSH` (Opus, AI, pushes ONLY `ship/s-items-counters-scout`): **grant ordering with
   only a weapon to follow** (`haveAtk` counts hand and arsenal attacks only, so the swing goes first and a later grant is
   wasted) SHIPPED v6.17. atkKeepsAP-first (SPXSWINGFIRST, `experiments/spxswingfirst.patch` 1c7e14e) measured flat:
