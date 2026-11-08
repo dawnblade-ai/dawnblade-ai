@@ -9,7 +9,51 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-07, at v6.07)
+## HANDOFF — START HERE (CEO, 2026-11-08, at v6.09)
+
+**Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
+and `docs/progress/` on main. Do not start a root handoff file.
+
+- **Live: v6.09** (release `b6a5529`; then `607c7fc` seeded/strict page drives; report `b579ca6`).
+  Progress report: `docs/progress/v6.09.md`.
+- **MISSION (user, 2026-11-07):** the ultimate FaB Silver Age precon competitive gaming environment and
+  judging engine — 100% fan-made, non-profit, for fun and glory, no ads, forever.
+- **CADENCE (user, 2026-11-07):** "With each version make a progress report and start a new CEO thread."
+- **HOW TO WORK:** workers as cloud sessions in env_011rwpp2MyBTt3cEsZKDoVGk, at most TWO at once, Sonnet
+  mechanical / Opus rules-AI-design; workers push `ship/*` and report under 30 lines via send_message; the CEO
+  re-validates on the MERGED tree (suite fail 0 / skipped 5, scenes, fairness, babel, `tools/page.js` screens,
+  `tools/twophone.js` + `tools/twophone.js judge` with `TWOPHONE_SEED` for table work, `tools/serverrun.js`
+  with DENO=<binary> for referee work, the 630-game ladder), is the only one who pushes main, confirms CI.
+  Page deps + deno install into a scratch dir (tools/page.js header; `npm install --prefix <dir> deno`).
+  **Workers hit the 5-hour usage limit and a limit stop sends NO report** — check idle workers with
+  get_session (status_bucket failed) and nudge them; tell them to push after every green fix.
+
+**H3 SHIPPED (v6.08–v6.09):** judge mode (`engine/hub.js`, LOBBY_V 3: a third browser holds the deck, both
+phones blind, seat keys, seed from all three); `net.refereeHost` serves N seats; host/judge save every commit;
+`net.wsAdapter` + Workers-shaped isolate (`test/helpers/isolate.js`) + Deno prove the referee server-side.
+`test/helpers/blind.js` is THE blindness check (names every legitimate grant: `_kb _kt _kh`, Scout's look,
+both-seat reveals); twophone fails hard on it after every action. v6.08: counters reset on leaving the arena
+(`game.resetLeavers`), Scout the Periphery reads the target's deck (WIRE_V 37).
+
+**WAITING ON THE USER (asked 2026-11-08):** (1) server for the referee: Cloudflare Workers+DO (CEO's
+recommendation), Supabase Edge (also H4 accounts), or neither — needs an account; build nothing until they
+answer. (2) a real two-phone (and judge) game — DESKTOP-TASKS.md, never tested on real PeerJS.
+
+**WORKERS IN FLIGHT:**
+- `session_013xG9xAMN9v4UxqgJGzXBSH` (Opus) — the six carried AI misplays (Refraction Bolters go-again, soak
+  pitching, Bolt'n Boots on an arrow with go again, Gravy's boots taker, Enigma Uphold, Frost Spike) on
+  `ship/ai-misplays`, each measured per CLAUDE.md. It hit the usage limit once with nothing pushed; resumed.
+- `session_013xG9xCgDniyTy1T4jVmNfK` (Opus, H3 author) — standing by; reuse it for the server deploy.
+
+**NEXT:** the server deploy once a provider is chosen (a WebSocket URL + a "join a server table" button), then
+**H4 · ranked** (HIDDEN-HANDS.md §6: accounts, Elo, result authority, forfeit clocks).
+
+**SMALLER OPEN ITEMS:** hand-reveal variants beyond foeReveal/fusion (clash, Strongest Survive…) not marked
+known (stay hidden, the safe side) · Scout's AI choice is always the opponent's deck (not weighed) · a
+board→arsenal move would keep counters (no route today) · play-line ORDER in the feed (Big Bertha / Oasis) ·
+trainer QA for Fai, Enigma, Arakni, Blaze, Gravy, Lyath · Line Crossers re-pin · parked: sudden death.
+
+## HANDOFF ARCHIVE (CEO, 2026-11-07, at v6.07) — superseded by the section above
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
