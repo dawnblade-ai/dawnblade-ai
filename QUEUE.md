@@ -39,8 +39,10 @@ Supabase Edge (also H4 accounts), or neither — needs an account; build nothing
 two-phone (and judge) game — DESKTOP-TASKS.md, never tested on real PeerJS. If they report, act on it first.
 
 **WORKERS IN FLIGHT:**
-- `session_013xG9xAMN9v4UxqgJGzXBSH` (Opus, AI): attribute Dorinthea's 11.67→17.33 (Bolters alone vs the
-  others), asked after its last report. Then free for the next AI item.
+- `session_013xG9xAMN9v4UxqgJGzXBSH` (Opus, AI): idle. **TO SHIP:** `d701b61` on `ship/s-items-counters-scout`
+  (one gate per fix: SPXPAY, SPXIDLE beside SPXSOAK/SPXLOOK, all inside SPXFIX; default unchanged). Replay
+  onto main, suite + ladder, push (no APP_VER bump needed). Dorinthea's 11.67→17.33 is ALL the Bolters fix
+  (per-seed [9,13,13]→[18,17,17], identical with only SPXPAY on). Free for the next AI item.
 - `session_013xG9xCgDniyTy1T4jVmNfK` (Opus, H3 author): feed play-line ORDER (Big Bertha / Oasis) on
   `ship/feed-order`. Reuse it for the server deploy once a provider is chosen.
 
