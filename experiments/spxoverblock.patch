@@ -1,0 +1,161 @@
+H-OVERBLOCK (Enigma) — NOT SHIPPED: no win. Against main dc44922 (v6.14).
+Rule: nextBlocker declares no hand blocker when a defence reaction in hand/arsenal
+(judge.defendsNow) prints defence >= the whole leak and its printed cost is payable from
+floating resources + the free hand's pitch; not on a lethal hit. Gate SPXOVERBLOCK, key
+blockRxCovers, drill test/overblock.test.js (gate off fails it).
+Own-seat A/B, Enigma vs the 14 others, both seat orders, 28 games/seed, 12 seeds paired:
+  rule policy: 15.58 -> 16.25 (+0.67, t 1.08)   per seed 16→16 14→13 13→14 15→16 14→13 15→15 21→17 13→16 17→20 16→20 17→18 16→17
+  Sharp (Enigma's seat), this patch: 21.42 -> 21.58 (+0.17, t 0.39)
+  Sharp with ALSO a filter on laBlockSets (drop sets holding a hand card a reaction covers):
+               21.42 -> 19.58 (-1.83, t -3.19) — removed; the search's own block sets know better.
+Census: the rule policy meets this case in ~4% of its hand blocks, mostly lethal (excluded) or
+the reaction unpayable once the card is kept; Sharp meets it in ~10% (11 of 107 over 8 games).
+0 refusals / violations / stalls in every A/B run. Full ladder not run (not shipping).
+Apply: git apply experiments/spxoverblock.patch
+
+diff --git a/engine/sparring.js b/engine/sparring.js
+index f1c00ce..55fbaf6 100644
+--- a/engine/sparring.js
++++ b/engine/sparring.js
+@@ -144,7 +144,8 @@ const fixOn = (g, seat) => {
+    a hero list = those seats), inside SPXFIX, so one fix can be A/B'd against the
+    others: SPXSOAK the soak card price, SPXLOOK whose deck a look reads, SPXPAY a
+    piece paid for go again, SPXIDLE the holds (land nothing, a go again already had),
+-   SPXRXFIT the defence reaction that stops the whole leak by itself. */
++   SPXRXFIT the defence reaction that stops the whole leak by itself, SPXOVERBLOCK no hand
++   blocker beside a defence reaction that stops the leak by itself. */
+ const subGate = k => {
+   const v = (typeof process !== "undefined" && process.env && process.env[k]) || "";
+   return (g, seat) => {
+@@ -156,7 +157,7 @@ const subGate = k => {
+   };
+ };
+ const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate("SPXPAY"), idleOn = subGate("SPXIDLE"),
+-      fitOn = subGate("SPXRXFIT");
++      fitOn = subGate("SPXRXFIT"), overOn = subGate("SPXOVERBLOCK");
+ /* A card or ability that would land nothing right now is held (`judge.landsNothing`).
+    Noted so the call can say why the turn ends with it still in hand. */
+ const idleOK = (g, seat, uid, from) => {
+@@ -427,6 +428,23 @@ function wallOf(sd){
+    damage step will total (`judge.strike` adds `blockRx` to the wall). */
+ const wallNow = sd => wallOf(sd) + (sd.blockRx || []).reduce((t, l) => t + ((l && l.def) || 0), 0);
+ 
++/* A DEFENCE REACTION THIS SEAT HOLDS WHOSE PRINTED DEFENCE ALONE COVERS `leak`, AND
++   THAT IT CAN PAY FOR, or null. `defendsNow` answers what defends (no card text here);
++   the cost is printed and paid from floating resources plus the pitch of the free hand
++   (not the card itself, not a declared defender). Cheapest first, then defence, then uid. */
++function coveringRx(g, seat, leak){
++  const sd = g.sides[seat];
++  const held = (sd.hand || []).map(c => ({c, from: "hand"})).concat(sd.arsenal ? [{c: sd.arsenal, from: "arsenal"}] : []);
++  return held
++    .filter(x => x.c && num(x.c, "def") >= leak && J.defendsNow(g, seat, x.c.uid, x.from))
++    .filter(x => {
++      const need = num(x.c, "cost") - (sd.res || 0);
++      if(need <= 0) return true;
++      return J.handFree(sd).filter(h => h.uid !== x.c.uid).reduce((t, h) => t + num(h, "pitch"), 0) >= need;
++    })
++    .sort((a, b) => num(a.c, "cost") - num(b.c, "cost") || num(a.c, "def") - num(b.c, "def") || byUid(a.c, b.c))[0] || null;
++}
++
+ function nextBlocker(g, seat, o){
+   const sd = g.sides[seat];
+   const incoming = (g.pend && g.pend.total) || 0;
+@@ -484,6 +502,15 @@ function nextBlocker(g, seat, o){
+      (CR 8.1.3a) — `legal` refuses it, so the policy does not have to
+      know that, and would be wrong here if it tried. */
+   if(!lethal && (sd.blockH || []).length >= o.handBlockers) return null;
++  /* NO HAND BLOCKER BESIDE A REACTION THAT STOPS THE LEAK ALONE (H-OVERBLOCK, Enigma
++     census). The wall took a hand card and the reaction step then cast a defence
++     reaction that would have stopped the whole leak by itself (`rxFit` picks exactly
++     that one): the blocked card bought nothing. When a defence reaction in hand or
++     arsenal (`judge.defendsNow`) prints defence covering the whole leak and its printed
++     cost is in reach of the floating resources plus the free hand's pitch, no hand card
++     is declared. Not on a lethal hit, where a reaction that misses its window would cost
++     the game. Printed numbers only, as `rxFit`. */
++  if(!lethal && overOn(g, seat) && coveringRx(g, seat, leak)){ if(NOTE) NOTE.rxCovers = true; return null; }
+   const card = J.handFree(sd)
+     .filter(c => num(c, "def") > 0)
+     .sort((a, b) => num(b, "def") - num(a, "def") || num(a, "power") - num(b, "power") || byUid(a, b))
+@@ -1560,6 +1587,7 @@ const CALL_WHY = {
+   blockSpare: "Block with a spare card. Your next turn cannot spend a hand this big, so the extra card stops this whole hit for free.",
+   rxHold: "Hold it. Your blocks already stop this whole hit, so the card stays in your hand.",
+   rxDefend: "Play it now. It protects you from this attack.",
++  blockRxCovers: "Don't block with a card. A defence reaction in your hand stops this whole hit on its own, so a blocked card would buy nothing.",
+   rxFit: "Play this one. It stops everything your blocks leave on its own, so no second card is needed.",
+   rxAttack: "React with your cheapest card to pump this attack.",
+   rxAbility: "Use the ability. It is printed for this window.",
+@@ -1698,7 +1726,7 @@ function explainNow(g, seat, o){
+      read off the action instead (`addPay` is pinned by sparring.test.js). */
+   const hit = a && n.tags.find(t => t[1] === a);
+   /* THE SEARCH CAN SAY "STOP BLOCKING" (phase c): no action, a reason */
+-  let key = n.stop || (a ? ((hit && hit[0]) || BY_TYPE[a.t] || null) : null);
++  let key = n.stop || (a ? ((hit && hit[0]) || BY_TYPE[a.t] || null) : (n.rxCovers ? "blockRxCovers" : null));
+   /* "NOTHING WORTH DOING IS LEFT" ONLY WHEN NOTHING IS LEFT (QA-B FEED-1). With
+      a play still legal the call says the seat is holding it, not that there is none. */
+   if(key === "endTurn" && laCands(g, seat, null).some(x => x.t !== "endTurn")) key = "endTurnKeep";
+diff --git a/test/overblock.test.js b/test/overblock.test.js
+new file mode 100644
+index 0000000..09c4d97
+--- /dev/null
++++ b/test/overblock.test.js
+@@ -0,0 +1,60 @@
++/* test/overblock.test.js — H-OVERBLOCK (Enigma census, v6.14): no hand blocker
++   beside a defence reaction that stops the whole leak by itself.
++
++   `nextBlocker` (the rule wall, and the search's baseline set) declined to add a
++   hand card when a defence reaction in hand or arsenal (`judge.defendsNow`) prints
++   defence covering the whole leak and its printed cost is in reach of floating
++   resources plus the free hand's pitch. Not on a lethal hit. Gate SPXOVERBLOCK,
++   call key `blockRxCovers`. Asserts on the action and the call key; each refusal
++   (short, unaffordable, lethal) is the sabotage of the match. */
++const test = require("node:test");
++const assert = require("node:assert/strict");
++const H = require("./helpers/judged.js");
++const SP = require("../engine/sparring.js");
++const P = require("../engine/priority.js");
++const J = H.J;
++const skip = !H.hasDb() && "no cached card database";
++
++/* the first block decision Enigma (seat 0) faces in a seeded game */
++function blockPoint(){
++  const {match} = require("../tools/selfplay.js");
++  let n = match("enigma", "kayo", "ob-kayo-0", 0);
++  for(let i = 0; i < 6000 && !n.over; i++){
++    if(P.canDeclareDefenders(n, 0) && n.pend && n.pend.total >= 6) return n;
++    let moved = false;
++    for(const seat of [0, 1]){ const a = SP.act(n, seat); if(!a) continue; const r = J.reduce(n, a, seat); if(r.error) continue; n = r.state; moved = true; break; }
++    if(!moved) break;
++  }
++  return null;
++}
++const mk = (nm, p, uid) => ({...H.card(nm, p), uid});
++/* a hand of a 3-defence blocker, Unmovable (printed defence 7 at pitch 1), and two blues to pay its 3 */
++function setUp(o){
++  const g = blockPoint();
++  assert.ok(g, "the fixture reaches a block decision");
++  o = o || {};
++  const um = mk("Unmovable", 1, "um1");
++  assert.ok(J.defendsNow({...g, sides: g.sides.map((sd, i) => i ? sd : {...sd, hand: [um]})}, 0, "um1", "hand"), "Unmovable is a defence reaction");
++  const hand = [mk("Test of Strength", 1, "ts1"), um].concat(o.broke ? [] : [mk("Big Blue Sky", 3, "bb1"), mk("Second Tenet of Chi: Wind", 3, "st1")]);
++  return {...g, sides: g.sides.map((sd, i) => i ? sd : {...sd, hand, arsenal: null, res: 0, blockH: [], blockG: (sd.gear || []).map(x => x.uid), hp: o.hp || 20}),
++          pend: {...g.pend, total: o.total || 6}};
++}
++const wallOf = g => SP.wallOf(g.sides[0]);
++
++test("a leak a defence reaction stops alone: no hand card is declared, and the call says why", {skip}, () => {
++  const g = setUp();
++  assert.ok(g.pend.total - wallOf(g) <= 7, "the leak is within Unmovable's printed defence");
++  assert.equal(SP.nextBlocker(g, 0, SP.DEFAULTS), null, "Test of Strength stays in hand");
++  assert.equal(SP.explain(g, 0).key, "blockRxCovers");
++});
++test("SABOTAGE — the reaction falls short, cannot be paid for, or the hit is lethal: the hand card blocks", {skip}, () => {
++  const short = setUp({total: 30});
++  const a = SP.nextBlocker(short, 0, SP.DEFAULTS);
++  assert.ok(a && a.t === "defend", "a leak past the reaction's defence: blocks — " + JSON.stringify(a));
++  const broke = setUp({broke: true});
++  const b = SP.nextBlocker(broke, 0, SP.DEFAULTS);
++  assert.ok(b && b.t === "defend" && b.uid === "ts1", "no pitch for its cost: blocks — " + JSON.stringify(b));
++  const lethal = setUp({hp: 3});
++  const c = SP.nextBlocker(lethal, 0, SP.DEFAULTS);
++  assert.ok(c && c.t === "defend", "a lethal hit: blocks — " + JSON.stringify(c));
++});
