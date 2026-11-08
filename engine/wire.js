@@ -323,7 +323,9 @@
    (a known top) and `_kh` (known in hand), beside `_kb` (game.js KNOWN_MARKS). */
 /* 36 -> 37 AT v6.08: a look into the opponent's deck stamps `revealed._from`
    (Scout the Periphery reads target hero's deck), and the look op names whose deck. */
-const WIRE_V = 37;
+/* 37 -> 38 AT v6.10: the game key `_gaGrant` carries the granting source's name
+   (a string) instead of `true`, so the late go-again line can name its source. */
+const WIRE_V = 38;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

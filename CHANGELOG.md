@@ -1,3 +1,21 @@
+## v6.10 — six carried AI misplays fixed
+
+The AI seat (`sparring.js`) still reads no card text. Each fix is a new judge reader, gated `SPXFIX` (soak:
+`SPXSOAK`), with its own call key.
+- **Plays into nothing held** (`judge.landsNothing`, key `endTurnIdle`): a card or ability whose every op would
+  land nothing is not played. Uphold Tradition with no ward aura (misfires 26→0 rule policy, 14→0 Sharp), Frost
+  Spike with no exposed zone (2→0), Mage Master Boots with no non-attack action to take the grant.
+- **Bolt'n Boots held** when the arrow already goes again or will (`gaAbilityRedundant` / `linkGoesAgain`,
+  key `rxGaHeld`): redundant uses 8 of 27 → 0 of 22.
+- **Refraction Bolters paid** for go again when the kept action point buys a second swing (`payBuysGoAgain`,
+  key `payGoAgain`): 0 of 27 offers → 7 of 7, each followed by the swing.
+- **A soak that costs a card** is taken only at lethal or when it stops 2+ (`soakPolicy`, key `soakCard`).
+- The late go-again line names its source: `_gaGrant` holds the source's name, not `true` (WIRE_V 37 → 38).
+- Measured: hero's-own-seat A/B at 3 seeds neutral for Enigma, Iyslander, Gravy, Azalea; Dorinthea 11.67 →
+  17.33 wins of 28 (disjoint seeds). The soak A/B for Blaze is UNRESOLVED at 12 seeds (−0.25, t≈−0.8); it ships
+  because it corrects the call. Drill `test/misplays.test.js`: sabotaging any reader fails it.
+- Open: Gravy left 2 of 16 boots grants unused (Loot the Arsenal held to the end; one late-game case unchased).
+
 ## v6.09 — Hidden hands H3: the neutral referee (judge mode, server-ready)
 
 HIDDEN-HANDS.md §6 H3. Until now the host's phone held the deck. Now a third device can.
