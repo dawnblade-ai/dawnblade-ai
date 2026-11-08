@@ -366,7 +366,7 @@ test("the policy is DETERMINISTIC and touches no rng", {skip}, () => {
   const b = E.soakPolicy({amount: 9, avail: 9, options: opts}, {hp: 20});
   assert.deepEqual(a, b, "two peers and a replay must decide identically");
   const src = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8");
-  const body = src.match(/function soakPolicy\(live, sd\)\{[\s\S]*?\n\}/);
+  const body = src.match(/function soakPolicy\(live, sd, opt\)\{[\s\S]*?\n\}/);
   assert.ok(body, "soakPolicy moved — re-anchor this drill");
   assert.ok(!/rng/i.test(body[0]),
     "consuming the seeded stream would shift every later shuffle, so a replay would diverge");

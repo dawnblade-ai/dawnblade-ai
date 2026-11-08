@@ -119,3 +119,22 @@ test("Refraction Bolters is destroyed for go again when the kept action point bu
   const priced = sheet({weaponUsed: {}}, {});
   assert.equal(J.payBuysGoAgain({...priced, prompt: {...priced.prompt, cost: 2}}, 0), false, "a resource price is the price rule's to weigh");
 });
+
+test("a soak that needs a card pitched is priced as the card: 1 point is not worth one, 2 is, lethal always is", () => {
+  const E = require("../engine/effects.js");
+  const bar = n => ({uid: "b" + n, name: "Barrier " + n, kind: "barrier", amount: n, cost: n});
+  const live = (amount, opts, avail) => ({amount, options: opts, avail});
+  const sd = (res, hp) => ({res, hp, hand: [{uid: "h1", pitch: 3}]});
+  /* the old price: resources only — a whole card pitched to stop 1 */
+  assert.deepEqual(E.soakPolicy(live(1, [bar(1)], 3), sd(0, 20)), [0], "the plain rule takes it");
+  assert.deepEqual(E.soakPolicy(live(1, [bar(1)], 3), sd(0, 20), {cardPrice: true}), [],
+    "priced as the card it pitches, 1 point is not worth it");
+  assert.deepEqual(E.soakPolicy(live(1, [bar(1)], 3), sd(1, 20), {cardPrice: true}), [0],
+    "paid from what is already floating, nothing is pitched: taken");
+  assert.deepEqual(E.soakPolicy(live(2, [bar(2)], 3), sd(0, 20), {cardPrice: true}), [0], "2 points for the card: taken");
+  assert.deepEqual(E.soakPolicy(live(1, [bar(1)], 3), sd(0, 1), {cardPrice: true}), [0], "at lethal nothing held is worth more");
+  const J = require("../engine/judge.js");
+  const g = {sides: [sd(0, 20), sd(0, 20)], prompt: {tag: "soak", side: 0, ...live(1, [bar(1)], 3), sel: []}};
+  assert.deepEqual(J.autoAnswer(g, {cardPrice: true}), {t: "promptConfirm"}, "the one answer body carries the ask");
+  assert.deepEqual(J.autoAnswer(g), {t: "promptSel", i: 0});
+});

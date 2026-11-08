@@ -556,12 +556,13 @@ const freePick = p => {
   if(p.zone === "hand" && p.to === "arsenal") return "ars";
   return null;
 };
-function autoAnswer(g){
+function autoAnswer(g, o){
   const p = g && g.prompt;
   if(!p) return null;
   const sd = at(g, p.side || 0);
   if(p.tag === "soak"){
-    const want = E.soakPolicy(p, sd);
+    /* `o.cardPrice`: the seat policy's per-seat ask (ship/ai-misplays), see `soakPolicy` */
+    const want = E.soakPolicy(p, sd, o && o.cardPrice ? {cardPrice: true} : null);
     for(let i = 0; i < (p.options || []).length; i++)
       if(want.indexOf(i) >= 0 && (p.sel || []).indexOf(i) < 0) return {t: "promptSel", i};
     return {t: "promptConfirm"};

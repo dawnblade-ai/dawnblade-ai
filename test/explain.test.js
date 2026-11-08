@@ -129,11 +129,13 @@ test("every reason is keyed from a site in the policy, and the census names what
      reasons belong to the lookahead, which only the table's AI seat and its call ask for (`{search: true}`);
      the census runs the rule policy, so `test/lookahead.test.js` reaches them.
      A resource piece that pays for a weapon swing (QA-A H-2) re-routes the census again: `discost`
-     is not reached now (test/discost.test.js drives the AI's answer). */
+     is not reached now (test/discost.test.js drives the AI's answer).
+     The misplay fixes (ship/ai-misplays) re-route it once more: `abtarget` is not reached by these
+     30 games now (test/abdecl.test.js drives the AI's answer), and the four new reasons are. */
   const seen = census().keys;
   for(const k of Object.keys(seen)) assert.ok(SP.CALL_WHY[k], "reached key " + k + " has no reason");
   assert.deepEqual(keys.filter(k => !seen[k]).sort(),
-    ["addPayNo", "allocAll", "allyTake", "answer", "arenaAP", "arenaRes", "arsenalSkip", "boostNo",
+    ["abtarget", "addPayNo", "allocAll", "allyTake", "answer", "arenaAP", "arenaRes", "arsenalSkip", "boostNo",
      "chargeDone", "chargeMore", "chargeNone", "discost", "laBlock", "laHit", "laHold", "laKeep", "laSafe", "laTake",
      "payCancel", "pitchChi"]);
 });

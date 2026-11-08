@@ -11433,9 +11433,17 @@ function rxNoTargetWhy(s, c, defenders){
   return c.name + " targets " + P.qualLabel(q) + " — " + (tgt ? tgt.name : "this attack") + " isn't one";
 }
 
-function soakPolicy(live, sd){
+/* `o.cardPrice` (QA-A H-4, ship/ai-misplays; the AI seat asks for it, gated per
+   seat): a barrier paid out of FLOATING resources is priced in resources, as
+   before, but one that needs a card PITCHED for it is priced as the card. A hit
+   on the other seat's turn pitches a whole card for {r} that the end of the turn
+   then wipes, so 37 soaks in 24 games gave a card to stop 1 point. Pitched for,
+   it is taken only at lethal or when it stops CARD_SOAK points or more. */
+const CARD_SOAK = 2;
+function soakPolicy(live, sd, opt){
   if(!live || !live.options) return [];
   const lethal = ((sd && sd.hp) || 0) - (live.amount || 0) <= 0;
+  const cardPrice = !!(opt && opt.cardPrice), floating = (sd && sd.res) || 0;
   const sel = [];
   let spent = 0, soaked = 0;
   live.options.forEach((o, i) => {
@@ -11443,6 +11451,8 @@ function soakPolicy(live, sd){
     if(o.kind === "spellvoid"){ sel.push(i); soaked += o.amount || 0; return; }
     if(!lethal && (o.cost || 0) > (live.amount || 0) - soaked) return;  /* a bad deal */
     if(spent + (o.cost || 0) > (live.avail || 0)) return;          /* cannot reach it */
+    if(cardPrice && !lethal && spent + (o.cost || 0) > floating
+       && Math.min(o.amount || 0, (live.amount || 0) - soaked) < CARD_SOAK) return;  /* a card for a point */
     sel.push(i); spent += o.cost || 0; soaked += o.amount || 0;
   });
   return sel;

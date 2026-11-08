@@ -140,6 +140,16 @@ const fixOn = (g, seat) => {
   const sd = g && g.sides && g.sides[seat];
   return !!(sd && SPXFIX.split(",").indexOf(sd.heroKey) >= 0);
 };
+/* The soak card price measures on its own gate (`SPXSOAK`, same reading as SPXFIX)
+   so it is A/B'd against the fixes already shipped rather than with them. */
+const SPXSOAK = (typeof process !== "undefined" && process.env && process.env.SPXSOAK) || "";
+const soakOn = (g, seat) => {
+  if(!fixOn(g, seat)) return false;
+  if(!SPXSOAK) return true;
+  if(SPXSOAK === "none") return false;
+  const sd = g && g.sides && g.sides[seat];
+  return !!(sd && SPXSOAK.split(",").indexOf(sd.heroKey) >= 0);
+};
 /* A card or ability that would land nothing right now is held (`judge.landsNothing`).
    Noted so the call can say why the turn ends with it still in hand. */
 const idleOK = (g, seat, uid, from) => {
@@ -1045,10 +1055,12 @@ function actBase(g, seat, o){
     if(g.prompt.tag === "pay" && g.prompt.choice == null && (g.prompt.side || 0) === seat
        && fixOn(g, seat) && J.payBuysGoAgain(g, seat))
       return tag("payGoAgain", {t: "promptChoose", choice: "pay"});
-    const ans = J.autoAnswer(g), pt = g.prompt.tag;
+    /* A SOAK PITCHED FOR IS PRICED AS THE CARD (QA-A H-4): `effects.soakPolicy`'s
+       card price, asked through the one answer body. */
+    const ans = J.autoAnswer(g, g.prompt.tag === "soak" && soakOn(g, seat) ? {cardPrice: true} : null), pt = g.prompt.tag;
     const k = !ans ? null
       : pt === "opt" ? "optKeep"
-      : pt === "soak" ? "soak"
+      : pt === "soak" ? (soakOn(g, seat) && JSON.stringify(ans) !== JSON.stringify(J.autoAnswer(g)) ? "soakCard" : "soak")
       : pt === "pay" ? ((ans.choice || g.prompt.choice) === "decline" ? (g.prompt.destroyUid != null ? "payNoPiece" : "payNo") : "payYes")
       : pt === "modal" || pt === "target" ? "firstOption"
       : pt === "alloc" ? "allocAll"
@@ -1550,6 +1562,7 @@ const CALL_WHY = {
   nonAttack: "Play the cheapest card you have left.",
   optKeep: "Leave them on top in this order.",
   soak: "Pay to soak only what the damage is worth.",
+  soakCard: "Take it. Soaking this would mean pitching a whole card to stop less than it is worth.",
   payYes: "Pay it.",
   payNo: "Don't pay. It isn't worth the cards.",
   payNoPiece: "Don't pay. Keeping the piece is worth more than what destroying it buys.",
