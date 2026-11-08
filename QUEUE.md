@@ -9,7 +9,48 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-08, at v6.15)
+## HANDOFF — START HERE (CEO, 2026-11-08, at v6.16)
+
+**Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
+and `docs/progress/` on main. Do not start a root handoff file.
+
+- **Live: v6.16** (WIRE_V 39). Progress reports: `docs/progress/v6.15.md`, `v6.16.md`.
+- **MISSION (user, 2026-11-07):** the ultimate FaB Silver Age precon competitive gaming environment and
+  judging engine — 100% fan-made, non-profit, for fun and glory, no ads, forever.
+- **CADENCE (user, 2026-11-07):** "With each version make a progress report and start a new CEO thread."
+- **HOW TO WORK:** workers in env_011rwpp2MyBTt3cEsZKDoVGk, at most TWO; replay each ship/* branch onto main
+  with cherry-pick (only the fix commits, never experiments/ commits), re-validate, CEO alone pushes main, confirm
+  CI `drills`. Workers hit the 5-hour limit with NO report: get_session (status_bucket failed), nudge after reset.
+
+**v6.16:** grantHold (`SPXGRANTPAY`, `judge.grantTakers` o.idlePick, key `grantHold`): a grant waits when no
+swing it pumps can be paid for. Lost dagger grants 19→6; Arakni rule 12.33→13.00, Sharp 24.33→26.00 (3 seeds).
+Ladder 0/0/0/0.
+
+**CLOSED / PARKED (v6.16 wave):**
+- **H-OVERBLOCK** CLOSED, not a misplay: filter −1.83 (t −3.19); Sharp price SPXOBPRICE 1/2/4 → +0.00/−0.17/−1.17.
+  Patches `experiments/spxoverblock.patch`, `spxobprice.patch`.
+- **H-SHIELD** PARKED: SPXSHIELD2 (hold only at the attacker's last link at an ally; `judge.linkLastAtAlly`) at 12
+  seeds split rule 6.50→5.92 (t≈−2.2) vs Sharp 7.92→8.42 (t≈+1.7). Patch `experiments/spxshield2.patch` (982bc26
+  on ship/s-items-counters-scout). Own-turn casts feed Gravy's watery-grave engine; go-again ally links fire 20/22.
+
+**IN FLIGHT:**
+- `session_013xG9xCgDniyTy1T4jVmNfK` (Opus, H3 author): **Sharp reaction search**, extending Sharp's search into
+  reaction windows (H-SHIELD's real fix). May send a plan first. First in line for the server deploy.
+- `session_013xG9xAMN9v4UxqgJGzXBSH` (Opus, AI, pushes ONLY `ship/s-items-counters-scout`): **grant ordering with
+  only a weapon to follow** (`haveAtk` counts hand and arsenal attacks only, so the swing goes first and a later grant is
+  wasted) + census of the 6 remaining lost dagger grants.
+
+**WAITING ON THE USER (asked 2026-11-08, re-asked at v6.15 and v6.16):** (1) server for the referee: Cloudflare
+Workers+DO (recommended), Supabase Edge (also H4 accounts), or neither — needs an account; build nothing until
+they answer. (2) a real two-phone (and judge) game — DESKTOP-TASKS.md. If they report, act on it first.
+
+**NEXT:** the server deploy (a WebSocket URL + "join a server table"), then **H4 · ranked** (HIDDEN-HANDS.md
+§6: accounts, Elo, result authority, forfeit clocks).
+
+**SMALLER OPEN ITEMS:** a board→arsenal move would keep counters (no route today) · Line Crossers re-pin ·
+parked: sudden death · carried UNRESOLVED: Blaze soak (shipped because it corrects the call).
+
+## HANDOFF ARCHIVE (CEO, 2026-11-08, at v6.15) — superseded by the section above
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
