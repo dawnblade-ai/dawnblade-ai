@@ -9,7 +9,48 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-08, at v6.09)
+## HANDOFF — START HERE (CEO, 2026-11-08, at v6.11)
+
+**Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
+and `docs/progress/` on main. Do not start a root handoff file.
+
+- **Live: v6.11** (`900e2f1`; WIRE_V 39). Progress report: `docs/progress/v6.11.md`.
+- **MISSION (user, 2026-11-07):** the ultimate FaB Silver Age precon competitive gaming environment and
+  judging engine — 100% fan-made, non-profit, for fun and glory, no ads, forever.
+- **CADENCE (user, 2026-11-07):** "With each version make a progress report and start a new CEO thread."
+- **HOW TO WORK:** workers as cloud sessions in env_011rwpp2MyBTt3cEsZKDoVGk, at most TWO at once, Sonnet
+  mechanical / Opus rules-AI-design; workers push `ship/*` and report under 30 lines via send_message. The CEO
+  **replays each branch onto current main** (branches are often cut from an older main), re-validates there
+  (suite fail 0 / skipped 5, scenes, fairness, babel if index.html's babel blocks moved, `tools/page.js` for
+  UI, `TWOPHONE_SEED=N node tools/twophone.js` + `... judge` for table work, `tools/serverrun.js` DENO=<bin>
+  for referee work, the 630-game ladder), is the only one who pushes main, and confirms CI (`drills`).
+  Page deps + deno go in a scratch dir (tools/page.js header; `npm install --prefix <dir> deno`).
+  **WIRE_V:** two branches may bump it to the same number; the second to ship takes the next number.
+  **Workers hit the 5-hour usage limit and a limit stop sends NO report.** Check idle workers with
+  get_session (status_bucket failed) and nudge them. Tell them to push after every green fix.
+  The AI worker may push ONLY to `ship/s-items-counters-scout` (its designated branch).
+
+**v6.10:** six carried AI misplays fixed (judge readers `landsNothing`, `gaAbilityRedundant`/`linkGoesAgain`,
+`payBuysGoAgain`, `soakPolicy` card price; gates SPXFIX/SPXSOAK). **UNRESOLVED:** Blaze soak A/B at 12 seeds
+(8.50→8.25, t≈−0.8), shipped because it corrects the call. **v6.11:** hand reveals public (`_kh`).
+
+**WAITING ON THE USER (asked 2026-11-08):** (1) server for the referee: Cloudflare Workers+DO (recommended),
+Supabase Edge (also H4 accounts), or neither — needs an account; build nothing until they answer. (2) a real
+two-phone (and judge) game — DESKTOP-TASKS.md, never tested on real PeerJS. If they report, act on it first.
+
+**WORKERS IN FLIGHT:**
+- `session_013xG9xAMN9v4UxqgJGzXBSH` (Opus, AI): Gravy's unused Loot the Arsenal; Scout the Periphery's AI
+  deck choice through a judge reader; attribute Dorinthea's 11.67→17.33 (Bolters alone vs the others).
+- `session_013xG9xCgDniyTy1T4jVmNfK` (Opus, H3 author): feed play-line ORDER (Big Bertha / Oasis) on
+  `ship/feed-order`. Reuse it for the server deploy once a provider is chosen.
+
+**NEXT:** the server deploy (a WebSocket URL + "join a server table"), then **H4 · ranked** (HIDDEN-HANDS.md
+§6: accounts, Elo, result authority, forfeit clocks).
+
+**SMALLER OPEN ITEMS:** a board→arsenal move would keep counters (no route today) · trainer QA for Fai,
+Enigma, Arakni, Blaze, Gravy, Lyath · Line Crossers re-pin · parked: sudden death.
+
+## HANDOFF ARCHIVE (CEO, 2026-11-08, at v6.09) — superseded by the section above
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
