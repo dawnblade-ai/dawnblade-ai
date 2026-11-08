@@ -131,12 +131,14 @@ test("every reason is keyed from a site in the policy, and the census names what
      A resource piece that pays for a weapon swing (QA-A H-2) re-routes the census again: `discost`
      is not reached now (test/discost.test.js drives the AI's answer).
      The misplay fixes (ship/ai-misplays) re-route it once more: `abtarget` is not reached by these
-     30 games now (test/abdecl.test.js drives the AI's answer), and the four new reasons are. */
+     30 games now (test/abdecl.test.js drives the AI's answer), and the four new reasons are.
+     `lookOwn` (Scout the Periphery with the opponent's top already known) is not reached by them;
+     test/misplays.test.js drives it. */
   const seen = census().keys;
   for(const k of Object.keys(seen)) assert.ok(SP.CALL_WHY[k], "reached key " + k + " has no reason");
   assert.deepEqual(keys.filter(k => !seen[k]).sort(),
     ["abtarget", "addPayNo", "allocAll", "allyTake", "answer", "arenaAP", "arenaRes", "arsenalSkip", "boostNo",
-     "chargeDone", "chargeMore", "chargeNone", "discost", "laBlock", "laHit", "laHold", "laKeep", "laSafe", "laTake",
+     "chargeDone", "chargeMore", "chargeNone", "discost", "laBlock", "laHit", "laHold", "laKeep", "laSafe", "laTake", "lookOwn",
      "payCancel", "pitchChi"]);
 });
 

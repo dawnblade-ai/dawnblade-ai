@@ -2260,6 +2260,39 @@ const payBuysGoAgain = (g, seat) => {
   if(!g.pend || g.pend.by !== seat || linkGoesAgain(g)) return false;
   return apBuys(g, seat, p.destroyUid);
 };
+/* ---- WHOSE DECK TO LOOK AT (Scout the Periphery, ship/ai-misplays) ----
+   For `sparring.js`, which reads no card text. The open sheet is a modal whose
+   every mode is one private look at the top card of a deck: `["reveal",1,"look"]`
+   (the seat's own) or `["reveal",1,"look","foe"]` (the opponent's), which is how
+   "look at the top card of target hero's deck" parses. A look is worth only the
+   information it adds, so the answer is the deck whose top card the seat does NOT
+   already know: a known top (`_kt`, a reveal both seats saw) or a look of its own
+   still standing on that card (`revealed._to`). Neither or both known: the
+   opponent's deck, where the policy can least infer what is coming. Answers
+   `{i, own}` (the mode, and whether it is the seat's own deck); null when the
+   sheet is anything else. */
+const lookChoice = (g, seat) => {
+  const p = g && g.prompt;
+  if(!p || p.tag !== "modal" || (p.side || 0) !== seat || !Array.isArray(p.options)) return null;
+  const whose = p.options.map(o => {
+    const ops = ((o && o.ops) || []).filter(x => x && x[0] !== "noop");
+    if(ops.length !== 1 || ops[0][0] !== "reveal" || ops[0][2] !== "look") return null;
+    return ops[0][3] === "foe" ? 1 - seat : seat;
+  });
+  if(whose.some(w => w == null)) return null;
+  const r = g.revealed;
+  const knows = owner => {
+    const top = ((at(g, owner) || {}).deck || [])[0];
+    if(!top) return true;                                       /* nothing to learn from an empty deck */
+    if(top._kt) return true;
+    return !!(r && r._to === seat && String(r.uid) === String(top.uid)
+              && (owner === seat ? r._from == null : r._from === owner));
+  };
+  const foe = 1 - seat;
+  const want = knows(foe) && !knows(seat) ? seat : foe;
+  const i = whose.indexOf(want);
+  return i >= 0 ? {i, own: want === seat} : null;
+};
 /* THE HAND ATTACKS A GRANT BEING PAID FOR STILL HAS TO TAKE (H29). While its payment is open the
    card is lifted onto `pending`, where `grantTakers` cannot find it and `legal` refuses every
    play, so this answers for the card itself and asks no legality: `{uid, cost, power}` of each
@@ -4805,7 +4838,7 @@ function drawTo(g, i){
 }
 
 return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, landsNothing, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, arcaneOf, chargeView, chargeMore,
+        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, landsNothing, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, chargeMore,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */

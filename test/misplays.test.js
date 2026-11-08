@@ -146,3 +146,33 @@ test("a soak that needs a card pitched is priced as the card: 1 point is not wor
   assert.deepEqual(J.autoAnswer(g, {cardPrice: true}), {t: "promptConfirm"}, "the one answer body carries the ask");
   assert.deepEqual(J.autoAnswer(g), {t: "promptSel", i: 0});
 });
+
+test("Scout the Periphery's look goes where it adds information: their deck, unless their top is already known", {skip}, () => {
+  H.db();
+  const mk = (nm, p, uid) => Object.assign({}, H.card(nm, p), {uid});
+  let n = H.state({name: "Fai", res: 9, ap: 9, hand: [mk("Scout the Periphery", 1, "spx1")],
+                   deck: [{uid: "m1", name: "Mine One", pitch: 1}, {uid: "m2", name: "Mine Two", pitch: 2}]},
+                  {name: "Them", deck: [{uid: "t1", name: "Theirs One", pitch: 3}, {uid: "t2", name: "Theirs Two", pitch: 1}]},
+                  {actor: 0, turnPlayer: 0, seed: "z", turn: 3});
+  n = J.reduce({...n, phase: "action", step: "layer", priority: 0, passed: []}, {t: "play", uid: "spx1", from: "hand"}, 0).state;
+  assert.equal(n.prompt && n.prompt.tag, "modal");
+  /* nothing known: their deck */
+  let e = SP.explain(n, 0);
+  assert.deepEqual(e.action, {t: "promptChoose", choice: 0});
+  assert.equal(e.key, "lookFoe");
+  /* their top is a known top already (a reveal both seats saw): your own deck is the news */
+  const theirsKnown = side(n, 1, {deck: [{...n.sides[1].deck[0], _kt: true}, n.sides[1].deck[1]]});
+  e = SP.explain(theirsKnown, 0);
+  assert.deepEqual(e.action, {t: "promptChoose", choice: 1});
+  assert.equal(e.key, "lookOwn");
+  /* both known: back to theirs */
+  const bothKnown = side(theirsKnown, 0, {deck: [{...n.sides[0].deck[0], _kt: true}, n.sides[0].deck[1]]});
+  assert.deepEqual(J.lookChoice(bothKnown, 0), {i: 0, own: false});
+  /* a standing look of this seat's own at their top counts as known too */
+  const looked = {...n, revealed: {...n.sides[1].deck[0], _to: 0, _from: 1}};
+  assert.deepEqual(J.lookChoice(looked, 0), {i: 1, own: true});
+  /* any other modal: the reader says nothing and the policy answers as before */
+  const other = {...n, prompt: {...n.prompt, options: [{label: "a", ops: [["draw", 1]]}, {label: "b", ops: [["res", 1]]}]}};
+  assert.equal(J.lookChoice(other, 0), null);
+  assert.equal(SP.explain(other, 0).key, "firstOption");
+});
