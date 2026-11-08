@@ -5,7 +5,7 @@
      "You draws back up to 4"                   — a hand-built verb
      "…the next time You would be dealt damage"  — a capital mid-sentence
      "You: their next Guardian attack…"          — their, for seat 0
-     "paid 1 and tapped X" before the "Pitched" that paid it
+     "paid 1 and tapped X" before the "Pitched" that paid it  (drilled in test/payorder.test.js)
 
    The line IS the observable here, so these assert on prose; each has a sabotage
    (the same line at the other seat, or the old order).
