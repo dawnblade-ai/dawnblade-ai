@@ -471,7 +471,10 @@ function makeEffects(ctx){
     actMut(n).ap = act(n).ap + 1;
     if(n.chain && n.chain.length)
       n.chain = n.chain.map((l, i) => i === n.chain.length - 1 ? {...l, ga: true} : l);
-    return L(n, "Go again, granted after the attack resolved — CR 5.3.5 hands the action point back.");
+    /* NAMED (ship/ai-misplays): Refraction Bolters' "if you do, the attack gets go
+       again" lands after the hit, and the old line named no source at all. */
+    const by = typeof s._gaGrant === "string" && s._gaGrant ? s._gaGrant : "The attack";
+    return L(n, `${by}: go again — an action point gained, because it was granted after the attack resolved (CR 5.3.5).`);
   }
 
   /* ---- "…THIS WAY", ANSWERED WHEN A DEFERRED HIT LANDS (v4.77) -------
@@ -598,7 +601,7 @@ function makeEffects(ctx){
     if((D.rest || []).length) n = runOps(n, D.rest, src);
     for(const {cond, op} of (D.conds || [])){
       if(!thisWayMet(cond, trace)){ n = L(n, wayMissLine(src, cond)); continue; }
-      if(op[0] === "ga") n._gaGrant = true;
+      if(op[0] === "ga") n._gaGrant = src || true;
       else n = runOps(n, [op], src);
     }
     if(D.costRider) n = settleCostRider(n, src, D.costRider, got);
@@ -1881,7 +1884,8 @@ function makeEffects(ctx){
       /* NO LINE OF ITS OWN (v5.60): "Go again granted." named no card, and every
          consumer of `_gaGrant` prints its own named line — "<card>: go again —
          action point kept" at the resolution, or the late-grant lines above. */
-      else if(k==="ga"){ n._gaGrant = true; }
+      /* the grant remembers WHO gave it, so a late settle can name it (feedsource) */
+      else if(k==="ga"){ n._gaGrant = srcName || true; }
       else if(k==="defBuff"){ n = L(n, `+${v} defense to the wall.`); }
       /* "-N POWER" ASKS WHETHER THERE IS A HOSTILE ATTACK IN FLIGHT, and
          that is not a phase question (v2.77). It read `mode==="block"`,

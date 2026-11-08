@@ -313,7 +313,8 @@ test("a grant with no `lateGa` still goes through the ORDINARY consumers",
   const out = unwrap(J.withEffects({...g, prompt: PM.promptChoose(sheet, "pay")},
     (fx, m) => fx.applyAnswer(m, m.prompt)));
   assert.equal(out.sides[0].ap, 1, "the action point is untouched by this route");
-  assert.equal(out._gaGrant, true, "the grant is left for the ordinary consumers");
+  /* the grant carries the name of what gave it (ship/ai-misplays), so a late settle can say so */
+  assert.equal(out._gaGrant, "probe", "the grant is left for the ordinary consumers, naming its source");
 });
 
 /* ---- 4. NO CARD IS SPECIAL-CASED ------------------------------------- */

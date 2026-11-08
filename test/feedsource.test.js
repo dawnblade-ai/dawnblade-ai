@@ -62,8 +62,13 @@ test("driven: every go-again line names its source, in game words", () => {
   const HEROES = ["arakni", "azalea", "blaze", "boltyn", "bravo", "briar", "dash", "dorinthea",
                   "enigma", "fai", "gravy", "iyslander", "kayo", "lyath", "viserai"];
   const ga = [], bare = [];
-  for(let i = 0; i < HEROES.length; i++){
-    let g = match(HEROES[i], HEROES[(i + 5) % 15], "ga-src-" + i, 0), steps = 0;
+  /* THE SIXTEENTH GAME (ship/ai-misplays): the pairing above reached Mage Master
+     Boots only through the misplay of activating it with nothing to take its
+     grant, which the seat no longer makes; this game uses the piece with a taker. */
+  const games = HEROES.map((h, i) => [h, HEROES[(i + 5) % 15], "ga-src-" + i])
+    .concat([["gravy", "arakni", "ga-src-gravy-0"]]);
+  for(const [h0, h1, seed] of games){
+    let g = match(h0, h1, seed, 0), steps = 0;
     while(!g.over && steps < 3000){
       let moved = false;
       for(const s of [0, 1]){

@@ -128,6 +128,25 @@ const affordsBoth = (sd, abCost, t, o) => {
    the move that was made instead. */
 let NOTE = null;
 const tag = (k, a) => { if(NOTE && a) NOTE.tags.push([k, a]); return a; };
+/* ---- THE MISPLAY FIXES' PER-SEAT GATE (ship/ai-misplays) --------------
+   CLAUDE.md: a policy change is measured one seat at a time. `SPXFIX` unset
+   is the shipped default (every seat on); "none" turns the fixes off for every
+   seat; a comma list of hero keys turns them on for those seats only — the A/B
+   switches the hero's own seat and leaves the opponents as they were. */
+const SPXFIX = (typeof process !== "undefined" && process.env && process.env.SPXFIX) || "";
+const fixOn = (g, seat) => {
+  if(!SPXFIX) return true;
+  if(SPXFIX === "none") return false;
+  const sd = g && g.sides && g.sides[seat];
+  return !!(sd && SPXFIX.split(",").indexOf(sd.heroKey) >= 0);
+};
+/* A card or ability that would land nothing right now is held (`judge.landsNothing`).
+   Noted so the call can say why the turn ends with it still in hand. */
+const idleOK = (g, seat, uid, from) => {
+  if(!fixOn(g, seat) || !J.landsNothing(g, seat, uid, from)) return true;
+  if(NOTE) NOTE.idle = true;
+  return false;
+};
 
 /* ---- the payment ------------------------------------------------------
    `judge.legal` has already refused any play this seat could not fund, so
@@ -513,6 +532,8 @@ function reaction(g, seat){
   }
   const legalRx = from
     .filter(x => !defending || J.defendsNow(g, seat, x.c.uid, x.from))
+    /* an instant that would land nothing is not a reaction either (QA-B H-5) */
+    .filter(x => idleOK(g, seat, x.c.uid, x.from))
     .filter(x => legal(g, {t: "play", uid: x.c.uid, from: x.from}, seat))
     .sort((a, b) => num(a.c, "cost") - num(b.c, "cost") || byUid(a.c, b.c));
   const pick = legalRx[0];
@@ -575,12 +596,25 @@ function reaction(g, seat){
      spent, whether its cost can be paid, and — since v4.38 — whether it
      has a legal target at all. */
   const rxAb = w => w === "attack-reaction" || w === "defense-reaction";
+  let gaHeld = false;
   const ab = (sd.gear || []).slice().sort(byUid).map(x => x.uid)
     .concat(["hpow"])
     .filter(uid => rxAb(J.abWindowOf(g, seat, uid)))
+    /* A GO AGAIN FOR AN ATTACK THAT ALREADY GOES AGAIN BUYS NOTHING (QA-A H-5).
+       Bolt'n Boots was destroyed and a card pitched for Bolt'n' Shot pumped above
+       base (its own go again) and for Swift Shot turned face up. `judge.
+       gaAbilityRedundant` answers; held, the call says why (`rxGaHeld`). */
+    .filter(uid => { if(uid === "hpow" || !fixOn(g, seat) || !J.gaAbilityRedundant(g, seat, uid)) return true;
+      gaHeld = true; return false; })
     .map(uid => uid === "hpow" ? {t: "activate", from: "hero", uid} : {t: "activate", uid})
     .find(a => legal(g, a, seat));
-  return ab ? tag("rxAbility", ab) : null;
+  if(ab) return tag("rxAbility", ab);
+  /* An ability was held because it would buy a go again the attack already has.
+     The caller would pass here anyway (it ends the turn only where that is legal,
+     and then this returns nothing so the caller does exactly that): the same
+     action either way, with the reason that decided it. */
+  if(gaHeld && !legal(g, {t: "endTurn"}, seat)) return tag("rxGaHeld", {t: "pass"});
+  return null;
 }
 
 /* ---- AN ARENA ABILITY IS CASHED WHEN IT IS A NET GAIN NOW (QUEUE H20) --
@@ -723,6 +757,7 @@ function offenceBase(g, seat, o){
       .filter(x => x.c && num(x.c, "power") <= 0 && J.keepsActionPoint(g, seat, x.uid, x.from));
     const first = cands
       .filter(x => grantOK(x))
+      .filter(x => idleOK(g, seat, x.uid, x.from))
       .filter(x => affordableWithin(sd, x.c, o))
       .sort((a, b) => num(a.c, "cost") - num(b.c, "cost")
                    || num(a.c, "pitch") - num(b.c, "pitch") || byUid(a, b))
@@ -842,6 +877,11 @@ function offenceBase(g, seat, o){
      player. `judge.abPieceForRes` answers. */
   const w = (sd.gear || []).slice().sort(byUid)
     .filter(x => !J.abPieceForRes(g, seat, x.uid))
+    /* AN ABILITY THAT WOULD LAND NOTHING IS NOT A SPARE ACTION (QA-B H-3, H-4).
+       Uphold Tradition was turned up and paid for with no ward aura to take its
+       counter, and Mage Master Boots destroyed for a non-attack grant with no
+       non-attack card to take it. `judge.landsNothing` answers. */
+    .filter(x => idleOK(g, seat, x.uid, "gear"))
     /* AN AMP-ONLY ABILITY WAITS FOR AN ARCANE CARD IT CAN AFFORD WITH IT (QUEUE v4 H18).
        `judge.abAmpTakers` answers; null means the piece's payout is not amp alone. */
     .filter(x => { const v = J.abAmpTakers(g, seat, x.uid);
@@ -898,6 +938,10 @@ function offenceBase(g, seat, o){
     .map(x => ({c: x.c, uid: x.c && x.c.uid, from: x.from}))
     .filter(x => x.c && num(x.c, "power") <= 0)
     .filter(x => grantOK(x))
+    /* A PLAY THAT WOULD LAND NOTHING IS HELD (QA-B H-5): Frost Spike into a hero
+       with no exposed armour zone fizzled, a card spent that could have pitched,
+       fused or blocked. `judge.landsNothing` answers. */
+    .filter(x => idleOK(g, seat, x.uid, x.from))
     .filter(x => affordableWithin(sd, x.c, o))
     /* THE BIGGEST PRINTED ARCANE FIRST (v5.39, QUEUE v4 H5). Cheapest-first
        spent the one action point on a 1-arcane Frosting with a 5-arcane Ice
@@ -993,6 +1037,14 @@ function actBase(g, seat, o){
      priority: it is the narrowest thing that blocks everything else. */
   if(g.prompt){
     if((g.prompt.side || 0) !== seat) return null;
+    /* A PIECE SPENT FOR GO AGAIN THE SEAT WILL USE (QA-A H-3). The price rule
+       declines any non-resource price, so Refraction Bolters was never destroyed
+       for the go again that buys Dorinthea's second Dawnblade swing (16 of 16
+       declined). `judge.payBuysGoAgain` answers whether the action point it keeps
+       buys a swing; the confirm that follows is the ordinary answer. */
+    if(g.prompt.tag === "pay" && g.prompt.choice == null && (g.prompt.side || 0) === seat
+       && fixOn(g, seat) && J.payBuysGoAgain(g, seat))
+      return tag("payGoAgain", {t: "promptChoose", choice: "pay"});
     const ans = J.autoAnswer(g), pt = g.prompt.tag;
     const k = !ans ? null
       : pt === "opt" ? "optKeep"
@@ -1158,7 +1210,11 @@ function laCands(g, seat, a0){
     const c = a.uid != null && a.uid !== "hpow" ? cardIn(sd, a.uid) : null;
     return a.t + "|" + (a.from || "") + "|" + (c && (a.t === "play") ? c.name + "/" + num(c, "pitch") : a.uid) + "|" + (a.target || "");
   };
-  const add = a => { if(!legal(g, a, seat)) return; const k = keyOf(a); if(seen.has(k)) return; seen.add(k); out.push(a); };
+  /* Sharp proposes nothing that would land nothing either (QA-B H-3: Gravy's
+     boots were the search's pick, for a grant no card could take). */
+  const idle = a => (a.t === "play" && (a.from === "hand" || a.from === "arsenal") && !idleOK(g, seat, a.uid, a.from))
+    || (a.t === "activate" && a.from == null && (sd.gear || []).some(x => x && x.uid === a.uid) && !idleOK(g, seat, a.uid, "gear"));
+  const add = a => { if(!legal(g, a, seat) || idle(a)) return; const k = keyOf(a); if(seen.has(k)) return; seen.add(k); out.push(a); };
   if(a0) add(a0);
   const atk = c => num(c, "power") > 0 ? {target: targetFor(g, seat, c)} : {};
   (sd.hand || []).forEach(c => c && add({t: "play", uid: c.uid, from: "hand", ...atk(c)}));
@@ -1470,6 +1526,7 @@ const CALL_WHY = {
   rxDefend: "Play it now. It protects you from this attack.",
   rxAttack: "React with your cheapest card to pump this attack.",
   rxAbility: "Use the ability. It is printed for this window.",
+  rxGaHeld: "Keep the piece. This attack already goes again, so its ability would buy nothing.",
   keepsAP: "Play it before you attack. It keeps your action point.",
   markFirst: "Discard it to mark them before you attack. It costs no action point, and your stealth attack on a marked hero hits harder and goes again if it lands.",
   atkKeepsAP: "Lead with the attack that goes again. It keeps your action point.",
@@ -1496,6 +1553,7 @@ const CALL_WHY = {
   payYes: "Pay it.",
   payNo: "Don't pay. It isn't worth the cards.",
   payNoPiece: "Don't pay. Keeping the piece is worth more than what destroying it buys.",
+  payGoAgain: "Destroy it. The attack goes again, and you have another attack to spend the action point on.",
   firstOption: "Take the first option.",
   allocAll: "Place every counter on your strongest piece.",
   pickMin: "Choose this one.",
@@ -1505,6 +1563,7 @@ const CALL_WHY = {
   answer: "Answer it and play on.",
   endTurn: "End your turn. Nothing worth doing is left.",
   endTurnKeep: "End your turn. What you could still play is worth more held back than spent now.",
+  endTurnIdle: "End your turn. What you could still play or use would land nothing right now, so it stays where it is.",
   laHit: "Start with this. Play each opening out to the end of your turn and this one lands the most damage once they block.",
   laSafe: "Start with this. Played out to the end of your turn, it costs you the least life of any opening.",
   laKeep: "Start with this. Played out to the end of your turn, it keeps more cards in hand for their swing back.",
@@ -1603,6 +1662,8 @@ function explainNow(g, seat, o){
   /* "NOTHING WORTH DOING IS LEFT" ONLY WHEN NOTHING IS LEFT (QA-B FEED-1). With
      a play still legal the call says the seat is holding it, not that there is none. */
   if(key === "endTurn" && laCands(g, seat, null).some(x => x.t !== "endTurn")) key = "endTurnKeep";
+  /* AND WHEN WHAT IS HELD WOULD LAND NOTHING, the call says that (ship/ai-misplays). */
+  if((key === "endTurn" || key === "endTurnKeep") && n.idle) key = "endTurnIdle";
   return {action: a, key, why: key ? (CALL_WHY[key] ? (key === "chargeColour" || key === "gateColour" ? CALL_WHY[key].replace(/COLOUR/g, ["", "red", "yellow", "blue"][key === "gateColour" ? J.gateColourWanted(g, seat) : J.chargePitchWanted(g)] || "matching") : CALL_WHY[key]) : null) : null, line: key !== "laTake" ? lineOf(g, seat, a) : (wallOf(g.sides[seat]) > 0 ? "Don't block any more" : "Don't block")};
 }
 

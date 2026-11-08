@@ -2129,6 +2129,115 @@ const grantTakers = (g, seat, uid, from) => {
       out.push({uid: w.uid, from: "weapon", cost: +w.cost || 0});
   return out;
 };
+/* ---- WOULD THIS LAND NOTHING RIGHT NOW? (QA-B H-3/H-4/H-5, ship/ai-misplays) ----
+   For `sparring.js`, which reads no card text. A card in hand or arsenal, or a
+   piece of gear's activated ability, whose EVERY op would resolve into nothing
+   on the board as it stands — the play or the activation is a card (or a
+   resource and a piece) spent for a feed line:
+
+     ctrPut   "Put a +1{p} counter on an aura you control with ward" with no
+              such aura (Uphold Tradition) — `effects.ctrPutCands`, the reader
+              the op itself resolves through.
+     token    a Frostbite "in an exposed head, chest, arms or legs zone" of a
+              hero with none exposed (Frost Spike) — `game.hasExposedZone`, the
+              gate the op itself asks.
+     gaNext   "the next NON-ATTACK action card you play this turn gets go
+              again" with no other non-attack action card the seat can play
+              from any zone `legal` admits (Mage Master Boots, Gravy's watery
+              grave included).
+
+   Anything else — a condition, an op this list does not know — is not
+   "nothing", so the answer is false: the reader only speaks where it can
+   prove the payout empty, and the policy otherwise plays as it did. */
+const LANDS_ZONES = ["hand", "arsenal", "grave", "banish"];
+const nonAtkPlayable = (g, seat, except) => {
+  const sd = at(g, seat);
+  for(const z of LANDS_ZONES){
+    const cs = z === "arsenal" ? (sd.arsenal ? [sd.arsenal] : []) : (sd[z] || []);
+    for(const c of cs)
+      if(c && c.uid != null && c.uid !== except && TY.isAction(c) && !TY.isAttack(c)
+         && legal(g, {t: "play", uid: c.uid, from: z}, seat) == null) return true;
+  }
+  return false;
+};
+const opLandsNothing = (g, seat, op, except) => {
+  const k = op && op[0], spec = (op && op[1]) || {};
+  if(k === "ctrPut") return !E.ctrPutCands(at(g, seat), spec).length;
+  if(k === "token"){
+    const where = op[4] || null;
+    if(!where || where.zone !== "exposed") return false;
+    return !GM.hasExposedZone(at(g, op[3] === "foe" ? 1 - seat : seat));
+  }
+  if(k === "gaNext") return !!(spec && spec.nonAtk) && !nonAtkPlayable(g, seat, except);
+  return false;
+};
+const landsNothing = (g, seat, uid, from) => {
+  const sd = at(g, seat);
+  let c = null;
+  if(from === "gear"){
+    const piece = (sd.gear || []).find(x => x && x.uid === uid);
+    c = piece && !PR.isWeapon(piece) ? piece.powCard : null;
+  } else if(from === "arsenal") c = sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null;
+  else if(from === "hand") c = (sd.hand || []).find(x => x && x.uid === uid) || null;
+  if(!c) return false;
+  const fx = PR.fxParse(c);
+  if((fx.conds || []).length || fx.optCost) return false;
+  const ops = (fx.ops || []).filter(o => o && o[0] !== "noop");
+  return ops.length > 0 && ops.every(o => opLandsNothing(g, seat, o, uid));
+};
+/* ---- DOES THE ATTACK ON THE CHAIN ALREADY GO AGAIN? (QA-A H-5, ship/ai-misplays) ----
+   For `sparring.js`, which reads no card text. True when the open link has go
+   again now (`pend.ga`: its own printed keyword, a face-up arsenal grant such as
+   Swift Shot's, a grant already taken) or is certain to get it when it resolves:
+   a late "if this card's {p} is greater than its base, it gets go again"
+   (Bolt'n' Shot) on a link already pumped above its base (`effects.pendPumped`,
+   the reader the resolution's own check agrees with). */
+const linkGoesAgain = g => {
+  const p = g && g.pend;
+  if(!p || !p.card) return false;
+  if(p.ga || g._gaGrant) return true;
+  return (p.lateConds || []).some(x => x && x.cond === "pumped" && x.op && x.op[0] === "ga") && E.pendPumped(g);
+};
+/* AN ABILITY WHOSE WHOLE PAYOUT IS THAT LINK'S GO AGAIN, GIVEN TO A LINK THAT HAS IT
+   (Bolt'n Boots: "{r}, destroy this: Target arrow attack with {p} greater than its base
+   gets go again"). Its cost buys nothing: the piece and the resource are spent for a
+   go again the attack already carries. False for any piece whose payout is anything else. */
+const gaAbilityRedundant = (g, seat, uid) => {
+  const piece = (at(g, seat).gear || []).find(x => x && x.uid === uid);
+  const pc = piece && !PR.isWeapon(piece) ? piece.powCard : null;
+  if(!pc) return false;
+  const fx = PR.fxParse(pc);
+  const more = (fx.ops || []).some(o => o && o[0] !== "noop") || (fx.onHit || []).length
+    || (fx.onHitHero || []).length || (fx.conds || []).length || fx.self;
+  return !!fx.ga && !more && linkGoesAgain(g);
+};
+/* ---- A PAID GO AGAIN THE SEAT WOULD SPEND (QA-A H-3, ship/ai-misplays) ----
+   For `sparring.js`, which reads no card text. True when the open sheet is a
+   `pay` whose WHOLE payout is go again (`ops` all `ga`) for the seat's own open
+   attack, the attack does not already go again (`linkGoesAgain`), no resource is
+   asked, and the action point it keeps buys something: an attack card in hand or
+   arsenal the seat could pay for, or a weapon not yet swung this turn (Dorinthea's
+   "attack an additional time with that weapon" clears that very limit on a hit).
+   Refraction Bolters: "When a weapon attack you control hits, you may destroy
+   this. If you do, the attack gets go again" — declined 16 of 16 times by the
+   price rule, which cannot weigh a piece against a second swing. */
+const apBuys = (g, seat, except) => {
+  const sd = at(g, seat), hand = sd.hand || [];
+  const pitch = skip => hand.reduce((t, c) => t + (c && c.uid !== skip ? (+c.pitch || 0) : 0), 0);
+  const pays = c => (+c.cost || 0) <= (sd.res || 0) + pitch(c.uid);
+  const cards = hand.concat(sd.arsenal ? [sd.arsenal] : []);
+  if(cards.some(c => c && TY.isAttack(c) && pays(c))) return true;
+  return (sd.gear || []).some(w => w && w.uid !== except && PR.isWeapon(w) && w.power != null
+    && !(sd.weaponUsed || {})[w.uid] && pays(w));
+};
+const payBuysGoAgain = (g, seat) => {
+  const p = g && g.prompt;
+  if(!p || p.tag !== "pay" || (p.side || 0) !== seat || (p.cost || 0) > 0) return false;
+  const ops = (p.ops || []).filter(o => o && o[0] !== "noop");
+  if(!ops.length || !ops.every(o => o[0] === "ga")) return false;
+  if(!g.pend || g.pend.by !== seat || linkGoesAgain(g)) return false;
+  return apBuys(g, seat, p.destroyUid);
+};
 /* THE HAND ATTACKS A GRANT BEING PAID FOR STILL HAS TO TAKE (H29). While its payment is open the
    card is lifted onto `pending`, where `grantTakers` cannot find it and `legal` refuses every
    play, so this answers for the card itself and asks no legality: `{uid, cost, power}` of each
@@ -4674,7 +4783,7 @@ function drawTo(g, i){
 }
 
 return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, arcaneOf, chargeView, chargeMore,
+        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, landsNothing, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, arcaneOf, chargeView, chargeMore,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */
