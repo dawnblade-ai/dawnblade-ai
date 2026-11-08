@@ -1,3 +1,24 @@
+## v6.09 — Hidden hands H3: the neutral referee (judge mode, server-ready)
+
+HIDDEN-HANDS.md §6 H3. Until now the host's phone held the deck. Now a third device can.
+- **Judge a table.** A third browser (a store's tablet, a friend's laptop) taps "Judge a table" and holds the
+  game; BOTH players join as guests and each phone receives only its own view: both phones are blind. The
+  judge's screen shows only the public view. `engine/hub.js` (new) seats channels by a secret per-seat key, so a
+  returning phone reclaims its seat and a stranger with the code is seated nowhere. The seed is fixed by all
+  three: the judge commits, both players answer, seed = H(judge half | both player halves) (LOBBY_V 2 -> 3).
+  Throw, pause/rejoin, Resume judging, post-game reveal and Verify this game work for both seats. The copy is
+  honest: the judge's device holds the deck and could look, so both players trust the judge.
+- **One referee body for H2 and H3:** `net.refereeHost` serves N remote seats (H2 host = 1, judge = 2).
+  The host and the judge now save after EVERY commit (a reloaded H2 host used to resume up to 29 actions behind).
+- **Server-ready, no server yet:** `net.wsAdapter` puts a table on a WebSocket (a phone's end and the server's
+  end). Proven in a Workers-shaped isolate (web globals only, no window/document/require/process) holding a
+  Durable-Object-shaped table: same log and fingerprints as the in-process judge, evict/rehydrate resumes.
+  `tools/serverrun.js` runs the referee drills UNCHANGED under Deno (the Supabase Edge runtime) plus 8 judged
+  games over all 15 heroes. A real deploy needs an account and is the user's call.
+- **Drills:** `test/judgetable.test.js` (16, looped 10/10), `test/wsreferee.test.js` (6), each sabotaged.
+  `tools/twophone.js judge` drives three real pages: both phones agree with the referee and stay blind, a
+  player drops and rejoins by key, the judge reloads and resumes, both phones Verified, 0 errors.
+
 ## v6.08 — two rules fixes: counters reset, Scout the Periphery
 
 - **Counters end when their card leaves the arena** (CR 3.0.9: an object entering a zone outside the arena
