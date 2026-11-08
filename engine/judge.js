@@ -2293,6 +2293,29 @@ const lookChoice = (g, seat) => {
   const i = whose.indexOf(want);
   return i >= 0 ? {i, own: want === seat} : null;
 };
+/* ---- WEAPON SWINGS A PENDING GRANT WOULD PUMP (H-DAGGER, trainer QA census) ----
+   For `sparring.js`, which reads no card text. A "your next <qualifier> attack this
+   turn gets +N" already taken (`buffQ`, or an unqualified `buffNext`) is spent by the
+   next attack it admits, matched with `qualMatches` — the matcher `execute` spends it
+   with. The policy ranked hand attacks on printed power and swung a weapon only after,
+   so Arakni played Up Sticks and Run ("your next dagger attack this turn gets +4") and
+   then led with Mark the Prey (3) over the 1-power dagger that would have swung for 5:
+   34 of 38 such grants expired (rule policy, 28 games). Answers each weapon the seat can
+   legally swing now that a pending grant admits, as `{uid, power, bonus}`: its printed
+   power plus +1{p} counters, plus the grant. */
+const grantedSwings = (g, seat) => {
+  const sd = at(g, seat) || {};
+  const q = sd.buffQ || [], bn = sd.buffNext || 0;
+  if(!q.length && !bn) return [];
+  return (sd.gear || []).filter(w => w && PR.isWeapon(w) && w.power != null
+      && legal(g, {t: "activate", uid: w.uid}, seat) == null)
+    .map(w => {
+      const bonus = bn + q.filter(e => e && (!e.q || PR.qualMatches(e.q, w, {from: "weapon", atk: true})))
+        .reduce((t, e) => t + (e.amt || 0), 0);
+      const ctr = ((sd.counters || {})[w.uid] || {}).pow || 0;
+      return bonus > 0 ? {uid: w.uid, power: (+w.power || 0) + ctr + bonus, bonus} : null;
+    }).filter(Boolean);
+};
 /* THE HAND ATTACKS A GRANT BEING PAID FOR STILL HAS TO TAKE (H29). While its payment is open the
    card is lifted onto `pending`, where `grantTakers` cannot find it and `legal` refuses every
    play, so this answers for the card itself and asks no legality: `{uid, cost, power}` of each
@@ -4838,7 +4861,7 @@ function drawTo(g, i){
 }
 
 return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, landsNothing, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, chargeMore,
+        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, chargeMore,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */

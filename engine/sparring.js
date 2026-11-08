@@ -144,7 +144,8 @@ const fixOn = (g, seat) => {
    a hero list = those seats), inside SPXFIX, so one fix can be A/B'd against the
    others: SPXSOAK the soak card price, SPXLOOK whose deck a look reads, SPXPAY a
    piece paid for go again, SPXIDLE the holds (land nothing, a go again already had),
-   SPXRXFIT the defence reaction that stops the whole leak by itself. */
+   SPXRXFIT the defence reaction that stops the whole leak by itself, SPXGRANTSWING a
+   weapon swing ranked with the pending grant that pumps it. */
 const subGate = k => {
   const v = (typeof process !== "undefined" && process.env && process.env[k]) || "";
   return (g, seat) => {
@@ -156,7 +157,7 @@ const subGate = k => {
   };
 };
 const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate("SPXPAY"), idleOn = subGate("SPXIDLE"),
-      fitOn = subGate("SPXRXFIT");
+      fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING");
 /* A card or ability that would land nothing right now is held (`judge.landsNothing`).
    Noted so the call can say why the turn ends with it still in hand. */
 const idleOK = (g, seat, uid, from) => {
@@ -816,6 +817,7 @@ function offenceBase(g, seat, o){
   const cv = x => !x.ally ? J.chargeView(g, seat, x.uid, x.from) : null;
   const rankC = x => {
     if(x.kap) return 0;
+    if(x.granted) return 3;
     if(x.weapon) return 2;
     const v = x.cv;
     if(!v) return 3;
@@ -826,6 +828,15 @@ function offenceBase(g, seat, o){
     .map(w => ({w, v: J.chargeView(g, seat, w.uid, "weapon")}))
     .filter(x => x.v && x.v.charged && x.v.power > x.v.base)
     .map(x => ({c: Object.assign({}, x.w, {power: x.v.power}), uid: x.w.uid, weapon: true, kap: 0}));
+  /* A WEAPON A PENDING GRANT PUMPS COMPETES ON ITS PUMPED POWER (H-DAGGER). Up Sticks and
+     Run's "+4 to your next dagger attack" was lost behind a 3-power hand attack while the
+     1-power dagger would have swung for 5. `judge.grantedSwings` answers; the swing ranks
+     among the hand attacks by that power, so a bigger hand attack still goes first. */
+  const granted = swingOn(g, seat) ? J.grantedSwings(g, seat)
+    .filter(x => !pumped.some(p => p.uid === x.uid))
+    .map(x => { const w = (sd.gear || []).find(z => z && z.uid === x.uid);
+      return w && affordableWithin(sd, w, o) ? {c: Object.assign({}, w, {power: x.power}), uid: x.uid, weapon: true, granted: true, kap: 0} : null; })
+    .filter(Boolean) : [];
   const pick = from
     .map(x => ({c: x.c, uid: x.c && x.c.uid, from: x.from}))
     .concat(allies)
@@ -834,7 +845,7 @@ function offenceBase(g, seat, o){
     .map(x => Object.assign(x, {kap: J.keepsActionPoint(g, seat, x.uid, x.ally ? "board" : x.from) ? 1 : 0}))
     .map(x => Object.assign(x, {cv: cv(x)}))
     .map(x => Object.assign(x, {gr: !x.ally && J.gateRaises(g, seat, x.uid, x.from)}))
-    .concat(pumped)
+    .concat(pumped).concat(granted)
     .sort((a, b) => (rankC(a) - rankC(b)) || (b.kap - a.kap) || num(b.c, "power") - num(a.c, "power")
                  || num(a.c, "cost") - num(b.c, "cost") || byUid(a, b))
     .find(x => legal(g, x.weapon ? {t: "activate", uid: x.uid}
@@ -849,7 +860,7 @@ function offenceBase(g, seat, o){
      offers a charge with room for it. (A rank-0 branch for a card whose
      charge turned on its go again changed no key over 30 games, so it is
      not written.) */
-  const pickWhy = x => x.weapon ? "pumpedWeapon"
+  const pickWhy = x => x.granted ? "grantSwing" : x.weapon ? "pumpedWeapon"
     : x.kap ? "atkKeepsAP"
     : rankC(x) < 3 && x.cv && !x.cv.charged ? (x.gr && !x.cv.gaIf ? "gateFirst" : "chargeFirst")
     : x.ally ? (targetFor(g, seat, x.c) !== "hero" ? "allyTake" : "allyIn") : waiting ? "grantWait" : "biggestAttack";
@@ -1569,6 +1580,7 @@ const CALL_WHY = {
   atkKeepsAP: "Lead with the attack that goes again. It keeps your action point.",
   chargeFirst: "Swing the attack that lets you charge first. Your other cards are waiting on a charge.",
   pumpedWeapon: "Swing the weapon. The charge pumped it.",
+  grantSwing: "Swing the weapon. The card you just played pumps its next attack, so it hits harder than anything in your hand.",
   allyTake: "Attack the ally. This swing kills it, and an attack on an ally can't be blocked.",
   allyIn: "Send your ally in.",
   biggestAttack: "Swing the biggest attack you can afford.",
