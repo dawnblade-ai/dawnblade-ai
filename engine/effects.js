@@ -2856,15 +2856,22 @@ function makeEffects(ctx){
       /* RULING (Ravenous Rabble): both players see the reveal, and the attack
          shifts by the revealed card's PITCH. The card stays on top. */
       else if(k==="reveal"){
-        const top = act(n).deck[0];
-        if(!top){ n = L(n, `${srcName}: deck is empty — nothing to reveal.`); return; }
+        /* WHOSE DECK IS THE OP'S FOURTH ELEMENT (S-item): "foe" is the
+           opposing hero's, chosen off "target hero's deck"; absent, the
+           actor's own, as every "your deck" reveal and look prints. */
+        const owner = op[3] === "foe" ? foe(n) : act(n);
+        const top = owner.deck[0];
+        if(!top){ n = L(n, `${srcName}: ${op[3] === "foe" ? sp(foe(n)) + " deck" : "deck"} is empty — nothing to ${op[2] === "look" ? "look at" : "reveal"}.`); return; }
         /* A LOOK is not a reveal (HIDDEN HANDS H1): the card is shown to the
            seat that looked and nobody else. `revealed` carries `_to`, and the
            line naming the card is tagged for that seat alone (`feedTo`);
            the shared line says only that a look happened. */
         if(op[2] === "look"){
-          n.revealed = {...top, _to: actorOf(n)};
-          n = L(n, `${srcName}: ${sv(act(n), "look")} at the top card of ${sp(act(n))} deck.`);
+          /* `_from` names the OPPONENT's deck a look read (S-item): view.js
+             shows that top card to the looker while it stays there, and
+             judge.clearKnown forgets the look once that deck changes. */
+          n.revealed = {...top, _to: actorOf(n), ...(op[3] === "foe" ? {_from: 1 - actorOf(n)} : {})};
+          n = L(n, `${srcName}: ${sv(act(n), "look")} at the top card of ${sp(owner)} deck.`);
           n = toSeat(L(n, `${srcName}: the top card is ${top.name} (pitch ${top.pitch}) — it stays there.`), actorOf(n));
           return;
         }

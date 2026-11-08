@@ -3181,6 +3181,17 @@ function clearKnown(g, prev){
     if(!ch) return;
     out = put(out, i, s => ({...s, hand: nh, deck: nd, arsenal: na, intimidated: ni}));
   });
+  /* A LOOK INTO THE OPPONENT'S DECK (`revealed._from`, S-item) holds only
+     while that deck is unchanged but for cards put UNDER it: the old order
+     must still lead the new one. A draw, a shuffle or a card put on top makes
+     it stale, and view.js would otherwise show the looker a top card they
+     never saw there. Dropped, not re-derived: the safe side. */
+  const lk = out.revealed;
+  if(lk && lk._from != null && prev && prev.sides && out.sides && out.sides[lk._from]){
+    const ids = sd => ((sd && sd.deck) || []).map(c => c && String(c.uid));
+    const was = ids(prev.sides[lk._from]), now = ids(out.sides[lk._from]);
+    if(was.some((u, j) => now[j] !== u)) out = {...out, revealed: null};
+  }
   return out;
 }
 

@@ -155,7 +155,15 @@ function slots(g, seat){
        moment it goes stale and a private reorder (opt) drops it at once. */
     const top = knownTop(deck, kb);
     const out = {deck: [], kb, top, hand: [], arsenal: [], intimidated: [], gear: [], soul: []};
-    for(let i = top; i < deck.length - kb; i++) if(!(deck[i] && pub.has(String(deck[i].uid)))) out.deck.push(i);
+    /* A LOOK INTO THIS (OPPONENT'S) DECK BY `seat` (S-item, Scout the
+       Periphery's "target hero's deck"): the looker knows the top card while
+       it is still the top card. `_from` is stamped only on such a look, and
+       judge.clearKnown drops the look the moment that deck changes other than
+       by cards put under it — so a shuffle never leaves a stale known top. */
+    const lk = revealFor(g, seat);
+    const looked = !!(lk && lk._to === seat && lk._from === owner && owner !== seat
+                      && deck[0] && String(deck[0].uid) === String(lk.uid));
+    for(let i = top; i < deck.length - kb; i++) if(!(deck[i] && pub.has(String(deck[i].uid))) && !(looked && i === 0)) out.deck.push(i);
     const foe = owner !== seat;
     if(foe){
       /* a card both players saw in this hand (`_kh`: a hand reveal, a fusion
