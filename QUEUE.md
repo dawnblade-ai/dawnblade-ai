@@ -9,12 +9,12 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-08, at v6.16)
+## HANDOFF — START HERE (CEO, 2026-11-08, at v6.17)
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
-- **Live: v6.16** (WIRE_V 39). Progress reports: `docs/progress/v6.15.md`, `v6.16.md`.
+- **Live: v6.17** (WIRE_V 39). Progress reports: `docs/progress/v6.16.md`, `v6.17.md`.
 - **MISSION (user, 2026-11-07):** the ultimate FaB Silver Age precon competitive gaming environment and
   judging engine — 100% fan-made, non-profit, for fun and glory, no ads, forever.
 - **CADENCE (user, 2026-11-07):** "With each version make a progress report and start a new CEO thread."
@@ -25,6 +25,8 @@ and `docs/progress/` on main. Do not start a root handoff file.
 **v6.16:** grantHold (`SPXGRANTPAY`, `judge.grantTakers` o.idlePick, key `grantHold`): a grant waits when no
 swing it pumps can be paid for. Lost dagger grants 19→6; Arakni rule 12.33→13.00, Sharp 24.33→26.00 (3 seeds).
 Ladder 0/0/0/0. CI green on main 53f7c7c (drills run 42534449390, live URL verified).
+**v6.17:** grantBeforeSwing (`SPXWPNFIRST`): with only a weapon swing to follow, a grant that pumps it goes first.
+Census 100→0 (Dorinthea 85). Dorinthea 18.00→19.00 (+1 every seed), Viserai 12.33→13.00, Arakni 13.00→13.67. Ladder 0/0/0.
 **CEO SUCCESSION:** session_013xG9xCnjwgSC6P9f3uUE9W hit the lineage-depth limit (8) and cannot spawn the next CEO;
 the user must start it. The new CEO tells both workers its id.
 
@@ -40,7 +42,8 @@ the user must start it. The new CEO tells both workers its id.
   reaction windows (H-SHIELD's real fix). May send a plan first. First in line for the server deploy.
 - `session_013xG9xAMN9v4UxqgJGzXBSH` (Opus, AI, pushes ONLY `ship/s-items-counters-scout`): **grant ordering with
   only a weapon to follow** (`haveAtk` counts hand and arsenal attacks only, so the swing goes first and a later grant is
-  wasted) + census of the 6 remaining lost dagger grants.
+  wasted) SHIPPED v6.17; now ASSIGNED the atkKeepsAP-first ordering (Arakni loses 7/28 grants to a go-again hand
+  attack spending the pitch first).
 
 **WAITING ON THE USER (asked 2026-11-08, re-asked at v6.15 and v6.16):** (1) server for the referee: Cloudflare
 Workers+DO (recommended), Supabase Edge (also H4 accounts), or neither — needs an account; build nothing until
