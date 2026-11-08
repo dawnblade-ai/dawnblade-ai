@@ -490,9 +490,12 @@ const markTop = deck => (deck || []).map((c, j) => j === 0 ? markKnown(c, "_kt")
    but a counter can then be put on a face-up card already there (Crow's
    Nest's aim counter on the arrow it watched go in), and a state sweep
    cannot tell a counter put before the entry from one put after. No
-   route moves a permanent with counters into an arsenal, so the gap is
-   theoretical; the stack and the combat chain keep counters by 3.0.9's
-   own words. Pure; reads no card types. */
+   card in the pinned pool moves a permanent from the arena into an
+   arsenal — `parser.arsenalPutSource` reads every clause and
+   test/arsenalsrc.test.js fails the day one does, and `invariants.js`
+   names a non-aim counter bag on an arsenal card (COUNTERS-INTO-ARSENAL).
+   The stack and the combat chain keep counters by 3.0.9's own words.
+   Pure; reads no card types. */
 const RESET_ZONES = ["deck", "hand", "pitch", "grave", "banish", "soul"];
 function resetUids(game){
   const out = new Set();

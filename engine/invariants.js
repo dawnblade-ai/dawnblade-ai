@@ -169,6 +169,22 @@ function check(game){
     });
   }
 
+  /* ---- a card in the arsenal carries no counters from the arena -------
+     The arsenal is the one reset zone `resetLeavers` does not sweep (a counter can be put
+     on a face-up card already there), which is safe only while no card moves a permanent
+     from the arena into an arsenal (`parser.arsenalPutSource`, test/arsenalsrc.test.js).
+     The only counter the pool puts on an arsenal card is Crow's Nest's aim counter, so a
+     bag holding any other kind on the arsenal card came in with it: the day a route
+     appears, this names it. */
+  sides.forEach((sd, si) => {
+    const a = sd.arsenal, bag = a && a.uid != null && (sd.counters || {})[a.uid];
+    if(!bag) return;
+    const odd = Object.keys(bag).filter(k => k !== "aim" && bag[k]);
+    if(odd.length)
+      err("COUNTERS-INTO-ARSENAL", "sides[" + si + "].arsenal (" + nameOf(a) + ") carries " + odd.join(", ") +
+          " counters — a card that enters the arsenal is a new object (CR 3.0.9)", String(a.uid));
+  });
+
   /* ---- a stolen card is on a board, or it has gone home (v4.74) ------
      Jack Be Quick moves an ally to the thief's board and stamps the card
      with its OWNER. Every exit from a board must file it into the owner's
