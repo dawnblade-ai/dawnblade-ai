@@ -358,6 +358,21 @@ from a host. Drills: `test/judgetable.test.js` over `test/helpers/judgetable.js`
 in eight judged games; each phone's view equals the referee's view of that seat after every
 commit; no frame names a uid hidden from its phone; player drop, judge drop, judge resumed from
 an older save; both phones verify). `tools/twophone.js judge` drives three real pages.
+
+**H3 increment 2 (the referee server-side), built on `ship/h3-referee-2`.** `net.wsAdapter(sock)`
+now carries the judged table: `handle()` is a phone's table on a WebSocket (room.js's handle
+shape, so TableRoom/TableBoard need nothing new), `accept(hub)` is the server's end. The proof
+needs no account or provider: `tools/serverrun.js` runs the referee drills (`referee`,
+`hostref`, `judgetable`, `wsreferee`, `sha256`, `lobby` — the same files `npm test` runs)
+UNCHANGED under Deno (`deno test --unstable-detect-cjs`; Deno is Supabase Edge's runtime), and
+plays eight judged games (all 15 heroes) with the judge inside a Workers-shaped isolate
+(`test/helpers/isolate.js`: web globals only, no window/document/require/process/Buffer; the
+page's own scripts; a Durable-Object-shaped `TableObject`). `test/wsreferee.test.js` (in the
+suite) proves the isolate's judge plays the SAME game, action for action and fingerprint for
+fingerprint, as the in-process judge, and that an evicted-and-rehydrated table resumes.
+**Not done (needs the user's decision):** deploying anywhere. A real deployment needs an
+account (Cloudflare Workers + Durable Objects, or Supabase Edge Functions), a WebSocket URL
+the page can dial, and a "Join a server table" path in TableScreen.
 | **H4 · Ranked** | accounts (SUPABASE.md steps 1–2), the referee writes results and Elo, throw at the referee, forfeit clocks, published game logs and replays | **L** · 3–4 sessions | result-authority drills (a client cannot write a result); disconnect forfeit; Elo math drills |
 | H5 · (optional) trustless P2P | mental poker plus audit, only if serverless ranked becomes a requirement | XL · 8–12 | not recommended now |
 

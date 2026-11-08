@@ -22,7 +22,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const T = require("./helpers/judgetable.js");
-const {makeTable, L, R, V, Wr, SP, J, HEROES, json, tokens, hiddenUidSet} = T;
+const {makeTable, judgedGame, L, R, V, Wr, SP, J, HEROES, json, tokens, hiddenUidSet} = T;
 const SHA = require("../engine/sha256.js");
 
 const WIRE_BUDGET = 16 * 1024;   /* test/table.test.js's: what a data channel carries reliably */
@@ -74,69 +74,6 @@ test("JUDGE LOBBY — the judge's device must run the same build as both phones"
 });
 
 /* ---- the loopback through a third-party referee ------------------------ */
-/* Play one judged game to its end. Scans, after EVERY commit: both phones'
-   fingerprints and (every third step) whole views against the referee's;
-   every new frame each phone received against the uids hidden from THAT
-   phone before and after the step; the frame size; the seed's secret half. */
-function judgedGame(k0, k1, salt, o){
-  o = o || {};
-  const t = makeTable({heroes: [k0, k1], salt, throws: [["rock", "rock"], ["paper", "rock"]], seatView: o.seatView}).open();
-  const ps = t.seatPhones();
-  const rec = {t, steps: 0, mism: [0, 0], deep: [0, 0], leaks: [[], []], big: 0, seedLeak: 0, judgeLeak: 0, earlyReveal: 0};
-  const parts = [null, null];
-  const sess = t.hub.session();
-  const seen = [0, 0];
-  let prevHid = [0, 1].map(s => hiddenUidSet(sess.full(), s));
-  const scan = () => {
-    const full = t.hub.session().full();
-    /* the seed's secret half and the match seed (both hex, so a match is no accident) */
-    const kept = t.hub.persist() || {};
-    const secret = [kept.seedH, kept.spec && kept.spec.seed].filter(Boolean).map(String);
-    for(const s of [0, 1]){
-      const hid = hiddenUidSet(full, s), both = new Set([...hid].filter(u => prevHid[s].has(u)));
-      const inbox = ps[s].inbox;
-      for(const f0 of inbox.slice(seen[s])){
-        /* a message too big for one frame arrives in PARTs: scan it whole */
-        let f = f0;
-        if(f.m && f.m.t === "part"){
-          const pp = parts[s] && parts[s].id === f.m.id ? parts[s] : (parts[s] = {id: f.m.id, got: []});
-          pp.got[f.m.i] = f.m.s;
-          if(pp.got.filter(x => x != null).length < f.m.n) continue;
-          f = {ch: f.ch, m: JSON.parse(pp.got.join(""))}; parts[s] = null;
-        }
-        /* THE REVEAL is the post-game publication of the seed and the whole
-           log — legitimate only once the game is over */
-        if(f.m && f.m.t === "reveal"){ if(!full.over) rec.earlyReveal++; continue; }
-        const str = JSON.stringify(f);
-        rec.big = Math.max(rec.big, str.length);
-        for(const u of tokens(f)) if(both.has(u)) rec.leaks[s].push(rec.steps + ": " + (f.m && f.m.t) + " uid " + u);
-        if(secret.some(x => str.indexOf(x) >= 0)) rec.seedLeak++;
-      }
-      seen[s] = inbox.length;
-      prevHid[s] = hid;
-    }
-  };
-  scan();
-  while(rec.steps < 3000 && t.step()){
-    rec.steps++;
-    for(const s of [0, 1]){
-      if(!t.agrees(s)) rec.mism[s]++;
-      if(rec.steps % 3 === 0 && !o.seatView && !R.same(ps[s].sess.state(), R.seatView(t.hub.session().full(), s))) rec.deep[s]++;
-    }
-    scan();
-    if(o.stopAtLeak && (rec.leaks[0].length || rec.leaks[1].length)) break;
-    if(rec.steps % 25 === 0){
-      /* the judge's own screen is the PUBLIC view: no hidden card of either seat */
-      const pub = t.hub.session().state(), full = t.hub.session().full();
-      const hid = new Set([...hiddenUidSet(full, 0)].filter(u => hiddenUidSet(full, 1).has(u)));
-      if(tokens(pub).some(u => hid.has(u))) rec.judgeLeak++;
-    }
-  }
-  rec.over = t.hub.session().full().over;
-  rec.log = t.hub.session().log();
-  return rec;
-}
-
 /* all 15 heroes in eight games: pairs along the list, the last against the first */
 const PAIRS = [];
 for(let i = 0; i < HEROES.length; i += 2) PAIRS.push([HEROES[i], HEROES[(i + 1) % HEROES.length]]);

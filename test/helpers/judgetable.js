@@ -64,8 +64,29 @@ function makeTable(o){
   const ev = [];
   const hubOpts = {code: "JDGE", build: BUILD, deal: dealSpec, reduce: J.reduce, legal: J.legal, check: INV.errors,
                    rand, onEvent: e => ev.push(e), seatView: o.seatView};
-  const T = {queue, flush, ev, phones: [], hub: null, rand};
-  T.hub = Hub.createHub(hubOpts);
+  const T = {queue, flush, ev, phones: [], hub: null, rand, sockets: 0};
+  /* WHERE THE JUDGE RUNS. By default a hub.js in this process, reached by
+     direct calls. `o.makeHub(opts)` puts it elsewhere (tools/serverrun.js:
+     a Durable-Object-shaped table inside a server-like isolate); with
+     `o.ws` every phone reaches it over a WebSocket pair through
+     net.wsAdapter — `handle()` at the phone, `accept(hub)` at the judge
+     (`o.accept(hub, socket)` when the hub lives elsewhere). */
+  const makeHub = o.makeHub || (opts => Hub.createHub(opts));
+  const accept = o.accept || ((hub, sock) => N.wsAdapter(sock).accept(hub));
+  T.hub = makeHub(hubOpts);
+  /* A WebSocketPair, as Workers and Deno hand one out: two ends that carry
+     STRINGS (a non-string send throws), deliver in order through the queue,
+     and close both ways. */
+  function socketPair(){
+    const mk = () => ({readyState: 1, l: {}, addEventListener(ev, f){ (this.l[ev] = this.l[ev] || []).push(f); },
+      fire(ev, e){ (this.l[ev] || []).forEach(f => f(e)); },
+      send(str){ if(typeof str !== "string") throw new Error("a WebSocket carries strings"); const other = this.other; T.sockets++;
+        queue.push(() => { if(other.readyState === 1) other.fire("message", {data: str}); }); },
+      close(){ if(this.readyState === 3) return; this.readyState = 3; const other = this.other;
+        queue.push(() => { this.fire("close", {}); if(other.readyState !== 3){ other.readyState = 3; other.fire("close", {}); } }); }});
+    const a = mk(), b = mk(); a.other = b; b.other = a;
+    return [a, b];
+  }
 
   /* a phone: dials the judge, is offered (or claims) a seat, runs the lobby */
   function phone(name, hero){
@@ -73,13 +94,25 @@ function makeTable(o){
                events: [], catalog: null, spec: null, refused: []};
     const deliver = f => P.receive(json(f));
     P.dial = claim => {
-      const end = {send: f => { const w = json(f); queue.push(() => { if(P.up && P.end === end) P.receive(w); }); }, close(){}};
-      P.end = end; P.up = true;
-      P.link = T.hub.connect(end);
+      P.up = true;
+      if(o.ws){
+        const [client, server] = socketPair();
+        accept(T.hub, server);
+        const h = N.wsAdapter(client).handle();
+        P.sock = client; P.h = h;
+        h.listen(f => { if(P.up && P.h === h) P.receive(f); });
+      } else {
+        const end = {send: f => { const w = json(f); queue.push(() => { if(P.up && P.end === end) P.receive(w); }); }, close(){}};
+        P.end = end;
+        P.link = T.hub.connect(end);
+      }
       if(claim != null) P.say({ch: Hub.CH.JUDGE, claim, key: P.key});
     };
-    P.say = f => { const w = json(f), link = P.link; queue.push(() => { if(P.up && P.link === link) link.receive(w); }); };
-    P.drop = () => { P.up = false; const link = P.link; link.closed(); if(P.sess) P.sess.pause("the channel closed"); };
+    P.say = f => {
+      if(o.ws){ if(P.up) P.h.send(f); return; }
+      const w = json(f), link = P.link; queue.push(() => { if(P.up && P.link === link) link.receive(w); });
+    };
+    P.drop = () => { P.up = false; if(o.ws) P.sock.close(); else P.link.closed(); if(P.sess) P.sess.pause("the channel closed"); };
     P.redial = () => { P.dial(P.seat); if(P.sess) P.sess.join(); };
     P.lobby = m => { const r = L.reduce(P.lob, m); if(r.error && !r.error.dup) P.refused.push(r.error.why); if(!r.error) P.lob = r.state; P.say({ch: Hub.CH.LOBBY, m}); P.step(); };
     P.receive = f => {
@@ -150,8 +183,9 @@ function makeTable(o){
   /* the judge's device restarts from what it persisted */
   T.restartJudge = () => {
     const saved = json(T.hub.persist());
-    for(const p of T.phones) if(p.up){ p.up = false; if(p.sess) p.sess.pause("the judge's device left the table"); }
-    T.hub = Hub.createHub({...hubOpts, resume: saved});
+    for(const p of T.phones) if(p.up){ p.up = false; if(o.ws) p.sock.close(); if(p.sess) p.sess.pause("the judge's device left the table"); }
+    flush();
+    T.hub = makeHub({...hubOpts, resume: saved});
     return saved;
   };
   return T;
@@ -169,4 +203,70 @@ function tokens(v, out){
 }
 const hiddenUidSet = (g, seat) => new Set([...V.hiddenUids(g, seat).keys()].map(String));
 
-module.exports = {makeTable, deal, dealSpec, catalogOf, seeded, tokens, hiddenUidSet, HEROES, BUILD, UID0, J, SP, N, L, Hub, Wr, R, V, INV, W, json};
+/* Play one judged game to its end (test/judgetable.test.js's proving run;
+   `o.ws`/`o.makeHub`/`o.accept` move the judge behind a socket or into an
+   isolate, and the scans are the same). Scans, after EVERY commit: both phones'
+   fingerprints and (every third step) whole views against the referee's;
+   every new frame each phone received against the uids hidden from THAT
+   phone before and after the step; the frame size; the seed's secret half. */
+function judgedGame(k0, k1, salt, o){
+  o = o || {};
+  const t = makeTable({heroes: [k0, k1], salt, throws: [["rock", "rock"], ["paper", "rock"]], seatView: o.seatView,
+                       ws: o.ws, makeHub: o.makeHub, accept: o.accept}).open();
+  const ps = t.seatPhones();
+  const rec = {t, steps: 0, mism: [0, 0], deep: [0, 0], leaks: [[], []], big: 0, seedLeak: 0, judgeLeak: 0, earlyReveal: 0};
+  const parts = [null, null];
+  const sess = t.hub.session();
+  const seen = [0, 0];
+  let prevHid = [0, 1].map(s => hiddenUidSet(sess.full(), s));
+  const scan = () => {
+    const full = t.hub.session().full();
+    /* the seed's secret half and the match seed (both hex, so a match is no accident) */
+    const kept = t.hub.persist() || {};
+    const secret = [kept.seedH, kept.spec && kept.spec.seed].filter(Boolean).map(String);
+    for(const s of [0, 1]){
+      const hid = hiddenUidSet(full, s), both = new Set([...hid].filter(u => prevHid[s].has(u)));
+      const inbox = ps[s].inbox;
+      for(const f0 of inbox.slice(seen[s])){
+        /* a message too big for one frame arrives in PARTs: scan it whole */
+        let f = f0;
+        if(f.m && f.m.t === "part"){
+          const pp = parts[s] && parts[s].id === f.m.id ? parts[s] : (parts[s] = {id: f.m.id, got: []});
+          pp.got[f.m.i] = f.m.s;
+          if(pp.got.filter(x => x != null).length < f.m.n) continue;
+          f = {ch: f.ch, m: JSON.parse(pp.got.join(""))}; parts[s] = null;
+        }
+        /* THE REVEAL is the post-game publication of the seed and the whole
+           log — legitimate only once the game is over */
+        if(f.m && f.m.t === "reveal"){ if(!full.over) rec.earlyReveal++; continue; }
+        const str = JSON.stringify(f);
+        rec.big = Math.max(rec.big, str.length);
+        for(const u of tokens(f)) if(both.has(u)) rec.leaks[s].push(rec.steps + ": " + (f.m && f.m.t) + " uid " + u);
+        if(secret.some(x => str.indexOf(x) >= 0)) rec.seedLeak++;
+      }
+      seen[s] = inbox.length;
+      prevHid[s] = hid;
+    }
+  };
+  scan();
+  while(rec.steps < 3000 && t.step()){
+    rec.steps++;
+    for(const s of [0, 1]){
+      if(!t.agrees(s)) rec.mism[s]++;
+      if(rec.steps % 3 === 0 && !o.seatView && !R.same(ps[s].sess.state(), R.seatView(t.hub.session().full(), s))) rec.deep[s]++;
+    }
+    scan();
+    if(o.stopAtLeak && (rec.leaks[0].length || rec.leaks[1].length)) break;
+    if(rec.steps % 25 === 0){
+      /* the judge's own screen is the PUBLIC view: no hidden card of either seat */
+      const pub = t.hub.session().state(), full = t.hub.session().full();
+      const hid = new Set([...hiddenUidSet(full, 0)].filter(u => hiddenUidSet(full, 1).has(u)));
+      if(tokens(pub).some(u => hid.has(u))) rec.judgeLeak++;
+    }
+  }
+  rec.over = t.hub.session().full().over;
+  rec.log = t.hub.session().log();
+  return rec;
+}
+
+module.exports = {makeTable, judgedGame, deal, dealSpec, catalogOf, seeded, tokens, hiddenUidSet, HEROES, BUILD, UID0, J, SP, N, L, Hub, Wr, R, V, INV, W, json};

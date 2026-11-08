@@ -844,16 +844,63 @@ function loopback(){
 
 /* Phase C's adapter, written now so the seam is proven rather than
    promised. Works with a browser WebSocket or any object with the same
-   three members. */
+   three members.
+
+   HIDDEN HANDS H3 PUT THE REFEREE BEHIND IT. Three ways to use one socket:
+     attach(session)  a phone's net session on a bare socket (the original);
+     handle()         a phone's TABLE on a socket: the same shape room.js's
+                      `open` resolves with ({send, listen, first, close,
+                      status}), so TableRoom/TableBoard run unchanged on a
+                      WebSocket to a server instead of a PeerJS channel;
+     accept(hub)      the SERVER's end: hands the socket to hub.js's
+                      `connect` as one more channel, and returns the link.
+   A socket here is anything with `send(string)` and either
+   `addEventListener` (browser, Deno, Cloudflare Workers' WebSocketPair) or
+   `on*` handlers. Nothing in it names a runtime: tools/serverrun.js drives
+   `accept` inside a context with no window, document, require or process. */
 function wsAdapter(socket){
+  const open = () => socket.readyState === 1 || socket.readyState == null;
+  const send = m => { if(open()) socket.send(JSON.stringify(m)); };
+  const on = (ev, fn) => {
+    if(typeof socket.addEventListener === "function") socket.addEventListener(ev, fn);
+    else { const prev = socket["on" + ev]; socket["on" + ev] = e => { if(prev) prev(e); fn(e); }; }
+  };
+  const parse = ev => { try { const d = ev && ev.data !== undefined ? ev.data : ev; return JSON.parse(typeof d === "string" ? d : String(d)); } catch(_){ return null; } };
   return {
-    send: m => { if(socket.readyState === 1 || socket.readyState == null) socket.send(JSON.stringify(m)); },
+    send,
     attach(session){
-      socket.onmessage = ev => {
-        let m; try { m = JSON.parse(ev.data); } catch(_){ return; }
-        session.receive(m);
-      };
+      on("message", ev => { const m = parse(ev); if(m) session.receive(m); });
       return session;
+    },
+    handle(){
+      let sink = null, backlog = [], status = open() ? "connected" : "connecting", onClose = null;
+      on("message", ev => { const m = parse(ev); if(!m) return; if(sink) sink(m); else backlog.push(m); });
+      on("open", () => { status = "connected"; });
+      on("close", () => { if(status !== "closed"){ status = "closed"; if(onClose) onClose(); } });
+      return {
+        send,
+        listen(fn){ sink = fn || null; if(sink && backlog.length){ const q = backlog; backlog = []; q.forEach(m => sink(m)); } },
+        /* the first frame, without consuming it (room.js's `first`). NO
+           TIMEOUT here — this module runs no timers (test/net.test.js); a
+           caller that will not wait forever races it with its own. */
+        first(){
+          return new Promise(res => {
+            if(backlog.length) return res(backlog[0]);
+            const prev = sink; let done = false;
+            sink = m => { backlog.push(m); if(!done){ done = true; sink = prev; res(m); } };
+          });
+        },
+        onClose(fn){ onClose = fn; },
+        close(){ status = "closed"; try { socket.close(); } catch(_){} },
+        status: () => status
+      };
+    },
+    accept(hub){
+      const link = hub.connect({send, close: () => { try { socket.close(); } catch(_){} }});
+      on("message", ev => { const m = parse(ev); if(m) link.receive(m); });
+      const gone = () => link.closed();
+      on("close", gone); on("error", gone);
+      return link;
     }
   };
 }
