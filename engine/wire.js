@@ -323,7 +323,10 @@
    (a known top) and `_kh` (known in hand), beside `_kb` (game.js KNOWN_MARKS). */
 /* 36 -> 37 AT v6.08: a look into the opponent's deck stamps `revealed._from`
    (Scout the Periphery reads target hero's deck), and the look op names whose deck. */
-const WIRE_V = 37;
+/* 37 -> 38 AT v6.10 (hand reveals): a `pick` prompt carries `reveal` (Crash and
+   Bash's reveal cost, Flamecall Awakening's search) and the card picked becomes
+   known in hand (`_kh`), as does Strongest Survive's escape card. */
+const WIRE_V = 38;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

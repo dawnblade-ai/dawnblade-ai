@@ -392,6 +392,10 @@ function buildPrompt(game, spec){
          untapped where it stands, so there is no `to` and nothing moves.
          Dropped here it vanishes silently, exactly as `arsStamp` did. */
       untapStamp: spec.untapStamp || null,
+      /* A PRINTED REVEAL (HIDDEN HANDS) — data `applyAnswer` reads: the card
+         picked is shown to both seats, so in its hand it is KNOWN (`_kh`).
+         Dropped here, the reveal happens in the feed and the view hides it. */
+      reveal: !!spec.reveal,
       /* A SPEC ONLY CARRIES FIELDS `buildPrompt` KNOWS ABOUT (v2.34,
          v3.53). `defStamp` is Shred's chain-scoped defender debuff — data
          the answer applies to the card that was CHOSEN, on the DEFENDING

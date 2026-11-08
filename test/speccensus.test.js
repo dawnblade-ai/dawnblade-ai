@@ -106,8 +106,12 @@ let legs = 0, threw = 0;
    rides onto the card the answer moves. */
 const ANSWER_READS = ["amount", "by", "cards", "cost", "defUid", "destroyUid", "discard", "elseOps",
                       "faceUp", "filter", "keepTop", "max", "min", "ops", "options",
-                      "side", "spendCtr", "src", "tag", "tapHero", "tapUid", "taps",
+                      "reveal", "side", "spendCtr", "src", "tag", "tapHero", "tapUid", "taps",
                       "to", "zone"];
+/* +reveal (hand reveals, after H3): a WORD match in `applyPrompt` — its
+   existing `tag === "reveal"` branch and "revealed from" line — not a read of
+   the pick spec's `reveal` field. That field is read by effects.applyAnswer,
+   which marks the picked card known in hand (`_kh`); buildPrompt carries it. */
 /* +defUid v5.36: the `pay` branch hands it out (`out.defUid`) so the paid
    +{d} lands on the named defender (v4.53). It was always read; it joined
    because the ring now reaches Brothers in Arms' sheet. */
@@ -290,8 +294,11 @@ test("every spec field that reaches prompts.js is pinned", () => {
     "amount", "arsStamp", "avail", "banStamp", "by", "cards", "charge", "cost", "costRider",
     "ctrHeld", "ctrSpend", "ctrStamp", "defUid", "destroyEffect", "destroyUid", "discard", "elseOps", "equipStamp",
     "exactPitch", "faceUp", "filter", "hint", "jab", "keepTop", "lateGa", "max", "min", "moveFoe", "n",
-    "ops", "optional", "options", "playThisTurn", "shuffleAfter", "side", "spendCtr",
+    "ops", "optional", "options", "playThisTurn", "reveal", "shuffleAfter", "side", "spendCtr",
     "src", "tag", "tapHero", "tapUid", "taps", "title", "to", "wayRider", "zone",
+  /* +reveal (hand reveals, after H3) — Crash and Bash's reveal cost and Flamecall
+     Awakening's search: the picked card is shown to both seats, so applyAnswer marks
+     it known in hand (`_kh`). Named in `buildPrompt`. */
   /* +destroyEffect RULING-B (ship/rules-qa) — Mark of the Huntsman's "you may CHOOSE TO
      destroy this and mark them": CR 1.8.3b makes the destroy an effect made if able, so
      the sheet is asked though the piece is gone. Named in `buildPrompt`; read by

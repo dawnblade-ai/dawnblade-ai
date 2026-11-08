@@ -376,7 +376,7 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        busy modes. Same signature, same anchors, so the slice still bounds
        the body each drill names. */
     "costtaxes.test.js index.html 26993",
-    "dichotomy.test.js engine/prompts.js 12623",
+    "dichotomy.test.js engine/prompts.js 12886",   /* +263 AT the hand reveals: buildPrompt carries `reveal` */
     /* 8,550 -> 9,523 AT v4.60, and now THREE files take the same slice —
        `playRx`, anchored on its own declaration and bounded at `playRxA`, the
        next one, which is the safe form. READ FIRST (v4.57: a pin edited

@@ -3449,7 +3449,8 @@ function classifyClause(raw){
     const filter = pickSubject(cased(RX_DECK_SEARCH, 2, m[2]));
     if(!filter) return null;
     const may = !!m[1];
-    return R([["pickPrompt", {zone:"deck", to:"hand", filter,
+    /* `reveal`: "reveal it" — the found card is KNOWN to both in the hand */
+    return R([["pickPrompt", {zone:"deck", to:"hand", filter, reveal:true,
       min: may ? 0 : 1, max:1, shuffleAfter:true,
       title: may ? "Search your deck?" : "Search your deck",
       hint: may ? "Optional — choose none to decline. Your deck is shuffled either way."

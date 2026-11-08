@@ -1638,6 +1638,9 @@ function makeEffects(ctx){
         const dmg = n.lastDmg || 0;
         const esc = foe(n).hand.find(c => zonePow(c, bFoe(n)) > dmg);
         if(esc){
+          /* the revealed card stays in the hand, KNOWN to both (`_kh`,
+             engine/view.js — HIDDEN HANDS: a reveal is public) */
+          foeMut(n).hand = foe(n).hand.map(c => c === esc ? G.markKnown(c, "_kh") : c);
           n = L(n, `${srcName}: ${sv(foe(n), "reveal")} ${esc.name} (${zonePow(esc, bFoe(n))}{p}, more than the ${dmg} dealt) — no discard.`);
           return;
         }
@@ -6662,6 +6665,18 @@ function makeEffects(ctx){
              + (st.costOff ? ` costing ${st.costOff} less` : "")
              + (st.playThisTurn ? ", and may be played this turn." : "."));
     }
+    /* A PRINTED REVEAL INTO OR WITHIN A HAND (HIDDEN HANDS): Crash and Bash's
+       "you may reveal a card with crush from your hand" (it stays there) and
+       Flamecall Awakening's "search your deck for …, reveal it, put it into
+       your hand". Both seats saw the card, so in the picker's hand it is
+       KNOWN (`_kh`, engine/view.js) until that hand changes in private
+       (judge.clearKnown). The picker is the prompt's side, not the actor: a
+       defend trigger is answered by the defender. */
+    if(p.tag === "pick" && p.reveal && (r.picked||[]).length){
+      const ids = new Set(r.picked.map(c => String(c.uid)));
+      n = {...n, sides: n.sides.map((sd, i) => i !== p.side ? sd
+        : {...sd, hand: (sd.hand || []).map(c => c && ids.has(String(c.uid)) ? G.markKnown(c, "_kh") : c)})};
+    }
     if(p.tag === "pick" && p.untapStamp && (r.picked||[]).length){
       const chosen = r.picked[0];
       const st = p.untapStamp || {};
@@ -9747,6 +9762,8 @@ function optCostSpec(oc, card, side, leaving){
       : "Optional — choose none to decline. The rider only resolves if you pay."
   };
   if(oc.kind !== "reveal") spec.to = (oc.kind === "banish" ? "banish" : "grave");
+  /* the card shown is KNOWN to both while it stays in the hand (applyAnswer) */
+  else if(oc.zone === "hand") spec.reveal = true;
   /* A DISCARD COST IS STILL A DISCARD (v4.81). `moveCards` files the card
      unstamped, so an optional discard never read as "discarded this turn"
      and never reached the shared discard event. The marker has nothing to
