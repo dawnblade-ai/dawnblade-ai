@@ -43,8 +43,13 @@ two-phone (and judge) game — DESKTOP-TASKS.md, never tested on real PeerJS. If
   (one gate per fix: SPXPAY, SPXIDLE beside SPXSOAK/SPXLOOK, all inside SPXFIX; default unchanged). Replay
   onto main, suite + ladder, push (no APP_VER bump needed). Dorinthea's 11.67→17.33 is ALL the Bolters fix
   (per-seed [9,13,13]→[18,17,17], identical with only SPXPAY on). Free for the next AI item.
-- `session_013xG9xCgDniyTy1T4jVmNfK` (Opus, H3 author): feed play-line ORDER (Big Bertha / Oasis) on
-  `ship/feed-order`. Reuse it for the server deploy once a provider is chosen.
+- `session_013xG9xCgDniyTy1T4jVmNfK` (Opus, H3 author): idle. **TO SHIP:** `ship/feed-order` @ `fb4b61e` (from
+  900e2f1): FEED-7 play-line order, effects.execute only (Big Bertha's boost line + trigger now after the
+  declaration line via `boostAfter`; Oasis Respite's play line before its riders). Drill
+  `test/feedorder.test.js` (5, sabotaged). Worker's run: suite 0 fail/5 skipped, page.js 78/78, ladder
+  identical to baseline. Replay onto main, re-validate (incl. page.js and twophone), ship as v6.13.
+  Open from FEED-7: Bravo's "paid 1 and tapped Magmatic Carapace" prints before the pitch (pay-sheet path) —
+  offer it to this worker. Reuse it for the server deploy once a provider is chosen.
 
 **NEXT:** the server deploy (a WebSocket URL + "join a server table"), then **H4 · ranked** (HIDDEN-HANDS.md
 §6: accounts, Elo, result authority, forfeit clocks).
