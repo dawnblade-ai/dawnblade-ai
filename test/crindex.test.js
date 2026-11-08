@@ -90,9 +90,12 @@ test("crindex — the verdict counts are pinned", () => {
   /* 82 -> 86 and 72 -> 76 guarded AT v6.02 (HIDDEN HANDS H1): CR 3.0.4a, 3.0.4b,
      3.0.4c, 3.0.4d — private and public zones, and public objects in a private
      zone (engine/view.js, test/view.test.js). */
-  assert.equal(rs.length, 86, "the number of distinct CR rules this project cites moved");
+  /* 86 -> 88 and 76 -> 78 guarded AT S-items (ship/s-items-counters-scout): CR 3.0.9,
+     1.15.3 — a card that leaves the arena becomes a new object and its counters
+     cease to exist (game.js resetLeavers, test/ctrreset.test.js). */
+  assert.equal(rs.length, 88, "the number of distinct CR rules this project cites moved");
   /* 50 -> 51 guarded and 6 -> 5 drill-only AT v4.66: CR 7.1.2, built. */
-  assert.equal(by(rs, "guarded").length,   76, "guarded count moved");
+  assert.equal(by(rs, "guarded").length,   78, "guarded count moved");
   assert.equal(by(rs, "UNGUARDED").length,  3, "UNGUARDED count moved");
   assert.equal(by(rs, "drill-only").length, 5, "drill-only count moved");
   assert.equal(by(rs, "prose").length,      2, "prose count moved");

@@ -3183,7 +3183,21 @@ function classifyClause(raw){
   /* LOOKING IS PRIVATE where revealing is public (CR 3.0.4b, the deck is a
      private zone): the third element says so, and effects.js tells only the
      seat that looked (HIDDEN HANDS H1). */
-  if(/^look at the top card of (?:your|target hero'?s?) deck$/.test(c)) return R([["reveal",1,"look"]]);
+  if(/^look at the top card of your deck$/.test(c)) return R([["reveal",1,"look"]]);
+  /* "TARGET HERO'S DECK" IS A CHOICE OF HERO, NOT THE ACTOR'S OWN DECK
+     (S-item, 2026-11-07). Scout the Periphery x3 print "Look at the top card
+     of target hero's deck", and this line used to share the "your deck"
+     regex above — so the look always read the actor's deck and the
+     opponent's could never be chosen. A hero can target either hero, so it
+     is a mandatory choice between two printed readings (`modalPrompt`, the
+     Stroke of Foresight shape), and the look carries WHOSE deck it reads:
+     `["reveal",1,"look","foe"]`. The opposing hero is the first mode, the
+     one every other "target hero" payload here resolves to. */
+  if(/^look at the top card of target hero'?s? deck$/.test(c)) return R([["modalPrompt", {
+    title: "Whose deck do you look at?",
+    hint: "Target either hero. Only you see the card, and it stays on top.",
+    options: [{label: "Look at the top card of the opposing hero's deck", ops: [["reveal",1,"look","foe"]]},
+              {label: "Look at the top card of your own deck", ops: [["reveal",1,"look"]]}]}]]);
   if(m=c.match(/this gets ([+-])x\s*\{p\}, where x is the pitch value of the card revealed/))
     return R([["revPitch", m[1]==="-" ? -1 : 1]]);
   /* THE SAME REVEAL, A DIFFERENT CONSUMER (v3.68). Three pool records

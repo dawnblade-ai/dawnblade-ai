@@ -32,9 +32,9 @@
      "warn"  — legal but almost certainly a mistake.
    ============================================================ */
 (function(root, factory){
-  if(typeof module==="object" && module.exports) module.exports = factory(require("./sides.js"), require("./priority.js"), require("./parser.js"));
-  else root.DawnInvariants = factory(root.DawnSides, root.DawnPriority, root.DawnParser);
-})(typeof self!=="undefined" ? self : this, function(S, P, PR){
+  if(typeof module==="object" && module.exports) module.exports = factory(require("./sides.js"), require("./priority.js"), require("./parser.js"), require("./game.js"));
+  else root.DawnInvariants = factory(root.DawnSides, root.DawnPriority, root.DawnParser, root.DawnGame);
+})(typeof self!=="undefined" ? self : this, function(S, P, PR, GM){
 
 /* Zones that hold an ARRAY of cards. `arsenal` is deliberately absent:
    it holds a single card or null, which is its own check below. */
@@ -153,6 +153,21 @@ function check(game){
       err("TOKEN-OUT-OF-ARENA", "\"" + nameOf(c) + "\" is a token on the combat chain — an activation leaves its card where it is",
           String(uidOf(c)));
   });
+
+  /* ---- counters do not outlive their card (CR 3.0.9, 1.15.3) ---------
+     A card that enters the hand, deck, pitch, graveyard, banished zone or
+     soul is a new object, and the counters on its old existence ceased to
+     exist with it. `game.js resetLeavers` drops such a bag on every state
+     both boards commit; a bag found here is a state that bypassed it. */
+  if(GM && GM.resetUids){
+    const gone = GM.resetUids(game);
+    sides.forEach((sd, si) => {
+      for(const k of Object.keys(sd.counters || {}))
+        if(gone.has(String(k)))
+          err("COUNTERS-OUTLIVE-CARD", "sides[" + si + "].counters holds a bag for " + k +
+              ", a card now outside the arena — it became a new object and its counters ceased to exist", String(k));
+    });
+  }
 
   /* ---- a stolen card is on a board, or it has gone home (v4.74) ------
      Jack Be Quick moves an ally to the thief's board and stamps the card

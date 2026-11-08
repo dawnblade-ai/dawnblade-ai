@@ -346,7 +346,10 @@ test("DRIVEN: Malefic Incantation unwinds a verse counter per attack action card
   n = {...n, phase: "action", step: "layer", priority: 0, passed: [],
        chain: [], chainCards: [], pend: null};
   n = J.reduce(n, {t: "play", uid: "a1", from: "hand"}, 0).state;
-  assert.equal(((n.sides[0].counters || {}).mi1 || {}).verse, 0);
+  /* The last verse counter came off and the card left: CR 1.15.3, "when an
+     object ceases to exist, the counters on that object cease to exist" —
+     so the bag is GONE, not a zero (test/ctrreset.test.js). */
+  assert.equal((n.sides[0].counters || {}).mi1, undefined);
   assert.ok(board(n, 0).indexOf("Runechant") >= 0, "\"if you do\" paid out");
   assert.equal(board(n, 0).indexOf("Malefic Incantation"), -1, "and the clock ran out");
   assert.ok(n.sides[0].grave.some(c => c.name === "Malefic Incantation"),

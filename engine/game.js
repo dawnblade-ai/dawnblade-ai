@@ -458,10 +458,75 @@ const markKnown = (c, k) => c ? {...unknown(c), [k]: true} : c;
    a put on top (test/topsy.test.js's census of deck-top writers). */
 const markTop = deck => (deck || []).map((c, j) => j === 0 ? markKnown(c, "_kt") : c);
 
+/* ============================================================
+   COUNTERS DO NOT OUTLIVE THEIR CARD (S-item, 2026-11-07)
+
+   The CR, verbatim (rules.fabtcg.com/en/cr/, 2026-11-07):
+
+     3.0.9 "If an object enters a zone that is not in the arena and is
+     not the stack zone, or a public object becomes private while it is
+     not in the arena, it resets - its previous existence ceases to exist
+     and it becomes a new object with no relation to its previous
+     existence."
+
+     1.15.3 "When an object ceases to exist, the counters on that object
+     cease to exist."
+
+     3.1.1a "The arsenal, banished, deck, graveyard, hand, pitch, and
+     stack zones are not part of the arena."
+
+   Counters live in ONE bag per side, `sd.counters`, keyed by the card's
+   uid — and a uid survives every zone move, so a Malefic Incantation
+   bounced to hand kept its verse counters in the bag and re-entered on
+   top of them (its "enters with" put ADDS to whatever the bag holds).
+   Every exit route is a writer somebody would have to remember, so this
+   is a STATE RULE instead, the way a token out of the arena is (v5.16):
+   any bag keyed by a card that now sits in a zone that resets it is
+   dropped. Both boards run it where they commit a state
+   (`judge.stalemateCheck`, which the table's `reduce` and the trainer's
+   `setG` both call), and `invariants.js` names a bag that slipped past.
+
+   THE ARSENAL IS DELIBERATELY NOT SWEPT. It resets a card that ENTERS it,
+   but a counter can then be put on a face-up card already there (Crow's
+   Nest's aim counter on the arrow it watched go in), and a state sweep
+   cannot tell a counter put before the entry from one put after. No
+   route moves a permanent with counters into an arsenal, so the gap is
+   theoretical; the stack and the combat chain keep counters by 3.0.9's
+   own words. Pure; reads no card types. */
+const RESET_ZONES = ["deck", "hand", "pitch", "grave", "banish", "soul"];
+function resetUids(game){
+  const out = new Set();
+  for(const sd of ((game && game.sides) || [])){
+    if(!sd) continue;
+    for(const z of RESET_ZONES)
+      for(const c of (Array.isArray(sd[z]) ? sd[z] : []))
+        if(c && c.uid != null) out.add(String(c.uid));
+  }
+  return out;
+}
+function resetLeavers(game){
+  if(!game || !Array.isArray(game.sides)) return game;
+  let gone = null, sides = null;
+  game.sides.forEach((sd, si) => {
+    const bag = sd && sd.counters;
+    if(!bag) return;
+    const keys = Object.keys(bag);
+    if(!keys.length) return;
+    gone = gone || resetUids(game);
+    const stale = keys.filter(k => gone.has(String(k)));
+    if(!stale.length) return;
+    const nb = Object.assign({}, bag);
+    for(const k of stale) delete nb[k];
+    sides = sides || game.sides.slice();
+    sides[si] = Object.assign({}, sd, {counters: nb});
+  });
+  return sides ? Object.assign({}, game, {sides}) : game;
+}
+
 return {parseDeck, gearDef, gearBlockApply, slotOf, HANDS, handsUsed, handsFree,
   isSecondPerson, thirdPerson, svName, sv, spName, sp, typeAbbr, pipParts, pipWords,
         ARMOR_SLOTS, exposedZones, hasExposedZone,
         isAlly, allyBaseLife, allyLife, isAttackable,
         attackTargets, targetCanBeDefended, damageAlly, resetAllyLife,
-        isRunechantEntry, addRunechants, popRunechants, unknown, unmark, markKnown, markTop, KNOWN_MARKS};
+        isRunechantEntry, addRunechants, popRunechants, RESET_ZONES, resetUids, resetLeavers, unknown, unmark, markKnown, markTop, KNOWN_MARKS};
 });
