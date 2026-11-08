@@ -29,9 +29,13 @@ pumps ranks at its pumped power. H-DAGGER: lost dagger grants 34/38 → 19/39; A
 **AI OPEN:**
 - **H-OVERBLOCK** Enigma: blocks a hand card, then casts a reaction that alone covered it. SPXOVERBLOCK
   UNRESOLVED at 12 seeds (rule +0.67, t≈1.08; Sharp +0.17) — not shipped; `experiments/spxoverblock.patch`.
-- **H-SHIELD** Gravy's Throw Caution on ally attacks: SPXSHIELD lost wins at 12 seeds; patch at
-  `experiments/spxshield.patch` (on ship/s-items-counters-scout, 220758e — not shipped).
-- **H-DAGGER residue:** 19 grants still lost, mostly trading the dagger's {r}{r} for a go-again hand attack.
+- **H-SHIELD** Gravy's Throw Caution on ally attacks: PARKED. SPXSHIELD lost wins (own-turn casts feed his
+  watery-grave engine; ally links with go again fire 20/22). SPXSHIELD2 (hold only at the attacker's LAST link
+  at an ally; `judge.linkLastAtAlly`, key rxAllyLastHold) at 12 seeds: rule 6.50→5.92 (t≈−2.2), Sharp
+  7.92→8.42 (t≈+1.7). Opposite directions, not shipped; patch `experiments/spxshield2.patch` (982bc26 on
+  ship/s-items-counters-scout). Real fix = Sharp searching reaction windows (bigger item).
+- **H-DAGGER residue:** 19 grants still lost, 0 of them correct trades (Up Sticks played with no affordable swing to
+  follow; 7 turns made no attack after it). ASSIGNED to the AI worker.
 - **UNRESOLVED (carried):** Blaze soak A/B 12 seeds (8.50→8.25, t≈−0.8), shipped because it corrects the call.
 
 **WAITING ON THE USER (asked 2026-11-08, re-asked at v6.15):** (1) server for the referee: Cloudflare
@@ -43,7 +47,7 @@ they answer. (2) a real two-phone (and judge) game — DESKTOP-TASKS.md. If they
 - `session_013xG9xCgDniyTy1T4jVmNfK` (Opus, H3 author): ASSIGNED H-OVERBLOCK take 2 (price it in Sharp's laEval,
   pushes `ship/h-overblock`); first in line for the server deploy.
 - `session_013xG9xAMN9v4UxqgJGzXBSH` (Opus, AI, pushes ONLY `ship/s-items-counters-scout`): ASSIGNED H-SHIELD
-  re-think (diagnose the lost wins first) + a count of how many of the 19 lost dagger grants were correct trades.
+  re-think DONE (parked); now ASSIGNED the H-DAGGER residue.
 
 **NEXT:** the server deploy (a WebSocket URL + "join a server table"), then **H4 · ranked** (HIDDEN-HANDS.md
 §6: accounts, Elo, result authority, forfeit clocks).
