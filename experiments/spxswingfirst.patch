@@ -1,0 +1,57 @@
+diff --git a/engine/sparring.js b/engine/sparring.js
+index 2ecafe6..8f1462c 100644
+--- a/engine/sparring.js
++++ b/engine/sparring.js
+@@ -147,7 +147,8 @@ const fixOn = (g, seat) => {
+    SPXRXFIT the defence reaction that stops the whole leak by itself, SPXGRANTSWING a
+    weapon swing ranked with the pending grant that pumps it, SPXGRANTPAY a grant whose only
+    other text is an optional pick it cannot use, held for a taker it can pay for,
+-   SPXWPNFIRST a grant played before the only attack left, a weapon swing it pumps. */
++   SPXWPNFIRST a grant played before the only attack left, a weapon swing it pumps,
++   SPXSWINGFIRST a pumped swing before a go-again attack that would leave it unpayable. */
+ const subGate = k => {
+   const v = (typeof process !== "undefined" && process.env && process.env[k]) || "";
+   return (g, seat) => {
+@@ -160,7 +161,7 @@ const subGate = k => {
+ };
+ const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate("SPXPAY"), idleOn = subGate("SPXIDLE"),
+       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
+-      wpnFirstOn = subGate("SPXWPNFIRST");
++      wpnFirstOn = subGate("SPXWPNFIRST"), swingFirstOn = subGate("SPXSWINGFIRST");
+ /* A card or ability that would land nothing right now is held (`judge.landsNothing`).
+    Noted so the call can say why the turn ends with it still in hand. */
+ const idleOK = (g, seat, uid, from) => {
+@@ -877,6 +878,25 @@ function offenceBase(g, seat, o){
+      offers a charge with room for it. (A rank-0 branch for a card whose
+      charge turned on its go again changed no key over 30 games, so it is
+      not written.) */
++  /* A PUMPED SWING BEFORE A GO-AGAIN ATTACK THAT WOULD STRAND IT (H-DAGGER, last shape).
++     The attack that keeps the point goes first (rank 0), and that is right when both can be
++     paid. When they cannot, the go-again card spends the pitch and the swing a pending grant
++     pumps is never paid: Arakni lost Up Sticks and Run's +4 7 times in 28 plays that way.
++     Each order is valued by what it delivers this turn, in printed numbers: the go-again card's
++     power plus the best other attack still payable after it (go again keeps the point), against
++     the pumped swing (`judge.grantedSwings`), which spends the point. The swing goes first only
++     when it delivers more. */
++  if(pick && pick.kap && !pick.weapon && !pick.ally && granted.length && swingFirstOn(g, seat)){
++    const gs = granted.slice().sort((a, b) => num(b.c, "power") - num(a.c, "power") || byUid(a, b))[0];
++    const both = jointly(sd, pick.c, {uid: gs.uid, cost: num(gs.c, "cost")}, o, null);
++    if(!both){
++      const follow = from.filter(x => x.c && x.c.uid !== pick.uid && num(x.c, "power") > 0
++          && jointly(sd, pick.c, {uid: x.c.uid, cost: num(x.c, "cost")}, o, null))
++        .reduce((m, x) => Math.max(m, num(x.c, "power")), 0);
++      if(num(gs.c, "power") > num(pick.c, "power") + follow && legal(g, {t: "activate", uid: gs.uid}, seat))
++        return tag("swingOverGoAgain", {t: "activate", uid: gs.uid});
++    }
++  }
+   const pickWhy = x => x.granted ? "grantSwing" : x.weapon ? "pumpedWeapon"
+     : x.kap ? "atkKeepsAP"
+     : rankC(x) < 3 && x.cv && !x.cv.charged ? (x.gr && !x.cv.gaIf ? "gateFirst" : "chargeFirst")
+@@ -1599,6 +1619,7 @@ const CALL_WHY = {
+   chargeFirst: "Swing the attack that lets you charge first. Your other cards are waiting on a charge.",
+   pumpedWeapon: "Swing the weapon. The charge pumped it.",
+   grantSwing: "Swing the weapon. The card you just played pumps its next attack, so it hits harder than anything in your hand.",
++  swingOverGoAgain: "Swing the weapon now. You can't pay for both, and the pumped swing hits harder than the attack that goes again and whatever could follow it.",
+   allyTake: "Attack the ally. This swing kills it, and an attack on an ally can't be blocked.",
+   allyIn: "Send your ally in.",
+   biggestAttack: "Swing the biggest attack you can afford.",
