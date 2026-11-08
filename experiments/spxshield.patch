@@ -1,0 +1,169 @@
+diff --git a/engine/judge.js b/engine/judge.js
+index c618ca1..e93a408 100644
+--- a/engine/judge.js
++++ b/engine/judge.js
+@@ -2182,8 +2182,15 @@ const nonAtkPlayable = (g, seat, except) => {
+   }
+   return false;
+ };
+-const opLandsNothing = (g, seat, op, except) => {
++const opLandsNothing = (g, seat, op, except, o) => {
+   const k = op && op[0], spec = (op && op[1]) || {};
++  /* A "THIS TURN" SHIELD FOR YOURSELF ON YOUR OWN TURN (trainer QA census, `o.ownTurnShield`):
++     "the next time you would be dealt damage THIS TURN, prevent X" (Throw Caution's
++     `revWard`) and "prevent the next N damage … this turn" (`ward` until turn) on the
++     seat's own turn wait for a hit that no opponent attack will bring before the
++     window closes. Gravy dumped held Throw Cautions as fillers and attack reactions. */
++  if(o && o.ownTurnShield && g.turnPlayer === seat
++     && (k === "revWard" || (k === "ward" && op[2] && op[2].until === "turn"))) return true;
+   if(k === "ctrPut") return !E.ctrPutCands(at(g, seat), spec).length;
+   if(k === "token"){
+     const where = op[4] || null;
+@@ -2193,7 +2200,7 @@ const opLandsNothing = (g, seat, op, except) => {
+   if(k === "gaNext") return !!(spec && spec.nonAtk) && !nonAtkPlayable(g, seat, except);
+   return false;
+ };
+-const landsNothing = (g, seat, uid, from) => {
++const landsNothing = (g, seat, uid, from, o) => {
+   const sd = at(g, seat);
+   let c = null;
+   if(from === "gear"){
+@@ -2204,8 +2211,10 @@ const landsNothing = (g, seat, uid, from) => {
+   if(!c) return false;
+   const fx = PR.fxParse(c);
+   if((fx.conds || []).length || fx.optCost) return false;
+-  const ops = (fx.ops || []).filter(o => o && o[0] !== "noop");
+-  return ops.length > 0 && ops.every(o => opLandsNothing(g, seat, o, uid));
++  let ops = (fx.ops || []).filter(x => x && x[0] !== "noop");
++  /* a plain reveal of your own top card is not a payout of its own beside a shield (Throw Caution) */
++  if(o && o.ownTurnShield && ops.length > 1) ops = ops.filter(x => !(x[0] === "reveal" && x[2] !== "look"));
++  return ops.length > 0 && ops.every(x => opLandsNothing(g, seat, x, uid, o));
+ };
+ /* ---- DOES THE ATTACK ON THE CHAIN ALREADY GO AGAIN? (QA-A H-5, ship/ai-misplays) ----
+    For `sparring.js`, which reads no card text. True when the open link has go
+@@ -2293,6 +2302,14 @@ const lookChoice = (g, seat) => {
+   const i = whose.indexOf(want);
+   return i >= 0 ? {i, own: want === seat} : null;
+ };
++/* ---- IS THE OPEN ATTACK AIMED AT AN ALLY? (trainer QA census) ----
++   For `sparring.js`, which reads no card text. CR 7.3.2a: an attack on an ally
++   cannot be defended, and the damage lands on the ally — so a card that protects
++   the HERO ("the next time YOU would be dealt damage this turn, prevent X": Throw
++   Caution to the Wind, Cloud Cover, Toe the Line) cannot touch it. Gravy cast
++   Throw Caution against attacks on his Pirate allies: 14 of 20 unused shields in
++   28 games. `game.targetCanBeDefended` is the one reader of the target. */
++const linkAtAlly = g => !!(g && g.pend && g.pend.card && !GM.targetCanBeDefended(g.pend.target));
+ /* THE HAND ATTACKS A GRANT BEING PAID FOR STILL HAS TO TAKE (H29). While its payment is open the
+    card is lifted onto `pending`, where `grantTakers` cannot find it and `legal` refuses every
+    play, so this answers for the card itself and asks no legality: `{uid, cost, power}` of each
+@@ -4838,7 +4855,7 @@ function drawTo(g, i){
+ }
+ 
+ return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
+-        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, landsNothing, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, chargeMore,
++        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, landsNothing, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, linkAtAlly, arcaneOf, chargeView, chargeMore,
+         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
+         handFree: PR.handFree,
+         /* the card semantics seam (v2.77) */
+diff --git a/engine/sparring.js b/engine/sparring.js
+index 98f78aa..fa80d67 100644
+--- a/engine/sparring.js
++++ b/engine/sparring.js
+@@ -143,7 +143,9 @@ const fixOn = (g, seat) => {
+ /* EACH FIX ALSO HAS ITS OWN GATE, read the way SPXFIX is (unset = on, "none" = off,
+    a hero list = those seats), inside SPXFIX, so one fix can be A/B'd against the
+    others: SPXSOAK the soak card price, SPXLOOK whose deck a look reads, SPXPAY a
+-   piece paid for go again, SPXIDLE the holds (land nothing, a go again already had). */
++   piece paid for go again, SPXIDLE the holds (land nothing, a go again already had),
++   SPXSHIELD the hero's protection held against an attack on an ally, and a "this turn"
++   shield for yourself held on your own turn. */
+ const subGate = k => {
+   const v = (typeof process !== "undefined" && process.env && process.env[k]) || "";
+   return (g, seat) => {
+@@ -154,11 +156,12 @@ const subGate = k => {
+     return !!(sd && v.split(",").indexOf(sd.heroKey) >= 0);
+   };
+ };
+-const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate("SPXPAY"), idleOn = subGate("SPXIDLE");
++const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate("SPXPAY"), idleOn = subGate("SPXIDLE"),
++      shieldOn = subGate("SPXSHIELD"), ownShieldOn = subGate("SPXOWNSHIELD");
+ /* A card or ability that would land nothing right now is held (`judge.landsNothing`).
+    Noted so the call can say why the turn ends with it still in hand. */
+ const idleOK = (g, seat, uid, from) => {
+-  if(!idleOn(g, seat) || !J.landsNothing(g, seat, uid, from)) return true;
++  if(!idleOn(g, seat) || !J.landsNothing(g, seat, uid, from, {ownTurnShield: shieldOn(g, seat) && ownShieldOn(g, seat)})) return true;
+   if(NOTE) NOTE.idle = true;
+   return false;
+ };
+@@ -571,6 +574,12 @@ function reaction(g, seat){
+      when the first stopped the hit. */
+   if(pick && defending && wallNow(sd) >= ((g.pend && g.pend.total) || 0))
+     return tag("rxHold", {t: "pass"});
++  /* AN ATTACK ON AN ALLY IS NOT THE HERO'S TO PREVENT (trainer QA census). CR 7.3.2a: it
++     cannot be defended and its damage lands on the ally, so a card that protects the hero
++     is a card thrown away — Gravy cast Throw Caution to the Wind against attacks on his
++     Pirate allies. `judge.linkAtAlly` answers. */
++  if(pick && defending && shieldOn(g, seat) && J.linkAtAlly(g))
++    return tag("rxAllyHold", {t: "pass"});
+   if(pick) return tag(defending ? "rxDefend" : "rxAttack", {t: "play", uid: pick.c.uid, from: pick.from});
+ 
+   /* ---- AN ACTIVATED ABILITY IS A REACTION TOO (v4.38) ----------------
+@@ -1546,6 +1555,7 @@ const CALL_WHY = {
+   blockHand: "Block with your best defender. This hit is too big to take.",
+   blockSpare: "Block with a spare card. Your next turn cannot spend a hand this big, so the extra card stops this whole hit for free.",
+   rxHold: "Hold it. Your blocks already stop this whole hit, so the card stays in your hand.",
++  rxAllyHold: "Hold it. This attack is aimed at your ally, so protecting yourself stops none of it.",
+   rxDefend: "Play it now. It protects you from this attack.",
+   rxAttack: "React with your cheapest card to pump this attack.",
+   rxAbility: "Use the ability. It is printed for this window.",
+diff --git a/test/misplays.test.js b/test/misplays.test.js
+index 868e0ea..bee508d 100644
+--- a/test/misplays.test.js
++++ b/test/misplays.test.js
+@@ -176,3 +176,46 @@ test("Scout the Periphery's look goes where it adds information: their deck, unl
+   assert.equal(J.lookChoice(other, 0), null);
+   assert.equal(SP.explain(other, 0).key, "firstOption");
+ });
++
++/* ---- TRAINER QA CENSUS (Fai, Enigma, Arakni, Blaze, Gravy, Lyath): the hero's shield ---- */
++
++test("an attack aimed at an ally is not the hero's to prevent: Throw Caution is held — and cast when the hero is the target", {skip}, () => {
++  const {match} = SPP();
++  /* replayed, one action per step, to the first reaction window where Gravy defends an
++     attack on his ally holding a castable Throw Caution (found by the census probe) */
++  let n = match("gravy", "kayo", "ally-kayo-1", 0), steps = 0, at = null;
++  while(!n.over && steps < 4000 && !at){
++    let moved = false;
++    for(const seat of [0, 1]){
++      if(seat === 0 && n.pend && n.pend.by === 1 && n.step === "reaction" && J.linkAtAlly(n)){
++        const tc = n.sides[0].hand.find(c => /Throw Caution/.test(c.name));
++        if(tc && J.legal(n, {t: "play", uid: tc.uid, from: "hand"}, 0) == null){ at = {n, tc}; break; }
++      }
++      const a = SP.act(n, seat); if(!a) continue;
++      const r = J.reduce(n, a, seat); if(r.error) continue;
++      n = r.state; steps++; moved = true; break;
++    }
++    if(!moved) break;
++  }
++  assert.ok(at, "the fixture game reaches the window");
++  const e = SP.explain(at.n, 0);
++  assert.deepEqual(e.action, {t: "pass"}, "the card protects the hero, and the hero is not the target");
++  assert.equal(e.key, "rxAllyHold");
++  /* the same window with the attack on the hero: the reader flips and the hold does not fire */
++  const atHero = {...at.n, pend: {...at.n.pend, target: {kind: "hero", side: 0, uid: null}}};
++  assert.equal(J.linkAtAlly(atHero), false);
++  assert.notEqual(SP.explain(atHero, 0).key, "rxAllyHold");
++});
++
++test("a 'this turn' shield for yourself lands nothing on your own turn — and is a shield on theirs", {skip}, () => {
++  const {match} = SPP();
++  let g = match("gravy", "kayo", "mp-tc", 0);
++  const tc = g.sides[0].hand.concat(g.sides[0].deck).find(c => /Throw Caution/.test(c.name));
++  g = side(g, 0, {hand: [tc], arsenal: null, res: 3});
++  assert.equal(g.turnPlayer, 0, "Gravy's own action phase");
++  assert.equal(J.landsNothing(g, 0, tc.uid, "hand", {ownTurnShield: true}), true, "no opponent attack can come before the window closes");
++  assert.equal(J.landsNothing(g, 0, tc.uid, "hand"), false, "without the ask the reader stays as it was");
++  assert.equal(J.landsNothing({...g, turnPlayer: 1}, 0, tc.uid, "hand", {ownTurnShield: true}), false, "on their turn it is a real shield");
++  const a = SP.act(g, 0);
++  assert.ok(!(a && a.t === "play" && a.uid === tc.uid), "it is not cast as a filler: " + JSON.stringify(a));
++});
