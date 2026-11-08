@@ -66,7 +66,7 @@ test("driven: every go-again line names its source, in game words", () => {
      Boots only through the misplay of activating it with nothing to take its
      grant, which the seat no longer makes; this game uses the piece with a taker. */
   const games = HEROES.map((h, i) => [h, HEROES[(i + 5) % 15], "ga-src-" + i])
-    .concat([["gravy", "arakni", "ga-src-gravy-0"]]);
+    .concat([["gravy", "bravo", "ga-src-gravy-0"]]);   /* was arakni: H-DAGGER moved that game */
   for(const [h0, h1, seed] of games){
     let g = match(h0, h1, seed, 0), steps = 0;
     while(!g.over && steps < 3000){

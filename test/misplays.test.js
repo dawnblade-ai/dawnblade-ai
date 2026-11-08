@@ -210,3 +210,32 @@ test("defending, the cheapest reaction that stops the whole leak by itself goes 
   const small = {...at.n, pend: {...at.n.pend, total: wall + (cheapest.def || 0)}};
   assert.notEqual(SP.explain(small, 0).key, "rxFit");
 });
+
+/* ---- H-DAGGER: a weapon a pending grant pumps competes on its pumped power ---- */
+
+test("a pending '+4 to your next dagger attack' makes the dagger swing outrank a bigger hand attack — and without it, the hand attack goes", {skip}, () => {
+  const {match} = SPP();
+  /* replayed (rule policy) to the first decision where Arakni holds a pending grant a weapon swing would take */
+  let n = match("arakni", "kayo", "arakni-kayo-0", 0), at = null;
+  for(let i = 0; i < 6000 && !n.over && !at; i++){
+    let moved = false;
+    for(const seat of [0, 1]){
+      if(seat === 0 && n.turnPlayer === 0 && !n.prompt && !n.pend && J.grantedSwings(n, 0).length){
+        const e = SP.explain(n, 0);
+        if(e.key === "grantSwing"){ at = {n, e}; break; }
+      }
+      const a = SP.act(n, seat); if(!a) continue;
+      const r = J.reduce(n, a, seat); if(r.error) continue;
+      n = r.state; moved = true;
+    }
+    if(!moved) break;
+  }
+  assert.ok(at, "the fixture game reaches a pumped swing");
+  const sw = J.grantedSwings(at.n, 0).find(x => x.uid === at.e.action.uid);
+  assert.ok(sw && sw.bonus > 0, "the swing is one the pending grant pumps");
+  assert.equal(at.e.action.t, "activate");
+  /* the refusal: the same state without the pending grant ranks by printed power again */
+  const bare = {...at.n, sides: at.n.sides.map((s, i) => i === 0 ? {...s, buffQ: [], buffNext: 0} : s)};
+  assert.deepEqual(J.grantedSwings(bare, 0), []);
+  assert.notEqual(SP.explain(bare, 0).key, "grantSwing");
+});

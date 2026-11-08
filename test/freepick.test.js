@@ -80,7 +80,9 @@ const probe = (a, ch) => {
     }
     return p;
   };
-  try { const E = T.ENTRANTS; T.leg(E[a], E[(a + 5) % E.length], "col-" + a, ch); }
+  /* a leg is its entrant index, optionally with a seed suffix ("13b" plays col-13b) */
+  const i = parseInt(a, 10), sfx = String(a).slice(String(i).length);
+  try { const E = T.ENTRANTS; T.leg(E[i], E[(i + 5) % E.length], "col-" + i + sfx, ch); }
   finally { PM.buildPrompt = real; }
   return out;
 };
@@ -98,7 +100,8 @@ test("H12 taken (driven games): the reveal for Crash and Bash's Seismic Surge, a
 });
 
 test("H12 still declined: every priced pick keeps its refusal", {skip}, () => {
-  const declined = [[4, "Pick Up the Point"], [2, "Condemn to Slaughter"], [8, "Golden Tipple"], [10, "Blaze"]];
+  /* Condemn to Slaughter re-anchored from leg 2 to "13b" (H-DAGGER moved leg 2's game) */
+  const declined = [[4, "Pick Up the Point"], ["13b", "Condemn to Slaughter"], [8, "Golden Tipple"], [10, "Blaze"]];
   for(const [a, src] of declined) for(const r of seen(a, src)){
     assert.equal(r.cls, null, src + " is not a free pick");
     assert.equal(r.ans, "promptConfirm", src + " is declined");
