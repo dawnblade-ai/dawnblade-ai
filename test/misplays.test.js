@@ -239,3 +239,36 @@ test("a pending '+4 to your next dagger attack' makes the dagger swing outrank a
   assert.deepEqual(J.grantedSwings(bare, 0), []);
   assert.notEqual(SP.explain(bare, 0).key, "grantSwing");
 });
+
+/* ---- H-DAGGER residue: a grant held when no swing it pumps can be paid for ---- */
+
+test("Up Sticks and Run waits when the dagger's {r}{r} is out of reach — and is played when it can be paid", {skip}, () => {
+  const {match} = SPP();
+  let g = match("arakni", "kayo", "mp-us", 0);
+  const all = g.sides[0].hand.concat(g.sides[0].deck);
+  const us = all.find(c => /Up Sticks and Run/.test(c.name));
+  const red = all.find(c => c !== us && (+c.pitch || 0) === 1 && !(+c.power > 0) && !/Up Sticks/.test(c.name));
+  const dagger = g.sides[0].gear.find(x => (x.ty || []).includes("Dagger"));
+  assert.ok(us && red && dagger, "fixture cards");
+  /* Up Sticks alone in hand: pitched for 1 it pays for nothing, played it leaves 0 for the {r}{r} */
+  g = side(g, 0, {hand: [us], arsenal: null, res: 0, grave: [], gear: g.sides[0].gear.filter(x => x.power != null)});
+  /* the retrieve is the only other text: with nothing to retrieve it is not a second payload */
+  assert.equal(J.grantTakers(g, 0, us.uid, "hand"), null, "read as printed, the card is not a pure grant");
+  assert.ok(Array.isArray(J.grantTakers(g, 0, us.uid, "hand", {idlePick: true})), "with the idle pick set aside, it is");
+  const e = SP.explain(g, 0);
+  assert.ok(!(e.action && e.action.t === "play" && e.action.uid === us.uid), "held: nothing left can pay the dagger's {r}{r}: " + JSON.stringify(e.action));
+  assert.equal(e.key, "grantHold");
+  /* a dagger IS in the graveyard and a red card could pay the retrieve's {r}: the pick is
+     still idle, because this seat's own answer declines every priced pick (H12) */
+  const graveDagger = {...dagger, uid: "gd1"};
+  const priced = side(g, 0, {hand: [us, red], grave: [graveDagger]});
+  assert.ok(Array.isArray(J.grantTakers(priced, 0, us.uid, "hand", {idlePick: true})),
+    "a priced optional pick is set aside as well");
+  /* the match: resources to pay the swing beside it — played */
+  /* (a hand attack beside it, the shape the grant-first branch reads; with only a weapon to
+     follow, the swing goes first whatever this reader says — a separate, older ordering) */
+  const atk = all.find(c => c !== us && (+c.power || 0) > 0 && !(+c.cost > 0));
+  const rich = side(g, 0, {res: 3, hand: [us, atk]});
+  const a = SP.act(rich, 0);
+  assert.ok(a && a.t === "play" && a.uid === us.uid, "with the swing payable it is played: " + JSON.stringify(a));
+});

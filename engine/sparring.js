@@ -145,7 +145,8 @@ const fixOn = (g, seat) => {
    others: SPXSOAK the soak card price, SPXLOOK whose deck a look reads, SPXPAY a
    piece paid for go again, SPXIDLE the holds (land nothing, a go again already had),
    SPXRXFIT the defence reaction that stops the whole leak by itself, SPXGRANTSWING a
-   weapon swing ranked with the pending grant that pumps it. */
+   weapon swing ranked with the pending grant that pumps it, SPXGRANTPAY a grant whose only
+   other text is an optional pick it cannot use, held for a taker it can pay for. */
 const subGate = k => {
   const v = (typeof process !== "undefined" && process.env && process.env[k]) || "";
   return (g, seat) => {
@@ -157,7 +158,7 @@ const subGate = k => {
   };
 };
 const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate("SPXPAY"), idleOn = subGate("SPXIDLE"),
-      fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING");
+      fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY");
 /* A card or ability that would land nothing right now is held (`judge.landsNothing`).
    Noted so the call can say why the turn ends with it still in hand. */
 const idleOK = (g, seat, uid, from) => {
@@ -695,13 +696,18 @@ function offenceBase(g, seat, o){
      WITHOUT the grant card. `judge.grantTakers` answers which attacks the
      grant admits, so this file still reads no card text. */
   const grantOK = x => {
-    const t = J.grantTakers(g, seat, x.uid, x.from);
+    const gp = grantPayOn(g, seat);
+    const t = J.grantTakers(g, seat, x.uid, x.from, gp ? {idlePick: true} : null);
     if(!t) return true;
+    /* only the idle-pick reading made it a grant: the call says so if it is held */
+    const viaPick = gp && !J.grantTakers(g, seat, x.uid, x.from);
     /* THE GRANT'S COST AND THE ATTACK'S TOGETHER, a weapon's and an ally's cost included (H29).
        The attack used to be checked against the hand without the grant's own payment, so the
        one attack in hand was pitched to pay for the card that pumps it, and a weapon or an ally
        was never asked about cost at all. */
-    return t.some(k => jointly(sd, x.c, k, o, null));
+    const ok = t.some(k => jointly(sd, x.c, k, o, null));
+    if(!ok && viaPick && NOTE) NOTE.grantHold = true;
+    return ok;
   };
   const from = [];
   (sd.hand || []).forEach(c => from.push({c, from: "hand"}));
@@ -1585,6 +1591,7 @@ const CALL_WHY = {
   allyIn: "Send your ally in.",
   biggestAttack: "Swing the biggest attack you can afford.",
   grantWait: "Swing the biggest attack you can afford, without the card that would pump it. Its cost can't be paid beside the attack's, so it stays in your hand.",
+  grantHold: "Keep the card that pumps your next attack. You can't pay for the attack it would pump this turn, and nothing else it does is within reach, so it waits.",
   weapon: "Swing your weapon. It costs no card.",
   resUnlock: "Spend the piece for its resource. It pays for an attack you are holding.",
   resUnlockWeapon: "Spend the piece for its resource. It pays for a swing of your weapon.",
@@ -1716,6 +1723,8 @@ function explainNow(g, seat, o){
   if(key === "endTurn" && laCands(g, seat, null).some(x => x.t !== "endTurn")) key = "endTurnKeep";
   /* AND WHEN WHAT IS HELD WOULD LAND NOTHING, the call says that (ship/ai-misplays). */
   if((key === "endTurn" || key === "endTurnKeep") && n.idle) key = "endTurnIdle";
+  /* AND WHEN A GRANT WAS HELD FOR WANT OF A SWING IT CAN PAY FOR (H-DAGGER residue). */
+  if((key === "endTurn" || key === "endTurnKeep" || key === "grantWait") && n.grantHold) key = "grantHold";
   return {action: a, key, why: key ? (CALL_WHY[key] ? (key === "chargeColour" || key === "gateColour" ? CALL_WHY[key].replace(/COLOUR/g, ["", "red", "yellow", "blue"][key === "gateColour" ? J.gateColourWanted(g, seat) : J.chargePitchWanted(g)] || "matching") : CALL_WHY[key]) : null) : null, line: key !== "laTake" ? lineOf(g, seat, a) : (wallOf(g.sides[seat]) > 0 ? "Don't block any more" : "Don't block")};
 }
 
