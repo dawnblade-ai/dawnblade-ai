@@ -1,0 +1,80 @@
+diff --git a/engine/judge.js b/engine/judge.js
+index b254597..28bb94c 100644
+--- a/engine/judge.js
++++ b/engine/judge.js
+@@ -2316,6 +2316,22 @@ const grantedSwings = (g, seat) => {
+       return bonus > 0 ? {uid: w.uid, power: (+w.power || 0) + ctr + bonus, bonus} : null;
+     }).filter(Boolean);
+ };
++/* ---- THE LAST ATTACK OF THE TURN, AIMED AT AN ALLY (H-SHIELD2) ----
++   For `sparring.js`, which reads no card text. CR 7.3.2a: an attack on an ally cannot
++   be defended and its damage lands on the ally, so "the next time YOU would be dealt
++   damage this turn, prevent X" (Throw Caution to the Wind, Cloud Cover, Toe the Line)
++   waits for a LATER hit on the hero. That hit can only come while the attacker can
++   attack again: this link has go again (`pend.ga`, or a grant waiting to land on it),
++   or its controller keeps an action point after it (the point is spent at resolution,
++   so `ap` still counts it here). Measured on Gravy's casts at ally attacks (3 seeds,
++   84 games): a link with go again — 20 of 22 shields caught a later hit on Gravy; the
++   last link — 28 of 29 expired. True only for that last link. */
++const linkLastAtAlly = g => {
++  const p = g && g.pend;
++  if(!p || !p.card || GM.targetCanBeDefended(p.target)) return false;
++  if(p.ga || g._gaGrant) return false;
++  return ((at(g, p.by) || {}).ap || 0) <= 1;
++};
+ /* THE HAND ATTACKS A GRANT BEING PAID FOR STILL HAS TO TAKE (H29). While its payment is open the
+    card is lifted onto `pending`, where `grantTakers` cannot find it and `legal` refuses every
+    play, so this answers for the card itself and asks no legality: `{uid, cost, power}` of each
+@@ -4861,7 +4877,7 @@ function drawTo(g, i){
+ }
+ 
+ return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
+-        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, chargeMore,
++        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, linkLastAtAlly, landsNothing, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, chargeMore,
+         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
+         handFree: PR.handFree,
+         /* the card semantics seam (v2.77) */
+diff --git a/engine/sparring.js b/engine/sparring.js
+index d487ca5..b2b2102 100644
+--- a/engine/sparring.js
++++ b/engine/sparring.js
+@@ -145,7 +145,8 @@ const fixOn = (g, seat) => {
+    others: SPXSOAK the soak card price, SPXLOOK whose deck a look reads, SPXPAY a
+    piece paid for go again, SPXIDLE the holds (land nothing, a go again already had),
+    SPXRXFIT the defence reaction that stops the whole leak by itself, SPXGRANTSWING a
+-   weapon swing ranked with the pending grant that pumps it. */
++   weapon swing ranked with the pending grant that pumps it, SPXSHIELD2 the hero's
++   protection held against the attacker's last attack of the turn, aimed at an ally. */
+ const subGate = k => {
+   const v = (typeof process !== "undefined" && process.env && process.env[k]) || "";
+   return (g, seat) => {
+@@ -157,7 +158,7 @@ const subGate = k => {
+   };
+ };
+ const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate("SPXPAY"), idleOn = subGate("SPXIDLE"),
+-      fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING");
++      fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), shield2On = subGate("SPXSHIELD2");
+ /* A card or ability that would land nothing right now is held (`judge.landsNothing`).
+    Noted so the call can say why the turn ends with it still in hand. */
+ const idleOK = (g, seat, uid, from) => {
+@@ -574,6 +575,12 @@ function reaction(g, seat){
+      when the first stopped the hit. */
+   if(pick && defending && wallNow(sd) >= ((g.pend && g.pend.total) || 0))
+     return tag("rxHold", {t: "pass"});
++  /* THE LAST ATTACK OF THE TURN, AIMED AT AN ALLY (H-SHIELD2). Its damage lands on the ally
++     (CR 7.3.2a) and no later attack can bring the hit a hero's shield waits for, so the card
++     stays in hand. A link that can still be followed is left alone: there a Throw Caution cast
++     now caught a later hit on Gravy 20 times in 22. `judge.linkLastAtAlly` answers. */
++  if(pick && defending && shield2On(g, seat) && J.linkLastAtAlly(g))
++    return tag("rxAllyLastHold", {t: "pass"});
+   /* THE ONE THAT STOPS THE WHOLE LEAK, IF ONE DOES (trainer QA census). Cheapest first cast
+      Big Blue Sky (+2) into a leak of 3, then paid a card for Unmovable (+7) to stop the last
+      point: three cards where Unmovable alone was two. Among the legal defenders, the
+@@ -1570,6 +1577,7 @@ const CALL_WHY = {
+   blockHand: "Block with your best defender. This hit is too big to take.",
+   blockSpare: "Block with a spare card. Your next turn cannot spend a hand this big, so the extra card stops this whole hit for free.",
+   rxHold: "Hold it. Your blocks already stop this whole hit, so the card stays in your hand.",
++  rxAllyLastHold: "Hold it. This is their last attack this turn and it is aimed at your ally, so nothing you could protect yourself from is coming.",
+   rxDefend: "Play it now. It protects you from this attack.",
+   rxFit: "Play this one. It stops everything your blocks leave on its own, so no second card is needed.",
+   rxAttack: "React with your cheapest card to pump this attack.",
