@@ -93,9 +93,11 @@ test("crindex — the verdict counts are pinned", () => {
   /* 86 -> 88 and 76 -> 78 guarded AT S-items (ship/s-items-counters-scout): CR 3.0.9,
      1.15.3 — a card that leaves the arena becomes a new object and its counters
      cease to exist (game.js resetLeavers, test/ctrreset.test.js). */
-  assert.equal(rs.length, 88, "the number of distinct CR rules this project cites moved");
+  /* 88 -> 89 and 78 -> 79 guarded AT the arsenal close-out: CR 3.1.1a, the zones outside the
+     arena (parser.arsenalPutSource, test/arsenalsrc.test.js). */
+  assert.equal(rs.length, 89, "the number of distinct CR rules this project cites moved");
   /* 50 -> 51 guarded and 6 -> 5 drill-only AT v4.66: CR 7.1.2, built. */
-  assert.equal(by(rs, "guarded").length,   78, "guarded count moved");
+  assert.equal(by(rs, "guarded").length,   79, "guarded count moved");
   assert.equal(by(rs, "UNGUARDED").length,  3, "UNGUARDED count moved");
   assert.equal(by(rs, "drill-only").length, 5, "drill-only count moved");
   assert.equal(by(rs, "prose").length,      2, "prose count moved");

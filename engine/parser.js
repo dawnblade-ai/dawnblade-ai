@@ -10257,6 +10257,28 @@ const isToken = c => {
    departure. QUEUE item 3: twelve Might tokens sat in one graveyard by the
    end of a game, and Pass Over then offered one as a legal banish. */
 const ARENA_ZONES = ["board", "gear"];
+/* WHERE DOES A CLAUSE THAT PUTS A CARD INTO AN ARSENAL TAKE IT FROM? (S-item close-out)
+   `game.js resetLeavers` sweeps counters off a card that entered the hand, deck, pitch,
+   graveyard, banished zone or soul (CR 3.0.9), but deliberately not the arsenal: a counter
+   can be put on a face-up card already there (Crow's Nest), and a sweep cannot tell that
+   counter from one carried in. That is safe only while no card moves a PERMANENT from the
+   arena into an arsenal. This reader is the guard (test/arsenalsrc.test.js): for one clause
+   that puts or returns a card into an arsenal it answers "hand", "deck", "arena" or
+   "unknown" — null for a clause that does no such thing. Every pinned-pool clause reads
+   "hand" or "deck"; the drill fails the day one reads anything else.
+   CR 3.1.1a (verbatim): "The arsenal, banished, deck, graveyard, hand, pitch, and stack
+   zones are not part of the arena." — so a card put into an arsenal has left the arena. */
+function arsenalPutSource(text){
+  const c = norm(String(text || ""));
+  if(!/\b(?:put|puts|return|returns)\b/.test(c) || !/\b(?:into|in|to) (?:your|their|its owner s|target hero s|an?) (?:face (?:up|down) )?arsenal\b/.test(c)) return null;
+  /* a trigger ON a put ("when this is put face-up into your arsenal", Crow's Nest's
+     "whenever an arrow is put ...") reacts to a move some other clause makes */
+  if(/\bwhen(?:ever)? (?:this|it|an? [a-z]+) (?:is|are) put\b/.test(c)) return null;
+  if(/\bfrom (?:your|their) hand\b/.test(c)) return "hand";
+  if(/\btop card of (?:your|their) deck\b|\bfrom (?:your|their) deck\b/.test(c)) return "deck";
+  if(/\byou control\b|\bin the arena\b|\bpermanent\b|\b(?:aura|item|ally|equipment|weapon|token)\b/.test(c)) return "arena";
+  return "unknown";
+}
 const ceasesToExist = (c, to) => {
   const dest = to || "grave";
   if(ARENA_ZONES.indexOf(dest) >= 0) return false;
@@ -10787,6 +10809,6 @@ return {norm, noopFeedText, noopIsQuiet, isAttack, isArrow, isWeapon, hasGA, arc
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, spellvoidX, linksControlled, arcaneSoaks,
         ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
-        chiValue, chiSum, chiFloating, pitchExcessWhy, chiCeiling, payCeiling, handFree, isDeclaredDefender, rxDefenders, PLAY_ROUTES, isCardPlay, isNonAtkActionPlay, abChiCost, abSoulCost, soulPutNote, soulPutThisTurn, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, abTargetSpec, swingSpentWhy, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, abilitiesLive, boardEntryNamed, isEphemeral, isToken, ceasesToExist, PLAY_GRANT_STAMPS, spendPlayGrant, ARENA_ZONES, isHandWipe, gyFirstGaKw, gyFirstGaSource,
+        chiValue, chiSum, chiFloating, pitchExcessWhy, chiCeiling, payCeiling, handFree, isDeclaredDefender, rxDefenders, PLAY_ROUTES, isCardPlay, isNonAtkActionPlay, abChiCost, abSoulCost, soulPutNote, soulPutThisTurn, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, abTargetSpec, swingSpentWhy, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, abilitiesLive, boardEntryNamed, isEphemeral, isToken, ceasesToExist, PLAY_GRANT_STAMPS, spendPlayGrant, ARENA_ZONES, arsenalPutSource, isHandWipe, gyFirstGaKw, gyFirstGaSource,
         CARD_OVERRIDES};
 });
