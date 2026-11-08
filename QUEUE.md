@@ -42,8 +42,9 @@ the user must start it. The new CEO tells both workers its id.
   reaction windows (H-SHIELD's real fix). May send a plan first. First in line for the server deploy.
 - `session_013xG9xAMN9v4UxqgJGzXBSH` (Opus, AI, pushes ONLY `ship/s-items-counters-scout`): **grant ordering with
   only a weapon to follow** (`haveAtk` counts hand and arsenal attacks only, so the swing goes first and a later grant is
-  wasted) SHIPPED v6.17; now ASSIGNED the atkKeepsAP-first ordering (Arakni loses 7/28 grants to a go-again hand
-  attack spending the pitch first).
+  wasted) SHIPPED v6.17. atkKeepsAP-first (SPXSWINGFIRST, `experiments/spxswingfirst.patch` 1c7e14e) measured flat:
+  fires 13×/210 games, Arakni rule 14.00=14.00, Sharp 26.00→25.67 — dagger line CLOSED at the noise floor; the
+  last 5 lost grants need reaction-window search. Now ASSIGNED: board→arsenal counters route (check the pool first).
 
 **WAITING ON THE USER (asked 2026-11-08, re-asked at v6.15 and v6.16):** (1) server for the referee: Cloudflare
 Workers+DO (recommended), Supabase Edge (also H4 accounts), or neither — needs an account; build nothing until
