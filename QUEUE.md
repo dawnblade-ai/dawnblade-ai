@@ -51,8 +51,10 @@ answer Cloudflare Workers + DO (free plan, no pause; Supabase free projects paus
   resolved loss; Blaze/SOAK −1 at 3 seeds → −0.17 (t≈−0.5) at 12 = noise. Now `session_013xG9xAMN9v4UxqgJGzXBSH` audits
   SPXLABOARD on Sharp for the other 11 heroes (report only).
 - **H-BOARD SHIPPED v6.21** (`SPXLABOARD`, key laBoard): Sharp's laEval prices permanents by printed numbers. Gravy
-  7.75→13.25 /28 (t 4.89, 12 seeds), Viserai 23.17→25.42, Kayo +1, Dorinthea +0.67; phone p95 ≤103 ms. Next for
-  `session_013xG9xCgDniyTy1T4jVmNfK` (push `ship/sharp-board`): bW tuning (0.5/2) or census #3. First in line for the deploy.
+  7.75→13.25 /28 (t 4.89, 12 seeds), Viserai 23.17→25.42, Kayo +1, Dorinthea +0.67; phone p95 ≤103 ms. bW tuning:
+  KEEP 1 (0.5 = same; 2 loses: Gravy −3.17, Viserai −1.67 at 6 seeds). Census #3 stays parked (hidden-info gamble).
+  `session_013xG9xCgDniyTy1T4jVmNfK` now ASSIGNED: Lyath's RULE-policy walls (313 Steady/Sharp block disagreements, ~6
+  wins); push `ship/rule-walls`. First in line for the deploy.
 - Census also: Lyath's gap is POLICY (rule 9/84 vs Sharp 41/84); Gravy's is mostly deck. Rare and parked: Sharp dies to a
   go-again follow-up after relying on a reaction (4/1,260).
 - Wins/84 at v6.18 (Sharp seat vs the 14 others): briar 83, bravo 76, dorinthea 76, kayo 75, dash 74, arakni 72, azalea 72,
