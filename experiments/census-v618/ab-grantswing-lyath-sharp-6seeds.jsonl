@@ -1,0 +1,24 @@
+{"hero":"lyath","s":0,"mode":"sharp","gate":"none","w":14,"ref":0,"viol":0,"stall":0,"draw":0}
+{"hero":"lyath","s":0,"mode":"sharp","gate":"on","w":13,"ref":0,"viol":0,"stall":0,"draw":0}
+[1]-  Done                    env GATE=X node $S/ab.js lyath $s sharp | sed 's/"gate":"[^"]*"/"gate":"on"/'
+[2]+  Done                    env GATE=X SPXGRANTSWING=$ALL node $S/ab.js lyath $s sharp | sed 's/"gate":"[^"]*"/"gate":"none"/'
+{"hero":"lyath","s":1,"mode":"sharp","gate":"on","w":16,"ref":0,"viol":0,"stall":0,"draw":0}
+[1]-  Done                    env GATE=X node $S/ab.js lyath $s sharp | sed 's/"gate":"[^"]*"/"gate":"on"/'
+{"hero":"lyath","s":1,"mode":"sharp","gate":"none","w":14,"ref":0,"viol":0,"stall":0,"draw":0}
+[2]+  Done                    env GATE=X SPXGRANTSWING=$ALL node $S/ab.js lyath $s sharp | sed 's/"gate":"[^"]*"/"gate":"none"/'
+{"hero":"lyath","s":2,"mode":"sharp","gate":"none","w":15,"ref":0,"viol":0,"stall":0,"draw":0}
+{"hero":"lyath","s":2,"mode":"sharp","gate":"on","w":16,"ref":0,"viol":0,"stall":0,"draw":0}
+[1]-  Done                    env GATE=X node $S/ab.js lyath $s sharp | sed 's/"gate":"[^"]*"/"gate":"on"/'
+[2]+  Done                    env GATE=X SPXGRANTSWING=$ALL node $S/ab.js lyath $s sharp | sed 's/"gate":"[^"]*"/"gate":"none"/'
+{"hero":"lyath","s":3,"mode":"sharp","gate":"none","w":18,"ref":0,"viol":0,"stall":0,"draw":0}
+{"hero":"lyath","s":3,"mode":"sharp","gate":"on","w":15,"ref":0,"viol":0,"stall":0,"draw":0}
+[1]-  Done                    env GATE=X node $S/ab.js lyath $s sharp | sed 's/"gate":"[^"]*"/"gate":"on"/'
+[2]+  Done                    env GATE=X SPXGRANTSWING=$ALL node $S/ab.js lyath $s sharp | sed 's/"gate":"[^"]*"/"gate":"none"/'
+{"hero":"lyath","s":4,"mode":"sharp","gate":"none","w":13,"ref":0,"viol":0,"stall":0,"draw":1}
+{"hero":"lyath","s":4,"mode":"sharp","gate":"on","w":15,"ref":0,"viol":0,"stall":0,"draw":0}
+[1]-  Done                    env GATE=X node $S/ab.js lyath $s sharp | sed 's/"gate":"[^"]*"/"gate":"on"/'
+[2]+  Done                    env GATE=X SPXGRANTSWING=$ALL node $S/ab.js lyath $s sharp | sed 's/"gate":"[^"]*"/"gate":"none"/'
+{"hero":"lyath","s":5,"mode":"sharp","gate":"none","w":14,"ref":0,"viol":0,"stall":0,"draw":1}
+{"hero":"lyath","s":5,"mode":"sharp","gate":"on","w":10,"ref":0,"viol":0,"stall":0,"draw":0}
+[1]-  Done                    env GATE=X node $S/ab.js lyath $s sharp | sed 's/"gate":"[^"]*"/"gate":"on"/'
+[2]+  Done                    env GATE=X SPXGRANTSWING=$ALL node $S/ab.js lyath $s sharp | sed 's/"gate":"[^"]*"/"gate":"none"/'

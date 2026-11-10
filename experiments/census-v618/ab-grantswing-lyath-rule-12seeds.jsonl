@@ -1,0 +1,48 @@
+{"hero":"lyath","s":0,"mode":"rule","gate":"none","w":8,"ref":0,"viol":0,"stall":0,"draw":0}
+{"hero":"lyath","s":0,"mode":"rule","gate":"on","w":3,"ref":0,"viol":0,"stall":0,"draw":0}
+[1]-  Done                    env GATE=X node $S/ab.js lyath $s rule | sed 's/"gate":"[^"]*"/"gate":"on"/'
+[2]+  Done                    env GATE=X SPXGRANTSWING=$ALL node $S/ab.js lyath $s rule | sed 's/"gate":"[^"]*"/"gate":"none"/'
+{"hero":"lyath","s":1,"mode":"rule","gate":"none","w":7,"ref":0,"viol":0,"stall":0,"draw":0}
+{"hero":"lyath","s":1,"mode":"rule","gate":"on","w":3,"ref":0,"viol":0,"stall":0,"draw":0}
+[1]-  Done                    env GATE=X node $S/ab.js lyath $s rule | sed 's/"gate":"[^"]*"/"gate":"on"/'
+[2]+  Done                    env GATE=X SPXGRANTSWING=$ALL node $S/ab.js lyath $s rule | sed 's/"gate":"[^"]*"/"gate":"none"/'
+{"hero":"lyath","s":2,"mode":"rule","gate":"on","w":3,"ref":0,"viol":0,"stall":0,"draw":0}
+[1]-  Done                    env GATE=X node $S/ab.js lyath $s rule | sed 's/"gate":"[^"]*"/"gate":"on"/'
+{"hero":"lyath","s":2,"mode":"rule","gate":"none","w":8,"ref":0,"viol":0,"stall":0,"draw":0}
+[2]+  Done                    env GATE=X SPXGRANTSWING=$ALL node $S/ab.js lyath $s rule | sed 's/"gate":"[^"]*"/"gate":"none"/'
+{"hero":"lyath","s":3,"mode":"rule","gate":"none","w":7,"ref":0,"viol":0,"stall":0,"draw":0}
+{"hero":"lyath","s":3,"mode":"rule","gate":"on","w":3,"ref":0,"viol":0,"stall":0,"draw":0}
+[1]-  Done                    env GATE=X node $S/ab.js lyath $s rule | sed 's/"gate":"[^"]*"/"gate":"on"/'
+[2]+  Done                    env GATE=X SPXGRANTSWING=$ALL node $S/ab.js lyath $s rule | sed 's/"gate":"[^"]*"/"gate":"none"/'
+{"hero":"lyath","s":4,"mode":"rule","gate":"none","w":6,"ref":0,"viol":0,"stall":0,"draw":1}
+{"hero":"lyath","s":4,"mode":"rule","gate":"on","w":3,"ref":0,"viol":0,"stall":0,"draw":0}
+[1]-  Done                    env GATE=X node $S/ab.js lyath $s rule | sed 's/"gate":"[^"]*"/"gate":"on"/'
+[2]+  Done                    env GATE=X SPXGRANTSWING=$ALL node $S/ab.js lyath $s rule | sed 's/"gate":"[^"]*"/"gate":"none"/'
+{"hero":"lyath","s":5,"mode":"rule","gate":"none","w":8,"ref":0,"viol":0,"stall":0,"draw":1}
+{"hero":"lyath","s":5,"mode":"rule","gate":"on","w":6,"ref":0,"viol":0,"stall":0,"draw":0}
+[1]-  Done                    env GATE=X node $S/ab.js lyath $s rule | sed 's/"gate":"[^"]*"/"gate":"on"/'
+[2]+  Done                    env GATE=X SPXGRANTSWING=$ALL node $S/ab.js lyath $s rule | sed 's/"gate":"[^"]*"/"gate":"none"/'
+{"hero":"lyath","s":6,"mode":"rule","gate":"none","w":5,"ref":0,"viol":0,"stall":0,"draw":0}
+{"hero":"lyath","s":6,"mode":"rule","gate":"on","w":4,"ref":0,"viol":0,"stall":0,"draw":0}
+[1]-  Done                    env GATE=X node $S/ab.js lyath $s rule | sed 's/"gate":"[^"]*"/"gate":"on"/'
+[2]+  Done                    env GATE=X SPXGRANTSWING=$ALL node $S/ab.js lyath $s rule | sed 's/"gate":"[^"]*"/"gate":"none"/'
+{"hero":"lyath","s":7,"mode":"rule","gate":"none","w":7,"ref":0,"viol":0,"stall":0,"draw":0}
+{"hero":"lyath","s":7,"mode":"rule","gate":"on","w":4,"ref":0,"viol":0,"stall":0,"draw":0}
+[1]-  Done                    env GATE=X node $S/ab.js lyath $s rule | sed 's/"gate":"[^"]*"/"gate":"on"/'
+[2]+  Done                    env GATE=X SPXGRANTSWING=$ALL node $S/ab.js lyath $s rule | sed 's/"gate":"[^"]*"/"gate":"none"/'
+{"hero":"lyath","s":8,"mode":"rule","gate":"none","w":6,"ref":0,"viol":0,"stall":0,"draw":0}
+{"hero":"lyath","s":8,"mode":"rule","gate":"on","w":0,"ref":0,"viol":0,"stall":0,"draw":0}
+[1]-  Done                    env GATE=X node $S/ab.js lyath $s rule | sed 's/"gate":"[^"]*"/"gate":"on"/'
+[2]+  Done                    env GATE=X SPXGRANTSWING=$ALL node $S/ab.js lyath $s rule | sed 's/"gate":"[^"]*"/"gate":"none"/'
+{"hero":"lyath","s":9,"mode":"rule","gate":"on","w":2,"ref":0,"viol":0,"stall":0,"draw":0}
+[1]-  Done                    env GATE=X node $S/ab.js lyath $s rule | sed 's/"gate":"[^"]*"/"gate":"on"/'
+{"hero":"lyath","s":9,"mode":"rule","gate":"none","w":6,"ref":0,"viol":0,"stall":0,"draw":0}
+[2]+  Done                    env GATE=X SPXGRANTSWING=$ALL node $S/ab.js lyath $s rule | sed 's/"gate":"[^"]*"/"gate":"none"/'
+{"hero":"lyath","s":10,"mode":"rule","gate":"none","w":12,"ref":0,"viol":0,"stall":0,"draw":0}
+{"hero":"lyath","s":10,"mode":"rule","gate":"on","w":4,"ref":0,"viol":0,"stall":0,"draw":0}
+[1]-  Done                    env GATE=X node $S/ab.js lyath $s rule | sed 's/"gate":"[^"]*"/"gate":"on"/'
+[2]+  Done                    env GATE=X SPXGRANTSWING=$ALL node $S/ab.js lyath $s rule | sed 's/"gate":"[^"]*"/"gate":"none"/'
+{"hero":"lyath","s":11,"mode":"rule","gate":"none","w":9,"ref":0,"viol":0,"stall":0,"draw":0}
+{"hero":"lyath","s":11,"mode":"rule","gate":"on","w":2,"ref":0,"viol":0,"stall":0,"draw":0}
+[1]-  Done                    env GATE=X node $S/ab.js lyath $s rule | sed 's/"gate":"[^"]*"/"gate":"on"/'
+[2]+  Done                    env GATE=X SPXGRANTSWING=$ALL node $S/ab.js lyath $s rule | sed 's/"gate":"[^"]*"/"gate":"none"/'
