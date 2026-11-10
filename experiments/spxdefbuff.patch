@@ -1,0 +1,113 @@
+LYATH'S DEFENDER BUFF — SPXDEFBUFF, NOT SHIPPED: no gain. Against main 03b661d (v6.21).
+New judge reader `abDefenderBuff(g, seat, uid)` -> {cost} when an ability's parsed ops carry a defender buff
+(DEFENDER_BUFF_OPS = ["defActBuff"]); pool census: exactly one ability, Lyath's hero power ("The crowd boos
+you. Defending action cards you control get +1{d} this turn." -> [defActBuff 1, boo 1]; the boo makes a Might).
+Policy (gate SPXDEFBUFF, keys rxDefBuff / holdDefBuff): own turn, hold it unless floating resources already pay
+for it; defending, activate it when the wall holds hand cards and the hit still leaks.
+Lyath own seat, rule policy, 28 games/seed, 3 seeds paired:
+  hold + defend:               7.67 -> 5.00 (-2.67, t -4.00)   8→4 7→5 8→6
+  defend only (no hold; env SPXDEFBUFF_NOHOLD=1): 7.67 -> 6.67 (-1.00, t -1.00)   8→5 7→7 8→8
+The own-turn use is NOT wasted: its rider (a Might token, +1{p} to the next attack every turn) is worth the
+{r}{r}, and paying {r}{r} on the opponent's turn costs pitched cards for +1{d} a blocker. Parked.
+Apply: git apply experiments/spxdefbuff.patch
+
+diff --git a/engine/judge.js b/engine/judge.js
+index ded69ce..e573ad9 100644
+--- a/engine/judge.js
++++ b/engine/judge.js
+@@ -1814,6 +1814,19 @@ const abWindowOf = (g, seat, uid) => {
+   const gr = (sd.gear || []).find(x => x && x.uid === uid);
+   return gr && gr.powCard ? abWindow(gr.powCard) : null;
+ };
++/* AN ABILITY WHOSE PAYLOAD BUFFS DEFENDERS (ship/rule-walls) — Lyath's "Defending action
++   cards you control get +1{d} this turn". For `sparring.js`, which reads no card text: that
++   payload only does anything while this seat defends, so spent on its own turn only its
++   riders land. {cost} (printed) when the ability (hero or equipment) carries one of
++   DEFENDER_BUFF_OPS, else null. */
++const DEFENDER_BUFF_OPS = ["defActBuff"];
++const abDefenderBuff = (g, seat, uid) => {
++  const sd = at(g, seat);
++  const pc = (uid === "hpow" || uid === "hero") ? bOf(g, seat).HPOW
++           : ((sd.gear || []).find(x => x && x.uid === uid) || {}).powCard;
++  if(!pc) return null;
++  return (PR.fxParse(pc).ops || []).some(o => DEFENDER_BUFF_OPS.indexOf(o[0]) >= 0) ? {cost: pc.cost || 0} : null;
++};
+ /* DOES THIS CARD HELP THE LINK BEING DEFENDED? (QUEUE v4 H8) For `sparring.js`,
+    which reads no card text: a defence reaction, or a card whose payload
+    prevents damage. Every other card held in hand while the seat defends is
+@@ -4890,7 +4903,7 @@ function drawTo(g, i){
+ }
+ 
+ return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
+-        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, chargeMore,
++        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, abDefenderBuff, DEFENDER_BUFF_OPS, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, chargeMore,
+         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
+         handFree: PR.handFree,
+         /* the card semantics seam (v2.77) */
+diff --git a/engine/sparring.js b/engine/sparring.js
+index 4a41b0a..7938d54 100644
+--- a/engine/sparring.js
++++ b/engine/sparring.js
+@@ -148,6 +148,7 @@ const fixOn = (g, seat) => {
+    weapon swing ranked with the pending grant that pumps it, SPXGRANTPAY a grant whose only
+    other text is an optional pick it cannot use, held for a taker it can pay for,
+    SPXWPNFIRST a grant played before the only attack left, a weapon swing it pumps,
++   SPXDEFBUFF an ability that buffs defenders held for the opponent's turn and used while defending,
+    SPXLABOARD a board term in Sharp's score (a permanent is worth its printed numbers, not -mu). */
+ const subGate = k => {
+   const v = (typeof process !== "undefined" && process.env && process.env[k]) || "";
+@@ -161,7 +162,7 @@ const subGate = k => {
+ };
+ const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate("SPXPAY"), idleOn = subGate("SPXIDLE"),
+       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
+-      wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD");
++      wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), defBuffOn = subGate("SPXDEFBUFF");
+ /* A card or ability that would land nothing right now is held (`judge.landsNothing`).
+    Noted so the call can say why the turn ends with it still in hand. */
+ const idleOK = (g, seat, uid, from) => {
+@@ -578,6 +579,12 @@ function reaction(g, seat){
+      when the first stopped the hit. */
+   if(pick && defending && wallNow(sd) >= ((g.pend && g.pend.total) || 0))
+     return tag("rxHold", {t: "pass"});
++  /* THE DEFENDER BUFF, WHILE DEFENDING (ship/rule-walls): the wall holds hand cards and
++     the hit still leaks, so each one blocking gains the buff. Before the cards: it costs
++     no card unless the resources have to be pitched for. */
++  if(defending && defBuffOn(g, seat) && (sd.blockH || []).length && wallNow(sd) < ((g.pend && g.pend.total) || 0)
++     && J.abDefenderBuff(g, seat, "hpow") && legal(g, {t: "activate", from: "hero", uid: "hpow"}, seat))
++    return tag("rxDefBuff", {t: "activate", from: "hero", uid: "hpow"});
+   /* THE ONE THAT STOPS THE WHOLE LEAK, IF ONE DOES (trainer QA census). Cheapest first cast
+      Big Blue Sky (+2) into a leak of 3, then paid a card for Unmovable (+7) to stop the last
+      point: three cards where Unmovable alone was two. Among the legal defenders, the
+@@ -952,7 +959,14 @@ function offenceBase(g, seat, o){
+      ability in this pool draws, digs or buffs rather than dealing damage,
+      so spending the action point on it ahead of a swing would be a
+      judgement this file cannot make without reading the card. */
+-  if(legal(g, {t: "activate", from: "hero", uid: "hpow"}, seat))
++  /* AN ABILITY THAT BUFFS DEFENDERS WAITS FOR THEIR TURN (ship/rule-walls). Lyath's
++     "defending action cards get +1{d} this turn" does nothing on his own turn but its
++     riders (the boo, a Might token), so it was paid for there and never met a hit. Held
++     unless floating resources already pay for it (the rider is then free); `reaction`
++     uses it while defending. `judge.abDefenderBuff` answers. */
++  const dbuff = defBuffOn(g, seat) && !(typeof process !== "undefined" && process.env && process.env.SPXDEFBUFF_NOHOLD) && J.abDefenderBuff(g, seat, "hpow");
++  if(dbuff && (sd.res || 0) < dbuff.cost){ if(NOTE) NOTE.defBuffHeld = true; }
++  else if(legal(g, {t: "activate", from: "hero", uid: "hpow"}, seat))
+     return tag("heroAbility", {t: "activate", from: "hero", uid: "hpow"});
+ 
+   /* ---- A NON-ATTACK IS STILL A PLAY (v3.80) --------------------------
+@@ -1625,6 +1639,8 @@ const CALL_WHY = {
+   resUnlockWeapon: "Spend the piece for its resource. It pays for a swing of your weapon.",
+   gearAbility: "Use your equipment's ability. Nothing better is left to do.",
+   gearAmp: "Use your equipment's ability. You can pay for an arcane card to take its extra damage.",
++  rxDefBuff: "Use your hero's ability now. Your blocking cards each get +1 defence against this hit.",
++  holdDefBuff: "End your turn and keep your hero's ability. It only helps your blockers, so save it for their attack.",
+   heroAbility: "Use your hero's ability. Nothing better is left for the action point.",
+   arenaPump: "Tap it. Your attack gets the extra damage for free.",
+   arenaDraw: "Cash it in. It draws a card for resources you already have floating, and it keeps your action point.",
+@@ -1752,6 +1768,7 @@ function explainNow(g, seat, o){
+   if(key === "endTurn" && laCands(g, seat, null).some(x => x.t !== "endTurn")) key = "endTurnKeep";
+   /* AND WHEN WHAT IS HELD WOULD LAND NOTHING, the call says that (ship/ai-misplays). */
+   if((key === "endTurn" || key === "endTurnKeep") && n.idle) key = "endTurnIdle";
++  if((key === "endTurn" || key === "endTurnKeep") && n.defBuffHeld) key = "holdDefBuff";
+   /* AND WHEN A GRANT WAS HELD FOR WANT OF A SWING IT CAN PAY FOR (H-DAGGER residue). */
+   if((key === "endTurn" || key === "endTurnKeep" || key === "grantWait") && n.grantHold) key = "grantHold";
+   return {action: a, key, why: key ? (CALL_WHY[key] ? (key === "chargeColour" || key === "gateColour" ? CALL_WHY[key].replace(/COLOUR/g, ["", "red", "yellow", "blue"][key === "gateColour" ? J.gateColourWanted(g, seat) : J.chargePitchWanted(g)] || "matching") : CALL_WHY[key]) : null) : null, line: key !== "laTake" ? lineOf(g, seat, a) : (wallOf(g.sides[seat]) > 0 ? "Don't block any more" : "Don't block")};
