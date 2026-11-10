@@ -117,11 +117,16 @@ test("Sharp does not bin a known arrow for a flip that won on one deal", {skip},
   const g = azalea(), HPOW = {t: "activate", from: "hero", uid: "hpow"};
   assert.equal(J.legal(g, HPOW, 0), null, "control: the ability is legal");
   assert.notEqual(SP.act(g, 0, {search: false}).uid, "hpow", "control: the rules do not flip");
-  /* sabotage: one deal (the old search) takes the flip */
-  assert.deepEqual(withLA({verify: 1}, () => SP.act(g, 0, {search: true})), HPOW, "one deal overrules into the flip");
+  /* sabotage: one deal (the old search) takes the flip. Scored without the board term
+     (`bW: 0`, ship/sharp-board): with it, even one deal keeps the arrow on this fixture, so
+     the board term would hide the very overrule the verify exists to catch. */
+  assert.deepEqual(withLA({verify: 1, bW: 0}, () => SP.act(g, 0, {search: true})), HPOW, "one deal overrules into the flip");
   const a = withLA({verify: 4}, () => SP.act(g, 0, {search: true}));
   assert.notEqual(a.uid, "hpow", "four deals keep the arrow: " + JSON.stringify(a));
-  assert.deepEqual(a, SP.act(g, 0, {search: false}), "and the rule policy's move stands");
+  /* under the old scoring the rule policy's move stands; with the board term (ship/sharp-board)
+     the search keeps the arrow by FIRING it from the arsenal — still not the flip */
+  assert.deepEqual(withLA({verify: 4, bW: 0}, () => SP.act(g, 0, {search: true})), SP.act(g, 0, {search: false}), "and, scored the old way, the rule policy's move stands");
+  assert.ok(a.uid === g.sides[0].arsenal.uid || JSON.stringify(a) === JSON.stringify(SP.act(g, 0, {search: false})), "with the board term: the known arrow, or the rules' move");
 });
 
 test("the verified call reads nothing hidden: scrambled hidden cards give the same call", {skip}, () => {
