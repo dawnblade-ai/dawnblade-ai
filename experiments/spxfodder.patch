@@ -1,0 +1,74 @@
+RULE WALLS (Lyath) — SPXFODDER, NOT SHIPPED: no gain. Against main 03b661d (v6.21).
+Diagnosis (Lyath's rule-policy games, 84, Sharp asked at each block decision): Steady declines and Sharp blocks
+274 times; leak 3 in 175, 2 in 48; Sharp walls with a printed-2 card 166x, printed-1 72x, gear 36x. Steady's
+declining line: takeUpTo (leak<=3, hand not spare) 108, "a spare card must stop the whole hit" 93, the
+two-card hand-blocker cap 37, iron below ironAt 36. Lyath halves base {p}/{d} (build.js halveCard), so his
+hand is mostly 1-power / 2-defence attacks.
+Predicate tried (printed numbers only): an attack card with power < its defence blocks a leaking non-lethal
+hit before the take/spare lines (cap kept). Gate SPXFODDER, key blockFodder; knobs SPXFODDER_LEAK/_DEF.
+Lyath own seat, rule policy, 28 games/seed, 3 seeds paired (off = gate none):
+  any leak, def >= 1:          7.67 -> 5.33 (-2.33, t -1.61)   8→3 7→7 8→6
+  leak >= 3, def >= 2:         7.67 -> 5.33 (-2.33, t -1.26)   8→2 7→7 8→7
+Blocking more with weak attacks loses under the rule policy's own attack plan; Sharp's block edge
+(+6 of the 32-win gap, census-v618) exists only beside Sharp's action search. Parked.
+Apply: git apply experiments/spxfodder.patch
+
+diff --git a/engine/sparring.js b/engine/sparring.js
+index 4a41b0a..8c34018 100644
+--- a/engine/sparring.js
++++ b/engine/sparring.js
+@@ -148,6 +148,7 @@ const fixOn = (g, seat) => {
+    weapon swing ranked with the pending grant that pumps it, SPXGRANTPAY a grant whose only
+    other text is an optional pick it cannot use, held for a taker it can pay for,
+    SPXWPNFIRST a grant played before the only attack left, a weapon swing it pumps,
++   SPXFODDER an attack weaker than its own defence blocks rather than wait in hand,
+    SPXLABOARD a board term in Sharp's score (a permanent is worth its printed numbers, not -mu). */
+ const subGate = k => {
+   const v = (typeof process !== "undefined" && process.env && process.env[k]) || "";
+@@ -161,7 +162,7 @@ const subGate = k => {
+ };
+ const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate("SPXPAY"), idleOn = subGate("SPXIDLE"),
+       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
+-      wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD");
++      wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), fodderOn = subGate("SPXFODDER");
+ /* A card or ability that would land nothing right now is held (`judge.landsNothing`).
+    Noted so the call can say why the turn ends with it still in hand. */
+ const idleOK = (g, seat, uid, from) => {
+@@ -432,6 +433,8 @@ function wallOf(sd){
+    damage step will total (`judge.strike` adds `blockRx` to the wall). */
+ const wallNow = sd => wallOf(sd) + (sd.blockRx || []).reduce((t, l) => t + ((l && l.def) || 0), 0);
+ 
++const FODDER_LEAK = +((typeof process !== "undefined" && process.env && process.env.SPXFODDER_LEAK) || 1),
++      FODDER_DEF = +((typeof process !== "undefined" && process.env && process.env.SPXFODDER_DEF) || 1);
+ function nextBlocker(g, seat, o){
+   const sd = g.sides[seat];
+   const incoming = (g.pend && g.pend.total) || 0;
+@@ -482,6 +485,20 @@ function nextBlocker(g, seat, o){
+      measured (Kayo, Bravo, Blaze, Dorinthea, Arakni) was short of the leak
+      under 3% of the time, so the line below moves them not at all. */
+   const spare = J.handFree(sd).length > o.maxPitch + 1;
++  /* AN ATTACK WEAKER THAN ITS OWN DEFENCE IS A BLOCK (ship/rule-walls, census-v618). The
++     two lines below keep a card for the hit worth it, because a card in hand is an attack
++     not made. That is true of a card whose attack is worth something: an attack card that
++     prints less power than defence (Lyath halves both, so his hand is mostly 1-power,
++     2-defence attacks) meets this hit better than it would ever hit back, and the rule
++     wall took 2-3 point hits holding a hand of them (Sharp walled them: 313 disagreements
++     in Lyath's rule games). Printed numbers only; the hand-blocker cap still applies. */
++  if(!lethal && fodderOn(g, seat) && leak >= FODDER_LEAK && (sd.blockH || []).length < o.handBlockers){
++    const f = J.handFree(sd)
++      .filter(c => num(c, "power") > 0 && num(c, "def") > num(c, "power") && num(c, "def") >= FODDER_DEF)
++      .sort((a, b) => num(b, "def") - num(a, "def") || num(a, "power") - num(b, "power") || byUid(a, b))
++      .find(c => legal(g, {t: "defend", uid: c.uid}, seat));
++    if(f) return tag("blockFodder", {t: "defend", uid: f.uid});
++  }
+   if(!lethal && leak <= o.takeUpTo && !spare) return null;
+ 
+   /* Best defence first, and among equals the one least worth playing
+@@ -1601,6 +1618,7 @@ const CALL_WHY = {
+   blockGear: "Block with armour first. Equipment wears down instead of leaving your hand.",
+   blockLethal: "Block with everything. This hit would kill you.",
+   blockHand: "Block with your best defender. This hit is too big to take.",
++  blockFodder: "Block with this. It hits for less than it blocks, so this hit is the best use it will get.",
+   blockSpare: "Block with a spare card. Your next turn cannot spend a hand this big, so the extra card stops this whole hit for free.",
+   rxHold: "Hold it. Your blocks already stop this whole hit, so the card stays in your hand.",
+   rxDefend: "Play it now. It protects you from this attack.",
