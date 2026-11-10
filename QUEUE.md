@@ -9,12 +9,12 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-10, at v6.18)
+## HANDOFF — START HERE (CEO, 2026-11-10, at v6.19)
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
-- **Live: v6.18** (WIRE_V 39). Progress reports: `docs/progress/v6.17.md`, `v6.18.md`.
+- **Live: v6.19** (WIRE_V 39, DATA_VER sage-v16). Progress reports: `docs/progress/v6.18.md`, `v6.19.md`.
 - **MISSION (user, 2026-11-07):** the ultimate FaB Silver Age precon competitive gaming environment and
   judging engine — 100% fan-made, non-profit, for fun and glory, no ads, forever.
 - **CADENCE (user, 2026-11-07):** "With each version make a progress report and start a new CEO thread."
@@ -30,8 +30,12 @@ Census 100→0 (Dorinthea 85). Dorinthea 18.00→19.00 (+1 every seed), Viserai 
 **v6.18:** `parser.arsenalPutSource` + `test/arsenalsrc.test.js` + invariant COUNTERS-INTO-ARSENAL: no pool card moves
 a permanent arena→arsenal (hand/deck only), so the counters-route item is CLOSED. No behaviour change. Ladder 0/0/0.
 Sharp reaction search PARKED after pass 2 (`experiments/sharp-reactions-2.patch` 798f59e: Dor −1.00, Gravy −0.50 at 6 seeds).
-**CEO SUCCESSION:** session_013xG9xCnjwgSC6P9f3uUE9W hit the lineage-depth limit (8) and cannot spawn the next CEO;
-the user must start it. The new CEO tells both workers its id.
+**v6.19:** Line Crossers scoped re-pin (`pin-pool.js --only`; lifeTie reads "as (a|another) hero"); DATA_VER
+sage-v16. NOT taken: Hyper Inflation yellow/blue power drift (decks play red only) — `pin-pool --check` says STALE
+until a deliberate full re-pin. Ladder 0/0/0.
+**CEO SUCCESSION:** session_013xG9xCnjwgSC6P9f3uUE9W hit the lineage-depth limit (8); the USER is starting a Fable
+CEO thread from a fresh session. The new CEO tells both workers its id. Referee host: user asked which is cheapest —
+answer Cloudflare Workers + DO (free plan, no pause; Supabase free projects pause after 7 idle days); awaiting confirm.
 
 **CLOSED / PARKED (v6.16 wave):**
 - **H-OVERBLOCK** CLOSED, not a misplay: filter −1.83 (t −3.19); Sharp price SPXOBPRICE 1/2/4 → +0.00/−0.17/−1.17.
@@ -43,7 +47,8 @@ the user must start it. The new CEO tells both workers its id.
 **IN FLIGHT (2026-11-10):**
 - `session_013xG9xCgDniyTy1T4jVmNfK` (Opus, H3 author): **fresh misplay census** on Sharp, every seat, top-3 confirmed
   by driven games; is Lyath's ~3/28 deck or policy? Discovery only. First in line for the server deploy.
-- `session_013xG9xAMN9v4UxqgJGzXBSH` (Opus, AI, pushes ONLY `ship/s-items-counters-scout`): **Line Crossers re-pin**.
+- `session_013xG9xAMN9v4UxqgJGzXBSH` (Opus, AI, pushes ONLY `ship/s-items-counters-scout`): Line Crossers re-pin
+  SHIPPED v6.19; STANDING BY for the new CEO's next item.
 
 **WAITING ON THE USER (asked 2026-11-08, re-asked at v6.15 and v6.16):** (1) server for the referee: Cloudflare
 Workers+DO (recommended), Supabase Edge (also H4 accounts), or neither — needs an account; build nothing until
@@ -52,7 +57,7 @@ they answer. (2) a real two-phone (and judge) game — DESKTOP-TASKS.md. If they
 **NEXT:** the server deploy (a WebSocket URL + "join a server table"), then **H4 · ranked** (HIDDEN-HANDS.md
 §6: accounts, Elo, result authority, forfeit clocks).
 
-**SMALLER OPEN ITEMS:** Line Crossers re-pin (assigned) ·
+**SMALLER OPEN ITEMS:** Hyper Inflation full re-pin (cosmetic) ·
 parked: sudden death · carried UNRESOLVED: Blaze soak (shipped because it corrects the call).
 
 ## HANDOFF ARCHIVE (CEO, 2026-11-08, at v6.15) — superseded by the section above
