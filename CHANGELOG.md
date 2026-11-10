@@ -1,3 +1,15 @@
+## v6.20 — the weapon bonus counts only when it is the weapon's alone (a v6.15 regression fixed)
+
+- **`judge.grantedSwings` exclusivity:** a pending grant now adds to a weapon's ranked power only when no hand or
+  arsenal attack could take it (qualMatches from hand/arsenal); an unqualified "your next attack gets +N" counts only
+  when the weapon is the sole taker. v6.15's grantSwing counted every admitting grant, so Lyath's Might token (+1 to
+  any next attack) lifted Titan's Fist ({r}{r}{r}, pitched for) over hand attacks that would carry the same +1: 7
+  power into a wall of 9. Found by the v6.18 misplay census (`experiments/census-v618/` on `findings/queue`).
+- Own-seat A/B, EVERY hero, rule policy, both chairs, 3 seeds, wins of 28 (gate off → on): before the fix, Lyath
+  8.00 → 3.00 (every seed −5); after the fix, Lyath 8.00 = 8.00 (12 seeds paired: 7.33 → 7.42); Arakni 11.00 → 14.33
+  and Dorinthea 18.33 → 19.00 hold; the other twelve heroes are byte-identical. Drill in `test/misplays.test.js`.
+- **Lesson:** a policy gate is A/B'd own-seat on every hero it can fire for, not only the heroes it targets.
+
 ## v6.19 — the Line Crossers re-pin
 
 - **Scoped re-pin** (`tools/pin-pool.js --only "<name>[,…]"`): takes the live record for the named cards and keeps
