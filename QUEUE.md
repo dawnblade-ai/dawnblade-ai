@@ -9,12 +9,12 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-10, at v6.20)
+## HANDOFF — START HERE (CEO, 2026-11-10, at v6.21)
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
-- **Live: v6.20** (WIRE_V 39, DATA_VER sage-v16). Progress reports: `docs/progress/v6.19.md`, `v6.20.md`.
+- **Live: v6.21** (WIRE_V 39, DATA_VER sage-v16). Progress reports: `docs/progress/v6.20.md`, `v6.21.md`.
 - **MISSION (user, 2026-11-07):** the ultimate FaB Silver Age precon competitive gaming environment and
   judging engine — 100% fan-made, non-profit, for fun and glory, no ads, forever.
 - **CADENCE (user, 2026-11-07):** "With each version make a progress report and start a new CEO thread."
@@ -49,9 +49,9 @@ answer Cloudflare Workers + DO (free plan, no pause; Supabase free projects paus
   it. Lyath 8.00=8.00 (12 seeds 7.33→7.42); Arakni/Dorinthea gains hold; 12 heroes byte-identical.
 - **SPX GATE AUDIT** ASSIGNED to `session_013xG9xAMN9v4UxqgJGzXBSH` (pushes ONLY `ship/s-items-counters-scout`): own-seat
   A/B on/off, rule policy, EVERY hero, for each gate shipped since v6.10; fix the predicate where a hero loses.
-- **H-BOARD (Sharp):** Gravy's Sharp holds a free 0-defence ally (Limpit) at end of turn, 14×/84 games, because laEval
-  has no board term. ASSIGNED to `session_013xG9xCgDniyTy1T4jVmNfK` (H3 author; push `ship/sharp-board`). First in line
-  for the server deploy.
+- **H-BOARD SHIPPED v6.21** (`SPXLABOARD`, key laBoard): Sharp's laEval prices permanents by printed numbers. Gravy
+  7.75→13.25 /28 (t 4.89, 12 seeds), Viserai 23.17→25.42, Kayo +1, Dorinthea +0.67; phone p95 ≤103 ms. Next for
+  `session_013xG9xCgDniyTy1T4jVmNfK` (push `ship/sharp-board`): bW tuning (0.5/2) or census #3. First in line for the deploy.
 - Census also: Lyath's gap is POLICY (rule 9/84 vs Sharp 41/84); Gravy's is mostly deck. Rare and parked: Sharp dies to a
   go-again follow-up after relying on a reaction (4/1,260).
 - Wins/84 at v6.18 (Sharp seat vs the 14 others): briar 83, bravo 76, dorinthea 76, kayo 75, dash 74, arakni 72, azalea 72,
