@@ -1,3 +1,30 @@
+## v6.21 — Sharp prices the board
+
+- **laBoard** (`engine/sparring.js`, gate `SPXLABOARD`, key `laBoard`): Sharp's `laEval` gains a board term. Each
+  permanent is worth an ally's power plus half its defence (at least 1), and any other permanent is worth 1. The
+  score takes the change from the root, mine minus theirs, at `LA.bW` (env `SPXLA_BW`, default 1). Printed numbers
+  only. Before, a permanent played this turn scored −mu because the horizon ends before it acts, so Gravy's Sharp
+  held a free 0-defence ally (Limpit, Hop-a-long) at end of turn (v6.18 census, `experiments/census-v618/`).
+  The rule policy (Steady) is byte for byte.
+- A/B, own seat on Sharp vs the 14 others, both seat orders, paired, wins of 28: Gravy 7.75 → 13.25 (+5.50, t 4.89,
+  12 seeds, 10 of 12 up); Viserai 23.17 → 25.42 (+2.25, t 4.18, 12 seeds); Kayo 26.00 → 27.00 (6 seeds); Dorinthea
+  26.17 → 26.83 (6 seeds). Phone bound at 4x: action p95 94.8 ms (worst 155.9), block p95 103 ms (worst 202.2).
+  Measured on v6.19; replayed onto v6.20.
+- Drill `test/sharpboard.test.js`. Moved: `aiqa`'s known-arrow drill pins its sabotage to the old scoring (bW 0);
+  with the board term Sharp keeps the arrow by firing it. `explain`'s census lists laBoard.
+
+## v6.20 — the weapon bonus counts only when it is the weapon's alone (a v6.15 regression fixed)
+
+- **`judge.grantedSwings` exclusivity:** a pending grant now adds to a weapon's ranked power only when no hand or
+  arsenal attack could take it (qualMatches from hand/arsenal); an unqualified "your next attack gets +N" counts only
+  when the weapon is the sole taker. v6.15's grantSwing counted every admitting grant, so Lyath's Might token (+1 to
+  any next attack) lifted Titan's Fist ({r}{r}{r}, pitched for) over hand attacks that would carry the same +1: 7
+  power into a wall of 9. Found by the v6.18 misplay census (`experiments/census-v618/` on `findings/queue`).
+- Own-seat A/B, EVERY hero, rule policy, both chairs, 3 seeds, wins of 28 (gate off → on): before the fix, Lyath
+  8.00 → 3.00 (every seed −5); after the fix, Lyath 8.00 = 8.00 (12 seeds paired: 7.33 → 7.42); Arakni 11.00 → 14.33
+  and Dorinthea 18.33 → 19.00 hold; the other twelve heroes are byte-identical. Drill in `test/misplays.test.js`.
+- **Lesson:** a policy gate is A/B'd own-seat on every hero it can fire for, not only the heroes it targets.
+
 ## v6.19 — the Line Crossers re-pin
 
 - **Scoped re-pin** (`tools/pin-pool.js --only "<name>[,…]"`): takes the live record for the named cards and keeps

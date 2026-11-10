@@ -147,7 +147,8 @@ const fixOn = (g, seat) => {
    SPXRXFIT the defence reaction that stops the whole leak by itself, SPXGRANTSWING a
    weapon swing ranked with the pending grant that pumps it, SPXGRANTPAY a grant whose only
    other text is an optional pick it cannot use, held for a taker it can pay for,
-   SPXWPNFIRST a grant played before the only attack left, a weapon swing it pumps. */
+   SPXWPNFIRST a grant played before the only attack left, a weapon swing it pumps,
+   SPXLABOARD a board term in Sharp's score (a permanent is worth its printed numbers, not -mu). */
 const subGate = k => {
   const v = (typeof process !== "undefined" && process.env && process.env[k]) || "";
   return (g, seat) => {
@@ -160,7 +161,7 @@ const subGate = k => {
 };
 const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate("SPXPAY"), idleOn = subGate("SPXIDLE"),
       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
-      wpnFirstOn = subGate("SPXWPNFIRST");
+      wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD");
 /* A card or ability that would land nothing right now is held (`judge.landsNothing`).
    Noted so the call can say why the turn ends with it still in hand. */
 const idleOK = (g, seat, uid, from) => {
@@ -1249,6 +1250,7 @@ const LA = {
   bMu: envOf("SPXLA_BMU") !== "" ? +envOf("SPXLA_BMU") : 2,  /* a held card's worth at a block (null: mu) */
   bH: envOf("SPXLA_BH") || "own",           /* block rollouts: "next" to this seat's next decision; "own" through its next turn */
   blockN: envOf("SPXLA_BN") !== "" ? +envOf("SPXLA_BN") : 4,      /* block sets kept besides the rules' and taking it */
+  bW: envOf("SPXLA_BW") !== "" ? +envOf("SPXLA_BW") : 1,     /* SPXLABOARD: life-points per board point */
   stepCap: 400,       /* per rollout */
   budget: envOf("SPXLA_B") !== "" ? +envOf("SPXLA_B") : 300,  /* engine steps per decision, all rollouts together; over it, A0 stands */
   stats: {decisions: 0, searched: 0, overruled: 0, steps: 0, ms: 0, maxSteps: 0, over: 0, hist: {}}
@@ -1293,11 +1295,25 @@ function laCands(g, seat, a0){
 }
 
 const held = sd => (sd.hand || []).length + (sd.arsenal ? 1 : 0);
+/* THE BOARD, PRICED (ship/sharp-board, census-v618 #2). The score counted life and held
+   cards only, and the "own" horizon ends before a permanent played this turn acts, so an
+   ally, an aura or an item scored -mu (a card gone) and nothing else: Gravy's Sharp kept a
+   free, zero-defence ally (cost 0, defence 0) in hand at end of turn. Each permanent on a
+   board is worth its printed numbers: an ally its power (what it swings each turn, the
+   life `dealt` is measured in) and its defence; any other permanent 1. Printed numbers
+   only, no card text. The change from the root, mine minus theirs, at `bW` per point. */
+function boardVal(sd){
+  return (sd.board || []).reduce((t, b) => {
+    if(!b || !b.card) return t;
+    return t + (GM.isAlly(b) ? Math.max(1, num(b.card, "power") + num(b.card, "def") / 2) : 1);
+  }, 0);
+}
 function laEval(n, seat, root, mu){
   const me = n.sides[seat], op = n.sides[1 - seat], m0 = root.sides[seat], o0 = root.sides[1 - seat];
-  if(n.over) return {v: n.over.winner === seat ? 1000 : n.over.winner == null ? 0 : -1000, dealt: 0, taken: 0, cards: 0, over: true};
+  if(n.over) return {v: n.over.winner === seat ? 1000 : n.over.winner == null ? 0 : -1000, dealt: 0, taken: 0, cards: 0, board: 0, over: true};
   const dealt = (o0.hp - op.hp), taken = (m0.hp - me.hp), cards = held(me) - held(op);
-  return {v: dealt - taken + (mu != null ? mu : LA.mu) * cards, dealt, taken, cards};
+  const board = boardOn(root, seat) ? (boardVal(me) - boardVal(m0)) - (boardVal(op) - boardVal(o0)) : 0;
+  return {v: dealt - taken + (mu != null ? mu : LA.mu) * cards + LA.bW * board, dealt, taken, cards, board};
 }
 function laRollout(n, seat, root, spent, until, skip){
   const stop = root.turn + (LA.horizon === "own" ? 1 : 2);
@@ -1335,7 +1351,7 @@ function laSearch(g, seat, a0){
     cands = laCands(g, seat, a0);
     if(cands.length < 2) return null;
     LA.stats.searched++;
-    const tot = cands.map(() => ({v: 0, dealt: 0, taken: 0, cards: 0})), luck = cands.map(() => false);
+    const tot = cands.map(() => ({v: 0, dealt: 0, taken: 0, cards: 0, board: 0})), luck = cands.map(() => false);
     for(let k = 0; k < LA.dets; k++){
       const root = laMask(g, seat, k);
       for(let i = 0; i < cands.length; i++){
@@ -1345,7 +1361,7 @@ function laSearch(g, seat, a0){
         if(!r.done){ LA.stats.over++; return null; }   /* over budget: the rule policy's move stands */
         if(laLucky(root, r.n, seat)) luck[i] = true;
         const e = laEval(r.n, seat, root);
-        ["v", "dealt", "taken", "cards"].forEach(f => tot[i][f] += e[f]);
+        ["v", "dealt", "taken", "cards", "board"].forEach(f => tot[i][f] += e[f]);
       }
     }
     let bi = 0;
@@ -1370,12 +1386,12 @@ function laSearch(g, seat, a0){
         const r = laRollout(out.state, seat, root, spent); spent += r.steps + 1;
         if(!r.done){ LA.stats.over++; return null; }
         const e = laEval(r.n, seat, root);
-        ["v", "dealt", "taken", "cards"].forEach(f => tot[i][f] += e[f]);
+        ["v", "dealt", "taken", "cards", "board"].forEach(f => tot[i][f] += e[f]);
       }
       dn++;
     }
     if(dn > LA.dets && !(tot[bi].v > tot[0].v + LA.margin * dn)){ LA.stats.unverified = (LA.stats.unverified || 0) + 1; return null; }
-    best = {a: cands[bi], d: ["dealt", "taken", "cards"].reduce((m, f) => (m[f] = (tot[bi][f] - tot[0][f]) / dn, m), {})};
+    best = {a: cands[bi], d: ["dealt", "taken", "cards", "board"].reduce((m, f) => (m[f] = (tot[bi][f] - tot[0][f]) / dn, m), {})};
     return best;
   } finally {
     IN_SEARCH = false; NOTE = keep;
@@ -1387,9 +1403,9 @@ function laSearch(g, seat, a0){
 /* WHY THE SEARCH OVERRULED THE RULES, in the coach's voice: the term of the
    score that moved most between its line and the rule policy's. */
 function laWhy(b){
-  const {dealt, taken, cards} = b.d;
+  const {dealt, taken, cards, board} = b.d;
   if(b.a.t === "endTurn") return "laHold";
-  const terms = [["laHit", dealt], ["laSafe", -taken], ["laKeep", LA.mu * cards]].sort((x, y) => y[1] - x[1]);
+  const terms = [["laHit", dealt], ["laSafe", -taken], ["laKeep", LA.mu * cards], ["laBoard", LA.bW * (board || 0)]].sort((x, y) => y[1] - x[1]);
   return terms[0][0];
 }
 /* ---- THE WALL, SEARCHED (phase c) ---------------------------------------
@@ -1472,7 +1488,7 @@ function laBlockSearch(g, seat, o){
     if(cands.length < 2) return null;
     LA.stats.searched++; LA.stats.bSearched = (LA.stats.bSearched || 0) + 1;
     const link = linkOf(g), sd = g.sides[seat];
-    const tot = cands.map(() => ({v: 0, dealt: 0, taken: 0, cards: 0}));
+    const tot = cands.map(() => ({v: 0, dealt: 0, taken: 0, cards: 0, board: 0}));
     for(let k = 0; k < LA.dets; k++){
       const root = laMask(g, seat, k, "blk" + link);
       const until = LA.bH === "own" ? (x => x.turn >= root.turn + 2) : (x => x.turn > root.turn && laPoint(x, seat));
@@ -1485,7 +1501,7 @@ function laBlockSearch(g, seat, o){
         const r = laRollout(n, seat, root, spent, until, skip); spent += r.steps;
         if(!r.done){ LA.stats.over++; return null; }
         const e = laEval(r.n, seat, root, LA.bMu);
-        ["v", "dealt", "taken", "cards"].forEach(f => tot[i][f] += e[f]);
+        ["v", "dealt", "taken", "cards", "board"].forEach(f => tot[i][f] += e[f]);
       }
     }
     let bi = 0;
@@ -1636,6 +1652,7 @@ const CALL_WHY = {
   endTurnKeep: "End your turn. What you could still play is worth more held back than spent now.",
   endTurnIdle: "End your turn. What you could still play or use would land nothing right now, so it stays where it is.",
   laHit: "Start with this. Play each opening out to the end of your turn and this one lands the most damage once they block.",
+  laBoard: "Play this now. It stays on your board and keeps working after this turn, which is worth more than holding the card.",
   laSafe: "Start with this. Played out to the end of your turn, it costs you the least life of any opening.",
   laKeep: "Start with this. Played out to the end of your turn, it keeps more cards in hand for their swing back.",
   laHold: "Stop here and keep the rest. Played out, every card you could still play costs you more than it earns.",
@@ -1740,5 +1757,5 @@ function explainNow(g, seat, o){
   return {action: a, key, why: key ? (CALL_WHY[key] ? (key === "chargeColour" || key === "gateColour" ? CALL_WHY[key].replace(/COLOUR/g, ["", "red", "yellow", "blue"][key === "gateColour" ? J.gateColourWanted(g, seat) : J.chargePitchWanted(g)] || "matching") : CALL_WHY[key]) : null) : null, line: key !== "laTake" ? lineOf(g, seat, a) : (wallOf(g.sides[seat]) > 0 ? "Don't block any more" : "Don't block")};
 }
 
-return {DEFAULTS, act, actBase, LA, laMask, laCands, explain, CALL_WHY, run, pitchPick, nextBlocker, offence, wallOf, affordableWithin};
+return {DEFAULTS, act, actBase, LA, laMask, laCands, laEval, boardVal, explain, CALL_WHY, run, pitchPick, nextBlocker, offence, wallOf, affordableWithin};
 });
