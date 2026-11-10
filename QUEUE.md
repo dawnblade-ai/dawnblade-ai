@@ -9,12 +9,12 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-10, at v6.19)
+## HANDOFF — START HERE (CEO, 2026-11-10, at v6.20)
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
-- **Live: v6.19** (WIRE_V 39, DATA_VER sage-v16). Progress reports: `docs/progress/v6.18.md`, `v6.19.md`.
+- **Live: v6.20** (WIRE_V 39, DATA_VER sage-v16). Progress reports: `docs/progress/v6.19.md`, `v6.20.md`.
 - **MISSION (user, 2026-11-07):** the ultimate FaB Silver Age precon competitive gaming environment and
   judging engine — 100% fan-made, non-profit, for fun and glory, no ads, forever.
 - **CADENCE (user, 2026-11-07):** "With each version make a progress report and start a new CEO thread."
@@ -45,11 +45,10 @@ answer Cloudflare Workers + DO (free plan, no pause; Supabase free projects paus
   on ship/s-items-counters-scout). Own-turn casts feed Gravy's watery-grave engine; go-again ally links fire 20/22.
 
 **IN FLIGHT (2026-11-10):**
-- **H-GRANTSWING-LYATH (PRIORITY, a v6.15 regression):** census `experiments/census-v618/` (e033d99): SPXGRANTSWING on the
-  rule policy drops Lyath 7.42→3.08 /28 (12 seeds, t −7.45, every seed down): Titan's Fist + Might token swung at 7 into
-  a 9 wall. Iyslander/Blaze/Boltyn may also lose (not own-seat yet). ASSIGNED to `session_013xG9xAMN9v4UxqgJGzXBSH` (wrote
-  grantSwing; pushes ONLY `ship/s-items-counters-scout`): own-seat A/B for every hero, fix the predicate, or as a stopgap
-  keep it on only where it measures ≥0.
+- **H-GRANTSWING-LYATH FIXED in v6.20:** `judge.grantedSwings` counts a grant only when no hand/arsenal attack could take
+  it. Lyath 8.00=8.00 (12 seeds 7.33→7.42); Arakni/Dorinthea gains hold; 12 heroes byte-identical.
+- **SPX GATE AUDIT** ASSIGNED to `session_013xG9xAMN9v4UxqgJGzXBSH` (pushes ONLY `ship/s-items-counters-scout`): own-seat
+  A/B on/off, rule policy, EVERY hero, for each gate shipped since v6.10; fix the predicate where a hero loses.
 - **H-BOARD (Sharp):** Gravy's Sharp holds a free 0-defence ally (Limpit) at end of turn, 14×/84 games, because laEval
   has no board term. ASSIGNED to `session_013xG9xCgDniyTy1T4jVmNfK` (H3 author; push `ship/sharp-board`). First in line
   for the server deploy.
