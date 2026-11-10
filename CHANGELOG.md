@@ -1,3 +1,14 @@
+## v6.19 — the Line Crossers re-pin
+
+- **Scoped re-pin** (`tools/pin-pool.js --only "<name>[,…]"`): takes the live record for the named cards and keeps
+  every other record exactly as pinned, in the full build's order. Line Crossers' upstream text now reads "If you
+  have the same {h} as ANOTHER hero" (was "as a hero"): a clarification, not a change of meaning, so the parser's
+  lifeTie anchor reads both (`as (?:a|another) hero`) and the pool takes upstream's text. `data/pool.js` changes
+  1 of 797 records. DATA_VER sage-v15 → sage-v16. Drill in `test/lifetie.test.js` (both wordings, real-record twins).
+- **Drift reported, NOT taken:** Hyper Inflation's yellow (4 → 3) and blue (4 → 2) power upstream, likely a database
+  fix. The decks play only the red printing, so no game changes; `pin-pool --check` reports STALE until a deliberate
+  full re-pin takes it.
+
 ## v6.18 — no card moves a permanent into an arsenal (and a guard says so)
 
 - **`parser.arsenalPutSource(clause)`**: where a clause that puts a card into an arsenal takes it from (hand /
