@@ -45,10 +45,19 @@ answer Cloudflare Workers + DO (free plan, no pause; Supabase free projects paus
   on ship/s-items-counters-scout). Own-turn casts feed Gravy's watery-grave engine; go-again ally links fire 20/22.
 
 **IN FLIGHT (2026-11-10):**
-- `session_013xG9xCgDniyTy1T4jVmNfK` (Opus, H3 author): **fresh misplay census** on Sharp, every seat, top-3 confirmed
-  by driven games; is Lyath's ~3/28 deck or policy? Discovery only. First in line for the server deploy.
-- `session_013xG9xAMN9v4UxqgJGzXBSH` (Opus, AI, pushes ONLY `ship/s-items-counters-scout`): Line Crossers re-pin
-  SHIPPED v6.19; STANDING BY for the new CEO's next item.
+- **H-GRANTSWING-LYATH (PRIORITY, a v6.15 regression):** census `experiments/census-v618/` (e033d99): SPXGRANTSWING on the
+  rule policy drops Lyath 7.42→3.08 /28 (12 seeds, t −7.45, every seed down): Titan's Fist + Might token swung at 7 into
+  a 9 wall. Iyslander/Blaze/Boltyn may also lose (not own-seat yet). ASSIGNED to `session_013xG9xAMN9v4UxqgJGzXBSH` (wrote
+  grantSwing; pushes ONLY `ship/s-items-counters-scout`): own-seat A/B for every hero, fix the predicate, or as a stopgap
+  keep it on only where it measures ≥0.
+- **H-BOARD (Sharp):** Gravy's Sharp holds a free 0-defence ally (Limpit) at end of turn, 14×/84 games, because laEval
+  has no board term. ASSIGNED to `session_013xG9xCgDniyTy1T4jVmNfK` (H3 author; push `ship/sharp-board`). First in line
+  for the server deploy.
+- Census also: Lyath's gap is POLICY (rule 9/84 vs Sharp 41/84); Gravy's is mostly deck. Rare and parked: Sharp dies to a
+  go-again follow-up after relying on a reaction (4/1,260).
+- Wins/84 at v6.18 (Sharp seat vs the 14 others): briar 83, bravo 76, dorinthea 76, kayo 75, dash 74, arakni 72, azalea 72,
+  iyslander 69, viserai 69, fai 64, enigma 62, blaze 58, boltyn 57, lyath 41, gravy 28.
+- **LESSON:** a policy gate must be A/B'd own-seat on EVERY hero it can fire for, not just the target heroes.
 
 **WAITING ON THE USER (asked 2026-11-08, re-asked at v6.15 and v6.16):** (1) server for the referee: Cloudflare
 Workers+DO (recommended), Supabase Edge (also H4 accounts), or neither — needs an account; build nothing until
