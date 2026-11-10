@@ -47,8 +47,9 @@ answer Cloudflare Workers + DO (free plan, no pause; Supabase free projects paus
 **IN FLIGHT (2026-11-10):**
 - **H-GRANTSWING-LYATH FIXED in v6.20:** `judge.grantedSwings` counts a grant only when no hand/arsenal attack could take
   it. Lyath 8.00=8.00 (12 seeds 7.33→7.42); Arakni/Dorinthea gains hold; 12 heroes byte-identical.
-- **SPX GATE AUDIT** ASSIGNED to `session_013xG9xAMN9v4UxqgJGzXBSH` (pushes ONLY `ship/s-items-counters-scout`): own-seat
-  A/B on/off, rule policy, EVERY hero, for each gate shipped since v6.10; fix the predicate where a hero loses.
+- **SPX GATE AUDIT CLEAN** (RXFIT, GRANTPAY, WPNFIRST, IDLE, PAY, SOAK, LOOK; own seat, rule, all 15, 3 seeds): no
+  resolved loss; Blaze/SOAK −1 at 3 seeds → −0.17 (t≈−0.5) at 12 = noise. Now `session_013xG9xAMN9v4UxqgJGzXBSH` audits
+  SPXLABOARD on Sharp for the other 11 heroes (report only).
 - **H-BOARD SHIPPED v6.21** (`SPXLABOARD`, key laBoard): Sharp's laEval prices permanents by printed numbers. Gravy
   7.75→13.25 /28 (t 4.89, 12 seeds), Viserai 23.17→25.42, Kayo +1, Dorinthea +0.67; phone p95 ≤103 ms. Next for
   `session_013xG9xCgDniyTy1T4jVmNfK` (push `ship/sharp-board`): bW tuning (0.5/2) or census #3. First in line for the deploy.
