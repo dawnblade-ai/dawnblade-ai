@@ -54,9 +54,10 @@ answer Cloudflare Workers + DO (free plan, no pause; Supabase free projects paus
   7.75→13.25 /28 (t 4.89, 12 seeds), Viserai 23.17→25.42, Kayo +1, Dorinthea +0.67; phone p95 ≤103 ms. bW tuning:
   KEEP 1 (0.5 = same; 2 loses: Gravy −3.17, Viserai −1.67 at 6 seeds). Census #3 stays parked (hidden-info gamble).
   Lyath RULE walls PARKED (SPXFODDER, `experiments/spxfodder.patch` 13e6e97: −2.33 at 3 seeds both variants; Lyath's
-  halved {p}/{d} make the hand look like threats; Sharp's block edge needs its action search). `session_013xG9xCgDniyTy1T4jVmNfK`
-  now ASSIGNED: Lyath's defensive instant cast on own turn (only the Might rider matters); push `ship/rule-walls`.
-  First in line for the deploy.
+  halved {p}/{d} make the hand look like threats; Sharp's block edge needs its action search). Lyath's
+  defender buff PARKED (SPXDEFBUFF, `experiments/spxdefbuff.patch` 10f4d34: −2.67 / −1.00 at 3 seeds; the own-turn
+  Might rider is worth {r}{r}). Lyath's Steady gap is attack play, not walls or the buff.
+  `session_013xG9xCgDniyTy1T4jVmNfK` STANDING BY for the server deploy.
 - Census also: Lyath's gap is POLICY (rule 9/84 vs Sharp 41/84); Gravy's is mostly deck. Rare and parked: Sharp dies to a
   go-again follow-up after relying on a reaction (4/1,260).
 - Wins/84 at v6.18 (Sharp seat vs the 14 others): briar 83, bravo 76, dorinthea 76, kayo 75, dash 74, arakni 72, azalea 72,
