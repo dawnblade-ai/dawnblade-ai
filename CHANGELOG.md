@@ -1,3 +1,16 @@
+## v6.18 — no card moves a permanent into an arsenal (and a guard says so)
+
+- **`parser.arsenalPutSource(clause)`**: where a clause that puts a card into an arsenal takes it from (hand /
+  deck / arena / unknown; null for a trigger on a put or a clause that moves nothing). Over the pinned pool:
+  hand (Bull's Eye Bracers, Call in the Big Guns, Death Dealer) and deck (Azalea, Concoct Disorder) only, so the
+  open item "a board→arsenal move would keep counters" is CLOSED: no route exists to build.
+- **Guards:** `test/arsenalsrc.test.js` fails the day a pool clause reads arena or unknown; `invariants.js` gains
+  COUNTERS-INTO-ARSENAL (an arsenal card's counter bag holds only aim, Crow's Nest's). CR 3.0.9 and 3.1.1a quoted
+  verbatim. No behaviour change.
+- Measured, not shipped: Sharp searching reaction windows, two passes (`experiments/sharp-reactions.patch`,
+  `sharp-reactions-2.patch` on `findings/queue`): Dorinthea −1.00 both times, Gravy noise. Parked. Arakni's
+  atkKeepsAP-first ordering (`experiments/spxswingfirst.patch`) measured flat; the dagger-grant line is closed.
+
 ## v6.17 — the AI plays the weapon bonus before the weapon swing
 
 - **grantBeforeSwing** (`engine/sparring.js`, gate `SPXWPNFIRST`, key `grantBeforeSwing`): in `offenceBase`'s
