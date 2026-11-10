@@ -9,12 +9,12 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-08, at v6.17)
+## HANDOFF — START HERE (CEO, 2026-11-10, at v6.18)
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
-- **Live: v6.17** (WIRE_V 39). Progress reports: `docs/progress/v6.16.md`, `v6.17.md`.
+- **Live: v6.18** (WIRE_V 39). Progress reports: `docs/progress/v6.17.md`, `v6.18.md`.
 - **MISSION (user, 2026-11-07):** the ultimate FaB Silver Age precon competitive gaming environment and
   judging engine — 100% fan-made, non-profit, for fun and glory, no ads, forever.
 - **CADENCE (user, 2026-11-07):** "With each version make a progress report and start a new CEO thread."
@@ -27,6 +27,9 @@ swing it pumps can be paid for. Lost dagger grants 19→6; Arakni rule 12.33→1
 Ladder 0/0/0/0. CI green on main 53f7c7c (drills run 42534449390, live URL verified).
 **v6.17:** grantBeforeSwing (`SPXWPNFIRST`): with only a weapon swing to follow, a grant that pumps it goes first.
 Census 100→0 (Dorinthea 85). Dorinthea 18.00→19.00 (+1 every seed), Viserai 12.33→13.00, Arakni 13.00→13.67. Ladder 0/0/0.
+**v6.18:** `parser.arsenalPutSource` + `test/arsenalsrc.test.js` + invariant COUNTERS-INTO-ARSENAL: no pool card moves
+a permanent arena→arsenal (hand/deck only), so the counters-route item is CLOSED. No behaviour change. Ladder 0/0/0.
+Sharp reaction search PARKED after pass 2 (`experiments/sharp-reactions-2.patch` 798f59e: Dor −1.00, Gravy −0.50 at 6 seeds).
 **CEO SUCCESSION:** session_013xG9xCnjwgSC6P9f3uUE9W hit the lineage-depth limit (8) and cannot spawn the next CEO;
 the user must start it. The new CEO tells both workers its id.
 
@@ -37,17 +40,10 @@ the user must start it. The new CEO tells both workers its id.
   seeds split rule 6.50→5.92 (t≈−2.2) vs Sharp 7.92→8.42 (t≈+1.7). Patch `experiments/spxshield2.patch` (982bc26
   on ship/s-items-counters-scout). Own-turn casts feed Gravy's watery-grave engine; go-again ally links fire 20/22.
 
-**IN FLIGHT:**
-- `session_013xG9xCgDniyTy1T4jVmNfK` (Opus, H3 author): **Sharp reaction search**, extending Sharp's search into
-  reaction windows (H-SHIELD's real fix). Pass 1 (SPXLARX, `experiments/sharp-reactions.patch` f02e548) NO WIN at 12
-  seeds: Gravy +0.50 (t 0.60), Dorinthea −1.00 (t −3.07); margin 2 shrinks the loss, no gain. ASSIGNED pass 2: more
-  deals at reaction windows + horizon to the next decision; park if 6 seeds don't show Dor ≥0 and Gravy >0.
-  First in line for the server deploy.
-- `session_013xG9xAMN9v4UxqgJGzXBSH` (Opus, AI, pushes ONLY `ship/s-items-counters-scout`): **grant ordering with
-  only a weapon to follow** (`haveAtk` counts hand and arsenal attacks only, so the swing goes first and a later grant is
-  wasted) SHIPPED v6.17. atkKeepsAP-first (SPXSWINGFIRST, `experiments/spxswingfirst.patch` 1c7e14e) measured flat:
-  fires 13×/210 games, Arakni rule 14.00=14.00, Sharp 26.00→25.67 — dagger line CLOSED at the noise floor; the
-  last 5 lost grants need reaction-window search. Now ASSIGNED: board→arsenal counters route (check the pool first).
+**IN FLIGHT (2026-11-10):**
+- `session_013xG9xCgDniyTy1T4jVmNfK` (Opus, H3 author): **fresh misplay census** on Sharp, every seat, top-3 confirmed
+  by driven games; is Lyath's ~3/28 deck or policy? Discovery only. First in line for the server deploy.
+- `session_013xG9xAMN9v4UxqgJGzXBSH` (Opus, AI, pushes ONLY `ship/s-items-counters-scout`): **Line Crossers re-pin**.
 
 **WAITING ON THE USER (asked 2026-11-08, re-asked at v6.15 and v6.16):** (1) server for the referee: Cloudflare
 Workers+DO (recommended), Supabase Edge (also H4 accounts), or neither — needs an account; build nothing until
@@ -56,7 +52,7 @@ they answer. (2) a real two-phone (and judge) game — DESKTOP-TASKS.md. If they
 **NEXT:** the server deploy (a WebSocket URL + "join a server table"), then **H4 · ranked** (HIDDEN-HANDS.md
 §6: accounts, Elo, result authority, forfeit clocks).
 
-**SMALLER OPEN ITEMS:** a board→arsenal move would keep counters (no route today) · Line Crossers re-pin ·
+**SMALLER OPEN ITEMS:** Line Crossers re-pin (assigned) ·
 parked: sudden death · carried UNRESOLVED: Blaze soak (shipped because it corrects the call).
 
 ## HANDOFF ARCHIVE (CEO, 2026-11-08, at v6.15) — superseded by the section above
