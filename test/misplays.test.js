@@ -304,3 +304,24 @@ test("with only a weapon to follow, the grant that pumps it goes first — and t
   const e2 = SP.explain(poor, 1);
   assert.notEqual(e2.key, "grantBeforeSwing");
 });
+
+/* ---- v6.19 regression (Lyath): only a grant no hand attack could take pumps a swing's rank ---- */
+
+test("an unqualified '+1 to your next attack' gives the weapon no edge over hand attacks — a weapon-only grant does", {skip}, () => {
+  const {match} = SPP();
+  const g0 = match("lyath", "kayo", "mp-ly", 0);
+  const fist = g0.sides[0].gear.find(x => x.power != null);
+  assert.ok(g0.sides[0].hand.some(c => +c.power > 0), "Lyath holds hand attacks");
+  const withGrant = q => side(g0, 0, {res: 9, buffQ: [q], buffNext: 0});
+  /* Might's grant: unqualified, so the hand attacks take it as well as the weapon */
+  assert.deepEqual(J.grantedSwings(withGrant({amt: 1, q: null, rider: null}), 0), [],
+    "a grant a hand attack would take does not put the weapon first");
+  assert.deepEqual(J.grantedSwings(side(g0, 0, {res: 9, buffQ: [], buffNext: 1}), 0), [],
+    "nor does an unqualified buffNext");
+  /* a grant only a weapon attack takes (Warrior's Valor, Sharpen Steel shape) still counts */
+  const sw = J.grantedSwings(withGrant({amt: 3, q: {g: [["weapon"]]}, rider: null}), 0);
+  assert.ok(sw.length && sw[0].uid === fist.uid && sw[0].bonus === 3, JSON.stringify(sw));
+  /* with no attack in hand the weapon is the only taker of the unqualified grant */
+  const bare = side(withGrant({amt: 1, q: null, rider: null}), 0, {hand: [], arsenal: null});
+  assert.equal((J.grantedSwings(bare, 0)[0] || {}).bonus, 1);
+});

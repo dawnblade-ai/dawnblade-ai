@@ -135,12 +135,13 @@ test("every reason is keyed from a site in the policy, and the census names what
      `lookOwn` (Scout the Periphery with the opponent's top already known) is not reached by them;
      test/misplays.test.js drives it. H-DAGGER re-routes it once more: `arsenalSkip` is reached now,
      and `gateFirst` / `grantKeep` are not (test/gatecharge.test.js and test/grantwait.test.js drive them).
-     The weapon-first grant (SPXWPNFIRST) moves `arsenalSkip` back out of reach. */
+     The weapon-first grant (SPXWPNFIRST) moves `arsenalSkip` back out of reach. The grantSwing
+     exclusivity fix (Lyath) brings `grantKeep` back within reach. */
   const seen = census().keys;
   for(const k of Object.keys(seen)) assert.ok(SP.CALL_WHY[k], "reached key " + k + " has no reason");
   assert.deepEqual(keys.filter(k => !seen[k]).sort(),
     ["abtarget", "addPayNo", "allocAll", "allyTake", "answer", "arenaAP", "arenaRes", "arsenalSkip", "boostNo",
-     "chargeDone", "chargeMore", "chargeNone", "discost", "gateFirst", "grantKeep", "laBlock", "laHit", "laHold", "laKeep", "laSafe", "laTake", "lookOwn",
+     "chargeDone", "chargeMore", "chargeNone", "discost", "gateFirst", "laBlock", "laHit", "laHold", "laKeep", "laSafe", "laTake", "lookOwn",
      "payCancel", "pitchChi"]);
 });
 

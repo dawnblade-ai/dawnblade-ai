@@ -2320,14 +2320,26 @@ const lookChoice = (g, seat) => {
    34 of 38 such grants expired (rule policy, 28 games). Answers each weapon the seat can
    legally swing now that a pending grant admits, as `{uid, power, bonus}`: its printed
    power plus +1{p} counters, plus the grant. */
+/* ONLY A GRANT NO HAND ATTACK COULD TAKE (v6.19 regression, Lyath). A pending grant that a
+   hand or arsenal attack would take just as well — Lyath's Might token's unqualified "your next
+   attack this turn gets +1{p}" — gives the weapon no edge over them: counting it on the weapon
+   alone put Titan's Fist ({r}{r}{r}, pitched for) ahead of the hand attacks that would have
+   carried the same +1, and Lyath fell from 8.00 to 3.00 wins of 28 (own seat, rule policy). A
+   grant the qualifier keeps to weapons and daggers (Up Sticks and Run, Warrior's Valor) still
+   counts. With no attack in hand or arsenal the weapon is the only taker, so nothing changes. */
 const grantedSwings = (g, seat) => {
   const sd = at(g, seat) || {};
   const q = sd.buffQ || [], bn = sd.buffNext || 0;
   if(!q.length && !bn) return [];
+  const handAtks = (sd.hand || []).map(c => ({c, f: "hand"}))
+    .concat(sd.arsenal ? [{c: sd.arsenal, f: "arsenal"}] : [])
+    .filter(x => x.c && TY.isAttack(x.c) && (+x.c.power || 0) > 0);
+  const exclusive = e => !handAtks.some(x => !e.q || PR.qualMatches(e.q, x.c, {from: x.f, atk: true}));
   return (sd.gear || []).filter(w => w && PR.isWeapon(w) && w.power != null
       && legal(g, {t: "activate", uid: w.uid}, seat) == null)
     .map(w => {
-      const bonus = bn + q.filter(e => e && (!e.q || PR.qualMatches(e.q, w, {from: "weapon", atk: true})))
+      const bonus = (bn && !handAtks.length ? bn : 0)
+        + q.filter(e => e && (!e.q || PR.qualMatches(e.q, w, {from: "weapon", atk: true})) && exclusive(e))
         .reduce((t, e) => t + (e.amt || 0), 0);
       const ctr = ((sd.counters || {})[w.uid] || {}).pow || 0;
       return bonus > 0 ? {uid: w.uid, power: (+w.power || 0) + ctr + bonus, bonus} : null;
