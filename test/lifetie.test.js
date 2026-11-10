@@ -53,6 +53,21 @@ test("Line Crossers' static is read off its printed line", {skip}, () => {
   assert.equal(fx.tier, "full");
 });
 
+test("both wordings read the same tie: \"as a hero\" (pinned until 2026-11-10) and \"as another hero\" (upstream now)", {skip}, () => {
+  /* The Line Crossers re-pin: upstream reworded the card and the pool took the new text. The
+     meaning did not change (a hero cannot tie its own life), and a later edit could flip it
+     back, so the anchor reads both — each a synthetic twin of the real record (unique names:
+     `fxParse` memoizes on name|pitch). */
+  const lc = piece();
+  assert.ok(/as another hero/.test(lc.tx), "the pool now carries upstream's wording");
+  for(const [w, nm] of [["as a hero", "LC twin a"], ["as another hero", "LC twin another"]]){
+    const twin = Object.assign({}, lc, {name: nm, tx: lc.tx.replace(/as (?:a|another) hero/, w)});
+    const fx = P.fxParse(twin);
+    assert.deepEqual(fx.lifeTie, {ahead: true, behind: true}, w);
+    assert.equal(fx.tier, "full", w);
+  }
+});
+
 test("the two halves are READ, not assumed as a pair", {skip}, () => {
   /* THE ONE REAL RECORD PRINTS BOTH, so no pool fixture can tell a read
      pair from a hardcoded one — the near-miss is synthetic (v3.73). */

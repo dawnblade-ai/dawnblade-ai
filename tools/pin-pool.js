@@ -39,6 +39,7 @@
 
      node tools/pin-pool.js            # rewrite data/pool.js
      node tools/pin-pool.js --check    # exit 1 if it would change
+     node tools/pin-pool.js --only "Line Crossers"   # take one card's live record, keep the rest
    ============================================================ */
 const fs = require("fs");
 const path = require("path");
@@ -170,7 +171,27 @@ function main(){
   }
   const W = loadData();
   const db = require("../test/helpers/extract").readCards(CACHE);
-  const pool = build(db, W);
+  let pool = build(db, W);
+  /* A SCOPED RE-PIN (`--only "<name>[,<name>…]"`, the Line Crossers re-pin): take the live
+     records for the named cards only, and keep every other record exactly as pinned, so a
+     release cycle can take one reviewed change without silently taking every other upstream
+     edit with it. The live records are still fetched data, copied whole — nothing is
+     authored — and the order is the full build's, so a later full re-pin is a clean diff. */
+  const oi = process.argv.indexOf("--only");
+  if(oi >= 0){
+    const only = new Set(String(process.argv[oi + 1] || "").split(",").map(norm).filter(Boolean));
+    if(!only.size){ console.error("--only needs a card name"); process.exit(2); }
+    const pinned = fs.existsSync(OUT) ? require(OUT) : [];
+    const keyOf = r => r.unique_id || (r.name + "|" + r.pitch);
+    const old = new Map(pinned.map(r => [keyOf(r), r]));
+    const took = [];
+    pool = pool.map(r => {
+      if(only.has(norm(r.name))){ took.push(r.name + " " + r.pitch); return r; }
+      return old.get(keyOf(r)) || r;
+    });
+    if(!took.length){ console.error("--only matched no record: " + [...only].join(", ")); process.exit(2); }
+    console.log("Scoped re-pin: took the live record for " + took.join(", ") + "; every other record kept as pinned.");
+  }
   const text = serialize(pool);
   const prev = fs.existsSync(OUT) ? fs.readFileSync(OUT, "utf8") : null;
 

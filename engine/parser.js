@@ -6386,7 +6386,10 @@ function fxParse(card){
      whose halves do not is left `skip` rather than filed with a grant
      nobody read. */
   {
-    const HEAD = /^if you have the same \{h\} as a hero, it also counts as (.+?)\.?$/;
+    /* BOTH WORDINGS (the Line Crossers re-pin, 2026-11-10). Upstream reworded "as a hero" to
+       "as ANOTHER hero"; the meaning is the same — a hero cannot tie its own life total — so
+       the reword is a clarification, and a later database edit could flip it back. */
+    const HEAD = /^if you have the same \{h\} as (?:a|another) hero, it also counts as (.+?)\.?$/;
     for(let ri = 0; ri < clauses.length; ri++){
       if(handled.has(ri)) continue;
       const m = levelIdiom(clauses[ri].toLowerCase().trim()).match(HEAD);

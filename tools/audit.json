@@ -1,7 +1,7 @@
 {
- "generated": "2026-11-08T00:13:49.078Z",
- "appVer": "6.07",
- "dataVer": "sage-v15",
+ "generated": "2026-11-10T17:23:07.753Z",
+ "appVer": "6.18",
+ "dataVer": "sage-v16",
  "dbCount": 797,
  "poolUnique": 405,
  "tiers": {
@@ -13201,7 +13201,7 @@
    "playable": true,
    "clauses": [
     {
-     "t": "If you have the same {h} as a hero, it also counts as you having more {h} than them, and them having less {h} than you.",
+     "t": "If you have the same {h} as another hero, it also counts as you having more {h} than them, and them having less {h} than you.",
      "st": "run"
     },
     {
@@ -13212,7 +13212,7 @@
    "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
-   "tx": "If you have the same {h} as a hero, it also counts as you having more {h} than them, and them having less {h} than you.\nBlade Break",
+   "tx": "If you have the same {h} as another hero, it also counts as you having more {h} than them, and them having less {h} than you.\nBlade Break",
    "flags": []
   },
   "stand strong|0": {
