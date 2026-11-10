@@ -1,3 +1,18 @@
+## v6.21 — Sharp prices the board
+
+- **laBoard** (`engine/sparring.js`, gate `SPXLABOARD`, key `laBoard`): Sharp's `laEval` gains a board term. Each
+  permanent is worth an ally's power plus half its defence (at least 1), and any other permanent is worth 1. The
+  score takes the change from the root, mine minus theirs, at `LA.bW` (env `SPXLA_BW`, default 1). Printed numbers
+  only. Before, a permanent played this turn scored −mu because the horizon ends before it acts, so Gravy's Sharp
+  held a free 0-defence ally (Limpit, Hop-a-long) at end of turn (v6.18 census, `experiments/census-v618/`).
+  The rule policy (Steady) is byte for byte.
+- A/B, own seat on Sharp vs the 14 others, both seat orders, paired, wins of 28: Gravy 7.75 → 13.25 (+5.50, t 4.89,
+  12 seeds, 10 of 12 up); Viserai 23.17 → 25.42 (+2.25, t 4.18, 12 seeds); Kayo 26.00 → 27.00 (6 seeds); Dorinthea
+  26.17 → 26.83 (6 seeds). Phone bound at 4x: action p95 94.8 ms (worst 155.9), block p95 103 ms (worst 202.2).
+  Measured on v6.19; replayed onto v6.20.
+- Drill `test/sharpboard.test.js`. Moved: `aiqa`'s known-arrow drill pins its sabotage to the old scoring (bW 0);
+  with the board term Sharp keeps the arrow by firing it. `explain`'s census lists laBoard.
+
 ## v6.20 — the weapon bonus counts only when it is the weapon's alone (a v6.15 regression fixed)
 
 - **`judge.grantedSwings` exclusivity:** a pending grant now adds to a weapon's ranked power only when no hand or
