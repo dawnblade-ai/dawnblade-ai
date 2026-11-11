@@ -1,3 +1,15 @@
+## v6.22 — a debuff token counts for the hero who made it
+
+- **`madeBy`** (`engine/effects.js`): a token minted "under their control" (Inertia, Bloodrot Pox, Frailty,
+  Frostbite) now carries the maker's seat, which is public. Sharp's board term (`boardVal`, v6.21) credits it to the
+  maker, not the holder. Before, a Lace hit's debuff counted as the OPPONENT gaining a permanent, so Azalea's Sharp
+  marked down the very hits her deck is built on (v6.21 all-hero audit: Azalea −0.92 at 12 seeds). WIRE_V 39 → 40.
+- A/B own seat, board term off → on, wins of 28: Azalea 23.67 → 24.08 (12 seeds; was 23.67 → 22.75); Gravy 8.17 →
+  14.17 and Viserai 23.50 → 26.33 (6 seeds, gains hold); Iyslander +0.67. Phone bound at 4x: action p95 101 ms,
+  block p95 115 ms. Drill in `test/sharpboard.test.js` ("A DEBUFF IS THE MAKER'S").
+- v6.21's board term, audited on all 15 heroes (Sharp seat): gains for Lyath +3, Enigma +3, Blaze +1.67, Bravo
+  +1.33, Boltyn +1, Iyslander +0.67; Fai, Dash and Briar flat; Arakni noise (−0.25 at 12 seeds).
+
 ## v6.21 — Sharp prices the board
 
 - **laBoard** (`engine/sparring.js`, gate `SPXLABOARD`, key `laBoard`): Sharp's `laEval` gains a board term. Each
