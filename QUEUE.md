@@ -9,12 +9,12 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-10, at v6.21)
+## HANDOFF — START HERE (CEO, 2026-11-11, at v6.22)
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
-- **Live: v6.21** (WIRE_V 39, DATA_VER sage-v16). Progress reports: `docs/progress/v6.20.md`, `v6.21.md`.
+- **Live: v6.22** (WIRE_V 40, DATA_VER sage-v16). Progress reports: `docs/progress/v6.21.md`, `v6.22.md`.
 - **MISSION (user, 2026-11-07):** the ultimate FaB Silver Age precon competitive gaming environment and
   judging engine — 100% fan-made, non-profit, for fun and glory, no ads, forever.
 - **CADENCE (user, 2026-11-07):** "With each version make a progress report and start a new CEO thread."
@@ -50,7 +50,8 @@ answer Cloudflare Workers + DO (free plan, no pause; Supabase free projects paus
 - **SPX GATE AUDIT CLEAN** (RXFIT, GRANTPAY, WPNFIRST, IDLE, PAY, SOAK, LOOK; own seat, rule, all 15, 3 seeds): no
   resolved loss; Blaze/SOAK −1 at 3 seeds → −0.17 (t≈−0.5) at 12 = noise. SPXLABOARD all-hero audit (Sharp seat): gains lyath +3,
   enigma +3, blaze +1.67, bravo +1.33, boltyn +1, iyslander +0.67; fai/dash/briar flat; arakni noise (−0.25 @12);
-  AZALEA UNRESOLVED leaning − (−0.92, t≈−1.5 @12) → the H3 author is checking the arsenal/arrow under-pricing.
+  AZALEA FIXED in v6.22: foe-side debuff tokens carry `madeBy` and count for the maker (Azalea 23.67→24.08 @12;
+  Gravy/Viserai gains hold). WIRE_V 40.
   `session_013xG9xAMN9v4UxqgJGzXBSH` STANDING BY.
 - **H-BOARD SHIPPED v6.21** (`SPXLABOARD`, key laBoard): Sharp's laEval prices permanents by printed numbers. Gravy
   7.75→13.25 /28 (t 4.89, 12 seeds), Viserai 23.17→25.42, Kayo +1, Dorinthea +0.67; phone p95 ≤103 ms. bW tuning:
@@ -59,7 +60,7 @@ answer Cloudflare Workers + DO (free plan, no pause; Supabase free projects paus
   halved {p}/{d} make the hand look like threats; Sharp's block edge needs its action search). Lyath's
   defender buff PARKED (SPXDEFBUFF, `experiments/spxdefbuff.patch` 10f4d34: −2.67 / −1.00 at 3 seeds; the own-turn
   Might rider is worth {r}{r}). Lyath's Steady gap is attack play, not walls or the buff.
-  `session_013xG9xCgDniyTy1T4jVmNfK`: Azalea/SPXLABOARD check (bounded), then STANDING BY for the server deploy.
+  `session_013xG9xCgDniyTy1T4jVmNfK`: Azalea fixed (v6.22); STANDING BY for the server deploy.
 - Census also: Lyath's gap is POLICY (rule 9/84 vs Sharp 41/84); Gravy's is mostly deck. Rare and parked: Sharp dies to a
   go-again follow-up after relying on a reaction (4/1,260).
 - Wins/84 at v6.18 (Sharp seat vs the 14 others): briar 83, bravo 76, dorinthea 76, kayo 75, dash 74, arakni 72, azalea 72,
