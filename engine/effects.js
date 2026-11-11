@@ -2078,7 +2078,10 @@ function makeEffects(ctx){
         const _tseat = side === "foe" ? 1 - actorOf(n) : actorOf(n), _minted = [];
         for(let i=0;i<(op[2]||1);i++){
           const tok = {...rec, uid:"tok"+tokSeq()};
-          if(side==="foe") foeMut(n).board = [...(foe(n).board||[]), {card:tok, kind:"token", spent:false, uid:tok.uid, sd:_tsd}];
+          /* `madeBy` (ship/sharp-board): a token minted "under their control" (Frostbite,
+             Bloodrot Pox, Frailty, Inertia) sits on the opponent's board but is the MAKER's
+             doing. Public, a seat index; read only by sparring.js's board term. */
+          if(side==="foe") foeMut(n).board = [...(foe(n).board||[]), {card:tok, kind:"token", spent:false, uid:tok.uid, sd:_tsd, madeBy: actorOf(n)}];
           else actMut(n).board = [...act(n).board, {card:tok, kind:"token", spent:false, uid:tok.uid, sd:_tsd}];
           _minted.push(tok);
         }

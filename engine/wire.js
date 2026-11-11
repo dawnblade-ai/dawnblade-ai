@@ -328,7 +328,9 @@
 /* 38 -> 39 AT v6.11 (hand reveals): a `pick` prompt carries `reveal` (Crash and
    Bash's reveal cost, Flamecall Awakening's search) and the card picked becomes
    known in hand (`_kh`), as does Strongest Survive's escape card. */
-const WIRE_V = 39;
+/* 39 -> 40 (ship/sharp-board): a token minted under the opponent's control carries
+   `madeBy` (the maker's seat) on its board entry — public; Sharp's board term reads it. */
+const WIRE_V = 40;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------
