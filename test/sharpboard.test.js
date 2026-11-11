@@ -57,3 +57,20 @@ test("SABOTAGE — with SPXLABOARD=none the same line scores the old way (board 
 test("the call names the board when it is the term that moved most", () => {
   assert.ok(SP.CALL_WHY.laBoard, "a CALL_WHY key for the board reason");
 });
+
+/* ---- a token minted under the opponent's control is its maker's (Azalea's Lace hits) ---- */
+test("A DEBUFF IS THE MAKER'S — a token minted under their control carries madeBy, and the board term credits the maker", () => {
+  H.db();
+  const g = H.state({name: "Azalea"}, {name: "Kayo"}, {actor: 0, turnPlayer: 0, turn: 3});
+  const n = H.runOps(g, [["token", "bloodrot pox", 1, "foe"]], "Lace with Bloodrot");
+  const e = (n.sides[1].board || []).find(b => b && b.kind === "token");
+  assert.ok(e, "the token sits on the opponent's board");
+  assert.equal(e.madeBy, 0, "stamped with the seat that made it");
+  /* the score: Azalea's debuff is +1 for Azalea, not +1 for Kayo */
+  const root = g, end = n;
+  assert.equal(SP.laEval(end, 0, root).board - SP.laEval(root, 0, root).board, 1, "her hit's debuff counts for her");
+  assert.equal(SP.laEval(end, 1, root).board - SP.laEval(root, 1, root).board, -1, "and against the seat it sits with");
+  /* SABOTAGE: the same entry without the stamp reads as the victim's permanent (the v6.21 sign) */
+  const bare = {...end, sides: end.sides.map((sd, i) => i ? {...sd, board: sd.board.map(b => { const {madeBy, ...r} = b; return r; })} : sd)};
+  assert.equal(SP.laEval(bare, 0, root).board - SP.laEval(root, 0, root).board, -1, "unstamped it scored against the maker");
+});

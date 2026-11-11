@@ -1302,17 +1302,21 @@ const held = sd => (sd.hand || []).length + (sd.arsenal ? 1 : 0);
    board is worth its printed numbers: an ally its power (what it swings each turn, the
    life `dealt` is measured in) and its defence; any other permanent 1. Printed numbers
    only, no card text. The change from the root, mine minus theirs, at `bW` per point. */
-function boardVal(sd){
-  return (sd.board || []).reduce((t, b) => {
-    if(!b || !b.card) return t;
-    return t + (GM.isAlly(b) ? Math.max(1, num(b.card, "power") + num(b.card, "def") / 2) : 1);
-  }, 0);
+/* A permanent counts for the seat that put it there: a token minted under the opponent's
+   control (`madeBy`, a debuff — Azalea's Lace hits, Iyslander's Frostbite) is its maker's,
+   wherever it sits. Without this, every debuff Azalea landed scored against her (the board
+   term counted it as the victim's permanent) — measured: her Sharp 23.67 -> 22.75. */
+const permVal = b => GM.isAlly(b) ? Math.max(1, num(b.card, "power") + num(b.card, "def") / 2) : 1;
+function boardVal(sd, other, self){
+  const mine = (sd.board || []).reduce((t, b) => (!b || !b.card || (b.madeBy != null && b.madeBy !== self && self != null)) ? t : t + permVal(b), 0);
+  const made = other ? (other.board || []).reduce((t, b) => (b && b.card && b.madeBy != null && b.madeBy === self) ? t + permVal(b) : t, 0) : 0;
+  return mine + made;
 }
 function laEval(n, seat, root, mu){
   const me = n.sides[seat], op = n.sides[1 - seat], m0 = root.sides[seat], o0 = root.sides[1 - seat];
   if(n.over) return {v: n.over.winner === seat ? 1000 : n.over.winner == null ? 0 : -1000, dealt: 0, taken: 0, cards: 0, board: 0, over: true};
   const dealt = (o0.hp - op.hp), taken = (m0.hp - me.hp), cards = held(me) - held(op);
-  const board = boardOn(root, seat) ? (boardVal(me) - boardVal(m0)) - (boardVal(op) - boardVal(o0)) : 0;
+  const board = boardOn(root, seat) ? (boardVal(me, op, seat) - boardVal(m0, o0, seat)) - (boardVal(op, me, 1 - seat) - boardVal(o0, m0, 1 - seat)) : 0;
   return {v: dealt - taken + (mu != null ? mu : LA.mu) * cards + LA.bW * board, dealt, taken, cards, board};
 }
 function laRollout(n, seat, root, spent, until, skip){
