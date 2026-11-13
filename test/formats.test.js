@@ -43,8 +43,7 @@ test("Dawnblade's legality does not follow Silver Age's ban list", () => {
     "a ban list inside the format would make Dawnblade follow it");
 });
 
-/* `null` is "not yet recorded"; `[]` would claim nothing is banned. Until the
-   desktop task lands, the pending marker must say where the work lives. */
+/* `null` is "not yet recorded"; `[]` would claim nothing is banned. */
 test("the Silver Age block is either pending or a sourced list of real pool cards", () => {
   const sa = F.silverAge;
   const names = poolNames();
@@ -68,6 +67,24 @@ test("the Silver Age block is either pending or a sourced list of real pool card
       assert.ok(h.source, `${h.hero}'s bench carries no source`);
     }
   }
+});
+
+/* v6.23: the block is DERIVED from the pinned pool by tools/silver-age.js, so it cannot rot:
+   re-pin the pool without rerunning the tool and this goes red. */
+test("the Silver Age block equals what the pinned pool derives", () => {
+  const { derive } = require("../tools/silver-age.js");
+  const pool = require("../data/pool.js");
+  const want = derive(pool, W);
+  assert.ok(want.length > 0, "the pinned pool derives no ban at all, so this drill proves nothing");
+  assert.deepEqual(F.silverAge.banned, want);
+  assert.ok(F.silverAge.banned.some(b => b.name === "Reaping Blade" && b.since === "2026-05-29"));
+  assert.ok(F.silverAge.banned.some(b => b.kind === "hero" && b.name === "Briar"));
+  /* the control: a pool where a banned card is not banned must derive a different list */
+  const clean = pool.map(r => r.name === "Pulping" ? Object.assign({}, r, { silver_age_banned: false }) : r);
+  assert.notDeepEqual(derive(clean, W), want, "the derivation ignored the database field");
+  /* and Dawnblade's own pool is untouched by any of it: every banned name is still dealt */
+  const names = poolNames();
+  for(const b of want) assert.ok(names.has(b.name), `${b.name} left the pool`);
 });
 
 test("the pool scan can tell a real card from a typo", () => {

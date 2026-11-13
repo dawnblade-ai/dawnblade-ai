@@ -1,3 +1,18 @@
+## v6.23 — Silver Age legality recorded from the pinned database
+
+- **`silverAge.banned`** (`data/formats.json`) is no longer `null`. New `tools/silver-age.js` derives it from the
+  pinned pool's `silver_age_banned` / `silver_age_banned_start` fields for the cards and heroes the fifteen precons
+  play; `test/formats.test.js` fails if the block drifts from what the tool derives (sabotaged once to check).
+  Nine entries: Reaping Blade (2026-05-29); Absorb in Aether, Beaten Trackers, Briar (a hero), Emeritus Scolding,
+  Lightning Press, Pulping, Sigil of Suffering, Snapback (2026-09-18). Kayo and Beckoning Haunt are no longer banned
+  upstream. This is the upstream DATABASE's statement, not fabtcg.com's announcements (still 403 from the sandbox).
+  `benched` stays `null`: the data has no hero-bench field, so Briar's bench is recorded as a ban with no end date.
+  Dawnblade's own legality is unchanged: no deck list changed and nothing became illegal.
+- **Full re-pin** (`node tools/pin-pool.js`, DATA_VER sage-v16 → sage-v17): 38 pool records moved, none of them text,
+  cost, power or defence of a card a deck plays (Hyper Inflation yellow and blue power 4 → 3 and 4 → 2; decks play red
+  only). The rest is ban metadata (Silver Age and Classic Constructed), a few printing ids, and `cards_referenced_by`
+  on tokens. Entwine Lightning is Classic Constructed-banned upstream, not Silver Age-banned.
+
 ## v6.22 — a debuff token counts for the hero who made it
 
 - **`madeBy`** (`engine/effects.js`): a token minted "under their control" (Inertia, Bloodrot Pox, Frailty,

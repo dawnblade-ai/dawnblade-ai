@@ -8,14 +8,14 @@
     "benched, stays legal here. That is a choice about which game this is, not",
     "an oversight, and `test/formats.test.js` holds it.",
     "",
-    "THE SILVER AGE LEGALITY BLOCK IS `null`, AND THAT IS A STATEMENT.",
-    "Recording which pool cards Silver Age has banned needs the official",
-    "announcements, and every source for them was blocked by this project's",
-    "cloud sandbox on 2026-09-26. An empty list would read as 'nothing is",
-    "banned', which is false; `null` reads as 'not yet recorded'. The research",
-    "is a desktop task (DESKTOP-TASKS.md). When it is done, fill `banned` and",
-    "`benched` with sourced entries; the drill checks every name against the",
-    "pool, so a typo fails rather than silently marking nothing."
+    "THE SILVER AGE LEGALITY BLOCK IS DERIVED, NOT AUTHORED (v6.23).",
+    "`node tools/silver-age.js` reads the pinned card database (data/pool.js)",
+    "and writes `silverAge`; `test/formats.test.js` fails if the block drifts",
+    "from what the tool derives. It records what the upstream DATABASE says,",
+    "not the official announcements (unreachable from this project's cloud",
+    "sandbox; DESKTOP-TASKS.md keeps the residual). `benched` is `null` because",
+    "the data has no hero-bench field: null reads as 'not recorded', and an",
+    "empty list would read as 'no hero is benched', which is not known."
   ],
   "dawnblade": {
     "name": "Dawnblade",
@@ -31,10 +31,75 @@
       "Silver Age's legality is recorded BESIDE the format, never inside it:",
       "it is information a player may want (which of these cards would they",
       "not be allowed at a Silver Age event) and it changes every season, while",
-      "Dawnblade's pool does not."
+      "Dawnblade's pool does not.",
+      "",
+      "DERIVED, NOT AUTHORED: tools/silver-age.js reads `silver_age_banned` and",
+      "`silver_age_banned_start` off the pinned card database (data/pool.js), for the",
+      "cards and heroes the fifteen precons play. This is the upstream DATABASE's",
+      "statement as of the last re-pin, NOT a reading of fabtcg.com's announcements",
+      "(still unreachable from the sandbox; see DESKTOP-TASKS.md).",
+      "",
+      "HEROES: the database marks a hero 'banned' (`kind: hero`) and has no separate",
+      "hero-bench field, so a seasonal bench is recorded here as a ban, in the",
+      "database's own words, with no 'until' date (the data carries none).",
+      "`benched` stays null: the data does not distinguish a bench from a ban."
     ],
-    "banned": null,
-    "benched": null,
-    "pending": "desktop task — see DESKTOP-TASKS.md, 'Silver Age legality'"
+    "banned": [
+      {
+        "name": "Reaping Blade",
+        "kind": "card",
+        "since": "2026-05-29",
+        "source": "the-fab-cube card database, field silver_age_banned (pinned in data/pool.js)"
+      },
+      {
+        "name": "Absorb in Aether",
+        "kind": "card",
+        "since": "2026-09-18",
+        "source": "the-fab-cube card database, field silver_age_banned (pinned in data/pool.js)"
+      },
+      {
+        "name": "Beaten Trackers",
+        "kind": "card",
+        "since": "2026-09-18",
+        "source": "the-fab-cube card database, field silver_age_banned (pinned in data/pool.js)"
+      },
+      {
+        "name": "Briar",
+        "kind": "hero",
+        "since": "2026-09-18",
+        "source": "the-fab-cube card database, field silver_age_banned (pinned in data/pool.js)"
+      },
+      {
+        "name": "Emeritus Scolding",
+        "kind": "card",
+        "since": "2026-09-18",
+        "source": "the-fab-cube card database, field silver_age_banned (pinned in data/pool.js)"
+      },
+      {
+        "name": "Lightning Press",
+        "kind": "card",
+        "since": "2026-09-18",
+        "source": "the-fab-cube card database, field silver_age_banned (pinned in data/pool.js)"
+      },
+      {
+        "name": "Pulping",
+        "kind": "card",
+        "since": "2026-09-18",
+        "source": "the-fab-cube card database, field silver_age_banned (pinned in data/pool.js)"
+      },
+      {
+        "name": "Sigil of Suffering",
+        "kind": "card",
+        "since": "2026-09-18",
+        "source": "the-fab-cube card database, field silver_age_banned (pinned in data/pool.js)"
+      },
+      {
+        "name": "Snapback",
+        "kind": "card",
+        "since": "2026-09-18",
+        "source": "the-fab-cube card database, field silver_age_banned (pinned in data/pool.js)"
+      }
+    ],
+    "benched": null
   }
 }

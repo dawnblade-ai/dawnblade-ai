@@ -12,8 +12,8 @@ The pool is FROZEN at the fifteen Chapter 1–3 precons as printed, and it does
 NOT follow Silver Age's rolling ban list or its seasonal hero bench: a card
 Silver Age has banned stays legal here. That is `data/formats.json`, held by
 `test/formats.test.js`. **Do not "fix" a banned card out of a deck list.**
-Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
-and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
+Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`), derived
+by `tools/silver-age.js` from the pinned pool (rerun it after every re-pin; `benched` is `null`).
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
 **Current version:** `grep APP_VER index.html` (a version written here rots in one release)

@@ -5,37 +5,20 @@ what was blocked, what is already known, and where the answer goes.
 
 ---
 
-## Silver Age legality — which Dawnblade cards and heroes has Silver Age banned or benched?
+## Silver Age legality — DONE from the upstream database (v6.23); one residual
 
-**Why it is here.** On 2026-09-26 this environment's egress policy blocked
-every source that carries the list: `fabtcg.com`, `fabtcg.gg`,
-`fabtcgmeta.com`, `fabrary.net`, `fab.cardsrealm.com` and
-`articles.starcitygames.com`. Web SEARCH worked, but its answers are
-summaries of snippets and cannot be trusted with card names. Either run
-this from a desktop, or add those hosts to the environment's allowed
-domains (Network access in the cloud environment's settings).
+`data/formats.json` → `silverAge.banned` is now derived by `tools/silver-age.js` from the pinned pool's
+`silver_age_banned` / `silver_age_banned_start` fields (the-fab-cube), held by `test/formats.test.js`. After a
+re-pin, rerun `node tools/silver-age.js`. The earlier snippet leads (Kayo benched, Entwine Lightning banned) are
+superseded by the database: Kayo is not banned, and Entwine Lightning is Classic Constructed-banned only.
 
-**Where the answer goes.** `data/formats.json` → `silverAge.banned` and
-`silverAge.benched`, replacing `null`. Each entry needs a name, an
-effective date and a source:
+**Residual (desktop).** The official announcement pages on fabtcg.com were never read from the sandbox (403), so
+the block is the database's word, not the announcement's. `benched` is `null`: the database has no hero-bench field
+(Briar is recorded as banned since 2026-09-18) and carries no "until" dates. Reading the announcements
+(`/articles/scheduled-banned-and-restricted-announcement-17-09-26/`, `/articles/silver-age-vote-iar-season/`)
+would confirm the dates and fill the bench.
 
-```json
-"banned":  [{"name": "Reaping Blade", "since": "2026-05-29", "source": "fabtcg.com/articles/scheduled-banned-and-restricted-announcement-28-05-26/"}],
-"benched": [{"hero": "kayo", "since": "2026-05-29", "until": "2026-09-18", "source": "…"}]
-```
-
-`test/formats.test.js` checks every name against the fifteen precons, so a
-typo fails the drill rather than silently marking nothing. **Dawnblade's
-own legality does not change**: every card and hero in the pool stays
-legal here. The block only records what a player would meet at a Silver
-Age event.
-
-### Leads from search snippets — UNVERIFIED, confirm each one
-
-The official announcements to read (all on fabtcg.com):
-
-| announcement | effective | page |
-|---|---|---|
+---|---|---|
 | March | 2026-03-03 | `/articles/scheduled-banned-and-restricted-announcement-2-3-26/` |
 | May | 2026-05-29 | `/articles/scheduled-banned-and-restricted-announcement-28-05-26/` |
 | June | ? | `/articles/scheduled-banned-and-restricted-announcement-29-06-26/` |
