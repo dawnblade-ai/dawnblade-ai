@@ -21,7 +21,7 @@
    makeServerHub({server, deal?, seedKey, tamper?}) -> makeHub(opts):
      server  the module under test (handleNow) — default server/referee.js
      deal    overrides opts.deal (the isolate's own card database)
-     tamper  {broadcast?(topic, payload, bus) -> void} — the sabotage seam:
+     tamper  {broadcast?(topic, payload, bus, {store, code}) -> void} — the sabotage seam:
              it REPLACES the bus's broadcast, to prove the audit bites. */
 const path = require("path");
 const Hub = require("../../engine/hub.js");
@@ -40,9 +40,13 @@ function makeServerHub(cfg){
     const store = memStore(), bus = memBus();
     const rnd = T.seeded("server|" + (cfg.seedKey || "") + "|" + code);
     let clock = 1700000000000;
-    const broadcast = cfg.tamper && cfg.tamper.broadcast ? (t, p) => cfg.tamper.broadcast(t, p, bus) : (t, p) => bus.broadcast(t, p);
-    const deps = {store, broadcast, deal, build: opts.build, now: () => clock++, rand: () => rnd, log: e => { audit.errors.push(String(e && e.stack || e)); }};
-    const audit = {calls: 0, responses: [], leaks: [], mismatch: 0, errors: [], refused: [], store, bus, deps};
+    const broadcast = cfg.tamper && cfg.tamper.broadcast ? (t, p) => cfg.tamper.broadcast(t, p, bus, {store, code}) : (t, p) => bus.broadcast(t, p);
+    /* the deps, from a clean clock and a clean seed: the async replay builds a second set */
+    const makeDeps = (st, bs) => { let ck = 1700000000000; const r = T.seeded("server|" + (cfg.seedKey || "") + "|" + code);
+      return {store: st, broadcast: (t, p) => bs.broadcast(t, p), deal, build: opts.build, now: () => ck++, rand: () => r,
+              log: e => { audit.errors.push(String(e && e.stack || e)); }}; };
+    const deps = {...makeDeps(store, bus), broadcast, now: () => clock++, rand: () => rnd};
+    const audit = {calls: 0, responses: [], reqs: [], resps: [], leaks: [], mismatch: 0, errors: [], refused: [], store, bus, deps, makeDeps, code};
 
     /* ---- inspector: a hub rehydrated from the stored row, never fed a frame ---- */
     let cache = {version: -1, hub: null};
@@ -69,7 +73,7 @@ function makeServerHub(cfg){
     function call(req){
       const mark = bus.log.length;
       const res = clone(server.handleNow(req, deps));
-      audit.calls++;
+      audit.calls++; audit.reqs.push(clone(req)); audit.resps.push(res);
       audit.responses.push({req: req.op, ok: res.ok, refused: res.refused});
       if(!res.ok) audit.refused.push(res.refused);
       const sent = bus.log.slice(mark);
@@ -97,7 +101,7 @@ function makeServerHub(cfg){
       connect(end){
         const L = {seat: null, key: null, n: 0, unsub: null};
         const seated = (res) => {
-          L.seat = res.seat;
+          L.seat = res.seat; L.n = res.n || 0;
           for(const f of res.frames){ if(f.ch === Hub.CH.JUDGE && f.key) L.key = f.key; end.send(f); }
           if(L.unsub) L.unsub();
           L.unsub = bus.subscribe(server.topic(code, L.seat), p => p.frames.forEach(f => end.send(f)));

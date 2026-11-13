@@ -10,6 +10,8 @@
       SAME FILES `npm test` runs, under `deno test` with no edit:
         test/referee.test.js   test/hostref.test.js   test/judgetable.test.js
         test/wsreferee.test.js test/sha256.test.js    test/lobby.test.js
+        test/serverref.test.js   (SERVER S1: the stateless hosted referee,
+                                  server/referee.js, over a fake store + bus)
       Deno reads CommonJS with --unstable-detect-cjs and provides node:test.
       Point DENO at a binary (`npm install --prefix <scratch> deno` fetches
       one) or put `deno` on PATH; without one this half says SKIPPED, never
@@ -32,7 +34,7 @@ const path = require("path");
 const {spawnSync, execSync} = require("child_process");
 const ROOT = path.join(__dirname, "..");
 const DRILLS = ["test/referee.test.js", "test/hostref.test.js", "test/judgetable.test.js",
-                "test/wsreferee.test.js", "test/sha256.test.js", "test/lobby.test.js"];
+                "test/wsreferee.test.js", "test/sha256.test.js", "test/lobby.test.js", "test/serverref.test.js"];
 let failed = 0;
 
 function denoBin(){
@@ -90,5 +92,31 @@ pairs.forEach(([a, b], i) => {
               " · leaks " + r.leaks[0].length + "/" + r.leaks[1].length + " · largest frame " + r.big + " · verified " + verified.join("/") +
               " · " + r.t.sockets + " socket frames · " + ((Date.now() - t0) / 1000).toFixed(0) + "s");
 });
+
+/* ---- the stateless referee (SERVER S1), inside the same isolate ------------
+   server/referee.js as a plain script after the page's own: one request, one
+   rehydrated hub, over a fake store and bus. Two games, scanned as above plus
+   every response and broadcast for the seed and the keys. */
+{
+  const {makeServerHub} = require("../test/helpers/serverhub.js");
+  console.log("SERVER    server/referee.js in the isolate (" + iso.serverScripts.join(", ") + "): handle() " + typeof iso.server.handle);
+  for(const [a, b] of [[H[0], H[1]], [H[12], H[14 % H.length]]]){
+    const t0 = Date.now();
+    let hub;
+    const mk = makeServerHub({server: iso.server, deal: iso.deal, seedKey: "run-" + a});
+    const r = T.judgedGame(a, b, "run-" + a, {makeHub: o => (hub = mk(o))});
+    const au = hub.audit;
+    const verified = r.t.phones.map(p => { const rv = p.sess.revealed(); if(!rv) return false;
+      return T.R.verifyGame({seedC: p.spec.seedC, seedG: p.spec.seedG, seedH: rv.seedH,
+        start: sd => T.deal(p.spec.heroes[0], p.spec.heroes[1], sd, p.spec.first), reduce: T.J.reduce, seat: p.seat,
+        log: rv.log, hashes: p.sess.hashes(), over: rv.over}).ok; });
+    const ok = !!r.over && r.mism.join() === "0,0" && r.deep.join() === "0,0" && !r.leaks[0].length && !r.leaks[1].length &&
+               !r.seedLeak && !r.earlyReveal && !au.leaks.length && !au.errors.length && !au.refused.length && verified.every(Boolean);
+    if(!ok) failed++;
+    console.log((ok ? "PASS  " : "FAIL  ") + (a + " v " + b).padEnd(22) + r.steps + " actions · " + au.calls + " requests, each on a rehydrated hub · largest stored row " +
+                au.store.largest() + " bytes · leaks " + (r.leaks[0].length + r.leaks[1].length + au.leaks.length) + " · verified " + verified.join("/") +
+                " · " + ((Date.now() - t0) / 1000).toFixed(0) + "s");
+  }
+}
 console.log(failed ? "FAILED: " + failed : "ALL PASS");
 process.exit(failed ? 1 : 0);

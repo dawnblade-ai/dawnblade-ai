@@ -32,7 +32,9 @@
      {op:"join", table}                          the first seat nobody has
                                                  sat in; the answer carries
                                                  {ch:"judge", seat, key}
-     {op:"join", table, seat, key}               a returning phone's claim
+     {op:"join", table, seat, key}               a returning phone's claim; the
+                                                 answer's `n` is where its frame
+                                                 counter resumes (above it)
      {op:"frame", table, seat, key, n, frame}    `frame` is a hub frame:
                 {ch:"lobby", m} | {ch:"net", m} (intent, hello, resync…)
      {op:"resync", table, seat, key, have?}      shorthand for the net
@@ -77,7 +79,7 @@ const then = (v, f) => isP(v) ? v.then(f) : f(v);
 
 const no = (refused, extra) => ({ok: false, refused, ...(extra || {})});
 /* equal strings, without stopping at the first difference */
-const same = (a, b) => { if(typeof a !== "string" || typeof b !== "string" || a.length !== b.length) return false;
+const keyEq = (a, b) => { if(typeof a !== "string" || typeof b !== "string" || a.length !== b.length) return false;
   let d = 0; for(let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i); return d === 0; };
 
 /* ---- one request's hub --------------------------------------------------
@@ -162,20 +164,20 @@ function join(req, got, deps){
   const row = got.row, id = row.id;
   if(req.key !== undefined){
     /* a returning phone: the key holds the chair (and nothing is written) */
-    if((req.seat !== 0 && req.seat !== 1) || !same(req.key, row.hub.keys[req.seat])) return no("auth");
+    if((req.seat !== 0 && req.seat !== 1) || !keyEq(req.key, row.hub.keys[req.seat])) return no("auth");
     const r = rig(id, row, deps);
     r.seat(req.seat, req.key, true);
-    return {ok: true, version: got.version, seat: req.seat, frames: r.out[req.seat]};
+    return {ok: true, version: got.version, seat: req.seat, n: row.nonces[req.seat], frames: r.out[req.seat]};
   }
   const r = rig(id, row, deps), f = r.fresh(), seat = f.link.seat();
   if(seat == null) return no("full");
   row.hub = r.hub.persistTable();          /* the new seat's key is now part of the table */
-  return save(id, row, got.version, deps, [[], []], f.got, {seat});
+  return save(id, row, got.version, deps, [[], []], f.got, {seat, n: row.nonces[seat]});
 }
 
 function frame(req, got, deps){
   const row = got.row, id = row.id, seat = req.seat, f = req.frame;
-  if((seat !== 0 && seat !== 1) || !same(req.key, row.hub.keys[seat])) return no("auth");
+  if((seat !== 0 && seat !== 1) || !keyEq(req.key, row.hub.keys[seat])) return no("auth");
   if(!Number.isInteger(req.n) || req.n <= row.nonces[seat]) return no("stale");
   if(!f || typeof f !== "object" || (f.ch !== Hub.CH.LOBBY && f.ch !== Hub.CH.NET)) return no("bad-request");
   if(f.ch === Hub.CH.NET && !row.hub.spec) return no("not-dealt");

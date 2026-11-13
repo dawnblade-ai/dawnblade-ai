@@ -30,6 +30,7 @@ const {webcrypto} = require("crypto");
 
 const ROOT = path.join(__dirname, "..", "..");
 const INDEX = path.join(ROOT, "index.html");
+const SERVER_SCRIPT = "server/referee.js";
 
 /* the scripts the page loads, in order (engine/ and data/ only) */
 function pageScripts(){
@@ -73,6 +74,7 @@ const TABLE_OBJECT = `
     webSocket(server){ return DawnNet.wsAdapter(server).accept(this.hub); }
   }
   self.TableObject = TableObject;
+  self.__deal = deal;    /* the server drills (server/referee.js) deal with the same database */
   self.__runtime = {window: typeof window, document: typeof document, require: typeof require, module: typeof module,
                     process: typeof process, Buffer: typeof Buffer, global: typeof global};
 })();`;
@@ -92,7 +94,10 @@ function makeIsolate(o){
   sb.__DATA = JSON.parse(JSON.stringify({HEROES: w.HEROES, DECKS: w.DECKS}));
   for(const f of pageScripts()) run(fs.readFileSync(path.join(ROOT, f), "utf8"), f);
   run(TABLE_OBJECT, "table-object.js");
-  return {ctx, run, TableObject: sb.TableObject, runtime: sb.__runtime, scripts: pageScripts()};
+  /* the hosted referee (SERVER S1) is not a page script: a plain script after them */
+  run(fs.readFileSync(path.join(ROOT, SERVER_SCRIPT), "utf8"), SERVER_SCRIPT);
+  return {ctx, run, TableObject: sb.TableObject, runtime: sb.__runtime, scripts: pageScripts(),
+          server: sb.DawnServer, deal: sb.__deal, serverScripts: [SERVER_SCRIPT]};
 }
 
 module.exports = {makeIsolate, pageScripts};
