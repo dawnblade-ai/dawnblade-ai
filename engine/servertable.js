@@ -1,0 +1,458 @@
+/* ============================================================
+   Dawnblade engine — servertable.js (SERVER S2: the page's side of the hosted referee)
+
+   A TABLE ON THE HOSTED REFEREE, AS THE SAME CHANNEL THE OTHER TABLES USE.
+
+   server/referee.js (S1) is a stateless function: one request in, the row
+   loaded, ONE frame applied, the row saved, the other seat pushed its own
+   frames. This module is the phone's end of it. It turns that request/answer
+   world back into the channel TableRoom already speaks to — the shape
+   engine/room.js's `open` resolves with —
+
+        {send(frame), listen(fn), first(ms), close(), status(), code}
+
+   so the lobby, net.js's guest session and the whole board run UNCHANGED.
+   (A frame is `{ch:"lobby"|"net", m}`; a judged table's seat offer, the
+   `{ch:"judge", seat}` frame, is the first thing `first()` hands out, with
+   the seat KEY taken out of it — see KEYS below.)
+
+   ---- THE TRANSPORT IS INJECTED ----------------------------------------
+     transport = {
+       post(envelope) -> Promise<answer>        one referee call
+       subscribe(topic, onPayload, onState?) -> unsubscribe
+                       onState("joined"|"lost") is optional: a transport that
+                       can tell when its subscription dropped says so, and the
+                       channel RESYNCS when it is back.
+     }
+   Nothing here names a socket, a URL or a library: `supabaseTransport` (at the
+   bottom) is the one place that does, and it is built to cost NOTHING until a
+   player asks for a server table (no request, no script tag). The offline
+   fake the drills use lives in test/helpers/servertransport.js and is never
+   loaded by the page.
+
+   ---- WHAT THIS MODULE OWNS ----------------------------------------------
+   THE COUNTER `n`. The referee refuses a frame whose n is not above the last
+   one it applied for this seat (a replay, or one that overtook a newer). The
+   channel keeps n, sends ONE frame at a time (a second in flight is how a
+   frame overtakes another), and moves n on only when the referee ANSWERED ok.
+   NOTE the one liberty taken with "advance only when a frame applied": an ok
+   answer to a frame that changed nothing (a refused intent, a read) also
+   moves n. That is safe — the referee only asks for n ABOVE its last — and it
+   keeps the client from guessing whether a frame applied.
+   CONFLICT. {refused:"conflict", retry:true} means somebody wrote first and
+   NOTHING of ours was saved: retry the SAME frame with the SAME n after a
+   jittered, growing pause, up to `conflictCap` tries.
+   A LOST ANSWER. The call failed in the network: the frame may or may not
+   have applied. It is resent with the same n; if it HAD applied the referee
+   answers `stale`, and the channel then asks where the counter stands
+   (a claiming join answers `n`), treats the frame as applied, and heals.
+   HEALING (`heal`): the referee's own answers are the repair. A claiming join
+   replays the lobby; a `resync` answers the net session's catch-up. It runs
+   after a stale answer, after the subscription comes back, after a broadcast
+   arrives late, and (when `pollMs` is set) after a long silence — a
+   broadcast that never came cannot announce itself.
+   BROADCASTS. Each payload is `{ver, frames}`. A repeated `ver` is dropped; a
+   `ver` BELOW one already delivered arrived out of order: its frames are not
+   delivered (net.js would take them for a past) and a resync is asked for.
+   Gaps in `ver` are NOT a signal: the caller's own writes and the other
+   seat's frame-less writes both advance it. net.js's own sequence numbers
+   notice a missing commit and ask for a resync through `send`.
+   THE KEY. The seat key is dealt in the answer to a first `join`, kept in
+   memory and (through the injected `keep`, the page's `store` seam) under
+   "srv.<code>" so a RELOAD can claim the seat back. It is sent only inside
+   the request envelope. It is never put in a status, an error, a frame handed
+   up, `report()`, or a JUDGE!! report (engine/report.js is handed the table
+   CODE only), and errors are scrubbed of it before they leave this file.
+   HONEST STATUS. `status()` is one of
+     connecting     the table is being reached
+     waiting        seated; nothing yet heard from the other player
+     seated         seated and the other player has spoken
+     reconnecting   this phone's link is failing; it keeps trying
+     unavailable    the server cannot be reached (or answered something that
+                    is not the referee); frames wait, and it probes again
+     closed         left, or the seat/table is gone (`closedWhy()` says which)
+
+   NO DOM, NO TIMERS OF ITS OWN BEYOND THE INJECTED ONES: `o.sleep`, `o.rand`
+   and `o.timers` let the drills run it without a clock.
+   ============================================================ */
+(function(root, factory){
+  if(typeof module==="object" && module.exports) module.exports = factory();
+  else root.DawnServerTable = factory();
+})(typeof self!=="undefined" ? self : this, function(){
+
+/* the referee's code alphabet (server/referee.js CODE_CHARS) and length */
+const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const CODE_LEN = 6;
+const normalize = c => String(c == null ? "" : c).toUpperCase().split("").filter(x => CODE_CHARS.indexOf(x) >= 0).join("").slice(0, CODE_LEN);
+const isValid = c => normalize(c).length === CODE_LEN;
+/* the private topic a seat listens on (server/referee.js `topic`); S3 may derive it from the key instead */
+const topicFor = (code, seat) => "table:" + code + ":seat" + seat;
+
+const STATUS = ["connecting", "waiting", "seated", "reconnecting", "unavailable", "closed"];
+const CH_JUDGE = "judge", CH_LOBBY = "lobby", CH_NET = "net";
+const clone = v => JSON.parse(JSON.stringify(v));
+const defaultSleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* an Error whose `why` is a short machine word the screen maps to a sentence */
+const fail = (why, detail) => Object.assign(new Error(detail || why), {why});
+/* the referee's refusals, as the words a screen reasons in */
+const WHY_OF = {"no-table": "no-table", full: "full", auth: "auth", wire: "wire", exists: "exists", "bad-request": "bad-request"};
+
+/* a transport failure: the network, a function that is not there, a paused
+   project, a page that is not the referee. Never carries the request. */
+const transportErr = e => Object.assign(new Error("server unreachable"), {transport: true, why: "unavailable", status: e && e.status});
+
+function scrubber(){
+  const secrets = [];
+  const f = v => { let s = String(v == null ? "" : (v.message || v)); for(const k of secrets) if(k) s = s.split(k).join("…"); return s; };
+  f.add = k => { if(k && secrets.indexOf(k) < 0) secrets.push(k); };
+  return f;
+}
+
+/* ---- one call -----------------------------------------------------------
+   Resolves with the answer, or rejects with a transport error: the referee
+   always answers {ok:boolean}, so anything else is not it. */
+async function call(T, env){
+  let r;
+  try { r = await T.post(env); } catch(e){ throw transportErr(e); }
+  if(!r || typeof r !== "object" || typeof r.ok !== "boolean") throw transportErr();
+  return r;
+}
+
+/* ---- opening: create / join / resume --------------------------------------
+   o: {transport, code?, mode: "create"|"join"|"resume", keep?, onStatus?, ...tuning}
+   Resolves with the channel handle once this phone HOLDS A SEAT; rejects with
+   an Error whose `.why` is unavailable | no-table | full | auth | wire | code. */
+async function open(o){
+  o = o || {};
+  const T = o.transport, mode = o.mode || "join";
+  if(!T || typeof T.post !== "function" || typeof T.subscribe !== "function") throw fail("unavailable", "no transport");
+  const keep = o.keep || null;
+  const kget = k => { try { return keep ? keep.get(k, null) : null; } catch(_){ return null; } };
+  const kset = (k, v) => { try { if(keep) keep.set(k, v); } catch(_){} };
+  let code = normalize(o.code), rec = null;
+  const scrub = scrubber();
+  const say = s => { try { if(o.onStatus) o.onStatus(s); } catch(_){} };
+  say("connecting");
+
+  const refusal = r => fail(WHY_OF[r.refused] || "unavailable", "refused: " + r.refused);
+  if(mode === "create"){
+    let made = null;
+    for(let i = 0; i < 3 && !made; i++){
+      const r = await call(T, {op: "create"});
+      if(r.ok && typeof r.table === "string") made = r.table;
+      else if(r.refused === "exists" && r.retry) continue;
+      else throw r.ok ? fail("unavailable") : refusal(r);
+    }
+    if(!made) throw fail("unavailable", "no free table code");
+    code = made;
+  } else if(!isValid(code)) throw fail("code", "a table code is " + CODE_LEN + " characters");
+  if(mode === "resume"){
+    rec = kget("srv." + code);
+    if(!rec || (rec.seat !== 0 && rec.seat !== 1) || typeof rec.key !== "string") throw fail("auth", "no seat to claim");
+    scrub.add(rec.key);
+  }
+
+  /* a join that lost a version race wrote NOTHING: it is asked again (a claim writes nothing at all) */
+  const sleep0 = o.sleep || defaultSleep, tune0 = {conflictCap: 8, base: 120, max: 2000, ...(o.tune || {})};
+  let res = null;
+  for(let k = 0; k <= tune0.conflictCap; k++){
+    res = await call(T, mode === "resume" ? {op: "join", table: code, seat: rec.seat, key: rec.key} : {op: "join", table: code});
+    if(res.ok || res.refused !== "conflict") break;
+    await sleep0(Math.min(tune0.max, tune0.base * Math.pow(2, k)) * (0.5 + (o.rand || Math.random)()));
+  }
+  if(!res.ok){
+    if(mode === "resume" && res.refused === "auth") kset("srv." + code, null);   /* a seat that is not ours any more */
+    if(mode === "resume" && res.refused === "no-table") kset("srv." + code, null);
+    throw refusal(res);
+  }
+  if(res.seat !== 0 && res.seat !== 1) throw fail("unavailable");
+  let key = rec ? rec.key : null;
+  if(!key) for(const f of res.frames || []) if(f && f.ch === CH_JUDGE && typeof f.key === "string") key = f.key;
+  if(!key) throw fail("unavailable", "the table dealt no seat key");
+  scrub.add(key);
+  kset("srv." + code, {seat: res.seat, key, role: mode === "create" ? "creator" : (rec && rec.role) || "joiner", at: (o.now || Date.now)()});
+  return channel(o, T, code, res.seat, key, res.n | 0, res.frames || [], scrub, keep);
+}
+
+/* ---- the channel ----------------------------------------------------------- */
+function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep){
+  const sleep = o.sleep || defaultSleep, rand = o.rand || Math.random;
+  const timers = o.timers || {setInterval: (f, ms) => setInterval(f, ms), clearInterval: h => clearInterval(h)};
+  const tune = {conflictCap: 8, failCap: 4, base: 120, max: 2000, probeMs: 5000, pollMs: 0, ...(o.tune || {})};
+  const onStatus = o.onStatus || (() => {});
+  const topic = (o.topic || topicFor)(code, seat);
+  let n = n0, st = "connecting", closed = false, closedWhy = null, sink = null, backlog = [];
+  let judgeSent = false, peerHeard = false, sawNet = false, lastVer = 0, lastIn = (o.now || Date.now)();
+  let unsub = null, subLost = false, healing = false, healAgain = false, haveFn = o.have || null;
+  const outbox = []; let pumping = false;
+  const events = []; const ev = (t, d) => { events.push({t, ...(d || {})}); if(events.length > 200) events.shift(); };
+  const set = s => { if(st === s || (st === "closed" && s !== "closed")) return; st = s; try { onStatus(s); } catch(_){} };
+  const peerSeat = 1 - seat;
+
+  const deliver = f => { if(sink) sink(f); else backlog.push(f); };
+  /* what comes up from the server: the seat offer once (key taken out), lobby and net frames as they are */
+  function ingest(frames){
+    for(const f0 of frames || []){
+      if(!f0 || typeof f0 !== "object") continue;
+      if(f0.ch === CH_JUDGE){
+        if(judgeSent) continue;
+        judgeSent = true;
+        const {key: _k, ...rest} = f0;                    /* THE KEY STOPS HERE */
+        deliver(clone(rest)); continue;
+      }
+      if(f0.ch !== CH_LOBBY && f0.ch !== CH_NET) continue;
+      if(f0.ch === CH_NET) sawNet = true;
+      if(!peerHeard && ((f0.ch === CH_LOBBY && f0.m && f0.m.seat === peerSeat) || (f0.ch === CH_NET))){ peerHeard = true; }
+      deliver(clone(f0));
+    }
+    if(peerHeard && st === "waiting") set("seated");
+  }
+  ingest(firstFrames);
+  set(peerHeard ? "seated" : "waiting");
+
+  /* ---- backoff: grows, is capped, is jittered -------------------------- */
+  const pause = k => sleep(Math.min(tune.max, tune.base * Math.pow(2, k)) * (0.5 + rand()));
+
+  /* ---- an answer that is not ok: what to do about it ---------------------- */
+  const fatal = (why) => { if(closedWhy == null) closedWhy = why; ev("fatal", {why}); stop(); };
+
+  /* ---- send: one frame at a time, in order ------------------------------- */
+  async function post1(item){
+    let conflicts = 0, fails = 0, soft = 0;
+    for(;;){
+      if(closed) return false;
+      let r;
+      try { r = await call(T, {op: "frame", table: code, seat, key, n: n + 1, frame: item.frame}); }
+      catch(e){
+        fails++; ev("post-failed", {fails});
+        if(fails < tune.failCap){ set("reconnecting"); await pause(fails); continue; }
+        /* parked: frames wait, the server is probed until it answers — nothing is dropped */
+        set("unavailable");
+        await sleep(tune.probeMs);
+        continue;
+      }
+      if(st === "reconnecting" || st === "unavailable") set(peerHeard ? "seated" : "waiting");
+      fails = 0;
+      if(r.ok){ n++; ingest(r.frames); return true; }
+      if(r.refused === "conflict"){
+        ev("conflict", {n: conflicts + 1});
+        if(++conflicts > tune.conflictCap){ set("unavailable"); await sleep(tune.probeMs); conflicts = 0; continue; }
+        await pause(conflicts); continue;
+      }
+      if(r.refused === "stale"){
+        /* it may have applied (a lost answer): ask where the counter stands */
+        ev("stale");
+        const j = await rejoin();
+        if(j === null) continue;                           /* transport trouble: the loop's own handling retries */
+        if(closed) return false;
+        if(j >= n + 1){ n = j; heal(); return true; }      /* applied (or a later one did) */
+        n = j; continue;                                   /* ours is still unapplied: resend above the counter */
+      }
+      if(r.refused === "auth" || r.refused === "no-table" || r.refused === "wire"){ fatal(r.refused); return false; }
+      /* not-dealt, internal, bad-request…: transient or a frame the server will not take */
+      if(r.refused === "bad-request"){ ev("bad-frame"); return true; }
+      if(++soft > tune.conflictCap){ set("unavailable"); await sleep(tune.probeMs); soft = 0; continue; }
+      await pause(soft);
+    }
+  }
+  async function pump(){
+    if(pumping) return; pumping = true;
+    try { while(outbox.length && !closed){ const it = outbox[0]; const ok = await post1(it); if(!closed || ok) outbox.shift(); } }
+    finally { pumping = false; }
+  }
+
+  /* a claiming join: the lobby replay and the counter; null on a transport failure */
+  async function rejoin(){
+    let r;
+    try { r = await call(T, {op: "join", table: code, seat, key}); } catch(_){ return null; }
+    if(!r.ok){ if(r.refused === "auth" || r.refused === "no-table") fatal(r.refused); return null; }
+    ingest(r.frames);
+    return r.n | 0;
+  }
+
+  /* ---- heal: ask the referee to bring this phone up to date -------------- */
+  async function heal(){
+    if(closed) return;
+    if(healing){ healAgain = true; return; }
+    healing = true;
+    try {
+      do {
+        healAgain = false;
+        if(!sawNet) await rejoin();                          /* the lobby, before there is a game */
+        if(closed) break;
+        let r = null;
+        try { r = await call(T, {op: "resync", table: code, seat, key, have: haveFn ? haveFn() : undefined}); } catch(_){ r = null; }
+        if(r && r.ok) ingest(r.frames);
+        else if(r && (r.refused === "auth" || r.refused === "no-table")) fatal(r.refused);
+        else if(r && r.refused === "not-dealt") ev("resync-before-deal");
+        else if(!r) ev("heal-failed");
+        ev("healed");
+      } while(healAgain && !closed);
+    } finally { healing = false; }
+  }
+
+  /* ---- the broadcast side ------------------------------------------------ */
+  function onPayload(p){
+    if(closed || !p || typeof p !== "object" || !Number.isInteger(p.ver) || !Array.isArray(p.frames)) return;
+    lastIn = (o.now || Date.now)();
+    if(p.ver === lastVer){ ev("dup", {ver: p.ver}); return; }
+    if(p.ver < lastVer){ ev("late", {ver: p.ver}); heal(); return; }
+    lastVer = p.ver;
+    ingest(p.frames);
+  }
+  function onSub(state){
+    if(closed) return;
+    if(state === "lost"){ subLost = true; ev("sub-lost"); set("reconnecting"); }
+    else if(state === "joined"){ const was = subLost; subLost = false; ev("sub-joined", {again: was}); if(st === "reconnecting") set(peerHeard ? "seated" : "waiting"); heal(); }
+  }
+  try { unsub = T.subscribe(topic, onPayload, onSub); } catch(_){ unsub = null; set("unavailable"); }
+  /* the gap between the join's answer and the subscription is healed at once */
+  heal();
+
+  let poll = null;
+  if(tune.pollMs > 0) poll = timers.setInterval(() => { if(!closed && (o.now || Date.now)() - lastIn >= tune.pollMs) heal(); }, tune.pollMs);
+
+  function stop(){
+    if(closed) return;
+    closed = true;
+    try { if(unsub) unsub(); } catch(_){}
+    if(poll) try { timers.clearInterval(poll); } catch(_){}
+    set("closed");
+    try { if(o.onClose) o.onClose(closedWhy); } catch(_){}
+  }
+
+  const handle = {
+    code, seat,
+    /* the channel shape room.js gives the table */
+    send(f){
+      if(closed || !f || typeof f !== "object" || (f.ch !== CH_LOBBY && f.ch !== CH_NET)) return;
+      outbox.push({frame: clone(f)}); pump();
+    },
+    listen(fn){ sink = fn || null; if(sink && backlog.length){ const q = backlog; backlog = []; q.forEach(m => sink(m)); } },
+    /* the first frame without consuming it: the seat offer, which is already here */
+    first(ms){
+      return new Promise(res => {
+        if(backlog.length) return res(backlog[0]);
+        const prev = sink; let done = false;
+        sink = m => { backlog.push(m); if(!done){ done = true; sink = prev; res(m); } };
+        (o.setTimeout || setTimeout)(() => { if(!done){ done = true; sink = prev; res(null); } }, ms || 2500);
+      });
+    },
+    close(){ stop(); },
+    status: () => st,
+    /* beyond room.js's shape */
+    peerHeard: () => peerHeard,
+    closedWhy: () => closedWhy,
+    quietFor: () => (o.now || Date.now)() - lastIn,
+    setHave(fn){ haveFn = fn; },
+    heal,
+    forget(){ try { if(keep) keep.set("srv." + code, null); } catch(_){} },
+    /* a drill's and a screen's inspectors — never the key */
+    counter: () => n,
+    pending: () => outbox.length,
+    events: () => events.slice(),
+    report: () => ({code, seat, status: st, n, pending: outbox.length, peerHeard, lastVer})
+  };
+  void scrub;
+  return handle;
+}
+
+const startTable = o => open({...o, mode: "create"});
+const sitAt = o => open({...o, mode: "join"});
+const reclaim = o => open({...o, mode: "resume"});
+
+/* the seats this phone may claim back: [{code, role, at}], newest first. `keep` is the page's store seam,
+   `keys` is its list of stored names (a drive or the page passes localStorage's keys) */
+function savedSeats(keep, names, now, maxAgeMs){
+  const out = [];
+  for(const nm of names || []){
+    const m = /^srv\.([A-Z0-9]+)$/.exec(nm); if(!m) continue;
+    let r = null; try { r = keep.get(nm, null); } catch(_){}
+    if(!r || typeof r.key !== "string" || (r.seat !== 0 && r.seat !== 1)) continue;
+    if(now != null && maxAgeMs && now - (r.at || 0) > maxAgeMs) continue;
+    out.push({code: m[1], role: r.role || "joiner", at: r.at || 0});
+  }
+  return out.sort((a, b) => b.at - a.at);
+}
+
+/* ============================================================
+   THE REAL TRANSPORT — Supabase (S2, UNVERIFIED against a live project)
+   ============================================================
+   Nothing below has been run against supabase.co: nothing is deployed there
+   yet and the build sandbox cannot reach it. Every detail marked UNVERIFIED
+   is a claim from memory of the docs, listed in server/S2-LOG.md. */
+const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.115.0/dist/umd/supabase.js";   /* SUPABASE.md measured this exact file */
+
+let libP = null;
+/* LAZY: nothing is requested until a player picks a server table. Rejects (never hangs) so the screen can say so. */
+function loadSupabase(o){
+  o = o || {};
+  if(o.lib) return Promise.resolve(o.lib);
+  if(typeof window !== "undefined" && window.supabase && window.supabase.createClient) return Promise.resolve(window.supabase);
+  const doc = o.document || (typeof document !== "undefined" ? document : null);
+  if(!doc) return Promise.reject(transportErr());
+  if(libP) return libP;
+  libP = new Promise((resolve, reject) => {
+    const el = doc.createElement("script");
+    el.src = o.url || SUPABASE_JS; el.async = true;
+    el.onload = () => (window.supabase && window.supabase.createClient) ? resolve(window.supabase) : (libP = null, reject(transportErr()));
+    el.onerror = () => { libP = null; reject(transportErr()); };
+    doc.head.appendChild(el);
+  });
+  return libP;
+}
+
+/* config: {url, key, fn?: "referee", fetch?, lib?, document?}
+   post:      POST <url>/functions/v1/<fn>, header `apikey` (the publishable key). UNVERIFIED: whether the Edge
+              Functions gateway accepts a publishable (non-JWT) key in `apikey` alone — the function is expected to
+              be deployed with JWT verification OFF (server/supabase/DEPLOY.md) and to check nothing but the seat key.
+              A 404 ("function not found"), a 5xx, a paused project or a body that is not JSON all read as UNAVAILABLE.
+   subscribe: supabase-js's Realtime Broadcast, lazily loaded. UNVERIFIED: createClient(url, key), client.channel(topic,
+              {config:{broadcast:{self:false}}}), .on("broadcast",{event:"frame"}, msg => msg.payload), .subscribe(cb)
+              with statuses SUBSCRIBED | CHANNEL_ERROR | TIMED_OUT | CLOSED, client.removeChannel(channel); the event name
+              "frame" matches the sketch in server/supabase-entry.example.ts; whether a PRIVATE channel can be joined with
+              the publishable key and no signed-in user (see server/supabase/001_tables.sql for the S3 question). */
+function supabaseTransport(config){
+  config = config || {};
+  const base = String(config.url || "").replace(/\/+$/, ""), fnName = config.fn || "referee";
+  const doFetch = config.fetch || (typeof fetch === "function" ? (u, i) => fetch(u, i) : null);
+  let client = null;
+  const getClient = () => client ? Promise.resolve(client) : loadSupabase(config).then(lib => (client = lib.createClient(base, config.key,
+    {auth: {persistSession: false, autoRefreshToken: false}, realtime: {params: {eventsPerSecond: 20}}})));
+  return {
+    async post(env){
+      if(!doFetch || !base) throw transportErr();
+      let resp;
+      try {
+        resp = await doFetch(base + "/functions/v1/" + fnName, {method: "POST", headers: {"content-type": "application/json", apikey: config.key},
+          body: JSON.stringify(env)});
+      } catch(_){ throw transportErr(); }
+      if(!resp || !resp.ok) throw transportErr({status: resp && resp.status});
+      let body; try { body = await resp.json(); } catch(_){ throw transportErr(); }
+      return body;
+    },
+    subscribe(topic, onPayload, onState){
+      let ch = null, dead = false;
+      getClient().then(c => {
+        if(dead) return;
+        ch = c.channel(topic, {config: {broadcast: {self: false}}});
+        ch.on("broadcast", {event: "frame"}, msg => { if(!dead) onPayload(msg && msg.payload); })
+          .subscribe(s => { if(dead || !onState) return; if(s === "SUBSCRIBED") onState("joined"); else if(s === "CHANNEL_ERROR" || s === "TIMED_OUT" || s === "CLOSED") onState("lost"); });
+      }).catch(() => { if(!dead && onState) onState("lost"); });
+      return () => { dead = true; try { if(ch && client) client.removeChannel(ch); } catch(_){} };
+    }
+  };
+}
+
+/* the transport the page uses: a drive or test may install one first (window.__dawnServerTransport — never the fake
+   by default); otherwise the real one, built from the page's config. Cheap: nothing is fetched here. */
+function defaultTransport(config, root_){
+  const w = root_ || (typeof window !== "undefined" ? window : null);
+  if(w && w.__dawnServerTransport) return w.__dawnServerTransport;
+  return supabaseTransport(config);
+}
+
+return {CODE_CHARS, CODE_LEN, STATUS, SUPABASE_JS, normalize, isValid, topicFor, open, startTable, sitAt, reclaim, savedSeats,
+        supabaseTransport, loadSupabase, defaultTransport};
+});
