@@ -405,12 +405,15 @@ function savedSeats(keep, names, now, maxAgeMs){
 }
 
 /* ============================================================
-   THE REAL TRANSPORT — Supabase (S2, UNVERIFIED against a live project)
+   THE REAL TRANSPORT — Supabase (S3: checked against the live project where no secret is needed)
    ============================================================
-   Nothing below has been run against supabase.co: nothing is deployed there
-   yet and the build sandbox cannot reach it. Every detail marked UNVERIFIED
-   is a claim from memory of the docs, listed in server/S2-LOG.md. */
-const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.115.0/dist/umd/supabase.js";   /* SUPABASE.md measured this exact file */
+   Project fokcpzplomjsraquaaid, publishable key only, 2026-11-13, from the build sandbox (Node 22 through the
+   egress proxy — NOT a browser, so browser-only behaviour stays UNVERIFIED). Full record: server/S3-LOG.md and
+   server/supabase/DEPLOY.md ("What was checked"). Each claim below is tagged VERIFIED (observed) or UNVERIFIED. */
+const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.115.0/dist/umd/supabase.js";
+/* ^ the file dist/umd/supabase.js exists in the 2.115.0 npm package and declares the global `supabase` (VERIFIED, read
+     from the installed package). UNVERIFIED: that jsdelivr serves this URL — the sandbox's proxy answers 403 for
+     cdn.jsdelivr.net, unpkg.com and cdnjs (host not allowed), so the HEAD request could not be made. */
 
 let libP = null;
 /* LAZY: nothing is requested until a player picks a server table. Rejects (never hangs) so the screen can say so. */
@@ -432,15 +435,22 @@ function loadSupabase(o){
 }
 
 /* config: {url, key, fn?: "table", fetch?, lib?, document?}
-   post:      POST <url>/functions/v1/<fn>, header `apikey` (the publishable key). UNVERIFIED: whether the Edge
-              Functions gateway accepts a publishable (non-JWT) key in `apikey` alone — the function is expected to
-              be deployed with JWT verification OFF (server/supabase/DEPLOY.md) and to check nothing but the seat key.
-              A 404 ("function not found"), a 5xx, a paused project or a body that is not JSON all read as UNAVAILABLE.
-   subscribe: supabase-js's Realtime Broadcast, lazily loaded. UNVERIFIED: createClient(url, key), client.channel(topic,
-              {config:{broadcast:{self:false}}}), .on("broadcast",{event:"frame"}, msg => msg.payload), .subscribe(cb)
-              with statuses SUBSCRIBED | CHANNEL_ERROR | TIMED_OUT | CLOSED, client.removeChannel(channel); the event name
-              "frame" matches the sketch in server/supabase-entry.example.ts; whether a PRIVATE channel can be joined with
-              the publishable key and no signed-in user (see server/supabase/001_tables.sql for the S3 question). */
+   post:      POST <url>/functions/v1/<fn>, header `apikey` (the publishable key). A function that is not deployed answers
+              HTTP 404, content-type application/json, body {"code":"NOT_FOUND","message":"Requested function was not found"},
+              header sb-error-code: NOT_FOUND, access-control-allow-origin: * (VERIFIED today, with and without the apikey
+              header, for POST and for a CORS preflight): `!resp.ok` below reads it as UNAVAILABLE, and a browser can read
+              the status. A paused project or a 5xx reads the same. UNVERIFIED: that a DEPLOYED function accepts the
+              publishable (non-JWT) key in `apikey` alone with JWT verification off (the function is deployed with it OFF;
+              server/supabase/DEPLOY.md), and the CORS preflight against it (the function answers OPTIONS itself).
+   subscribe: supabase-js's Realtime Broadcast, lazily loaded. VERIFIED with supabase-js 2.115.0 in Node 22 on a throwaway
+              topic: createClient(url, publishableKey, {auth:{persistSession:false,...}}) joins a PUBLIC broadcast channel
+              with no signed-in user; client.channel(topic, {config:{broadcast:{self:false}}}).on("broadcast", {event:"frame"},
+              msg => msg.payload).subscribe(cb) reports "SUBSCRIBED" (and "CLOSED" after removeChannel); two clients joined the
+              same topic and a broadcast reached both (this very transport, `subscribe`, got a payload sent over the HTTP
+              endpoint). A topic shaped table:<6 chars>:<64 hex> joins. A PRIVATE channel (config.private:true) without a user
+              is refused: status "CHANNEL_ERROR", "Unauthorized: You do not have permissions to read from this Channel topic".
+              Status strings seen: SUBSCRIBED, CLOSED, CHANNEL_ERROR. Not provoked: TIMED_OUT. A client may also publish to a
+              public channel (channel.send) and the other client receives it — the reason every push is sealed (see onPayload). */
 function supabaseTransport(config){
   config = config || {};
   const base = String(config.url || "").replace(/\/+$/, ""), fnName = config.fn || "table";

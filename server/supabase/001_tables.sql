@@ -1,6 +1,7 @@
--- DRAFT — UNVERIFIED. Never run: nothing is deployed on Supabase yet and the build sandbox cannot reach it.
--- Every statement below is written from memory of Supabase's Postgres/RLS/Realtime behaviour; read each one
--- against the live docs before pasting it into the project's SQL editor (server/supabase/DEPLOY.md, step 2).
+-- NOT YET RUN: the build sandbox can reach the project's REST API with the publishable key only (no secret, no SQL), so these
+-- statements have not been executed anywhere. (Checked 2026-11-13: GET /rest/v1/tables answers PGRST205 "table not found" —
+-- nothing is deployed.) The SQL is plain Postgres plus Supabase's standard roles (anon, authenticated, service_role); paste it
+-- into the SQL editor (server/supabase/DEPLOY.md) and read the result: it ends with a self-check that returns one row, 'ok'.
 --
 -- WHAT THIS IS: the table store server/referee.js's `deps.store` needs (S1: store.get(id) -> {version,row}|null,
 -- store.put(id,row,expectedVersion) -> {ok,version}), as one Postgres table that ONLY the Edge Function's
@@ -14,7 +15,7 @@
 create table if not exists public.tables (
   id         text primary key check (id ~ '^[A-Za-z0-9_-]{1,32}$'),   -- the table code (referee.js ID_RE)
   version    integer not null default 1,                              -- optimistic concurrency: put() succeeds only against the version it read
-  row        jsonb   not null,                                        -- referee.js newRow(): {v, wireV, id, build, hub, nonces, created, updated}
+  row        jsonb   not null,                                        -- referee.js newRow(): {v, wireV, id, build, hub, nonces, claims, created, updated}  (v = 2)
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -59,43 +60,61 @@ grant execute on function public.table_put(text, jsonb, integer) to service_role
 -- get(id) needs no function: the Edge Function reads `select version, row from public.tables where id = $1`
 -- with the service role.
 
+-- SELF-CHECK: raises an error naming what is wrong, or ends with one row, 'ok'. It creates and deletes one throwaway row
+-- ('zz-selfcheck'). If its FIRST put fails with a row-level-security error, the SQL editor's role does not bypass RLS on
+-- this project: that is harmless for the deploy (the function runs as service_role, which does), say so and skip the check.
+do $$
+declare v integer;
+begin
+  if not (select relrowsecurity and relforcerowsecurity from pg_class where oid = 'public.tables'::regclass) then
+    raise exception 'row level security is not enabled and forced on public.tables'; end if;
+  if has_table_privilege('anon', 'public.tables', 'select') or has_table_privilege('authenticated', 'public.tables', 'select')
+     or has_table_privilege('anon', 'public.tables', 'insert') or has_table_privilege('authenticated', 'public.tables', 'insert') then
+    raise exception 'anon or authenticated can still reach public.tables'; end if;
+  if has_function_privilege('anon', 'public.table_put(text,jsonb,integer)', 'execute')
+     or has_function_privilege('authenticated', 'public.table_put(text,jsonb,integer)', 'execute') then
+    raise exception 'anon or authenticated may call table_put'; end if;
+  if not has_function_privilege('service_role', 'public.table_put(text,jsonb,integer)', 'execute') then
+    raise exception 'service_role may not call table_put'; end if;
+  v := public.table_put('zz-selfcheck', '{"v":2}'::jsonb, 0);          if v <> 1 then raise exception 'a first put answered %', v; end if;
+  v := public.table_put('zz-selfcheck', '{"v":2}'::jsonb, 0);          if v <> 0 then raise exception 'a duplicate create was not refused (%)', v; end if;
+  v := public.table_put('zz-selfcheck', '{"v":2,"x":1}'::jsonb, 1);    if v <> 2 then raise exception 'an update at version 1 answered %', v; end if;
+  v := public.table_put('zz-selfcheck', '{"v":2,"x":2}'::jsonb, 1);    if v <> 0 then raise exception 'a stale put was not refused (%)', v; end if;
+  delete from public.tables where id = 'zz-selfcheck';
+end $$;
+select 'ok' as dawnblade_tables;
+
 -- OPTIONAL, UNVERIFIED: forget tables nobody has touched for a week (needs the pg_cron extension, enabled
 -- from Database -> Extensions in the dashboard).
 -- select cron.schedule('dawnblade-forget-old-tables', '17 4 * * *',
 --   $$ delete from public.tables where updated_at < now() - interval '7 days' $$);
 
 -- ---------------------------------------------------------------------------------------------------------
--- WHO MAY LISTEN TO A SEAT'S CHANNEL — THE OPEN QUESTION (S3). Nothing below is active.
+-- WHO MAY LISTEN TO A SEAT'S CHANNEL — DECIDED (CEO, 2026-11-13, casual stage): OPTION B. Nothing below is SQL to run.
 --
--- Each seat is pushed its own frames on  table:<code>:seat0  /  table:<code>:seat1  (referee.js `topic`). Those
--- frames are that seat's VIEW: its own hand. Anyone able to subscribe to seat 0's topic reads seat 0's hand.
+-- Each seat is pushed its own frames — that seat's VIEW, its own hand — on a PUBLIC Realtime channel named
+--     table:<code>:<64 hex>      the hex is sha256 of (code, seat, the seat's secret key): engine/sha256.js `seatTopic`,
+-- computed by the function (server/referee.js) and by the phone from the key it was dealt. The name never reveals the key;
+-- the other seat's name is never sent to a phone and cannot be worked out from its own; a stranger with only the table code
+-- cannot guess either. No auth users, no policy, no extra round trip. (Realtime's own table, realtime.messages, is not
+-- touched: public channels need no policy. VERIFIED 2026-11-13: a client holding only the publishable key joins such a
+-- channel; the same key is refused on a private one — "Unauthorized: You do not have permissions to read from this Channel topic".)
 --
--- OPTION A — Realtime Authorization (private channels + RLS on realtime.messages). Needs an auth user per phone
--- (anonymous sign-in: supabase-js signInAnonymously), the phone's JWT sent with `join` so the function can record
--- which user holds which seat, and a policy like the one below. Costs: an extra sign-in round trip, the anonymous
--- sign-in feature switched on in the project, a JWT forwarded to the function (the publishable key alone is not a
--- user), and a referee.js change (join records the caller's user id). It is the strongest answer: the SERVER
--- decides who may listen, and a leaked table code alone gives nothing.
+-- WHAT THAT BUYS, AND WHAT IT DOES NOT:
+--   * The secrecy of a seat's hand is exactly the secrecy of a 256-bit name, not an access check. Anyone who LEARNS the
+--     name — a log line, a proxy, a screenshot of a network tab, Supabase's own operators — can LISTEN to that seat's frames.
+--   * Anyone with the name can also PUBLISH into the channel (public channels let any client send; VERIFIED). So every push
+--     is SEALED: the function adds `mac`, HMAC-SHA256 under the seat's key over (code, seat, ver, frames), and a phone
+--     applies nothing whose seal does not verify (engine/servertable.js `onPayload`). A listener cannot forge a frame
+--     without the key; at worst a replayed genuine push costs the phone one resync. An intruder cannot put a frame in a game.
+--   * The name is a bearer secret and CANNOT BE REVOKED short of ending the table.
+--   * The 6-character table CODE alone no longer lets anyone listen — but it is still what lets a stranger take the second
+--     seat before the real opponent does (the same exposure the direct table has).
 --
---   create table if not exists public.seat_users (
---     table_id text not null, seat smallint not null check (seat in (0,1)), user_id uuid not null,
---     primary key (table_id, seat));
---   alter table public.seat_users enable row level security;  -- service role only, like tables
+-- LATER (S4, with sign-in): private channels + a policy on realtime.messages, so the SERVER decides who may listen and a
+-- leaked name gives nothing. That needs anonymous or real sign-in users, a JWT forwarded to `join` so the function can
+-- record which user holds which seat (a seat_users table), and a policy such as
 --   create policy "a seat listens to its own topic" on realtime.messages for select to authenticated
---     using (exists (select 1 from public.seat_users s
---                    where s.user_id = auth.uid()
---                      and realtime.topic() = 'table:' || s.table_id || ':seat' || s.seat));
---   -- (and no insert policy: phones never broadcast; only the function does, with the service role)
---
--- OPTION B — the simplest honest S3: PUBLIC channels with UNGUESSABLE topic names. The topic is
--- 'table:<code>:' || encode(sha256((seat_key || ':' || code)::bytea), 'hex') — derived from the seat key,
--- which only that seat's phone and the function ever hold. No auth users, no policy, no extra round trip;
--- servertable.js already takes a `topic(code, seat)` option for it (the phone hashes its key with
--- engine/sha256.js). Trade-offs, plainly: (1) the secrecy of a seat's hand is exactly the secrecy of a 256-bit
--- name, not an access check — anyone who learns the name (a log line, a proxy, Supabase's own operators, a
--- screenshot of the network tab) can listen AND can publish frames into that seat's channel (public channels
--- let any client send); net.js trusts what arrives on its channel as the referee's, so an attacker who has the
--- name can feed a phone a forged commit (whether net.js's own checks would catch one is not drilled). (2) the
--- topic is a bearer secret that cannot be revoked short of ending the table. (3) a table CODE alone is no longer
--- enough to listen — which is the point — but the 6-character code is still what lets a stranger take the second
--- seat before the real opponent does (the same exposure the direct table has).
+--     using (exists (select 1 from public.seat_users s where s.user_id = auth.uid()
+--                    and realtime.topic() = 'table:' || s.table_id || ':seat' || s.seat));
+-- and a topic that no longer needs to be secret. Not built.
