@@ -138,12 +138,14 @@ test("every reason is keyed from a site in the policy, and the census names what
      The weapon-first grant (SPXWPNFIRST) moves `arsenalSkip` back out of reach. The grantSwing
      exclusivity fix (Lyath) brings `grantKeep` back within reach.
      `laBoard` (ship/sharp-board) is a search reason like the other `la*`: the census runs the rule
-     policy, so test/sharpboard.test.js reaches it. */
+     policy, so test/sharpboard.test.js reaches it.
+     SPXEFFPOW (a hand attack ranked on the power it has now) re-routes the census: `effPower` is reached, and
+     `grantKeep` is out of reach again (test/grantwait.test.js drives it). */
   const seen = census().keys;
   for(const k of Object.keys(seen)) assert.ok(SP.CALL_WHY[k], "reached key " + k + " has no reason");
   assert.deepEqual(keys.filter(k => !seen[k]).sort(),
     ["abtarget", "addPayNo", "allocAll", "allyTake", "answer", "arenaAP", "arenaRes", "arsenalSkip", "boostNo",
-     "chargeDone", "chargeMore", "chargeNone", "discost", "gateFirst", "laBlock", "laBoard", "laHit", "laHold", "laKeep", "laSafe", "laTake", "lookOwn",
+     "chargeDone", "chargeMore", "chargeNone", "discost", "gateFirst", "grantKeep", "laBlock", "laBoard", "laHit", "laHold", "laKeep", "laSafe", "laTake", "lookOwn",
      "payCancel", "pitchChi"]);
 });
 

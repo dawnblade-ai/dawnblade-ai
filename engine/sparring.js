@@ -148,7 +148,9 @@ const fixOn = (g, seat) => {
    weapon swing ranked with the pending grant that pumps it, SPXGRANTPAY a grant whose only
    other text is an optional pick it cannot use, held for a taker it can pay for,
    SPXWPNFIRST a grant played before the only attack left, a weapon swing it pumps,
-   SPXLABOARD a board term in Sharp's score (a permanent is worth its printed numbers, not -mu). */
+   SPXLABOARD a board term in Sharp's score (a permanent is worth its printed numbers, not -mu),
+   SPXEFFPOW a hand attack ranked on the power it has NOW (`judge.effPowerNow`: a self-pump
+   whose gate is already true counts), not the power it prints. */
 const subGate = k => {
   const v = (typeof process !== "undefined" && process.env && process.env[k]) || "";
   return (g, seat) => {
@@ -161,7 +163,7 @@ const subGate = k => {
 };
 const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate("SPXPAY"), idleOn = subGate("SPXIDLE"),
       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
-      wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD");
+      wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW");
 /* A card or ability that would land nothing right now is held (`judge.landsNothing`).
    Noted so the call can say why the turn ends with it still in hand. */
 const idleOK = (g, seat, uid, from) => {
@@ -855,7 +857,7 @@ function offenceBase(g, seat, o){
     .map(x => { const w = (sd.gear || []).find(z => z && z.uid === x.uid);
       return w && affordableWithin(sd, w, o) ? {c: Object.assign({}, w, {power: x.power}), uid: x.uid, weapon: true, granted: true, kap: 0} : null; })
     .filter(Boolean) : [];
-  const pick = from
+  const pick0 = from
     .map(x => ({c: x.c, uid: x.c && x.c.uid, from: x.from}))
     .concat(allies)
     .filter(x => x.c && num(x.c, "power") > 0)
@@ -863,13 +865,25 @@ function offenceBase(g, seat, o){
     .map(x => Object.assign(x, {kap: J.keepsActionPoint(g, seat, x.uid, x.ally ? "board" : x.from) ? 1 : 0}))
     .map(x => Object.assign(x, {cv: cv(x)}))
     .map(x => Object.assign(x, {gr: !x.ally && J.gateRaises(g, seat, x.uid, x.from)}))
-    .concat(pumped).concat(granted)
-    .sort((a, b) => (rankC(a) - rankC(b)) || (b.kap - a.kap) || num(b.c, "power") - num(a.c, "power")
+    .concat(pumped).concat(granted);
+  /* A HAND ATTACK IS RANKED ON THE POWER IT HAS NOW (SPXEFFPOW). Printed power cannot see a
+     self-pump whose gate is already true (Mocking Blow prints 1 and is 5 once the crowd has
+     booed), and `execute` reads that gate only when the card resolves. `judge.effPowerNow`
+     asks the engine's own gate reader without playing: a gate it cannot settle counts as
+     nothing, so the number is never above what is known. */
+  const effOf = x => x.ep != null ? x.ep : num(x.c, "power");
+  const order = useEp => pick0.slice()
+    .sort((a, b) => (rankC(a) - rankC(b)) || (b.kap - a.kap)
+                 || (useEp ? effOf(b) - effOf(a) : num(b.c, "power") - num(a.c, "power"))
                  || num(a.c, "cost") - num(b.c, "cost") || byUid(a, b))
     .find(x => legal(g, x.weapon ? {t: "activate", uid: x.uid}
                      : x.ally ? {t: "activate", uid: x.uid, target: targetFor(g, seat, x.c)}
                                : {t: "play", uid: x.uid, from: x.from,
                                   target: targetFor(g, seat, x.c)}, seat));
+  if(effPowOn(g, seat)) pick0.forEach(x => { if(!x.ally && !x.weapon){
+    const e = J.effPowerNow(g, seat, x.uid, x.from); if(e && e.bonus > 0) x.ep = e.power; } });
+  const pick = order(pick0.some(x => x.ep != null));
+  const epMoved = pick0.some(x => x.ep != null) && !!pick && (order(false) || {}).uid !== pick.uid;
   /* THE KEY FOLLOWS THE RANK THAT PUT THE CARD FIRST (v5.49, QUEUE S14).
      `chargeView` answers for every card, so a go-again attack (rank 0 by
      `kap`) read as "chargeFirst" for any uncharged seat: 38 of 54 such
@@ -881,7 +895,7 @@ function offenceBase(g, seat, o){
   const pickWhy = x => x.granted ? "grantSwing" : x.weapon ? "pumpedWeapon"
     : x.kap ? "atkKeepsAP"
     : rankC(x) < 3 && x.cv && !x.cv.charged ? (x.gr && !x.cv.gaIf ? "gateFirst" : "chargeFirst")
-    : x.ally ? (targetFor(g, seat, x.c) !== "hero" ? "allyTake" : "allyIn") : waiting ? "grantWait" : "biggestAttack";
+    : x.ally ? (targetFor(g, seat, x.c) !== "hero" ? "allyTake" : "allyIn") : epMoved ? "effPower" : waiting ? "grantWait" : "biggestAttack";
   if(pick && pick.weapon) return tag(pickWhy(pick), {t: "activate", uid: pick.uid});
   if(pick) return tag(pickWhy(pick), pick.ally
     ? {t: "activate", uid: pick.uid, target: targetFor(g, seat, pick.c)}
@@ -1622,6 +1636,7 @@ const CALL_WHY = {
   allyTake: "Attack the ally. This swing kills it, and an attack on an ally can't be blocked.",
   allyIn: "Send your ally in.",
   biggestAttack: "Swing the biggest attack you can afford.",
+  effPower: "Swing the attack that hits hardest right now. Its bonus is already live, so it is bigger than the number printed on it.",
   grantWait: "Swing the biggest attack you can afford, without the card that would pump it. Its cost can't be paid beside the attack's, so it stays in your hand.",
   grantHold: "Keep the card that pumps your next attack. You can't pay for the attack it would pump this turn, and nothing else it does is within reach, so it waits.",
   weapon: "Swing your weapon. It costs no card.",

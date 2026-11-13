@@ -3262,6 +3262,186 @@ function makeEffects(ctx){
       || (dracN!=null ? `only ${dracLinks} Draconic chain link${dracLinks===1?"":"s"}, needs ${dracN}` : cond);
   }
 
+  /* ---- THE CONDITION READER, ONE BODY (effpower) --------------------------
+     `execute`'s condition loop and `effPowerNow` (a judge reader for the AI) ask
+     the SAME question here, so the AI's idea of "is this gate open" cannot drift
+     from the engine's. It reads `n` and writes nothing. `x` carries the three
+     facts the loop settles first: `chargedWay`, `fused`, `dracLinks`. */
+  function condMetNow(n, s, card, from, cond, x){
+    const {chargedWay, fused, dracLinks} = x;
+    const dracN = /^drac(\d+)$/.test(cond) ? +cond.slice(4) : null;
+  return cond==="atk" ? act(n).hist.atk>0 : cond==="non" ? act(n).hist.non>0
+    /* what THIS resolution discarded, not what the turn did */
+    : cond==="discard6way" ? (n._discWay||[]).some(c=>pow6(c, bAct(n)))
+    : cond==="pitch6" ? act(n).pitch.some(c=>pow6(c, bAct(n)))
+    : cond==="arsenal" ? from==="arsenal"
+    /* THE ONE PAIR (v4.51) — Line Crossers makes a tie read as a lead,
+       one direction per seat. Never `act(n).hp > foe(n).hp` inline. */
+    : cond==="lifeLt" ? lifeBehind(act(n), foe(n))
+    : cond==="lifeGt" ? lifeAhead(act(n), foe(n))
+    : cond==="marked" ? !!foe(n).marked
+    /* "IF IT'S NOT YOUR TURN" IS A QUESTION ABOUT THE TURN, NOT ABOUT
+       A COMBAT WINDOW (v2.73). Read as `mode==="block"` this meant
+       "they are swinging at me" — which was the only shape the
+       opponent's turn had until v2.71 gave them an action phase. The
+       moment `mode:"foeturn"` existed this silently answered FALSE
+       there, so an Emeritus Scolding played in the new window would
+       have taken the ordinary branch. A second copy of a gate the
+       trainer had already widened; the trainer's `activateIfOk` is the
+       other one, and this is why they must not be two.
+
+       `turnPlayer` rides on every state through `withPriority`
+       (v2.27), and the actor is who is resolving — so this is the
+       question the CR actually asks. The mode test stays as the
+       fallback for a state built without the priority fields, which
+       is every drill that hand-rolls one. */
+    : cond==="foeTurn" ? foeTurnNow(s)
+    : cond==="arcDealt" ? (act(n).hist.arc||0)>0
+    /* THE HERO'S OWN SUFFERING, not the opponent's (v3.40). */
+    : cond==="arcTakenTurn" ? (act(n).hist.arcTaken||0)>0
+    : cond==="auraTurn" ? (act(n).hist.aura||0)>0
+    : cond==="madeCard" ? (act(n).hist.made||0)>0
+    : cond==="booed" ? (act(n).hist.booed||0)>0
+    /* "IF YOU'VE PLAYED A <CLASS> CARD THIS TURN" (v3.58) — Star Fall.
+       Answered off `hist.playTy`, the structured type words of every
+       card played this turn (v3.38), so the CLASS comes off the card
+       rather than from a list here. Lowercased on the way in, which is
+       what `playTy` stores.
+
+       IT IS A WIDER QUESTION THAN `blue`/`red` above: those count a
+       pitch VALUE and say "another", where this asks about a class and
+       does not exclude the card being played. */
+    : /^playedCls:/.test(cond) ? ((act(n).hist.playTy||[])
+        .some(ty => (ty||[]).indexOf(cond.replace(/^playedCls:/, "")) >= 0))
+    : cond==="blue" ? (act(n).hist.blue||0)>0
+    : cond==="red" ? (act(n).hist.red||0)>0
+    : cond==="transcended" ? (act(n).hist.trans||0)>0
+    /* conditions added after the deep dive — all read existing state */
+    /* "IF THIS HAS AN AIM COUNTER" — THIS card, by uid (v3.72). It
+       asked whether ANY counter bag on the side held an aim counter,
+       which is a different question and a strictly more generous one:
+       one aimed arrow would have pumped every other arrow in the deck.
+       Unreachable until v3.72, because Crow's Nest is the pool's only
+       source of aim counters and its trigger had no event to fire on —
+       so building the SOURCE is what made the approximation live.
+       v3.57's rule, read from the other end: when you build a source,
+       ask which conditions it just made reachable. */
+    : cond==="aim" ? ((act(n).counters[card.uid]||{}).aim||0) > 0
+    /* "IF THIS HAS NO <K> COUNTERS" (v4.63) — Plasma Barrel Shot's steam
+       line. "This" is the PIECE the ability belongs to, found back off
+       the powCard's `gp`/`bp` uid by `abSourceUid`, which is the same
+       reader `ctrSrc` puts the counter with and `abCtrGateFails` refuses
+       with — three sites, one answer to "which permanent". A powCard
+       whose piece is gone has nothing to ask, and answers FALSE. */
+    : /^noCtr:/.test(cond) ? (() => {
+        const u = P.abSourceUid(act(n), card);
+        return u != null && (((act(n).counters||{})[u]||{})[cond.slice(6)]||0) === 0;
+      })()
+    : /^auras\d+$/.test(cond) ? (act(n).board||[]).filter(b=>b.kind==="aura").length >= +cond.slice(5)
+    : cond==="hasArsenal" ? !!act(n).arsenal
+    : cond==="seismic" ? (act(n).board||[]).some(b=>/seismic surge/i.test((b.card&&b.card.name)||""))
+    /* A NAMED PERMANENT YOU CONTROL (v4.22). The name travels IN the
+       condition, read off the printed line (v3.21), so this evaluator
+       knows no card — `seismic` one line up is the same question with
+       one card's name written into the engine, which is the golden
+       rule broken at the condition level.
+
+       `P.boardEntryNamed` is the ONE reader of "the permanent a printed
+       line names, on one side's board" (v3.86). Asking it here rather
+       than re-deriving the match is what keeps the ability's gate and
+       an activation cost's gate from disagreeing about the same
+       board. */
+    : cond.slice(0,6)==="board:" ? !!P.boardEntryNamed(act(n), cond.slice(6))
+    : cond==="suspenseAura" ? controlsAuraOf(act(n), "suspense")
+    : /^pitchCost\d+$/.test(cond) ? act(n).pitch.some(c=>(c.cost||0) >= +cond.slice(9))
+    : cond==="allyDied" ? (act(n).grave||[]).some(c=>c._gy===n.turn && /\bally\b/i.test(c.tt||""))
+    : cond==="weaponSwung" ? Object.keys(act(n).weaponUsed||{}).length>0
+    : cond==="dealtDmg" ? (act(n).hist.atk||0)>0 || (act(n).hist.arc||0)>0
+    : cond==="isDraconic" ? (/draconic/i.test(card.tt||"") || !!card._drac || !!act(n).dracNext || !!act(n).dracChain)
+    : cond==="pitchOverBase" ? act(n).pitch.some(c=>(c.power||0) > (card.power||0))
+    /* CHARGE (Boltyn): "charged" is a turn-scoped boolean; "chargedPitchN"
+       asks about the SPECIFIC card just charged as THIS card's own cost
+       (chargedWay is filled above, before this loop runs). */
+    : cond==="charged" ? (act(n).hist.charged||0)>0
+    /* "IF THERE ARE NO CARDS IN YOUR SOUL" (v4.64) — Roaring Beam. */
+    : cond==="soulEmpty" ? (act(n).soul||[]).length === 0
+    /* "IF A YELLOW CARD IS CHARGED THIS WAY" asks whether AT LEAST ONE
+       was (v4.56) — the article is "a", and with a multi charge the
+       answer is a membership test over what the cost paid rather than
+       a scalar comparison. At one charge the two readings agree
+       exactly, which is why this could be a scalar until now. */
+    : /^chargedPitch\d$/.test(cond) ? chargedWay.some(c => c.pitch === +cond.match(/\d+/)[0])
+    /* FUSION: `fused` is computed above, before this loop runs. */
+    : cond==="fused" ? fused
+    : /^atkNamed:/.test(cond) ? (act(n).hist.atkNames||[]).includes(cond.slice(9))
+    : /^hit\d+$/.test(cond) ? (n.chain||[]).filter(l=>l.dmg>0).length >= +cond.slice(3)
+    /* HIGH TIDE: blue is pitch value 3 throughout this engine. */
+    : /^pitchBlue\d+$/.test(cond) ? act(n).pitch.filter(c=>c.pitch===3).length >= +cond.match(/\d+/)[0]
+    /* THE FOUR TRAPS ASK ABOUT THE ATTACK COMING AT YOU (v3.08), which
+       is a different object from the one every condition above reads.
+
+       `hostileAtk` is the same test `atkMinus` already makes and for
+       the same reason: a `pend` belongs to whoever DECLARED it, so the
+       only way to know it is aimed at the resolving seat is that the
+       seat is not its owner. Without that a trap would read the
+       holder's OWN attack and mark the wrong hero.
+
+       NOT `pumped`. That one asks whether MY attack beat its own base
+       and is settled in `linkPumps` after the total is struck; these
+       are checked the moment the trap resolves, which is when the CR
+       checks a trigger condition. A pump landing later in the same
+       reaction step does not reach back and turn the trigger on.
+
+       IN THE TRAINER BOTH ARE FALSE, and that is the right answer
+       rather than a gap: seat 1 there is always the vanilla pile
+       (v2.81), its swing is the `[3,4,5]` scalar on `n.incoming` with
+       no card behind it, and a fabricated number has neither go again
+       nor a base to beat. At the table, against a person, both are
+       live. */
+    : cond==="defGA" || cond==="defPumped" ? (() => {
+        const hostile = n.pend && n.pend.by != null && n.pend.by !== actorOf(n);
+        if(!hostile) return false;
+        /* `pendPumped`, the one reader (v4.92). This copy compared the
+           link's declared total alone against `card.power`, so it
+           missed a pump an attack REACTION had already landed on the
+           link (`pend.rxPump`, v4.03) — weaker than printed at the
+           table — and read the base of an aura or the Gun as zero. */
+        return cond==="defGA" ? !!n.pend.ga : pendPumped(n);
+      })()
+    : dracN!=null ? dracLinks >= dracN : false;
+  }
+
+  /* ---- THE POWER AN ATTACK WOULD HAVE IF PLAYED NOW (effpower) ----------
+     `{power, base, bonus, gates}`: the card's base, plus every conditional
+     "+N{p}" on itself whose gate `condMetNow` (the loop's own reader) answers TRUE
+     from the public board and this seat's own record. A gate that waits on the
+     wall (late), on the cost still to be paid (pitch, charge, fused, discard), on
+     the opponent's reply, or on a zone the card has left by then is UNDECIDABLE and
+     adds nothing: the answer is then the printed power, never a guess. Reads `g`,
+     writes nothing. `seat` acts: the state is read as that seat's turn. */
+  const EFF_DECIDABLE = (cond, from) =>
+    /^(atk|non|lifeLt|lifeGt|marked|foeTurn|arcDealt|arcTakenTurn|auraTurn|madeCard|booed|blue|red|transcended|aim|weaponSwung|dealtDmg|isDraconic|charged|suspenseAura|allyDied|seismic)$/.test(cond)
+    || /^(playedCls:|board:|noCtr:|atkNamed:|auras\d+$|hit\d+$|drac\d+$)/.test(cond)
+    || (cond === "arsenal") || (cond === "hasArsenal" && from !== "arsenal");
+  function effPowerNow(g, seat, card, from){
+    if(!card || !card.name) return null;
+    const n = Object.assign({}, g, {actor: seat});
+    const fx = P.splitFx(card, P.isSplit(card) ? 0 : null);
+    const base = basePowOf(card, from, n) || 0;
+    const gates = [];
+    let bonus = 0;
+    (fx.conds || []).forEach(e => {
+      if(!e || !e.op || e.op[0] !== "self" || !((+e.op[1]) > 0)) return;
+      if(e.wpnOnly && from !== "weapon") return;
+      if(!EFF_DECIDABLE(e.cond, from)) return;
+      const dracLinks = P.dracLinks(n.chain, actorOf(n)) + (P.dracNow(card, act(n)) ? 1 : 0);
+      if(condMetNow(n, n, card, from, e.cond, {chargedWay: [], fused: false, dracLinks})){
+        bonus += +e.op[1]; gates.push(e.cond);
+      }
+    });
+    return {power: base + bonus, base, bonus, gates};
+  }
+
   const execute = (s,card,from,idx,opts) => {
     /* A DESTROYED PIECE GOES TO THE GRAVEYARD NOW (v4.79) — see
        `fileDestroyedGear`. One wrapper, so no return below can skip it. */
@@ -4319,7 +4499,6 @@ function makeEffects(ctx){
          facts, it just had no condition that asked for them: which zone the
          card came from, the life race, the marked state, and how many links
          of this turn's chain are Draconic (link 1 = the turn's first attack). */
-      const dracN = /^drac(\d+)$/.test(cond) ? +cond.slice(4) : null;
       /* RULING: links come from attacks — "the first attack each turn is chain
          link 1" — so non-attack arcane (kind "arc") and the dummy's swing
          (kind "foe") must not be counted. */
@@ -4330,145 +4509,7 @@ function makeEffects(ctx){
          stamps). A non-attack is no link (the ruling of 2026-07-25). */
       const dracLinks = P.dracLinks(n.chain, actorOf(n))
         + (attacking && P.dracNow(card, act(n)) ? 1 : 0);
-      const met = cond==="atk" ? act(n).hist.atk>0 : cond==="non" ? act(n).hist.non>0
-        /* what THIS resolution discarded, not what the turn did */
-        : cond==="discard6way" ? (n._discWay||[]).some(c=>pow6(c, bAct(n)))
-        : cond==="pitch6" ? act(n).pitch.some(c=>pow6(c, bAct(n)))
-        : cond==="arsenal" ? from==="arsenal"
-        /* THE ONE PAIR (v4.51) — Line Crossers makes a tie read as a lead,
-           one direction per seat. Never `act(n).hp > foe(n).hp` inline. */
-        : cond==="lifeLt" ? lifeBehind(act(n), foe(n))
-        : cond==="lifeGt" ? lifeAhead(act(n), foe(n))
-        : cond==="marked" ? !!foe(n).marked
-        /* "IF IT'S NOT YOUR TURN" IS A QUESTION ABOUT THE TURN, NOT ABOUT
-           A COMBAT WINDOW (v2.73). Read as `mode==="block"` this meant
-           "they are swinging at me" — which was the only shape the
-           opponent's turn had until v2.71 gave them an action phase. The
-           moment `mode:"foeturn"` existed this silently answered FALSE
-           there, so an Emeritus Scolding played in the new window would
-           have taken the ordinary branch. A second copy of a gate the
-           trainer had already widened; the trainer's `activateIfOk` is the
-           other one, and this is why they must not be two.
-
-           `turnPlayer` rides on every state through `withPriority`
-           (v2.27), and the actor is who is resolving — so this is the
-           question the CR actually asks. The mode test stays as the
-           fallback for a state built without the priority fields, which
-           is every drill that hand-rolls one. */
-        : cond==="foeTurn" ? foeTurnNow(s)
-        : cond==="arcDealt" ? (act(n).hist.arc||0)>0
-        /* THE HERO'S OWN SUFFERING, not the opponent's (v3.40). */
-        : cond==="arcTakenTurn" ? (act(n).hist.arcTaken||0)>0
-        : cond==="auraTurn" ? (act(n).hist.aura||0)>0
-        : cond==="madeCard" ? (act(n).hist.made||0)>0
-        : cond==="booed" ? (act(n).hist.booed||0)>0
-        /* "IF YOU'VE PLAYED A <CLASS> CARD THIS TURN" (v3.58) — Star Fall.
-           Answered off `hist.playTy`, the structured type words of every
-           card played this turn (v3.38), so the CLASS comes off the card
-           rather than from a list here. Lowercased on the way in, which is
-           what `playTy` stores.
-
-           IT IS A WIDER QUESTION THAN `blue`/`red` above: those count a
-           pitch VALUE and say "another", where this asks about a class and
-           does not exclude the card being played. */
-        : /^playedCls:/.test(cond) ? ((act(n).hist.playTy||[])
-            .some(ty => (ty||[]).indexOf(cond.replace(/^playedCls:/, "")) >= 0))
-        : cond==="blue" ? (act(n).hist.blue||0)>0
-        : cond==="red" ? (act(n).hist.red||0)>0
-        : cond==="transcended" ? (act(n).hist.trans||0)>0
-        /* conditions added after the deep dive — all read existing state */
-        /* "IF THIS HAS AN AIM COUNTER" — THIS card, by uid (v3.72). It
-           asked whether ANY counter bag on the side held an aim counter,
-           which is a different question and a strictly more generous one:
-           one aimed arrow would have pumped every other arrow in the deck.
-           Unreachable until v3.72, because Crow's Nest is the pool's only
-           source of aim counters and its trigger had no event to fire on —
-           so building the SOURCE is what made the approximation live.
-           v3.57's rule, read from the other end: when you build a source,
-           ask which conditions it just made reachable. */
-        : cond==="aim" ? ((act(n).counters[card.uid]||{}).aim||0) > 0
-        /* "IF THIS HAS NO <K> COUNTERS" (v4.63) — Plasma Barrel Shot's steam
-           line. "This" is the PIECE the ability belongs to, found back off
-           the powCard's `gp`/`bp` uid by `abSourceUid`, which is the same
-           reader `ctrSrc` puts the counter with and `abCtrGateFails` refuses
-           with — three sites, one answer to "which permanent". A powCard
-           whose piece is gone has nothing to ask, and answers FALSE. */
-        : /^noCtr:/.test(cond) ? (() => {
-            const u = P.abSourceUid(act(n), card);
-            return u != null && (((act(n).counters||{})[u]||{})[cond.slice(6)]||0) === 0;
-          })()
-        : /^auras\d+$/.test(cond) ? (act(n).board||[]).filter(b=>b.kind==="aura").length >= +cond.slice(5)
-        : cond==="hasArsenal" ? !!act(n).arsenal
-        : cond==="seismic" ? (act(n).board||[]).some(b=>/seismic surge/i.test((b.card&&b.card.name)||""))
-        /* A NAMED PERMANENT YOU CONTROL (v4.22). The name travels IN the
-           condition, read off the printed line (v3.21), so this evaluator
-           knows no card — `seismic` one line up is the same question with
-           one card's name written into the engine, which is the golden
-           rule broken at the condition level.
-
-           `P.boardEntryNamed` is the ONE reader of "the permanent a printed
-           line names, on one side's board" (v3.86). Asking it here rather
-           than re-deriving the match is what keeps the ability's gate and
-           an activation cost's gate from disagreeing about the same
-           board. */
-        : cond.slice(0,6)==="board:" ? !!P.boardEntryNamed(act(n), cond.slice(6))
-        : cond==="suspenseAura" ? controlsAuraOf(act(n), "suspense")
-        : /^pitchCost\d+$/.test(cond) ? act(n).pitch.some(c=>(c.cost||0) >= +cond.slice(9))
-        : cond==="allyDied" ? (act(n).grave||[]).some(c=>c._gy===n.turn && /\bally\b/i.test(c.tt||""))
-        : cond==="weaponSwung" ? Object.keys(act(n).weaponUsed||{}).length>0
-        : cond==="dealtDmg" ? (act(n).hist.atk||0)>0 || (act(n).hist.arc||0)>0
-        : cond==="isDraconic" ? (/draconic/i.test(card.tt||"") || !!card._drac || !!act(n).dracNext || !!act(n).dracChain)
-        : cond==="pitchOverBase" ? act(n).pitch.some(c=>(c.power||0) > (card.power||0))
-        /* CHARGE (Boltyn): "charged" is a turn-scoped boolean; "chargedPitchN"
-           asks about the SPECIFIC card just charged as THIS card's own cost
-           (chargedWay is filled above, before this loop runs). */
-        : cond==="charged" ? (act(n).hist.charged||0)>0
-        /* "IF THERE ARE NO CARDS IN YOUR SOUL" (v4.64) — Roaring Beam. */
-        : cond==="soulEmpty" ? (act(n).soul||[]).length === 0
-        /* "IF A YELLOW CARD IS CHARGED THIS WAY" asks whether AT LEAST ONE
-           was (v4.56) — the article is "a", and with a multi charge the
-           answer is a membership test over what the cost paid rather than
-           a scalar comparison. At one charge the two readings agree
-           exactly, which is why this could be a scalar until now. */
-        : /^chargedPitch\d$/.test(cond) ? chargedWay.some(c => c.pitch === +cond.match(/\d+/)[0])
-        /* FUSION: `fused` is computed above, before this loop runs. */
-        : cond==="fused" ? fused
-        : /^atkNamed:/.test(cond) ? (act(n).hist.atkNames||[]).includes(cond.slice(9))
-        : /^hit\d+$/.test(cond) ? (n.chain||[]).filter(l=>l.dmg>0).length >= +cond.slice(3)
-        /* HIGH TIDE: blue is pitch value 3 throughout this engine. */
-        : /^pitchBlue\d+$/.test(cond) ? act(n).pitch.filter(c=>c.pitch===3).length >= +cond.match(/\d+/)[0]
-        /* THE FOUR TRAPS ASK ABOUT THE ATTACK COMING AT YOU (v3.08), which
-           is a different object from the one every condition above reads.
-
-           `hostileAtk` is the same test `atkMinus` already makes and for
-           the same reason: a `pend` belongs to whoever DECLARED it, so the
-           only way to know it is aimed at the resolving seat is that the
-           seat is not its owner. Without that a trap would read the
-           holder's OWN attack and mark the wrong hero.
-
-           NOT `pumped`. That one asks whether MY attack beat its own base
-           and is settled in `linkPumps` after the total is struck; these
-           are checked the moment the trap resolves, which is when the CR
-           checks a trigger condition. A pump landing later in the same
-           reaction step does not reach back and turn the trigger on.
-
-           IN THE TRAINER BOTH ARE FALSE, and that is the right answer
-           rather than a gap: seat 1 there is always the vanilla pile
-           (v2.81), its swing is the `[3,4,5]` scalar on `n.incoming` with
-           no card behind it, and a fabricated number has neither go again
-           nor a base to beat. At the table, against a person, both are
-           live. */
-        : cond==="defGA" || cond==="defPumped" ? (() => {
-            const hostile = n.pend && n.pend.by != null && n.pend.by !== actorOf(n);
-            if(!hostile) return false;
-            /* `pendPumped`, the one reader (v4.92). This copy compared the
-               link's declared total alone against `card.power`, so it
-               missed a pump an attack REACTION had already landed on the
-               link (`pend.rxPump`, v4.03) — weaker than printed at the
-               table — and read the base of an aura or the Gun as zero. */
-            return cond==="defGA" ? !!n.pend.ga : pendPumped(n);
-          })()
-        : dracN!=null ? dracLinks >= dracN : false;
+      const met = condMetNow(n, s, card, from, cond, {chargedWay, fused, dracLinks});
       const why = condWhy(n, cond, chargedWay, false, dracLinks);
       if(!met){
         if(!_notMetSaid.has(cond)) n = L(n, `${card.name}: condition not met (${why}).`);
@@ -8792,7 +8833,7 @@ function makeEffects(ctx){
 
   return {runOps, execute, afterDefenders, defendsTriggers, resolveClash, resolveStack, afterDiscard, payAddCost, fileAttack, allyDeath,
           linkPumps, linkPayload, attackRx, preventDamage, autoPitch, applyAnswer,
-          activateHandAbility, playAtSpeed, fileDestroyedGear,
+          activateHandAbility, playAtSpeed, fileDestroyedGear, effPowerNow,
           /* `applyDefMod` IS NO LONGER EXPOSED (v4.57). It was exposed at
              v4.53 for exactly one outside caller — `index.html`'s
              `confirmDefPay`, the trainer's own pause for one of the four

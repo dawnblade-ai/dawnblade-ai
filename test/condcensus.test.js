@@ -95,9 +95,9 @@ function poolConds(){
    moving out of it is a failure here rather than a silently shorter
    slice (v2.53: a ledger that stops scanning keeps reporting green). */
 function metChain(){
-  const i = SRC.indexOf('const met = cond==="atk" ?');
+  const i = SRC.indexOf('return cond==="atk" ?');   /* the reader moved into `condMetNow` (effpower): one body, execute and effPowerNow both ask it */
   assert.ok(i > 0, "the condition loop moved — re-anchor this drill");
-  const j = SRC.indexOf("      if(!met)", i);
+  const j = SRC.indexOf("  /* ---- THE POWER AN ATTACK WOULD HAVE IF PLAYED NOW", i);
   assert.ok(j > i, "…and so did its end");
   return SRC.slice(i, j);
 }

@@ -2447,6 +2447,21 @@ const chargeView = (g, seat, uid, from) => {
   return {charged, offers: !!fx.chargeCost, gaIf: conds.some(e => e.op[0] === "ga"),
           base, power: base + ctr + pump};
 };
+/* ---- WHAT POWER WOULD THIS ATTACK HAVE IF PLAYED NOW? (effpower) ----
+   `chargeView`'s sibling, for `sparring.js`, which reads no card text. A hand or arsenal
+   attack ("hand" / "arsenal") or a weapon ("weapon") the seat holds, answered by
+   `effects.effPowerNow`: `{power, base, bonus, gates}` - the base plus each conditional
+   self-pump whose gate is already TRUE (the very reader `execute` runs). A gate that waits
+   on the wall, the payment or hidden cards adds nothing, so the answer is never more than
+   what is known. Writes nothing; null for a card the seat does not hold there. */
+const effPowerNow = (g, seat, uid, from) => {
+  const sd = at(g, seat);
+  const c = from === "weapon" ? (sd.gear || []).find(x => x && x.uid === uid && PR.isWeapon(x))
+          : from === "arsenal" ? (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null)
+          : from === "hand" ? (sd.hand || []).find(x => x && x.uid === uid) : null;
+  if(!c || !c.name) return null;
+  return effectsFor(g).fx.effPowerNow(g, seat, c, from);
+};
 /* ---- ANOTHER CHARGE, AND WHAT IT BUYS AND LEAVES (v5.67, QUEUE v4 H24) ----
    V of the Vanguard prints "you may charge your soul ANY NUMBER OF TIMES" and
    "+1{p} for each Light card charged this way". The sheet has offered the
@@ -4890,7 +4905,7 @@ function drawTo(g, i){
 }
 
 return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, chargeMore,
+        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */

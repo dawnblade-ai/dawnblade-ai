@@ -1,3 +1,29 @@
+## v6.24 — the simpler AI ranks an attack by the power it would have now
+
+- **`effPowerNow`** (`engine/effects.js`, read through `judge.effPowerNow`; gate `SPXEFFPOW`, key `effPower`): the rule
+  policy ranked hand attacks by PRINTED power, so an attack that prints 1 and pumps itself +3 under a gate that is
+  already true (Mocking Blow after a boo) lost to a plain 2. The reader answers `{power, base, bonus, gates}` for a card
+  the seat holds: the base plus each conditional self-pump whose condition is TRUE from public facts and the seat's
+  own record. It asks `condMetNow`, the ONE body `execute`'s condition loop now calls too (extracted, not copied), so
+  the AI's "is the gate open" cannot drift from the engine's; `execute` is unchanged. It writes nothing and reads no
+  hidden card. A gate it cannot settle counts for nothing: the answer is the printed power.
+- **Census** (`experiments/effpow-census.js`, run over the cards the fifteen precons hold): 29 of 327 printings carry
+  a conditional self-pump, 38 condition entries; the reader decides 22 and returns printed power for 16. Undecided
+  kinds, said plainly: `pumped`, `reprise`, `discard6way`, `pitch6`, `defLt`, `chainLinkGe`, `chargedPitch`, `hasGa`,
+  `pitchBlue` (they wait on the payment, the chain, the opponent's defence or a reprise). `hasArsenal` counts only when
+  the attack is played from hand, since an arsenal attack leaves the slot first.
+- **Measured** (own seat, 28 games per seed, `SPXEFFPOW` none vs the hero). Rule policy, 24 seeds: Lyath 7.67 → 8.33
+  (+0.67, t 2.64, 12 seeds up / 3 down); Iyslander +0.08; Boltyn 0.00; Bravo −0.04 (t −0.18); Viserai −0.08;
+  Fai −0.08 (t −0.53; it read −0.33, t −2.35 at 12 seeds and came back); Blaze +0.17 and Briar −0.08 (12 seeds).
+  Arakni, Azalea, Dash, Dorinthea, Enigma, Gravy and Kayo are byte-identical. Sharp (search on), 6 seeds: Lyath
+  +1.33 (t 1.58), Bravo +0.50, Boltyn, Fai and Iyslander +0.17, Blaze, Briar and Viserai 0.00; the same seven
+  byte-identical; no loss. Wins are noisy (band ~3, up to ~10), so only Lyath resolves, and only on the rule policy.
+- **Proven:** gate off (`SPXEFFPOW=none`) is byte-identical to v6.23 for all fifteen heroes (two seeds, own seat);
+  `test/effpower.test.js` (8 drills, each sabotaged once); `test/condcensus.test.js` re-anchored on the moved
+  reader. Ladder 630 games: 0 refusals, 0 violations, 0 stalls, 0 draws. No WIRE_V or DATA_VER bump: no payload,
+  prompt or pool change. Sharp's search cost is unchanged (12–18 ms per searched decision unthrottled, step budget
+  300); the 4x-throttled phone check was not re-run.
+
 ## v6.23 — Silver Age legality recorded from the pinned database
 
 - **`silverAge.banned`** (`data/formats.json`) is no longer `null`. New `tools/silver-age.js` derives it from the
