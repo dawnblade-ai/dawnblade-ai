@@ -107,10 +107,11 @@ function seatFeed(g, seat){
   return {feed: out, feedTo: outTo, log: out.slice(-LOG_KEEP).reverse()};
 }
 
-/* A key that holds a uid (or a list of them): `uid`, `uids`, `_fuseUid`,
+/* A key that holds a uid (or a list of them): `uid`, `uids`, `picked` (a charge
+   pending's chosen cards, v6.25), `_fuseUid`,
    `targetUid`…, a `target`, and `_flipGear` (a face-down piece's own uid,
    carried by its ability). */
-const UID_KEY = /uid|^target$|^_flipGear$/i;
+const UID_KEY = /uid|^target$|^_flipGear$|^picked$/i;
 /* Replace, in place on a JSON copy, every uid-keyed value naming a card in
    `hid` (uid -> {owner}) by `to(uid)`; and drop a uid-keyed bag's hidden keys. */
 function scrubUids(v, hid, to){

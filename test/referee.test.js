@@ -51,7 +51,8 @@ function tokens(v, out){
   out = out || [];
   if(v == null) return out;
   if(Array.isArray(v)){ v.forEach(x => tokens(x, out)); return out; }
-  if(typeof v === "object"){ for(const k of Object.keys(v)){ out.push(k); tokens(v[k], out); } return out; }
+  /* a KEY can carry a uid inside it (`ct100083`, v6.25): its digit runs are tokens too */
+  if(typeof v === "object"){ for(const k of Object.keys(v)){ out.push(k); const m = k.match(/\d{6,}/g); if(m) out.push(...m); if(k !== "tokSeq") tokens(v[k], out); } return out; }
   const s = String(v);
   out.push(s);
   if(typeof v === "string"){ const m = s.match(/\d{6,}/g); if(m) out.push(...m); }
@@ -332,6 +333,18 @@ test("SLOT HANDLE (P3) — the other seat learns WHERE a card went face-down, ne
   /* a card that went PUBLIC by the action keeps its uid: the action revealed it */
   const played = {...g, sides: [{...sd, hand: sd.hand.slice(1), grave: [c]}, g.sides[1]]};
   assert.equal(R.redactAction({t: "play", uid: c.uid, from: "hand"}, played, 1).uid, c.uid);
+});
+
+test("A CHARGE'S `picked` LIST names hand cards by bare uid: the other seat gets the carrier placeholder, the owner its own uids (v6.25)", () => {
+  const g = match("azalea", "boltyn", "h2-picked", 0);
+  const sd = g.sides[1], [c0, c1, played] = sd.hand;   /* `played` is the charging card itself: public in `pending.card` */
+  const pending = {kind: "charge", seat: 1, card: played, from: "hand", window: "action", uids: [c1.uid], picked: [c0.uid], multi: true};
+  const g2 = {...g, pending};
+  const foe = R.seatView(g2, 0).pending, own = R.seatView(g2, 1).pending;
+  assert.deepEqual(foe.picked, ["?1x"], "the foe's view names no picked card");
+  assert.deepEqual(foe.uids, ["?1x"]);
+  assert.deepEqual(own.picked, [c0.uid], "the owner keeps its own uids");
+  assert.ok(R.UID_KEY.test("picked"));
 });
 
 /* ---- the invariant judge at the referee ------------------------------------ */
