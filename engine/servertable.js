@@ -154,9 +154,9 @@ async function open(o){
   }
 
   /* a join that lost a version race wrote NOTHING: it is asked again (a claim writes nothing at all) */
-  const sleep0 = o.sleep || defaultSleep, tune0 = {conflictCap: 8, base: 120, max: 2000, ...(o.tune || {})};
+  const sleep0 = o.sleep || defaultSleep, tune0 = {joinCap: 8, base: 120, max: 2000, ...(o.tune || {})};
   let res = null;
-  for(let k = 0; k <= tune0.conflictCap; k++){
+  for(let k = 0; k <= tune0.joinCap; k++){
     res = await call(T, mode === "resume" ? {op: "join", table: code, seat: rec.seat, key: rec.key} : {op: "join", table: code});
     if(res.ok || res.refused !== "conflict") break;
     await sleep0(Math.min(tune0.max, tune0.base * Math.pow(2, k)) * (0.5 + (o.rand || Math.random)()));
@@ -179,7 +179,7 @@ async function open(o){
 function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep){
   const sleep = o.sleep || defaultSleep, rand = o.rand || Math.random;
   const timers = o.timers || {setInterval: (f, ms) => setInterval(f, ms), clearInterval: h => clearInterval(h)};
-  const tune = {conflictCap: 8, failCap: 4, base: 120, max: 2000, probeMs: 5000, pollMs: 0, ...(o.tune || {})};
+  const tune = {conflictCap: 8, joinCap: 8, failCap: 4, base: 120, max: 2000, probeMs: 5000, pollMs: 0, ...(o.tune || {})};
   const onStatus = o.onStatus || (() => {});
   const topic = (o.topic || topicFor)(code, seat);
   let n = n0, st = "connecting", closed = false, closedWhy = null, sink = null, backlog = [];
@@ -279,14 +279,14 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep){
     try {
       do {
         healAgain = false;
-        if(!sawNet) await rejoin();                          /* the lobby, before there is a game */
-        if(closed) break;
-        let r = null;
-        try { r = await call(T, {op: "resync", table: code, seat, key, have: haveFn ? haveFn() : undefined}); } catch(_){ r = null; }
-        if(r && r.ok) ingest(r.frames);
-        else if(r && (r.refused === "auth" || r.refused === "no-table")) fatal(r.refused);
-        else if(r && r.refused === "not-dealt") ev("resync-before-deal");
-        else if(!r) ev("heal-failed");
+        if(!sawNet){ if(await rejoin() === null) ev("heal-failed"); }      /* before there is a game: the lobby, replayed */
+        else {                                                             /* a game: the net session's catch-up */
+          let r = null;
+          try { r = await call(T, {op: "resync", table: code, seat, key, have: haveFn ? haveFn() : undefined}); } catch(_){ r = null; }
+          if(r && r.ok) ingest(r.frames);
+          else if(r && (r.refused === "auth" || r.refused === "no-table")) fatal(r.refused);
+          else ev("heal-failed");
+        }
         ev("healed");
       } while(healAgain && !closed);
     } finally { healing = false; }
@@ -323,7 +323,7 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep){
   }
 
   const handle = {
-    code, seat,
+    code, seat, srv: true,
     /* the channel shape room.js gives the table */
     send(f){
       if(closed || !f || typeof f !== "object" || (f.ch !== CH_LOBBY && f.ch !== CH_NET)) return;
@@ -453,6 +453,6 @@ function defaultTransport(config, root_){
   return supabaseTransport(config);
 }
 
-return {CODE_CHARS, CODE_LEN, STATUS, SUPABASE_JS, normalize, isValid, topicFor, open, startTable, sitAt, reclaim, savedSeats,
+return {TABLE_CODE_CHARS: CODE_CHARS, CODE_LEN, STATUS, SUPABASE_JS, normalize, isValid, topicFor, open, startTable, sitAt, reclaim, savedSeats,
         supabaseTransport, loadSupabase, defaultTransport};
 });

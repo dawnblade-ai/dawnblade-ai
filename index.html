@@ -820,6 +820,9 @@ img{display:block;max-width:100%}
 .macts .a{padding:11px 4px;font-size:13px}
 .mfeed{background:var(--forge);border:1px solid var(--line);padding:8px 10px;font-size:12px;color:var(--bone-dim);min-height:56px;max-height:110px;overflow-y:auto}
 .mfeed div:last-child{color:var(--bone)}
+.srvbar{position:fixed;left:12px;right:12px;top:max(8px,env(safe-area-inset-top));z-index:60;font-size:13px;line-height:1.4;padding:9px 10px;max-width:536px;margin:0 auto;background:var(--ink);box-shadow:0 4px 14px rgba(0,0,0,.5)}
+.srvbar.warn{color:var(--y);border:1px solid var(--y)}
+.srvbar.bad{color:var(--r);border:1px solid var(--r)}
 .mnote{font-size:11px;color:var(--bone-dim);line-height:1.5;border-left:2px solid var(--line);padding-left:8px}
 
 /* ---- the lobby: hero, throw, seating (v2.49) ---- */
@@ -898,6 +901,10 @@ img{display:block;max-width:100%}
    database + typographic fallbacks. Not affiliated with LSS.
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
+/* THE HOSTED REFEREE (SERVER S2, RULING user 2026-11-13: Supabase). Both values are PUBLIC by design (the key
+   is the project's publishable one) and are config, not a secret. Nothing is requested until a player opens a
+   server table; until the function is deployed the page reads "unavailable" and offers the direct table. */
+window.SERVER_CFG = {url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "referee"};
 window.APP_VER = "6.25"; /* v6.25 - a card that needs a target can no longer be played without one, and the other seat can no longer tell which hidden card you used earlier. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
@@ -1564,6 +1571,11 @@ window.TROPHIES = [
      both phones are guests. Reached as DawnHub.* only. It drives lobby.js and
      net.js, so it loads after both. -->
 <script src="engine/hub.js"></script>
+<!-- A TABLE ON THE HOSTED REFEREE (SERVER S2): the phone's end of the hosted referee, as the same
+     channel the two-phone table uses. Reached as DawnServerTable.* only. It needs no other engine
+     module, loads its real transport (supabase-js) lazily on the first server table, and a
+     missing server reads "unavailable" on one screen. -->
+<script src="engine/servertable.js"></script>
 <script>
 /* The bridge: lift the engine's exports into the bare names the two
    babel blocks already call. Every name here used to be a hand-mirrored
@@ -6971,14 +6983,59 @@ function TableScreen({onBack, onSeated}){
   const [stat,setStat] = uS(null);
   const [err,setErr]   = uS(null);
   const [busy,setBusy] = uS(false);
+  const [gone,setGone] = uS(false);           /* the server cannot be reached */
   const live = uR(true);
-  uE(()=>()=>{ live.current = false; },[]);
+  const waitRef = uR(null);                   /* a server table opened, its other player not yet heard */
+  uE(()=>()=>{ live.current = false; const w = waitRef.current; waitRef.current = null; if(w){ try{ w.ch.close(); }catch(_){} } },[]);
 
   const PHRASE = {
     loading:"Fetching the transport…", connecting:"Reaching the relay…",
     waiting:"Table open — waiting for your opponent…",
-    dialling:"Knocking on the table…", connected:"Seated.", seating:"Taking a seat…"
+    dialling:"Knocking on the table…", connected:"Seated.", seating:"Taking a seat…",
+    "srv-connecting":"Reaching the server…", "srv-waiting":"Table open — waiting for your opponent…",
+    "srv-seated":"Seated.", "srv-reconnecting":"Lost touch — trying again…", "srv-unavailable":"The server is not answering…"
   };
+  /* A TABLE ON THE HOSTED REFEREE (SERVER S2). `how`: "create" (open one), "join" (a code), "reclaim" (this
+     phone's seat after a reload). The opener waits here, code on screen, until the other player has spoken; the
+     joiner goes straight to the table (the table is already open). A server that cannot be reached is a state of
+     its own, not an error message: the direct table is one tap away. */
+  const SRV_WHY = {
+    "no-table":"No table is open with that code. Check it, or ask them to open a new one.",
+    full:"That table already has two players.",
+    auth:"That seat is no longer yours — the table moved on without you.",
+    wire:"The table runs a different version of the game. Reload the page to pick up the latest.",
+    code:"A table code is "+DawnServerTable.CODE_LEN+" letters and numbers.",
+    exists:"That code is taken — try again."
+  };
+  const srvSit = (how, c, role) => {
+    setErr(null); setGone(false); setBusy(true); setStat("srv-connecting");
+    const open = how==="create" ? DawnServerTable.startTable : how==="join" ? DawnServerTable.sitAt : DawnServerTable.reclaim;
+    open({
+      transport: DawnServerTable.defaultTransport(window.SERVER_CFG), keep: store, code: c,
+      tune: {pollMs: 20000},
+      onStatus: s=>{ if(!live.current) return; setStat("srv-"+s);
+        if(s==="seated" && waitRef.current){ const w = waitRef.current; waitRef.current = null; w.go(); } }
+    }).then(ch=>{
+      if(!live.current){ ch.close(); return; }
+      setCode(ch.code);
+      const go = () => onSeated({table: ch, host:false, code: ch.code, judged: {seat: ch.seat, key: null, srv: true}});
+      if(how==="join" || (how==="reclaim" && role!=="creator") || ch.peerHeard()) return go();
+      setMode("srv-host"); setStat("srv-waiting");
+      waitRef.current = {ch, go};
+    }).catch(e=>{
+      if(!live.current) return;
+      setStat(null); setBusy(false);
+      if(!e || e.why==="unavailable" || !SRV_WHY[e.why]) setGone(true); else setErr(SRV_WHY[e.why]);
+    });
+  };
+  const srvSaved = uM(()=>{ try {
+    const ls = window.localStorage, names = [];
+    for(let i = 0; i < ls.length; i++){ const k = ls.key(i); if(/^dawnblade\.srv\./.test(k)) names.push(k.slice("dawnblade.".length)); }
+    return DawnServerTable.savedSeats(store, names, Date.now(), 3*24*3600*1000).slice(0, 2);
+  } catch(_){ return []; } },[]);
+  const srvLeave = () => { const w = waitRef.current; waitRef.current = null;
+    if(w){ try{ w.ch.forget(); w.ch.close(); }catch(_){} }
+    setMode(null); setErr(null); setGone(false); setBusy(false); setStat(null); };
 
   const sit = (host, c, resume) => {
     setErr(null); setBusy(true); setStat("loading");
@@ -7059,6 +7116,9 @@ function TableScreen({onBack, onSeated}){
           <button className="bigbtn alt" onClick={()=>judgeTable(DawnRoom.makeCode())}>Judge a table</button>
           {savedJudge.map(r=><button key={"j"+r.code} className="bigbtn alt" onClick={()=>judgeTable(r.code, r.resume)}>Resume judging {r.code}</button>)}
         </div>
+        {/* THE SERVER TABLE (SERVER S2): the same game, but the referee is a program on the web, so the two
+            phones never need to reach each other. */}
+        <div className="tblrow"><button className="bigbtn alt" onClick={()=>{ setErr(null); setGone(false); setMode("srv"); }}>Join a server table</button></div>
         {/* This said "the drill decks — blank cards" until v2.52, which was
             true before v2.49 and has been wrong since: the table negotiates a
             hero, a throw and a sideboard and runs two real decks. Stale copy
@@ -7079,6 +7139,11 @@ function TableScreen({onBack, onSeated}){
           deck or the next draw. The host's phone could look, so play people you trust.
           When the game ends, the guest can verify every shuffle and draw.
         </p>
+        <p className="mnote">
+          <strong>A server table needs no direct link.</strong> The referee runs on the web and holds the deck,
+          so neither phone can look at the other's hand. Whoever runs the server could look; every shuffle is
+          still checkable when the game ends.
+        </p>
         {/* THE HONEST LINE FOR A JUDGED TABLE (HIDDEN HANDS H3) */}
         <p className="mnote">
           <strong>At a judged table, the judge's device holds the deck.</strong> A third
@@ -7089,6 +7154,51 @@ function TableScreen({onBack, onSeated}){
           every shuffle and draw.
         </p>
       </>}
+
+      {mode==="srv" && <>
+        <div className="tblcard">
+          <p className="note" style={{marginTop:0}}>
+            Open a table and read out its code, or type in the code you were given.
+            The referee on the web seats you both and deals the game.
+          </p>
+        </div>
+        {gone ? null : <>
+          <button className="bigbtn" disabled={busy} onClick={()=>srvSit("create")}>{busy ? (PHRASE[stat]||"…") : "Open a server table"}</button>
+          <button className="bigbtn alt" disabled={busy} onClick={()=>{ setCode(""); setMode("srv-join"); }}>Enter a table code</button>
+          {srvSaved.map(r=><button key={r.code} className="bigbtn alt" disabled={busy} onClick={()=>{ setCode(r.code); srvSit("reclaim", r.code, r.role); }}>Resume table {r.code}</button>)}
+        </>}
+      </>}
+
+      {mode==="srv-host" && <>
+        <div className="tblcard">
+          <div className="tblstat">Your table number — read it out</div>
+          <div className="tblcode">{code}</div>
+        </div>
+        <div className={"tblstat"+(stat==="srv-waiting"?" live":"")}>
+          {stat==="srv-waiting" && <span className="tbldot"></span>}
+          {err||gone ? "" : (PHRASE[stat]||"…")}
+        </div>
+      </>}
+
+      {mode==="srv-join" && <>
+        <div className="tblcard">
+          <div className="tblstat">Table number</div>
+          <input className="tblin mono" value={code} maxLength={DawnServerTable.CODE_LEN+2} inputMode="text"
+            autoCapitalize="characters" autoCorrect="off" spellCheck={false}
+            placeholder="······"
+            onChange={e=>{ setErr(null); setGone(false); setCode(DawnServerTable.normalize(e.target.value)); }}/>
+        </div>
+        <button className="bigbtn" disabled={busy||!DawnServerTable.isValid(code)} onClick={()=>srvSit("join", code)}>
+          {busy ? (PHRASE[stat]||"…") : "Sit down"}
+        </button>
+      </>}
+
+      {gone && <div className="tblcard">
+        <div className="tblerr">The server table service is not answering right now — it may be paused or still being set up.</div>
+        <p className="note">You can still play a friend: the direct two-phone table needs no server.
+          One of you opens a table and reads out the code.</p>
+        <button className="bigbtn" onClick={()=>{ srvLeave(); }}>Use a direct table instead</button>
+      </div>}
 
       {mode==="host" && <>
         <div className="tblcard">
@@ -7123,9 +7233,31 @@ function TableScreen({onBack, onSeated}){
       </>}
 
       {err && <div className="tblerr">{err}</div>}
-      <button className="bigbtn alt" onClick={onBack}>Back</button>
+      {mode && /^srv/.test(mode) ? <button className="bigbtn alt" onClick={mode==="srv-join" ? ()=>{ setMode("srv"); setErr(null); setGone(false); setBusy(false); setCode(""); } : srvLeave}>{mode==="srv-host" ? "Cancel" : "Back"}</button>
+        : <button className="bigbtn alt" onClick={onBack}>Back</button>}
     </div>
   );
+}
+
+/* THE SERVER LINE, ON ANY SCREEN OF A SERVER TABLE (SERVER S2): what the link is doing, said at the top of the
+   screen where it cannot be missed, and nothing at all while it is fine. The table keeps this phone's seat;
+   every word here is what a player does next. */
+function SrvBanner({table, waitingOnThem}){
+  const [s,setS] = uS({st:"seated", quiet:0});
+  uE(()=>{
+    if(!table || !table.srv) return;
+    const read = () => setS({st: table.status(), quiet: table.quietFor(), why: table.closedWhy()});
+    read(); const t = setInterval(read, 1000);
+    return ()=>clearInterval(t);
+  },[table]);
+  if(!table || !table.srv) return null;
+  if(s.st==="reconnecting") return <div className="srvbar warn" role="status">Lost touch with the server — reconnecting. Your moves wait and go through when it is back.</div>;
+  if(s.st==="unavailable") return <div className="srvbar bad" role="status">The server is not answering. Your seat is kept and this page keeps trying — you can leave and come back.</div>;
+  if(s.st==="closed" && s.why) return <div className="srvbar bad" role="status">{s.why==="wire"
+    ? "The table runs a different version of the game. Reload the page to pick up the latest."
+    : "This phone's seat at the table is gone. Leave the table and rejoin from Find an opponent."}</div>;
+  if(waitingOnThem && s.quiet > 45000) return <div className="srvbar warn" role="status">No word from the other player for a while — they may have dropped. The table keeps their seat, and the game picks up when they return.</div>;
+  return null;
 }
 
 /* ============================================================
@@ -7313,10 +7445,11 @@ function TableRoom({table, host, code, db, onExit, resume, judged}){
   const waiting = DawnLobby.waitingOn(lob).indexOf(mySeat) < 0
                   && DawnLobby.waitingOn(lob).length > 0;
 
-  const head = (
+  const head = (<>
     <div className="tblhead">Table {code}
-      <span className="tblseat">seat {mySeat} · {host ? "host" : judged ? "judged table" : "guest"}</span></div>
-  );
+      <span className="tblseat">seat {mySeat} · {host ? "host" : judged ? (judged.srv ? "server table" : "judged table") : "guest"}</span></div>
+    <SrvBanner table={table}/>
+  </>);
 
   if(step === "fault") return (
     <div className="tblwrap">{head}
@@ -7746,6 +7879,8 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
       }
     });
     sess.current = s; netRef.current = s;
+    /* a server table's resync asks for catch-up from where this phone stands */
+    if(tableRef.current && tableRef.current.setHave) tableRef.current.setHave(() => s.seq());
     if(host && match.restore) setG(s.state());
     /* THE INTERNAL TESTING HOOK. Same reasoning as JUDGE!! in the
        trainer: the expensive part of a two-phone bug is never noticing
@@ -7769,7 +7904,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
     const watch = setInterval(()=>{
       /* THE HOST'S PHONE LEFT: the game pauses (HIDDEN HANDS H2). The guest
          holds no hidden card, so it cannot carry the game on. */
-      if(!host && s.status() !== "paused" && tableRef.current.status && tableRef.current.status() === "closed")
+      if(!host && !(judged && judged.srv) && s.status() !== "paused" && tableRef.current.status && tableRef.current.status() === "closed")
         s.pause(judged ? "the judge's device left the table" : "the host's phone left the table");
       if(host) keepHost(s);
       const st = s.status();
@@ -7784,6 +7919,9 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
   uE(()=>{ if(g.over && !local && host && sess.current && sess.current.reveal){
              sess.current.reveal({seedH: match.seedH});
              try { lsGet().removeItem("dawnblade.table." + code); } catch(_){} } },[g.over]);
+
+  /* a finished game at a server table is not offered for resuming */
+  uE(()=>{ if(g.over && !local && tableRef.current && tableRef.current.forget) tableRef.current.forget(); },[g.over]);
 
   /* THE GUEST REJOINS a table whose host dropped: the same code, a new
      channel, and net.js's join lands it on a snapshot of its view. */
@@ -8611,7 +8749,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
           {" "}{me.hp>0 ? <>You finished on <b className="mono">{me.hp}</b>.</> : null} Tap anywhere.
         </p>
         {!local && !host && <div onClick={e=>e.stopPropagation()} style={{marginTop:10}}>
-          <p style={{fontSize:12}}>{judged ? "The judge's device" : "The host's phone"} held the deck. It has now sent its half of the seed and every move.</p>
+          <p style={{fontSize:12}}>{judged ? (judged.srv ? "The server" : "The judge's device") : "The host's phone"} held the deck. It has now sent its half of the seed and every move.</p>
           <button className="bigbtn alt" disabled={verdict==="busy"} onClick={verify}>
             {verdict==="busy" ? "Verifying…" : "Verify this game"}</button>
           {verdict && verdict!=="busy" && <p className={verdict.ok ? "note" : "tblerr"} style={{fontSize:13}}>
@@ -8622,9 +8760,10 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
       </div>}
 
       {note && <div className="tblerr">{note}</div>}
+      <SrvBanner table={tableRef.current} waitingOnThem={!over && g.priority !== mySeat}/>
       {/* THE HOST'S PHONE LEFT (HIDDEN HANDS H2): the game waits for it. The
           guest holds no hidden card, so it cannot carry the game on. */}
-      {!local && !host && link === "paused" && !over && <div className="tblerr">
+      {!local && !host && link === "paused" && !over && !(judged && judged.srv) && <div className="tblerr">
         {judged
           ? <>The game is paused: this phone has lost its link to the judge's device, which
               holds the deck. Rejoin once the judge's table {code} is open again.</>

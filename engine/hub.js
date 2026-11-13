@@ -198,6 +198,11 @@ function createHub(o){
     }
   } else if(o.resume){
     seedH = o.resume.seedH; spec = o.resume.spec;
+    /* the lobby, silently (a table's row keeps it, so a phone that reloads mid-game is replayed it on its claim) */
+    for(const m of (o.resume.lobLog || [])){
+      const r = L.reduce(lob, m);
+      if(!r.error){ lob = r.state; lobLog.push(m); }
+    }
     const d = o.deal({...spec, seed: SHA.seedOf(seedH, spec.seedG)});
     startSession(d.state, d.catalog, o.resume.saved);
   } else {
@@ -219,7 +224,7 @@ function createHub(o){
        stores after every frame (`resume` takes either). The page's own
        `persist` is unchanged (null until dealt). */
     persistTable(){
-      if(sess && spec) return {judge: true, spec, seedH, keys: keys.slice(), saved: sess.persist()};
+      if(sess && spec) return {judge: true, spec, seedH, keys: keys.slice(), saved: sess.persist(), lobLog: lobLog.slice()};
       return {judge: true, spec: null, seedH, keys: keys.slice(), lobLog: lobLog.slice()};
     },
     tick(){ if(sess) sess.tick(); },

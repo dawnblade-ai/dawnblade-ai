@@ -17,6 +17,7 @@
    WHAT IS ROUTED
      cdnjs react / react-dom / babel-standalone   npm react, react-dom, @babel/standalone
      unpkg peerjs (loaded lazily by engine/room.js) npm peerjs
+     jsdelivr @supabase/supabase-js (engine/servertable.js, lazily, on the first server table) npm @supabase/supabase-js
      fonts.googleapis.com css2                    generated @font-face over @fontsource files
      fonts.gstatic.com                            the @fontsource woff2 files
      any image or font from any other host        a 5:7 grey PNG / an empty 200
@@ -32,7 +33,7 @@
 
    DEPS (outside the repo, which keeps ZERO dependencies)
      npm install --prefix "$PAGE_DEPS" --save-exact react@18.2.0 \
-       react-dom@18.2.0 @babel/standalone@7.23.5 peerjs@1.5.4 \
+       react-dom@18.2.0 @babel/standalone@7.23.5 peerjs@1.5.4 @supabase/supabase-js@2.115.0 \
        @fontsource/big-shoulders-display @fontsource/spline-sans \
        @fontsource/spline-sans-mono
    The fonts are optional: without them the CSS is empty and the page
@@ -125,8 +126,8 @@ function makeAnswer(deps){
     if(h === "cdnjs.cloudflare.com" && (m = u.pathname.match(/^\/ajax\/libs\/([^/]+)\/([\d.]+)\/(.+)$/)) && CDN_PKG[m[1]]){
       return pkgFile(CDN_PKG[m[1]], m[2], m[3]);
     }
-    if(h === "unpkg.com" && (m = u.pathname.match(/^\/([^@/]+)@([\d.]+)\/(.+)$/))) return pkgFile(m[1], m[2], m[3]);
-    if(h === "cdn.jsdelivr.net" && (m = u.pathname.match(/^\/npm\/([^@/]+)@([\d.]+)\/(.+)$/))) return pkgFile(m[1], m[2], m[3]);
+    if(h === "unpkg.com" && (m = u.pathname.match(/^\/((?:@[^/]+\/)?[^@/]+)@([\d.]+)\/(.+)$/))) return pkgFile(m[1], m[2], m[3]);
+    if(h === "cdn.jsdelivr.net" && (m = u.pathname.match(/^\/npm\/((?:@[^/]+\/)?[^@/]+)@([\d.]+)\/(.+)$/))) return pkgFile(m[1], m[2], m[3]);
     if(h === "fonts.googleapis.com") return fontCss(url);
     if(h === "fonts.gstatic.com"){
       const file = path.basename(u.pathname), slug = file.replace(/-latin-.*$/, "");

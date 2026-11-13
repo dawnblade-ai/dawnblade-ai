@@ -17,7 +17,7 @@ function memKeep(){
   return {m, get: (k, f) => m.has(k) ? JSON.parse(m.get(k)) : f, set: (k, v) => { m.set(k, JSON.stringify(v)); }};
 }
 
-const FAST = {sleep: () => Promise.resolve(), tune: {base: 1, max: 4, probeMs: 1}};
+const FAST = {sleep: () => new Promise(r => setImmediate(r)), tune: {base: 1, max: 4, probeMs: 1}};
 
 /* o: {hero, rand, throws, chooser, keep, tune?, onStatus?} */
 function makePhone(world, name, o){
@@ -40,7 +40,7 @@ function makePhone(world, name, o){
   P.receive = f => {
     P.inbox.push(f);
     if(f.ch === Hub.CH.JUDGE){
-      if(f.seat != null && P.seat == null){ P.seat = f.seat; P.lob = L.newLobby({code: f.code, judge: true}); P.lobby(L.hello(P.seat, T.BUILD)); }
+      if(f.seat != null && P.seat == null){ P.seat = f.seat; P.lob = L.newLobby({code: f.code, judge: true}); P.lobby(L.hello(P.seat, o.build || T.BUILD)); }
       return;
     }
     if(f.ch === Hub.CH.LOBBY){ if(!P.lob) return; const r = L.reduce(P.lob, f.m); if(!r.error) P.lob = r.state; P.step(); return; }
@@ -62,8 +62,8 @@ function makePhone(world, name, o){
   P.start = () => {
     P.spec = L.matchSpec(P.lob);
     const blind = T.deal(P.spec.heroes[0], P.spec.heroes[1], "blind|" + P.spec.seedC, P.spec.first);
-    P.catalog = T.catalogOf(blind);
-    P.sess = N.createSession({seat: P.seat, host: false, referee: true, reduce: J.reduce, legal: J.legal, catalog: P.catalog, build: T.BUILD,
+    P.catalog = o.matchCatalog ? o.matchCatalog(P.spec) : T.catalogOf(blind);   /* a drive against the real page deals the page's way (tools/serverpage.js) */
+    P.sess = N.createSession({seat: P.seat, host: false, referee: true, reduce: J.reduce, legal: J.legal, catalog: P.catalog, build: o.build || T.BUILD,
       send: m => P.say({ch: Hub.CH.NET, m}), onEvent: e => P.events.push(e)});
     P.sess.join();
   };
@@ -71,9 +71,9 @@ function makePhone(world, name, o){
 }
 
 /* the in-process referee's game from the deal a table's row recorded: the same policy, no network */
-function reference(row, cap){
+function reference(row, cap, dealFn){
   const spec = row.hub.spec, SHA = require("../../engine/sha256.js"), INV = T.INV;
-  const d = T.dealSpec({...spec, seed: SHA.seedOf(row.hub.seedH, spec.seedG)});
+  const d = (dealFn || T.dealSpec)({...spec, seed: SHA.seedOf(row.hub.seedH, spec.seedG)});
   const ref = R.createReferee({state: d.state, reduce: J.reduce, legal: J.legal, check: INV.errors, catalog: d.catalog});
   let n = 0;
   while(!ref.over() && n++ < (cap || 3000)){
@@ -92,7 +92,7 @@ function reference(row, cap){
 
 /* the stored game, rehydrated by a hub that is never fed a frame */
 function storedGame(world, code){
-  const hub = Hub.createHub({code, build: T.BUILD, deal: T.dealSpec, reduce: J.reduce, legal: J.legal, check: T.INV.errors, resume: world.row(code).hub});
+  const hub = Hub.createHub({code, build: T.BUILD, deal: world.deps.deal, reduce: J.reduce, legal: J.legal, check: T.INV.errors, resume: world.row(code).hub});
   return hub.session().full();
 }
 

@@ -427,7 +427,7 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        68,417 -> 68,639 AT v5.81, READ FIRST: still `<style>` -> `</style>`;
        the growth is the `.pip` tints PipLine draws a printed pip's word in,
        with their comment. */
-    "phasebar.test.js index.html 68988",
+    "phasebar.test.js index.html 69328",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
        `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
        `abPickBound` in the pick legality it extends. */
