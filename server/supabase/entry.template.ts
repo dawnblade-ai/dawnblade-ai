@@ -32,11 +32,16 @@
                                        set TABLE_SERVICE_KEY yourself — a secret, set only in the dashboard)
      TABLE_SERVICE_KEY                 overrides the key above
      TABLE_ORIGINS                     extra comma-separated browser origins allowed by CORS
+     TABLE_UID0                        a test hook (see UID0); leave unset
    ============================================================================================================ */
 __ENGINE_LOAD__
 
 const G: any = globalThis;
 const ORIGINS = ["https://dawnblade-ai.github.io", "null", ...(Deno.env.get("TABLE_ORIGINS") || "").split(",").map((s: string) => s.trim()).filter(Boolean)];
+/* TEST HOOK, leave unset: the first uid a deal hands out. 0 is the page's own (the catalog hash covers card uids, so a
+   deployed function MUST deal from 0). tools/supabase-rehearse.js sets 100000 so its blindness scan can tell a hidden
+   uid from any other number, as the drills do. */
+const UID0 = Number(Deno.env.get("TABLE_UID0") || 0) || 0;
 const MAX_BODY = 256 * 1024;                 // a request is one frame; the largest is a few KB
 const MAX_BROADCAST = 240_000;               // Realtime's HTTP endpoint refuses ~250 KB payloads (measured 2026-11-13: 250,000 ok, 260,000 422)
 
@@ -53,7 +58,7 @@ function ready(){
   const heroes = Object.fromEntries(win.HEROES.map((h: any) => [h.k, h]));
   const decks = Object.fromEntries(win.HEROES.map((h: any) => [h.k, G.DawnGame.parseDeck(win.DECKS[h.k])]));
   const deal = (spec: any) => {
-    const m = G.DawnBuild.buildMatch(spec, {db, heroes, decks});
+    const m = G.DawnBuild.buildMatch(spec, {db, heroes, decks, ctr0: UID0});
     const state = G.DawnJudge.newMatch({builds: m.builds, names: m.names, heroKeys: m.heroKeys, first: m.first, seed: m.seed});
     const catalog = G.DawnWire.makeCatalog(m.builds.flatMap((b: any) => [...(b.deck || []), ...(b.gear || []), ...(b.startItem ? [b.startItem.card] : [])]));
     return {state, catalog};

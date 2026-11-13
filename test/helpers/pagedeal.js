@@ -11,12 +11,12 @@ require("../../engine/cards.js").setCDN("https://legendstory-production-s3-publi
 
 const HEROES_ = Object.fromEntries(T.W.HEROES.map(h => [h.k, h]));
 const DECKS_ = Object.fromEntries(T.W.HEROES.filter(h => T.W.DECKS[h.k]).map(h => [h.k, G_.parseDeck(T.W.DECKS[h.k])]));
-const dealLikeThePage = spec => {
-  const m = B_.buildMatch(spec, {db: HJ_.db(), heroes: HEROES_, decks: DECKS_});
+const dealLikeThePage = (spec, ctr0) => {
+  const m = B_.buildMatch(spec, {db: HJ_.db(), heroes: HEROES_, decks: DECKS_, ctr0: ctr0 || 0});
   const state = J_.newMatch({builds: m.builds, names: m.names, heroKeys: m.heroKeys, first: m.first, seed: m.seed});
   const catalog = Wr.makeCatalog(m.builds.flatMap(b => [...(b.deck || []), ...(b.gear || []), ...(b.startItem ? [b.startItem.card] : [])]));
   return {state, catalog};
 };
 /* the catalog a blind guest derives for a spec */
-const matchCatalog = spec => dealLikeThePage({...spec, seed: "blind|" + spec.seedC}).catalog;
+const matchCatalog = (spec, ctr0) => dealLikeThePage({...spec, seed: "blind|" + spec.seedC}, ctr0).catalog;
 module.exports = {dealLikeThePage, matchCatalog};

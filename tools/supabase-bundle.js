@@ -10,7 +10,7 @@
      node tools/supabase-bundle.js --check         exit 1 when anything built from an older tree is STALE
      node tools/supabase-bundle.js --stamp         record what was just deployed in server/supabase/DEPLOYED.json
                                                    (tracked; run it after a deploy, commit it)
-     node tools/supabase-bundle.js --out <dir>     write somewhere else
+     node tools/supabase-bundle.js --out <dir>     write somewhere else   (--stamp-file <path>: likewise for the stamp)
 
    WHAT COMES OUT (dist/)
      supabase/config.toml                      a one-function project: [functions.table] verify_jwt = false
@@ -38,7 +38,7 @@ const crypto = require("crypto");
 
 const ROOT = path.join(__dirname, "..");
 const TEMPLATE = path.join(ROOT, "server", "supabase", "entry.template.ts");
-const STAMP = path.join(ROOT, "server", "supabase", "DEPLOYED.json");
+const STAMP_DEFAULT = path.join(ROOT, "server", "supabase", "DEPLOYED.json");
 const DEFAULT_OUT = path.join(ROOT, "server", "supabase", "dist");
 const FN = "table";
 /* the page's scripts the referee does NOT need: the AI seat, the local table, the PeerJS room, the phone's own channel
@@ -122,6 +122,7 @@ function write(dir, out){
 function main(argv){
   const flag = n => argv.indexOf(n) >= 0;
   const outDir = flag("--out") ? path.resolve(argv[argv.indexOf("--out") + 1]) : DEFAULT_OUT;
+  const STAMP = flag("--stamp-file") ? path.resolve(argv[argv.indexOf("--stamp-file") + 1]) : STAMP_DEFAULT;
   const b = cut();
   if(flag("--stamp")){
     fs.writeFileSync(STAMP, JSON.stringify({note: "Written by `node tools/supabase-bundle.js --stamp` AFTER deploying the function. --check compares the tree to this.", build: b.build, digest: b.digest}, null, 2) + "\n");

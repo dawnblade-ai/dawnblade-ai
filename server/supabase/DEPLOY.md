@@ -20,7 +20,7 @@ goes is the dashboard's secrets screen (step 4), typed or pasted by you, on your
    and check a table named `tables` exists and shows a lock / "RLS enabled" and **no policies**. If it shows a
    policy, stop and ask: the row holds both seats' keys.
 3. **Deploy the function** named `referee`. The entry file does not exist yet (stage S3 writes it from
-   `server/supabase-entry.example.ts` and bundles `engine/*.js`, `server/referee.js` and `data/pool.js`, 1.4 MB).
+   `server/supabase/entry.template.ts` and bundles `engine/*.js`, `server/referee.js` and `data/pool.js`, 1.4 MB).
    Two ways, once it exists:
    - *Dashboard:* *Edge Functions* → *Deploy a new function* → *Via Editor* (UNVERIFIED that the editor takes a
      multi-file bundle this size), name it `referee`.
