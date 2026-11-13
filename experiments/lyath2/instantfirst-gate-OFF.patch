@@ -1,0 +1,304 @@
+diff --git a/engine/judge.js b/engine/judge.js
+index 699c6e8..cc93ef1 100644
+--- a/engine/judge.js
++++ b/engine/judge.js
+@@ -2224,6 +2224,45 @@ const landsNothing = (g, seat, uid, from) => {
+   const ops = (fx.ops || []).filter(o => o && o[0] !== "noop");
+   return ops.length > 0 && ops.every(o => opLandsNothing(g, seat, o, uid));
+ };
++/* ---- A FREE INSTANT THAT MAKES AN ATTACK IN HAND HIT HARDER (lyath2) ---------
++   For `sparring.js`, which reads no card text. An INSTANT costs no action point (CR 8.1.6),
++   so playing one before the turn's attack spends nothing the attack needs. It is worth
++   playing first when it changes the attack, and the engine can say so without reading a
++   word: play it on a COPY of the state, let it resolve, and ask `effPowerNow` (the one
++   gate reader `execute` itself uses) what each attack the seat could still pay for would
++   have now, against what it has before. Concealed Object ("the crowd boos you" when it
++   enters) raises Mocking Blow's printed 1 by the boo bonus.
++   `atks` is the policy's own list of {uid, from} attack cards in hand or arsenal, and
++   `fits(uid, except)` asks whether the seat could still pay for that attack with the hand
++   minus the instant (the instant may have been a pitch). Only a card of printed cost 0
++   (nothing to pay, no sheet), of the Instant type and not a reaction, legal now and
++   not idle (`landsNothing`), is tried; a play that opens a sheet or waits on the stack is
++   unreadable and counts for nothing. Answers {uid, from, gain} for the biggest gain of
++   at least 1, or null. Writes nothing. */
++const instantFirst = (g, seat, atks, fits) => {
++  const sd = at(g, seat);
++  const best = (st, except) => atks.reduce((m, x) => {
++    if(x.uid === except || (fits && !fits(x.uid, except))) return m;
++    const e = effPowerNow(st, seat, x.uid, x.from);
++    return e ? Math.max(m, e.power) : m;
++  }, 0);
++  const src = (sd.hand || []).map(c => ({c, from: "hand"})).concat(sd.arsenal ? [{c: sd.arsenal, from: "arsenal"}] : []);
++  let top = null;
++  src.filter(x => x.c && x.c.uid != null && !TY.isAttack(x.c) && !TY.isAR(x.c) && !TY.isDR(x.c)
++      && !(+x.c.cost > 0)
++      && legal(g, {t: "play", uid: x.c.uid, from: x.from}, seat) == null
++      && !landsNothing(g, seat, x.c.uid, x.from))
++    .sort((a, b) => String(a.c.uid) < String(b.c.uid) ? -1 : 1)
++    .forEach(x => {
++      const out = reduce(g, {t: "play", uid: x.c.uid, from: x.from}, seat);
++      if(out.error) return;
++      const st = out.state;
++      if(pendingOf(st) || st.prompt || (st.stack || []).length) return;
++      const gain = best(st, x.c.uid) - best(g, x.c.uid);
++      if(gain >= 1 && (!top || gain > top.gain)) top = {uid: x.c.uid, from: x.from, gain};
++    });
++  return top;
++};
+ /* ---- DOES THE ATTACK ON THE CHAIN ALREADY GO AGAIN? (QA-A H-5, ship/ai-misplays) ----
+    For `sparring.js`, which reads no card text. True when the open link has go
+    again now (`pend.ga`: its own printed keyword, a face-up arsenal grant such as
+@@ -4905,7 +4944,7 @@ function drawTo(g, i){
+ }
+ 
+ return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
+-        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
++        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, instantFirst, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
+         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
+         handFree: PR.handFree,
+         /* the card semantics seam (v2.77) */
+diff --git a/engine/sparring.js b/engine/sparring.js
+index 4199eb7..97713e9 100644
+--- a/engine/sparring.js
++++ b/engine/sparring.js
+@@ -150,7 +150,9 @@ const fixOn = (g, seat) => {
+    SPXWPNFIRST a grant played before the only attack left, a weapon swing it pumps,
+    SPXLABOARD a board term in Sharp's score (a permanent is worth its printed numbers, not -mu),
+    SPXEFFPOW a hand attack ranked on the power it has NOW (`judge.effPowerNow`: a self-pump
+-   whose gate is already true counts), not the power it prints. */
++   whose gate is already true counts), not the power it prints,
++   SPXINSTFIRST a free instant played before the attack it makes hit harder
++   (`judge.instantFirst`). */
+ const subGate = k => {
+   const v = (typeof process !== "undefined" && process.env && process.env[k]) || "";
+   return (g, seat) => {
+@@ -164,6 +166,15 @@ const subGate = k => {
+ const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate("SPXPAY"), idleOn = subGate("SPXIDLE"),
+       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
+       wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW");
++/* SPXINSTFIRST is OFF unless named (measured, unresolved: Lyath rule +0.18 wins/seed at 72 seeds, t 1.09,
++   every other hero byte-identical): unset or "none" = off, "all" = every seat, else a hero list. */
++const instFirstOn = (g, seat) => {
++  const v = (typeof process !== "undefined" && process.env && process.env.SPXINSTFIRST) || "";
++  if(!v || v === "none" || !fixOn(g, seat)) return false;
++  if(v === "all") return true;
++  const sd = g && g.sides && g.sides[seat];
++  return !!(sd && v.split(",").indexOf(sd.heroKey) >= 0);
++};
+ /* A card or ability that would land nothing right now is held (`judge.landsNothing`).
+    Noted so the call can say why the turn ends with it still in hand. */
+ const idleOK = (g, seat, uid, from) => {
+@@ -797,6 +808,26 @@ function offenceBase(g, seat, o){
+      Trot Along or Sharpen Steel 85 times in 28 games (her other cards were attack reactions).
+      Only then, only a grant a weapon swing takes (`judge.grantTakers`) is a candidate. */
+   const viaWeapon = !haveAtk && wpnFirstOn(g, seat) && weaponSwings(sd).some(a => legal(g, a, seat));
++  /* A FREE INSTANT THAT MAKES AN ATTACK HIT HARDER GOES BEFORE IT (SPXINSTFIRST). An instant
++     costs no action point, so it is free to play first, and it only helps the swing if it is on
++     the table when the swing is declared; this policy played every non-attack after the attack,
++     so Concealed Object's boo never reached the Mocking Blow it would have pumped.
++     `judge.instantFirst` answers which card, by playing it on a copy and asking the engine's own
++     effective-power reader what the attacks this seat can still pay for would be.
++     THE SEARCH SEAT KEEPS ITS OWN ORDER: Sharp plays this card itself when it pays, and a rule
++     move that already leads with it moved its default (Lyath's Sharp -0.50 at 6 seeds, t -2.2,
++     with the gate shared), so neither its rule move nor its rollouts take this branch. */
++  if(instFirstOn(g, seat) && !IN_SEARCH && !laGated(g, seat, o)){
++    const atks = from.filter(x => x.c && x.from !== "banish" && num(x.c, "power") > 0)
++      .map(x => ({uid: x.c.uid, from: x.from, c: x.c}));
++    const fits = (uid, except) => {
++      const x = atks.find(y => y.uid === uid);
++      return !!x && affordableWithin(Object.assign({}, sd, {hand: (sd.hand || []).filter(c => c && c.uid !== except)}), x.c, o)
++        && legal(g, {t: "play", uid, from: x.from, target: targetFor(g, seat, x.c)}, seat);
++    };
++    const k = atks.length ? J.instantFirst(g, seat, atks, fits) : null;
++    if(k) return tag("instantFirst", {t: "play", uid: k.uid, from: k.from});
++  }
+   if(haveAtk || viaWeapon){
+     const cands = from
+       .map(x => ({c: x.c, uid: x.c && x.c.uid, from: x.from}))
+@@ -1636,6 +1667,7 @@ const CALL_WHY = {
+   allyTake: "Attack the ally. This swing kills it, and an attack on an ally can't be blocked.",
+   allyIn: "Send your ally in.",
+   biggestAttack: "Swing the biggest attack you can afford.",
++  instantFirst: "Play the instant before you swing. It costs no action point, and with it out your attack hits harder than it would now.",
+   effPower: "Swing the attack that hits hardest right now. Its bonus is already live, so it is bigger than the number printed on it.",
+   grantWait: "Swing the biggest attack you can afford, without the card that would pump it. Its cost can't be paid beside the attack's, so it stays in your hand.",
+   grantHold: "Keep the card that pumps your next attack. You can't pay for the attack it would pump this turn, and nothing else it does is within reach, so it waits.",
+diff --git a/test/explain.test.js b/test/explain.test.js
+index ee01df3..0e90ee9 100644
+--- a/test/explain.test.js
++++ b/test/explain.test.js
+@@ -140,12 +140,13 @@ test("every reason is keyed from a site in the policy, and the census names what
+      `laBoard` (ship/sharp-board) is a search reason like the other `la*`: the census runs the rule
+      policy, so test/sharpboard.test.js reaches it.
+      SPXEFFPOW (a hand attack ranked on the power it has now) re-routes the census: `effPower` is reached, and
+-     `grantKeep` is out of reach again (test/grantwait.test.js drives it). */
++     `grantKeep` is out of reach again (test/grantwait.test.js drives it).
++     SPXINSTFIRST is off unless named, so `instantFirst` is out of reach (test/instantfirst.test.js drives it). */
+   const seen = census().keys;
+   for(const k of Object.keys(seen)) assert.ok(SP.CALL_WHY[k], "reached key " + k + " has no reason");
+   assert.deepEqual(keys.filter(k => !seen[k]).sort(),
+     ["abtarget", "addPayNo", "allocAll", "allyTake", "answer", "arenaAP", "arenaRes", "arsenalSkip", "boostNo",
+-     "chargeDone", "chargeMore", "chargeNone", "discost", "gateFirst", "grantKeep", "laBlock", "laBoard", "laHit", "laHold", "laKeep", "laSafe", "laTake", "lookOwn",
++     "chargeDone", "chargeMore", "chargeNone", "discost", "gateFirst", "grantKeep", "instantFirst", "laBlock", "laBoard", "laHit", "laHold", "laKeep", "laSafe", "laTake", "lookOwn",
+      "payCancel", "pitchChi"]);
+ });
+ 
+diff --git a/test/instantfirst.test.js b/test/instantfirst.test.js
+new file mode 100644
+index 0000000..a72a954
+--- /dev/null
++++ b/test/instantfirst.test.js
+@@ -0,0 +1,153 @@
++/* ============================================================
++   A FREE INSTANT THAT MAKES AN ATTACK HIT HARDER GOES BEFORE IT (instantfirst)
++
++   `judge.instantFirst(g, seat, atks, fits)` plays each free Instant-typed non-attack in hand
++   on a COPY of the state and asks `effPowerNow` what the attacks the seat could still pay
++   for would be, before and after. Concealed Object ("the crowd boos you" when it enters)
++   turns Mocking Blow's printed 1 into 5. The policy gate SPXINSTFIRST is OFF unless named.
++
++   Each drill asks for the number that moved AND for the refusal: the crowd already booed
++   (nothing moves), an attack that does not care (nothing moves), an attack the seat could
++   not pay for without the instant, an instant that costs something, a reader that writes.
++   Sabotages applied once each, by hand, and restored (see the commit message).
++   ============================================================ */
++const test = require("node:test");
++const assert = require("node:assert/strict");
++
++const H = require("./helpers/judged.js");
++const skip = !H.hasDb() && "no cached card database";
++const SPP = () => require("../tools/selfplay.js");
++const J = H.J;
++
++const side = (g, i, o) => ({...g, sides: g.sides.map((s, k) => k === i ? {...s, ...o} : s)});
++function find(name){
++  const {match, W} = SPP();
++  for(const h of W.HEROES){
++    const g = match(h.k, h.k === "kayo" ? "dash" : "kayo", "if-" + name, 0);
++    const c = g.sides[0].deck.find(x => x.name === name);
++    if(c) return {g, c};
++  }
++  throw new Error("no deck holds " + name);
++}
++const atkOf = (c, from) => ({uid: c.uid, from: from || "hand"});
++const yes = () => true;
++const setup = (hist) => {
++  const {g, c: co} = find("Concealed Object");
++  const {c: mb} = find("Mocking Blow");
++  const {c: alt} = find("Walk in My Shoes");
++  const st = side(g, 0, {hand: [co, mb], arsenal: null, res: 0, ap: 1, hist: {...g.sides[0].hist, ...(hist || {})}});
++  return {g, co, mb, alt, st};
++};
++
++test("the instant that makes the crowd boo is chosen, with the gain it buys", {skip}, () => {
++  const {co, mb, st} = setup();
++  const printed = require("../engine/parser.js").fxParse(mb).conds.find(e => e.cond === "booed").op[1];
++  const k = J.instantFirst(st, 0, [atkOf(mb)], yes);
++  assert.ok(k, "Concealed Object is worth playing first");
++  assert.equal(k.uid, co.uid);
++  assert.equal(k.from, "hand");
++  assert.equal(k.gain, printed, "the gain is Mocking Blow's own boo bonus");
++});
++
++test("the crowd has already booed: nothing moves, so nothing is chosen", {skip}, () => {
++  const {mb, st} = setup({booed: 1});
++  assert.equal(J.instantFirst(st, 0, [atkOf(mb)], yes), null);
++});
++
++test("an attack that does not care what the crowd did: nothing is chosen", {skip}, () => {
++  const {g, co, alt} = setup();
++  const st = side(g, 0, {hand: [co, alt], arsenal: null, res: 0, ap: 1});
++  assert.equal(J.instantFirst(st, 0, [atkOf(alt)], yes), null);
++});
++
++test("an attack the seat could not pay for without the instant is not counted", {skip}, () => {
++  const {co, mb, st} = setup();
++  assert.equal(J.instantFirst(st, 0, [atkOf(mb)], () => false), null, "no payable attack: no gain");
++  assert.equal(J.instantFirst(st, 0, [], yes), null, "no attack at all");
++  const seen = [];
++  J.instantFirst(st, 0, [atkOf(mb)], (uid, except) => { seen.push([uid, except]); return true; });
++  assert.ok(seen.some(([u, e]) => u === mb.uid && e === co.uid), "affordability is asked with the instant set aside");
++});
++
++test("an instant that costs something is not tried", {skip}, () => {
++  const {g, mb} = setup();
++  const {c: ta} = find("Tension in the Air");
++  assert.ok(+ta.cost > 0, "Tension in the Air prints a cost");
++  const st = side(g, 0, {hand: [ta, mb], arsenal: null, res: 4, ap: 1});
++  assert.equal(J.instantFirst(st, 0, [atkOf(mb)], yes), null);
++});
++
++test("a card that prints a cost is not tried even when the pool floats enough to pay it", {skip}, () => {
++  const {g, co, mb} = setup();
++  const paid = {...co, cost: 1};
++  const st = side(g, 0, {hand: [paid, mb], arsenal: null, res: 1, ap: 1});
++  assert.equal(J.legal(st, {t: "play", uid: paid.uid, from: "hand"}, 0), null, "legal: the pool pays for it");
++  assert.equal(J.instantFirst(st, 0, [atkOf(mb)], yes), null);
++  const free = side(g, 0, {hand: [co, mb], arsenal: null, res: 1, ap: 1});
++  assert.ok(J.instantFirst(free, 0, [atkOf(mb)], yes), "the same card at its printed cost 0 is chosen");
++});
++
++test("a free card that is NOT an Instant spends the action point and is not tried", {skip}, () => {
++  const {g, mb} = setup();
++  const {c: bz} = find("Booze!");
++  assert.ok(!(+bz.cost > 0), "Booze! is free");
++  const st = side(g, 0, {hand: [bz, mb], arsenal: null, res: 0, ap: 1});
++  const before = J.effPowerNow(st, 0, mb.uid, "hand").power;
++  assert.equal(J.instantFirst(st, 0, [atkOf(mb)], yes), null);
++  assert.ok(before > 0);
++});
++
++test("it writes nothing", {skip}, () => {
++  const {mb, st} = setup();
++  const before = JSON.stringify(st);
++  J.instantFirst(st, 0, [atkOf(mb)], yes);
++  assert.equal(JSON.stringify(st), before);
++});
++
++function policy(env){
++  const {execFileSync} = require("node:child_process");
++  const prog = `
++    const {match, W} = require("./tools/selfplay.js"); const SP = require("./engine/sparring.js");
++    const g0 = match("lyath", "kayo", "if-policy", 0);
++    const pick = n => g0.sides[0].deck.find(x => x.name === n);
++    const co = pick("Concealed Object"), mb = pick("Mocking Blow"), alt = pick("Walk in My Shoes");
++    const g = {...g0, sides: g0.sides.map((s, k) => k ? s : {...s, hand: [co, mb, alt], arsenal: null, res: 0, ap: 1})};
++    const r = SP.explain(g, 0); console.log(JSON.stringify({uid: r.action.uid, key: r.key, co: co.uid, mb: mb.uid, alt: alt.uid, line: r.line || null}));`;
++  return JSON.parse(execFileSync(process.execPath, ["-e", prog],
++    {cwd: require("node:path").join(__dirname, ".."), env: {...process.env, ...env}}).toString().trim());
++}
++
++test("gate on: the rule policy plays the instant first and says why", {skip}, () => {
++  const out = policy({SPXINSTFIRST: "lyath"});
++  assert.equal(out.uid, out.co);
++  assert.equal(out.key, "instantFirst");
++});
++
++test("gate off (the default): the attack leads, as before", {skip}, () => {
++  const out = policy({SPXINSTFIRST: ""});
++  assert.notEqual(out.uid, out.co, "off: the instant waits behind the attack");
++  assert.notEqual(out.key, "instantFirst");
++  const none = policy({SPXINSTFIRST: "none"});
++  assert.deepEqual(none, out, "none is the same as unset");
++});
++
++test("a hero list names seats: another hero's seat does not take the branch", {skip}, () => {
++  const out = policy({SPXINSTFIRST: "kayo"});
++  assert.notEqual(out.key, "instantFirst");
++});
++
++test("the search seat keeps its own order: the branch is not taken when search is asked for", {skip}, () => {
++  const {execFileSync} = require("node:child_process");
++  const prog = `
++    const {match} = require("./tools/selfplay.js"); const SP = require("./engine/sparring.js");
++    const g0 = match("lyath", "kayo", "if-policy", 0);
++    const pick = n => g0.sides[0].deck.find(x => x.name === n);
++    const co = pick("Concealed Object"), mb = pick("Mocking Blow");
++    const g = {...g0, sides: g0.sides.map((s, k) => k ? s : {...s, hand: [co, mb], arsenal: null, res: 0, ap: 1})};
++    const r = SP.explain(g, 0, {search: false}), q = SP.explain(g, 0, {search: true});
++    console.log(JSON.stringify({rule: r.key, sharp: q.key}));`;
++  const out = JSON.parse(execFileSync(process.execPath, ["-e", prog],
++    {cwd: require("node:path").join(__dirname, ".."), env: {...process.env, SPXINSTFIRST: "all"}}).toString().trim());
++  assert.equal(out.rule, "instantFirst", "Steady takes it");
++  assert.notEqual(out.sharp, "instantFirst", "Sharp decides by its own search, under its own key");
++});

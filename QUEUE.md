@@ -9,12 +9,12 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-13, at v6.24)
+## HANDOFF — START HERE (CEO, 2026-11-13, at v6.25)
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
-- **Live: v6.24** (WIRE_V 40, DATA_VER sage-v17). Progress reports: `docs/progress/v6.23.md`, `v6.24.md`.
+- **Live: v6.25** (WIRE_V 40, DATA_VER sage-v17). Progress reports: `docs/progress/v6.24.md`, `v6.25.md`.
 - **CEO since 2026-11-13: `session_013xG9xCPR11GYcDV7QGiWyX`** (Fable; user asked for LOW CONTEXT and the cheapest
   agents: in-session haiku/sonnet subagents did v6.23; the two Opus workers were NOT woken, still standing by).
 - **MISSION (user, 2026-11-07):** the ultimate FaB Silver Age precon competitive gaming environment and
@@ -55,7 +55,27 @@ Rule: Lyath +0.67 @24 (t 2.64); fai/bravo/viserai/iyslander/boltyn noise @24, bl
 byte-identical. Sharp @6: lyath +1.33 (t 1.58), no loss. Ladder 0/0/0. NOT RE-RUN: the 4x-throttled phone p95
 (unthrottled 12-18 ms per searched decision; step cap untouched). Probes: `experiments/effpow-*`, `sharp-ab/`.
 Lyath's remaining gap: activate-first (133 diffs) and free non-attack first (65) classes — undiagnosed.
-**NEEDS A RULING still open (asked 2026-11-13):** Preserve Tradition / Pass Over with no legal target.
+**v6.25:** (i) RULING (user, 2026-11-13) no legal target -> unplayable; was already built at v6.00, gap closed for
+Scuttle Toes' ability (`effects.playTargetWhy` untapAlly). ASKED, unanswered: confirm it covers Edict of Steel,
+Preserve Tradition, Pass Over, A Drop in the Ocean (independent effects). (ii) SERVER S1: `server/referee.js`
+`handle(request, deps)` — stateless, rehydrates the hub from a stored row per request, version check, per-seat
+broadcast; fakes `test/helpers/serverfakes.js`; drill `test/serverref.test.js`; ~20 ms/action, cold 82-93 ms
+(Node/Deno), row <= 77 KB; log `server/S1-LOG.md`. (iii) LEAK FIXED: uid-KEYED maps (`weaponUsed`, `counters`,
+`hist.wpnHits`) are redacted in `view.js` `redactKeyed`; charge pending `picked` scrubbed in `referee.js`;
+scanners now read uids inside KEYS. 210-pair sweep clean.
+**SERVER = SUPABASE (user, 2026-11-13).** Project `https://fokcpzplomjsraquaaid.supabase.co`, publishable key
+`sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu` (both public). Host is on the env allowlist; auth health 200,
+no functions deployed, anonymous sign-ins OFF. NEVER ask for the service-role key or an access token in chat
+(request_credential or dashboard). PLAN: S2 page transport + "join a server table" vs the fake (no account
+needed) -> S3 SQL migration + deploy + two-phone smoke + keep-alive ping (free projects pause ~7 idle days)
+-> S4 anonymous sign-in, seat = auth.uid() -> S5 = H4 ranked. Supabase API details are UNVERIFIED (docs
+unreachable; verify at S3). ASKED, unanswered: casual table first? paused-project fallback to the direct
+table OK? deploy via this env (needs api.supabase.com + token) or the user's dashboard?
+**H-LYATH2 DIAGNOSED, PARKED** (`experiments/lyath2-NOTES.md`): Sharp's pre-attack plays are all Instants or
+the hero ability. Ceilings @12: free instant first +1.83, hero ability first +1.17. Blanket rules lose (always
+hero ability first -2.17). `judge.instantFirst` (SPXINSTFIRST, dry-run + effPowerNow) faded: +0.92 @12, +0.58
+@24, +0.18 @72 (t 1.09) -> NOT shipped (`experiments/lyath2-instantfirst-ship-OFF.patch`). LEAD: Suspense is an
+aura pumping the first attack each turn; effPowerNow cannot see aura pumps.
 
 **CLOSED / PARKED (v6.16 wave):**
 - **H-OVERBLOCK** CLOSED, not a misplay: filter −1.83 (t −3.19); Sharp price SPXOBPRICE 1/2/4 → +0.00/−0.17/−1.17.

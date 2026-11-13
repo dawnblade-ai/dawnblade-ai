@@ -1,0 +1,105 @@
+diff --git a/engine/judge.js b/engine/judge.js
+index 699c6e8..44da851 100644
+--- a/engine/judge.js
++++ b/engine/judge.js
+@@ -2224,6 +2224,23 @@ const landsNothing = (g, seat, uid, from) => {
+   const ops = (fx.ops || []).filter(o => o && o[0] !== "noop");
+   return ops.length > 0 && ops.every(o => opLandsNothing(g, seat, o, uid));
+ };
++/* ---- WHICH INSTANTS COULD GO BEFORE THE ATTACK? (lyath2) --------------------
++   For `sparring.js`, which reads no card text. An INSTANT costs no action point (CR 8.1.6),
++   so playing one before the turn's attack spends nothing the attack needs, and an instant that
++   changes the attack (an aura that pumps the first attack, an item that makes the crowd boo)
++   only does so if it is on the table first. Answers, cheapest first then by uid, each hand or
++   arsenal card whose printed type is Instant (a non-attack, not a reaction), that is legal to
++   play now, would land something (`landsNothing`) and costs at most `o.maxCost` printed. */
++const instantsFirst = (g, seat, o) => {
++  const sd = at(g, seat), maxCost = o && o.maxCost != null ? o.maxCost : 0;
++  const src = (sd.hand || []).map(c => ({c, from: "hand"})).concat(sd.arsenal ? [{c: sd.arsenal, from: "arsenal"}] : []);
++  return src.filter(x => x.c && x.c.uid != null && TY.isInstant(x.c) && !TY.isAttack(x.c) && !TY.isAR(x.c) && !TY.isDR(x.c)
++      && (+x.c.cost || 0) <= maxCost
++      && legal(g, {t: "play", uid: x.c.uid, from: x.from}, seat) == null
++      && !landsNothing(g, seat, x.c.uid, x.from))
++    .sort((a, b) => ((+a.c.cost || 0) - (+b.c.cost || 0)) || (String(a.c.uid) < String(b.c.uid) ? -1 : 1))
++    .map(x => ({uid: x.c.uid, from: x.from, cost: +x.c.cost || 0}));
++};
+ /* ---- DOES THE ATTACK ON THE CHAIN ALREADY GO AGAIN? (QA-A H-5, ship/ai-misplays) ----
+    For `sparring.js`, which reads no card text. True when the open link has go
+    again now (`pend.ga`: its own printed keyword, a face-up arsenal grant such as
+@@ -4905,7 +4922,7 @@ function drawTo(g, i){
+ }
+ 
+ return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
+-        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
++        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, instantsFirst, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
+         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
+         handFree: PR.handFree,
+         /* the card semantics seam (v2.77) */
+diff --git a/engine/sparring.js b/engine/sparring.js
+index 4199eb7..659e2c5 100644
+--- a/engine/sparring.js
++++ b/engine/sparring.js
+@@ -163,7 +163,7 @@ const subGate = k => {
+ };
+ const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate("SPXPAY"), idleOn = subGate("SPXIDLE"),
+       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
+-      wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW");
++      wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW"), instOn = subGate("SPXINST");
+ /* A card or ability that would land nothing right now is held (`judge.landsNothing`).
+    Noted so the call can say why the turn ends with it still in hand. */
+ const idleOK = (g, seat, uid, from) => {
+@@ -797,6 +797,40 @@ function offenceBase(g, seat, o){
+      Trot Along or Sharpen Steel 85 times in 28 games (her other cards were attack reactions).
+      Only then, only a grant a weapon swing takes (`judge.grantTakers`) is a candidate. */
+   const viaWeapon = !haveAtk && wpnFirstOn(g, seat) && weaponSwings(sd).some(a => legal(g, a, seat));
++  /*HEROFHACK*/ if(process.env.SPXHEROF && subGate("SPXHEROF")(g, seat) && sd.ap > 0 && J.abWindowOf(g, seat, "hpow") === "instant"
++      && legal(g, {t: "activate", from: "hero", uid: "hpow"}, seat) && idleOK(g, seat, "hpow", "hero")){
++    const maxLoss = +(process.env.SPXHEROLOSS || 1);
++    let n = J.reduce(g, {t: "activate", from: "hero", uid: "hpow"}, seat), ok = false;
++    if(!n.error){ let st = n.state;
++      for(let i = 0; i < 8 && (J.pendingOf(st) || st.prompt); i++){ const a = actBase(st, seat, o); if(!a) break; const r2 = J.reduce(st, a, seat); if(r2.error) break; st = r2.state; }
++      const s2 = st.sides[seat], lost = (sd.hand || []).length - (s2.hand || []).length;
++      const w2 = weaponSwings(s2).some(a => legal(st, a, seat));
++      const swing2 = w2 || (s2.hand || []).concat(s2.arsenal ? [s2.arsenal] : []).some(c => c && num(c, "power") > 0 && affordableWithin(s2, c, o));
++      const best = (gg, S, own) => (S.hand || []).concat(S.arsenal ? [S.arsenal] : []).reduce((m, c) => { if(!c || !(num(c, "power") > 0)) return m;
++        const from2 = S.arsenal && S.arsenal.uid === c.uid ? "arsenal" : "hand"; const e = J.effPowerNow(gg, seat, c.uid, from2);
++        return Math.max(m, e && e.power != null ? e.power : num(c, "power")); }, 0);
++      const gain = best(st, s2) - best(g, sd);
++      ok = !J.pendingOf(st) && !st.prompt && lost <= maxLoss && swing2 && gain >= +(process.env.SPXHEROGAIN || 0) && (haveAtk || weaponSwings(sd).some(a => legal(g, a, seat))); }
++    if(ok) return tag("heroFirst", {t: "activate", from: "hero", uid: "hpow"});
++  }
++  /*INSTHACK*/ if(instOn(g, seat)){
++    const wpn = weaponSwings(sd).some(a => legal(g, a, seat));
++    const ins = J.instantsFirst(g, seat, {maxCost: +(process.env.SPXINSMAX || 0)}).filter(x => idleOK(g, seat, x.uid, x.from)).find(x => {
++      const sdm = Object.assign({}, sd, {hand: (sd.hand || []).filter(c => c && c.uid !== x.uid)});
++      const atkOK = wpn || from.some(y => y.c && y.c.uid !== x.uid && num(y.c, "power") > 0 && affordableWithin(sdm, y.c, o)
++        && legal(g, {t: "play", uid: y.c.uid, from: y.from, target: targetFor(g, seat, y.c)}, seat));
++      return atkOK && affordableWithin(sd, (sd.hand || []).concat(sd.arsenal ? [sd.arsenal] : []).find(c => c.uid === x.uid), o); });
++    let insOk = true;
++    if(ins && process.env.SPXINSGAIN){
++      const r1 = J.reduce(g, {t: "play", uid: ins.uid, from: ins.from}, seat); let st = r1.error ? null : r1.state;
++      for(let i = 0; st && i < 8 && (J.pendingOf(st) || st.prompt); i++){ const a = actBase(st, seat, o); if(!a) { st = null; break; } const r2 = J.reduce(st, a, seat); if(r2.error){ st = null; break; } st = r2.state; }
++      const bestE = (gg, S) => (S.hand || []).concat(S.arsenal ? [S.arsenal] : []).reduce((m, c) => { if(!c || !(num(c, "power") > 0)) return m;
++        const f2 = S.arsenal && S.arsenal.uid === c.uid ? "arsenal" : "hand"; const e = J.effPowerNow(gg, seat, c.uid, f2);
++        return Math.max(m, e && e.power != null ? e.power : num(c, "power")); }, 0);
++      if(!st || bestE(st, st.sides[seat]) - bestE(g, sd) < +process.env.SPXINSGAIN) insOk = false;
++    }
++    if(ins && insOk) return tag("instantFirst", {t: "play", uid: ins.uid, from: ins.from});
++  }
+   if(haveAtk || viaWeapon){
+     const cands = from
+       .map(x => ({c: x.c, uid: x.c && x.c.uid, from: x.from}))
+@@ -1549,6 +1583,13 @@ function act(g, seat, o){
+   if(!a0 || !laPoint(g, seat)) return a0;
+   const b = laSearch(g, seat, a0);
+   if(!b || !legal(g, b.a, seat)) return a0;
++  /*OVRHACK*/ if(process.env.SPXOVR){ const sd = g.sides[seat], a = b.a;
++    const c = a.uid != null && a.uid !== "hpow" ? cardIn(sd, a.uid) : null;
++    const cl = a.t === "endTurn" ? "END" : a.uid === "hpow" ? "HERO" : a.t === "activate" ? (c && num(c, "power") > 0 ? "WPN" : "ACT")
++      : c && num(c, "power") > 0 ? "ATK" : (num(c, "cost") === 0 ? "NONFREE" : "NONPAID");
++    const r0 = a0.t === "endTurn" ? "END" : a0.uid === "hpow" ? "HERO" : a0.t === "activate" ? "WPN" : (cardIn(sd, a0.uid) && num(cardIn(sd, a0.uid), "power") > 0 ? "ATK" : "NON");
++    if(process.env.SPXOVR.split(",").indexOf(cl) < 0) return a0;
++    if(process.env.SPXOVR_R && process.env.SPXOVR_R.split(",").indexOf(r0) < 0) return a0; }
+   return tag(laWhy(b), b.a);
+ }
+ 
