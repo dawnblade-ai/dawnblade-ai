@@ -34,7 +34,8 @@
   then swept all 210 ordered hero pairs (one seed each, `judgetable.judgedGame`): they also found `pending.picked`
   (a charge's chosen cards, bare uids, on V of the Vanguard; four games), fixed by adding `picked` to `referee.js`'s
   `UID_KEY`, and `tokSeq` equal to a hidden gear uid at Enigma's first snapshot (fourteen games): a counter, not a
-  card, so the scanners skip it. No WIRE_V bump: the redactions only remove or replace values inside a view; no payload
+  card, so the scanners skip it. The same sweep on the final code with a fresh seed per pair: 210 games, 0 hits, all
+  finished, 0 fingerprint mismatches. No WIRE_V bump: the redactions only remove or replace values inside a view; no payload
   or prompt shape changed. Ladder `npm run play '' '' 1` is byte-identical to the commit before (the ladder never
   reads a view); Sharp's root differs from v5.37's deal at 3 of 6,500 sampled positions, all this redaction.
 
