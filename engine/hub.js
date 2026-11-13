@@ -186,7 +186,17 @@ function createHub(o){
   }
 
   /* ---- start: a fresh table, or a resumed one -------------------------- */
-  if(o.resume){
+  if(o.resume && !o.resume.spec){
+    /* A TABLE THAT HAS NOT DEALT (a server that rehydrates per request keeps
+       the lobby between frames): replay the lobby log, silently — nothing is
+       sent and nothing deals; the frame that made the lobby ready dealt it
+       in its own request, and `persistTable` then kept the game instead. */
+    seedH = o.resume.seedH;
+    for(const m of (o.resume.lobLog || [])){
+      const r = L.reduce(lob, m);
+      if(!r.error){ lob = r.state; lobLog.push(m); }
+    }
+  } else if(o.resume){
     seedH = o.resume.seedH; spec = o.resume.spec;
     const d = o.deal({...spec, seed: SHA.seedOf(seedH, spec.seedG)});
     startSession(d.state, d.catalog, o.resume.saved);
@@ -205,6 +215,13 @@ function createHub(o){
     /* what the judge's device keeps so a reload resumes the game: the spec,
        its secret half of the seed, and the referee's saved game */
     persist: () => sess && spec ? {judge: true, spec, seedH, keys: keys.slice(), saved: sess.persist()} : null,
+    /* `persist`, or — before the deal — the lobby: what a stateless server
+       stores after every frame (`resume` takes either). The page's own
+       `persist` is unchanged (null until dealt). */
+    persistTable(){
+      if(sess && spec) return {judge: true, spec, seedH, keys: keys.slice(), saved: sess.persist()};
+      return {judge: true, spec: null, seedH, keys: keys.slice(), lobLog: lobLog.slice()};
+    },
     tick(){ if(sess) sess.tick(); },
     /* the seed's secret half — the drills' and a post-game screen's; it is
        sent to the players only with the reveal */

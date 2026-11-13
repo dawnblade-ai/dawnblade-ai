@@ -327,6 +327,11 @@ function createReferee(o){
   let state = o.state, seq = 0;
   const log = [];
   const sent = {};          /* seat -> the last view that seat was sent */
+  /* A referee REBUILT from storage (`restore`) has forgotten `sent`. A server
+     that rebuilds on every request would otherwise send every commit as the
+     whole view (measured ~90 KB late in a game). It was sent the previous
+     state's view — every action goes through here — so that IS the base. */
+  let rebuilt = false;
   const violations = [];
 
   const audit = st => { if(!check) return; try { for(const v of check(st) || []) violations.push({seq, ...v}); } catch(_){} };
@@ -347,6 +352,7 @@ function createReferee(o){
     if(why) return {error: why};
     const r = reduce(state, action, seat);
     if(r.error) return {error: r.error};
+    const prev = state;
     state = r.state;
     seq++;
     log.push({seq, seat, action: json(action)});
@@ -354,7 +360,7 @@ function createReferee(o){
     const commits = {};
     for(const s of seats){
       const v = SV(state, s);
-      const base = sent[s];
+      const base = sent[s] || (rebuilt ? SV(prev, s) : null);
       sent[s] = v;
       commits[s] = {seq, seat, action: RA(action, state, s),
                     d: base ? delta(base, v, catalog) : null, h: W.hash(v),
@@ -375,7 +381,7 @@ function createReferee(o){
        so its screen shows exactly what the guest's would from that chair. */
     view: seat => SV(state, seat),
     /* Load a persisted referee (the host's phone was backgrounded). */
-    restore(saved){ state = saved.state; seq = saved.seq; log.length = 0; log.push(...(saved.log || [])); for(const k of Object.keys(sent)) delete sent[k]; },
+    restore(saved){ state = saved.state; seq = saved.seq; log.length = 0; log.push(...(saved.log || [])); for(const k of Object.keys(sent)) delete sent[k]; rebuilt = true; },
     persist: () => ({state, seq, log: log.slice()})
   };
 }
