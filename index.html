@@ -901,10 +901,13 @@ img{display:block;max-width:100%}
    database + typographic fallbacks. Not affiliated with LSS.
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
-/* THE HOSTED REFEREE (SERVER S2, RULING user 2026-11-13: Supabase). Both values are PUBLIC by design (the key
-   is the project's publishable one) and are config, not a secret. Nothing is requested until a player opens a
-   server table; until the function is deployed the page reads "unavailable" and offers the direct table. */
-window.SERVER_CFG = {url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "referee"};
+/* THE HOSTED REFEREE (SERVER S2/S3, RULING user 2026-11-13: Supabase). ONE switch. `on:false` (the shipped state until the
+   function is deployed): the table screen does not offer a server table at all and no server code path can start — no
+   request, no script tag. `on:true`: the server-table button appears and the page talks to <url>/functions/v1/<fn>.
+   `url` and `key` are PUBLIC by design (the project's address and its publishable key) — config, not a secret; the
+   service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
+   release that deploys the function (server/supabase/DEPLOY.md). */
+window.SERVER_TABLE = {on: false, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
 window.APP_VER = "6.25"; /* v6.25 - a card that needs a target can no longer be played without one, and the other seat can no longer tell which hidden card you used earlier. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
@@ -1572,8 +1575,8 @@ window.TROPHIES = [
      net.js, so it loads after both. -->
 <script src="engine/hub.js"></script>
 <!-- A TABLE ON THE HOSTED REFEREE (SERVER S2): the phone's end of the hosted referee, as the same
-     channel the two-phone table uses. Reached as DawnServerTable.* only. It needs no other engine
-     module, loads its real transport (supabase-js) lazily on the first server table, and a
+     channel the two-phone table uses. Reached as DawnServerTable.* only. It needs only sha256.js (the
+     channel's name and seal), loads its real transport (supabase-js) lazily on the first server table, and a
      missing server reads "unavailable" on one screen. -->
 <script src="engine/servertable.js"></script>
 <script>
@@ -7007,11 +7010,13 @@ function TableScreen({onBack, onSeated}){
     code:"A table code is "+DawnServerTable.CODE_LEN+" letters and numbers.",
     exists:"That code is taken — try again."
   };
+  const srvOn = !!(window.SERVER_TABLE && window.SERVER_TABLE.on === true);   /* the switch (data script): off, nothing below can start */
   const srvSit = (how, c, role) => {
+    if(!srvOn) return;
     setErr(null); setGone(false); setBusy(true); setStat("srv-connecting");
     const open = how==="create" ? DawnServerTable.startTable : how==="join" ? DawnServerTable.sitAt : DawnServerTable.reclaim;
     open({
-      transport: DawnServerTable.defaultTransport(window.SERVER_CFG), keep: store, code: c,
+      transport: DawnServerTable.defaultTransport(window.SERVER_TABLE), keep: store, code: c,
       tune: {pollMs: 20000},
       onStatus: s=>{ if(!live.current) return; setStat("srv-"+s);
         if(s==="seated" && waitRef.current){ const w = waitRef.current; waitRef.current = null; w.go(); } }
@@ -7118,7 +7123,7 @@ function TableScreen({onBack, onSeated}){
         </div>
         {/* THE SERVER TABLE (SERVER S2): the same game, but the referee is a program on the web, so the two
             phones never need to reach each other. */}
-        <div className="tblrow"><button className="bigbtn alt" onClick={()=>{ setErr(null); setGone(false); setMode("srv"); }}>Join a server table</button></div>
+        {srvOn && <div className="tblrow"><button className="bigbtn alt" onClick={()=>{ setErr(null); setGone(false); setMode("srv"); }}>Join a server table</button></div>}
         {/* This said "the drill decks — blank cards" until v2.52, which was
             true before v2.49 and has been wrong since: the table negotiates a
             hero, a throw and a sideboard and runs two real decks. Stale copy
@@ -7139,11 +7144,11 @@ function TableScreen({onBack, onSeated}){
           deck or the next draw. The host's phone could look, so play people you trust.
           When the game ends, the guest can verify every shuffle and draw.
         </p>
-        <p className="mnote">
+        {srvOn && <p className="mnote">
           <strong>A server table needs no direct link.</strong> The referee runs on the web and holds the deck,
           so neither phone can look at the other's hand. Whoever runs the server could look; every shuffle is
           still checkable when the game ends.
-        </p>
+        </p>}
         {/* THE HONEST LINE FOR A JUDGED TABLE (HIDDEN HANDS H3) */}
         <p className="mnote">
           <strong>At a judged table, the judge's device holds the deck.</strong> A third

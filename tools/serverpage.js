@@ -119,6 +119,28 @@ async function toServerChooser(page){
     await context.route(/supabase\.co/, route => { hits++; route.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ message: "Requested function was not found" }) }); });
     row(hits === 0, "the page loaded without one request to the server project (lazy)", "hits " + hits);
     await page.evaluate(() => { delete window.__dawnServerTransport; });
+
+    /* THE SWITCH (index.html window.SERVER_TABLE.on). The shipped value, then OFF forced, then ON forced. */
+    const cfg = await page.evaluate(() => JSON.parse(JSON.stringify(window.SERVER_TABLE || null)));
+    row(!!cfg && typeof cfg.on === "boolean" && cfg.fn === "table" && /^https:\/\/[a-z0-9]+\.supabase\.co$/.test(cfg.url) && /^sb_publishable_/.test(cfg.key),
+        "the switch: window.SERVER_TABLE is {on, url, key, fn:'table'} with a publishable key", "shipped on=" + (cfg && cfg.on));
+    const offState = async (label) => {
+      await page.evaluate(() => { window.SERVER_TABLE.on = false; });
+      await page.getByRole("button", { name: /^Find an opponent/ }).click();
+      await page.waitForSelector(".tblwrap");
+      const t = await text(page);
+      if(process.env.DEBUG_DRIVE) console.log("OFF TEXT:", t.match(/.{0,60}server.{0,60}/gi));
+      row(!/server table/i.test(t) && (await boxes(page, ".tblwrap button")).every(b => !/server/i.test(b.t)) && /open a table/i.test(t), label + ": OFF - the table screen offers no server table at all (no button, no blurb), the direct options are there");
+      row(hits === 0, label + ": OFF - no request to the project", "hits " + hits);
+      row(await overflow(page), label + ": OFF - no horizontal overflow"); await thumbs(page, label + " (off)");
+      /* and no server code path can start: the page's own transport, off, is inert */
+      const r = await page.evaluate(async () => { const t = DawnServerTable.defaultTransport(window.SERVER_TABLE); try { await t.post({ op: "create" }); return "answered"; } catch(e){ return e.why || "?"; } });
+      row(r === "unavailable" && hits === 0, label + ": OFF - the transport the page would use answers unavailable without a request", r + ", hits " + hits);
+      await click(page, btn(page, /^Back/), "back out of the table screen");
+      await page.waitForSelector("button:has-text('Find an opponent')");
+    };
+    await offState("switch");
+    await page.evaluate(() => { window.SERVER_TABLE.on = true; });
     await page.getByRole("button", { name: /^Find an opponent/ }).click();
     await page.waitForSelector(".tblwrap");
     const home = await text(page);
@@ -151,7 +173,7 @@ async function toServerChooser(page){
   const build = await page.evaluate(() => TABLE_BUILD);
   const world2 = makeWorld({ seedKey: "page", build, deal: dealLikeThePage });
   await wire(page, world2);
-  const topic = c => s => ST.topicFor(c, s);
+  await page.evaluate(() => { window.SERVER_TABLE.on = true; });          /* the drive forces the switch ON */
 
   /* a code that nobody opened; a table that is full */
   await toServerChooser(page);
@@ -240,15 +262,17 @@ async function toServerChooser(page){
   row(await overflow(page), "board: no horizontal overflow");
 
   /* the link drops and comes back */
-  world2.fault.cut(topic(code)(0));
+  world2.fault.cut(world2.topicOf(code, 0));
   await page.waitForSelector(".srvbar.warn", { timeout: 5000 }).catch(() => {});
   const warn = await inside(page, ".srvbar", "reconnecting: the banner");
   row(!!warn && /reconnecting/.test(warn.t), "reconnecting: it says so", warn && warn.t);
-  world2.fault.restore(topic(code)(0));
+  world2.fault.restore(world2.topicOf(code, 0));
   await page.waitForFunction(() => !document.querySelector(".srvbar"), null, { timeout: 8000 }).catch(() => {});
   row(await page.evaluate(() => !document.querySelector(".srvbar")), "reconnecting: the banner clears when the link is back");
 
   /* the server goes away mid-game */
+  /* a move to make: the scripted phone plays on its own clock, so wait until it is this page's turn */
+  await page.waitForFunction(() => { const s = window.__dawnTable && window.__dawnTable.session; return !!(s && s.status() === "ready" && DawnSparring.act(s.state(), 0, { search: false })); }, null, { timeout: 15000 }).catch(() => {});
   world2.fault.dead();
   await page.evaluate(() => { const s = window.__dawnTable.session; const a = DawnSparring.act(s.state(), 0, { search: false }); if(a) s.submit(a);
     window.__dawnTable.report(); });
@@ -268,6 +292,7 @@ async function toServerChooser(page){
   await page.waitForSelector(".shell");
   await page.waitForFunction(() => /\d+ cards/.test((document.querySelector(".topbar .tag") || {}).textContent || ""), null, { timeout: 30000 });
   await page.evaluate(() => window.__installFake());
+  await page.evaluate(() => { window.SERVER_TABLE.on = true; });            /* a reload re-reads the shipped value: forced ON again */
   await toServerChooser(page);
   const resumeBtn = page.getByRole("button", { name: new RegExp("^Resume table " + code) });
   row(await resumeBtn.count() === 1, "reload: the table offers to resume this seat", code);

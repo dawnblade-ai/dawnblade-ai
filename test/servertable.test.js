@@ -493,6 +493,20 @@ test("a 404 from the function is final (not retried); a network error is retried
   posts = 0; assert.equal(await guard(whyOf(ST.sitAt({transport: mk(404), code: "ABCDEF", sleep: PH.FAST.sleep}))), "unavailable"); assert.equal(posts, 1, "a missing function is not asked again");
   posts = 0; assert.equal(await guard(whyOf(ST.sitAt({transport: mk(undefined), code: "ABCDEF", sleep: PH.FAST.sleep}))), "unavailable"); assert.equal(posts, 3, "a failing network is asked three times, then given up on");
 });
+test("THE SWITCH in index.html: one config value gates every entry; the table screen renders the option only behind it", () => {
+  const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+  const m = html.match(/window\.SERVER_TABLE = (\{[^}]*\});/);
+  assert.ok(m, "window.SERVER_TABLE is declared in the data script");
+  const cfg = new Function("return " + m[1])();
+  assert.equal(typeof cfg.on, "boolean"); assert.equal(cfg.fn, "table");
+  assert.match(cfg.url, /^https:\/\/[a-z0-9]+\.supabase\.co$/); assert.match(cfg.key, /^sb_publishable_/);
+  assert.ok(!/service_role|sb_secret_|eyJ[A-Za-z0-9_-]{20,}/.test(html.slice(html.indexOf("window.SERVER_TABLE"), html.indexOf("window.SERVER_TABLE") + 600)), "no secret in the config");
+  assert.ok(!/SERVER_CFG/.test(html), "the old unguarded config name is gone");
+  assert.equal(html.split("Join a server table").length - 1, 1, "the entry is rendered in one place");
+  assert.match(html, /\{srvOn && <div className="tblrow"><button className="bigbtn alt"[^>]*>Join a server table<\/button><\/div>\}/, "and that place is behind the switch");
+  assert.match(html, /const srvSit = \(how, c, role\) => \{\s*if\(!srvOn\) return;/, "so is the only caller of the server transport");
+  assert.equal(html.split("DawnServerTable.defaultTransport(").length - 1, 1);
+});
 test("the server switch: off, the page's transport makes no request and loads no library", async () => {
   const w = {};
   const t = ST.defaultTransport({on: false, url: "https://example.invalid", key: "k"}, w);
