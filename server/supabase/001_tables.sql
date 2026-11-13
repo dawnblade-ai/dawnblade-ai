@@ -25,6 +25,8 @@ alter table public.tables force row level security;
 -- NO "create policy" for this table, on purpose: with RLS on and no policy, anon and authenticated read and write
 -- nothing. The service role bypasses RLS (UNVERIFIED: that is how Supabase's service_role key behaves).
 revoke all on public.tables from anon, authenticated;
+-- Supabase normally grants service_role everything in `public` by default; stating it makes the file stand on its own.
+grant all on public.tables to service_role;
 
 create index if not exists tables_updated_at_idx on public.tables (updated_at);
 
