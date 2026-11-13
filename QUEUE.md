@@ -9,12 +9,14 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-11, at v6.22)
+## HANDOFF — START HERE (CEO, 2026-11-13, at v6.23)
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
-- **Live: v6.22** (WIRE_V 40, DATA_VER sage-v16). Progress reports: `docs/progress/v6.21.md`, `v6.22.md`.
+- **Live: v6.23** (WIRE_V 40, DATA_VER sage-v17). Progress reports: `docs/progress/v6.22.md`, `v6.23.md`.
+- **CEO since 2026-11-13: `session_013xG9xCPR11GYcDV7QGiWyX`** (Fable; user asked for LOW CONTEXT and the cheapest
+  agents: in-session haiku/sonnet subagents did v6.23; the two Opus workers were NOT woken, still standing by).
 - **MISSION (user, 2026-11-07):** the ultimate FaB Silver Age precon competitive gaming environment and
   judging engine — 100% fan-made, non-profit, for fun and glory, no ads, forever.
 - **CADENCE (user, 2026-11-07):** "With each version make a progress report and start a new CEO thread."
@@ -36,6 +38,17 @@ until a deliberate full re-pin. Ladder 0/0/0.
 **CEO SUCCESSION:** session_013xG9xCnjwgSC6P9f3uUE9W hit the lineage-depth limit (8); the USER is starting a Fable
 CEO thread from a fresh session. The new CEO tells both workers its id. Referee host: user asked which is cheapest —
 answer Cloudflare Workers + DO (free plan, no pause; Supabase free projects pause after 7 idle days); awaiting confirm.
+
+**v6.23:** full re-pin (38 records; no deck-played text/number moved; Hyper Inflation item CLOSED) + Silver Age
+legality DERIVED from the pinned DB (`tools/silver-age.js`, drill in `test/formats.test.js`): 9 bans, Briar as
+`kind: hero`, `benched` null (the DB has no bench field). Residual in DESKTOP-TASKS.md: fabtcg.com unread (403).
+**H-LYATH-ATTACK DIAGNOSED, nothing shipped** (`experiments/lyath-attack-census.js`): 414/14,148 own-turn first
+actions differ rule vs Sharp; gap is DIFFUSE (attack search ~+6 wins/seed, blocks ~+4). Largest single class
+attack->attack ~+2.5/seed: rule ranks printed power then cost, Sharp picks cost-0 attacks with conditional
+self-pumps (Mocking Blow +4 once booed). SPXNETPOW (power minus cost) PARKED: Lyath +0.83 @12 (t 2.1) but Bravo
+-1.17 (t -2.9), Gravy -1.00; `experiments/lyath-netpow-NEGATIVE.patch`. NEXT IDEA (unbuilt): a judge reader for a
+card's EFFECTIVE power now (conds live inline in `effects.execute`; needs a dry-run), ceiling ~+2.5/seed.
+**NEEDS A RULING still open (asked 2026-11-13):** Preserve Tradition / Pass Over with no legal target.
 
 **CLOSED / PARKED (v6.16 wave):**
 - **H-OVERBLOCK** CLOSED, not a misplay: filter −1.83 (t −3.19); Sharp price SPXOBPRICE 1/2/4 → +0.00/−0.17/−1.17.
@@ -74,8 +87,7 @@ they answer. (2) a real two-phone (and judge) game — DESKTOP-TASKS.md. If they
 **NEXT:** the server deploy (a WebSocket URL + "join a server table"), then **H4 · ranked** (HIDDEN-HANDS.md
 §6: accounts, Elo, result authority, forfeit clocks).
 
-**SMALLER OPEN ITEMS:** Hyper Inflation full re-pin (cosmetic) ·
-parked: sudden death · carried UNRESOLVED: Blaze soak (shipped because it corrects the call).
+**SMALLER OPEN ITEMS:** parked: sudden death · carried UNRESOLVED: Blaze soak (shipped because it corrects the call).
 
 ## HANDOFF ARCHIVE (CEO, 2026-11-08, at v6.15) — superseded by the section above
 
