@@ -20,7 +20,9 @@
   p95 30.4 ms, max 82.3 ms on Node and 18.2 / 26.4 / 65.3 ms on Deno (1058 actions); stored row 34,966 to 76,915 B.
   Network, Postgres and Realtime round trips, Realtime payload limits and private-channel authorization are NOT measured.
   Drills a-e plus a sabotage for each (`test/serverref.test.js`); `tools/serverrun.js` plays whole games under Deno.
-  The suite's slow drill was cut from about 125 s to the figure in the progress note (one whole game, three capped).
+  `test/serverref.test.js` ran 115.6 s alone and now runs 41.3 s (same machine, nothing else running): one whole game
+  (blaze v dorinthea, 164 actions) plus three games capped at 100 actions, every request still rehydrated from the
+  row, all drill classes a-e and every sabotage kept; `SERVER_FULL=1` and `tools/serverrun.js` play whole games.
 - **A hidden card's id no longer rides a used-flag.** `weaponUsed` is keyed by a card's uid, or `ct`/`ally`/`aura` +
   uid (once-per-turn marks); `view.js` did not redact keys, so a commit delta that deleted `weaponUsed.ct100083` after
   that card returned to its owner's hand told the other seat which hidden card it was (found by the S1 worker,
@@ -28,8 +30,13 @@
   whole values to a hidden uid and never looked INSIDE a key; it now does. Fix: `view.js` `redactKeyed` drops, from a
   seat's view, the keys of `weaponUsed`, `counters` and `hist.wpnHits` whose card is hidden from that seat. The table's
   own state keeps them (they are per-turn allowances the rules read), so no rule moves. `KEYED_MAPS` is the census
-  and `test/view.test.js` fails on a keyed per-side map it does not list. No WIRE_V bump: the redaction only removes
-  keys from a view; no payload or prompt shape changed.
+  and `test/view.test.js` fails on a keyed per-side map it does not list. The widened scanners (digit runs inside keys)
+  then swept all 210 ordered hero pairs (one seed each, `judgetable.judgedGame`): they also found `pending.picked`
+  (a charge's chosen cards, bare uids, on V of the Vanguard; four games), fixed by adding `picked` to `referee.js`'s
+  `UID_KEY`, and `tokSeq` equal to a hidden gear uid at Enigma's first snapshot (fourteen games): a counter, not a
+  card, so the scanners skip it. No WIRE_V bump: the redactions only remove or replace values inside a view; no payload
+  or prompt shape changed. Ladder `npm run play '' '' 1` is byte-identical to the commit before (the ladder never
+  reads a view); Sharp's root differs from v5.37's deal at 3 of 6,500 sampled positions, all this redaction.
 
 ## v6.24 — the simpler AI ranks an attack by the power it would have now
 

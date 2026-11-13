@@ -63,7 +63,7 @@ commit delta to the OTHER seat deleted `sides[1].weaponUsed.ct100083` after that
 to seat 1's hand, so seat 0 learns "that hidden card is the one played earlier". Reproduced on a
 CONTINUOUS in-process referee (not a rehydration artefact): arakni v viserai, seed key `srv-2`,
 seq 96, uid 100083. `view.js` does not map prefixed keys. judgetable's drills pass only because
-their seeds do not reach it. Not fixed here (out of S1's scope); S1's drill games avoid that seed.
+their seeds do not reach it. FIXED in v6.25 (view.js `redactKeyed`, ruled by `KEYED_MAPS`; the scanner now reads digit runs inside keys; drill game arakni v viserai `srv-2` capped at 100 actions is in test/serverref.test.js). The widened scanner also found `pending.picked` (a charge's chosen cards, bare uids: referee.js `UID_KEY` now includes `picked`).
 Repro: `node tools/servermeasure.js` does not scan; use test/helpers/judgetable.js `judgedGame`
 with `makeServerHub({seedKey: "srv-2"})` for arakni v viserai.
 

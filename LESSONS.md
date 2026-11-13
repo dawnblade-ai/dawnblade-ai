@@ -14395,6 +14395,22 @@ needs the verbatim quote IN THE REPO (source comment, `tools/approx.js` record, 
   target action card with blood debt" — optional, unparsed), hero targets (always exist), attacks
   (CR 1.4.5).
 
+### v6.25 — a KEY can name a card (found by the S1 worker, widened by the sweep)
+- `weaponUsed` is keyed by a card's uid, or `ct`/`ally`/`aura`/`gp` + uid; `counters` and `hist.wpnHits` by uid. A
+  delta that deleted `weaponUsed.ct100083` after that card went back to its owner's hand told the other seat which
+  hidden card it was. `CARRIERS` sweeps card OBJECTS and values; nothing looked at keys, and every leak scanner
+  compared a whole key string (`ct100083`) to a bare uid (`100083`), so the key never matched.
+- Fix (a), not (b): `view.js` `redactKeyed` drops a seat's view of a key whose card is hidden FROM THAT SEAT. Clearing
+  the entry where the card leaves the arena (b) would change rules (the allowance is per turn and survives the card
+  returning; effects.js "DELIBERATELY NOT CLEARED"). A mark on a card in the arena stays public. `KEYED_MAPS` is the
+  census; `test/view.test.js` fails on a per-side map keyed by a card that it does not list.
+- The widened scanners (judgetable.js, referee.test.js, view.test.js) read digit runs inside keys. A whole-pair sweep
+  with them found `pending.picked` (a charge's chosen cards, a list of bare uids) leaking on Boltyn's V of the
+  Vanguard: `referee.js` `UID_KEY` now includes `picked`. It also reported `tokSeq` equal to a hidden gear uid
+  (Enigma, 100110) at the first snapshot: a counter, not a card; the scanners skip that key.
+- Lesson: a drill that scans for an id must scan every place an id can be spelled (value, key, key suffix), and a
+  sweep over all pairs is the only way to find the spelling a drill's own seeds never reach.
+
 ### S-1 — dominate against a played defence reaction (ship/rules-qa)
 - CR 8.3.4: "Dominate is a static ability that means "This can't be defended by more than one card from hand.""
 - CR 8.3.4b: "If an attack with dominate is currently defended by a card from hand on the activate chain
