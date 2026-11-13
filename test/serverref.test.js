@@ -62,18 +62,18 @@ Hub.createHub = o => { if(o && o.onEvent){ built.server++; if(o.resume) built.re
 function playServer(k0, k1, salt, cfg){
   const mk = makeServerHub({seedKey: salt, ...(cfg || {})});
   let hub; const b0 = {...built};
-  const r = T.judgedGame(k0, k1, salt, {makeHub: o => (hub = mk(o)), stopAtLeak: !!(cfg && cfg.stopAtLeak)});
+  const r = T.judgedGame(k0, k1, salt, {makeHub: o => (hub = mk(o)), stopAtLeak: !!(cfg && cfg.stopAtLeak), maxSteps: cfg && cfg.maxSteps});
   return {r, hub, audit: hub.audit, hubs: built.server - b0.server, resumed: built.resumed - b0.resumed};
 }
 
 /* the SAME game through the existing in-process referee: the deal the
    server's row recorded, the same policy, no network, no storage */
-function reference(g){
+function reference(g, cap){
   const row = g.audit.store.row(g.audit.code).hub, spec = row.spec;
   const d = T.dealSpec({...spec, seed: SHA.seedOf(row.seedH, spec.seedG)});
   const ref = R.createReferee({state: d.state, reduce: J.reduce, legal: J.legal, check: INV.errors, catalog: d.catalog});
   let n = 0;
-  while(!ref.over() && n++ < 3000){
+  while(!ref.over() && n++ < (cap || 3000)){
     let moved = false;
     for(const s of [0, 1]){
       const a = SP.act(ref.view(s), s, {search: false});
@@ -87,17 +87,27 @@ function reference(g){
   return ref;
 }
 
-const PAIRS = [["kayo", "dash"], ["briar", "lyath"], ["dorinthea", "iyslander"]];
-const GAMES = PAIRS.map(([a, b], i) => ({a, b, g: playServer(a, b, "srv-" + i)}));
+/* THE GAMES. One whole game (briar v lyath, the shortest of the old three) is
+   played to its end and verified; three more are played for their first
+   CAP actions, every request rehydrated from the row all the same (the lobby,
+   the deal, the opening turns, a first fight). `SERVER_FULL=1` plays every
+   pair to the end (about 35 s a game); tools/serverrun.js plays whole games
+   too. arakni v viserai on seed key srv-2 is the leak regression: its first
+   hidden-uid leak (a `weaponUsed` key) came at action 96. */
+const CAP = 130;
+const FULL = !!process.env.SERVER_FULL;
+const PAIRS = [["briar", "lyath", "srv-1", 0], ["kayo", "dash", "srv-0", CAP], ["arakni", "viserai", "srv-2", CAP], ["dorinthea", "iyslander", "srv-3", CAP]];
+const GAMES = PAIRS.map(([a, b, salt, cap]) => ({a, b, cap: FULL ? 0 : cap, g: playServer(a, b, salt, {maxSteps: FULL ? 0 : cap})}));
 
 test("(a) WHOLE GAMES THROUGH handle ALONE — the hub rebuilt from the stored row before every frame, the game the in-process referee plays", () => {
-  for(const {a, b, g} of GAMES){
+  for(const {a, b, cap, g} of GAMES){
     const label = a + " v " + b, r = g.r, au = g.audit;
-    assert.ok(r.over, label + ": finished");
+    if(cap) assert.equal(r.steps, cap, label + ": played its first " + cap + " actions");
+    else assert.ok(r.over, label + ": finished");
     assert.deepEqual(r.mism, [0, 0], label + ": each phone's fingerprint is the referee's view of its seat");
     assert.deepEqual(r.deep, [0, 0], label + ": whole views");
     assert.ok(r.big <= 16 * 1024, label + ": a message of " + r.big + " bytes");
-    for(const v of verifyAll(r)) assert.ok(v.ok, label + ": verify — " + v.why);
+    if(!cap) for(const v of verifyAll(r)) assert.ok(v.ok, label + ": verify — " + v.why);
     assert.deepEqual(au.errors, [], label + ": no internal error");
     assert.equal(au.refused.length, 0, label + ": nothing was refused in a clean game: " + au.refused);
     /* STATELESS: a hub was built for every request, and every one after the
@@ -106,18 +116,20 @@ test("(a) WHOLE GAMES THROUGH handle ALONE — the hub rebuilt from the stored r
     assert.equal(g.resumed, au.calls - 1, label + ": every request but the create resumed from the stored row");
     assert.ok(au.store.puts >= r.steps, label + ": every action was saved: " + au.store.puts + " puts for " + r.steps + " actions");
     /* the stored game is the one an uninterrupted referee plays */
-    const ref = reference(g), full = g.hub.session().full();
-    assert.ok(ref.over(), label + ": the reference finished");
+    const ref = reference(g, cap), full = g.hub.session().full();
+    if(!cap) assert.ok(ref.over(), label + ": the reference finished");
     assert.equal(Wr.hash(full), Wr.hash(ref.state()), label + ": final fingerprint, server vs in-process referee");
     assert.deepEqual(json(r.log), json(ref.log()), label + ": the same actions in the same order");
     assert.deepEqual(json(r.over), json(ref.state().over), label + ": the same result");
+    assert.equal(ref.log().length, r.log.length, label + ": the same number of actions");
     assert.ok(au.store.largest() <= 200 * 1024, label + ": the stored row stayed under 200 KB: " + au.store.largest());
   }
   assert.notDeepEqual(json(GAMES[0].g.r.log), json(GAMES[1].g.r.log), "different heroes, different games");
+  assert.ok(GAMES.some(x => !x.cap) && (FULL || GAMES.filter(x => x.cap).length >= 3), "one whole game and capped ones");
 });
 
 test("(a) THE ASYNC BODY — the recorded requests replayed through handle() over a store and a bus that answer through promises: the same responses, the same row", async () => {
-  const {g} = GAMES[0], au = g.audit;
+  const {g} = GAMES[1], au = g.audit;
   const store = F.memStore(), bus = F.memBus();
   const d0 = au.makeDeps(store, bus);
   const deps = {...d0, store: F.lagged(store), broadcast: F.laggedBus(bus).broadcast};

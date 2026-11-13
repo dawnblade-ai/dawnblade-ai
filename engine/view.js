@@ -205,7 +205,7 @@ function sweep(v, hid, d){
   return o || v;
 }
 
-/* UID-KEYED MAPS (v6.25). `weaponUsed` and `counters` are keyed by a card's uid,
+/* UID-KEYED MAPS (v6.25). `weaponUsed`, `counters` and `hist.wpnHits` are keyed by a card's uid,
    and `weaponUsed` also by a prefixed one (`ct`/`ally`/`aura`/`gp` + uid). A key
    NAMES the card, so a key whose card is hidden from this seat is dropped: the
    once-per-turn mark on a card everyone can see in the arena stays public, the
@@ -213,6 +213,8 @@ function sweep(v, hid, d){
    table's own state keeps the key (it is a per-turn allowance the rules read),
    so no rule moves. Returns `m` itself when nothing was dropped. */
 const KEYED = ["weaponUsed", "counters"];
+/* the census of per-side maps whose KEYS name a card (test/view.test.js fails on one not listed) */
+const KEYED_MAPS = ["sides.weaponUsed", "sides.counters", "sides.hist.wpnHits"];
 const KEY_PREFIX = /^(?:ct|ally|aura|gp)/;
 function redactKeyed(m, hid){
   if(!m || typeof m !== "object" || !hid.size) return m;
@@ -228,6 +230,7 @@ function view(g, seat){
   const sides = g.sides.map((sd, owner) => {
     const h = sl[owner], o = {...sd}, deck = sd.deck || [], foe = owner !== seat;
     for(const f of KEYED){ const m = redactKeyed(sd[f], hid); if(m !== sd[f]) o[f] = m; }
+    if(sd.hist && sd.hist.wpnHits){ const m = redactKeyed(sd.hist.wpnHits, hid); if(m !== sd.hist.wpnHits) o.hist = {...sd.hist, wpnHits: m}; }
     const unseen = [], unseenGear = [];
     const a = h.top, b = deck.length - h.kb;
     const mid = deck.slice(a, b);
@@ -331,5 +334,5 @@ function dealExtra(dst, src, at, cards){
   }
 }
 
-return {view, hiddenUids, reveal, determinize, canon, isPh, SWITCHES, CARRIERS, ZONES, RNG_HIDDEN};
+return {view, hiddenUids, reveal, determinize, canon, isPh, SWITCHES, CARRIERS, ZONES, KEYED_MAPS, RNG_HIDDEN};
 });

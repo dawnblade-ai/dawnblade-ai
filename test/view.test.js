@@ -221,6 +221,8 @@ test("no uid hidden from a seat appears anywhere in its view, carriers included 
       const walk = (x, p) => { if(x == null || typeof x !== "object") return;
         if(Array.isArray(x)) return x.forEach((y, i) => walk(y, p + "/" + i));
         if(x.uid != null && hid.has(String(x.uid))) found.push(p);
+        /* v6.25: a KEY can name a card too (`ct<uid>`, `ally<uid>`, a bare uid); under `sides` only: `feedTo` is keyed by feed line number */
+        if(p.indexOf("/sides") === 0) for(const k of Object.keys(x)) if(hid.has(k) || hid.has(k.replace(/^(?:ct|ally|aura|gp)/, ""))) found.push(p + "/" + k + " (a key)");
         for(const k of Object.keys(x)) if(k !== "unseen" && k !== "unseenGear" && k !== "feed" && k !== "log") walk(x[k], p + "/" + k); };
       walk(v, "");
       assert.deepEqual(found, [], hero + " turn " + g.turn + " seat " + seat);
@@ -372,6 +374,9 @@ function peeked(g, seat){
   /* the soul and the seat's own intimidated cards are in its view (RULING
      2026-11-07), so v5.37's deal saw nothing hidden there */
   const hid = V.hiddenUids(g, seat);
+  /* v6.25: a uid-KEYED mark of a hidden card (weaponUsed, counters, hist.wpnHits) is withheld from the view */
+  for(const sd of g.sides) for(const m of [sd.weaponUsed, sd.counters, (sd.hist || {}).wpnHits]) for(const k of Object.keys(m || {}))
+    if(hid.has(k) || hid.has(k.replace(/^(?:ct|ally|aura|gp)/, ""))) return "hidden card's uid-keyed mark";
   for(const k of Object.keys(V.CARRIERS)) if(["sweep", "addressed"].includes(V.CARRIERS[k]) && g[k] != null){
     const s = new Set(); JSON.stringify(g[k], (kk, vv) => { if(kk === "uid") s.add(String(vv)); return vv; });
     for(const u of s) if(hid.has(u)) return "hidden copy in " + k;
@@ -401,4 +406,58 @@ test("ONE BODY WITH laMask — Sharp's root is determinize(view), and it is v5.3
   /* the search never runs the real state: a scrambled root determinizes the same */
   every(25, ({g}) => { for(const seat of [0, 1]){ const {h} = scramble(g, seat);
     same(SP.laMask(h, seat, 0), SP.laMask(g, seat, 0), "scrambled root"); } });
+});
+
+/* ---- UID-KEYED MAPS (v6.25) --------------------------------------------
+   A KEY can name a card as surely as a value: `weaponUsed` is keyed by a
+   uid, or `ct`/`ally`/`aura`/`gp` + a uid; a delta that deleted
+   `weaponUsed.ct100083` told the other seat which hidden card had been played
+   earlier. CARRIERS cannot see keys, so this census does. */
+const KEY_RE = /^(?:ct|ally|aura|gp)?(\d+)$/;
+/* every path under `x` whose key names `uid`-like digits, as {path, id} */
+function keyedPaths(x, path, out, d){
+  if(x == null || typeof x !== "object" || d > 7) return out;
+  if(Array.isArray(x)){ x.forEach(y => keyedPaths(y, path, out, d + 1)); return out; }
+  for(const k of Object.keys(x)){ const m = KEY_RE.exec(k); if(m) out.push({path, id: m[1]}); else keyedPaths(x[k], path + "." + k, out, d + 1); }
+  return out;
+}
+/* the keyed paths of a state's sides, in KEYED_MAPS spelling, and any whose id is hidden from `seat` */
+function keyedLeaks(full, v, seat){
+  const hid = new Set([...V.hiddenUids(full, seat).keys()]);
+  const seen = new Set(), leaked = [];
+  full.sides.forEach(sd => { for(const f of Object.keys(sd)) for(const p of keyedPaths(sd[f], "sides." + f, [], 0)) seen.add(p.path); });
+  const ids = v.sides.map(sd => { const o = []; for(const f of Object.keys(sd)) o.push(...keyedPaths(sd[f], "sides." + f, [], 0)); return o; });
+  ids.forEach(list => list.forEach(p => { if(hid.has(p.id)) leaked.push(p.path + ":" + p.id); }));
+  return {seen, leaked};
+}
+test("UID-KEYED MAPS — every per-side map keyed by a card is ruled, and no view carries a key naming a card hidden from its seat", () => {
+  const seenPaths = new Set(); const leaks = []; let withHidden = 0;
+  every(1, ({n}) => { for(const seat of [0, 1]){
+    const v = V.view(n, seat), r = keyedLeaks(n, v, seat);
+    r.seen.forEach(p => seenPaths.add(p)); leaks.push(...r.leaked);
+    /* the full state DOES hold such a key for a hidden card, or the drill proves nothing */
+    const hid = new Set([...V.hiddenUids(n, seat).keys()]);
+    if(keyedPaths(n.sides[1 - seat].weaponUsed, "", [], 0).some(p => hid.has(p.id))) withHidden++; } });
+  assert.deepEqual(leaks.slice(0, 5), [], "a view carries a key naming a hidden card");
+  const unruled = [...seenPaths].filter(p => !V.KEYED_MAPS.includes(p) && !V.KEYED_MAPS.some(k => p.startsWith(k + ".")) && p !== "sides.hist.wpnHits"
+    && !/^sides\.hist\.wpnHits/.test(p)).sort();
+  assert.deepEqual(unruled, [], "a per-side map keyed by a card has no rule in engine/view.js KEYED_MAPS");
+  for(const k of ["sides.weaponUsed", "sides.counters"]) assert.ok(seenPaths.has(k), "the census saw " + k);
+  assert.ok(withHidden > 0, "no state in the games held a hidden card's key; the drill proved nothing (saw " + withHidden + ")");
+});
+
+test("UID-KEYED MAPS — a hidden card's keys go, a card in the arena keeps its once-per-turn mark, the owner sees all, Sharp's guess carries none", () => {
+  const g = match("arakni", "viserai", "key-1", 0);
+  const o = g.sides[1], hand = o.hand[0], board = o.gear.find(c => c && !c._faceDown) || o.gear[0];
+  const wu = {["ct" + hand.uid]: true, ["ally" + hand.uid]: true, ["aura" + hand.uid]: true, ["gp" + hand.uid]: true, [hand.uid]: true,
+              ["ct" + board.uid]: true, [board.uid]: true};
+  const g2 = {...g, sides: [g.sides[0], {...o, weaponUsed: wu, counters: {[hand.uid]: {x: 1}, [board.uid]: {x: 1}}, hist: {...o.hist, wpnHits: {[hand.uid]: 1, [board.uid]: 1}}}]};
+  const v0 = V.view(g2, 0), v1 = V.view(g2, 1);
+  assert.deepEqual(Object.keys(v0.sides[1].weaponUsed).sort(), ["ct" + board.uid, String(board.uid)].sort(), "the foe's view keeps only the arena card's marks");
+  assert.deepEqual(Object.keys(v0.sides[1].counters), [String(board.uid)]);
+  assert.deepEqual(Object.keys(v0.sides[1].hist.wpnHits), [String(board.uid)]);
+  assert.deepEqual(Object.keys(v1.sides[1].weaponUsed).sort(), Object.keys(wu).sort(), "the owner's own view keeps every key");
+  const d = V.determinize(v0, 0);
+  assert.equal(Object.keys(d.sides[1].weaponUsed).filter(k => k.endsWith(String(hand.uid))).length, 0, "Sharp's determinized root carries no key of the hidden card");
+  assert.equal(g2.sides[1].weaponUsed, wu, "the table's own state is untouched");
 });

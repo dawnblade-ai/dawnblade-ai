@@ -250,7 +250,7 @@ function judgedGame(k0, k1, salt, o){
     }
   };
   scan();
-  while(rec.steps < 3000 && t.step()){
+  while(rec.steps < (o.maxSteps || 3000) && t.step()){
     rec.steps++;
     for(const s of [0, 1]){
       if(!t.agrees(s)) rec.mism[s]++;
@@ -265,7 +265,7 @@ function judgedGame(k0, k1, salt, o){
       if(tokens(pub).some(u => hid.has(u))) rec.judgeLeak++;
     }
   }
-  rec.over = t.hub.session().full().over;
+  rec.over = t.hub.session().full().over;     /* falsy when `o.maxSteps` stopped the game short */
   rec.log = t.hub.session().log();
   return rec;
 }

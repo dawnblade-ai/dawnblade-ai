@@ -1,3 +1,36 @@
+## v6.25 — no target, no play; the server referee's core; a hidden card's id no longer rides a used-flag
+
+- **RULING (user, 2026-11-13): a card that requires a target cannot be played when it has no legal target.** It
+  answers the standing question "Preserve Tradition / Pass Over with no legal target: playable?" the way v6.00 already
+  built it, so those two did not change. One gap closed: Scuttle Toes' "{u} target ally you control" was a paid no-op
+  with no ally; `effects.playTargetWhy` now refuses it (`untapAlly`), on both boards (`test/targetreq.test.js`, census
+  grown to twelve). Left alone: Gate to i'Arathael (optional, unparsed), hero targets (always exist), attacks (CR 1.4.5).
+  PENDING USER CONFIRMATION: four cards print other effects beside the target that do not depend on it (Preserve
+  Tradition and Pass Over's transcend, A Drop in the Ocean's transcend, Edict of Steel's go again) and are refused
+  whole when the target is missing; the ruling as given covers them, and nothing was built beyond it.
+- **Server referee S1** (`server/referee.js`, OFFLINE; Supabase chosen by the user 2026-11-13: a stateless Edge
+  Function per action, the table in a service-role-only row, each seat's frames on its own private Realtime channel).
+  `handle(request, deps)`: load row, rehydrate a `hub.js` hub, apply ONE frame, save with an optimistic version check,
+  push each seat only its own frames. Frame and payload shapes are the engine's own; the one new shape is the request
+  envelope. Engine changes: `hub.persistTable()` (a table saved before the deal replays its lobby log; the page's
+  `persist()` is unchanged) and `engine/referee.js` `restore()` sets `rebuilt`, so a seat's first commit after a
+  restore diffs against the previous state's view (without it every commit after a rehydration carried the whole
+  view: largest commit 90,851 B rehydrated vs 10,313 B continuous). Measured on this machine (`server/S1-LOG.md`):
+  cold load 82 ms Node / 93 ms Deno; one action (rehydrate + apply + save + push, in-memory fakes) median 22.0 ms,
+  p95 30.4 ms, max 82.3 ms on Node and 18.2 / 26.4 / 65.3 ms on Deno (1058 actions); stored row 34,966 to 76,915 B.
+  Network, Postgres and Realtime round trips, Realtime payload limits and private-channel authorization are NOT measured.
+  Drills a-e plus a sabotage for each (`test/serverref.test.js`); `tools/serverrun.js` plays whole games under Deno.
+  The suite's slow drill was cut from about 125 s to the figure in the progress note (one whole game, three capped).
+- **A hidden card's id no longer rides a used-flag.** `weaponUsed` is keyed by a card's uid, or `ct`/`ally`/`aura` +
+  uid (once-per-turn marks); `view.js` did not redact keys, so a commit delta that deleted `weaponUsed.ct100083` after
+  that card returned to its owner's hand told the other seat which hidden card it was (found by the S1 worker,
+  arakni v viserai, seed key `srv-2`, action 96). The leak scanner missed it because it compared whole key strings and
+  whole values to a hidden uid and never looked INSIDE a key; it now does. Fix: `view.js` `redactKeyed` drops, from a
+  seat's view, the keys of `weaponUsed`, `counters` and `hist.wpnHits` whose card is hidden from that seat. The table's
+  own state keeps them (they are per-turn allowances the rules read), so no rule moves. `KEYED_MAPS` is the census
+  and `test/view.test.js` fails on a keyed per-side map it does not list. No WIRE_V bump: the redaction only removes
+  keys from a view; no payload or prompt shape changed.
+
 ## v6.24 — the simpler AI ranks an attack by the power it would have now
 
 - **`effPowerNow`** (`engine/effects.js`, read through `judge.effPowerNow`; gate `SPXEFFPOW`, key `effPower`): the rule
