@@ -8,16 +8,16 @@ const {match, play, W, SP} = require("../tools/selfplay.js");
 const [hero, from, to, mode] = [process.argv[2], +process.argv[3], +process.argv[4], process.argv[5] || "both"];
 const keys = W.HEROES.map(h => h.k).filter(k => k !== hero);
 function run(on, s){
-  SP.LA.seats.length = 0; if(on) SP.LA.seats.push(hero);
-  let w = 0, ref = 0, viol = 0, stall = 0, draw = 0;
+  SP.LA.seats.length = 0; if(on || process.env.SEARCH) SP.LA.seats.push(hero);
+  let w = 0, ref = 0, viol = 0, stall = 0, draw = 0, sig = 0;
   for(const o of keys) for(const [a, b] of [[hero, o], [o, hero]]){
     const r = play(match(a, b, `${a}-${b}-${s}`, s % 2));
-    ref += r.errs.length; viol += r.viols.length;
+    ref += r.errs.length; viol += r.viols.length; sig = (sig * 31 + (r.game.turn || 0) * 7 + ((r.game.sides[0].hp + 3) * 13 + (r.game.sides[1].hp + 5)) + ((r.game.log || []).length)) % 1000000007;
     if(!r.game.over) stall++;
     else if(r.game.over.winner == null) draw++;
     else if((r.game.over.winner === 0) === (a === hero)) w++;
   }
-  return {w, ref, viol, stall, draw};
+  return {w, ref, viol, stall, draw, sig};
 }
 for(let s = from; s < to; s++){
   const row = {hero, s};

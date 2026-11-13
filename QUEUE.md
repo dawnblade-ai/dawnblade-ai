@@ -9,12 +9,12 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-13, at v6.23)
+## HANDOFF — START HERE (CEO, 2026-11-13, at v6.24)
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
-- **Live: v6.23** (WIRE_V 40, DATA_VER sage-v17). Progress reports: `docs/progress/v6.22.md`, `v6.23.md`.
+- **Live: v6.24** (WIRE_V 40, DATA_VER sage-v17). Progress reports: `docs/progress/v6.23.md`, `v6.24.md`.
 - **CEO since 2026-11-13: `session_013xG9xCPR11GYcDV7QGiWyX`** (Fable; user asked for LOW CONTEXT and the cheapest
   agents: in-session haiku/sonnet subagents did v6.23; the two Opus workers were NOT woken, still standing by).
 - **MISSION (user, 2026-11-07):** the ultimate FaB Silver Age precon competitive gaming environment and
@@ -48,6 +48,13 @@ attack->attack ~+2.5/seed: rule ranks printed power then cost, Sharp picks cost-
 self-pumps (Mocking Blow +4 once booed). SPXNETPOW (power minus cost) PARKED: Lyath +0.83 @12 (t 2.1) but Bravo
 -1.17 (t -2.9), Gravy -1.00; `experiments/lyath-netpow-NEGATIVE.patch`. NEXT IDEA (unbuilt): a judge reader for a
 card's EFFECTIVE power now (conds live inline in `effects.execute`; needs a dry-run), ceiling ~+2.5/seed.
+**v6.24:** effPower (`SPXEFFPOW` default ON, `effects.condMetNow` one body, `judge.effPowerNow`, key `effPower`):
+hand attacks rank by the power they would have NOW (decidable-and-true self-pumps only; 22 of 38 cond entries
+decided, 16 stay printed: pumped, reprise, discard6way, chargedPitch, pitch6, defLt, chainLinkGe, hasGa, pitchBlue).
+Rule: Lyath +0.67 @24 (t 2.64); fai/bravo/viserai/iyslander/boltyn noise @24, blaze/briar noise @12; 7 heroes
+byte-identical. Sharp @6: lyath +1.33 (t 1.58), no loss. Ladder 0/0/0. NOT RE-RUN: the 4x-throttled phone p95
+(unthrottled 12-18 ms per searched decision; step cap untouched). Probes: `experiments/effpow-*`, `sharp-ab/`.
+Lyath's remaining gap: activate-first (133 diffs) and free non-attack first (65) classes — undiagnosed.
 **NEEDS A RULING still open (asked 2026-11-13):** Preserve Tradition / Pass Over with no legal target.
 
 **CLOSED / PARKED (v6.16 wave):**

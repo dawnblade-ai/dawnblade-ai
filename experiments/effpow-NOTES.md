@@ -1,0 +1,12 @@
+# effpower running log
+- review: shared body `effects.condMetNow` (execute + effPowerNow), reader writes nothing, gates decidable from public + own record; no names. OK.
+- npm test: 4124 tests, pass 4119, fail 0, skipped 5 (tools/.cache present, games.json only).
+- scenes 107 pass 0 fail; fairness exit 0.
+- sabotage of test/effpower.test.js: 7 sabotages (pitch gate decidable, hasArsenal from arsenal, bonus x0, rank ignores ep, gate always on, reader mutates g, null guard removed) all bit; restored.
+- gate-off byte-identical: 15 heroes x seeds 0-1 own-seat (SPXEFFPOW=none, 28 games/seed) vs c953696 worktree: identical output (w, ref, viol, stall, draw, sig) for all 15.
+- census: see experiments/effpow-census.txt (327 distinct printings in the 15 decks; 29 carry a conditional self-pump; 38 cond entries: 22 decidable by the reader, 16 return printed)
+- A/B seeds 0-5, all 15 heroes own-seat rule policy: experiments/effpow-ab/summary.txt (7 heroes byte-identical... see file); extending non-identical heroes to seeds 6-11 into experiments/effpow-ab2
+- A/B own seat, rule policy, SPXEFFPOW none vs hero, wins of 28 per seed, 24 seeds for non-identical heroes (experiments/effpow-ab24/summary.txt; 12-seed table experiments/effpow-ab12): lyath +0.67 t 2.64 (on>off 12 seeds, off>on 3); fai -0.08 t -0.53 (was -0.33 t -2.35 at 12 seeds, regressed); bravo -0.04 t -0.18 (7/7); viserai -0.08 t -0.70; iyslander +0.08 t 0.57; boltyn 0.00; blaze +0.17 t 1.48 (12 seeds); briar -0.08 t -0.56 (12 seeds). 7 heroes byte-identical (arakni azalea dash dorinthea enigma gravy kayo... see summary: arakni azalea dash dorinthea enigma gravy kayo).
+- Decision: default ON (no resolved loss; lyath resolved gain).
+- default ON validated: play '' '' 3: 630 games, stalls 0, draws 0, refusals 0, violations 0; npm test 4124/4119 pass/0 fail/5 skipped.
+- SHARP own-seat (search on, SPXEFFPOW none vs hero), 6 seeds: experiments/sharp-ab/summary.txt. 6 heroes byte-identical (arakni azalea dash dorinthea enigma gravy kayo =7). lyath +1.33 t 1.58 (4 up/1 down), bravo +0.50 t 1.46, boltyn/fai/iyslander +0.17, blaze/briar/viserai 0.00. No loss; ref/viol/stall 0/0/0. No Sharp exemption.

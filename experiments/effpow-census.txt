@@ -1,0 +1,22 @@
+pumped         cards   3 decides 0 printed 3  e.g. pumped
+auraTurn       cards   2 decides 4 printed 0  e.g. auraTurn
+aim            cards   2 decides 3 printed 0  e.g. aim
+reprise        cards   2 decides 0 printed 4  e.g. reprise
+drac           cards   2 decides 2 printed 0  e.g. drac4
+charged        cards   2 decides 2 printed 0  e.g. charged
+auras          cards   2 decides 2 printed 0  e.g. auras3
+discard        cards   1 decides 0 printed 2  e.g. discard6way
+pitch          cards   1 decides 0 printed 1  e.g. pitch6
+lifeLt         cards   1 decides 1 printed 0  e.g. lifeLt
+hasArsenal     cards   1 decides 1 printed 0  e.g. hasArsenal
+defLt          cards   1 decides 0 printed 1  e.g. defLt2any
+chainLinkGe    cards   1 decides 0 printed 1  e.g. chainLinkGe4
+isDraconic     cards   1 decides 1 printed 0  e.g. isDraconic
+madeCard       cards   1 decides 1 printed 0  e.g. madeCard
+chargedPitch   cards   1 decides 0 printed 2  e.g. chargedPitch2
+dealtDmg       cards   1 decides 1 printed 0  e.g. dealtDmg
+hasGa          cards   1 decides 0 printed 1  e.g. hasGa
+pitchBlue      cards   1 decides 0 printed 1  e.g. pitchBlue2
+booed          cards   1 decides 3 printed 0  e.g. booed
+arsenal        cards   1 decides 1 printed 0  e.g. arsenal
+distinct unique card printings in pool decks: 327 | with a conditional self-pump: 29 | conds decidable: 22 undecidable: 16
