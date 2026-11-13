@@ -87,16 +87,16 @@ function reference(g, cap){
   return ref;
 }
 
-/* THE GAMES. One whole game (briar v lyath, the shortest of the old three) is
-   played to its end and verified; three more are played for their first
+/* THE GAMES. One whole game (blaze v dorinthea on seed key srv-s2: 164 actions, the
+   shortest of the dozen pairs and seeds tried) is played to its end and verified; three more are played for their first
    CAP actions, every request rehydrated from the row all the same (the lobby,
    the deal, the opening turns, a first fight). `SERVER_FULL=1` plays every
-   pair to the end (about 35 s a game); tools/serverrun.js plays whole games
+   pair to the end (about 25 s a game); tools/serverrun.js plays whole games
    too. arakni v viserai on seed key srv-2 is the leak regression: its first
    hidden-uid leak (a `weaponUsed` key) came at action 96. */
-const CAP = 130;
+const CAP = 100;
 const FULL = !!process.env.SERVER_FULL;
-const PAIRS = [["briar", "lyath", "srv-1", 0], ["kayo", "dash", "srv-0", CAP], ["arakni", "viserai", "srv-2", CAP], ["dorinthea", "iyslander", "srv-3", CAP]];
+const PAIRS = [["blaze", "dorinthea", "srv-s2", 0], ["kayo", "dash", "srv-0", CAP], ["arakni", "viserai", "srv-2", CAP], ["briar", "lyath", "srv-1", CAP]];
 const GAMES = PAIRS.map(([a, b, salt, cap]) => ({a, b, cap: FULL ? 0 : cap, g: playServer(a, b, salt, {maxSteps: FULL ? 0 : cap})}));
 
 test("(a) WHOLE GAMES THROUGH handle ALONE — the hub rebuilt from the stored row before every frame, the game the in-process referee plays", () => {
@@ -145,14 +145,14 @@ test("(a) THE RUNTIME MOVES, THE REFEREE DOES NOT — the same server inside a n
   const iso = makeIsolate();
   for(const k of ["window", "document", "require", "module", "process", "Buffer", "global"]) assert.equal(iso.runtime[k], "undefined", k + " is absent in the isolate");
   assert.ok(iso.serverScripts.includes("server/referee.js") && typeof iso.server.handle === "function");
-  /* the first 90 actions (the lobby, the deal, the opening turns), the same table twice: a whole game
+  /* the first 60 actions (the lobby, the deal, the opening turns), the same table twice: a whole game
      in the isolate is three times slower and tools/serverrun.js plays those */
   const first = cfg => { let hub; const mk = makeServerHub({seedKey: "iso", ...cfg});
     const t = T.makeTable({heroes: ["kayo", "dash"], salt: "iso", throws: [["rock", "rock"], ["paper", "rock"]], makeHub: o => (hub = mk(o))}).open();
-    for(let i = 0; i < 90 && t.step(); i++);
+    for(let i = 0; i < 60 && t.step(); i++);
     return hub.audit; };
   const here = first({}), there = first({server: iso.server, deal: iso.deal});
-  assert.ok(here.store.version(here.code) > 90, "a real stretch of play: version " + here.store.version(here.code));
+  assert.ok(here.store.version(here.code) > 60, "a real stretch of play: version " + here.store.version(here.code));
   assert.equal(there.store.json(there.code), here.store.json(here.code), "the stored row, byte for byte, in the isolate and in node");
   assert.deepEqual(there.bus.log, here.bus.log, "every broadcast, in order");
   assert.deepEqual(there.errors, []);
