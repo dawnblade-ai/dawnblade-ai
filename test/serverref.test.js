@@ -133,13 +133,18 @@ test("(a) THE RUNTIME MOVES, THE REFEREE DOES NOT — the same server inside a n
   const iso = makeIsolate();
   for(const k of ["window", "document", "require", "module", "process", "Buffer", "global"]) assert.equal(iso.runtime[k], "undefined", k + " is absent in the isolate");
   assert.ok(iso.serverScripts.includes("server/referee.js") && typeof iso.server.handle === "function");
-  const [a, b] = PAIRS[0];
-  const here = GAMES[0].g, there = playServer(a, b, "srv-0", {server: iso.server, deal: iso.deal});
-  assert.ok(there.r.over, "finished in the isolate");
-  assert.equal(there.audit.store.json(there.audit.code), here.audit.store.json(here.audit.code), "the stored row, byte for byte, in the isolate and in node");
-  assert.deepEqual(json(there.r.log), json(here.r.log));
-  assert.deepEqual(there.audit.errors, []);
-  assert.deepEqual(there.audit.leaks, []);
+  /* the first 90 actions (the lobby, the deal, the opening turns), the same table twice: a whole game
+     in the isolate is three times slower and tools/serverrun.js plays those */
+  const first = cfg => { let hub; const mk = makeServerHub({seedKey: "iso", ...cfg});
+    const t = T.makeTable({heroes: ["kayo", "dash"], salt: "iso", throws: [["rock", "rock"], ["paper", "rock"]], makeHub: o => (hub = mk(o))}).open();
+    for(let i = 0; i < 90 && t.step(); i++);
+    return hub.audit; };
+  const here = first({}), there = first({server: iso.server, deal: iso.deal});
+  assert.ok(here.store.version(here.code) > 90, "a real stretch of play: version " + here.store.version(here.code));
+  assert.equal(there.store.json(there.code), here.store.json(here.code), "the stored row, byte for byte, in the isolate and in node");
+  assert.deepEqual(there.bus.log, here.bus.log, "every broadcast, in order");
+  assert.deepEqual(there.errors, []);
+  assert.deepEqual(there.leaks, []);
 });
 
 /* ---- (b) blindness ------------------------------------------------------- */
