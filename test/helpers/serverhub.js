@@ -46,7 +46,7 @@ function makeServerHub(cfg){
       return {store: st, broadcast: (t, p) => bs.broadcast(t, p), deal, build: opts.build, now: () => ck++, rand: () => r,
               log: e => { audit.errors.push(String(e && e.stack || e)); }}; };
     const deps = {...makeDeps(store, bus), broadcast, now: () => clock++, rand: () => rnd};
-    const audit = {calls: 0, responses: [], reqs: [], resps: [], leaks: [], mismatch: 0, errors: [], refused: [], store, bus, deps, makeDeps, code};
+    const audit = {calls: 0, timings: [], responses: [], reqs: [], resps: [], leaks: [], mismatch: 0, errors: [], refused: [], store, bus, deps, makeDeps, code};
 
     /* ---- inspector: a hub rehydrated from the stored row, never fed a frame ---- */
     let cache = {version: -1, hub: null};
@@ -71,8 +71,11 @@ function makeServerHub(cfg){
     };
 
     function call(req){
-      const mark = bus.log.length;
+      const mark = bus.log.length, t0 = performance.now();
       const res = clone(server.handleNow(req, deps));
+      /* what one request cost: load, rehydrate, apply, save, push (tools/servermeasure.js reads these) */
+      audit.timings.push({op: req.op, what: req.frame ? req.frame.ch + ":" + ((req.frame.m && req.frame.m.t) || "") : req.op, ms: performance.now() - t0,
+                          bytes: JSON.stringify(res).length, version: res.version});
       audit.calls++; audit.reqs.push(clone(req)); audit.resps.push(res);
       audit.responses.push({req: req.op, ok: res.ok, refused: res.refused});
       if(!res.ok) audit.refused.push(res.refused);

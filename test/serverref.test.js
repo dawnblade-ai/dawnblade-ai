@@ -87,7 +87,7 @@ function reference(g){
   return ref;
 }
 
-const PAIRS = [["kayo", "dash"], ["briar", "lyath"], ["arakni", "viserai"]];
+const PAIRS = [["kayo", "dash"], ["briar", "lyath"], ["dorinthea", "iyslander"]];
 const GAMES = PAIRS.map(([a, b], i) => ({a, b, g: playServer(a, b, "srv-" + i)}));
 
 test("(a) WHOLE GAMES THROUGH handle ALONE — the hub rebuilt from the stored row before every frame, the game the in-process referee plays", () => {
@@ -134,7 +134,7 @@ test("(a) THE RUNTIME MOVES, THE REFEREE DOES NOT — the same server inside a n
   for(const k of ["window", "document", "require", "module", "process", "Buffer", "global"]) assert.equal(iso.runtime[k], "undefined", k + " is absent in the isolate");
   assert.ok(iso.serverScripts.includes("server/referee.js") && typeof iso.server.handle === "function");
   const [a, b] = PAIRS[0];
-  const here = playServer(a, b, "iso-0"), there = playServer(a, b, "iso-0", {server: iso.server, deal: iso.deal});
+  const here = GAMES[0].g, there = playServer(a, b, "srv-0", {server: iso.server, deal: iso.deal});
   assert.ok(there.r.over, "finished in the isolate");
   assert.equal(there.audit.store.json(there.audit.code), here.audit.store.json(here.audit.code), "the stored row, byte for byte, in the isolate and in node");
   assert.deepEqual(json(there.r.log), json(here.r.log));
@@ -170,18 +170,17 @@ test("(b) SABOTAGE — a bus that forwards one seat's payload to the other seat'
     if(p.frames.some(f => f.m && f.m.t === "commit")) bus.broadcast(t.endsWith("seat0") ? t.replace("seat0", "seat1") : t.replace("seat1", "seat0"), p);
   }}});
   assert.ok(cross.r.leaks[0].length + cross.r.leaks[1].length > 0, "the cross-seat forward must leak a hidden uid and be seen");
-  const withKey = playServer("kayo", "dash", "sab-b2", {tamper: {broadcast: (t, p, bus, ctx) => {
-    const h = (ctx.store.row(ctx.code) || {}).hub;
-    bus.broadcast(t, h && h.keys[0] && p.frames.length ? {...p, frames: p.frames.concat([{ch: "judge", note: h.keys[0]}])} : p);
-  }}});
-  assert.ok(withKey.audit.leaks.some(l => /key/.test(l)), "a key in a broadcast must be caught: " + withKey.audit.leaks.slice(0, 2));
-  const withSeed = playServer("kayo", "dash", "sab-b3", {tamper: {broadcast: (t, p, bus, ctx) => {
-    const h = (ctx.store.row(ctx.code) || {}).hub;
-    bus.broadcast(t, h && h.seedH && p.frames.length ? {...p, frames: p.frames.concat([{ch: "judge", note: h.seedH}])} : p);
-  }}});
-  assert.ok(withSeed.audit.leaks.some(l => /seed/.test(l)), "the seed in a broadcast must be caught: " + withSeed.audit.leaks.slice(0, 2));
-  const control = playServer("kayo", "dash", "sab-b4", {tamper: {broadcast: (t, p, bus) => bus.broadcast(t, p)}});
-  assert.deepEqual(control.audit.leaks, [], "a pass-through bus is clean (control)");
+  /* a table opened to the deal is enough for the audit: the first broadcast already carries what the tamper adds */
+  const opens = tamper => { let hub; const mk = makeServerHub({seedKey: "sab", tamper});
+    T.makeTable({heroes: ["kayo", "dash"], salt: "sab", throws: [["rock", "rock"], ["paper", "rock"]], makeHub: o => (hub = mk(o))}).open(); return hub.audit; };
+  const rowHub = ctx => (ctx.store.row(ctx.code) || {}).hub;
+  const withKey = opens({broadcast: (t, p, bus, ctx) => { const h = rowHub(ctx);
+    bus.broadcast(t, h && h.keys[0] && p.frames.length ? {...p, frames: p.frames.concat([{ch: "judge", note: h.keys[0]}])} : p); }});
+  assert.ok(withKey.leaks.some(l => /key/.test(l)), "a key in a broadcast must be caught: " + withKey.leaks.slice(0, 2));
+  const withSeed = opens({broadcast: (t, p, bus, ctx) => { const h = rowHub(ctx);
+    bus.broadcast(t, h && h.seedH && p.frames.length ? {...p, frames: p.frames.concat([{ch: "judge", note: h.seedH}])} : p); }});
+  assert.ok(withSeed.leaks.some(l => /seed/.test(l)), "the seed in a broadcast must be caught: " + withSeed.leaks.slice(0, 2));
+  assert.deepEqual(opens({broadcast: (t, p, bus) => bus.broadcast(t, p)}).leaks, [], "a pass-through bus is clean (control)");
 });
 
 /* ---- a dealt table to attack (c, d, e) ------------------------------------ */
@@ -244,7 +243,9 @@ test("(c) A WRONG OR MISSING SEAT KEY IS REFUSED AND CHANGES NOTHING — frames,
   assert.deepEqual(authFailures(SERVER), []);
 });
 test("(c) SABOTAGE — a server whose key check always passes fails the drill", () => {
-  const sab = loadServer([["const keyEq = (a, b) => {", "const keyEq = (a, b) => { return true;"]]);
+  /* the hub checks a claim's key too (defence in depth), so the sabotage vouches for every caller at BOTH doors */
+  const sab = loadServer([["const keyEq = (a, b) => {", "const keyEq = (a, b) => { return true;"],
+    ["link.receive({ch: Hub.CH.JUDGE, claim: seat, key});", "link.receive({ch: Hub.CH.JUDGE, claim: seat, key: hub.persistTable().keys[seat]});"]]);
   const bad = authFailures(sab);
   assert.ok(bad.length >= 3, "the drill must see the broken check: " + bad.slice(0, 3));
 });
@@ -329,8 +330,9 @@ test("a returning phone's claim restores its seat from the row alone, and a thir
   assert.equal(o.a.store.version(o.id), v); assert.equal(o.a.bus.log.length, log);
   /* and a table over: a phone that comes back after the game still gets the reveal */
   const g = GAMES[0].g, id = g.audit.code, ks = g.audit.store.row(id).hub.keys;
-  const late = json(SERVER.handleNow({op: "resync", table: id, seat: 0, key: ks[0]}, g.audit.deps));
-  assert.ok(late.ok);
+  const hello = {ch: "net", m: {t: N.MSG.HELLO, proto: Wr.PROTO, wireV: Wr.WIRE_V, build: T.BUILD, seat: 0}};
+  const late = json(SERVER.handleNow({op: "frame", table: id, seat: 0, key: ks[0], n: g.audit.store.row(id).nonces[0] + 1, frame: hello}, g.audit.deps));
+  assert.ok(late.ok, JSON.stringify(late).slice(0, 100));
   const text = late.frames.filter(f => f.m && f.m.t === "part").map(f => f.m.s).join("");
   assert.ok(text.indexOf('"t":"reveal"') >= 0 || late.frames.some(f => f.m && f.m.t === "reveal"), "a rehydrated, finished game still reveals itself to a returning phone");
 });
@@ -341,7 +343,7 @@ test("bad requests are refused and an internal failure is answered bare (no mess
     assert.equal((await SERVER.handle(bad, deps)).refused, "bad-request", JSON.stringify(bad));
   assert.equal((await SERVER.handle({op: "join", table: "NOPE"}, deps)).refused, "no-table");
   assert.equal((await SERVER.handle({op: "create", table: "T1"}, deps)).ok, true);
-  assert.deepEqual(json(await SERVER.handle({op: "create", table: "T1"}, deps)), {ok: false, refused: "exists"});
+  assert.deepEqual(json(await SERVER.handle({op: "create", table: "T1"}, deps)), {ok: false, refused: "exists", retry: false});
   const gen = await SERVER.handle({op: "create"}, deps);
   assert.ok(gen.ok && /^[A-HJ-NP-Z2-9]{6}$/.test(gen.table), "a generated table code");
   const boom = {...deps, store: {get(){ throw new Error("hidden card 123456"); }, put(){ }}};
@@ -407,7 +409,8 @@ test("LEDGER — server/referee.js is headless (not a page script) and re-declar
     for(const k of Object.keys(m || {})) names.add(k);
   }
   assert.ok(names.size > 100, "the census found the engine's exports: " + names.size);
-  const decl = [...SRC.matchAll(/(?:function|const|let|var)\s+([A-Za-z_$][\w$]*)/g)].map(m => m[1]);
+  /* module-scope declarations (the factory's body is not indented) */
+  const decl = [...SRC.matchAll(/^(?:function|const|let|var)\s+([A-Za-z_$][\w$]*)/gm)].map(m => m[1]);
   assert.deepEqual(decl.filter(n => names.has(n)), [], "the server re-declares an engine export");
   assert.ok(decl.includes("handle") && decl.includes("rig"), "the census read the source");
 });

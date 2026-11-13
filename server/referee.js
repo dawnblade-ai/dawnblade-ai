@@ -67,7 +67,7 @@
 
 const ROW_V = 1;
 const ID_RE = /^[A-Za-z0-9_-]{1,32}$/;
-const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const topic = (id, seat) => "table:" + id + ":seat" + seat;
 const clone = v => JSON.parse(JSON.stringify(v));
 
@@ -122,7 +122,7 @@ const newRow = (id, hub, deps) => ({v: ROW_V, wireV: W.WIRE_V, id, build: deps.b
 
 function newId(deps){
   const r = deps.rand ? deps.rand() : Math.random;
-  let s = ""; for(let i = 0; i < 6; i++) s += ALPHABET[Math.floor(r() * ALPHABET.length)];
+  let s = ""; for(let i = 0; i < 6; i++) s += CODE_CHARS[Math.floor(r() * CODE_CHARS.length)];
   return s;
 }
 
@@ -205,7 +205,7 @@ function resync(req, got, deps){
 }
 
 /* ---- the entry ------------------------------------------------------- */
-function run(req, deps){
+function serve(req, deps){
   if(!req || typeof req !== "object" || !deps || !deps.store) return no("bad-request");
   if(req.op === "create") return create(req, deps);
   if(typeof req.table !== "string" || !ID_RE.test(req.table)) return no("bad-request");
@@ -222,13 +222,13 @@ function run(req, deps){
 const failed = (deps, e) => { try { if(deps && deps.log) deps.log(e); } catch(_){} return no("internal"); };
 function handle(req, deps){
   return new Promise(res => {
-    let v; try { v = run(req, deps); } catch(e){ return res(failed(deps, e)); }
+    let v; try { v = serve(req, deps); } catch(e){ return res(failed(deps, e)); }
     if(isP(v)) v.then(res, e => res(failed(deps, e))); else res(v);
   });
 }
 /* the same body for synchronous deps (the drills' fakes): returns the response */
 function handleNow(req, deps){
-  let v; try { v = run(req, deps); } catch(e){ return failed(deps, e); }
+  let v; try { v = serve(req, deps); } catch(e){ return failed(deps, e); }
   if(isP(v)) throw new Error("server: handleNow needs synchronous deps");
   return v;
 }
