@@ -196,7 +196,8 @@ function tokens(v, out){
   out = out || [];
   if(v == null) return out;
   if(Array.isArray(v)){ v.forEach(x => tokens(x, out)); return out; }
-  if(typeof v === "object"){ for(const k of Object.keys(v)){ out.push(k); tokens(v[k], out); } return out; }
+  /* a KEY can carry a uid inside it (`ct100083`, `ally100083`, v6.25): its digit runs are tokens too */
+  if(typeof v === "object"){ for(const k of Object.keys(v)){ out.push(k); const m = k.match(/\d{6,}/g); if(m) out.push(...m); tokens(v[k], out); } return out; }
   const s = String(v); out.push(s);
   if(typeof v === "string"){ const m = s.match(/\d{6,}/g); if(m) out.push(...m); }
   return out;
