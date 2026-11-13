@@ -42,3 +42,24 @@ test("the match seed is fixed by both halves, in order", () => {
   assert.notEqual(a, SHA.seedOf("h2", "g1"), "the host's half moves it");
   assert.notEqual(a, SHA.seedOf("g1", "h1"), "order-fixed");
 });
+
+/* ---- SERVER S3: the channel's name and seal ------------------------------------------------ */
+test("HMAC-SHA256 equals node's own, for short, block-sized and over-long keys and any message", () => {
+  for(const k of ["", "k", "a".repeat(63), "a".repeat(64), "a".repeat(65), "b".repeat(300), "é✊"])
+    for(const m of ["", "m", "x".repeat(55), "x".repeat(56), "x".repeat(64), "x".repeat(1000), "é🂡"])
+      assert.equal(SHA.hmac(k, m), crypto.createHmac("sha256", Buffer.from(k, "utf8")).update(m, "utf8").digest("hex"), JSON.stringify([k.length, m.length]));
+});
+
+test("seatTopic is one-way and distinct per seat, code and key; frameMac moves with every field", () => {
+  const key = "0123456789abcdef0123456789abcdef";
+  const t = SHA.seatTopic("K7Q2ZM", 0, key);
+  assert.match(t, /^table:K7Q2ZM:[0-9a-f]{64}$/);
+  assert.ok(t.indexOf(key) < 0, "the topic does not contain the key");
+  assert.equal(t, SHA.seatTopic("K7Q2ZM", 0, key), "deterministic");
+  for(const o of [SHA.seatTopic("K7Q2ZM", 1, key), SHA.seatTopic("K7Q2ZN", 0, key), SHA.seatTopic("K7Q2ZM", 0, key + "0")]) assert.notEqual(o, t);
+  const fr = [{ch: "net", m: {t: "commit", seq: 3}}], mac = SHA.frameMac(key, "K7Q2ZM", 0, 5, fr);
+  assert.match(mac, /^[0-9a-f]{64}$/);
+  assert.equal(mac, SHA.frameMac(key, "K7Q2ZM", 0, 5, JSON.parse(JSON.stringify(fr))));
+  for(const o of [SHA.frameMac(key + "0", "K7Q2ZM", 0, 5, fr), SHA.frameMac(key, "K7Q2ZN", 0, 5, fr), SHA.frameMac(key, "K7Q2ZM", 1, 5, fr),
+                  SHA.frameMac(key, "K7Q2ZM", 0, 6, fr), SHA.frameMac(key, "K7Q2ZM", 0, 5, [{ch: "net", m: {t: "commit", seq: 4}}])]) assert.notEqual(o, mac);
+});

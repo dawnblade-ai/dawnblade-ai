@@ -20,7 +20,7 @@
                  a put against any other version than the stored one is
                  {ok:false} — that is the whole concurrency story). Either
                  may return a promise.
-     broadcast  (topic, payload) — fire the payload at a private channel
+     broadcast  (topic, payload) — fire the payload at the seat's channel
      deal       (spec) -> {state, catalog}   hub.js's `deal`: the card
                 database lives with the caller, as in the page and the isolate
      build      the build id both phones must match (hub.js's)
@@ -29,9 +29,15 @@
 
    ---- requests (one JSON frame; the payloads are hub.js's own) ----------
      {op:"create", table?}                       a fresh table (lobby open)
-     {op:"join", table}                          the first seat nobody has
+     {op:"join", table, claim?}                  the first seat nobody has
                                                  sat in; the answer carries
-                                                 {ch:"judge", seat, key}
+                                                 {ch:"judge", seat, key}.
+                                                 `claim`: a token the phone
+                                                 chose (16-64 of A-Za-z0-9_-);
+                                                 asked again with the same
+                                                 token the answer is the SAME
+                                                 seat, key and lobby (a lost
+                                                 answer can be retried)
      {op:"join", table, seat, key}               a returning phone's claim; the
                                                  answer's `n` is where its frame
                                                  counter resumes (above it)
@@ -54,21 +60,29 @@
         `conflict` (someone else wrote first) is the only retry:true.
 
    ---- broadcasts ---------------------------------------------------------
-     topic table:<id>:seat<0|1>, payload {ver, frames:[{ch, m}...]} — ONLY
+     topic table:<id>:<hash of the seat's key> (sha256.js seatTopic; PUBLIC
+     channel — see there for the trade-off), payload {ver, frames:[{ch, m}...],
+     mac} — `mac` is HMAC-SHA256 under the seat's key (sha256.js frameMac):
+     a phone applies a push only if it verifies. ONLY
      that seat's frames (net.js sends each seat its own view), and only
      frames a CALLER is not already holding in its response: the other
      seat's. Sent after a successful save, never for a refused, read-only or
-     conflicted call.
+     conflicted call. No response ever names a topic: a phone derives its OWN from the key it was dealt,
+     and the other seat's name is never sent to anyone.
    ============================================================ */
 (function(root, factory){
-  if(typeof module==="object" && module.exports) module.exports = factory(require("../engine/hub.js"), require("../engine/wire.js"), require("../engine/judge.js"), require("../engine/invariants.js"));
-  else root.DawnServer = factory(root.DawnHub, root.DawnWire, root.DawnJudge, root.DawnInvariants);
-})(typeof self!=="undefined" ? self : this, function(Hub, W, J, INV){
+  if(typeof module==="object" && module.exports) module.exports = factory(require("../engine/hub.js"), require("../engine/wire.js"), require("../engine/judge.js"), require("../engine/invariants.js"), require("../engine/sha256.js"));
+  else root.DawnServer = factory(root.DawnHub, root.DawnWire, root.DawnJudge, root.DawnInvariants, root.DawnSHA);
+})(typeof self!=="undefined" ? self : this, function(Hub, W, J, INV, SHA){
 
-const ROW_V = 1;
+/* the stored row's own version: 1 (S1) -> 2 (S3: `claims`, the join tokens) */
+const ROW_V = 2;
 const ID_RE = /^[A-Za-z0-9_-]{1,32}$/;
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-const topic = (id, seat) => "table:" + id + ":seat" + seat;
+/* a seat's channel: derived from its secret key by a one-way hash (sha256.js `seatTopic`), so the name is
+   unguessable and never reveals the key. PUBLIC channel, CEO decision (casual stage): see sha256.js. */
+const topic = (id, seat, key) => SHA.seatTopic(id, seat, key);
+const CLAIM_RE = /^[A-Za-z0-9_-]{16,64}$/;
 const clone = v => JSON.parse(JSON.stringify(v));
 
 /* a value that may or may not be a promise: the core runs synchronously
@@ -118,7 +132,7 @@ function rig(id, data, deps){
 
 /* the row a table is stored as */
 const newRow = (id, hub, deps) => ({v: ROW_V, wireV: W.WIRE_V, id, build: deps.build || null, hub: hub.persistTable(),
-  nonces: [0, 0], created: deps.now ? deps.now() : 0, updated: deps.now ? deps.now() : 0});
+  nonces: [0, 0], claims: [null, null], created: deps.now ? deps.now() : 0, updated: deps.now ? deps.now() : 0});
 
 function newId(deps){
   const r = deps.rand ? deps.rand() : Math.random;
@@ -143,7 +157,11 @@ function save(id, row, version, deps, frames, reply, extra){
   return then(deps.store.put(id, row, version), p => {
     if(!p || !p.ok) return no("conflict", {retry: true});
     const list = [];
-    for(const s of [0, 1]) if(frames[s].length) list.push([topic(id, s), {ver: p.version, frames: frames[s]}]);
+    for(const s of [0, 1]){
+      const key = row.hub.keys[s];
+      /* a seat nobody was ever dealt has no channel (and no frames); the seal is the seat's own key's */
+      if(frames[s].length && key != null) list.push([topic(id, s, key), {ver: p.version, frames: frames[s], mac: SHA.frameMac(key, id, s, p.version, frames[s])}]);
+    }
     return then(pushAll(list, deps, 0, false), sent => ({ok: true, version: p.version, ...(extra || {}), frames: reply,
       ...(sent ? {} : {broadcast: "failed"})}));
   });
@@ -169,9 +187,27 @@ function join(req, got, deps){
     r.seat(req.seat, req.key, true);
     return {ok: true, version: got.version, seat: req.seat, n: row.nonces[req.seat], frames: r.out[req.seat]};
   }
+  /* AN UNKEYED JOIN carries a CLAIM TOKEN the phone chose (128+ random bits). The seat and the token are saved
+     in ONE write, so a phone that never got the answer asks again with the same token and is handed the SAME
+     seat, key and lobby — instead of a second seat dealt to nobody. (A token is a bearer secret like the key,
+     stored only in the row.) */
+  const tok = req.claim;
+  if(tok !== undefined && (typeof tok !== "string" || !CLAIM_RE.test(tok))) return no("bad-request");
+  const claims = Array.isArray(row.claims) ? row.claims : [null, null];
+  if(tok !== undefined){
+    const prior = [0, 1].find(s => claims[s] != null && keyEq(claims[s], tok));
+    if(prior !== undefined){
+      const r = rig(id, row, deps), key = row.hub.keys[prior];
+      r.seat(prior, key, true);
+      /* the first answer's seat offer carried the key; the claim's replay does not, so it is put back */
+      const frames = r.out[prior].map(f => f && f.ch === Hub.CH.JUDGE && f.seat === prior ? {...f, key} : f);
+      return {ok: true, version: got.version, seat: prior, n: row.nonces[prior], frames};
+    }
+  }
   const r = rig(id, row, deps), f = r.fresh(), seat = f.link.seat();
   if(seat == null) return no("full");
   row.hub = r.hub.persistTable();          /* the new seat's key is now part of the table */
+  if(tok !== undefined){ row.claims = claims.slice(); row.claims[seat] = tok; }
   return save(id, row, got.version, deps, [[], []], f.got, {seat, n: row.nonces[seat]});
 }
 

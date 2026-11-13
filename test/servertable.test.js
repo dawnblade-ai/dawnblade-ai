@@ -48,7 +48,7 @@ function loadCopy(src, edits, req){
   new Function("module", "exports", "require", "self", src)(m, m.exports, req || (() => { throw new Error("no require"); }), undefined);
   return m.exports;
 }
-const stCopy = edits => loadCopy(SRC, edits);
+const stCopy = edits => loadCopy(SRC, edits, p => require(path.join(ROOT, "engine", p)));
 const serverCopy = edits => loadCopy(SERVER_SRC, edits, p => require(path.join(ROOT, "server", p)));
 
 const HEROES = ["blaze", "dorinthea"];
@@ -214,7 +214,7 @@ test("SABOTAGE (b): a channel that does not retry a conflict loses frames", asyn
 async function brokenWire(ST_){
   const world = makeWorld({seedKey: "bw"});
   const {A, B} = await PH.seatTwo(world, HEROES, "bw", {ST: ST_});
-  const code = A.code, tA = ST.topicFor(code, 0), tB = ST.topicFor(code, 1), injected = {dup: 0};
+  const code = A.code, tA = world.topicOf(code, 0), tB = world.topicOf(code, 1), injected = {dup: 0};
   await play(world, [A, B], 70, async n => {
     if(n === 10){ world.fault.dup(tB, 1); injected.dup++; }
     if(n === 20){ world.fault.drop(tA, 1); }
@@ -249,7 +249,7 @@ test("SABOTAGE (c): a channel that delivers every payload as it comes (no dedup,
 test("(d) A SUBSCRIPTION THAT DROPS READS reconnecting, AND COMES BACK HEALED", async () => {
   const world = makeWorld({seedKey: "sub"});
   const {A, B} = await PH.seatTwo(world, HEROES, "sub");
-  const code = A.code, tB = ST.topicFor(code, 1);
+  const code = A.code, tB = world.topicOf(code, 1);
   await play(world, [A, B], 10);
   B.statuses.length = 0;
   world.fault.cut(tB);
@@ -391,10 +391,117 @@ test("SABOTAGE (g): the blindness scan bites — the other seat's view delivered
   assert.deepEqual(sc.leaks, [], "clean before the sabotage");
   /* what seat 1 was told (its own hand, in a commit or a snapshot) arrives on seat 0's topic as well */
   const mine = B.inbox.filter(f => f.ch === "net");
-  world.route(ST.topicFor(code, 0), {ver: 99999, frames: mine});
+  const k0 = world.row(code).hub.keys[0];
+  world.route(world.topicOf(code, 0), {ver: 99999, frames: mine, mac: require("../engine/sha256.js").frameMac(k0, code, 0, 99999, mine)});   /* a buggy SERVER seals what it sends */
   await world.settle([A.ch, B.ch]);
   sc.scan();
   assert.ok(sc.leaks.length > 0, "the scanner did not notice the other seat's frames on this seat's channel");
+});
+
+/* ============================================================ (h) THE CHANNEL IS PUBLIC: A FORGED PUSH IS IGNORED (SERVER S3) */
+async function forgeRun(ST_){
+  const world = makeWorld({seedKey: "fg"});
+  const {A, B} = await PH.seatTwo(world, HEROES, "fg", {ST: ST_});
+  const code = A.code, SHAx = require("../engine/sha256.js");
+  await play(world, [A, B], 14);
+  const tA = world.topicOf(code, 0), keys = world.row(code).hub.keys;
+  const before = A.inbox.length, st0 = A.sess.hash(), seq0 = A.sess.seq();
+  /* what a listener who learned seat 0's channel name could publish: B's real frames (a hand!) and a made-up commit, with
+     no seal, a seal of the wrong version, the other seat's seal, and a seal over other frames */
+  const real = B.inbox.filter(f => f.ch === "net").slice(-3), junk = [{ch: "net", m: {t: "commit", seq: seq0 + 1, bogus: true}}];
+  const lastVer = world.store.version(code);
+  const ver = lastVer + 50;
+  const sends = [
+    {ver, frames: real}, {ver: ver + 1, frames: junk, mac: "0".repeat(64)}, {ver: ver + 2, frames: junk, mac: 5},
+    {ver: ver + 3, frames: junk, mac: SHAx.frameMac(keys[1], code, 0, ver + 3, junk)},                  /* the other seat's key */
+    {ver: ver + 4, frames: junk, mac: SHAx.frameMac(keys[0], code, 0, ver + 3, junk)},                  /* the right key, another version */
+    {ver: ver + 5, frames: junk, mac: SHAx.frameMac(keys[0], code, 1, ver + 5, junk)},                  /* the right key, another seat */
+    {ver: ver + 6, frames: real, mac: SHAx.frameMac(keys[0], code, 0, ver + 6, junk)}];                 /* a seal over other frames */
+  for(const p of sends) world.route(tA, p);
+  await world.settle([A.ch, B.ch]);
+  const calls0 = world.posts.length;
+  return {world, A, B, code, before, st0, seq0, sends, events: A.ch.events(), calls0};
+}
+const cleanForge = async r => {
+  const {world, A, B, code, before, st0, seq0, sends} = r;
+  assert.equal(A.ch.events().filter(e => e.t === "unsealed").length, sends.length, "every unsealed push was seen and ignored");
+  assert.equal(A.inbox.length, before, "nothing was handed up to the game");
+  assert.equal(A.sess.hash(), st0, "the game's state did not move"); assert.equal(A.sess.seq(), seq0);
+  /* and the game goes on, and is the referee's */
+  await play(world, [A, B], 20);
+  assert.equal(hashOf(world, code), refHash(world, code, 34), "the stored game is still the referee's");
+  for(const p of [A, B]) assert.equal(p.sess.hash(), Wr.hash(R.seatView(PH.storedGame(world, code), p.seat)), "seat " + p.seat + " agrees with the referee");
+};
+test("(h) A PUSH ON THE PUBLIC CHANNEL THAT DOES NOT VERIFY IS IGNORED — unsealed, wrongly sealed, another seat's seal, a replayed seal over other frames: the game never sees them", async () => {
+  await cleanForge(await forgeRun(ST));
+});
+test("(h) A GENUINE PUSH REPLAYED LATER cannot move the game (a repeated version is dropped)", async () => {
+  const world = makeWorld({seedKey: "rp"});
+  const {A, B} = await PH.seatTwo(world, HEROES, "rp");
+  const code = A.code, tA = world.topicOf(code, 0);
+  await play(world, [A, B], 10);
+  const sealed = world.bus.log.filter(e => e.topic === tA).map(e => e.payload);
+  assert.ok(sealed.length >= 3, "the referee pushed to seat 0: " + sealed.length);
+  const h0 = A.sess.hash(), seq0 = A.sess.seq(), n0 = A.inbox.length;
+  for(const p of sealed) world.route(tA, JSON.parse(JSON.stringify(p)));
+  await world.settle([A.ch, B.ch]);
+  assert.equal(A.sess.hash(), h0); assert.equal(A.sess.seq(), seq0);
+  assert.equal(A.inbox.length, n0, "nothing replayed reached the game");
+  await play(world, [A, B], 12);
+  assert.equal(hashOf(world, code), refHash(world, code, 22));
+});
+test("SABOTAGE (h): a channel that applies a push without checking its seal takes a forged frame", async () => {
+  const bad = stCopy([["if(typeof p.mac !== \"string\" || p.mac !== SHA.frameMac(key, code, seat, p.ver, p.frames)){ ev(\"unsealed\", {ver: p.ver}); return; }", ""]]);
+  let bit = false;
+  try { await cleanForge(await forgeRun(bad)); } catch(e){ bit = true; }
+  assert.ok(bit, "the forgery drill did not notice a channel that skips the seal check");
+});
+
+/* ============================================================ (i) THE CLAIM TOKEN, FROM THE PHONE'S SIDE (SERVER S3) */
+async function lostJoinRun(ST_){
+  const world = makeWorld({seedKey: "lj"});
+  const opts = (name, extra) => ({transport: world.transport(name), sleep: PH.FAST.sleep, tune: {...PH.FAST.tune}, rand: () => 0.5, keep: PH.memKeep(), ...(extra || {})});
+  const M = ST_ || ST;
+  world.fault.loseUnkeyedJoins(1);                           /* the opener's first join is dealt a seat, its answer is lost */
+  const a = await M.startTable(opts("A"));
+  const code = a.code;
+  const b = await M.sitAt(opts("B", {code}));
+  return {world, a, b, code};
+}
+test("(i) A LOST ANSWER TO THE OPENING JOIN IS RETRIED AND LANDS ON THE SAME SEAT — the other phone gets the other chair, none is stranded", async () => {
+  const {world, a, b, code} = await lostJoinRun(ST);
+  assert.equal(a.seat, 0, "the opener holds seat 0"); assert.equal(b.seat, 1, "the joiner holds seat 1");
+  const asks = world.outbound.filter(x => x.name === "A").map(x => JSON.parse(x.text)).filter(e => e.op === "join" && e.claim);
+  assert.equal(asks.length, 2, "the opener asked twice");
+  assert.equal(asks[0].claim, asks[1].claim, "with the same token");
+  assert.deepEqual(world.row(code).hub.keys.map(k => !!k), [true, true], "two seats dealt, no more");
+  assert.equal(world.row(code).claims.filter(Boolean).length, 2);
+  /* the claim token is never sent to the other phone */
+  const tokA = world.row(code).claims[0];
+  assert.ok(!world.inbound.filter(e => e.name === "B").some(e => e.text.indexOf(tokA) >= 0), "seat 0's token did not reach seat 1");
+  a.close(); b.close();
+});
+test("SABOTAGE (i): a phone that sends no claim token strands the seat its lost answer was dealt", async () => {
+  const bad = stCopy([["{op: \"join\", table: code, claim}", "{op: \"join\", table: code}"]]);
+  const r = await lostJoinRun(bad).then(x => x, e => ({err: e}));
+  assert.ok(r.err || r.a.seat !== 0 || r.b.seat !== 1 || r.world.row(r.code).hub.keys.filter(Boolean).length !== 2, "the drill must see a stranded or swapped seat");
+  assert.ok(!r.err ? r.b.seat !== 1 || r.a.seat !== 0 : true);
+});
+test("a 404 from the function is final (not retried); a network error is retried a couple of times, then unavailable", async () => {
+  let posts = 0;
+  const mk = status => ({post: async () => { posts++; throw Object.assign(new Error("x"), {status}); }, subscribe: () => () => {}});
+  posts = 0; assert.equal(await guard(whyOf(ST.sitAt({transport: mk(404), code: "ABCDEF", sleep: PH.FAST.sleep}))), "unavailable"); assert.equal(posts, 1, "a missing function is not asked again");
+  posts = 0; assert.equal(await guard(whyOf(ST.sitAt({transport: mk(undefined), code: "ABCDEF", sleep: PH.FAST.sleep}))), "unavailable"); assert.equal(posts, 3, "a failing network is asked three times, then given up on");
+});
+test("the server switch: off, the page's transport makes no request and loads no library", async () => {
+  const w = {};
+  const t = ST.defaultTransport({on: false, url: "https://example.invalid", key: "k"}, w);
+  assert.equal(await guard(whyOf(ST.startTable({transport: t, sleep: PH.FAST.sleep}))), "unavailable");
+  assert.equal(await guard(whyOf(ST.defaultTransport(undefined, w).post({}))), "unavailable", "no config is off, too");
+  const real = ST.defaultTransport({on: true, url: "https://example.invalid", key: "k", fetch: async () => ({ok: false, status: 404})}, w);
+  assert.equal(await guard(whyOf(ST.startTable({transport: real, sleep: PH.FAST.sleep}))), "unavailable");
+  const fake = {post: async () => ({ok: false}), subscribe: () => () => {}};
+  assert.equal(ST.defaultTransport({on: false}, {__dawnServerTransport: fake}), fake, "a drive's installed transport still wins");
 });
 
 /* ============================================================ the module itself */
@@ -411,7 +518,7 @@ test("loading the module costs no request; the real transport answers unavailabl
   const tr = ST.supabaseTransport({url: "https://example.invalid", key: "k", fetch: async (u, i) => { calls.push({u, i}); return {ok: false, status: 404, json: async () => ({message: "not found"})}; }});
   assert.equal(calls.length, 0, "building the transport made no request");
   assert.equal(await guard(whyOf(ST.startTable({transport: tr, sleep: PH.FAST.sleep}))), "unavailable");
-  assert.equal(calls.length, 1); assert.equal(calls[0].u, "https://example.invalid/functions/v1/referee");
+  assert.equal(calls.length, 1); assert.equal(calls[0].u, "https://example.invalid/functions/v1/table");
   assert.equal(calls[0].i.headers.apikey, "k"); assert.ok(!("authorization" in calls[0].i.headers));
   /* a 200 that is not the referee (a login page, say) reads the same */
   const tr2 = ST.supabaseTransport({url: "https://example.invalid", key: "k", fetch: async () => ({ok: true, status: 200, json: async () => ({hello: 1})})});

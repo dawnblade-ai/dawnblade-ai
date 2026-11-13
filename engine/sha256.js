@@ -128,5 +128,33 @@ const seedOf = (seedH, seedG) => sha256("dawnblade-seed|" + String(seedH) + "|" 
    nonce of its own: nobody can hash their way to it. */
 const seedCommit = seedH => sha256("dawnblade-seedc|" + String(seedH));
 
-return {sha256, digestBytes, utf8, nonce, makeCommit, commitOf, opens, seedOf, seedCommit};
+/* ---- THE HOSTED REFEREE'S CHANNEL NAMES AND SEALS (SERVER S3) --------------
+   A server table pushes each seat its own frames on a PUBLIC Realtime channel (CEO decision 2026-11-13,
+   "Option B" for the casual stage). The two things below are what make that tolerable, and both live here
+   because both the referee (server/referee.js) and the phone (engine/servertable.js) must compute the SAME
+   value: one copy.
+
+   seatTopic  the channel a seat listens on: table:<code>:<64 hex>. The hex is a ONE-WAY hash of the seat's
+              secret key (and the code and seat), so the name never reveals the key, the other seat's name
+              cannot be worked out from this one, and a stranger who knows only the table code cannot guess it.
+              TRADE-OFF, stated plainly: the channel is public. Anyone who LEARNS the name (a log line, a
+              network trace, a screenshot, the platform's operators) can listen to that seat's hand and can
+              publish into the channel; the name is a bearer secret and cannot be revoked short of ending the
+              table. Private channels with real authorization come with sign-in (stage S4).
+   frameMac   HMAC-SHA256 under the seat's key over (code, seat, ver, frames). The referee seals every push; a
+              phone applies a push only if its seal verifies, so a listener who learns the topic can READ but
+              cannot FORGE: without the key no frame can be made that a phone will accept. */
+const hex2bytes = h => { const o = []; for(let i = 0; i + 1 < h.length; i += 2) o.push(parseInt(h.substr(i, 2), 16)); return o; };
+/* HMAC-SHA256 (RFC 2104) of a string message under a string key, as 64 hex characters */
+function hmac(key, msg){
+  let k = utf8(key);
+  if(k.length > 64) k = hex2bytes(digestBytes(k));
+  const ipad = new Array(64).fill(0x36), opad = new Array(64).fill(0x5c);
+  for(let i = 0; i < k.length; i++){ ipad[i] ^= k[i]; opad[i] ^= k[i]; }
+  return digestBytes(opad.concat(hex2bytes(digestBytes(ipad.concat(utf8(msg))))));
+}
+const seatTopic = (code, seat, key) => "table:" + code + ":" + sha256("dawnblade-topic|" + String(code).length + ":" + code + "|" + seat + "|" + String(key));
+const frameMac = (key, code, seat, ver, frames) => hmac(String(key), "dawnblade-frames|" + code + "|" + seat + "|" + ver + "|" + JSON.stringify(frames));
+
+return {sha256, digestBytes, utf8, nonce, makeCommit, commitOf, opens, seedOf, seedCommit, hmac, seatTopic, frameMac};
 });

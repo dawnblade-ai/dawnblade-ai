@@ -171,20 +171,24 @@ test("(b) BLINDNESS — no hidden uid, no seed and no key in anything either pho
     assert.equal(g.audit.mismatch, 0, label + ": a caller's frames rode its own topic too");
     /* every payload went to one seat's private topic, and carried only {ver, frames} */
     for(const e of g.audit.bus.log){
-      assert.match(e.topic, /^table:[A-Za-z0-9_-]+:seat[01]$/, label);
-      assert.deepEqual(Object.keys(e.payload).sort(), ["frames", "ver"], label);
+      assert.match(e.topic, /^table:[A-Za-z0-9_-]+:[0-9a-f]{64}$/, label);
+      assert.deepEqual(Object.keys(e.payload).sort(), ["frames", "mac", "ver"], label);
     }
-    assert.ok(g.audit.bus.log.some(e => e.topic.endsWith("seat0")) && g.audit.bus.log.some(e => e.topic.endsWith("seat1")), label + ": both seats were pushed to");
     /* the stored row is the one place the secrets live */
     const row = g.audit.store.row(g.audit.code);
+    const names = [0, 1].map(s => SERVER.topic(g.audit.code, s, row.hub.keys[s]));
+    assert.notEqual(names[0], names[1]);
+    assert.ok(g.audit.bus.log.some(e => e.topic === names[0]) && g.audit.bus.log.some(e => e.topic === names[1]), label + ": both seats were pushed to, each on the name its own key derives");
+    assert.ok(g.audit.bus.log.every(e => e.payload.mac === SHA.frameMac(row.hub.keys[names.indexOf(e.topic)], g.audit.code, names.indexOf(e.topic), e.payload.ver, e.payload.frames)), label + ": every push is sealed under its seat's own key");
     assert.ok(row.hub.seedH && row.hub.keys[0] && row.hub.keys[1], label + ": the row holds the seed and both keys");
   }
 });
 
 test("(b) SABOTAGE — a bus that forwards one seat's payload to the other seat's topic leaks hidden uids and is caught; a payload carrying a key or the seed is caught by the audit", () => {
-  const cross = playServer("kayo", "dash", "sab-b1", {stopAtLeak: true, tamper: {broadcast: (t, p, bus) => {
+  const cross = playServer("kayo", "dash", "sab-b1", {stopAtLeak: true, tamper: {broadcast: (t, p, bus, ctx) => {
     bus.broadcast(t, p);
-    if(p.frames.some(f => f.m && f.m.t === "commit")) bus.broadcast(t.endsWith("seat0") ? t.replace("seat0", "seat1") : t.replace("seat1", "seat0"), p);
+    const keys = ctx.store.row(ctx.code).hub.keys, names = [0, 1].map(x => SERVER.topic(ctx.code, x, keys[x]));
+    if(p.frames.some(f => f.m && f.m.t === "commit")) bus.broadcast(names[0] === t ? names[1] : names[0], p);
   }}});
   assert.ok(cross.r.leaks[0].length + cross.r.leaks[1].length > 0, "the cross-seat forward must leak a hidden uid and be seen");
   /* a table opened to the deal is enough for the audit: the first broadcast already carries what the tamper adds */
@@ -198,6 +202,12 @@ test("(b) SABOTAGE — a bus that forwards one seat's payload to the other seat'
     bus.broadcast(t, h && h.seedH && p.frames.length ? {...p, frames: p.frames.concat([{ch: "judge", note: h.seedH}])} : p); }});
   assert.ok(withSeed.leaks.some(l => /seed/.test(l)), "the seed in a broadcast must be caught: " + withSeed.leaks.slice(0, 2));
   assert.deepEqual(opens({broadcast: (t, p, bus) => bus.broadcast(t, p)}).leaks, [], "a pass-through bus is clean (control)");
+  /* S3: the channel name is a bearer secret. A name that carries the key, or a response that names a channel, is caught. */
+  const keyed = opens({broadcast: (t, p, bus, ctx) => { const k = (rowHub(ctx) || {keys: []}).keys[0]; bus.broadcast(k && p.frames.length ? t + k : t, p); }});
+  assert.ok(keyed.leaks.some(l => /channel name carries/.test(l)), "a key inside a channel name must be caught: " + keyed.leaks.slice(0, 2));
+  const named = opens({broadcast: (t, p, bus, ctx) => { const k = (rowHub(ctx) || {keys: []}).keys[0];
+    bus.broadcast(t, k && p.frames.length ? {...p, frames: p.frames.concat([{ch: "judge", note: SERVER.topic(ctx.code, 0, k)}])} : p); }});
+  assert.ok(named.leaks.some(l => /channel name/.test(l)), "a channel name inside a frame must be caught: " + named.leaks.slice(0, 2));
 });
 
 /* ---- a dealt table to attack (c, d, e) ------------------------------------ */
@@ -430,4 +440,48 @@ test("LEDGER — server/referee.js is headless (not a page script) and re-declar
   const decl = [...SRC.matchAll(/^(?:function|const|let|var)\s+([A-Za-z_$][\w$]*)/gm)].map(m => m[1]);
   assert.deepEqual(decl.filter(n => names.has(n)), [], "the server re-declares an engine export");
   assert.ok(decl.includes("handle") && decl.includes("rig"), "the census read the source");
+});
+
+/* ---- (g) THE CLAIM TOKEN (SERVER S3): a lost answer to an unkeyed join can be asked again ------------------- */
+function claimFailures(server){
+  const bad = [], F2 = require("./helpers/serverfakes.js");
+  const store = F2.memStore(), sent = [];
+  const deps = {store, broadcast: (t, p) => sent.push([t, p]), deal: T.dealSpec, build: T.BUILD, now: () => 1, rand: (r => () => r())(T.seeded("claim"))};
+  server.handleNow({op: "create", table: "CLAIM1"}, deps);
+  const TA = "tokenAAAAAAAAAAAAAAAA", TB = "tokenBBBBBBBBBBBBBBBB", TC = "tokenCCCCCCCCCCCCCCCC";
+  const keyOf = r => (r.frames.find(f => f.ch === "judge" && f.key) || {}).key;
+  const a1 = json(server.handleNow({op: "join", table: "CLAIM1", claim: TA}, deps));      /* its answer is "lost": asked again */
+  const v1 = store.version("CLAIM1"), row1 = store.json("CLAIM1");
+  const a2 = json(server.handleNow({op: "join", table: "CLAIM1", claim: TA}, deps));
+  if(!a1.ok || !a2.ok) bad.push("a claimed join was refused: " + JSON.stringify([a1.refused, a2.refused]));
+  else {
+    if(a2.seat !== a1.seat) bad.push("the retry was dealt seat " + a2.seat + ", the first answer said " + a1.seat);
+    if(!keyOf(a1) || keyOf(a2) !== keyOf(a1)) bad.push("the retry did not carry the first answer's seat key");
+    if(a2.n !== a1.n) bad.push("the retry's counter differs");
+  }
+  if(store.version("CLAIM1") !== v1 || store.json("CLAIM1") !== row1) bad.push("the retry wrote to the table");
+  const b = json(server.handleNow({op: "join", table: "CLAIM1", claim: TB}, deps));
+  if(!b.ok || b.seat === a1.seat) bad.push("another phone's token did not get the other chair: " + JSON.stringify(b.ok ? b.seat : b.refused));
+  const c = json(server.handleNow({op: "join", table: "CLAIM1", claim: TC}, deps));
+  if(c.ok || c.refused !== "full") bad.push("a third token was seated: " + JSON.stringify(c.ok ? c.seat : c.refused));
+  const again = json(server.handleNow({op: "join", table: "CLAIM1", claim: TA}, deps));
+  if(!again.ok || again.seat !== a1.seat) bad.push("seat A's token stopped working once the table filled");
+  for(const claim of ["short", 7, "has space 16 chars!!", "x".repeat(65)]) {
+    const r = json(server.handleNow({op: "join", table: "CLAIM1", claim}, deps));
+    if(r.ok || r.refused !== "bad-request") bad.push("a malformed claim " + JSON.stringify(claim) + " answered " + JSON.stringify(r.refused));
+  }
+  /* no claim at all still works (the old shape) */
+  server.handleNow({op: "create", table: "CLAIM2"}, deps);
+  const n1 = json(server.handleNow({op: "join", table: "CLAIM2"}, deps)), n2 = json(server.handleNow({op: "join", table: "CLAIM2"}, deps));
+  if(!n1.ok || !n2.ok || n1.seat === n2.seat) bad.push("unclaimed joins no longer take one chair each");
+  return bad;
+}
+test("(g) CLAIM TOKEN — an unkeyed join asked again with its token gets the SAME seat, key and counter and writes nothing; other tokens take the other chair; a full table stays full", () => {
+  assert.deepEqual(claimFailures(SERVER), []);
+  assert.equal(SERVER.ROW_V, 2, "the stored row's shape changed (claims): its own version moved");
+});
+test("SABOTAGE (g): a referee that ignores the token strands a seat on a retry", () => {
+  const sab = loadServer([["if(tok !== undefined){\n    const prior", "if(false){\n    const prior"]]);
+  const bad = claimFailures(sab);
+  assert.ok(bad.some(x => /retry was dealt seat|did not carry/.test(x)), "the drill must see the stranded seat: " + bad.slice(0, 3));
 });

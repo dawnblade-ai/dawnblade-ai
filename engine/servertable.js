@@ -51,7 +51,8 @@
    after a stale answer, after the subscription comes back, after a broadcast
    arrives late, and (when `pollMs` is set) after a long silence — a
    broadcast that never came cannot announce itself.
-   BROADCASTS. Each payload is `{ver, frames}`. A repeated `ver` is dropped; a
+   BROADCASTS. Each payload is `{ver, frames, mac}`; one whose seal does not verify is ignored (see `onPayload`: the
+   channel is public, so the seal is what keeps a listener from forging). A repeated `ver` is dropped; a
    `ver` BELOW one already delivered arrived out of order: its frames are not
    delivered (net.js would take them for a past) and a resync is asked for.
    Gaps in `ver` are NOT a signal: the caller's own writes and the other
@@ -76,17 +77,21 @@
    and `o.timers` let the drills run it without a clock.
    ============================================================ */
 (function(root, factory){
-  if(typeof module==="object" && module.exports) module.exports = factory();
-  else root.DawnServerTable = factory();
-})(typeof self!=="undefined" ? self : this, function(){
+  if(typeof module==="object" && module.exports) module.exports = factory(require("./sha256.js"));
+  else root.DawnServerTable = factory(root.DawnSHA);
+})(typeof self!=="undefined" ? self : this, function(SHA){
 
 /* the referee's code alphabet (server/referee.js CODE_CHARS) and length */
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const CODE_LEN = 6;
 const normalize = c => String(c == null ? "" : c).toUpperCase().split("").filter(x => CODE_CHARS.indexOf(x) >= 0).join("").slice(0, CODE_LEN);
 const isValid = c => normalize(c).length === CODE_LEN;
-/* the private topic a seat listens on (server/referee.js `topic`); S3 may derive it from the key instead */
-const topicFor = (code, seat) => "table:" + code + ":seat" + seat;
+/* the channel a seat listens on (server/referee.js `topic`): derived from the seat's secret key by a one-way
+   hash (sha256.js `seatTopic`), so it is unguessable, never reveals the key, and the OTHER seat's name is never
+   sent to this phone — it cannot even work it out. A PUBLIC channel, by decision (casual stage): anyone who
+   learns this name can read this seat's hand and publish into it, and it cannot be revoked; the seal below is
+   what keeps a listener from forging. Private channels with sign-in arrive at S4. */
+const topicFor = (code, seat, key) => SHA.seatTopic(code, seat, key);
 
 const STATUS = ["connecting", "waiting", "seated", "reconnecting", "unavailable", "closed"];
 const CH_JUDGE = "judge", CH_LOBBY = "lobby", CH_NET = "net";
@@ -153,11 +158,26 @@ async function open(o){
     scrub.add(rec.key);
   }
 
-  /* a join that lost a version race wrote NOTHING: it is asked again (a claim writes nothing at all) */
-  const sleep0 = o.sleep || defaultSleep, tune0 = {joinCap: 8, base: 120, max: 2000, ...(o.tune || {})};
-  let res = null;
-  for(let k = 0; k <= tune0.joinCap; k++){
-    res = await call(T, mode === "resume" ? {op: "join", table: code, seat: rec.seat, key: rec.key} : {op: "join", table: code});
+  /* THE CLAIM TOKEN. An unkeyed join deals a seat; if its ANSWER is lost the phone cannot tell, and a second join
+     would deal the other seat (or "full"), stranding the first one. So the phone picks 128 random bits ONCE per
+     open and sends them with every attempt: the referee remembers which seat the token took, saves the two in one
+     write, and answers a repeat with the SAME seat, key and lobby. Always real randomness (never `o.rand`, which
+     the drills pin): two phones must never share a token. A claiming join (resume) is already idempotent. */
+  const claim = mode === "resume" ? null : (o.claim || SHA.nonce());
+  const req0 = mode === "resume" ? {op: "join", table: code, seat: rec.seat, key: rec.key} : {op: "join", table: code, claim};
+  /* a join that lost a version race wrote NOTHING: it is asked again. One that FAILED in the network may or may
+     not have been applied: it is asked again too (a claim token / a keyed claim makes that safe), a couple of
+     times, but never when the function is simply not there (404): that answer is final. */
+  const sleep0 = o.sleep || defaultSleep, tune0 = {joinCap: 8, joinFailCap: 2, base: 120, max: 2000, ...(o.tune || {})};
+  let res = null, netFails = 0;
+  for(let k = 0; k <= tune0.joinCap + tune0.joinFailCap; k++){
+    try { res = await call(T, req0); }
+    catch(e){
+      if(e && e.status === 404) throw e;
+      if(++netFails > tune0.joinFailCap) throw e;
+      await sleep0(Math.min(tune0.max, tune0.base * Math.pow(2, netFails)) * (0.5 + (o.rand || Math.random)()));
+      continue;
+    }
     if(res.ok || res.refused !== "conflict") break;
     await sleep0(Math.min(tune0.max, tune0.base * Math.pow(2, k)) * (0.5 + (o.rand || Math.random)()));
   }
@@ -181,7 +201,7 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep){
   const timers = o.timers || {setInterval: (f, ms) => setInterval(f, ms), clearInterval: h => clearInterval(h)};
   const tune = {conflictCap: 8, joinCap: 8, failCap: 4, base: 120, max: 2000, probeMs: 5000, pollMs: 0, ...(o.tune || {})};
   const onStatus = o.onStatus || (() => {});
-  const topic = (o.topic || topicFor)(code, seat);
+  const topic = (o.topic || topicFor)(code, seat, key);
   let n = n0, st = "connecting", closed = false, closedWhy = null, sink = null, backlog = [];
   let judgeSent = false, peerHeard = false, sawNet = false, lastVer = 0, lastIn = (o.now || Date.now)();
   let unsub = null, subLost = false, healing = false, healAgain = false, haveFn = o.have || null;
@@ -293,8 +313,16 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep){
   }
 
   /* ---- the broadcast side ------------------------------------------------ */
+  /* BROADCASTS ARE SEALED. The channel is public, so anyone who learns its name may publish into it. The referee
+     seals every push with HMAC-SHA256 under this seat's key (sha256.js `frameMac`, over code, seat, ver and the
+     frames); a push whose seal does not verify is IGNORED — not applied, not counted as news (it neither moves
+     `lastIn` nor starts a heal, so a flood of forgeries costs a hash each and nothing else). Without the key no
+     frame can be made that passes, so an intruder can READ a seat's hand (the stated trade-off) but cannot put a
+     frame into a game. A genuine push replayed later is a repeated or lower `ver`: dropped as a duplicate, or
+     answered with a resync, exactly like a late one. */
   function onPayload(p){
     if(closed || !p || typeof p !== "object" || !Number.isInteger(p.ver) || !Array.isArray(p.frames)) return;
+    if(typeof p.mac !== "string" || p.mac !== SHA.frameMac(key, code, seat, p.ver, p.frames)){ ev("unsealed", {ver: p.ver}); return; }
     lastIn = (o.now || Date.now)();
     if(p.ver === lastVer){ ev("dup", {ver: p.ver}); return; }
     if(p.ver < lastVer){ ev("late", {ver: p.ver}); heal(); return; }
@@ -403,7 +431,7 @@ function loadSupabase(o){
   return libP;
 }
 
-/* config: {url, key, fn?: "referee", fetch?, lib?, document?}
+/* config: {url, key, fn?: "table", fetch?, lib?, document?}
    post:      POST <url>/functions/v1/<fn>, header `apikey` (the publishable key). UNVERIFIED: whether the Edge
               Functions gateway accepts a publishable (non-JWT) key in `apikey` alone — the function is expected to
               be deployed with JWT verification OFF (server/supabase/DEPLOY.md) and to check nothing but the seat key.
@@ -415,7 +443,7 @@ function loadSupabase(o){
               the publishable key and no signed-in user (see server/supabase/001_tables.sql for the S3 question). */
 function supabaseTransport(config){
   config = config || {};
-  const base = String(config.url || "").replace(/\/+$/, ""), fnName = config.fn || "referee";
+  const base = String(config.url || "").replace(/\/+$/, ""), fnName = config.fn || "table";
   const doFetch = config.fetch || (typeof fetch === "function" ? (u, i) => fetch(u, i) : null);
   let client = null;
   const getClient = () => client ? Promise.resolve(client) : loadSupabase(config).then(lib => (client = lib.createClient(base, config.key,
@@ -450,6 +478,9 @@ function supabaseTransport(config){
 function defaultTransport(config, root_){
   const w = root_ || (typeof window !== "undefined" ? window : null);
   if(w && w.__dawnServerTransport) return w.__dawnServerTransport;
+  /* THE SWITCH (index.html `window.SERVER_TABLE.on`): off, no server code path can start — the page does not even
+     offer the option, and this transport answers "unavailable" without a request or a script tag. */
+  if(!config || config.on !== true) return {post: () => Promise.reject(transportErr()), subscribe: () => () => {}};
   return supabaseTransport(config);
 }
 

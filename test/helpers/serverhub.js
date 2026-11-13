@@ -68,6 +68,8 @@ function makeServerHub(cfg){
       if(s.seedH && text.indexOf(s.seedH) >= 0) audit.leaks.push(what + ": the seed's secret half");
       if(s.seed && text.indexOf(String(s.seed)) >= 0) audit.leaks.push(what + ": the match seed");
       s.keys.forEach((k, i) => { if(text.indexOf(k) >= 0 && !(allowOwnKey && i === seat)) audit.leaks.push(what + ": seat " + i + "'s key"); });
+      /* a channel name is a bearer secret (S3, Option B): no response and no frame may carry either seat's */
+      s.keys.forEach((k, i) => { const h = server.topic(code, i, k).split(":")[2]; if(text.indexOf(h) >= 0) audit.leaks.push(what + ": seat " + i + "'s channel name"); });
     };
 
     function call(req){
@@ -93,8 +95,9 @@ function makeServerHub(cfg){
       for(const t of wholes(res.frames)) scanText(req.op + " response", t, res.seat != null ? res.seat : req.seat, joined);
       scanText(req.op + " response (envelope)", JSON.stringify({...res, frames: undefined}), req.seat, false);
       for(const e of sent) for(const t of wholes(e.payload.frames)) scanText("broadcast to " + e.topic, t, null, false);
+      for(const e of sent) secrets().keys.forEach((k, i) => { if(e.topic.indexOf(k) >= 0) audit.leaks.push("a channel name carries seat " + i + "'s key"); });
       /* a call's frames reach the caller in its response; its own topic carries none of them */
-      if(req.op !== "create" && req.seat != null && sent.some(e => e.topic === server.topic(code, req.seat))) audit.mismatch++;
+      if(req.op !== "create" && req.seat != null && sent.some(e => e.topic === server.topic(code, req.seat, ((store.row(code) || {}).hub || {keys: []}).keys[req.seat]))) audit.mismatch++;
       return res;
     }
     call({op: "create", table: code});
@@ -107,7 +110,7 @@ function makeServerHub(cfg){
           L.seat = res.seat; L.n = res.n || 0;
           for(const f of res.frames){ if(f.ch === Hub.CH.JUDGE && f.key) L.key = f.key; end.send(f); }
           if(L.unsub) L.unsub();
-          L.unsub = bus.subscribe(server.topic(code, L.seat), p => p.frames.forEach(f => end.send(f)));
+          L.unsub = bus.subscribe(server.topic(code, L.seat, L.key), p => p.frames.forEach(f => end.send(f)));
         };
         const first = call({op: "join", table: code});
         if(first.ok) seated(first); else end.send({ch: Hub.CH.JUDGE, full: first.refused === "full" ? true : undefined, refused: first.refused});

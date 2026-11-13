@@ -11,7 +11,9 @@
      world.transport(name)      a transport for one phone (its own subscriptions)
      world.fault.failPosts(n)        the next n posts never reach the server (rejects)
      world.fault.loseAnswers(n)      the next n posts REACH the server, the answer is lost (rejects)
+     world.fault.loseUnkeyedJoins(n) the next n unkeyed joins REACH the server (a seat is dealt), the answer is lost
      world.fault.conflicts(n)        the next n store writes lose a version race (the server's real `conflict`)
+     world.topicOf(code, seat)       the channel name of a seat (derived from its key: tests read it off the row)
      world.fault.drop(topic, n)      the next n payloads to `topic` are lost
      world.fault.dup(topic, n)       the next n payloads to `topic` are delivered twice
      world.fault.swap(topic)         the next two payloads to `topic` arrive in the other order
@@ -37,17 +39,20 @@ function makeWorld(o){
   const lagStore = F.lagged({get: id => store.get(id), put: (id, row, v) => { if(failPuts > 0){ failPuts--; return {ok: false, version: store.version(id)}; } return store.put(id, row, v); }}, o.ticks || 2);
   const deps = {store: lagStore, broadcast: (t, p) => bus.broadcast(t, p), deal: o.deal || T.dealSpec, build: o.build || T.BUILD,
                 now: () => clock++, rand: () => rnd, log: e => { W.errors.push(String(e && e.stack || e)); }};
-  const f = {fail: 0, lose: 0, dead: false, notFound: false, drop: new Map(), dup: new Map(), swap: new Map(), held: new Map(), cut: new Set()};
+  const f = {fail: 0, lose: 0, loseOp: null, dead: false, notFound: false, drop: new Map(), dup: new Map(), swap: new Map(), held: new Map(), cut: new Set()};
   const take = (m, k) => { const n = m.get(k) || 0; if(n > 0){ m.set(k, n - 1); return true; } return false; };
   const W = {store, bus, deps, errors: [], inbound: [], outbound: [], calls: 0, inflight: 0, posts: [], answers: [], route: null, subs: new Map(),
     fault: {
-      failPosts: n => { f.fail = n; }, loseAnswers: n => { f.lose = n; }, conflicts: n => { failPuts = n; },
+      failPosts: n => { f.fail = n; }, loseAnswers: n => { f.lose = n; },
+      loseUnkeyedJoins: n => { f.loseOp = {n}; }, conflicts: n => { failPuts = n; },
       drop: (t, n) => f.drop.set(t, n), dup: (t, n) => f.dup.set(t, n), swap: t => f.swap.set(t, 2),
       cut: t => { f.cut.add(t); for(const s of W.subs.get(t) || []) s.state && s.state("lost"); },
       restore: t => { f.cut.delete(t); for(const s of W.subs.get(t) || []) s.state && s.state("joined"); },
       dead: on => { f.dead = on !== false; }, notFound: on => { f.notFound = on !== false; }
     },
-    row: id => store.row(id), server: SERVER};
+    row: id => store.row(id), server: SERVER,
+    /* the channel a seat listens on, as the server derives it (S3: from the seat's key, read off the stored row) */
+    topicOf: (id, seat) => SERVER.topic(id, seat, store.row(id).hub.keys[seat])};
 
   /* payloads reach a topic's subscribers through the faults */
   const route = (topic, payload) => {
@@ -77,6 +82,7 @@ function makeWorld(o){
         if(f.fail > 0){ f.fail--; throw new Error("network down"); }
         const ans = clone(await SERVER.handle(JSON.parse(JSON.stringify(env)), deps));
         if(f.lose > 0){ f.lose--; throw new Error("network dropped the answer"); }
+        if(f.loseOp && f.loseOp.n > 0 && env.op === "join" && env.key === undefined){ f.loseOp.n--; throw new Error("network dropped the join's answer"); }
         const text = JSON.stringify(ans);
         W.inbound.push({topic: null, text, op: env.op, name}); W.answers.push({name, op: env.op, ok: ans.ok, refused: ans.refused, n: env.n});
         return JSON.parse(text);
