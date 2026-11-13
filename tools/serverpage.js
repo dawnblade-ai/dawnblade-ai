@@ -33,23 +33,8 @@ const ST = require("../engine/servertable.js");
 const Wr = require("../engine/wire.js");
 const R = T.R;
 
-/* THE CARD DATA THE SERVER DEALS FROM MUST HASH EQUAL TO THE PAGE'S (net.js's handshake compares catalog hashes). A card
-   object carries its image address, which the page builds from window.CDN: the fake server does the same. (The hosted
-   function has to as well — server/supabase/DEPLOY.md.) */
-require("../engine/cards.js").setCDN("https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/");
-
-/* THE DEAL, THE PAGE'S WAY (index.html JudgeRoom.deal): buildMatch over the card database and the hero decks, the
-   catalog from the builds' own cards — the catalog the page's guest derives, or the handshake refuses a stale cache. */
-const B_ = require("../engine/build.js"), G_ = require("../engine/game.js"), J_ = T.J, HJ_ = require("../test/helpers/judged.js");
-const HEROES_ = Object.fromEntries(T.W.HEROES.map(h => [h.k, h]));
-const DECKS_ = Object.fromEntries(T.W.HEROES.filter(h => T.W.DECKS[h.k]).map(h => [h.k, G_.parseDeck(T.W.DECKS[h.k])]));
-const dealLikeThePage = spec => {
-  const m = B_.buildMatch(spec, { db: HJ_.db(), heroes: HEROES_, decks: DECKS_ });
-  const state = J_.newMatch({ builds: m.builds, names: m.names, heroKeys: m.heroKeys, first: m.first, seed: m.seed });
-  const catalog = Wr.makeCatalog(m.builds.flatMap(b => [...(b.deck || []), ...(b.gear || []), ...(b.startItem ? [b.startItem.card] : [])]));
-  return { state, catalog };
-};
-const matchCatalog = spec => dealLikeThePage({ ...spec, seed: "blind|" + spec.seedC }).catalog;
+/* THE DEAL, THE PAGE'S WAY (index.html JudgeRoom.deal) — shared with tools/supabase-rehearse.js; sets the page's CDN address */
+const { dealLikeThePage, matchCatalog } = require("../test/helpers/pagedeal.js");
 
 const W = 393, H = 852;
 const rows = [];
