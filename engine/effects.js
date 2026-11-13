@@ -11448,7 +11448,12 @@ function playTargetWhy(s, c, seat){
   const sd = (s && s.sides && s.sides[seat]) || {};
   const foeSd = (s && s.sides && s.sides[seat === 0 ? 1 : 0]) || {};
   const fx = P.fxParse(c);
-  /* A TARGET IS REQUIRED (v6.00). RULING (user, 2026-11-07), asked whether
+  /* A TARGET IS REQUIRED (v6.00). RULING (user, 2026-11-13): a card that
+     requires a target cannot be played when it has no legal target
+     (re-asked as "NEEDS A RULING: Preserve Tradition / Pass Over with NO
+     legal target: playable?"; CR 5.1.4a/5.1.5 do not say outright). It
+     confirms the 2026-11-07 ruling below and covers activations too.
+     RULING (user, 2026-11-07), asked whether
      Preserve Tradition can be played with no legal target: "You're right -
      target required." CR 5.1.4a "…if any resolution abilities generate
      effects that require a target, the player must declare all legal
@@ -11475,6 +11480,11 @@ function playTargetWhy(s, c, seat){
     if(k === "foePick" && spec.zone === "grave"
        && !((foeSd.grave || []).filter(promptFilter(spec.filter))).length)
       return c.name + ": nothing in " + sp(foeSd) + " graveyard can be its target";
+    /* Scuttle Toes — "{u} target ally you control" (v6.25). An ally is a
+       board entry's kind (`G.isAlly`), the same reader the resolution asks;
+       with none the activation is illegal, not a paid no-op. */
+    if(k === "untapAlly" && !((sd.board || []).filter(b => b && b.card && G.isAlly(b))).length)
+      return c.name + ": you control no ally for it to target";
     /* A Drop in the Ocean — "target attack" is any attack on the chain:
        the open link, or the trainer's scripted swing (`incoming`, which
        never opens a `pend`). The parser flags the printed word. */

@@ -14385,6 +14385,16 @@ needs the verbatim quote IN THE REPO (source comment, `tools/approx.js` record, 
   prints something else beside the target (v5.07's partial reading is closed). One body,
   `effects.playTargetWhy`, both boards. An attack's target is a hero (CR 1.4.5), so attacks never meet it.
 
+### v6.25 — a target is required, asked again (RULING user, 2026-11-13)
+- RULING (user, 2026-11-13): a card that requires a target cannot be played when it has no legal
+  target. It answers the standing question "Preserve Tradition / Pass Over with NO legal target:
+  playable?" (CR 5.1.4a / 5.1.5 do not say outright) the way v6.00 already built it, so no card
+  changed for those two. Census of the pool's printed "target": see `test/targetreq.test.js`.
+- One gap closed: Scuttle Toes' "{u} target ally you control" was a paid no-op with no ally; it is now
+  refused in `effects.playTargetWhy` (`untapAlly`). Left alone: Gate to i'Arathael ("you may play
+  target action card with blood debt" — optional, unparsed), hero targets (always exist), attacks
+  (CR 1.4.5).
+
 ### S-1 — dominate against a played defence reaction (ship/rules-qa)
 - CR 8.3.4: "Dominate is a static ability that means "This can't be defended by more than one card from hand.""
 - CR 8.3.4b: "If an attack with dominate is currently defended by a card from hand on the activate chain

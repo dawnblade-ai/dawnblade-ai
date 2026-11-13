@@ -1,6 +1,9 @@
 /* ============================================================
    A TARGET IS REQUIRED (v6.00)
 
+   RULING (user, 2026-11-13): a card that requires a target cannot be played
+   when it has no legal target (confirms the ruling below).
+
    RULING (user, 2026-11-07), asked whether Preserve Tradition ("Put target
    action card from your graveyard on the bottom of your deck.") can be
    played with no legal target: "You're right - target required."
@@ -74,6 +77,19 @@ test("A DROP IN THE OCEAN and EDICT OF STEEL: refused with nothing to target, le
   assert.match(String(why(at({hand: [ed]}), "ED")), /^Edict of Steel: you control nothing it can target$/);
 });
 
+test("SCUTTLE TOES: the ability needs an ally to target (2026-11-13); no gate on an unparsed optional target", {skip}, () => {
+  H.db();
+  const st = {...H.card("Scuttle Toes", 0), uid: "ST"};
+  const ab = B.equipPiece({...st}).powCard;
+  assert.ok(ab, "fixture: the equipment has an activated ability");
+  assert.match(String(E.playTargetWhy(at(), ab, 0)), /^Scuttle Toes — ability: you control no ally for it to target$/);
+  const ally = {card: {...H.card("Swabbie", 0), uid: "AL"}, kind: "ally", uid: "AL"};
+  assert.ok(require("../engine/game").isAlly(ally), "fixture: a real ally entry");
+  assert.equal(E.playTargetWhy(at({board: [ally]}), ab, 0), null, "an ally is a legal target");
+  const gate = {...H.card("Gate to i'Arathael", 0), uid: "GT"};
+  assert.equal(E.playTargetWhy(at(), gate, 0), null);
+});
+
 test("THE TRAINER'S INSTANT DOOR refuses the same play, before anything moves", {skip}, () => {
   H.db();
   const pt = cc("Preserve Tradition", 1, "PT");
@@ -118,5 +134,5 @@ test("THE CENSUS: which pool cards a missing target refuses", {skip}, () => {
   assert.deepEqual([...out].sort(), [
     "A Drop in the Ocean", "Astral Etchings", "Beckoning Haunt — ability", "Concealed Object — ability",
     "Crown of Dichotomy — ability", "Edict of Steel", "Fai — ability", "Lightning Press",
-    "Memorial Ground", "Pass Over", "Preserve Tradition"]);
+    "Memorial Ground", "Pass Over", "Preserve Tradition", "Scuttle Toes — ability"]);
 });

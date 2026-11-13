@@ -1074,7 +1074,9 @@ const APPROX = {
         "(`effects.playTargetWhy`, one body: `judge.playableWhy`, every activation route "+
         "through `rxTargetWhy`, the trainer's play and instant doors). Untargeted text "+
         "(Re-Charge!'s \"a\") and attacks (their target is a hero, CR 1.4.5) ask nothing.",
-  why:"RULING (user, 2026-11-07), asked whether Preserve Tradition can be played with no "+
+  why:"RULING (user, 2026-11-13): a card that requires a target cannot be played when it has no "+
+      "legal target (confirms the next; Scuttle Toes' ally target joined, probe in "+
+      "test/targetreq.test.js). RULING (user, 2026-11-07), asked whether Preserve Tradition can be played with no "+
       "legal target: \"You're right - target required.\" Read verbatim at rules.fabtcg.com: "+
       "CR 5.1.4a \"...if any resolution abilities generate effects that require a target, "+
       "the player must declare all legal targets for those effects.\" CR 5.1.5 \"...or the "+

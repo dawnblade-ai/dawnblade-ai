@@ -1705,7 +1705,8 @@ test("the second-person debt in the shared semantics does not grow", () => {
      titles and hints (addressed to `spec.side`), refusals returned to the
      seat that tried the play, the printed "the next time you hit a hero"
      quoted from a card, and the `/^you$/` tests that choose a verb. */
-  assert.ok(lits.length <= 19,
+  /* 19 -> 20 AT v6.25, DELIBERATELY: playTargetWhy refuses Scuttle Toes with "you control no ally for it to target" - a refusal returned to the seat that tried the play (RULING user, 2026-11-13). */
+  assert.ok(lits.length <= 20,
     `second-person literals in effects.js rose to ${lits.length} — the shared feed is read by both seats`);
   /* AND IT MUST NOT PASS BY FINDING NOTHING: if the scan ever stops
      matching, an empty result reads as a clean file. */
