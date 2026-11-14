@@ -7893,7 +7893,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
        console read on either phone gives status, sequence, hash and
        counters — and two phones on different hashes at the same `seq`
        is a desync, stated in one line. */
-    window.__dawnTable = {session: s, seat: mySeat, host, code,
+    window.__dawnTable = {session: s, seat: mySeat, host, code, seedG: match.spec && match.spec.seedG,   /* drills compare it with the referee's: a reloaded seat must hold the table's seed half */
       report: () => ({seat: mySeat, host, status: s.status(), seq: s.seq(),
                       hash: s.hash(), stats: s.stats(),
                       phase: (s.state()||{}).phase, step: (s.state()||{}).step,

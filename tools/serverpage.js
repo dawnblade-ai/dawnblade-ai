@@ -256,8 +256,11 @@ async function toServerChooser(page){
   row(await page.evaluate(() => !document.querySelector(".srvbar")), "reconnecting: the banner clears when the link is back");
 
   /* the server goes away mid-game */
-  /* a move to make: the scripted phone plays on its own clock, so wait until it is this page's turn */
-  await page.waitForFunction(() => { const s = window.__dawnTable && window.__dawnTable.session; return !!(s && s.status() === "ready" && DawnSparring.act(s.state(), 0, { search: false })); }, null, { timeout: 15000 }).catch(() => {});
+  /* a move to make: drive the scripted phone until it is this page's turn (a state, not a wait: the old fixed wait
+     timed out under load, no move was submitted, no request failed, and no banner ever came) */
+  const pageHasMove = () => page.evaluate(() => { const s = window.__dawnTable && window.__dawnTable.session; return !!(s && s.status() === "ready" && DawnSparring.act(s.state(), 0, { search: false })); });
+  for(let i = 0; i < 400 && !(await pageHasMove()); i++){ if(!(await PH.step(world2, [B]))) await wait(50); await world2.settle([B.ch]); }
+  row(await pageHasMove(), "unavailable mid-game: the page has a move to submit while the server is down");
   world2.fault.dead();
   await page.evaluate(() => { const s = window.__dawnTable.session; const a = DawnSparring.act(s.state(), 0, { search: false }); if(a) s.submit(a);
     window.__dawnTable.report(); });
@@ -271,6 +274,7 @@ async function toServerChooser(page){
   await world2.settle([B.ch]);
 
   /* a reload: the seat is claimed back from the stored key */
+  const seedGBefore = await page.evaluate(() => window.__dawnTable.seedG);
   const nonceBefore = world2.row(code).nonces[0];
   const seqBefore = B.sess.seq();
   await page.reload();
@@ -289,6 +293,8 @@ async function toServerChooser(page){
   const rep2 = await page.evaluate(() => window.__dawnTable.report());
   const full2 = PH.storedGame(world2, code);
   row(rep2.seat === 0 && rep2.hash === Wr.hash(R.seatView(full2, 0)), "reload: back at seat 0, on the referee's view of the game", rep2.hash);
+  const seedGAfter = await page.evaluate(() => window.__dawnTable.seedG), tableSeedG = world2.row(code).hub.spec.seedG;
+  row(!!tableSeedG && seedGBefore === tableSeedG && seedGAfter === tableSeedG, "reload: the page's lobby holds the table's own seed half (so 'verify this game' still opens the right deal)", "before " + String(seedGBefore).slice(0, 8) + ", after " + String(seedGAfter).slice(0, 8) + ", table " + String(tableSeedG).slice(0, 8));
   const stale = world2.answers.filter(a => a.refused === "stale").length;
   row(stale === 0, "reload: no frame was refused as stale");
   const more = await play(10);
