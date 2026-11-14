@@ -62,6 +62,19 @@ function memBus(){
     sent: topic => log.filter(e => e.topic === topic).map(e => e.payload)};
 }
 
+/* THE SIGN-IN PROVIDER, FAKED (S4.1): what `deps.identify(token)` stands on. issue(player, name?) hands out a token the way a
+   provider would (opaque, unguessable-looking, never the player id); identify(token) answers {player, name?} or null for a
+   forged, expired or revoked one — the function never learns how. `calls` counts the lookups (a join with no token makes none). */
+function memIdentity(){
+  const live = new Map(); let n = 0;
+  const st = {calls: 0, tokens: [],
+    issue(player, name){ const t = "jwt." + (++n) + "." + Math.abs(hash(player + "|" + n)).toString(36) + "xyz"; live.set(t, {player, ...(name ? {name} : {})}); st.tokens.push(t); return t; },
+    expire: t => live.delete(t),
+    identify(token){ st.calls++; const w = live.get(token); return w ? {...w} : null; }};
+  return st;
+}
+function hash(s){ let h = 7; for(let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return h; }
+
 const tick = n => { let p = Promise.resolve(); for(let i = 0; i < (n || 1); i++) p = p.then(() => null); return p; };
 function lagged(store, ticks){
   const t = ticks || 3;
@@ -72,4 +85,4 @@ function laggedBus(bus, ticks){
   return {broadcast: (topic, payload) => tick(t).then(() => bus.broadcast(topic, payload)), inner: bus};
 }
 
-module.exports = {memStore, memBus, lagged, laggedBus, bytes, tick};
+module.exports = {memStore, memBus, memIdentity, lagged, laggedBus, bytes, tick};

@@ -21,6 +21,11 @@
    makeServerHub({server, deal?, seedKey, tamper?}) -> makeHub(opts):
      server  the module under test (handleNow) — default server/referee.js
      deal    overrides opts.deal (the isolate's own card database)
+     identify, identities, lose, secrets   (S4.1, test/serverid.test.js)
+             identify  deps.identify for the referee; identities: the token each successive phone presents with its first
+             join (none: no identity, as v6.28); lose: a Set of seats whose phone has LOST its key — its claim is then an
+             unkeyed identity join (a takeover) instead of a keyed one; secrets: strings (player ids, tokens) no response,
+             broadcast or frame may contain, scanned like the keys.
      tamper  {broadcast?(topic, payload, bus, {store, code}) -> void} — the sabotage seam:
              it REPLACES the bus's broadcast, to prove the audit bites. */
 const path = require("path");
@@ -44,9 +49,10 @@ function makeServerHub(cfg){
     /* the deps, from a clean clock and a clean seed: the async replay builds a second set */
     const makeDeps = (st, bs) => { let ck = 1700000000000; const r = T.seeded("server|" + (cfg.seedKey || "") + "|" + code);
       return {store: st, broadcast: (t, p) => bs.broadcast(t, p), deal, build: opts.build, now: () => ck++, rand: () => r,
+              ...(cfg.identify ? {identify: cfg.identify} : {}),
               log: e => { audit.errors.push(String(e && e.stack || e)); }}; };
     const deps = {...makeDeps(store, bus), broadcast, now: () => clock++, rand: () => rnd};
-    const audit = {calls: 0, timings: [], responses: [], reqs: [], resps: [], leaks: [], mismatch: 0, errors: [], refused: [], store, bus, deps, makeDeps, code};
+    const audit = {phones: 0, calls: 0, timings: [], responses: [], reqs: [], resps: [], leaks: [], mismatch: 0, errors: [], refused: [], store, bus, deps, makeDeps, code};
 
     /* ---- inspector: a hub rehydrated from the stored row, never fed a frame ---- */
     let cache = {version: -1, hub: null};
@@ -68,6 +74,7 @@ function makeServerHub(cfg){
       if(s.seedH && text.indexOf(s.seedH) >= 0) audit.leaks.push(what + ": the seed's secret half");
       if(s.seed && text.indexOf(String(s.seed)) >= 0) audit.leaks.push(what + ": the match seed");
       s.keys.forEach((k, i) => { if(text.indexOf(k) >= 0 && !(allowOwnKey && i === seat)) audit.leaks.push(what + ": seat " + i + "'s key"); });
+      for(const x of cfg.secrets || []) if(text.indexOf(x) >= 0) audit.leaks.push(what + ": an identity secret (" + x.slice(0, 4) + "…)");
       /* a channel name is a bearer secret (S3, Option B): no response and no frame may carry either seat's */
       s.keys.forEach((k, i) => { const h = server.topic(code, i, k).split(":")[2]; if(text.indexOf(h) >= 0) audit.leaks.push(what + ": seat " + i + "'s channel name"); });
     };
@@ -112,14 +119,17 @@ function makeServerHub(cfg){
           if(L.unsub) L.unsub();
           L.unsub = bus.subscribe(server.topic(code, L.seat, L.key), p => p.frames.forEach(f => end.send(f)));
         };
-        const first = call({op: "join", table: code});
+        const tok = (cfg.identities || [])[audit.phones++];
+        const first = call({op: "join", table: code, ...(tok ? {identity: {token: tok}} : {})});
         if(first.ok) seated(first); else end.send({ch: Hub.CH.JUDGE, full: first.refused === "full" ? true : undefined, refused: first.refused});
         return {
           receive(f){
             if(!f || typeof f !== "object") return;
             if(f.ch === Hub.CH.JUDGE){
               if(f.claim === 0 || f.claim === 1){
-                const r = call({op: "join", table: code, seat: f.claim, key: f.key});
+                /* a phone that lost its key can only prove who it is */
+                const lostTok = cfg.lose && cfg.lose.has(f.claim) ? (cfg.identities || [])[f.claim] : null;
+                const r = lostTok ? call({op: "join", table: code, identity: {token: lostTok}}) : call({op: "join", table: code, seat: f.claim, key: f.key});
                 if(r.ok){ L.key = f.key; seated(r); } else end.send({ch: Hub.CH.JUDGE, refused: r.refused});
               }
               return;
