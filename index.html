@@ -804,6 +804,14 @@ img{display:block;max-width:100%}
 .tblwho button{flex:none;background:none;border:1px solid var(--line);color:var(--y);font-size:13px;padding:8px 12px;min-height:40px}
 .tblvs{font-size:13px;color:var(--bone-dim);text-align:center;margin-top:4px;overflow-wrap:anywhere}
 .tblvs strong{color:var(--bone)}
+.tblrk{display:inline-block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--y);border:1px solid var(--y);padding:2px 8px;margin-right:6px}
+.tblrt{color:var(--y);font-family:'Spline Sans Mono',monospace;font-size:12px;margin-left:4px}
+.tblsw{width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;background:none;border:1px solid var(--line);color:var(--bone);font-size:15px;padding:10px 12px;min-height:48px}
+.tblsw.on{border-color:var(--y);color:var(--y)}
+.tblsw .tblswsub{font-size:12.5px;color:var(--bone-dim)}
+.rankchg{font-size:14px;line-height:1.45;margin-top:10px;padding:9px 10px;border:1px solid var(--line);background:rgba(0,0,0,.25)}
+.rankchg strong{color:var(--y);font-family:'Spline Sans Mono',monospace}
+.heromid .pname .prate{color:var(--y);font-family:'Spline Sans Mono',monospace}
 .heromid{min-width:0}
 .heromid .pname{max-width:100%;font-size:10px;line-height:1.15;letter-spacing:.02em;color:var(--bone-dim);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tblopen{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:4px 0}
@@ -7041,7 +7049,10 @@ function TableScreen({onBack, onSeated}){
     wire:"The table runs a different version of the game. Reload the page to pick up the latest.",
     code:"A table code is "+DawnServerTable.CODE_LEN+" letters and numbers.",
     exists:"That code is taken — try again.",
-    "table-cap":"You already have 5 tables open, the most one player can have. Finish a game, or close one of the tables below, then open a new one."
+    "table-cap":"You already have 5 tables open, the most one player can have. Finish a game, or close one of the tables below, then open a new one.",
+    "ranked-name":"A ranked table needs a player name for both players. Choose yours under Playing as, then try again.",
+    "ranked-signin":"A ranked table is for signed-in players, and this phone could not sign in just now. Check your connection and try again, or play a friendly table.",
+    identity:"The server did not accept this phone's sign-in just now. Try again in a moment."
   };
   const srvOn = !!(window.SERVER_TABLE && DawnServerTable.doorOpen(SRV_CHOICE, window.SERVER_TABLE.on));   /* this phone's ?server= choice beats the shipped switch (data script); closed, nothing below can start */
   const srvCfg = srvOn ? {...window.SERVER_TABLE, on: true} : window.SERVER_TABLE;
@@ -7052,6 +7063,22 @@ function TableScreen({onBack, onSeated}){
   const srvWire = () => DawnServerTable.defaultTransport(srvCfg);   /* the one place the page reaches for the server; both callers below stop at a shut door first */
   const srvWho = uM(()=> srvOn ? DawnServerTable.defaultIdentity(srvCfg, store) : null, [srvOn]);
   const [myName,setMyName] = uS(()=>{ const n = store.get("who.name", null); return typeof n==="string" ? n : null; });
+  /* RANKED (SERVER S5.1): a table is a friendly one unless the player switches this on for the table they are about to open (never remembered). `myRank` is
+     the rating and record the server last said for this player; it is only asked for when the phone already has a sign-in (looking at a screen never signs
+     anyone in). */
+  const [ranked,setRanked] = uS(false);
+  const [hostRanked,setHostRanked] = uS(false);
+  const [myRank,setMyRank] = uS(null);
+  uE(()=>{
+    if(!srvOn || !srvWho || (mode!=="srv" && mode!=="srv-name")) return;
+    if(typeof srvWho.known==="function" && !srvWho.known()) return;
+    let dead = false;
+    DawnServerTable.whoAmI({transport: srvWire(), identity: srvWho}).then(r=>{
+      if(dead || !live.current) return;
+      if(typeof r.rating==="number") setMyRank({rating:r.rating, games:r.games, wins:r.wins, losses:r.losses, draws:r.draws});
+    }).catch(()=>{});
+    return ()=>{ dead = true; };
+  },[mode, srvOn]);
   const [draft,setDraft] = uS("");
   const NAME_WHY = {
     short:"A name needs at least 3 characters.", long:"A name can be at most 16 characters.",
@@ -7065,6 +7092,7 @@ function TableScreen({onBack, onSeated}){
     DawnServerTable.setName({transport: srvWire(), identity: srvWho}, draft.trim().replace(/ +/g," ")).then(r=>{
       if(!live.current) return;
       store.set("who.name", r.name); setMyName(r.name); setBusy(false); setMode("srv");
+      if(typeof r.rating==="number") setMyRank({rating:r.rating, games:r.games, wins:r.wins, losses:r.losses, draws:r.draws});
     }).catch(e=>{
       if(!live.current) return;
       setBusy(false);
@@ -7119,10 +7147,10 @@ function TableScreen({onBack, onSeated}){
   };
   const srvSit = (how, c, role) => {
     if(!srvOn) return;
-    setErr(null); setGone(false); setBusy(true); setStat("srv-connecting"); setCapOpen([]); setCapNote(null);
+    setErr(null); setGone(false); setBusy(true); setStat("srv-connecting"); setCapOpen([]); setCapNote(null); setHostRanked(false);
     const open = how==="create" ? DawnServerTable.startTable : how==="join" ? DawnServerTable.sitAt : DawnServerTable.reclaim;
     open({
-      transport: srvWire(), keep: store, code: c, identity: srvWho,
+      transport: srvWire(), keep: store, code: c, identity: srvWho, ranked: how==="create" && ranked,
       tune: {pollMs: 20000, fallbackMs: 2000},   /* fallbackMs: with no push, ask the table every 2 s (engine/servertable.js) */
       onStatus: s=>{ if(!live.current) return; setStat("srv-"+s);
         if(s==="seated" && waitRef.current){ const w = waitRef.current; waitRef.current = null; w.go(); } }
@@ -7131,6 +7159,7 @@ function TableScreen({onBack, onSeated}){
       setCode(ch.code);
       const go = () => onSeated({table: ch, host:false, code: ch.code, judged: {seat: ch.seat, key: null, srv: true}});
       if(how==="join" || (how==="reclaim" && role!=="creator") || ch.peerHeard()) return go();
+      setHostRanked(!!(ch.rank && ch.rank().ranked));
       setMode("srv-host"); setStat("srv-waiting");
       waitRef.current = {ch, go};
     }).catch(e=>{
@@ -7289,11 +7318,18 @@ function TableScreen({onBack, onSeated}){
           </p>
         </div>
         {srvWho && !gone && <div className="tblcard tblwho">
-          <span>{myName ? <>Playing as <strong>{myName}</strong></> : "No player name yet — your opponent sees no name."}</span>
+          <span>{myName ? <>Playing as <strong>{myName}</strong></> : "No player name yet — your opponent sees no name."}{myRank && <> · rating <strong data-testid="my-rating">{myRank.rating}</strong></>}</span>
           <button disabled={busy} onClick={()=>{ setErr(null); setDraft(myName||""); setMode("srv-name"); }}>{myName ? "Change" : "Choose a name"}</button>
         </div>}
+        {srvWho && !gone && <div className="tblcard">
+          <button role="switch" aria-checked={ranked} data-testid="ranked-switch" className={"tblsw"+(ranked?" on":"")} disabled={busy} onClick={()=>setRanked(r=>!r)}>
+            <span>{ranked ? "Ranked table" : "Friendly table"}</span>
+            <span className="tblswsub">{ranked ? "Counts toward both players' ratings" : "Just for fun — nothing is recorded"}</span>
+          </button>
+          {ranked && <p className="note" data-testid="ranked-note">A ranked table needs a player name for both of you. Everyone starts at 1200. The throw still decides who chooses to go first.</p>}
+        </div>}
         {gone ? null : <>
-          <button className="bigbtn" disabled={busy} onClick={()=>srvSit("create")}>{busy ? (PHRASE[stat]||"…") : "Open a server table"}</button>
+          <button className="bigbtn" disabled={busy} onClick={()=>srvSit("create")}>{busy ? (PHRASE[stat]||"…") : ranked ? "Open a ranked table" : "Open a server table"}</button>
           <button className="bigbtn alt" disabled={busy} onClick={()=>{ setCode(""); setMode("srv-join"); }}>Enter a table code</button>
           {srvSaved.map(r=><button key={r.code} className="bigbtn alt" disabled={busy} onClick={()=>{ setCode(r.code); srvSit("reclaim", r.code, r.role); }}>Resume table {r.code}</button>)}
         </>}
@@ -7310,6 +7346,7 @@ function TableScreen({onBack, onSeated}){
         <div className="tblcard">
           <div className="tblstat">Your table number — read it out</div>
           <div className="tblcode">{code}</div>
+          {hostRanked && <div className="tblstat" data-testid="host-ranked"><span className="tblrk">Ranked</span>{myRank ? <>your rating <strong>{myRank.rating}</strong></> : null}</div>}
         </div>
         <div className={"tblstat"+(stat==="srv-waiting"?" live":"")}>
           {stat==="srv-waiting" && <span className="tbldot"></span>}
@@ -7338,6 +7375,9 @@ function TableScreen({onBack, onSeated}){
             onChange={e=>{ setErr(null); setDraft(e.target.value); }}/>
           <p className="note">Your opponent sees this name at a server table. It is yours alone: no other player can take it.
             No email and no password — this phone remembers you.</p>
+          {myRank && <p className="note" data-testid="my-record">{myRank.games===0
+            ? <>Your rating is <strong>{myRank.rating}</strong>. No ranked games yet.</>
+            : <>Your rating is <strong>{myRank.rating}</strong>. {myRank.games} ranked {myRank.games===1?"game":"games"}: {myRank.wins} won, {myRank.losses} lost, {myRank.draws} drawn.</>}</p>}
         </div>
         <button className="bigbtn" disabled={busy || Array.from(draft.trim()).length<3} onClick={saveName}>{busy ? "Saving…" : "Save name"}</button>
         {recView==="menu" && <div className="tblcard">
@@ -7430,11 +7470,45 @@ function useSrvNames(table){
   },[table]);
   return n;
 }
+/* THE RANKED STATE AS A HOOK (SERVER S5.1): {ranked, ratings: [seat 0's, seat 1's], result}; {ranked:false} at any other table */
+function useSrvRank(table){
+  const [r,setR] = uS({ranked:false, ratings:[null,null], result:null});
+  uE(()=>{
+    if(!table || !table.srv || !table.rank) return;
+    const read = () => setR(p=>{ const v = table.rank(); return v.ranked===p.ranked && v.ratings[0]===p.ratings[0] && v.ratings[1]===p.ratings[1] && !!v.result===!!p.result ? p : v; });
+    read(); const t = setInterval(read, 1000);
+    return ()=>clearInterval(t);
+  },[table]);
+  return r;
+}
 function SrvNames({table, seat}){
-  const n = useSrvNames(table);
-  if(!table || !table.srv || (n[0]==null && n[1]==null)) return null;
-  const me = n[seat], them = n[1-seat];
-  return <div className="tblvs">{me ? <strong>{me}</strong> : "You"} <span>vs</span> {them ? <strong>{them}</strong> : "a player with no name yet"}</div>;
+  const n = useSrvNames(table), rk = useSrvRank(table);
+  if(!table || !table.srv || (n[0]==null && n[1]==null && !rk.ranked)) return null;
+  const me = n[seat], them = n[1-seat], rm = rk.ratings[seat], rt = rk.ratings[1-seat];
+  return <div className="tblvs" data-testid="vs-line">{rk.ranked && <span className="tblrk" data-testid="ranked-chip">Ranked</span>}{me ? <strong>{me}</strong> : "You"}{rk.ranked && rm!=null && <span className="tblrt" data-testid="rate-me">{rm}</span>} <span>vs</span> {them ? <strong>{them}</strong> : "a player with no name yet"}{rk.ranked && rt!=null && <span className="tblrt" data-testid="rate-foe">{rt}</span>}</div>;
+}
+/* THE RATING CHANGE, AT THE END OF A RANKED GAME (SERVER S5.1): the function records the result as the game ends; the phone that made the last move
+   already holds it, the other asks. Warm and plain: what happened to YOUR rating, nothing else. */
+function RankChange({table, seat}){
+  const rk = useSrvRank(table);
+  const [res,setRes] = uS(null);
+  const [gaveUp,setGaveUp] = uS(false);
+  uE(()=>{
+    if(!table || !table.srv || !table.result || !rk.ranked) return;
+    let dead = false;
+    table.result().then(r=>{ if(dead) return; if(r) setRes(r); else setGaveUp(true); }).catch(()=>{ if(!dead) setGaveUp(true); });
+    return ()=>{ dead = true; };
+  },[table, rk.ranked]);
+  if(!table || !table.srv || !rk.ranked) return null;
+  const r = res || rk.result;
+  if(!r) return <div className="rankchg" data-testid="rank-change">{gaveUp ? "This ranked result is being recorded. Your new rating will show under Playing as." : "Recording the result…"}</div>;
+  const c = r.change[seat], d = c.to - c.from;
+  return <div className="rankchg" data-testid="rank-change">
+    {d>0 ? <>Well played. Your rating rose from <strong>{c.from}</strong> → <strong>{c.to}</strong> (+{d}).</>
+      : d<0 ? <>Your rating moved from <strong>{c.from}</strong> → <strong>{c.to}</strong> ({"\u2212"}{-d}). Every game teaches something.</>
+      : <>Your rating stays at <strong>{c.to}</strong>.</>}
+    {" "}<span style={{color:"var(--bone-dim)"}}>A ranked game counts for both players.</span>
+  </div>;
 }
 function SrvBanner({table, waitingOnThem}){
   const [s,setS] = uS({st:"seated", quiet:0});
@@ -7931,6 +8005,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
      hand and deck face down, so no card on it is a guess. */
   const [g,setG]     = uS(()=> local ? match.g : DawnReferee.seatView(match.g, host ? mySeat : -1));
   const srvNames = useSrvNames(table);     /* a server table's player names (S4.4): each seat's, beside its hero; nothing at any other table */
+  const srvRank = useSrvRank(table);       /* a ranked server table (S5.1): each player's rating beside their name, and the mark on the pane; {ranked:false} anywhere else */
   const [note,setNote] = uS(null);
   const [link,setLink] = uS("connected");
   const [zoom,setZoom] = uS(null);
@@ -8458,7 +8533,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
         <div className="vscreen" ref={oppRef}>
           <div className="hscroll">
             <div className="hpane vfill">
-              <div className="paneflag"><span>{them.name} · seat {1-mySeat}</span><span>swipe → graveyard</span></div>
+              <div className="paneflag"><span>{them.name} · seat {1-mySeat}{srvRank.ranked ? " · ranked" : ""}</span><span>swipe → graveyard</span></div>
               <div className="midrow">
                 <ArmorGrid gear={armorOf(them)} own={false} cell={gearTile(false)}/>
                 <div className="arscol">
@@ -8481,7 +8556,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                 <div className="heromid clip-sm">
                   {foeH ? <div className="hport2"><HeroArt h={foeH} db={db}/></div> : null}
                   <span className="hname">{them.name}</span>
-                  {srvNames[1-mySeat] && <span className="pname" data-pname="foe" title={srvNames[1-mySeat]}>{srvNames[1-mySeat]}</span>}
+                  {srvNames[1-mySeat] && <span className="pname" data-pname="foe" title={srvNames[1-mySeat]}>{srvNames[1-mySeat]}{srvRank.ranked && srvRank.ratings[1-mySeat]!=null && <span className="prate"> {srvRank.ratings[1-mySeat]}</span>}</span>}
                   <b className="hlife2">{Math.max(0,them.hp)}</b>
                   <span className="hlbl">{g.turnPlayer===1-mySeat ? "their turn" : "life"}</span>
                 </div>
@@ -8737,7 +8812,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                   <button className="hport2" onClick={()=>setZoom(myBuild.HZOOM)}>
                     {myH ? <HeroArt h={myH} db={db}/> : null}</button>
                   <span className="hname">{me.name.split(",")[0]}</span>
-                  {srvNames[mySeat] && <span className="pname" data-pname="me" title={srvNames[mySeat]}>{srvNames[mySeat]}</span>}
+                  {srvNames[mySeat] && <span className="pname" data-pname="me" title={srvNames[mySeat]}>{srvNames[mySeat]}{srvRank.ranked && srvRank.ratings[mySeat]!=null && <span className="prate"> {srvRank.ratings[mySeat]}</span>}</span>}
                   <b className="hlife2">{Math.max(0,me.hp)}</b>
                   <span className="hlbl">life</span>
                   {/* THE SAME CHIP THE TRAINER DRAWS (v3.39) — a counter
@@ -8947,6 +9022,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
           {drawText ? drawText.note : over.how==="life" ? "Life to zero." : "The game ended on "+over.how+"."}
           {" "}{me.hp>0 ? <>You finished on <b className="mono">{me.hp}</b>.</> : null} Tap anywhere.
         </p>
+        {!local && <RankChange table={table} seat={mySeat}/>}
         {!local && !host && <div onClick={e=>e.stopPropagation()} style={{marginTop:10}}>
           <p style={{fontSize:12}}>{judged ? (judged.srv ? "The server" : "The judge's device") : "The host's phone"} held the deck. It has now sent its half of the seed and every move.</p>
           <button className="bigbtn alt" disabled={verdict==="busy"} onClick={verify}>
