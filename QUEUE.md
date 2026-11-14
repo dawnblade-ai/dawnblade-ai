@@ -9,7 +9,43 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-14, at v6.29)
+## HANDOFF — START HERE (CEO, 2026-11-14, at v6.30)
+
+**Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
+and `docs/progress/` on main. Do not start a root handoff file.
+
+### NEW THREAD: READ THIS BLOCK FIRST (written 2026-11-14 by CEO session_013xG9xCQHaLR2DeWf3gSrzu)
+- **State:** live = v6.30 on `main` (8d36415), livecheck ALL PASS (push 43, fallback 0, median 349 ms, p95 458; a third
+  fresh phone redeemed seat 0's recovery code). Function `table` version 14 = build `v6.30 · sage-v17`, stamped;
+  `supabase-bundle --check` OK. `004_recovery.sql` RUN on the project (`[{"dawnblade_recovery":"ok"}]`). No unreleased work.
+- **v6.30 = S4.3 SHIPPED** (`server/S4-LOG.md`, CHANGELOG, `docs/progress/v6.30.md`): ops `recovery-mint` (code shown once,
+  15 chars / 74 bits, only its SHA-256 stored, 730 days, a new code retires the old) and `recovery-redeem` (the new phone's
+  sign-in is re-pointed to the code's player in one transaction; its throwaway player is deleted; wrong/used/expired = one
+  answer; 8 wrong tries per sign-in per hour = limited; refused while the throwaway is seated at a table the page lists).
+  Name sheet has "Get a recovery code" / "I have a code". WIRE_V stays 40.
+- **NEXT, in order:** names on the board during the game (lobby only today) -> cap 5 open tables per player -> S5 ranked
+  (results/ratings written only by the function, Elo 1200, forfeit clock, leaderboard).
+- **ASKED the user 2026-11-14, unanswered (default built = allowed):** a phone whose player already has a NAME and redeems a
+  code gives that player up (name freed). Refuse instead?
+- **KNOWN LIMITS:** the seated-throwaway check only knows the tables the page sends (a seat at an unlisted table is left
+  with a deleted player); each livecheck run leaves one named player ("Lc…") on the project and uses 4 of the 30
+  anonymous sign-ins per hour per address; a LOST refresh answer can still cost the session (now recoverable by code);
+  two tabs of one browser are one player.
+- **USER ANSWERS (2026-11-14, "Yes to all"), still standing:** recovery code is enough for the first ladder (no email/Google);
+  cap 5 open tables per player; names unique; one player on two phones: last one wins.
+- **HOW THIS THREAD WORKED (user asked: low context, cheaper Claudes do the work):** the CEO stays thin; ONE in-session
+  `sonnet` subagent per feature with a self-contained brief (read CLAUDE.md + S4-LOG, commit after every step, offline only,
+  no push/deploy, release prep included, factual report); the CEO re-runs npm test/scenes/fairness, reads the SQL, runs the
+  SQL + deploys + stamps + pushes main + livecheck. Session branch fast-forwarded into `main`. The user is kind and brief.
+- **Supabase access:** the access token lives ONLY in the environment's credential store for `api.supabase.com` (worked all
+  session). Approved scope: this project only, the SQL files, the function `table`, the auth switch. Nothing else without asking.
+- **EVERY RELEASE:** validate -> run any new SQL -> bundle + deploy `table` (folder variant, multipart, DEPLOY.md) +
+  `--stamp` (commit the stamp) -> push main -> `NODE_PATH=/opt/node-tools/node_modules node tools/livecheck.js` -> CI
+  `drills` green -> update this section.
+- **Parked AI items:** Lyath (`experiments/lyath-*`, `lyath2-*`; lead = aura pumps unseen by `effPowerNow`). Unverified: the
+  4x-throttled phone bound for Sharp after v6.24.
+
+## HANDOFF ARCHIVE (CEO, 2026-11-14, at v6.29) — superseded by the section above
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
