@@ -9,20 +9,27 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-14, at v6.31)
+## HANDOFF — START HERE (CEO, 2026-11-14, at v6.32)
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
 ### NEW THREAD: READ THIS BLOCK FIRST (written 2026-11-14 by CEO session_013xG9xCQHaLR2DeWf3gSrzu)
-- **State:** live = v6.31 on `main` (f1a0fb3), livecheck ALL PASS (push 41, fallback 0, median 346 ms, p95 547; third phone
-  redeems a recovery code; seat 0's name on both boards). Function `table` version 16 = build `v6.31 · sage-v17`, stamped;
-  `--check` OK. SQL 001-005 all RUN on the project. CI `drills` green at v6.30 (run 279); v6.31's run 280 was in progress.
-- **v6.31 SHIPPED** (`docs/progress/v6.31.md`, S4-LOG): player names on the board during a server game (from the function's
-  `names`, never in game state); at most 5 OPEN tables per signed-in creator (`005_table_cap.sql` `table_create_capped`,
-  advisory lock per creator; open = creator's, not `over`, touched within 48 h; refusal `table-cap` lists their codes with
-  Close buttons; new creator-only `{op:"close"}`). Casual (not signed in) tables are uncapped, as before.
-- **IN PROGRESS when this was written:** S5.1 ranked results + Elo (a sonnet subagent, offline, on the session branch).
+- **State:** live = v6.32 on `main` (a3b597b), livecheck ALL PASS (push 41, fallback 0, median 289 ms, p95 549; recovery
+  redeem; names on both boards; ranked refusals/create/close). Function `table` version 18 = build `v6.32 · sage-v17`,
+  stamped; `--check` OK. SQL 001-006 all RUN on the project. CI `drills` green at v6.30; later runs not read (check them).
+- **v6.32 = S5.1 SHIPPED** (`server/S5-LOG.md`, `docs/progress/v6.32.md`): a creator may open a RANKED table (default
+  Friendly); needs two different signed-in NAMED players (`ranked-signin`, `ranked-name`); row v4; the function alone records
+  one result per game (`006_ratings.sql` `result_record`, idempotent on code+creation time, per-player advisory locks) and
+  moves both Elo ratings (start 1200, K 32, draw 0.5); `me` returns rating + record; ratings in lobby, on the board, and
+  the change on the end screen. Who goes first was ALREADY rock-paper-scissors at every server table. Concede exists and records.
+- **v6.31:** names on the board; 5 open tables per signed-in creator (`005`, `table-cap`, creator-only `{op:"close"}`).
+- **KNOWN RANKED GAPS (told to the user):** a creator can CLOSE a ranked table mid-game and nothing is recorded (dodge);
+  an abandoned ranked game never ends; `recovery_redeem` deletes a throwaway player and its rating cascades away;
+  two friends can trade concessions. No full ranked game has been played on LIVE (drills, Deno rehearsal, page drive only).
+- **IN PROGRESS when this was written:** S5.2 (forfeit clock, close = forfeit once started, rating survives recovery), a sonnet
+  subagent, offline, on the session branch. THEN S5.3 leaderboard.
+- **Subagents hit the 5-hour limit silently (status failed):** work is committed step by step; resume with SendMessage after reset.
 - **v6.30 = S4.3 SHIPPED** (`server/S4-LOG.md`, CHANGELOG, `docs/progress/v6.30.md`): ops `recovery-mint` (code shown once,
   15 chars / 74 bits, only its SHA-256 stored, 730 days, a new code retires the old) and `recovery-redeem` (the new phone's
   sign-in is re-pointed to the code's player in one transaction; its throwaway player is deleted; wrong/used/expired = one
