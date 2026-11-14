@@ -66,3 +66,18 @@ fairness: no findings. serverrun --isolate: ALL PASS. Deno rehearsal (single + f
   69,669 -> 70,334), tapdoor (12 -> 13). CR-INDEX.md regenerated (line numbers only).
 - KNOWN LIMITS: identity is per phone until S4.3 (recovery code); a lost refresh ANSWER can cost the session (Supabase rotates refresh tokens; reuse is only
   tolerated for a few seconds) -> new player; two tabs of one browser are one player; names are not on the board, only the lobby.
+
+# SERVER S4.3 — running log (branch `claude/relaxed-fermi-erc3gs`, on v6.29) — recovery code. OFFLINE ONLY: nothing pushed, deployed or run on the project.
+
+## Step 1 — 004_recovery.sql (NOT RUN on the project; 002/003 untouched)
+- New: `recovery_attempts` (RLS forced, no policy, service_role only), `recovery_mint(player, hash, days=730)` -> ok|unknown (deletes the player's older UNUSED
+  codes, stores the new hash; the player row is locked so two mints cannot leave two live codes), `recovery_redeem(provider, subject, hash)` -> (status, display_name):
+  ok | refused (unknown, used, expired: one UPDATE that matches or not) | limited | unknown. One transaction: spend the code, move the identity, delete the
+  throwaway player when it is left with no identity (its name is freed; its codes cascade).
+- EXPIRY: 730 days (two years), sent by the function; the column only needs expires_at > created_at. Minting again retires the old code and starts a new two years.
+- BRAKE: 8 refused tries per sign-in per hour -> `limited` (a limited try does not look at the code, so a good code is not spent by it). Per sign-in, not global, on
+  purpose: a global brake would let anyone lock every player out. A storm of fresh sign-ins is bounded by the auth service's own limit (30 anonymous sign-ins per hour
+  per address, S4.2) and the code is 15 characters of a 31-letter alphabet = 74.4 bits: even at 150 tries an hour from one address that is ~10^15 years.
+- PGlite (`PGLITE_DIR=<scratch> node tools/sql-pglite.js`, default list now 001..004): 004 run twice -> `ok`; anon refused on recovery_attempts, recovery_mint, recovery_redeem.
+  Sabotage (10, each raised the named error): mint keeps older codes; throwaway kept; no brake; expiry ignored; code not spent; identity not moved; anon may redeem;
+  attempts RLS not forced; throwaway deleted though it has another identity; a limited try spends the code.
