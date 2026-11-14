@@ -26,6 +26,8 @@
              join (none: no identity, as v6.28); lose: a Set of seats whose phone has LOST its key — its claim is then an
              unkeyed identity join (a takeover) instead of a keyed one; secrets: strings (player ids, tokens) no response,
              broadcast or frame may contain, scanned like the keys.
+             creator   (S4.4) the token the table is CREATED with (a signed-in create: the row records its creator and the referee marks it over
+             when the game ends); needs `identify`.
      tamper  {broadcast?(topic, payload, bus, {store, code}) -> void} — the sabotage seam:
              it REPLACES the bus's broadcast, to prove the audit bites. */
 const path = require("path");
@@ -107,7 +109,7 @@ function makeServerHub(cfg){
       if(req.op !== "create" && req.seat != null && sent.some(e => e.topic === server.topic(code, req.seat, ((store.row(code) || {}).hub || {keys: []}).keys[req.seat]))) audit.mismatch++;
       return res;
     }
-    call({op: "create", table: code});
+    call({op: "create", table: code, ...(cfg.creator ? {identity: {token: cfg.creator}} : {})});    /* S4.4: a signed-in create records its creator (cfg.creator: a token) */
 
     const hub = {
       audit,

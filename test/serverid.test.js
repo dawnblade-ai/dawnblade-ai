@@ -393,7 +393,8 @@ function reference(audit){
 function takeoverGame(server, cap){
   const idp = F.memIdentity(), ids = ["P-seat-zero-id", "P-seat-one-id"], toks = ids.map(i => idp.issue(i, i === ids[0] ? "Dawn Smith" : "Rival One"));
   const lose = new Set();
-  const mk = makeServerHub({server, seedKey: "srv-s2", identify: t => idp.identify(t), identities: toks, lose, secrets: ids.concat(toks)});
+  /* S4.4: seat 0's player CREATES the table signed in, so the scans below also read a creator-stamped row and the over marker */
+  const mk = makeServerHub({server, seedKey: "srv-s2", identify: t => idp.identify(t), identities: toks, lose, creator: toks[0], secrets: ids.concat(toks)});
   let hub; const t = T.makeTable({heroes: ["blaze", "dorinthea"], salt: "srv-s2", throws: [["rock", "rock"], ["paper", "rock"]], makeHub: o => (hub = mk(o))}).open();
   const ps = t.seatPhones(), audit = hub.audit;
   const oldKeys = {}, drops = [], marks = {};
@@ -425,6 +426,10 @@ test("(6) A WHOLE GAME, A PHONE LOSES ITS KEY MID-GAME AND RECLAIMS BY IDENTITY 
   assert.deepEqual(json(g.hub.session().log()), json(ref.log()), "the same actions in the same order");
   const row = au.store.row(au.code);
   assert.equal(row.v, 3); assert.deepEqual(row.retired.map(l => l.length), [1, 1], "one retired key per seat");
+  /* S4.4: the table was created signed in: its row names the creator, and the referee marked it over when the game ended */
+  assert.equal(row.creator, g.ids[0], "the row records who created the table");
+  assert.equal(row.over, true, "the referee marked the finished game over (the creator's open-table count lets go of it)");
+  assert.deepEqual(au.store.openOf(g.ids[0]), [], "a finished table is not open");
   /* the refused kinds in this game are exactly the harness's own redial 'full' + nothing else surprising */
   assert.ok(au.refused.every(r => r === "full"), "only the redial's fresh join met a full table: " + [...new Set(au.refused)]);
   /* the old phones: refused 'taken' */
