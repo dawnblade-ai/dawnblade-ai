@@ -1,7 +1,6 @@
 # DEPLOY — the hosted referee on Supabase
 
-**State today (2026-11-14):** the SQL is run and the function is **deployed and live-tested** on `fokcpzplomjsraquaaid` (path B, below; record in `server/S3-DEPLOY-LOG.md`, stamp in `DEPLOYED.json`, currently v6.27). The page's server table is **a tester's door**: `window.SERVER_TABLE.on` stays `false` for everyone, and a phone opts in by opening the game with `?server=1` (remembered; `?server=0` forgets it).
-Turning it on for everyone is one value in a release (`on: true`).
+**State today (2026-11-14):** the SQL is run and the function is **deployed and live-tested** on `fokcpzplomjsraquaaid` (path B, below; record in `server/S3-DEPLOY-LOG.md`, stamp in `DEPLOYED.json`, currently v6.28). The page's server table is **open to everyone** since v6.28 (`window.SERVER_TABLE.on` is `true`, the user's decision); `?server=0` hides it on one phone (remembered), `?server=1` brings it back. After every push, `node tools/livecheck.js`.
 
 **Project:** `https://fokcpzplomjsraquaaid.supabase.co`
 

@@ -426,8 +426,11 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        `::before`), the jump row's one-line rule and the action bar's wrap.
        68,417 -> 68,639 AT v5.81, READ FIRST: still `<style>` -> `</style>`;
        the growth is the `.pip` tints PipLine draws a printed pip's word in,
-       with their comment. */
-    "phasebar.test.js index.html 69328",
+       with their comment.
+       69,328 -> 69,669 AT v6.28, READ FIRST: still `<style>` -> `</style>`; the
+       growth is the table screen's three labelled groups (`.tblgroup`,
+       `.tblgname`, `.tblgnote`) and the wrapping `.tblrow`. */
+    "phasebar.test.js index.html 69669",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
        `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
        `abPickBound` in the pick legality it extends. */
