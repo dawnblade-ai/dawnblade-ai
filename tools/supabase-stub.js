@@ -16,6 +16,10 @@
    throwaway player, 8 refusals an hour); `recovery` (hash -> {player, used, expires}) and `attempts` are readable.
    S4.4 adds table_create_capped {p_id, p_row, p_creator, p_cap} (a stand-in for 005_table_cap.sql: ONE jsonb answer, {version} | {version:0, exists} |
    {version:0, capped, open:[ids]}; open = the creator's rows not over, idle under 48 hours; a row also keeps an `at` time the rehearsal may age).
+   S5.1 adds rating_get {p_player} -> [{rating, games, wins, losses, draws}] (the starting rating and no games for an unrated player) and result_record
+   {p_game, p_table, p_p0, p_p1, p_n0, p_n1, p_h0, p_h1, p_winner, p_how, p_turns, p_build, p_started, p_ended} -> {recorded, ratings:[{from,to},{from,to}]}
+   (a stand-in for 006_ratings.sql: once per game id, Elo with K 32 from 1200, both ratings in one step; `ratings`, `results` are readable). Its Elo is
+   checked against the very table (test/fixtures/elo-vectors.json) the SQL is checked against in tools/sql-pglite.js.
    `issueUser(id, anon?)` hands out a token; `users`, `players`, `identities` are readable; stats.auths / stats.resolves count calls.
 
    It checks the headers the real services need (apikey; bearer unless the key is "sb_…"), keeps rows as JSON text like
@@ -29,7 +33,7 @@ function makeStub(o){
   o = o || {};
   const rows = new Map(), broadcasts = [], stats = {gets: 0, puts: 0, conflicts: 0, casts: 0, bad: [], largestPut: 0};
   const KEY = o.key || "stub-service-key";
-  const subs = [], users = new Map(), players = new Map(), identities = new Map(), recovery = new Map(), attempts = new Map();
+  const subs = [], users = new Map(), players = new Map(), identities = new Map(), recovery = new Map(), attempts = new Map(), ratings = new Map(), results = new Map();
   stats.auths = 0; stats.resolves = 0; let seq = 0, born = 0, authDown = false;
   const handler = (req, res) => {
     const chunks = [];
@@ -74,6 +78,31 @@ function makeStub(o){
           if(open.length >= p_cap) return reply(200, {version: 0, capped: true, open: open.slice(0, 10)});
           rows.set(p_id, {version: 1, json: JSON.stringify(p_row), at: Date.now(), n: ++born});
           return reply(200, {version: 1});
+        }
+        if(req.method === "POST" && url.pathname === "/rest/v1/rpc/rating_get"){        /* 006_ratings.sql: one row; 1200 and no games when unrated */
+          stats.ratingGets = (stats.ratingGets || 0) + 1;
+          const {p_player} = JSON.parse(body);
+          if(typeof p_player !== "string" || !p_player){ stats.bad.push("rating_get args"); return reply(400, {message: "bad args"}); }
+          const r = ratings.get(p_player) || {rating: 1200, games: 0, wins: 0, losses: 0, draws: 0};
+          return reply(200, [{rating: r.rating, games: r.games, wins: r.wins, losses: r.losses, draws: r.draws}]);
+        }
+        if(req.method === "POST" && url.pathname === "/rest/v1/rpc/result_record"){     /* 006_ratings.sql: once per game id; Elo, K 32, both ratings together */
+          stats.records = (stats.records || 0) + 1;
+          const a = JSON.parse(body);
+          const okArgs = typeof a.p_game === "string" && /^[A-Za-z0-9_-]{1,80}$/.test(a.p_game) && typeof a.p_table === "string" && typeof a.p_p0 === "string" && typeof a.p_p1 === "string"
+            && a.p_p0 && a.p_p1 && a.p_p0 !== a.p_p1 && ["life", "concession", "stalemate"].includes(a.p_how) && (a.p_winner === null || a.p_winner === 0 || a.p_winner === 1)
+            && ((a.p_how === "stalemate") === (a.p_winner === null)) && typeof a.p_h0 === "string" && typeof a.p_h1 === "string" && Number.isInteger(a.p_turns) && a.p_turns >= 0;
+          if(!okArgs){ stats.bad.push("result_record args"); return reply(400, {message: "bad args"}); }
+          const ex = results.get(a.p_game);
+          if(ex) return reply(200, {recorded: false, ratings: [{from: ex.b0, to: ex.a0}, {from: ex.b1, to: ex.a1}]});
+          if(!players.has(a.p_p0) || !players.has(a.p_p1)){ stats.bad.push("result_record unknown player"); return reply(400, {message: "a player is unknown"}); }
+          const get = id => { if(!ratings.has(id)) ratings.set(id, {rating: 1200, games: 0, wins: 0, losses: 0, draws: 0}); return ratings.get(id); };
+          const r0 = get(a.p_p0), r1 = get(a.p_p1), K = 32, ra = r0.rating, rb = r1.rating;
+          const sa = a.p_winner === null ? 0.5 : a.p_winner === 0 ? 1 : 0, ea = 1 / (1 + Math.pow(10, (rb - ra) / 400));
+          r0.rating = Math.round(ra + K * (sa - ea)); r1.rating = Math.round(rb + K * ((1 - sa) - (1 - ea)));
+          for(const [r, w] of [[r0, a.p_winner === 0], [r1, a.p_winner === 1]]){ r.games++; if(a.p_winner === null) r.draws++; else if(w) r.wins++; else r.losses++; }
+          results.set(a.p_game, {b0: ra, a0: r0.rating, b1: rb, a1: r1.rating, ...a});
+          return reply(200, {recorded: true, ratings: [{from: ra, to: r0.rating}, {from: rb, to: r1.rating}]});
         }
         if(req.method === "POST" && url.pathname === "/rest/v1/rpc/identity_resolve"){
           stats.resolves++;
@@ -137,7 +166,7 @@ function makeStub(o){
     });
   };
   const server = http.createServer(handler);
-  return {server, rows, broadcasts, stats, key: KEY, users, players, identities, recovery, attempts, authDown: down => { authDown = down !== false; },
+  return {server, rows, broadcasts, stats, key: KEY, users, players, identities, recovery, attempts, ratings, results, authDown: down => { authDown = down !== false; },
     issueUser: (id, anon) => { const t = "stub.jwt." + (++seq) + "." + Math.random().toString(36).slice(2); users.set(t, {id, anon: anon !== false}); return t; }, subscribe: f => { subs.push(f); return () => { const i = subs.indexOf(f); if(i >= 0) subs.splice(i, 1); }; },
     row: id => rows.has(id) ? JSON.parse(rows.get(id).json) : null, version: id => rows.has(id) ? rows.get(id).version : 0,
     listen: port => new Promise(res => server.listen(port || 0, "127.0.0.1", () => res({port: server.address().port}))),

@@ -16,6 +16,8 @@
                 put = the SQL function table_put() (001_tables.sql), one atomic compare-and-set; createCapped = table_create_capped()
                 (005_table_cap.sql), the count of a signed-in player's OPEN tables and the insert in ONE transaction under a per-player lock
                 (S4.4: at most 5 open tables per player).
+     rating / record   (S5.1) 006_ratings.sql's rating_get() and result_record(): a player's rating and record, and the ONE-TIME recording of a
+                finished ranked game with both ratings moved in the same transaction (idempotent on the game id).
      broadcast  Realtime Broadcast over HTTP: POST <project>/realtime/v1/api/broadcast, one message per seat,
                 event "frame", on a PUBLIC channel whose name is derived from the seat key (sha256.js).
      deal       exactly the page's JudgeRoom.deal (index.html): build.buildMatch over the pinned pool and the hero
@@ -138,6 +140,36 @@ async function createCappedRpc(c: any, id: string, row: any, creator: string, ca
     return v.version > 0 ? {ok: true, version: v.version} : (() => { throw new Error("store.createCapped answered neither a version, exists nor capped"); })();
   } finally { c.put += nowMs() - t; }
 }
+/* S5.1 — ranked results and ratings (006_ratings.sql). `deps.rating(player)` is rating_get: the rating and the record of one player, answered as
+   ONE row by PostgREST's table-return shape (an unrated player reads as the starting rating with no games). `deps.record(result)` is
+   result_record: stored ONCE per game id (idempotent: a second call answers the stored result with recorded:false), both ratings moved in the same
+   transaction, answers one jsonb {recorded, ratings:[{from,to},{from,to}]}. The arithmetic (Elo, K 32, start 1200) is the SQL's alone. UNVERIFIED against the
+   real project until 006 is run: the table-return shape of rating_get and the jsonb-return shape of result_record are what tools/supabase-stub.js stands in for. */
+const mkRating = (c: any) => async (player: string) => {
+  const t = nowMs();
+  try {
+    const k = conf();
+    const r = await fetch(k.url + "/rest/v1/rpc/rating_get", {method: "POST", headers: k.headers, body: JSON.stringify({p_player: player})});
+    if(!r.ok) throw new Error("rating " + r.status);
+    const rows: any = await r.json();
+    const row = Array.isArray(rows) ? rows[0] : rows;
+    if(!row || typeof row.rating !== "number") throw new Error("rating answered no rating");
+    return {rating: row.rating, games: row.games, wins: row.wins, losses: row.losses, draws: row.draws};
+  } finally { c.get += nowMs() - t; }
+};
+const mkRecord = (c: any) => async (x: any) => {
+  const t = nowMs();
+  try {
+    const k = conf();
+    const r = await fetch(k.url + "/rest/v1/rpc/result_record", {method: "POST", headers: k.headers, body: JSON.stringify({
+      p_game: x.game, p_table: x.table, p_p0: x.players[0], p_p1: x.players[1], p_n0: x.names[0], p_n1: x.names[1], p_h0: x.heroes[0], p_h1: x.heroes[1],
+      p_winner: x.winner, p_how: x.how, p_turns: x.turns, p_build: x.build, p_started: x.started, p_ended: x.ended})});
+    if(!r.ok) throw new Error("record " + r.status);
+    const v: any = await r.json();
+    if(!v || typeof v !== "object" || !Array.isArray(v.ratings)) throw new Error("record answered no result");
+    return {recorded: v.recorded === true, ratings: v.ratings};
+  } finally { c.put += nowMs() - t; }
+};
 const mkBroadcast = (c: any) => async (topic: string, payload: any) => {
   const body = JSON.stringify({messages: [{topic, event: "frame", payload, private: false}]});
   if(body.length > MAX_BROADCAST) throw new Error("broadcast too large: " + body.length);
@@ -259,7 +291,7 @@ Deno.serve(async (req: Request) => {
   try { r = ready(); } catch(e){ console.error(e); return send(req, {ok: false, refused: "internal"}); }
   c.ready = nowMs() - tr;
   const answer = await G.DawnServer.handle(request, {store: mkStore(c), broadcast: mkBroadcast(c), deal: r.deal, build: r.build, now: () => Date.now(),
-    ...(Deno.env.get("TABLE_IDENTITY") === "off" ? {} : {identify: mkIdentify(c), rename: mkRename(c), mint: mkMint(c), redeem: mkRedeem(c)}),
+    ...(Deno.env.get("TABLE_IDENTITY") === "off" ? {} : {identify: mkIdentify(c), rename: mkRename(c), mint: mkMint(c), redeem: mkRedeem(c), rating: mkRating(c), record: mkRecord(c)}),
     log: (e: any) => console.error(String(e && e.stack || e))});          // operator logs only; an error never rides a response
   return send(req, answer, 200, timingHeaders(c, cold));
 });

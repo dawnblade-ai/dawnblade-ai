@@ -150,8 +150,10 @@ begin
     if has_function_privilege('anon', f, 'execute') or has_function_privilege('authenticated', f, 'execute') then raise exception 'anon or authenticated may call %', f; end if;
     if not has_function_privilege('service_role', f, 'execute') then raise exception 'service_role may not call %', f; end if;
   end loop;
-  if position('pg_advisory_xact_lock' in (select prosrc from pg_proc where oid = 'public.result_record(text,text,text,text,text,text,text,text,integer,text,integer,text,bigint,bigint)'::regprocedure)) = 0 then
-    raise exception 'result_record does not take the per-player locks'; end if;
+  -- the race story: a serial check cannot race, so it at least proves the decision runs under BOTH players' locks (tools/sql-race.sh is the real proof)
+  if (select (length(prosrc) - length(replace(prosrc, 'pg_advisory_xact_lock', ''))) / length('pg_advisory_xact_lock') from pg_proc
+       where oid = 'public.result_record(text,text,text,text,text,text,text,text,integer,text,integer,text,bigint,bigint)'::regprocedure) < 2 then
+    raise exception 'result_record does not take both players'' locks'; end if;
   if public.rating_start() <> 1200 or public.rating_k() <> 32 then raise exception 'the rating constants are not 1200 and 32'; end if;
 
   delete from public.results where game_id like 'zz-rate-%';
@@ -177,7 +179,7 @@ begin
   select * into g from public.rating_get(a); if g.rating <> 1216 or g.games <> 1 then raise exception 'a duplicate moved a rating: %', g; end if;
   if (select count(*) from public.results where game_id = 'zz-rate-1') <> 1 then raise exception 'a duplicate stored a second result'; end if;
   if (select winner from public.results where game_id = 'zz-rate-1') <> 0 or (select turns from public.results where game_id = 'zz-rate-1') <> 7 then raise exception 'the stored result was changed by a replay'; end if;
-  if (select started_at from public.results where game_id = 'zz-rate-1') <> to_timestamp(1700000000) then raise exception 'the start time was not stored'; end if;
+  if (select started_at from public.results where game_id = 'zz-rate-1') is distinct from to_timestamp(1700000000) then raise exception 'the start time was not stored'; end if;
   -- a draw between 1216 and 1184 (a stalemate, no winner), then the unequal pair: a (now 1216) v c (1200)
   r := public.result_record('zz-rate-2', 'ZZRATE', a, b, null, null, 'kayo', 'dash', null, 'stalemate', 40, null, 0, 0);
   if r->'ratings' <> '[{"from": 1216, "to": 1215}, {"from": 1184, "to": 1185}]'::jsonb then raise exception 'an unequal draw answered %', r; end if;
