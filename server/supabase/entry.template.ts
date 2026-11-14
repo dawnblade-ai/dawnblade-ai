@@ -32,6 +32,8 @@
                                        set TABLE_SERVICE_KEY yourself — a secret, set only in the dashboard)
      TABLE_SERVICE_KEY                 overrides the key above
      TABLE_ORIGINS                     extra comma-separated browser origins allowed by CORS
+     TABLE_IDENTITY                    "off" removes the identify seam: a join that presents an identity token is then refused
+                                       ("identity"); anything else leaves it wired (it is only ever CALLED when a token is presented)
      TABLE_UID0                        a test hook (see UID0); leave unset
    ============================================================================================================ */
 __ENGINE_LOAD__
@@ -127,6 +129,37 @@ const mkBroadcast = (c: any) => async (topic: string, payload: any) => {
   } finally { c.bc += nowMs() - t; c.nbc++; }
 };
 
+/* ---- identity (S4.1) — UNVERIFIED, NOT DEPLOYED, INERT UNLESS A JOIN PRESENTS A TOKEN -------------------------------------
+   referee.js asks `deps.identify(token) -> {player, name?} | null` and nothing else; this is the Supabase end of that seam.
+     1. VERIFY the token with the provider: GET <project>/auth/v1/user with `apikey` (the project's key) and `Authorization: Bearer
+        <the player's token>`. GoTrue checks signature, expiry and session; a 401/403 is "forged or expired" -> null (the referee
+        answers "identity" and changes nothing). Any other failure (network, 5xx) THROWS: the referee answers "internal" — a provider
+        outage is not a verdict on the token. We never decode the JWT ourselves.
+     2. MAP it onto OUR player: POST /rest/v1/rpc/identity_resolve (002_players.sql) with (provider, the user's id): the same
+        sign-in is always the same player; first sight creates one. provider = "supabase-anon" for an anonymous user (planned first
+        provider, NOT enabled on the project yet, pending the user's permission), "supabase" otherwise.
+   The token, the provider's user id and OUR player id never reach a log line, a response or a broadcast (referee.js keeps them in
+   the row's `owners` only). UNVERIFIED against the real services: the exact /auth/v1/user headers (publishable vs service key as
+   `apikey`) and identity_resolve's table-return shape over PostgREST — both are what tools/supabase-stub.js stands in for. */
+const mkIdentify = (c: any) => async (token: string) => {
+  const t = nowMs();
+  try {
+    const k = conf();
+    const who = await fetch(k.url + "/auth/v1/user", {headers: {apikey: k.headers.apikey, authorization: "Bearer " + token}});
+    if(who.status === 401 || who.status === 403) return null;
+    if(!who.ok) throw new Error("identify.verify " + who.status);
+    const u: any = await who.json();
+    if(!u || typeof u.id !== "string" || !u.id || u.id.length > 256) return null;
+    const r = await fetch(k.url + "/rest/v1/rpc/identity_resolve", {method: "POST", headers: k.headers,
+      body: JSON.stringify({p_provider: u.is_anonymous ? "supabase-anon" : "supabase", p_subject: u.id, p_name: null})});
+    if(!r.ok) throw new Error("identify.resolve " + r.status);
+    const rows: any = await r.json();
+    const row = Array.isArray(rows) ? rows[0] : rows;
+    if(!row || typeof row.player_id !== "string") throw new Error("identify.resolve answered no player");
+    return {player: row.player_id, ...(row.display_name ? {name: row.display_name} : {})};
+  } finally { c.get += nowMs() - t; }
+};
+
 /* ---- HTTP ----------------------------------------------------------------------------------------------- */
 function cors(req: Request){
   const origin = req.headers.get("origin");
@@ -156,6 +189,7 @@ Deno.serve(async (req: Request) => {
   try { r = ready(); } catch(e){ console.error(e); return send(req, {ok: false, refused: "internal"}); }
   c.ready = nowMs() - tr;
   const answer = await G.DawnServer.handle(request, {store: mkStore(c), broadcast: mkBroadcast(c), deal: r.deal, build: r.build, now: () => Date.now(),
+    ...(Deno.env.get("TABLE_IDENTITY") === "off" ? {} : {identify: mkIdentify(c)}),
     log: (e: any) => console.error(String(e && e.stack || e))});          // operator logs only; an error never rides a response
   return send(req, answer, 200, timingHeaders(c, cold));
 });

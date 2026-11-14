@@ -9,6 +9,11 @@
      POST /realtime/v1/api/broadcast {messages:[{topic,event,payload,private}]}   202, 422 on a payload over the limit
                                                            (the real endpoint's observed limit: 250,000 bytes)
 
+   S4.1 adds the two calls entry.template.ts's `identify` makes (a stand-in for GoTrue's and for 002_players.sql's function):
+     GET  /auth/v1/user                                     apikey + Bearer <user token> -> {id, is_anonymous} or 401
+     POST /rest/v1/rpc/identity_resolve {p_provider, p_subject, p_name}   -> [{player_id, display_name}] (same sign-in, same player)
+   `issueUser(id, anon?)` hands out a token; `users`, `players`, `identities` are readable; stats.auths / stats.resolves count calls.
+
    It checks the headers the real services need (apikey; bearer unless the key is "sb_…"), keeps rows as JSON text like
    a jsonb column, and hands every broadcast to `onBroadcast(topic, payload)` so a driver can fan it out to subscribers.
    `serve(port?)` -> {url, port, close, rows, broadcasts, stats}. Not a Supabase emulator: it checks the calls this
@@ -20,7 +25,8 @@ function makeStub(o){
   o = o || {};
   const rows = new Map(), broadcasts = [], stats = {gets: 0, puts: 0, conflicts: 0, casts: 0, bad: [], largestPut: 0};
   const KEY = o.key || "stub-service-key";
-  const subs = [];
+  const subs = [], users = new Map(), players = new Map(), identities = new Map();
+  stats.auths = 0; stats.resolves = 0; let seq = 0, authDown = false;
   const handler = (req, res) => {
     const chunks = [];
     req.on("data", c => chunks.push(c));
@@ -29,6 +35,12 @@ function makeStub(o){
       const url = new URL(req.url, "http://stub");
       const reply = (code, obj) => { const t = obj === undefined ? "" : JSON.stringify(obj); res.writeHead(code, {"content-type": "application/json"}); res.end(t); };
       if(req.headers.apikey !== KEY){ stats.bad.push("no apikey " + url.pathname); return reply(401, {message: "No API key found in request"}); }
+      if(req.method === "GET" && url.pathname === "/auth/v1/user"){
+        stats.auths++;
+        if(authDown) return reply(503, {msg: "auth is down"});
+        const u = users.get(String(req.headers.authorization || "").replace(/^Bearer /, ""));
+        return u ? reply(200, {id: u.id, is_anonymous: !!u.anon, aud: "authenticated", role: "authenticated"}) : reply(401, {code: 401, error_code: "bad_jwt", msg: "invalid JWT"});
+      }
       if(!KEY.startsWith("sb_") && req.headers.authorization !== "Bearer " + KEY){ stats.bad.push("no bearer " + url.pathname); return reply(401, {message: "bad bearer"}); }
       try {
         if(req.method === "GET" && url.pathname === "/rest/v1/tables"){
@@ -48,6 +60,15 @@ function makeStub(o){
           stats.puts++; if(!v) stats.conflicts++; stats.largestPut = Math.max(stats.largestPut, Buffer.byteLength(body));
           return reply(200, v);
         }
+        if(req.method === "POST" && url.pathname === "/rest/v1/rpc/identity_resolve"){
+          stats.resolves++;
+          const {p_provider, p_subject, p_name} = JSON.parse(body);
+          if(typeof p_provider !== "string" || !/^[a-z][a-z0-9_-]{0,31}$/.test(p_provider) || typeof p_subject !== "string" || !p_subject || p_subject.length > 256){ stats.bad.push("identity_resolve args"); return reply(400, {message: "bad args"}); }
+          const k = p_provider + "\u0000" + p_subject;
+          if(!identities.has(k)){ const id = "pl-" + (++seq) + "-" + Math.random().toString(36).slice(2, 8); players.set(id, {id, display_name: p_name || null}); identities.set(k, id); }
+          const p = players.get(identities.get(k));
+          return reply(200, [{player_id: p.id, display_name: p.display_name}]);
+        }
         if(req.method === "POST" && url.pathname === "/realtime/v1/api/broadcast"){
           const {messages} = JSON.parse(body);
           if(!Array.isArray(messages) || !messages.length) return reply(422, {errors: {messages: ["can't be blank"]}});
@@ -63,7 +84,8 @@ function makeStub(o){
     });
   };
   const server = http.createServer(handler);
-  return {server, rows, broadcasts, stats, key: KEY, subscribe: f => { subs.push(f); return () => { const i = subs.indexOf(f); if(i >= 0) subs.splice(i, 1); }; },
+  return {server, rows, broadcasts, stats, key: KEY, users, players, identities, authDown: down => { authDown = down !== false; },
+    issueUser: (id, anon) => { const t = "stub.jwt." + (++seq) + "." + Math.random().toString(36).slice(2); users.set(t, {id, anon: anon !== false}); return t; }, subscribe: f => { subs.push(f); return () => { const i = subs.indexOf(f); if(i >= 0) subs.splice(i, 1); }; },
     row: id => rows.has(id) ? JSON.parse(rows.get(id).json) : null, version: id => rows.has(id) ? rows.get(id).version : 0,
     listen: port => new Promise(res => server.listen(port || 0, "127.0.0.1", () => res({port: server.address().port}))),
     close: () => new Promise(res => { server.closeAllConnections && server.closeAllConnections(); server.close(() => res()); })};

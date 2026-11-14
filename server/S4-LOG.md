@@ -18,3 +18,12 @@ PGlite (`PGLITE_DIR=<scratch> node tools/sql-pglite.js`; PGlite installed with `
 anon select grant, a policy, anon execute, recovery not one-time, recovery ignores expiry, key without provider, unbounded name.
 Two sabotages are NOT caught by the serial self-check ("identity re-pointed on conflict", "orphan player kept"): both live on the
 simultaneous-first-sight path, which one PGlite connection cannot exercise.
+
+## Step 4 — entry template `identify` seam + stub + Deno rehearsal
+`entry.template.ts`: `mkIdentify` (verify with `GET /auth/v1/user`, 401/403 -> null, other failure throws -> `internal`; map with
+`POST /rest/v1/rpc/identity_resolve`), wired as `deps.identify` unless `TABLE_IDENTITY=off`; only ever called when a join presents a
+token. Marked UNVERIFIED in the file. `tools/supabase-stub.js` gained `/auth/v1/user` and `identity_resolve` stand-ins (+`issueUser`, `authDown`).
+`tools/supabase-rehearse.js` gained an identity phase per variant (13 rows). Deno 2.9.6: single and folder both ALL PASS (both games'
+fingerprints equal the in-process referee; identity rows pass).
+**`node tools/supabase-bundle.js --check` now reads STALE for the deployed stamp (and the dist copy): EXPECTED — `server/referee.js` and the
+template are bundled files and changed. NOT stamped. The live function is still the v6.28 one (stamp's digest).**

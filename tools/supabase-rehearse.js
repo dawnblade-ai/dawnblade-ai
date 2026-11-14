@@ -135,7 +135,57 @@ async function rehearse(label, entry, deno, uid0){
     row(errs.length === 0, label + ": the function logged no error", errs.slice(0, 2).join(" | "));
     console.log("      " + label + " numbers: median request " + median(timings) + " ms (HTTP + function + stub), largest stored row " + stub.stats.largestPut.toLocaleString("en-US") + " bytes, " + stub.stats.puts + " saves, " + stub.stats.conflicts + " conflicts, cold first answer " + cold + " ms");
     phones.forEach(p => p.ch.close());
+    await identityPhase(label, base, stub, log);
   } finally { child.kill(); await stub.close(); }
+}
+
+/* S4.1: the identify seam, against the stub's /auth/v1/user and identity_resolve (UNVERIFIED stand-ins for the real services). Plain
+   fetches in the page's own request shape: no page code is involved, none changed. */
+async function identityPhase(label, base, stub, log){
+  const post = async body => { const r = await fetch(base + "/functions/v1/table", {method: "POST", headers: {apikey: "sb_publishable_rehearsal", "content-type": "application/json"}, body: JSON.stringify(body)});
+    const text = await r.text(); return {text, ...JSON.parse(text)}; };
+  const keyOf = r => ((r.frames || []).find(f => f.ch === "judge" && f.key) || {}).key;
+  const SUB_A = "sub-secret-aaaa-1111", SUB_B = "sub-secret-bbbb-2222";
+  const tokA = stub.issueUser(SUB_A), tokB = stub.issueUser(SUB_B), texts = [];
+  const go = async body => { const r = await post(body); texts.push(r.text); return r; };
+  const made = await go({op: "create"}); const code = made.table;
+  const sBefore = stub.stats.auths;
+  const a = await go({op: "join", table: code, identity: {token: tokA, name: "Rehearsal Ann"}});
+  const kA = keyOf(a);
+  row(a.ok && a.seat === 0 && a.owned === true && !!kA, label + ": identity: a join with a (stub) sign-in token is seated and bound to a player", "seat " + a.seat);
+  const v1 = stub.version(code), row1 = JSON.stringify(stub.row(code));
+  const forged = await go({op: "join", table: code, identity: {token: "stub.jwt.forged"}});
+  row(forged.ok === false && forged.refused === "identity" && stub.version(code) === v1 && JSON.stringify(stub.row(code)) === row1, label + ": identity: a forged token is refused 'identity' and the stored row is untouched");
+  const b = await go({op: "join", table: code, identity: {token: tokB}});
+  row(b.ok && b.seat === 1 && JSON.stringify(b.names) === JSON.stringify(["Rehearsal Ann", null]), label + ": identity: the second player takes the other chair and reads the first's public name", JSON.stringify(b.names));
+  const full = await go({op: "join", table: code});
+  row(full.refused === "full", label + ": identity: a casual join on the full table is 'full', as before");
+  const re = await go({op: "join", table: code, identity: {token: tokA}});
+  const kA2 = keyOf(re);
+  row(re.ok && re.seat === 0 && !!kA2 && kA2 !== kA && re.owned === true, label + ": identity: the same player with no key re-claims seat 0 and is dealt a FRESH key");
+  const old = await go({op: "resync", table: code, seat: 0, key: kA});
+  row(old.ok === false && old.refused === "auth" && old.taken === true, label + ": identity: the old key answers 'auth' with taken:true (the old phone is told, not left hanging)");
+  const cast = stub.broadcasts.filter(b => b.topic === SHA.seatTopic(code, 0, kA) && (b.payload.frames || []).some(f => f.taken));
+  row(cast.length === 1 && cast[0].payload.mac === SHA.frameMac(kA, code, 0, cast[0].payload.ver, cast[0].payload.frames) && cast[0].private === false, label + ": identity: the old channel got ONE sealed 'taken' notice", cast.length + " notice(s)");
+  const back = await go({op: "join", table: code, seat: 0, key: kA2});
+  row(back.ok && back.seat === 0, label + ": identity: the new key holds the chair");
+  const r1 = stub.row(code);
+  row(r1.v === 3 && r1.owners.filter(Boolean).length === 2 && r1.retired[0].length === 1 && JSON.stringify(r1).indexOf(kA) < 0, label + ": identity: the row is v3, two owners, the old key stored as a hash only");
+  const players = stub.players.size, again = await go({op: "join", table: code, identity: {token: tokA}});
+  row(again.ok && stub.players.size === players && stub.stats.auths - sBefore >= 5 && stub.stats.resolves >= 4, label + ": identity: every token was verified at /auth/v1/user and mapped by identity_resolve; the same sign-in is the same player (" + stub.players.size + " players)");
+  const all = texts.join("\n") + JSON.stringify(stub.broadcasts.filter(b => b.topic.startsWith("table:" + code)));
+  const secrets = [SUB_A, SUB_B, tokA, tokB, ...stub.players.keys()];
+  row(secrets.every(x => all.indexOf(x) < 0), label + ": identity: no token, provider user id or player id in any response or broadcast for this table");
+  const cas = await go({op: "create"}), c1 = await go({op: "join", table: cas.table}), c2 = await go({op: "join", table: cas.table, claim: "casualClaimTokenAAAAAAAA"});
+  row(c1.ok && c2.ok && c1.seat !== c2.seat && stub.row(cas.table).v === 2 && !("owners" in stub.row(cas.table)), label + ": identity: a casual table on the same function is unchanged (v2 row, no identity fields)");
+  const logged = log.join("").split("\n").filter(l => /error|exception|panick/i.test(l)).length;
+  stub.authDown(true);
+  const down = await go({op: "join", table: code, identity: {token: tokB}});
+  stub.authDown(false);
+  await new Promise(r => setTimeout(r, 100));
+  const after = log.join("").split("\n").filter(l => /error|exception|panick/i.test(l));
+  row(down.ok === false && down.refused === "internal" && down.text.indexOf("auth is down") < 0 && after.length > logged && after.every(l => l.indexOf(tokB) < 0 && l.indexOf(SUB_B) < 0), label + ": identity: a provider outage is 'internal' (logged for the operator, without the token), not a verdict on the token");
+  row(stub.stats.bad.length === 0, label + ": identity: the stub saw no malformed call (the /auth/v1/user headers, identity_resolve's args)", stub.stats.bad.slice(0, 3).join("; "));
 }
 
 /* the blindness scanner of test/servertable.test.js, over what each phone's channel handed up */
