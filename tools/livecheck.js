@@ -20,7 +20,7 @@
 "use strict";
 const { spawnSync } = require("child_process");
 if(process.env.HTTPS_PROXY && !process.env.NODE_USE_ENV_PROXY){
-  const r = spawnSync(process.execPath, process.argv.slice(1), { stdio: "inherit", env: { ...process.env, NODE_USE_ENV_PROXY: "1" } });
+  const r = spawnSync(process.execPath, process.argv.slice(1), { stdio: "inherit", env: { ...process.env, NODE_USE_ENV_PROXY: "1", NODE_NO_WARNINGS: "1" } });
   process.exit(r.status == null ? 1 : r.status);
 }
 const arg = (n, d) => { const i = process.argv.indexOf(n); return i >= 0 ? process.argv[i + 1] : d; };
