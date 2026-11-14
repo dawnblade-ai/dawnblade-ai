@@ -1,6 +1,6 @@
 # DEPLOY — the hosted referee on Supabase
 
-**State today (2026-11-14):** the SQL is run and the function is **deployed and live-tested** on `fokcpzplomjsraquaaid` (path B, below; record in `server/S3-DEPLOY-LOG.md`, stamp in `DEPLOYED.json`, currently v6.26). The page's server table is **a tester's door**: `window.SERVER_TABLE.on` stays `false` for everyone, and a phone opts in by opening the game with `?server=1` (remembered; `?server=0` forgets it).
+**State today (2026-11-14):** the SQL is run and the function is **deployed and live-tested** on `fokcpzplomjsraquaaid` (path B, below; record in `server/S3-DEPLOY-LOG.md`, stamp in `DEPLOYED.json`, currently v6.27). The page's server table is **a tester's door**: `window.SERVER_TABLE.on` stays `false` for everyone, and a phone opts in by opening the game with `?server=1` (remembered; `?server=0` forgets it).
 Turning it on for everyone is one value in a release (`on: true`).
 
 **Project:** `https://fokcpzplomjsraquaaid.supabase.co`
@@ -51,7 +51,7 @@ The function is named exactly **`table`** (the page calls `/functions/v1/table`)
    the project's Realtime must allow public channels (the default; **Realtime → Settings → "Allow public access"** if
    shown). Do not switch Realtime to private-only.
 6. **Check it.** Open `https://fokcpzplomjsraquaaid.supabase.co/functions/v1/table` in a browser: expect
-   `{"service":"dawnblade-table","build":"v6.26 · sage-v17"}` (the build must equal the page's, shown in-game). If the
+   `{"service":"dawnblade-table","build":"v6.27 · sage-v17"}` (the build must equal the page's, shown in-game). If the
    browser says a key is needed, that is the gateway; the game itself sends it (UNVERIFIED which way the gateway asks).
 7. **Switch the page on.** Tell Claude "turn the server table on": a release sets `on: true`. Then open the game, *Find an
    opponent* → *Join a server table* → *Open a server table*: a six-character code appears. If it says the service is not

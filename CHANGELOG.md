@@ -1,3 +1,38 @@
+## v6.27 — the other phone hears your move at once (the push script was asked for at the wrong address)
+
+- **What the user's two-phone test showed (2026-11-14):** the server table worked, but a move took up to about 5 seconds to reach the
+  other phone.
+- **Root cause, found by driving the real page against the live function:** `loadSupabase` used the project's address as the address of
+  the helper script (`config.url` is the project; the script lives on the CDN). Every browser therefore asked the project's front door
+  for a script, got an error page, never loaded the helper and never opened the Realtime socket: **no push ever arrived in any browser.**
+  Every drill passed because each handed the transport a ready library or a fake transport, so the loader was never run. Without a push
+  the only way a phone hears the other seat is the 20-second idle poll; and a host's lobby stayed shut, because a channel that had lost
+  its push never moved to "seated" when the peer was heard by asking.
+- **The fix** (`engine/servertable.js`, `index.html`): the script is requested from the pinned CDN address (`libUrl || SUPABASE_JS`); while
+  the push subscription is not joined the phone asks the table every 2 s (`fallbackMs`; stops when a push channel joins); a successful ask
+  takes a "reconnecting" channel back to waiting/seated (the lobby opens); the library load is retried every 10 s; `report().push` reads
+  "joined" or "polling". **Cost of the fallback:** one function call (about 120 ms of function time) per phone per 2 s only while push is
+  down, 600 calls in a 20-minute game; the free plan's 500,000 calls a month cover about 800 such games. No extra keep-alive pinging.
+- **Measured live on v6.27, real page in Chromium (393x852, 4x CPU throttle, websocket through the egress proxy), 80 actions:** the other
+  seat's move reaches the page by push, 33 of 33, median 234 ms, p95 475 (the first fixed tree: median 240, p95 423); the page's own move
+  shows on its board in about 284 ms (p95 428) and reaches the other seat in 230 ms (p95 315). With push cut: 1.4 s median, 2.0 s max (was
+  19.4 s median, and a host lobby that never opened). Live Node game: 275 actions, per request median 205 ms, p95 430.
+- **Not causes (measured):** the function (median 116 ms of a 195 ms request: SELECT 30, put 35, broadcast 31, app 19; always one request per
+  action), cold instances (4 of 151 requests, 331-445 ms), version-conflict retries (5 of 151), the page (55-70 ms per frame at 4x
+  throttle, flat over a 172-action game: no log replay, no render storm). Tail spikes of 1.3-2.4 s hit 2 of 120 actions (one was Postgres).
+- **Drills that would have caught it:** `test/servertable.test.js` feeds the page's own config (read from `index.html`) through
+  `supabaseTransport` with no `lib` and asserts the script address (sabotaged: the old line is seen requesting the project); `tools/serverpage.js`
+  row "real loader" drives the page's real loader with the script served from a local route (sabotaged); plus the fallback drills
+  ("no push, heard within a tick", the page's "push lost" row). LESSONS.md: a drill that injects the library can never test the loader.
+- **Honest open question:** with no push at all the move should have taken about 20 seconds (or the lobby should not have opened), yet the
+  user saw up to about 5. Not explained; a different build or luck. The two-phone test on v6.27 will say.
+- **Function:** responses carry `Server-Timing` and `x-table-meta` headers (ready, get, put, bc, app, total, instance, cold flag, row size),
+  never in the body. Tools: `tools/perf-live.js`, `tools/perf-page.js`; full log `server/PERF-LOG.md`.
+- **WIRE_V and DATA_VER unchanged:** no payload, prompt shape or top-level game key moved (the function's bodies are as in v6.26); no
+  loader schema, card-field handling or pool changed (`engine/servertable.js` is the page's side and is not in the function). The function
+  was re-bundled and redeployed for `v6.27 · sage-v17` (stamp in `DEPLOYED.json`); until `main` is pushed, live v6.26 pages cannot
+  handshake with it (the door is testers-only).
+
 ## v6.26 — the server table, behind a tester's door; the page gives its rules the card database
 
 - **S2: the page's server table** (`engine/servertable.js`, the table screen's "Join a server table", banners for a lost link,
