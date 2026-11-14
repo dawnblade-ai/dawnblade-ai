@@ -30,6 +30,7 @@ function makePhone(world, name, o){
   /* how: "create" | "join" | "reclaim"; code for the last two */
   P.connect = async (how, code) => {
     const M = o.ST || ST, f = how === "create" ? M.startTable : how === "reclaim" ? M.reclaim : M.sitAt;
+    P.reclaimed = how === "reclaim";   /* a reloaded seat already answered every lobby step: the table replays them, and answering anew BEFORE the replay reaches the seat's own answer would put a different seed half into this phone's local lobby (the page's seat does not: its lobby takes the whole replay in one batch before its effect runs) */
     P.ch = await f({...opts(), code});
     P.code = P.ch.code;
     P.ch.listen(fr => P.receive(json(fr)));
@@ -48,6 +49,7 @@ function makePhone(world, name, o){
   };
   P.step = () => {
     const s = P.lob, st = L.stepOf(s), me = P.seat;
+    if(P.reclaimed && st !== "ready") return;
     if(st === "hero" && s.heroes[me] == null) return P.lobby(L.hero(me, P.hero));
     if(st === "throw"){
       if(s.seals[me] == null){ const th = (o.throws || [["paper", "rock"]])[Math.min(s.round, (o.throws || [1]).length - 1)][me];

@@ -1,8 +1,7 @@
 # DEPLOY — the hosted referee on Supabase
 
-**State today (2026-11-14):** the SQL is run and the function is **deployed and live-tested** on `fokcpzplomjsraquaaid` (path B, below; record in `server/S3-DEPLOY-LOG.md`, stamp in `DEPLOYED.json`). The page's "Join a server table" is switched **off**
-(`window.SERVER_TABLE.on = false` in `index.html`), so nobody can reach a half-finished door. Two steps turn it on:
-(done) deploy the function, then flip that one value in a release.
+**State today (2026-11-14):** the SQL is run and the function is **deployed and live-tested** on `fokcpzplomjsraquaaid` (path B, below; record in `server/S3-DEPLOY-LOG.md`, stamp in `DEPLOYED.json`, currently v6.26). The page's server table is **a tester's door**: `window.SERVER_TABLE.on` stays `false` for everyone, and a phone opts in by opening the game with `?server=1` (remembered; `?server=0` forgets it).
+Turning it on for everyone is one value in a release (`on: true`).
 
 **Project:** `https://fokcpzplomjsraquaaid.supabase.co`
 
@@ -52,7 +51,7 @@ The function is named exactly **`table`** (the page calls `/functions/v1/table`)
    the project's Realtime must allow public channels (the default; **Realtime → Settings → "Allow public access"** if
    shown). Do not switch Realtime to private-only.
 6. **Check it.** Open `https://fokcpzplomjsraquaaid.supabase.co/functions/v1/table` in a browser: expect
-   `{"service":"dawnblade-table","build":"v6.25 · sage-v17"}` (the build must equal the page's, shown in-game). If the
+   `{"service":"dawnblade-table","build":"v6.26 · sage-v17"}` (the build must equal the page's, shown in-game). If the
    browser says a key is needed, that is the gateway; the game itself sends it (UNVERIFIED which way the gateway asks).
 7. **Switch the page on.** Tell Claude "turn the server table on": a release sets `on: true`. Then open the game, *Find an
    opponent* → *Join a server table* → *Open a server table*: a six-character code appears. If it says the service is not
@@ -119,13 +118,13 @@ deploy there is no stamp; `--check` then compares the generated copy only.
 
 **STILL UNVERIFIED**
 - A real browser's websocket and the page's CDN script URL for supabase-js (jsdelivr is blocked from the sandbox); dashboard labels; behaviour at the free plan's quotas.
-- A reloaded phone's own "verify this game": in the headless harness the reloaded seat re-derives a different seed half from its replayed lobby, so its verification fails while its views match the referee. The page's real reload path was not driven live. (Server side is not involved.)
+- A real PHONE's reload against the live service (the page's own reload was driven to the end of a game, and verified, against the offline fake only; the harness's reloaded seat verifies true/true live since v6.26).
 - Edge Function limits under load (only sequential two-seat games, and four at once, were run).
 
 ## Known limits of the casual stage (see `001_tables.sql` for the channel decision)
 - Public channels: anyone who learns a seat's channel name can listen to that seat's hand and cannot be revoked; they cannot forge a frame (every push is sealed under the seat key). Private channels with sign-in are S4.
-- The function is callable by anyone who knows the project URL (JWT verification is off): a stranger can open empty tables. Forget old rows with the optional `pg_cron` job at the end of `001_tables.sql`; real abuse limits come with sign-in.
+- The function is callable by anyone who knows the project URL (JWT verification is off): a stranger can open empty tables. Rows idle 48 hours are forgotten whenever a table is opened (`table_put`); real abuse limits come with sign-in.
 
 ## Rolling back
-Delete nothing. Set `on: false` in a release (the page stops offering it), or undeploy the function (the page then reads "not
-answering" and offers the direct table). Table rows are small and the optional cleanup job expires them.
+Delete nothing (tables idle 48 hours are forgotten by `table_put` itself since v6.26). Set `on: false` in a release (the page stops offering it), or undeploy the function (the page then reads "not
+answering" and offers the direct table). Table rows are small and expire on their own (48 hours idle).
