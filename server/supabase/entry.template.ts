@@ -77,29 +77,55 @@ function conf(){
   if(!key.startsWith("sb_")) headers.authorization = "Bearer " + key;
   return {url, headers};
 }
-const store = {
+/* ---- timing (PERF, 2026-11-14): every response carries `Server-Timing` and `x-table-meta` headers (never the body, so no page
+   or drill can depend on them): where this request's milliseconds went inside the function. `ready` = building the card database
+   and deal (cold instance only), `get` = the row SELECT, `put` = table_put, `bc` = the Realtime broadcast call(s), `app` =
+   everything else (parse, rehydrate the hub, apply the frame, serialise); `inst` names the instance, `seq` counts its requests,
+   `cold` is 1 on its first, `up` is ms since the isolate started, `rowb` is the stored row's size in bytes as read. One ctx per request: instances serve requests
+   concurrently. */
+const INST = Math.random().toString(36).slice(2, 8);
+let SEQ = 0;
+const nowMs = () => performance.now();
+function mkCtx(){ return {t0: nowMs(), ready: 0, get: 0, put: 0, bc: 0, nbc: 0, rowb: 0, seq: ++SEQ}; }
+function timingHeaders(c: any, cold: boolean){
+  const total = nowMs() - c.t0, app = Math.max(0, total - c.ready - c.get - c.put - c.bc), f = (x: number) => x.toFixed(1);
+  return {"server-timing": "ready;dur=" + f(c.ready) + ", get;dur=" + f(c.get) + ", put;dur=" + f(c.put) + ", bc;dur=" + f(c.bc) + ", app;dur=" + f(app) + ", total;dur=" + f(total),
+          "x-table-meta": "inst=" + INST + ";seq=" + c.seq + ";cold=" + (cold ? 1 : 0) + ";rowb=" + c.rowb + ";nbc=" + c.nbc + ";up=" + Math.round(nowMs()),
+          "access-control-expose-headers": "server-timing, x-table-meta"};
+}
+const mkStore = (c: any) => ({
   async get(id: string){
-    const c = conf();
-    const r = await fetch(c.url + "/rest/v1/tables?id=eq." + encodeURIComponent(id) + "&select=version,row", {headers: c.headers});
-    if(!r.ok) throw new Error("store.get " + r.status);
-    const rows = await r.json();
-    return rows.length ? {version: rows[0].version, row: rows[0].row} : null;
+    const t = nowMs();
+    try {
+      const k = conf();
+      const r = await fetch(k.url + "/rest/v1/tables?id=eq." + encodeURIComponent(id) + "&select=version,row", {headers: k.headers});
+      if(!r.ok) throw new Error("store.get " + r.status);
+      const text = await r.text(); c.rowb = text.length;
+      const rows = JSON.parse(text);
+      return rows.length ? {version: rows[0].version, row: rows[0].row} : null;
+    } finally { c.get += nowMs() - t; }
   },
   async put(id: string, row: any, expected: number){
-    const c = conf();
-    const r = await fetch(c.url + "/rest/v1/rpc/table_put", {method: "POST", headers: c.headers, body: JSON.stringify({p_id: id, p_row: row, p_expected: expected})});
-    if(!r.ok) throw new Error("store.put " + r.status);
-    const v = await r.json();                 // table_put returns the new version, or 0 for "someone wrote first"
-    return v > 0 ? {ok: true, version: v} : {ok: false, version: expected};
+    const t = nowMs();
+    try {
+      const k = conf();
+      const r = await fetch(k.url + "/rest/v1/rpc/table_put", {method: "POST", headers: k.headers, body: JSON.stringify({p_id: id, p_row: row, p_expected: expected})});
+      if(!r.ok) throw new Error("store.put " + r.status);
+      const v = await r.json();                 // table_put returns the new version, or 0 for "someone wrote first"
+      return v > 0 ? {ok: true, version: v} : {ok: false, version: expected};
+    } finally { c.put += nowMs() - t; }
   }
-};
-async function broadcast(topic: string, payload: any){
+});
+const mkBroadcast = (c: any) => async (topic: string, payload: any) => {
   const body = JSON.stringify({messages: [{topic, event: "frame", payload, private: false}]});
   if(body.length > MAX_BROADCAST) throw new Error("broadcast too large: " + body.length);
-  const c = conf();
-  const r = await fetch(c.url + "/realtime/v1/api/broadcast", {method: "POST", headers: c.headers, body});
-  if(!r.ok) throw new Error("broadcast " + r.status);          // 202 is success (measured)
-}
+  const t = nowMs();
+  try {
+    const k = conf();
+    const r = await fetch(k.url + "/realtime/v1/api/broadcast", {method: "POST", headers: k.headers, body});
+    if(!r.ok) throw new Error("broadcast " + r.status);          // 202 is success (measured)
+  } finally { c.bc += nowMs() - t; c.nbc++; }
+};
 
 /* ---- HTTP ----------------------------------------------------------------------------------------------- */
 function cors(req: Request){
@@ -109,7 +135,7 @@ function cors(req: Request){
   if(origin && ORIGINS.includes(origin)) h["access-control-allow-origin"] = origin;
   return h;
 }
-const send = (req: Request, body: any, status = 200) => new Response(JSON.stringify(body), {status, headers: {...cors(req), "content-type": "application/json"}});
+const send = (req: Request, body: any, status = 200, extra: any = {}) => new Response(JSON.stringify(body), {status, headers: {...cors(req), "content-type": "application/json", ...extra}});
 
 Deno.serve(async (req: Request) => {
   if(req.method === "OPTIONS") return new Response(null, {status: 204, headers: cors(req)});
@@ -124,9 +150,12 @@ Deno.serve(async (req: Request) => {
     if(text.length > MAX_BODY) return send(req, {ok: false, refused: "bad-request"});
     request = JSON.parse(text);
   } catch(_){ return send(req, {ok: false, refused: "bad-request"}); }
+  const c = mkCtx(), cold = !READY;
   let r: any;
+  const tr = nowMs();
   try { r = ready(); } catch(e){ console.error(e); return send(req, {ok: false, refused: "internal"}); }
-  const answer = await G.DawnServer.handle(request, {store, broadcast, deal: r.deal, build: r.build, now: () => Date.now(),
+  c.ready = nowMs() - tr;
+  const answer = await G.DawnServer.handle(request, {store: mkStore(c), broadcast: mkBroadcast(c), deal: r.deal, build: r.build, now: () => Date.now(),
     log: (e: any) => console.error(String(e && e.stack || e))});          // operator logs only; an error never rides a response
-  return send(req, answer);
+  return send(req, answer, 200, timingHeaders(c, cold));
 });
