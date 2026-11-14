@@ -806,9 +806,9 @@ img{display:block;max-width:100%}
 .tblvs strong{color:var(--bone)}
 .tblrk{display:inline-block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--y);border:1px solid var(--y);padding:2px 8px;margin-right:6px}
 .tblrt{color:var(--y);font-family:'Spline Sans Mono',monospace;font-size:12px;margin-left:4px}
-.tblsw{width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;background:none;border:1px solid var(--line);color:var(--bone);font-size:15px;padding:10px 12px;min-height:48px}
+.tblsw{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;background:none;border:1px solid var(--line);color:var(--bone);font-size:15px;padding:8px 12px;min-height:44px}
 .tblsw.on{border-color:var(--y);color:var(--y)}
-.tblsw .tblswsub{font-size:12.5px;color:var(--bone-dim)}
+.tblsw .tblswsub{font-size:12px;color:var(--bone-dim);text-align:right}
 .rankchg{font-size:14px;line-height:1.45;margin-top:10px;padding:9px 10px;border:1px solid var(--line);background:rgba(0,0,0,.25)}
 .rankchg strong{color:var(--y);font-family:'Spline Sans Mono',monospace}
 .heromid .pname .prate{color:var(--y);font-family:'Spline Sans Mono',monospace}
@@ -7068,6 +7068,9 @@ function TableScreen({onBack, onSeated}){
      anyone in). */
   const [ranked,setRanked] = uS(false);
   const [hostRanked,setHostRanked] = uS(false);
+  /* a refusal is for the player to read: on a short phone the sentence can fall below the buttons, so it is brought into view */
+  const errRef = uR(null);
+  uE(()=>{ if(err && errRef.current && errRef.current.scrollIntoView) try{ errRef.current.scrollIntoView({block:"nearest"}); }catch(_){} },[err]);
   const [myRank,setMyRank] = uS(null);
   uE(()=>{
     if(!srvOn || !srvWho || (mode!=="srv" && mode!=="srv-name")) return;
@@ -7321,13 +7324,11 @@ function TableScreen({onBack, onSeated}){
           <span>{myName ? <>Playing as <strong>{myName}</strong></> : "No player name yet — your opponent sees no name."}{myRank && <> · rating <strong data-testid="my-rating">{myRank.rating}</strong></>}</span>
           <button disabled={busy} onClick={()=>{ setErr(null); setDraft(myName||""); setMode("srv-name"); }}>{myName ? "Change" : "Choose a name"}</button>
         </div>}
-        {srvWho && !gone && <div className="tblcard">
-          <button role="switch" aria-checked={ranked} data-testid="ranked-switch" className={"tblsw"+(ranked?" on":"")} disabled={busy} onClick={()=>setRanked(r=>!r)}>
-            <span>{ranked ? "Ranked table" : "Friendly table"}</span>
-            <span className="tblswsub">{ranked ? "Counts toward both players' ratings" : "Just for fun — nothing is recorded"}</span>
-          </button>
-          {ranked && <p className="note" data-testid="ranked-note">A ranked table needs a player name for both of you. Everyone starts at 1200. The throw still decides who chooses to go first.</p>}
-        </div>}
+        {srvWho && !gone && <button role="switch" aria-checked={ranked} data-testid="ranked-switch" className={"tblsw"+(ranked?" on":"")} disabled={busy} onClick={()=>setRanked(r=>!r)}>
+          <span>{ranked ? "Ranked table" : "Friendly table"}</span>
+          <span className="tblswsub">{ranked ? "Counts toward both ratings" : "Just for fun — nothing is recorded"}</span>
+        </button>}
+        {srvWho && !gone && ranked && <p className="note" data-testid="ranked-note">A ranked table needs a player name for both of you. Everyone starts at 1200. The throw still decides who chooses to go first.</p>}
         {gone ? null : <>
           <button className="bigbtn" disabled={busy} onClick={()=>srvSit("create")}>{busy ? (PHRASE[stat]||"…") : ranked ? "Open a ranked table" : "Open a server table"}</button>
           <button className="bigbtn alt" disabled={busy} onClick={()=>{ setCode(""); setMode("srv-join"); }}>Enter a table code</button>
@@ -7446,7 +7447,7 @@ function TableScreen({onBack, onSeated}){
         </button>
       </>}
 
-      {err && <div className="tblerr">{err}</div>}
+      {err && <div className="tblerr" ref={errRef}>{err}</div>}
       {mode && /^srv/.test(mode) ? <button className="bigbtn alt" onClick={mode==="srv-join" || mode==="srv-name" ? ()=>{ recBack(); setMode("srv"); setErr(null); setGone(false); setBusy(false); setCode(""); } : srvLeave}>{mode==="srv-host" ? "Cancel" : "Back"}</button>
         : <button className="bigbtn alt" onClick={onBack}>Back</button>}
     </div>

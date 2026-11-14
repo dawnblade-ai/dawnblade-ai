@@ -19,6 +19,11 @@
        and one per run: "Lc" + the clock in base 36); the throwaway player the third phone had is deleted by the redeem itself.
    (e) S4.4 (v6.31, UNRUN ON LIVE when written): after both phones reach the board, seat 0's one-run name is beside its hero on BOTH boards. It does NOT create
        six tables (the cap is proven offline: test/servertablecap.test.js, the Deno rehearsal, tools/serverpage.js).
+   (f) S5.1 (v6.32, UNRUN ON LIVE when written: 006_ratings.sql and the v6.32 function are not deployed yet): the lightest honest ranked check, over plain
+       HTTPS to the function with the two sign-ins the phones above already hold (host = named, guest = nameless): `me` carries a rating (1200, no
+       ranked games) for the named host; the nameless guest's ranked create is refused `ranked-name`; the host's ranked create is accepted, an anonymous
+       join is refused `ranked-signin`, the host's own join says `ranked:true` with a rating, and the host CLOSES the table. It never plays a ranked game
+       on live (that would write a result and move two real ratings) and creates no player and no name of its own. A closed table records nothing.
    Exit 0 only when every check passes; otherwise 1 (and the line that failed says why).
 
    If the live page's switch is closed (SERVER_TABLE.on false: a release before v6.28) both phones are opened with ?server=1.
@@ -96,6 +101,30 @@ const LOBBY = ({ role, done }) => {
   if(btn(/^Lock the sideboard/) && !done.side) return press("side", btn(/^Lock the sideboard/));
   return null;
 };
+
+/* ---------------- (f) S5.1: a ranked table is accepted, refused and closed on live — without playing it ---------------- */
+async function rankedLight(cfg, pages){
+  const tok = pg => pg.evaluate(() => { try { return JSON.parse(window.localStorage.getItem("dawnblade.who.id") || "null").a || null; } catch(_){ return null; } });
+  const [named, nameless] = [await tok(pages[0]), await tok(pages[1])];
+  const post = async body => { try { const r = await fetchT(cfg.url + "/functions/v1/" + cfg.fn, { method: "POST", headers: { apikey: cfg.key, "content-type": "application/json" }, body: JSON.stringify(body) }); return await r.json(); } catch(e){ return { ok: false, refused: "network " + (e.cause && e.cause.code || e.message) }; } };
+  if(!row(!!named && !!nameless, "ranked: both phones hold a sign-in to check with")) return;
+  const me = await post({ op: "me", identity: { token: named } });
+  row(me.ok === true && me.rating === 1200 && me.games === 0, "ranked: `me` carries the host player's rating (1200, no ranked games)", JSON.stringify({ rating: me.rating, games: me.games, refused: me.refused }));
+  const no = await post({ op: "create", identity: { token: nameless }, ranked: true });
+  row(no.ok === false && no.refused === "ranked-name", "ranked: a nameless player's ranked create is refused 'ranked-name'", JSON.stringify(no));
+  const bad = await post({ op: "create", identity: { token: named }, ranked: "yes" });
+  row(bad.ok === false && bad.refused === "bad-request", "ranked: a ranked flag that is not true is refused", JSON.stringify(bad));
+  const made = await post({ op: "create", identity: { token: named }, ranked: true });
+  row(made.ok === true && /^[A-Z0-9]{6}$/.test(made.table || ""), "ranked: the host's ranked create is accepted", JSON.stringify(made));
+  if(!made.ok) return;
+  const anon = await post({ op: "join", table: made.table });
+  row(anon.ok === false && anon.refused === "ranked-signin", "ranked: an anonymous join of the ranked table is refused 'ranked-signin'", JSON.stringify(anon).slice(0, 120));
+  const mine = await post({ op: "join", table: made.table, identity: { token: named } });
+  row(mine.ok === true && mine.ranked === true && Array.isArray(mine.ratings) && mine.ratings.includes(1200), "ranked: the host's own join says the table is ranked and shows the rating", JSON.stringify({ ranked: mine.ranked, ratings: mine.ratings, refused: mine.refused }));
+  const closed = await post({ op: "close", table: made.table, identity: { token: named } });
+  const gone = await post({ op: "join", table: made.table, identity: { token: named } });
+  row(closed.ok === true && gone.refused === "no-table", "ranked: the host closes the table (nothing was recorded), and it is gone", JSON.stringify({ closed: closed.ok, after: gone.refused }));
+}
 
 async function twoPhones(p, cfg){
   let pw; try { pw = require("playwright"); } catch(e){ return row(false, "playwright resolves", "set NODE_PATH to a playwright install"); }
@@ -209,6 +238,8 @@ async function twoPhones(p, cfg){
     console.log("      how remote moves arrived: push " + pushed + ", fallback " + fallback + (fallback ? " (" + out.play.fallbackKinds.join("; ") + ")" : ""));
     console.log("      tap -> other seat (ms): all median " + out.play.all.median + ", p95 " + out.play.all.p95 + " | host moves: median " + hs.median + ", p95 " + hs.p95 + ", max " + hs.max + " | guest moves: median " + gs.median + ", p95 " + gs.p95 + ", max " + gs.max);
     row(fallback === 0, "every remote move arrived by push", fallback ? fallback + " of " + rows.length + " came by a fallback ask" : "");
+    /* S5.1: the lightest honest ranked check, with the sign-ins these two phones already hold (no ranked game is played, no player or name is made) */
+    await rankedLight(cfg, phones.map(ph => ph.page));
     /* S4.3: a third, fresh phone redeems seat 0's code and is that player */
     if(recCode){
       const C = await mk("recovered");

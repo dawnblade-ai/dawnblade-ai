@@ -95,7 +95,7 @@ const pnames = page => page.evaluate(() => { const o = {};
 /* drive a page (open at the server table chooser) to the board: the page either opens a table (asHost) or types the code of the scripted phone's */
 async function toTheBoard(page, world, B, o){
   if(o.asHost){
-    await click(page, btn(page, /^Open a server table/), "open a server table"); await page.waitForSelector(".tblcode");
+    await click(page, btn(page, o.openRe || /^Open a server table/), "open a server table"); await page.waitForSelector(".tblcode");
     const code = await page.evaluate(() => document.querySelector(".tblcode").innerText.trim());
     await B.connect("join", code);
     await page.waitForFunction(() => /Choose your fighter/i.test(document.body.innerText), null, { timeout: 10000 }).catch(() => {});
@@ -372,7 +372,8 @@ async function toServerChooser(page){
     row(idp.names.get("P-page") && idp.names.get("P-page").name === "Dawn Smith", "name: the registry holds it for this player");
     row(await page.evaluate(() => JSON.parse(window.localStorage.getItem("dawnblade.who.name")) === "Dawn Smith"), "name: the phone remembers it");
     row(await overflow(page), "name row: no horizontal overflow"); await thumbs(page, "name row (named)");
-    const sentMe = world2.outbound.map(x => JSON.parse(x.text)).filter(e => e.op === "me");
+    /* S5.1: the screens also READ the player's rating (an `me` with no name), so the saves are the requests that carry a name */
+    const sentMe = world2.outbound.map(x => JSON.parse(x.text)).filter(e => e.op === "me" && e.name !== undefined);
     row(sentMe.length === 4 && sentMe.every(e => e.identity && e.identity.token === tokPage), "name: each save was one request carrying the sign-in", sentMe.length + " requests");
   }
 
@@ -730,6 +731,120 @@ async function toServerChooser(page){
     row(bad4.length === 0 && w4.errors.length === 0, "cap: no page error and no internal error on the fake server", bad4.concat(w4.errors).join(" | ").slice(0, 200));
     await kit4.close();
   }
+  /* ---- S5.1: RANKED TABLES, ON THE PAGE (each phase its own page and world; the ratings backend behaves like 006_ratings.sql) ---- */
+  const rankedKit = async (label, o) => {
+    const kit = await open({ w: W, h: H }), pg = kit.page;
+    const bld = await pg.evaluate(() => TABLE_BUILD);
+    const wd = makeWorld({ seedKey: "ranked-" + label, build: bld, deal: dealLikeThePage });
+    await wire(pg, wd);
+    const idp = F.memIdentity(), rat = F.withRatings();
+    wd.deps.identify = t => idp.identify(t); wd.deps.rename = (pl, n, f) => idp.rename(pl, n, f); Object.assign(wd.deps, rat.deps());
+    const tokMe = idp.issue("P-rk-me"), tokFoe = idp.issue("P-rk-foe");
+    if(o.me) idp.rename("P-rk-me", o.me, wd.server.nameFold(o.me));
+    idp.rename("P-rk-foe", "Rival One", wd.server.nameFold("Rival One"));
+    if(o.meRating) rat.set("P-rk-me", o.meRating);
+    const shim = "window.__dawnServerIdentity = {token: () => Promise.resolve(" + JSON.stringify(tokMe) + ")};";
+    await pg.addInitScript(shim); await pg.evaluate(shim);
+    await pg.evaluate(() => { window.SERVER_TABLE.on = true; });
+    const Bp = PH.makePhone(wd, "B", { hero: "dorinthea", rand: T.seeded("ranked-b-" + label), build: bld, matchCatalog, throws: o.throws || [["rock", "rock"], ["paper", "rock"]], identity: { token: async () => tokFoe }, ...(o.bRanked ? { ranked: true } : {}) });
+    return { kit, pg, wd, rat, Bp, idp, tokMe, tokFoe };
+  };
+  const leaveBoard = async pg => { await click(pg, pg.locator(".reveal h2"), "tap the end screen to leave"); await pg.waitForSelector(".shell"); };
+  const noJargon = t => !/undefined|NaN|\bnull\b|ranked-|refused|bad-request|ratings?:|winner|change|\bv6\.|player id|table-cap/i.test(t);
+
+  /* R1: the page opens a RANKED table, a named opponent sits down, the game is played to a concession by the opponent; the page's seat wins (1300 v 1200) */
+  {
+    const k = await rankedKit("open", { me: "Dawn Smith", meRating: 1300 }), pg = k.pg, wd = k.wd, rat = k.rat, B = k.Bp;
+    await toServerChooser(pg);
+    await pg.waitForSelector('[data-testid="my-rating"]', { timeout: 8000 }).catch(() => {});
+    const mr = await boxes(pg, '[data-testid="my-rating"]');
+    row(mr.length === 1 && mr[0].t === "1300", "ranked: the chooser shows the player's rating beside their name", JSON.stringify(mr[0]));
+    const sw0 = await boxes(pg, '[data-testid="ranked-switch"]');
+    row(sw0.length === 1 && /Friendly table/.test(sw0[0].t) && sw0[0].h >= 44 && sw0[0].x >= 0 && sw0[0].r <= W && (await pg.getAttribute('[data-testid="ranked-switch"]', "aria-checked")) === "false", "ranked: the switch starts on Friendly (the default is the casual table), thumb-sized, inside the screen", JSON.stringify(sw0[0]));
+    row(await btn(pg, /^Open a server table/).count() === 1, "ranked: with the switch off the button is still 'Open a server table'");
+    await click(pg, pg.locator('[data-testid="ranked-switch"]'), "switch to ranked");
+    const sw1 = await boxes(pg, '[data-testid="ranked-switch"]'), note = await boxes(pg, '[data-testid="ranked-note"]');
+    row(sw1.length === 1 && /Ranked table/.test(sw1[0].t) && /Counts toward both ratings/.test(sw1[0].t) && (await pg.getAttribute('[data-testid="ranked-switch"]', "aria-checked")) === "true" && note.length === 1 && /1200/.test(note[0].t) && note[0].r <= W,
+      "ranked: switching it on says what changes, in plain words", sw1[0] && sw1[0].t);
+    row(await btn(pg, /^Open a ranked table/).count() === 1 && await overflow(pg), "ranked: the button now reads 'Open a ranked table'; no horizontal overflow"); await thumbs(pg, "ranked chooser");
+    const code = await toTheBoard(pg, wd, B, { asHost: true, openRe: /^Open a ranked table/ });
+    row(wd.row(code).ranked === true && wd.row(code).v === 4 && wd.row(code).creator === "P-rk-me", "ranked: the table the page opened is a ranked table created by the page's player", "v" + wd.row(code).v);
+    await pg.waitForFunction(() => document.querySelectorAll("[data-pname]").length === 2, null, { timeout: 8000 }).catch(() => {});
+    const pn = await pnames(pg);
+    row(pn.me && pn.foe && /^Dawn Smith\s*1300$/.test(pn.me.t) && /^Rival One\s*1200$/.test(pn.foe.t), "ranked: each hero has its player's name AND rating beside it on the board", JSON.stringify([pn.me && pn.me.t, pn.foe && pn.foe.t]));
+    row(!!pn.me && !!pn.foe && [pn.me, pn.foe].every(p => p.x >= p.mx && p.r <= p.mr && p.rr <= W && p.h <= 14) && pn.scrollW <= W, "ranked: the name and rating stay inside the hero's box, one line, inside 393 wide", JSON.stringify(pn));
+    const flags = await pg.evaluate(() => [...document.querySelectorAll(".paneflag")].map(e => e.innerText.replace(/\s+/g, " ")));
+    row(flags.some(f => /ranked/i.test(f)), "ranked: the board says the table is ranked", JSON.stringify(flags.slice(0, 3)));
+    await playSome(pg, wd, B, 0, 6);
+    B.sess.submit({ t: "concede" });
+    await wd.settle([B.ch]);
+    await pg.waitForSelector('[data-testid="rank-change"]', { timeout: 15000 }).catch(() => {});
+    await pg.waitForFunction(() => /rose from/.test((document.querySelector('[data-testid="rank-change"]') || {}).innerText || ""), null, { timeout: 15000 }).catch(() => {});
+    const rc = await boxes(pg, '[data-testid="rank-change"]');
+    row(rc.length === 1 && /Well played\. Your rating rose from 1300 → 1312 \(\+12\)\./.test(rc[0].t), "ranked: the page's end screen shows its own rating change (old → new), warm and plain", rc[0] && rc[0].t);
+    row(rc.length === 1 && rc[0].x >= 0 && rc[0].r <= W && rc[0].y >= 0 && rc[0].b <= H && await overflow(pg), "ranked: the rating change is inside 393x852, no horizontal overflow", JSON.stringify(rc[0]));
+    row(rc.length === 1 && noJargon(rc[0].t), "ranked: the sentence carries no identifier, field name or version number");
+    const rb = B.ch.rank().result;
+    row(!!rb && JSON.stringify(rb.change) === JSON.stringify([{ from: 1300, to: 1312 }, { from: 1200, to: 1188 }]) && rb.winner === 0 && rb.how === "concession", "ranked: the other phone read the same result (its own rating 1200 → 1188)", JSON.stringify(rb && rb.change));
+    row(rat.results.size === 1 && rat.records === 1 && rat.rating("P-rk-me").rating === 1312 && rat.rating("P-rk-foe").rating === 1188, "ranked: exactly one result was recorded and both ratings moved by the Elo amounts", rat.records + " record call(s)");
+    await wait(2500);
+    row(rat.records === 1 && (await boxes(pg, '[data-testid="rank-change"]')).length === 1, "ranked: nothing was recorded again while the end screen stayed open");
+    /* the name sheet shows the new rating and record */
+    await leaveBoard(pg); await toServerChooser(pg);
+    await pg.waitForFunction(() => (document.querySelector('[data-testid="my-rating"]') || {}).innerText === "1312", null, { timeout: 8000 }).catch(() => {});
+    row((await boxes(pg, '[data-testid="my-rating"]')).map(b => b.t).join() === "1312", "ranked: the chooser shows the NEW rating");
+    await click(pg, btn(pg, /^(Change|Choose a name)/), "open the name sheet"); await pg.waitForSelector('[data-testid="my-record"]', { timeout: 8000 }).catch(() => {});
+    const rec = await boxes(pg, '[data-testid="my-record"]');
+    row(rec.length === 1 && /Your rating is 1312\. 1 ranked game: 1 won, 0 lost, 0 drawn\./.test(rec[0].t) && rec[0].r <= W, "ranked: the name sheet shows the rating and the record", rec[0] && rec[0].t);
+    row(await overflow(pg) && noJargon(rec[0] ? rec[0].t : ""), "ranked: the name sheet: no overflow, no jargon"); await thumbs(pg, "ranked name sheet");
+    const bad = k.kit.errors.filter(e => !/404|Failed to load resource/.test(e));
+    row(bad.length === 0 && wd.errors.length === 0, "ranked: no page error and no internal error on the fake server", bad.concat(wd.errors).join(" | ").slice(0, 200));
+    B.ch.close(); await k.kit.close();
+  }
+
+  /* R2: the page's seat LOSES by its own concession (1200 v 1200): the phone that made the last move reads the result from its own answer */
+  {
+    const k = await rankedKit("loss", { me: "Dawn Smith" }), pg = k.pg, wd = k.wd, rat = k.rat, B = k.Bp;
+    await toServerChooser(pg);
+    await click(pg, pg.locator('[data-testid="ranked-switch"]'), "switch to ranked");
+    await toTheBoard(pg, wd, B, { asHost: true, openRe: /^Open a ranked table/ });
+    await playSome(pg, wd, B, 0, 4);
+    await pg.evaluate(() => window.__dawnTable.session.submit({ t: "concede" }));
+    await wd.settle([B.ch]);
+    await pg.waitForFunction(() => /moved from/.test((document.querySelector('[data-testid="rank-change"]') || {}).innerText || ""), null, { timeout: 15000 }).catch(() => {});
+    const rc = await boxes(pg, '[data-testid="rank-change"]');
+    row(rc.length === 1 && /Your rating moved from 1200 → 1184 \(\u221216\)\. Every game teaches something\./.test(rc[0].t), "ranked: the loser's end screen shows 1200 → 1184, kindly", rc[0] && rc[0].t);
+    row(rc.length === 1 && rc[0].r <= W && rc[0].b <= H && noJargon(rc[0].t) && await overflow(pg), "ranked: the loss sentence is inside the screen and carries no jargon");
+    row(rat.results.size === 1 && [...rat.results.values()][0].winner === 1 && rat.rating("P-rk-me").rating === 1184 && rat.rating("P-rk-foe").rating === 1216, "ranked: the loss was recorded once, for the right player");
+    B.ch.close(); await k.kit.close();
+  }
+
+  /* R3: the refusals — a nameless player cannot sit at a ranked table (the page says what to do), and cannot open one */
+  {
+    const k = await rankedKit("nameless", { me: null, bRanked: true }), pg = k.pg, wd = k.wd, rat = k.rat, B = k.Bp;
+    await B.connect("create");
+    const code = B.code;
+    await toServerChooser(pg);
+    await click(pg, btn(pg, /^Enter a table code/), "enter a table code"); await pg.waitForSelector(".tblin");
+    await pg.fill(".tblin", code); await click(pg, btn(pg, /^Sit down/), "sit down at the ranked table");
+    await pg.waitForSelector(".tblerr", { timeout: 8000 }).catch(() => {});
+    const er = await boxes(pg, ".tblerr");
+    row(er.length === 1 && /A ranked table needs a player name for both players\. Choose yours under Playing as, then try again\./.test(er[0].t), "ranked refusal: a nameless joiner is told what to do, in plain words", er[0] && er[0].t);
+    row(er.length === 1 && er[0].x >= 0 && er[0].r <= W && er[0].b <= H && noJargon(er[0].t) && await overflow(pg), "ranked refusal: the sentence is inside 393x852 and carries no identifier or field name");
+    row(wd.row(code).owners.filter(Boolean).length === 1 && rat.records === 0, "ranked refusal: nothing was written by the refused seat");
+    await click(pg, btn(pg, /^Back/), "back to the chooser"); await pg.waitForSelector('[data-testid="ranked-switch"]');
+    await click(pg, pg.locator('[data-testid="ranked-switch"]'), "switch to ranked");
+    const rowsN = wd.store.rows.size;
+    await click(pg, btn(pg, /^Open a ranked table/), "open a ranked table without a name");
+    await pg.waitForSelector(".tblerr", { timeout: 8000 }).catch(() => {});
+    const er2 = await boxes(pg, ".tblerr");
+    row(er2.length === 1 && /needs a player name/.test(er2[0].t) && wd.store.rows.size === rowsN, "ranked refusal: a nameless player cannot open a ranked table either, and no table was made", er2[0] && er2[0].t);
+    row((await boxes(pg, ".tblwho button")).some(b => /Choose a name/.test(b.t) && b.h >= 40), "ranked refusal: the way out (Choose a name) is on the same screen, thumb-sized");
+    const bad = k.kit.errors.filter(e => !/404|Failed to load resource/.test(e));
+    row(bad.length === 0 && wd.errors.length === 0, "ranked refusal: no page error and no internal error on the fake server", bad.concat(wd.errors).join(" | ").slice(0, 200));
+    B.ch.close(); await k.kit.close();
+  }
+
   const fail = rows.filter(r => !r.ok).length;
   console.log(`\n${rows.length - fail} passed, ${fail} failed in ${((Date.now() - t0) / 1000).toFixed(0)}s`);
   process.exit(fail ? 1 : 0);
