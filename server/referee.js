@@ -35,6 +35,9 @@
      store.createCapped  (id, row, creator, cap) -> {ok:true, version} | {ok:false, exists:true} | {ok:false, capped:true, open:[ids]}   (S4.4,
                 optional; may return a promise) — create a table for a SIGNED-IN player unless they already hold `cap` open ones, the count and
                 the insert ONE atomic step (005_table_cap.sql table_create_capped). Only called by op "create" with an identity.
+     rating     (player) -> {rating, games, wins, losses, draws}   (S5.1, optional; may return a promise) — 006_ratings.sql rating_get. Only called by op "me"
+                and by a join at a ranked table. record  (result) -> {recorded, ratings:[{from,to},{from,to}]}   (S5.1, optional; may return a
+                promise) — 006_ratings.sql result_record, once per game (see "ranked tables" below). A function without both cannot make a ranked table.
      redeem     (token, hash) -> {status:"ok"|"refused"|"limited", name?} | null   (S4.3, optional; may return a promise) — spend the
                 code and move the token's sign-in to the code's player (recovery_redeem). null: the token is not a sign-in. Only
                 called by op "recovery-redeem". The Edge Function owns the provider subject; this file never sees it.
@@ -99,6 +102,28 @@
         for both seats. -> {ok:true}; refusals: bad-request | identity | no-table | not-creator | conflict (retry:true) | internal.
         Closing a table that is already over or closed is {ok:true} and writes nothing.
 
+   ---- ranked tables: results and ratings (S5.1) ----------------------------------------------------------------------------------
+     {op:"create", identity:{token}, ranked:true}
+        a RANKED table (casual stays the default: no `ranked`, byte for byte v6.31). Needs a signed-in creator who has a chosen name: no
+        identity `ranked-signin`; a nameless creator `ranked-name`; a function with no `record`/`rating` `unavailable`. The row is v4 with
+        `ranked:true`, `ratings:[null,null]` (each player's rating as they SAT DOWN) and, later, `result`. `ranked` that is not `true`: bad-request.
+     {op:"join", table, identity:{token}} at a ranked table: every chair needs a signed-in player with a chosen name, and the two are two
+        different players (a player who already holds a chair takes THAT chair over, never the other). A join with no identity is refused
+        `ranked-signin`, one whose player has no name `ranked-name` (nothing is written); a phone that already holds its chair (a keyed
+        join) is not asked again. The answers carry `ranked:true`, `ratings:[r0|null, r1|null]` and, once recorded, `result`.
+     THE RESULT. When the move that ends a ranked game has been saved (win, loss, the engine's dead-position draw, or a concession — the
+        reducer's `concede` action is the only way out a table has), the function reads who won and how from ITS OWN game state, calls
+        `deps.record({game, table, players, names, heroes, winner, how, turns, build, started, ended})` -> {recorded, ratings:[{from,to},
+        {from,to}]} (006_ratings.sql result_record: one row per game id and both ratings moved in ONE transaction, idempotent), keeps the
+        public summary {winner, how, turns, heroes, change:[{from,to},{from,to}]} in the row (`result`) and answers it to the caller as `result`
+        (the other seat reads it from its next join/resync answer, as `result`). A failed record never undoes the game: the NEXT request on
+        that table (any op) finds a ranked game that is over and has no `result`, and records it first. A table CLOSED by its creator before
+        the game ended records nothing in this release (the forfeit clock will close that gap); a close that finds a decided, unrecorded game
+        records it first (and refuses `internal` if it cannot), and a decided game's table is never closed over: a result cannot be erased.
+     {op:"me"} also answers `rating, games, wins, losses, draws` when the function can read ratings (`deps.rating(player) -> {rating, games,
+        wins, losses, draws}`; an unrated player is at the starting rating with no games). Ratings and names are public; the player id, the
+        token and the subject never are.
+
    ---- recovery codes (S4.3: a lost phone is not a lost player) ------------------------------------------------
      {op:"recovery-mint", identity:{token}}
         -> {ok:true, code:"XXXXX-XXXXX-XXXXX", days:730}. THE ONLY ANSWER, BROADCAST, ROW OR REPORT THAT EVER HOLDS A CODE: it is
@@ -124,7 +149,7 @@
         response asks `resync`.
      {ok:false, refused: "auth"|"stale"|"conflict"|"no-table"|"exists"|
                  "full"|"not-dealt"|"bad-request"|"wire"|"internal"|
-                 "identity"|"seat-owned"|"table-cap"|"not-creator", retry?}
+                 "identity"|"seat-owned"|"table-cap"|"not-creator"|"ranked-signin"|"ranked-name"|"unavailable", retry?}
         `conflict` (someone else wrote first) is the only retry:true.
 
    ---- broadcasts ---------------------------------------------------------
@@ -143,13 +168,14 @@
   else root.DawnServer = factory(root.DawnHub, root.DawnWire, root.DawnJudge, root.DawnInvariants, root.DawnSHA);
 })(typeof self!=="undefined" ? self : this, function(Hub, W, J, INV, SHA){
 
-/* the stored row's own version: 1 (S1) -> 2 (S3: `claims`, the join tokens) -> 3 (S4.1: `owners`, `names`, `retired`).
-   READ: 2 and 3 (a v2 row — the live project's — reads as owners [null,null], names [null,null], retired [[],[]]:
+/* the stored row's own version: 1 (S1) -> 2 (S3: `claims`, the join tokens) -> 3 (S4.1: `owners`, `names`, `retired`) -> 4 (S5.1: a RANKED
+   table: `ranked`, `ratings`, `result`; written only by a ranked create, so a v6.31 function refuses it as `wire` — a rollback can never
+   turn a ranked table into a casual one that records nothing). READ: 2, 3 and 4. (Earlier note, v3's:) READ: 2 and 3 (a v2 row — the live project's — reads as owners [null,null], names [null,null], retired [[],[]]:
    a table nobody identified into; no migration, nothing is rewritten by reading). WRITE: a row stays v2 until an
    identity binds into it (`stamp`), so a casual table's row is byte for byte v6.28's and the v6.28 function can
    still read it; a v3 row is refused `wire` by v6.28 (it cannot honour owners), the safe way to roll back. */
-const ROW_V = 3, ROW_V_CASUAL = 2;
-const rowOk = v => v === ROW_V || v === ROW_V_CASUAL;
+const ROW_V = 3, ROW_V_CASUAL = 2, ROW_V_RANKED = 4;
+const rowOk = v => v === ROW_V || v === ROW_V_CASUAL || v === ROW_V_RANKED;
 const ID_RE = /^[A-Za-z0-9_-]{1,32}$/;
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 /* a seat's channel: derived from its secret key by a one-way hash (sha256.js `seatTopic`), so the name is
@@ -240,10 +266,14 @@ const ownersOf = row => Array.isArray(row.owners) ? row.owners : [null, null];
 const namesOf = row => Array.isArray(row.names) ? row.names : [null, null];
 const retiredOf = row => Array.isArray(row.retired) ? row.retired : [[], []];
 /* the public part of the stored identity: display names only, and only when there is one */
-const pub = row => { const n = namesOf(row); return n[0] != null || n[1] != null ? {names: n.slice()} : {}; };
+const pub = row => { const n = namesOf(row); return {...(n[0] != null || n[1] != null ? {names: n.slice()} : {}), ...rankPub(row)}; };
+/* ---- S5.1 row readers: a casual row has none of these fields, and rankPub answers {} for it (a casual answer is byte for byte v6.31's) ---- */
+const ratingsOf = row => Array.isArray(row.ratings) ? row.ratings : [null, null];
+/* public by design: that the table is ranked, the two ratings as each player SAT DOWN, and, once recorded, how the game ended and the rating moves */
+const rankPub = row => row.ranked === true ? {ranked: true, ratings: ratingsOf(row).slice(), ...(row.result ? {result: row.result} : {})} : {};
 /* make the row v3 (first identity write): defaults filled, nothing else touched */
 function stamp(row){
-  row.v = ROW_V; row.owners = ownersOf(row).slice(); row.names = namesOf(row).slice(); row.retired = retiredOf(row).map(l => l.slice());
+  row.v = row.v === ROW_V_RANKED ? ROW_V_RANKED : ROW_V; row.owners = ownersOf(row).slice(); row.names = namesOf(row).slice(); row.retired = retiredOf(row).map(l => l.slice());
   return row;
 }
 /* a retired key is remembered by hash, never by value */
@@ -273,7 +303,7 @@ function pushAll(list, deps, i, failed){
 
 /* write the row if nobody wrote since it was read, then tell each seat its
    own frames. `reply`: the caller's response frames. */
-function save(id, row, version, deps, frames, reply, extra, also){
+function save(id, row, version, deps, frames, reply, extra, also, settle){
   row.updated = deps.now ? deps.now() : row.updated;
   return then(deps.store.put(id, row, version), p => {
     if(!p || !p.ok) return no("conflict", {retry: true});
@@ -284,9 +314,73 @@ function save(id, row, version, deps, frames, reply, extra, also){
       if(frames[s].length && key != null) list.push([topic(id, s, key), {ver: p.version, frames: frames[s], mac: SHA.frameMac(key, id, s, p.version, frames[s])}]);
     }
     if(also) for(const a of also(p.version)) list.push(a);
-    return then(pushAll(list, deps, 0, false), sent => ({ok: true, version: p.version, ...(extra || {}), frames: reply,
-      ...(sent ? {} : {broadcast: "failed"})}));
+    /* S5.1: the move that ENDS a ranked game is recorded here, after the row is saved and before the other seat is told (a failure is logged, never
+       fatal: the next request that finds the game decided and unrecorded settles it, and the record is idempotent) */
+    return then(settle ? settleSafe(settle, p.version, deps) : null, st => then(pushAll(list, deps, 0, false), sent => ({ok: true, version: p.version, ...(extra || {}),
+      ...(st && st.result ? {result: st.result} : {}), frames: reply, ...(sent ? {} : {broadcast: "failed"})})));
   });
+}
+
+/* ---- S5.1: ranked results and ratings ---------------------------------------------------------------------------------------------
+   The RESULT of a ranked game comes from one place only: the referee's own game state (`hub.session().full().over`, written by judge.js's
+   reducer), read by this function after the move that decided it was SAVED. No request field is ever read for it: a phone that says "winner"
+   (in a frame, a lobby message or the envelope) is talking to a reducer that has no such action. `deps.record(result)` stores it ONCE and moves
+   both ratings in the same transaction (006_ratings.sql result_record: idempotent on the game id, so a replay, a resync, a takeover or a second
+   request answers the stored result and moves nothing). The rating arithmetic lives in SQL only; this file never computes a rating. */
+const intIn = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
+/* what `deps.rating(player)` must answer: the rating and the record, as integers (a malformed answer is a bug, answered `internal`) */
+function ratingOf(rt){
+  if(!rt || typeof rt !== "object" || !intIn(rt.rating, 0, 100000) || !["games", "wins", "losses", "draws"].every(k => intIn(rt[k], 0, 1e9))) throw new Error("rating answered something that is not a rating");
+  return {rating: rt.rating, games: rt.games, wins: rt.wins, losses: rt.losses, draws: rt.draws};
+}
+const RANKED_HOW = ["life", "concession", "stalemate"];
+/* the record's key: the table code AND the moment the table was made, so a code that is drawn again after the old table was forgotten is a new game */
+const gameId = row => row.id + "-" + (Number.isInteger(row.created) ? row.created : 0);
+/* the result of a finished ranked game as the function knows it, or null (logged) when it is not a result that may be recorded */
+function resultOf(row, hub, deps){
+  const bad = why => { try { if(deps.log) deps.log(new Error("ranked result not recorded: " + why)); } catch(_){} return null; };
+  const sess = hub.session(), spec = hub.spec();
+  if(!sess || !spec || !sess.over()) return bad("the game is not over");
+  const g = sess.full(), over = g.over, owners = ownersOf(row);
+  if(!over || RANKED_HOW.indexOf(over.how) < 0) return bad("an ending that is not life, concession or stalemate");
+  const winner = over.winner === 0 || over.winner === 1 ? over.winner : null;
+  if((winner === null) !== (over.how === "stalemate")) return bad("a winner that does not fit how the game ended");
+  if(typeof owners[0] !== "string" || typeof owners[1] !== "string" || owners[0] === owners[1]) return bad("the two seats do not belong to two different players");
+  if(!Array.isArray(spec.heroes) || typeof spec.heroes[0] !== "string" || typeof spec.heroes[1] !== "string") return bad("no heroes");
+  const names = namesOf(row);
+  return {game: gameId(row), table: row.id, players: owners.slice(), names: names.slice(), heroes: spec.heroes.slice(), winner, how: over.how,
+    turns: Number.isInteger(g.turn) && g.turn >= 0 ? g.turn : 0, build: row.build || null, started: Number.isInteger(row.created) ? row.created : 0, ended: deps.now ? deps.now() : 0};
+}
+/* record the decided game and keep its public summary in the row. Returns {result, version} or null. `row` gets `result` in memory even when the
+   second write loses a race (the record itself is what counts, and any later request reads it back from there). */
+function settleRow(id, row, version, deps, hub){
+  if(typeof deps.record !== "function") throw new Error("a ranked table without a way to record its result");
+  const res = resultOf(row, hub, deps);
+  if(!res) return null;
+  return then(deps.record(res), rec => {
+    if(!rec || !Array.isArray(rec.ratings) || rec.ratings.length !== 2 || !rec.ratings.every(x => x && intIn(x.from, 0, 100000) && intIn(x.to, 0, 100000))) throw new Error("record answered something that is not a result");
+    const shown = {winner: res.winner, how: res.how, turns: res.turns, heroes: res.heroes.slice(), change: rec.ratings.map(x => ({from: x.from, to: x.to}))};
+    row.result = shown;
+    return then(deps.store.put(id, row, version), p => ({result: shown, version: p && p.ok ? p.version : version, saved: !!(p && p.ok)}));
+  });
+}
+/* the version of settleRow that logs and goes on (the move that decided the game, a heal on any request) */
+function settleSafe(settle, version, deps){
+  const bad = e => { try { if(deps.log) deps.log(e); } catch(_){} return null; };
+  try { const v = settle(version); return isP(v) ? v.then(x => x, bad) : v; } catch(e){ return bad(e); }
+}
+/* a request found a ranked game over and unrecorded: record it first, then serve the request on the row as it now is */
+function healSoft(id, got, deps){
+  const bad = e => { try { if(deps.log) deps.log(e); } catch(_){} return got; };
+  try {
+    const r = rig(id, got.row, deps), v = settleRow(id, got.row, got.version, deps, r.hub), ok = st => st ? {version: st.version, row: got.row} : got;
+    return isP(v) ? v.then(ok, bad) : ok(v);
+  } catch(e){ return bad(e); }
+}
+/* the same, but a failure is the caller's: `close` must not close over a result it could not record */
+function healStrict(id, got, deps){
+  const r = rig(id, got.row, deps);
+  return then(settleRow(id, got.row, got.version, deps, r.hub), st => st ? {version: st.version, row: got.row} : got);
 }
 
 /* ---- ops ------------------------------------------------------------- */
@@ -296,6 +390,8 @@ function create(req, deps){
   const given = req.table != null;
   const id = given ? req.table : newId(deps);
   if(typeof id !== "string" || !ID_RE.test(id)) return no("bad-request");
+  if(req.ranked !== undefined && req.ranked !== true) return no("bad-request");
+  if(req.ranked === true && req.identity === undefined) return no("ranked-signin");     /* a ranked table is only for signed-in players */
   if(req.identity !== undefined) return createAs(req, id, given, deps);
   const r = rig(id, null, deps);
   const row = newRow(id, r.hub, deps);
@@ -305,9 +401,17 @@ function create(req, deps){
 function createAs(req, id, given, deps){
   return recoveryWho(req, deps, who => {
     if(typeof deps.store.createCapped !== "function") return no("unavailable");      /* never create an unchecked table for a signed-in player */
+    const ranked = req.ranked === true;
+    /* S5.1: a ranked table needs a way to record its result and to read ratings, and a creator with a chosen name (never an unchecked ranked table) */
+    if(ranked){
+      if(typeof deps.record !== "function" || typeof deps.rating !== "function") return no("unavailable");
+      const v = who.name != null ? validateName(who.name) : null;
+      if(!v || !v.ok) return no("ranked-name");
+    }
     const r = rig(id, null, deps);
     const row = stamp(newRow(id, r.hub, deps));
     row.creator = who.player;
+    if(ranked){ row.v = ROW_V_RANKED; row.ranked = true; row.ratings = [null, null]; }
     return then(deps.store.createCapped(id, row, who.player, OPEN_CAP), p => {
       if(p && p.ok) return {ok: true, table: id, version: p.version};
       if(p && p.capped === true) return no("table-cap", {cap: OPEN_CAP, open: (Array.isArray(p.open) ? p.open : []).filter(x => typeof x === "string" && ID_RE.test(x)).slice(0, 10)});
@@ -324,6 +428,11 @@ function opCloseTable(req, deps){
     if(!got || !got.row || got.row.closed === true) return no("no-table");
     if(!rowOk(got.row.v) || got.row.wireV !== W.WIRE_V) return no("wire");
     if(got.row.creator == null || got.row.creator !== who.player) return no("not-creator");
+    /* S5.1: a decided ranked game is recorded BEFORE anything else, and the table is not closed over it (it is already over): closing is never
+       a way to erase a result. If the record cannot be made now this refuses `internal` and the table stays as it is. A game still being
+       played is closed as before and records nothing (the forfeit clock, a later release, closes that gap). */
+    if(got.row.ranked === true && got.row.over === true && got.row.result == null)
+      return then(healStrict(req.table, got, deps), () => ({ok: true}));
     if(got.row.over === true) return {ok: true};
     const row = got.row; row.over = true; row.closed = true;
     return then(save(req.table, row, got.version, deps, [[], []], []), a => a.ok ? {ok: true} : a);
@@ -331,7 +440,11 @@ function opCloseTable(req, deps){
 }
 
 function join(req, got, deps){
-  if(req.identity === undefined) return joinAs(req, got, deps, null);
+  const ranked = got.row.ranked === true, fresh = req.key === undefined;       /* a keyed join is a phone that already holds its chair */
+  if(req.identity === undefined){
+    if(ranked && fresh) return no("ranked-signin");                            /* S5.1: a ranked chair is only for a signed-in player */
+    return joinAs(req, got, deps, null);
+  }
   const idn = req.identity;
   if(!idn || typeof idn !== "object" || Array.isArray(idn) || typeof idn.token !== "string" || idn.token.length < 1 || idn.token.length > 4096) return no("bad-request");
   /* S4.2: a display name is the PLAYER'S (op "me": validated, unique on its fold, stored once) and a join shows the stored one.
@@ -344,7 +457,11 @@ function join(req, got, deps){
     if(typeof who !== "object" || typeof who.player !== "string" || !PLAYER_RE.test(who.player)) throw new Error("identify answered something that is not a player");
     let nm = name;
     if(nm == null && who.name != null){ const v = validateName(who.name); if(v.ok) nm = v.name; }   /* the stored default name; a bad one is dropped */
-    return joinAs(req, got, deps, {player: who.player, name: nm});
+    if(!(ranked && fresh)) return joinAs(req, got, deps, {player: who.player, name: nm});
+    /* S5.1: a ranked chair needs a chosen name, and the lobby shows the player's rating as they sit down (read once, kept in the row) */
+    if(nm == null) return no("ranked-name");
+    if(typeof deps.rating !== "function" || typeof deps.record !== "function") return no("unavailable");
+    return then(deps.rating(who.player), rt => joinAs(req, got, deps, {player: who.player, name: nm, rating: ratingOf(rt).rating}));
   });
 }
 const PLAYER_RE = /^[A-Za-z0-9_-]{1,64}$/;
@@ -359,7 +476,16 @@ const PLAYER_RE = /^[A-Za-z0-9_-]{1,64}$/;
                    you already hold is "ok". The store decides the race (a unique index), not this function.
    Refusals: bad-request (+field:"name", reason) | identity (forged, expired, or no provider / no registry wired) |
    name-taken | internal (the provider or the registry threw). The player id never rides the answer. */
+/* S5.1: `me` answers who the player is and what they are called (meCore, S4.2); when the function can read ratings the answer also carries the
+   player's rating and record, read for the very player meCore identified (public by design; the player id stays inside) */
 function me(req, deps){
+  const seen = {player: null};
+  return then(meCore(req, deps, seen), ans => {
+    if(!ans || ans.ok !== true || typeof deps.rating !== "function" || seen.player == null) return ans;
+    return then(deps.rating(seen.player), rt => ({...ans, ...ratingOf(rt)}));
+  });
+}
+function meCore(req, deps, seen){
   const idn = req.identity;
   if(!idn || typeof idn !== "object" || Array.isArray(idn) || typeof idn.token !== "string" || idn.token.length < 1 || idn.token.length > 4096) return no("bad-request");
   let want = null;
@@ -369,7 +495,7 @@ function me(req, deps){
     want = v.name;
   }
   if(typeof deps.identify !== "function") return no("identity");
-  return then(deps.identify(idn.token), who => {
+  return then(deps.identify(idn.token), who => { if(who && typeof who.player === "string") seen.player = who.player;      /* for `me`'s rating */
     if(!who) return no("identity");                 /* forged, expired, unknown */
     if(typeof who !== "object" || typeof who.player !== "string" || !PLAYER_RE.test(who.player)) throw new Error("identify answered something that is not a player");
     if(want == null){ const v = who.name != null ? validateName(who.name) : null; return {ok: true, name: v && v.ok ? v.name : null}; }
@@ -477,7 +603,7 @@ function joinAs(req, got, deps, who){
       if(owner != null && owner !== who.player) return no("seat-owned");
       if(owner === who.player) return {ok: true, version: got.version, seat: prior, n: row.nonces[prior], owned: true, ...pub(row), frames};
       if(ownersOf(row)[1 - prior] === who.player) return no("seat-owned");     /* never both seats */
-      stamp(row); row.owners[prior] = who.player; if(who.name != null) row.names[prior] = who.name;
+      stamp(row); row.owners[prior] = who.player; if(who.name != null) row.names[prior] = who.name; bindRank(row, prior, who);
       return save(id, row, got.version, deps, [[], []], frames, {seat: prior, n: row.nonces[prior], owned: true, ...pub(row)});
     }
   }
@@ -489,8 +615,13 @@ function joinAs(req, got, deps, who){
   if(seat == null) return no("full");
   row.hub = r.hub.persistTable();          /* the new seat's key is now part of the table */
   if(tok !== undefined){ row.claims = claims.slice(); row.claims[seat] = tok; }
-  if(who){ stamp(row); row.owners[seat] = who.player; if(who.name != null) row.names[seat] = who.name; }
+  if(who){ stamp(row); row.owners[seat] = who.player; if(who.name != null) row.names[seat] = who.name; bindRank(row, seat, who); }
   return save(id, row, got.version, deps, [[], []], f.got, {seat, n: row.nonces[seat], ...(who ? {owned: true, ...pub(row)} : {})});
+}
+
+/* S5.1: a ranked table remembers each player's rating as they sat down (the lobby's "1200 vs 1216"); a casual row is never touched */
+function bindRank(row, seat, who){
+  if(row.ranked === true && who.rating != null){ row.ratings = ratingsOf(row).slice(); row.ratings[seat] = who.rating; }
 }
 
 /* THE SAME PLAYER, A NEW PHONE: the seat's key is replaced and the old one retired; the old claim token is dropped
@@ -503,6 +634,7 @@ function takeOver(row, got, deps, who, seat, tok){
   row.retired[seat] = row.retired[seat].concat([retireHash(id, seat, oldKey)]).slice(-RETIRED_CAP);
   row.claims = (Array.isArray(row.claims) ? row.claims : [null, null]).slice(); row.claims[seat] = tok !== undefined ? tok : null;
   if(who.name != null) row.names[seat] = who.name;
+  bindRank(row, seat, who);
   const r = rig(id, row, deps);
   r.seat(seat, key, true);
   const frames = r.out[seat].map(f => f && f.ch === Hub.CH.JUDGE && f.seat === seat ? {...f, key} : f);
@@ -533,7 +665,9 @@ function frame(req, got, deps){
   row.nonces = row.nonces.slice(); row.nonces[seat] = req.n;
   /* the caller's frames ride its response; only the OTHER seat's are pushed */
   const pushed = [[], []]; pushed[other] = r.out[other];
-  return save(id, row, got.version, deps, pushed, r.out[seat]);
+  /* S5.1: the frame that decided a ranked game; the result comes from THIS hub's own game state, never from anything the phone said */
+  const decided = row.ranked === true && row.over === true && row.result == null;
+  return save(id, row, got.version, deps, pushed, r.out[seat], undefined, undefined, decided ? ver => settleRow(id, row, ver, deps, r.hub) : undefined);
 }
 
 function resync(req, got, deps){
@@ -558,6 +692,8 @@ function serve(req, deps){
   return then(deps.store.get(req.table), got => {
     if(!got || !got.row || got.row.closed === true) return no("no-table");       /* a closed table (S4.4) is gone for both seats */
     if(!rowOk(got.row.v) || got.row.wireV !== W.WIRE_V) return no("wire");
+    /* S5.1: a ranked game that is over and has no recorded result (its recording failed when it ended) is settled by whoever asks next */
+    if(got.row.ranked === true && got.row.over === true && got.row.result == null) return then(healSoft(req.table, got, deps), g2 => fn(req, g2, deps));
     return fn(req, got, deps);
   });
 }
@@ -577,5 +713,5 @@ function handleNow(req, deps){
   return v;
 }
 
-return {handle, handleNow, topic, OPEN_CAP, ROW_V, ROW_V_CASUAL, validateName, nameFold, recoveryNormal, recoveryHash, RECOVERY_DAYS, RECOVERY_CHARS, RECOVERY_LEN};
+return {handle, handleNow, topic, OPEN_CAP, ROW_V, ROW_V_CASUAL, ROW_V_RANKED, validateName, nameFold, recoveryNormal, recoveryHash, RECOVERY_DAYS, RECOVERY_CHARS, RECOVERY_LEN};
 });
