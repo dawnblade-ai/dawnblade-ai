@@ -9,12 +9,17 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-14, at v6.27)
+## HANDOFF — START HERE (CEO, 2026-11-14, at v6.28)
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
-- **Live: v6.27** (WIRE_V 40, DATA_VER sage-v17). Progress reports: `docs/progress/v6.26.md`, `v6.27.md`.
+- **Live: v6.28** (WIRE_V 40, DATA_VER sage-v17). Progress reports: `docs/progress/v6.27.md`, `v6.28.md`.
+- **v6.28: THE SERVER TABLE IS OPEN TO EVERYONE** (user, 2026-11-14: "Go ahead and open it up"; project is
+  unannounced). `SERVER_TABLE.on: true`; `?server=0` hides it on one phone. After every push run
+  `NODE_PATH=/opt/node-tools/node_modules node tools/livecheck.js` (live page + function build + a real two-seat
+  game in Chromium; the env now allows the live page and its CDNs). v6.28 livecheck: ALL PASS, 40/40 by push,
+  median 284 ms, p95 561. NEXT: S4 sign-in (needs the user's OK to enable anonymous sign-ins in Supabase).
 - **CEO since 2026-11-13: `session_013xG9xCPR11GYcDV7QGiWyX`** (Fable; user asked for LOW CONTEXT and the cheapest
   agents: in-session haiku/sonnet subagents did v6.23; the two Opus workers were NOT woken, still standing by).
 - **MISSION (user, 2026-11-07):** the ultimate FaB Silver Age precon competitive gaming environment and
@@ -88,7 +93,7 @@ repeatable live drill `tools/supabase-live.js`. Also fixed: the page never regis
   push 234 ms median, p95 475. Function v7 = build v6.27, stamped. `server/PERF-LOG.md`. UNEXPLAINED: user saw
   <=5 s where the bug measured ~20 s. ASKED the user to re-test.
 - **RE-TEST PASSED (user, 2026-11-14, v6.27):** "Like night and day ... things happen in an instant now." A real
-  two-phone server game works and is fast. ASKED: open the door to everyone (`SERVER_TABLE.on: true`)?
+  two-phone server game works and is fast. ANSWERED: opened in v6.28.
 - **(superseded) two-phone test address:** `https://dawnblade-ai.github.io/dawnblade-ai/?server=1`
   (UNVERIFIED: a real phone browser's websocket + the jsdelivr supabase-js path). If it passes: flip `on: true`.
 - **NEXT:** S4 anonymous sign-in (currently OFF in the project), seat = auth.uid(), private channels; then H4 ranked.
