@@ -14,6 +14,8 @@
      POST /rest/v1/rpc/identity_resolve {p_provider, p_subject, p_name}   -> [{player_id, display_name}] (same sign-in, same player)
    S4.3 adds recovery_mint / recovery_redeem (a stand-in for 004_recovery.sql: one live code per player, spend + move the identity + drop the
    throwaway player, 8 refusals an hour); `recovery` (hash -> {player, used, expires}) and `attempts` are readable.
+   S4.4 adds table_create_capped {p_id, p_row, p_creator, p_cap} (a stand-in for 005_table_cap.sql: ONE jsonb answer, {version} | {version:0, exists} |
+   {version:0, capped, open:[ids]}; open = the creator's rows not over, idle under 48 hours; a row also keeps an `at` time the rehearsal may age).
    `issueUser(id, anon?)` hands out a token; `users`, `players`, `identities` are readable; stats.auths / stats.resolves count calls.
 
    It checks the headers the real services need (apikey; bearer unless the key is "sb_…"), keeps rows as JSON text like
@@ -28,7 +30,7 @@ function makeStub(o){
   const rows = new Map(), broadcasts = [], stats = {gets: 0, puts: 0, conflicts: 0, casts: 0, bad: [], largestPut: 0};
   const KEY = o.key || "stub-service-key";
   const subs = [], users = new Map(), players = new Map(), identities = new Map(), recovery = new Map(), attempts = new Map();
-  stats.auths = 0; stats.resolves = 0; let seq = 0, authDown = false;
+  stats.auths = 0; stats.resolves = 0; let seq = 0, born = 0, authDown = false;
   const handler = (req, res) => {
     const chunks = [];
     req.on("data", c => chunks.push(c));
@@ -57,10 +59,21 @@ function makeStub(o){
           if(typeof p_id !== "string" || !/^[A-Za-z0-9_-]{1,32}$/.test(p_id) || typeof p_row !== "object" || !Number.isInteger(p_expected)){ stats.bad.push("table_put args"); return reply(400, {message: "bad args"}); }
           const e = rows.get(p_id);
           let v = 0;
-          if(p_expected === 0){ if(!e){ rows.set(p_id, {version: 1, json: JSON.stringify(p_row)}); v = 1; } }
-          else if(e && e.version === p_expected){ e.version++; e.json = JSON.stringify(p_row); v = e.version; }
+          if(p_expected === 0){ if(!e){ rows.set(p_id, {version: 1, json: JSON.stringify(p_row), at: Date.now(), n: ++born}); v = 1; } }
+          else if(e && e.version === p_expected){ e.version++; e.json = JSON.stringify(p_row); e.at = Date.now(); v = e.version; }
           stats.puts++; if(!v) stats.conflicts++; stats.largestPut = Math.max(stats.largestPut, Buffer.byteLength(body));
           return reply(200, v);
+        }
+        if(req.method === "POST" && url.pathname === "/rest/v1/rpc/table_create_capped"){   /* 005_table_cap.sql: the count and the insert are one step (this process is single-threaded) */
+          stats.capped = (stats.capped || 0) + 1;
+          const {p_id, p_row, p_creator, p_cap} = JSON.parse(body);
+          if(typeof p_id !== "string" || !/^[A-Za-z0-9_-]{1,32}$/.test(p_id) || !p_row || typeof p_row !== "object" || typeof p_creator !== "string" || !p_creator || !Number.isInteger(p_cap) || p_cap < 1 || p_row.creator !== p_creator){ stats.bad.push("table_create_capped args"); return reply(400, {message: "bad args"}); }
+          for(const [k, e] of rows) if(e.at < Date.now() - 48 * 3600000) rows.delete(k);
+          if(rows.has(p_id)) return reply(200, {version: 0, exists: true});
+          const open = [...rows.entries()].map(([id, e]) => ({id, n: e.n || 0, r: JSON.parse(e.json)})).filter(x => x.r.creator === p_creator && x.r.over !== true).sort((a, b) => a.n - b.n).map(x => x.id);
+          if(open.length >= p_cap) return reply(200, {version: 0, capped: true, open: open.slice(0, 10)});
+          rows.set(p_id, {version: 1, json: JSON.stringify(p_row), at: Date.now(), n: ++born});
+          return reply(200, {version: 1});
         }
         if(req.method === "POST" && url.pathname === "/rest/v1/rpc/identity_resolve"){
           stats.resolves++;

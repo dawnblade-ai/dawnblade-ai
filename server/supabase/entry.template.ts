@@ -13,7 +13,9 @@
 
      store      the `tables` row in Postgres, through PostgREST with the SERVICE-ROLE key (the key lives in the
                 function's own environment and nowhere else; the page never sees it). get = one SELECT;
-                put = the SQL function table_put() (001_tables.sql), one atomic compare-and-set.
+                put = the SQL function table_put() (001_tables.sql), one atomic compare-and-set; createCapped = table_create_capped()
+                (005_table_cap.sql), the count of a signed-in player's OPEN tables and the insert in ONE transaction under a per-player lock
+                (S4.4: at most 5 open tables per player).
      broadcast  Realtime Broadcast over HTTP: POST <project>/realtime/v1/api/broadcast, one message per seat,
                 event "frame", on a PUBLIC channel whose name is derived from the seat key (sha256.js).
      deal       exactly the page's JudgeRoom.deal (index.html): build.buildMatch over the pinned pool and the hero
@@ -116,8 +118,26 @@ const mkStore = (c: any) => ({
       const v = await r.json();                 // table_put returns the new version, or 0 for "someone wrote first"
       return v > 0 ? {ok: true, version: v} : {ok: false, version: expected};
     } finally { c.put += nowMs() - t; }
-  }
+  },
+  createCapped: (id: string, row: any, creator: string, cap: number) => createCappedRpc(c, id, row, creator, cap)
 });
+/* S4.4 — createCapped(id, row, creator, cap): 005_table_cap.sql's table_create_capped answers ONE jsonb: {version:N} created,
+   {version:0, exists:true} the code is taken, {version:0, capped:true, open:[codes]} the creator already holds `cap` open tables. The row names
+   its creator (the referee wrote it). UNVERIFIED against the real project until 005 is run: the jsonb-return shape over PostgREST is what
+   tools/supabase-stub.js stands in for (a function returning jsonb answers the value itself). */
+async function createCappedRpc(c: any, id: string, row: any, creator: string, cap: number){
+  const t = nowMs();
+  try {
+    const k = conf();
+    const r = await fetch(k.url + "/rest/v1/rpc/table_create_capped", {method: "POST", headers: k.headers, body: JSON.stringify({p_id: id, p_row: row, p_creator: creator, p_cap: cap})});
+    if(!r.ok) throw new Error("store.createCapped " + r.status);
+    const v: any = await r.json();
+    if(!v || typeof v !== "object") throw new Error("store.createCapped answered no object");
+    if(v.capped === true) return {ok: false, capped: true, open: Array.isArray(v.open) ? v.open : []};
+    if(v.exists === true) return {ok: false, exists: true};
+    return v.version > 0 ? {ok: true, version: v.version} : (() => { throw new Error("store.createCapped answered neither a version, exists nor capped"); })();
+  } finally { c.put += nowMs() - t; }
+}
 const mkBroadcast = (c: any) => async (topic: string, payload: any) => {
   const body = JSON.stringify({messages: [{topic, event: "frame", payload, private: false}]});
   if(body.length > MAX_BROADCAST) throw new Error("broadcast too large: " + body.length);

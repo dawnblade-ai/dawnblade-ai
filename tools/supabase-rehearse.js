@@ -214,6 +214,41 @@ async function identityPhase(label, base, stub, log){
   row(secrets.every(x => all.indexOf(x) < 0), label + ": identity: no token, provider user id or player id in any response or broadcast for this table");
   const cas = await go({op: "create"}), c1 = await go({op: "join", table: cas.table}), c2 = await go({op: "join", table: cas.table, claim: "casualClaimTokenAAAAAAAA"});
   row(c1.ok && c2.ok && c1.seat !== c2.seat && stub.row(cas.table).v === 2 && !("owners" in stub.row(cas.table)), label + ": identity: a casual table on the same function is unchanged (v2 row, no identity fields)");
+  /* S4.4: at most 5 open tables per player — table_create_capped through the real function (the stub stands in for 005_table_cap.sql) */
+  {
+    const SUB_K = "sub-secret-kkkk-9999", SUB_L = "sub-secret-llll-8888", tokK = stub.issueUser(SUB_K), tokL = stub.issueUser(SUB_L);
+    const mk = tok => go({op: "create", identity: {token: tok}});
+    const first = []; for(let i = 0; i < 5; i++) first.push(await mk(tokK));
+    row(first.every(r => r.ok && /^[A-Z0-9]{6}$/.test(r.table)), label + ": cap: five signed-in tables are created", first.map(r => r.refused || "ok").join());
+    const rowK = stub.row(first[0].table);
+    row(rowK.v === 3 && typeof rowK.creator === "string" && rowK.creator.length > 0 && JSON.stringify(rowK).indexOf(SUB_K) < 0 && JSON.stringify(rowK).indexOf(tokK) < 0, label + ": cap: the row records a creator (our player id), not the provider's subject or the token");
+    const rowsN = stub.rows.size, sixth = await mk(tokK);
+    row(sixth.ok === false && sixth.refused === "table-cap" && sixth.cap === 5 && JSON.stringify(sixth.open) === JSON.stringify(first.map(r => r.table)) && stub.rows.size === rowsN, label + ": cap: the sixth is refused table-cap with the five codes, nothing written", JSON.stringify(sixth).slice(0, 120));
+    row((await mk(tokL)).ok === true, label + ": cap: another player is not held to it");
+    const casualMore = []; for(let i = 0; i < 3; i++) casualMore.push(await go({op: "create"}));
+    row(casualMore.every(r => r.ok && stub.row(r.table).v === 2 && !("creator" in stub.row(r.table))) && (await mk(tokK)).refused === "table-cap", label + ": cap: casual tables are unchanged and do not count");
+    /* the creator joins their own table and another player joins it: neither is a new table */
+    const jj = await go({op: "join", table: first[1].table, identity: {token: tokL}});
+    row(jj.ok === true && (await mk(tokK)).refused === "table-cap", label + ": cap: a join does not count");
+    /* the way out: close one (creator only), then exactly one more may be made */
+    const notMine = await go({op: "close", table: first[0].table, identity: {token: tokL}});
+    const forgedClose = await go({op: "close", table: first[0].table, identity: {token: "stub.jwt.forged"}});
+    const closed = await go({op: "close", table: first[0].table, identity: {token: tokK}});
+    row(notMine.refused === "not-creator" && forgedClose.refused === "identity" && closed.ok === true && stub.row(first[0].table).closed === true && stub.row(first[0].table).over === true, label + ": cap: only the creator may close; a close marks the row over and closed", [notMine.refused, forgedClose.refused, closed.ok].join());
+    const gone = await go({op: "join", table: first[0].table, identity: {token: tokL}});
+    row(gone.refused === "no-table", label + ": cap: a closed table is gone for a joiner");
+    const again = await mk(tokK), again2 = await mk(tokK);
+    row(again.ok === true && again2.refused === "table-cap", label + ": cap: one slot freed, exactly one more table");
+    /* a finished game frees a slot: the stub's row is marked over the way the referee does when the session ends */
+    const rr = stub.row(first[2].table); rr.over = true; stub.rows.get(first[2].table).json = JSON.stringify(rr);
+    row((await mk(tokK)).ok === true && (await mk(tokK)).refused === "table-cap", label + ": cap: a row marked over (a finished game) stops counting");
+    /* simultaneous creates at the cap: exactly one passes (a fresh player, four open) */
+    const tokM = stub.issueUser("sub-secret-mmmm-7777"); for(let i = 0; i < 4; i++) await mk(tokM);
+    const race = await Promise.all(Array.from({length: 6}, () => mk(tokM)));
+    row(race.filter(r => r.ok).length === 1 && race.filter(r => r.refused === "table-cap").length === 5, label + ": cap: six simultaneous creates at four open make exactly one", race.map(r => r.refused || "ok").join());
+    const capText = texts.join("\n") + JSON.stringify(stub.broadcasts);
+    row([SUB_K, SUB_L, tokK, tokL].every(x => capText.indexOf(x) < 0) && stub.stats.bad.length === 0, label + ": cap: no token or provider id in any answer or broadcast; the stub saw no malformed call", stub.stats.bad.slice(0, 2).join("; "));
+  }
   const logged = log.join("").split("\n").filter(l => /error|exception|panick/i.test(l)).length;
   stub.authDown(true);
   const down = await go({op: "join", table: code, identity: {token: tokB}});
