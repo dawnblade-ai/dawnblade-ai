@@ -54,7 +54,8 @@ const RECORD = `
     const base = world.transport;
     const unsubs = new Map();
     await page.exposeFunction("__srvPost", async (name, text) => { await wait(POST_MS / 2); const a = JSON.stringify(await base(name).post(JSON.parse(text))); await wait(POST_MS / 2); return a; });
-    await page.exposeFunction("__srvSub", (name, topic, id) => { unsubs.set(id, base(name).subscribe(topic,
+    await page.exposeFunction("__srvSub", (name, topic, id) => { if(NOPUSH) setTimeout(() => page.evaluate(i => window.__srvState(i, "lost"), id).catch(() => {}), 50);   /* --nopush: the library never loaded, as in v6.26 browsers: the subscription reads lost, no push ever comes */
+      unsubs.set(id, base(name).subscribe(topic,
       p => { if(NOPUSH) return; setTimeout(() => page.evaluate(([i, q]) => { window.__rec.ws.push([Date.now(), "fake", "push", ""]); window.__srvDeliver(i, q); }, [id, p]).catch(() => {}), PUSH_MS); },
       st => page.evaluate(([i, s]) => window.__srvState(i, s), [id, st]).catch(() => {}))); });
     await page.exposeFunction("__srvUnsub", id => { const u = unsubs.get(id); if(u) u(); unsubs.delete(id); });
@@ -64,7 +65,7 @@ const RECORD = `
     await page.evaluate(SHIM); await page.evaluate(() => { window.SERVER_TABLE.on = true; });
   }
   const deal = live ? s => dealLikeThePage(s, 0) : dealLikeThePage;
-  const click = (loc) => loc.click({ timeout: 8000 });
+  const click = (loc) => loc.click({ timeout: 150000 });
   const btn = re => page.getByRole("button", { name: re });
   await click(btn(/^Find an opponent/)); await page.waitForSelector(".tblwrap");
   await click(btn(/^Join a server table/)); await click(btn(/^Open a server table/));
@@ -116,9 +117,9 @@ const RECORD = `
     const m1 = await tasks(), rec = await page.evaluate(r0 => ({ ws: window.__rec.ws.slice(r0.ws), fx: window.__rec.fx.slice(r0.fx) }), rec0);
     n++;
     const own = who === "page" ? tPage : tB, other = who === "page" ? tB : tPage;
-    const pushed = who === "B" ? rec.ws.filter(w => /broadcast/.test(w[2]) || w[2] === "push") : [];
+    const pushed = who === "B" ? rec.ws.filter(w => w[3] === "frame" || w[2] === "push") : [];
     const row = { n, who, ownMs: own && own - ts, otherMs: other && other - ts, pageTaskMs: +((m1.task - m0.task) * 1000).toFixed(0), pageScriptMs: +((m1.script - m0.script) * 1000).toFixed(0),
-      via: who === "B" ? (pushed.length ? "push@" + (pushed[0][0] - ts) + "ms" : "no-push; posts: " + rec.fx.map(f => f[2]).join("+")) : "-", pagePosts: rec.fx.length };
+      via: who === "B" ? (rec.fx.length === 0 ? "push" : "poll: " + rec.fx.map(f => f[2]).join("+")) : "-", pagePosts: rec.fx.length };
     rows.push(row);
     if(n <= 6 || n % 10 === 0 || (row.otherMs == null || row.otherMs > 1500)) console.log(JSON.stringify(row));
     if(SAMPLE_AT.includes(n)) console.log("   sample@" + n + " " + JSON.stringify(row));

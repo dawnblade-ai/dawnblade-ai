@@ -562,3 +562,64 @@ test("loading the module costs no request; the real transport answers unavailabl
   /* and the library is pinned to one exact version */
   assert.match(ST.SUPABASE_JS, /@supabase\/supabase-js@\d+\.\d+\.\d+\/dist\/umd\/supabase\.js$/);
 });
+
+/* ============================================================ PERF (2026-11-14): the push never landed in a browser */
+test("PERF: the library is loaded from the pinned CDN address, never from the project URL (v6.26 asked the project for its script, so no browser ever got Realtime)", async () => {
+  const srcs = [];
+  const doc = {createElement: () => ({}), head: {appendChild: el => { srcs.push(el.src); }}};
+  const w = global.window; delete global.window;
+  try {
+    const p = ST.loadSupabase({document: doc, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "k"});
+    p.catch(() => {});
+    assert.equal(srcs.length, 1);
+    assert.equal(srcs[0], ST.SUPABASE_JS, "the script address is the pinned CDN file, not config.url");
+    assert.ok(srcs[0].indexOf("fokcpzplomjsraquaaid") < 0);
+  } finally { if(w) global.window = w; }
+  /* the page's own call path: supabaseTransport hands its whole config (url = the project) to loadSupabase */
+  assert.ok(/loadSupabase\(config\)/.test(SRC), "the transport still passes its config (so the drill above is the guard)");
+  /* sabotage: the old line must fail the drill's own assertion */
+  const bad = stCopy([["el.src = o.libUrl || SUPABASE_JS;", "el.src = o.url || SUPABASE_JS;"]]);
+  const srcs2 = [], doc2 = {createElement: () => ({}), head: {appendChild: el => { srcs2.push(el.src); }}};
+  bad.loadSupabase({document: doc2, url: "https://p.example", key: "k"}).catch(() => {});
+  assert.equal(srcs2[0], "https://p.example", "sabotage applied: the old code takes the project URL");
+});
+
+test("PERF: with no push the other seat is still heard within one fallback tick, a lobby opens, and 'reconnecting' clears once the table answers", async () => {
+  const run = async (src, fallbackMs) => {
+    const world = makeWorld({seedKey: "fb"});
+    const ticks = [];
+    const timers = {setInterval: (f, ms) => { ticks.push({f, ms}); return ticks.length; }, clearInterval: () => {}};
+    const M = src || ST;
+    /* a bare channel for A (the host waiting on 'seated' sends nothing, as in the page's lobby) */
+    const Ach = await M.startTable({transport: world.transport("A"), keep: PH.memKeep(), sleep: PH.FAST.sleep, tune: {...PH.FAST.tune, fallbackMs}, timers, rand: () => 0.5});
+    const A = {ch: Ach, code: Ach.code};
+    await world.settle([A.ch]);
+    world.fault.cut(world.topicOf(A.code, 0));                       /* A's push channel is gone: payloads lost, the subscription reads "lost" */
+    const B = PH.makePhone(world, "B", {hero: "dorinthea", rand: T.seeded("fb"), ST: M});
+    await B.connect("join", A.code);
+    await world.settle([A.ch, B.ch]);
+    const before = {peer: A.ch.peerHeard(), st: A.ch.status(), reportPush: A.ch.report().push};
+    for(const t of ticks.filter(t => t.ms === fallbackMs && fallbackMs > 0)) await t.f();
+    await world.settle([A.ch, B.ch]);
+    for(let i = 0; i < 5; i++) await new Promise(r => setImmediate(r));
+    const out = {before, peer: A.ch.peerHeard(), st: A.ch.status(), registered: ticks.filter(t => t.ms === fallbackMs).length};
+    A.ch.close(); B.ch.close(); return out;
+  };
+  const on = await run(null, 2000);
+  assert.equal(on.registered, 1, "one fallback timer");
+  assert.equal(on.before.peer, false, "no push reached A: it has not heard B yet (the fixture)");
+  assert.equal(on.before.reportPush, "polling");
+  assert.equal(on.peer, true, "one tick and A has heard B");
+  assert.equal(on.st, "seated", "and the status is no longer 'reconnecting'");
+  /* sabotage: no fallback timer (the v6.26 page) -> A never hears; and the status stays reconnecting */
+  const off = await run(null, 0);
+  assert.equal(off.peer, false); assert.equal(off.st, "reconnecting");
+  const old = await run(stCopy([["if(ok1 && st === \"reconnecting\") set(peerHeard ? \"seated\" : \"waiting\");", ""], ["if(ok1 && peerHeard && st === \"waiting\") set(\"seated\");", ""]]), 2000);
+  assert.equal(old.peer, true); assert.equal(old.st, "reconnecting", "sabotage applied: without the clearing, a lobby that waits on 'seated' stays shut");
+});
+
+test("PERF: the page turns the fallback poll on, and it is stopped when the table closes", () => {
+  const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+  assert.ok(/tune: \{pollMs: 20000, fallbackMs: 2000\}/.test(html));
+  assert.ok(/if\(fb\) try \{ timers\.clearInterval\(fb\)/.test(SRC));
+});

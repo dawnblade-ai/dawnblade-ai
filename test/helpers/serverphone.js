@@ -26,7 +26,7 @@ function makePhone(world, name, o){
              open: null, sentSeed: false, catalog: null, errors: []};
   const rand = o.rand;
   const opts = () => ({transport: world.transport(name), keep, sleep: FAST.sleep, tune: {...FAST.tune, ...(o.tune || {})}, rand: () => 0.5,
-                       onStatus: s => P.statuses.push(s), have: () => P.sess ? P.sess.seq() : undefined, now: () => Date.now()});
+                       onStatus: s => P.statuses.push(s), timers: o.timers, have: () => P.sess ? P.sess.seq() : undefined, now: () => Date.now()});
   /* how: "create" | "join" | "reclaim"; code for the last two */
   P.connect = async (how, code) => {
     const M = o.ST || ST, f = how === "create" ? M.startTable : how === "reclaim" ? M.reclaim : M.sitAt;
