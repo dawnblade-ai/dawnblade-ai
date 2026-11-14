@@ -524,6 +524,13 @@ test("THE TESTER'S DOOR: the shipped switch is off; ?server=1 opts a phone in an
   assert.match(html, /const SRV_TESTER = DawnServerTable\.testerDoor\(store, window\.location\.search\);/, "the page asks through its store seam");
   assert.match(html, /const srvOn = !!\(window\.SERVER_TABLE && \(window\.SERVER_TABLE\.on === true \|\| SRV_TESTER\)\)/, "and srvOn is the only gate that reads it");
 });
+test("the page registers its card database with the judge engine (a replay of a server game needs the tokens the server made)", () => {
+  const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+  const body = html.slice(html.indexOf("function loadPool(){"), html.indexOf("function useCardDB(){"));
+  assert.match(body, /const db = \{status:"ready",byNP,byName,byCode,count:cards\.length,err:null\};/);
+  assert.match(body, /DawnJudge\.setDb\(db\);\s*return db;/, "loadPool registers what it returns; tools/serverpage.js plays the page's own judge with and without it");
+  assert.equal(html.split("DawnJudge.setDb(").length - 1, 1, "registered in one place");
+});
 test("the server switch: off, the page's transport makes no request and loads no library", async () => {
   const w = {};
   const t = ST.defaultTransport({on: false, url: "https://example.invalid", key: "k"}, w);

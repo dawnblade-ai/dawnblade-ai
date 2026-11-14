@@ -180,6 +180,21 @@ async function toServerChooser(page){
     await reopen(k0.page, k0.href, "");
     r = await offersServer(k0.page);
     row(!r.btn && hits === 0, "tester's door: and it stays forgotten; no request reached the project while only looking", "hits " + hits);
+    /* THE RULES NEED THE CARDS: the page registers its card database with the judge engine (it did not until v6.26, and a replay of a
+       server game diverged at the first token the server minted). Seeded Viserai v Dorinthea, played through the page's own judge. */
+    const tokens = await k0.page.evaluate(() => {
+      const run = () => { const db = loadPool(); /* loadPool registers; the sabotage below unregisters AFTER it */
+        const heroes = Object.fromEntries(HEROES.map(h => [h.k, h])), decks = Object.fromEntries(HEROES.map(h => [h.k, PARSED[h.k]]));
+        return { db, heroes, decks }; };
+      const play = (reg) => { const { db, heroes, decks } = run(); if(!reg) DawnJudge.setDb(null);
+        const m = DawnBuild.buildMatch({ heroes: ["viserai", "dorinthea"], seed: "probe", first: 0, boards: [{}, {}] }, { db, heroes, decks });
+        let g = DawnJudge.newMatch({ builds: m.builds, names: m.names, heroKeys: m.heroKeys, first: m.first, seed: m.seed }), n = 0;
+        while(!g.over && n++ < 600){ let moved = false; for(const s of [0, 1]){ const a = DawnSparring.act(g, s, { search: false }); if(!a) continue; const r = DawnJudge.reduce(g, a, s); if(r.error) break; g = r.state; moved = true; break; } if(!moved) break; }
+        const feed = (g.feed || []).map(f => typeof f === "string" ? f : (f.t || f.text || JSON.stringify(f))).join("\n");
+        return { n, missing: (feed.match(/token not created/g) || []).length, rune: (feed.match(/Runechant/g) || []).length }; };
+      const off = play(false), on = play(true); return { off, on }; });
+    row(tokens.off.missing >= 1, "card database: the probe sees a token go missing when the judge has no database (sabotage applied)", JSON.stringify(tokens.off));
+    row(tokens.on.missing === 0 && tokens.on.rune > 0, "card database: the page's judge has the database - every token a card makes is made", JSON.stringify(tokens.on));
     await k0.close();
   }
 
@@ -333,6 +348,25 @@ async function toServerChooser(page){
   const full3 = PH.storedGame(world2, code), rep3 = await page.evaluate(() => window.__dawnTable.report());
   row(more >= 8 && B.sess.seq() >= seqBefore + 8, "reload: the game went on", more + " more actions");
   row(rep3.hash === Wr.hash(R.seatView(full3, 0)) && B.sess.hash() === Wr.hash(R.seatView(full3, 1)), "reload: both phones still agree with the referee");
+
+  /* THE END, AND "VERIFY THIS GAME" ON A RELOADED SEAT (v6.26): play on to the end of the game, then press the page's own button.
+     The reloaded page rebuilt its lobby from the table's replay: its verdict must be the same as a seat that never reloaded. */
+  {
+    let n = 0, overNow = async () => page.evaluate(() => { const s = window.__dawnTable.session.state(); return !!(s && s.over); });
+    for(let i = 0; i < 60 && !(await overNow()); i++){ n += await play(30); await world2.settle([B.ch]); }
+    row(await overNow(), "reload: the game was played to its end through the reloaded page", n + " more actions");
+    await page.waitForSelector("button:has-text('Verify this game')", { timeout: 20000 }).catch(() => {});
+    row(await page.getByRole("button", { name: /^Verify this game/ }).count() === 1, "reload: the end screen offers 'Verify this game'");
+    await world2.settle([B.ch]); await wait(500);
+    await click(page, page.getByRole("button", { name: /^Verify this game/ }), "verify this game (reloaded seat)");
+    await page.waitForFunction(() => /Verified:|Not verified:/.test(document.body.innerText), null, { timeout: 60000 }).catch(() => {});
+    const vt = ((await text(page)).match(/(Verified:|Not verified:)[^\n]*/) || [""])[0];
+    row(/^Verified:/.test(vt), "reload: the reloaded seat's own 'Verify this game' passes", vt.slice(0, 140));
+    const rv = B.sess.revealed(), full4 = PH.storedGame(world2, code), sp = world2.row(code).hub.spec;
+    const vB = rv && R.verifyGame({ seedC: B.spec.seedC, seedG: B.spec.seedG, seedH: rv.seedH, start: sd => dealLikeThePage({ ...B.spec, seed: sd }).state, reduce: T.J.reduce, seat: 1, log: rv.log, hashes: B.sess.hashes(), over: rv.over });
+    row(!!vB && vB.ok, "the scripted seat (never reloaded) verifies the same game", vB && (vB.ok ? "ok" : vB.why));
+    row(!!rv && B.spec.seedG === sp.seedG && Wr.hash(full4) === Wr.hash(PH.reference(world2.row(code), 0, world2.deps.deal).state()), "the finished game is the in-process referee's");
+  }
 
   /* the key is nowhere a player or a report can read it */
   const keys = world2.row(code).hub.keys;
