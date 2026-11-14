@@ -14,6 +14,37 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
+### NEW THREAD: READ THIS BLOCK FIRST (written 2026-11-14 by CEO session_013xG9xCPR11GYcDV7QGiWyX, which is ending)
+- **State:** live = v6.28 on `main` (dc2ee48), CI green, livecheck ALL PASS. The hosted server table (Supabase)
+  is OPEN to everyone and fast (user's two-phone test: "things happen in an instant now").
+- **Unreleased work:** branch `claude/amazing-franklin-ycg51z` = main + 5 commits (S4.1 sign-in core, offline;
+  `server/S4-LOG.md`). Start from that branch. `supabase-bundle --check` is STALE there by design.
+- **USER ANSWERS (2026-11-14, "Yes to all"):** (1) ENABLE anonymous sign-in on the Supabase project — approved,
+  NOT yet done (try Management API `PATCH /v1/projects/fokcpzplomjsraquaaid/config/auth`, UNVERIFIED field name;
+  else ask the user to flip the dashboard toggle); (2) a recovery code is enough for the first ladder (no
+  email/Google yet); (3) cap 5 open tables per player; (4) display names UNIQUE (case-folded); (5) one player on
+  two phones: last one wins. Also confirmed earlier: no legal target -> unplayable (RULING 2026-11-13); the four
+  independent-effect cards (Edict of Steel, Preserve Tradition, Pass Over, A Drop in the Ocean) were asked about
+  and never contradicted.
+- **NEXT, in order:** S4.2 (page signs in lazily when a server table is opened + display-name sheet; run
+  `002_players.sql`; redeploy; verify `mkIdentify` against the real `/auth/v1/user`) -> S4.3 recovery code +
+  livecheck covers reclaim -> table cap -> S5 ranked (results/ratings written only by the function, Elo 1200,
+  forfeit clock, leaderboard). Plan details: the S4 bullets below and `server/S4-LOG.md`.
+- **HOW THIS THREAD WORKED (user asked for low context + cheapest agents):** the CEO stays thin; every job goes
+  to an in-session `sonnet` subagent (haiku for read-only scouting) with a self-contained brief, "commit after
+  every step" (containers restart without warning; work in worktrees/branches survived every time), no push;
+  the CEO reviews the report, fast-forwards `main`, runs livecheck, confirms CI. The two old Opus worker
+  sessions were never woken. The user is kind and brief: ask at most a few plain questions, recommend an answer.
+- **Supabase access:** project URL/key are public (below). The access token lives ONLY in the cloud
+  environment's credential store for `api.supabase.com` (still saved as of this writing; the user may revoke
+  it — then ask again through request_credential, never chat). Approved scope so far: this project only, the
+  SQL files, the one function `table`, and now enabling anonymous sign-in. Nothing else without asking.
+- **EVERY RELEASE:** validate -> push main -> re-bundle + redeploy `table` + `--stamp` when APP_VER/DATA_VER or
+  a bundled file changed (the page and function must report the same build) ->
+  `NODE_PATH=/opt/node-tools/node_modules node tools/livecheck.js` -> CI `drills` green -> update this section.
+- **Parked AI items:** Lyath (two diagnoses filed: `experiments/lyath-*`, `lyath2-*`; lead = aura pumps unseen
+  by `effPowerNow`). Unverified: the 4x-throttled phone bound for Sharp after v6.24.
+
 - **Live: v6.28** (WIRE_V 40, DATA_VER sage-v17). Progress reports: `docs/progress/v6.27.md`, `v6.28.md`.
 - **v6.28: THE SERVER TABLE IS OPEN TO EVERYONE** (user, 2026-11-14: "Go ahead and open it up"; project is
   unannounced). `SERVER_TABLE.on: true`; `?server=0` hides it on one phone. After every push run
