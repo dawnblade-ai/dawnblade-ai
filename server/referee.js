@@ -28,6 +28,8 @@
      log        (error) -> void   server-side only; never in a response
      identify   (token) -> {player, name?} | null   (S4.1, optional; may return a promise) — who a sign-in token is, as OUR
                 player id; null when the token is forged, expired or unknown. Only called when a join presents one.
+     rename     (player, name, fold) -> "ok" | "taken"   (S4.2, optional; may return a promise) — store the player's display
+                name; "taken" when another player holds a name with the same fold. Only called by op "me" with a name.
 
    ---- requests (one JSON frame; the payloads are hub.js's own) ----------
      {op:"create", table?}                       a fresh table (lobby open)
@@ -52,7 +54,7 @@
      is stale (a replay, or one that overtook a newer) and is refused.
 
    ---- identity (S4.1: a seat can belong to a player) ----------------------
-     {op:"join", table, identity:{token, name?}, claim?}
+     {op:"join", table, identity:{token}, claim?}        (a display name is set with op "me", S4.2 — never at a join)
         `token` is whatever the sign-in provider issued; THIS FILE NEVER SEES HOW IT IS VERIFIED: `deps.identify(token)
         -> {player, name?} | null` (promise or not) is the whole seam (the Edge Function wires it to Supabase, the
         drills to a fake). `player` is OUR player id (players table, server/supabase/002_players.sql), never the
@@ -66,8 +68,8 @@
           already owns a seat is a takeover of THAT seat, never the second one);
         - a keyed join (the key holds the chair) that also presents a token of ANOTHER player, or a claim token
           replayed by another player, is refused `seat-owned`; nothing is written;
-        - `identity` that is not an object with a string token, or has an invalid name: `bad-request` (a bad name
-          adds `field:"name"` and a `reason`); `identify` answered null (forged, expired, unknown): `identity`; the
+        - `identity` that is not an object with a string token, or that carries a `name`: `bad-request` (a name
+          adds `field:"name"`, `reason:"at-join"`); `identify` answered null (forged, expired, unknown): `identity`; the
           function has no `identify`: `identity` (it never guesses); `identify` THROWING (provider down) is an
           `internal` answer, not a verdict on the token.
         The answers carry `names:[n0,n1]` (public: both seats may read both) only when some seat has a display name, and
@@ -262,12 +264,10 @@ function join(req, got, deps){
   if(req.identity === undefined) return joinAs(req, got, deps, null);
   const idn = req.identity;
   if(!idn || typeof idn !== "object" || Array.isArray(idn) || typeof idn.token !== "string" || idn.token.length < 1 || idn.token.length > 4096) return no("bad-request");
-  let name = null;
-  if(idn.name !== undefined){
-    const v = validateName(idn.name);
-    if(!v.ok) return no("bad-request", {field: "name", reason: v.reason});
-    name = v.name;
-  }
+  /* S4.2: a display name is the PLAYER'S (op "me": validated, unique on its fold, stored once) and a join shows the stored one.
+     A name offered at a join would let anyone wear another player's name for a game, so it is refused, never ignored. */
+  if(idn.name !== undefined) return no("bad-request", {field: "name", reason: "at-join"});
+  const name = null;
   if(typeof deps.identify !== "function") return no("identity");
   return then(deps.identify(idn.token), who => {
     if(who == null) return no("identity");
@@ -278,6 +278,39 @@ function join(req, got, deps){
   });
 }
 const PLAYER_RE = /^[A-Za-z0-9_-]{1,64}$/;
+
+/* ---- {op:"me", identity:{token}, name?} (S4.2) ---------------------------------------------------------------
+   WHO AM I, and what am I called. No table: a player's name is theirs across every table.
+     no `name`  -> {ok:true, name: <the stored display name> | null}                       (never writes)
+     `name`     -> validated by THE validator, then `deps.rename(player, name, fold)` -> "ok" | "taken":
+                   {ok:true, name} | {ok:false, refused:"name-taken"}. `fold` is nameFold(name): lower case, spaces gone,
+                   look-alikes levelled, so "Dawn Smith", "dawnsmith" and "Dawn Sm1th" are ONE name and only one player
+                   can hold it (RULING (user, 2026-11-14): display names are unique, case-folded). Asking for the name
+                   you already hold is "ok". The store decides the race (a unique index), not this function.
+   Refusals: bad-request (+field:"name", reason) | identity (forged, expired, or no provider / no registry wired) |
+   name-taken | internal (the provider or the registry threw). The player id never rides the answer. */
+function me(req, deps){
+  const idn = req.identity;
+  if(!idn || typeof idn !== "object" || Array.isArray(idn) || typeof idn.token !== "string" || idn.token.length < 1 || idn.token.length > 4096) return no("bad-request");
+  let want = null;
+  if(req.name !== undefined){
+    const v = validateName(req.name);
+    if(!v.ok) return no("bad-request", {field: "name", reason: v.reason});
+    want = v.name;
+  }
+  if(typeof deps.identify !== "function") return no("identity");
+  return then(deps.identify(idn.token), who => {
+    if(who == null) return no("identity");
+    if(typeof who !== "object" || typeof who.player !== "string" || !PLAYER_RE.test(who.player)) throw new Error("identify answered something that is not a player");
+    if(want == null){ const v = who.name != null ? validateName(who.name) : null; return {ok: true, name: v && v.ok ? v.name : null}; }
+    if(typeof deps.rename !== "function") return no("identity");
+    return then(deps.rename(who.player, want, nameFold(want)), r => {
+      if(r === "ok") return {ok: true, name: want};
+      if(r === "taken") return no("name-taken");
+      throw new Error("rename answered something that is neither ok nor taken");
+    });
+  });
+}
 
 /* `who`: null (no identity presented: v6.28's body, untouched) or {player, name} */
 function joinAs(req, got, deps, who){
@@ -379,6 +412,7 @@ function resync(req, got, deps){
 function serve(req, deps){
   if(!req || typeof req !== "object" || !deps || !deps.store) return no("bad-request");
   if(req.op === "create") return create(req, deps);
+  if(req.op === "me") return me(req, deps);
   if(typeof req.table !== "string" || !ID_RE.test(req.table)) return no("bad-request");
   const fn = req.op === "join" ? join : req.op === "frame" ? frame : req.op === "resync" ? resync : null;
   if(!fn) return no("bad-request");
@@ -404,5 +438,5 @@ function handleNow(req, deps){
   return v;
 }
 
-return {handle, handleNow, topic, ROW_V, ROW_V_CASUAL, validateName};
+return {handle, handleNow, topic, ROW_V, ROW_V_CASUAL, validateName, nameFold};
 });

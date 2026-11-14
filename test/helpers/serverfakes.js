@@ -70,7 +70,10 @@ function memIdentity(){
   const st = {calls: 0, tokens: [],
     issue(player, name){ const t = "jwt." + (++n) + "." + Math.abs(hash(player + "|" + n)).toString(36) + "xyz"; live.set(t, {player, ...(name ? {name} : {})}); st.tokens.push(t); return t; },
     expire: t => live.delete(t),
-    identify(token){ st.calls++; const w = live.get(token); return w ? {...w} : null; }};
+    identify(token){ st.calls++; const w = live.get(token); if(!w) return null; const nm = st.names.has(w.player) ? st.names.get(w.player).name : w.name; return {player: w.player, ...(nm ? {name: nm} : {})}; },
+    /* the name registry (S4.2): one holder per fold, like the unique index in 003_names.sql */
+    names: new Map(), renames: 0,
+    rename(player, name, fold){ st.renames++; for(const [p, n] of st.names) if(p !== player && n.fold === fold) return "taken"; st.names.set(player, {name, fold}); return "ok"; }};
   return st;
 }
 function hash(s){ let h = 7; for(let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return h; }
