@@ -507,6 +507,23 @@ test("THE SWITCH in index.html: one config value gates every entry; the table sc
   assert.match(html, /const srvSit = \(how, c, role\) => \{\s*if\(!srvOn\) return;/, "so is the only caller of the server transport");
   assert.equal(html.split("DawnServerTable.defaultTransport(").length - 1, 1);
 });
+test("THE TESTER'S DOOR: the shipped switch is off; ?server=1 opts a phone in and is remembered; ?server=0 forgets it", () => {
+  const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+  assert.equal(new Function("return " + html.match(/window\.SERVER_TABLE = (\{[^}]*\});/)[1])().on, false, "off by default for everyone");
+  const mk = () => { const m = new Map(); return {get: (k, f) => m.has(k) ? JSON.parse(m.get(k)) : f, set: (k, v) => m.set(k, JSON.stringify(v)), m}; };
+  const keep = mk();
+  assert.equal(ST.testerDoor(keep, ""), false, "no query, nothing stored: closed");
+  assert.equal(ST.testerDoor(keep, "?server=yes"), false, "only 1 opens it");
+  assert.equal(ST.testerDoor(keep, "?x=1&server=1"), true, "the query opens it");
+  assert.equal(ST.testerDoor(keep, ""), true, "a relaunch without the query stays open (remembered)");
+  assert.equal(ST.testerDoor(keep, "?server=0"), false, "0 forgets it");
+  assert.equal(ST.testerDoor(keep, ""), false, "and it stays forgotten");
+  const broken = {get(){ throw new Error("blocked"); }, set(){ throw new Error("blocked"); }};
+  assert.equal(ST.testerDoor(broken, ""), false, "blocked storage: closed, no throw");
+  assert.equal(ST.testerDoor(broken, "?server=1"), true, "blocked storage: this load is still opted in");
+  assert.match(html, /const SRV_TESTER = DawnServerTable\.testerDoor\(store, window\.location\.search\);/, "the page asks through its store seam");
+  assert.match(html, /const srvOn = !!\(window\.SERVER_TABLE && \(window\.SERVER_TABLE\.on === true \|\| SRV_TESTER\)\)/, "and srvOn is the only gate that reads it");
+});
 test("the server switch: off, the page's transport makes no request and loads no library", async () => {
   const w = {};
   const t = ST.defaultTransport({on: false, url: "https://example.invalid", key: "k"}, w);

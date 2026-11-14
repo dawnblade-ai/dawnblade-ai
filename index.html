@@ -908,7 +908,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: false, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "6.25"; /* v6.25 - a card that needs a target can no longer be played without one, and the other seat can no longer tell which hidden card you used earlier. See CHANGELOG.md. */
+window.APP_VER = "6.26"; /* v6.26 - an early test of tables that need no direct link between the two phones, for testers sent a special address. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -1670,6 +1670,9 @@ const store = {
    which wraps every touch in try/catch; it is handed this THUNK because on some
    browsers merely reading window.localStorage is what throws */
 const lsGet = () => window.localStorage;
+/* THE TESTER'S DOOR (v6.26): the server table is off for everyone unless this phone was sent the test address (?server=1);
+   the choice is remembered here, and ?server=0 forgets it. Read once per page load. */
+const SRV_TESTER = DawnServerTable.testerDoor(store, window.location.search);
 /* THE SEED OF A GAME AGAINST THE AI: the clock, so every game deals afresh.
    A page DRIVE (tools/page.js) sets `window.__dawnSeedFix` so the same hands
    are dealt every run and its screen count is stable; a player never sets it. */
@@ -7010,13 +7013,14 @@ function TableScreen({onBack, onSeated}){
     code:"A table code is "+DawnServerTable.CODE_LEN+" letters and numbers.",
     exists:"That code is taken — try again."
   };
-  const srvOn = !!(window.SERVER_TABLE && window.SERVER_TABLE.on === true);   /* the switch (data script): off, nothing below can start */
+  const srvOn = !!(window.SERVER_TABLE && (window.SERVER_TABLE.on === true || SRV_TESTER));   /* the switch (data script) or this phone's tester opt-in: neither, nothing below can start */
+  const srvCfg = srvOn ? {...window.SERVER_TABLE, on: true} : window.SERVER_TABLE;
   const srvSit = (how, c, role) => {
     if(!srvOn) return;
     setErr(null); setGone(false); setBusy(true); setStat("srv-connecting");
     const open = how==="create" ? DawnServerTable.startTable : how==="join" ? DawnServerTable.sitAt : DawnServerTable.reclaim;
     open({
-      transport: DawnServerTable.defaultTransport(window.SERVER_TABLE), keep: store, code: c,
+      transport: DawnServerTable.defaultTransport(srvCfg), keep: store, code: c,
       tune: {pollMs: 20000},
       onStatus: s=>{ if(!live.current) return; setStat("srv-"+s);
         if(s==="seated" && waitRef.current){ const w = waitRef.current; waitRef.current = null; w.go(); } }
@@ -7145,7 +7149,8 @@ function TableScreen({onBack, onSeated}){
           When the game ends, the guest can verify every shuffle and draw.
         </p>
         {srvOn && <p className="mnote">
-          <strong>A server table needs no direct link.</strong> The referee runs on the web and holds the deck,
+          <strong>A server table needs no direct link.</strong> It is an early test, open only to people who
+          were sent this address, and it may stop answering. The referee runs on the web and holds the deck,
           so neither phone can look at the other's hand. Whoever runs the server could look; every shuffle is
           still checkable when the game ends.
         </p>}

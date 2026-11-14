@@ -152,6 +152,37 @@ async function toServerChooser(page){
     await kit.close();
   }
 
+  /* ---- 1b. THE TESTER'S DOOR: off by default; ?server=1 opens it and the page remembers; ?server=0 forgets ---- */
+  {
+    let hits = 0;
+    const doorKit = async (query) => { const k = await open({ w: W, h: H, query }); await k.context.route(/supabase\.co/, route => { hits++; route.fulfill({ status: 404, body: "{}" }); }); return k; };
+    const offersServer = async (p) => { await p.getByRole("button", { name: /^Find an opponent/ }).click(); await p.waitForSelector(".tblwrap");
+      const r = { btn: await p.evaluate(() => [...document.querySelectorAll("button")].some(b => /^Join a server table/.test(b.textContent.trim()))), note: /early test/i.test(await text(p)) };
+      await click(p, btn(p, /^Back/), "back"); await p.waitForSelector("button:has-text('Find an opponent')"); return r; };
+    const reopen = async (p, href, query) => { await p.goto(href + query); await p.waitForSelector(".shell", { timeout: 15000 });
+      await p.waitForFunction(() => /\d+ cards/.test((document.querySelector(".topbar .tag") || {}).textContent || ""), null, { timeout: 30000 }); };
+    const k0 = await doorKit("");
+    row(await k0.page.evaluate(() => window.SERVER_TABLE.on === false), "tester's door: the shipped switch is off");
+    let r = await offersServer(k0.page);
+    row(!r.btn && !r.note, "tester's door: no query, nothing remembered - no server option on the table screen");
+    await reopen(k0.page, k0.href, "?server=1");
+    r = await offersServer(k0.page);
+    row(r.btn, "tester's door: ?server=1 shows the server option (shipped switch still off)");
+    const txt = await (async () => { await k0.page.getByRole("button", { name: /^Find an opponent/ }).click(); await k0.page.waitForSelector(".tblwrap"); const t = await text(k0.page); await click(k0.page, btn(k0.page, /^Back/), "back"); await k0.page.waitForSelector("button:has-text('Find an opponent')"); return t; })();
+    row(/early test/i.test(txt) && !/sb_publishable|supabase|v6\.\d|seedG|nonce/i.test(txt.match(/A server table needs no direct link[\s\S]{0,300}/i)[0]), "tester's door: the option reads as an early test, in player language (no identifiers or version numbers)");
+    row(await k0.page.evaluate(() => window.SERVER_TABLE.on === false && window.localStorage.getItem("dawnblade.server") === "true"), "tester's door: the choice is kept in the page's store seam, the shipped switch untouched");
+    await reopen(k0.page, k0.href, "");
+    r = await offersServer(k0.page);
+    row(r.btn, "tester's door: a relaunch without the query keeps it (home-screen launch)");
+    await reopen(k0.page, k0.href, "?server=0");
+    r = await offersServer(k0.page);
+    row(!r.btn, "tester's door: ?server=0 forgets it");
+    await reopen(k0.page, k0.href, "");
+    r = await offersServer(k0.page);
+    row(!r.btn && hits === 0, "tester's door: and it stays forgotten; no request reached the project while only looking", "hits " + hits);
+    await k0.close();
+  }
+
   /* ---- 2. THE FAKE: a table, seated, played -------------------------------------------- */
   const kit = await open({ w: W, h: H });
   const { page, errors } = kit;

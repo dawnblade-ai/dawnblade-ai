@@ -404,6 +404,18 @@ function savedSeats(keep, names, now, maxAgeMs){
   return out.sort((a, b) => b.at - a.at);
 }
 
+/* THE TESTER'S DOOR (v6.26): the shipped switch stays off; a player opts in with the address `?server=1`, which the page's store
+   seam remembers (so a home-screen relaunch, which drops the query, keeps it), and `?server=0` forgets it. Returns whether this
+   phone is opted in. `keep` is the page's store seam; `search` is location.search. Never throws. */
+function testerDoor(keep, search){
+  let q = null; try { q = new URLSearchParams(search || "").get("server"); } catch(_){}
+  try {
+    if(q === "1") keep.set("server", true);
+    else if(q === "0") keep.set("server", false);
+    return keep.get("server", false) === true;
+  } catch(_){ return q === "1"; }
+}
+
 /* ============================================================
    THE REAL TRANSPORT — Supabase (S3: checked against the live project where no secret is needed)
    ============================================================
@@ -494,6 +506,6 @@ function defaultTransport(config, root_){
   return supabaseTransport(config);
 }
 
-return {TABLE_CODE_CHARS: CODE_CHARS, CODE_LEN, STATUS, SUPABASE_JS, normalize, isValid, topicFor, open, startTable, sitAt, reclaim, savedSeats,
+return {TABLE_CODE_CHARS: CODE_CHARS, CODE_LEN, STATUS, SUPABASE_JS, normalize, isValid, topicFor, open, startTable, sitAt, reclaim, savedSeats, testerDoor,
         supabaseTransport, loadSupabase, defaultTransport};
 });

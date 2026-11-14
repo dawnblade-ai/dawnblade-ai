@@ -153,7 +153,7 @@ function needPlaywright(){
    reads "N cards"). Rejects, after closing the browser, if the load itself
    produced a page error or console error. `errors` keeps filling afterwards:
    call check() to throw on anything new. */
-async function open({ w = 393, h = 852, deps = depsDir() } = {}){
+async function open({ w = 393, h = 852, deps = depsDir(), query = "" } = {}){
   const { chromium } = needPlaywright();
   const answer = makeAnswer(deps);
   const browser = await chromium.launch(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {});
@@ -180,7 +180,7 @@ async function open({ w = 393, h = 852, deps = depsDir() } = {}){
        opportunistic checks run used to depend on the hand dealt (70-73 screens
        on one page). index.html's `battleSeed` reads this instead. */
     await page.addInitScript(() => { window.__dawnSeedFix = 1730000000000; });
-    await page.goto(pathToFileURL(INDEX).href);
+    await page.goto(pathToFileURL(INDEX).href + query);   /* `query`: e.g. "?server=1", the tester's door */
     await page.waitForSelector(".shell", { timeout: 15000 });
     await page.waitForFunction(() => /\d+ cards/.test((document.querySelector(".topbar .tag") || {}).textContent || ""), null, { timeout: 30000 });
     await page.evaluate(() => document.fonts.ready);
@@ -191,7 +191,7 @@ async function open({ w = 393, h = 852, deps = depsDir() } = {}){
     if(errors.length) throw new Error(errors.length + " error(s) while loading:\n  " + errors.join("\n  "));
     throw e;
   }
-  return { page, browser, context, errors, routed, check, close };
+  return { page, browser, context, errors, routed, check, close, href: pathToFileURL(INDEX).href };
 }
 
 module.exports = { open, makeAnswer, depsDir };

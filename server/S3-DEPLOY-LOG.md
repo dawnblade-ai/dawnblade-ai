@@ -27,3 +27,9 @@ Request paths and status codes only; no bodies that could hold secrets.
    Wrong key: `ST.reclaim` with a bad key -> `why=auth`, seat record forgotten.
 6. Left behind (read-only count via `database/query`): 22 rows in `public.tables`, 311,412 bytes of row JSON, 6,840,320 bytes total relation size. No expiry job installed (the optional pg_cron line stays commented). Nothing deleted.
    `GET /rest/v1/tables` with the publishable key after all games: 401.
+
+## v6.26 release work (continued after a container restart)
+
+Job 1, the tester's door (index.html `SRV_TESTER`, engine/servertable.js `testerDoor`): `window.SERVER_TABLE.on` stays false. `?server=1` opts a phone in, remembered through the page's `store` seam (key `dawnblade.server`);
+`?server=0` forgets it. The option's blurb now says it is an early test. Drills: `test/servertable.test.js` (gate; sabotaged by removing the `?server=0` branch -> fails, restored) and 8 rows in `tools/serverpage.js` (driven in the real page; `open({query})` added to tools/page.js).
+serverpage after the door rows: 64 passed, 0 failed.
