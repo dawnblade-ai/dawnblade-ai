@@ -153,11 +153,11 @@ function needPlaywright(){
    reads "N cards"). Rejects, after closing the browser, if the load itself
    produced a page error or console error. `errors` keeps filling afterwards:
    call check() to throw on anything new. */
-async function open({ w = 393, h = 852, deps = depsDir(), query = "" } = {}){
+async function open({ w = 393, h = 852, deps = depsDir(), query = "", launch = null } = {}){
   const { chromium } = needPlaywright();
   const answer = makeAnswer(deps);
-  const browser = await chromium.launch(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {});
-  const context = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const browser = await chromium.launch({ ...(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {}), ...(launch || {}) });   /* `launch`: e.g. the egress proxy, for tools/perf-page.js's live drive */
+  const context = await browser.newContext({ ...(launch ? { ignoreHTTPSErrors: true } : {}), viewport: { width: w, height: h }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   const page = await context.newPage();
   const errors = [], routed = {};
   const seen = new Set();

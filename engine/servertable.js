@@ -199,12 +199,12 @@ async function open(o){
 function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep){
   const sleep = o.sleep || defaultSleep, rand = o.rand || Math.random;
   const timers = o.timers || {setInterval: (f, ms) => setInterval(f, ms), clearInterval: h => clearInterval(h)};
-  const tune = {conflictCap: 8, joinCap: 8, failCap: 4, base: 120, max: 2000, probeMs: 5000, pollMs: 0, ...(o.tune || {})};
+  const tune = {conflictCap: 8, joinCap: 8, failCap: 4, base: 120, max: 2000, probeMs: 5000, pollMs: 0, fallbackMs: 0, ...(o.tune || {})};
   const onStatus = o.onStatus || (() => {});
   const topic = (o.topic || topicFor)(code, seat, key);
   let n = n0, st = "connecting", closed = false, closedWhy = null, sink = null, backlog = [];
   let judgeSent = false, peerHeard = false, sawNet = false, lastVer = 0, lastIn = (o.now || Date.now)();
-  let unsub = null, subLost = false, healing = false, healAgain = false, haveFn = o.have || null;
+  let unsub = null, subLost = false, subJoined = false, healing = false, healAgain = false, haveFn = o.have || null;
   const outbox = []; let pumping = false;
   const events = []; const ev = (t, d) => { events.push({t, ...(d || {})}); if(events.length > 200) events.shift(); };
   const set = s => { if(st === s || (st === "closed" && s !== "closed")) return; st = s; try { onStatus(s); } catch(_){} };
@@ -299,15 +299,20 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep){
     try {
       do {
         healAgain = false;
-        if(!sawNet){ if(await rejoin() === null) ev("heal-failed"); }      /* before there is a game: the lobby, replayed */
+        let ok1 = false;
+        if(!sawNet){ if(await rejoin() === null) ev("heal-failed"); else ok1 = true; }      /* before there is a game: the lobby, replayed */
         else {                                                             /* a game: the net session's catch-up */
           let r = null;
           try { r = await call(T, {op: "resync", table: code, seat, key, have: haveFn ? haveFn() : undefined}); } catch(_){ r = null; }
-          if(r && r.ok) ingest(r.frames);
+          if(r && r.ok){ ingest(r.frames); ok1 = true; }
           else if(r && (r.refused === "auth" || r.refused === "no-table")) fatal(r.refused);
           else ev("heal-failed");
         }
         ev("healed");
+        /* THE LINK TO THE SERVER WORKS (it just answered) even though Realtime is down: polling carries the table, so the
+           phone is not "reconnecting" and a lobby that waits for the peer can open (it stayed shut in v6.26) */
+        if(ok1 && st === "reconnecting") set(peerHeard ? "seated" : "waiting");
+        if(ok1 && peerHeard && st === "waiting") set("seated");
       } while(healAgain && !closed);
     } finally { healing = false; }
   }
@@ -331,13 +336,18 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep){
   }
   function onSub(state){
     if(closed) return;
-    if(state === "lost"){ subLost = true; ev("sub-lost"); set("reconnecting"); }
-    else if(state === "joined"){ const was = subLost; subLost = false; ev("sub-joined", {again: was}); if(st === "reconnecting") set(peerHeard ? "seated" : "waiting"); heal(); }
+    if(state === "lost"){ subLost = true; subJoined = false; ev("sub-lost"); set("reconnecting"); }
+    else if(state === "joined"){ const was = subLost; subLost = false; subJoined = true; ev("sub-joined", {again: was}); if(st === "reconnecting") set(peerHeard ? "seated" : "waiting"); heal(); }
   }
   try { unsub = T.subscribe(topic, onPayload, onSub); } catch(_){ unsub = null; set("unavailable"); }
   /* the gap between the join's answer and the subscription is healed at once */
   heal();
 
+  /* NO PUSH, NO WAIT: while the subscription is not joined (the library did not load, the socket is down, a network that blocks
+     websockets) the other seat's moves arrive only by asking, so ask every `fallbackMs` (the page sets it; 0 = never). It stops
+     the moment a subscription joins. Costs one function call per phone per period while push is down. */
+  let fb = null;
+  if(tune.fallbackMs > 0) fb = timers.setInterval(() => { if(!closed && !subJoined && !healing) heal(); }, tune.fallbackMs);
   let poll = null;
   if(tune.pollMs > 0) poll = timers.setInterval(() => { if(!closed && (o.now || Date.now)() - lastIn >= tune.pollMs) heal(); }, tune.pollMs);
 
@@ -346,6 +356,7 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep){
     closed = true;
     try { if(unsub) unsub(); } catch(_){}
     if(poll) try { timers.clearInterval(poll); } catch(_){}
+    if(fb) try { timers.clearInterval(fb); } catch(_){}
     set("closed");
     try { if(o.onClose) o.onClose(closedWhy); } catch(_){}
   }
@@ -380,7 +391,7 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep){
     counter: () => n,
     pending: () => outbox.length,
     events: () => events.slice(),
-    report: () => ({code, seat, status: st, n, pending: outbox.length, peerHeard, lastVer})
+    report: () => ({code, seat, status: st, n, pending: outbox.length, peerHeard, lastVer, push: subJoined ? "joined" : "polling"})
   };
   void scrub;
   return handle;
@@ -438,7 +449,7 @@ function loadSupabase(o){
   if(libP) return libP;
   libP = new Promise((resolve, reject) => {
     const el = doc.createElement("script");
-    el.src = o.url || SUPABASE_JS; el.async = true;
+    el.src = o.libUrl || SUPABASE_JS;   /* `o.url` is the PROJECT address (config.url), never the script: v6.26 asked the project for its script and never got Realtime (PERF-LOG) */ el.async = true;
     el.onload = () => (window.supabase && window.supabase.createClient) ? resolve(window.supabase) : (libP = null, reject(transportErr()));
     el.onerror = () => { libP = null; reject(transportErr()); };
     doc.head.appendChild(el);
@@ -483,14 +494,16 @@ function supabaseTransport(config){
       return body;
     },
     subscribe(topic, onPayload, onState){
-      let ch = null, dead = false;
-      getClient().then(c => {
+      let ch = null, dead = false, retry = null, told = false;
+      const attempt = () => { if(dead) return; getClient().then(c => {
         if(dead) return;
         ch = c.channel(topic, {config: {broadcast: {self: false}}});
         ch.on("broadcast", {event: "frame"}, msg => { if(!dead) onPayload(msg && msg.payload); })
           .subscribe(s => { if(dead || !onState) return; if(s === "SUBSCRIBED") onState("joined"); else if(s === "CHANNEL_ERROR" || s === "TIMED_OUT" || s === "CLOSED") onState("lost"); });
-      }).catch(() => { if(!dead && onState) onState("lost"); });
-      return () => { dead = true; try { if(ch && client) client.removeChannel(ch); } catch(_){} };
+      }).catch(() => { if(!dead && onState && !told){ told = true; onState("lost"); } if(!dead) retry = setTimeout(attempt, 10000); });
+    };
+    attempt();
+    return () => { dead = true; if(retry) clearTimeout(retry); try { if(ch && client) client.removeChannel(ch); } catch(_){} };
     }
   };
 }

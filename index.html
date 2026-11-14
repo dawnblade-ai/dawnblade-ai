@@ -7029,7 +7029,7 @@ function TableScreen({onBack, onSeated}){
     const open = how==="create" ? DawnServerTable.startTable : how==="join" ? DawnServerTable.sitAt : DawnServerTable.reclaim;
     open({
       transport: DawnServerTable.defaultTransport(srvCfg), keep: store, code: c,
-      tune: {pollMs: 20000},
+      tune: {pollMs: 20000, fallbackMs: 2000},   /* fallbackMs: with no push, ask the table every 2 s (engine/servertable.js) */
       onStatus: s=>{ if(!live.current) return; setStat("srv-"+s);
         if(s==="seated" && waitRef.current){ const w = waitRef.current; waitRef.current = null; w.go(); } }
     }).then(ch=>{
