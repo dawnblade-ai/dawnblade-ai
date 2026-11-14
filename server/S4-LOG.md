@@ -49,3 +49,20 @@ fairness: no findings. serverrun --isolate: ALL PASS. Deno rehearsal (single + f
 - `mkIdentify` VERIFIED LIVE: two real anonymous players joined one table (`owned:true`, `names:["Ritchie","Franklin"]`), the same token asked again got the same
   seat, a forged token -> `identity`, a one-letter name -> `bad-request field:name reason:short`, a third casual join -> `full`; no token or subject in any answer.
 - `tools/livecheck.js` against the v6.28 page + the new function: ALL PASS (push 43, fallback 0, median 313 ms, p95 550).
+
+## Step 2 — op "me" and unique names (server/referee.js, 003_names.sql)
+- `{op:"me", identity:{token}, name?}`: no name reads the stored one; a name is validated by `validateName`, stored through `deps.rename(player, name, fold)`
+  ("ok" | "taken"), unique on `nameFold` (RULING user 2026-11-14). A name at a JOIN is now refused (`bad-request`, `field:"name"`, `reason:"at-join"`): it would
+  let anyone wear another player's name. `003_names.sql`: `players.name_fold`, a unique partial index, `player_rename` (service_role only). PGlite: all three files
+  twice -> ok; sabotage (non-unique index; anon execute) each raised.
+## Step 3 — entry `mkRename`, stub `player_rename`, Deno rehearsal single + folder: ALL PASS.
+## Step 4 — the phone (engine/servertable.js): `supabaseIdentity` (lazy anonymous sign-in kept under `who.id`; refresh; an outage is never a refusal),
+  `open` sends `identity:{token}` on an unkeyed join and falls back to a casual join when refused; `names()`/`owned()`/`onNames`; `taken` (push, request, resume);
+  `whoAmI`/`setName`; `defaultIdentity` (drive seam `window.__dawnServerIdentity`). Drills `test/serverwho.test.js` (10, each with sabotage).
+## Step 5 — the page: "Playing as …" row + name sheet (`srv-name`), `SrvNames` in the lobby, `taken` wording. `tools/serverpage.js`: 99 passed.
+## Step 6 — release v6.29 (2026-11-14)
+- `003_names.sql` RUN on the project -> `[{"dawnblade_names":"ok"}]`. Refresh VERIFIED live: `POST /auth/v1/token?grant_type=refresh_token` 200; a bad refresh token 400.
+- npm test: 4216 tests, 4211 pass, 0 fail, 5 skipped. scenes 107/0. fairness: no findings. Both babel blocks compile. Repinned with notes: slicecensus (stylesheet
+  69,669 -> 70,334), tapdoor (12 -> 13). CR-INDEX.md regenerated (line numbers only).
+- KNOWN LIMITS: identity is per phone until S4.3 (recovery code); a lost refresh ANSWER can cost the session (Supabase rotates refresh tokens; reuse is only
+  tolerated for a few seconds) -> new player; two tabs of one browser are one player; names are not on the board, only the lobby.

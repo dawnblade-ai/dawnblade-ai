@@ -130,6 +130,10 @@ async function twoPhones(p, cfg){
     await Promise.all([both(A), both(B)]);
     seated = true; out.seatedMs = Date.now() - tJoin;
     row(true, "both phones seated at table " + code, "guest tap to both on the lobby screen " + out.seatedMs + " ms");
+    /* S4.2: each phone signed in by itself when it opened or joined the table (an anonymous player, kept on the phone) */
+    const signed = [];
+    for(const ph of phones) signed.push(await ph.page.evaluate(() => { try { const r = JSON.parse(window.localStorage.getItem("dawnblade.who.id") || "null"); return !!(r && typeof r.a === "string" && r.a && typeof r.r === "string" && r.r); } catch(_){ return false; } }));
+    row(signed.every(Boolean), "both phones signed in as players (no email, no password)", "host " + (signed[0] ? "yes" : "no") + ", guest " + (signed[1] ? "yes" : "no"));
     /* the lobby, by each phone's own buttons, until both have a board */
     const t0 = Date.now(); let tb = null;
     while(Date.now() - t0 < 150000){

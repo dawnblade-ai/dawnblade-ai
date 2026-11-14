@@ -1,3 +1,30 @@
+## v6.29 — your seat is yours: the phone signs in by itself, and you can choose a player name
+
+- **Decided by the user (2026-11-14, "Yes to all"):** turn on anonymous sign-in; a recovery code is enough for the first ladder; at most 5 open
+  tables per player; display names are unique; one player on two phones, the last one wins. This release builds the first, the fourth and the fifth.
+- **The phone signs in on its own, only when it is needed** (`engine/servertable.js` `supabaseIdentity`): the first time a server table is opened or
+  joined (or a name is saved) the page asks the project for an anonymous player and keeps the session on the phone. No email, no password, nothing
+  typed. A sign-in that cannot be made never blocks a game: the table is then a casual one, exactly as in v6.28. An outage is never read as "signed
+  out" (that would silently make a new player); only a refusal from the service is.
+- **A seat belongs to its player** (`server/referee.js`, S4.1 + S4.2): the stored table records who owns each seat. Another player cannot take it. The
+  same player sitting down at the same table on a second phone TAKES the seat (last one wins): a fresh key is dealt, the old one is retired, and the
+  first phone is told in plain words ("You sat down at this table on another phone…") instead of hanging.
+- **Player names** (*Find an opponent* → *Join a server table* → *Choose a name*): 3 to 16 letters, digits and single spaces, any script. One request
+  (`op: "me"`) validates, stores and answers; the referee is the only judge of a name, so the page and the server cannot disagree. Names are UNIQUE
+  on their fold (`003_names.sql`, a unique index): capitals, spaces and look-alike letters do not make a different name ("Dawn Smith", "dawnsmith",
+  "Dawn Sm1th" are one). A name can no longer be offered at a join (it would let anyone wear another player's name for a game). The lobby reads
+  "Dawn Smith vs Rival One" once the other player has sat down.
+- **On the project (live, done through the Management API):** anonymous sign-in enabled; `002_players.sql` and `003_names.sql` run (publishable key
+  refused on every table and function); the function redeployed. `mkIdentify` and `mkRename` are verified against the real services.
+- **Drills:** `test/serverid.test.js` (op me, five sabotages), `test/serverwho.test.js` (the sign-in, a player's join, casual fallback, takeover,
+  the name calls; each with sabotage), `tools/serverpage.js` (the real page at 393x852: lazy sign-in through the page's own config, the name sheet's
+  refusals in plain words, names in the lobby, no player id anywhere in the page), `tools/supabase-rehearse.js` under Deno, `tools/sql-pglite.js`.
+  `tools/livecheck.js` now also checks that both live phones signed in.
+- **WIRE_V not bumped:** no wire payload, prompt or game key changed; identity rides the request envelope and the function's own answers.
+- **Honest list:** the sign-in lives on ONE phone. Clear the browser's storage, or lose the phone, and the player (and the name) is gone until the
+  recovery code ships (next). Two tabs of one browser are one player, so they cannot sit at both seats of a table. Names are not shown on the board
+  during the game yet, only in the lobby. The 5-table cap and ranked play are not built.
+
 ## v6.28 — the server table is open (the user's two-phone re-test, then "Go ahead and open it up")
 
 - **The user's re-test on two real phones at v6.27 (2026-11-14):** "Like night and day … things happen in an instant now."

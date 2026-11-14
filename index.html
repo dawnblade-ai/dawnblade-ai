@@ -918,7 +918,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "6.28"; /* v6.28 - the server table is open to everyone: share a six-letter code and play, no direct link needed. See CHANGELOG.md. */
+window.APP_VER = "6.29"; /* v6.29 - your seat is yours: the phone signs in by itself at a server table, and you can choose a player name. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -7039,6 +7039,7 @@ function TableScreen({onBack, onSeated}){
      name is saved: then the phone signs in on its own (no email, no password) and the seat belongs to that player. A
      sign-in that fails never blocks a game — the table is then a casual one. The referee judges a name; this screen
      only says what it answered. */
+  const srvWire = () => DawnServerTable.defaultTransport(srvCfg);   /* the one place the page reaches for the server; both callers below stop at a shut door first */
   const srvWho = uM(()=> srvOn ? DawnServerTable.defaultIdentity(srvCfg, store) : null, [srvOn]);
   const [myName,setMyName] = uS(()=>{ const n = store.get("who.name", null); return typeof n==="string" ? n : null; });
   const [draft,setDraft] = uS("");
@@ -7051,7 +7052,7 @@ function TableScreen({onBack, onSeated}){
   const saveName = () => {
     if(!srvOn || !srvWho || busy) return;
     setErr(null); setBusy(true);
-    DawnServerTable.setName({transport: DawnServerTable.defaultTransport(srvCfg), identity: srvWho}, draft.trim().replace(/ +/g," ")).then(r=>{
+    DawnServerTable.setName({transport: srvWire(), identity: srvWho}, draft.trim().replace(/ +/g," ")).then(r=>{
       if(!live.current) return;
       store.set("who.name", r.name); setMyName(r.name); setBusy(false); setMode("srv");
     }).catch(e=>{
@@ -7067,7 +7068,7 @@ function TableScreen({onBack, onSeated}){
     setErr(null); setGone(false); setBusy(true); setStat("srv-connecting");
     const open = how==="create" ? DawnServerTable.startTable : how==="join" ? DawnServerTable.sitAt : DawnServerTable.reclaim;
     open({
-      transport: DawnServerTable.defaultTransport(srvCfg), keep: store, code: c, identity: srvWho,
+      transport: srvWire(), keep: store, code: c, identity: srvWho,
       tune: {pollMs: 20000, fallbackMs: 2000},   /* fallbackMs: with no push, ask the table every 2 s (engine/servertable.js) */
       onStatus: s=>{ if(!live.current) return; setStat("srv-"+s);
         if(s==="seated" && waitRef.current){ const w = waitRef.current; waitRef.current = null; w.go(); } }

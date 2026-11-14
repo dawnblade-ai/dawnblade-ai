@@ -120,6 +120,15 @@ deploy there is no stamp; `--check` then compares the generated copy only.
 - A real PHONE's reload against the live service (the page's own reload was driven to the end of a game, and verified, against the offline fake only; the harness's reloaded seat verifies true/true live since v6.26).
 - Edge Function limits under load (only sequential two-seat games, and four at once, were run).
 
+## Sign-in and names (S4.2, live since v6.29)
+
+- **Anonymous sign-in is ON** (the user's decision, 2026-11-14): `PATCH /v1/projects/{ref}/config/auth` body `{"external_anonymous_users_enabled":true}`.
+  The page signs in with `POST /auth/v1/signup` body `{}` and refreshes with `POST /auth/v1/token?grant_type=refresh_token` (publishable key as `apikey`).
+- **SQL, in order, each safe to run twice:** `001_tables.sql`, `002_players.sql`, `003_names.sql` (`POST /v1/projects/{ref}/database/query`; each ends with one `ok` row).
+  Offline check: `PGLITE_DIR=<scratch> node tools/sql-pglite.js`.
+- The function verifies a token at `/auth/v1/user`, maps it with `identity_resolve`, stores a name with `player_rename`. `TABLE_IDENTITY=off` (a function secret) switches all of it off:
+  every table is then casual.
+
 ## Known limits of the casual stage (see `001_tables.sql` for the channel decision)
 - Public channels: anyone who learns a seat's channel name can listen to that seat's hand and cannot be revoked; they cannot forge a frame (every push is sealed under the seat key). Private channels with sign-in are S4.
 - The function is callable by anyone who knows the project URL (JWT verification is off): a stranger can open empty tables. Rows idle 48 hours are forgotten whenever a table is opened (`table_put`); real abuse limits come with sign-in.
