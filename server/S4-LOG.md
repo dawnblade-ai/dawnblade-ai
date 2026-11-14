@@ -27,3 +27,13 @@ token. Marked UNVERIFIED in the file. `tools/supabase-stub.js` gained `/auth/v1/
 fingerprints equal the in-process referee; identity rows pass).
 **`node tools/supabase-bundle.js --check` now reads STALE for the deployed stamp (and the dist copy): EXPECTED — `server/referee.js` and the
 template are bundled files and changed. NOT stamped. The live function is still the v6.28 one (stamp's digest).**
+
+## Step 5 — validation (2026-11-14)
+npm test: tests 4204, pass 4199, fail 0, skipped 5 (tools/.cache/card.json moved aside for the run, restored). scenes 107 passing / 0 failing.
+fairness: no findings. serverrun --isolate: ALL PASS. Deno rehearsal (single + folder incl. identity phase): ALL PASS. serverpage (PAGE_DEPS scratch): 74 passed, 0 failed.
+(`npm test` rewrote CR-INDEX.md; reverted, not part of this stage.)
+
+## Decisions
+- WIRE_V NOT bumped: wire.js payloads, prompts and game keys are untouched; `identity` rides the request envelope and `names`/`owned`/`taken`/`owners`/`retired` the function's own envelope and row (same reasoning as `claim`/`mac` in S3).
+- Row: ROW_V=3 newest; reads 2 and 3; a row is written v3 only when an identity binds (casual rows stay v2, byte-identical to v6.28, and v6.28 can still read them; v6.28 refuses v3 as `wire` = safe rollback). v2 reads as owners/names [null,null], retired [[],[]], nothing rewritten by reading.
+- Bundled files changed: `server/referee.js` and `server/supabase/entry.template.ts` ONLY (engine/*.js, data/*, index.html unchanged). Shipping the repo without redeploying the function is safe (live function = v6.28 referee, unaffected); `--check` stays STALE until a redeploy + `--stamp`.
