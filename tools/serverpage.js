@@ -292,10 +292,23 @@ async function toServerChooser(page){
   row(await overflow(page), "board: no horizontal overflow");
 
   /* the link drops and comes back */
+  /* the push channel drops (every payload to this page is lost, the subscription reads lost): since the PERF fix the page
+     keeps asking the table every 2 s, so the other seat's move STILL arrives, within a poll - not after the 20 s idle poll, and
+     with no scary banner while the table answers */
   world2.fault.cut(world2.topicOf(code, 0));
-  await page.waitForSelector(".srvbar.warn", { timeout: 5000 }).catch(() => {});
-  const warn = await inside(page, ".srvbar", "reconnecting: the banner");
-  row(!!warn && /reconnecting/.test(warn.t), "reconnecting: it says so", warn && warn.t);
+  {
+    let seq0 = 0, moved = null;
+    for(let i = 0; i < 200 && !moved; i++){
+      seq0 = await page.evaluate(() => window.__dawnTable.session.seq());
+      moved = await PH.step(world2, [B]);
+      if(!moved){ await page.evaluate(() => { const s = window.__dawnTable.session; if(s.status() === "ready"){ const a = DawnSparring.act(s.state(), 0, { search: false }); if(a) s.submit(a); } }); await wait(150); }
+    }
+    const t0 = Date.now();
+    while(Date.now() - t0 < 6000 && (await page.evaluate(() => window.__dawnTable.session.seq())) <= seq0) await wait(50);
+    const dt = Date.now() - t0;
+    if(process.env.DEBUG_DRIVE) console.log("DEBUG fb:", seq0, JSON.stringify(moved && moved.seat), await page.evaluate(() => window.__dawnTable.session.seq()), B.sess.seq(), B.ch.report().n);
+    row(!!moved && (await page.evaluate(() => window.__dawnTable.session.seq())) > seq0 && dt < 5000, "push lost: the other seat's move still reaches the page by the fallback poll, within a few seconds (not the 20 s idle poll)", dt + " ms after the move");
+  }
   world2.fault.restore(world2.topicOf(code, 0));
   await page.waitForFunction(() => !document.querySelector(".srvbar"), null, { timeout: 8000 }).catch(() => {});
   row(await page.evaluate(() => !document.querySelector(".srvbar")), "reconnecting: the banner clears when the link is back");
