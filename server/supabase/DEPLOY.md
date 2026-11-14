@@ -1,8 +1,8 @@
 # DEPLOY — the hosted referee on Supabase
 
-**State today:** built and rehearsed, **not deployed**. The page's "Join a server table" is switched **off**
+**State today (2026-11-14):** the SQL is run and the function is **deployed and live-tested** on `fokcpzplomjsraquaaid` (path B, below; record in `server/S3-DEPLOY-LOG.md`, stamp in `DEPLOYED.json`). The page's "Join a server table" is switched **off**
 (`window.SERVER_TABLE.on = false` in `index.html`), so nobody can reach a half-finished door. Two steps turn it on:
-deploy the function (below), then flip that one value in a release.
+(done) deploy the function, then flip that one value in a release.
 
 **Project:** `https://fokcpzplomjsraquaaid.supabase.co`
 
@@ -60,6 +60,13 @@ The function is named exactly **`table`** (the page calls `/functions/v1/table`)
 
 ## Path B — CLI or Management API, from the cloud environment
 
+**DONE 2026-11-14 through the Management API (no CLI), with the environment's proxy injecting the access token.** Exact calls, all VERIFIED:
+`POST /v1/projects/{ref}/database/query` with body `{"query": <001_tables.sql>}` (201, last result `[{"dawnblade_tables":"ok"}]`);
+`POST /v1/projects/{ref}/functions/deploy?slug=table`, multipart: a `metadata` part (`{"entrypoint_path":"index.ts","verify_jwt":false,"name":"table"}`,
+type application/json) and one `file` part per file of the FOLDER variant, each with `filename=<relative path>` (`index.ts`, `src/engine/…`); 201,
+status ACTIVE, `verify_jwt:false`; a redeploy to the same slug raises `version`. The 3.5 MB folder (25 files) was accepted with no size complaint.
+The OpenAPI document is at `https://api.supabase.com/api/v1-json`. The notes below were the plan and are kept for a human doing it by hand.
+
 Needs the environment's network to allow `api.supabase.com` (the Management API and the CLI both use it) and, to
 install the CLI, the host(s) its npm package downloads a binary from (`github.com`, `objects.githubusercontent.com` —
 UNVERIFIED which). `fokcpzplomjsraquaaid.supabase.co` already works from the sandbox. *Today `api.supabase.com` and
@@ -94,33 +101,26 @@ node tools/supabase-bundle.js --stamp     # writes server/supabase/DEPLOYED.json
 `--check` also fails if the stamp is older than the tree, which is how a forgotten redeploy shows up. Before the first
 deploy there is no stamp; `--check` then compares the generated copy only.
 
-## What was checked, and what was not (2026-11-13; publishable key only, from the build sandbox through its egress proxy)
+## What was checked, and what was not
 
-**VERIFIED against the real project**
-- A function that does not exist answers HTTP 404 JSON `{"code":"NOT_FOUND","message":"Requested function was not found"}`,
-  header `sb-error-code: NOT_FOUND`, `access-control-allow-origin: *` (POST with or without `apikey`, and OPTIONS). The page reads any non-2xx as "unavailable".
-- Realtime over the HTTP endpoint: `POST /realtime/v1/api/broadcast` **needs the `apikey` header** (the publishable key works, status 202,
-  no `Authorization` needed); `Authorization: Bearer <key>` alone and no header both answer 401 "No API key found in request". Body
-  `{"messages":[{"topic","event","payload","private"}]}`; a missing `event` answers 422.
-- Payload size: 1 KB, 32 KB, 80 KB, 100 KB, 150 KB, 200 KB and 250,000 bytes accepted (202); 260,000 and above answers 422
-  `Payload size exceeds tenant limit`. The function refuses to send above 240,000. The largest push in a rehearsed game was about 23 KB.
-- supabase-js 2.115.0 (Node 22, through the proxy with `NODE_USE_ENV_PROXY=1`): `createClient(url, publishableKey)` joins a **public**
-  broadcast channel with no user; status strings seen: `SUBSCRIBED`, then `CLOSED` after `removeChannel`; two clients on one topic
-  exchanged a client `send` (so any client can publish into a public channel: the reason pushes are sealed) and HTTP-endpoint pushes
-  reached both, up to 248 KB; a topic `table:<code>:<64 hex>` joins; a **private** channel without a user is refused (`CHANNEL_ERROR`,
-  "Unauthorized: You do not have permissions to read from this Channel topic"). The page's own `supabaseTransport.subscribe` received a
-  sealed payload this way.
-- `001_tables.sql`, run on PGlite (a WASM Postgres) with Supabase's three role names created: runs, self-check prints `ok`, `table_put`
-  returns 1 / 0 / 2 for create / stale / update, `anon` is refused the table and the function.
-- The generated function, under Deno 2.9.6, against local stand-ins for PostgREST and the Broadcast endpoint: `tools/supabase-rehearse.js`.
+**VERIFIED against the real project, 2026-11-13 (publishable key only)**
+- A missing function answered HTTP 404 `{"code":"NOT_FOUND",...}` with `access-control-allow-origin: *`.
+- Realtime HTTP endpoint: `POST /realtime/v1/api/broadcast` needs the `apikey` header (publishable key works, 202); 250,000-byte payloads accepted, 260,000 refused (422). The function refuses to send above 240,000; the largest push in a live game was about 26 KB.
+- supabase-js 2.115.0 (Node 22, `NODE_USE_ENV_PROXY=1`): a client with the publishable key joins a **public** channel with no user; a **private** channel is refused (`CHANNEL_ERROR`).
+- `001_tables.sql` on PGlite: self-check `ok`.
+- The generated function under Deno 2.9.6 against local stand-ins (`tools/supabase-rehearse.js`), both variants.
 
-**STILL UNVERIFIED (could not be checked without a secret, a deployed function or a browser)**
-- That a deployed function accepts the publishable key in `apikey` alone with Verify JWT off, and its CORS preflight (the function answers OPTIONS itself).
-- Dashboard labels (Verify JWT, Allow public access, the editor's accepted size) and the Edge Functions' own limits (CPU time, memory, bundle size) for a 3.5 MB bundle that builds a 797-card database on a cold start (about 0.4 to 0.7 s under Deno locally).
-- That `SUPABASE_SERVICE_ROLE_KEY` is provided on this project (new API keys), and PostgREST's behaviour with a new-style key (`sb_secret_…`, sent in `apikey` alone).
-- jsdelivr's UMD URL for 2.115.0: the file exists in the npm package and defines the global `supabase`, but the sandbox proxy blocks `cdn.jsdelivr.net` (403), so no HEAD request could be made.
-- A real browser's websocket to Realtime (only Node was exercised); `TIMED_OUT` status; behaviour at the free plan's connection and message quotas.
-- Everything in path B (`api.supabase.com` is blocked in the sandbox).
+**VERIFIED against the deployed function, 2026-11-14** (full record: `server/S3-DEPLOY-LOG.md`)
+- SQL ran on the real project: self-check `ok`; RLS on and forced, 0 policies; with the publishable key `GET`/`POST /rest/v1/tables` and `POST /rest/v1/rpc/table_put` all answer 401 (42501 permission denied).
+- The function (folder variant, `verify_jwt` **false**) answers `GET /functions/v1/table` with `{"service":"dawnblade-table","build":"v6.25 · sage-v17"}` using the publishable key in `apikey` alone; CORS preflight 204 with `access-control-allow-origin: https://dawnblade-ai.github.io`, allow-headers `authorization, x-client-info, apikey, content-type`. A POST with no `apikey` at all is also answered (JWT off means the gateway asks for nothing); the function authenticates seats by key.
+- **`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided on this new-API-key project:** the function reads and writes the table, so `TABLE_SERVICE_KEY` was NOT needed.
+- Real games through `supabaseTransport` (real HTTP + supabase-js Realtime websocket from Node): created, joined by code, played to the end, final seat views equal the in-process referee's, shuffles verify, blindness scan clean, wrong key refused (`auth`), a mid-game reload reclaimed its seat. Numbers in the deploy log (per-request median about 190 ms, p95 about 400 ms; cold first answer 100 to 550 ms).
+- **Realtime re-encodes a broadcast with its object keys sorted.** Found live: every seal over insertion-order JSON failed on arrival. Fixed: `frameMac` seals canonical (key-sorted) JSON (`sha256.js` `canon`) and `referee.replay` compares the result canonically; the rehearsal's stand-in now sorts keys too, so offline drills see it.
+
+**STILL UNVERIFIED**
+- A real browser's websocket and the page's CDN script URL for supabase-js (jsdelivr is blocked from the sandbox); dashboard labels; behaviour at the free plan's quotas.
+- A reloaded phone's own "verify this game": in the headless harness the reloaded seat re-derives a different seed half from its replayed lobby, so its verification fails while its views match the referee. The page's real reload path was not driven live. (Server side is not involved.)
+- Edge Function limits under load (only sequential two-seat games, and four at once, were run).
 
 ## Known limits of the casual stage (see `001_tables.sql` for the channel decision)
 - Public channels: anyone who learns a seat's channel name can listen to that seat's hand and cannot be revoked; they cannot forge a frame (every push is sealed under the seat key). Private channels with sign-in are S4.

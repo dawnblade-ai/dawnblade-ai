@@ -50,6 +50,13 @@ test("HMAC-SHA256 equals node's own, for short, block-sized and over-long keys a
       assert.equal(SHA.hmac(k, m), crypto.createHmac("sha256", Buffer.from(k, "utf8")).update(m, "utf8").digest("hex"), JSON.stringify([k.length, m.length]));
 });
 
+test("frameMac does not depend on object key order (Realtime re-encodes broadcasts with sorted keys)", () => {
+  const a = [{ch: "net", m: {t: "commit", seq: 3, z: [{b: 1, a: null}], s: "é\u2028"}}], b = [{m: {s: "é\u2028", z: [{a: null, b: 1}], seq: 3, t: "commit"}, ch: "net"}];
+  assert.notEqual(JSON.stringify(a), JSON.stringify(b), "the fixture really reorders keys");
+  assert.equal(SHA.frameMac("k", "K7Q2ZM", 0, 5, a), SHA.frameMac("k", "K7Q2ZM", 0, 5, b));
+  assert.notEqual(SHA.frameMac("k", "K7Q2ZM", 0, 5, a), SHA.frameMac("k", "K7Q2ZM", 0, 5, [{ch: "net", m: {t: "commit", seq: 4, z: [{b: 1, a: null}], s: "é\u2028"}}]), "values still count");
+  assert.notEqual(SHA.frameMac("k", "K7Q2ZM", 0, 5, [[1, 2]]), SHA.frameMac("k", "K7Q2ZM", 0, 5, [[2, 1]]), "array order still counts");
+});
 test("seatTopic is one-way and distinct per seat, code and key; frameMac moves with every field", () => {
   const key = "0123456789abcdef0123456789abcdef";
   const t = SHA.seatTopic("K7Q2ZM", 0, key);

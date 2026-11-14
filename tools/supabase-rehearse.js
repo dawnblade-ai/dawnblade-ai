@@ -66,7 +66,9 @@ async function rehearse(label, entry, deno, uid0){
     const real = ST.supabaseTransport(cfg);
     const subs = new Map(), inbound = [], outbound = [], posts = [], answers = [], timings = [];
     let calls = 0, inflight = 0;
-    stub.subscribe((topic, event, payload) => { const text = JSON.stringify(payload);
+    /* the real Realtime service re-encodes a broadcast with its object keys sorted (observed live, S3 deploy): the stand-in does too */
+    const sorted = v => Array.isArray(v) ? v.map(sorted) : v && typeof v === "object" ? Object.fromEntries(Object.keys(v).sort().map(k => [k, sorted(v[k])])) : v;
+    stub.subscribe((topic, event, payload) => { const text = JSON.stringify(sorted(payload));
       for(const s of [...(subs.get(topic) || [])]){ inbound.push({topic, text, name: s.name}); setImmediate(() => s.fn(JSON.parse(text))); } });
     const world = {inbound, outbound, posts, answers, errors: [], deps: {deal: spec => dealLikeThePage(spec, uid0)}, row: id => stub.row(id),
       transport: name => ({

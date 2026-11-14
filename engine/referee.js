@@ -428,8 +428,9 @@ function replay(o){
     if(hashes[e.seq] != null && W.hash(seatView(g, seat)) !== hashes[e.seq])
       return {ok: false, at: e.seq, why: "after action " + e.seq + " the replay differs from what this phone was shown"};
   }
-  const want = o.over != null ? JSON.stringify(o.over) : null;
-  if(want != null && JSON.stringify(json(g.over)) !== want) return {ok: false, at: (o.log || []).length, why: "the replay ends with a different result"};
+  /* compared as canonical JSON: a result that came over Supabase Realtime has its keys re-sorted (observed live 2026-11-14) */
+  const want = o.over != null ? SHA.canon(o.over) : null;
+  if(want != null && SHA.canon(json(g.over)) !== want) return {ok: false, at: (o.log || []).length, why: "the replay ends with a different result"};
   return {ok: true, over: g.over || null, state: g};
 }
 

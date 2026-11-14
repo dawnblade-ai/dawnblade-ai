@@ -154,7 +154,13 @@ function hmac(key, msg){
   return digestBytes(opad.concat(hex2bytes(digestBytes(ipad.concat(utf8(msg))))));
 }
 const seatTopic = (code, seat, key) => "table:" + code + ":" + sha256("dawnblade-topic|" + String(code).length + ":" + code + "|" + seat + "|" + String(key));
-const frameMac = (key, code, seat, ver, frames) => hmac(String(key), "dawnblade-frames|" + code + "|" + seat + "|" + ver + "|" + JSON.stringify(frames));
+/* CANONICAL JSON: object keys sorted, recursively. Supabase Realtime decodes a broadcast and re-encodes it with its keys
+   in alphabetical order (observed live 2026-11-14: every seal over JSON.stringify's insertion order failed on arrival),
+   so the seal is over a form that does not depend on key order. Arrays keep their order. */
+const canon = v => Array.isArray(v) ? "[" + v.map(x => x === undefined ? "null" : canon(x)).join(",") + "]"
+  : v && typeof v === "object" ? "{" + Object.keys(v).filter(k => v[k] !== undefined).sort().map(k => JSON.stringify(k) + ":" + canon(v[k])).join(",") + "}"
+  : JSON.stringify(v);
+const frameMac = (key, code, seat, ver, frames) => hmac(String(key), "dawnblade-frames|" + code + "|" + seat + "|" + ver + "|" + canon(frames));
 
-return {sha256, digestBytes, utf8, nonce, makeCommit, commitOf, opens, seedOf, seedCommit, hmac, seatTopic, frameMac};
+return {sha256, digestBytes, utf8, nonce, makeCommit, commitOf, opens, seedOf, seedCommit, hmac, seatTopic, frameMac, canon};
 });

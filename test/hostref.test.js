@@ -274,6 +274,20 @@ test("VERIFY THIS GAME — the host's reveal (seedH + log) opens its commitment 
   assert.ok(t2.host.reveal({seedH: t2.seedH}), "no reveal mid-game");
 });
 
+test("VERIFY THIS GAME — a result whose keys arrive in another order (Realtime re-sorts them) still verifies; a different result does not", () => {
+  const t = table("fai", "dash");
+  while(step(t)) {}
+  t.host.reveal({seedH: t.seedH});
+  const rv = t.guest.revealed();
+  const keys = Object.keys(rv.over);
+  assert.ok(keys.length >= 2, "the result has two or more keys to reorder");
+  const flipped = {}; for(const k of keys.slice().reverse()) flipped[k] = rv.over[k];
+  assert.notEqual(JSON.stringify(flipped), JSON.stringify(rv.over), "the fixture really reorders keys");
+  const base = {seedC: t.seedC, seedG: t.seedG, seedH: rv.seedH, start: t.start, reduce: J.reduce, seat: 1, log: rv.log, hashes: t.guest.hashes()};
+  assert.ok(R.verifyGame({...base, over: flipped}).ok, "same result, another key order");
+  assert.equal(R.verifyGame({...base, over: {...rv.over, winner: 1 - rv.over.winner}}).ok, false, "a different winner is refused");
+});
+
 test("SABOTAGE — a lying reveal fails: another seedH, a doctored log, a host that dealt from another seed", () => {
   const t = table("fai", "dash");
   while(step(t)) {}
