@@ -1,3 +1,33 @@
+## v6.31 — a player's name is on the board, and no player holds more than 5 open tables
+
+- **Names on the board.** At a server table each seat's player name (when that player has one) is on the table board, small and dim, under that seat's hero
+  name, on both phones: yours under your hero, theirs under theirs. A player with no name shows exactly what was shown before (nothing is drawn). It survives
+  a reload (the claimed seat reads both names at once) and a seat takeover. A 16-letter name fits the box at 393 wide; on a narrower phone it is cut with an
+  ellipsis, never wrapped, never pushing the row. Local tables and the trainer are unchanged.
+  The names are the channel's, the same `names()` the lobby's "A vs B" line has read since v6.29 (the function's own answer envelope): they are NOT in the
+  game state the rules or the AI read, nor in the report, nor in any wire payload. **WIRE_V stays 40** (no wire payload, prompt or game key changed).
+- **At most 5 open tables per player** (ruling, user, 2026-11-14: "cap 5 open tables per player"). **Open** = a table this player CREATED while signed in,
+  whose game is not finished, that its creator has not closed, and that has not been idle 48 hours (those are forgotten anyway). A finished game lets go of
+  its slot (the referee marks the row `over` when the session ends); joining someone else's table never counts; casual (not signed-in) tables are exactly as
+  before (no creator, v2 row, never counted, never refused). The sixth is refused `table-cap` and nothing is written.
+  The page says: *"You already have 5 tables open, the most one player can have. Finish a game, or close one of the tables below, then open a new one."*,
+  lists the five codes, and gives each a **Close** button.
+- **Close** (`{op:"close"}`, creator only): the smallest way out of the cap (a table nobody sits at would otherwise count for two days). It marks the row over and
+  closed; a closed table answers `no-table` to both seats. Another player, a casual table, a forged token and a missing table each get their own refusal.
+- **How the count is atomic** (`005_table_cap.sql`, new, service_role only): `table_create_capped(id, row, creator, cap)` counts the creator's open rows and
+  inserts in ONE transaction under a per-player advisory lock (`pg_advisory_xact_lock`), so two simultaneous creates at four open make exactly one more.
+  Proven on a REAL Postgres 16 with ten simultaneous callers (`tools/sql-race.sh`: with the lock 1 created / 9 refused; the same file without the lock line 10 created),
+  and on PGlite (twice, plus ten sabotages). A signed-in create on a store that cannot count is refused `unavailable`, never made unchecked.
+- **Honest limits:** the cap binds signed-in creates. A phone that cannot sign in opens a casual table, and casual tables are by design uncapped (the
+  stranger-opens-empty-tables exposure in DEPLOY.md is unchanged). A name is stored in the table row when a player sits down (as in the lobby), so a name
+  the player changes mid-table shows at the next sit-down. Closing a table does not push a notice: the other phone finds out on its next request.
+- **To go live (the CEO):** run `server/supabase/005_table_cap.sql` (ends `[{"dawnblade_table_cap":"ok"}]`; safe to run twice), re-bundle and redeploy the function
+  (the build id moved with APP_VER), `--stamp`, then `node tools/livecheck.js` (now also asserts seat 0's name on both boards; WRITTEN BUT NOT RUN on live).
+  Until 005 is run the new function answers a signed-in create with an internal error (the SQL function is missing): run the SQL first.
+- **Drills:** `test/servertablecap.test.js` (the cap, joins, a whole finished game, close, a race, no leak, the phone) and `test/servernames.test.js` (game,
+  reload, takeover, no name in state), each with its sabotage; `tools/serverpage.js` (names on the board, long names, a nameless opponent, the joiner's
+  board, the cap refusal and Close at 393x852); the Deno rehearsal (cap phase, single + folder); `tools/sql-pglite.js` (005 twice).
+
 ## v6.30 — a lost phone is not a lost player: the recovery code
 
 - **On the name sheet** (*Find an opponent* → *Join a server table* → *Choose a name*): **Get a recovery code** shows a code ONCE (three groups of five,

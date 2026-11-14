@@ -124,10 +124,18 @@ deploy there is no stamp; `--check` then compares the generated copy only.
 
 - **Anonymous sign-in is ON** (the user's decision, 2026-11-14): `PATCH /v1/projects/{ref}/config/auth` body `{"external_anonymous_users_enabled":true}`.
   The page signs in with `POST /auth/v1/signup` body `{}` and refreshes with `POST /auth/v1/token?grant_type=refresh_token` (publishable key as `apikey`).
-- **SQL, in order, each safe to run twice:** `001_tables.sql`, `002_players.sql`, `003_names.sql`, `004_recovery.sql` (`POST /v1/projects/{ref}/database/query`; each ends with one `ok` row).
+- **SQL, in order, each safe to run twice:** `001_tables.sql`, `002_players.sql`, `003_names.sql`, `004_recovery.sql`, `005_table_cap.sql` (`POST /v1/projects/{ref}/database/query`; each ends with one `ok` row;
+  `005` ends `dawnblade_table_cap`). **Run `005` BEFORE redeploying the v6.31 function:** a signed-in create calls `table_create_capped`, which must exist.
   Offline check: `PGLITE_DIR=<scratch> node tools/sql-pglite.js`.
 - The function verifies a token at `/auth/v1/user`, maps it with `identity_resolve`, stores a name with `player_rename`. `TABLE_IDENTITY=off` (a function secret) switches all of it off:
   every table is then casual.
+
+## At most 5 open tables per player (S4.4, v6.31)
+
+- A signed-in player may CREATE at most 5 open tables (user ruling 2026-11-14). `005_table_cap.sql`'s `table_create_capped` counts and inserts in one transaction under a per-player advisory
+  lock. OPEN = `row->>'creator'` is the player, `row->>'over'` is not `true`, `updated_at` within 48 hours. The referee sets `over` when a game ends or the creator closes the table
+  (`{op:"close"}`). The sixth answers `table-cap` (+ `cap`, `open:[codes]`). Casual tables (no identity) have no creator and are neither counted nor refused.
+- Real-Postgres race proof: `tools/sql-race.sh start|real|nolock|stop` (needs the Postgres 16 server binaries; offline).
 
 ## Known limits of the casual stage (see `001_tables.sql` for the channel decision)
 - Public channels: anyone who learns a seat's channel name can listen to that seat's hand and cannot be revoked; they cannot forge a frame (every push is sealed under the seat key). Private channels with sign-in are S4.

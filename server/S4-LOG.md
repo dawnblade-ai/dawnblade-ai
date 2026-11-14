@@ -100,3 +100,33 @@ fairness: no findings. serverrun --isolate: ALL PASS. Deno rehearsal (single + f
 - livecheck: after the real game a third fresh context redeems seat 0's code; WRITTEN BUT NOT RUN against live (004 and the new function are not deployed). Seat 0's phone first takes a one-run name ("Lc" + clock base 36) so the recovered player is recognisable.
 - Release prep: APP_VER 6.30, CHANGELOG, docs/progress/v6.30.md. WIRE_V stays 40 (no wire payload, prompt or game key changed; the ops ride the request envelope). `--check` reads STALE as expected; NOT stamped.
 - Repins with notes: slicecensus stylesheet 70,334 -> 70,922 (`.tblrec`, `.tblrecin`, `.tblok`), tapdoor plain-arrow onClick 13 -> 15 (two screen-state buttons). npm test: 4240 tests, 4235 pass, 0 fail, 5 skipped. scenes 107/0. fairness: exit 0.
+
+# SERVER S4.4 — running log (branch `claude/relaxed-fermi-erc3gs`, on v6.30) — names on the board + at most 5 open tables per player. OFFLINE ONLY: nothing pushed, deployed or run on the project.
+
+## Step 1 — 005_table_cap.sql (NOT RUN on the project; 001-004 untouched)
+- `table_create_capped(id, row, creator, cap) -> jsonb` ({version} | {version:0, exists} | {version:0, capped, open:[ids]}), service_role only, one transaction under
+  `pg_advisory_xact_lock(hashtextextended('dawnblade-open-tables|' || creator, 0))`. Sweep (48 h idle) first, then taken-code, then count, then insert. Count reads the row's own jsonb
+  (`row->>'creator'`, `row->>'over'`, `updated_at`), so `table_put` (001) needed no change; partial index on `(row->>'creator')`.
+- PGlite (`PGLITE_DIR=<scratch> node tools/sql-pglite.js`, default list now 001..005): 005 twice -> `ok`; anon refused. Sabotage (ten, each raised the named error): no lock, finished tables
+  counted, idle tables counted, count ignores the creator, casual rows counted, off-by-one cap, refusal stores the row, anon may create, row naming another creator, taken code not reported.
+- REAL concurrency: PGlite is one connection. A real Postgres 16 (Ubuntu's server binaries, run as the `postgres` user) took ten simultaneous callers for a player at four open, with a
+  0.4 s pause between count and insert: with the lock created=1 capped=9 (5 stored); the same file with the lock line deleted created=10 (14 stored). `tools/sql-race.sh`.
+
+## Step 2 — referee, phone, fakes, drills
+- `create` with `identity` -> `createAs`: `deps.store.createCapped(id, row, creator, 5)`; the row is stamped v3 with `creator`; refusal `table-cap` (+`cap`, `open`); a store with no `createCapped` -> `unavailable`
+  (never an unchecked table for a signed-in player). No identity: the casual create, byte for byte (the v6.28 fixture drill still passes). `frame` sets `row.over` when the session ends (creator rows only).
+  `{op:"close"}` (creator only; `not-creator`, `no-table`, `identity`); a closed row answers `no-table` to join/frame/resync.
+- Phone (`engine/servertable.js`): the sign-in token is asked BEFORE a create (it moved up); `{op:"create", identity}`; `identity` refusal falls back to a casual create AND a casual sit-down; `table-cap` -> `.why` with
+  `.open` (codes) and `.cap`; new `closeTable(o, code)`.
+- Drills: `test/servertablecap.test.js` (15) and `test/servernames.test.js` (2), every one with sabotage that fails; `test/serverid.test.js`'s whole-game drill now has seat 0's player CREATE the table signed in, so its scans also
+  read the creator row and the `over` marker. Two of my first edits tripped existing sabotage anchors (text no longer unique): reworded mine, never weakened theirs.
+
+## Step 3 — entry `createCappedRpc`, stub `table_create_capped`, Deno rehearsal cap phase (single + folder ALL PASS, 12 rows each)
+
+## Step 4 — the page
+- `useSrvNames(table)` hook (SrvNames uses it); TableBoard draws `.pname` (`data-pname="me"|"foe"`) in each seat's `.heromid`; `.heromid{min-width:0}` + `.pname` one line with an ellipsis.
+- `TableScreen`: `SRV_WHY["table-cap"]`, the list of open codes with a Close button each (`closeMine`), a note when one is closed.
+- `tools/serverpage.js`: names on the board (both seats), after a reload, after a takeover of the opponent's seat, long (16 letters; and 320 wide: cut with an ellipsis), a nameless opponent, the joiner's board, the
+  cap refusal text, the five codes, Close freeing exactly one slot. Page sabotage (foe name not drawn; an identifier in the cap sentence; `min-width:0` removed) each FAILed, restored.
+- `tools/livecheck.js`: after both phones reach the board, seat 0's one-run name is on BOTH boards. WRITTEN BUT NOT RUN on live.
+- WIRE_V stays 40 and DATA_VER unchanged: names ride the function's own answers (`names`), create/close ride the request envelope, the cap refusal is the function's own answer; no wire.js payload, prompt or game key moved.
