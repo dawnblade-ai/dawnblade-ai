@@ -415,17 +415,22 @@ function savedSeats(keep, names, now, maxAgeMs){
   return out.sort((a, b) => b.at - a.at);
 }
 
-/* THE TESTER'S DOOR (v6.26): the shipped switch stays off; a player opts in with the address `?server=1`, which the page's store
-   seam remembers (so a home-screen relaunch, which drops the query, keeps it), and `?server=0` forgets it. Returns whether this
-   phone is opted in. `keep` is the page's store seam; `search` is location.search. Never throws. */
-function testerDoor(keep, search){
+/* THE DOOR'S KILL SWITCH (v6.28; the tester's door of v6.26, kept). The table is open to everyone through the page's own switch
+   (`window.SERVER_TABLE.on`); one phone can still say what it wants with the address: `?server=0` hides the server table on that phone
+   (remembered through the page's `store` seam, so a home-screen relaunch that drops the query keeps it), `?server=1` brings it back
+   (and offers it even while the shipped switch is off). Returns that phone's choice: true, false, or null (no choice: the shipped
+   switch decides). `keep` is the page's store seam; `search` is location.search. Never throws. */
+function doorChoice(keep, search){
   let q = null; try { q = new URLSearchParams(search || "").get("server"); } catch(_){}
   try {
     if(q === "1") keep.set("server", true);
     else if(q === "0") keep.set("server", false);
-    return keep.get("server", false) === true;
-  } catch(_){ return q === "1"; }
+    const v = keep.get("server", null);
+    return v === true ? true : v === false ? false : null;
+  } catch(_){ return q === "1" ? true : q === "0" ? false : null; }
 }
+/* whether the server table is offered: this phone's choice beats the shipped switch */
+function doorOpen(choice, on){ return choice === false ? false : (choice === true || on === true); }
 
 /* ============================================================
    THE REAL TRANSPORT — Supabase (S3: checked against the live project where no secret is needed)
@@ -519,6 +524,6 @@ function defaultTransport(config, root_){
   return supabaseTransport(config);
 }
 
-return {TABLE_CODE_CHARS: CODE_CHARS, CODE_LEN, STATUS, SUPABASE_JS, normalize, isValid, topicFor, open, startTable, sitAt, reclaim, savedSeats, testerDoor,
+return {TABLE_CODE_CHARS: CODE_CHARS, CODE_LEN, STATUS, SUPABASE_JS, normalize, isValid, topicFor, open, startTable, sitAt, reclaim, savedSeats, doorChoice, doorOpen,
         supabaseTransport, loadSupabase, defaultTransport};
 });

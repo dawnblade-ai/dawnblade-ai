@@ -794,8 +794,11 @@ img{display:block;max-width:100%}
 .tblstat{font-size:12.5px;color:var(--bone-dim);text-align:center;min-height:18px}
 .tblstat.live{color:var(--y)}
 .tblerr{font-size:13px;color:var(--r);background:rgba(196,48,43,.12);border:1px solid var(--r);padding:9px 10px}
-.tblrow{display:flex;gap:8px}
-.tblrow .bigbtn{flex:1}
+.tblrow{display:flex;gap:8px;flex-wrap:wrap}
+.tblgroup{display:flex;flex-direction:column;gap:6px;border-left:2px solid var(--line);padding-left:10px}
+.tblgname{font-family:'Big Shoulders Display';font-weight:800;font-size:15px;letter-spacing:.14em;text-transform:uppercase;color:var(--y)}
+.tblgnote{margin:0;font-size:12px;line-height:1.4;color:var(--bone-dim)}
+.tblrow .bigbtn{flex:1 1 120px}
 .tbldot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:6px;animation:tblpulse 1.4s ease-in-out infinite}
 @keyframes tblpulse{0%,100%{opacity:.35}50%{opacity:1}}
 
@@ -907,8 +910,8 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    `url` and `key` are PUBLIC by design (the project's address and its publishable key) — config, not a secret; the
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
-window.SERVER_TABLE = {on: false, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "6.27"; /* v6.27 - at a table that needs no direct link, the other phone now hears your move at once instead of up to several seconds later. See CHANGELOG.md. */
+window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
+window.APP_VER = "6.28"; /* v6.28 - the server table is open to everyone: share a six-letter code and play, no direct link needed. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -1672,7 +1675,7 @@ const store = {
 const lsGet = () => window.localStorage;
 /* THE TESTER'S DOOR (v6.26): the server table is off for everyone unless this phone was sent the test address (?server=1);
    the choice is remembered here, and ?server=0 forgets it. Read once per page load. */
-const SRV_TESTER = DawnServerTable.testerDoor(store, window.location.search);
+const SRV_CHOICE = DawnServerTable.doorChoice(store, window.location.search);
 /* THE SEED OF A GAME AGAINST THE AI: the clock, so every game deals afresh.
    A page DRIVE (tools/page.js) sets `window.__dawnSeedFix` so the same hands
    are dealt every run and its screen count is stable; a player never sets it. */
@@ -7021,7 +7024,7 @@ function TableScreen({onBack, onSeated}){
     code:"A table code is "+DawnServerTable.CODE_LEN+" letters and numbers.",
     exists:"That code is taken — try again."
   };
-  const srvOn = !!(window.SERVER_TABLE && (window.SERVER_TABLE.on === true || SRV_TESTER));   /* the switch (data script) or this phone's tester opt-in: neither, nothing below can start */
+  const srvOn = !!(window.SERVER_TABLE && DawnServerTable.doorOpen(SRV_CHOICE, window.SERVER_TABLE.on));   /* this phone's ?server= choice beats the shipped switch (data script); closed, nothing below can start */
   const srvCfg = srvOn ? {...window.SERVER_TABLE, on: true} : window.SERVER_TABLE;
   const srvSit = (how, c, role) => {
     if(!srvOn) return;
@@ -7122,20 +7125,33 @@ function TableScreen({onBack, onSeated}){
         <div className="tblcard">
           <p className="note" style={{marginTop:0}}>
             One of you opens a table and reads out the code; the other types it in.
-            No account, no server — the two phones talk directly once they have found
-            each other.
+            No account needed. Pick how the two phones meet.
           </p>
         </div>
-        <div className="tblrow">
-          <button className="bigbtn" onClick={openTable}>Open a table</button>
-          <button className="bigbtn alt" onClick={()=>setMode("join")}>Join a table</button>
-          {saved.map(r=><button key={r.code} className="bigbtn alt" onClick={()=>resumeTable(r)}>Resume table {r.code}</button>)}
-          <button className="bigbtn alt" onClick={()=>judgeTable(DawnRoom.makeCode())}>Judge a table</button>
-          {savedJudge.map(r=><button key={"j"+r.code} className="bigbtn alt" onClick={()=>judgeTable(r.code, r.resume)}>Resume judging {r.code}</button>)}
+        {/* THREE WAYS TO MEET, side by side, each with its own one-line reason (v6.28). The server table (SERVER S2) is the same
+            game with the referee on the web, so the two phones never need to reach each other. */}
+        {srvOn && <div className="tblgroup">
+          <div className="tblgname">Server table</div>
+          <p className="tblgnote">Share a code and play, no direct link needed. Works across any network.</p>
+          <div className="tblrow"><button className="bigbtn" onClick={()=>{ setErr(null); setGone(false); setMode("srv"); }}>Join a server table</button></div>
+        </div>}
+        <div className="tblgroup">
+          <div className="tblgname">Direct table</div>
+          <p className="tblgnote">Two phones talk straight to each other. No server.</p>
+          <div className="tblrow">
+            <button className="bigbtn alt" onClick={openTable}>Open a table</button>
+            <button className="bigbtn alt" onClick={()=>setMode("join")}>Join a table</button>
+          </div>
+          {saved.length>0 && <div className="tblrow">{saved.map(r=><button key={r.code} className="bigbtn alt" onClick={()=>resumeTable(r)}>Resume table {r.code}</button>)}</div>}
         </div>
-        {/* THE SERVER TABLE (SERVER S2): the same game, but the referee is a program on the web, so the two
-            phones never need to reach each other. */}
-        {srvOn && <div className="tblrow"><button className="bigbtn alt" onClick={()=>{ setErr(null); setGone(false); setMode("srv"); }}>Join a server table</button></div>}
+        <div className="tblgroup">
+          <div className="tblgname">Judge's table</div>
+          <p className="tblgnote">A third phone or tablet holds the deck and keeps the game honest.</p>
+          <div className="tblrow">
+            <button className="bigbtn alt" onClick={()=>judgeTable(DawnRoom.makeCode())}>Judge a table</button>
+            {savedJudge.map(r=><button key={"j"+r.code} className="bigbtn alt" onClick={()=>judgeTable(r.code, r.resume)}>Resume judging {r.code}</button>)}
+          </div>
+        </div>
         {/* This said "the drill decks — blank cards" until v2.52, which was
             true before v2.49 and has been wrong since: the table negotiates a
             hero, a throw and a sideboard and runs two real decks. Stale copy
@@ -7151,16 +7167,15 @@ function TableScreen({onBack, onSeated}){
         {/* THE HONEST LINE (HIDDEN HANDS H2): what the guest's phone cannot see,
             and what the host's phone could. */}
         <p className="mnote">
-          <strong>The host's phone holds the deck.</strong> It deals and runs the game;
+          <strong>At a direct table, the host's phone holds the deck.</strong> It deals and runs the game;
           the guest's phone sees only the guest's own hand, never the host's hand, either
           deck or the next draw. The host's phone could look, so play people you trust.
           When the game ends, the guest can verify every shuffle and draw.
         </p>
         {srvOn && <p className="mnote">
-          <strong>A server table needs no direct link.</strong> It is an early test, open only to people who
-          were sent this address, and it may stop answering. The referee runs on the web and holds the deck,
-          so neither phone can look at the other's hand. Whoever runs the server could look; every shuffle is
-          still checkable when the game ends.
+          <strong>At a server table, a referee on the web holds the deck,</strong> so neither phone can look at
+          the other's hand. It is a casual table: no accounts, and the service can be busy or stop answering.
+          Whoever runs the server could look; every shuffle is still checkable when the game ends.
         </p>}
         {/* THE HONEST LINE FOR A JUDGED TABLE (HIDDEN HANDS H3) */}
         <p className="mnote">
