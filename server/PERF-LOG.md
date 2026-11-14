@@ -10,3 +10,19 @@ Every response now carries headers `Server-Timing: ready, get, put, bc, app, tot
 - Lobby/deal: 27 posts to reach ready (create 1, join 3 + 4 claim/heal, hello 4, hero 2, seedg 2, throw 4, open 4, seat 1, board 2).
 - Mid-game: 260 actions = 260 requests, EXACTLY 1 request per action, no retries on the clean fake. Uplink 172 B avg per action; downlink grows with the log: 242 B at action 5, 2.1 KB at 100, 4.3 KB at 250 (the actor's own commit frames).
 - Stored row (offline, 260 actions): 48,340 bytes.
+
+## Step 3: LIVE function, Node phones (tools/perf-live.js, 120 actions kayo v dash, no think time; instrumented function v6, 2026-11-14)
+Per request (client wall): median 194.7 ms, p95 354, max 2434. Function itself (Server-Timing total): median 116.5, p95 204. Split (medians): row SELECT 29.6, table_put 35.3, broadcast call 30.6, app (parse+rehydrate+apply) 19.4. Client minus function (network + gateway): median 71 ms, p95 137.
+1 request per action (120/120). Bytes: up 167 B median; down median 247 B, p95 3.5 KB; stored row 25 KB median, 35 KB max at 120 actions.
+Cold: 4 of 151 requests were the first on a new instance (331-445 ms each, function app 98 ms + ready 39 ms); 5 instances served the one game.
+Conflicts (version races): 5 of 151 requests, 5 of the first 27 lobby requests... (lobby hello/hero/throw); each costs a jittered 60-180 ms pause + a retry.
+Tail: 2 of 120 actions took 1.3 s and 2.4 s (one was Postgres table_put = 1844 ms inside the function, one pure network: function total 128 ms).
+Push: the function awaits the broadcast before answering, so the OTHER seat's push arrives a median -10 ms vs the actor's own answer (131 of 137 pushes arrive BEFORE the answer); POST sent -> other seat's websocket message: median 187 ms, p95 326.
+=> from Node the server table is ~200 ms per move both ways. This does not explain "up to 5 seconds".
+
+## Step 4 (user detail: "up to 5 s between pressing the button and the other player receiving the move"): THE REAL BROWSER
+Chromium (Playwright 1.63) CAN open a websocket to wss://fokcpzplomjsraquaaid.supabase.co/realtime/v1/websocket through the proxy (open in 208 ms), so a live page drive is possible (tools/perf-page.js live).
+ROOT CAUSE, reproduced on the real page v6.26 against the live function: `engine/servertable.js loadSupabase(o)` set `el.src = o.url || SUPABASE_JS`, and `supabaseTransport` calls `loadSupabase(config)` where `config.url` is the PROJECT address. The page therefore requested
+`<script src="https://fokcpzplomjsraquaaid.supabase.co/">` (the project root, a 404 JSON body; Chromium: net::ERR_BLOCKED_BY_ORB), supabase-js never loaded, `window.supabase` stayed undefined, NO websocket was ever created (0 `ws-new` events in the page), the status read "Lost touch - trying again...". Every Node drill/rehearsal passed `lib:` so the CDN path was never run.
+Consequence in v6.26: in a browser there is NO push, ever. Fallbacks: heal poll `pollMs: 20000` only. And `ingest` never moved a "reconnecting" channel to "seated", so the host's lobby stayed shut: in the live drive the page (host) was still on "Lost touch" with the guest seated 90 s later (polls every 20 s answered 200 but changed nothing).
+(The user's game "worked": not explained by this drive; open question in the final report.)
