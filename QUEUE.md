@@ -87,7 +87,9 @@ repeatable live drill `tools/supabase-live.js`. Also fixed: the page never regis
   (drills injected the library). Fixed + 2 s fallback heal while push is down; real page in Chromium vs live:
   push 234 ms median, p95 475. Function v7 = build v6.27, stamped. `server/PERF-LOG.md`. UNEXPLAINED: user saw
   <=5 s where the bug measured ~20 s. ASKED the user to re-test.
-- **WAITING ON THE USER (re-test after v6.27):** the two-phone test at `https://dawnblade-ai.github.io/dawnblade-ai/?server=1`
+- **RE-TEST PASSED (user, 2026-11-14, v6.27):** "Like night and day ... things happen in an instant now." A real
+  two-phone server game works and is fast. ASKED: open the door to everyone (`SERVER_TABLE.on: true`)?
+- **(superseded) two-phone test address:** `https://dawnblade-ai.github.io/dawnblade-ai/?server=1`
   (UNVERIFIED: a real phone browser's websocket + the jsdelivr supabase-js path). If it passes: flip `on: true`.
 - **NEXT:** S4 anonymous sign-in (currently OFF in the project), seat = auth.uid(), private channels; then H4 ranked.
 **H-LYATH2 DIAGNOSED, PARKED** (`experiments/lyath2-NOTES.md`): Sharp's pre-attack plays are all Instants or
