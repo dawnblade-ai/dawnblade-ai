@@ -43,7 +43,8 @@ function world(server, o){
   const store = F.memStore(), sent = [], idp = F.memIdentity();
   let clock = 1700000000000; const rnd = T.seeded("id|" + ((o && o.salt) || ""));
   const deps = {store, broadcast: (t, p) => sent.push({topic: t, payload: json(p)}), deal: T.dealSpec, build: T.BUILD, now: () => clock++, rand: () => rnd,
-    ...(o && o.noIdentify ? {} : {identify: (o && o.identify) || (t => idp.identify(t))})};
+    ...(o && o.noIdentify ? {} : {identify: (o && o.identify) || (t => idp.identify(t))}),
+    ...(o && o.noRename ? {} : {rename: (o && o.rename) || ((p, n, f) => idp.rename(p, n, f))})};
   const ID = "IDTAB1";
   server.handleNow({op: "create", table: ID}, deps);
   const go = req => json(server.handleNow(req, deps));
@@ -292,14 +293,15 @@ test("SABOTAGE (5): a validator with no character class, or no reserved list, or
   }
 });
 function nameJoinFailures(server){
-  const bad = [], w = world(server, {salt: "names"}), P = w.idp.issue("P-zero"), Q = w.idp.issue("P-one", "Stored Name"), Z = w.idp.issue("P-zed", "x!");
+  const bad = [], w = world(server, {salt: "names"}), P = w.idp.issue("P-zero", "Dawn Smith"), Q = w.idp.issue("P-one", "Stored Name"), Z = w.idp.issue("P-zed", "x!");
   const base = w.snap();
-  for(const name of ["ab", "Admin", "Ana!", 5]){
+  /* S4.2: a name is the PLAYER'S (op "me"); one offered at a join, good or bad, is refused and seats nobody */
+  for(const name of ["ab", "Admin", "Ana!", 5, "Rival One"]){
     const r = w.go({op: "join", table: w.ID, identity: {token: P, name}});
-    if(r.refused !== "bad-request" || r.field !== "name" || typeof r.reason !== "string") bad.push("name " + JSON.stringify(name) + " answered " + JSON.stringify(r).slice(0, 80));
+    if(r.refused !== "bad-request" || r.field !== "name" || r.reason !== "at-join") bad.push("name " + JSON.stringify(name) + " answered " + JSON.stringify(r).slice(0, 80));
   }
   if(JSON.stringify(w.snap()) !== JSON.stringify(base)) bad.push("a refused name changed the table");
-  const a = w.go({op: "join", table: w.ID, identity: {token: P, name: "Dawn Smith"}});
+  const a = w.join(P);
   if(!a.ok || JSON.stringify(a.names) !== JSON.stringify(a.seat === 0 ? ["Dawn Smith", null] : [null, "Dawn Smith"])) bad.push("the namer's own answer does not carry the public names: " + JSON.stringify(a.names));
   const b = w.join(Q);                         /* no name in the request: the provider's stored default, validated */
   const bn = b.seat === 0 ? ["Stored Name", "Dawn Smith"] : ["Dawn Smith", "Stored Name"];
@@ -319,10 +321,58 @@ test("(5) NAMES RIDE THE IDENTITY — validated, public to both seats, an invali
   assert.deepEqual(nameJoinFailures(SERVER), []);
 });
 test("SABOTAGE (5b): a referee that skips the name check, or answers with the player id, is seen", () => {
-  const noCheck = loadServer([["if(!v.ok) return no(\"bad-request\", {field: \"name\", reason: v.reason});", ""]]);
+  const noCheck = loadServer([["if(idn.name !== undefined) return no(\"bad-request\", {field: \"name\", reason: \"at-join\"});", ""]]);
   assert.ok(nameJoinFailures(noCheck).length >= 1);
   const leakId = loadServer([["const pub = row => { const n = namesOf(row);", "const pub = row => { const n = namesOf(row); if(row.owners) return {names: n.slice(), who: row.owners};"]]);
   assert.ok(nameJoinFailures(leakId).some(x => /private identity string/.test(x)));
+});
+
+/* ---------------------------------------------------------------------------------------------- (5c) */
+/* op "me": who am I, and the one way a display name is set. Unique on its FOLD; the join then shows the stored name. */
+function meFailures(server){
+  const bad = [], w = world(server, {salt: "me"}), P = w.idp.issue("P-zero"), Q = w.idp.issue("P-one");
+  const me = (tok, name) => w.go({op: "me", identity: {token: tok}, ...(name !== undefined ? {name} : {})});
+  const eq = (r, want, what) => { if(JSON.stringify(r) !== JSON.stringify(want)) bad.push(what + ": " + JSON.stringify(r).slice(0, 90)); };
+  const base = w.snap();
+  eq(me(P), {ok: true, name: null}, "a new player has no name");
+  if(w.idp.renames !== 0) bad.push("asking who I am wrote to the registry");
+  for(const [name, reason] of [["ab", "short"], ["Admin", "reserved"], ["Ana!", "chars"], [5, "type"]])
+    eq(me(P, name), {ok: false, refused: "bad-request", field: "name", reason}, "an invalid name " + JSON.stringify(name));
+  if(w.idp.renames !== 0) bad.push("an invalid name reached the registry");
+  eq(me(P, "Dawn Smith"), {ok: true, name: "Dawn Smith"}, "a free name");
+  eq(me(P), {ok: true, name: "Dawn Smith"}, "the stored name reads back");
+  /* ONE holder per fold: case, spaces and look-alikes are the same name; a different name is free */
+  for(const name of ["Dawn Smith", "dawn smith", "DAWNSMITH", "Dawn Sm1th"]) eq(me(Q, name), {ok: false, refused: "name-taken"}, "another player asking for " + name);
+  eq(me(Q), {ok: true, name: null}, "a refused name was stored");
+  eq(me(P, "dawn SMITH"), {ok: true, name: "dawn SMITH"}, "the holder restyling their own name");
+  eq(me(Q, "Rival One"), {ok: true, name: "Rival One"}, "a second free name");
+  /* forged / malformed / nothing wired */
+  eq(me("jwt.forged", "Free Name"), {ok: false, refused: "identity"}, "a forged token naming itself");
+  eq(w.go({op: "me"}), {ok: false, refused: "bad-request"}, "no identity");
+  eq(w.go({op: "me", identity: {token: 7}}), {ok: false, refused: "bad-request"}, "a token that is not a string");
+  eq(json(server.handleNow({op: "me", identity: {token: P}, name: "Free Name"}, {...w.deps, rename: undefined})), {ok: false, refused: "identity"}, "no registry wired");
+  eq(json(server.handleNow({op: "me", identity: {token: P}}, {...w.deps, identify: undefined})), {ok: false, refused: "identity"}, "no provider wired");
+  eq(json(server.handleNow({op: "me", identity: {token: P}, name: "Free Name"}, {...w.deps, rename: () => { throw new Error("registry down P-zero"); }, log: () => {}})), {ok: false, refused: "internal"}, "a registry outage");
+  eq(json(server.handleNow({op: "me", identity: {token: P}, name: "Free Name"}, {...w.deps, rename: () => "maybe", log: () => {}})), {ok: false, refused: "internal"}, "a registry answering nonsense");
+  /* none of it touched the table, and the names now ride the joins */
+  if(JSON.stringify(w.snap()) !== JSON.stringify(base)) bad.push("op me changed a table");
+  const a = w.join(P), b = w.join(Q);
+  if(!a.ok || !b.ok || JSON.stringify(b.names.slice().sort()) !== JSON.stringify(["Rival One", "dawn SMITH"])) bad.push("the joins do not show the stored names: " + JSON.stringify(b.names));
+  const text = JSON.stringify([me(P), me(Q), a, b, w.sent]);
+  for(const x of ["P-zero", "P-one", P, Q]) if(text.indexOf(x) >= 0) bad.push("a private identity string reached an answer: " + x);
+  return bad;
+}
+test("(5c) OP ME — who am I; a name is validated, stored once, UNIQUE ON ITS FOLD (case, spaces, look-alikes), shown by the joins; forged/outage/malformed refused", () => {
+  assert.deepEqual(meFailures(SERVER), []);
+});
+test("SABOTAGE (5c): a referee that folds nothing, treats 'taken' as stored, skips the validator, or names the player is seen", () => {
+  const sabs = [
+    [["return then(deps.rename(who.player, want, nameFold(want)), r => {", "return then(deps.rename(who.player, want, want), r => {"]],
+    [["if(r === \"taken\") return no(\"name-taken\");", "if(r === \"taken\") return {ok: true, name: want};"]],
+    [["    if(!v.ok) return no(\"bad-request\", {field: \"name\", reason: v.reason});\n    want = v.name;", "    want = req.name;"]],
+    [["if(r === \"ok\") return {ok: true, name: want};", "if(r === \"ok\") return {ok: true, name: want, player: who.player};"]],
+    [["if(!who) return no(\"identity\");                 /* forged, expired, unknown */\n    if(typeof who !== \"object\" || typeof who.player !== \"string\" || !PLAYER_RE.test(who.player)) throw new Error(\"identify answered something that is not a player\");\n    if(want == null)", "if(who == null) who = {player: \"nobody\"};\n    if(want == null)"]]];
+  for(const s of sabs) assert.ok(meFailures(loadServer(s)).length >= 1, "the sabotage must be seen: " + s[0][1].slice(0, 50));
 });
 
 /* ---------------------------------------------------------------------------------------------- (6) */

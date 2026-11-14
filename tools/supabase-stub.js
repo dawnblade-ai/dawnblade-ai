@@ -69,6 +69,15 @@ function makeStub(o){
           const p = players.get(identities.get(k));
           return reply(200, [{player_id: p.id, display_name: p.display_name}]);
         }
+        if(req.method === "POST" && url.pathname === "/rest/v1/rpc/player_rename"){     /* 003_names.sql: one holder per fold */
+          stats.renames = (stats.renames || 0) + 1;
+          const {p_player, p_name, p_fold} = JSON.parse(body);
+          if(typeof p_player !== "string" || typeof p_name !== "string" || typeof p_fold !== "string" || !p_fold){ stats.bad.push("player_rename args"); return reply(400, {message: "bad args"}); }
+          if(!players.has(p_player)) return reply(200, "unknown");
+          for(const p of players.values()) if(p.id !== p_player && p.name_fold === p_fold) return reply(200, "taken");
+          Object.assign(players.get(p_player), {display_name: p_name, name_fold: p_fold});
+          return reply(200, "ok");
+        }
         if(req.method === "POST" && url.pathname === "/realtime/v1/api/broadcast"){
           const {messages} = JSON.parse(body);
           if(!Array.isArray(messages) || !messages.length) return reply(422, {errors: {messages: ["can't be blank"]}});

@@ -150,7 +150,16 @@ async function identityPhase(label, base, stub, log){
   const go = async body => { const r = await post(body); texts.push(r.text); return r; };
   const made = await go({op: "create"}); const code = made.table;
   const sBefore = stub.stats.auths;
-  const a = await go({op: "join", table: code, identity: {token: tokA, name: "Rehearsal Ann"}});
+  /* S4.2: the name is set by op "me" (player_rename), unique on its fold, and the join shows the stored one */
+  const who0 = await go({op: "me", identity: {token: tokA}});
+  const named = await go({op: "me", identity: {token: tokA}, name: "Rehearsal Ann"});
+  const clash = await go({op: "me", identity: {token: tokB}, name: "rehearsal ann"});
+  const who1 = await go({op: "me", identity: {token: tokA}});
+  row(who0.ok && who0.name === null && named.ok && named.name === "Rehearsal Ann" && clash.ok === false && clash.refused === "name-taken" && who1.name === "Rehearsal Ann",
+    label + ": identity: op me reads no name, stores a free one, refuses its fold to another player, and reads it back", JSON.stringify([who0.name, named.name, clash.refused, who1.name]));
+  const atJoin = await go({op: "join", table: code, identity: {token: tokA, name: "Rehearsal Ann"}});
+  row(atJoin.ok === false && atJoin.refused === "bad-request" && atJoin.reason === "at-join", label + ": identity: a name offered at a join is refused");
+  const a = await go({op: "join", table: code, identity: {token: tokA}});
   const kA = keyOf(a);
   row(a.ok && a.seat === 0 && a.owned === true && !!kA, label + ": identity: a join with a (stub) sign-in token is seated and bound to a player", "seat " + a.seat);
   const v1 = stub.version(code), row1 = JSON.stringify(stub.row(code));

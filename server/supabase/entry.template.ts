@@ -160,6 +160,20 @@ const mkIdentify = (c: any) => async (token: string) => {
   } finally { c.get += nowMs() - t; }
 };
 
+/* S4.2 — the name registry: `deps.rename(player, name, fold)` is 003_names.sql's player_rename ("ok" | "taken"; anything else,
+   "unknown" included, throws and is answered `internal`). The unique index on the fold decides a race. */
+const mkRename = (c: any) => async (player: string, name: string, fold: string) => {
+  const t = nowMs();
+  try {
+    const k = conf();
+    const r = await fetch(k.url + "/rest/v1/rpc/player_rename", {method: "POST", headers: k.headers, body: JSON.stringify({p_player: player, p_name: name, p_fold: fold})});
+    if(!r.ok) throw new Error("rename " + r.status);
+    const v: any = await r.json();
+    if(v === "ok" || v === "taken") return v;
+    throw new Error("rename answered neither ok nor taken");
+  } finally { c.put += nowMs() - t; }
+};
+
 /* ---- HTTP ----------------------------------------------------------------------------------------------- */
 function cors(req: Request){
   const origin = req.headers.get("origin");
@@ -189,7 +203,7 @@ Deno.serve(async (req: Request) => {
   try { r = ready(); } catch(e){ console.error(e); return send(req, {ok: false, refused: "internal"}); }
   c.ready = nowMs() - tr;
   const answer = await G.DawnServer.handle(request, {store: mkStore(c), broadcast: mkBroadcast(c), deal: r.deal, build: r.build, now: () => Date.now(),
-    ...(Deno.env.get("TABLE_IDENTITY") === "off" ? {} : {identify: mkIdentify(c)}),
+    ...(Deno.env.get("TABLE_IDENTITY") === "off" ? {} : {identify: mkIdentify(c), rename: mkRename(c)}),
     log: (e: any) => console.error(String(e && e.stack || e))});          // operator logs only; an error never rides a response
   return send(req, answer, 200, timingHeaders(c, cold));
 });

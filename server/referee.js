@@ -300,7 +300,7 @@ function me(req, deps){
   }
   if(typeof deps.identify !== "function") return no("identity");
   return then(deps.identify(idn.token), who => {
-    if(who == null) return no("identity");
+    if(!who) return no("identity");                 /* forged, expired, unknown */
     if(typeof who !== "object" || typeof who.player !== "string" || !PLAYER_RE.test(who.player)) throw new Error("identify answered something that is not a player");
     if(want == null){ const v = who.name != null ? validateName(who.name) : null; return {ok: true, name: v && v.ok ? v.name : null}; }
     if(typeof deps.rename !== "function") return no("identity");
