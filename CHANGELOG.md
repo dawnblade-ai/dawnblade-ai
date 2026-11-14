@@ -1,3 +1,34 @@
+## v6.32 — ranked server tables: the result is recorded once, and ratings move
+
+- **A ranked table is a choice at create.** On the server-table screen a switch reads *Friendly table* (the default, exactly as before) or *Ranked table*
+  ("Counts toward both ratings"); the button then reads *Open a ranked table*. A ranked table needs two DIFFERENT signed-in players who each have a chosen
+  name. A phone that cannot meet that is refused in a plain sentence: *"A ranked table needs a player name for both players. Choose yours under Playing as,
+  then try again."* (no name), or *"A ranked table is for signed-in players, and this phone could not sign in just now..."* (no sign-in). Nothing is written by a refusal.
+  The lobby line and the board say **Ranked** and show each player's rating beside their name.
+- **Who goes first:** unchanged and already as ruled: every server table's lobby is the two-phone rock-paper-scissors (sealed throws, opened only once both
+  are in, ties replay) and the WINNER CHOOSES who goes first. Nothing to build.
+- **The result is written by the function only, exactly once.** When a ranked game ends (a win on life, a concession, or the engine's dead-position DRAW) the
+  function reads who won, how and how many turns from its OWN game state, after the deciding move is saved, and calls `result_record`: one `results` row (game,
+  both players, heroes, winner or draw, how it ended, turns, build, times, both ratings before/after) and both ratings updated in the SAME transaction.
+  Idempotent on the game id (the table code plus the moment the table was made, so a code drawn again later is a new game): a replayed ending, a resync, a
+  takeover or a retry answers the stored result and moves nothing. No request from a phone can name a winner (forgery drills). If recording fails the game is
+  not undone: the next request of any kind records it. There is a Concede button on the board (`concede`); there is no leave/abandon op.
+  **Gap (the forfeit clock closes it later):** a ranked table its creator closes before the game ended records NOTHING (so a creator can dodge a loss by
+  closing). A decided game's table cannot be closed over, so close can never erase a result.
+- **Ratings:** Elo, one per player (not per hero), start 1200, K 32, a draw is half a point, rounded to integers, computed IN SQL (`rating_start()`,
+  `rating_k()` are the one place the constants live). Two simultaneous finishes of one player's two games both apply (one advisory lock per player, lower id first;
+  proven on a real Postgres 16: with the locks 1231, without 1216). Records kept: games, wins, losses, draws.
+- **What a player sees:** `me` now also returns rating and record; the name sheet shows them ("Your rating is 1312. 1 ranked game: 1 won, 0 lost, 0 drawn.");
+  at the end of a ranked game each phone's end screen says "Well played. Your rating rose from 1300 → 1312 (+12)." / "Your rating moved from 1200 → 1184 (−16).
+  Every game teaches something." / "Your rating stays at 1200.".
+- **Privacy:** player ids, tokens and subjects still never leave the function; ratings, names and the result summary are public by design (scanned by the drills).
+- **WIRE_V stays 40, DATA_VER unchanged:** no wire payload, prompt or game key changed; ranked rides the request envelope and the function's own answers and row.
+  The stored row for a ranked table is **v4** (a v6.31 function refuses it as `wire`: a rollback cannot turn a ranked table into a casual one).
+- **To go live (the CEO):** run `server/supabase/006_ratings.sql` (ends `[{"dawnblade_ratings":"ok"}]`, safe to run twice) BEFORE redeploying; re-bundle and redeploy
+  `table`; `--stamp`; `node tools/livecheck.js` (the ranked check is WRITTEN BUT NOT RUN on live). A function redeployed before 006 refuses ranked creates with `internal`.
+- **Drills:** `test/serverranked.test.js`, `test/serverrankedphone.test.js` (each with sabotage), `test/fixtures/elo-vectors.json` (the shared Elo table the fake and
+  the SQL are both held to), `tools/sql-pglite.js` (006 twice, 20 sabotages, vectors), `tools/sql-race.sh rate|ratenolock`, the Deno rehearsal (ranked phase), `tools/serverpage.js` (ranked at 393x852).
+
 ## v6.31 — a player's name is on the board, and no player holds more than 5 open tables
 
 - **Names on the board.** At a server table each seat's player name (when that player has one) is on the table board, small and dim, under that seat's hero

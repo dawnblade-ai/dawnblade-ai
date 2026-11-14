@@ -439,7 +439,10 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
     /* 70,922 -> 71,449 AT v6.31, READ FIRST: still `<style>` -> `</style>`; the growth is
        the board's player name (`.heromid{min-width:0}`, `.heromid .pname`) and the cap's
        list of open tables (`.tblopen`, its button and its code). */
-    "phasebar.test.js index.html 71449",
+    /* 71,449 -> 72,329 AT v6.32, READ FIRST: still `<style>` -> `</style>`; the growth is
+       the ranked table's rules (`.tblrk` the Ranked chip, `.tblrt` a rating, `.tblsw` the
+       Friendly/Ranked switch, `.rankchg` the rating change, `.prate` the rating on the board). */
+    "phasebar.test.js index.html 72329",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
        `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
        `abPickBound` in the pick legality it extends. */

@@ -124,8 +124,8 @@ deploy there is no stamp; `--check` then compares the generated copy only.
 
 - **Anonymous sign-in is ON** (the user's decision, 2026-11-14): `PATCH /v1/projects/{ref}/config/auth` body `{"external_anonymous_users_enabled":true}`.
   The page signs in with `POST /auth/v1/signup` body `{}` and refreshes with `POST /auth/v1/token?grant_type=refresh_token` (publishable key as `apikey`).
-- **SQL, in order, each safe to run twice:** `001_tables.sql`, `002_players.sql`, `003_names.sql`, `004_recovery.sql`, `005_table_cap.sql` (`POST /v1/projects/{ref}/database/query`; each ends with one `ok` row;
-  `005` ends `dawnblade_table_cap`). **Run `005` BEFORE redeploying the v6.31 function:** a signed-in create calls `table_create_capped`, which must exist.
+- **SQL, in order, each safe to run twice:** `001_tables.sql`, `002_players.sql`, `003_names.sql`, `004_recovery.sql`, `005_table_cap.sql`, `006_ratings.sql` (`POST /v1/projects/{ref}/database/query`; each ends with one `ok` row;
+  `005` ends `dawnblade_table_cap`, `006` ends `dawnblade_ratings`). **Run `006` BEFORE redeploying the v6.32 function (ranked results call `result_record`, `me` calls `rating_get`). Run `005` BEFORE redeploying the v6.31 function:** a signed-in create calls `table_create_capped`, which must exist.
   Offline check: `PGLITE_DIR=<scratch> node tools/sql-pglite.js`.
 - The function verifies a token at `/auth/v1/user`, maps it with `identity_resolve`, stores a name with `player_rename`. `TABLE_IDENTITY=off` (a function secret) switches all of it off:
   every table is then casual.
@@ -136,6 +136,12 @@ deploy there is no stamp; `--check` then compares the generated copy only.
   lock. OPEN = `row->>'creator'` is the player, `row->>'over'` is not `true`, `updated_at` within 48 hours. The referee sets `over` when a game ends or the creator closes the table
   (`{op:"close"}`). The sixth answers `table-cap` (+ `cap`, `open:[codes]`). Casual tables (no identity) have no creator and are neither counted nor refused.
 - Real-Postgres race proof: `tools/sql-race.sh start|real|nolock|stop` (needs the Postgres 16 server binaries; offline).
+
+## Ranked results and ratings (S5.1, v6.32)
+
+- `006_ratings.sql`: `ratings` (one row per player), `results` (one row per ranked game, key = table code + creation time), `rating_get`, `result_record` (idempotent; both ratings and the result in one
+  transaction under one advisory lock per player, lower id first), constants `rating_start()` = 1200, `rating_k()` = 32. service_role only. Offline: `PGLITE_DIR=<scratch> node tools/sql-pglite.js`; real race: `tools/sql-race.sh start|rate|ratenolock|stop`.
+- A ranked table is a v4 row. A closed-mid-game ranked table records nothing (the forfeit clock, later).
 
 ## Known limits of the casual stage (see `001_tables.sql` for the channel decision)
 - Public channels: anyone who learns a seat's channel name can listen to that seat's hand and cannot be revoked; they cannot forge a frame (every push is sealed under the seat key). Private channels with sign-in are S4.
