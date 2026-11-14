@@ -9,21 +9,26 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-14, at v6.30)
+## HANDOFF — START HERE (CEO, 2026-11-14, at v6.31)
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
 ### NEW THREAD: READ THIS BLOCK FIRST (written 2026-11-14 by CEO session_013xG9xCQHaLR2DeWf3gSrzu)
-- **State:** live = v6.30 on `main` (8d36415), livecheck ALL PASS (push 43, fallback 0, median 349 ms, p95 458; a third
-  fresh phone redeemed seat 0's recovery code). Function `table` version 14 = build `v6.30 · sage-v17`, stamped;
-  `supabase-bundle --check` OK. `004_recovery.sql` RUN on the project (`[{"dawnblade_recovery":"ok"}]`). No unreleased work.
+- **State:** live = v6.31 on `main` (f1a0fb3), livecheck ALL PASS (push 41, fallback 0, median 346 ms, p95 547; third phone
+  redeems a recovery code; seat 0's name on both boards). Function `table` version 16 = build `v6.31 · sage-v17`, stamped;
+  `--check` OK. SQL 001-005 all RUN on the project. CI `drills` green at v6.30 (run 279); v6.31's run 280 was in progress.
+- **v6.31 SHIPPED** (`docs/progress/v6.31.md`, S4-LOG): player names on the board during a server game (from the function's
+  `names`, never in game state); at most 5 OPEN tables per signed-in creator (`005_table_cap.sql` `table_create_capped`,
+  advisory lock per creator; open = creator's, not `over`, touched within 48 h; refusal `table-cap` lists their codes with
+  Close buttons; new creator-only `{op:"close"}`). Casual (not signed in) tables are uncapped, as before.
+- **IN PROGRESS when this was written:** S5.1 ranked results + Elo (a sonnet subagent, offline, on the session branch).
 - **v6.30 = S4.3 SHIPPED** (`server/S4-LOG.md`, CHANGELOG, `docs/progress/v6.30.md`): ops `recovery-mint` (code shown once,
   15 chars / 74 bits, only its SHA-256 stored, 730 days, a new code retires the old) and `recovery-redeem` (the new phone's
   sign-in is re-pointed to the code's player in one transaction; its throwaway player is deleted; wrong/used/expired = one
   answer; 8 wrong tries per sign-in per hour = limited; refused while the throwaway is seated at a table the page lists).
   Name sheet has "Get a recovery code" / "I have a code". WIRE_V stays 40.
-- **NEXT, in order:** names on the board during the game (lobby only today) -> cap 5 open tables per player -> S5 ranked
+- **NEXT, in order:** S5 ranked
   (results/ratings written only by the function, Elo 1200, forfeit clock, leaderboard).
 - **ASKED the user 2026-11-14, unanswered (default built = allowed):** a phone whose player already has a NAME and redeems a
   code gives that player up (name freed). Refuse instead?
