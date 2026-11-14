@@ -124,13 +124,13 @@ function withRecovery(idp, o){
 /* THE RATINGS BACKEND, FAKED (S5.1): what `deps.rating` / `deps.record` stand on, behaving as 006_ratings.sql does — a player nobody has rated reads as
    1200 with no games; a result is stored ONCE per game id (a second call answers the stored one, recorded:false, and moves nothing); both ratings move
    in the same step by Elo, K 32, a draw half a point, each rounded to an integer. Its arithmetic is checked against test/fixtures/elo-vectors.json (the
-   very table tools/sql-pglite.js feeds to the SQL), so it cannot drift from the real thing. The sabotages: `noIdempotent` records every call, `failing`
-   makes `record` throw (the database is down), `stale` computes a rating from the one read at the START of a call (the lost update the SQL's locks stop). */
+   very table tools/sql-pglite.js feeds to the SQL), so it cannot drift from the real thing. The sabotages: `noIdempotent` records every call, `k` is another K, `failing`
+   makes `record` throw (the database is down). */
 function withRatings(o){
   o = o || {};
   const rt = new Map(), results = new Map();
   const get = p => { if(!rt.has(p)) rt.set(p, {rating: 1200, games: 0, wins: 0, losses: 0, draws: 0}); return rt.get(p); };
-  const elo = (ra, rb, score) => { const K = 32, e = 1 / (1 + Math.pow(10, (rb - ra) / 400)); return [Math.round(ra + K * (score - e)), Math.round(rb + K * ((1 - score) - (1 - e)))]; };
+  const elo = (ra, rb, score) => { const K = o.k || 32, e = 1 / (1 + Math.pow(10, (rb - ra) / 400)); return [Math.round(ra + K * (score - e)), Math.round(rb + K * ((1 - score) - (1 - e)))]; };
   const st = {rt, results, records: 0, duplicates: 0, lookups: 0, failing: false, elo,
     rating(player){ st.lookups++; const r = rt.has(player) ? rt.get(player) : {rating: 1200, games: 0, wins: 0, losses: 0, draws: 0}; return {...r}; },
     record(x){
