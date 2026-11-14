@@ -436,7 +436,10 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        70,334 -> 70,922 AT v6.30, READ FIRST: still `<style>` -> `</style>`; the
        growth is the recovery code's three rules (`.tblrec` the code shown once,
        `.tblrecin` the field, `.tblok` the welcome line). */
-    "phasebar.test.js index.html 70922",
+    /* 70,922 -> 71,449 AT v6.31, READ FIRST: still `<style>` -> `</style>`; the growth is
+       the board's player name (`.heromid{min-width:0}`, `.heromid .pname`) and the cap's
+       list of open tables (`.tblopen`, its button and its code). */
+    "phasebar.test.js index.html 71449",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
        `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
        `abPickBound` in the pick legality it extends. */

@@ -7103,7 +7103,7 @@ function TableScreen({onBack, onSeated}){
     }).catch(e=>{ if(!live.current) return; setBusy(false); recFail(e); });
   };
   /* THE CAP OF OPEN TABLES (SERVER S4.4; user ruling: 5 open tables per player). The referee names the player's open tables; each can be
-     closed from here, which is the way out for a table nobody will sit at (it would otherwise count until it had been idle two days). */
+     closed from here, which is the way out for a table nobody will sit down at, which would otherwise count until it had been idle two days. */
   const [capOpen,setCapOpen] = uS([]);
   const [capNote,setCapNote] = uS(null);
   const closeMine = c => {
