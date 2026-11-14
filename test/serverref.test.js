@@ -478,7 +478,7 @@ function claimFailures(server){
 }
 test("(g) CLAIM TOKEN — an unkeyed join asked again with its token gets the SAME seat, key and counter and writes nothing; other tokens take the other chair; a full table stays full", () => {
   assert.deepEqual(claimFailures(SERVER), []);
-  assert.equal(SERVER.ROW_V, 2, "the stored row's shape changed (claims): its own version moved");
+  assert.equal(SERVER.ROW_V_CASUAL, 2, "a casual table's row is still the v2 shape (claims)"); assert.equal(SERVER.ROW_V, 3, "the newest row (owners, names, retired) is v3");
 });
 test("SABOTAGE (g): a referee that ignores the token strands a seat on a retry", () => {
   const sab = loadServer([["if(tok !== undefined){\n    const prior", "if(false){\n    const prior"]]);

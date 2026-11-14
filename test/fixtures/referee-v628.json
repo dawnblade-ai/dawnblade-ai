@@ -1,0 +1,140 @@
+{
+ "recordedAgainst": "v6.28 referee, git dc2ee48 (server/referee.js before S4.1)",
+ "steps": [
+  {
+   "what": "create",
+   "res": "1a8da994020b2c0102ada9c280773a280ff25198aaefb45c4b56fa4531f0b10f",
+   "row": "e217542edcc62df1600956c9d05b4770ab250fb3739f341bd3432b3eabaa2b42",
+   "version": 1,
+   "ok": true,
+   "refused": null,
+   "pushes": 0
+  },
+  {
+   "what": "join A (claim)",
+   "res": "60cd126c5a1f6ad95a134232516e73836e2e8417e0b6d07263987403ad436b5c",
+   "row": "142419bade8223a6754ff351f09c4d64b0d5dc7d5abeab5d510197b2d20cbfbf",
+   "version": 2,
+   "ok": true,
+   "refused": null,
+   "pushes": 0
+  },
+  {
+   "what": "join A again (same claim)",
+   "res": "60cd126c5a1f6ad95a134232516e73836e2e8417e0b6d07263987403ad436b5c",
+   "row": "142419bade8223a6754ff351f09c4d64b0d5dc7d5abeab5d510197b2d20cbfbf",
+   "version": 2,
+   "ok": true,
+   "refused": null,
+   "pushes": 0
+  },
+  {
+   "what": "join B (no claim)",
+   "res": "92874ac06ac7d74df5d372f71231f5cf8c1fbd079e57c91cfc134e9b2b0fed05",
+   "row": "11761becfcc1a8ac90b0d5a5ffc9130986bc399567aea8f4ef74aec391bf712f",
+   "version": 3,
+   "ok": true,
+   "refused": null,
+   "pushes": 0
+  },
+  {
+   "what": "join C (full)",
+   "res": "9caccde6cf604c76ac786c70abfc7f2e961587652ae1283dea1d5fe7969bf03e",
+   "row": "11761becfcc1a8ac90b0d5a5ffc9130986bc399567aea8f4ef74aec391bf712f",
+   "version": 3,
+   "ok": false,
+   "refused": "full",
+   "pushes": 0
+  },
+  {
+   "what": "join with a bad claim",
+   "res": "488d096441831782b0f0efa57f85bc1c831099481da8b166cc8b16b3a43c0aab",
+   "row": "11761becfcc1a8ac90b0d5a5ffc9130986bc399567aea8f4ef74aec391bf712f",
+   "version": 3,
+   "ok": false,
+   "refused": "bad-request",
+   "pushes": 0
+  },
+  {
+   "what": "keyed join A",
+   "res": "81f5f3c96c986f9e05363a26f3f93c4692b6ced638151fe371476ec04b43fbd2",
+   "row": "11761becfcc1a8ac90b0d5a5ffc9130986bc399567aea8f4ef74aec391bf712f",
+   "version": 3,
+   "ok": true,
+   "refused": null,
+   "pushes": 0
+  },
+  {
+   "what": "keyed join with the other seat's key",
+   "res": "93cd88a6bbf67d2ea29a56fa7c45e3b3e6ba3e1c35b83c0ff4564fc2d97d7961",
+   "row": "11761becfcc1a8ac90b0d5a5ffc9130986bc399567aea8f4ef74aec391bf712f",
+   "version": 3,
+   "ok": false,
+   "refused": "auth",
+   "pushes": 0
+  },
+  {
+   "what": "resync A",
+   "res": "074b958fd30caf56dcb735a69257f58ab713b5a05bcfe6dc75114a12d3adb015",
+   "row": "11761becfcc1a8ac90b0d5a5ffc9130986bc399567aea8f4ef74aec391bf712f",
+   "version": 3,
+   "ok": false,
+   "refused": "not-dealt",
+   "pushes": 0
+  },
+  {
+   "what": "frame with a wrong key",
+   "res": "93cd88a6bbf67d2ea29a56fa7c45e3b3e6ba3e1c35b83c0ff4564fc2d97d7961",
+   "row": "11761becfcc1a8ac90b0d5a5ffc9130986bc399567aea8f4ef74aec391bf712f",
+   "version": 3,
+   "ok": false,
+   "refused": "auth",
+   "pushes": 0
+  },
+  {
+   "what": "hero A",
+   "res": "e95ef6b38ab29be6c32a1965889024bffe10c75060ee263e699c3eb1ae8bf109",
+   "row": "f5e8725efbc7f28665d23a2a4fe3cbf8e92479e23096f3e829b26a5e5b3bf046",
+   "version": 4,
+   "ok": true,
+   "refused": null,
+   "pushes": 1
+  },
+  {
+   "what": "hero B",
+   "res": "1b321511d0ec6012c95d9fd66ad5c52caf4e8f665db71d07f0d4cf608fa1f7ef",
+   "row": "f9e214dc4bc903fe10251a711f0533e34a023c58b4d7328635361e9dc8786c0c",
+   "version": 5,
+   "ok": true,
+   "refused": null,
+   "pushes": 2
+  },
+  {
+   "what": "stale frame",
+   "res": "c83f23a61593c218f7b342c556379b1194d24aa77eb053a37b40c06d7447e8ff",
+   "row": "f9e214dc4bc903fe10251a711f0533e34a023c58b4d7328635361e9dc8786c0c",
+   "version": 5,
+   "ok": false,
+   "refused": "stale",
+   "pushes": 2
+  },
+  {
+   "what": "resync B",
+   "res": "074b958fd30caf56dcb735a69257f58ab713b5a05bcfe6dc75114a12d3adb015",
+   "row": "f9e214dc4bc903fe10251a711f0533e34a023c58b4d7328635361e9dc8786c0c",
+   "version": 5,
+   "ok": false,
+   "refused": "not-dealt",
+   "pushes": 2
+  },
+  {
+   "what": "no such table",
+   "res": "b94e24f0c375e9ff1dc69ca52b6af46ae3fd9910355b9f6c1cadffbe9c737b36",
+   "row": "f9e214dc4bc903fe10251a711f0533e34a023c58b4d7328635361e9dc8786c0c",
+   "version": 5,
+   "ok": false,
+   "refused": "no-table",
+   "pushes": 2
+  }
+ ]
+}

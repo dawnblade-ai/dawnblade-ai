@@ -26,6 +26,8 @@
      build      the build id both phones must match (hub.js's)
      now        () -> ms      rand  () -> a [0,1) function (default: crypto)
      log        (error) -> void   server-side only; never in a response
+     identify   (token) -> {player, name?} | null   (S4.1, optional; may return a promise) — who a sign-in token is, as OUR
+                player id; null when the token is forged, expired or unknown. Only called when a join presents one.
 
    ---- requests (one JSON frame; the payloads are hub.js's own) ----------
      {op:"create", table?}                       a fresh table (lobby open)
@@ -49,6 +51,29 @@
      counter: a frame whose n is not above the last one APPLIED for that seat
      is stale (a replay, or one that overtook a newer) and is refused.
 
+   ---- identity (S4.1: a seat can belong to a player) ----------------------
+     {op:"join", table, identity:{token, name?}, claim?}
+        `token` is whatever the sign-in provider issued; THIS FILE NEVER SEES HOW IT IS VERIFIED: `deps.identify(token)
+        -> {player, name?} | null` (promise or not) is the whole seam (the Edge Function wires it to Supabase, the
+        drills to a fake). `player` is OUR player id (players table, server/supabase/002_players.sql), never the
+        provider's subject. A request with no `identity` is handled byte for byte as in v6.28.
+        - first unkeyed join: the seat dealt is BOUND to the player in the stored row (`owners`);
+        - a later unkeyed join by the SAME player (no key; a claim token is optional) TAKES THE SEAT OVER: a fresh seat
+          key is dealt and the old key RETIRED (its hash is kept, never the key), the old claim token stops working,
+          and the old phone gets (a) a sealed push on its own channel `{ch:"judge", taken:true}` and (b) on any request
+          it makes with the old key `{ok:false, refused:"auth", taken:true}` — never a hang. A v6.28 page reads that as
+          its ordinary fatal `auth`; the S4.4 page reads `taken`. A player never holds both seats (a join by a player who
+          already owns a seat is a takeover of THAT seat, never the second one);
+        - a keyed join (the key holds the chair) that also presents a token of ANOTHER player, or a claim token
+          replayed by another player, is refused `seat-owned`; nothing is written;
+        - `identity` that is not an object with a string token, or has an invalid name: `bad-request` (a bad name
+          adds `field:"name"` and a `reason`); `identify` answered null (forged, expired, unknown): `identity`; the
+          function has no `identify`: `identity` (it never guesses); `identify` THROWING (provider down) is an
+          `internal` answer, not a verdict on the token.
+        The answers carry `names:[n0,n1]` (public: both seats may read both) only when some seat has a display name, and
+        `owned:true` on a join that bound/kept the caller's seat. The player id, the token and the provider's subject
+        are never in any response to anyone, any broadcast, or a report (they live only in the row's `owners`).
+
    ---- responses ----------------------------------------------------------
      {ok:true, version, frames:[...]}   `frames`: what the CALLER's seat
         receives from this call, in order — its commits, a nack, a hello's
@@ -56,7 +81,8 @@
         response and no broadcast ever does). A caller that never got the
         response asks `resync`.
      {ok:false, refused: "auth"|"stale"|"conflict"|"no-table"|"exists"|
-                 "full"|"not-dealt"|"bad-request"|"wire"|"internal", retry?}
+                 "full"|"not-dealt"|"bad-request"|"wire"|"internal"|
+                 "identity"|"seat-owned", retry?}
         `conflict` (someone else wrote first) is the only retry:true.
 
    ---- broadcasts ---------------------------------------------------------
@@ -75,8 +101,13 @@
   else root.DawnServer = factory(root.DawnHub, root.DawnWire, root.DawnJudge, root.DawnInvariants, root.DawnSHA);
 })(typeof self!=="undefined" ? self : this, function(Hub, W, J, INV, SHA){
 
-/* the stored row's own version: 1 (S1) -> 2 (S3: `claims`, the join tokens) */
-const ROW_V = 2;
+/* the stored row's own version: 1 (S1) -> 2 (S3: `claims`, the join tokens) -> 3 (S4.1: `owners`, `names`, `retired`).
+   READ: 2 and 3 (a v2 row — the live project's — reads as owners [null,null], names [null,null], retired [[],[]]:
+   a table nobody identified into; no migration, nothing is rewritten by reading). WRITE: a row stays v2 until an
+   identity binds into it (`stamp`), so a casual table's row is byte for byte v6.28's and the v6.28 function can
+   still read it; a v3 row is refused `wire` by v6.28 (it cannot honour owners), the safe way to roll back. */
+const ROW_V = 3, ROW_V_CASUAL = 2;
+const rowOk = v => v === ROW_V || v === ROW_V_CASUAL;
 const ID_RE = /^[A-Za-z0-9_-]{1,32}$/;
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 /* a seat's channel: derived from its secret key by a one-way hash (sha256.js `seatTopic`), so the name is
@@ -92,6 +123,34 @@ const isP = v => !!v && typeof v.then === "function";
 const then = (v, f) => isP(v) ? v.then(f) : f(v);
 
 const no = (refused, extra) => ({ok: false, refused, ...(extra || {})});
+
+/* ---- display names: THE one validator (S4.1) ----------------------------------------------------------------
+   3-16 characters (Unicode code points, after NFC), trimmed, no leading/trailing space, single spaces only.
+   Letters (\p{L}), combining marks (\p{M}, at most 2 in a row: Thai, Arabic, Indic and accented scripts need them,
+   a stack of them is the zalgo trick), decimal digits (\p{Nd}, any script) and the ASCII space: so Spanish, Portuguese,
+   Cyrillic, Greek, Japanese, Chinese, Korean, Arabic, Thai names all work on an international phone audience, while
+   emoji, punctuation, symbols, zero-width and bidi controls (category Cf), line breaks and tabs do not. A name must
+   start with a letter or digit. Reserved words are matched on a FOLD (lower case, spaces gone, look-alike digits and
+   Cyrillic/Greek homoglyphs mapped to Latin) so "Adm1n", "a d m i n" and Cyrillic "аdmin" are reserved too. */
+const NAME_MIN = 3, NAME_MAX = 16;
+const NAME_RESERVED = ["admin", "administrator", "mod", "moderator", "judge", "referee", "system", "server", "support", "staff",
+  "dawnblade", "coach", "you", "opponent", "trainer", "dummy", "guest", "player", "anonymous", "nobody", "null", "undefined"];
+const HOMOGLYPH = {"0": "o", "1": "l", "3": "e", "4": "a", "5": "s", "7": "t", "\u0430": "a", "\u0435": "e", "\u043e": "o", "\u0440": "p", "\u0441": "c",
+  "\u0445": "x", "\u0443": "y", "\u0456": "i", "\u0455": "s", "\u03bf": "o", "\u03b1": "a", "\u03b5": "e", "\u03b9": "i", "\u03c1": "p"};
+const nameFold = s => Array.from(s.toLowerCase().replace(/ /g, "")).map(ch => HOMOGLYPH[ch] || ch).join("").replace(/i/g, "l");
+const NAME_FOLDED = NAME_RESERVED.map(nameFold);
+function validateName(raw){
+  if(typeof raw !== "string") return {ok: false, reason: "type"};
+  const s = raw.normalize("NFC"), cps = Array.from(s);
+  if(s !== s.trim()) return {ok: false, reason: "space"};
+  if(cps.length < NAME_MIN) return {ok: false, reason: "short"};
+  if(cps.length > NAME_MAX) return {ok: false, reason: "long"};
+  if(!/^[\p{L}\p{M}\p{Nd} ]+$/u.test(s) || !/^[\p{L}\p{Nd}]/u.test(s)) return {ok: false, reason: "chars"};
+  if(/\p{M}{3}/u.test(s)) return {ok: false, reason: "chars"};
+  if(/  /.test(s)) return {ok: false, reason: "space"};
+  if(NAME_FOLDED.includes(nameFold(s))) return {ok: false, reason: "reserved"};
+  return {ok: true, name: s};
+}
 /* equal strings, without stopping at the first difference */
 const keyEq = (a, b) => { if(typeof a !== "string" || typeof b !== "string" || a.length !== b.length) return false;
   let d = 0; for(let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i); return d === 0; };
@@ -131,8 +190,28 @@ function rig(id, data, deps){
 }
 
 /* the row a table is stored as */
-const newRow = (id, hub, deps) => ({v: ROW_V, wireV: W.WIRE_V, id, build: deps.build || null, hub: hub.persistTable(),
+const newRow = (id, hub, deps) => ({v: ROW_V_CASUAL, wireV: W.WIRE_V, id, build: deps.build || null, hub: hub.persistTable(),
   nonces: [0, 0], claims: [null, null], created: deps.now ? deps.now() : 0, updated: deps.now ? deps.now() : 0});
+
+/* ---- S4.1 row readers/writers: a v2 row has none of these fields ---------------------------------------------- */
+const ownersOf = row => Array.isArray(row.owners) ? row.owners : [null, null];
+const namesOf = row => Array.isArray(row.names) ? row.names : [null, null];
+const retiredOf = row => Array.isArray(row.retired) ? row.retired : [[], []];
+/* the public part of the stored identity: display names only, and only when there is one */
+const pub = row => { const n = namesOf(row); return n[0] != null || n[1] != null ? {names: n.slice()} : {}; };
+/* make the row v3 (first identity write): defaults filled, nothing else touched */
+function stamp(row){
+  row.v = ROW_V; row.owners = ownersOf(row).slice(); row.names = namesOf(row).slice(); row.retired = retiredOf(row).map(l => l.slice());
+  return row;
+}
+/* a retired key is remembered by hash, never by value */
+const retireHash = (id, seat, key) => SHA.sha256("dawnblade-retired|" + id + "|" + seat + "|" + key);
+const RETIRED_CAP = 8;
+/* the answer to a wrong key: `taken:true` when it is a key this seat used to have (an identity takeover) */
+function authFail(row, seat, key){
+  if((seat === 0 || seat === 1) && typeof key === "string" && retiredOf(row)[seat].includes(retireHash(row.id, seat, key))) return no("auth", {taken: true});
+  return no("auth");
+}
 
 function newId(deps){
   const r = deps.rand ? deps.rand() : Math.random;
@@ -152,7 +231,7 @@ function pushAll(list, deps, i, failed){
 
 /* write the row if nobody wrote since it was read, then tell each seat its
    own frames. `reply`: the caller's response frames. */
-function save(id, row, version, deps, frames, reply, extra){
+function save(id, row, version, deps, frames, reply, extra, also){
   row.updated = deps.now ? deps.now() : row.updated;
   return then(deps.store.put(id, row, version), p => {
     if(!p || !p.ok) return no("conflict", {retry: true});
@@ -162,6 +241,7 @@ function save(id, row, version, deps, frames, reply, extra){
       /* a seat nobody was ever dealt has no channel (and no frames); the seal is the seat's own key's */
       if(frames[s].length && key != null) list.push([topic(id, s, key), {ver: p.version, frames: frames[s], mac: SHA.frameMac(key, id, s, p.version, frames[s])}]);
     }
+    if(also) for(const a of also(p.version)) list.push(a);
     return then(pushAll(list, deps, 0, false), sent => ({ok: true, version: p.version, ...(extra || {}), frames: reply,
       ...(sent ? {} : {broadcast: "failed"})}));
   });
@@ -179,13 +259,37 @@ function create(req, deps){
 }
 
 function join(req, got, deps){
+  if(req.identity === undefined) return joinAs(req, got, deps, null);
+  const idn = req.identity;
+  if(!idn || typeof idn !== "object" || Array.isArray(idn) || typeof idn.token !== "string" || idn.token.length < 1 || idn.token.length > 4096) return no("bad-request");
+  let name = null;
+  if(idn.name !== undefined){
+    const v = validateName(idn.name);
+    if(!v.ok) return no("bad-request", {field: "name", reason: v.reason});
+    name = v.name;
+  }
+  if(typeof deps.identify !== "function") return no("identity");
+  return then(deps.identify(idn.token), who => {
+    if(who == null) return no("identity");
+    if(typeof who !== "object" || typeof who.player !== "string" || !PLAYER_RE.test(who.player)) throw new Error("identify answered something that is not a player");
+    let nm = name;
+    if(nm == null && who.name != null){ const v = validateName(who.name); if(v.ok) nm = v.name; }   /* the stored default name; a bad one is dropped */
+    return joinAs(req, got, deps, {player: who.player, name: nm});
+  });
+}
+const PLAYER_RE = /^[A-Za-z0-9_-]{1,64}$/;
+
+/* `who`: null (no identity presented: v6.28's body, untouched) or {player, name} */
+function joinAs(req, got, deps, who){
   const row = got.row, id = row.id;
   if(req.key !== undefined){
     /* a returning phone: the key holds the chair (and nothing is written) */
-    if((req.seat !== 0 && req.seat !== 1) || !keyEq(req.key, row.hub.keys[req.seat])) return no("auth");
+    if((req.seat !== 0 && req.seat !== 1) || !keyEq(req.key, row.hub.keys[req.seat])) return authFail(row, req.seat, req.key);
+    /* a token of ANOTHER player does not ride a key that is not theirs (S4.1); no token: the key alone, as before */
+    if(who && ownersOf(row)[req.seat] != null && ownersOf(row)[req.seat] !== who.player) return no("seat-owned");
     const r = rig(id, row, deps);
     r.seat(req.seat, req.key, true);
-    return {ok: true, version: got.version, seat: req.seat, n: row.nonces[req.seat], frames: r.out[req.seat]};
+    return {ok: true, version: got.version, seat: req.seat, n: row.nonces[req.seat], ...(who && ownersOf(row)[req.seat] === who.player ? {owned: true} : {}), ...pub(row), frames: r.out[req.seat]};
   }
   /* AN UNKEYED JOIN carries a CLAIM TOKEN the phone chose (128+ random bits). The seat and the token are saved
      in ONE write, so a phone that never got the answer asks again with the same token and is handed the SAME
@@ -201,19 +305,49 @@ function join(req, got, deps){
       r.seat(prior, key, true);
       /* the first answer's seat offer carried the key; the claim's replay does not, so it is put back */
       const frames = r.out[prior].map(f => f && f.ch === Hub.CH.JUDGE && f.seat === prior ? {...f, key} : f);
-      return {ok: true, version: got.version, seat: prior, n: row.nonces[prior], frames};
+      if(!who) return {ok: true, version: got.version, seat: prior, n: row.nonces[prior], ...pub(row), frames};
+      /* the same token, now with an identity: another player's seat is refused; an unowned one is bound to this player */
+      const owner = ownersOf(row)[prior];
+      if(owner != null && owner !== who.player) return no("seat-owned");
+      if(owner === who.player) return {ok: true, version: got.version, seat: prior, n: row.nonces[prior], owned: true, ...pub(row), frames};
+      if(ownersOf(row)[1 - prior] === who.player) return no("seat-owned");     /* never both seats */
+      stamp(row); row.owners[prior] = who.player; if(who.name != null) row.names[prior] = who.name;
+      return save(id, row, got.version, deps, [[], []], frames, {seat: prior, n: row.nonces[prior], owned: true, ...pub(row)});
     }
+  }
+  if(who){
+    const mine = ownersOf(row).indexOf(who.player);
+    if(mine >= 0) return takeOver(row, got, deps, who, mine, tok);
   }
   const r = rig(id, row, deps), f = r.fresh(), seat = f.link.seat();
   if(seat == null) return no("full");
   row.hub = r.hub.persistTable();          /* the new seat's key is now part of the table */
   if(tok !== undefined){ row.claims = claims.slice(); row.claims[seat] = tok; }
-  return save(id, row, got.version, deps, [[], []], f.got, {seat, n: row.nonces[seat]});
+  if(who){ stamp(row); row.owners[seat] = who.player; if(who.name != null) row.names[seat] = who.name; }
+  return save(id, row, got.version, deps, [[], []], f.got, {seat, n: row.nonces[seat], ...(who ? {owned: true, ...pub(row)} : {})});
+}
+
+/* THE SAME PLAYER, A NEW PHONE: the seat's key is replaced and the old one retired; the old claim token is dropped
+   (it would hand the old key back); the old phone is told on its own channel, sealed under the key it holds. */
+function takeOver(row, got, deps, who, seat, tok){
+  const id = row.id, oldKey = row.hub.keys[seat];
+  const key = SHA.nonce(deps.rand ? deps.rand() : undefined);
+  stamp(row);
+  row.hub = {...row.hub, keys: row.hub.keys.map((k, s) => s === seat ? key : k)};
+  row.retired[seat] = row.retired[seat].concat([retireHash(id, seat, oldKey)]).slice(-RETIRED_CAP);
+  row.claims = (Array.isArray(row.claims) ? row.claims : [null, null]).slice(); row.claims[seat] = tok !== undefined ? tok : null;
+  if(who.name != null) row.names[seat] = who.name;
+  const r = rig(id, row, deps);
+  r.seat(seat, key, true);
+  const frames = r.out[seat].map(f => f && f.ch === Hub.CH.JUDGE && f.seat === seat ? {...f, key} : f);
+  const notice = [{ch: Hub.CH.JUDGE, taken: true, seat}];
+  return save(id, row, got.version, deps, [[], []], frames, {seat, n: row.nonces[seat], owned: true, ...pub(row)},
+    ver => [[topic(id, seat, oldKey), {ver, frames: notice, mac: SHA.frameMac(oldKey, id, seat, ver, notice)}]]);
 }
 
 function frame(req, got, deps){
   const row = got.row, id = row.id, seat = req.seat, f = req.frame;
-  if((seat !== 0 && seat !== 1) || !keyEq(req.key, row.hub.keys[seat])) return no("auth");
+  if((seat !== 0 && seat !== 1) || !keyEq(req.key, row.hub.keys[seat])) return authFail(row, seat, req.key);
   if(!Number.isInteger(req.n) || req.n <= row.nonces[seat]) return no("stale");
   if(!f || typeof f !== "object" || (f.ch !== Hub.CH.LOBBY && f.ch !== Hub.CH.NET)) return no("bad-request");
   if(f.ch === Hub.CH.NET && !row.hub.spec) return no("not-dealt");
@@ -235,9 +369,10 @@ function frame(req, got, deps){
 
 function resync(req, got, deps){
   const seat = req.seat;
-  return frame({op: "frame", table: req.table, seat, key: req.key,
+  return then(frame({op: "frame", table: req.table, seat, key: req.key,
     n: Number.isInteger(req.n) ? req.n : (seat === 0 || seat === 1 ? got.row.nonces[seat] + 1 : 0),
-    frame: {ch: Hub.CH.NET, m: {t: "resync", have: req.have | 0, seat, force: req.have == null}}}, got, deps);
+    frame: {ch: Hub.CH.NET, m: {t: "resync", have: req.have | 0, seat, force: req.have == null}}}, got, deps),
+    r => r.ok ? {...r, ...pub(got.row)} : r);
 }
 
 /* ---- the entry ------------------------------------------------------- */
@@ -249,7 +384,7 @@ function serve(req, deps){
   if(!fn) return no("bad-request");
   return then(deps.store.get(req.table), got => {
     if(!got || !got.row) return no("no-table");
-    if(got.row.v !== ROW_V || got.row.wireV !== W.WIRE_V) return no("wire");
+    if(!rowOk(got.row.v) || got.row.wireV !== W.WIRE_V) return no("wire");
     return fn(req, got, deps);
   });
 }
@@ -269,5 +404,5 @@ function handleNow(req, deps){
   return v;
 }
 
-return {handle, handleNow, topic, ROW_V};
+return {handle, handleNow, topic, ROW_V, ROW_V_CASUAL, validateName};
 });
