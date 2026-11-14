@@ -14473,3 +14473,11 @@ needs the verbatim quote IN THE REPO (source comment, `tools/approx.js` record, 
   the line for the right reason (the name is public in the view), not by exemption.
 - Lesson: an open visibility question was a SWITCH with a drill that flips it, so the ruling was a
   one-line change plus re-measuring Sharp, which read the soul it could not see before.
+
+## v6.27 — a drill that injects the library can never test the loader (2026-11-14)
+- `loadSupabase` took the PROJECT address (`config.url`) for the script address, so no browser ever loaded supabase-js and no push ever
+  arrived; every drill, rehearsal and live Node game passed because each handed the transport a ready `lib` (or a fake transport).
+  Rule: a path that loads something from the network is drilled by driving the REAL loader with the page's own config and asserting on
+  the URL it asks for (`test/servertable.test.js` "page-shaped config", `tools/serverpage.js` row "real loader"). Measurements and
+  the fallback poll: `server/PERF-LOG.md`.
+
