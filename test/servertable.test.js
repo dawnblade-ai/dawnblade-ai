@@ -623,3 +623,27 @@ test("PERF: the page turns the fallback poll on, and it is stopped when the tabl
   assert.ok(/tune: \{pollMs: 20000, fallbackMs: 2000\}/.test(html));
   assert.ok(/if\(fb\) try \{ timers\.clearInterval\(fb\)/.test(SRC));
 });
+
+test("PERF: the page-shaped config, through supabaseTransport with NO `lib:` shortcut, asks for the script at the CDN constant, never the project address", async () => {
+  /* exactly what index.html builds: {...window.SERVER_TABLE, on: true}, read from the page's own data script */
+  const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+  const line = html.match(/window\.SERVER_TABLE = (\{[^\n]*\});/);
+  assert.ok(line, "the page's SERVER_TABLE line");
+  const cfg = {...new Function("return " + line[1])(), on: true};
+  assert.ok(/^https:\/\/[a-z0-9]+\.supabase\.co$/.test(cfg.url), "the page's config carries the PROJECT address as `url`");
+  const asked = async M => {
+    const srcs = [], saved = {w: global.window, d: global.document};
+    global.window = {}; global.document = {createElement: () => ({}), head: {appendChild: el => { srcs.push(el.src); }}};
+    try {
+      const tr = M.defaultTransport(cfg);                         /* the page's own entry: no lib, no document, no url override */
+      const un = tr.subscribe("table:ABCDEF:" + "0".repeat(64), () => {}, () => {});
+      await new Promise(r => setImmediate(r)); un();
+    } finally { if(saved.w === undefined) delete global.window; else global.window = saved.w; if(saved.d === undefined) delete global.document; else global.document = saved.d; }
+    return srcs;
+  };
+  const good = await asked(stCopy([]));          /* a fresh copy: the loader keeps its promise per module */
+  assert.deepEqual(good, [ST.SUPABASE_JS], "one script request, at the pinned CDN address");
+  assert.ok(good[0].indexOf(cfg.url) < 0 && good[0] !== cfg.url + "/");
+  const bad = await asked(stCopy([["el.src = o.libUrl || SUPABASE_JS;", "el.src = o.url || SUPABASE_JS;"]]));
+  assert.equal(bad[0], cfg.url, "sabotage applied: the v6.26 line requests the project address and this drill sees it");
+});

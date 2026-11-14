@@ -197,6 +197,36 @@ async function toServerChooser(page){
     await k0.close();
   }
 
+  /* ---- 1c. THE REAL LOADER PATH (v6.27): the page's own config through the real transport, the library fetched the way a phone
+          fetches it (from the CDN address, served here by page.js's local route). v6.26 asked the PROJECT for its script, so no browser
+          ever got a push, while every drive passed: they all installed a fake transport or a `lib`. This row cannot pass that way. ---- */
+  {
+    const kit = await open({ w: W, h: H });
+    const { page, context } = kit;
+    const build = await page.evaluate(() => TABLE_BUILD);
+    const w3 = makeWorld({ seedKey: "loader", build, deal: dealLikeThePage });
+    const scripts = [];
+    page.on("request", r => { if(r.resourceType() === "script") scripts.push(r.url()); });
+    const cors = { "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "POST, GET, OPTIONS" };
+    await context.route(/supabase\.co\/functions/, async route => {
+      const req = route.request();
+      if(req.method() === "OPTIONS") return route.fulfill({ status: 204, headers: cors });
+      const ans = await w3.transport("PAGE").post(JSON.parse(req.postData() || "{}"));
+      route.fulfill({ status: 200, contentType: "application/json", headers: cors, body: JSON.stringify(ans) });
+    });
+    await context.route(/supabase\.co\/realtime/, route => route.abort());      /* no socket offline: the subscription reads lost, which is fine here */
+    await page.evaluate(() => { delete window.__dawnServerTransport; window.SERVER_TABLE.on = true; });
+    await toServerChooser(page);
+    await click(page, btn(page, /^Open a server table/), "open a server table (real transport)");
+    await page.waitForSelector(".tblcode", { timeout: 15000 }).catch(() => {});
+    await page.waitForFunction(() => window.supabase && window.supabase.createClient, null, { timeout: 15000 }).catch(() => {});
+    const lib = await page.evaluate(() => !!(window.supabase && window.supabase.createClient));
+    const cdn = scripts.filter(u => /supabase-js/.test(u)), proj = scripts.filter(u => /supabase\.co/.test(u));
+    row(cdn.length === 1 && cdn[0] === ST.SUPABASE_JS && proj.length === 0 && lib,
+        "real loader: the page's own config makes the page fetch supabase-js from the CDN address (never the project) and the library is there", "scripts " + JSON.stringify(scripts.filter(u => /supabase/.test(u))));
+    await kit.close();
+  }
+
   /* ---- 2. THE FAKE: a table, seated, played -------------------------------------------- */
   const kit = await open({ w: W, h: H });
   const { page, errors } = kit;
