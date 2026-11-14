@@ -1,0 +1,33 @@
+# KEEP THE SERVER TABLE'S PROJECT AWAKE.
+#
+# A free Supabase project pauses after about seven idle days, and a paused
+# project makes the page's server table read "not answering". Once a day this
+# asks the deployed function for its health line, which also proves the
+# function is still the one this repo deployed (its `service` field). It
+# touches nothing: no row is read or written, and no secret is used.
+#
+# EVERYTHING HERE IS PUBLIC: the project address and the publishable key are
+# the same two values index.html ships (window.SERVER_TABLE). The service-role
+# key and the access token are never in this repo.
+name: keepalive
+
+on:
+  schedule:
+    - cron: '23 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: the function answers its health line
+        run: |
+          URL=https://fokcpzplomjsraquaaid.supabase.co/functions/v1/table
+          KEY=sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu
+          code=$(curl -s -o /tmp/health.json -w '%{http_code}' -H "apikey: $KEY" "$URL")
+          echo "status=$code"
+          [ "$code" = "200" ] || { echo "::error::the health URL answered $code (a paused project answers 5xx or 404)"; exit 1; }
+          svc=$(grep -oP '"service"\s*:\s*"\K[^"]+' /tmp/health.json | head -1)
+          build=$(grep -oP '"build"\s*:\s*"\K[^"]+' /tmp/health.json | head -1)
+          echo "service=$svc build=$build"
+          [ "$svc" = "dawnblade-table" ] || { echo "::error::wrong service field: '$svc'"; exit 1; }
