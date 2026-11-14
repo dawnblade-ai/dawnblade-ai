@@ -30,6 +30,11 @@
                 player id; null when the token is forged, expired or unknown. Only called when a join presents one.
      rename     (player, name, fold) -> "ok" | "taken"   (S4.2, optional; may return a promise) — store the player's display
                 name; "taken" when another player holds a name with the same fold. Only called by op "me" with a name.
+     mint       (player, hash, days) -> "ok"   (S4.3, optional; may return a promise) — store a recovery code's SHA-256 hex for the
+                player, retiring that player's older unused codes (004_recovery.sql recovery_mint). Only called by op "recovery-mint".
+     redeem     (token, hash) -> {status:"ok"|"refused"|"limited", name?} | null   (S4.3, optional; may return a promise) — spend the
+                code and move the token's sign-in to the code's player (recovery_redeem). null: the token is not a sign-in. Only
+                called by op "recovery-redeem". The Edge Function owns the provider subject; this file never sees it.
 
    ---- requests (one JSON frame; the payloads are hub.js's own) ----------
      {op:"create", table?}                       a fresh table (lobby open)
@@ -75,6 +80,23 @@
         The answers carry `names:[n0,n1]` (public: both seats may read both) only when some seat has a display name, and
         `owned:true` on a join that bound/kept the caller's seat. The player id, the token and the provider's subject
         are never in any response to anyone, any broadcast, or a report (they live only in the row's `owners`).
+
+   ---- recovery codes (S4.3: a lost phone is not a lost player) ------------------------------------------------
+     {op:"recovery-mint", identity:{token}}
+        -> {ok:true, code:"XXXXX-XXXXX-XXXXX", days:730}. THE ONLY ANSWER, BROADCAST, ROW OR REPORT THAT EVER HOLDS A CODE: it is
+        shown to the player once and only its SHA-256 hex is stored (never the code). 15 characters of a 31-letter alphabet
+        (no 0 O 1 I L) = 74 bits, drawn from crypto.getRandomValues with rejection sampling (never Math.random), grouped for reading.
+        One live code per player: a new one retires the older unused ones. Refusals: bad-request | identity | unavailable (no
+        `mint` wired) | internal.
+     {op:"recovery-redeem", identity:{token}, code, tables?:[table ids]}
+        -> {ok:true, name: <the recovered player's name> | null}: THIS sign-in (a new phone's own fresh one) now belongs to the
+        code's player; the old phone's sign-in stays on that player (one player, two phones; the last to sit down wins the seat).
+        The code is normalised (case, spaces, dashes and any other separators ignored). Wrong, used, expired, retired and malformed
+        are ONE answer, {ok:false, refused:"recovery"}; too many wrong tries from one sign-in in an hour is {refused:"recovery-limited"}
+        (it says nothing about the code). `tables`: the tables this phone knows it has sat at; if its current player holds a seat at
+        any of them the redeem is refused `recovery-seated` BEFORE anything changes (the seat would be left to a player that no
+        longer exists). The code, its hash and every identifier stay inside; the answer carries only `name`.
+        Refusals: bad-request | identity | unavailable | recovery | recovery-limited | recovery-seated | internal.
 
    ---- responses ----------------------------------------------------------
      {ok:true, version, frames:[...]}   `frames`: what the CALLER's seat
@@ -312,6 +334,69 @@ function me(req, deps){
   });
 }
 
+/* ---- recovery codes (S4.3) ------------------------------------------------------------------------------------ */
+const RECOVERY_DAYS = 730;                                /* two years; recovery_mint's own bound is 1..3650 */
+const RECOVERY_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; /* 31 characters: no 0 O 1 I L */
+const RECOVERY_LEN = 15;                                  /* 15 * log2(31) = 74.3 bits */
+const recoveryNormal = raw => typeof raw === "string" ? raw.toUpperCase().replace(/[^A-Z0-9]/g, "") : "";
+const recoveryValid = c => c.length === RECOVERY_LEN && Array.from(c).every(ch => RECOVERY_CHARS.indexOf(ch) >= 0);
+const recoveryHash = code => SHA.sha256(code);            /* of the NORMALISED code, no salt: the code itself is 74 random bits */
+function recoveryDraw(deps){
+  const rb = deps.randBytes || (n => { const c = typeof crypto !== "undefined" ? crypto : null;
+    if(!c || typeof c.getRandomValues !== "function") throw new Error("no cryptographic randomness for a recovery code");
+    return c.getRandomValues(new Uint8Array(n)); });
+  let out = "";
+  while(out.length < RECOVERY_LEN){
+    for(const b of Array.from(rb(32))){ if(b < 248 && out.length < RECOVERY_LEN) out += RECOVERY_CHARS[b % 31]; }   /* 248 = 31*8: no modulo bias */
+  }
+  return out;
+}
+const recoveryShow = c => c.match(/.{1,5}/g).join("-");
+function recoveryWho(req, deps, f){
+  const idn = req.identity;
+  if(!idn || typeof idn !== "object" || Array.isArray(idn) || typeof idn.token !== "string" || idn.token.length < 1 || idn.token.length > 4096) return no("bad-request");
+  if(typeof deps.identify !== "function") return no("identity");
+  return then(deps.identify(idn.token), who => {
+    if(!who) return no("identity");
+    if(typeof who !== "object" || typeof who.player !== "string" || !PLAYER_RE.test(who.player)) throw new Error("identify answered something that is not a player");
+    return f(who, idn.token);
+  });
+}
+function recoveryMint(req, deps){
+  return recoveryWho(req, deps, who => {
+    if(typeof deps.mint !== "function") return no("unavailable");
+    const code = recoveryDraw(deps);
+    return then(deps.mint(who.player, recoveryHash(code), RECOVERY_DAYS), r => {
+      if(r !== "ok") throw new Error("mint answered something that is not ok");
+      return {ok: true, code: recoveryShow(code), days: RECOVERY_DAYS};
+    });
+  });
+}
+function recoveryRedeem(req, deps){
+  const code = recoveryNormal(req.code);
+  const tables = req.tables === undefined ? [] : req.tables;
+  if(!Array.isArray(tables) || tables.length > 6 || !tables.every(t => typeof t === "string" && ID_RE.test(t))) return no("bad-request");
+  return recoveryWho(req, deps, (who, token) => {
+    if(typeof deps.redeem !== "function") return no("unavailable");
+    /* the throwaway player must not be left holding a chair: look at the tables the phone says it has sat at */
+    const seated = i => i >= tables.length ? false : then(deps.store.get(tables[i]), got => {
+      const owners = got && got.row && Array.isArray(got.row.owners) ? got.row.owners : [];
+      return owners.indexOf(who.player) >= 0 ? true : seated(i + 1);
+    });
+    return then(seated(0), held => {
+      if(held) return no("recovery-seated");
+      if(!recoveryValid(code)) return no("recovery");          /* malformed = the same answer as wrong */
+      return then(deps.redeem(token, recoveryHash(code)), r => {
+        if(r == null) return no("identity");
+        if(r.status === "ok") { const v = r.name != null ? validateName(r.name) : null; return {ok: true, name: v && v.ok ? v.name : null}; }
+        if(r.status === "limited") return no("recovery-limited");
+        if(r.status === "refused") return no("recovery");
+        throw new Error("redeem answered something that is not ok, refused or limited");
+      });
+    });
+  });
+}
+
 /* `who`: null (no identity presented: v6.28's body, untouched) or {player, name} */
 function joinAs(req, got, deps, who){
   const row = got.row, id = row.id;
@@ -413,6 +498,8 @@ function serve(req, deps){
   if(!req || typeof req !== "object" || !deps || !deps.store) return no("bad-request");
   if(req.op === "create") return create(req, deps);
   if(req.op === "me") return me(req, deps);
+  if(req.op === "recovery-mint") return recoveryMint(req, deps);
+  if(req.op === "recovery-redeem") return recoveryRedeem(req, deps);
   if(typeof req.table !== "string" || !ID_RE.test(req.table)) return no("bad-request");
   const fn = req.op === "join" ? join : req.op === "frame" ? frame : req.op === "resync" ? resync : null;
   if(!fn) return no("bad-request");
@@ -438,5 +525,5 @@ function handleNow(req, deps){
   return v;
 }
 
-return {handle, handleNow, topic, ROW_V, ROW_V_CASUAL, validateName, nameFold};
+return {handle, handleNow, topic, ROW_V, ROW_V_CASUAL, validateName, nameFold, recoveryNormal, recoveryHash, RECOVERY_DAYS, RECOVERY_CHARS, RECOVERY_LEN};
 });

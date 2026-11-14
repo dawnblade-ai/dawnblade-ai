@@ -12,6 +12,8 @@
    S4.1 adds the two calls entry.template.ts's `identify` makes (a stand-in for GoTrue's and for 002_players.sql's function):
      GET  /auth/v1/user                                     apikey + Bearer <user token> -> {id, is_anonymous} or 401
      POST /rest/v1/rpc/identity_resolve {p_provider, p_subject, p_name}   -> [{player_id, display_name}] (same sign-in, same player)
+   S4.3 adds recovery_mint / recovery_redeem (a stand-in for 004_recovery.sql: one live code per player, spend + move the identity + drop the
+   throwaway player, 8 refusals an hour); `recovery` (hash -> {player, used, expires}) and `attempts` are readable.
    `issueUser(id, anon?)` hands out a token; `users`, `players`, `identities` are readable; stats.auths / stats.resolves count calls.
 
    It checks the headers the real services need (apikey; bearer unless the key is "sb_…"), keeps rows as JSON text like
@@ -25,7 +27,7 @@ function makeStub(o){
   o = o || {};
   const rows = new Map(), broadcasts = [], stats = {gets: 0, puts: 0, conflicts: 0, casts: 0, bad: [], largestPut: 0};
   const KEY = o.key || "stub-service-key";
-  const subs = [], users = new Map(), players = new Map(), identities = new Map();
+  const subs = [], users = new Map(), players = new Map(), identities = new Map(), recovery = new Map(), attempts = new Map();
   stats.auths = 0; stats.resolves = 0; let seq = 0, authDown = false;
   const handler = (req, res) => {
     const chunks = [];
@@ -77,6 +79,35 @@ function makeStub(o){
           for(const p of players.values()) if(p.id !== p_player && p.name_fold === p_fold) return reply(200, "taken");
           Object.assign(players.get(p_player), {display_name: p_name, name_fold: p_fold});
           return reply(200, "ok");
+        }
+        if(req.method === "POST" && url.pathname === "/rest/v1/rpc/recovery_mint"){      /* 004_recovery.sql: one live code per player */
+          stats.mints = (stats.mints || 0) + 1;
+          const {p_player, p_hash, p_days} = JSON.parse(body);
+          if(typeof p_hash !== "string" || !/^[0-9a-f]{64}$/.test(p_hash) || !Number.isInteger(p_days) || p_days < 1 || p_days > 3650 || typeof p_player !== "string"){ stats.bad.push("recovery_mint args"); return reply(400, {message: "bad args"}); }
+          if(!players.has(p_player)) return reply(200, "unknown");
+          for(const [h, e] of recovery) if(e.player === p_player && !e.used) recovery.delete(h);
+          recovery.set(p_hash, {player: p_player, used: false, expires: Date.now() + p_days * 86400000, days: p_days});
+          return reply(200, "ok");
+        }
+        if(req.method === "POST" && url.pathname === "/rest/v1/rpc/recovery_redeem"){   /* 004_recovery.sql: spend, move the identity, drop the throwaway, brake */
+          stats.redeems = (stats.redeems || 0) + 1;
+          const {p_provider, p_subject, p_hash} = JSON.parse(body);
+          if(typeof p_provider !== "string" || typeof p_subject !== "string" || !p_subject || typeof p_hash !== "string"){ stats.bad.push("recovery_redeem args"); return reply(400, {message: "bad args"}); }
+          const out = (status, name) => reply(200, [{status, display_name: name || null}]);
+          if(!/^[0-9a-f]{64}$/.test(p_hash)) return out("refused");
+          const k = p_provider + "\u0000" + p_subject, cur = identities.get(k);
+          if(!cur) return out("unknown");
+          const tries = (attempts.get(k) || []).filter(t => t > Date.now() - 3600000);
+          if(tries.length >= 8) return out("limited");
+          const e = recovery.get(p_hash);
+          if(!e || e.used || e.expires <= Date.now()){ tries.push(Date.now()); attempts.set(k, tries); return out("refused"); }
+          e.used = true;
+          if(e.player !== cur){
+            identities.set(k, e.player);
+            if(![...identities.values()].includes(cur)){ players.delete(cur); for(const [h, x] of recovery) if(x.player === cur) recovery.delete(h); }
+          }
+          attempts.delete(k);
+          return out("ok", (players.get(e.player) || {}).display_name);
         }
         if(req.method === "POST" && url.pathname === "/realtime/v1/api/broadcast"){
           const {messages} = JSON.parse(body);

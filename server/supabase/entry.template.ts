@@ -174,6 +174,42 @@ const mkRename = (c: any) => async (player: string, name: string, fold: string) 
   } finally { c.put += nowMs() - t; }
 };
 
+/* S4.3 — recovery codes. `deps.mint(player, hash, days)` is 004_recovery.sql's recovery_mint ("ok"; anything else throws and is answered
+   `internal`). `deps.redeem(token, hash)` is the other half: it VERIFIES the token again (the same GET /auth/v1/user as identify, a 401/403
+   answers null) because only this file may see the provider's user id, then calls recovery_redeem(provider, subject, hash), which spends the
+   code, moves THAT sign-in to the code's player and removes the throwaway player, in one transaction. The code, its hash and the subject
+   never reach a log line, a response or a broadcast: the referee answers only `ok` and the recovered player's name. UNVERIFIED against the
+   real services (004_recovery.sql is not run on the project): the table-return shape of recovery_redeem over PostgREST is what
+   tools/supabase-stub.js stands in for. */
+const mkMint = (c: any) => async (player: string, hash: string, days: number) => {
+  const t = nowMs();
+  try {
+    const k = conf();
+    const r = await fetch(k.url + "/rest/v1/rpc/recovery_mint", {method: "POST", headers: k.headers, body: JSON.stringify({p_player: player, p_hash: hash, p_days: days})});
+    if(!r.ok) throw new Error("mint " + r.status);
+    return await r.json();
+  } finally { c.put += nowMs() - t; }
+};
+const mkRedeem = (c: any) => async (token: string, hash: string) => {
+  const t = nowMs();
+  try {
+    const k = conf();
+    const who = await fetch(k.url + "/auth/v1/user", {headers: {apikey: k.headers.apikey, authorization: "Bearer " + token}});
+    if(who.status === 401 || who.status === 403) return null;
+    if(!who.ok) throw new Error("redeem.verify " + who.status);
+    const u: any = await who.json();
+    if(!u || typeof u.id !== "string" || !u.id || u.id.length > 256) return null;
+    const r = await fetch(k.url + "/rest/v1/rpc/recovery_redeem", {method: "POST", headers: k.headers,
+      body: JSON.stringify({p_provider: u.is_anonymous ? "supabase-anon" : "supabase", p_subject: u.id, p_hash: hash})});
+    if(!r.ok) throw new Error("redeem " + r.status);
+    const rows: any = await r.json();
+    const row = Array.isArray(rows) ? rows[0] : rows;
+    if(!row || typeof row.status !== "string") throw new Error("redeem answered no status");
+    if(row.status === "unknown") throw new Error("redeem: the sign-in is no player");      /* identify ran first: a bug guard, answered `internal` */
+    return {status: row.status, ...(row.display_name ? {name: row.display_name} : {})};
+  } finally { c.put += nowMs() - t; }
+};
+
 /* ---- HTTP ----------------------------------------------------------------------------------------------- */
 function cors(req: Request){
   const origin = req.headers.get("origin");
@@ -203,7 +239,7 @@ Deno.serve(async (req: Request) => {
   try { r = ready(); } catch(e){ console.error(e); return send(req, {ok: false, refused: "internal"}); }
   c.ready = nowMs() - tr;
   const answer = await G.DawnServer.handle(request, {store: mkStore(c), broadcast: mkBroadcast(c), deal: r.deal, build: r.build, now: () => Date.now(),
-    ...(Deno.env.get("TABLE_IDENTITY") === "off" ? {} : {identify: mkIdentify(c), rename: mkRename(c)}),
+    ...(Deno.env.get("TABLE_IDENTITY") === "off" ? {} : {identify: mkIdentify(c), rename: mkRename(c), mint: mkMint(c), redeem: mkRedeem(c)}),
     log: (e: any) => console.error(String(e && e.stack || e))});          // operator logs only; an error never rides a response
   return send(req, answer, 200, timingHeaders(c, cold));
 });
