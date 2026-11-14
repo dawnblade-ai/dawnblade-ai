@@ -804,6 +804,11 @@ img{display:block;max-width:100%}
 .tblwho button{flex:none;background:none;border:1px solid var(--line);color:var(--y);font-size:13px;padding:8px 12px;min-height:40px}
 .tblvs{font-size:13px;color:var(--bone-dim);text-align:center;margin-top:4px;overflow-wrap:anywhere}
 .tblvs strong{color:var(--bone)}
+.heromid{min-width:0}
+.heromid .pname{max-width:100%;font-size:10px;line-height:1.15;letter-spacing:.02em;color:var(--bone-dim);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tblopen{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:4px 0}
+.tblopen button{flex:none;background:none;border:1px solid var(--line);color:var(--y);font-size:13px;padding:8px 12px;min-height:44px}
+.tblopen .mono{font-family:'Spline Sans Mono',monospace;letter-spacing:.1em;font-size:16px}
 .tblerr{font-size:13px;color:var(--r);background:rgba(196,48,43,.12);border:1px solid var(--r);padding:9px 10px}
 .tblrow{display:flex;gap:8px;flex-wrap:wrap}
 .tblgroup{display:flex;flex-direction:column;gap:6px;border-left:2px solid var(--line);padding-left:10px}
@@ -922,7 +927,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "6.30"; /* v6.30 - a lost phone is not a lost player: get a recovery code on the name sheet and type it on a new phone. See CHANGELOG.md. */
+window.APP_VER = "6.31"; /* v6.31 - a player's name is on the board during a server game, and no player holds more than 5 open tables. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -7035,7 +7040,8 @@ function TableScreen({onBack, onSeated}){
     "seat-owned":"That seat belongs to another player.",
     wire:"The table runs a different version of the game. Reload the page to pick up the latest.",
     code:"A table code is "+DawnServerTable.CODE_LEN+" letters and numbers.",
-    exists:"That code is taken — try again."
+    exists:"That code is taken — try again.",
+    "table-cap":"You already have 5 tables open, the most one player can have. Finish a game, or close one of the tables below, then open a new one."
   };
   const srvOn = !!(window.SERVER_TABLE && DawnServerTable.doorOpen(SRV_CHOICE, window.SERVER_TABLE.on));   /* this phone's ?server= choice beats the shipped switch (data script); closed, nothing below can start */
   const srvCfg = srvOn ? {...window.SERVER_TABLE, on: true} : window.SERVER_TABLE;
@@ -7096,9 +7102,24 @@ function TableScreen({onBack, onSeated}){
       store.set("who.name", r.name); setMyName(r.name); setDraft(r.name||""); setRecIn(""); setBusy(false); setRecView("done");
     }).catch(e=>{ if(!live.current) return; setBusy(false); recFail(e); });
   };
+  /* THE CAP OF OPEN TABLES (SERVER S4.4; user ruling: 5 open tables per player). The referee names the player's open tables; each can be
+     closed from here, which is the way out for a table nobody will sit at (it would otherwise count until it had been idle two days). */
+  const [capOpen,setCapOpen] = uS([]);
+  const [capNote,setCapNote] = uS(null);
+  const closeMine = c => {
+    if(!srvOn || !srvWho || busy) return;
+    setErr(null); setCapNote(null); setBusy(true);
+    const done = note => { if(!live.current) return; setBusy(false); setCapOpen(l=>l.filter(x=>x!==c)); setCapNote(note); try{ store.set("srv."+c, null); }catch(_){} };
+    DawnServerTable.closeTable({transport: srvWire(), identity: srvWho}, c).then(()=>done("Table "+c+" is closed. You can open a new table now."), e=>{
+      if(!live.current) return;
+      if(e && e.why==="no-table") return done("Table "+c+" was already gone.");
+      setBusy(false);
+      setErr(e && e.why==="not-creator" ? "That table is not yours to close." : "That did not go through — the server is not answering. Try again in a moment.");
+    });
+  };
   const srvSit = (how, c, role) => {
     if(!srvOn) return;
-    setErr(null); setGone(false); setBusy(true); setStat("srv-connecting");
+    setErr(null); setGone(false); setBusy(true); setStat("srv-connecting"); setCapOpen([]); setCapNote(null);
     const open = how==="create" ? DawnServerTable.startTable : how==="join" ? DawnServerTable.sitAt : DawnServerTable.reclaim;
     open({
       transport: srvWire(), keep: store, code: c, identity: srvWho,
@@ -7115,6 +7136,7 @@ function TableScreen({onBack, onSeated}){
     }).catch(e=>{
       if(!live.current) return;
       setStat(null); setBusy(false);
+      if(e && e.why==="table-cap") setCapOpen(Array.isArray(e.open) ? e.open : []);
       if(!e || e.why==="unavailable" || !SRV_WHY[e.why]) setGone(true); else setErr(SRV_WHY[e.why]);
     });
   };
@@ -7275,6 +7297,13 @@ function TableScreen({onBack, onSeated}){
           <button className="bigbtn alt" disabled={busy} onClick={()=>{ setCode(""); setMode("srv-join"); }}>Enter a table code</button>
           {srvSaved.map(r=><button key={r.code} className="bigbtn alt" disabled={busy} onClick={()=>{ setCode(r.code); srvSit("reclaim", r.code, r.role); }}>Resume table {r.code}</button>)}
         </>}
+        {capNote && <div className="tblok" data-testid="cap-note">{capNote}</div>}
+        {capOpen.length>0 && <div className="tblcard" data-testid="cap-open">
+          <div className="tblstat">Your open tables</div>
+          {capOpen.map(c=><div key={c} className="tblopen"><span className="mono">{c}</span>
+            <button disabled={busy} aria-label={"Close table "+c} onClick={()=>closeMine(c)}>Close</button></div>)}
+          <p className="note">Closing a table ends it for both players. A table that nobody plays also closes by itself after two days.</p>
+        </div>}
       </>}
 
       {mode==="srv-host" && <>
@@ -7389,7 +7418,9 @@ function TableScreen({onBack, onSeated}){
    every word here is what a player does next. */
 /* WHO IS AT THE TABLE (SERVER S4.2): the two display names, once the other player has one. Read off the channel
    (they ride the referee's answers), nothing typed here. */
-function SrvNames({table, seat}){
+/* THE NAMES AS A HOOK (SERVER S4.4): the board reads the very names the lobby line does. [seat 0's name | null, seat 1's]; always
+   [null, null] off a server table. Never part of the game's state: they are the channel's, not the engine's. */
+function useSrvNames(table){
   const [n,setN] = uS([null,null]);
   uE(()=>{
     if(!table || !table.srv || !table.names) return;
@@ -7397,6 +7428,10 @@ function SrvNames({table, seat}){
     read(); const t = setInterval(read, 1000);
     return ()=>clearInterval(t);
   },[table]);
+  return n;
+}
+function SrvNames({table, seat}){
+  const n = useSrvNames(table);
   if(!table || !table.srv || (n[0]==null && n[1]==null)) return null;
   const me = n[seat], them = n[1-seat];
   return <div className="tblvs">{me ? <strong>{me}</strong> : "You"} <span>vs</span> {them ? <strong>{them}</strong> : "a player with no name yet"}</div>;
@@ -7895,6 +7930,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
      lands, the guest shows its blind deal as seen from NEITHER seat: every
      hand and deck face down, so no card on it is a guess. */
   const [g,setG]     = uS(()=> local ? match.g : DawnReferee.seatView(match.g, host ? mySeat : -1));
+  const srvNames = useSrvNames(table);     /* a server table's player names (S4.4): each seat's, beside its hero; nothing at any other table */
   const [note,setNote] = uS(null);
   const [link,setLink] = uS("connected");
   const [zoom,setZoom] = uS(null);
@@ -8445,6 +8481,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                 <div className="heromid clip-sm">
                   {foeH ? <div className="hport2"><HeroArt h={foeH} db={db}/></div> : null}
                   <span className="hname">{them.name}</span>
+                  {srvNames[1-mySeat] && <span className="pname" data-pname="foe" title={srvNames[1-mySeat]}>{srvNames[1-mySeat]}</span>}
                   <b className="hlife2">{Math.max(0,them.hp)}</b>
                   <span className="hlbl">{g.turnPlayer===1-mySeat ? "their turn" : "life"}</span>
                 </div>
@@ -8700,6 +8737,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                   <button className="hport2" onClick={()=>setZoom(myBuild.HZOOM)}>
                     {myH ? <HeroArt h={myH} db={db}/> : null}</button>
                   <span className="hname">{me.name.split(",")[0]}</span>
+                  {srvNames[mySeat] && <span className="pname" data-pname="me" title={srvNames[mySeat]}>{srvNames[mySeat]}</span>}
                   <b className="hlife2">{Math.max(0,me.hp)}</b>
                   <span className="hlbl">life</span>
                   {/* THE SAME CHIP THE TRAINER DRAWS (v3.39) — a counter
