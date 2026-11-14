@@ -121,6 +121,7 @@ something new, teach the parser to read its text — never special-case a card b
   ```
   CI (`.github/workflows/ci.yml`) runs the suite on a fresh clone and checks the live
   URL after a push. If you cannot reach the live URL, say so.
+- **The server table's function must match the page.** After any release that changes `APP_VER`, `DATA_VER` or an engine/data file: `node tools/supabase-bundle.js`, redeploy `table` (`server/supabase/DEPLOY.md`), `--stamp`; `--check` proves it, or the handshake refuses. The access token is never in the repo or in chat.
 - **`WIRE_V`** (engine/wire.js) bumps on any payload or prompt shape change, including
   a new top-level game key. A new per-side field goes in `SIDE_FIELDS`, `wire.js` and
   `report.js`'s `seat()`.

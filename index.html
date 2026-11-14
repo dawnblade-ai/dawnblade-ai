@@ -1794,18 +1794,20 @@ function loadPool(){
     (byName[k]=byName[k]||[]).push(c);
     Object.keys(c.pr||{}).forEach(id=>{ if(id!=="_first") byCode[id]=c; });
   });
-  const db = {status:"ready",byNP,byName,byCode,count:cards.length,err:null};
-  /* THE TABLE'S RULES NEED THE CARDS (v6.26): judge.js looks tokens up (Runechant, Vigor, Agility...) in the database it was
-     registered with, and until now this page never registered one — so every table game played here minted fewer tokens than the
-     rules say, and a phone replaying a server table's game ("Verify this game") diverged at the first token the server made.
-     Registered once, here, where the pool is read. */
-  DawnJudge.setDb(db);
-  return db;
+  return {status:"ready",byNP,byName,byCode,count:cards.length,err:null};
 }
 function useCardDB(){
   /* Ready on the first render — there is nothing to wait for. */
   const [state] = useState(()=>{
-    try{ return loadPool(); }
+    try{
+      const db = loadPool();
+      /* THE TABLE'S RULES NEED THE CARDS (v6.26): judge.js looks tokens up (Runechant, Vigor, Agility...) in the database it was
+         registered with, and until now this page never registered one — so every table game played here made fewer tokens than the
+         rules say, and a phone replaying a server table's game ("Verify this game") diverged at the first token the server made.
+         Registered once, here, where the pool is read (not inside loadPool, which drills evaluate on their own). */
+      DawnJudge.setDb(db);
+      return db;
+    }
     catch(e){ return {status:"error",byNP:{},byName:{},byCode:{},count:0,err:String(e&&e.message||e)}; }
   });
   /* The live-database era cached its mapped cards under "dbcache_<DATA_VER>";

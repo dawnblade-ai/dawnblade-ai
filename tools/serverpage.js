@@ -183,16 +183,15 @@ async function toServerChooser(page){
     /* THE RULES NEED THE CARDS: the page registers its card database with the judge engine (it did not until v6.26, and a replay of a
        server game diverged at the first token the server minted). Seeded Viserai v Dorinthea, played through the page's own judge. */
     const tokens = await k0.page.evaluate(() => {
-      const run = () => { const db = loadPool(); /* loadPool registers; the sabotage below unregisters AFTER it */
-        const heroes = Object.fromEntries(HEROES.map(h => [h.k, h])), decks = Object.fromEntries(HEROES.map(h => [h.k, PARSED[h.k]]));
-        return { db, heroes, decks }; };
-      const play = (reg) => { const { db, heroes, decks } = run(); if(!reg) DawnJudge.setDb(null);
-        const m = DawnBuild.buildMatch({ heroes: ["viserai", "dorinthea"], seed: "probe", first: 0, boards: [{}, {}] }, { db, heroes, decks });
+      const db = loadPool(), heroes = Object.fromEntries(HEROES.map(h => [h.k, h])), decks = Object.fromEntries(HEROES.map(h => [h.k, PARSED[h.k]]));
+      const play = () => { const m = DawnBuild.buildMatch({ heroes: ["viserai", "dorinthea"], seed: "probe", first: 0, boards: [{}, {}] }, { db, heroes, decks });
         let g = DawnJudge.newMatch({ builds: m.builds, names: m.names, heroKeys: m.heroKeys, first: m.first, seed: m.seed }), n = 0;
         while(!g.over && n++ < 600){ let moved = false; for(const s of [0, 1]){ const a = DawnSparring.act(g, s, { search: false }); if(!a) continue; const r = DawnJudge.reduce(g, a, s); if(r.error) break; g = r.state; moved = true; break; } if(!moved) break; }
         const feed = (g.feed || []).map(f => typeof f === "string" ? f : (f.t || f.text || JSON.stringify(f))).join("\n");
         return { n, missing: (feed.match(/token not created/g) || []).length, rune: (feed.match(/Runechant/g) || []).length }; };
-      const off = play(false), on = play(true); return { off, on }; });
+      const on = play();                    /* as the page loaded: whatever the page registered */
+      DawnJudge.setDb(null); const off = play(); DawnJudge.setDb(db);   /* the sabotage: no database registered, then put back */
+      return { off, on }; });
     row(tokens.off.missing >= 1, "card database: the probe sees a token go missing when the judge has no database (sabotage applied)", JSON.stringify(tokens.off));
     row(tokens.on.missing === 0 && tokens.on.rune > 0, "card database: the page's judge has the database - every token a card makes is made", JSON.stringify(tokens.on));
     await k0.close();
