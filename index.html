@@ -795,6 +795,10 @@ img{display:block;max-width:100%}
 .tblstat.live{color:var(--y)}
 .tblname{width:100%;background:var(--ink);border:1px solid var(--line);color:var(--bone);font-size:20px;text-align:center;padding:12px 6px;margin-top:8px}
 .tblname:focus{outline:none;border-color:var(--y)}
+.tblrec{font-family:'Spline Sans Mono',monospace;font-size:22px;letter-spacing:.1em;text-align:center;color:var(--y);padding:12px 0 6px;overflow-wrap:anywhere;user-select:all}
+.tblrecin{width:100%;background:var(--ink);border:1px solid var(--line);color:var(--bone);font-family:'Spline Sans Mono',monospace;font-size:22px;letter-spacing:.1em;text-align:center;text-transform:uppercase;padding:12px 4px;margin-top:8px}
+.tblrecin:focus{outline:none;border-color:var(--y)}
+.tblok{font-size:14px;color:var(--bone);background:rgba(80,160,90,.12);border:1px solid var(--line);padding:9px 10px}
 .tblwho{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13.5px;color:var(--bone-dim)}
 .tblwho strong{color:var(--bone);font-size:15px;overflow-wrap:anywhere}
 .tblwho button{flex:none;background:none;border:1px solid var(--line);color:var(--y);font-size:13px;padding:8px 12px;min-height:40px}
@@ -7063,6 +7067,35 @@ function TableScreen({onBack, onSeated}){
         : "Your name was not saved — the server is not answering. Try again in a moment.");
     });
   };
+  /* A RECOVERY CODE (SERVER S4.3): the name sheet's second card. The code is held in THIS component's state only, shown once, and
+     dropped the moment the player leaves the screen — never written to the phone's storage. The server judges the code; this
+     only says what it answered, in words that do not tell a wrong code from a used or a replaced one. */
+  const [recView,setRecView] = uS("menu");        /* "menu" | "show" | "enter" | "done" */
+  const [recCode,setRecCode] = uS(null);
+  const [recIn,setRecIn] = uS("");
+  const REC_WHY = {
+    recovery:"That code did not work. Check it and try again. A code works once, and a newer code replaces an older one.",
+    "recovery-limited":"That is a lot of tries. Wait an hour, then try again.",
+    "recovery-seated":"This phone is sitting at a table. Leave the table first, then enter your code."
+  };
+  const recFail = e => setErr(REC_WHY[e && e.why] || "That did not go through — the server is not answering. Try again in a moment.");
+  const recBack = () => { setRecCode(null); setRecIn(""); setRecView("menu"); setErr(null); };
+  const getRecovery = () => {
+    if(!srvOn || !srvWho || busy) return;
+    setErr(null); setBusy(true);
+    DawnServerTable.recoveryMint({transport: srvWire(), identity: srvWho}).then(r=>{
+      if(!live.current) return;
+      setBusy(false); setRecCode(r.code); setRecView("show");
+    }).catch(e=>{ if(!live.current) return; setBusy(false); recFail(e); });
+  };
+  const useRecovery = () => {
+    if(!srvOn || !srvWho || busy) return;
+    setErr(null); setBusy(true);
+    DawnServerTable.recoveryRedeem({transport: srvWire(), identity: srvWho}, recIn, srvSaved.map(r=>r.code)).then(r=>{
+      if(!live.current) return;
+      store.set("who.name", r.name); setMyName(r.name); setDraft(r.name||""); setRecIn(""); setBusy(false); setRecView("done");
+    }).catch(e=>{ if(!live.current) return; setBusy(false); recFail(e); });
+  };
   const srvSit = (how, c, role) => {
     if(!srvOn) return;
     setErr(null); setGone(false); setBusy(true); setStat("srv-connecting");
@@ -7278,6 +7311,31 @@ function TableScreen({onBack, onSeated}){
             No email and no password — this phone remembers you.</p>
         </div>
         <button className="bigbtn" disabled={busy || Array.from(draft.trim()).length<3} onClick={saveName}>{busy ? "Saving…" : "Save name"}</button>
+        {recView==="menu" && <div className="tblcard">
+          <div className="tblstat">If you lose this phone</div>
+          <p className="note">A recovery code brings your name and your seat back on a new phone. No email, no password.</p>
+          <button className="bigbtn alt" disabled={busy} onClick={getRecovery}>{busy ? "One moment…" : "Get a recovery code"}</button>
+          <button className="bigbtn alt" disabled={busy} onClick={()=>{ setErr(null); setRecIn(""); setRecView("enter"); }}>I have a code</button>
+        </div>}
+        {recView==="show" && recCode && <div className="tblcard">
+          <div className="tblstat">Your recovery code</div>
+          <div className="tblrec" data-testid="rec-code">{recCode}</div>
+          <p className="note">Write this down and keep it somewhere safe. It is shown only once. If you get a new code, this one stops working.</p>
+          <button className="bigbtn" onClick={recBack}>I wrote it down</button>
+        </div>}
+        {recView==="enter" && <div className="tblcard">
+          <div className="tblstat">Your recovery code</div>
+          <input className="tblrecin" value={recIn} maxLength={24} inputMode="text" autoCapitalize="characters" autoCorrect="off" spellCheck={false}
+            placeholder="·····-·····-·····" aria-label="Your recovery code"
+            onChange={e=>{ setErr(null); setRecIn(e.target.value); }}/>
+          <p className="note">Type the code you wrote down. This phone then becomes you, with your name and your seat.</p>
+          <button className="bigbtn" disabled={busy || recIn.replace(/[^A-Za-z0-9]/g,"").length<6} onClick={useRecovery}>{busy ? "Checking…" : "Recover my player"}</button>
+          <button className="bigbtn alt" disabled={busy} onClick={recBack}>Cancel</button>
+        </div>}
+        {recView==="done" && <div className="tblcard">
+          <div className="tblok" data-testid="rec-done">{myName ? <>Welcome back, <strong>{myName}</strong>. This phone is you now.</> : "Your player is back on this phone. It has no name yet — you can choose one above."}</div>
+          <button className="bigbtn" onClick={()=>{ recBack(); setMode("srv"); }}>Done</button>
+        </div>}
       </>}
 
       {gone && <div className="tblcard">
@@ -7320,7 +7378,7 @@ function TableScreen({onBack, onSeated}){
       </>}
 
       {err && <div className="tblerr">{err}</div>}
-      {mode && /^srv/.test(mode) ? <button className="bigbtn alt" onClick={mode==="srv-join" || mode==="srv-name" ? ()=>{ setMode("srv"); setErr(null); setGone(false); setBusy(false); setCode(""); } : srvLeave}>{mode==="srv-host" ? "Cancel" : "Back"}</button>
+      {mode && /^srv/.test(mode) ? <button className="bigbtn alt" onClick={mode==="srv-join" || mode==="srv-name" ? ()=>{ recBack(); setMode("srv"); setErr(null); setGone(false); setBusy(false); setCode(""); } : srvLeave}>{mode==="srv-host" ? "Cancel" : "Back"}</button>
         : <button className="bigbtn alt" onClick={onBack}>Back</button>}
     </div>
   );

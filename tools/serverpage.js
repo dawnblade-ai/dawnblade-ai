@@ -262,9 +262,11 @@ async function toServerChooser(page){
   const world2 = makeWorld({ seedKey: "page", build, deal: dealLikeThePage });
   await wire(page, world2);
   /* S4.2 — players: the fake referee knows a sign-in provider and a name registry; the page and the scripted phone are players */
-  const idp = F.memIdentity(), tokPage = idp.issue("P-page"), tokB = idp.issue("P-phone-b");
+  const idp = F.memIdentity(), tokPage = idp.issue("P-page"), tokB = idp.issue("P-phone-b"), tok0 = () => tokPage;
   world2.deps.identify = t => idp.identify(t); world2.deps.rename = (p, n, f) => idp.rename(p, n, f);
   idp.rename("P-phone-b", "Rival One", world2.server.nameFold("Rival One"));
+  /* S4.3 — recovery codes: the fake backend behaves like 004_recovery.sql (test/helpers/serverfakes.js withRecovery) */
+  const rec = F.withRecovery(idp); world2.deps.mint = (p, h, d) => rec.mint(p, h, d); world2.deps.redeem = (t, h) => rec.redeem(t, h);
   const idShim = "window.__dawnServerIdentity = {token: () => Promise.resolve(" + JSON.stringify(tokPage) + ")};";
   await page.addInitScript(idShim); await page.evaluate(idShim);
   await page.evaluate(() => { window.SERVER_TABLE.on = true; });          /* the drive forces the switch ON */
@@ -324,6 +326,82 @@ async function toServerChooser(page){
     row(await overflow(page), "name row: no horizontal overflow"); await thumbs(page, "name row (named)");
     const sentMe = world2.outbound.map(x => JSON.parse(x.text)).filter(e => e.op === "me");
     row(sentMe.length === 4 && sentMe.every(e => e.identity && e.identity.token === tokPage), "name: each save was one request carrying the sign-in", sentMe.length + " requests");
+  }
+
+  /* ---- A RECOVERY CODE, MINTED ON ONE PAGE AND REDEEMED ON A SECOND (S4.3) ---- */
+  {
+    await click(page, btn(page, /^Change/), "change the name (opens the name sheet)");
+    await page.waitForSelector(".tblname");
+    const sheet = await text(page);
+    row(/If you lose this phone/i.test(sheet) && /Get a recovery code/i.test(sheet) && /I have a code/i.test(sheet), "recovery: the name sheet offers 'Get a recovery code' and 'I have a code', with a plain line about why");
+    row(await overflow(page), "recovery: the sheet has no horizontal overflow"); await thumbs(page, "recovery sheet");
+    await click(page, btn(page, /^Get a recovery code/), "get a recovery code");
+    await page.waitForSelector(".tblrec");
+    const box = await inside(page, ".tblrec", "recovery: the code");
+    const code = await page.evaluate(() => document.querySelector(".tblrec").innerText.trim());
+    row(/^[A-HJ-KM-NP-Z2-9]{5}(-[A-HJ-KM-NP-Z2-9]{5}){2}$/.test(code), "recovery: the code is three groups of five, no look-alike characters", code);
+    row(!!box && box.h >= 30 && box.r - box.x >= 200, "recovery: the code is large enough to copy down", box && (box.r - box.x) + "x" + box.h);
+    const shown = await text(page);
+    row(/Write this down/.test(shown) && /shown only once/.test(shown) && /new code, this one stops working/.test(shown), "recovery: it says write it down, that it is shown once, and that a new code replaces it");
+    row(!/recovery-|undefined|bad-request|identity\b/.test(shown), "recovery: no identifier or field name in the words");
+    await thumbs(page, "recovery code shown"); row(await overflow(page), "recovery: no overflow with the code shown");
+    row(rec.codes.size === 1 && ![...rec.codes.keys()].includes(code.replace(/-/g, "")), "recovery: the server holds one hash, not the code", rec.codes.size + " held");
+    await click(page, btn(page, /^I wrote it down/), "I wrote it down");
+    await page.waitForSelector("button:has-text('Get a recovery code')");
+    const gone = await page.evaluate(c => { const plain = c.replace(/-/g, ""); const blob = document.documentElement.innerHTML + JSON.stringify(Object.assign({}, localStorage)) + JSON.stringify(Object.assign({}, sessionStorage));
+      return blob.indexOf(c) < 0 && blob.indexOf(plain) < 0; }, code);
+    row(gone, "recovery: once dismissed the code is nowhere on the page or in the phone's storage");
+
+    /* the SECOND page: a new phone, its own fresh sign-in, no name */
+    const kit2 = await open({ w: W, h: H });
+    const p2 = kit2.page, tokNew = idp.issue("P-new-phone");
+    await wire(p2, world2);
+    const shim2 = "window.__dawnServerIdentity = {token: () => Promise.resolve(" + JSON.stringify(tokNew) + ")};";
+    await p2.addInitScript(shim2); await p2.evaluate(shim2);
+    await p2.evaluate(() => { window.SERVER_TABLE.on = true; });
+    await toServerChooser(p2);
+    row(/No player name yet/.test(await text(p2)), "recovery: the new phone starts with no name");
+    await click(p2, btn(p2, /^Choose a name/), "choose a name (second page)");
+    await p2.waitForSelector(".tblname");
+    await click(p2, btn(p2, /^I have a code/), "I have a code");
+    await p2.waitForSelector(".tblrecin");
+    await inside(p2, ".tblrecin", "recovery: the code field"); await thumbs(p2, "recovery entry"); row(await overflow(p2), "recovery: the entry has no overflow");
+    const goOff = () => p2.evaluate(() => { const b = [...document.querySelectorAll("button")].find(x => /^Recover my player/.test(x.textContent.trim())); return !!b && b.disabled; });
+    row(await goOff(), "recovery: an empty field cannot be sent");
+    /* a wrong code: plain words, the same for any reason it might be wrong */
+    await p2.fill(".tblrecin", "abcde fghjk mnpqr"); await click(p2, btn(p2, /^Recover my player/), "recover (wrong code)");
+    await p2.waitForSelector(".tblerr");
+    const werr = await p2.evaluate(() => document.querySelector(".tblerr").innerText.replace(/\s+/g, " ").trim());
+    row(/did not work/.test(werr) && /works once/.test(werr) && !/recovery-|undefined|expired|used|wrong/i.test(werr.replace(/A code works once/, "")), "recovery: a wrong code is refused in plain words that do not say why it failed", werr.slice(0, 120));
+    await inside(p2, ".tblerr", "recovery: the refusal");
+    row(idp.live.get(tokNew).player === "P-new-phone", "recovery: a wrong code moved nothing");
+    /* the right code, typed the way a person might: lower case, spaces */
+    await p2.fill(".tblrecin", code.toLowerCase().replace(/-/g, " ")); await click(p2, btn(p2, /^Recover my player/), "recover (right code)");
+    await p2.waitForSelector("[data-testid=rec-done]");
+    const done = await inside(p2, "[data-testid=rec-done]", "recovery: the welcome");
+    row(!!done && /Welcome back, Dawn Smith\. This phone is you now\./.test(done.t), "recovery: the new phone's sheet shows the recovered name", done && done.t);
+    row(await p2.evaluate(() => JSON.parse(window.localStorage.getItem("dawnblade.who.name")) === "Dawn Smith"), "recovery: the new phone remembers the recovered name");
+    row(idp.live.get(tokNew).player === "P-page" && idp.live.get(tok0()).player === "P-page", "recovery: the new sign-in and the old one are the same player");
+    row(rec.deleted.join() === "P-new-phone", "recovery: the throwaway player was removed", rec.deleted.join());
+    const sentR = world2.outbound.map(x => JSON.parse(x.text)).filter(e => e.op === "recovery-redeem");
+    row(sentR.length === 2 && sentR.every(e => e.identity && e.identity.token === tokNew && !("table" in e)), "recovery: each try was one request carrying the new sign-in", sentR.length + " tries");
+    await thumbs(p2, "recovery welcome"); row(await overflow(p2), "recovery: the welcome has no overflow");
+    await click(p2, btn(p2, /^Done/), "done");
+    await p2.waitForSelector("button:has-text('Open a server table')");
+    row(/Playing as\s+Dawn Smith/.test(await text(p2)), "recovery: back on the chooser it reads 'Playing as Dawn Smith'");
+    /* the same code a second time (from a third sign-in): one answer, nothing moves */
+    await click(p2, btn(p2, /^Change/), "change (second page)"); await p2.waitForSelector(".tblname");
+    const tokThird = idp.issue("P-third-phone");
+    await p2.evaluate(t => { window.__dawnServerIdentity = {token: () => Promise.resolve(t)}; }, tokThird);
+    await click(p2, btn(p2, /^I have a code/), "I have a code (again)"); await p2.waitForSelector(".tblrecin");
+    await p2.fill(".tblrecin", code); await click(p2, btn(p2, /^Recover my player/), "recover (used code)"); await p2.waitForSelector(".tblerr");
+    row(/did not work/.test(await p2.evaluate(() => document.querySelector(".tblerr").innerText)) && idp.live.get(tokThird).player === "P-third-phone", "recovery: a used code is refused the same way and moves nothing");
+    row(world2.errors.length === 0, "recovery: no internal error on the fake server", world2.errors.join("|").slice(0, 150));
+    const bug2 = kit2.errors.filter(e => !/404|Failed to load resource/.test(e));
+    row(bug2.length === 0, "recovery: no page error on the second page", bug2.join(" | ").slice(0, 200));
+    await kit2.close();
+    await click(page, btn(page, /^Back/), "back to the chooser (first page)");
+    await page.waitForSelector("button:has-text('Open a server table')");
   }
 
   /* open one: waiting */
