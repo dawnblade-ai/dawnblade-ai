@@ -12,6 +12,11 @@
        through the page's own session hooks (window.__dawnTable, the same ones tools/perf-page.js uses) and reports: seated yes/no,
        how every remote move reached the other phone (push = a Realtime message with no function call, else a fallback ask),
        median / p95 tap -> other seat, any banner text, console errors.
+   (d) S4.3 (v6.30, UNRUN ON LIVE when written: the recovery SQL and function were not deployed yet): before the table is opened, seat 0's phone
+       chooses a one-run player name and gets a recovery code on the name sheet; after the game a THIRD fresh Chromium context (a brand-new
+       anonymous sign-in) types that code on its own name sheet and must read "Welcome back, <that name>", with a sign-in of its own (not the
+       host's), and the same code typed again must be refused. The recovered player's name is the only mark a run leaves (names are unique
+       and one per run: "Lc" + the clock in base 36); the throwaway player the third phone had is deleted by the redeem itself.
    Exit 0 only when every check passes; otherwise 1 (and the line that failed says why).
 
    If the live page's switch is closed (SERVER_TABLE.on false: a release before v6.28) both phones are opened with ?server=1.
@@ -107,7 +112,7 @@ async function twoPhones(p, cfg){
     await page.waitForFunction(() => /\d+ cards/.test((document.querySelector(".topbar .tag") || {}).textContent || ""), null, { timeout: 120000 });
     phones.push(ph); return ph;
   };
-  let seated = false, verdict = "";
+  let seated = false, verdict = "", liveName = null, recCode = null;
   try {
     const A = await mk("host"), B = await mk("guest");
     out.loaded = { A: await A.page.evaluate(() => window.APP_VER), B: await B.page.evaluate(() => window.APP_VER) };
@@ -116,7 +121,19 @@ async function twoPhones(p, cfg){
     const offered = await A.page.evaluate(() => [...document.querySelectorAll("button")].some(b => /^Join a server table/.test(b.textContent.trim())));
     row(offered, "the table screen offers the server table" + (closed ? " (opened with ?server=1: the switch is closed)" : " (no query: the door is open)"));
     if(!offered) throw new Error("no server option on the table screen");
-    await click(A, /^Join a server table/); await click(A, /^Open a server table/);
+    await click(A, /^Join a server table/);
+    /* S4.3: seat 0's player gets a one-run name and a recovery code on the name sheet (the same buttons tools/serverpage.js drives offline) */
+    liveName = "Lc" + Date.now().toString(36).slice(-8);
+    await click(A, /^Choose a name/); await A.page.waitForSelector(".tblname", { timeout: 60000 });
+    await A.page.fill(".tblname", liveName); await click(A, /^Save name/);
+    await A.page.waitForFunction(n => document.body.innerText.indexOf(n) >= 0 && /Playing as/i.test(document.body.innerText), liveName, { timeout: 90000 });
+    await click(A, /^Change/); await A.page.waitForSelector(".tblname", { timeout: 30000 });
+    await click(A, /^Get a recovery code/); await A.page.waitForSelector(".tblrec", { timeout: 90000 });
+    recCode = (await A.page.evaluate(() => document.querySelector(".tblrec").innerText)).trim();
+    row(/^[A-HJ-KM-NP-Z2-9]{5}(-[A-HJ-KM-NP-Z2-9]{5}){2}$/.test(recCode), "seat 0's player got a recovery code (three groups of five)", "name " + liveName);
+    await click(A, /^I wrote it down/); await click(A, /^Back/);
+    await A.page.waitForSelector("button:has-text('Open a server table')", { timeout: 30000 });
+    await click(A, /^Open a server table/);
     await A.page.waitForSelector(".tblcode", { timeout: 90000 });
     const code = (await A.page.evaluate(() => document.querySelector(".tblcode").innerText)).trim();
     out.code = code;
@@ -184,6 +201,34 @@ async function twoPhones(p, cfg){
     console.log("      how remote moves arrived: push " + pushed + ", fallback " + fallback + (fallback ? " (" + out.play.fallbackKinds.join("; ") + ")" : ""));
     console.log("      tap -> other seat (ms): all median " + out.play.all.median + ", p95 " + out.play.all.p95 + " | host moves: median " + hs.median + ", p95 " + hs.p95 + ", max " + hs.max + " | guest moves: median " + gs.median + ", p95 " + gs.p95 + ", max " + gs.max);
     row(fallback === 0, "every remote move arrived by push", fallback ? fallback + " of " + rows.length + " came by a fallback ask" : "");
+    /* S4.3: a third, fresh phone redeems seat 0's code and is that player */
+    if(recCode){
+      const C = await mk("recovered");
+      const hostA = await A.page.evaluate(() => { try { return JSON.parse(window.localStorage.getItem("dawnblade.who.id") || "null").a; } catch(_){ return null; } });
+      await click(C, /^Find an opponent/); await C.page.waitForSelector(".tblwrap");
+      await click(C, /^Join a server table/);
+      await click(C, /^Choose a name/); await C.page.waitForSelector(".tblname", { timeout: 60000 });
+      await click(C, /^I have a code/); await C.page.waitForSelector(".tblrecin", { timeout: 30000 });
+      await C.page.fill(".tblrecin", recCode.toLowerCase().replace(/-/g, " "));
+      await click(C, /^Recover my player/);
+      const welcomed = await C.page.waitForSelector("[data-testid=rec-done]", { timeout: 90000 }).then(() => true, () => false);
+      const said = welcomed ? (await C.page.evaluate(() => document.querySelector("[data-testid=rec-done]").innerText)).replace(/\s+/g, " ").trim() : (await C.page.evaluate(() => (document.querySelector(".tblerr") || { innerText: "" }).innerText)).trim();
+      row(welcomed && said.indexOf("Welcome back, " + liveName) === 0, "a third fresh phone redeemed seat 0's recovery code and is recognised as that player", said.slice(0, 100));
+      const mine = await C.page.evaluate(() => { try { return { who: JSON.parse(window.localStorage.getItem("dawnblade.who.name") || "null"), a: JSON.parse(window.localStorage.getItem("dawnblade.who.id") || "null").a }; } catch(_){ return null; } });
+      row(!!mine && mine.who === liveName && !!mine.a && mine.a !== hostA, "the third phone holds the recovered name and a sign-in of its own (not the host's)");
+      /* the same code again, from yet another fresh sign-in: refused, and the screen says nothing about why */
+      await click(C, /^Done/); await C.page.waitForSelector("button:has-text('Open a server table')");
+      await C.page.evaluate(() => { window.localStorage.removeItem("dawnblade.who.id"); window.localStorage.removeItem("dawnblade.who.name"); });
+      await C.page.reload({ waitUntil: "load" });
+      await C.page.waitForFunction(() => /\d+ cards/.test((document.querySelector(".topbar .tag") || {}).textContent || ""), null, { timeout: 120000 });
+      await click(C, /^Find an opponent/); await C.page.waitForSelector(".tblwrap");
+      await click(C, /^Join a server table/); await click(C, /^Choose a name/); await C.page.waitForSelector(".tblname", { timeout: 60000 });
+      await click(C, /^I have a code/); await C.page.waitForSelector(".tblrecin", { timeout: 30000 });
+      await C.page.fill(".tblrecin", recCode); await click(C, /^Recover my player/);
+      const refused = await C.page.waitForSelector(".tblerr", { timeout: 90000 }).then(() => C.page.evaluate(() => document.querySelector(".tblerr").innerText.replace(/\s+/g, " ").trim()), () => "");
+      row(/did not work/.test(refused) && !(await C.page.evaluate(() => !!document.querySelector("[data-testid=rec-done]"))), "the same code typed again is refused, in plain words", refused.slice(0, 80));
+      await C.ctx.close().catch(() => {});           /* its page errors were recorded as they happened and are still counted below */
+    }
   } catch(e){ verdict = String(e && e.message || e); if(verdict !== "lobby") row(false, "two-phone drive", verdict.split("\n")[0]); }
   row(seated, "seated: " + (seated ? "yes" : "no"));
   const banners = [], errs = [], cerrs = [];
