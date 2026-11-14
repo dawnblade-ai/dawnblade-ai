@@ -89,3 +89,14 @@ fairness: no findings. serverrun --isolate: ALL PASS. Deno rehearsal (single + f
 - Throwaway player: SQL deletes it when the redeeming sign-in leaves it with no identity. A seat it holds is the referee's business: the phone names the tables it has sat at (`tables`) and the redeem is refused `recovery-seated`
   before anything changes. The server only knows the tables it is told of; the page sends its saved seats.
 - Drills `test/serverrecover.test.js` (18, each with its sabotage; backend fake `withRecovery` in serverfakes.js behaves like 004).
+
+## Step 3 — the phone, the page, the rehearsal, livecheck, release prep (v6.30; nothing pushed or deployed)
+- `engine/servertable.js`: `recoveryMint(o)` -> {code, days}; `recoveryRedeem(o, code, tables?)` -> {name}; rejects `.why` unavailable | identity | recovery | recovery-limited | recovery-seated.
+  Drills `test/serverrecoverphone.test.js` (6, each with sabotage). (Referee helpers are named `opMintCode`/`opRedeemCode`: `recoveryMint`/`recoveryRedeem` collided with the engine exports and `serverref.test.js`'s no-mirror ledger said so.)
+- Page (index.html, name sheet = mode "srv-name"): second card "If you lose this phone": Get a recovery code / I have a code; the code is in component state only. `tools/serverpage.js` 131 passed, 0 failed:
+  mint on page 1 (box 351x50 inside 393, thumb-sized buttons, no overflow, code not in DOM/storage after "I wrote it down"), redeem on page 2 (wrong code plain words, right code typed lower-case with spaces
+  -> "Welcome back, Dawn Smith", same player as the old sign-in, throwaway removed, used code refused the same way). Page sabotage (code written to localStorage; a refusal that says "used or expired") -> 3 FAILs, restored.
+- Rehearsal: `tools/supabase-rehearse.js` single + folder under Deno 2.9.6: ALL PASS (8 recovery rows each; the bundled entry compiles with mkMint/mkRedeem).
+- livecheck: after the real game a third fresh context redeems seat 0's code; WRITTEN BUT NOT RUN against live (004 and the new function are not deployed). Seat 0's phone first takes a one-run name ("Lc" + clock base 36) so the recovered player is recognisable.
+- Release prep: APP_VER 6.30, CHANGELOG, docs/progress/v6.30.md. WIRE_V stays 40 (no wire payload, prompt or game key changed; the ops ride the request envelope). `--check` reads STALE as expected; NOT stamped.
+- Repins with notes: slicecensus stylesheet 70,334 -> 70,922 (`.tblrec`, `.tblrecin`, `.tblok`), tapdoor plain-arrow onClick 13 -> 15 (two screen-state buttons). npm test: 4240 tests, 4235 pass, 0 fail, 5 skipped. scenes 107/0. fairness: exit 0.

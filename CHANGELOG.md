@@ -1,3 +1,33 @@
+## v6.30 — a lost phone is not a lost player: the recovery code
+
+- **On the name sheet** (*Find an opponent* → *Join a server table* → *Choose a name*): **Get a recovery code** shows a code ONCE (three groups of five,
+  e.g. `6RY9U-8HWT9-5QMG7`) with a plain line telling the player to write it down and that a new code replaces it; **I have a code** takes it on a
+  NEW phone and the sheet answers "Welcome back, <name>. This phone is you now." The recovered phone has the player's name and takes the player's seat
+  the usual way (sit down: last one wins, the old phone is told). The old phone keeps working: one player, two phones. The code is held in the page's
+  memory only while it is on the screen, never in the phone's storage.
+- **The code** (`server/referee.js`, ops `recovery-mint` and `recovery-redeem`): 15 characters from a 31-letter alphabet (no 0 O 1 I L) = 74 bits, drawn
+  from `crypto.getRandomValues` with rejection sampling (never `Math.random`). Only its SHA-256 is stored (`recovery`, from 002). Read leniently on
+  the way in (case, spaces, dashes). **Expiry two years** (730 days; it is a lost-phone code and must still work months later); a new code restarts it.
+  **One live code per player**: minting retires the older unused ones.
+- **Redeem** (`004_recovery.sql`, `recovery_redeem`, service_role only, ONE transaction): spends the code, re-points the new phone's sign-in to the code's
+  player, and deletes the throwaway player it had if that leaves it with no sign-in (its name, if it chose one, is freed). **Wrong, used, expired,
+  replaced and malformed codes are ONE answer** (`recovery`, and one plain sentence on the screen). A phone that is sitting at a table (the page names the
+  tables it knows) is told to leave it first (`recovery-seated`), before anything changes, so a seat is never left to a player that no longer exists.
+- **Brake:** eight wrong tries from one sign-in in an hour answer `recovery-limited` (a limited try does not look at the code, so a good code is not
+  spent by it). Per sign-in, not global (a global brake would let anyone lock every player out); the defence is the code's size: ~10^15 years at 150 tries
+  an hour from one address, and the auth service itself allows 30 anonymous sign-ins an hour per address.
+- **Nothing leaks:** the code is in the mint's answer and nowhere else; no hash, token, provider id or player id in any other answer, broadcast, stored
+  row or report (`test/serverrecover.test.js` scans them, with the leaks planted as sabotage).
+- **To go live (the CEO):** run `server/supabase/004_recovery.sql` (ends `[{"dawnblade_recovery":"ok"}]`), re-bundle and redeploy the function, `--stamp`,
+  then `node tools/livecheck.js` (which now also mints a code on seat 0 and redeems it on a third fresh browser; it was written but NOT run on live).
+- **Drills:** `test/serverrecover.test.js` (18) and `test/serverrecoverphone.test.js` (6), each with its sabotage; `tools/serverpage.js` mints on one real
+  page and redeems on a second at 393x852; `tools/supabase-rehearse.js` under Deno (single + folder); `tools/sql-pglite.js` (004 twice; ten sabotages).
+- **WIRE_V not bumped** (still 40): no wire payload, prompt or game key changed; the two ops ride the request envelope and the function's own answers, as `me` did.
+  The table's build id moved with APP_VER, so the function MUST be redeployed or the handshake refuses.
+- **Honest list:** a code is only as safe as the paper it is on; anyone who has it can become the player (the same trust as a password). Losing the
+  code AND the phone is still losing the player. The server only knows the tables the redeeming phone tells it of (an unlisted old seat stays with a
+  player that no longer exists). A phone that already has a named player and redeems a code gives that player up if it had no other sign-in.
+
 ## v6.29 — your seat is yours: the phone signs in by itself, and you can choose a player name
 
 - **Decided by the user (2026-11-14, "Yes to all"):** turn on anonymous sign-in; a recovery code is enough for the first ladder; at most 5 open

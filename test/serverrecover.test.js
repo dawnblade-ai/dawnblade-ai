@@ -263,8 +263,8 @@ test("SABOTAGE (7): a code drawn from Math.random, a 16-letter alphabet, a modul
 });
 test("(7b) LEDGER — the draw rejects bytes at 248 (31*8) so the modulo is unbiased, and never falls back to Math.random", () => {
   assert.ok(/b < 248/.test(SRC) && 248 === 31 * 8);
-  const recovery = SRC.slice(SRC.indexOf("function recoveryDraw"), SRC.indexOf("const recoveryShow"));
-  assert.ok(!/Math\.random/.test(recovery), "recoveryDraw must not mention Math.random");
+  const recovery = (SRC.match(/function recoveryDraw[\s\S]*?\nconst recoveryShow/) || [""])[0];
+  assert.ok(recovery.length > 100 && !/Math\.random/.test(recovery), "recoveryDraw must not mention Math.random");
 });
 
 /* ---------------------------------------------------------------------------------------------- (8) */

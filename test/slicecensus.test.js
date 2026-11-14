@@ -432,8 +432,11 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        `.tblgname`, `.tblgnote`) and the wrapping `.tblrow`.
        69,669 -> 70,334 AT v6.29, READ FIRST: still `<style>` -> `</style>`; the
        growth is the server table's player name (`.tblname` the field, `.tblwho`
-       the "Playing as" row, `.tblvs` the lobby's names line). */
-    "phasebar.test.js index.html 70334",
+       the "Playing as" row, `.tblvs` the lobby's names line).
+       70,334 -> 70,922 AT v6.30, READ FIRST: still `<style>` -> `</style>`; the
+       growth is the recovery code's three rules (`.tblrec` the code shown once,
+       `.tblrecin` the field, `.tblok` the welcome line). */
+    "phasebar.test.js index.html 70922",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
        `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
        `abPickBound` in the pick legality it extends. */

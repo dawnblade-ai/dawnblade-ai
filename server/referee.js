@@ -362,7 +362,7 @@ function recoveryWho(req, deps, f){
     return f(who, idn.token);
   });
 }
-function recoveryMint(req, deps){
+function opMintCode(req, deps){
   return recoveryWho(req, deps, who => {
     if(typeof deps.mint !== "function") return no("unavailable");
     const code = recoveryDraw(deps);
@@ -372,7 +372,7 @@ function recoveryMint(req, deps){
     });
   });
 }
-function recoveryRedeem(req, deps){
+function opRedeemCode(req, deps){
   const code = recoveryNormal(req.code);
   const tables = req.tables === undefined ? [] : req.tables;
   if(!Array.isArray(tables) || tables.length > 6 || !tables.every(t => typeof t === "string" && ID_RE.test(t))) return no("bad-request");
@@ -498,8 +498,8 @@ function serve(req, deps){
   if(!req || typeof req !== "object" || !deps || !deps.store) return no("bad-request");
   if(req.op === "create") return create(req, deps);
   if(req.op === "me") return me(req, deps);
-  if(req.op === "recovery-mint") return recoveryMint(req, deps);
-  if(req.op === "recovery-redeem") return recoveryRedeem(req, deps);
+  if(req.op === "recovery-mint") return opMintCode(req, deps);
+  if(req.op === "recovery-redeem") return opRedeemCode(req, deps);
   if(typeof req.table !== "string" || !ID_RE.test(req.table)) return no("bad-request");
   const fn = req.op === "join" ? join : req.op === "frame" ? frame : req.op === "resync" ? resync : null;
   if(!fn) return no("bad-request");

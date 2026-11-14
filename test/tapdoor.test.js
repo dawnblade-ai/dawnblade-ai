@@ -50,7 +50,9 @@ test("CENSUS: no plain-arrow onClick returns a tapTwice handler", () => {
      returns a handler, so the census below still holds. */
   /* 12 -> 13 AT SERVER S4.2, READ FIRST: the server chooser's "Choose a name" / "Change" button is a plain arrow that
      sets screen state (clears the error, seeds the draft, opens the name sheet); it returns no handler. */
-  assert.equal(bodies.length, 13, "the plain-arrow onClick count moved (" + bodies.length + ") — read the new one, then repin");
+  /* 13 -> 15 AT SERVER S4.3, READ FIRST: the recovery card's "I have a code" button (clears the error and the field, shows the entry) and the
+     welcome card's "Done" (clears the code state, returns to the chooser) are plain arrows that set screen state; neither returns a handler. */
+  assert.equal(bodies.length, 15, "the plain-arrow onClick count moved (" + bodies.length + ") — read the new one, then repin");
   const dead = bodies.filter(b => /return tapTwice\(/.test(b));
   assert.deepEqual(dead.map(b => b.slice(0, 120)), [], "a tap that builds its handler and throws it away");
 });

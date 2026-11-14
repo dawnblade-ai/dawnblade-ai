@@ -124,7 +124,7 @@ deploy there is no stamp; `--check` then compares the generated copy only.
 
 - **Anonymous sign-in is ON** (the user's decision, 2026-11-14): `PATCH /v1/projects/{ref}/config/auth` body `{"external_anonymous_users_enabled":true}`.
   The page signs in with `POST /auth/v1/signup` body `{}` and refreshes with `POST /auth/v1/token?grant_type=refresh_token` (publishable key as `apikey`).
-- **SQL, in order, each safe to run twice:** `001_tables.sql`, `002_players.sql`, `003_names.sql` (`POST /v1/projects/{ref}/database/query`; each ends with one `ok` row).
+- **SQL, in order, each safe to run twice:** `001_tables.sql`, `002_players.sql`, `003_names.sql`, `004_recovery.sql` (`POST /v1/projects/{ref}/database/query`; each ends with one `ok` row).
   Offline check: `PGLITE_DIR=<scratch> node tools/sql-pglite.js`.
 - The function verifies a token at `/auth/v1/user`, maps it with `identity_resolve`, stores a name with `player_rename`. `TABLE_IDENTITY=off` (a function secret) switches all of it off:
   every table is then casual.
