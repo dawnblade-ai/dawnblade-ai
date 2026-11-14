@@ -37,3 +37,15 @@ fairness: no findings. serverrun --isolate: ALL PASS. Deno rehearsal (single + f
 - WIRE_V NOT bumped: wire.js payloads, prompts and game keys are untouched; `identity` rides the request envelope and `names`/`owned`/`taken`/`owners`/`retired` the function's own envelope and row (same reasoning as `claim`/`mac` in S3).
 - Row: ROW_V=3 newest; reads 2 and 3; a row is written v3 only when an identity binds (casual rows stay v2, byte-identical to v6.28, and v6.28 can still read them; v6.28 refuses v3 as `wire` = safe rollback). v2 reads as owners/names [null,null], retired [[],[]], nothing rewritten by reading.
 - Bundled files changed: `server/referee.js` and `server/supabase/entry.template.ts` ONLY (engine/*.js, data/*, index.html unchanged). Shipping the repo without redeploying the function is safe (live function = v6.28 referee, unaffected); `--check` stays STALE until a redeploy + `--stamp`.
+
+# SERVER S4.2 — running log (branch `claude/inspiring-ritchie-630ocp`)
+
+## Step 1 — the project side, LIVE (2026-11-14)
+- Anonymous sign-in ENABLED (user's yes, 2026-11-14): `PATCH /v1/projects/{ref}/config/auth` body `{"external_anonymous_users_enabled":true}` -> 200 (field name VERIFIED;
+  took a few seconds to apply). Sign in: `POST /auth/v1/signup` body `{}` with the publishable `apikey` -> `{access_token, refresh_token, expires_in:3600, user:{is_anonymous:true}}`.
+  `GET /auth/v1/user`: 200 with a real token, 403 with a garbage one (mkIdentify already treats 401/403 as null). No captcha; 30 anonymous sign-ins per hour per address.
+- `002_players.sql` RUN on the project (`database/query` -> 201, `[{"dawnblade_players":"ok"}]`); the publishable key is refused on players/identities/recovery (404) and identity_resolve (401).
+- Function redeployed with the S4.1 referee (version 11; build id unchanged `v6.28 · sage-v17`, so v6.28 phones handshake as before), stamped (digest 68fb00be0da6).
+- `mkIdentify` VERIFIED LIVE: two real anonymous players joined one table (`owned:true`, `names:["Ritchie","Franklin"]`), the same token asked again got the same
+  seat, a forged token -> `identity`, a one-letter name -> `bad-request field:name reason:short`, a third casual join -> `full`; no token or subject in any answer.
+- `tools/livecheck.js` against the v6.28 page + the new function: ALL PASS (push 43, fallback 0, median 313 ms, p95 550).
