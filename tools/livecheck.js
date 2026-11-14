@@ -17,6 +17,8 @@
        anonymous sign-in) types that code on its own name sheet and must read "Welcome back, <that name>", with a sign-in of its own (not the
        host's), and the same code typed again must be refused. The recovered player's name is the only mark a run leaves (names are unique
        and one per run: "Lc" + the clock in base 36); the throwaway player the third phone had is deleted by the redeem itself.
+   (e) S4.4 (v6.31, UNRUN ON LIVE when written): after both phones reach the board, seat 0's one-run name is beside its hero on BOTH boards. It does NOT create
+       six tables (the cap is proven offline: test/servertablecap.test.js, the Deno rehearsal, tools/serverpage.js).
    Exit 0 only when every check passes; otherwise 1 (and the line that failed says why).
 
    If the live page's switch is closed (SERVER_TABLE.on false: a release before v6.28) both phones are opened with ?server=1.
@@ -167,6 +169,12 @@ async function twoPhones(p, cfg){
     const seatOf = ph => ph.page.evaluate(() => window.__dawnTable.seat);
     const seats = [await seatOf(A), await seatOf(B)];
     out.seats = seats;
+    /* S4.4 (v6.31, UNRUN ON LIVE when written: the v6.31 page and function are not deployed yet): seat 0's one-run player name is on BOTH boards, beside
+       that seat's hero: the host reads it as its own (data-pname "me"), the guest as its opponent's ("foe"). Names are the one mark a run leaves. */
+    {
+      const seen = await Promise.all([[A, "me"], [B, "foe"]].map(([ph, who]) => ph.page.waitForFunction(([w, n]) => { const e = document.querySelector('[data-pname="' + w + '"]'); return !!e && e.textContent === n; }, [who, liveName], { timeout: 45000 }).then(() => true, () => false)));
+      row(seen[0] && seen[1], "seat 0's player name is beside its hero on BOTH boards (host: mine, guest: theirs)", "name " + liveName + ", host " + (seen[0] ? "yes" : "no") + ", guest " + (seen[1] ? "yes" : "no"));
+    }
     const seqNow = ph => ph.page.evaluate(() => window.__dawnTable.session.seq());
     const move = ph => ph.page.evaluate(seat => { const s = window.__dawnTable.session; if(s.status() !== "ready") return false; const a = DawnSparring.act(s.state(), seat, { search: false }); if(!a) return false; window.__t_submit = Date.now(); return !s.submit(a); }, seats[phones.indexOf(ph)]).catch(() => false);
     const rows = []; let idle = 0, lost = 0;

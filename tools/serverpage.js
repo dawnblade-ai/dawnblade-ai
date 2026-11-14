@@ -85,6 +85,54 @@ const inside = async (page, sel, name) => {
 const click = async (page, loc, what) => { try { await loc.click({ timeout: 4000 }); return true; } catch(e){ row(false, what, "not clickable: " + String(e.message).split("\n")[0]); return false; } };
 const btn = (page, re) => page.getByRole("button", { name: re });
 
+/* S4.4 — the board's player names, measured. `.pname` is drawn inside its seat's `.heromid`; a seat with no name draws nothing. */
+const pnames = page => page.evaluate(() => { const o = {};
+  for(const k of ["me", "foe"]){ const e = document.querySelector('[data-pname="' + k + '"]'), m = e && e.closest(".heromid"), r = e && e.getBoundingClientRect(), q = m && m.getBoundingClientRect(), rr = m && m.closest(".heror").getBoundingClientRect();
+    o[k] = e ? { t: e.textContent, x: Math.round(r.left), r: Math.round(r.right), h: Math.round(r.height), cut: e.scrollWidth > e.clientWidth, ell: getComputedStyle(e).textOverflow, mx: Math.round(q.left), mr: Math.round(q.right), mw: Math.round(q.width), mh: Math.round(q.height), rx: Math.round(rr.left), rr: Math.round(rr.right) } : null; }
+  o.scrollW = document.scrollingElement.scrollWidth; o.n = document.querySelectorAll("[data-pname]").length;
+  const hm = [...document.querySelectorAll(".heromid")].map(m => Math.round(m.getBoundingClientRect().width)); o.hm = hm; return o; });
+
+/* drive a page (open at the server table chooser) to the board: the page either opens a table (asHost) or types the code of the scripted phone's */
+async function toTheBoard(page, world, B, o){
+  if(o.asHost){
+    await click(page, btn(page, /^Open a server table/), "open a server table"); await page.waitForSelector(".tblcode");
+    const code = await page.evaluate(() => document.querySelector(".tblcode").innerText.trim());
+    await B.connect("join", code);
+    await page.waitForFunction(() => /Choose your fighter/i.test(document.body.innerText), null, { timeout: 10000 }).catch(() => {});
+    var codeOut = code;
+  } else {
+    await B.connect("create"); codeOut = B.code;
+    await click(page, btn(page, /^Enter a table code/), "enter a table code"); await page.waitForSelector(".tblin");
+    await page.fill(".tblin", B.code); await click(page, btn(page, /^Sit down/), "sit down");
+    await page.waitForFunction(() => /Choose your fighter/i.test(document.body.innerText), null, { timeout: 10000 }).catch(() => {});
+  }
+  await click(page, page.locator(".lobhero", { hasText: /Blaze/ }).first(), "pick Blaze");
+  await click(page, btn(page, /^Lock in/), "lock in");
+  await page.waitForSelector(".rthrows", { timeout: 10000 });
+  await click(page, page.locator(".rthrows button", { hasText: /rock/i }), "throw rock");
+  await page.waitForFunction(() => document.querySelector(".rthrows"), null, { timeout: 10000 });
+  await wait(300);
+  await click(page, page.locator(".rthrows button", { hasText: /paper/i }), "throw paper");
+  await page.waitForFunction(() => document.querySelector(".rseatpick") || /Lock the sideboard/i.test(document.body.innerText), null, { timeout: 10000 });
+  if(await page.locator(".rseatpick").count()) await click(page, page.locator(".rseatpick button").first(), "I go first");
+  await page.waitForFunction(() => /Lock the sideboard/i.test(document.body.innerText), null, { timeout: 15000 });
+  await click(page, btn(page, /^Lock the sideboard/), "lock the sideboard");
+  await page.waitForSelector(".board", { timeout: 30000 });
+  await wait(500);
+  return codeOut;
+}
+/* a few real actions across the page and the scripted phone, so the names are checked in a game that is being played */
+async function playSome(page, world, B, seat, n){
+  let did = 0;
+  for(let i = 0; i < n * 4 && did < n; i++){
+    const moved = await page.evaluate(s => { const t = window.__dawnTable; if(!t) return false; const x = t.session; if(x.status() !== "ready") return false; const a = DawnSparring.act(x.state(), s, { search: false }); if(!a) return false; return !x.submit(a); }, seat).catch(() => false);
+    if(moved){ did++; await world.settle([B.ch]); await wait(60); continue; }
+    if(await PH.step(world, [B])){ did++; await wait(60); continue; }
+    await wait(120);
+  }
+  return did;
+}
+
 async function toServerChooser(page){
   await click(page, btn(page, /^Find an opponent/), "find an opponent");
   await page.waitForSelector(".tblwrap");
@@ -472,6 +520,13 @@ async function toServerChooser(page){
   row(Wr.hash(full) === Wr.hash(PH.reference(world2.row(code), B.sess.seq(), world2.deps.deal).state()), "the stored game is the in-process referee's, action for action", B.sess.seq() + " actions");
   row(world2.errors.length === 0, "no internal error on the fake server", world2.errors.join("|").slice(0, 150));
   row(await overflow(page), "board: no horizontal overflow");
+  /* S4.4: both players' names are on the board, beside each hero */
+  await page.waitForFunction(() => document.querySelectorAll("[data-pname]").length === 2, null, { timeout: 8000 }).catch(() => {});
+  const pn0 = await pnames(page);
+  row(pn0.me && pn0.foe && pn0.me.t === "Dawn Smith" && pn0.foe.t === "Rival One", "board: each seat's player name is beside its hero ('Dawn Smith' mine, 'Rival One' theirs)", JSON.stringify([pn0.me && pn0.me.t, pn0.foe && pn0.foe.t]));
+  row(!!pn0.me && !!pn0.foe && [pn0.me, pn0.foe].every(p => p.x >= p.mx && p.r <= p.mr && p.mx >= 0 && p.mr <= W && p.rx >= 0 && p.rr <= W) && pn0.scrollW <= W, "board: each name sits inside its hero's box, inside 393 wide, no horizontal overflow", JSON.stringify(pn0));
+  row(!/Dawn Smith|Rival One/.test(await page.evaluate(() => JSON.stringify(window.__dawnTable.report()))), "board: the names are not part of the table's report or state");
+  globalThis.__pn0 = pn0;
 
   /* the link drops and comes back */
   /* the push channel drops (every payload to this page is lost, the subscription reads lost): since the PERF fix the page
@@ -533,6 +588,9 @@ async function toServerChooser(page){
   const rep2 = await page.evaluate(() => window.__dawnTable.report());
   const full2 = PH.storedGame(world2, code);
   row(rep2.seat === 0 && rep2.hash === Wr.hash(R.seatView(full2, 0)), "reload: back at seat 0, on the referee's view of the game", rep2.hash);
+  await page.waitForFunction(() => document.querySelectorAll("[data-pname]").length === 2, null, { timeout: 8000 }).catch(() => {});
+  { const pn = await pnames(page);
+    row(pn.me && pn.foe && pn.me.t === "Dawn Smith" && pn.foe.t === "Rival One", "reload: both names are on the board again, straight from the claimed seat", JSON.stringify([pn.me && pn.me.t, pn.foe && pn.foe.t])); }
   const seedGAfter = await page.evaluate(() => window.__dawnTable.seedG), tableSeedG = world2.row(code).hub.spec.seedG;
   row(!!tableSeedG && seedGBefore === tableSeedG && seedGAfter === tableSeedG, "reload: the page's lobby holds the table's own seed half (so 'verify this game' still opens the right deal)", "before " + String(seedGBefore).slice(0, 8) + ", after " + String(seedGAfter).slice(0, 8) + ", table " + String(tableSeedG).slice(0, 8));
   const stale = world2.answers.filter(a => a.refused === "stale").length;
@@ -569,7 +627,109 @@ async function toServerChooser(page){
   const bug = errors.filter(e => !/404|Failed to load resource/.test(e));
   row(bug.length === 0, "no page error during the whole drive", bug.join(" | ").slice(0, 200));
 
+  /* S4.4 — a seat takeover: the opponent's player sits down on another phone; this page's board keeps both names */
+  {
+    const B2 = PH.makePhone(world2, "B2", { hero: "dorinthea", rand: T.seeded("page-b2"), build, matchCatalog, throws: [["rock", "rock"], ["paper", "rock"]], identity: { token: async () => tokB } });
+    await B2.connect("join", code);
+    await world2.settle([B.ch, B2.ch]); await wait(1200);
+    const nm = B2.ch.names();
+    row(B2.seat === 1 && JSON.stringify(nm) === JSON.stringify(["Dawn Smith", "Rival One"]), "takeover: the phone that took seat 1 reads both names at once", JSON.stringify(nm));
+    await page.evaluate(() => window.__dawnTable && window.__dawnTable.report());
+    const pn = await pnames(page);
+    row(pn.me && pn.foe && pn.me.t === "Dawn Smith" && pn.foe.t === "Rival One", "takeover: this page's board still shows both names", JSON.stringify([pn.me && pn.me.t, pn.foe && pn.foe.t]));
+    B2.ch.close();
+  }
+
   await kit.close();
+
+  /* ---- S4.4: LONG NAMES, A NAMELESS OPPONENT, AND THE JOINER'S BOARD (each its own page and world) ---- */
+  const LONG_ME = "Wwwwwwwwwwwwwwww", LONG_FOE = "Mmmmmmmmmmmmmmmm";
+  for(const phase of [{ label: "long names, page opens the table", asHost: true, me: LONG_ME, foe: LONG_FOE, throws: [["rock", "rock"], ["paper", "rock"]] },
+                      { label: "joiner's board, nameless opponent", asHost: false, me: "Seat One", foe: null, throws: [["rock", "rock"], ["rock", "paper"]] }]){
+    const kit3 = await open({ w: W, h: H }), p3 = kit3.page;
+    const b3 = await p3.evaluate(() => TABLE_BUILD);
+    const w3 = makeWorld({ seedKey: "names-" + phase.label, build: b3, deal: dealLikeThePage });
+    await wire(p3, w3);
+    const idp3 = F.memIdentity(), tokMe = idp3.issue("P-name-me"), tokFoe = idp3.issue("P-name-foe");
+    w3.deps.identify = t => idp3.identify(t); w3.deps.rename = (pl, n, f) => idp3.rename(pl, n, f);
+    idp3.rename("P-name-me", phase.me, w3.server.nameFold(phase.me));
+    if(phase.foe) idp3.rename("P-name-foe", phase.foe, w3.server.nameFold(phase.foe));
+    const shim3 = "window.__dawnServerIdentity = {token: () => Promise.resolve(" + JSON.stringify(tokMe) + ")};";
+    await p3.addInitScript(shim3); await p3.evaluate(shim3);
+    await p3.evaluate(() => { window.SERVER_TABLE.on = true; });
+    const B3 = PH.makePhone(w3, "B3", { hero: "dorinthea", rand: T.seeded("names-b3"), build: b3, matchCatalog, throws: phase.throws, identity: { token: async () => tokFoe } });
+    await toServerChooser(p3);
+    const code3 = await toTheBoard(p3, w3, B3, phase);
+    await playSome(p3, w3, B3, phase.asHost ? 0 : 1, 6);
+    await p3.waitForFunction(n => document.querySelectorAll("[data-pname]").length === n, phase.foe ? 2 : 1, { timeout: 8000 }).catch(() => {});
+    const pn = await pnames(p3), L = phase.label;
+    row(!!pn.me && pn.me.t === phase.me, L + ": my own name is beside my hero (seat " + (phase.asHost ? 0 : 1) + ")", pn.me && pn.me.t);
+    if(phase.foe){
+      row(!!pn.foe && pn.foe.t === phase.foe, L + ": the opponent's name is beside their hero", pn.foe && pn.foe.t);
+      const ps = [pn.me, pn.foe];
+      row(ps.every(p => p && p.x >= p.mx && p.r <= p.mr && p.mr <= W && p.rr <= W) && pn.scrollW <= W, L + ": a 16-letter name stays inside its hero's box and inside 393 wide, no horizontal overflow", JSON.stringify(pn));
+      row(ps.every(p => p && p.ell === "ellipsis" && p.h <= 14), L + ": a name is one line with an ellipsis style (never wrapped)", JSON.stringify(ps.map(p => p && [p.cut, p.ell, p.h])));
+      const base = globalThis.__pn0;
+      row(!!base && ps.every((p, i) => p && Math.abs(p.mw - (i === 0 ? base.me.mw : base.foe.mw)) <= 1 && Math.abs(p.mh - (i === 0 ? base.me.mh : base.foe.mh)) <= 1), L + ": the hero boxes are exactly as wide and as tall as with a short name (the long name pushed nothing)", JSON.stringify([pn.me.mw, pn.me.mh, pn.foe.mw, pn.foe.mh]) + " vs " + JSON.stringify([base.me.mw, base.me.mh, base.foe.mw, base.foe.mh]));
+      /* on a narrower phone the same names no longer fit their boxes: they are cut with an ellipsis, inside the box, never pushing the row */
+      await p3.setViewportSize({ width: 320, height: 568 }); await wait(400);
+      const nn = await pnames(p3), qs = [nn.me, nn.foe];
+      row(qs.every(p => p && p.x >= p.mx && p.r <= p.mr && p.rr <= 320 && p.h <= 14) && nn.scrollW <= 320 && qs.some(p => p.cut), L + ": at 320 wide a 16-letter name is cut cleanly with an ellipsis, inside its box, no overflow", JSON.stringify(nn));
+      await p3.setViewportSize({ width: W, height: H }); await wait(300);
+    } else {
+      row(pn.foe === null && pn.n === 1, L + ": a player with no name draws nothing beside their hero", "elements " + pn.n);
+      const hmNone = await p3.evaluate(() => [...document.querySelectorAll(".heromid")].map(m => m.innerText.replace(/\s+/g, " ").trim()));
+      row(hmNone.length === 2 && !hmNone.some(t => /undefined|null|no name/i.test(t)), L + ": no placeholder text in the nameless seat's box", JSON.stringify(hmNone));
+    }
+    row(await overflow(p3), L + ": board: no horizontal overflow");
+    row(w3.errors.length === 0, L + ": no internal error on the fake server", w3.errors.join("|").slice(0, 150));
+    const bad3 = kit3.errors.filter(e => !/404|Failed to load resource/.test(e));
+    row(bad3.length === 0, L + ": no page error", bad3.join(" | ").slice(0, 200));
+    void code3;
+    B3.ch.close(); await kit3.close();
+  }
+
+  /* ---- S4.4: THE CAP OF OPEN TABLES, ON THE PAGE ---- */
+  {
+    const kit4 = await open({ w: W, h: H }), p4 = kit4.page;
+    const b4 = await p4.evaluate(() => TABLE_BUILD);
+    const w4 = makeWorld({ seedKey: "cap-page", build: b4, deal: dealLikeThePage });
+    await wire(p4, w4);
+    const idp4 = F.memIdentity(), tokCap = idp4.issue("P-cap-page");
+    w4.deps.identify = t => idp4.identify(t); w4.deps.rename = (pl, n, f) => idp4.rename(pl, n, f);
+    const shim4 = "window.__dawnServerIdentity = {token: () => Promise.resolve(" + JSON.stringify(tokCap) + ")};";
+    await p4.addInitScript(shim4); await p4.evaluate(shim4);
+    await p4.evaluate(() => { window.SERVER_TABLE.on = true; });
+    /* the player already holds five open tables (made on other phones, as the server sees it) */
+    const held = []; for(let i = 0; i < 5; i++){ const r = await w4.transport("held").post({ op: "create", identity: { token: tokCap } }); held.push(r.table); }
+    const casualBefore = []; for(let i = 0; i < 3; i++) casualBefore.push((await w4.transport("c").post({ op: "create" })).table);
+    await toServerChooser(p4);
+    await click(p4, btn(p4, /^Open a server table/), "open a server table (the sixth)");
+    await p4.waitForSelector(".tblerr", { timeout: 8000 }).catch(() => {});
+    const capText = await text(p4);
+    row(/You already have 5 tables open/.test(capText) && /Finish a game, or close one/.test(capText), "cap: the sixth table is refused in warm, plain words (what happened, what to do)", (capText.match(/You already have.{0,160}/) || [""])[0]);
+    row(!/table-cap|refused|bad-request|identity|undefined|v6\.|creator/i.test((await p4.evaluate(() => document.querySelector(".tblerr").innerText))), "cap: the sentence carries no identifier, field name or version number");
+    await inside(p4, ".tblerr", "cap: the message");
+    const rowsOpen = await boxes(p4, '[data-testid="cap-open"] .tblopen');
+    row(rowsOpen.length === 5 && rowsOpen.map(r => r.t.split(" ")[0]).join() === held.join(), "cap: it lists the five open tables by code, oldest first", rowsOpen.map(r => r.t).join(" | "));
+    const closeBtns = await boxes(p4, '[data-testid="cap-open"] button');
+    row(closeBtns.length === 5 && closeBtns.every(b => b.h >= 44 && b.x >= 0 && b.r <= W), "cap: each table has its own thumb-sized Close button, inside the screen", closeBtns.map(b => b.h + "px").join());
+    row(await overflow(p4), "cap: no horizontal overflow"); await thumbs(p4, "cap");
+    row(w4.store.rows.size === 5 + 3, "cap: nothing was created by the refused open", "rows " + w4.store.rows.size);
+    await click(p4, p4.locator('[data-testid="cap-open"] button[aria-label="Close table ' + held[0] + '"]'), "close the first table");
+    await p4.waitForSelector('[data-testid="cap-note"]', { timeout: 8000 }).catch(() => {});
+    const afterClose = await text(p4);
+    row(/Table .{6} is closed\. You can open a new table now\./.test(afterClose) && (await boxes(p4, '[data-testid="cap-open"] .tblopen')).length === 4, "cap: closing one says so and takes it off the list", (afterClose.match(/Table .{6} is closed.{0,50}/) || [""])[0]);
+    row(w4.row(held[0]).closed === true && w4.row(held[0]).over === true, "cap: the table is closed on the server");
+    await click(p4, btn(p4, /^Open a server table/), "open a server table (one slot free)");
+    await p4.waitForSelector(".tblcode", { timeout: 8000 }).catch(() => {});
+    const newCode = await p4.evaluate(() => (document.querySelector(".tblcode") || {}).innerText);
+    row(ST.isValid((newCode || "").trim()) && w4.row(newCode.trim()).creator === "P-cap-page", "cap: with one closed the player can open a table again", newCode);
+    row(await overflow(p4), "cap: waiting screen: no horizontal overflow");
+    const bad4 = kit4.errors.filter(e => !/404|Failed to load resource/.test(e));
+    row(bad4.length === 0 && w4.errors.length === 0, "cap: no page error and no internal error on the fake server", bad4.concat(w4.errors).join(" | ").slice(0, 200));
+    await kit4.close();
+  }
   const fail = rows.filter(r => !r.ok).length;
   console.log(`\n${rows.length - fail} passed, ${fail} failed in ${((Date.now() - t0) / 1000).toFixed(0)}s`);
   process.exit(fail ? 1 : 0);
