@@ -1,3 +1,23 @@
+## v6.28 — the server table is open (the user's two-phone re-test, then "Go ahead and open it up")
+
+- **The user's re-test on two real phones at v6.27 (2026-11-14):** "Like night and day … things happen in an instant now."
+- **The door is open, by the user's decision (2026-11-14, "Go ahead and open it up"):** `window.SERVER_TABLE.on` is `true`, so everyone sees the
+  server table. `?server=0` stays as a kill switch for one phone (remembered; `?server=1` brings it back, and offers it even if the shipped switch
+  is ever turned off again); `engine/servertable.js` `doorChoice`/`doorOpen` replace the tester's door.
+- **The table screen names its three ways to meet** (`index.html`): *Server table* (share a code, no direct link needed, works across any network),
+  *Direct table* (two phones talk straight to each other), *Judge's table* (a third device holds the deck). Each is a labelled group with a one-line
+  reason and its own honest line below; "early test" is gone. `tools/serverpage.js` asserts the three groups' boxes at 393x852 (no overlap, inside the
+  width, every button thumb-sized and on the first screen) and the door's four states.
+- **`tools/livecheck.js`, the post-deploy check, runnable any time:** fetches the LIVE page (version, every script answers 200), compares the function's
+  health build with the page's `APP_VER · DATA_VER`, then opens the live page in two phone-sized Chromium contexts (real CDNs, nothing local), opens a
+  server table, joins by code, plays 20+ moves each way and reports seated yes/no, push versus fallback, median and p95 tap to other seat, banners and
+  console errors. Exit non-zero on any failure. First run, against live v6.27 (`?server=1`): 30 of 30 scripts 200, function and page both
+  `v6.27 · sage-v17`, seated, 41 moves all by push, 0 lost, median 313 ms, p95 471, no banner, no errors.
+- **Redeployed for this build:** the function now reports `v6.28 · sage-v17` (record: `server/S3-DEPLOY-LOG.md`). Until `main` is pushed, live v6.27
+  pages cannot handshake with it ("different versions of the game").
+- **The standing honest list:** these are casual tables with no accounts; a seat's channel is protected by an unguessable name and a seal, not by
+  sign-in; the free plan's quotas have not been measured under real load.
+
 ## v6.27 — the other phone hears your move at once (the push script was asked for at the wrong address)
 
 - **What the user's two-phone test showed (2026-11-14):** the server table worked, but a move took up to about 5 seconds to reach the

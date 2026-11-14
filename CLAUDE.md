@@ -114,6 +114,7 @@ something new, teach the parser to read its text — never special-case a card b
   The release summary goes at the top of `CHANGELOG.md`.
 - Validate (below), then **`git push origin main` — that is the deploy** (Pages serves
   `main`). One worker pushes `main` at a time.
+- **After the push, `node tools/livecheck.js`** checks the live page, the function's build and a real two-seat server game (exit 1 on any failure).
 - **Verify the push:** every script the page loads exists in the pushed commit, and
   `.nojekyll` is present:
   ```sh
