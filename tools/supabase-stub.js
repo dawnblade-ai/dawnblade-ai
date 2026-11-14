@@ -124,7 +124,7 @@ function makeStub(o){
     });
   };
   const server = http.createServer(handler);
-  return {server, rows, broadcasts, stats, key: KEY, users, players, identities, authDown: down => { authDown = down !== false; },
+  return {server, rows, broadcasts, stats, key: KEY, users, players, identities, recovery, attempts, authDown: down => { authDown = down !== false; },
     issueUser: (id, anon) => { const t = "stub.jwt." + (++seq) + "." + Math.random().toString(36).slice(2); users.set(t, {id, anon: anon !== false}); return t; }, subscribe: f => { subs.push(f); return () => { const i = subs.indexOf(f); if(i >= 0) subs.splice(i, 1); }; },
     row: id => rows.has(id) ? JSON.parse(rows.get(id).json) : null, version: id => rows.has(id) ? rows.get(id).version : 0,
     listen: port => new Promise(res => server.listen(port || 0, "127.0.0.1", () => res({port: server.address().port}))),

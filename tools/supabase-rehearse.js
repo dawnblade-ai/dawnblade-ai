@@ -182,8 +182,35 @@ async function identityPhase(label, base, stub, log){
   row(r1.v === 3 && r1.owners.filter(Boolean).length === 2 && r1.retired[0].length === 1 && JSON.stringify(r1).indexOf(kA) < 0, label + ": identity: the row is v3, two owners, the old key stored as a hash only");
   const players = stub.players.size, again = await go({op: "join", table: code, identity: {token: tokA}});
   row(again.ok && stub.players.size === players && stub.stats.auths - sBefore >= 5 && stub.stats.resolves >= 4, label + ": identity: every token was verified at /auth/v1/user and mapped by identity_resolve; the same sign-in is the same player (" + stub.players.size + " players)");
+  /* S4.3: a recovery code, minted by player A and redeemed by a brand-new sign-in C (stand-ins for 004_recovery.sql; UNVERIFIED against the real SQL over PostgREST) */
+  const SUB_C = "sub-secret-cccc-3333", tokC = stub.issueUser(SUB_C);
+  const nameC = await go({op: "me", identity: {token: tokC}, name: "Throwaway Cee"});
+  const playersBefore = stub.players.size;
+  const minted = await post({op: "recovery-mint", identity: {token: tokA}});
+  const codeA = minted.code, plainA = String(codeA || "").replace(/-/g, "");
+  row(minted.ok === true && /^[A-HJ-KM-NP-Z2-9]{5}(-[A-HJ-KM-NP-Z2-9]{5}){2}$/.test(codeA) && minted.days === 730 && stub.recovery.size === 1 && !stub.recovery.has(plainA) && [...stub.recovery.keys()].every(h => /^[0-9a-f]{64}$/.test(h)),
+    label + ": recovery: a mint answers the code once, and the database holds only a sha256 hash", JSON.stringify(Object.keys(minted).filter(k => k !== "text")));
+  const wrong = await go({op: "recovery-redeem", identity: {token: tokC}, code: "ABCDE-FGHJK-MNPQR"});
+  row(wrong.ok === false && wrong.refused === "recovery" && stub.players.size === playersBefore, label + ": recovery: a wrong code is 'recovery' and moves nothing");
+  const redeemed = await go({op: "recovery-redeem", identity: {token: tokC}, code: plainA.toLowerCase().replace(/(.{4})/g, "$1 ")});
+  row(redeemed.ok === true && redeemed.name === "Rehearsal Ann" && Object.keys(redeemed).filter(k => k !== "text").sort().join() === "name,ok" && nameC.ok && stub.players.size === playersBefore - 1,
+    label + ": recovery: a new sign-in redeems the code (lower case, spaces), is told the recovered name, and its throwaway player is deleted", JSON.stringify([redeemed.ok, redeemed.name, stub.players.size - playersBefore]));
+  const againRedeem = await go({op: "recovery-redeem", identity: {token: stub.issueUser("sub-secret-dddd-4444")}, code: codeA});
+  row(againRedeem.ok === false && againRedeem.refused === "recovery" && againRedeem.text === wrong.text, label + ": recovery: the same code again is the very answer a wrong code gets");
+  const seatC = await go({op: "join", table: code, identity: {token: tokC}});
+  const kC = keyOf(seatC);
+  row(seatC.ok && seatC.seat === 0 && seatC.owned === true && !!kC && kC !== kA2, label + ": recovery: the recovered sign-in takes the player's seat 0 with a fresh key (one player, two phones; last one wins)");
+  const mint2 = await post({op: "recovery-mint", identity: {token: tokA}}), mint3 = await post({op: "recovery-mint", identity: {token: tokA}});
+  const oldCode = await go({op: "recovery-redeem", identity: {token: stub.issueUser("sub-secret-eeee-5555")}, code: mint2.code});
+  row(mint2.ok && mint3.ok && mint2.code !== mint3.code && oldCode.refused === "recovery" && [...stub.recovery.values()].filter(e => !e.used).length === 1, label + ": recovery: a second mint retires the first (one live code)");
+  const sentSeat = await go({op: "recovery-redeem", identity: {token: stub.issueUser("sub-secret-ffff-6666")}, code: mint3.code, tables: [code]});
+  row(sentSeat.ok === true, label + ": recovery: a phone with no seat at the named table redeems");
+  const noMint = stub.stats.bad.length;
+  const hashes = [...stub.recovery.keys()];
+  const reco = texts.join("\n") + JSON.stringify(stub.broadcasts) + JSON.stringify(stub.row(code));
+  row([plainA, codeA, mint2.code, mint3.code, SUB_C, tokC, ...hashes].every(x => reco.indexOf(x) < 0) && noMint === 0, label + ": recovery: no code, hash, token or subject in any redeem/join answer, broadcast or stored row", "bad calls " + noMint);
   const all = texts.join("\n") + JSON.stringify(stub.broadcasts.filter(b => b.topic.startsWith("table:" + code)));
-  const secrets = [SUB_A, SUB_B, tokA, tokB, ...stub.players.keys()];
+  const secrets = [SUB_A, SUB_B, SUB_C, tokA, tokB, tokC, ...stub.players.keys(), ...stub.recovery.keys()];
   row(secrets.every(x => all.indexOf(x) < 0), label + ": identity: no token, provider user id or player id in any response or broadcast for this table");
   const cas = await go({op: "create"}), c1 = await go({op: "join", table: cas.table}), c2 = await go({op: "join", table: cas.table, claim: "casualClaimTokenAAAAAAAA"});
   row(c1.ok && c2.ok && c1.seat !== c2.seat && stub.row(cas.table).v === 2 && !("owners" in stub.row(cas.table)), label + ": identity: a casual table on the same function is unchanged (v2 row, no identity fields)");
