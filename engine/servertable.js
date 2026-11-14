@@ -449,6 +449,37 @@ async function me(o, name){
 const whoAmI = o => me(o);
 const setName = (o, name) => me(o, name);
 
+/* ---- RECOVERY CODE (S4.3): a lost phone is not a lost player ---------------------------------------------------
+   o: {transport, identity}, as whoAmI. `recoveryMint(o)` -> {code, days}: the signed-in player's NEW recovery code, in the clear, ONCE (the
+   server keeps only its hash; the page must show it and then forget it — nothing here stores it). A new code retires the old one.
+   `recoveryRedeem(o, code, tables?)` -> {name | null}: this phone's own (new) sign-in now belongs to the code's player, so its name and
+   its seats are back. `code` is typed by a person: nothing here judges it, the server reads it leniently (case, spaces, dashes). `tables`:
+   the table codes this phone has sat at; the server refuses while this phone's current player holds a chair at one of them. Rejects with `.why`:
+     unavailable (no sign-in, no server, or the server does not do this yet) | identity (the server would not take this sign-in) |
+     recovery (that code does not work: wrong, used, expired or replaced — the server says no more than that) |
+     recovery-limited (too many wrong tries; wait an hour) | recovery-seated (this phone is sitting at a table: leave it first). */
+async function recoveryCall(o, req){
+  o = o || {};
+  const T = o.transport;
+  if(!T || typeof T.post !== "function" || !o.identity || typeof o.identity.token !== "function") throw fail("unavailable", "no sign-in");
+  let token = null; try { token = await o.identity.token(); } catch(_){ token = null; }
+  if(typeof token !== "string" || !token) throw fail("unavailable", "no sign-in");
+  const r = await call(T, {...req, identity: {token}});
+  if(r.ok) return r;
+  if(r.refused === "recovery" || r.refused === "recovery-limited" || r.refused === "recovery-seated" || r.refused === "identity") throw fail(r.refused);
+  throw fail("unavailable", "refused: " + r.refused);
+}
+async function recoveryMint(o){
+  const r = await recoveryCall(o, {op: "recovery-mint"});
+  if(typeof r.code !== "string" || !r.code) throw fail("unavailable", "no code");
+  return {code: r.code, days: Number(r.days) > 0 ? Number(r.days) : null};
+}
+async function recoveryRedeem(o, code, tables){
+  const list = (Array.isArray(tables) ? tables : []).map(normalize).filter(isValid).slice(0, 6);
+  const r = await recoveryCall(o, {op: "recovery-redeem", code: String(code == null ? "" : code), ...(list.length ? {tables: list} : {})});
+  return {name: typeof r.name === "string" ? r.name : null};
+}
+
 /* ---- THE SIGN-IN (S4.2): an anonymous Supabase user, kept on this phone ---------------------------------------
    No email, no password, nothing typed: the first time a server table (or the name sheet) needs to know who this phone
    is, it asks the project's auth service for an anonymous user and keeps the session in `keep` under "who.id"
@@ -633,5 +664,5 @@ function defaultTransport(config, root_){
 }
 
 return {TABLE_CODE_CHARS: CODE_CHARS, CODE_LEN, STATUS, SUPABASE_JS, normalize, isValid, topicFor, open, startTable, sitAt, reclaim, savedSeats, doorChoice, doorOpen,
-        supabaseTransport, loadSupabase, defaultTransport, whoAmI, setName, supabaseIdentity, defaultIdentity};
+        supabaseTransport, loadSupabase, defaultTransport, whoAmI, setName, recoveryMint, recoveryRedeem, supabaseIdentity, defaultIdentity};
 });
