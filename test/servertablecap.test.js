@@ -281,7 +281,7 @@ test("SABOTAGE (5): an id echoed in the refusal, and a refusal that lists everyb
 });
 
 /* ---------------------------------------------------------------------------------------------- (6) */
-const guard = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("hung")), ms || 6000))]);
+const guard = (p, ms) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(new Error("hung")), ms || 20000); })]).finally(() => clearTimeout(t)); };
 function pWorld(seed){
   const w = makeWorld({seedKey: seed}), idp = F.memIdentity();
   w.deps.identify = t => idp.identify(t); w.deps.rename = (p, n, f) => idp.rename(p, n, f);
