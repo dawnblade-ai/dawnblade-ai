@@ -101,7 +101,8 @@ const defaultSleep = ms => new Promise(r => setTimeout(r, ms));
 /* an Error whose `why` is a short machine word the screen maps to a sentence */
 const fail = (why, detail) => Object.assign(new Error(detail || why), {why});
 /* the referee's refusals, as the words a screen reasons in */
-const WHY_OF = {"no-table": "no-table", full: "full", auth: "auth", wire: "wire", exists: "exists", "bad-request": "bad-request", "seat-owned": "seat-owned", "table-cap": "table-cap"};
+const WHY_OF = {"no-table": "no-table", full: "full", auth: "auth", wire: "wire", exists: "exists", "bad-request": "bad-request", "seat-owned": "seat-owned", "table-cap": "table-cap",
+  "ranked-signin": "ranked-signin", "ranked-name": "ranked-name", unavailable: "unavailable"};
 
 /* a transport failure: the network, a function that is not there, a paused
    project, a page that is not the referee. Never carries the request. */
@@ -112,6 +113,13 @@ function scrubber(){
   const f = v => { let s = String(v == null ? "" : (v.message || v)); for(const k of secrets) if(k) s = s.split(k).join("…"); return s; };
   f.add = k => { if(k && secrets.indexOf(k) < 0) secrets.push(k); };
   return f;
+}
+
+/* S5.1: a RANKED table is asked for in the create request (`ranked: true`); the one place that says so is this wrapper around the transport, so the create
+   call below stays the casual one for everybody else */
+function rankedWire(T, ranked){
+  if(!ranked || !T || typeof T.post !== "function") return T;
+  return {post: env => T.post(env && env.op === "create" ? {...env, ranked: true} : env), subscribe: (a, b, c) => T.subscribe(a, b, c)};
 }
 
 /* ---- one call -----------------------------------------------------------
@@ -128,10 +136,11 @@ async function call(T, env){
    o: {transport, code?, mode: "create"|"join"|"resume", keep?, onStatus?, ...tuning}
    Resolves with the channel handle once this phone HOLDS A SEAT; rejects with
    an Error whose `.why` is unavailable | no-table | full | auth | wire | code | table-cap (S4.4: opening as a signed-in
-   player met the cap of open tables; `.open` holds their codes). */
+   player met the cap of open tables; `.open` holds their codes) | ranked-signin | ranked-name (S5.1: a ranked table needs a signed-in player with a chosen
+   name, to open it and to sit at it). `o.ranked: true` (mode create) asks for a RANKED table: there is no casual fallback for it. */
 async function open(o){
   o = o || {};
-  const T = o.transport, mode = o.mode || "join";
+  const T = rankedWire(o.transport, o.ranked === true), mode = o.mode || "join";
   if(!T || typeof T.post !== "function" || typeof T.subscribe !== "function") throw fail("unavailable", "no transport");
   const keep = o.keep || null;
   const kget = k => { try { return keep ? keep.get(k, null) : null; } catch(_){ return null; } };
@@ -160,6 +169,7 @@ async function open(o){
       else if(r.refused === "exists" && r.retry) continue;
       /* the referee would not take the sign-in (expired between the check and the call, or no provider there): open the table casually,
          and sit down at it casually too. Nothing was written by the refusal. */
+      else if(r.refused === "identity" && o.ranked === true) throw fail("identity", "refused: identity");      /* a RANKED table has no casual fallback (S5.1) */
       else if(r.refused === "identity" && asToken){ asToken = null; token = null; i--; continue; }
       /* THE CAP (S4.4): this player already holds the most open tables there may be. The codes ride along so the screen can say which. */
       else if(r.refused === "table-cap") throw Object.assign(refusal(r), {open: (Array.isArray(r.open) ? r.open : []).map(normalize).filter(isValid).slice(0, 10), cap: Number(r.cap) > 0 ? Number(r.cap) : null});
@@ -212,7 +222,7 @@ async function open(o){
   if(!key) throw fail("unavailable", "the table dealt no seat key");
   scrub.add(key);
   kset("srv." + code, {seat: res.seat, key, role: mode === "create" ? "creator" : (rec && rec.role) || "joiner", at: (o.now || Date.now)()});
-  return channel(o, T, code, res.seat, key, res.n | 0, res.frames || [], scrub, keep, {owned: res.owned === true, names: res.names});
+  return channel(o, T, code, res.seat, key, res.n | 0, res.frames || [], scrub, keep, {owned: res.owned === true, names: res.names, ranked: res.ranked, ratings: res.ratings, result: res.result});
 }
 
 /* ---- the channel ----------------------------------------------------------- */
@@ -238,6 +248,20 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep, who){
     if(nx[0] === names[0] && nx[1] === names[1]) return;
     names = nx; try { if(o.onNames) o.onNames(names.slice()); } catch(_){} };
   readNames(who && who.names);
+  /* S5.1: a RANKED table, public to both seats like the names: that it is ranked, each player's rating as they sat down, and — once the game is
+     decided and recorded — how it ended and each rating's move. They ride a join's and a resync's answer (and the answer to the move that ended the
+     game), never a push; a casual table's answers carry none of it and `rank()` stays {ranked: false}. */
+  let ranked = false, ratings = [null, null], result = null;
+  const readRank = v => { if(!v || typeof v !== "object" || (v.ranked !== true && !ranked)) return;       /* the answer to a move carries `result` alone: this phone already knows the table is ranked */
+    let changed = !ranked; ranked = true;
+    if(Array.isArray(v.ratings) && v.ratings.length === 2){ const nr = v.ratings.map(x => Number.isInteger(x) && x >= 0 && x < 100000 ? x : null);
+      if(nr[0] !== ratings[0] || nr[1] !== ratings[1]){ ratings = nr; changed = true; } }
+    const r = v.result;
+    if(!result && r && typeof r === "object" && (r.winner === 0 || r.winner === 1 || r.winner === null) && typeof r.how === "string" && Array.isArray(r.change) && r.change.length === 2
+       && r.change.every(c => c && Number.isInteger(c.from) && Number.isInteger(c.to))){
+      result = {winner: r.winner, how: r.how, turns: Number.isInteger(r.turns) ? r.turns : null, change: r.change.map(c => ({from: c.from, to: c.to}))}; changed = true; }
+    if(changed) try { if(o.onRank) o.onRank({ranked, ratings: ratings.slice(), result: result ? clone(result) : null}); } catch(_){} };
+  readRank(who);
 
   const deliver = f => { if(sink) sink(f); else backlog.push(f); };
   /* what comes up from the server: the seat offer once (key taken out), lobby and net frames as they are */
@@ -288,7 +312,7 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep, who){
       }
       if(st === "reconnecting" || st === "unavailable") set(peerHeard ? "seated" : "waiting");
       fails = 0;
-      if(r.ok){ n++; ingest(r.frames); return true; }
+      if(r.ok){ n++; readRank(r); ingest(r.frames); return true; }
       if(r.refused === "conflict"){
         ev("conflict", {n: conflicts + 1});
         if(++conflicts > tune.conflictCap){ set("unavailable"); await sleep(tune.probeMs); conflicts = 0; continue; }
@@ -321,7 +345,7 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep, who){
     let r;
     try { r = await call(T, {op: "join", table: code, seat, key}); } catch(_){ return null; }
     if(!r.ok){ if(r.refused === "auth" || r.refused === "no-table") fatal(r.refused === "auth" && r.taken === true ? "taken" : r.refused); return null; }
-    readNames(r.names);
+    readNames(r.names); readRank(r);
     ingest(r.frames);
     return r.n | 0;
   }
@@ -339,7 +363,7 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep, who){
         else {                                                             /* a game: the net session's catch-up */
           let r = null;
           try { r = await call(T, {op: "resync", table: code, seat, key, have: haveFn ? haveFn() : undefined}); } catch(_){ r = null; }
-          if(r && r.ok){ readNames(r.names); ingest(r.frames); ok1 = true; }
+          if(r && r.ok){ readNames(r.names); readRank(r); ingest(r.frames); ok1 = true; }
           else if(r && (r.refused === "auth" || r.refused === "no-table")) fatal(r.refused === "auth" && r.taken === true ? "taken" : r.refused);
           else ev("heal-failed");
         }
@@ -419,6 +443,22 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep, who){
     peerHeard: () => peerHeard,
     closedWhy: () => closedWhy,
     names: () => names.slice(),          /* [seat 0's display name | null, seat 1's] */
+    /* S5.1: {ranked, ratings: [seat 0's rating | null, seat 1's], result: null | {winner, how, turns, change: [{from, to}, {from, to}]}} (index = seat) */
+    rank: () => ({ranked, ratings: ratings.slice(), result: result ? clone(result) : null}),
+    /* the recorded result of a decided ranked game, or null: the function records it as the game ends, and the answer to the move that ended it
+       carries it for the seat that made it; the other seat asks here (a few tries, `gapMs` apart: the record is one more round trip behind the move).
+       A casual table answers null at once. */
+    async result(tries, gapMs){
+      const nTry = tries > 0 ? tries : 6, gap = gapMs >= 0 ? gapMs : 1000;
+      for(let i = 0; i < nTry; i++){
+        if(result) return clone(result);
+        if(closed || !ranked) break;
+        await heal();
+        if(result) return clone(result);
+        if(i + 1 < nTry) await sleep(gap);
+      }
+      return result ? clone(result) : null;
+    },
     owned: () => owned,                  /* this seat is bound to this phone's player */
     quietFor: () => (o.now || Date.now)() - lastIn,
     setHave(fn){ haveFn = fn; },
@@ -435,7 +475,8 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep, who){
 }
 
 /* ---- WHO AM I / MY NAME (S4.2) ---------------------------------------------------------------------------------
-   o: {transport, identity}. `whoAmI(o)` -> {name | null}; `setName(o, name)` -> {name}. Both sign this phone in if it
+   o: {transport, identity}. `whoAmI(o)` -> {name | null, rating?, games?, wins?, losses?, draws?} (S5.1: the rating and the record, public by design, when the
+   function reads ratings); `setName(o, name)` -> the same. Both sign this phone in if it
    is not yet (lazily: only a server table or the name sheet ever asks). Rejects with `.why`:
      unavailable (no sign-in, no server) | name (the referee's validator refused it; `.reason`: short | long | chars |
      space | reserved | type) | name-taken (another player holds it; names are unique whatever the capitals, spaces or
@@ -448,7 +489,8 @@ async function me(o, name){
   let token = null; try { token = await o.identity.token(); } catch(_){ token = null; }
   if(typeof token !== "string" || !token) throw fail("unavailable", "no sign-in");
   const r = await call(T, {op: "me", identity: {token}, ...(name !== undefined ? {name} : {})});
-  if(r.ok) return {name: typeof r.name === "string" ? r.name : null};
+  if(r.ok) return {name: typeof r.name === "string" ? r.name : null,
+    ...(Number.isInteger(r.rating) ? {rating: r.rating, games: r.games | 0, wins: r.wins | 0, losses: r.losses | 0, draws: r.draws | 0} : {})};   /* S5.1: the rating and the record, when the function reads ratings */
   if(r.refused === "name-taken") throw fail("name-taken");
   if(r.refused === "bad-request" && r.field === "name") throw Object.assign(fail("name"), {reason: typeof r.reason === "string" ? r.reason : "chars"});
   if(r.refused === "identity") throw fail("identity");
