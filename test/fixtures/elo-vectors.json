@@ -1,0 +1,18 @@
+{
+  "note": "Elo, start 1200, K 32, draw = half a point, expected score 1/(1+10^((other-mine)/400)), each new rating rounded to an integer. The ONE table both the drills (against the fake backend) and tools/sql-pglite.js (against 006_ratings.sql, real Postgres arithmetic) check, so the fake cannot drift from the SQL. `outcome`: a = the first player won, b = the second won.",
+  "start": 1200,
+  "k": 32,
+  "vectors": [
+    {"a": 1200, "b": 1200, "outcome": "a", "after": [1216, 1184]},
+    {"a": 1200, "b": 1200, "outcome": "b", "after": [1184, 1216]},
+    {"a": 1200, "b": 1200, "outcome": "draw", "after": [1200, 1200]},
+    {"a": 1300, "b": 1200, "outcome": "a", "after": [1312, 1188]},
+    {"a": 1300, "b": 1200, "outcome": "b", "after": [1280, 1220]},
+    {"a": 1300, "b": 1200, "outcome": "draw", "after": [1296, 1204]},
+    {"a": 1000, "b": 1500, "outcome": "a", "after": [1030, 1470]},
+    {"a": 1500, "b": 1000, "outcome": "a", "after": [1502, 998]},
+    {"a": 1000, "b": 1500, "outcome": "draw", "after": [1014, 1486]},
+    {"a": 1216, "b": 1184, "outcome": "a", "after": [1231, 1169]},
+    {"a": 1100, "b": 1100, "outcome": "draw", "after": [1100, 1100]}
+  ]
+}
