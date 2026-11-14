@@ -23,7 +23,7 @@ const bytes = s => enc ? enc.encode(s).length : Buffer.byteLength(s);
 const clone = v => JSON.parse(JSON.stringify(v));
 
 function memStore(){
-  const rows = new Map();
+  const rows = new Map(); let born = 0;
   const st = {rows, gets: 0, puts: 0, conflicts: 0, sizes: [],
     get(id){
       st.gets++;
@@ -35,9 +35,21 @@ function memStore(){
       if(expectedVersion !== cur){ st.conflicts++; return {ok: false, version: cur}; }
       const json = JSON.stringify(row);
       st.puts++; st.sizes.push(bytes(json));
-      rows.set(id, {version: cur + 1, json});
+      rows.set(id, {version: cur + 1, json, n: e ? e.n : ++born});
       return {ok: true, version: cur + 1};
     },
+    /* S4.4 — what 005_table_cap.sql's table_create_capped does, in one synchronous (so atomic) step: refuse a taken code, count the
+       creator's OPEN tables (row.creator is theirs, row.over is not true; the drill's clock is the rows' own `updated`), refuse at
+       the cap with their codes oldest first, else insert at version 1. `noCount` is the sabotage: it never refuses. */
+    createCapped(id, row, creator, cap){
+      if(rows.has(id)) return {ok: false, exists: true};
+      const open = st.openOf(creator);
+      if(!st.noCount && open.length >= cap) return {ok: false, capped: true, open: open.slice(0, 10)};
+      return st.put(id, row, 0);
+    },
+    /* an inspector: the codes of the creator's open tables, oldest first */
+    openOf: creator => [...rows.entries()].map(([id, e]) => ({id, row: JSON.parse(e.json), n: e.n})).filter(x => x.row.creator === creator && x.row.over !== true)
+      .sort((a, b) => a.n - b.n).map(x => x.id),
     json: id => rows.has(id) ? rows.get(id).json : null,
     row: id => rows.has(id) ? JSON.parse(rows.get(id).json) : null,
     version: id => rows.has(id) ? rows.get(id).version : 0,
@@ -114,7 +126,8 @@ function hash(s){ let h = 7; for(let i = 0; i < s.length; i++) h = (h * 31 + s.c
 const tick = n => { let p = Promise.resolve(); for(let i = 0; i < (n || 1); i++) p = p.then(() => null); return p; };
 function lagged(store, ticks){
   const t = ticks || 3;
-  return {get: id => tick(t).then(() => store.get(id)), put: (id, row, v) => tick(t).then(() => store.put(id, row, v)), inner: store};
+  return {get: id => tick(t).then(() => store.get(id)), put: (id, row, v) => tick(t).then(() => store.put(id, row, v)),
+    ...(typeof store.createCapped === "function" ? {createCapped: (id, row, creator, cap) => tick(t).then(() => store.createCapped(id, row, creator, cap)), openOf: store.openOf} : {}), inner: store};
 }
 function laggedBus(bus, ticks){
   const t = ticks || 2;

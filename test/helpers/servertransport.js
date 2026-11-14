@@ -36,7 +36,8 @@ function makeWorld(o){
   const rnd = T.seeded("server|" + (o.seedKey || "") + "|world");
   let clock = 1700000000000;
   let failPuts = 0;
-  const lagStore = F.lagged({get: id => store.get(id), put: (id, row, v) => { if(failPuts > 0){ failPuts--; return {ok: false, version: store.version(id)}; } return store.put(id, row, v); }}, o.ticks || 2);
+  const lagStore = F.lagged({get: id => store.get(id), put: (id, row, v) => { if(failPuts > 0){ failPuts--; return {ok: false, version: store.version(id)}; } return store.put(id, row, v); },
+    createCapped: (id, row, creator, cap) => store.createCapped(id, row, creator, cap), openOf: c => store.openOf(c)}, o.ticks || 2);
   const deps = {store: lagStore, broadcast: (t, p) => bus.broadcast(t, p), deal: o.deal || T.dealSpec, build: o.build || T.BUILD,
                 now: () => clock++, rand: () => rnd, log: e => { W.errors.push(String(e && e.stack || e)); }};
   const f = {fail: 0, lose: 0, loseOp: null, dead: false, notFound: false, drop: new Map(), dup: new Map(), swap: new Map(), held: new Map(), cut: new Set()};

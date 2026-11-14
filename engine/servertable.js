@@ -101,7 +101,7 @@ const defaultSleep = ms => new Promise(r => setTimeout(r, ms));
 /* an Error whose `why` is a short machine word the screen maps to a sentence */
 const fail = (why, detail) => Object.assign(new Error(detail || why), {why});
 /* the referee's refusals, as the words a screen reasons in */
-const WHY_OF = {"no-table": "no-table", full: "full", auth: "auth", wire: "wire", exists: "exists", "bad-request": "bad-request", "seat-owned": "seat-owned"};
+const WHY_OF = {"no-table": "no-table", full: "full", auth: "auth", wire: "wire", exists: "exists", "bad-request": "bad-request", "seat-owned": "seat-owned", "table-cap": "table-cap"};
 
 /* a transport failure: the network, a function that is not there, a paused
    project, a page that is not the referee. Never carries the request. */
@@ -127,7 +127,8 @@ async function call(T, env){
 /* ---- opening: create / join / resume --------------------------------------
    o: {transport, code?, mode: "create"|"join"|"resume", keep?, onStatus?, ...tuning}
    Resolves with the channel handle once this phone HOLDS A SEAT; rejects with
-   an Error whose `.why` is unavailable | no-table | full | auth | wire | code. */
+   an Error whose `.why` is unavailable | no-table | full | auth | wire | code | table-cap (S4.4: opening as a signed-in
+   player met the cap of open tables; `.open` holds their codes). */
 async function open(o){
   o = o || {};
   const T = o.transport, mode = o.mode || "join";
@@ -141,12 +142,27 @@ async function open(o){
   say("connecting");
 
   const refusal = r => fail(WHY_OF[r.refused] || "unavailable", "refused: " + r.refused);
+  /* WHO IS SITTING DOWN (S4.2). `o.identity` ({token() -> Promise<string|null>}; `supabaseIdentity` on the page, a fake in
+     the drills) signs this phone in LAZILY, here, the first time it opens or joins a server table. With a token the seat is
+     bound to the player (the referee's `owners`); with none (sign-in off, unreachable, refused) the join is the casual one,
+     byte for byte: a game must never wait on an account. A keyed claim (resume) needs no token: the key holds the chair.
+     S4.4: the token is asked BEFORE a table is opened too, because opening one as a signed-in player is what the referee counts
+     (at most 5 open tables per player). */
+  let token = null;
+  if(mode !== "resume" && o.identity && typeof o.identity.token === "function"){ try { token = await o.identity.token(); } catch(_){ token = null; } }
+  if(typeof token !== "string" || !token) token = null;
+  if(token) scrub.add(token);
   if(mode === "create"){
-    let made = null;
+    let made = null, asToken = token;
     for(let i = 0; i < 3 && !made; i++){
-      const r = await call(T, {op: "create"});
+      const r = await call(T, {op: "create", ...(asToken ? {identity: {token: asToken}} : {})});
       if(r.ok && typeof r.table === "string") made = r.table;
       else if(r.refused === "exists" && r.retry) continue;
+      /* the referee would not take the sign-in (expired between the check and the call, or no provider there): open the table casually,
+         and sit down at it casually too. Nothing was written by the refusal. */
+      else if(r.refused === "identity" && asToken){ asToken = null; token = null; i--; continue; }
+      /* THE CAP (S4.4): this player already holds the most open tables there may be. The codes ride along so the screen can say which. */
+      else if(r.refused === "table-cap") throw Object.assign(refusal(r), {open: (Array.isArray(r.open) ? r.open : []).map(normalize).filter(isValid).slice(0, 10), cap: Number(r.cap) > 0 ? Number(r.cap) : null});
       else throw r.ok ? fail("unavailable") : refusal(r);
     }
     if(!made) throw fail("unavailable", "no free table code");
@@ -164,14 +180,6 @@ async function open(o){
      write, and answers a repeat with the SAME seat, key and lobby. Always real randomness (never `o.rand`, which
      the drills pin): two phones must never share a token. A claiming join (resume) is already idempotent. */
   const claim = mode === "resume" ? null : (o.claim || SHA.nonce());
-  /* WHO IS SITTING DOWN (S4.2). `o.identity` ({token() -> Promise<string|null>}; `supabaseIdentity` on the page, a fake in
-     the drills) signs this phone in LAZILY, here, the first time it opens or joins a server table. With a token the seat is
-     bound to the player (the referee's `owners`); with none (sign-in off, unreachable, refused) the join is the casual one,
-     byte for byte: a game must never wait on an account. A keyed claim (resume) needs no token: the key holds the chair. */
-  let token = null;
-  if(mode !== "resume" && o.identity && typeof o.identity.token === "function"){ try { token = await o.identity.token(); } catch(_){ token = null; } }
-  if(typeof token !== "string" || !token) token = null;
-  if(token) scrub.add(token);
   let req0 = mode === "resume" ? {op: "join", table: code, seat: rec.seat, key: rec.key} : {op: "join", table: code, claim, ...(token ? {identity: {token}} : {})};
   /* a join that lost a version race wrote NOTHING: it is asked again. One that FAILED in the network may or may
      not have been applied: it is asked again too (a claim token / a keyed claim makes that safe), a couple of
@@ -536,6 +544,29 @@ function defaultIdentity(config, keep, root_){
   return supabaseIdentity(config, keep);
 }
 
+/* ---- CLOSE MY OWN TABLE (S4.4) -------------------------------------------------------------------------------------
+   o: {transport, identity, sleep?}. `closeTable(o, code)` -> {closed:true}: the creator ends a table of theirs that nobody will play, which is
+   how a player at the cap of open tables gets unstuck (a table nobody sits at counts as open until it has been idle 48 hours). The table is
+   gone for both seats afterwards. Rejects with `.why`: unavailable (no sign-in / server) | identity | no-table (not there, or already
+   closed) | not-creator (it is somebody else's, or a casual table) . A lost version race is asked again. */
+async function closeTable(o, code){
+  o = o || {};
+  const T = o.transport, c = normalize(code);
+  if(!T || typeof T.post !== "function" || !o.identity || typeof o.identity.token !== "function") throw fail("unavailable", "no sign-in");
+  if(!isValid(c)) throw fail("code", "a table code is " + CODE_LEN + " characters");
+  let token = null; try { token = await o.identity.token(); } catch(_){ token = null; }
+  if(typeof token !== "string" || !token) throw fail("unavailable", "no sign-in");
+  const sleep = o.sleep || defaultSleep;
+  for(let k = 0; k < 5; k++){
+    const r = await call(T, {op: "close", table: c, identity: {token}});
+    if(r.ok) return {closed: true};
+    if(r.refused === "identity" || r.refused === "no-table" || r.refused === "not-creator") throw fail(r.refused);
+    if(r.retry === true){ await sleep(120 * (k + 1)); continue; }          /* a lost version race (the only retry:true answer) */
+    throw fail("unavailable", "refused: " + r.refused);
+  }
+  throw fail("unavailable", "the table kept changing");
+}
+
 const startTable = o => open({...o, mode: "create"});
 const sitAt = o => open({...o, mode: "join"});
 const reclaim = o => open({...o, mode: "resume"});
@@ -664,5 +695,5 @@ function defaultTransport(config, root_){
 }
 
 return {TABLE_CODE_CHARS: CODE_CHARS, CODE_LEN, STATUS, SUPABASE_JS, normalize, isValid, topicFor, open, startTable, sitAt, reclaim, savedSeats, doorChoice, doorOpen,
-        supabaseTransport, loadSupabase, defaultTransport, whoAmI, setName, recoveryMint, recoveryRedeem, supabaseIdentity, defaultIdentity};
+        supabaseTransport, loadSupabase, defaultTransport, whoAmI, setName, recoveryMint, recoveryRedeem, closeTable, supabaseIdentity, defaultIdentity};
 });

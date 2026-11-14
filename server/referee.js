@@ -32,6 +32,9 @@
                 name; "taken" when another player holds a name with the same fold. Only called by op "me" with a name.
      mint       (player, hash, days) -> "ok"   (S4.3, optional; may return a promise) — store a recovery code's SHA-256 hex for the
                 player, retiring that player's older unused codes (004_recovery.sql recovery_mint). Only called by op "recovery-mint".
+     store.createCapped  (id, row, creator, cap) -> {ok:true, version} | {ok:false, exists:true} | {ok:false, capped:true, open:[ids]}   (S4.4,
+                optional; may return a promise) — create a table for a SIGNED-IN player unless they already hold `cap` open ones, the count and
+                the insert ONE atomic step (005_table_cap.sql table_create_capped). Only called by op "create" with an identity.
      redeem     (token, hash) -> {status:"ok"|"refused"|"limited", name?} | null   (S4.3, optional; may return a promise) — spend the
                 code and move the token's sign-in to the code's player (recovery_redeem). null: the token is not a sign-in. Only
                 called by op "recovery-redeem". The Edge Function owns the provider subject; this file never sees it.
@@ -81,6 +84,21 @@
         `owned:true` on a join that bound/kept the caller's seat. The player id, the token and the provider's subject
         are never in any response to anyone, any broadcast, or a report (they live only in the row's `owners`).
 
+   ---- at most 5 open tables per player (S4.4; RULING user 2026-11-14 "cap 5 open tables per player") ---------------------
+     {op:"create", identity:{token}, table?}
+        a SIGNED-IN create: the row is stamped v3 with `creator` (OUR player id, in the row only) and the table is made through
+        `deps.store.createCapped` — the count of the creator's OPEN tables and the insert in one atomic step. OPEN = created by this
+        player, game not finished (the referee sets `over` when the session ends) and not closed by its creator, and not idle for 48
+        hours (forgotten). A player holding OPEN_CAP of them is refused `{ok:false, refused:"table-cap", cap, open:[their codes]}`
+        and nothing is written. Joining another player's table never counts (only `creator` does). A create with NO identity is the
+        casual create, byte for byte as before (no creator, never counted). Refusals: bad-request | identity | unavailable (the
+        store cannot count) | table-cap | exists (retry:true when the code was ours to pick) | internal.
+     {op:"close", table, identity:{token}}
+        the creator closes their own table (the smallest way out of the cap: a table nobody will play still counts as open until it is
+        48 hours idle). Marks the row `over` and `closed`: a closed table is then answered `no-table` to every join, frame and resync,
+        for both seats. -> {ok:true}; refusals: bad-request | identity | no-table | not-creator | conflict (retry:true) | internal.
+        Closing a table that is already over or closed is {ok:true} and writes nothing.
+
    ---- recovery codes (S4.3: a lost phone is not a lost player) ------------------------------------------------
      {op:"recovery-mint", identity:{token}}
         -> {ok:true, code:"XXXXX-XXXXX-XXXXX", days:730}. THE ONLY ANSWER, BROADCAST, ROW OR REPORT THAT EVER HOLDS A CODE: it is
@@ -106,7 +124,7 @@
         response asks `resync`.
      {ok:false, refused: "auth"|"stale"|"conflict"|"no-table"|"exists"|
                  "full"|"not-dealt"|"bad-request"|"wire"|"internal"|
-                 "identity"|"seat-owned", retry?}
+                 "identity"|"seat-owned"|"table-cap"|"not-creator", retry?}
         `conflict` (someone else wrote first) is the only retry:true.
 
    ---- broadcasts ---------------------------------------------------------
@@ -273,13 +291,43 @@ function save(id, row, version, deps, frames, reply, extra, also){
 
 /* ---- ops ------------------------------------------------------------- */
 
+const OPEN_CAP = 5;
 function create(req, deps){
   const given = req.table != null;
   const id = given ? req.table : newId(deps);
   if(typeof id !== "string" || !ID_RE.test(id)) return no("bad-request");
+  if(req.identity !== undefined) return createAs(req, id, given, deps);
   const r = rig(id, null, deps);
   const row = newRow(id, r.hub, deps);
   return then(deps.store.put(id, row, 0), p => p && p.ok ? {ok: true, table: id, version: p.version} : no("exists", {retry: !given}));
+}
+/* S4.4: a signed-in create. The decision (count, then insert) is the STORE's, in one atomic step; this only says who and what. */
+function createAs(req, id, given, deps){
+  return recoveryWho(req, deps, who => {
+    if(typeof deps.store.createCapped !== "function") return no("unavailable");      /* never create an unchecked table for a signed-in player */
+    const r = rig(id, null, deps);
+    const row = stamp(newRow(id, r.hub, deps));
+    row.creator = who.player;
+    return then(deps.store.createCapped(id, row, who.player, OPEN_CAP), p => {
+      if(p && p.ok) return {ok: true, table: id, version: p.version};
+      if(p && p.capped === true) return no("table-cap", {cap: OPEN_CAP, open: (Array.isArray(p.open) ? p.open : []).filter(x => typeof x === "string" && ID_RE.test(x)).slice(0, 10)});
+      if(p && p.exists === true) return no("exists", {retry: !given});
+      throw new Error("createCapped answered something that is neither created, capped nor exists");
+    });
+  });
+}
+
+/* ---- {op:"close", table, identity:{token}} (S4.4) --------------------------------------------------------------- */
+function opCloseTable(req, deps){
+  if(typeof req.table !== "string" || !ID_RE.test(req.table)) return no("bad-request");
+  return recoveryWho(req, deps, who => then(deps.store.get(req.table), got => {
+    if(!got || !got.row || got.row.closed === true) return no("no-table");
+    if(!rowOk(got.row.v) || got.row.wireV !== W.WIRE_V) return no("wire");
+    if(got.row.creator == null || got.row.creator !== who.player) return no("not-creator");
+    if(got.row.over === true) return {ok: true};
+    const row = got.row; row.over = true; row.closed = true;
+    return then(save(req.table, row, got.version, deps, [[], []], []), a => a.ok ? {ok: true} : a);
+  }));
 }
 
 function join(req, got, deps){
@@ -479,6 +527,9 @@ function frame(req, got, deps){
   const after = r.mark();
   if(before.lob === after.lob && before.seq === after.seq) return {ok: true, version: got.version, frames: r.out[seat]};   /* a refusal or a read: nothing to save */
   row.hub = r.hub.persistTable();
+  /* S4.4: the row of a table a signed-in player created learns when its game ends, so the player's count of OPEN tables lets go of it
+     (005_table_cap.sql reads `over`). A casual table has no creator and its row is never touched by this. */
+  if(row.creator != null && row.over !== true){ const s = r.hub.session(); if(s && s.over()) row.over = true; }
   row.nonces = row.nonces.slice(); row.nonces[seat] = req.n;
   /* the caller's frames ride its response; only the OTHER seat's are pushed */
   const pushed = [[], []]; pushed[other] = r.out[other];
@@ -498,13 +549,14 @@ function serve(req, deps){
   if(!req || typeof req !== "object" || !deps || !deps.store) return no("bad-request");
   if(req.op === "create") return create(req, deps);
   if(req.op === "me") return me(req, deps);
+  if(req.op === "close") return opCloseTable(req, deps);
   if(req.op === "recovery-mint") return opMintCode(req, deps);
   if(req.op === "recovery-redeem") return opRedeemCode(req, deps);
   if(typeof req.table !== "string" || !ID_RE.test(req.table)) return no("bad-request");
   const fn = req.op === "join" ? join : req.op === "frame" ? frame : req.op === "resync" ? resync : null;
   if(!fn) return no("bad-request");
   return then(deps.store.get(req.table), got => {
-    if(!got || !got.row) return no("no-table");
+    if(!got || !got.row || got.row.closed === true) return no("no-table");       /* a closed table (S4.4) is gone for both seats */
     if(!rowOk(got.row.v) || got.row.wireV !== W.WIRE_V) return no("wire");
     return fn(req, got, deps);
   });
@@ -525,5 +577,5 @@ function handleNow(req, deps){
   return v;
 }
 
-return {handle, handleNow, topic, ROW_V, ROW_V_CASUAL, validateName, nameFold, recoveryNormal, recoveryHash, RECOVERY_DAYS, RECOVERY_CHARS, RECOVERY_LEN};
+return {handle, handleNow, topic, OPEN_CAP, ROW_V, ROW_V_CASUAL, validateName, nameFold, recoveryNormal, recoveryHash, RECOVERY_DAYS, RECOVERY_CHARS, RECOVERY_LEN};
 });
