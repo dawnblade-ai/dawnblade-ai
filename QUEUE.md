@@ -9,12 +9,12 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-13, at v6.25)
+## HANDOFF — START HERE (CEO, 2026-11-14, at v6.26)
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
-- **Live: v6.25** (WIRE_V 40, DATA_VER sage-v17). Progress reports: `docs/progress/v6.24.md`, `v6.25.md`.
+- **Live: v6.26** (WIRE_V 40, DATA_VER sage-v17). Progress reports: `docs/progress/v6.25.md`, `v6.26.md`.
 - **CEO since 2026-11-13: `session_013xG9xCPR11GYcDV7QGiWyX`** (Fable; user asked for LOW CONTEXT and the cheapest
   agents: in-session haiku/sonnet subagents did v6.23; the two Opus workers were NOT woken, still standing by).
 - **MISSION (user, 2026-11-07):** the ultimate FaB Silver Age precon competitive gaming environment and
@@ -71,6 +71,20 @@ needed) -> S3 SQL migration + deploy + two-phone smoke + keep-alive ping (free p
 -> S4 anonymous sign-in, seat = auth.uid() -> S5 = H4 ranked. Supabase API details are UNVERIFIED (docs
 unreachable; verify at S3). ASKED, unanswered: casual table first? paused-project fallback to the direct
 table OK? deploy via this env (needs api.supabase.com + token) or the user's dashboard?
+**v6.26 — THE SERVER TABLE IS DEPLOYED (2026-11-14), behind a tester's door.** Supabase function `table`
+(verify_jwt off; folder bundle 25 files/3.5 MB; health `GET /functions/v1/table` reports the build) + SQL
+`public.tables`/`table_put` (RLS forced, 0 policies; rows idle > 48 h deleted on create). Page: `engine/servertable.js`,
+`window.SERVER_TABLE.on` false; `?server=1` opts a phone in (`?server=0` forgets). Per-seat public channels with
+derived names + HMAC seal over CANONICAL JSON (Realtime re-sorts keys). Live: median ~190 ms, p95 ~440 ms, cold ~530 ms.
+Keep-alive: `.github/workflows/keepalive.yml`. Logs: `server/S3-DEPLOY-LOG.md`, `server/supabase/DEPLOY.md`;
+repeatable live drill `tools/supabase-live.js`. Also fixed: the page never registered the card DB with the judge
+(`DawnJudge.setDb`) so its own replay could not find tokens.
+- **EVERY RELEASE: re-bundle + redeploy + `--stamp`** (CLAUDE.md Release). Needs a Supabase access token in the
+  env credential store for `api.supabase.com` (user may have revoked it after v6.26: ask via request_credential,
+  never chat). Until redeployed, the server table's handshake refuses.
+- **WAITING ON THE USER:** the two-phone test at `https://dawnblade-ai.github.io/dawnblade-ai/?server=1`
+  (UNVERIFIED: a real phone browser's websocket + the jsdelivr supabase-js path). If it passes: flip `on: true`.
+- **NEXT:** S4 anonymous sign-in (currently OFF in the project), seat = auth.uid(), private channels; then H4 ranked.
 **H-LYATH2 DIAGNOSED, PARKED** (`experiments/lyath2-NOTES.md`): Sharp's pre-attack plays are all Instants or
 the hero ability. Ceilings @12: free instant first +1.83, hero ability first +1.17. Blanket rules lose (always
 hero ability first -2.17). `judge.instantFirst` (SPXINSTFIRST, dry-run + effPowerNow) faded: +0.92 @12, +0.58
