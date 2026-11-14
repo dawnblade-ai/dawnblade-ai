@@ -26,6 +26,7 @@
              join (none: no identity, as v6.28); lose: a Set of seats whose phone has LOST its key — its claim is then an
              unkeyed identity join (a takeover) instead of a keyed one; secrets: strings (player ids, tokens) no response,
              broadcast or frame may contain, scanned like the keys.
+             ranked    (S5.1) the table is created RANKED (needs `creator`); rankDeps: {rating, record} for the referee's deps (a ratings backend, serverfakes.js withRatings)
              creator   (S4.4) the token the table is CREATED with (a signed-in create: the row records its creator and the referee marks it over
              when the game ends); needs `identify`.
      tamper  {broadcast?(topic, payload, bus, {store, code}) -> void} — the sabotage seam:
@@ -51,7 +52,7 @@ function makeServerHub(cfg){
     /* the deps, from a clean clock and a clean seed: the async replay builds a second set */
     const makeDeps = (st, bs) => { let ck = 1700000000000; const r = T.seeded("server|" + (cfg.seedKey || "") + "|" + code);
       return {store: st, broadcast: (t, p) => bs.broadcast(t, p), deal, build: opts.build, now: () => ck++, rand: () => r,
-              ...(cfg.identify ? {identify: cfg.identify} : {}),
+              ...(cfg.identify ? {identify: cfg.identify} : {}), ...(cfg.rankDeps || {}),
               log: e => { audit.errors.push(String(e && e.stack || e)); }}; };
     const deps = {...makeDeps(store, bus), broadcast, now: () => clock++, rand: () => rnd};
     const audit = {phones: 0, calls: 0, timings: [], responses: [], reqs: [], resps: [], leaks: [], mismatch: 0, errors: [], refused: [], store, bus, deps, makeDeps, code};
@@ -109,7 +110,8 @@ function makeServerHub(cfg){
       if(req.op !== "create" && req.seat != null && sent.some(e => e.topic === server.topic(code, req.seat, ((store.row(code) || {}).hub || {keys: []}).keys[req.seat]))) audit.mismatch++;
       return res;
     }
-    call({op: "create", table: code, ...(cfg.creator ? {identity: {token: cfg.creator}} : {})});    /* S4.4: a signed-in create records its creator (cfg.creator: a token) */
+    const made = call({op: "create", table: code, ...(cfg.creator ? {identity: {token: cfg.creator}} : {}), ...(cfg.ranked ? {ranked: true} : {})});
+    if(cfg.ranked && !made.ok) throw new Error("the ranked table was not made: " + made.refused);    /* S4.4: a signed-in create records its creator (cfg.creator: a token) */
 
     const hub = {
       audit,
