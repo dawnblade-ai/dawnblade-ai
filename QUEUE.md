@@ -9,7 +9,42 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-14, at v6.28)
+## HANDOFF — START HERE (CEO, 2026-11-14, at v6.29)
+
+**Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
+and `docs/progress/` on main. Do not start a root handoff file.
+
+### NEW THREAD: READ THIS BLOCK FIRST (written 2026-11-14 by CEO session_013xG9x96ShtY8zh3QNW5NzA)
+- **State:** live = v6.29 on `main` (3662cce), livecheck ALL PASS (both phones signed in; push 42, fallback 0, median 287 ms,
+  p95 404). Function `table` version 12 = build `v6.29 · sage-v17`, stamped; `supabase-bundle --check` OK. No unreleased work.
+- **v6.29 = S4.1 + S4.2 SHIPPED** (`server/S4-LOG.md`, CHANGELOG, `docs/progress/v6.29.md`): anonymous sign-in is ON in the
+  project; `002_players.sql` + `003_names.sql` are RUN; the page signs in lazily at a server table (`servertable.supabaseIdentity`,
+  session kept under `who.id`); a seat belongs to its player; same player on a second phone takes the seat (old phone reads
+  "taken"); player names via `{op:"me"}` (`whoAmI`/`setName`), UNIQUE on `referee.nameFold` (capitals, spaces, look-alikes);
+  a name at a join is refused; the lobby shows both names. Sign-in failing = a casual table, as v6.28.
+- **VERIFIED live:** `PATCH .../config/auth {"external_anonymous_users_enabled":true}`; `POST /auth/v1/signup {}`;
+  `POST /auth/v1/token?grant_type=refresh_token` (bad token 400); `/auth/v1/user` (bad token 403); `identity_resolve` and
+  `player_rename` through the function (two real anonymous players, look-alike name refused).
+- **NEXT, in order:** S4.3 recovery code (`recovery` table + `recovery_use` exist in 002; needs: a function op that mints a
+  code for the signed-in player and one that redeems it INTO the new phone's anonymous identity, a sheet on the page, livecheck
+  covers reclaim) -> names on the board during the game (lobby only today) -> cap 5 open tables per player -> S5 ranked
+  (results/ratings written only by the function, Elo 1200, forfeit clock, leaderboard).
+- **KNOWN LIMITS (told to the user):** identity is per phone until S4.3; a LOST refresh answer can cost the session (Supabase
+  rotates refresh tokens) = a new player; two tabs of one browser are one player (cannot hold both seats of a table);
+  30 anonymous sign-ins per hour per address, no captcha.
+- **USER ANSWERS (2026-11-14, "Yes to all"), still standing:** recovery code is enough for the first ladder (no email/Google);
+  cap 5 open tables per player; names unique; one player on two phones: last one wins.
+- **HOW THIS THREAD WORKED:** one session did the work inline (no subagents), commit after every step, branch
+  `claude/inspiring-ritchie-630ocp` fast-forwarded into `main`. Scratch deps it needed: `@electric-sql/pglite` (sql-pglite),
+  `deno` (rehearse), PAGE_DEPS with the exact versions in `tools/page.js`'s header. The user is kind and brief.
+- **Supabase access:** the access token lives ONLY in the environment's credential store for `api.supabase.com` (worked all
+  session). Approved scope: this project only, the SQL files, the function `table`, the auth switch above. Nothing else without asking.
+- **EVERY RELEASE:** validate -> bundle + deploy `table` + `--stamp` (commit the stamp) -> push main ->
+  `NODE_PATH=/opt/node-tools/node_modules node tools/livecheck.js` -> CI `drills` green -> update this section.
+- **Parked AI items:** Lyath (`experiments/lyath-*`, `lyath2-*`; lead = aura pumps unseen by `effPowerNow`). Unverified: the
+  4x-throttled phone bound for Sharp after v6.24.
+
+## HANDOFF ARCHIVE (CEO, 2026-11-14, at v6.28) — superseded by the section above
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
