@@ -43,6 +43,9 @@ as $$
 declare v integer;
 begin
   if p_expected = 0 then
+    -- EXPIRY (v6.26): opening a table first forgets every table nobody has touched for 48 hours. `updated_at` is set on insert and
+    -- on every update below, so a table in play is never idle; this needs no extension and no schedule, only that tables keep being opened.
+    delete from public.tables where updated_at < now() - interval '48 hours';
     insert into public.tables (id, row) values (p_id, p_row)
       on conflict (id) do nothing
       returning version into v;
@@ -82,11 +85,19 @@ begin
   v := public.table_put('zz-selfcheck', '{"v":2}'::jsonb, 0);          if v <> 0 then raise exception 'a duplicate create was not refused (%)', v; end if;
   v := public.table_put('zz-selfcheck', '{"v":2,"x":1}'::jsonb, 1);    if v <> 2 then raise exception 'an update at version 1 answered %', v; end if;
   v := public.table_put('zz-selfcheck', '{"v":2,"x":2}'::jsonb, 1);    if v <> 0 then raise exception 'a stale put was not refused (%)', v; end if;
+  -- expiry: a table idle for 3 days is forgotten when the next one is opened; one idle for 1 day is kept; the new one is made
+  insert into public.tables (id, row, updated_at) values ('zz-selfcheck-old', '{"v":2}'::jsonb, now() - interval '3 days');
+  insert into public.tables (id, row, updated_at) values ('zz-selfcheck-new', '{"v":2}'::jsonb, now() - interval '1 day');
   delete from public.tables where id = 'zz-selfcheck';
+  v := public.table_put('zz-selfcheck', '{"v":2}'::jsonb, 0);
+  if v <> 1 then raise exception 'a create after the expiry sweep answered %', v; end if;
+  if exists (select 1 from public.tables where id = 'zz-selfcheck-old') then raise exception 'a table idle for 3 days was not forgotten'; end if;
+  if not exists (select 1 from public.tables where id = 'zz-selfcheck-new') then raise exception 'a table idle for 1 day was forgotten'; end if;
+  delete from public.tables where id in ('zz-selfcheck', 'zz-selfcheck-new', 'zz-selfcheck-old');
 end $$;
 select 'ok' as dawnblade_tables;
 
--- OPTIONAL, UNVERIFIED: forget tables nobody has touched for a week (needs the pg_cron extension, enabled
+-- OPTIONAL, UNVERIFIED, NOT NEEDED since v6.26 (table_put forgets tables idle 48 hours when a table is opened): a scheduled sweep (needs the pg_cron extension, enabled
 -- from Database -> Extensions in the dashboard).
 -- select cron.schedule('dawnblade-forget-old-tables', '17 4 * * *',
 --   $$ delete from public.tables where updated_at < now() - interval '7 days' $$);
