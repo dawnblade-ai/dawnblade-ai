@@ -295,7 +295,7 @@ test("(e) A RELOAD MID-GAME claims the seat back, resumes at the right counter a
   assert.ok(r.keep.m.get("srv." + r.code), "the seat record lived in the store seam");
 });
 test("SABOTAGE (e): a reclaim that forgets the counter is noticed", async () => {
-  const bad = stCopy([["return channel(o, T, code, res.seat, key, res.n | 0, res.frames || [], scrub, keep);", "return channel(o, T, code, res.seat, key, 0, res.frames || [], scrub, keep);"]]);
+  const bad = stCopy([["return channel(o, T, code, res.seat, key, res.n | 0, res.frames || [], scrub, keep, {owned:", "return channel(o, T, code, res.seat, key, 0, res.frames || [], scrub, keep, {owned:"]]);
   let bit = false;
   try { cleanReload(await reloadRun(bad)); } catch(e){ bit = true; }
   assert.ok(bit, "the reload drill did not notice a counter reset to zero");
@@ -482,7 +482,7 @@ test("(i) A LOST ANSWER TO THE OPENING JOIN IS RETRIED AND LANDS ON THE SAME SEA
   a.close(); b.close();
 });
 test("SABOTAGE (i): a phone that sends no claim token strands the seat its lost answer was dealt", async () => {
-  const bad = stCopy([["{op: \"join\", table: code, claim}", "{op: \"join\", table: code}"]]);
+  const bad = stCopy([["{op: \"join\", table: code, claim, ...(token ? {identity: {token}} : {})}", "{op: \"join\", table: code, ...(token ? {identity: {token}} : {})}"]]);
   const r = await lostJoinRun(bad).then(x => x, e => ({err: e}));
   assert.ok(r.err || r.a.seat !== 0 || r.b.seat !== 1 || r.world.row(r.code).hub.keys.filter(Boolean).length !== 2, "the drill must see a stranded or swapped seat");
   assert.ok(!r.err ? r.b.seat !== 1 || r.a.seat !== 0 : true);

@@ -101,7 +101,7 @@ const defaultSleep = ms => new Promise(r => setTimeout(r, ms));
 /* an Error whose `why` is a short machine word the screen maps to a sentence */
 const fail = (why, detail) => Object.assign(new Error(detail || why), {why});
 /* the referee's refusals, as the words a screen reasons in */
-const WHY_OF = {"no-table": "no-table", full: "full", auth: "auth", wire: "wire", exists: "exists", "bad-request": "bad-request"};
+const WHY_OF = {"no-table": "no-table", full: "full", auth: "auth", wire: "wire", exists: "exists", "bad-request": "bad-request", "seat-owned": "seat-owned"};
 
 /* a transport failure: the network, a function that is not there, a paused
    project, a page that is not the referee. Never carries the request. */
@@ -164,7 +164,15 @@ async function open(o){
      write, and answers a repeat with the SAME seat, key and lobby. Always real randomness (never `o.rand`, which
      the drills pin): two phones must never share a token. A claiming join (resume) is already idempotent. */
   const claim = mode === "resume" ? null : (o.claim || SHA.nonce());
-  const req0 = mode === "resume" ? {op: "join", table: code, seat: rec.seat, key: rec.key} : {op: "join", table: code, claim};
+  /* WHO IS SITTING DOWN (S4.2). `o.identity` ({token() -> Promise<string|null>}; `supabaseIdentity` on the page, a fake in
+     the drills) signs this phone in LAZILY, here, the first time it opens or joins a server table. With a token the seat is
+     bound to the player (the referee's `owners`); with none (sign-in off, unreachable, refused) the join is the casual one,
+     byte for byte: a game must never wait on an account. A keyed claim (resume) needs no token: the key holds the chair. */
+  let token = null;
+  if(mode !== "resume" && o.identity && typeof o.identity.token === "function"){ try { token = await o.identity.token(); } catch(_){ token = null; } }
+  if(typeof token !== "string" || !token) token = null;
+  if(token) scrub.add(token);
+  let req0 = mode === "resume" ? {op: "join", table: code, seat: rec.seat, key: rec.key} : {op: "join", table: code, claim, ...(token ? {identity: {token}} : {})};
   /* a join that lost a version race wrote NOTHING: it is asked again. One that FAILED in the network may or may
      not have been applied: it is asked again too (a claim token / a keyed claim makes that safe), a couple of
      times, but never when the function is simply not there (404): that answer is final. */
@@ -178,11 +186,15 @@ async function open(o){
       await sleep0(Math.min(tune0.max, tune0.base * Math.pow(2, netFails)) * (0.5 + (o.rand || Math.random)()));
       continue;
     }
+    /* the referee would not take the sign-in (expired between the check and the call, or no provider there): sit down
+       casually instead. Nothing was written by the refusal, and the claim token is the same. */
+    if(!res.ok && res.refused === "identity" && req0.identity){ req0 = {op: "join", table: code, claim}; token = null; continue; }
     if(res.ok || res.refused !== "conflict") break;
     await sleep0(Math.min(tune0.max, tune0.base * Math.pow(2, k)) * (0.5 + (o.rand || Math.random)()));
   }
   if(!res.ok){
     if(mode === "resume" && res.refused === "auth") kset("srv." + code, null);   /* a seat that is not ours any more */
+    if(res.refused === "auth" && res.taken === true) throw fail("taken", "refused: auth (taken)");
     if(mode === "resume" && res.refused === "no-table") kset("srv." + code, null);
     throw refusal(res);
   }
@@ -192,11 +204,11 @@ async function open(o){
   if(!key) throw fail("unavailable", "the table dealt no seat key");
   scrub.add(key);
   kset("srv." + code, {seat: res.seat, key, role: mode === "create" ? "creator" : (rec && rec.role) || "joiner", at: (o.now || Date.now)()});
-  return channel(o, T, code, res.seat, key, res.n | 0, res.frames || [], scrub, keep);
+  return channel(o, T, code, res.seat, key, res.n | 0, res.frames || [], scrub, keep, {owned: res.owned === true, names: res.names});
 }
 
 /* ---- the channel ----------------------------------------------------------- */
-function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep){
+function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep, who){
   const sleep = o.sleep || defaultSleep, rand = o.rand || Math.random;
   const timers = o.timers || {setInterval: (f, ms) => setInterval(f, ms), clearInterval: h => clearInterval(h)};
   const tune = {conflictCap: 8, joinCap: 8, failCap: 4, base: 120, max: 2000, probeMs: 5000, pollMs: 0, fallbackMs: 0, ...(o.tune || {})};
@@ -209,6 +221,15 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep){
   const events = []; const ev = (t, d) => { events.push({t, ...(d || {})}); if(events.length > 200) events.shift(); };
   const set = s => { if(st === s || (st === "closed" && s !== "closed")) return; st = s; try { onStatus(s); } catch(_){} };
   const peerSeat = 1 - seat;
+  /* the two display names, public to both seats (S4.2): they ride a join's and a resync's answer, never a push */
+  const owned = !!(who && who.owned);
+  let names = [null, null], namesAsked = false, started = false;
+  const wantNames = !!(o.identity || o.onNames);      /* a casual drill's request count is untouched */
+  const readNames = v => { if(!Array.isArray(v) || v.length !== 2) return;
+    const nx = v.map(x => typeof x === "string" && x.length <= 64 ? x : null);
+    if(nx[0] === names[0] && nx[1] === names[1]) return;
+    names = nx; try { if(o.onNames) o.onNames(names.slice()); } catch(_){} };
+  readNames(who && who.names);
 
   const deliver = f => { if(sink) sink(f); else backlog.push(f); };
   /* what comes up from the server: the seat offer once (key taken out), lobby and net frames as they are */
@@ -216,6 +237,8 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep){
     for(const f0 of frames || []){
       if(!f0 || typeof f0 !== "object") continue;
       if(f0.ch === CH_JUDGE){
+        /* the same player sat down on another phone: this key is retired (sealed push, or a first frame) */
+        if(f0.taken === true){ fatal("taken"); return; }
         if(judgeSent) continue;
         judgeSent = true;
         const {key: _k, ...rest} = f0;                    /* THE KEY STOPS HERE */
@@ -227,8 +250,11 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep){
       deliver(clone(f0));
     }
     if(peerHeard && st === "waiting") set("seated");
+    /* the other player just sat down: ask once who they are (their name rides a join's answer, not a push) */
+    if(started && wantNames && peerHeard && !namesAsked && names[peerSeat] == null){ namesAsked = true; Promise.resolve().then(() => { if(!closed) heal(); }); }
   }
   ingest(firstFrames);
+  started = true;                        /* the join's own answer already carried the names it knew */
   set(peerHeard ? "seated" : "waiting");
 
   /* ---- backoff: grows, is capped, is jittered -------------------------- */
@@ -269,7 +295,7 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep){
         if(j >= n + 1){ n = j; heal(); return true; }      /* applied (or a later one did) */
         n = j; continue;                                   /* ours is still unapplied: resend above the counter */
       }
-      if(r.refused === "auth" || r.refused === "no-table" || r.refused === "wire"){ fatal(r.refused); return false; }
+      if(r.refused === "auth" || r.refused === "no-table" || r.refused === "wire"){ fatal(r.refused === "auth" && r.taken === true ? "taken" : r.refused); return false; }
       /* not-dealt, internal, bad-request…: transient or a frame the server will not take */
       if(r.refused === "bad-request"){ ev("bad-frame"); return true; }
       if(++soft > tune.conflictCap){ set("unavailable"); await sleep(tune.probeMs); soft = 0; continue; }
@@ -286,7 +312,8 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep){
   async function rejoin(){
     let r;
     try { r = await call(T, {op: "join", table: code, seat, key}); } catch(_){ return null; }
-    if(!r.ok){ if(r.refused === "auth" || r.refused === "no-table") fatal(r.refused); return null; }
+    if(!r.ok){ if(r.refused === "auth" || r.refused === "no-table") fatal(r.refused === "auth" && r.taken === true ? "taken" : r.refused); return null; }
+    readNames(r.names);
     ingest(r.frames);
     return r.n | 0;
   }
@@ -304,8 +331,8 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep){
         else {                                                             /* a game: the net session's catch-up */
           let r = null;
           try { r = await call(T, {op: "resync", table: code, seat, key, have: haveFn ? haveFn() : undefined}); } catch(_){ r = null; }
-          if(r && r.ok){ ingest(r.frames); ok1 = true; }
-          else if(r && (r.refused === "auth" || r.refused === "no-table")) fatal(r.refused);
+          if(r && r.ok){ readNames(r.names); ingest(r.frames); ok1 = true; }
+          else if(r && (r.refused === "auth" || r.refused === "no-table")) fatal(r.refused === "auth" && r.taken === true ? "taken" : r.refused);
           else ev("heal-failed");
         }
         ev("healed");
@@ -383,6 +410,8 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep){
     /* beyond room.js's shape */
     peerHeard: () => peerHeard,
     closedWhy: () => closedWhy,
+    names: () => names.slice(),          /* [seat 0's display name | null, seat 1's] */
+    owned: () => owned,                  /* this seat is bound to this phone's player */
     quietFor: () => (o.now || Date.now)() - lastIn,
     setHave(fn){ haveFn = fn; },
     heal,
@@ -395,6 +424,85 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep){
   };
   void scrub;
   return handle;
+}
+
+/* ---- WHO AM I / MY NAME (S4.2) ---------------------------------------------------------------------------------
+   o: {transport, identity}. `whoAmI(o)` -> {name | null}; `setName(o, name)` -> {name}. Both sign this phone in if it
+   is not yet (lazily: only a server table or the name sheet ever asks). Rejects with `.why`:
+     unavailable (no sign-in, no server) | name (the referee's validator refused it; `.reason`: short | long | chars |
+     space | reserved | type) | name-taken (another player holds it; names are unique whatever the capitals, spaces or
+     look-alike letters) | identity (the server would not take this sign-in).
+   The referee is THE validator: nothing here judges a name, so the page and the server cannot disagree. */
+async function me(o, name){
+  o = o || {};
+  const T = o.transport;
+  if(!T || typeof T.post !== "function" || !o.identity || typeof o.identity.token !== "function") throw fail("unavailable", "no sign-in");
+  let token = null; try { token = await o.identity.token(); } catch(_){ token = null; }
+  if(typeof token !== "string" || !token) throw fail("unavailable", "no sign-in");
+  const r = await call(T, {op: "me", identity: {token}, ...(name !== undefined ? {name} : {})});
+  if(r.ok) return {name: typeof r.name === "string" ? r.name : null};
+  if(r.refused === "name-taken") throw fail("name-taken");
+  if(r.refused === "bad-request" && r.field === "name") throw Object.assign(fail("name"), {reason: typeof r.reason === "string" ? r.reason : "chars"});
+  if(r.refused === "identity") throw fail("identity");
+  throw fail("unavailable", "refused: " + r.refused);
+}
+const whoAmI = o => me(o);
+const setName = (o, name) => me(o, name);
+
+/* ---- THE SIGN-IN (S4.2): an anonymous Supabase user, kept on this phone ---------------------------------------
+   No email, no password, nothing typed: the first time a server table (or the name sheet) needs to know who this phone
+   is, it asks the project's auth service for an anonymous user and keeps the session in `keep` under "who.id"
+   ({a: access token, r: refresh token, exp: ms}). `token()` answers a usable access token or null:
+     - a stored token with more than two minutes left: that one, no request;
+     - else the refresh token is traded for a new pair;
+     - a refresh the service REFUSES (400/401/403: the sign-in is gone) or no session at all: a new anonymous user —
+       a NEW PLAYER. Until S4.3's recovery code that is the only way back, and it is why a network failure or a 5xx
+       is never read as a refusal: they answer null (this table is casual) and the session is kept for next time.
+   Callers share one request in flight. Nothing here is a secret of the game: the token says who the PLAYER is, the
+   referee turns it into a seat, and the seat key (never this token) is what moves a card.
+   VERIFIED live 2026-11-14: POST /auth/v1/signup {} and POST /auth/v1/token?grant_type=refresh_token
+   {refresh_token}, both with the publishable key as `apikey`, answer {access_token, refresh_token, expires_in}. */
+function supabaseIdentity(config, keep, o){
+  config = config || {}; o = o || {};
+  const base = String(config.url || "").replace(/\/+$/, "");
+  const doFetch = config.fetch || (typeof fetch === "function" ? (u, i) => fetch(u, i) : null);
+  const now = o.now || Date.now, K = "who.id";
+  const kget = () => { try { return keep ? keep.get(K, null) : null; } catch(_){ return null; } };
+  const kset = v => { try { if(keep) keep.set(K, v); } catch(_){} };
+  const ask = (path, body) => doFetch(base + path, {method: "POST", headers: {"content-type": "application/json", apikey: config.key}, body: JSON.stringify(body)});
+  async function take(resp){
+    let j; try { j = await resp.json(); } catch(_){ return null; }
+    if(!j || typeof j.access_token !== "string" || !j.access_token || typeof j.refresh_token !== "string" || !j.refresh_token) return null;
+    const secs = Number(j.expires_in);
+    kset({a: j.access_token, r: j.refresh_token, exp: now() + (secs > 0 ? secs : 3600) * 1000});
+    return j.access_token;
+  }
+  async function fresh(){
+    const rec = kget();
+    if(rec && typeof rec.a === "string" && rec.a && Number(rec.exp) - 120000 > now()) return rec.a;
+    if(!doFetch || !base || !config.key) return null;
+    if(rec && typeof rec.r === "string" && rec.r){
+      let resp; try { resp = await ask("/auth/v1/token?grant_type=refresh_token", {refresh_token: rec.r}); } catch(_){ return null; }
+      if(resp && resp.ok) return take(resp);
+      if(!resp || (resp.status !== 400 && resp.status !== 401 && resp.status !== 403)) return null;
+    }
+    let resp; try { resp = await ask("/auth/v1/signup", {}); } catch(_){ return null; }
+    if(!resp || !resp.ok) return null;
+    return take(resp);
+  }
+  let flight = null;
+  return {
+    token(){ if(!flight){ flight = fresh().then(v => { flight = null; return v; }, () => { flight = null; return null; }); } return flight; },
+    known(){ const rec = kget(); return !!(rec && typeof rec.r === "string" && rec.r); }
+  };
+}
+/* the sign-in the page uses: a drive may install one first (window.__dawnServerIdentity); with the door shut there is
+   none (null: every table is casual and nothing is asked of the auth service) */
+function defaultIdentity(config, keep, root_){
+  const w = root_ || (typeof window !== "undefined" ? window : null);
+  if(w && w.__dawnServerIdentity) return w.__dawnServerIdentity;
+  if(!config || config.on !== true || config.signIn === false) return null;
+  return supabaseIdentity(config, keep);
 }
 
 const startTable = o => open({...o, mode: "create"});
@@ -525,5 +633,5 @@ function defaultTransport(config, root_){
 }
 
 return {TABLE_CODE_CHARS: CODE_CHARS, CODE_LEN, STATUS, SUPABASE_JS, normalize, isValid, topicFor, open, startTable, sitAt, reclaim, savedSeats, doorChoice, doorOpen,
-        supabaseTransport, loadSupabase, defaultTransport};
+        supabaseTransport, loadSupabase, defaultTransport, whoAmI, setName, supabaseIdentity, defaultIdentity};
 });
