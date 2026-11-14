@@ -129,7 +129,15 @@ async function toServerChooser(page){
     await page.getByRole("button", { name: /^Find an opponent/ }).click();
     await page.waitForSelector(".tblwrap");
     const home = await text(page);
-    row(/Join a server table/i.test(home) && /A server table needs no direct link/i.test(home), "table screen: the server option sits beside the direct ones, with its honest line");
+    row(/Join a server table/i.test(home) && /no direct link needed/i.test(home) && /referee on the web holds the deck/i.test(home) && !/early test/i.test(home), "table screen: the server option sits beside the direct ones, in player words (not an early test), with its honest line");
+    /* THREE CHOICES SIDE BY SIDE (v6.28): server, direct, judge's - each a labelled group, stacked in order, all inside 393 wide, their buttons visible on the first screen */
+    const grp = await page.evaluate(() => [...document.querySelectorAll(".tblgroup")].map(g => { const r = g.getBoundingClientRect(), n = (g.querySelector(".tblgname") || {}).textContent;
+      const bs = [...g.querySelectorAll("button")].map(b => { const q = b.getBoundingClientRect(); return { t: b.textContent.trim(), x: Math.round(q.left), r: Math.round(q.right), y: Math.round(q.top), b: Math.round(q.bottom), h: Math.round(q.height) }; });
+      return { n, x: Math.round(r.left), r: Math.round(r.right), y: Math.round(r.top), b: Math.round(r.bottom), bs }; }));
+    row(grp.map(g => g.n).join("|") === "Server table|Direct table|Judge's table", "table screen: three labelled choices in order: server, direct, judge's", grp.map(g => g.n).join("|"));
+    row(grp.length === 3 && grp.every((g, i) => g.x >= 0 && g.r <= W && (i === 0 || g.y >= grp[i - 1].b)) && grp.every(g => g.bs.length > 0 && g.bs.every(b => b.x >= 0 && b.r <= W && b.h >= 40 && b.b <= H)),
+        "table screen: the three groups do not overlap, stay inside 393 wide, and every button is thumb-sized and on the first 852px", grp.map(g => `${g.n} y${g.y}-${g.b}`).join(", "));
+    row(grp.every(g => g.bs.every((a, i) => g.bs.every((c, j) => j <= i || a.r <= c.x || c.r <= a.x || a.b <= c.y || c.b <= a.y))), "table screen: no two buttons overlap");
     row(await overflow(page), "table screen: no horizontal overflow");
     await thumbs(page, "table screen");
     await click(page, btn(page, /^Join a server table/), "join a server table");
@@ -152,7 +160,7 @@ async function toServerChooser(page){
     await kit.close();
   }
 
-  /* ---- 1b. THE TESTER'S DOOR: off by default; ?server=1 opens it and the page remembers; ?server=0 forgets ---- */
+  /* ---- 1b. THE DOOR (v6.28): open for everyone; ?server=0 hides it on one phone (remembered); ?server=1 brings it back ---- */
   {
     let hits = 0;
     const doorKit = async (query) => { const k = await open({ w: W, h: H, query }); await k.context.route(/supabase\.co/, route => { hits++; route.fulfill({ status: 404, body: "{}" }); }); return k; };
@@ -162,24 +170,24 @@ async function toServerChooser(page){
     const reopen = async (p, href, query) => { await p.goto(href + query); await p.waitForSelector(".shell", { timeout: 15000 });
       await p.waitForFunction(() => /\d+ cards/.test((document.querySelector(".topbar .tag") || {}).textContent || ""), null, { timeout: 30000 }); };
     const k0 = await doorKit("");
-    row(await k0.page.evaluate(() => window.SERVER_TABLE.on === false), "tester's door: the shipped switch is off");
+    row(await k0.page.evaluate(() => window.SERVER_TABLE.on === true), "the door: the shipped switch is open");
     let r = await offersServer(k0.page);
-    row(!r.btn && !r.note, "tester's door: no query, nothing remembered - no server option on the table screen");
-    await reopen(k0.page, k0.href, "?server=1");
-    r = await offersServer(k0.page);
-    row(r.btn, "tester's door: ?server=1 shows the server option (shipped switch still off)");
+    row(r.btn && !r.note, "the door: no query - everyone sees the server option, and it is not called an early test");
     const txt = await (async () => { await k0.page.getByRole("button", { name: /^Find an opponent/ }).click(); await k0.page.waitForSelector(".tblwrap"); const t = await text(k0.page); await click(k0.page, btn(k0.page, /^Back/), "back"); await k0.page.waitForSelector("button:has-text('Find an opponent')"); return t; })();
-    row(/early test/i.test(txt) && !/sb_publishable|supabase|v6\.\d|seedG|nonce/i.test(txt.match(/A server table needs no direct link[\s\S]{0,300}/i)[0]), "tester's door: the option reads as an early test, in player language (no identifiers or version numbers)");
-    row(await k0.page.evaluate(() => window.SERVER_TABLE.on === false && window.localStorage.getItem("dawnblade.server") === "true"), "tester's door: the choice is kept in the page's store seam, the shipped switch untouched");
-    await reopen(k0.page, k0.href, "");
-    r = await offersServer(k0.page);
-    row(r.btn, "tester's door: a relaunch without the query keeps it (home-screen launch)");
+    row(!/sb_publishable|supabase|v6\.\d|seedG|nonce|SERVER_TABLE/i.test(txt.match(/Server table Share a code[\s\S]{0,120}/i)[0] + txt.match(/At a server table[\s\S]{0,330}/i)[0]), "the door: the option reads in player language (no identifiers or version numbers)");
     await reopen(k0.page, k0.href, "?server=0");
     r = await offersServer(k0.page);
-    row(!r.btn, "tester's door: ?server=0 forgets it");
+    row(!r.btn, "the door: ?server=0 hides it on this phone (kill switch)");
+    row(await k0.page.evaluate(() => window.SERVER_TABLE.on === true && window.localStorage.getItem("dawnblade.server") === "false"), "the door: the choice is kept in the page's store seam, the shipped switch untouched");
     await reopen(k0.page, k0.href, "");
     r = await offersServer(k0.page);
-    row(!r.btn && hits === 0, "tester's door: and it stays forgotten; no request reached the project while only looking", "hits " + hits);
+    row(!r.btn && hits === 0, "the door: a relaunch without the query keeps it hidden; no request reached the project while only looking", "hits " + hits);
+    await reopen(k0.page, k0.href, "?server=1");
+    r = await offersServer(k0.page);
+    row(r.btn, "the door: ?server=1 brings it back");
+    await reopen(k0.page, k0.href, "");
+    r = await offersServer(k0.page);
+    row(r.btn, "the door: and it stays");
     /* THE RULES NEED THE CARDS: the page registers its card database with the judge engine (it did not until v6.26, and a replay of a
        server game diverged at the first token the server minted). Seeded Viserai v Dorinthea, played through the page's own judge. */
     const tokens = await k0.page.evaluate(() => {

@@ -503,7 +503,7 @@ test("THE SWITCH in index.html: one config value gates every entry; the table sc
   assert.ok(!/service_role|sb_secret_|eyJ[A-Za-z0-9_-]{20,}/.test(html.slice(html.indexOf("window.SERVER_TABLE"), html.indexOf("window.SERVER_TABLE") + 600)), "no secret in the config");
   assert.ok(!/SERVER_CFG/.test(html), "the old unguarded config name is gone");
   assert.equal(html.split("Join a server table").length - 1, 1, "the entry is rendered in one place");
-  assert.match(html, /\{srvOn && <div className="tblrow"><button className="bigbtn alt" onClick=.*>Join a server table<\/button><\/div>\}/, "and that place is behind the switch");
+  assert.match(html, /\{srvOn && <div className="tblgroup">(?:(?!<\/div>\}\s)[\s\S])*>Join a server table<\/button>[\s\S]*?<\/div>\}/, "and that place is behind the switch");
   assert.match(html, /const srvSit = \(how, c, role\) => \{\s*if\(!srvOn\) return;/, "so is the only caller of the server transport");
   assert.equal(html.split("DawnServerTable.defaultTransport(").length - 1, 1);
 });
