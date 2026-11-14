@@ -793,6 +793,13 @@ img{display:block;max-width:100%}
 .tblin:focus{outline:none;border-color:var(--y)}
 .tblstat{font-size:12.5px;color:var(--bone-dim);text-align:center;min-height:18px}
 .tblstat.live{color:var(--y)}
+.tblname{width:100%;background:var(--ink);border:1px solid var(--line);color:var(--bone);font-size:20px;text-align:center;padding:12px 6px;margin-top:8px}
+.tblname:focus{outline:none;border-color:var(--y)}
+.tblwho{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13.5px;color:var(--bone-dim)}
+.tblwho strong{color:var(--bone);font-size:15px;overflow-wrap:anywhere}
+.tblwho button{flex:none;background:none;border:1px solid var(--line);color:var(--y);font-size:13px;padding:8px 12px;min-height:40px}
+.tblvs{font-size:13px;color:var(--bone-dim);text-align:center;margin-top:4px;overflow-wrap:anywhere}
+.tblvs strong{color:var(--bone)}
 .tblerr{font-size:13px;color:var(--r);background:rgba(196,48,43,.12);border:1px solid var(--r);padding:9px 10px}
 .tblrow{display:flex;gap:8px;flex-wrap:wrap}
 .tblgroup{display:flex;flex-direction:column;gap:6px;border-left:2px solid var(--line);padding-left:10px}
@@ -7020,18 +7027,47 @@ function TableScreen({onBack, onSeated}){
     "no-table":"No table is open with that code. Check it, or ask them to open a new one.",
     full:"That table already has two players.",
     auth:"That seat is no longer yours — the table moved on without you.",
+    taken:"You sat down at this table on another phone, so this phone gave up the seat.",
+    "seat-owned":"That seat belongs to another player.",
     wire:"The table runs a different version of the game. Reload the page to pick up the latest.",
     code:"A table code is "+DawnServerTable.CODE_LEN+" letters and numbers.",
     exists:"That code is taken — try again."
   };
   const srvOn = !!(window.SERVER_TABLE && DawnServerTable.doorOpen(SRV_CHOICE, window.SERVER_TABLE.on));   /* this phone's ?server= choice beats the shipped switch (data script); closed, nothing below can start */
   const srvCfg = srvOn ? {...window.SERVER_TABLE, on: true} : window.SERVER_TABLE;
+  /* WHO THIS PHONE IS AT A SERVER TABLE (SERVER S4.2). Nothing is asked until a server table is opened or joined, or a
+     name is saved: then the phone signs in on its own (no email, no password) and the seat belongs to that player. A
+     sign-in that fails never blocks a game — the table is then a casual one. The referee judges a name; this screen
+     only says what it answered. */
+  const srvWho = uM(()=> srvOn ? DawnServerTable.defaultIdentity(srvCfg, store) : null, [srvOn]);
+  const [myName,setMyName] = uS(()=>{ const n = store.get("who.name", null); return typeof n==="string" ? n : null; });
+  const [draft,setDraft] = uS("");
+  const NAME_WHY = {
+    short:"A name needs at least 3 characters.", long:"A name can be at most 16 characters.",
+    chars:"Use letters, numbers and single spaces — no symbols or emoji.",
+    space:"No space at the start or the end, and one space at most between words.",
+    reserved:"That name is set aside — pick another.", type:"Type a name first."
+  };
+  const saveName = () => {
+    if(!srvOn || !srvWho || busy) return;
+    setErr(null); setBusy(true);
+    DawnServerTable.setName({transport: DawnServerTable.defaultTransport(srvCfg), identity: srvWho}, draft.trim().replace(/ +/g," ")).then(r=>{
+      if(!live.current) return;
+      store.set("who.name", r.name); setMyName(r.name); setBusy(false); setMode("srv");
+    }).catch(e=>{
+      if(!live.current) return;
+      setBusy(false);
+      setErr(e && e.why==="name" ? (NAME_WHY[e.reason]||NAME_WHY.chars)
+        : e && e.why==="name-taken" ? "Another player already has that name. Capitals, spaces and look-alike letters count as the same name."
+        : "Your name was not saved — the server is not answering. Try again in a moment.");
+    });
+  };
   const srvSit = (how, c, role) => {
     if(!srvOn) return;
     setErr(null); setGone(false); setBusy(true); setStat("srv-connecting");
     const open = how==="create" ? DawnServerTable.startTable : how==="join" ? DawnServerTable.sitAt : DawnServerTable.reclaim;
     open({
-      transport: DawnServerTable.defaultTransport(srvCfg), keep: store, code: c,
+      transport: DawnServerTable.defaultTransport(srvCfg), keep: store, code: c, identity: srvWho,
       tune: {pollMs: 20000, fallbackMs: 2000},   /* fallbackMs: with no push, ask the table every 2 s (engine/servertable.js) */
       onStatus: s=>{ if(!live.current) return; setStat("srv-"+s);
         if(s==="seated" && waitRef.current){ const w = waitRef.current; waitRef.current = null; w.go(); } }
@@ -7174,7 +7210,8 @@ function TableScreen({onBack, onSeated}){
         </p>
         {srvOn && <p className="mnote">
           <strong>At a server table, a referee on the web holds the deck,</strong> so neither phone can look at
-          the other's hand. It is a casual table: no accounts, and the service can be busy or stop answering.
+          the other's hand. No email and no password: your phone signs in on its own, so your seat and your player name are yours.
+          The service can be busy or stop answering.
           Whoever runs the server could look; every shuffle is still checkable when the game ends.
         </p>}
         {/* THE HONEST LINE FOR A JUDGED TABLE (HIDDEN HANDS H3) */}
@@ -7195,6 +7232,10 @@ function TableScreen({onBack, onSeated}){
             The referee on the web seats you both and deals the game.
           </p>
         </div>
+        {srvWho && !gone && <div className="tblcard tblwho">
+          <span>{myName ? <>Playing as <strong>{myName}</strong></> : "No player name yet — your opponent sees no name."}</span>
+          <button disabled={busy} onClick={()=>{ setErr(null); setDraft(myName||""); setMode("srv-name"); }}>{myName ? "Change" : "Choose a name"}</button>
+        </div>}
         {gone ? null : <>
           <button className="bigbtn" disabled={busy} onClick={()=>srvSit("create")}>{busy ? (PHRASE[stat]||"…") : "Open a server table"}</button>
           <button className="bigbtn alt" disabled={busy} onClick={()=>{ setCode(""); setMode("srv-join"); }}>Enter a table code</button>
@@ -7224,6 +7265,18 @@ function TableScreen({onBack, onSeated}){
         <button className="bigbtn" disabled={busy||!DawnServerTable.isValid(code)} onClick={()=>srvSit("join", code)}>
           {busy ? (PHRASE[stat]||"…") : "Sit down"}
         </button>
+      </>}
+
+      {mode==="srv-name" && <>
+        <div className="tblcard">
+          <div className="tblstat">Your player name</div>
+          <input className="tblname" value={draft} maxLength={16} autoCapitalize="words" autoCorrect="off" spellCheck={false}
+            placeholder="3 to 16 letters" aria-label="Your player name"
+            onChange={e=>{ setErr(null); setDraft(e.target.value); }}/>
+          <p className="note">Your opponent sees this name at a server table. It is yours alone: no other player can take it.
+            No email and no password — this phone remembers you.</p>
+        </div>
+        <button className="bigbtn" disabled={busy || Array.from(draft.trim()).length<3} onClick={saveName}>{busy ? "Saving…" : "Save name"}</button>
       </>}
 
       {gone && <div className="tblcard">
@@ -7266,7 +7319,7 @@ function TableScreen({onBack, onSeated}){
       </>}
 
       {err && <div className="tblerr">{err}</div>}
-      {mode && /^srv/.test(mode) ? <button className="bigbtn alt" onClick={mode==="srv-join" ? ()=>{ setMode("srv"); setErr(null); setGone(false); setBusy(false); setCode(""); } : srvLeave}>{mode==="srv-host" ? "Cancel" : "Back"}</button>
+      {mode && /^srv/.test(mode) ? <button className="bigbtn alt" onClick={mode==="srv-join" || mode==="srv-name" ? ()=>{ setMode("srv"); setErr(null); setGone(false); setBusy(false); setCode(""); } : srvLeave}>{mode==="srv-host" ? "Cancel" : "Back"}</button>
         : <button className="bigbtn alt" onClick={onBack}>Back</button>}
     </div>
   );
@@ -7275,6 +7328,20 @@ function TableScreen({onBack, onSeated}){
 /* THE SERVER LINE, ON ANY SCREEN OF A SERVER TABLE (SERVER S2): what the link is doing, said at the top of the
    screen where it cannot be missed, and nothing at all while it is fine. The table keeps this phone's seat;
    every word here is what a player does next. */
+/* WHO IS AT THE TABLE (SERVER S4.2): the two display names, once the other player has one. Read off the channel
+   (they ride the referee's answers), nothing typed here. */
+function SrvNames({table, seat}){
+  const [n,setN] = uS([null,null]);
+  uE(()=>{
+    if(!table || !table.srv || !table.names) return;
+    const read = () => setN(p=>{ const v = table.names(); return v[0]===p[0] && v[1]===p[1] ? p : v; });
+    read(); const t = setInterval(read, 1000);
+    return ()=>clearInterval(t);
+  },[table]);
+  if(!table || !table.srv || (n[0]==null && n[1]==null)) return null;
+  const me = n[seat], them = n[1-seat];
+  return <div className="tblvs">{me ? <strong>{me}</strong> : "You"} <span>vs</span> {them ? <strong>{them}</strong> : "a player with no name yet"}</div>;
+}
 function SrvBanner({table, waitingOnThem}){
   const [s,setS] = uS({st:"seated", quiet:0});
   uE(()=>{
@@ -7288,6 +7355,7 @@ function SrvBanner({table, waitingOnThem}){
   if(s.st==="unavailable") return <div className="srvbar bad" role="status">The server is not answering. Your seat is kept and this page keeps trying — you can leave and come back.</div>;
   if(s.st==="closed" && s.why) return <div className="srvbar bad" role="status">{s.why==="wire"
     ? "The table runs a different version of the game. Reload the page to pick up the latest."
+    : s.why==="taken" ? "You sat down at this table on another phone, so this phone gave up the seat. Carry on over there."
     : "This phone's seat at the table is gone. Leave the table and rejoin from Find an opponent."}</div>;
   if(waitingOnThem && s.quiet > 45000) return <div className="srvbar warn" role="status">No word from the other player for a while — they may have dropped. The table keeps their seat, and the game picks up when they return.</div>;
   return null;
@@ -7482,6 +7550,7 @@ function TableRoom({table, host, code, db, onExit, resume, judged}){
     <div className="tblhead">Table {code}
       <span className="tblseat">seat {mySeat} · {host ? "host" : judged ? (judged.srv ? "server table" : "judged table") : "guest"}</span></div>
     <SrvBanner table={table}/>
+    <SrvNames table={table} seat={mySeat}/>
   </>);
 
   if(step === "fault") return (

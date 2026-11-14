@@ -28,6 +28,7 @@ const path = require("path");
 const { open } = require("./page.js");
 const { makeWorld } = require("../test/helpers/servertransport.js");
 const PH = require("../test/helpers/serverphone.js");
+const F = require("../test/helpers/serverfakes.js");
 const T = require("../test/helpers/judgetable.js");
 const ST = require("../engine/servertable.js");
 const Wr = require("../engine/wire.js");
@@ -223,10 +224,29 @@ async function toServerChooser(page){
       route.fulfill({ status: 200, contentType: "application/json", headers: cors, body: JSON.stringify(ans) });
     });
     await context.route(/supabase\.co\/realtime/, route => route.abort());      /* no socket offline: the subscription reads lost, which is fine here */
-    await page.evaluate(() => { delete window.__dawnServerTransport; window.SERVER_TABLE.on = true; });
+    /* S4.2 — THE REAL SIGN-IN (engine/servertable.js supabaseIdentity, the page's own config): the auth service is answered here */
+    const idp3 = F.memIdentity(), tok3 = idp3.issue("P-page-real"), auths = [];
+    w3.deps.identify = t => idp3.identify(t); w3.deps.rename = (p, n, f) => idp3.rename(p, n, f);
+    await context.route(/supabase\.co\/auth/, async route => {
+      const req = route.request();
+      if(req.method() === "OPTIONS") return route.fulfill({ status: 204, headers: cors });
+      auths.push({ url: req.url(), apikey: req.headers().apikey, body: req.postData() });
+      route.fulfill({ status: 200, contentType: "application/json", headers: cors, body: JSON.stringify({ access_token: tok3, refresh_token: "page-refresh-1", expires_in: 3600, token_type: "bearer", user: { is_anonymous: true } }) });
+    });
+    await page.evaluate(() => { delete window.__dawnServerTransport; delete window.__dawnServerIdentity; window.SERVER_TABLE.on = true; });
     await toServerChooser(page);
+    row(auths.length === 0, "real sign-in: nothing is asked of the auth service until a table is opened (lazy)", "asks " + auths.length);
     await click(page, btn(page, /^Open a server table/), "open a server table (real transport)");
     await page.waitForSelector(".tblcode", { timeout: 15000 }).catch(() => {});
+    {
+      const code3 = await page.evaluate(() => { const e = document.querySelector(".tblcode"); return e ? e.innerText.trim() : ""; });
+      const r3 = ST.isValid(code3) ? w3.row(code3) : null;
+      row(auths.length === 1 && /\/auth\/v1\/signup$/.test(auths[0].url) && /^sb_publishable_/.test(auths[0].apikey || "") && auths[0].body === "{}",
+          "real sign-in: opening a table made ONE anonymous sign-up with the publishable key", JSON.stringify(auths.map(a => a.url.replace(/^.*supabase\.co/, ""))));
+      row(!!r3 && r3.v === 3 && r3.owners[0] === "P-page-real", "real sign-in: the seat the page was dealt belongs to the signed-in player", r3 ? JSON.stringify(r3.owners) : "no table");
+      const kept = await page.evaluate(() => JSON.parse(window.localStorage.getItem("dawnblade.who.id") || "null"));
+      row(!!kept && kept.r === "page-refresh-1" && typeof kept.exp === "number", "real sign-in: the session is kept on the phone for next time");
+    }
     await page.waitForFunction(() => window.supabase && window.supabase.createClient, null, { timeout: 15000 }).catch(() => {});
     const lib = await page.evaluate(() => !!(window.supabase && window.supabase.createClient));
     const cdn = scripts.filter(u => /supabase-js/.test(u)), proj = scripts.filter(u => /supabase\.co/.test(u));
@@ -241,6 +261,12 @@ async function toServerChooser(page){
   const build = await page.evaluate(() => TABLE_BUILD);
   const world2 = makeWorld({ seedKey: "page", build, deal: dealLikeThePage });
   await wire(page, world2);
+  /* S4.2 — players: the fake referee knows a sign-in provider and a name registry; the page and the scripted phone are players */
+  const idp = F.memIdentity(), tokPage = idp.issue("P-page"), tokB = idp.issue("P-phone-b");
+  world2.deps.identify = t => idp.identify(t); world2.deps.rename = (p, n, f) => idp.rename(p, n, f);
+  idp.rename("P-phone-b", "Rival One", world2.server.nameFold("Rival One"));
+  const idShim = "window.__dawnServerIdentity = {token: () => Promise.resolve(" + JSON.stringify(tokPage) + ")};";
+  await page.addInitScript(idShim); await page.evaluate(idShim);
   await page.evaluate(() => { window.SERVER_TABLE.on = true; });          /* the drive forces the switch ON */
 
   /* a code that nobody opened; a table that is full */
@@ -266,6 +292,40 @@ async function toServerChooser(page){
   }
   await click(page, btn(page, /^Back/), "back to the chooser");
 
+  /* ---- THE NAME SHEET (S4.2) ---- */
+  {
+    const who0 = await text(page);
+    row(/No player name yet/i.test(who0) && /Choose a name/.test(who0), "name: with no name the chooser says so and offers to choose one");
+    await thumbs(page, "name row");
+    await click(page, btn(page, /^Choose a name/), "choose a name");
+    await page.waitForSelector(".tblname");
+    await inside(page, ".tblname", "name sheet: the field");
+    row(await overflow(page), "name sheet: no horizontal overflow"); await thumbs(page, "name sheet");
+    const saveOff = () => page.evaluate(() => { const b = [...document.querySelectorAll("button")].find(x => /^Save name/.test(x.textContent.trim())); return !!b && b.disabled; });
+    await page.fill(".tblname", "ab");
+    row(await saveOff(), "name sheet: two letters cannot be saved");
+    const tryName = async (name, re, what) => {
+      await page.fill(".tblname", name); await click(page, btn(page, /^Save name/), "save " + name);
+      await page.waitForFunction(r => new RegExp(r, "i").test((document.querySelector(".tblerr") || {}).innerText || ""), re.source, { timeout: 5000 }).catch(() => {});
+      const e = await page.evaluate(() => (document.querySelector(".tblerr") || {}).innerText || "");
+      row(re.test(e) && !/undefined|bad-request|name-taken|reserved\b/.test(e), what, e.slice(0, 90));
+    };
+    await tryName("Judge", /set aside/i, "name sheet: a reserved name is refused in plain words");
+    await tryName("Ana!", /letters, numbers/i, "name sheet: a symbol is refused in plain words");
+    await tryName("rival 0ne", /already has that name/i, "name sheet: another player's name (a look-alike of it) is refused as taken");
+    await inside(page, ".tblerr", "name sheet: the refusal");
+    row(idp.names.size === 1, "name sheet: no refused name was stored", "stored " + idp.names.size);
+    await page.fill(".tblname", "Dawn Smith"); await click(page, btn(page, /^Save name/), "save Dawn Smith");
+    await page.waitForFunction(() => /Playing as/.test(document.body.innerText), null, { timeout: 5000 }).catch(() => {});
+    const who1 = await text(page);
+    row(/Playing as\s+Dawn Smith/.test(who1) && /Open a server table/i.test(who1) && !/No player name yet/.test(who1), "name: saved, the chooser reads 'Playing as Dawn Smith'");
+    row(idp.names.get("P-page") && idp.names.get("P-page").name === "Dawn Smith", "name: the registry holds it for this player");
+    row(await page.evaluate(() => JSON.parse(window.localStorage.getItem("dawnblade.who.name")) === "Dawn Smith"), "name: the phone remembers it");
+    row(await overflow(page), "name row: no horizontal overflow"); await thumbs(page, "name row (named)");
+    const sentMe = world2.outbound.map(x => JSON.parse(x.text)).filter(e => e.op === "me");
+    row(sentMe.length === 4 && sentMe.every(e => e.identity && e.identity.token === tokPage), "name: each save was one request carrying the sign-in", sentMe.length + " requests");
+  }
+
   /* open one: waiting */
   await click(page, btn(page, /^Open a server table/), "open a server table");
   await page.waitForSelector(".tblcode");
@@ -278,7 +338,7 @@ async function toServerChooser(page){
 
   /* the other phone types the code */
   const rand = T.seeded("page-b");
-  const B = PH.makePhone(world2, "B", { hero: "dorinthea", rand, build, matchCatalog, throws: [["rock", "rock"], ["paper", "rock"]] });
+  const B = PH.makePhone(world2, "B", { hero: "dorinthea", rand, build, matchCatalog, throws: [["rock", "rock"], ["paper", "rock"]], identity: { token: async () => tokB } });
   await B.connect("join", code);
   await page.waitForFunction(() => /server table/i.test(document.body.innerText) && /Choose your fighter/i.test(document.body.innerText), null, { timeout: 10000 }).catch(() => {});
   const seated = await text(page);
@@ -286,6 +346,12 @@ async function toServerChooser(page){
   row(/Choose your fighter/i.test(seated) && /seat 0 · server table/i.test(seated), "both seated: the lobby opens at seat 0, labelled a server table");
   row(await overflow(page), "lobby: no horizontal overflow");
   row(await page.evaluate(() => !document.querySelector(".srvbar")), "lobby: no server banner while the link is fine");
+  /* S4.2: both seats are players; the lobby names them (the opener learns the joiner's name when the joiner sits down) */
+  await page.waitForFunction(() => /Rival One/.test((document.querySelector(".tblvs") || {}).innerText || ""), null, { timeout: 8000 }).catch(() => {});
+  row(/^Dawn Smith\s+vs\s+Rival One$/.test(await page.evaluate(() => ((document.querySelector(".tblvs") || {}).innerText || "").trim())), "lobby: it reads 'Dawn Smith vs Rival One'");
+  await inside(page, ".tblvs", "lobby: the names line");
+  row(JSON.stringify(world2.row(code).owners) === JSON.stringify(["P-page", "P-phone-b"]), "both seats belong to their players in the stored table");
+  row(await page.evaluate(([a, b]) => document.documentElement.innerHTML.indexOf(a) < 0 && document.documentElement.innerHTML.indexOf(b) < 0, ["P-page", "P-phone-b"]), "no player id is anywhere in the page");
 
   /* the lobby: hero, throw (a tie, then paper over rock), seating, sideboard */
   await click(page, page.locator(".lobhero", { hasText: /Blaze/ }).first(), "pick Blaze");
