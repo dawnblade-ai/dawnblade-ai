@@ -779,6 +779,24 @@ const blockedBy = (g, seat) => {
   return p.seat === seat ? null : at(g, p.seat).name + " is mid-decision";
 };
 
+/* ---- WHO THE GAME IS WAITING ON (S5.2: the hosted table's forfeit clock reads it) -----------------------------------
+   One reader, READ-ONLY, over the full game: the seat whose decision is pending right now, or null when the game waits on nobody. The order is
+   the order `legal` refuses in: a pending cost or question (`pending.seat`: a card is mid-play), then a live sheet (`prompt.side`, a sheet
+   stops the game for both seats and only its side may answer), then the end-phase arsenal choice (`arsenalFor`), then PRIORITY (`priority.holder`).
+   NOBODY: the game is over; or priority is null with no pending question, sheet or arsenal choice (the start and end phases and the close step,
+   where the engine walks on by itself, CR 7.7.1). BOTH never happens here: the one moment both seats may act, declaring defenders (CR 7.3.2),
+   is not a priority action, and the turn-player, who holds priority in the defend step (CR 7.3.3), is the one the engine waits on (it may pass
+   once the defender has declared, and the defender's own priority follows). This asks no card text and writes nothing. */
+const waitingOn = g => {
+  if(!g || g.over) return null;
+  const p = pendingOf(g);
+  if(p && (p.seat === 0 || p.seat === 1)) return p.seat;
+  if(g.prompt){ const s = g.prompt.side || 0; return s === 1 ? 1 : 0; }
+  if(g.phase === "end" && (g.arsenalFor === 0 || g.arsenalFor === 1)) return g.arsenalFor;
+  const h = P.holder(g);
+  return h === 0 || h === 1 ? h : null;
+};
+
 /* ---- legality ---------------------------------------------------------
    Null when legal, else the reason. Two properties earn it its own
    function: a guest calls it before sending so an illegal tap never
@@ -4906,7 +4924,7 @@ function drawTo(g, i){
 
 return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
         playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
-        actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
+        actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf, waitingOn,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */
         setDb, effectsFor, withEffects, openPrompt, autoAnswer,
