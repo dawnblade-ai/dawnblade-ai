@@ -135,8 +135,55 @@ async function rehearse(label, entry, deno, uid0){
     row(errs.length === 0, label + ": the function logged no error", errs.slice(0, 2).join(" | "));
     console.log("      " + label + " numbers: median request " + median(timings) + " ms (HTTP + function + stub), largest stored row " + stub.stats.largestPut.toLocaleString("en-US") + " bytes, " + stub.stats.puts + " saves, " + stub.stats.conflicts + " conflicts, cold first answer " + cold + " ms");
     phones.forEach(p => p.ch.close());
+    await rankedPhase(label, base, stub, log, world, build, uid0);
     await identityPhase(label, base, stub, log);
   } finally { child.kill(); await stub.close(); }
+}
+
+/* S5.1: a RANKED table through the real function — two signed-in, named players (stand-in sign-ins) play a table to a recorded result and a rating move
+   (the stub stands in for 006_ratings.sql: rating_get, result_record; UNVERIFIED against the real SQL over PostgREST), and the refusals. */
+async function rankedPhase(label, base, stub, log, world, build, uid0){
+  const post = async body => { const r = await fetch(base + "/functions/v1/table", {method: "POST", headers: {apikey: "sb_publishable_rehearsal", "content-type": "application/json"}, body: JSON.stringify(body)});
+    const text = await r.text(); return {text, ...JSON.parse(text)}; };
+  const SUB_A = "sub-rank-aaaa-1111", SUB_B = "sub-rank-bbbb-2222", SUB_N = "sub-rank-nnnn-3333", tokA = stub.issueUser(SUB_A), tokB = stub.issueUser(SUB_B), tokN = stub.issueUser(SUB_N);
+  const texts = [], go = async b => { const r = await post(b); texts.push(r.text); return r; };
+  const fresh = await go({op: "me", identity: {token: tokA}});
+  row(fresh.ok === true && fresh.rating === 1200 && fresh.games === 0 && fresh.wins === 0 && fresh.losses === 0 && fresh.draws === 0, label + ": ranked: me reads 1200 and no games for a fresh player", JSON.stringify([fresh.rating, fresh.games]));
+  await go({op: "me", identity: {token: tokA}, name: "Rank Ann"}); await go({op: "me", identity: {token: tokB}, name: "Rank Bob"});
+  const noSign = await go({op: "create", ranked: true}), noName = await go({op: "create", identity: {token: tokN}, ranked: true});
+  const rowsBefore = stub.rows.size, badFlag = await go({op: "create", identity: {token: tokA}, ranked: "yes"});
+  row(noSign.refused === "ranked-signin" && noName.refused === "ranked-name" && badFlag.refused === "bad-request" && stub.rows.size === rowsBefore, label + ": ranked: a ranked create with no sign-in, with no name, or with a bad flag is refused and writes nothing", [noSign.refused, noName.refused, badFlag.refused].join());
+  /* two phones through the function's HTTP, signed in, ranked */
+  const rand = T.seeded("rank-rehearse|" + label), cat = {matchCatalog: spec => matchCatalog(spec, uid0), build};
+  const mk = (n, h, tok, extra) => PH.makePhone(world, n, {hero: h, rand, throws: [["rock", "rock"], ["paper", "rock"]], identity: {token: async () => tok}, ...cat, ...(extra || {})});
+  const RA = mk("RA", HEROES[0], tokA, {ranked: true}), RB = mk("RB", HEROES[1], tokB);
+  await RA.connect("create");
+  const code = RA.code;
+  row(RA.ch.rank().ranked === true && stub.row(code).v === 4 && stub.row(code).ranked === true && JSON.stringify(RA.ch.rank().ratings.filter(x => x != null)) === "[1200]", label + ": ranked: the table opens ranked (a v4 row), the opener sits down at 1200", JSON.stringify(RA.ch.rank()));
+  const anon = await go({op: "join", table: code}), nameless = await go({op: "join", table: code, identity: {token: tokN}});
+  row(anon.refused === "ranked-signin" && nameless.refused === "ranked-name", label + ": ranked: a join with no sign-in or no name is refused with its own word", [anon.refused, nameless.refused].join());
+  await RB.connect("join", code);
+  await world.settle([RA.ch, RB.ch]);
+  for(let i = 0; i < 8 && !(RA.sess && RB.sess && RA.sess.status() === "ready" && RB.sess.status() === "ready"); i++) await world.settle([RA.ch, RB.ch]);
+  row(!!RA.sess && !!RB.sess && RA.sess.status() === "ready" && JSON.stringify(RA.ch.rank().ratings) === "[1200,1200]" && JSON.stringify(RB.ch.rank().ratings) === "[1200,1200]", label + ": ranked: both phones are in the game and read both ratings (the lobby shows them)", JSON.stringify([RA.ch.rank().ratings, RB.ch.rank().ratings]));
+  const forged = await go({op: "record", table: code, winner: 1, how: "life"});
+  row(forged.refused === "bad-request" && (stub.stats.records || 0) === 0, label + ": ranked: a request that names a winner is refused and nothing is recorded");
+  RB.sess.submit({t: "concede"});
+  await world.settle([RA.ch, RB.ch]);
+  const resB = RB.ch.rank().result, resA = await RA.ch.result(5, 20);
+  const players = [...stub.players.keys()], rt = players.map(p => stub.ratings.get(p)).filter(Boolean);
+  row(stub.results.size === 1 && (stub.stats.records || 0) === 1 && !!resA && !!resB && resA.winner === 0 && resA.how === "concession" && JSON.stringify(resA.change) === JSON.stringify([{from: 1200, to: 1216}, {from: 1200, to: 1184}]) && JSON.stringify(resB.change) === JSON.stringify(resA.change),
+    label + ": ranked: a conceded game is recorded ONCE and both phones read the rating change (1200 -> 1216 / 1184)", JSON.stringify([stub.results.size, stub.stats.records, resA && resA.change]));
+  row(rt.length === 2 && rt.map(x => x.rating).sort().join() === "1184,1216" && rt.every(x => x.games === 1), label + ": ranked: the database holds both new ratings and one game each");
+  for(let i = 0; i < 3; i++){ await RA.ch.heal(); await RB.ch.heal(); await post({op: "join", table: code, identity: {token: tokA}}); }
+  const meA = await go({op: "me", identity: {token: tokA}}), meB = await go({op: "me", identity: {token: tokB}});
+  row(stub.results.size === 1 && (stub.stats.records || 0) === 1 && meA.rating === 1216 && meA.wins === 1 && meB.rating === 1184 && meB.losses === 1, label + ": ranked: resyncs and a takeover record nothing more; me reads the new rating and record", JSON.stringify([meA.rating, meA.wins, meB.rating, meB.losses]));
+  const closeAfter = await go({op: "close", table: code, identity: {token: tokA}});
+  row(closeAfter.ok === true && stub.row(code).closed !== true && !!stub.row(code).result && (await go({op: "join", table: code, identity: {token: tokA}})).result != null, label + ": ranked: a close after a decided game erases nothing");
+  const all = texts.join("\n") + JSON.stringify(stub.broadcasts.filter(b => b.topic.startsWith("table:" + code))) + world.inbound.map(x => x.text).join("\n");
+  row([SUB_A, SUB_B, SUB_N, tokA, tokB, tokN, ...players].every(x => all.indexOf(x) < 0), label + ": ranked: no token, provider user id or player id in any answer or broadcast of the ranked game");
+  row(stub.stats.bad.length === 0, label + ": ranked: the stub saw no malformed call (rating_get / result_record args)", stub.stats.bad.slice(0, 3).join("; "));
+  RA.ch.close(); RB.ch.close();
 }
 
 /* S4.1: the identify seam, against the stub's /auth/v1/user and identity_resolve (UNVERIFIED stand-ins for the real services). Plain
