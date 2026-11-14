@@ -20,6 +20,14 @@ and `docs/progress/` on main. Do not start a root handoff file.
   `NODE_PATH=/opt/node-tools/node_modules node tools/livecheck.js` (live page + function build + a real two-seat
   game in Chromium; the env now allows the live page and its CDNs). v6.28 livecheck: ALL PASS, 40/40 by push,
   median 284 ms, p95 561. NEXT: S4 sign-in (needs the user's OK to enable anonymous sign-ins in Supabase).
+- **S4.1 BUILT, UNRELEASED** (session branch `claude/amazing-franklin-ycg51z`, ahead of main; `server/S4-LOG.md`):
+  `referee.join` takes `identity:{token,name?}` via `deps.identify`; seat owners in the row (ROW_V 3, reads v2;
+  casual rows stay v2, byte-identical to v6.28); takeover retires the old key; `validateName`; draft
+  `server/supabase/002_players.sql` (PGlite ok, NOT run on the project); entry `mkIdentify` UNVERIFIED, undeployed.
+  `supabase-bundle --check` reads STALE on that branch by design. Plan: S4.2 page signs in lazily + name sheet
+  (needs anonymous sign-in ON) -> S4.3 recovery code -> S5 ranked (results/ratings written only by the function).
+  ASKED 2026-11-14, unanswered: (1) enable anonymous sign-in? (2) recovery code enough, no email/Google?
+  (3) cap 5 open tables per player? Open design: unique names? two phones of one player = last one wins.
 - **CEO since 2026-11-13: `session_013xG9xCPR11GYcDV7QGiWyX`** (Fable; user asked for LOW CONTEXT and the cheapest
   agents: in-session haiku/sonnet subagents did v6.23; the two Opus workers were NOT woken, still standing by).
 - **MISSION (user, 2026-11-07):** the ultimate FaB Silver Age precon competitive gaming environment and
