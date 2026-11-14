@@ -9,12 +9,12 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-14, at v6.26)
+## HANDOFF — START HERE (CEO, 2026-11-14, at v6.27)
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
-- **Live: v6.26** (WIRE_V 40, DATA_VER sage-v17). Progress reports: `docs/progress/v6.25.md`, `v6.26.md`.
+- **Live: v6.27** (WIRE_V 40, DATA_VER sage-v17). Progress reports: `docs/progress/v6.26.md`, `v6.27.md`.
 - **CEO since 2026-11-13: `session_013xG9xCPR11GYcDV7QGiWyX`** (Fable; user asked for LOW CONTEXT and the cheapest
   agents: in-session haiku/sonnet subagents did v6.23; the two Opus workers were NOT woken, still standing by).
 - **MISSION (user, 2026-11-07):** the ultimate FaB Silver Age precon competitive gaming environment and
@@ -82,7 +82,12 @@ repeatable live drill `tools/supabase-live.js`. Also fixed: the page never regis
 - **EVERY RELEASE: re-bundle + redeploy + `--stamp`** (CLAUDE.md Release). Needs a Supabase access token in the
   env credential store for `api.supabase.com` (user may have revoked it after v6.26: ask via request_credential,
   never chat). Until redeployed, the server table's handshake refuses.
-- **WAITING ON THE USER:** the two-phone test at `https://dawnblade-ai.github.io/dawnblade-ai/?server=1`
+- **v6.27 (2026-11-14):** the user's two-phone test WORKED but moves took up to ~5 s to reach the other phone.
+  Cause: `servertable.loadSupabase` asked the PROJECT address for supabase-js, so no browser ever got a push
+  (drills injected the library). Fixed + 2 s fallback heal while push is down; real page in Chromium vs live:
+  push 234 ms median, p95 475. Function v7 = build v6.27, stamped. `server/PERF-LOG.md`. UNEXPLAINED: user saw
+  <=5 s where the bug measured ~20 s. ASKED the user to re-test.
+- **WAITING ON THE USER (re-test after v6.27):** the two-phone test at `https://dawnblade-ai.github.io/dawnblade-ai/?server=1`
   (UNVERIFIED: a real phone browser's websocket + the jsdelivr supabase-js path). If it passes: flip `on: true`.
 - **NEXT:** S4 anonymous sign-in (currently OFF in the project), seat = auth.uid(), private channels; then H4 ranked.
 **H-LYATH2 DIAGNOSED, PARKED** (`experiments/lyath2-NOTES.md`): Sharp's pre-attack plays are all Instants or
