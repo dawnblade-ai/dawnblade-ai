@@ -67,13 +67,46 @@ function memBus(){
    forged, expired or revoked one — the function never learns how. `calls` counts the lookups (a join with no token makes none). */
 function memIdentity(){
   const live = new Map(); let n = 0;
-  const st = {calls: 0, tokens: [],
+  const st = {calls: 0, tokens: [], live,
     issue(player, name){ const t = "jwt." + (++n) + "." + Math.abs(hash(player + "|" + n)).toString(36) + "xyz"; live.set(t, {player, ...(name ? {name} : {})}); st.tokens.push(t); return t; },
     expire: t => live.delete(t),
     identify(token){ st.calls++; const w = live.get(token); if(!w) return null; const nm = st.names.has(w.player) ? st.names.get(w.player).name : w.name; return {player: w.player, ...(nm ? {name: nm} : {})}; },
     /* the name registry (S4.2): one holder per fold, like the unique index in 003_names.sql */
     names: new Map(), renames: 0,
     rename(player, name, fold){ st.renames++; for(const [p, n] of st.names) if(p !== player && n.fold === fold) return "taken"; st.names.set(player, {name, fold}); return "ok"; }};
+  return st;
+}
+/* THE RECOVERY BACKEND, FAKED (S4.3): what `deps.mint` / `deps.redeem` stand on, behaving as 004_recovery.sql does — one live code
+   per player; a redeem spends the code, moves THAT token's sign-in to the code's player and deletes the throwaway player (and its name)
+   when it has no sign-in left; wrong, used, expired and retired are one 'refused'; eight refusals an hour from one sign-in are 'limited'
+   (and a limited try does not look at the code). `clock` is the drill's own time; `keepOld`, `noBrake`, `leaveThrowaway`, `neverSpend` are the sabotages. */
+function withRecovery(idp, o){
+  o = o || {};
+  const rec = new Map(), attempts = new Map();
+  const st = {codes: rec, clock: 1700000000000, deleted: [], mints: 0, redeems: 0,
+    mint(player, hash, days){
+      st.mints++;
+      if(!o.keepOld) for(const [h, e] of rec) if(e.player === player && !e.used) rec.delete(h);
+      rec.set(hash, {player, used: false, expires: st.clock + days * 86400000});
+      return "ok";
+    },
+    redeem(token, hash){
+      st.redeems++;
+      const w = idp.live.get(token); if(!w) return null;
+      const tries = (attempts.get(token) || []).filter(t => t > st.clock - 3600000);
+      if(!o.noBrake && tries.length >= 8) return {status: "limited"};
+      const e = rec.get(hash);
+      if(!e || e.used || e.expires <= st.clock){ tries.push(st.clock); attempts.set(token, tries); return {status: "refused"}; }
+      if(!o.neverSpend) e.used = true;
+      const cur = w.player;
+      if(e.player !== cur){
+        w.player = e.player;
+        if(!o.leaveThrowaway && ![...idp.live.values()].some(x => x.player === cur)){ st.deleted.push(cur); idp.names.delete(cur); for(const [h, x] of rec) if(x.player === cur) rec.delete(h); }
+      }
+      attempts.delete(token);
+      const nm = idp.names.get(e.player);
+      return {status: "ok", ...(nm ? {name: nm.name} : {})};
+    }};
   return st;
 }
 function hash(s){ let h = 7; for(let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return h; }
@@ -88,4 +121,4 @@ function laggedBus(bus, ticks){
   return {broadcast: (topic, payload) => tick(t).then(() => bus.broadcast(topic, payload)), inner: bus};
 }
 
-module.exports = {memStore, memBus, memIdentity, lagged, laggedBus, bytes, tick};
+module.exports = {memStore, memBus, memIdentity, withRecovery, lagged, laggedBus, bytes, tick};

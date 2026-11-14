@@ -81,3 +81,11 @@ fairness: no findings. serverrun --isolate: ALL PASS. Deno rehearsal (single + f
 - PGlite (`PGLITE_DIR=<scratch> node tools/sql-pglite.js`, default list now 001..004): 004 run twice -> `ok`; anon refused on recovery_attempts, recovery_mint, recovery_redeem.
   Sabotage (10, each raised the named error): mint keeps older codes; throwaway kept; no brake; expiry ignored; code not spent; identity not moved; anon may redeem;
   attempts RLS not forced; throwaway deleted though it has another identity; a limited try spends the code.
+
+## Step 2 — the function: ops `recovery-mint` and `recovery-redeem` (server/referee.js), entry `mkMint`/`mkRedeem`, stub stand-ins
+- `{op:"recovery-mint", identity:{token}}` -> `{ok:true, code:"XXXXX-XXXXX-XXXXX", days:730}` (the ONLY place a code exists in the clear). `{op:"recovery-redeem", identity:{token}, code, tables?:[ids]}` ->
+  `{ok:true, name}` | `{ok:false, refused:"recovery"}` (wrong/used/expired/retired/malformed: one answer) | `recovery-limited` | `recovery-seated` | `identity` | `bad-request` | `unavailable` | `internal`.
+- Code: 15 chars of ABCDEFGHJKMNPQRSTUVWXYZ23456789 (31, no 0 O 1 I L), 74.3 bits, `crypto.getRandomValues` with rejection at 248, never Math.random. Hash = plain SHA-256 hex of the normalised (upper case, alphanumerics only) code.
+- Throwaway player: SQL deletes it when the redeeming sign-in leaves it with no identity. A seat it holds is the referee's business: the phone names the tables it has sat at (`tables`) and the redeem is refused `recovery-seated`
+  before anything changes. The server only knows the tables it is told of; the page sends its saved seats.
+- Drills `test/serverrecover.test.js` (18, each with its sabotage; backend fake `withRecovery` in serverfakes.js behaves like 004).
