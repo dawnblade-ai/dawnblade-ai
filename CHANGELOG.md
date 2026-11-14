@@ -1,3 +1,51 @@
+## v6.26 — the server table, behind a tester's door; the page gives its rules the card database
+
+- **S2: the page's server table** (`engine/servertable.js`, the table screen's "Join a server table", banners for a lost link,
+  a silent server and a seat gone). Two phones sit at a table that needs no direct link; the referee is a program on the web.
+  **Behind a tester's door:** `window.SERVER_TABLE.on` stays `false` for everyone. A phone opts in by opening the game with
+  `?server=1` (kept through the page's `store` seam so a home-screen relaunch keeps it; `?server=0` forgets it); the option reads
+  as an early test. Drilled (`test/servertable.test.js`, sabotaged) and driven in the real page (`tools/serverpage.js`).
+- **S3: the Supabase function `table`, deployed and live-tested** on the project the user set up (record: `server/S3-DEPLOY-LOG.md`;
+  how: `server/supabase/DEPLOY.md`). Each seat is pushed its own frames on a channel with an unguessable derived name AND every
+  push is sealed (HMAC over canonical JSON) under the seat's key, so a stranger who learns a name can listen but cannot forge a
+  frame; join carries a claim token (a lost answer cannot strand a seat); the stored row is version 2. Measured live (real HTTP and
+  Realtime websocket from Node, publishable key only): per request median about 185 ms, p95 about 400 ms; cold first answer
+  360-500 ms (530 ms on the v6.26 runs); worst request 1.5-3.2 s with four games at once; games of 175-449 actions played to the
+  end, every seat view equal to the in-process referee's, shuffles verified on both phones, blindness scan clean. v6.26 build runs:
+  303 actions (median 199 ms, p95 444, max 1152) and 198 actions with a seat reload at action 60 (median 186, p95 434, max 854).
+  **Two bugs found only against the real service,** both fixed with drills and sabotage: Supabase Realtime re-encodes a broadcast
+  with its object keys sorted, so every seal over insertion-order JSON failed (`sha256.canon`); and `referee.replay` compared the
+  game's result as order-sensitive JSON, so a seat whose reveal arrived by push failed "verify".
+- **Found by driving the page's own reload to the end of a game: the page never gave its rules the card database.** The log's
+  failing "verify this game" on a reloaded seat was not the seed half (the page's lobby holds the table's own) and not the reload:
+  `index.html` never called `DawnJudge.setDb`, so on the real page `judge.reduce` could not look up a token (Vigor, Agility,
+  Runechant...) and the page's replay of a server game diverged at the first token the server made (intermittent: it needs a
+  token-making card in the game; failed at action 25, 31, 33, 35, 62, 89 over runs). Fixed once, in `useCardDB`. Measured in the
+  page, seeded Viserai v Dorinthea: unregistered 1 token missing and 25 Runechant lines, registered 0 and 33. Drills:
+  `test/servertable.test.js` (source) and `tools/serverpage.js` (the probe sees the missing token with no database, then none);
+  the reloaded seat's own button now ends "Verified" and the never-reloaded scripted seat verifies the same game. Side finding, seen
+  only in that probe: tables played on the page (against a friend directly or against the AI) ran without the database too, so card
+  text that makes a token refused there; the trainer's `Battle` has its own context and is unaffected. The harness's different
+  seed half was a harness fault (a reloaded fake phone answered the seed again before the replay reached its own answer); fixed in
+  `test/helpers/serverphone.js`, and the reloaded harness seat verifies true/true live.
+- **Keep-alive:** `.github/workflows/keepalive.yml` asks the function's health line daily (public key only) and fails on a non-200
+  or a wrong `service` field, so the free project does not pause after about seven idle days.
+- **Row expiry:** `table_put` forgets tables idle 48 hours whenever a table is opened (`updated_at` is kept by the function; no
+  extension, no schedule). The SQL's self-check proves it (a 3-day-old row goes, a 1-day-old row stays; sabotaged), and it was run on
+  the project: `ok`, RLS on and forced, no policies, the publishable key still refused on REST (401 on GET, POST and the RPC).
+- **The serverpage flake:** the "unavailable mid-game" check drives the scripted phone until the page has a move (a state, not a
+  fixed wait); five consecutive runs green (71 assertions, 57-66 s each).
+- **WIRE_V and DATA_VER unchanged:** no payload, prompt shape or top-level game key moved, and no loader schema, card-field
+  handling or pool changed. The function was re-bundled and redeployed for `v6.26 · sage-v17` (stamp in `DEPLOYED.json`); until
+  `main` is pushed, live v6.25 pages cannot use the server table (hidden there anyway).
+- **UNVERIFIED:** a real phone browser's websocket and the page's CDN script path for supabase-js (jsdelivr is blocked from the build
+  sandbox); the free plan's limits and quotas under load (four games at once is the most run); the live hidden-uid scan (the live
+  blindness scan covers keys, channel names and the seed before the reveal; the hidden-uid scan ran only against the Deno rehearsal);
+  a real page's reload against the live service (driven against the offline fake only).
+- Numbers on the final tree: suite 4182 tests, fail 0, skipped 5; scenes 107 passing, 0 failing; fairness nothing found; self-play
+  `npm run play '' '' 3`: 630 games, 0 stalls, 0 draws, policy refusals 0, invariant violations 0; `tools/serverrun.js --isolate`
+  all pass; Deno rehearsal both variants all pass (median 16-17 ms, no network).
+
 ## v6.25 — no target, no play; the server referee's core; a hidden card's id no longer rides a used-flag
 
 - **RULING (user, 2026-11-13): a card that requires a target cannot be played when it has no legal target.** It
