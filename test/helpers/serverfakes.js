@@ -162,6 +162,35 @@ function withRatings(o){
     deps: () => ({rating: p => st.rating(p), record: x => st.record(x)})};
   return st;
 }
+/* THE LADDER BACKEND, FAKED (S5.3): what `deps.ladder({player, floor, limit, recent})` stands on, behaving as 008_ladder.sql's ladder_get does, over the ratings
+   backend (`rat`, withRatings) and the sign-in provider (`idp`, memIdentity). LISTED = a chosen name (the registry, else the sign-in's own default), at least `floor`
+   games, and a live sign-in pointing at the player (an orphan has none). Order: rating desc, more games, name fold in byte order. The top `limit`; the last `recent`
+   results newest first (ended desc, then game id desc); the caller's line when a player is given and exists. READ-ONLY: `reads` counts calls, and the sabotage
+   `touch` makes a read write a rating row (a drill proves a read changes nothing). The other sabotages: `noFloor`, `noName`, `noOrphan`, `noCap` (the list ignores
+   `limit`), `noGames` (no more-games tie-break), `byNameDesc`, `leakId` (a player id rides every row), `badRank` (the caller's rank is off by one), `unsorted`. */
+function withLadder(rat, idp, o){
+  o = o || {};
+  const st = {reads: 0, last: null};
+  const byte = (x, y) => Buffer.compare(Buffer.from(x), Buffer.from(y));
+  const nameOf = p => { const r = idp.names.get(p); if(r) return {name: r.name, fold: r.fold}; for(const w of idp.live.values()) if(w.player === p && w.name) return {name: w.name, fold: w.name.toLowerCase().replace(/ /g, "")}; return null; };
+  st.ladder = ({player, floor, limit, recent}) => {
+    st.reads++; st.last = {player, floor, limit, recent};
+    if(o.touch && player) rat.rt.set(player, rat.rt.get(player) || {rating: 1200, games: 0, wins: 0, losses: 0, draws: 0});
+    const signed = new Set([...idp.live.values()].map(w => w.player));
+    const listed = id => { const r = rat.rt.get(id), n = nameOf(id); return !!(r && (o.noFloor || r.games >= floor) && (o.noName || n) && (o.noOrphan || signed.has(id))); };
+    const cmp = (x, y) => (o.unsorted ? x.r.rating - y.r.rating : y.r.rating - x.r.rating) || (o.noGames ? 0 : y.r.games - x.r.games) || (o.byNameDesc ? -1 : 1) * byte((x.n || {fold: ""}).fold, (y.n || {fold: ""}).fold);
+    const all = [...rat.rt.keys()].filter(listed).map(id => ({id, r: rat.rt.get(id), n: nameOf(id)})).sort(cmp);
+    const out = {ladder: all.slice(0, o.noCap ? all.length : limit).map((x, i) => ({rank: i + 1, name: x.n ? x.n.name : "Unnamed", rating: x.r.rating, games: x.r.games, wins: x.r.wins, losses: x.r.losses, draws: x.r.draws, ...(o.leakId ? {id: x.id} : {})})),
+      recent: [...rat.results.values()].sort((x, y) => y.ended - x.ended || byte(y.game, x.game)).slice(0, recent).map(x => ({names: x.names.slice(), heroes: x.heroes.slice(), winner: x.winner, how: x.how, at: x.ended}))};
+    if(player != null && (rat.rt.has(player) || nameOf(player) || signed.has(player))){
+      const r = rat.rt.get(player) || {rating: 1200, games: 0, wins: 0, losses: 0, draws: 0}, n = nameOf(player), ok = listed(player), at = all.findIndex(x => x.id === player);
+      out.you = {name: n ? n.name : null, rating: r.rating, games: r.games, wins: r.wins, losses: r.losses, draws: r.draws, listed: ok, rank: ok ? at + 1 + (o.badRank ? 1 : 0) : null, ...(o.leakId ? {id: player} : {})};
+    }
+    return JSON.parse(JSON.stringify(out));
+  };
+  st.deps = () => ({ladder: x => st.ladder(x)});
+  return st;
+}
 function hash(s){ let h = 7; for(let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return h; }
 
 const tick = n => { let p = Promise.resolve(); for(let i = 0; i < (n || 1); i++) p = p.then(() => null); return p; };
@@ -175,4 +204,4 @@ function laggedBus(bus, ticks){
   return {broadcast: (topic, payload) => tick(t).then(() => bus.broadcast(topic, payload)), inner: bus};
 }
 
-module.exports = {memStore, memBus, memIdentity, withRecovery, withRatings, lagged, laggedBus, bytes, tick};
+module.exports = {memStore, memBus, memIdentity, withRecovery, withRatings, withLadder, lagged, laggedBus, bytes, tick};
