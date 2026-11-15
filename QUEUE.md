@@ -9,26 +9,32 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-15, at v6.33)
+## HANDOFF — START HERE (CEO, 2026-11-15, at v6.34)
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
 ### NEW THREAD: READ THIS BLOCK FIRST (written 2026-11-14 by CEO session_013xG9xCQHaLR2DeWf3gSrzu)
-- **State:** live = v6.33 on `main` (ac0deea), livecheck ALL PASS (push 41, fallback 0, median 296 ms, p95 375). Function
-  `table` version 20 = build `v6.33 · sage-v17`, stamped; `--check` OK. SQL 001-007 all RUN on the project (re-running 004
-  or 006 restores old function bodies: run 007 again after). CI `drills` green at v6.30; later runs not read (check them).
-- **v6.33 = S5.2 SHIPPED** (`server/S5-LOG.md`, `docs/progress/v6.33.md`): FORFEIT CLOCK, ranked only, claim-based
-  (`FORFEIT_MS` 5 min in `server/referee.js`; `row.clock={on,since}` stamped by the server; `judge.waitingOn` read-only
-  reader; `{op:"claim"}` with refusals claim-casual/over/idle/self/early; race decided by the row version). A creator's
-  CLOSE of a started ranked game = their concession (warning shown first). Recovery keeps a throwaway that has a ranked
-  footprint (orphaned, intact; never merged, never refused). Ranked rows v5 (v4 still read).
-- **v6.32:** ranked tables, `006_ratings.sql`, Elo 1200/K32, results only by the function. **v6.31:** board names, 5-table cap, close.
-- **KNOWN (told to the user):** no full ranked game and no real 5-minute forfeit has been played on LIVE (drills, Deno
-  rehearsal, page drive only; livecheck does refusals/create/close/claim-idle). In the defend step the clock runs on the
-  ATTACKER (CR 7.3.3: the turn player holds priority; they must pass) — asked the user whether to pause it there. Friends can
-  trade concessions. The close warning is conditional (the page does not know which open table is ranked/started).
-- **IN PROGRESS when this was written:** S5.3 leaderboard + a one-off live ranked proof tool, a sonnet subagent, offline.
+- **State:** live = v6.34 on `main` (cd326b5), livecheck ALL PASS (push 40, fallback 0, median 293 ms, p95 395). Function
+  `table` version 22 = build `v6.34 · sage-v17`, stamped; `--check` OK. SQL 001-008 all RUN on the project (re-running 004
+  or 006 restores old function bodies: run 007 again after). No unreleased work. THE S4/S5 PLAN IS COMPLETE.
+- **v6.34 = S5.3 SHIPPED** (`server/S5-LOG.md`, `docs/progress/v6.34.md`): public `{op:"ladder"}` (`008_ladder.sql`
+  `ladder_get`, read-only): top 50 named players with >= 3 ranked games, rating desc / games / name; the caller's own line;
+  last 10 results. Ladder screen from the first screen, the server table screen and the name sheet. No caching.
+- **FULL RANKED GAME PROVEN ON LIVE** (`NODE_PATH=/opt/node-tools/node_modules node tools/liveranked.js --go`, ALL PASS,
+  2026-11-15): two fresh players, ranked table, concession, 1216/1184 in `me`, both end screens, recent results, ladder
+  floor. It LEFT on the project: players Lcmwh6nttgH / Lcmwh6nttgG (1 game each), one result row visible under "Latest
+  games". Do not run it routinely (each run adds two players and a public result). Offered the user to delete them.
+- **v6.33:** forfeit clock (ranked, claim-based, `FORFEIT_MS` 5 min, `judge.waitingOn`), close of a started ranked game =
+  concession, recovery keeps a throwaway with a ranked footprint. **v6.32:** ranked tables, Elo 1200/K32 (`006`).
+  **v6.31:** board names, 5-table cap, close.
+- **STILL UNPROVEN ON LIVE:** a real 5-minute forfeit claim (offline only).
+- **ASKED THE USER, UNANSWERED (defaults are what is built):** (1) forfeit limit 5 min? (2) pause the clock in the defend
+  step? today it runs on the ATTACKER (CR 7.3.3, they must pass) — CEO recommends pausing; (3) a 0-turn lobby forfeit after
+  both heroes are chosen — keep? (4) friends trading concessions — a minimum game length? (5) refuse a recovery redeem when
+  the phone's own player already has a name? (6) ladder floor 3 / top 50 / last 10 — keep? (7) delete the two test players?
+- **NEXT (no order given by the user yet):** act on the answers above; a live forfeit proof needs a clock override or a
+  5-minute wait; the Concede button exists only in the defend step (found by liveranked) — worth a look; parked AI items.
 - **Subagents hit the 5-hour limit silently (status failed):** work is committed step by step; resume with SendMessage after reset.
 - **v6.30 = S4.3 SHIPPED** (`server/S4-LOG.md`, CHANGELOG, `docs/progress/v6.30.md`): ops `recovery-mint` (code shown once,
   15 chars / 74 bits, only its SHA-256 stored, 730 days, a new code retires the old) and `recovery-redeem` (the new phone's
