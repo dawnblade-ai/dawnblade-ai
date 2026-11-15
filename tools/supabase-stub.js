@@ -21,6 +21,8 @@
    {p_game, p_table, p_p0, p_p1, p_n0, p_n1, p_h0, p_h1, p_winner, p_how, p_turns, p_build, p_started, p_ended} -> {recorded, ratings:[{from,to},{from,to}]}
    (a stand-in for 006_ratings.sql: once per game id, Elo with K 32 from 1200, both ratings in one step; `ratings`, `results` are readable). Its Elo is
    checked against the very table (test/fixtures/elo-vectors.json) the SQL is checked against in tools/sql-pglite.js.
+   S5.3 adds ladder_get {p_floor, p_limit, p_recent, p_player} -> ONE jsonb {ladder, recent, you?} (a stand-in for 008_ladder.sql: floor, names, sign-in, order rating/games/name fold,
+   the top p_limit, the last p_recent results, the caller's line; read-only: `stats.ladders` counts calls and the stub's stores are never touched by it).
    `issueUser(id, anon?)` hands out a token; `users`, `players`, `identities` are readable; stats.auths / stats.resolves count calls.
 
    It checks the headers the real services need (apikey; bearer unless the key is "sb_…"), keeps rows as JSON text like
@@ -102,8 +104,27 @@ function makeStub(o){
           const sa = a.p_winner === null ? 0.5 : a.p_winner === 0 ? 1 : 0, ea = 1 / (1 + Math.pow(10, (rb - ra) / 400));
           r0.rating = Math.round(ra + K * (sa - ea)); r1.rating = Math.round(rb + K * ((1 - sa) - (1 - ea)));
           for(const [r, w] of [[r0, a.p_winner === 0], [r1, a.p_winner === 1]]){ r.games++; if(a.p_winner === null) r.draws++; else if(w) r.wins++; else r.losses++; }
-          results.set(a.p_game, {b0: ra, a0: r0.rating, b1: rb, a1: r1.rating, ...a});
+          results.set(a.p_game, {b0: ra, a0: r0.rating, b1: rb, a1: r1.rating, ended: a.p_ended > 0 ? a.p_ended : Date.now(), ...a});
           return reply(200, {recorded: true, ratings: [{from: ra, to: r0.rating}, {from: rb, to: r1.rating}]});
+        }
+        if(req.method === "POST" && url.pathname === "/rest/v1/rpc/ladder_get"){        /* 008_ladder.sql: ONE read-only answer, {ladder, recent, you?}; writes nothing, makes no row */
+          stats.ladders = (stats.ladders || 0) + 1;
+          const {p_floor, p_limit, p_recent, p_player} = JSON.parse(body);
+          if(!Number.isInteger(p_floor) || p_floor < 1 || p_floor > 1000 || !Number.isInteger(p_limit) || p_limit < 1 || p_limit > 100 || !Number.isInteger(p_recent) || p_recent < 0 || p_recent > 50 || (p_player !== null && typeof p_player !== "string")){
+            stats.bad.push("ladder_get args"); return reply(400, {message: "bad args"}); }
+          const signed = new Set(identities.values());
+          const listed = id => { const p = players.get(id), r = ratings.get(id); return !!(p && r && r.games >= p_floor && p.display_name && p.name_fold && signed.has(id)); };
+          const byC = (x, y) => Buffer.compare(Buffer.from(x), Buffer.from(y));
+          const cmp = (x, y) => y.r.rating - x.r.rating || y.r.games - x.r.games || byC(x.p.name_fold, y.p.name_fold);
+          const all = [...ratings.keys()].filter(listed).map(id => ({id, r: ratings.get(id), p: players.get(id)})).sort(cmp);
+          const out = {ladder: all.slice(0, p_limit).map((x, i) => ({rank: i + 1, name: x.p.display_name, rating: x.r.rating, games: x.r.games, wins: x.r.wins, losses: x.r.losses, draws: x.r.draws})),
+            recent: [...results.values()].sort((x, y) => y.ended - x.ended || byC(y.p_game, x.p_game)).slice(0, p_recent)
+              .map(x => ({names: [x.p_n0, x.p_n1], heroes: [x.p_h0, x.p_h1], winner: x.p_winner, how: x.p_how, at: x.ended}))};
+          if(p_player !== null && players.has(p_player)){
+            const pl = players.get(p_player), r = ratings.get(p_player) || {rating: 1200, games: 0, wins: 0, losses: 0, draws: 0}, ok = listed(p_player), at = all.findIndex(x => x.id === p_player);
+            out.you = {name: pl.display_name || null, rating: r.rating, games: r.games, wins: r.wins, losses: r.losses, draws: r.draws, listed: ok, rank: ok ? at + 1 : null};
+          }
+          return reply(200, out);
         }
         if(req.method === "POST" && url.pathname === "/rest/v1/rpc/identity_resolve"){
           stats.resolves++;

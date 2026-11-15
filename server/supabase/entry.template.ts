@@ -16,6 +16,7 @@
                 put = the SQL function table_put() (001_tables.sql), one atomic compare-and-set; createCapped = table_create_capped()
                 (005_table_cap.sql), the count of a signed-in player's OPEN tables and the insert in ONE transaction under a per-player lock
                 (S4.4: at most 5 open tables per player).
+     ladder     (S5.3) 008_ladder.sql's ladder_get(): the public ladder, the last ranked results and the caller's own line in ONE read-only statement.
      rating / record   (S5.1) 006_ratings.sql's rating_get() and result_record(): a player's rating and record, and the ONE-TIME recording of a
                 finished ranked game with both ratings moved in the same transaction (idempotent on the game id).
      broadcast  Realtime Broadcast over HTTP: POST <project>/realtime/v1/api/broadcast, one message per seat,
@@ -170,6 +171,21 @@ const mkRecord = (c: any) => async (x: any) => {
     return {recorded: v.recorded === true, ratings: v.ratings};
   } finally { c.put += nowMs() - t; }
 };
+/* S5.3 — the public ladder (008_ladder.sql). `deps.ladder({player, floor, limit, recent})` is ladder_get: ONE jsonb {ladder, recent, you?} answered by ONE
+   statement (the top list, the last results and the caller's line, no call per row); READ-ONLY (a STABLE function). The numbers are the referee's (referee.js
+   LADDER_FLOOR / LADDER_CAP / LADDER_RECENT); the database only bounds them. `player` is OUR id for the caller's line, never in the answer. Wired whether or not identity
+   is (the ladder is public). UNVERIFIED against the real project until 008 is run: the jsonb-return shape over PostgREST is what tools/supabase-stub.js stands in for. */
+const mkLadder = (c: any) => async (x: any) => {
+  const t = nowMs();
+  try {
+    const k = conf();
+    const r = await fetch(k.url + "/rest/v1/rpc/ladder_get", {method: "POST", headers: k.headers, body: JSON.stringify({p_floor: x.floor, p_limit: x.limit, p_recent: x.recent, p_player: x.player})});
+    if(!r.ok) throw new Error("ladder " + r.status);
+    const v: any = await r.json();
+    if(!v || typeof v !== "object" || !Array.isArray(v.ladder)) throw new Error("ladder answered no ladder");
+    return v;
+  } finally { c.get += nowMs() - t; }
+};
 const mkBroadcast = (c: any) => async (topic: string, payload: any) => {
   const body = JSON.stringify({messages: [{topic, event: "frame", payload, private: false}]});
   if(body.length > MAX_BROADCAST) throw new Error("broadcast too large: " + body.length);
@@ -290,7 +306,7 @@ Deno.serve(async (req: Request) => {
   const tr = nowMs();
   try { r = ready(); } catch(e){ console.error(e); return send(req, {ok: false, refused: "internal"}); }
   c.ready = nowMs() - tr;
-  const answer = await G.DawnServer.handle(request, {store: mkStore(c), broadcast: mkBroadcast(c), deal: r.deal, build: r.build, now: () => Date.now(),
+  const answer = await G.DawnServer.handle(request, {store: mkStore(c), broadcast: mkBroadcast(c), deal: r.deal, build: r.build, now: () => Date.now(), ladder: mkLadder(c),
     ...(Deno.env.get("TABLE_IDENTITY") === "off" ? {} : {identify: mkIdentify(c), rename: mkRename(c), mint: mkMint(c), redeem: mkRedeem(c), rating: mkRating(c), record: mkRecord(c)}),
     log: (e: any) => console.error(String(e && e.stack || e))});          // operator logs only; an error never rides a response
   return send(req, answer, 200, timingHeaders(c, cold));

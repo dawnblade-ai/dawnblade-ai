@@ -38,6 +38,9 @@
      rating     (player) -> {rating, games, wins, losses, draws}   (S5.1, optional; may return a promise) — 006_ratings.sql rating_get. Only called by op "me"
                 and by a join at a ranked table. record  (result) -> {recorded, ratings:[{from,to},{from,to}]}   (S5.1, optional; may return a
                 promise) — 006_ratings.sql result_record, once per game (see "ranked tables" below). A function without both cannot make a ranked table.
+     ladder     ({player|null, floor, limit, recent}) -> {ladder:[...], recent:[...], you?}   (S5.3, optional; may return a promise) — 008_ladder.sql ladder_get: the public
+                ladder, the last recorded results and, when `player` (OUR id) is given, that player's own line. Only called by op "ladder"; a function without it answers
+                `unavailable`. It is handed the three numbers below (LADDER_FLOOR, LADDER_CAP, LADDER_RECENT): the rules live in this file, the database only bounds them.
      redeem     (token, hash) -> {status:"ok"|"refused"|"limited", name?} | null   (S4.3, optional; may return a promise) — spend the
                 code and move the token's sign-in to the code's player (recovery_redeem). null: the token is not a sign-in. Only
                 called by op "recovery-redeem". The Edge Function owns the provider subject; this file never sees it.
@@ -123,6 +126,21 @@
      {op:"me"} also answers `rating, games, wins, losses, draws` when the function can read ratings (`deps.rating(player) -> {rating, games,
         wins, losses, draws}`; an unrated player is at the starting rating with no games). Ratings and names are public; the player id, the
         token and the subject never are.
+
+   ---- the ladder (S5.3: PUBLIC, read without signing in) ---------------------------------------------------------------------------
+     {op:"ladder", identity?:{token}}
+        -> {ok:true, floor, cap, ladder:[{rank, name, rating, games, wins, losses, draws}], recent:[{names:[a,b], heroes:[a,b], winner:0|1|null, how, at}], you?}
+        WHO IS LISTED: a player with a chosen name, at least `floor` (3) recorded ranked games and a sign-in that points at them (an orphan kept by 007's recovery
+        rule, a nameless player and a provisional player (fewer games) never appear). ORDER: rating, then more games, then name: a total order; `rank` is the
+        position. The top `cap` (50). `recent`: the last LADDER_RECENT (10) recorded ranked results, newest first: both names, both heroes, the winner (null: a draw),
+        how it ended (life | concession | stalemate | forfeit) and when it was recorded (ms since 1970).
+        THE CALLER'S LINE (`you`, only when the request presents a token that identifies): {name|null, rating, games, wins, losses, draws, listed, rank|null, toGo}:
+        `rank` is their position among LISTED players (also below the cap), `toGo` the ranked games still to play before they are listed (0 when listed, or when they
+        have the games but no chosen name). A request with no identity, a malformed one, a forged or expired token, or a provider that is down is simply answered WITHOUT
+        `you`: the public read never fails for the caller's sake. NOTHING ELSE LEAVES: no player id, no sign-in subject, no table code, no game id, no token; every row
+        is rebuilt here from its public fields. READ-ONLY: nothing is written and no row is made for anyone; not cached (see S5-LOG: one indexed statement, and a
+        ladder that does not show your own game just finished would read as a bug). The answer is checked against its own rules (at most `cap` rows, none under the
+        floor, in the stated order, ranks 1..n): a backend that breaks them is `internal`, never shown. Refusals: unavailable (no `ladder` wired) | internal.
 
    ---- recovery codes (S4.3: a lost phone is not a lost player) ------------------------------------------------
      {op:"recovery-mint", identity:{token}}
@@ -488,6 +506,53 @@ function createAs(req, id, given, deps){
   });
 }
 
+/* ---- {op:"ladder", identity?:{token}} (S5.3) — the public ladder -------------------------------------------------------------------- */
+const LADDER_FLOOR = 3, LADDER_CAP = 50, LADDER_RECENT = 10;
+const ladderStr = v => typeof v === "string" && v.length >= 1 && v.length <= 64;
+const ladderCmp = (x, y) => y.rating - x.rating || y.games - x.games;
+/* the caller, if they can be told: never a reason to fail the public read */
+function ladderWho(req, deps){
+  const idn = req.identity;
+  if(!idn || typeof idn !== "object" || Array.isArray(idn) || typeof idn.token !== "string" || idn.token.length < 1 || idn.token.length > 4096 || typeof deps.identify !== "function") return null;
+  const soft = e => { try { if(deps.log) deps.log(e); } catch(_){} return null; };
+  const pick = who => who && typeof who === "object" && typeof who.player === "string" && PLAYER_RE.test(who.player) ? who.player : null;
+  let v; try { v = deps.identify(idn.token); } catch(e){ return soft(e); }
+  return isP(v) ? v.then(pick, soft) : pick(v);
+}
+function ladderShape(a){
+  const bad = why => { throw new Error("ladder answered something that is not a ladder: " + why); };
+  if(!a || typeof a !== "object" || !Array.isArray(a.ladder) || !Array.isArray(a.recent)) bad("no lists");
+  if(a.ladder.length > LADDER_CAP) bad("more than the cap");
+  if(a.recent.length > LADDER_RECENT) bad("more recent results than asked for");
+  const ladder = a.ladder.map((x, i) => {
+    if(!x || typeof x !== "object" || !ladderStr(x.name) || !intIn(x.rating, 0, 100000) || !["games", "wins", "losses", "draws"].every(k => intIn(x[k], 0, 1e9))) bad("a row");
+    if(x.rank !== i + 1) bad("ranks that are not 1..n");
+    if(x.games < LADDER_FLOOR) bad("a player under the floor");
+    return {rank: x.rank, name: x.name, rating: x.rating, games: x.games, wins: x.wins, losses: x.losses, draws: x.draws};
+  });
+  for(let i = 1; i < ladder.length; i++) if(ladderCmp(ladder[i - 1], ladder[i]) > 0) bad("rows out of order");
+  const recent = a.recent.map(x => {
+    if(!x || typeof x !== "object" || !Array.isArray(x.names) || x.names.length !== 2 || !x.names.every(n => n === null || ladderStr(n)) || !Array.isArray(x.heroes) || x.heroes.length !== 2 || !x.heroes.every(ladderStr)
+       || !(x.winner === null || x.winner === 0 || x.winner === 1) || RANKED_HOW.indexOf(x.how) < 0 || (x.winner === null) !== (x.how === "stalemate") || !intIn(x.at, 0, 1e15)) bad("a recent result");
+    return {names: x.names.slice(), heroes: x.heroes.slice(), winner: x.winner, how: x.how, at: x.at};
+  });
+  let you = null;
+  if(a.you != null){
+    const y = a.you;
+    if(typeof y !== "object" || !(y.name === null || ladderStr(y.name)) || !intIn(y.rating, 0, 100000) || !["games", "wins", "losses", "draws"].every(k => intIn(y[k], 0, 1e9)) || typeof y.listed !== "boolean"
+       || (y.listed ? !intIn(y.rank, 1, 1e9) : y.rank !== null)) bad("the caller's line");
+    you = {name: y.name, rating: y.rating, games: y.games, wins: y.wins, losses: y.losses, draws: y.draws, listed: y.listed, rank: y.listed ? y.rank : null, toGo: y.listed ? 0 : Math.max(0, LADDER_FLOOR - y.games)};
+  }
+  return {ladder, recent, you};
+}
+function opLadder(req, deps){
+  if(typeof deps.ladder !== "function") return no("unavailable");
+  return then(ladderWho(req, deps), player => then(deps.ladder({player, floor: LADDER_FLOOR, limit: LADDER_CAP, recent: LADDER_RECENT}), a => {
+    const s = ladderShape(a);
+    return {ok: true, floor: LADDER_FLOOR, cap: LADDER_CAP, ladder: s.ladder, recent: s.recent, ...(s.you ? {you: s.you} : {})};
+  }));
+}
+
 /* ---- {op:"close", table, identity:{token}} (S4.4) --------------------------------------------------------------- */
 function opCloseTable(req, deps){
   if(typeof req.table !== "string" || !ID_RE.test(req.table)) return no("bad-request");
@@ -809,6 +874,7 @@ function serve(req, deps){
   if(!req || typeof req !== "object" || !deps || !deps.store) return no("bad-request");
   if(req.op === "create") return create(req, deps);
   if(req.op === "me") return me(req, deps);
+  if(req.op === "ladder") return opLadder(req, deps);
   if(req.op === "close") return opCloseTable(req, deps);
   if(req.op === "recovery-mint") return opMintCode(req, deps);
   if(req.op === "recovery-redeem") return opRedeemCode(req, deps);
@@ -839,5 +905,5 @@ function handleNow(req, deps){
   return v;
 }
 
-return {handle, handleNow, topic, OPEN_CAP, FORFEIT_MS, ROW_V, ROW_V_CASUAL, ROW_V_RANKED, ROW_V_RANKED_4, validateName, nameFold, recoveryNormal, recoveryHash, RECOVERY_DAYS, RECOVERY_CHARS, RECOVERY_LEN};
+return {handle, handleNow, topic, OPEN_CAP, FORFEIT_MS, LADDER_FLOOR, LADDER_CAP, LADDER_RECENT, ROW_V, ROW_V_CASUAL, ROW_V_RANKED, ROW_V_RANKED_4, validateName, nameFold, recoveryNormal, recoveryHash, RECOVERY_DAYS, RECOVERY_CHARS, RECOVERY_LEN};
 });
