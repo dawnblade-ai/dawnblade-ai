@@ -281,7 +281,7 @@ Only rules cited in code. A rules revision is a lookup here, not an archaeology 
 *drills:* test/judge.test.js:569, test/priority.test.js:225
 
 **CR 8.5.12b** — engine/effects.js:2557, engine/parser.js:2342  
-*drills:* test/anchors.test.js:141, test/crindex.test.js:81, test/loselife.test.js:8, test/loselife.test.js:30
+*drills:* test/anchors.test.js:147, test/crindex.test.js:81, test/loselife.test.js:8, test/loselife.test.js:30
 
 **CR 1.15.3** — engine/invariants.js:157, engine/judge.js:3256  
 *drills:* test/crindex.test.js:93, test/ctrclock.test.js:349, test/ctrreset.test.js:9, test/ctrreset.test.js:94

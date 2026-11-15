@@ -99,6 +99,12 @@ test("every parser reading the pool never reaches is pinned", {skip}, () => {
     "return NOOP(\"clash — resolved when this blocks, off the clash keyword\");",
     "return NOOP(\"reveal payoff — fires if this is the card revealed on a winning clash\");",
     "return R([[\"soulSpend\", num(m[1]), sub.ops]]);",
+    /* v6.37: A READER FOR A STAGED CARD. The six Gloomblades of Viserai,
+       Between Worlds print "You may play this from your banished zone";
+       they are in data/staged.js, not the pool, so the pool cannot reach
+       this line until that hero opens. Driven by test/banroute.test.js
+       against the staged records. This entry leaves the day he is decked. */
+    "return R([[\"noop\", \"a standing permission — it may be played from its owner's banished zone\"]], {fromBan: true});",
   ].sort());
 });
 
