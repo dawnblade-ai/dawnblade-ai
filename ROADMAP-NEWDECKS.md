@@ -42,8 +42,8 @@ hide a keyword with no reader, so read this as a floor on the work, not a ceilin
      `effects.beginEndPhase` step (6a), `test/blooddebt.test.js`)
   3. **DONE v6.39** (`parser.usurps`, `effects.execute`, `test/usurp.test.js`) — Usurp (in the keyword section of the rules: an additional cost that destroys a Runechant, +2 power, and the
      "usurped" fact other cards ask about)
-  4. "banish the top card of your deck / if it's red|blue" and "banish a card from your
-     hand / if it's Runeblade|Shadow" conditionals
+  4. **DONE v6.40** (`banTop`, `optCost.classRiders`, `test/banishif.test.js`) — "banish the top card of your deck / if it's red|blue" and "banish a card from your
+     hand / if it's Runeblade|Shadow" conditionals, and Corrupted Crown's "if you do"
   5. the Gate to i'Arathael token and its grant
   6. the special Runechants ("counts as a Runechant", "when an attack usurps this")
   7. the hero: a trigger on creating Runechants, a per-turn count, and **traverse** — the

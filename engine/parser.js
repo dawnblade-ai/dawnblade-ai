@@ -3303,6 +3303,12 @@ function classifyClause(raw){
   if(m=c.match(/put an aim counter on it/)) return R([["aim",1]]);
   /* the dummy has a real deck now, so banishing off the top is a real cost */
   if(/^banish the top card of their deck$/.test(c)) return R([["foeBanishTop",1]]);
+  /* AND THE SEAT'S OWN (v6.40) — "Banish the top card of your deck", Pull
+     from Beyond's head sentence (staged; Viserai, Between Worlds). The same
+     move one seat over, so it is its own op rather than a flag: whose deck
+     is milled is what the two differ in. Its "If it's red, …" rider is
+     paired in `fxParse`, where the whole card is visible. */
+  if(/^banish the top card of your deck$/.test(c)) return R([["banTop",1]]);
   /* THE SAME MOVE, AIMED AT THE OTHER SEAT (Brain Freeze): "put an action
      card with cost 0 from THEIR hand on top of THEIR deck". The reader is
      `optFilter` again — the subject phrase has to be consumed whole or the
@@ -4385,6 +4391,11 @@ const CARD_CLASSES = /^(?:assassin|shadow)$/;
    `wizard` and `runeblade`, nothing else — so a third is a deliberate edit
    here, and until then it refuses (weaker than printed and visible). */
 const ACTION_CLASSES = /^(?:wizard|runeblade)$/;
+/* THE CLASS AND TALENT WORDS A BANISHED CARD MAY BE ASKED ABOUT (v6.40).
+   Closed for the reason the two lists above are: the words Embrace Ursur
+   prints, and a third is a deliberate edit here. A colour is NOT one of
+   them — "if it is red" asks a pitch, and reads as a type nothing has. */
+const RIDER_CLASSES = /^(?:runeblade|shadow)$/;
 
 /* A FILTER WHOSE BOUND ONLY ONE QUEUE SITE CAN RESOLVE (v3.92).
    `costLtDrac` is supplied by the `hits` optional-cost site out of the
@@ -5618,6 +5629,45 @@ function fxParse(card){
       }
     } }
 
+  /* ---- "YOU MAY BANISH A CARD FROM YOUR HAND. IF IT'S <CLASS>, …" (v6.40)
+     EMBRACE URSUR (staged; Viserai, Between Worlds):
+
+       "When this attacks, you may banish a card from your hand. If it's
+        Runeblade, create a Runechant token. If it's Shadow, this gets go
+        again."
+
+     `optCost`'s offer with a different second half: there is no "if you
+     do" — each rider asks about THE CARD THAT WAS BANISHED, and both can be
+     true of one card. So the riders are DATA on the offer (`classRiders`,
+     the list form of Halo of Illumination's `classRider`, v4.01) and
+     `applyAnswer` asks the class where the chosen card is in hand — never
+     `fx.conds`, which `execute` answers about the attack itself.
+
+     CLOSED, like every vocabulary beside it: the trigger is the one the
+     card prints, and the class words are the two it prints. EVERY rider
+     must read or the card stays unclaimed — a banish that pays half its
+     printed reward is a cost a player would be wrong to pay. */
+  for(let i = 0; i < clauses.length - 1; i++){
+    if(handled.has(i)) continue;
+    if(!/^when this attacks, you may banish a card from your hand\.?$/i.test(String(clauses[i]).trim())) continue;
+    const riders = [], used = [];
+    let ok = true;
+    for(let j = i + 1; j < clauses.length && !handled.has(j); j++){
+      const rm = levelIdiom(String(clauses[j]).toLowerCase().trim().replace(/\.$/, ""))
+        .match(/^if it is ([a-z]+), (.+)$/);
+      if(!rm) break;
+      const pay = RIDER_CLASSES.test(rm[1]) ? classifyClause(rm[2]) : null;
+      if(!pay || pay.status !== "run" || !(pay.ops || []).length
+         || Object.keys(pay).some(k => k !== "status" && k !== "ops")){ ok = false; break; }
+      riders.push({cls: rm[1], ops: pay.ops});
+      used.push(j);
+    }
+    if(!ok || !riders.length) continue;
+    fx.optCost = {trigger: "attacks", kind: "banish", zone: "hand", filter: {}, ops: [], classRiders: riders};
+    handled.add(i); used.forEach(j => handled.add(j));
+    break;
+  }
+
   for(let i = 0; i < clauses.length - 1; i++){
     const rider = clauses[i+1];
     if(!/^if you do\b/i.test(rider)) continue;
@@ -5655,7 +5705,15 @@ function fxParse(card){
        a card the text says comes from hand. */
     const zm = subject.match(/\s*\bfrom your (graveyard|hand)\b/i);
     if(zm){ zone = zm[1].toLowerCase(); subject = (subject.slice(0, zm.index) + " " + subject.slice(zm.index + zm[0].length)).trim(); }
-    const filter = optFilter(subject);
+    /* "A CARD FROM YOUR HAND" IS PINNED BY ITS ZONE (v6.40) — Corrupted
+       Crown (staged): "you may banish a card from your hand". `optFilter`
+       refuses a bare "card" (v3.53) because a cost whose subject the reader
+       cannot pin is a cost a player could pay wrongly; here the PRINTED zone
+       pins it, so any card in that hand is the faithful reading
+       (`pickSubject`'s argument for Pass Over). Only the banish verb with
+       the hand printed: measured, no pinned pool record prints it. */
+    const filter = (cm[2].toLowerCase() === "banish" && zm && zone === "hand" && /^(?:a|one) card$/i.test(subject))
+      ? {} : optFilter(subject);
     if(!filter) continue;                       /* unreadable cost — do not claim the card */
     /* "IT" IS THE BANISHED CARD, NOT THE ATTACKER (v3.92). v2.29 pinned
        this and refused both cards for it: "in both, 'it' is the banished
@@ -6815,6 +6873,49 @@ function fxParse(card){
       bop[2] = {pitch: COLOR_PITCH[bm[1]], word: bm[1], ops: pay.ops};
       fx.clauses[ri].st = "run";
       break;
+    }
+  }
+
+  /* ---- "BANISH THE TOP CARD OF YOUR DECK. IF IT'S RED, …" (v6.40) ----
+     PULL FROM BEYOND (staged). "It" is the card the head sentence banished,
+     so the rider rides on that op as its third element and is answered off
+     the banished card's printed pitch where the op runs — `foeBanishTop`'s
+     shape just above, and never an `fx.conds` entry, which `execute`
+     answers about the RESOLVING card before any op has run (v2.33, v3.60).
+
+     THE RIDER MUST BE THE NEXT CLAUSE, and its payload must read: an
+     unreadable one leaves the clause reporting unread and the banish still
+     happens — weaker than printed and visible.
+
+     AND AN OPT PRINTED AHEAD OF IT FINISHES FIRST. "Opt 2. Banish the top
+     card of your deck": the opt is a sheet answered after `runOps` returns,
+     so a banish left beside it in `fx.ops` would take the top card BEFORE
+     the player arranged it. The banish therefore rides on the opt as its
+     continuation (`op[2].then`) and runs when the sheet is answered.
+     Measured over the pinned pool: no record has any op after an opt, so
+     this moves nothing a player can be dealt today. */
+  {
+    const bi = (fx.clauses || []).findIndex(c =>
+      /^banish the top card of your deck\.?$/i.test(String(c.t || "").trim()));
+    const bop = bi >= 0 ? (fx.ops || []).find(o => o[0] === "banTop" && !o[2]) : null;
+    if(bop){
+      const nx = fx.clauses[bi + 1];
+      const bm = nx ? levelIdiom(String(nx.t || "").toLowerCase().trim().replace(/\.$/, ""))
+        .match(/^if it is (red|yellow|blue), (.+)$/) : null;
+      if(bm && nx.st === "skip"){
+        const pay = classifyClause(bm[2]);
+        if(pay && pay.status === "run" && (pay.ops || []).length
+           && !Object.keys(pay).some(k => k !== "status" && k !== "ops")){
+          bop[2] = {pitch: COLOR_PITCH[bm[1]], word: bm[1], ops: pay.ops};
+          nx.st = "run";
+        }
+      }
+      const oi = fx.ops.findIndex(o => o[0] === "opt" && typeof o[1] === "number" && !o[2]);
+      const at = fx.ops.indexOf(bop);
+      if(oi >= 0 && oi < at){
+        fx.ops[oi] = [fx.ops[oi][0], fx.ops[oi][1], {then: [bop]}];
+        fx.ops.splice(at, 1);
+      }
     }
   }
 

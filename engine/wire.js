@@ -330,7 +330,11 @@
    known in hand (`_kh`), as does Strongest Survive's escape card. */
 /* 39 -> 40 (ship/sharp-board): a token minted under the opponent's control carries
    `madeBy` (the maker's seat) on its board entry — public; Sharp's board term reads it. */
-const WIRE_V = 40;
+/* 40 -> 41 AT v6.40: two prompt fields. An `opt` prompt carries `ops` (what the
+   card prints after the opt — Pull from Beyond's banish waits for the sheet) and
+   a `pick` prompt carries `defUid` (the defender a paid +{d} belongs to — Corrupted
+   Crown pays with a card). A `pick` filter may carry `notUids`. */
+const WIRE_V = 41;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

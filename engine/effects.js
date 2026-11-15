@@ -2160,14 +2160,26 @@ function makeEffects(ctx){
            any order — the player's call, so it queues a prompt. Queued rather
            than opened inline: opt only touches the deck, so it is safe to ask
            after the action finishes resolving. */
-        if(!act(n).deck.length){ n = L(n, `${srcName}: deck is empty — nothing to opt.`); return; }
+        /* WHAT THE CARD PRINTS AFTER THE OPT WAITS FOR IT (v6.40) — Pull from
+           Beyond's "Opt 2. Banish the top card of your deck". `fxParse` put
+           the banish on this op as `then`; it rides on the sheet as `ops`
+           and runs when the sheet is answered, on the deck the player
+           arranged. With no deck there is no sheet, so it runs now and
+           reports the empty deck itself. */
+        const _then = (op[2] && op[2].then) || [];
+        if(!act(n).deck.length){
+          n = L(n, `${srcName}: deck is empty — nothing to opt.`);
+          if(_then.length) n = runOps(n, _then, srcName);
+          return;
+        }
         /* A NUMBER OR NOTHING (v4.83). "Opt X" whose X is the damage dealt
            arrives as the word `dealt` and is resolved by whoever holds the
            trace (`dealtX`); one that reaches here unresolved opts NONE —
            an X nobody counted is not a 1. */
         if(!(typeof v === "number" && v > 0)){ n = L(n, `${srcName}: nothing to opt.`); return; }
         const looked = Math.min(v, act(n).deck.length);
-        n.promptQ = [...(n.promptQ||[]), {tag:"opt", side:actorOf(n), n:looked, src:srcName}];
+        n.promptQ = [...(n.promptQ||[]), Object.assign({tag:"opt", side:actorOf(n), n:looked, src:srcName},
+          _then.length ? {ops: _then} : {})];
         /* BLAZE, CLAUSE 1 (v3.39) — "Whenever you opt, put energy
            counters on Blaze equal to the number of cards LOOKED AT this
            way."
@@ -2515,6 +2527,27 @@ function makeEffects(ctx){
          can make "this" banish anything). It is answered off the banished
          card's printed PITCH, and it is the attacker's: the actor here is
          the seat whose swing hit. */
+      /* THE SEAT'S OWN DECK (v6.40) — Pull from Beyond (staged). The same
+         move as the one below, one seat over; the zone is public, so the
+         card is named. "If it's red, …" rides as `op[2]` and is answered
+         off the banished card's printed PITCH, here, where "it" exists. An
+         empty deck banishes nothing and so pays nothing. */
+      else if(k==="banTop"){
+        const take = act(n).deck.slice(0,v);
+        if(!take.length){ n = L(n, `${srcName}: ${sp(act(n))} deck is empty — nothing is banished.`); return; }
+        actMut(n).deck = act(n).deck.slice(take.length);
+        actMut(n).banish = [...take, ...(act(n).banish || [])];
+        n = L(n, `${srcName}: ${take.map(c=>c.name).join(", ")} banished off the top of ${sp(act(n))} deck (${act(n).deck.length} left).`);
+        const rider = op[2];
+        if(rider && (rider.ops || []).length){
+          take.forEach(c => {
+            if((c.pitch || 0) === rider.pitch){
+              n = L(n, `${srcName}: ${c.name} is ${rider.word} — it pays out.`);
+              n = runOps(n, rider.ops, srcName);
+            } else n = L(n, `${srcName}: ${c.name} is not ${rider.word} — nothing more.`);
+          });
+        }
+      }
       else if(k==="foeBanishTop"){
         const take = foe(n).deck.slice(0,v);
         if(!take.length){ n = L(n, `${srcName}: ${sp(foe(n))} deck is empty.`); return; }
@@ -6725,13 +6758,22 @@ function makeEffects(ctx){
        is credited: an empty hand charges nothing and triggers nothing. */
     if(p.tag === "pick" && p.charge && (r.picked||[]).length)
       for(const got of r.picked) n = creditCharge(n, got);
+    /* ONE RIDER OR SEVERAL (v6.40). Embrace Ursur prints two — "If it's
+       Runeblade, …. If it's Shadow, …" — and both can be true of one
+       banished card, so each is asked in printed order. A go-again grant
+       goes to the LINK as well (v3.62): this sheet is answered after the
+       attack is on the chain, and `pend` carries its own copy. */
     if(p.tag === "pick" && p.classRider && (r.picked||[]).length){
       const got = r.picked[0];
-      if(promptFilter({ty: p.classRider.cls})(got)){
-        n = L(n, `${got.name} is ${p.classRider.cls} — the rider fires.`);
-        n = runOps(n, p.classRider.ops, p.src || "");
-      } else {
-        n = L(n, `${got.name} is not ${p.classRider.cls} — no rider.`);
+      for(const cr of [].concat(p.classRider)){
+        const _cw = cr.cls.charAt(0).toUpperCase() + cr.cls.slice(1);
+        if(promptFilter({ty: cr.cls})(got)){
+          n = L(n, `${got.name} is ${_cw} — the rider fires.`);
+          n = runOps(n, cr.ops, p.src || "");
+          if(n._gaGrant && n.pend){ n.pend = {...n.pend, ga: true}; delete n._gaGrant; }
+        } else {
+          n = L(n, `${got.name} is not ${_cw} — no rider.`);
+        }
       }
     }
     if(p.tag === "pick" && p.defStamp && (r.picked||[]).length){
@@ -7205,7 +7247,22 @@ function makeEffects(ctx){
       }
       const oc = dfx.optCost;
       if(!oc || oc.trigger !== "defends") continue;
-      n.promptQ = [...(n.promptQ||[]), optCostSpec(oc, dc, defSeat, false)];
+      /* CORRUPTED CROWN (v6.40, staged): "you may banish a card from your
+         hand. If you do, this gets +1{d}."
+         (1) A DECLARED DEFENDER IS NOT IN THE HAND. Judge keeps the wall's
+         cards in `hand` under `blockH` until the link closes, so a pick
+         that MOVES a card out of that zone must not offer them — paying
+         the cost with a card that is also blocking is two uses of one
+         card. A reveal moves nothing and keeps its pool.
+         (2) "THIS GETS +1{d}" IS THE DEFENDING PIECE'S, so the payload
+         rides as `defUid` exactly as the pay-cost family's does: `runOps`
+         only logs a `defBuff`, and the number has to reach `defMod`. */
+      const _os = optCostSpec(oc, dc, defSeat, false);
+      const _dsd = n.sides[defSeat] || {};
+      if(oc.kind !== "reveal" && oc.zone === "hand" && (_dsd.blockH || []).length)
+        _os.filter = {...(_os.filter || {}), notUids: (_dsd.blockH || []).slice()};
+      if(defBuffOf(oc.ops)) _os.defUid = dc.uid;
+      n.promptQ = [...(n.promptQ||[]), _os];
       queued++;
     }
     return {game: n, queued};
@@ -9868,6 +9925,9 @@ function optCostSpec(oc, card, side, leaving){
      returning it as ops hands it to `runOps`, which applies it to the
      SOURCE. Opt-in, so every other optional cost keeps its shape. */
   if(oc.banStamp) spec.banStamp = oc.banStamp;
+  /* "IF IT'S <CLASS>, …" ABOUT THE CARD THAT MOVED (v6.40) — data the
+     answer asks, for the same reason. */
+  if(oc.classRiders) spec.classRider = oc.classRiders;
   return spec;
 }
 

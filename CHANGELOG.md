@@ -1,3 +1,23 @@
+## v6.40 — the fourth reader for Viserai, Between Worlds: banish a card, then ask what it was
+
+- **Nothing a player can be dealt changed.** Engine groundwork (`ROADMAP-NEWDECKS.md`). Three staged cards print one idea three ways: the card banishes something and the rest of
+  its text is about THAT card. Measured over the pinned pool: no record prints "banish a card from your hand", none has an op after an opt, and Soul Shackle (the one pool card
+  printing "banish the top card of your deck", as a start-of-phase trigger) reads exactly as it did.
+- **Pull from Beyond** ("Opt 2. Banish the top card of your deck. If it's red, create a Gate to i'Arathael token."): a new `banTop` op (the seat's own deck, `foeBanishTop`'s twin);
+  the colour rider rides on the op and is answered off the banished card's printed pitch. **New engine fact: what a card prints after an opt waits for the opt.** The banish rides
+  on the opt sheet (`op[2].then` -> the prompt's `ops`) and runs when the sheet is answered, on the deck the player arranged; before this an op beside an opt would have run first.
+- **Embrace Ursur** ("When this attacks, you may banish a card from your hand. If it's Runeblade, create a Runechant token. If it's Shadow, this gets go again."): `optCost`'s offer
+  with `classRiders`, the list form of Halo of Illumination's `classRider`; each is asked about the banished card, both can be true, and go again reaches the open chain link.
+  The class words are a closed list (the two the card prints); every rider must read or the card stays unclaimed.
+- **Corrupted Crown** ("When this defends, you may banish a card from your hand. If you do, this gets +1{d}."): a bare "card" is pinned by the printed hand (banish only); the +1
+  lands on the defending piece (`defUid`, as the pay-cost family does); **a card declared as a defender is not offered as the cost** (the table keeps the wall's cards in `hand`).
+- **Drill `test/banishif.test.js`** (sabotaged ten ways, each bit): the parses; the refusals (an unlisted class, a colour asked as a class, an unreadable payload, a bare card with
+  no hand printed, a rider that is not the next clause); at the table, the opt is answered before the banish and the colour decides the payout; all four class cases and the
+  decline for Embrace Ursur; the Crown paid (wall of 2) against declined (wall of 1), and the blocking card missing from the sheet.
+- **STATED LIMITS:** the Gate to i'Arathael token is the next reader, so Pull from Beyond's payout names a token the engine cannot mint yet (it reports that and creates nothing);
+  the trainer's wall and the AI's answer to these two sheets are undriven. Nobody can be dealt these cards.
+- **WIRE_V 40 -> 41** (an opt prompt carries `ops`, a pick prompt carries `defUid`). No DATA_VER change. The function is redeployed because `APP_VER` and engine files changed.
+
 ## v6.39 — the third reader for Viserai, Between Worlds: Usurp
 
 - **Nothing a player can be dealt changed.** Engine groundwork (`ROADMAP-NEWDECKS.md`): seven staged cards print Usurp (the six Gloomblades and Runic Disposition). Measured:

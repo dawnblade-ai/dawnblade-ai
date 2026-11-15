@@ -117,6 +117,10 @@ function promptFilter(spec){
        sev-3 the refusal it replaced was protecting against. */
     if(spec.costLtDrac) return false;
     if(spec.notUid != null && c.uid === spec.notUid) return false;
+    /* SEVERAL EXCLUSIONS (v6.40) — the cards a wall has declared are in
+       the hand zone and are not in the hand. Supplied by the QUEUE SITE,
+       like `notUid`: uids never live in a parse. */
+    if(spec.notUids && spec.notUids.indexOf(c.uid) >= 0) return false;
     /* THE ONE CARD A DECLARATION NAMED (v5.72) — an activated ability's
        target is declared when it is activated, and when the ability
        resolves the pick it queues is narrowed to exactly that card. A
@@ -313,7 +317,9 @@ function buildPrompt(game, spec){
        permutation of the indices dealt (QUEUE v4 S12). It opens in the
        dealt order, which is what the seat policy keeps, and only
        `promptMove` changes it. */
-    return {...base, cards:look, n, keepTop: !!spec.keepTop, order: look.map((_,i)=>i),
+    /* `ops` (v6.40): what the card prints AFTER the opt, run by
+       `applyAnswer`'s caller once the deck is in the chosen order. */
+    return {...base, cards:look, n, keepTop: !!spec.keepTop, order: look.map((_,i)=>i), ops: spec.ops || [],
       title: spec.title || (spec.keepTop ? ("Reorder the top " + n) : ("Opt " + n)),
       hint: spec.hint || (spec.keepTop
         ? ("Top " + n + " cards of your deck. Tap a card to put it UNDER the rest. "
@@ -387,6 +393,10 @@ function buildPrompt(game, spec){
          hand it to runOps, which would apply it to the source. It rides on
          the prompt as data so the trainer can stamp the card that moved. */
       arsStamp: spec.arsStamp || null,
+      /* THE DEFENDER A PAID +{d} BELONGS TO (v6.40) — the pay sheet has
+         carried this since v4.53; Corrupted Crown pays with a CARD, so the
+         pick carries it too. Data: the caller routes it. */
+      defUid: spec.defUid,
       /* THE SAME LESSON, ONE CARD LATER (v3.47). `untapStamp` is DATA the
          answer applies to the board entry that was chosen — the ally is
          untapped where it stands, so there is no `to` and nothing moves.
@@ -1296,6 +1306,7 @@ function applyPrompt(game, prompt){
       (keep.length ? _nc(keep.length) + " left on top" : "nothing kept on top") +
       (bottom.length ? ", " + _nc(bottom.length) + " sent to the bottom" : "") + "."));
     out.game = {...game, sides};
+    out.ops = prompt.ops || [];
     return out;
   }
   if(prompt.tag === "pick"){
@@ -1358,6 +1369,7 @@ function applyPrompt(game, prompt){
         + picked.slice(1).map(c=>c.name).join(", ") + ".");
     /* PAID. The cards moved, so the rider resolves. */
     out.ops = prompt.ops || [];
+    if(prompt.defUid != null) out.defUid = prompt.defUid;
     /* AND THE PRICE IS ONLY CHARGED WHEN SOMETHING WAS ACTUALLY TAKEN.
        The decline path above returns early, so this is unreachable on a
        "choose none" — which is the v2.04 rule the `pay` variant already

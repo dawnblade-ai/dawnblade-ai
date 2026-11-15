@@ -107,6 +107,8 @@ test("every parser reading the pool never reaches is pinned", {skip}, () => {
     "return R([[\"noop\", \"a standing permission — it may be played from its owner's banished zone\"]], {fromBan: true});",
     /* v6.39: the same, for Usurp (test/usurp.test.js). */
     "if(/^usurp$/.test(c)) return NOOP(\"printed keyword — as it is played, its owner destroys a Runechant if they have one, and if they do it gets +2 power\");",
+    /* v6.40: the same, for Pull from Beyond's own-deck banish (test/banishif.test.js). */
+    "if(/^banish the top card of your deck$/.test(c)) return R([[\"banTop\",1]]);",
     /* v6.38: the same, for Blood Debt (test/blooddebt.test.js). */
     "if(/^blood debt$/.test(c)) return NOOP(\"printed keyword — while this sits in its owner's banished zone, they lose 1 life at the beginning of each of their end phases\");",
   ].sort());
