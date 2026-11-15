@@ -178,3 +178,10 @@ Read-only: the public ladder over HTTPS with no sign-in, with the host's, with a
 
 ## Release prep
 APP_VER 6.34. WIRE_V (40) and DATA_VER UNCHANGED: no payload, prompt, game key, snapshot or loader field changed (a request op and an engine call). The function must still be re-bundled and redeployed (APP_VER is part of the build id). Census repins with notes: tapdoor plain-arrow onClick 15 -> 18 (the three ladder buttons), slicecensus stylesheet 73,060 -> 74,307. A local named `you` was renamed (shadow drill: `you` is a side helper).
+
+## Final numbers (offline; nothing pushed, deployed or run on live)
+- `npm test`: 4343 tests, 4338 pass, 0 fail, 5 skipped (the live-wire drills). Before the repins the run had 3 findings of my own change (a local named `you` shadowing a side helper; the stylesheet slice; the plain-arrow onClick census), each read and fixed or repinned with a note. `npm run scenes`: 107 passing, 0 failing. `npm run fairness`: exit 0. `npm run play` NOT run (engine rules untouched). Both `text/babel` blocks compile.
+- PGlite: 001..008 each twice `ok`; 11 Elo vectors; anon refused everywhere; `tools/sql-sab-008.js` 19/19 sabotages seen.
+- Deno rehearsal (single + folder): ALL PASS, 193 rows (22 new per variant for the ladder phase).
+- `tools/serverpage.js` at 393x852 (and 320 for the ladder): 298 passed, 0 failed.
+- Not run: `tools/livecheck.js` (the ladder rows are UNRUN on live), `tools/liveranked.js` (UNRUN on live), `supabase-bundle.js --stamp`, any deploy.
