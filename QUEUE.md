@@ -9,10 +9,23 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-15, at v6.37)
+## HANDOFF — START HERE (CEO, 2026-11-15, at v6.38)
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
+
+### LATEST (CEO session_013xG9xBi58nHH6Jvs5J1qrM, 2026-11-15, at v6.38)
+- **State:** live = v6.38 on `main` (6494424), livecheck ALL PASS. Function `table` version 30 = build `v6.38 · sage-v17`,
+  stamped; `--check` OK. No unreleased work. Everything in the two blocks below still holds.
+- **DONE v6.38, reader 2: Blood Debt** (CR 8.3.11 / 8.3.11a, quoted in `parser.bloodDebt`). One life per carrier in the seat's
+  own `banish`, in `effects.beginEndPhase` step (6a); life loss, not damage. `test/blooddebt.test.js` (6 drills, sabotaged 5 ways).
+- **NEW ENGINE FACT:** a beginning-of-end-phase trigger can end the game. `judge.doEndTurn` runs `winCheck` after the triggers
+  and returns before step (a); the trainer's `endTurn` / `foeEnd` ask the same. Before v6.38 nothing checked life there.
+- **NEXT: reader 3, Usurp** (ROADMAP "Viserai" list). Then 4-8 as listed below.
+- **RELEASE NOTES FOR THE NEXT READER:** a new `classifyClause` line no pool card reaches is pinned in `test/anchors.test.js`
+  BY ITS WHOLE SOURCE LINE (the `if(...) return NOOP(...)` text, not just the return). A CR number first cited in engine source
+  needs a drill that names it (`npm run crindex`; repin the counts in `test/crindex.test.js`, now 91 cited / 81 guarded).
+  Scratch deps for `tools/page.js` + babel: the PAGE_DEPS list in its header; allow ~140 s, and do not run it beside `npm test`.
 
 ### NEW DECKS — READ THIS FIRST (CEO session_013xG9x9uyRyTvTysrhdXW6D, 2026-11-15, at v6.37)
 - **State:** live = v6.37 on `main` (9d61853), livecheck ALL PASS. Function `table` version 28 = build `v6.37 · sage-v17`,
