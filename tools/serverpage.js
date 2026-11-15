@@ -718,6 +718,17 @@ async function toServerChooser(page){
     row(await overflow(p4), "cap: no horizontal overflow"); await thumbs(p4, "cap");
     row(w4.store.rows.size === 5 + 3, "cap: nothing was created by the refused open", "rows " + w4.store.rows.size);
     await click(p4, p4.locator('[data-testid="cap-open"] button[aria-label="Close table ' + held[0] + '"]'), "close the first table");
+    await p4.waitForSelector('[data-testid="close-warn"]', { timeout: 8000 }).catch(() => {});
+    const warn0 = await boxes(p4, '[data-testid="close-warn"]'), wb0 = await boxes(p4, '[data-testid="close-warn"] button');
+    row(warn0.length === 1 && /Closing now counts as a loss/.test(warn0[0].t) && /ranked table with a game under way/.test(warn0[0].t) && /without a trace/.test(warn0[0].t), "close warning: before anything is closed the page says, plainly, that closing a started ranked table counts as a loss", warn0[0] && warn0[0].t.slice(0, 120));
+    row(warn0.length === 1 && warn0[0].x >= 0 && warn0[0].r <= W && warn0[0].b <= H && wb0.length === 2 && wb0.every(b => b.h >= 44 && b.x >= 0 && b.r <= W) && await overflow(p4), "close warning: inside 393x852, both buttons thumb-sized, no horizontal overflow", JSON.stringify(wb0.map(b => [b.t, b.h])));
+    row(!/closeTable|conceded|undefined|refused|v6\.|creator|identity/i.test(warn0[0] ? warn0[0].t : ""), "close warning: the sentence carries no identifier, field name or version number");
+    row(w4.row(held[0]).closed !== true, "close warning: nothing is closed until the player says yes");
+    await click(p4, p4.locator('[data-testid="close-no"]'), "keep it");
+    row((await boxes(p4, '[data-testid="close-warn"]')).length === 0 && (await boxes(p4, '[data-testid="cap-open"] .tblopen')).length === 5 && w4.row(held[0]).closed !== true, "close warning: 'Keep it' closes the question and the table stays");
+    await click(p4, p4.locator('[data-testid="cap-open"] button[aria-label="Close table ' + held[0] + '"]'), "close the first table (again)");
+    await p4.waitForSelector('[data-testid="close-yes"]', { timeout: 8000 });
+    await click(p4, p4.locator('[data-testid="close-yes"]'), "yes, close it");
     await p4.waitForSelector('[data-testid="cap-note"]', { timeout: 8000 }).catch(() => {});
     const afterClose = await text(p4);
     row(/Table .{6} is closed\. You can open a new table now\./.test(afterClose) && (await boxes(p4, '[data-testid="cap-open"] .tblopen')).length === 4, "cap: closing one says so and takes it off the list", (afterClose.match(/Table .{6} is closed.{0,50}/) || [""])[0]);
@@ -768,7 +779,7 @@ async function toServerChooser(page){
       "ranked: switching it on says what changes, in plain words", sw1[0] && sw1[0].t);
     row(await btn(pg, /^Open a ranked table/).count() === 1 && await overflow(pg), "ranked: the button now reads 'Open a ranked table'; no horizontal overflow"); await thumbs(pg, "ranked chooser");
     const code = await toTheBoard(pg, wd, B, { asHost: true, openRe: /^Open a ranked table/ });
-    row(wd.row(code).ranked === true && wd.row(code).v === 4 && wd.row(code).creator === "P-rk-me", "ranked: the table the page opened is a ranked table created by the page's player", "v" + wd.row(code).v);
+    row(wd.row(code).ranked === true && wd.row(code).v === 5 && wd.row(code).creator === "P-rk-me", "ranked: the table the page opened is a ranked table created by the page's player", "v" + wd.row(code).v);
     await pg.waitForFunction(() => document.querySelectorAll("[data-pname]").length === 2, null, { timeout: 8000 }).catch(() => {});
     const pn = await pnames(pg);
     row(pn.me && pn.foe && /^Dawn Smith\s*1300$/.test(pn.me.t) && /^Rival One\s*1200$/.test(pn.foe.t), "ranked: each hero has its player's name AND rating beside it on the board", JSON.stringify([pn.me && pn.me.t, pn.foe && pn.foe.t]));
@@ -843,6 +854,126 @@ async function toServerChooser(page){
     const bad = k.kit.errors.filter(e => !/404|Failed to load resource/.test(e));
     row(bad.length === 0 && wd.errors.length === 0, "ranked refusal: no page error and no internal error on the fake server", bad.concat(wd.errors).join(" | ").slice(0, 200));
     B.ch.close(); await k.kit.close();
+  }
+
+  /* ---- S5.2: THE FORFEIT CLOCK AND CLOSE-AS-CONCESSION, ON THE PAGE ---- */
+  const LIMIT = ST && require("../server/referee.js").FORFEIT_MS;
+  const fnClock = wd => { const c = { t: 1700000000000 }; wd.deps.now = () => c.t; return c; };
+  /* play until the table's clock is on `seat` (a state, not a wait), the page moving for seat 0 and the scripted phone for seat 1 */
+  const untilWaitingOn = async (pg, wd, B, code, seat) => {
+    for(let i = 0; i < 300; i++){
+      const ck = wd.row(code).clock;
+      if(ck && ck.on === seat) return true;
+      const moved = await pg.evaluate(() => { const t = window.__dawnTable; if(!t) return false; const x = t.session; if(x.status() !== "ready") return false; const a = DawnSparring.act(x.state(), t.seat, { search: false }); if(!a) return false; return !x.submit(a); }).catch(() => false);
+      if(moved){ await wd.settle([B.ch]); await wait(60); continue; }
+      if(await PH.step(wd, [B])){ await wait(60); continue; }
+      await wait(100);
+    }
+    return false;
+  };
+  const pollClock = async (pg, re, ms) => { await pg.waitForFunction(r => new RegExp(r).test(document.body.innerText), re, { timeout: ms || 9000 }).catch(() => {}); };
+  /* F1: the opponent is the one the game waits on; the page waits, then may claim, and claims */
+  {
+    const k = await rankedKit("forfeit", { me: "Dawn Smith" }), pg = k.pg, wd = k.wd, rat = k.rat, B = k.Bp, ck = fnClock(wd);
+    await toServerChooser(pg);
+    await click(pg, pg.locator('[data-testid="ranked-switch"]'), "switch to ranked");
+    const code = await toTheBoard(pg, wd, B, { asHost: true, openRe: /^Open a ranked table/ });
+    await playSome(pg, wd, B, 0, 4);
+    row(await untilWaitingOn(pg, wd, B, code, 1), "forfeit: the table's clock is on the opponent (the page waits)", JSON.stringify(wd.row(code).clock));
+    wd.fault.cut(wd.topicOf(code, 0));                          /* the page asks the table every 2 s, so it learns the server's account of the wait */
+    row(await pg.evaluate(() => !document.querySelector(".ffbar")), "forfeit: no bar at all while the wait is short (a quiet table stays quiet)");
+    ck.t += 70000; await pollClock(pg, "taking a while");
+    const wt = await boxes(pg, '[data-testid="forfeit-wait"]');
+    row(wt.length === 1 && /Rival One is taking a while\. You may claim the win in \d:\d\d\./.test(wt[0].t), "forfeit: after a minute's wait the page says how long until it may claim (the server's account plus its own elapsed time)", wt[0] && wt[0].t);
+    row(wt.length === 1 && wt[0].x >= 0 && wt[0].r <= W && wt[0].y >= 0 && wt[0].b <= H && await overflow(pg) && (await boxes(pg, '[data-testid="claim-win"]')).length === 0, "forfeit: the countdown is inside 393x852, no horizontal overflow, and there is NO claim button yet", JSON.stringify(wt[0]));
+    row(wt.length === 1 && !/undefined|NaN|\bnull\b|claim-|refused|clock|stamp|v6\./i.test(wt[0].t), "forfeit: the countdown carries no identifier, field name or version number, and says nothing of what the opponent is deciding");
+    const v0 = wd.store.version(code);
+    ck.t += 231000; await pollClock(pg, "may claim the win:");
+    const due = await boxes(pg, '[data-testid="forfeit-due"]'), cb = await boxes(pg, '[data-testid="claim-win"]');
+    row(due.length === 1 && cb.length === 1 && /^Claim the win$/.test(cb[0].t) && /has not moved for 5 minutes/.test(due[0].t), "forfeit: once the limit has passed the page offers 'Claim the win' and says why", due[0] && due[0].t);
+    row(cb.length === 1 && cb[0].h >= 44 && cb[0].x >= 0 && cb[0].r <= W && cb[0].b <= H && await overflow(pg), "forfeit: the claim button is thumb-sized and inside 393x852", JSON.stringify(cb[0])); await thumbs(pg, "forfeit claim", ".ffbar");
+    row(rat.records === 0 && wd.row(code).over !== true, "forfeit: nothing is recorded before the claim is pressed");
+    await click(pg, pg.locator('[data-testid="claim-win"]'), "claim the win");
+    await pg.waitForSelector(".reveal", { timeout: 15000 }).catch(() => {});
+    await pg.waitForFunction(() => /rose from/.test((document.querySelector('[data-testid="rank-change"]') || {}).innerText || ""), null, { timeout: 15000 }).catch(() => {});
+    const how = await boxes(pg, '[data-testid="forfeit-how"]'), rc = await boxes(pg, '[data-testid="rank-change"]');
+    row(how.length === 1 && /Won by forfeit: your opponent did not come back in time\./.test(how[0].t) && rc.length === 1 && /Your rating rose from 1200 → 1216 \(\+16\)/.test(rc[0].t), "forfeit: the winner's end screen says it was a win by forfeit, and the rating move", rc[0] && rc[0].t);
+    row(rc.length === 1 && rc[0].x >= 0 && rc[0].r <= W && rc[0].b <= H && await overflow(pg) && noJargon(rc[0].t), "forfeit: the winner's end screen is inside 393x852, no overflow, no jargon");
+    const rb = B.ch.rank().result;
+    await wd.settle([B.ch]); await B.ch.result(4, 20);
+    const rb2 = B.ch.rank().result;
+    row(!!(rb2 || rb) && (rb2 || rb).how === "forfeit" && (rb2 || rb).winner === 0 && JSON.stringify((rb2 || rb).change) === JSON.stringify([{ from: 1200, to: 1216 }, { from: 1200, to: 1184 }]), "forfeit: the absent phone reads the same result (1200 → 1184, forfeit, seat 0 won)", JSON.stringify(rb2 || rb));
+    row(rat.results.size === 1 && rat.records === 1 && [...rat.results.values()][0].how === "forfeit" && wd.store.version(code) > v0, "forfeit: exactly one result was recorded, as a forfeit");
+    await wait(2500);
+    row(rat.records === 1 && (await boxes(pg, '[data-testid="claim-win"]')).length === 0, "forfeit: nothing more was recorded and the claim button is gone");
+    const bad = k.kit.errors.filter(e => !/404|Failed to load resource/.test(e));
+    row(bad.length === 0 && wd.errors.length === 0, "forfeit: no page error and no internal error on the fake server", bad.concat(wd.errors).join(" | ").slice(0, 200));
+    B.ch.close(); await k.kit.close();
+  }
+  /* F2: the page is the one the game waits on: a calm countdown in the last two minutes; the opponent claims; the page's end screen says what happened */
+  {
+    const k = await rankedKit("forfeit-mine", { me: "Dawn Smith" }), pg = k.pg, wd = k.wd, rat = k.rat, B = k.Bp, ck = fnClock(wd);
+    await toServerChooser(pg);
+    await click(pg, pg.locator('[data-testid="ranked-switch"]'), "switch to ranked");
+    const code = await toTheBoard(pg, wd, B, { asHost: true, openRe: /^Open a ranked table/ });
+    await playSome(pg, wd, B, 0, 4);
+    for(let i = 0; i < 200 && !((wd.row(code).clock || {}).on === 0); i++){ await PH.step(wd, [B]); await wait(60); }
+    row((wd.row(code).clock || {}).on === 0, "forfeit (mine): the table's clock is on the page's seat", JSON.stringify(wd.row(code).clock));
+    wd.fault.cut(wd.topicOf(code, 0));
+    ck.t += 100000; await wait(2600);
+    row(await pg.evaluate(() => !document.querySelector('[data-testid="forfeit-mine"]')), "forfeit (mine): with plenty of time left the page's own clock stays out of the way");
+    ck.t += 100000; await pollClock(pg, "waiting on you");
+    const mine = await boxes(pg, '[data-testid="forfeit-mine"]');
+    row(mine.length === 1 && /The game is waiting on you\. Rival One may claim the win in \d:\d\d\. Any move you make carries on as normal\./.test(mine[0].t), "forfeit (mine): in the last two minutes the page says, calmly, how long it has", mine[0] && mine[0].t);
+    row(mine.length === 1 && mine[0].x >= 0 && mine[0].r <= W && mine[0].b <= H && await overflow(pg) && (await boxes(pg, '[data-testid="claim-win"]')).length === 0, "forfeit (mine): inside 393x852, no overflow, and no claim button on the waited-on phone");
+    row(mine.length === 1 && !/undefined|NaN|\bnull\b|claim-|refused|stamp|v6\./i.test(mine[0].t), "forfeit (mine): no identifier or field name in the sentence");
+    /* the opponent's phone claims once it is due; the page learns the game is over */
+    ck.t += 101000;
+    const early = await B.ch.claimWin().then(() => null, e => e);
+    row(!early, "forfeit (mine): the opponent's claim, now due, goes through");
+    await pg.waitForSelector(".reveal", { timeout: 20000 }).catch(() => {});
+    await pg.waitForFunction(() => /moved from/.test((document.querySelector('[data-testid="rank-change"]') || {}).innerText || ""), null, { timeout: 15000 }).catch(() => {});
+    const how = await boxes(pg, '[data-testid="forfeit-how"]'), rc = await boxes(pg, '[data-testid="rank-change"]');
+    row(how.length === 1 && /Lost by forfeit: the game waited for you and you did not come back in time\./.test(how[0].t) && rc.length === 1 && /Your rating moved from 1200 → 1184/.test(rc[0].t), "forfeit (mine): the absent player's end screen says it was a loss by forfeit, kindly, with the rating move", rc[0] && rc[0].t);
+    row(rc.length === 1 && rc[0].x >= 0 && rc[0].r <= W && rc[0].b <= H && await overflow(pg) && noJargon(rc[0].t), "forfeit (mine): inside 393x852, no overflow, no jargon");
+    row(rat.results.size === 1 && [...rat.results.values()][0].how === "forfeit" && [...rat.results.values()][0].winner === 1 && rat.rating("P-rk-me").rating === 1184, "forfeit (mine): one forfeit recorded, the page's player the loser");
+    const bad = k.kit.errors.filter(e => !/404|Failed to load resource/.test(e));
+    row(bad.length === 0 && wd.errors.length === 0, "forfeit (mine): no page error and no internal error on the fake server", bad.concat(wd.errors).join(" | ").slice(0, 200));
+    B.ch.close(); await k.kit.close();
+  }
+  /* F3: CLOSE counts as a loss — the player holds five tables, one of them a ranked game under way; the page warns before it closes it, and says what it counted as */
+  {
+    const k = await rankedKit("close-loss", { me: "Dawn Smith" }), pg = k.pg, wd = k.wd, rat = k.rat, B = k.Bp;
+    const A0 = PH.makePhone(wd, "A0", { hero: "blaze", rand: T.seeded("ranked-a0"), build: await pg.evaluate(() => TABLE_BUILD), matchCatalog, throws: [["rock", "rock"], ["paper", "rock"]], identity: { token: async () => k.tokMe }, ranked: true });
+    await A0.connect("create"); const live = A0.code;
+    await B.connect("join", live); await wd.settle([A0.ch, B.ch]);
+    for(let i = 0; i < 8 && !(A0.sess && B.sess && A0.sess.status() === "ready" && B.sess.status() === "ready"); i++) await wd.settle([A0.ch, B.ch]);
+    row(!!A0.sess && !!B.sess && !!wd.row(live).hub.spec, "close loss: a ranked game is under way at a table the page's player created");
+    const extra = []; for(let i = 0; i < 4; i++) extra.push((await wd.transport("held").post({ op: "create", identity: { token: k.tokMe } })).table);
+    await toServerChooser(pg);
+    await click(pg, btn(pg, /^Open a server table/), "open a server table (the sixth)");
+    await pg.waitForSelector('[data-testid="cap-open"]', { timeout: 8000 }).catch(() => {});
+    await click(pg, pg.locator('[data-testid="cap-open"] button[aria-label="Close table ' + live + '"]'), "close the live ranked table");
+    await pg.waitForSelector('[data-testid="close-warn"]', { timeout: 8000 }).catch(() => {});
+    const w1 = await boxes(pg, '[data-testid="close-warn"]');
+    row(w1.length === 1 && /Closing now counts as a loss/.test(w1[0].t) && w1[0].r <= W && w1[0].b <= H, "close loss: the page warns before it closes", w1[0] && w1[0].t.slice(0, 90));
+    row(!wd.row(live).over && rat.records === 0, "close loss: nothing is recorded while the question is open");
+    await click(pg, pg.locator('[data-testid="close-yes"]'), "yes, close it");
+    await pg.waitForSelector('[data-testid="cap-note"]', { timeout: 8000 }).catch(() => {});
+    const note = await boxes(pg, '[data-testid="cap-note"]');
+    row(note.length === 1 && /had a ranked game under way, so closing it counted as a loss\. Your rating moved from 1200 to 1184\./.test(note[0].t) && note[0].r <= W && noJargon(note[0].t), "close loss: after yes the page says it counted as a loss and how the rating moved", note[0] && note[0].t);
+    const st = [...rat.results.values()];
+    row(st.length === 1 && st[0].how === "concession" && st[0].winner === 1 - wd.row(live).owners.indexOf("P-rk-me") && rat.rating("P-rk-me").rating === 1184 && wd.row(live).closed !== true && wd.row(live).over === true, "close loss: one concession recorded, the closer the loser, the table over (not erased)");
+    await wd.settle([A0.ch, B.ch]); await B.ch.result(4, 20);
+    row(!!B.ch.rank().result && B.ch.rank().result.winner === 1 - wd.row(live).owners.indexOf("P-rk-me"), "close loss: the opponent's phone reads the win");
+    const idle = extra[0], r1 = rat.records;
+    await click(pg, pg.locator('[data-testid="cap-open"] button[aria-label="Close table ' + idle + '"]'), "close an empty table");
+    await click(pg, pg.locator('[data-testid="close-yes"]'), "yes, close it (empty)");
+    await pg.waitForFunction(t => new RegExp("Table " + t + " is closed").test(document.body.innerText), idle, { timeout: 8000 }).catch(() => {});
+    row(rat.records === r1 && wd.row(idle).closed === true && /Table .{6} is closed\. You can open a new table now\./.test(await text(pg)), "close loss: an empty table closes without a trace (no loss, nothing recorded)");
+    const bad = k.kit.errors.filter(e => !/404|Failed to load resource/.test(e));
+    row(bad.length === 0 && wd.errors.length === 0, "close loss: no page error and no internal error on the fake server", bad.concat(wd.errors).join(" | ").slice(0, 200));
+    A0.ch.close(); B.ch.close(); await k.kit.close();
   }
 
   const fail = rows.filter(r => !r.ok).length;

@@ -24,6 +24,10 @@
        ranked games) for the named host; the nameless guest's ranked create is refused `ranked-name`; the host's ranked create is accepted, an anonymous
        join is refused `ranked-signin`, the host's own join says `ranked:true` with a rating, and the host CLOSES the table. It never plays a ranked game
        on live (that would write a result and move two real ratings) and creates no player and no name of its own. A closed table records nothing.
+   (g) S5.2 (v6.33, UNRUN ON LIVE when written: 007_forfeit.sql and the v6.33 function are not deployed yet): inside (f), on the ranked table just made, a claim of the
+       forfeit is refused `claim-idle` (no game started, so no clock runs) and a claim with a forged key `auth`. No ranked game is played or recorded on live, so a REAL
+       forfeit (five minutes of waiting, a claim, a recorded result) is NOT checked here: it is proven offline only (test/serverforfeit.test.js, the Deno rehearsal,
+       tools/serverpage.js).
    Exit 0 only when every check passes; otherwise 1 (and the line that failed says why).
 
    If the live page's switch is closed (SERVER_TABLE.on false: a release before v6.28) both phones are opened with ?server=1.
@@ -121,6 +125,15 @@ async function rankedLight(cfg, pages){
   row(anon.ok === false && anon.refused === "ranked-signin", "ranked: an anonymous join of the ranked table is refused 'ranked-signin'", JSON.stringify(anon).slice(0, 120));
   const mine = await post({ op: "join", table: made.table, identity: { token: named } });
   row(mine.ok === true && mine.ranked === true && Array.isArray(mine.ratings) && mine.ratings.includes(1200), "ranked: the host's own join says the table is ranked and shows the rating", JSON.stringify({ ranked: mine.ranked, ratings: mine.ratings, refused: mine.refused }));
+  /* S5.2 (v6.33, UNRUN ON LIVE when written): the lightest honest check of the forfeit clock — on the table just made, with the host seated, no clock runs, so a claim
+     is refused as `claim-idle` (and a forged key as `auth`); nothing is written and no game is played or recorded */
+  const hostKey = ((mine.frames || []).find(f => f && f.ch === "judge" && f.key) || {}).key;
+  if(hostKey && (mine.seat === 0 || mine.seat === 1)){
+    const idle = await post({ op: "claim", table: made.table, seat: mine.seat, key: hostKey });
+    row(idle.ok === false && idle.refused === "claim-idle", "forfeit: a claim on the table just made (no game started, no clock) is refused 'claim-idle'", JSON.stringify(idle).slice(0, 120));
+    const forged = await post({ op: "claim", table: made.table, seat: mine.seat, key: "x".repeat(hostKey.length) });
+    row(forged.ok === false && forged.refused === "auth", "forfeit: a claim with a forged seat key is refused 'auth'", JSON.stringify(forged).slice(0, 120));
+  } else row(false, "forfeit: the host's seat key was in the join answer to claim with", JSON.stringify({ seat: mine.seat }));
   const closed = await post({ op: "close", table: made.table, identity: { token: named } });
   const gone = await post({ op: "join", table: made.table, identity: { token: named } });
   row(closed.ok === true && gone.refused === "no-table", "ranked: the host closes the table (nothing was recorded), and it is gone", JSON.stringify({ closed: closed.ok, after: gone.refused }));
