@@ -1,3 +1,18 @@
+## v6.36 — the Pass button says what a pass costs; the Concede button is gone
+
+- **The phone never passes for a player** (RULING, user, 2026-11-15: "Don't auto pass because it gives too much info to the opp"). A pass sent the instant the attacker has nothing to play
+  would tell the defender the hand holds no instant. Instead the player's own Pass button shows it, and only their phone sees it.
+- **Green: nothing else can be started.** When a player holds priority and no card can be played, no ability activated and no defender declared, Pass ("Pass", "Pass — let <hero> block",
+  "Done defending") and End turn are green: passing gives nothing up. This is the attacker in the defend step with no instant, the case the forfeit clock was burning on.
+- **Purple: an action point is unspent.** In the player's own action window, with an action point left and something that could still be started, Pass and End turn are purple, so the turn
+  is not passed away by a mis-tap. The tap still works: it is a warning colour, not a lock.
+- **`judge.moves(g, seat)`** (new, read-only) is the one list both colours ask: every play, activation and defender `legal` accepts for that seat now. Drill `test/moves.test.js` plays real games
+  with every hero: whatever the AI proposes must be on the list, every entry must be accepted by the reducer, and the list must be seen both empty and full (sabotaged three ways).
+- **The Concede button is removed** (RULING, user, 2026-11-15: "It has no place there completely remove it"). It appeared only in the defend step and asked no confirmation, so a mis-tap was
+  a ranked loss. Closing a started ranked table is still a concession, and the engine's concede action (CR 4.5.3c) is unchanged.
+- **Ruling recorded, nothing to build:** a player who runs out the forfeit clock loses, and the winner has to wait the clock out; "we are counting on people playing nice".
+- **No WIRE_V, no DATA_VER change.** No payload, prompt or game key changed; the function is re-bundled and redeployed because `APP_VER` and `engine/judge.js` changed.
+
 ## v6.35 — the forfeit clock: seven and a half minutes, and the defend step says whose move it is
 
 - **The limit is 7.5 minutes** (RULING, user, 2026-11-15: "sometimes there is a lot to consider"). One constant, `FORFEIT_MS` in `server/referee.js`; the page still reads it from the

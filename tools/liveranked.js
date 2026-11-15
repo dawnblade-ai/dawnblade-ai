@@ -18,7 +18,7 @@
      2. each signs in (by the page itself) and takes its one-run name on the name sheet;
      3. the host switches the table to Ranked and opens one; the guest types the code and sits down; both lobbies say Ranked;
      4. both walk the lobby exactly as livecheck does (hero, lock in, rock-paper-scissors, who goes first, sideboard) to the board;
-     5. the GUEST CONCEDES on the board (through the page's own session hook, the very action the Concede button fires — that button only exists in the defend step);
+     5. the GUEST CONCEDES on the board (through the page's own session hook, the engine's concede action; the board has had no Concede button since v6.36);
      6. through `me`: the winner reads 1216 with 1 win and 1 game, the loser 1184 with 1 loss and 1 game; both end screens show the rating change in words;
      7. the public ladder does NOT list either player (under the floor), each one's own line says "listed: false" and two games to go;
      8. the game is in the recent results: both names, the host the winner, "concession", a time within ten minutes;

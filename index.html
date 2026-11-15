@@ -26,7 +26,7 @@
   --r:#C4302B; --y:#E8B33C; --b:#3B6FB0;
   --ink:#14100E; --forge:#241B16; --forge2:#2E241D;
   --bone:#E8DFD0; --bone-dim:#B8AC98; --line:#4A3B2E;
-  --ok:#7BA05B;
+  --ok:#7BA05B; --hold:#6B4BA3;
   --tv:calc(100vh - 152px);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -131,6 +131,12 @@ img{display:block;max-width:100%}
 .actrow .a,.actbar .a{flex:1;padding:12px 6px;font-family:'Big Shoulders Display';font-weight:800;font-size:16px;letter-spacing:.08em;text-transform:uppercase;background:var(--forge2);border:1px solid var(--line)}
 .actrow .a.go,.actbar .a.go{background:var(--r)}
 .actrow .a.pay,.actbar .a.pay{background:var(--y);color:var(--ink)}
+/* THE PASS BUTTON SAYS WHAT A PASS COSTS (ruling 2026-11-15). Green: nothing
+   else can be started, so passing gives nothing up. Purple: an action point
+   is unspent and something could still be started. Only the player's own
+   phone shows either, so the opponent learns nothing. */
+.actbar .a.free{background:var(--ok);color:var(--ink)}
+.actbar .a.hold{background:var(--hold)}
 .actrow .a:disabled,.actbar .a:disabled{opacity:.4}
 /* A NON-BUTTON in the action bar: the table uses it to say whose window
    is open, because a permanently dead "Done defending" reads as a broken
@@ -955,7 +961,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "6.35"; /* v6.35 - the ranked forfeit limit is seven and a half minutes, and the attacker's Pass in the defend step says it lets the defender block. See CHANGELOG.md. */
+window.APP_VER = "6.36"; /* v6.36 - the Pass button is green when nothing else can be started and purple when an action point is unspent, and the Concede button is gone. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -8425,6 +8431,17 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
   const myArsStep = g.phase === "end" && g.arsenalFor === mySeat;
   const defending = DawnPriority.canDeclareDefenders(g, mySeat);
   const myTurn = g.priority === mySeat;
+  /* WHAT A PASS WOULD COST, for the colour of the Pass button. RULING (user,
+     2026-11-15): the phone never passes for the player (a fast pass would
+     tell the opponent the hand holds no instant); it shows the player
+     instead. `judge.moves` is everything this seat could start now.
+     "free" = nothing, so a pass gives nothing up. "hold" = the action
+     window is open with an action point unspent and something to start, so
+     a pass may waste it. */
+  const myMoves = uM(()=>DawnJudge.moves(g, mySeat), [g]);
+  const passTone = !myMoves.length ? "free"
+    : (g.turnPlayer === mySeat && (me.ap||0) > 0
+       && DawnPriority.speedAllowed(g, mySeat).indexOf("action") >= 0) ? "hold" : "";
 
   /* A stale peek commits the wrong action on its second tap, so it is
      dropped whenever the window it was armed in closes. */
@@ -9136,19 +9153,21 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
              rather than as the rule it is. Say which it is. */
           : defending ? <>
               {mine({t:"pass"})
-                ? <button className="a go" onClick={()=>fire({t:"pass"})}>Done defending</button>
+                ? <button className={"a "+(passTone==="free"?"free":"go")} data-pass={passTone} onClick={()=>fire({t:"pass"})}>Done defending</button>
                 : <span className="a dis">declare your blockers — {them.name.split(",")[0]} still holds priority</span>}
-              <button className="a" onClick={()=>fire({t:"concede"})}>Concede</button>
+              {/* RULING (user, 2026-11-15): no Concede button here. One tap with no
+                  confirmation was a ranked loss. Closing a started ranked table is
+                  still a concession, and the engine still knows CR 4.5.3c. */}
             </>
           : <>
               {mine({t:"pass"})
                 ? (g.step === "defend" && targetCanBeDefended(g.pend && g.pend.target)
                     /* CR 7.3.3 - the turn-player holds priority in the defend step, so the game (and a ranked table's clock) waits on the ATTACKER until it
                        passes; only then is the wait on the defender. RULING (user, 2026-11-15): the clock sits on whoever must decide - so say what this tap does. */
-                    ? <button className="a go" data-testid="pass-to-blocks" onClick={()=>fire({t:"pass"})}>Pass — let {them.name.split(",")[0]} block</button>
-                    : <button className="a" onClick={()=>fire({t:"pass"})}>Pass</button>)
+                    ? <button className={"a "+(passTone==="free"?"free":"go")} data-pass={passTone} data-testid="pass-to-blocks" onClick={()=>fire({t:"pass"})}>Pass — let {them.name.split(",")[0]} block</button>
+                    : <button className={"a"+(passTone?" "+passTone:"")} data-pass={passTone} data-testid="pass" onClick={()=>fire({t:"pass"})}>Pass</button>)
                 : <span className="a dis">waiting on {them.name.split(",")[0]}</span>}
-              <button className="a go" disabled={!mine({t:"endTurn"})} onClick={()=>fire({t:"endTurn"})}>End turn</button>
+              <button className={"a "+(mine({t:"endTurn"}) && passTone ? passTone : "go")} data-pass={mine({t:"endTurn"}) ? passTone : ""} data-testid="end-turn" disabled={!mine({t:"endTurn"})} onClick={()=>fire({t:"endTurn"})}>End turn</button>
             </>}
       </div>
 

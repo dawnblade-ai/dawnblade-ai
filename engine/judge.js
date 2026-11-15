@@ -4922,7 +4922,35 @@ function drawTo(g, i){
   return n;
 }
 
-return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
+/* EVERYTHING A SEAT COULD START NOW, other than passing: each card it could
+   play, each ability it could activate, each defender it could declare.
+   `legal` decides every entry, so this list and the reducer cannot disagree.
+   RULING (user, 2026-11-15): the page never passes FOR a player who has
+   nothing to do (the speed of that pass would tell the opponent the hand
+   holds no instant); the player's own Pass button shows it instead, and
+   this is the reader that button asks. An attack's target is left off: an
+   omitted target reads as the hero (`targetOf`), which is enough to know
+   the attack can be declared. */
+function moves(g, seat){
+  if(!g || g.over || (seat !== 0 && seat !== 1)) return [];
+  const sd = g.sides[seat], out = [];
+  const add = a => { if(legal(g, a, seat) === null) out.push(a); };
+  (sd.hand || []).forEach(c => { if(!c) return;
+    add({t: "play", uid: c.uid, from: "hand"});
+    add({t: "activate", from: "hand", uid: c.uid});
+    add({t: "defend", uid: c.uid}); });
+  if(sd.arsenal) add({t: "play", uid: sd.arsenal.uid, from: "arsenal"});
+  ["banish", "grave"].forEach(z => (sd[z] || []).forEach(c => c && add({t: "play", uid: c.uid, from: z})));
+  (sd.gear || []).forEach(c => { if(!c) return;
+    add({t: "activate", uid: c.uid});
+    add({t: "activate", uid: "gp" + c.uid});
+    add({t: "defend", uid: c.uid}); });
+  (sd.board || []).forEach(b => b && add({t: "activate", uid: b.uid}));
+  add({t: "activate", from: "hero", uid: "hpow"});
+  return out;
+}
+
+return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, moves, reduce, settle, strike, closeChain,
         playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf, waitingOn,
         handFree: PR.handFree,
