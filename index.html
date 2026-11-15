@@ -811,6 +811,12 @@ img{display:block;max-width:100%}
 .tblsw .tblswsub{font-size:12px;color:var(--bone-dim);text-align:right}
 .rankchg{font-size:14px;line-height:1.45;margin-top:10px;padding:9px 10px;border:1px solid var(--line);background:rgba(0,0,0,.25)}
 .rankchg strong{color:var(--y);font-family:'Spline Sans Mono',monospace}
+.ffbar{margin:8px 12px;padding:9px 10px;border:1px solid var(--line);background:rgba(0,0,0,.25);font-size:14px;line-height:1.45}
+.ffbar strong{color:var(--y);font-family:'Spline Sans Mono',monospace}
+.ffbar.mine,.ffbar.due{border-color:var(--y)}
+.ffbar button{display:block;margin-top:8px;min-height:44px;padding:8px 14px;background:none;border:1px solid var(--y);color:var(--y);font-size:14px}
+.ffbar button:disabled{opacity:.5}
+.ffbar .note{margin-top:6px}
 .heromid .pname .prate{color:var(--y);font-family:'Spline Sans Mono',monospace}
 .heromid{min-width:0}
 .heromid .pname{max-width:100%;font-size:10px;line-height:1.15;letter-spacing:.02em;color:var(--bone-dim);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -935,7 +941,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "6.32"; /* v6.32 - a server table can be ranked: the result is recorded once by the server and both players' Elo ratings move. See CHANGELOG.md. */
+window.APP_VER = "6.33"; /* v6.33 - a ranked game that is abandoned can be claimed as a win by forfeit after five minutes, closing a started ranked table counts as a loss, and recovery keeps a ranked rating. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -7137,11 +7143,19 @@ function TableScreen({onBack, onSeated}){
      closed from here, which is the way out for a table nobody will sit down at, which would otherwise count until it had been idle two days. */
   const [capOpen,setCapOpen] = uS([]);
   const [capNote,setCapNote] = uS(null);
+  const [capAsk,setCapAsk] = uS(null);     /* S5.2: the table whose close is waiting for a yes (a close can count as a loss: it says so first) */
   const closeMine = c => {
+    setCapAsk(null);
     if(!srvOn || !srvWho || busy) return;
     setErr(null); setCapNote(null); setBusy(true);
     const done = note => { if(!live.current) return; setBusy(false); setCapOpen(l=>l.filter(x=>x!==c)); setCapNote(note); try{ store.set("srv."+c, null); }catch(_){} };
-    DawnServerTable.closeTable({transport: srvWire(), identity: srvWho}, c).then(()=>done("Table "+c+" is closed. You can open a new table now."), e=>{
+    DawnServerTable.closeTable({transport: srvWire(), identity: srvWho}, c).then(r=>{
+      if(r && r.conceded){
+        const mine = r.result && Array.isArray(r.result.change) ? r.result.change[1-r.result.winner] : null;
+        return done("Table "+c+" had a ranked game under way, so closing it counted as a loss."+(mine ? " Your rating moved from "+mine.from+" to "+mine.to+"." : "")+" You can open a new table now.");
+      }
+      done("Table "+c+" is closed. You can open a new table now.");
+    }, e=>{
       if(!live.current) return;
       if(e && e.why==="no-table") return done("Table "+c+" was already gone.");
       setBusy(false);
@@ -7338,7 +7352,12 @@ function TableScreen({onBack, onSeated}){
         {capOpen.length>0 && <div className="tblcard" data-testid="cap-open">
           <div className="tblstat">Your open tables</div>
           {capOpen.map(c=><div key={c} className="tblopen"><span className="mono">{c}</span>
-            <button disabled={busy} aria-label={"Close table "+c} onClick={()=>closeMine(c)}>Close</button></div>)}
+            <button disabled={busy} aria-label={"Close table "+c} onClick={()=>setCapAsk(capAsk===c ? null : c)}>Close</button></div>)}
+          {capAsk && <div className="tblerr" role="alertdialog" data-testid="close-warn" aria-label={"Close table "+capAsk+"?"}>
+            <p><strong>Closing now counts as a loss</strong> if table {capAsk} is a ranked table with a game under way: it ends the game for both of you, your opponent takes the win, and your rating moves. A ranked table that has not started yet, and any friendly table, closes without a trace.</p>
+            <div className="tblopen"><button disabled={busy} data-testid="close-yes" onClick={()=>closeMine(capAsk)}>Yes, close it</button>
+              <button disabled={busy} data-testid="close-no" onClick={()=>setCapAsk(null)}>Keep it</button></div>
+          </div>}
           <p className="note">Closing a table ends it for both players. A table that nobody plays also closes by itself after two days.</p>
         </div>}
       </>}
@@ -7505,10 +7524,58 @@ function RankChange({table, seat}){
   if(!r) return <div className="rankchg" data-testid="rank-change">{gaveUp ? "This ranked result is being recorded. Your new rating will show under Playing as." : "Recording the result…"}</div>;
   const c = r.change[seat], d = c.to - c.from;
   return <div className="rankchg" data-testid="rank-change">
+    {r.how==="forfeit" && <div data-testid="forfeit-how">{r.winner===seat ? "Won by forfeit: your opponent did not come back in time." : "Lost by forfeit: the game waited for you and you did not come back in time."}</div>}
     {d>0 ? <>Well played. Your rating rose from <strong>{c.from}</strong> → <strong>{c.to}</strong> (+{d}).</>
       : d<0 ? <>Your rating moved from <strong>{c.from}</strong> → <strong>{c.to}</strong> ({"\u2212"}{-d}). Every game teaches something.</>
       : <>Your rating stays at <strong>{c.to}</strong>.</>}
     {" "}<span style={{color:"var(--bone-dim)"}}>A ranked game counts for both players.</span>
+  </div>;
+}
+/* THE FORFEIT CLOCK, AS A HOOK AND A BAR (SERVER S5.2): the server stamps when the player the game waits on last moved; this phone shows a calm countdown made of
+   that stamp plus its own elapsed time (engine/servertable.js `clock()`), and the claim itself is the server's decision. It says only THAT the game waits on a seat,
+   never what is being decided. A friendly table has no clock (clock() answers null). The limit is the server's: the page never restates it. */
+function useSrvClock(table){
+  const [c,setC] = uS(null);
+  uE(()=>{
+    if(!table || !table.srv || !table.clock){ setC(null); return; }
+    const read = () => setC(table.clock());
+    read(); const t = setInterval(read, 1000);
+    return ()=>clearInterval(t);
+  },[table]);
+  return c;
+}
+const mmss = ms => { const s = Math.max(0, Math.ceil(ms/1000)); return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); };
+const CLAIM_WHY = {
+  "claim-early":"Not quite yet — they still have a little time. Try again when the clock runs out.",
+  "claim-self":"The game is waiting on you, so there is nothing to claim. Make your move.",
+  "claim-idle":"The game is not waiting on them any more. Look at the table again.",
+  "claim-over":"That game has already finished.",
+  "claim-casual":"Only ranked tables have a forfeit clock.",
+  unavailable:"That did not go through — the server is not answering. Try again in a moment.",
+  auth:"That seat is no longer yours — the table moved on without you.",
+  "no-table":"That table is gone."
+};
+function ForfeitBar({table, seat, over}){
+  const c = useSrvClock(table), nm = useSrvNames(table);
+  const [busy,setBusy] = uS(false), [msg,setMsg] = uS(null);
+  if(over || !c || !table || !table.srv) return null;
+  const them = nm[1-seat] || "Your opponent", mins = Math.round(c.limit/60000);
+  if(c.mine){
+    if(c.left > 120000) return null;
+    return <div className="ffbar mine" role="status" data-testid="forfeit-mine">{c.left > 0
+      ? <>The game is waiting on you. {them} may claim the win in <strong>{mmss(c.left)}</strong>. Any move you make carries on as normal.</>
+      : <>The game is waiting on you, and {them} may now claim the win. Make your move to keep playing.</>}</div>;
+  }
+  if(!c.due){
+    if(c.limit - c.left < 60000) return null;
+    return <div className="ffbar" role="status" data-testid="forfeit-wait">{them} is taking a while. You may claim the win in <strong>{mmss(c.left)}</strong>. Until then the table keeps their seat.</div>;
+  }
+  const claim = () => { if(busy) return; setBusy(true); setMsg(null);
+    table.claimWin().then(()=>setBusy(false), e=>{ setBusy(false); setMsg(CLAIM_WHY[e && e.why] || CLAIM_WHY.unavailable); }); };
+  return <div className="ffbar due" role="status" data-testid="forfeit-due">
+    <div>{them} has not moved for {mins} minutes. You may claim the win: it counts as a ranked win for you and a loss for them.</div>
+    <button data-testid="claim-win" disabled={busy} onClick={claim}>{busy ? "Claiming…" : "Claim the win"}</button>
+    {msg && <div className="note" data-testid="claim-msg">{msg}</div>}
   </div>;
 }
 function SrvBanner({table, waitingOnThem}){
@@ -7715,12 +7782,21 @@ function TableRoom({table, host, code, db, onExit, resume, judged}){
   const waiting = DawnLobby.waitingOn(lob).indexOf(mySeat) < 0
                   && DawnLobby.waitingOn(lob).length > 0;
 
+  const lobEnd = useSrvRank(table);
   const head = (<>
     <div className="tblhead">Table {code}
       <span className="tblseat">seat {mySeat} · {host ? "host" : judged ? (judged.srv ? "server table" : "judged table") : "guest"}</span></div>
     <SrvBanner table={table}/>
     <SrvNames table={table} seat={mySeat}/>
+    {!lobEnd.result && <ForfeitBar table={table} seat={mySeat}/>}
   </>);
+  /* A forfeit claimed before the match was dealt ends the table in the lobby: nothing was played, the result is the table's */
+  if(lobEnd.ranked && lobEnd.result && !match) return (
+    <div className="tblwrap">{head}
+      <div className="rankchg" data-testid="lobby-ended">This table has ended before the game began.</div>
+      <RankChange table={table} seat={mySeat}/>
+      <button className="bigbtn alt" onClick={onExit}>Leave the table</button>
+    </div>);
 
   if(step === "fault") return (
     <div className="tblwrap">{head}
@@ -9037,6 +9113,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
 
       {note && <div className="tblerr">{note}</div>}
       <SrvBanner table={tableRef.current} waitingOnThem={!over && g.priority !== mySeat}/>
+      {!local && !over && <ForfeitBar table={tableRef.current} seat={mySeat} over={!!over}/>}
       {/* THE HOST'S PHONE LEFT (HIDDEN HANDS H2): the game waits for it. The
           guest holds no hidden card, so it cannot carry the game on. */}
       {!local && !host && link === "paused" && !over && !(judged && judged.srv) && <div className="tblerr">
