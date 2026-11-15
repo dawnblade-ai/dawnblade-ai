@@ -81,7 +81,7 @@ test("SABOTAGE (1): a referee that stamps every row v3 / adds identity fields to
   const sab2 = loadServer([["return {ok: true, version: got.version, seat: req.seat, n: row.nonces[req.seat], ...(who &&", "return {ok: true, version: got.version, seat: req.seat, n: row.nonces[req.seat], extra: 1, ...(who &&"]]);
   assert.ok(casualFailures(sab2).some(x => /response differs/.test(x)), "a changed response must be seen");
 });
-test("(1) ROW VERSIONS — v2 (the live rows) and v3 are read; an identity write lifts a v2 row to v3 and keeps its game; v1 and v5 are refused as `wire` (v4 is the ranked row, S5.1)", () => {
+test("(1) ROW VERSIONS — v2 (the live rows) and v3 are read; an identity write lifts a v2 row to v3 and keeps its game; v1 and v6 are refused as `wire` (v4 is the ranked row of S5.1, v5 the one of S5.2)", () => {
   assert.equal(SERVER.ROW_V, 3); assert.equal(SERVER.ROW_V_CASUAL, 2);
   const w = world(SERVER), tok = w.idp.issue("P-one");
   const a = w.join(null, {claim: "tokenAAAAAAAAAAAAAAAA"});
@@ -93,7 +93,7 @@ test("(1) ROW VERSIONS — v2 (the live rows) and v3 are read; an identity write
   /* a casual keyed join and a casual claim replay still work on the v3 row */
   assert.ok(w.go({op: "join", table: w.ID, seat: a.seat, key: w.keyOf(a)}).ok);
   assert.equal(w.go({op: "join", table: w.ID, claim: "tokenAAAAAAAAAAAAAAAA"}).seat, a.seat);
-  for(const [v, want] of [[1, "wire"], [5, "wire"], [undefined, "wire"], [2, null], [3, null], [4, null]]){
+  for(const [v, want] of [[1, "wire"], [6, "wire"], [undefined, "wire"], [2, null], [3, null], [4, null], [5, null]]){
     const x = world(SERVER); const rw = x.row(); const ver = x.store.version(x.ID);
     x.store.put(x.ID, {...rw, v}, ver);
     const res = x.go({op: "join", table: x.ID});
@@ -323,7 +323,7 @@ test("(5) NAMES RIDE THE IDENTITY — validated, public to both seats, an invali
 test("SABOTAGE (5b): a referee that skips the name check, or answers with the player id, is seen", () => {
   const noCheck = loadServer([["if(idn.name !== undefined) return no(\"bad-request\", {field: \"name\", reason: \"at-join\"});", ""]]);
   assert.ok(nameJoinFailures(noCheck).length >= 1);
-  const leakId = loadServer([["const pub = row => { const n = namesOf(row);", "const pub = row => { const n = namesOf(row); if(row.owners) return {names: n.slice(), who: row.owners};"]]);
+  const leakId = loadServer([["const pub = (row, deps) => { const n = namesOf(row);", "const pub = (row, deps) => { const n = namesOf(row); if(row.owners) return {names: n.slice(), who: row.owners};"]]);
   assert.ok(nameJoinFailures(leakId).some(x => /private identity string/.test(x)));
 });
 

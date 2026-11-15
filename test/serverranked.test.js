@@ -61,7 +61,7 @@ function requireFailures(server){
   const ok = w.ranked(A);
   if(!ok.ok || !ok.table) return ["a named signed-in creator could not make a ranked table: " + JSON.stringify(ok)];
   const id = ok.table, r0 = w.row(id);
-  if(r0.v !== 4 || r0.ranked !== true || r0.creator !== "P-alpha" || JSON.stringify(r0.ratings) !== "[null,null]") bad.push("the ranked row is not v4 with ranked/creator/ratings: " + JSON.stringify([r0.v, r0.ranked, r0.ratings]));
+  if(r0.v !== 5 || r0.ranked !== true || r0.creator !== "P-alpha" || JSON.stringify(r0.ratings) !== "[null,null]") bad.push("the ranked row is not v5 with ranked/creator/ratings: " + JSON.stringify([r0.v, r0.ranked, r0.ratings]));
   /* create refusals: each its own word, nothing written */
   const before = w.store.rows.size;
   for(const [what, r, want] of [["no sign-in", w.go({op: "create", ranked: true}), "ranked-signin"], ["a nameless creator", w.ranked(N), "ranked-name"],
@@ -396,11 +396,13 @@ function closeFailures(server){
   /* another player cannot close it */
   const intruder = close(g.toks[1]);
   if(intruder.ok || intruder.refused !== "not-creator") bad.push("a seated player who is not the creator closed it: " + JSON.stringify(intruder));
-  /* the creator closes it MID-GAME: allowed (v6.31), and nothing is recorded — the gap */
+  /* the creator closes it MID-GAME (S5.2): that is their CONCESSION — one result, how "concession", the closer (seat 0) the loser, the table over (not closed over it) */
   const mid = close(g.toks[0]);
-  if(!mid.ok) bad.push("the creator could not close a table mid-game: " + JSON.stringify(mid));
-  if(g.row().closed !== true || g.rat.records !== 0 || g.rat.results.size !== 0 || g.rat.rt.size !== 0) bad.push("a mid-game close recorded something or did not close: records " + g.rat.records);
-  if(g.resync(0).refused !== "no-table") bad.push("a closed table still answers its seats");
+  if(!mid.ok || mid.conceded !== true) bad.push("the creator's mid-game close was not answered as a concession: " + JSON.stringify(mid));
+  const st = [...g.rat.results.values()];
+  if(g.rat.records !== 1 || st.length !== 1 || st[0].winner !== 1 || st[0].how !== "concession") bad.push("a mid-game close did not record the closer's concession: " + JSON.stringify(st.map(x => [x.winner, x.how])));
+  if(g.row().closed === true || g.row().over !== true || !g.row().result) bad.push("a conceding close closed over its own result");
+  if(!g.resync(1).result) bad.push("the other phone cannot read the ending");
   /* a lobby that never started: closes, records nothing */
   const w = world(server, {salt: "close0"}), A = w.player("P-closer", "Closer One"), t0 = w.ranked(A);
   if(!w.go({op: "close", table: t0.table, identity: {token: A.tok}}).ok || w.rat.records !== 0) bad.push("an empty ranked table could not be closed quietly");
@@ -415,12 +417,12 @@ function closeFailures(server){
   const rs = h.resync(1); if(!rs.ok || !rs.result) bad.push("the result is not readable after the close");
   return bad;
 }
-test("(6) CLOSE — a ranked table closed mid-game records nothing (the gap the forfeit clock will close); after a decided game a close erases and changes nothing", () => {
+test("(6) CLOSE — a ranked table closed mid-game is the creator's concession (S5.2); after a decided game a close erases and changes nothing", () => {
   assert.deepEqual(closeFailures(SERVER), []);
 });
-test("SABOTAGE (6): a close that closes a decided table, or that records a mid-game table, is seen", () => {
-  assert.ok(closeFailures(loadServer([["    if(got.row.over === true) return {ok: true};\n    const row = got.row; row.over = true; row.closed = true;", "    const row = got.row; row.over = true; row.closed = true;"]])).length >= 1, "a close that closes over a decided game must be seen");
-  assert.ok(closeFailures(loadServer([["    const row = got.row; row.over = true; row.closed = true;", "    const row = got.row; row.over = true; row.closed = true; if(row.ranked === true) deps.record({game: gameId(row), table: row.id, players: ownersOf(row), names: [null, null], heroes: [\"a\", \"b\"], winner: 0, how: \"concession\", turns: 1, build: null, started: 0, ended: 0});"]])).length >= 1, "a close that records a result for a game nobody finished must be seen");
+test("SABOTAGE (6): a close that closes a decided table, or that does not count a mid-game close as a concession, is seen", () => {
+  assert.ok(probe(() => closeFailures(loadServer([["    if(got.row.over === true) return {ok: true};\n", ""]]))).length >= 1, "a close that closes over a decided game must be seen");
+  assert.ok(probe(() => closeFailures(loadServer([["    if(got.row.ranked === true && got.row.hub && got.row.hub.spec){", "    if(false){"]]))).length >= 1, "a close that does not count as a concession must be seen");
 });
 
 /* ---------------------------------------------------------------------------------------------- (7), (3c) a whole game */

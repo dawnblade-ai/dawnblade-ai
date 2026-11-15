@@ -164,18 +164,24 @@
      and the other seat's name is never sent to anyone.
    ============================================================ */
 (function(root, factory){
-  if(typeof module==="object" && module.exports) module.exports = factory(require("../engine/hub.js"), require("../engine/wire.js"), require("../engine/judge.js"), require("../engine/invariants.js"), require("../engine/sha256.js"));
-  else root.DawnServer = factory(root.DawnHub, root.DawnWire, root.DawnJudge, root.DawnInvariants, root.DawnSHA);
-})(typeof self!=="undefined" ? self : this, function(Hub, W, J, INV, SHA){
+  if(typeof module==="object" && module.exports) module.exports = factory(require("../engine/hub.js"), require("../engine/wire.js"), require("../engine/judge.js"), require("../engine/invariants.js"), require("../engine/sha256.js"), require("../engine/lobby.js"));
+  else root.DawnServer = factory(root.DawnHub, root.DawnWire, root.DawnJudge, root.DawnInvariants, root.DawnSHA, root.DawnLobby);
+})(typeof self!=="undefined" ? self : this, function(Hub, W, J, INV, SHA, L){
 
 /* the stored row's own version: 1 (S1) -> 2 (S3: `claims`, the join tokens) -> 3 (S4.1: `owners`, `names`, `retired`) -> 4 (S5.1: a RANKED
    table: `ranked`, `ratings`, `result`; written only by a ranked create, so a v6.31 function refuses it as `wire` — a rollback can never
-   turn a ranked table into a casual one that records nothing). READ: 2, 3 and 4. (Earlier note, v3's:) READ: 2 and 3 (a v2 row — the live project's — reads as owners [null,null], names [null,null], retired [[],[]]:
+   turn a ranked table into a casual one that records nothing) -> 5 (S5.2: a ranked table also keeps `clock` and, once a claim ended it, `forfeit`; a
+   v6.32 function refuses a v5 row as `wire`, so a rollback cannot keep playing a ranked game without maintaining its forfeit clock). READ: 2, 3, 4 and 5
+   (a v4 ranked row, made by v6.32, simply has no clock until its next saved move). (Earlier note, v3's:) READ: 2 and 3 (a v2 row — the live project's — reads as owners [null,null], names [null,null], retired [[],[]]:
    a table nobody identified into; no migration, nothing is rewritten by reading). WRITE: a row stays v2 until an
    identity binds into it (`stamp`), so a casual table's row is byte for byte v6.28's and the v6.28 function can
    still read it; a v3 row is refused `wire` by v6.28 (it cannot honour owners), the safe way to roll back. */
-const ROW_V = 3, ROW_V_CASUAL = 2, ROW_V_RANKED = 4;
-const rowOk = v => v === ROW_V || v === ROW_V_CASUAL || v === ROW_V_RANKED;
+const ROW_V = 3, ROW_V_CASUAL = 2, ROW_V_RANKED = 5, ROW_V_RANKED_4 = 4;
+const rowOk = v => v === ROW_V || v === ROW_V_CASUAL || v === ROW_V_RANKED || v === ROW_V_RANKED_4;
+/* S5.2: THE FORFEIT CLOCK'S LIMIT, in ONE place. A claim is refused until the player the game is waiting on has made no accepted move for this long
+   (server time, from the row's own stamp). A placeholder the user may rule on; `deps.forfeitMs` replaces it (the drills' injected clock). */
+const FORFEIT_MS = 5 * 60 * 1000;
+const forfeitLimit = deps => Number.isInteger(deps && deps.forfeitMs) && deps.forfeitMs >= 0 ? deps.forfeitMs : FORFEIT_MS;
 const ID_RE = /^[A-Za-z0-9_-]{1,32}$/;
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 /* a seat's channel: derived from its secret key by a one-way hash (sha256.js `seatTopic`), so the name is
@@ -266,14 +272,24 @@ const ownersOf = row => Array.isArray(row.owners) ? row.owners : [null, null];
 const namesOf = row => Array.isArray(row.names) ? row.names : [null, null];
 const retiredOf = row => Array.isArray(row.retired) ? row.retired : [[], []];
 /* the public part of the stored identity: display names only, and only when there is one */
-const pub = row => { const n = namesOf(row); return {...(n[0] != null || n[1] != null ? {names: n.slice()} : {}), ...rankPub(row)}; };
+const pub = (row, deps) => { const n = namesOf(row); return {...(n[0] != null || n[1] != null ? {names: n.slice()} : {}), ...rankPub(row, deps)}; };
 /* ---- S5.1 row readers: a casual row has none of these fields, and rankPub answers {} for it (a casual answer is byte for byte v6.31's) ---- */
 const ratingsOf = row => Array.isArray(row.ratings) ? row.ratings : [null, null];
 /* public by design: that the table is ranked, the two ratings as each player SAT DOWN, and, once recorded, how the game ended and the rating moves */
-const rankPub = row => row.ranked === true ? {ranked: true, ratings: ratingsOf(row).slice(), ...(row.result ? {result: row.result} : {})} : {};
+const rankPub = (row, deps) => row.ranked === true ? {ranked: true, ratings: ratingsOf(row).slice(), ...(row.result ? {result: row.result} : {}), ...clockPub(row, deps)} : {};
+/* ---- S5.2: the forfeit clock's public face. `row.clock` = {on: the seat the game is waiting on, since: SERVER ms of that seat's last accepted move (or of
+   the moment the wait on it began)}. What a phone is told is {on, age, limit}: which seat, how long it has waited as the SERVER counts it, and the limit; the phone
+   adds only the time elapsed on its own clock since it heard (never its wall clock against ours). That the game waits on a seat is already public (priority,
+   a pending question and a sheet's side are in both seats' views); WHAT is being decided never is. A casual row, a finished game and a wait on nobody have none. */
+const clockOn = row => row.clock && (row.clock.on === 0 || row.clock.on === 1) && Number.isFinite(row.clock.since) ? row.clock : null;
+const clockAge = (row, deps) => Math.max(0, (deps && deps.now ? deps.now() : 0) - row.clock.since);
+const clockPub = (row, deps) => row.over !== true && clockOn(row) ? {clock: {on: row.clock.on, age: clockAge(row, deps), limit: forfeitLimit(deps)}} : {};
+/* the same fact as a sealed frame (a push rides the seat's own seal, so a listener on the public channel cannot forge it); phones that do not know the channel skip it */
+const CH_CLOCK = "clock";
+const clockFrame = (row, deps) => ({ch: CH_CLOCK, m: clockOn(row) && row.over !== true ? {on: row.clock.on, age: clockAge(row, deps), limit: forfeitLimit(deps)} : {on: null}});
 /* make the row v3 (first identity write): defaults filled, nothing else touched */
 function stamp(row){
-  row.v = row.v === ROW_V_RANKED ? ROW_V_RANKED : ROW_V; row.owners = ownersOf(row).slice(); row.names = namesOf(row).slice(); row.retired = retiredOf(row).map(l => l.slice());
+  row.v = row.v === ROW_V_RANKED || row.v === ROW_V_RANKED_4 ? row.v : ROW_V; row.owners = ownersOf(row).slice(); row.names = namesOf(row).slice(); row.retired = retiredOf(row).map(l => l.slice());
   return row;
 }
 /* a retired key is remembered by hash, never by value */
@@ -333,22 +349,29 @@ function ratingOf(rt){
   if(!rt || typeof rt !== "object" || !intIn(rt.rating, 0, 100000) || !["games", "wins", "losses", "draws"].every(k => intIn(rt[k], 0, 1e9))) throw new Error("rating answered something that is not a rating");
   return {rating: rt.rating, games: rt.games, wins: rt.wins, losses: rt.losses, draws: rt.draws};
 }
-const RANKED_HOW = ["life", "concession", "stalemate"];
+const RANKED_HOW = ["life", "concession", "stalemate", "forfeit"];
 /* the record's key: the table code AND the moment the table was made, so a code that is drawn again after the old table was forgotten is a new game */
 const gameId = row => row.id + "-" + (Number.isInteger(row.created) ? row.created : 0);
 /* the result of a finished ranked game as the function knows it, or null (logged) when it is not a result that may be recorded */
 function resultOf(row, hub, deps){
   const bad = why => { try { if(deps.log) deps.log(new Error("ranked result not recorded: " + why)); } catch(_){} return null; };
-  const sess = hub.session(), spec = hub.spec();
-  if(!sess || !spec || !sess.over()) return bad("the game is not over");
-  const g = sess.full(), over = g.over, owners = ownersOf(row);
-  if(!over || RANKED_HOW.indexOf(over.how) < 0) return bad("an ending that is not life, concession or stalemate");
+  const sess = hub.session(), owners = ownersOf(row);
+  const fl = row.forfeit && (row.forfeit.loser === 0 || row.forfeit.loser === 1) ? row.forfeit.loser : null;
+  /* a forfeit claimed in the who-goes-first lobby (both heroes chosen, the match not dealt): no game was played; the lobby has the heroes and the row the ending */
+  const lobbyEnd = fl !== null && !sess;
+  const spec = lobbyEnd ? {heroes: (hub.lobby() || {}).heroes} : hub.spec();
+  if(!spec || (!lobbyEnd && (!sess || !sess.over()))) return bad("the game is not over");
+  const g = lobbyEnd ? {turn: 0, over: {winner: 1 - fl, how: "concession"}} : sess.full(), over = g.over;
+  if(!over || RANKED_HOW.indexOf(over.how) < 0) return bad("an ending that is not life, concession, stalemate or forfeit");
   const winner = over.winner === 0 || over.winner === 1 ? over.winner : null;
-  if((winner === null) !== (over.how === "stalemate")) return bad("a winner that does not fit how the game ended");
+  let how = over.how;
+  /* a CLAIMED FORFEIT ends the game through the reducer's concession for the absent seat; the record says what it was */
+  if(fl !== null){ if(how !== "concession" || winner !== 1 - fl) return bad("a forfeit that is not the absent seat's concession"); how = "forfeit"; }
+  if((winner === null) !== (how === "stalemate")) return bad("a winner that does not fit how the game ended");
   if(typeof owners[0] !== "string" || typeof owners[1] !== "string" || owners[0] === owners[1]) return bad("the two seats do not belong to two different players");
   if(!Array.isArray(spec.heroes) || typeof spec.heroes[0] !== "string" || typeof spec.heroes[1] !== "string") return bad("no heroes");
   const names = namesOf(row);
-  return {game: gameId(row), table: row.id, players: owners.slice(), names: names.slice(), heroes: spec.heroes.slice(), winner, how: over.how,
+  return {game: gameId(row), table: row.id, players: owners.slice(), names: names.slice(), heroes: spec.heroes.slice(), winner, how,
     turns: Number.isInteger(g.turn) && g.turn >= 0 ? g.turn : 0, build: row.build || null, started: Number.isInteger(row.created) ? row.created : 0, ended: deps.now ? deps.now() : 0};
 }
 /* record the decided game and keep its public summary in the row. Returns {result, version} or null. `row` gets `result` in memory even when the
@@ -381,6 +404,50 @@ function healSoft(id, got, deps){
 function healStrict(id, got, deps){
   const r = rig(id, got.row, deps);
   return then(settleRow(id, got.row, got.version, deps, r.hub), st => st ? {version: st.version, row: got.row} : got);
+}
+
+/* ---- S5.2: THE FORFEIT CLOCK ---------------------------------------------------------------------------------------------------
+   WHO THE TABLE IS WAITING ON — one reader per stage, both read-only: once the match is dealt `judge.waitingOn(full game)` (a pending question, a sheet's
+   side, the arsenal choice, else the priority holder: judge.js says why); before it, in the who-goes-first lobby, `lobby.waitingOn` — and only once BOTH heroes
+   are chosen (a table where a player sat down and never picked has nothing to forfeit: it ages out). In the lobby a seat is waited on when it alone still owes
+   the step (a throw's seal or open, the seat choice by the throw's winner, a sideboard, the seed answer). NO CLOCK RUNS (the answer is null) when the game is over,
+   when the engine walks on by itself (priority null), when the lobby is still choosing heroes, or when BOTH seats owe the step (both unsealed, both unopened,
+   both without a sideboard): a wait on both is a wait on neither. Never guessed from whose turn it is. */
+function waitedOn(hub){
+  const sess = hub.session();
+  if(sess) return J.waitingOn(sess.full());
+  const lob = hub.lobby();
+  if(!lob) return null;
+  const step = L.stepOf(lob);
+  if(step === "fault" || step === "hero" || step === "ready") return null;
+  let w = L.waitingOn(lob).filter(x => x === 0 || x === 1);
+  if(step === "throw" && lob.seals[0] != null && lob.seals[1] != null) w = [0, 1].filter(x => lob.throws[x] == null);   /* both sealed: whoever has not opened */
+  return w.length === 1 ? w[0] : null;
+}
+/* after a saved move by `moved` on a RANKED row: who the game waits on now, and since when. The stamp restarts when the wait changes seat or when the
+   waited-on seat itself moved (any accepted move by that player restarts it); a move by the OTHER seat leaves it running. Returns true when it changed. */
+function stampClock(row, hub, moved, deps){
+  if(row.ranked !== true) return false;
+  const was = JSON.stringify(row.clock == null ? null : row.clock);
+  if(row.over === true){ row.clock = null; return was !== "null"; }
+  const w = waitedOn(hub), prev = clockOn(row), now = deps.now ? deps.now() : 0;
+  row.clock = w === null ? null : {on: w, since: prev && prev.on === w && moved !== w ? prev.since : now};
+  return JSON.stringify(row.clock) !== was;
+}
+/* the function concedes for a seat THROUGH THE HUB'S OWN SEAT AND REDUCER (the reducer's `concede` is the only way a game ends by a person leaving it; this
+   is a close or a claimed forfeit, never a phone's word). Returns {r, mine, theirs} (frames for the loser's and the winner's phones) or null when the match
+   has not been dealt or somehow did not end. The caller saves. */
+function concedeAs(id, row, deps, loser){
+  const r = rig(id, row, deps), s0 = r.hub.session();
+  if(!s0 || s0.over()) return null;
+  const other = 1 - loser;
+  r.seat(loser, row.hub.keys[loser], false);
+  r.seat(other, row.hub.keys[other], false);
+  r.links[loser].receive({ch: Hub.CH.NET, m: {t: "intent", id: 0, seat: loser, action: {t: "concede"}}});
+  if(!r.hub.session().over()) return null;
+  row.hub = r.hub.persistTable();
+  row.over = true;
+  return {r, mine: r.out[loser], theirs: r.out[other]};
 }
 
 /* ---- ops ------------------------------------------------------------- */
@@ -434,6 +501,22 @@ function opCloseTable(req, deps){
     if(got.row.ranked === true && got.row.over === true && got.row.result == null)
       return then(healStrict(req.table, got, deps), () => ({ok: true}));
     if(got.row.over === true) return {ok: true};
+    /* S5.2: CLOSING A STARTED RANKED GAME IS A CONCESSION. STARTED = the match has been dealt (the table's row holds the spec: both seats sat down and the
+       who-goes-first lobby is finished, so there is a game) and is not over. The creator, if they hold a chair, concedes through the reducer exactly as the
+       board's Concede button does (how: "concession", the closer the loser) and the table is NOT closed over it (it is over, with a result, and the other phone
+       reads the ending). A ranked table closed before the deal, a creator with no chair, and every casual table close as they always did and record nothing. */
+    if(got.row.ranked === true && got.row.hub && got.row.hub.spec){
+      const row = got.row, seat = ownersOf(row).indexOf(who.player);
+      if(seat >= 0){
+        const c = concedeAs(req.table, row, deps, seat);
+        if(!c) return no("internal");
+        stampClock(row, c.r.hub, seat, deps);
+        const pushed = [[], []]; pushed[1 - seat] = c.theirs;
+        const ck = clockFrame(row, deps); pushed[1 - seat] = pushed[1 - seat].concat([ck]);
+        return then(save(req.table, row, got.version, deps, pushed, [], undefined, undefined, ver => settleRow(req.table, row, ver, deps, c.r.hub)),
+          a => a.ok ? {ok: true, conceded: true, ...(a.result ? {result: a.result} : {})} : a);
+      }
+    }
     const row = got.row; row.over = true; row.closed = true;
     return then(save(req.table, row, got.version, deps, [[], []], []), a => a.ok ? {ok: true} : a);
   }));
@@ -581,7 +664,7 @@ function joinAs(req, got, deps, who){
     if(who && ownersOf(row)[req.seat] != null && ownersOf(row)[req.seat] !== who.player) return no("seat-owned");
     const r = rig(id, row, deps);
     r.seat(req.seat, req.key, true);
-    return {ok: true, version: got.version, seat: req.seat, n: row.nonces[req.seat], ...(who && ownersOf(row)[req.seat] === who.player ? {owned: true} : {}), ...pub(row), frames: r.out[req.seat]};
+    return {ok: true, version: got.version, seat: req.seat, n: row.nonces[req.seat], ...(who && ownersOf(row)[req.seat] === who.player ? {owned: true} : {}), ...pub(row, deps), frames: r.out[req.seat]};
   }
   /* AN UNKEYED JOIN carries a CLAIM TOKEN the phone chose (128+ random bits). The seat and the token are saved
      in ONE write, so a phone that never got the answer asks again with the same token and is handed the SAME
@@ -597,14 +680,14 @@ function joinAs(req, got, deps, who){
       r.seat(prior, key, true);
       /* the first answer's seat offer carried the key; the claim's replay does not, so it is put back */
       const frames = r.out[prior].map(f => f && f.ch === Hub.CH.JUDGE && f.seat === prior ? {...f, key} : f);
-      if(!who) return {ok: true, version: got.version, seat: prior, n: row.nonces[prior], ...pub(row), frames};
+      if(!who) return {ok: true, version: got.version, seat: prior, n: row.nonces[prior], ...pub(row, deps), frames};
       /* the same token, now with an identity: another player's seat is refused; an unowned one is bound to this player */
       const owner = ownersOf(row)[prior];
       if(owner != null && owner !== who.player) return no("seat-owned");
-      if(owner === who.player) return {ok: true, version: got.version, seat: prior, n: row.nonces[prior], owned: true, ...pub(row), frames};
+      if(owner === who.player) return {ok: true, version: got.version, seat: prior, n: row.nonces[prior], owned: true, ...pub(row, deps), frames};
       if(ownersOf(row)[1 - prior] === who.player) return no("seat-owned");     /* never both seats */
       stamp(row); row.owners[prior] = who.player; if(who.name != null) row.names[prior] = who.name; bindRank(row, prior, who);
-      return save(id, row, got.version, deps, [[], []], frames, {seat: prior, n: row.nonces[prior], owned: true, ...pub(row)});
+      return save(id, row, got.version, deps, [[], []], frames, {seat: prior, n: row.nonces[prior], owned: true, ...pub(row, deps)});
     }
   }
   if(who){
@@ -616,7 +699,7 @@ function joinAs(req, got, deps, who){
   row.hub = r.hub.persistTable();          /* the new seat's key is now part of the table */
   if(tok !== undefined){ row.claims = claims.slice(); row.claims[seat] = tok; }
   if(who){ stamp(row); row.owners[seat] = who.player; if(who.name != null) row.names[seat] = who.name; bindRank(row, seat, who); }
-  return save(id, row, got.version, deps, [[], []], f.got, {seat, n: row.nonces[seat], ...(who ? {owned: true, ...pub(row)} : {})});
+  return save(id, row, got.version, deps, [[], []], f.got, {seat, n: row.nonces[seat], ...(who ? {owned: true, ...pub(row, deps)} : {})});
 }
 
 /* S5.1: a ranked table remembers each player's rating as they sat down (the lobby's "1200 vs 1216"); a casual row is never touched */
@@ -639,7 +722,7 @@ function takeOver(row, got, deps, who, seat, tok){
   r.seat(seat, key, true);
   const frames = r.out[seat].map(f => f && f.ch === Hub.CH.JUDGE && f.seat === seat ? {...f, key} : f);
   const notice = [{ch: Hub.CH.JUDGE, taken: true, seat}];
-  return save(id, row, got.version, deps, [[], []], frames, {seat, n: row.nonces[seat], owned: true, ...pub(row)},
+  return save(id, row, got.version, deps, [[], []], frames, {seat, n: row.nonces[seat], owned: true, ...pub(row, deps)},
     ver => [[topic(id, seat, oldKey), {ver, frames: notice, mac: SHA.frameMac(oldKey, id, seat, ver, notice)}]]);
 }
 
@@ -649,6 +732,8 @@ function frame(req, got, deps){
   if(!Number.isInteger(req.n) || req.n <= row.nonces[seat]) return no("stale");
   if(!f || typeof f !== "object" || (f.ch !== Hub.CH.LOBBY && f.ch !== Hub.CH.NET)) return no("bad-request");
   if(f.ch === Hub.CH.NET && !row.hub.spec) return no("not-dealt");
+  /* S5.2: a ranked table whose forfeit was claimed before the match was dealt is over: a late lobby frame changes nothing (it reads the ending from the answer) */
+  if(row.ranked === true && row.over === true && row.forfeit && !row.hub.spec) return {ok: true, version: got.version, frames: [], ...pub(row, deps)};
   const other = 1 - seat;
   const r = rig(id, row, deps);
   r.seat(seat, req.key, false);
@@ -665,9 +750,50 @@ function frame(req, got, deps){
   row.nonces = row.nonces.slice(); row.nonces[seat] = req.n;
   /* the caller's frames ride its response; only the OTHER seat's are pushed */
   const pushed = [[], []]; pushed[other] = r.out[other];
+  /* S5.2: on a ranked table the forfeit clock follows the game: who it waits on now, since when, told to both phones as a sealed frame of its own */
+  let mine = r.out[seat];
+  if(row.ranked === true){
+    stampClock(row, r.hub, seat, deps);
+    const ck = clockFrame(row, deps);
+    pushed[other] = pushed[other].concat([ck]); mine = mine.concat([ck]);
+  }
   /* S5.1: the frame that decided a ranked game; the result comes from THIS hub's own game state, never from anything the phone said */
   const decided = row.ranked === true && row.over === true && row.result == null;
-  return save(id, row, got.version, deps, pushed, r.out[seat], undefined, undefined, decided ? ver => settleRow(id, row, ver, deps, r.hub) : undefined);
+  return save(id, row, got.version, deps, pushed, mine, undefined, undefined, decided ? ver => settleRow(id, row, ver, deps, r.hub) : undefined);
+}
+
+/* ---- {op:"claim", table, seat, key} (S5.2): CLAIM THE WIN BY FORFEIT ------------------------------------------------------------
+   The seat that is being kept waiting asks the function to end a RANKED game the other player has abandoned. The function decides, from its own row and its own
+   game: the claimant holds the chair (seat + key, as a frame does), the table is ranked, the game is not over, a clock is running (the row's stamp) AND the
+   game is still waiting on that seat now (re-read from the rehydrated hub, not trusted from the stamp), the waited-on seat is NOT the claimant, and the stamp
+   is older than the limit by the SERVER's clock. Then the absent seat concedes through the reducer (the other phone is pushed the ending like any move), the row is
+   marked over with `forfeit:{loser}` and saved under the row's version check, and the result is recorded as how:"forfeit". Nothing a phone sends names a winner.
+   Refusals, each writing nothing: auth | bad-request | claim-casual | claim-over | claim-idle (no clock is running) | claim-self (the game is waiting on you) |
+   claim-early (+ left: ms to wait) | conflict (retry:true: somebody wrote first; asked again it meets the answers above). THE RACE with the absent player's late
+   move is the row's version: both save against the version they read, exactly one put wins; the loser of the race re-reads (a claim then meets claim-early or
+   claim-idle, a late move meets "the game is over"). */
+function claim(req, got, deps){
+  const row = got.row, id = row.id, seat = req.seat;
+  if((seat !== 0 && seat !== 1) || !keyEq(req.key, row.hub.keys[seat])) return authFail(row, seat, req.key);
+  if(row.ranked !== true) return no("claim-casual");
+  if(row.over === true || row.result) return no("claim-over");
+  const ck = clockOn(row);
+  if(!ck) return no("claim-idle");
+  if(ck.on === seat) return no("claim-self");
+  const left = forfeitLimit(deps) - clockAge(row, deps);
+  if(left > 0) return no("claim-early", {left});
+  const r0 = rig(id, row, deps);
+  if(waitedOn(r0.hub) !== ck.on) return no("claim-idle");          /* the stamp is old news: the game is not waiting on that seat now */
+  const loser = ck.on;
+  row.forfeit = {loser};
+  let pushed = [[], []], reply = [], hub = r0.hub;
+  if(row.hub.spec){
+    const c = concedeAs(id, row, deps, loser);
+    if(!c) return no("internal");
+    hub = c.r.hub; pushed[loser] = c.mine; reply = c.theirs;
+  } else row.over = true;                                          /* the lobby: no game was dealt, the ending is the row's */
+  stampClock(row, hub, loser, deps);
+  return save(id, row, got.version, deps, pushed, reply, {claimed: true}, undefined, ver => settleRow(id, row, ver, deps, hub));
 }
 
 function resync(req, got, deps){
@@ -675,7 +801,7 @@ function resync(req, got, deps){
   return then(frame({op: "frame", table: req.table, seat, key: req.key,
     n: Number.isInteger(req.n) ? req.n : (seat === 0 || seat === 1 ? got.row.nonces[seat] + 1 : 0),
     frame: {ch: Hub.CH.NET, m: {t: "resync", have: req.have | 0, seat, force: req.have == null}}}, got, deps),
-    r => r.ok ? {...r, ...pub(got.row)} : r);
+    r => r.ok ? {...r, ...pub(got.row, deps)} : r);
 }
 
 /* ---- the entry ------------------------------------------------------- */
@@ -687,7 +813,7 @@ function serve(req, deps){
   if(req.op === "recovery-mint") return opMintCode(req, deps);
   if(req.op === "recovery-redeem") return opRedeemCode(req, deps);
   if(typeof req.table !== "string" || !ID_RE.test(req.table)) return no("bad-request");
-  const fn = req.op === "join" ? join : req.op === "frame" ? frame : req.op === "resync" ? resync : null;
+  const fn = req.op === "join" ? join : req.op === "frame" ? frame : req.op === "resync" ? resync : req.op === "claim" ? claim : null;
   if(!fn) return no("bad-request");
   return then(deps.store.get(req.table), got => {
     if(!got || !got.row || got.row.closed === true) return no("no-table");       /* a closed table (S4.4) is gone for both seats */
@@ -713,5 +839,5 @@ function handleNow(req, deps){
   return v;
 }
 
-return {handle, handleNow, topic, OPEN_CAP, ROW_V, ROW_V_CASUAL, ROW_V_RANKED, validateName, nameFold, recoveryNormal, recoveryHash, RECOVERY_DAYS, RECOVERY_CHARS, RECOVERY_LEN};
+return {handle, handleNow, topic, OPEN_CAP, FORFEIT_MS, ROW_V, ROW_V_CASUAL, ROW_V_RANKED, ROW_V_RANKED_4, validateName, nameFold, recoveryNormal, recoveryHash, RECOVERY_DAYS, RECOVERY_CHARS, RECOVERY_LEN};
 });

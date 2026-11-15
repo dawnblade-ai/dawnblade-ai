@@ -70,7 +70,7 @@ async function playedFailures(M){
   if(JSON.stringify(A.ch.rank().ratings) !== "[1300,1200]") bad.push("the opener never learned the joiner's rating: " + JSON.stringify(A.ch.rank()));
   if(!A.sess || A.sess.status() !== "ready") return bad.concat("the game did not start");
   const row = w.world.row(A.code);
-  if(row.v !== 4 || row.ranked !== true) bad.push("the table is not a ranked row");
+  if(row.v !== 5 || row.ranked !== true) bad.push("the table is not a ranked row");
   /* seat 1 (the joiner) concedes: the favourite (1300) wins -> 1312 / 1188 */
   B.sess.submit({t: "concede"});
   await w.world.settle([A.ch, B.ch]);
