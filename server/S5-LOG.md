@@ -45,3 +45,87 @@ Existing drills touched: `serverid.test.js` row-version drill (v5 is now the ref
 - Page: a Friendly/Ranked switch (default Friendly), "Open a ranked table", Ranked chip + ratings in the lobby line, ratings beside names on the board and "ranked" on the pane flag, rating and record on the chooser and name sheet, "Your rating rose from 1300 → 1312 (+12)" on the end screen (RankChange), refusal sentences (ranked-name, ranked-signin, identity), refusals scrolled into view. `tools/serverpage.js`: 195 passed, 0 failed (3 ranked phases). Page sabotage (rating dropped from the board, end-screen change removed) -> 7 FAILs, restored. The existing `me`-count assertion now counts saves (a name field); reads are new.
 - livecheck (f): lightest ranked check with the phones' own sign-ins (me rating 1200; nameless ranked create refused; named ranked create accepted; anonymous join refused; host join says ranked; close). WRITTEN BUT UNRUN on live.
 - APP_VER 6.32, WIRE_V 40 and DATA_VER unchanged (no wire payload, prompt or game key changed). slicecensus stylesheet repin 71,449 -> 72,329 with a note. npm test: 4286 tests, 4280+ pass; the one failure was that repin (fixed, rerun 6/6); skipped 5. scenes 107/0; fairness exit 0. Both babel blocks compile.
+
+---
+
+# SERVER S5.2 — running log (same branch, on v6.32) — ranked integrity: the forfeit clock. OFFLINE ONLY: nothing pushed, deployed or run on the project.
+
+Scope: the three gaps S5.1 recorded. SQL 001-006 are run on the live project and untouched; new SQL is `007_forfeit.sql`.
+
+## What "started" means (Gap 1)
+STARTED = the match has been DEALT: the stored row holds the spec (`row.hub.spec`), which only happens when both players are seated and the who-goes-first lobby (heroes, throws,
+seat choice, sideboards, seed) is finished, and the game is not over. It is read from the row, never from a phone. `close` by the creator:
+- ranked, started, undecided, creator holds a chair: the function CONCEDES for the creator's seat through the hub's own seat and the reducer's `concede` (exactly the board's Concede
+  button: `how:"concession"`, the closer the loser), saves, records. The table is NOT closed over it: it is over with a result, so the other phone reads the ending (a push and `result`),
+  a decided game is never erased, and closing again is `{ok:true}` and writes nothing. The answer is `{ok:true, conceded:true, result}`.
+- ranked, not started (lobby, or empty): free, `closed`, records nothing (as before); a creator who holds no chair (never sat) also closes free;
+- a decided, unrecorded game: recorded first (S5.1), unchanged; casual tables: byte for byte unchanged (the casual close line and its sabotage anchors were left untouched).
+The page says it BEFORE the confirm: the cap list's Close now asks first ("Closing now counts as a loss if table X is a ranked table with a game under way: it ends the game for both of
+you, your opponent takes the win, and your rating moves. A ranked table that has not started yet, and any friendly table, closes without a trace.") with "Yes, close it" / "Keep it".
+There is no other close button in the page (the board has Concede); the page cannot tell which listed table is ranked or started (codes only), so the sentence is conditional.
+
+## The clock (Gap 2)
+- THE ONE LIMIT: `FORFEIT_MS = 5 * 60 * 1000` in `server/referee.js`, once (a drill counts the literal). `deps.forfeitMs` replaces it (the drills' injected clock). The page and the phone's
+  channel never restate it: the function tells each phone `limit` with the clock. A placeholder the user may rule on.
+- THE STAMP lives in the row: `row.clock = {on: seat, since: server ms}` (ranked rows only; `deps.now` is `Date.now()` in the real function). It is rewritten after every saved frame by
+  `stampClock`: the wait restarts (`since = now`) when the waited-on seat moves ("any accepted move by that player restarts it") or when the wait changes seat; a move by the OTHER seat
+  (declaring defenders) leaves it running; reads (resync, join), refused and stale frames write nothing and cannot move it.
+- WHO IS WAITED ON: `judge.waitingOn(fullGame)` (engine/judge.js, new, READ-ONLY, ~10 lines; exported; no rule changed): a pending cost or question (`pending.seat`), else a live sheet
+  (`prompt.side`), else the end-phase arsenal choice (`arsenalFor`), else the priority holder (`priority.holder`). NOT guessed from whose turn it is: the drill plays a whole game and
+  asserts that at every step the seat it names is the seat that then acts (declaring defenders excepted), and that a turn-based guess fails the same drill. Before the deal, the
+  who-goes-first lobby: `lobby.waitingOn`, and only once BOTH heroes are chosen; a seat is waited on when it alone owes the step (seal or open of a throw, the seat choice, the
+  sideboard, the seed answer).
+- NO CLOCK runs when: the game is over; priority is null with no pending question, sheet or arsenal choice (the engine walks on by itself: start/end phases, the close step); the lobby is
+  still choosing heroes (a table where somebody sat down and never picked is not a game: it ages out); both seats owe the lobby step (both unsealed, both unopened, both without a
+  sideboard) - a wait on both is a wait on neither. (In the defend step the engine waits on the turn-player, who holds priority (CR 7.3.3), while the defender declares; the clock is on the
+  priority holder. If the attacker's phone is present it passes at once; see the questions below.)
+- THE CLAIM: `{op:"claim", table, seat, key}` (the claimant's own seat key, as a frame). The function re-reads its own row and rehydrates the hub, and checks IN THIS ORDER:
+  key (`auth`, and `bad-request`/`no-table`/`wire` as for any op), ranked (`claim-casual`: "Only ranked tables have a forfeit clock."), not over/decided (`claim-over`: "That game has already
+  finished."), a clock is running (`claim-idle`: "The game is not waiting on them any more."), the claimant is not the waited-on seat (`claim-self`: "The game is waiting on you, so
+  there is nothing to claim."), the stamp is older than the limit by the SERVER's clock (`claim-early` + `left` ms: "Not quite yet - they still have a little time."), and the hub's own
+  `waitingOn` STILL names the stamped seat (else `claim-idle`: the stamp is old news). Each refusal writes nothing, pushes nothing, records nothing (drilled by byte-comparing the row,
+  its version, the pushes and the rating backend). A due claim makes the absent seat concede through the reducer (the other phone is pushed the ending like any move), marks the row
+  `over` + `forfeit:{loser}`, saves under the version check and records `how:"forfeit"`, winner = the claimant. Answer `{ok:true, claimed:true, frames, result}`.
+- A claim before the match was dealt (the lobby clock) has no game to end: the row is marked over with the forfeit, nothing is dealt, the result is recorded with the lobby's heroes and 0
+  turns; a late lobby frame from the absent player then changes nothing (it reads the ending).
+- THE RACE with the absent player's late move: both read the row at version v and both write with `put(row, v)`; the store's compare-and-set lets exactly one through; the loser is
+  `conflict` (retry:true) and, asked again, meets the truth: a claim after the move wins meets `claim-early`/`claim-idle`; a move after the claim wins meets "the game is over". Drilled both
+  orders with a lagged store (both requests read before either writes); the sabotage (a store that ignores the version) lets both win and is seen. No new SQL is involved: the version check
+  is `table_put` of 001, already proven on real Postgres in S4.4's race script. (A claim and a move are the same kind of write; `sql-race.sh` was NOT re-run for 007 because 007 adds no race claim.)
+- WHAT THE PHONES SEE: the clock rides to each seat as a SEALED frame of its own (`{ch:"clock", m:{on, age, limit}}`, inside the push's seal, so a listener on the public channel cannot
+  forge it; a phone that does not know the channel skips it) and as `clock:{on, age, limit}` in every join/resync answer of a ranked table. `age` is the server's count; the phone adds only
+  the time elapsed on its own clock since it heard (`channel.clock().left`). The waited-on phone shows a calm countdown only in the last two minutes; the waiting phone is told after a
+  minute of waiting how long until it may claim, and gets "Claim the win" only when the countdown is out. NOTHING that reveals what is being decided: only that the game waits on a seat,
+  which both seats' views already show (`pending`, `priority` and a sheet's `side` are public; the sheet's cards are not and are not sent).
+- AGES OUT: a ranked game that neither player finishes nor claims is not recorded by anything: the row is forgotten 48 hours after its last write (`table_put`/`table_create_capped`
+  sweep), and until then it counts as an open table for its creator (cap). A drill asserts a quiet ranked table never calls `record` from reads. (Also: a creator who closes it is a loss.)
+
+## Gap 3 - recovery and ratings (007_forfeit.sql)
+RULE CHOSEN: a throwaway player with a RANKED FOOTPRINT (a rated game, a `results` row naming it, or a seat at an unfinished ranked table) is KEPT, ORPHANED BUT INTACT after the redeem:
+row, rating, record and results stay; its display name is freed; its unused recovery codes are deleted; no sign-in points at it. The recovered player's rating and record are never
+written. A throwaway with no footprint is deleted exactly as in v6.30. The redeem itself is never refused for this.
+WHY NOT the alternatives: DELETE (v6.32) loses real rating history and, worse, makes an unfinished ranked game unrecordable (`result_record` needs both players to exist), so leaving a
+lost game by recovering away would dodge it. MERGE would let one player's record flow into another's. REFUSE strands the rightful owner of a lost phone for good once the new phone
+played a single ranked game, with no in-app way to "choose". Orphan-intact changes nobody's rating, leaves the opponent's result standing and the game recordable; the price is a dormant row.
+A player can already make a fresh anonymous player at will (no sybil defence exists), so keeping the orphan hands out nothing new. 007 REPLACES `recovery_redeem` (004) with a body identical
+except for the delete branch; 004's self-check expectations (a throwaway without a footprint is deleted, its name freed) still hold and 007's self-check re-asserts them.
+CAUTION: re-running 004 or 006 after 007 puts the old bodies back: run 007 again.
+007 also widens `results.how` to include 'forfeit' (constraint re-added) and REPLACES `result_record` with 006's body whose only change is that list; a forfeit still names a winner.
+PGlite: 001..007 each twice -> `ok` (`dawnblade_forfeit`); 14 sabotages (`tools/sql-sab-007.js`) each caught: table constraint not widened, function still refuses forfeit, a forfeit with no
+winner accepted, no idempotency, a player lock lost, every throwaway deleted, the unfinished-table footprint ignored, a finished table counted as a footprint, ratings/results ignored,
+the orphan keeps its name, keeps its codes, is merged into the recovered player, a footprint refuses the redeem instead, anon may redeem. anon refused on everything as before.
+
+## Wire, rows, versions
+- `WIRE_V` is UNCHANGED (40): no game state, snapshot, prompt or game key changed; the clock is transport (a new push frame channel, a new answer key) and the claim is a new request op.
+  An old page ignores the unknown frame channel (its `ingest` skips what it does not know) - and a page of another build is refused at the handshake anyway.
+- Ranked rows are now v5 (clock, forfeit); v4 ranked rows (made by v6.32) are still READ and get a clock at their next saved move; a v6.32 function refuses v5 as `wire` (rollback cannot play a
+  ranked game without its clock). Casual rows: untouched (v2/v3), no clock key, no forfeit key, no clock frame (drilled).
+- `DATA_VER` unchanged.
+
+## Drills and proof (offline)
+test/serverforfeit.test.js (24): reader honest through a whole game + a turn-guess fails; the stamp (restart on own move, not on the other's, not on reads) including through a whole game; every
+refusal changes nothing; a due claim records ONE forfeit with the exact Elo move, both phones read it, repeats and a late move change nothing; the lobby claim; the race both orders; close
+(concession, free before start, casual unchanged); privacy (ids, tokens, keys in every new answer/push/summary; every answer key public; the clock frame sealed, casual has none); the limit
+in one place; ageing out; the recovery rule through the function's ops on the fakes. test/serverforfeitphone.test.js (6): the phone's countdown (server age + its own elapsed time), claimWin,
+closeTable. Each has a sabotage that fails it (confirmed). Existing drills adapted: serverranked (row v5; (6) is now "close is a concession"), serverrankedphone (v5), serverid (row versions),
+the shared fakes accept the forfeit ending.
