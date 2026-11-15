@@ -976,6 +976,142 @@ async function toServerChooser(page){
     A0.ch.close(); B.ch.close(); await k.kit.close();
   }
 
+  /* ---- S5.3: THE LADDER, ON THE PAGE (each phase its own page and world; the ladder backend behaves like 008_ladder.sql) ----
+     Asserted on element boxes and text, at 393 wide and at 320, with 16-letter names and four-digit ratings. */
+  const ladderKit = async (label, o) => {
+    o = o || {};
+    const kit = await open({ w: o.w || W, h: o.h || H }), pg = kit.page;
+    const wd = makeWorld({ seedKey: "ladder-" + label });
+    await wire(pg, wd);
+    const idp = F.memIdentity(), rat = F.withRatings(), lad = F.withLadder(rat, idp);
+    wd.deps.identify = t => idp.identify(t); wd.deps.rename = (pl, n, f) => idp.rename(pl, n, f); Object.assign(wd.deps, rat.deps(), lad.deps());
+    const seed = (id, name, rating, games) => { const tok = idp.issue(id); if(name) idp.rename(id, name, wd.server.nameFold(name)); if(rating !== undefined) rat.rt.set(id, { rating, games, wins: games, losses: 0, draws: 0 }); return tok; };
+    const tokMe = seed("P-lad-me", o.me === undefined ? "Dawn Smith" : o.me, o.meRating, o.meGames);
+    if(o.crowd) for(const [id, nm, r, g] of [["c1", "Abcdefghijklmnop", 1842, 12], ["c2", "WWWWWWWWWWWWWWWW", 1790, 9], ["c3", "Mmmmmmmmmmmmmmmm", 1502, 4], ["c4", "Iiiiiiiiiiiiiiii", 1500, 4], ["c5", "Zed Zed", 1311, 3], ["c6", "Quick Brown Fox", 1203, 7]]) seed(id, nm, r, g);
+    if(o.games){ for(const [id, nm] of [["r1", "Rec One"], ["r2", "Rec Two"], ["r3", "Rec Three"], ["r4", "Rec Four"], ["r5", "Rec Five"], ["r6", "Rec Six"]]) seed(id, nm);     /* three games between three pairs: nobody reaches the floor */
+      const g = (n, a, b, winner, how, heroes, ago) => rat.record({ game: "LG" + n, table: "LT" + n, players: ["r" + a, "r" + b], names: ["Rec " + ["", "One", "Two", "Three", "Four", "Five", "Six"][a], "Rec " + ["", "One", "Two", "Three", "Four", "Five", "Six"][b]], heroes, winner, how, turns: 5, build: null, started: 0, ended: Date.now() - ago });
+      g(1, 1, 2, 0, "life", ["kayo", "dash"], 2 * 86400000); g(2, 3, 4, null, "stalemate", ["bravo", "katsu"], 3 * 3600000); g(3, 5, 6, 1, "concession", ["viserai", "dorinthea"], 5 * 60000); }
+    const shim = "window.__dawnServerIdentity = {token: () => Promise.resolve(" + JSON.stringify(tokMe) + ")" + (o.known === false ? ", known: () => false" : "") + "};";
+    await pg.addInitScript(shim); await pg.evaluate(shim);
+    await pg.evaluate(() => { window.SERVER_TABLE.on = true; });
+    return { kit, pg, wd, rat, lad, idp, tokMe, W: o.w || W };
+  };
+  const ladderOpen = async (pg, how) => {
+    await click(pg, btn(pg, /^Find an opponent/), "find an opponent"); await pg.waitForSelector(".tblwrap");
+    if(how === "first") await click(pg, pg.locator('[data-testid="ladder-open"]'), "the ladder (first screen)");
+    else {
+      await click(pg, btn(pg, /^Join a server table/), "join a server table"); await pg.waitForSelector(".tblwrap button:has-text('Open a server table')");
+      if(how === "name"){ await click(pg, btn(pg, /^(Change|Choose a name)/), "player name"); await pg.waitForSelector(".tblname"); }
+      await click(pg, pg.locator('[data-testid="ladder-open"]'), "the ladder (" + how + ")");
+    }
+    await pg.waitForFunction(() => !document.querySelector('[data-testid="ladder-loading"]') && /The ladder/.test(document.body.innerText), null, { timeout: 8000 }).catch(() => {});
+  };
+  const ladFits = async (pg, w, name) => {
+    const m = await pg.evaluate(() => ({ sw: document.scrollingElement.scrollWidth,
+      rows: [...document.querySelectorAll('[data-testid="ladder-row"]')].map(r => { const b = r.getBoundingClientRect(), n = r.querySelector(".ladnm"), t = r.querySelector(".ladrt"), nb = n.getBoundingClientRect(), tb = t.getBoundingClientRect();
+        return { x: Math.round(b.left), r: Math.round(b.right), nameCut: n.scrollWidth > n.clientWidth + 1, nr: Math.round(nb.right), tl: Math.round(tb.left), tr: Math.round(tb.right), txt: n.innerText.split("\n")[0], rt: t.innerText }; }),
+      games: [...document.querySelectorAll('[data-testid="ladder-game"]')].map(g => { const b = g.getBoundingClientRect(); return { x: Math.round(b.left), r: Math.round(b.right) }; }),
+      cards: [...document.querySelectorAll(".tblwrap > *")].map(c => { const b = c.getBoundingClientRect(); return { x: Math.round(b.left), r: Math.round(b.right) }; }) }));
+    row(m.sw <= w, name + ": no horizontal overflow", "scrollWidth " + m.sw + " of " + w);
+    row(m.rows.length > 0 && m.rows.every(r => r.x >= 0 && r.r <= w && !r.nameCut && r.nr <= r.tl && r.tr <= r.r), name + ": every row is inside the screen, no name is cut, and the name never runs under the rating", m.rows.map(r => r.txt + " " + r.rt).join(" | "));
+    row(m.games.every(g => g.x >= 0 && g.r <= w) && m.cards.every(c => c.x >= 0 && c.r <= w), name + ": the latest games and every card are inside the screen");
+  };
+  const ladText = async pg => (await boxes(pg, ".tblwrap")).map(b => b.t).join(" ");
+  const ladJargon = t => !/undefined|NaN|\bnull\b|refused|bad-request|unavailable|identity|ladder_get|\bop\b|\bv6\.|player id|toGo|\bwinner\b|stalemate|concession/i.test(t);
+
+  /* L1: a crowd, the page's player ranked third; long names and four-digit ratings at 393 AND at 320 */
+  for(const [w, h] of [[W, H], [320, 568]]) {
+    const k = await ladderKit("crowd" + w, { w, h, crowd: true, games: true, meRating: 1655, meGames: 5 }), pg = k.pg;
+    await ladderOpen(pg, "first");
+    const rowsT = await boxes(pg, '[data-testid="ladder-row"]');
+    row(rowsT.length === 7, "ladder " + w + ": seven players are listed (everyone with three games or more, nobody with one)", rowsT.length + " rows");
+    row(/^1 Abcdefghijklmnop.*1842$/.test(rowsT[0].t) && /^2 WWWWWWWWWWWWWWWW.*1790$/.test(rowsT[1].t) && /^3 Dawn Smith.*1655$/.test(rowsT[2].t) && /^4 Mmmmmmmmmmmmmmmm.*1502$/.test(rowsT[3].t) && /^5 Iiiiiiiiiiiiiiii.*1500$/.test(rowsT[4].t),
+        "ladder " + w + ": the order is rating first (1842, 1790, 1655, 1502, 1500), then the lower ranks", rowsT.map(r => r.t).join(" | ").slice(0, 300));
+    const mine = await boxes(pg, '[data-testid="ladder-row"].me');
+    row(mine.length === 1 && /Dawn Smith/.test(mine[0].t), "ladder " + w + ": exactly one row is the caller's, highlighted");
+    const you = await boxes(pg, '[data-testid="ladder-you"]');
+    row(you.length === 1 && /You are number 3 on the ladder with a rating of 1655: 5 won, 0 lost, 0 drawn\./.test(you[0].t) && you[0].r <= w, "ladder " + w + ": the caller's own line says where they stand", you[0] && you[0].t);
+    await ladFits(pg, w, "ladder " + w);
+    const rec = await boxes(pg, '[data-testid="ladder-game"]');
+    row(rec.length === 3 && /^Rec Six \(Dorinthea\) beat Rec Five \(Viserai\) conceded · 5 min ago$/.test(rec[0].t) && /^Rec Three \(Bravo\) and Rec Four \(Katsu\) drew draw · 3 hours ago$/.test(rec[1].t) && /^Rec One \(Kayo\) beat Rec Two \(Dash\) won · 2 days ago$/.test(rec[2].t),
+        "ladder " + w + ": the latest games read in plain words (who beat whom with which hero, how it ended, when), newest first", rec.map(r => r.t).join(" | ").slice(0, 400));
+    const full = await ladText(pg);
+    row(ladJargon(full) && /fan-made ladder, for fun and glory: no ads, no prizes, free forever/.test(full), "ladder " + w + ": no identifier, field name or version number in the words, and the mission line is there");
+    /* rows do nothing, so they are not controls: no button, link or tab stop inside the list, and tapping a row changes nothing */
+    const ctl = await pg.evaluate(() => document.querySelectorAll('[data-testid="ladder-board"] button, [data-testid="ladder-board"] a, [data-testid="ladder-board"] [tabindex], [data-testid="ladder-board"] [role="button"], [data-testid="ladder-recent"] button').length + [...document.querySelectorAll('[data-testid="ladder-row"]')].filter(r => getComputedStyle(r).cursor === "pointer").length);
+    const before = await text(pg); await pg.locator('[data-testid="ladder-row"]').first().click(); await wait(150);
+    row(ctl === 0 && (await text(pg)) === before, "ladder " + w + ": the rows are not controls (no button, link, tab stop or pointer), and tapping one changes nothing");
+    const reads = k.lad.reads;
+    row(reads === 1 && k.lad.last.player !== null, "ladder " + w + ": opening it was one read of the backend, with the caller's line asked for", reads + " reads");
+    await thumbs(pg, "ladder " + w, ".tblwrap");
+    await click(pg, btn(pg, /^Back/), "back from the ladder"); await pg.waitForSelector('[data-testid="ladder-open"]');
+    row(/One of you opens a table/.test(await text(pg)), "ladder " + w + ": Back from the ladder returns to the first screen it was opened from");
+    const bad = k.kit.errors.filter(e => !/404|Failed to load resource/.test(e));
+    row(bad.length === 0 && k.wd.errors.length === 0, "ladder " + w + ": no page error and no internal error on the fake server", bad.concat(k.wd.errors).join(" | ").slice(0, 200));
+    await k.kit.close();
+  }
+  /* L2: the empty ladder, and the caller who has not played */
+  {
+    const k = await ladderKit("empty", {}), pg = k.pg;
+    await ladderOpen(pg, "srv");
+    const em = await boxes(pg, '[data-testid="ladder-empty"]');
+    row(em.length === 1 && em[0].t === "No one is on the ladder yet. Be the first: play three ranked games." && (await boxes(pg, '[data-testid="ladder-row"]')).length === 0, "empty ladder: the honest empty state, and no rows", em[0] && em[0].t);
+    const you = await boxes(pg, '[data-testid="ladder-you"]');
+    row(you.length === 1 && /Your rating is 1200\. 3 more ranked games and you are on the ladder\./.test(you[0].t), "empty ladder: a caller with no games is told how many more it takes", you[0] && you[0].t);
+    row((await boxes(pg, '[data-testid="ladder-recent"]')).length === 0, "empty ladder: no 'latest games' card with nothing in it");
+    row(await overflow(pg), "empty ladder: no horizontal overflow");
+    await click(pg, btn(pg, /^Back/), "back from the ladder"); await pg.waitForSelector(".tblwrap button:has-text('Open a server table')");
+    row((await boxes(pg, ".tblwrap button")).some(b => /^open a server table/i.test(b.t)), "ladder from the server table screen: Back returns to it");
+    await k.kit.close();
+  }
+  /* L3: one game played, two to go; from the name sheet; Back returns to the name sheet */
+  {
+    const k = await ladderKit("two", { crowd: false, meRating: 1216, meGames: 1 }), pg = k.pg;
+    await ladderOpen(pg, "name");
+    const you = await boxes(pg, '[data-testid="ladder-you"]');
+    row(you.length === 1 && /Your rating is 1216 after 1 ranked game\. 2 more ranked games and you are on the ladder\./.test(you[0].t), "provisional: one game played, two to go, said in words", you[0] && you[0].t);
+    await click(pg, btn(pg, /^Back/), "back from the ladder"); await pg.waitForSelector(".tblname");
+    row(await pg.evaluate(() => /Your player name/.test(document.body.innerText)), "ladder from the name sheet: Back returns to the name sheet");
+    await k.kit.close();
+  }
+  /* L4: failure and retry */
+  {
+    const k = await ladderKit("fail", { crowd: true, meRating: 1655, meGames: 5 }), pg = k.pg;
+    k.wd.fault.dead(true);
+    await ladderOpen(pg, "first");
+    await pg.waitForSelector('[data-testid="ladder-fail"]', { timeout: 8000 }).catch(() => {});
+    const f = await boxes(pg, '[data-testid="ladder-fail"]');
+    row(f.length === 1 && /The ladder is not answering right now\. Check your connection, then try again\./.test(f[0].t) && f[0].r <= W && ladJargon(f[0].t), "ladder failure: a plain sentence and a way to try again", f[0] && f[0].t);
+    await thumbs(pg, "ladder failure", '[data-testid="ladder-fail"]');
+    k.wd.fault.dead(false);
+    await click(pg, btn(pg, /^Try again/), "try again");
+    await pg.waitForSelector('[data-testid="ladder-row"]', { timeout: 8000 }).catch(() => {});
+    row((await boxes(pg, '[data-testid="ladder-row"]')).length >= 5 && (await boxes(pg, '[data-testid="ladder-fail"]')).length === 0, "ladder failure: Try again reads the ladder and the failure is gone");
+    await k.kit.close();
+  }
+  /* L5: a phone with no sign-in reads the public list, is never signed in by looking, and is told what it takes */
+  {
+    const k = await ladderKit("anon", { crowd: true, known: false }), pg = k.pg;
+    const calls0 = k.idp.calls;
+    await ladderOpen(pg, "first");
+    const sent = await pg.evaluate(() => window.__srvPosted || null);
+    row((await boxes(pg, '[data-testid="ladder-row"]')).length >= 5 && (await boxes(pg, '[data-testid="ladder-you"]')).length === 0, "anonymous: the public list shows with no caller's line");
+    const anon = await boxes(pg, '[data-testid="ladder-anon"]');
+    row(anon.length === 1 && /Open a ranked table to get a place here: a player name, then 3 ranked games\./.test(anon[0].t), "anonymous: a one-line way in", anon[0] && anon[0].t);
+    row(k.lad.reads === 1 && k.lad.last.player === null && k.idp.calls === calls0, "anonymous: no identity was sent and the sign-in provider was never asked", JSON.stringify(k.lad.last));
+    row(!k.wd.outbound.some(e => /"op":"ladder"/.test(e.text) && /identity/.test(e.text)), "anonymous: the request on the wire carried no sign-in");
+    void sent;
+    await k.kit.close();
+  }
+  /* L6: a listed caller below the player, a nameless caller with games */
+  {
+    const k = await ladderKit("nameless", { me: null, meRating: 1500, meGames: 7 }), pg = k.pg;
+    await ladderOpen(pg, "srv");
+    const you = await boxes(pg, '[data-testid="ladder-you"]');
+    row(you.length === 1 && /You have played 7 ranked games\. Choose a player name and you are on the ladder\./.test(you[0].t) && (await boxes(pg, '[data-testid="ladder-row"]')).length === 0, "nameless: games but no name is told to choose a name, and is not listed", you[0] && you[0].t);
+    await k.kit.close();
+  }
+
   const fail = rows.filter(r => !r.ok).length;
   console.log(`\n${rows.length - fail} passed, ${fail} failed in ${((Date.now() - t0) / 1000).toFixed(0)}s`);
   process.exit(fail ? 1 : 0);

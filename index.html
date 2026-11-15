@@ -817,6 +817,20 @@ img{display:block;max-width:100%}
 .ffbar button{display:block;margin-top:8px;min-height:44px;padding:8px 14px;background:none;border:1px solid var(--y);color:var(--y);font-size:14px}
 .ffbar button:disabled{opacity:.5}
 .ffbar .note{margin-top:6px}
+.ladnote{margin:0;font-size:12.5px;line-height:1.45;color:var(--bone-dim)}
+.ladyou{font-size:14px;line-height:1.45;padding:10px 12px;border:1px solid var(--y);background:rgba(232,179,60,.08);color:var(--bone);overflow-wrap:anywhere}
+.ladyou strong{color:var(--y)}
+.ladlist{list-style:none;margin:0;padding:0}
+.ladrow{display:grid;grid-template-columns:30px minmax(0,1fr) auto;align-items:center;gap:8px;padding:8px 6px;min-height:44px;border-top:1px solid var(--line)}
+.ladrow:first-child{border-top:0}
+.ladrow.me{background:rgba(232,179,60,.12);box-shadow:inset 3px 0 0 var(--y)}
+.ladrk{font-family:'Spline Sans Mono',monospace;font-size:13px;color:var(--bone-dim);text-align:right}
+.ladnm{min-width:0;overflow-wrap:anywhere;font-size:15px;line-height:1.25;color:var(--bone)}
+.ladnm small{display:block;margin-top:2px;font-size:11.5px;color:var(--bone-dim);font-family:'Spline Sans Mono',monospace}
+.ladrt{font-family:'Spline Sans Mono',monospace;font-size:17px;color:var(--y);text-align:right;min-width:3.4em}
+.ladgame{padding:8px 0;border-top:1px solid var(--line);font-size:13.5px;line-height:1.4;color:var(--bone);overflow-wrap:anywhere}
+.ladgame:first-child{border-top:0}
+.ladgame small{display:block;font-size:11.5px;color:var(--bone-dim)}
 .heromid .pname .prate{color:var(--y);font-family:'Spline Sans Mono',monospace}
 .heromid{min-width:0}
 .heromid .pname{max-width:100%;font-size:10px;line-height:1.15;letter-spacing:.02em;color:var(--bone-dim);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -7024,6 +7038,61 @@ function Pregame({h, seed, onSeated, onBack}){
    because `open`, `reduce`, `legal` and `hash` are far too generic to
    own as globals. test/sync.test.js pins that.
    ============================================================ */
+/* THE LADDER (SERVER S5.3): the public standings of ranked server tables, and the last few games. Readable by anyone; it never signs a phone in (the caller's own
+   line is asked for only when `who` says this phone already has a sign-in). The rows are plain text: nothing here is tappable because nothing here does anything. */
+const LAD_END = {life:"won", concession:"conceded", forfeit:"forfeit", stalemate:"draw"};
+const ladHero = k => { const h = HEROES.find(x=>x.k===k); return h ? h.n.split(",")[0] : String(k||"").replace(/^./,c=>c.toUpperCase()); };
+const ladAgo = at => { const m = Math.floor(Math.max(0, Date.now()-at)/60000); if(m<1) return "just now"; if(m<60) return m+" min ago"; const h = Math.floor(m/60); if(h<48) return h+(h===1?" hour ago":" hours ago"); return Math.floor(h/24)+" days ago"; };
+function SrvLadder({wire, who}){
+  const [st,setSt] = uS({s:"loading"});
+  const tick = uR(0), alive = uR(true);
+  uE(()=>()=>{ alive.current = false; },[]);
+  const load = () => {
+    const n = ++tick.current; setSt({s:"loading"});
+    const signedIn = !!who && (typeof who.known!=="function" || who.known());
+    DawnServerTable.ladder({transport: wire(), ...(signedIn ? {identity: who} : {})}).then(r=>{ if(alive.current && n===tick.current) setSt({s:"ok", r}); },
+      ()=>{ if(alive.current && n===tick.current) setSt({s:"fail"}); });
+  };
+  uE(()=>{ load(); },[]);
+  if(st.s==="loading") return <div className="tblstat live" data-testid="ladder-loading"><span className="tbldot"></span>Reading the ladder…</div>;
+  if(st.s==="fail") return <div className="tblcard" data-testid="ladder-fail">
+    <div className="tblerr">The ladder is not answering right now. Check your connection, then try again.</div>
+    <button className="bigbtn" style={{marginTop:10}} onClick={load}>Try again</button>
+  </div>;
+  const {r} = st, you = r.you;
+  const games = n => n+" ranked "+(n===1?"game":"games");
+  return <>
+    <div className="tblcard">
+      <p className="ladnote">Ranked server tables only: a player name and {r.floor} ranked games put you on the list, the best {r.cap} by rating. Friendly tables are never counted. A fan-made ladder, for fun and glory: no ads, no prizes, free forever.</p>
+    </div>
+    {you && <div className="ladyou" data-testid="ladder-you">
+      {you.listed ? <>You are number <strong>{you.rank}</strong> on the ladder with a rating of <strong>{you.rating}</strong>: {you.wins} won, {you.losses} lost, {you.draws} drawn.</>
+        : you.toGo>0 ? <>{you.games===0 ? <>Your rating is <strong>{you.rating}</strong>. </> : <>Your rating is <strong>{you.rating}</strong> after {games(you.games)}. </>}<strong>{you.toGo}</strong> more ranked {you.toGo===1?"game":"games"} and you are on the ladder.</>
+        : <>You have played {games(you.games)}. Choose a player name and you are on the ladder.</>}
+    </div>}
+    {!you && <p className="ladnote" data-testid="ladder-anon">Open a ranked table to get a place here: a player name, then {r.floor} ranked games.</p>}
+    <div className="tblcard" data-testid="ladder-board">
+      <div className="tblgname">The ladder</div>
+      {r.ladder.length===0
+        ? <p className="ladnote" data-testid="ladder-empty" style={{marginTop:8}}>No one is on the ladder yet. Be the first: play {r.floor===3?"three":r.floor} ranked games.</p>
+        : <ol className="ladlist" style={{marginTop:6}}>{r.ladder.map(x=><li key={x.rank} className={"ladrow"+(you && you.listed && you.rank===x.rank ? " me" : "")} data-testid="ladder-row">
+            <span className="ladrk">{x.rank}</span>
+            <span className="ladnm">{x.name}<small>{x.wins} won · {x.losses} lost{x.draws>0 ? " · "+x.draws+" drawn" : ""}</small></span>
+            <span className="ladrt">{x.rating}</span>
+          </li>)}</ol>}
+    </div>
+    {r.recent.length>0 && <div className="tblcard" data-testid="ladder-recent">
+      <div className="tblgname">Latest games</div>
+      <div style={{marginTop:6}}>{r.recent.map((x,i)=>{
+        const a = (x.names[0]||"A player")+" ("+ladHero(x.heroes[0])+")", b = (x.names[1]||"A player")+" ("+ladHero(x.heroes[1])+")";
+        return <div key={i} className="ladgame" data-testid="ladder-game">
+          {x.winner===null ? <>{a} and {b} drew</> : x.winner===0 ? <><strong>{a}</strong> beat {b}</> : <><strong>{b}</strong> beat {a}</>}
+          <small>{LAD_END[x.how]||"played"} · {ladAgo(x.at)}</small>
+        </div>; })}</div>
+    </div>}
+  </>;
+}
+
 function TableScreen({onBack, onSeated}){
   const [mode,setMode] = uS(null);           /* null | "host" | "join" */
   const [code,setCode] = uS("");
@@ -7074,6 +7143,7 @@ function TableScreen({onBack, onSeated}){
      anyone in). */
   const [ranked,setRanked] = uS(false);
   const [hostRanked,setHostRanked] = uS(false);
+  const ladFrom = uR(null);                    /* where the ladder was opened from (the mode Back returns to; null: the first screen) */
   /* a refusal is for the player to read: on a short phone the sentence can fall below the buttons, so it is brought into view */
   const errRef = uR(null);
   uE(()=>{ if(err && errRef.current && errRef.current.scrollIntoView) try{ errRef.current.scrollIntoView({block:"nearest"}); }catch(_){} },[err]);
@@ -7271,7 +7341,8 @@ function TableScreen({onBack, onSeated}){
         {srvOn && <div className="tblgroup">
           <div className="tblgname">Server table</div>
           <p className="tblgnote">Share a code and play, no direct link needed. Works across any network.</p>
-          <div className="tblrow"><button className="bigbtn" onClick={()=>{ setErr(null); setGone(false); setMode("srv"); }}>Join a server table</button></div>
+          <div className="tblrow"><button className="bigbtn" onClick={()=>{ setErr(null); setGone(false); setMode("srv"); }}>Join a server table</button>
+            <button className="bigbtn alt" data-testid="ladder-open" onClick={()=>{ setErr(null); setGone(false); ladFrom.current = null; setMode("srv-ladder"); }}>The ladder</button></div>
         </div>}
         <div className="tblgroup">
           <div className="tblgname">Direct table</div>
@@ -7347,6 +7418,7 @@ function TableScreen({onBack, onSeated}){
           <button className="bigbtn" disabled={busy} onClick={()=>srvSit("create")}>{busy ? (PHRASE[stat]||"…") : ranked ? "Open a ranked table" : "Open a server table"}</button>
           <button className="bigbtn alt" disabled={busy} onClick={()=>{ setCode(""); setMode("srv-join"); }}>Enter a table code</button>
           {srvSaved.map(r=><button key={r.code} className="bigbtn alt" disabled={busy} onClick={()=>{ setCode(r.code); srvSit("reclaim", r.code, r.role); }}>Resume table {r.code}</button>)}
+          <button className="bigbtn alt" disabled={busy} data-testid="ladder-open" onClick={()=>{ setErr(null); ladFrom.current = "srv"; setMode("srv-ladder"); }}>See the ladder</button>
         </>}
         {capNote && <div className="tblok" data-testid="cap-note">{capNote}</div>}
         {capOpen.length>0 && <div className="tblcard" data-testid="cap-open">
@@ -7387,6 +7459,8 @@ function TableScreen({onBack, onSeated}){
         </button>
       </>}
 
+      {mode==="srv-ladder" && <SrvLadder wire={srvWire} who={srvWho}/>}
+
       {mode==="srv-name" && <>
         <div className="tblcard">
           <div className="tblstat">Your player name</div>
@@ -7400,6 +7474,7 @@ function TableScreen({onBack, onSeated}){
             : <>Your rating is <strong>{myRank.rating}</strong>. {myRank.games} ranked {myRank.games===1?"game":"games"}: {myRank.wins} won, {myRank.losses} lost, {myRank.draws} drawn.</>}</p>}
         </div>
         <button className="bigbtn" disabled={busy || Array.from(draft.trim()).length<3} onClick={saveName}>{busy ? "Saving…" : "Save name"}</button>
+        <button className="bigbtn alt" disabled={busy} data-testid="ladder-open" onClick={()=>{ setErr(null); ladFrom.current = "srv-name"; setMode("srv-ladder"); }}>See the ladder</button>
         {recView==="menu" && <div className="tblcard">
           <div className="tblstat">If you lose this phone</div>
           <p className="note">A recovery code brings your name and your seat back on a new phone. No email, no password.</p>
@@ -7467,7 +7542,7 @@ function TableScreen({onBack, onSeated}){
       </>}
 
       {err && <div className="tblerr" ref={errRef}>{err}</div>}
-      {mode && /^srv/.test(mode) ? <button className="bigbtn alt" onClick={mode==="srv-join" || mode==="srv-name" ? ()=>{ recBack(); setMode("srv"); setErr(null); setGone(false); setBusy(false); setCode(""); } : srvLeave}>{mode==="srv-host" ? "Cancel" : "Back"}</button>
+      {mode && /^srv/.test(mode) ? <button className="bigbtn alt" onClick={mode==="srv-ladder" ? ()=>{ setMode(ladFrom.current); setErr(null); } : mode==="srv-join" || mode==="srv-name" ? ()=>{ recBack(); setMode("srv"); setErr(null); setGone(false); setBusy(false); setCode(""); } : srvLeave}>{mode==="srv-host" ? "Cancel" : "Back"}</button>
         : <button className="bigbtn alt" onClick={onBack}>Back</button>}
     </div>
   );
