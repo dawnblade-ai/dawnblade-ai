@@ -136,7 +136,7 @@ function withRatings(o){
     record(x){
       st.records++;
       if(st.failing) throw new Error("the ratings database is down");
-      if(!x || typeof x.game !== "string" || x.players[0] === x.players[1] || !["life", "concession", "stalemate"].includes(x.how) || ((x.how === "stalemate") !== (x.winner === null))) throw new Error("result_record refused this result");
+      if(!x || typeof x.game !== "string" || x.players[0] === x.players[1] || !["life", "concession", "stalemate", "forfeit"].includes(x.how) || ((x.how === "stalemate") !== (x.winner === null))) throw new Error("result_record refused this result");
       const ex = results.get(x.game);
       if(ex && !o.noIdempotent){ st.duplicates++; return {recorded: false, ratings: [{from: ex.b0, to: ex.a0}, {from: ex.b1, to: ex.a1}]}; }
       const r0 = get(x.players[0]), r1 = get(x.players[1]), ra = r0.rating, rb = r1.rating;
