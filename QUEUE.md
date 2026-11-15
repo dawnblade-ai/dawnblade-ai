@@ -9,26 +9,26 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-14, at v6.32)
+## HANDOFF — START HERE (CEO, 2026-11-15, at v6.33)
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
 ### NEW THREAD: READ THIS BLOCK FIRST (written 2026-11-14 by CEO session_013xG9xCQHaLR2DeWf3gSrzu)
-- **State:** live = v6.32 on `main` (a3b597b), livecheck ALL PASS (push 41, fallback 0, median 289 ms, p95 549; recovery
-  redeem; names on both boards; ranked refusals/create/close). Function `table` version 18 = build `v6.32 · sage-v17`,
-  stamped; `--check` OK. SQL 001-006 all RUN on the project. CI `drills` green at v6.30; later runs not read (check them).
-- **v6.32 = S5.1 SHIPPED** (`server/S5-LOG.md`, `docs/progress/v6.32.md`): a creator may open a RANKED table (default
-  Friendly); needs two different signed-in NAMED players (`ranked-signin`, `ranked-name`); row v4; the function alone records
-  one result per game (`006_ratings.sql` `result_record`, idempotent on code+creation time, per-player advisory locks) and
-  moves both Elo ratings (start 1200, K 32, draw 0.5); `me` returns rating + record; ratings in lobby, on the board, and
-  the change on the end screen. Who goes first was ALREADY rock-paper-scissors at every server table. Concede exists and records.
-- **v6.31:** names on the board; 5 open tables per signed-in creator (`005`, `table-cap`, creator-only `{op:"close"}`).
-- **KNOWN RANKED GAPS (told to the user):** a creator can CLOSE a ranked table mid-game and nothing is recorded (dodge);
-  an abandoned ranked game never ends; `recovery_redeem` deletes a throwaway player and its rating cascades away;
-  two friends can trade concessions. No full ranked game has been played on LIVE (drills, Deno rehearsal, page drive only).
-- **IN PROGRESS when this was written:** S5.2 (forfeit clock, close = forfeit once started, rating survives recovery), a sonnet
-  subagent, offline, on the session branch. THEN S5.3 leaderboard.
+- **State:** live = v6.33 on `main` (ac0deea), livecheck ALL PASS (push 41, fallback 0, median 296 ms, p95 375). Function
+  `table` version 20 = build `v6.33 · sage-v17`, stamped; `--check` OK. SQL 001-007 all RUN on the project (re-running 004
+  or 006 restores old function bodies: run 007 again after). CI `drills` green at v6.30; later runs not read (check them).
+- **v6.33 = S5.2 SHIPPED** (`server/S5-LOG.md`, `docs/progress/v6.33.md`): FORFEIT CLOCK, ranked only, claim-based
+  (`FORFEIT_MS` 5 min in `server/referee.js`; `row.clock={on,since}` stamped by the server; `judge.waitingOn` read-only
+  reader; `{op:"claim"}` with refusals claim-casual/over/idle/self/early; race decided by the row version). A creator's
+  CLOSE of a started ranked game = their concession (warning shown first). Recovery keeps a throwaway that has a ranked
+  footprint (orphaned, intact; never merged, never refused). Ranked rows v5 (v4 still read).
+- **v6.32:** ranked tables, `006_ratings.sql`, Elo 1200/K32, results only by the function. **v6.31:** board names, 5-table cap, close.
+- **KNOWN (told to the user):** no full ranked game and no real 5-minute forfeit has been played on LIVE (drills, Deno
+  rehearsal, page drive only; livecheck does refusals/create/close/claim-idle). In the defend step the clock runs on the
+  ATTACKER (CR 7.3.3: the turn player holds priority; they must pass) — asked the user whether to pause it there. Friends can
+  trade concessions. The close warning is conditional (the page does not know which open table is ranked/started).
+- **IN PROGRESS when this was written:** S5.3 leaderboard + a one-off live ranked proof tool, a sonnet subagent, offline.
 - **Subagents hit the 5-hour limit silently (status failed):** work is committed step by step; resume with SendMessage after reset.
 - **v6.30 = S4.3 SHIPPED** (`server/S4-LOG.md`, CHANGELOG, `docs/progress/v6.30.md`): ops `recovery-mint` (code shown once,
   15 chars / 74 bits, only its SHA-256 stored, 730 days, a new code retires the old) and `recovery-redeem` (the new phone's
