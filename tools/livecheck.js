@@ -28,6 +28,12 @@
        forfeit is refused `claim-idle` (no game started, so no clock runs) and a claim with a forged key `auth`. No ranked game is played or recorded on live, so a REAL
        forfeit (five minutes of waiting, a claim, a recorded result) is NOT checked here: it is proven offline only (test/serverforfeit.test.js, the Deno rehearsal,
        tools/serverpage.js).
+   (h) S5.3 (v6.34, UNRUN ON LIVE when written: 008_ladder.sql and the v6.34 function are not deployed yet): the public ladder. Over plain HTTPS with NO sign-in the
+       function answers `{op:"ladder"}` 200 with a well-formed (possibly empty) list: floor 3, cap 50, every row exactly rank/name/rating/games/wins/losses/draws,
+       the recent list's entries exactly names/heroes/winner/how/at, and nothing that looks like an id (the two sign-ins the phones hold are scanned for in the text);
+       the same with the host's sign-in (its own line is well-formed), and with a forged token (still the public list). Then a FRESH phone with no sign-in opens the page's
+       own Ladder screen (Find an opponent, Join a server table, See the ladder) and must read it, and looking must not have signed that phone in. It reads only: it writes
+       and records nothing. (A real ranked game is NOT played here: that is tools/liveranked.js, a separate one-off.)
    Exit 0 only when every check passes; otherwise 1 (and the line that failed says why).
 
    If the live page's switch is closed (SERVER_TABLE.on false: a release before v6.28) both phones are opened with ?server=1.
@@ -35,7 +41,7 @@
    HTTPS_PROXY for the browser and re-runs itself with NODE_USE_ENV_PROXY=1 for Node's own fetches. Zero repo dependencies. */
 "use strict";
 const { spawnSync } = require("child_process");
-if(process.env.HTTPS_PROXY && !process.env.NODE_USE_ENV_PROXY){
+if(require.main === module && process.env.HTTPS_PROXY && !process.env.NODE_USE_ENV_PROXY){
   const r = spawnSync(process.execPath, process.argv.slice(1), { stdio: "inherit", env: { ...process.env, NODE_USE_ENV_PROXY: "1", NODE_NO_WARNINGS: "1" } });
   process.exit(r.status == null ? 1 : r.status);
 }
@@ -43,8 +49,9 @@ const arg = (n, d) => { const i = process.argv.indexOf(n); return i >= 0 ? proce
 const PAGE_URL = arg("--url", "https://dawnblade-ai.github.io/dawnblade-ai/"), N_EACH = +arg("--actions", 20), THR = +arg("--throttle", 1), JSON_OUT = process.argv.includes("--json");
 const wait = ms => new Promise(r => setTimeout(r, ms));
 const pct = (a, p) => { const s = a.filter(x => x != null).sort((x, y) => x - y); return s.length ? Math.round(s[Math.min(s.length - 1, Math.floor(p * s.length))]) : null; };
-let failed = 0; const out = {};
-const row = (ok, name, detail) => { if(!ok) failed++; console.log((ok ? "PASS  " : "FAIL  ") + name + (detail ? "  " + detail : "")); return ok; };
+/* S5.3: the helpers below are SHARED with tools/liveranked.js (one copy): `makeRow` gives a PASS/FAIL printer with its own failure count; this script's own is `row`. */
+const makeRow = () => { const st = { failed: 0 }; return { st, row: (ok, name, detail) => { if(!ok) st.failed++; console.log((ok ? "PASS  " : "FAIL  ") + name + (detail ? "  " + detail : "")); return ok; } }; };
+const R = makeRow(), row = R.row, out = {};
 const fetchT = (u, o) => fetch(u, { ...(o || {}), signal: AbortSignal.timeout(30000) });
 
 /* ---------------- (a) the live page and every script it names ---------------- */
@@ -106,11 +113,52 @@ const LOBBY = ({ role, done }) => {
   return null;
 };
 
+/* ---------------- (h) S5.3: the public ladder, read-only ---------------- */
+const LADDER_ROW = "draws,games,losses,name,rank,rating,wins", LADDER_GAME = "at,heroes,how,names,winner", LADDER_YOU = "draws,games,listed,losses,name,rank,rating,toGo,wins";
+/* the HTTP half, also run offline by tools/supabase-rehearse.js against the Deno-run function (one copy of the checks). `toks`: sign-ins to scan for and to use as "the host". */
+async function ladderOverHttp(cfg, toks, row){
+  const post = functionPost(cfg);
+  const keys = o => Object.keys(o).sort().join();
+  const check = (what, a, tokens) => {
+    const okShape = a && a.ok === true && a.floor === 3 && a.cap === 50 && Array.isArray(a.ladder) && Array.isArray(a.recent) && a.ladder.length <= 50 && a.recent.length <= 10
+      && a.ladder.every((x, i) => keys(x) === LADDER_ROW && x.rank === i + 1 && x.games >= 3 && typeof x.name === "string" && Number.isInteger(x.rating))
+      && a.ladder.every((x, i) => i === 0 || a.ladder[i - 1].rating > x.rating || (a.ladder[i - 1].rating === x.rating && a.ladder[i - 1].games >= x.games))
+      && a.recent.every(x => keys(x) === LADDER_GAME && Array.isArray(x.names) && Array.isArray(x.heroes) && ["life", "concession", "stalemate", "forfeit"].includes(x.how))
+      && (a.you === undefined || keys(a.you) === LADDER_YOU) && Object.keys(a).every(k => ["ok", "floor", "cap", "ladder", "recent", "you"].includes(k));
+    row(okShape, "ladder: " + what + " answers a well-formed list (floor 3, cap 50, public fields only, in order)", okShape ? a.ladder.length + " ranked player(s), " + a.recent.length + " recent game(s)" + (a.you ? ", with its own line" : "") : JSON.stringify(a).slice(0, 160));
+    const hay = JSON.stringify(a); row(!tokens.filter(Boolean).some(t => hay.indexOf(t) >= 0) && !/"(id|player|subject|token|table|game)"/.test(hay), "ladder: " + what + " carries no id, token or table code");
+  };
+  const pub = await post({ op: "ladder" });
+  check("the public read (no sign-in)", pub, toks); row(pub.ok === true && pub.you === undefined, "ladder: with no sign-in there is no line of 'you'");
+  const host = await post({ op: "ladder", identity: { token: toks[0] } });
+  check("the host's read", host, toks); row(host.ok === true && !!host.you && host.you.listed === false && host.you.toGo === 3 && host.you.games === 0, "ladder: the host's own line says no games, three to go", JSON.stringify(host.you));
+  check("a forged token", await post({ op: "ladder", identity: { token: "x".repeat(60) } }), toks);
+  return { pub, host };
+}
+async function ladderLight(cfg, phones, browser, proxy, query){
+  const toks = [];
+  for(const ph of phones) toks.push(await phoneToken(ph.page));
+  await ladderOverHttp(cfg, toks, row);
+  const L = await openPhone(browser, "ladder-viewer", { proxy, query });
+  try {
+    await L.page.getByRole("button", { name: /^Find an opponent/ }).click({ timeout: 60000 }); await L.page.waitForSelector(".tblwrap");
+    await L.page.getByRole("button", { name: /^Join a server table/ }).click({ timeout: 60000 });
+    await L.page.getByRole("button", { name: /^See the ladder/ }).click({ timeout: 60000 });
+    const opened = await L.page.waitForSelector('[data-testid="ladder-board"]', { timeout: 60000 }).then(() => true, () => false);
+    const said = opened ? (await L.page.evaluate(() => document.querySelector(".tblwrap").innerText)).replace(/\s+/g, " ") : "";
+    row(opened && /The ladder/i.test(said) && (/No one is on the ladder yet/.test(said) || sawRows(said)), "ladder: the page's own Ladder screen opens and reads (a list, or the honest empty state)", said.slice(0, 90));
+    const signedIn = await L.page.evaluate(() => !!window.localStorage.getItem("dawnblade.who.id"));
+    row(!signedIn, "ladder: looking at the Ladder did not sign the phone in");
+    row(L.errors.length === 0, "ladder: no page error on the Ladder screen", L.errors.slice(0, 2).join(" | "));
+  } catch(e){ row(false, "ladder: the page's Ladder screen", String(e && e.message || e).split("\n")[0]); }
+  await L.ctx.close().catch(() => {});
+}
+const sawRows = said => /\b1\s+\S+/.test(said) && /won/.test(said);
+
 /* ---------------- (f) S5.1: a ranked table is accepted, refused and closed on live — without playing it ---------------- */
 async function rankedLight(cfg, pages){
-  const tok = pg => pg.evaluate(() => { try { return JSON.parse(window.localStorage.getItem("dawnblade.who.id") || "null").a || null; } catch(_){ return null; } });
+  const tok = phoneToken, post = functionPost(cfg);
   const [named, nameless] = [await tok(pages[0]), await tok(pages[1])];
-  const post = async body => { try { const r = await fetchT(cfg.url + "/functions/v1/" + cfg.fn, { method: "POST", headers: { apikey: cfg.key, "content-type": "application/json" }, body: JSON.stringify(body) }); return await r.json(); } catch(e){ return { ok: false, refused: "network " + (e.cause && e.cause.code || e.message) }; } };
   if(!row(!!named && !!nameless, "ranked: both phones hold a sign-in to check with")) return;
   const me = await post({ op: "me", identity: { token: named } });
   row(me.ok === true && me.rating === 1200 && me.games === 0, "ranked: `me` carries the host player's rating (1200, no ranked games)", JSON.stringify({ rating: me.rating, games: me.games, refused: me.refused }));
@@ -139,23 +187,46 @@ async function rankedLight(cfg, pages){
   row(closed.ok === true && gone.refused === "no-table", "ranked: the host closes the table (nothing was recorded), and it is gone", JSON.stringify({ closed: closed.ok, after: gone.refused }));
 }
 
-async function twoPhones(p, cfg){
-  let pw; try { pw = require("playwright"); } catch(e){ return row(false, "playwright resolves", "set NODE_PATH to a playwright install"); }
+/* ---- shared with tools/liveranked.js: a browser, a phone, and the lobby walked to the board ---- */
+async function launchBrowser(){
+  const pw = require("playwright");
   const proxy = process.env.HTTPS_PROXY;
   const browser = await pw.chromium.launch({ ...(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {}), ...(proxy ? { proxy: { server: proxy } } : {}) });
+  return { browser, proxy };
+}
+/* one fresh phone (its own context, so its own sign-in) on the live page, opened and ready ("N cards" in the top bar) */
+async function openPhone(browser, name, o){
+  o = o || {};
+  const ctx = await browser.newContext({ ...(o.proxy ? { ignoreHTTPSErrors: true } : {}), viewport: { width: 393, height: 852 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const page = await ctx.newPage(), ph = { name, ctx, page, errors: [], consoleErrors: [], done: {} };
+  page.on("pageerror", e => ph.errors.push(String(e && e.message || e).slice(0, 200)));
+  page.on("console", m => { if(m.type() === "error") ph.consoleErrors.push(m.text().slice(0, 200) + (m.location().url ? " @ " + m.location().url.slice(0, 80) : "")); });
+  page.on("dialog", d => { ph.errors.push("dialog: " + d.message()); d.dismiss().catch(() => {}); });
+  await page.addInitScript(RECORD);
+  await page.goto((o.url || PAGE_URL).replace(/\?.*$/, "") + (o.query || ""), { waitUntil: "load", timeout: 120000 });
+  await page.waitForFunction(() => /\d+ cards/.test((document.querySelector(".topbar .tag") || {}).textContent || ""), null, { timeout: 120000 });
+  return ph;
+}
+/* both phones walk the who-goes-first lobby by their own buttons until each has a board; returns the ms it took, or null */
+async function walkLobby(A, B, maxMs){
+  const t0 = Date.now();
+  while(Date.now() - t0 < (maxMs || 150000)){
+    const r = await Promise.all([A, B].map(async (ph, i) => { const x = await ph.page.evaluate(LOBBY, { role: i ? "guest" : "host", done: ph.done }).catch(() => null); if(x && x !== "board" && x !== "throw") ph.done[x] = true; return x; }));
+    if(r[0] === "board" && r[1] === "board") return Date.now() - t0;
+    await wait(250);
+  }
+  return null;
+}
+/* S4.2: the access token a phone holds for its own sign-in (kept in its localStorage under the page's own key) */
+const phoneToken = pg => pg.evaluate(() => { try { return JSON.parse(window.localStorage.getItem("dawnblade.who.id") || "null").a || null; } catch(_){ return null; } });
+const functionPost = cfg => async body => { try { const r = await fetchT(cfg.url + "/functions/v1/" + cfg.fn, { method: "POST", headers: { apikey: cfg.key, "content-type": "application/json" }, body: JSON.stringify(body) }); return await r.json(); } catch(e){ return { ok: false, refused: "network " + (e.cause && e.cause.code || e.message) }; } };
+
+async function twoPhones(p, cfg){
+  let pw; try { pw = require("playwright"); } catch(e){ return row(false, "playwright resolves", "set NODE_PATH to a playwright install"); }
+  const { browser, proxy } = await launchBrowser();
   const closed = p && p.cfg && p.cfg.on !== true, q = closed ? "?server=1" : "";
   const phones = [];
-  const mk = async name => {
-    const ctx = await browser.newContext({ ...(proxy ? { ignoreHTTPSErrors: true } : {}), viewport: { width: 393, height: 852 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
-    const page = await ctx.newPage(), ph = { name, ctx, page, errors: [], consoleErrors: [], done: {} };
-    page.on("pageerror", e => ph.errors.push(String(e && e.message || e).slice(0, 200)));
-    page.on("console", m => { if(m.type() === "error") ph.consoleErrors.push(m.text().slice(0, 200) + (m.location().url ? " @ " + m.location().url.slice(0, 80) : "")); });
-    page.on("dialog", d => { ph.errors.push("dialog: " + d.message()); d.dismiss().catch(() => {}); });
-    await page.addInitScript(RECORD);
-    await page.goto(PAGE_URL.replace(/\?.*$/, "") + q, { waitUntil: "load", timeout: 120000 });
-    await page.waitForFunction(() => /\d+ cards/.test((document.querySelector(".topbar .tag") || {}).textContent || ""), null, { timeout: 120000 });
-    phones.push(ph); return ph;
-  };
+  const mk = async name => { const ph = await openPhone(browser, name, { proxy, query: q }); phones.push(ph); return ph; };
   let seated = false, verdict = "", liveName = null, recCode = null;
   try {
     const A = await mk("host"), B = await mk("guest");
@@ -196,12 +267,7 @@ async function twoPhones(p, cfg){
     for(const ph of phones) signed.push(await ph.page.evaluate(() => { try { const r = JSON.parse(window.localStorage.getItem("dawnblade.who.id") || "null"); return !!(r && typeof r.a === "string" && r.a && typeof r.r === "string" && r.r); } catch(_){ return false; } }));
     row(signed.every(Boolean), "both phones signed in as players (no email, no password)", "host " + (signed[0] ? "yes" : "no") + ", guest " + (signed[1] ? "yes" : "no"));
     /* the lobby, by each phone's own buttons, until both have a board */
-    const t0 = Date.now(); let tb = null;
-    while(Date.now() - t0 < 150000){
-      const r = await Promise.all([A, B].map(async (ph, i) => { const x = await ph.page.evaluate(LOBBY, { role: i ? "guest" : "host", done: ph.done }).catch(() => null); if(x && x !== "board" && x !== "throw") ph.done[x] = true; return x; }));
-      if(r[0] === "board" && r[1] === "board"){ tb = Date.now() - t0; break; }
-      await wait(250);
-    }
+    const tb = await walkLobby(A, B, 150000);
     out.lobbyMs = tb;
     if(!row(tb != null, "both phones reach the board", tb != null ? "lobby walked in " + tb + " ms" : "stuck; host " + JSON.stringify(A.done) + " guest " + JSON.stringify(B.done))) throw new Error("lobby");
     for(const ph of phones) await ph.page.waitForFunction(() => window.__dawnTable && window.__dawnTable.session.state() != null, null, { timeout: 90000 });
@@ -253,6 +319,8 @@ async function twoPhones(p, cfg){
     row(fallback === 0, "every remote move arrived by push", fallback ? fallback + " of " + rows.length + " came by a fallback ask" : "");
     /* S5.1: the lightest honest ranked check, with the sign-ins these two phones already hold (no ranked game is played, no player or name is made) */
     await rankedLight(cfg, phones.map(ph => ph.page));
+    /* S5.3: the public ladder, read-only (it needs the two sign-ins above only to scan for them) */
+    await ladderLight(cfg, phones, browser, proxy, q).catch(e => row(false, "ladder check", String(e && e.message || e).split("\n")[0]));
     /* S4.3: a third, fresh phone redeems seat 0's code and is that player */
     if(recCode){
       const C = await mk("recovered");
@@ -294,14 +362,15 @@ async function twoPhones(p, cfg){
   await browser.close().catch(() => {});
 }
 
-(async () => {
+module.exports = { ladderOverHttp, makeRow, wait, fetchT, RECORD, LOBBY, launchBrowser, openPhone, walkLobby, phoneToken, functionPost, pageAndScripts, health, PAGE_URL };
+if(require.main === module) (async () => {
   const t0 = Date.now();
   console.log("livecheck " + PAGE_URL + "  (" + new Date().toISOString() + ")");
   const p = await pageAndScripts().catch(e => { row(false, "live page fetch", String(e && e.message || e)); return null; });
   const cfg = await health(p).catch(e => { row(false, "function health", String(e && e.message || e)); return null; });
   if(p) await twoPhones({ ...p, cfg: p.cfg }, cfg).catch(e => row(false, "two-phone check", String(e && e.stack || e).split("\n").slice(0, 3).join(" | ")));
   else row(false, "two-phone check", "skipped: no live page");
-  console.log((failed ? "FAILED: " + failed + " check(s)" : "ALL PASS") + "  in " + Math.round((Date.now() - t0) / 1000) + " s");
+  console.log((R.st.failed ? "FAILED: " + R.st.failed + " check(s)" : "ALL PASS") + "  in " + Math.round((Date.now() - t0) / 1000) + " s");
   if(JSON_OUT) console.log("JSON " + JSON.stringify(out));
-  setTimeout(() => process.exit(failed ? 1 : 0), 200);
+  setTimeout(() => process.exit(R.st.failed ? 1 : 0), 200);
 })();
