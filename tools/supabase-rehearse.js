@@ -138,6 +138,7 @@ async function rehearse(label, entry, deno, uid0){
     await rankedPhase(label, base, stub, log, world, build, uid0);
     await forfeitPhase(label, base, stub, log, world, build, uid0);
     await identityPhase(label, base, stub, log);
+    await ladderPhase(label, base, stub, log);
   } finally { child.kill(); await stub.close(); }
 }
 
@@ -374,6 +375,61 @@ async function identityPhase(label, base, stub, log){
   const after = log.join("").split("\n").filter(l => /error|exception|panick/i.test(l));
   row(down.ok === false && down.refused === "internal" && down.text.indexOf("auth is down") < 0 && after.length > logged && after.every(l => l.indexOf(tokB) < 0 && l.indexOf(SUB_B) < 0), label + ": identity: a provider outage is 'internal' (logged for the operator, without the token), not a verdict on the token");
   row(stub.stats.bad.length === 0, label + ": identity: the stub saw no malformed call (the /auth/v1/user headers, identity_resolve's args)", stub.stats.bad.slice(0, 3).join("; "));
+}
+
+/* S5.3: the PUBLIC LADDER through the real function (the stub stands in for 008_ladder.sql's ladder_get: UNVERIFIED against the real SQL over PostgREST). Runs last: it adds
+   players and ratings directly to the stub's store (a ladder of 55, an orphan, a nameless player), reads over plain HTTP with NO sign-in, with a sign-in, with a forged one,
+   and proves the answers well-formed (the very checks tools/livecheck.js runs on live: one copy), ordered, floored, capped, one statement per request, and read-only. */
+async function ladderPhase(label, base, stub, log){
+  const LC = require("./livecheck.js");
+  const cfg = {url: base, key: "sb_publishable_rehearsal", fn: "table"};
+  const R = (ok, name, detail) => row(ok, label + ": " + name, detail);
+  const post = LC.functionPost(cfg), errLines = () => log.join("").split("\n").filter(l => /error|exception|panick/i.test(l)).length, logged0 = errLines();
+  const mkPlayer = (sub, name, rating, games, o) => { const id = "pl-lad-" + sub, o2 = o || {};
+    stub.players.set(id, {id, display_name: name || null, name_fold: name ? name.toLowerCase().replace(/ /g, "") : null});
+    if(!o2.orphan) stub.identities.set("supabase-anon\u0000" + sub, id);
+    if(games !== undefined) stub.ratings.set(id, {rating, games, wins: games, losses: 0, draws: 0});
+    return {id, sub}; };
+  const keyed = (sub) => { const tok = stub.issueUser(sub); return tok; };
+  /* what the earlier phases left, whatever it is, must already be a well-formed ladder */
+  const hostSub = "sub-lad-host", hostTok = keyed(hostSub), hostMe = await post({op: "me", identity: {token: hostTok}, name: "Ladder Host"});
+  R(hostMe.ok === true, "ladder: a player to call with (named through `me`)");
+  const calls0 = stub.stats.ladders || 0;
+  await LC.ladderOverHttp(cfg, [hostTok], R);
+  R((stub.stats.ladders || 0) - calls0 === 3, "ladder: each of the three requests (public, signed in, forged) was exactly ONE ladder_get call (no call per row)", String((stub.stats.ladders || 0) - calls0));
+  /* a ladder of 55 players, and the cases that must not appear */
+  const crowd = []; for(let i = 0; i < 55; i++) crowd.push(mkPlayer("crowd" + i, "Crowd " + String(i).padStart(2, "0"), 1300 + i, 3 + (i % 4)));
+  mkPlayer("prov", "Provisional One", 1900, 2); mkPlayer("nameless", null, 1950, 9); mkPlayer("orphan", "Orphan Rated", 1960, 9, {orphan: true});
+  const two = mkPlayer("tie-a", "Tie Aaa", 1250, 5), tie2 = mkPlayer("tie-b", "Tie Bbb", 1250, 5); void two; void tie2;
+  const nowCalls = stub.stats.ladders;
+  const pub = await post({op: "ladder"});
+  R(pub.ok === true && pub.ladder.length === 50 && pub.cap === 50 && pub.floor === 3, "ladder: 55 players listed, the top 50 are shown (cap 50, floor 3)", String(pub.ladder && pub.ladder.length));
+  R(pub.ladder[0].name === "Crowd 54" && pub.ladder[0].rating === 1354 && pub.ladder.every((x, i) => i === 0 || pub.ladder[i - 1].rating >= x.rating), "ladder: the best is first and the list is in rating order");
+  R(!pub.ladder.some(x => /Provisional One|Orphan Rated/.test(x.name)) && pub.ladder.every(x => x.name && x.games >= 3), "ladder: the provisional, the nameless and the orphan are not listed");
+  const t51 = keyed("sub-lad-fifty-first"); const p51 = mkPlayer("fifty-first", "Fifty First", 1299, 3); void p51;
+  stub.identities.set("supabase-anon\u0000sub-lad-fifty-first", "pl-lad-fifty-first");
+  const lowest = await post({op: "ladder", identity: {token: t51}});
+  R(lowest.ok && lowest.you && lowest.you.listed === true && lowest.you.rank > 50 && lowest.ladder.length === 50 && !lowest.ladder.some(x => x.name === "Fifty First"), "ladder: a listed player below the cap is told their rank and is not in the top 50", JSON.stringify(lowest.you));
+  const provTok = keyed("sub-lad-prov"); stub.identities.set("supabase-anon\u0000sub-lad-prov", "pl-lad-prov");
+  const prov = await post({op: "ladder", identity: {token: provTok}});
+  R(prov.ok && prov.you && prov.you.listed === false && prov.you.toGo === 1 && prov.you.games === 2 && prov.you.rating === 1900, "ladder: a provisional player is told how many games are left", JSON.stringify(prov.you));
+  const orphTok = keyed("sub-lad-orphan");           /* a brand-new sign-in: the function makes it a new, unrated player; the orphan seeded above (no sign-in) is still not listed */
+  const orph = await post({op: "ladder", identity: {token: orphTok}});
+  R(orph.ok && !orph.ladder.some(x => x.name === "Orphan Rated") && orph.you && orph.you.games === 0 && orph.you.toGo === 3 && orph.you.name === null, "ladder: a brand-new sign-in is told it has no name and no games; the orphan is still not listed", JSON.stringify(orph.you));
+  const tieA = await post({op: "ladder", identity: {token: keyed("sub-lad-tie-a")}}); void tieA;
+  const forged = await post({op: "ladder", identity: {token: "x".repeat(80)}}), bad = await post({op: "ladder", identity: "nope"}), pub2 = await post({op: "ladder"});
+  R(forged.ok === true && forged.you === undefined && bad.ok === true && JSON.stringify(forged.ladder) === JSON.stringify(pub2.ladder), "ladder: a forged or malformed identity still gets the public list");
+  const reads = [pub, lowest, prov, orph, forged, bad, pub2];
+  const snap0 = JSON.stringify([stub.rows.size, stub.stats.puts, stub.players.size, stub.ratings.size, stub.results.size, stub.identities.size, stub.stats.records || 0, stub.broadcasts.length, [...stub.ratings.entries()]]);
+  for(let i = 0; i < 5; i++) await post({op: "ladder", identity: {token: hostTok}});
+  R(snap0 === JSON.stringify([stub.rows.size, stub.stats.puts, stub.players.size, stub.ratings.size, stub.results.size, stub.identities.size, stub.stats.records || 0, stub.broadcasts.length, [...stub.ratings.entries()]]) && !stub.ratings.has([...stub.players.values()].find(p => p.display_name === "Ladder Host").id),
+    "ladder: five more reads (signed in, never rated) wrote nothing: no table row, no put, no rating row, no result, no broadcast");
+  R((stub.stats.ladders - nowCalls) >= reads.length, "ladder: every read reached the one ladder_get statement");
+  const hay = JSON.stringify(reads) + JSON.stringify(await post({op: "ladder", identity: {token: hostTok}}));
+  const secretsAll = [...stub.players.keys(), ...[...stub.identities.keys()].map(k => k.split("\u0000")[1]), hostTok, t51, provTok, orphTok];
+  R(secretsAll.every(x => hay.indexOf(x) < 0), "ladder: no player id, provider user id or token in any ladder answer");
+  R(stub.stats.bad.length === 0, "ladder: the stub saw no malformed call (ladder_get args)", stub.stats.bad.slice(0, 3).join("; "));
+  R(errLines() === logged0, "ladder: the function logged no error while the ladder was read", String(errLines() - logged0));
 }
 
 /* the blindness scanner of test/servertable.test.js, over what each phone's channel handed up */
