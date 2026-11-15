@@ -14,6 +14,16 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
+### NEW DECKS (added 2026-11-15 by CEO session_013xG9x9uyRyTvTysrhdXW6D; live is still v6.36, no release made)
+- **The user asked for all the new decks.** The plan is `ROADMAP-NEWDECKS.md` on the session branch
+  `claude/affectionate-pascal-ntel01` (not on main yet), with `tools/newdecks-census.js` (the measure).
+- **Found:** the-fab-cube `develop` still has 15 Silver Age sets, but its unmerged branch `usurp-the-shadow-throne` carries
+  SAT (Prism) and SBW (Viserai, Between Worlds) complete: every row of `data/newsets.json` resolves with its printing.
+  Outbreak (SLV Mortimer, SFC α-01, 2027-02) is spoilers only, no lists. The CR on rules.fabtcg.com defines the new keywords.
+- **ASKED THE USER, UNANSWERED (do not pin or build before the answers):** (1) amend the frozen-at-fifteen format so built
+  precons join the pool; (2) pin the September text from the unmerged upstream branch now, or wait for the merge.
+- **Order if yes:** pin (one invisible release) -> Viserai, Between Worlds (8 readers) -> Prism (soul zone first).
+
 ### NEW THREAD: READ THIS BLOCK FIRST (written 2026-11-15 by CEO session_013xG9x9AK7kNX6rG3LLzLuR)
 - **State:** live = v6.36 on `main` (e58200c), livecheck ALL PASS. Function `table` version 26 = build `v6.36 · sage-v17`,
   stamped; `--check` OK. SQL 001-008 unchanged. No unreleased work.
