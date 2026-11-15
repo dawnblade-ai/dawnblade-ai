@@ -1,3 +1,24 @@
+## v6.33 — ranked integrity: the forfeit clock, closing counts, recovery keeps a rating
+
+- **An abandoned ranked game can be claimed.** On a RANKED server table the function stamps (server time, never a phone's clock) when the player the game is waiting on last
+  made an accepted move. If that player makes no accepted move for **five minutes** (one constant, `FORFEIT_MS` in `server/referee.js`, a placeholder the user may rule on), the OTHER
+  player's phone is offered **Claim the win**; the function checks the claim against its own stamp and its own notion of whose decision is pending, ends the game as a **win by
+  forfeit** (the absent player loses) and records it once with the usual Elo move. Early claims, a claim by the player being waited on, a claim on a friendly table or a finished game,
+  and a forged seat or key are each refused and change nothing; a claim racing the absent player's late move is decided by the row's version check (exactly one wins; drilled in both
+  orders). **Who the game waits on** is `judge.waitingOn` (read-only, new): a pending cost, a live sheet's side, the arsenal choice, else the priority holder — never guessed from whose
+  turn it is; no clock runs when the game waits on nobody or on both. The waited-on phone sees a calm countdown in the last two minutes; the waiting phone is told how long until it may
+  claim. Neither says what is being decided. A ranked game nobody finishes or claims simply ages out with the table (48 hours) and records nothing. Friendly tables: no clock, no
+  claim, byte for byte as before.
+- **Closing a ranked table mid-game is a concession.** Once the match has been dealt, the creator's close counts as their loss (recorded exactly like Concede, the closer the loser) and the
+  page says so before the player confirms ("Closing now counts as a loss…"). Closing before the game starts is free and records nothing; friendly tables are unchanged.
+- **Recovery keeps a ranked rating** (`007_forfeit.sql`). A throwaway player that played a ranked game (or sits at an unfinished ranked table) is kept, orphaned but intact, when its
+  phone redeems a recovery code; the recovered player's rating and record are never touched. A throwaway with no ranked games is deleted as before.
+- **Row v5, WIRE_V 40, DATA_VER unchanged.** A ranked table is now a v5 row (clock, forfeit); v4 rows are still read. The clock rides as a sealed push frame and a join/resync answer key,
+  the claim is a new request op: no game state, snapshot or prompt changed.
+- **To go live:** run `server/supabase/007_forfeit.sql` (ends `dawnblade_forfeit` / `ok`, safe to run twice; re-run it after any re-run of 004 or 006) BEFORE redeploying; re-bundle and redeploy
+  `table`; `--stamp`; `node tools/livecheck.js` (the forfeit check is WRITTEN BUT NOT RUN on live). Drills: `test/serverforfeit.test.js`, `test/serverforfeitphone.test.js` (each with
+  sabotage), `tools/sql-pglite.js` + `tools/sql-sab-007.js` (PGlite), the Deno rehearsal, `tools/serverpage.js`.
+
 ## v6.32 — ranked server tables: the result is recorded once, and ratings move
 
 - **A ranked table is a choice at create.** On the server-table screen a switch reads *Friendly table* (the default, exactly as before) or *Ranked table*
