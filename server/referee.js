@@ -198,7 +198,7 @@ const ROW_V = 3, ROW_V_CASUAL = 2, ROW_V_RANKED = 5, ROW_V_RANKED_4 = 4;
 const rowOk = v => v === ROW_V || v === ROW_V_CASUAL || v === ROW_V_RANKED || v === ROW_V_RANKED_4;
 /* S5.2: THE FORFEIT CLOCK'S LIMIT, in ONE place. A claim is refused until the player the game is waiting on has made no accepted move for this long
    (server time, from the row's own stamp). A placeholder the user may rule on; `deps.forfeitMs` replaces it (the drills' injected clock). */
-const FORFEIT_MS = 5 * 60 * 1000;
+const FORFEIT_MS = 7.5 * 60 * 1000;      /* RULING (user, 2026-11-15): seven and a half minutes - "sometimes there is a lot to consider" */
 const forfeitLimit = deps => Number.isInteger(deps && deps.forfeitMs) && deps.forfeitMs >= 0 ? deps.forfeitMs : FORFEIT_MS;
 const ID_RE = /^[A-Za-z0-9_-]{1,32}$/;
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";

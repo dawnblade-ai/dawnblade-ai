@@ -1,3 +1,13 @@
+## v6.35 — the forfeit clock: seven and a half minutes, and the defend step says whose move it is
+
+- **The limit is 7.5 minutes** (RULING, user, 2026-11-15: "sometimes there is a lot to consider"). One constant, `FORFEIT_MS` in `server/referee.js`; the page still reads it from the
+  function's answer and now prints a half minute honestly ("has not moved for 7.5 minutes").
+- **The clock sits on whoever must decide** (RULING, user, 2026-11-15: a chess clock, never paused). In the defend step the turn-player holds priority (CR 7.3.3), so the game waits on the
+  attacker until it passes, and on the defender from then on while they choose blockers. The attacker's button used to read only "Pass"; it now reads **"Pass — let <hero> block"**, so a
+  player who is politely waiting knows the table is waiting on that tap. An attack on an ally (which cannot be blocked) keeps the plain "Pass". No rule and no clock logic changed.
+- **Rulings recorded, nothing to build:** the 0-turn lobby forfeit stays; very short ranked games count (an honour system); a phone that already has a name may still redeem a recovery code;
+  the ladder keeps floor 3 / top 50 / last 10.
+
 ## v6.34 — the ladder: who stands where in ranked play, and the latest games
 
 - **A public ladder.** From the first screen ("The ladder"), the server table screen and the name sheet ("See the ladder") a player opens a plain list of ranked players, best rating first: rank, name,

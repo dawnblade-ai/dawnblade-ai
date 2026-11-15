@@ -955,7 +955,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "6.34"; /* v6.34 - a public ladder of ranked players (a name and three ranked games to be listed) with the latest games, readable by anyone from the server table screens. See CHANGELOG.md. */
+window.APP_VER = "6.35"; /* v6.35 - the ranked forfeit limit is seven and a half minutes, and the attacker's Pass in the defend step says it lets the defender block. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -7634,7 +7634,7 @@ function ForfeitBar({table, seat, over}){
   const c = useSrvClock(table), nm = useSrvNames(table);
   const [busy,setBusy] = uS(false), [msg,setMsg] = uS(null);
   if(over || !c || !table || !table.srv) return null;
-  const them = nm[1-seat] || "Your opponent", mins = Math.round(c.limit/60000);
+  const them = nm[1-seat] || "Your opponent", mins = +(c.limit/60000).toFixed(1);
   if(c.mine){
     if(c.left > 120000) return null;
     return <div className="ffbar mine" role="status" data-testid="forfeit-mine">{c.left > 0
@@ -9142,7 +9142,11 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
             </>
           : <>
               {mine({t:"pass"})
-                ? <button className="a" onClick={()=>fire({t:"pass"})}>Pass</button>
+                ? (g.step === "defend" && targetCanBeDefended(g.pend && g.pend.target)
+                    /* CR 7.3.3 - the turn-player holds priority in the defend step, so the game (and a ranked table's clock) waits on the ATTACKER until it
+                       passes; only then is the wait on the defender. RULING (user, 2026-11-15): the clock sits on whoever must decide - so say what this tap does. */
+                    ? <button className="a go" data-testid="pass-to-blocks" onClick={()=>fire({t:"pass"})}>Pass — let {them.name.split(",")[0]} block</button>
+                    : <button className="a" onClick={()=>fire({t:"pass"})}>Pass</button>)
                 : <span className="a dis">waiting on {them.name.split(",")[0]}</span>}
               <button className="a go" disabled={!mine({t:"endTurn"})} onClick={()=>fire({t:"endTurn"})}>End turn</button>
             </>}

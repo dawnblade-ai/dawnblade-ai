@@ -212,9 +212,9 @@ async function forfeitPhase(label, base, stub, log, world, build, uid0){
   row(!!A.sess && !!B.sess && !!ck0 && (ck0.on === 0 || ck0.on === 1) && Number.isFinite(ck0.since), label + ": forfeit: a ranked game that has started carries a clock naming the seat the game waits on", JSON.stringify(ck0));
   const wait = ck0.on, claimant = 1 - wait, keyOf = s => stub.row(code).hub.keys[s];
   const early = await go({op: "claim", table: code, seat: claimant, key: keyOf(claimant)}), self = await go({op: "claim", table: code, seat: wait, key: keyOf(wait)}), forged = await go({op: "claim", table: code, seat: claimant, key: "x".repeat(keyOf(claimant).length)});
-  row(early.refused === "claim-early" && early.left > 0 && early.left <= 300000 && self.refused === "claim-self" && forged.refused === "auth" && stub.results.size === before && stub.row(code).over !== true, label + ": forfeit: an early claim, a claim by the waited-on player and a forged claim are each refused and change nothing", [early.refused, early.left, self.refused, forged.refused].join());
+  row(early.refused === "claim-early" && early.left > 0 && early.left <= 450000 && self.refused === "claim-self" && forged.refused === "auth" && stub.results.size === before && stub.row(code).over !== true, label + ": forfeit: an early claim, a claim by the waited-on player and a forged claim are each refused and change nothing", [early.refused, early.left, self.refused, forged.refused].join());
   const peek = await go({op: "resync", table: code, seat: claimant, key: keyOf(claimant)});
-  row(peek.ok === true && peek.clock && peek.clock.on === wait && peek.clock.limit === 300000 && peek.clock.age >= 0, label + ": forfeit: a resync tells the phone who the game waits on, how long (server time) and the limit", JSON.stringify(peek.clock));
+  row(peek.ok === true && peek.clock && peek.clock.on === wait && peek.clock.limit === 450000 && peek.clock.age >= 0, label + ": forfeit: a resync tells the phone who the game waits on, how long (server time) and the limit", JSON.stringify(peek.clock));
   age(code, 301000);
   const claimed = await go({op: "claim", table: code, seat: claimant, key: keyOf(claimant)});
   const stored = [...stub.results.values()].pop();

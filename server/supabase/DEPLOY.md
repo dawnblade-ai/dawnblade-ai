@@ -148,7 +148,7 @@ deploy there is no stamp; `--check` then compares the generated copy only.
 - `007_forfeit.sql`: `results.how` also allows `forfeit`; `result_record` is REPLACED (006's body, one list widened); `recovery_redeem` is REPLACED (004's body; a throwaway with a ranked footprint is kept orphaned
   instead of deleted). **Run `007` BEFORE redeploying the v6.33 function** (a forfeit or a concession-by-close calls `result_record`; without 007 a forfeit is refused by the database and healed later).
   **Re-running 004 or 006 afterwards puts the old function bodies back: run 007 again.** Offline: `PGLITE_DIR=<scratch> node tools/sql-pglite.js` (001..007 twice) and `node tools/sql-sab-007.js`.
-- A ranked table is a v5 row (`clock`, `forfeit`); v4 ranked rows are still read; a v6.32 function refuses v5 (`wire`). The limit (`FORFEIT_MS`, five minutes) is in `server/referee.js`; the function needs no new secret or setting.
+- A ranked table is a v5 row (`clock`, `forfeit`); v4 ranked rows are still read; a v6.32 function refuses v5 (`wire`). The limit (`FORFEIT_MS`, seven and a half minutes) is in `server/referee.js`; the function needs no new secret or setting.
 - A closed-mid-game ranked table is no longer free: for a started game it is the creator's concession. A ranked game nobody finishes or claims records nothing and ages out with the row (48 hours).
 
 ## The ladder (S5.3, v6.34)

@@ -490,11 +490,11 @@ test("(7b) THE CLOCK RIDES AS A SEALED FRAME, AND ONLY ON A RANKED TABLE — the
   void cc;
 });
 test("(7c) THE LIMIT LIVES IN ONE PLACE — referee.js states it once, the page and the phone's channel never restate it, and deps.forfeitMs replaces it", () => {
-  assert.equal(SERVER.FORFEIT_MS, 300000, "five minutes");
-  assert.equal((SRC.match(/5 \* 60 \* 1000/g) || []).length, 1, "the constant is written once in referee.js");
+  assert.equal(SERVER.FORFEIT_MS, 450000, "seven and a half minutes (RULING, user, 2026-11-15)");
+  assert.equal((SRC.match(/7\.5 \* 60 \* 1000/g) || []).length, 1, "the constant is written once in referee.js");
   for(const f of ["engine/servertable.js", "index.html"]){
     const t = fs.readFileSync(path.join(ROOT, f), "utf8");
-    assert.ok(!/FORFEIT_MS|300000\b|5 \* 60 \* 1000/.test(t), f + " restates the forfeit limit (it must read it from the function's answer)");
+    assert.ok(!/FORFEIT_MS|450000\b|300000\b|5 \* 60 \* 1000/.test(t), f + " restates the forfeit limit (it must read it from the function's answer)");
   }
   const g = table({salt: "inject"}), [w, o] = pair(g);
   g.audit.deps.forfeitMs = 1000; g.at(g.row().clock.since - T0 + 1000);

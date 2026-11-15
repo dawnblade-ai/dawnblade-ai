@@ -888,9 +888,9 @@ async function toServerChooser(page){
     row(wt.length === 1 && wt[0].x >= 0 && wt[0].r <= W && wt[0].y >= 0 && wt[0].b <= H && await overflow(pg) && (await boxes(pg, '[data-testid="claim-win"]')).length === 0, "forfeit: the countdown is inside 393x852, no horizontal overflow, and there is NO claim button yet", JSON.stringify(wt[0]));
     row(wt.length === 1 && !/undefined|NaN|\bnull\b|claim-|refused|clock|stamp|v6\./i.test(wt[0].t), "forfeit: the countdown carries no identifier, field name or version number, and says nothing of what the opponent is deciding");
     const v0 = wd.store.version(code);
-    ck.t += 231000; await pollClock(pg, "may claim the win:");
+    ck.t += LIMIT - 70000 + 1000; await pollClock(pg, "may claim the win:");   /* past the limit, whatever it is */
     const due = await boxes(pg, '[data-testid="forfeit-due"]'), cb = await boxes(pg, '[data-testid="claim-win"]');
-    row(due.length === 1 && cb.length === 1 && /^Claim the win$/.test(cb[0].t) && /has not moved for 5 minutes/.test(due[0].t), "forfeit: once the limit has passed the page offers 'Claim the win' and says why", due[0] && due[0].t);
+    row(due.length === 1 && cb.length === 1 && /^Claim the win$/.test(cb[0].t) && /has not moved for 7\.5 minutes/.test(due[0].t), "forfeit: once the limit has passed the page offers 'Claim the win' and says why", due[0] && due[0].t);
     row(cb.length === 1 && cb[0].h >= 44 && cb[0].x >= 0 && cb[0].r <= W && cb[0].b <= H && await overflow(pg), "forfeit: the claim button is thumb-sized and inside 393x852", JSON.stringify(cb[0])); await thumbs(pg, "forfeit claim", ".ffbar");
     row(rat.records === 0 && wd.row(code).over !== true, "forfeit: nothing is recorded before the claim is pressed");
     await click(pg, pg.locator('[data-testid="claim-win"]'), "claim the win");
@@ -922,7 +922,7 @@ async function toServerChooser(page){
     wd.fault.cut(wd.topicOf(code, 0));
     ck.t += 100000; await wait(2600);
     row(await pg.evaluate(() => !document.querySelector('[data-testid="forfeit-mine"]')), "forfeit (mine): with plenty of time left the page's own clock stays out of the way");
-    ck.t += 100000; await pollClock(pg, "waiting on you");
+    ck.t += LIMIT - 200000; await pollClock(pg, "waiting on you");   /* 100 s left: inside the last two minutes */
     const mine = await boxes(pg, '[data-testid="forfeit-mine"]');
     row(mine.length === 1 && /The game is waiting on you\. Rival One may claim the win in \d:\d\d\. Any move you make carries on as normal\./.test(mine[0].t), "forfeit (mine): in the last two minutes the page says, calmly, how long it has", mine[0] && mine[0].t);
     row(mine.length === 1 && mine[0].x >= 0 && mine[0].r <= W && mine[0].b <= H && await overflow(pg) && (await boxes(pg, '[data-testid="claim-win"]')).length === 0, "forfeit (mine): inside 393x852, no overflow, and no claim button on the waited-on phone");
