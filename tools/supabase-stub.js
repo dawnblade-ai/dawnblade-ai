@@ -16,6 +16,7 @@
    throwaway player, 8 refusals an hour); `recovery` (hash -> {player, used, expires}) and `attempts` are readable.
    S4.4 adds table_create_capped {p_id, p_row, p_creator, p_cap} (a stand-in for 005_table_cap.sql: ONE jsonb answer, {version} | {version:0, exists} |
    {version:0, capped, open:[ids]}; open = the creator's rows not over, idle under 48 hours; a row also keeps an `at` time the rehearsal may age).
+   S5.2 adds the forfeit ending to result_record and 007's footprint rule to recovery_redeem (a throwaway that played, or sits at an unfinished ranked table, is kept orphaned).
    S5.1 adds rating_get {p_player} -> [{rating, games, wins, losses, draws}] (the starting rating and no games for an unrated player) and result_record
    {p_game, p_table, p_p0, p_p1, p_n0, p_n1, p_h0, p_h1, p_winner, p_how, p_turns, p_build, p_started, p_ended} -> {recorded, ratings:[{from,to},{from,to}]}
    (a stand-in for 006_ratings.sql: once per game id, Elo with K 32 from 1200, both ratings in one step; `ratings`, `results` are readable). Its Elo is
@@ -90,7 +91,7 @@ function makeStub(o){
           stats.records = (stats.records || 0) + 1;
           const a = JSON.parse(body);
           const okArgs = typeof a.p_game === "string" && /^[A-Za-z0-9_-]{1,80}$/.test(a.p_game) && typeof a.p_table === "string" && typeof a.p_p0 === "string" && typeof a.p_p1 === "string"
-            && a.p_p0 && a.p_p1 && a.p_p0 !== a.p_p1 && ["life", "concession", "stalemate"].includes(a.p_how) && (a.p_winner === null || a.p_winner === 0 || a.p_winner === 1)
+            && a.p_p0 && a.p_p1 && a.p_p0 !== a.p_p1 && ["life", "concession", "stalemate", "forfeit"].includes(a.p_how) && (a.p_winner === null || a.p_winner === 0 || a.p_winner === 1)
             && ((a.p_how === "stalemate") === (a.p_winner === null)) && typeof a.p_h0 === "string" && typeof a.p_h1 === "string" && Number.isInteger(a.p_turns) && a.p_turns >= 0;
           if(!okArgs){ stats.bad.push("result_record args"); return reply(400, {message: "bad args"}); }
           const ex = results.get(a.p_game);
@@ -146,7 +147,14 @@ function makeStub(o){
           e.used = true;
           if(e.player !== cur){
             identities.set(k, e.player);
-            if(![...identities.values()].includes(cur)){ players.delete(cur); for(const [h, x] of recovery) if(x.player === cur) recovery.delete(h); }
+            if(![...identities.values()].includes(cur)){
+              /* 007_forfeit.sql: a throwaway with a ranked footprint (a rated game, a result naming it, a seat at an unfinished ranked table) is KEPT, orphaned but
+                 intact, its name freed and its codes gone; with none it is deleted as in v6.30 */
+              const fp = (ratings.get(cur) || {games: 0}).games > 0 || [...results.values()].some(x => x.p_p0 === cur || x.p_p1 === cur)
+                || [...rows.values()].some(e => { const r = JSON.parse(e.json); return r.ranked === true && r.over !== true && Array.isArray(r.owners) && r.owners.includes(cur); });
+              for(const [h, x] of recovery) if(x.player === cur) recovery.delete(h);
+              if(fp){ const pl = players.get(cur); if(pl){ pl.display_name = null; pl.name_fold = null; } } else players.delete(cur);
+            }
           }
           attempts.delete(k);
           return out("ok", (players.get(e.player) || {}).display_name);

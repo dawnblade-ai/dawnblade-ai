@@ -507,3 +507,46 @@ test("(7d) AN UNFINISHED GAME AGES OUT WITH THE TABLE AND RECORDS NOTHING — a 
   assert.equal(g.rat.records, 0, "no request but a claim, a close or the game's own ending records");
   assert.ok(g.row().result === undefined && g.row().over !== true);
 });
+
+/* ---------------------------------------------------------------------------------------------- (8) RECOVERY KEEPS A RANKED THROWAWAY */
+/* The rule itself is SQL (007_forfeit.sql, proven on PGlite with sabotage by tools/sql-pglite.js and tools/sql-sab-007.js); the fake backend the function's drills
+   run on must behave the same way, and the function's own ops (mint, redeem) must carry it through unchanged. */
+function recoveryFailures(o){
+  const bad = [], store = F.memStore(), idp = F.memIdentity(), rat = F.withRatings(), rec = F.withRecovery(idp, {rat, store, ...(o || {})});
+  let clock = T0, n = 0;
+  const deps = {store, broadcast: () => {}, deal: T.dealSpec, build: T.BUILD, now: () => clock++, rand: () => T.seeded("rec8"), identify: t => idp.identify(t), rename: (p, nm, f) => idp.rename(p, nm, f),
+    mint: (p, h, d) => rec.mint(p, h, d), redeem: (t, h) => rec.redeem(t, h), ...rat.deps(), randBytes: len => Uint8Array.from({length: len}, (_, i) => ((++n * 2654435761 + i * 40503) >>> 7) & 255)};
+  const go = r => json(SERVER.handleNow(r, deps));
+  const tokOld = idp.issue("P-old"), rival = "P-rival";
+  go({op: "me", identity: {token: tokOld}, name: "Dawn Smith"});
+  rat.record({game: "g-old", table: "TABOLD", players: ["P-old", rival], names: [null, null], heroes: ["kayo", "dash"], winner: 0, how: "life", turns: 5, build: null, started: 0, ended: 0});
+  const oldBefore = JSON.stringify(rat.rating("P-old"));
+  const phone = (id, setup) => { const t = idp.issue(id); if(setup) setup(id); const code = go({op: "recovery-mint", identity: {token: tokOld}}).code; return {t, code, redeem: () => go({op: "recovery-redeem", identity: {token: t}, code})}; };
+  /* (a) no ranked footprint: deleted, as in v6.30 */
+  const a = phone("P-fresh-a"); const ra = a.redeem();
+  if(!ra.ok || rec.deleted.indexOf("P-fresh-a") < 0 || rec.orphans.indexOf("P-fresh-a") >= 0) bad.push("a throwaway with no ranked game was not deleted as in v6.30: " + JSON.stringify([ra.ok, rec.deleted, rec.orphans]));
+  /* (b) it played a ranked game: kept, orphaned, intact; the recovered player is untouched; never merged, never refused */
+  const b = phone("P-fresh-b", id => rat.record({game: "g-b", table: "TABB", players: [id, rival], names: [null, null], heroes: ["kayo", "dash"], winner: 1, how: "concession", turns: 3, build: null, started: 0, ended: 0}));
+  const keep = JSON.stringify(rat.rating("P-fresh-b")), rb = b.redeem();
+  if(!rb.ok) bad.push("a throwaway that played ranked made the redeem fail: " + JSON.stringify(rb));
+  if(rec.orphans.indexOf("P-fresh-b") < 0 || rec.deleted.indexOf("P-fresh-b") >= 0) bad.push("a throwaway that played ranked was not kept orphaned");
+  if(JSON.stringify(rat.rating("P-fresh-b")) !== keep || !rat.rt.has("P-fresh-b")) bad.push("the orphan's rating or record changed or vanished");
+  if(JSON.stringify(rat.rating("P-old")) !== oldBefore) bad.push("the recovered player's rating or record moved");
+  if(idp.live.get(b.t).player !== "P-old") bad.push("the new phone was not moved to the recovered player");
+  /* (c) it holds a seat at an UNFINISHED ranked table: kept (recovering away must not dodge that game) */
+  const c = phone("P-fresh-c", id => store.put("LIVE01", {v: 5, ranked: true, over: false, owners: [id, null]}, 0));
+  c.redeem();
+  if(rec.orphans.indexOf("P-fresh-c") < 0) bad.push("a throwaway seated at an unfinished ranked game was not kept");
+  /* (d) only a FINISHED ranked table and a casual one: deleted */
+  const d = phone("P-fresh-d", id => { store.put("DONE01", {v: 5, ranked: true, over: true, owners: [id, null]}, 0); store.put("CASU01", {v: 3, owners: [id, null]}, 0); });
+  d.redeem();
+  if(rec.deleted.indexOf("P-fresh-d") < 0) bad.push("a throwaway with only a finished ranked table and a casual table was kept");
+  if(JSON.stringify(rat.rating("P-old")) !== oldBefore) bad.push("the recovered player's rating or record moved after all the redeems");
+  return bad;
+}
+test("(8) RECOVERY KEEPS A RANKED THROWAWAY — through the function's own ops: no ranked footprint is deleted as in v6.30; a played game or a seat at an unfinished ranked game is kept orphaned and intact; the recovered player's rating never moves", () => {
+  assert.deepEqual(recoveryFailures(), []);
+});
+test("SABOTAGE (8): a backend that deletes every throwaway, or merges, is seen", () => {
+  assert.ok(probe(() => recoveryFailures({deleteAlways: true})).length >= 1, "deleting a ranked throwaway must be seen");
+});

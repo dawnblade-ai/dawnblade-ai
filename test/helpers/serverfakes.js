@@ -95,7 +95,12 @@ function memIdentity(){
 function withRecovery(idp, o){
   o = o || {};
   const rec = new Map(), attempts = new Map();
-  const st = {codes: rec, clock: 1700000000000, deleted: [], mints: 0, redeems: 0,
+  const st = {codes: rec, clock: 1700000000000, deleted: [], orphans: [], mints: 0, redeems: 0,
+    footprint(player){
+      if(o.rat){ const r = o.rat.rt.get(player); if(r && r.games > 0) return true; for(const x of o.rat.results.values()) if(x.players.indexOf(player) >= 0) return true; }
+      if(o.store) for(const id of o.store.rows.keys()){ const row = o.store.row(id); if(row && row.ranked === true && row.over !== true && Array.isArray(row.owners) && row.owners.indexOf(player) >= 0) return true; }
+      return false;
+    },
     mint(player, hash, days){
       st.mints++;
       if(!o.keepOld) for(const [h, e] of rec) if(e.player === player && !e.used) rec.delete(h);
@@ -113,7 +118,13 @@ function withRecovery(idp, o){
       const cur = w.player;
       if(e.player !== cur){
         w.player = e.player;
-        if(!o.leaveThrowaway && ![...idp.live.values()].some(x => x.player === cur)){ st.deleted.push(cur); idp.names.delete(cur); for(const [h, x] of rec) if(x.player === cur) rec.delete(h); }
+        if(!o.leaveThrowaway && ![...idp.live.values()].some(x => x.player === cur)){
+          /* S5.2 (007_forfeit.sql): a throwaway WITH a ranked footprint (a rated game, a result naming it, a seat at an unfinished ranked table) is kept orphaned but
+             intact (its name freed, its codes gone, its rating and results untouched); with none it is deleted as in v6.30. Needs `o.rat` (withRatings) and `o.store`. */
+          const fp = !o.deleteAlways && st.footprint(cur);
+          idp.names.delete(cur); for(const [h, x] of rec) if(x.player === cur) rec.delete(h);
+          if(fp) st.orphans.push(cur); else { st.deleted.push(cur); if(o.rat) o.rat.rt.delete(cur); }
+        }
       }
       attempts.delete(token);
       const nm = idp.names.get(e.player);
