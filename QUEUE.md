@@ -14,7 +14,37 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
-### LATEST (CEO session_013xG9xBi58nHH6Jvs5J1qrM, 2026-11-15, at v6.39)
+### LATEST (CEO session_013xG9x8TRjNcbSSsM6xnoj1, 2026-11-15, at v6.40)
+- **State:** live = v6.40 on `main` (162578c), livecheck ALL PASS. Function `table` version 34 = build `v6.40 · sage-v17`,
+  stamped; `--check` OK. No unreleased work. Everything in the blocks below still holds. **WIRE_V is 41** (was 40).
+- **DONE v6.40, reader 4: banish a card, then ask what it was** (`test/banishif.test.js`, sabotaged ten ways).
+  Pull from Beyond = new op `banTop` (own deck; colour rider on `op[2]`, `foeBanishTop`'s twin). Embrace Ursur =
+  `optCost.classRiders` (list form of Halo's `classRider`; closed class list `RIDER_CLASSES` in parser.js). Corrupted Crown =
+  the existing `optCost` defends offer; a bare "card" reads only with banish + the printed hand; `defUid` now rides on a pick.
+- **NEW ENGINE FACTS:** (1) what a card prints AFTER an opt waits for the opt: `fxParse` folds a `banTop` into the opt op
+  (`op[2].then`), the sheet carries it as `ops`, it runs when the sheet is answered. Only `banTop` is folded; any other op
+  after an opt still runs first (no pool card has one: measure again when a new deck prints one). (2) in `defendsTriggers`
+  a pick that moves a hand card excludes the caller's `wall` (filter `notUids`); that body must never read `blockH`
+  (`test/bravo.test.js`). (3) `test/helpers/v628scenario.js` reads the row's `wireV` back as 40 before hashing, so a
+  WIRE_V bump no longer breaks the v6.28 fixture.
+- **OPEN FROM READER 4 (owed before Viserai opens):** (a) the trainer's wall is undriven for the Crown (the shared body is
+  called, but whether its `wall` holds the player's declared cards there is unchecked); (b) the AI's answers to the two new
+  sheets are whatever `judge.autoAnswer` does with an optional pick: unmeasured, needs a reason key; (c) Pull from Beyond's
+  payout names the Gate token, which cannot be minted until reader 5 (it logs "no card named" and creates nothing).
+- **STILL OPEN FROM USURP (v6.39):** (a) special Runechants make WHICH Runechant a choice: `usurpTarget` must return
+  candidates and the cost becomes a `pending`; (b) `judge.effPowerNow` and the Coach do not count the +2; (c) 8.3.49a's
+  "the PLAYER usurped" has no per-turn fact.
+- **MEASURE:** `node tools/newdecks-census.js`: Viserai rows 26 full / 8 part / 1 none (was 19 / 12 / 4); Prism 21 / 4 / 7.
+- **NEXT: reader 5** (the Gate to i'Arathael token and its grant; the token-name scan reads it as "arathael": probe in
+  staged.test.js; the token op must resolve a STAGED record, and the judge's db is the pool), then 6, 7, 8.
+- **RELEASE NOTES FOR THE NEXT READER:** pins that move with any parser/effects/prompts edit, all "read first, then repin":
+  `test/anchors.test.js` (unreached `classifyClause` lines by whole source line; the `runOps` vocabulary count and its
+  no-emitter list), `test/slicecensus.test.js` + `test/dichotomy.test.js` (the pick branch of `buildPrompt`),
+  `test/promptside.test.js` (a `promptQ` push must be a literal with `side`, a known builder, or `Object.assign(builder(`).
+  A prompt field = a WIRE_V bump (wire.js header, `test/wire.test.js`, `test/dichotomy.test.js`). The validation chain in one
+  background command takes ~8 minutes; `tools/page.js` (~140 s) afterwards, never beside `npm test`.
+
+### PREVIOUS (CEO session_013xG9xBi58nHH6Jvs5J1qrM, 2026-11-15, at v6.39)
 - **State:** live = v6.39 on `main` (34e1a47), livecheck ALL PASS. Function `table` version 32 = build `v6.39 · sage-v17`,
   stamped; `--check` OK. No unreleased work. Everything in the two blocks below still holds.
 - **DONE v6.38, reader 2: Blood Debt** (CR 8.3.11 / 8.3.11a). One life per carrier in the seat's own `banish`, in
