@@ -1,3 +1,15 @@
+## v6.37 — the first reader for Viserai, Between Worlds: "You may play this from your banished zone"
+
+- **Nothing a player can be dealt changed.** This is engine groundwork for the new decks (`ROADMAP-NEWDECKS.md`): the six Gloomblades of *Viserai, Between Worlds* print the line, and
+  they are staged (`data/staged.js`), not in the pool. Measured: no pool record sets the fact, before or after.
+- **The clause is read now.** `classifyClause` answers the printed line and forwards the card fact `fromBan`. The ROUTE was built at v3.00 (`parser.playZoneWhy`, asked by both boards) and
+  waited for a card to print it; until now the line reported unread. The census (`node tools/newdecks-census.js`) moved Viserai's rows from 12 full / 14 part / 9 none to 12 / 19 / 4.
+- **Drill `test/banroute.test.js`** (sabotaged three ways): all six read the line; at the table a banished Gloomblade is played once, deals damage, files to the graveyard turn-stamped
+  (RULING, user, 2026-10-31) and is refused from there; an attack that does not print the line is refused from banish; the Gate token, which only talks about banished-zone plays, grants
+  itself nothing.
+- **Still unread on those cards:** Usurp and Blood Debt (readers 2 and 3). A Gloomblade today is weaker than printed, and nobody can be dealt one.
+- **No WIRE_V, no DATA_VER change.** The function is re-bundled and redeployed because `APP_VER` and `engine/parser.js` changed.
+
 ## After v6.36 (2026-11-15, not a release) — the pool may grow, and the two September precons are staged
 
 - **RULING (user, 2026-11-15, "Yes to all"):** (1) Dawnblade is no longer frozen at fifteen: a new Silver Age precon joins the pool when the engine reads its whole list, and Silver Age's

@@ -3825,6 +3825,17 @@ function classifyClause(raw){
      damage meets `preventDamage` on both boards (`noDrx`'s shape). */
   if(/^damage that would be dealt by this can'?t be prevented$/.test(c))
     return R([["noop", "its damage can't be prevented"]], {unpreventable: true});
+  /* ---- "YOU MAY PLAY THIS FROM YOUR BANISHED ZONE" (v6.37) --------------
+     The six Gloomblades of Viserai, Between Worlds (staged, data/staged.js)
+     print it as a line of its own. `fx.fromBan` has been set off the whole
+     text since v3.00 and `playZoneWhy` has asked it on both boards since
+     then, so the ROUTE was built before a card printed it; what was missing
+     is this clause saying so, which left the line `skip` and the card
+     reported as unread. A CARD FACT, forwarded by the clause loop. The play
+     itself files to the graveyard like any card (RULING, user, 2026-10-31),
+     so the permission is not a loop: the card must be banished again. */
+  if(/^you may play this from your banished zone$/.test(c))
+    return R([["noop", "a standing permission — it may be played from its owner's banished zone"]], {fromBan: true});
   /* ---- "DEFENSE REACTIONS CAN'T BE PLAYED TO THIS CHAIN LINK" (v4.60) --
      Widowmaker x3 (Azalea's) and Wreck Havoc x3 (Dorinthea's), and until
      now the clause was filed:
@@ -6473,6 +6484,8 @@ function fxParse(card){
     if(r.noDrx) fx.noDrx = r.noDrx;
     /* v5.26: the same rule again, read at the damage step. */
     if(r.unpreventable) fx.unpreventable = true;
+    /* v6.37: and at the play, by `playZoneWhy`. */
+    if(r.fromBan) fx.fromBan = true;
     /* v4.83, the same rule a third time: a board static the declaration
        reads, forwarded or it is a noop that does nothing. */
     if(r.firstAtk) fx.firstAtk = (fx.firstAtk || 0) + r.firstAtk;

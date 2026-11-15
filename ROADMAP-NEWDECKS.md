@@ -35,7 +35,9 @@ hide a keyword with no reader, so read this as a floor on the work, not a ceilin
 
 - **Viserai, Between Worlds** — 12 full / 14 part / 9 none; 19 names not in the pool.
   Missing readers, in build order:
-  1. play a card from the banished zone ("You may play this from your banished zone")
+  1. **DONE v6.37** — play a card from the banished zone ("You may play this from your
+     banished zone"; `test/banroute.test.js`). The route was already built (`playZoneWhy`,
+     `fx.fromBan`); only the clause was unread. The soul zone also already exists (Boltyn).
   2. Blood Debt (end-phase life loss while it sits in banish)
   3. Usurp (in the keyword section of the rules: an additional cost that destroys a Runechant, +2 power, and the
      "usurped" fact other cards ask about)
