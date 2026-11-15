@@ -94,7 +94,7 @@ const isValid = c => normalize(c).length === CODE_LEN;
 const topicFor = (code, seat, key) => SHA.seatTopic(code, seat, key);
 
 const STATUS = ["connecting", "waiting", "seated", "reconnecting", "unavailable", "closed"];
-const CH_JUDGE = "judge", CH_LOBBY = "lobby", CH_NET = "net";
+const CH_JUDGE = "judge", CH_LOBBY = "lobby", CH_NET = "net", CH_CLOCK = "clock";
 const clone = v => JSON.parse(JSON.stringify(v));
 const defaultSleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -252,7 +252,9 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep, who){
      decided and recorded — how it ended and each rating's move. They ride a join's and a resync's answer (and the answer to the move that ended the
      game), never a push; a casual table's answers carry none of it and `rank()` stays {ranked: false}. */
   let ranked = false, ratings = [null, null], result = null;
-  const readRank = v => { if(!v || typeof v !== "object" || (v.ranked !== true && !ranked)) return;       /* the answer to a move carries `result` alone: this phone already knows the table is ranked */
+  const readClock0 = v => readClock(v);
+  const readRank = v => { if(!v || typeof v !== "object" || (v.ranked !== true && !ranked)) return;
+    if(v.ranked === true) readClock0(v.clock);                           /* a join's or resync's answer is the whole truth about the clock: none in it means none runs */       /* the answer to a move carries `result` alone: this phone already knows the table is ranked */
     let changed = !ranked; ranked = true;
     if(Array.isArray(v.ratings) && v.ratings.length === 2){ const nr = v.ratings.map(x => Number.isInteger(x) && x >= 0 && x < 100000 ? x : null);
       if(nr[0] !== ratings[0] || nr[1] !== ratings[1]){ ratings = nr; changed = true; } }
@@ -261,7 +263,20 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep, who){
        && r.change.every(c => c && Number.isInteger(c.from) && Number.isInteger(c.to))){
       result = {winner: r.winner, how: r.how, turns: Number.isInteger(r.turns) ? r.turns : null, change: r.change.map(c => ({from: c.from, to: c.to}))}; changed = true; }
     if(changed) try { if(o.onRank) o.onRank({ranked, ratings: ratings.slice(), result: result ? clone(result) : null}); } catch(_){} };
+  /* S5.2: THE FORFEIT CLOCK, as this phone was last told it (a sealed frame with a push, or `clock` in a join's or resync's answer). It is the SERVER's account:
+     which seat the game waits on, how long it has waited as the server counts it (`age`), and the limit. This phone adds only the time elapsed on ITS OWN clock since
+     it heard, so `clock().left` is a display; whether a claim is due is the function's decision alone. null: no clock runs (casual table, nobody waited on, game over). */
+  let clk = null;
+  const readClock = v => {
+    let nx = null;
+    if(v && typeof v === "object" && (v.on === 0 || v.on === 1) && Number.isFinite(v.age) && v.age >= 0 && Number.isFinite(v.limit) && v.limit > 0)
+      nx = {on: v.on, age: v.age, limit: v.limit, at: (o.now || Date.now)()};
+    const same = (!nx && !clk) || (nx && clk && nx.on === clk.on && nx.age === clk.age && nx.limit === clk.limit);
+    clk = nx;
+    if(!same) try { if(o.onClock) o.onClock(handle.clock()); } catch(_){}
+  };
   readRank(who);
+  if(who && who.ranked === true) readClock(who.clock);
 
   const deliver = f => { if(sink) sink(f); else backlog.push(f); };
   /* what comes up from the server: the seat offer once (key taken out), lobby and net frames as they are */
@@ -276,6 +291,7 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep, who){
         const {key: _k, ...rest} = f0;                    /* THE KEY STOPS HERE */
         deliver(clone(rest)); continue;
       }
+      if(f0.ch === CH_CLOCK){ readClock(f0.m); continue; }                 /* S5.2: the forfeit clock, sealed with the push; never handed up to the game */
       if(f0.ch !== CH_LOBBY && f0.ch !== CH_NET) continue;
       if(f0.ch === CH_NET) sawNet = true;
       if(!peerHeard && ((f0.ch === CH_LOBBY && f0.m && f0.m.seat === peerSeat) || (f0.ch === CH_NET))){ peerHeard = true; }
@@ -459,6 +475,29 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep, who){
       }
       return result ? clone(result) : null;
     },
+    /* S5.2: the forfeit clock as this phone can show it: {on: the seat the game waits on, left: ms until a claim may be made (never below 0; the server's
+       age plus this phone's own elapsed time), limit, mine: the game waits on THIS seat, due: left is 0 and the wait is on the other seat}, or null */
+    clock(){
+      if(!clk || closed) return null;
+      const left = Math.max(0, clk.limit - clk.age - Math.max(0, (o.now || Date.now)() - clk.at));
+      return {on: clk.on, left, limit: clk.limit, mine: clk.on === seat, due: clk.on !== seat && left === 0};
+    },
+    /* S5.2: CLAIM THE WIN. Asks the function to end the game the other player has abandoned; the function decides (its own stamp, its own pending decision). Resolves
+       {result} (and the game's ending arrives like any move); rejects with `.why`: claim-early (`.left` ms to wait) | claim-self | claim-idle | claim-over | claim-casual |
+       auth | no-table | unavailable. A lost version race is asked again (the function then answers the truth). */
+    async claimWin(){
+      if(closed) throw fail("no-table");
+      for(let k = 0; k < 5; k++){
+        const r = await call(T, {op: "claim", table: code, seat, key});
+        if(r.ok){ readRank(r); if(r.result) readRank({result: r.result}); ingest(r.frames); readClock(null); return {result: result ? clone(result) : null}; }
+        if(r.refused === "conflict" || r.retry === true){ await pause(k); continue; }
+        if(r.refused === "claim-early"){ if(Number.isFinite(r.left) && r.left >= 0 && clk) clk = {...clk, age: Math.max(clk.age, clk.limit - r.left), at: (o.now || Date.now)()}; throw Object.assign(fail("claim-early"), {left: Number.isFinite(r.left) ? r.left : null}); }
+        if(r.refused === "auth" || r.refused === "no-table") throw fail(r.refused);
+        if(/^claim-/.test(String(r.refused))) throw fail(r.refused);
+        throw fail("unavailable", "refused: " + r.refused);
+      }
+      throw fail("unavailable", "the table kept changing");
+    },
     owned: () => owned,                  /* this seat is bound to this phone's player */
     quietFor: () => (o.now || Date.now)() - lastIn,
     setHave(fn){ haveFn = fn; },
@@ -589,7 +628,8 @@ function defaultIdentity(config, keep, root_){
 /* ---- CLOSE MY OWN TABLE (S4.4) -------------------------------------------------------------------------------------
    o: {transport, identity, sleep?}. `closeTable(o, code)` -> {closed:true}: the creator ends a table of theirs that nobody will play, which is
    how a player at the cap of open tables gets unstuck (a table nobody sits at counts as open until it has been idle 48 hours). The table is
-   gone for both seats afterwards. Rejects with `.why`: unavailable (no sign-in / server) | identity | no-table (not there, or already
+   gone for both seats afterwards. S5.2: closing a RANKED table whose game has started is the creator's concession — the answer is then {closed:true, conceded:true,
+   result?: {winner, how, change}} and the table is over, not gone (the other phone reads the ending). Rejects with `.why`: unavailable (no sign-in / server) | identity | no-table (not there, or already
    closed) | not-creator (it is somebody else's, or a casual table) . A lost version race is asked again. */
 async function closeTable(o, code){
   o = o || {};
@@ -601,7 +641,7 @@ async function closeTable(o, code){
   const sleep = o.sleep || defaultSleep;
   for(let k = 0; k < 5; k++){
     const r = await call(T, {op: "close", table: c, identity: {token}});
-    if(r.ok) return {closed: true};
+    if(r.ok) return r.conceded === true ? {closed: true, conceded: true, ...(r.result && Array.isArray(r.result.change) ? {result: {winner: r.result.winner, how: r.result.how, change: r.result.change.map(c => ({from: c.from, to: c.to}))}} : {})} : {closed: true};
     if(r.refused === "identity" || r.refused === "no-table" || r.refused === "not-creator") throw fail(r.refused);
     if(r.retry === true){ await sleep(120 * (k + 1)); continue; }          /* a lost version race (the only retry:true answer) */
     throw fail("unavailable", "refused: " + r.refused);
