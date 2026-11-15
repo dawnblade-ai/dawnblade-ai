@@ -9,7 +9,29 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-15, at v6.35)
+## HANDOFF — START HERE (CEO, 2026-11-15, at v6.36)
+
+**Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
+and `docs/progress/` on main. Do not start a root handoff file.
+
+### NEW THREAD: READ THIS BLOCK FIRST (written 2026-11-15 by CEO session_013xG9x9AK7kNX6rG3LLzLuR)
+- **State:** live = v6.36 on `main` (e58200c), livecheck ALL PASS. Function `table` version 26 = build `v6.36 · sage-v17`,
+  stamped; `--check` OK. SQL 001-008 unchanged. No unreleased work.
+- **v6.36 = THE USER'S ANSWERS (2026-11-15), all RULINGS:** (1) NO AUTO-PASS, ever ("gives too much info to the opp"); instead the
+  player's own Pass button is GREEN when nothing else can be started and PURPLE when an action point is unspent and something
+  could be started (Pass, "Pass — let X block", Done defending, End turn; `data-pass` = free / hold). One reader:
+  `judge.moves(g, seat)` (new, read-only; `test/moves.test.js`, sabotaged). (2) THE CONCEDE BUTTON IS REMOVED from the board
+  ("It has no place there completely remove it"); the engine action and "closing a started ranked table = concession" stay.
+  (3) Forfeit: the absent player loses and the winner waits the clock out; an honour system, nothing to build.
+- **NOT DECIDED:** the CR-shaped defend step (defender declares, then the attacker gets priority; engine + AI + wire). The user
+  answered the auto-pass route with the colours and did not say "go" on the rework. Asked again; do not start it unasked.
+- **NOT DONE:** the trainer's Pass / End buttons (`Battle`) have no colours (table only). A real forfeit claim is still unproven
+  on live. There is now no in-game way to concede a casual or AI game except Leave.
+- **HOW THIS THREAD WORKED:** inline, no subagents. Scratch deps: the PAGE_DEPS list in `tools/page.js`'s header; playwright from
+  `/opt/node-tools/node_modules`. `test/slicecensus.test.js` pins the size of `TableBoard`: repin after reading the diff.
+- **Supabase access / EVERY RELEASE / parked AI items / known limits:** unchanged, see the archived sections below.
+
+## HANDOFF ARCHIVE (CEO, 2026-11-15, at v6.35) — superseded by the section above
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
