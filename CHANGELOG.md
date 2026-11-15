@@ -1,3 +1,19 @@
+## v6.39 — the third reader for Viserai, Between Worlds: Usurp
+
+- **Nothing a player can be dealt changed.** Engine groundwork (`ROADMAP-NEWDECKS.md`): seven staged cards print Usurp (the six Gloomblades and Runic Disposition). Measured:
+  `parser.usurps` answers no pool record.
+- **The rule, verbatim (CR 8.3.49, rules.fabtcg.com):** "Usurp is a play-static ability that means 'As an additional cost to play this, destroy a Runechant if able. If you destroy a
+  Runechant in this way, this gets +2 {p}.'" 8.3.49a: "If a player pays the additional cost to play a card with usurp, the player and the played card are considered to have usurped and
+  Runechant that was destroyed is considered to have been usurped."
+- **Built once, in the shared play path** (`effects.execute`, so both boards): the Runechant is destroyed BEFORE the attack-play auras are captured, so the usurped one deals no arcane
+  damage and the others still pop; the +2 is a gain (under Chokeslam's cap, not base); the chain link carries `usurped`. "If able" is not "you may": nothing is asked, and with no
+  Runechant the card is played at printed power. Readers: `parser.usurps` (`printedKw`), `parser.usurpTarget`.
+- **Drill `test/usurp.test.js`** (sabotaged five ways, each bit): 0 / 1 / 3 Runechants at the table (power, Runechants left, arcane dealt); an attack without the keyword pays and gains
+  nothing; the +2 lands as damage; the card's own discard ability does not usurp; a card that only names usurp, and an aura that is not a Runechant, are refused by the readers.
+- **STATED LIMITS, for the readers that follow:** the special Runechants ("This counts as a Runechant", "when an attack usurps this") are unread, and when they are, choosing between
+  two different Runechants is a choice the player is owed; the AI's power readers (`judge.effPowerNow`) and the trainer's Coach do not count the +2 yet. Nobody can be dealt these cards.
+- **No WIRE_V, no DATA_VER change** (`pend.usurped` rides the link like its other optional facts). The function is redeployed because `APP_VER` and engine files changed.
+
 ## v6.38 — the second reader for Viserai, Between Worlds: Blood Debt
 
 - **Nothing a player can be dealt changed.** Engine groundwork for the new decks (`ROADMAP-NEWDECKS.md`): six Gloomblades of *Viserai, Between Worlds* print Blood Debt, and they are

@@ -3509,6 +3509,23 @@ function makeEffects(ctx){
        itself conjures was not there when the attack was played and
        survives to the next swing. Captured by ENTRY, and popped later by
        uid, because the board is about to change underneath this. */
+    /* USURP IS PAID FIRST (v6.39). CR 8.3.49 (verbatim): "As an additional
+       cost to play this, destroy a Runechant if able. If you destroy a
+       Runechant in this way, this gets +2 {p}." A COST is paid as the card
+       is played, so the Runechant is gone BEFORE the capture below asks
+       which auras see an attack played: the usurped one deals no arcane
+       damage, and the others still pop. A token that leaves the arena
+       ceases to exist. Only a card PLAYED pays a play cost: a weapon or
+       ally activation, or one half of a split card, never does. */
+    let usurped = null;
+    if(from !== "weapon" && from !== "ally" && P.usurps(card)){
+      const _ut = P.usurpTarget(act(s));
+      if(_ut){
+        usurped = _ut.card;
+        s = {...s};
+        actMut(s).board = act(s).board.filter(b => b.uid !== _ut.uid);
+      }
+    }
     const atkTrigAt = (act(s).board || [])
       .map(b => ({b, trig: fxParse(b.card).atkTrigger}))
       .filter(x => x.trig);
@@ -5156,6 +5173,13 @@ function makeEffects(ctx){
          the declared total and its label agree, and SPENT so it hits the
          first attack only: a debuff that lasted the whole turn would be
          stronger than the card prints. */
+      /* USURP'S +2 (v6.39) — "If you destroy a Runechant in this way, this
+         gets +2 {p}." A GAIN, not base, so it sits with the declaration's
+         other modifiers and under the cap below. */
+      if(usurped){
+        total += 2;
+        declNote += ` Usurp — ${sv(act(n), "destroy")} a ${usurped.name} to pay for it, and ${card.name} gets +2 power.`;
+      }
       {
         const _dbf = P.nextTurnDebuff(act(n), "firstAtkMinus");
         if(_dbf > 0){
@@ -5277,7 +5301,7 @@ function makeEffects(ctx){
          and that this play IS an attack), so the answer travels with the
          link rather than being re-derived over there — v3.24's rule about
          an argument threaded through two call sites. */
-      n.pend = {card, from, by: actorOf(n), defCap: _cap || null, total, ga, _qCtx: qCtx, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perChainHit"&&o[0]!=="perEquipDef"&&o[0]!=="piercing"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider, ...smRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:[...(fx.condOnHit||[]), ...qRiderCond], ...(qNoDrx.length ? {noDrx: qNoDrx} : {}), chargedWay, fused, ...(smCand ? {_sm: smCand} : {}), lateConds:fx.conds.filter(x=>isLateCond(x.cond)), lateOps:[...fx.ops.filter(o=>o[0]==="perEquipDef"||o[0]==="piercing"), ...(_pierce ? [["piercing", _pierce]] : [])], runeOnHit};
+      n.pend = {card, from, by: actorOf(n), defCap: _cap || null, total, ga, _qCtx: qCtx, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perChainHit"&&o[0]!=="perEquipDef"&&o[0]!=="piercing"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider, ...smRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:[...(fx.condOnHit||[]), ...qRiderCond], ...(qNoDrx.length ? {noDrx: qNoDrx} : {}), chargedWay, fused, ...(smCand ? {_sm: smCand} : {}), lateConds:fx.conds.filter(x=>isLateCond(x.cond)), lateOps:[...fx.ops.filter(o=>o[0]==="perEquipDef"||o[0]==="piercing"), ...(_pierce ? [["piercing", _pierce]] : [])], runeOnHit, ...(usurped ? {usurped: true} : {})};
       n.stack = [{k:"atk", label:`${card.name} — attack ${total}`}];
       /* ---- "WHEN THIS ATTACKS A HERO, …" FIRES AT DECLARATION (v3.46) --
          An attacks-trigger goes on the stack ABOVE the attack that

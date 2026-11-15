@@ -40,7 +40,7 @@ hide a keyword with no reader, so read this as a floor on the work, not a ceilin
      `fx.fromBan`); only the clause was unread. The soul zone also already exists (Boltyn).
   2. **DONE v6.38** — Blood Debt (end-phase life loss while it sits in banish; `parser.bloodDebt`,
      `effects.beginEndPhase` step (6a), `test/blooddebt.test.js`)
-  3. Usurp (in the keyword section of the rules: an additional cost that destroys a Runechant, +2 power, and the
+  3. **DONE v6.39** (`parser.usurps`, `effects.execute`, `test/usurp.test.js`) — Usurp (in the keyword section of the rules: an additional cost that destroys a Runechant, +2 power, and the
      "usurped" fact other cards ask about)
   4. "banish the top card of your deck / if it's red|blue" and "banish a card from your
      hand / if it's Runeblade|Shadow" conditionals

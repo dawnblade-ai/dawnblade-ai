@@ -1717,6 +1717,13 @@ function classifyClause(raw){
      against a hand-less dummy. Pending and unreviewed keywords are
      deliberately absent: they must keep surfacing as coverage gaps. */
   if(/^(?:boost|battleworn|temper|guardwell|blade break|crush)$/.test(c)) return NOOP("printed keyword — applied by the rules when the card is used");
+  /* USURP (v6.39). CR 8.3.49 (verbatim, rules.fabtcg.com): "Usurp is a
+     play-static ability that means 'As an additional cost to play this,
+     destroy a Runechant if able. If you destroy a Runechant in this way,
+     this gets +2 {p}.'" The line is a `noop` because the keyword is a
+     COST, settled where every cost is (`effects.execute`), off `usurps`
+     and `usurpTarget` below. */
+  if(/^usurp$/.test(c)) return NOOP("printed keyword — as it is played, its owner destroys a Runechant if they have one, and if they do it gets +2 power");
   /* BLOOD DEBT (v6.38). CR 8.3.11 (verbatim, rules.fabtcg.com): "Blood Debt
      is a triggered-static ability. Blood debt means 'While this is in your
      banished zone, at the beginning of your end phase, lose 1 {h}.'" The
@@ -9642,6 +9649,29 @@ const printedKw = (c, k) => {
   return false;
 };
 
+/* ---- USURP — THE COST AND WHAT PAYS IT (v6.39) -------------------------
+
+   CR 8.3.49 (verbatim): "Usurp is a play-static ability that means 'As an
+   additional cost to play this, destroy a Runechant if able. If you
+   destroy a Runechant in this way, this gets +2 {p}.'" CR 8.3.49a: "If a
+   player pays the additional cost to play a card with usurp, the player
+   and the played card are considered to have usurped and Runechant that
+   was destroyed is considered to have been usurped."
+
+   "IF ABLE" IS NOT "YOU MAY": with a Runechant in the arena the cost is
+   paid, and with none the card is still played, at its printed power.
+   So there is nothing to ask while every Runechant is the same token.
+
+   `printedKw`, NEVER `hasKw` (an additional cost is carried or it is not).
+   `usurpTarget` answers WHICH aura pays: the first Runechant on the board.
+   STATED LIMIT: the special Runechants ("This counts as a Runechant") are
+   not read yet; the day they are, two different Runechants make this a
+   choice the player is owed, and this reader must return the candidates. */
+const usurps = c => !!c && printedKw(c, "usurp");
+function usurpTarget(sd){
+  return ((sd && sd.board) || []).find(isRunechant) || null;
+}
+
 /* ---- BLOOD DEBT — WHICH BANISHED CARDS BILL THEIR OWNER (v6.38) --------
 
    CR 8.3.11 (verbatim): "Blood Debt is a triggered-static ability. Blood
@@ -10845,7 +10875,7 @@ return {norm, noopFeedText, noopIsQuiet, isAttack, isArrow, isWeapon, hasGA, arc
         nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, qualColour, CLASS_TALENT_WORDS, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, isActionCard, costOffFor, heaveOf,
         classifyClause, fxParse, fxReset, playableFromZone, playZoneWhy, addCostWhy, isArrowCard, boostPays, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost, isActivation, isActionPaid, costTaxes, handAbilityTax,
         DECL_OPS, dracLinks, dracNow, dracLinksNow, weaponCost, payTrigger, OFFER_TRIGGERS, allyAttack, auraWeaponGrant, wardValue, wardBearers, wardTotal, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, routeCostsAP, rxAllowed, drxBarred, drxBarWhy, rxPump,
-        idleCounterWipes, rustedThrough, bloodDebt,
+        idleCounterWipes, rustedThrough, bloodDebt, usurps, usurpTarget,
         isAtkActionCard, phantasmPops, zonePow, pow6, kwGated, hasKwNow, printedKw,
         crankCost, fusionOffer, chargeOffer,
         isRunechant, runeCount, isAura, auraCount, isFrostbite, frostCount,
