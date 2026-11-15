@@ -811,7 +811,7 @@ img{display:block;max-width:100%}
 .tblsw .tblswsub{font-size:12px;color:var(--bone-dim);text-align:right}
 .rankchg{font-size:14px;line-height:1.45;margin-top:10px;padding:9px 10px;border:1px solid var(--line);background:rgba(0,0,0,.25)}
 .rankchg strong{color:var(--y);font-family:'Spline Sans Mono',monospace}
-.ffbar{margin:8px 12px;padding:9px 10px;border:1px solid var(--line);background:rgba(0,0,0,.25);font-size:14px;line-height:1.45}
+.ffbar{position:fixed;left:12px;right:12px;top:max(8px,env(safe-area-inset-top));z-index:59;max-width:536px;margin:0 auto;padding:9px 10px;border:1px solid var(--line);background:var(--ink);box-shadow:0 4px 14px rgba(0,0,0,.5);font-size:14px;line-height:1.45}   /* fixed like the server banner (which, at z 60, covers it when the link is in trouble): a countdown or a claim is never below the fold */
 .ffbar strong{color:var(--y);font-family:'Spline Sans Mono',monospace}
 .ffbar.mine,.ffbar.due{border-color:var(--y)}
 .ffbar button{display:block;margin-top:8px;min-height:44px;padding:8px 14px;background:none;border:1px solid var(--y);color:var(--y);font-size:14px}
@@ -7353,7 +7353,7 @@ function TableScreen({onBack, onSeated}){
           <div className="tblstat">Your open tables</div>
           {capOpen.map(c=><div key={c} className="tblopen"><span className="mono">{c}</span>
             <button disabled={busy} aria-label={"Close table "+c} onClick={()=>setCapAsk(capAsk===c ? null : c)}>Close</button></div>)}
-          {capAsk && <div className="tblerr" role="alertdialog" data-testid="close-warn" aria-label={"Close table "+capAsk+"?"}>
+          {capAsk && <div className="tblerr" role="alertdialog" data-testid="close-warn" aria-label={"Close table "+capAsk+"?"} ref={el=>{ if(el && el.scrollIntoView) try{ el.scrollIntoView({block:"nearest"}); }catch(_){} }}>
             <p><strong>Closing now counts as a loss</strong> if table {capAsk} is a ranked table with a game under way: it ends the game for both of you, your opponent takes the win, and your rating moves. A ranked table that has not started yet, and any friendly table, closes without a trace.</p>
             <div className="tblopen"><button disabled={busy} data-testid="close-yes" onClick={()=>closeMine(capAsk)}>Yes, close it</button>
               <button disabled={busy} data-testid="close-no" onClick={()=>setCapAsk(null)}>Keep it</button></div>
