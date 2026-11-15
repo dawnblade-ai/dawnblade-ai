@@ -136,6 +136,7 @@ async function rehearse(label, entry, deno, uid0){
     console.log("      " + label + " numbers: median request " + median(timings) + " ms (HTTP + function + stub), largest stored row " + stub.stats.largestPut.toLocaleString("en-US") + " bytes, " + stub.stats.puts + " saves, " + stub.stats.conflicts + " conflicts, cold first answer " + cold + " ms");
     phones.forEach(p => p.ch.close());
     await rankedPhase(label, base, stub, log, world, build, uid0);
+    await forfeitPhase(label, base, stub, log, world, build, uid0);
     await identityPhase(label, base, stub, log);
   } finally { child.kill(); await stub.close(); }
 }
@@ -159,7 +160,7 @@ async function rankedPhase(label, base, stub, log, world, build, uid0){
   const RA = mk("RA", HEROES[0], tokA, {ranked: true}), RB = mk("RB", HEROES[1], tokB);
   await RA.connect("create");
   const code = RA.code;
-  row(RA.ch.rank().ranked === true && stub.row(code).v === 4 && stub.row(code).ranked === true && JSON.stringify(RA.ch.rank().ratings.filter(x => x != null)) === "[1200]", label + ": ranked: the table opens ranked (a v4 row), the opener sits down at 1200", JSON.stringify(RA.ch.rank()));
+  row(RA.ch.rank().ranked === true && stub.row(code).v === 5 && stub.row(code).ranked === true && JSON.stringify(RA.ch.rank().ratings.filter(x => x != null)) === "[1200]", label + ": ranked: the table opens ranked (a v5 row), the opener sits down at 1200", JSON.stringify(RA.ch.rank()));
   const anon = await go({op: "join", table: code}), nameless = await go({op: "join", table: code, identity: {token: tokN}});
   row(anon.refused === "ranked-signin" && nameless.refused === "ranked-name", label + ": ranked: a join with no sign-in or no name is refused with its own word", [anon.refused, nameless.refused].join());
   await RB.connect("join", code);
@@ -184,6 +185,75 @@ async function rankedPhase(label, base, stub, log, world, build, uid0){
   row([SUB_A, SUB_B, SUB_N, tokA, tokB, tokN, ...players].every(x => all.indexOf(x) < 0), label + ": ranked: no token, provider user id or player id in any answer or broadcast of the ranked game");
   row(stub.stats.bad.length === 0, label + ": ranked: the stub saw no malformed call (rating_get / result_record args)", stub.stats.bad.slice(0, 3).join("; "));
   RA.ch.close(); RB.ch.close();
+}
+
+/* S5.2: the forfeit clock, close-as-concession and the recovery rule, through the real function. REAL time cannot be waited for (the limit is five
+   minutes), so the table's stored stamp is AGED in the stub's store (the function then compares it against its own Date.now(), exactly as it would after five minutes);
+   everything else is the function's own code. (The stub stands in for 006/007's result_record and recovery_redeem: UNVERIFIED against the real SQL over PostgREST.) */
+async function forfeitPhase(label, base, stub, log, world, build, uid0){
+  const post = async body => { const r = await fetch(base + "/functions/v1/table", {method: "POST", headers: {apikey: "sb_publishable_rehearsal", "content-type": "application/json"}, body: JSON.stringify(body)});
+    const text = await r.text(); return {text, ...JSON.parse(text)}; };
+  const SUBS = ["sub-ff-cccc-1111", "sub-ff-dddd-2222", "sub-ff-eeee-3333", "sub-ff-ffff-4444"], toks = SUBS.map(x => stub.issueUser(x)), texts = [];
+  const go = async b => { const r = await post(b); texts.push(r.text); return r; };
+  await go({op: "me", identity: {token: toks[0]}, name: "Forfeit Cee"}); await go({op: "me", identity: {token: toks[1]}, name: "Forfeit Dee"});
+  await go({op: "me", identity: {token: toks[2]}, name: "Forfeit Eee"}); await go({op: "me", identity: {token: toks[3]}, name: "Forfeit Eff"});
+  const rand = T.seeded("forfeit-rehearse|" + label), cat = {matchCatalog: spec => matchCatalog(spec, uid0), build};
+  const mk = (n, h, tok, extra) => PH.makePhone(world, n, {hero: h, rand, throws: [["rock", "rock"], ["paper", "rock"]], identity: {token: async () => tok}, ...cat, ...(extra || {})});
+  const seatUp = async (a, b, tokA, tokB) => { const PA = mk("PA" + a, HEROES[0], tokA, {ranked: true}), PB = mk("PB" + b, HEROES[1], tokB);
+    await PA.connect("create"); await PB.connect("join", PA.code); await world.settle([PA.ch, PB.ch]);
+    for(let i = 0; i < 8 && !(PA.sess && PB.sess && PA.sess.status() === "ready" && PB.sess.status() === "ready"); i++) await world.settle([PA.ch, PB.ch]);
+    return [PA, PB]; };
+  const age = (code, ms) => { const e = stub.rows.get(code), r = JSON.parse(e.json); r.clock.since -= ms; e.json = JSON.stringify(r); };
+  /* ---- a claimed forfeit ---- */
+  const before = stub.results.size;
+  const [A, B] = await seatUp(0, 1, toks[0], toks[1]);
+  const code = A.code, ck0 = stub.row(code).clock;
+  row(!!A.sess && !!B.sess && !!ck0 && (ck0.on === 0 || ck0.on === 1) && Number.isFinite(ck0.since), label + ": forfeit: a ranked game that has started carries a clock naming the seat the game waits on", JSON.stringify(ck0));
+  const wait = ck0.on, claimant = 1 - wait, keyOf = s => stub.row(code).hub.keys[s];
+  const early = await go({op: "claim", table: code, seat: claimant, key: keyOf(claimant)}), self = await go({op: "claim", table: code, seat: wait, key: keyOf(wait)}), forged = await go({op: "claim", table: code, seat: claimant, key: "x".repeat(keyOf(claimant).length)});
+  row(early.refused === "claim-early" && early.left > 0 && early.left <= 300000 && self.refused === "claim-self" && forged.refused === "auth" && stub.results.size === before && stub.row(code).over !== true, label + ": forfeit: an early claim, a claim by the waited-on player and a forged claim are each refused and change nothing", [early.refused, early.left, self.refused, forged.refused].join());
+  const peek = await go({op: "resync", table: code, seat: claimant, key: keyOf(claimant)});
+  row(peek.ok === true && peek.clock && peek.clock.on === wait && peek.clock.limit === 300000 && peek.clock.age >= 0, label + ": forfeit: a resync tells the phone who the game waits on, how long (server time) and the limit", JSON.stringify(peek.clock));
+  age(code, 301000);
+  const claimed = await go({op: "claim", table: code, seat: claimant, key: keyOf(claimant)});
+  const stored = [...stub.results.values()].pop();
+  row(claimed.ok === true && claimed.claimed === true && claimed.result && claimed.result.how === "forfeit" && claimed.result.winner === claimant && stub.results.size === before + 1 && stored && stored.p_how === "forfeit" && stored.p_winner === claimant,
+    label + ": forfeit: a due claim records ONE win by forfeit for the claimant (the absent seat loses)", JSON.stringify([claimed.ok, claimed.result && claimed.result.how, claimed.result && claimed.result.winner, stub.results.size - before]));
+  row(JSON.stringify(claimed.result.change.map(c => c.to).sort()) === "[1184,1216]", label + ": forfeit: the ratings moved by the Elo amount (1216 / 1184)", JSON.stringify(claimed.result.change));
+  const again = await go({op: "claim", table: code, seat: claimant, key: keyOf(claimant)}), lateMove = await go({op: "frame", table: code, seat: wait, key: keyOf(wait), n: 99999, frame: {ch: "net", m: {t: "intent", id: 3, seat: wait, action: {t: "pass"}}}});
+  const loser = await go({op: "resync", table: code, seat: wait, key: keyOf(wait)});
+  row(again.refused === "claim-over" && stub.results.size === before + 1 && !(lateMove.frames || []).some(f => f.m && f.m.t === "commit") && loser.ok === true && loser.result && loser.result.how === "forfeit" && loser.result.winner === claimant,
+    label + ": forfeit: a second claim and the absent player's late move change nothing; the absent player reads the ending", JSON.stringify([again.refused, loser.result && loser.result.how]));
+  A.ch.close(); B.ch.close();
+  /* ---- close is a concession once the game has started; free before ---- */
+  const [C, D] = await seatUp(2, 3, toks[2], toks[3]);
+  const cc = C.code, r0 = stub.results.size, closer = stub.row(cc).owners.indexOf(stub.players.get([...stub.identities.values()][0]) ? stub.row(cc).creator : null);
+  const closed = await go({op: "close", table: cc, identity: {token: toks[2]}});
+  const st2 = [...stub.results.values()].pop(), cseat = stub.row(cc).owners.indexOf(stub.row(cc).creator);
+  row(closed.ok === true && closed.conceded === true && stub.results.size === r0 + 1 && st2.p_how === "concession" && st2.p_winner === 1 - cseat && stub.row(cc).closed !== true && stub.row(cc).over === true,
+    label + ": forfeit: closing a started ranked table is the creator's concession (the closer loses, one result, the table is over)", JSON.stringify([closed.ok, closed.conceded, stub.results.size - r0, st2 && st2.p_how, st2 && st2.p_winner, cseat]));
+  void closer;
+  const idle = await go({op: "create", identity: {token: toks[2]}, ranked: true}), r1 = stub.results.size;
+  const free = await go({op: "close", table: idle.table, identity: {token: toks[2]}});
+  row(free.ok === true && !free.conceded && stub.results.size === r1 && stub.row(idle.table).closed === true, label + ": forfeit: closing a ranked table before the game started is free and records nothing");
+  C.ch.close(); D.ch.close();
+  /* ---- recovery: the stub's redeem keeps a throwaway that played ranked (orphaned), and never touches the recovered player ---- */
+  const playedBefore = stub.ratings.get([...stub.players.keys()][0]);
+  const SUBR = "sub-ff-rrrr-5555", tokR = stub.issueUser(SUBR);
+  const mint = await go({op: "recovery-mint", identity: {token: toks[2]}});
+  const mePlayer = [...stub.identities.entries()].find(([k]) => k.endsWith("\u0000" + SUBS[2]))[1];
+  const throwaway = [...stub.identities.entries()].find(([k]) => k.endsWith("\u0000" + SUBS[3]))[1];
+  const ratingBefore = JSON.stringify(stub.ratings.get(mePlayer)), tBefore = JSON.stringify(stub.ratings.get(throwaway));
+  await go({op: "me", identity: {token: toks[3]}});
+  const mint2 = await go({op: "recovery-mint", identity: {token: toks[2]}});
+  const redeem = await go({op: "recovery-redeem", identity: {token: toks[3]}, code: mint2.code});
+  row(mint.ok === true && redeem.ok === true && stub.players.has(throwaway) && JSON.stringify(stub.ratings.get(throwaway)) === tBefore && JSON.stringify(stub.ratings.get(mePlayer)) === ratingBefore && stub.players.get(throwaway).display_name === null,
+    label + ": forfeit: a recovery redeem keeps the throwaway that played ranked (orphaned, name freed, rating intact) and leaves the recovered player's rating alone", JSON.stringify([redeem.ok, stub.players.has(throwaway)]));
+  void playedBefore; void SUBR; void tokR;
+  stub.recovery.clear();                         /* the recovery phase after this one counts the codes it mints itself */
+  const all = texts.join("\n") + JSON.stringify(stub.broadcasts.filter(b => b.topic.startsWith("table:" + code) || b.topic.startsWith("table:" + cc))) + world.inbound.map(x => x.text).join("\n");
+  row([...SUBS, ...toks, mePlayer, throwaway].every(x => all.indexOf(x) < 0), label + ": forfeit: no token, provider user id or player id in any claim, close or recovery answer or broadcast");
+  row(stub.stats.bad.length === 0, label + ": forfeit: the stub saw no malformed call (result_record args with the forfeit ending)", stub.stats.bad.slice(0, 3).join("; "));
 }
 
 /* S4.1: the identify seam, against the stub's /auth/v1/user and identity_resolve (UNVERIFIED stand-ins for the real services). Plain
