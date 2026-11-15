@@ -67,7 +67,14 @@ checked for renumbering or rewording.
 
 ---
 
-## The two new precons — nothing to do until upstream publishes
+## The two new precons — being built (2026-11-15), nothing to do on a desktop
+
+**Update 2026-11-15:** the user ruled that they are to be built, from the text on
+the-fab-cube's unmerged `usurp-the-shadow-throne` branch. It is staged in
+`data/staged.js`; the plan is `ROADMAP-NEWDECKS.md`. The paragraph below is the
+state of `develop`, which still carries neither set.
+
+### As recorded before the ruling
 
 *Prism, Advent of Thrones* (SAT) and *Viserai, Between Worlds* (SBW) are
 pinned as fetched lists in `data/newsets.json`. They stay unbuildable

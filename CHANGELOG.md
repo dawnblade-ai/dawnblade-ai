@@ -1,3 +1,15 @@
+## After v6.36 (2026-11-15, not a release) — the pool may grow, and the two September precons are staged
+
+- **RULING (user, 2026-11-15, "Yes to all"):** (1) Dawnblade is no longer frozen at fifteen: a new Silver Age precon joins the pool when the engine reads its whole list, and Silver Age's
+  ban list and hero bench still never remove anything (`data/formats.json` `dawnblade.growth`, `test/formats.test.js`); (2) the text of *Prism, Advent of Thrones* (SAT) and *Viserai, Between
+  Worlds* (SBW) is pinned now from the-fab-cube's unmerged `usurp-the-shadow-throne` branch instead of waiting for the merge into `develop`.
+- **`data/staged.js`** (new; `tools/pin-staged.js`, source recorded as a commit) holds every record with a SAT or SBW printing, both faces of the two-faced cards, and their tokens. **The page
+  does not load it**: no page, `APP_VER`, `DATA_VER`, `WIRE_V` or server function change, so nothing a player can see moved and the version did not bump.
+- **`test/staged.test.js`** (sabotaged): every row of both lists resolves by its own print code (the pool alone must not); both faces present; a card the pool already holds reads the same in
+  both files; the phone never sees the file. One probe records that the token-name scan reads "Gate to i'Arathael" as "arathael".
+- **`tools/newdecks-census.js`** runs both lists through the real parser and prints what it cannot read. The plan and the reader order are `ROADMAP-NEWDECKS.md`: Viserai first, Prism second.
+- **Checked this cycle:** `develop` re-fetched, `pin-pool.js --check` current, the live-wire drills in `drift.test.js` read with the cache present.
+
 ## v6.36 — the Pass button says what a pass costs; the Concede button is gone
 
 - **The phone never passes for a player** (RULING, user, 2026-11-15: "Don't auto pass because it gives too much info to the opp"). A pass sent the instant the attacker has nothing to play

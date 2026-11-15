@@ -228,8 +228,10 @@ test("upstream has not yet published the two precons we are waiting on", {skip},
       if(byName.has(n.toLowerCase().trim())) arrived.push(d.hero + ": \"" + n + "\" now resolves");
   }
   assert.deepEqual(arrived, [],
-    "UPSTREAM HAS PUBLISHED — the debt in data/newsets.json has come due. Re-pin with "
-    + "`node tools/pin-pool.js`, add the hero to HEROES/DECKS in index.html, re-measure "
-    + "`upstreamMissing`/`cardsBlocked`, bump DATA_VER, and update this drill's premise:\n  "
+    "UPSTREAM HAS MERGED the two precons into develop. Their text is already staged in "
+    + "data/staged.js from the unmerged branch (RULING 2026-11-15): diff the staged records against "
+    + "develop's (a wording change between branch and merge must be read, not played), re-point "
+    + "tools/pin-staged.js or retire it, re-measure `upstreamMissing`/`cardsBlocked`, and update "
+    + "this drill's premise:\n  "
     + arrived.join("\n  "));
 });

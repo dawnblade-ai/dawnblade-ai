@@ -8,9 +8,11 @@ the table, "Coach's call" in the trainer).
 **Mission (user, 2026-11-07):** the ultimate FaB Silver Age precon competitive gaming environment and judging engine — 100% fan-made, non-profit, for fun and glory, no ads, forever.
 
 **It plays DAWNBLADE, a fan-made sub-format of Silver Age (declared 2026-09-26).**
-The pool is FROZEN at the fifteen Chapter 1–3 precons as printed, and it does
-NOT follow Silver Age's rolling ban list or its seasonal hero bench: a card
-Silver Age has banned stays legal here. That is `data/formats.json`, held by
+The pool is the Silver Age precons this project has BUILT, as printed (the fifteen
+Chapter 1–3 decks today), and it does NOT follow Silver Age's rolling ban list or its
+seasonal hero bench: a card Silver Age has banned stays legal here. RULING (user,
+2026-11-15): new precons JOIN as they are built (`ROADMAP-NEWDECKS.md`); until a hero
+opens, its cards wait in `data/staged.js` (`tools/pin-staged.js`), which the page never loads. That is `data/formats.json`, held by
 `test/formats.test.js`. **Do not "fix" a banned card out of a deck list.**
 Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`), derived
 by `tools/silver-age.js` from the pinned pool (rerun it after every re-pin; `benched` is `null`).

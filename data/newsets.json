@@ -63,6 +63,18 @@
   ],
   "_note": "re-measured 2026-09-11, one week before the announced street date: every number below is UNCHANGED — 15 Silver Age sets, 4952 records, 0 printings for either set, and all 15 blocking names still absent. Re-measured again 2026-09-26, EIGHT DAYS AFTER the street date: still UNCHANGED — set.csv lists the same 15 Silver Age sets and nothing from Usurp the Shadow Throne, card.json holds 4952 records and 0 SAT / 0 SBW printings. A street date is not publication."
  },
+ "staged": {
+  "_why": [
+   "RULING (user, 2026-11-15): pin the card records now from the unmerged upstream branch instead of waiting for the merge into develop.",
+   "tools/pin-staged.js writes them to data/staged.js, which the page does not load. The `upstream` block above is still the measurement of `develop`, and it is still true: develop carries neither set.",
+   "This block records WHERE the staged records came from, as a commit, so the file can be reproduced. It holds no card text."
+  ],
+  "repo": "the-fab-cube/flesh-and-blood-cards",
+  "branch": "usurp-the-shadow-throne",
+  "commit": "ec42d952da9c56a6a94855de8f27daeef2d7730f",
+  "taken": "2026-11-15",
+  "file": "data/staged.js"
+ },
  "prism": {
   "set": "SAT",
   "hero": "Prism, Advent of Thrones",

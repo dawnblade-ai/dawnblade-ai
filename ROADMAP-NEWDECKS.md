@@ -1,11 +1,11 @@
 # ROADMAP — the new precons
 
 Written 2026-11-15 by the CEO thread, at v6.36, on the user's request ("several new decks
-have released … make a plan to add all the new decks"). **This is a plan. Nothing here is
-built, and nothing in it ships before the two rulings in "Needs the user" are given.**
+have released … make a plan to add all the new decks"). **Status 2026-11-15: the user answered "Yes to all" — both
+rulings are given, Phase 0 and Phase 1 are DONE, Phase 2 is next.**
 
 Every number below was measured on 2026-11-15. Re-derive before trusting:
-`node tools/newdecks-census.js --refresh`.
+`node tools/newdecks-census.js` (reads `data/staged.js`, no network).
 
 ## What has released, and what can be built
 
@@ -59,16 +59,24 @@ banish and double-face work is smaller than Prism's new zone.
 
 ## The phases (one reader per release, as always)
 
-**Phase 0 — rulings.** See "Needs the user". Record them in `data/formats.json`,
-`test/formats.test.js` and CLAUDE.md's format paragraph.
+**Phase 0 — rulings. DONE (2026-11-15).** `data/formats.json` (`dawnblade.growth`),
+`test/formats.test.js`, CLAUDE.md's format paragraph.
 
-**Phase 1 — pin the text (one release, nothing a player can see).**
-- `tools/pin-pool.js` learns a second source for named sets (the feature branch), so the
-  fifteen keep coming from `develop` untouched. Pin both lists' records, both faces.
-- `test/newsets.test.js` turns from "absent" to "pinned, not decked"; `drift.test.js`
-  compares the pinned branch text with `develop` the day upstream merges, so a wording
-  change between the branch and the merge is caught, not played.
-- `DATA_VER` bump, function redeploy, the usual release steps.
+**Phase 1 — pin the text. DONE (2026-11-15), and differently from the first draft.**
+- The text is NOT in `data/pool.js`. It is staged in `data/staged.js`, written by
+  `tools/pin-staged.js` from one upstream COMMIT (recorded in the tool and in
+  `data/newsets.json`'s `staged` block), held by `test/staged.test.js`.
+- Why: the pool is what the phone plays and what every pool-wide census counts. Cards
+  nobody can be dealt do not belong on the phone, and they would have moved those counts.
+  So this step changed no page, no `DATA_VER` and no server function: it is not a release.
+- The day a hero opens, its `DECKS` entry makes `pin-pool.js` reach its cards by name.
+  `pin-pool.js` reads `develop` only today, so that release must teach it to take a
+  record `develop` lacks from the staged file. That is the release with the `DATA_VER` bump.
+- `drift.test.js`'s probe still watches `develop`: when upstream merges, it says to diff
+  the staged text against the merged text before anything else.
+- Readers are built and drilled against staged records (`require("../data/staged.js")`).
+- Found while staging: the token-name scan reads "Gate to i'Arathael token" as
+  "arathael" (held as a probe in `test/staged.test.js`); reader 5 must read the whole name.
 
 **Phase 2 — Viserai, Between Worlds.** The eight readers above, each its own release with
 a drill that bites, a scene, fairness, and a CR quote in the source. The hero stays out of
@@ -82,7 +90,7 @@ other Prism reader stands on it.
 **Phase 4 — Outbreak (2027-02).** When the lists publish: ask for `fabrary.net`, pin the
 lists into `data/newsets.json`, run the census, extend this file.
 
-## Needs the user
+## Asked of the user — ANSWERED "Yes to all" (2026-11-15)
 
 1. **The format.** Dawnblade was declared FROZEN at fifteen (2026-09-26). Adding decks
    changes that declaration. Proposed wording: "the pool is every Silver Age precon this

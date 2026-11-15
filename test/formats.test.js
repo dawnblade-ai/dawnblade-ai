@@ -87,6 +87,22 @@ test("the Silver Age block equals what the pinned pool derives", () => {
   for(const b of want) assert.ok(names.has(b.name), `${b.name} left the pool`);
 });
 
+/* RULING (user, 2026-11-15): the pool grows as new precons are built. The rule is data, and
+   what it must never become is a way for a card to LEAVE. */
+test("the pool grows by ruling, and a staged hero is not a Dawnblade hero until it is built", () => {
+  assert.match(F.dawnblade.growth, /RULING \(user, 2026-11-15\)/);
+  assert.match(F.dawnblade.growth, /staged/);
+  assert.ok(!/frozen at/i.test(F.dawnblade.pool), "the pool line still says frozen");
+  const NEW = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "data", "newsets.json"), "utf8"));
+  const staged = Object.keys(NEW).filter(k => NEW[k] && NEW[k].set && NEW[k].sections);
+  assert.ok(staged.length >= 2, "no staged list was found, so this drill holds nothing");
+  /* a staged hero the roster does not deal must not be counted by the format either:
+     the format fields exactly the roster (the first drill), so the two counts agree */
+  const opened = staged.filter(k => W.HEROES.some(h => h.n === NEW[k].hero));
+  assert.equal(F.dawnblade.heroes.length, W.HEROES.length, "the format and the roster count different heroes");
+  assert.equal(W.HEROES.length, 15 + opened.length, "the roster is not the fifteen plus the staged heroes that have opened");
+});
+
 test("the pool scan can tell a real card from a typo", () => {
   /* the control for the check above: without it, a scan that returned every
      string would vouch for any name at all */
