@@ -9,20 +9,32 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-15, at v6.36)
+## HANDOFF — START HERE (CEO, 2026-11-15, at v6.37)
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
-### NEW DECKS (added 2026-11-15 by CEO session_013xG9x9uyRyTvTysrhdXW6D; live is still v6.36, no release made)
-- **The user asked for all the new decks.** The plan is `ROADMAP-NEWDECKS.md` on the session branch
-  `claude/affectionate-pascal-ntel01` (not on main yet), with `tools/newdecks-census.js` (the measure).
-- **Found:** the-fab-cube `develop` still has 15 Silver Age sets, but its unmerged branch `usurp-the-shadow-throne` carries
-  SAT (Prism) and SBW (Viserai, Between Worlds) complete: every row of `data/newsets.json` resolves with its printing.
-  Outbreak (SLV Mortimer, SFC α-01, 2027-02) is spoilers only, no lists. The CR on rules.fabtcg.com defines the new keywords.
-- **ASKED THE USER, UNANSWERED (do not pin or build before the answers):** (1) amend the frozen-at-fifteen format so built
-  precons join the pool; (2) pin the September text from the unmerged upstream branch now, or wait for the merge.
-- **Order if yes:** pin (one invisible release) -> Viserai, Between Worlds (8 readers) -> Prism (soul zone first).
+### NEW DECKS — READ THIS FIRST (CEO session_013xG9x9uyRyTvTysrhdXW6D, 2026-11-15, at v6.37)
+- **State:** live = v6.37 on `main` (9d61853), livecheck ALL PASS. Function `table` version 28 = build `v6.37 · sage-v17`,
+  stamped; `--check` OK. No unreleased work. The older block below (v6.36) still holds for everything else.
+- **RULINGS (user, 2026-11-15, "Yes to all"):** (1) the pool is NO LONGER frozen at fifteen: a new Silver Age precon joins when
+  the engine reads its whole list (`data/formats.json` `dawnblade.growth`); bans and benches still never remove anything;
+  (2) pin the new text NOW from the-fab-cube's unmerged branch `usurp-the-shadow-throne` (develop still has 15 sets).
+- **THE PLAN is `ROADMAP-NEWDECKS.md` on main.** Order: Viserai, Between Worlds (SBW) -> Prism, Advent of Thrones (SAT) ->
+  Outbreak (SLV Mortimer, SFC α-01, 2027-02: spoilers only, no lists; ask the user for `fabrary.net` when lists publish).
+- **STAGED, NOT POOLED:** `data/staged.js` (`tools/pin-staged.js`, source = ONE upstream commit; `test/staged.test.js`) holds
+  both decks' records. The page does not load it. Readers are built and drilled against it. The day a hero opens, `pin-pool.js`
+  must learn to take a record develop lacks from the staged file (that release bumps DATA_VER).
+- **MEASURE:** `node tools/newdecks-census.js` (no network). Viserai rows now 12 full / 19 part / 4 none; Prism 21 / 4 / 7.
+- **DONE v6.37, reader 1:** "You may play this from your banished zone" (`test/banroute.test.js`). The route already existed
+  (`playZoneWhy`, `fx.fromBan`); the soul zone exists too (Boltyn). A reader no pool card reaches must be added to the pin in
+  `test/anchors.test.js` ("every parser reading the pool never reaches").
+- **NEXT, in order (ROADMAP "Viserai" list):** 2 Blood Debt -> 3 Usurp -> 4 banish-then-colour/type conditionals -> 5 Gate to
+  i'Arathael token (the token-name scan reads it as "arathael": probe in staged.test.js) -> 6 special Runechants -> 7 the
+  double-faced hero and traverse -> 8 small conditionals. Quote the CR verbatim (rules.fabtcg.com/en/cr/08-keywords/ is reachable).
+  Do not cite a CR number in docs before the rule is built (`test/crindex.test.js` pins prose-only citations).
+- **Each reader is a full release** (engine file changes -> function redeploy -> stamp -> main -> livecheck), even though no
+  dealt card changes. A plain `git push` of docs/data that the page does not load needs no version bump (done once, 817e5c7).
 
 ### NEW THREAD: READ THIS BLOCK FIRST (written 2026-11-15 by CEO session_013xG9x9AK7kNX6rG3LLzLuR)
 - **State:** live = v6.36 on `main` (e58200c), livecheck ALL PASS. Function `table` version 26 = build `v6.36 · sage-v17`,
