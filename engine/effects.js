@@ -10948,6 +10948,27 @@ function beginEndPhase(game, seat, db){
     for(const f of sw.fired) fired.push(f);
   }
 
+  /* (6a) BLOOD DEBT (v6.38). CR 8.3.11 (verbatim): "While this is in your
+     banished zone, at the beginning of your end phase, lose 1 {h}." One
+     life per card in the seat's OWN banished zone, each its own trigger.
+     LIFE LOSS, NOT DAMAGE (CR 8.5.12b): nothing prevents it, it is not a
+     hit, and so it is written to the life total and not sent through a
+     damage op. Both callers ask whether the seat is still standing. */
+  {
+    const sd = (n.sides || [])[seat] || {};
+    const debt = P.bloodDebt(sd.banish);
+    if(debt.length){
+      const sides = n.sides.slice(), me = Object.assign({}, sides[seat]);
+      me.hp = (me.hp || 0) - debt.length;
+      sides[seat] = me; n = Object.assign({}, n, {sides});
+      const names = debt.map(c => c.name);
+      msgs.push("Blood debt — " + G.sv(me, "lose") + " " + debt.length + " life for "
+        + (debt.length > 3 ? debt.length + " cards" : names.join(", "))
+        + " in " + G.sp(me) + " banished zone. Life loss, not damage: nothing prevents it.");
+      fired.push("blood debt");
+    }
+  }
+
   /* (7) WHAT WAS ARMED AGAINST THIS TURN EXPIRES WITH IT (v3.29).
      "Their FIRST attack during their next turn" — if they never attacked,
      the effect is spent all the same. Only entries that were armed for

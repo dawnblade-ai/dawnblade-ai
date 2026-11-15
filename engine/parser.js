@@ -1717,6 +1717,13 @@ function classifyClause(raw){
      against a hand-less dummy. Pending and unreviewed keywords are
      deliberately absent: they must keep surfacing as coverage gaps. */
   if(/^(?:boost|battleworn|temper|guardwell|blade break|crush)$/.test(c)) return NOOP("printed keyword — applied by the rules when the card is used");
+  /* BLOOD DEBT (v6.38). CR 8.3.11 (verbatim, rules.fabtcg.com): "Blood Debt
+     is a triggered-static ability. Blood debt means 'While this is in your
+     banished zone, at the beginning of your end phase, lose 1 {h}.'" The
+     line is a `noop` because nothing happens when the card is played: the
+     keyword is carried by `bloodDebt` below, which the shared end phase
+     (`effects.beginEndPhase`) asks on both boards. */
+  if(/^blood debt$/.test(c)) return NOOP("printed keyword — while this sits in its owner's banished zone, they lose 1 life at the beginning of each of their end phases");
   /* HEAVE N (v3.32). This line is a `noop` for the same reason as the ones
      above and for NO OTHER: the keyword is carried, by `heaveOf` /
      `heaveOffer` / `heave`, and both boards offer it at the arsenal step.
@@ -9635,6 +9642,26 @@ const printedKw = (c, k) => {
   return false;
 };
 
+/* ---- BLOOD DEBT — WHICH BANISHED CARDS BILL THEIR OWNER (v6.38) --------
+
+   CR 8.3.11 (verbatim): "Blood Debt is a triggered-static ability. Blood
+   debt means 'While this is in your banished zone, at the beginning of
+   your end phase, lose 1 {h}.'" CR 8.3.11a: "Blood debt only triggers if
+   its source is public in the banished zone at the beginning of the
+   owner's end phase."
+
+   `printedKw`, NEVER `hasKw`: the Gate to i'Arathael says "target action
+   card WITH BLOOD DEBT" and is a reference, not a carrier. One life per
+   card, so the answer is the cards, not a count.
+
+   PUBLIC (8.3.11a): every card in `banish` is face-up in this engine.
+   The one face-down banish, intimidate's, is held in its own field
+   (`intimidated`) and never enters the zone this reads. A reader that
+   ever files a face-down card into `banish` must teach this function. */
+function bloodDebt(banish){
+  return (banish || []).filter(c => c && printedKw(c, "blood debt"));
+}
+
 /* ---- CRANK — THE KEYWORD'S OWN PARAMETERS (v4.24) --------------------
 
    The database carries no reminder text for any keyword, and the SDA023
@@ -10818,7 +10845,7 @@ return {norm, noopFeedText, noopIsQuiet, isAttack, isArrow, isWeapon, hasGA, arc
         nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, qualColour, CLASS_TALENT_WORDS, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, isActionCard, costOffFor, heaveOf,
         classifyClause, fxParse, fxReset, playableFromZone, playZoneWhy, addCostWhy, isArrowCard, boostPays, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost, isActivation, isActionPaid, costTaxes, handAbilityTax,
         DECL_OPS, dracLinks, dracNow, dracLinksNow, weaponCost, payTrigger, OFFER_TRIGGERS, allyAttack, auraWeaponGrant, wardValue, wardBearers, wardTotal, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, routeCostsAP, rxAllowed, drxBarred, drxBarWhy, rxPump,
-        idleCounterWipes, rustedThrough,
+        idleCounterWipes, rustedThrough, bloodDebt,
         isAtkActionCard, phantasmPops, zonePow, pow6, kwGated, hasKwNow, printedKw,
         crankCost, fusionOffer, chargeOffer,
         isRunechant, runeCount, isAura, auraCount, isFrostbite, frostCount,

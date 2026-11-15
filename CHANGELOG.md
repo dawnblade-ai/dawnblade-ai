@@ -1,3 +1,18 @@
+## v6.38 — the second reader for Viserai, Between Worlds: Blood Debt
+
+- **Nothing a player can be dealt changed.** Engine groundwork for the new decks (`ROADMAP-NEWDECKS.md`): six Gloomblades of *Viserai, Between Worlds* print Blood Debt, and they are
+  staged (`data/staged.js`), not in the pool. Measured: `parser.bloodDebt` answers no pool record.
+- **The rule, verbatim (CR 8.3.11, rules.fabtcg.com):** "Blood Debt is a triggered-static ability. Blood debt means 'While this is in your banished zone, at the beginning of your end
+  phase, lose 1 {h}.'" 8.3.11a: "Blood debt only triggers if its source is public in the banished zone at the beginning of the owner's end phase."
+- **Built once, for both boards:** `parser.bloodDebt(banish)` names the carriers (`printedKw`, so the Gate token's "with blood debt" is a reference and owes nothing);
+  `effects.beginEndPhase` step (6a) takes one life per carrier in the seat's own banished zone. It is life loss, not damage (CR 8.5.12b): no prevention, no hit. Every card in `banish`
+  is public here (intimidate's face-down card lives in its own field), which is 8.3.11a.
+- **A beginning-of-end-phase trigger can now end the game.** `judge.doEndTurn` asks `winCheck` after the triggers and stops before step (a); the trainer's `endTurn` and `foeEnd` ask the
+  same question at the same beat.
+- **Drill `test/blooddebt.test.js`** (sabotaged five ways, each bit): carriers not references; one life per card, owner's end phase only, banish only; a prevention shield does not stop
+  it (with a control that the same shield stops 1 damage); at the table the debt is paid and the turn goes on; a hero at 1 life with a debt has lost before the handoff, and at 2 survives.
+- **Still unread on those cards:** Usurp (reader 3). **No WIRE_V, no DATA_VER change.** The function is redeployed because `APP_VER` and engine files changed.
+
 ## v6.37 — the first reader for Viserai, Between Worlds: "You may play this from your banished zone"
 
 - **Nothing a player can be dealt changed.** This is engine groundwork for the new decks (`ROADMAP-NEWDECKS.md`): the six Gloomblades of *Viserai, Between Worlds* print the line, and

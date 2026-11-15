@@ -4677,6 +4677,10 @@ function doEndTurn(g, seat){
     for(const m of be.msgs) n = say(n, m);
     if(be.ops.length)
       n = withEffects({...n, actor: seat}, (fx, s2) => fx.runOps(s2, be.ops, be.src || be.fired.join(", ")));
+    /* A BEGINNING-OF-END-PHASE TRIGGER CAN END THE GAME (v6.38): blood debt
+       is life loss (CR 8.3.11), and a hero at 0 has lost before (a). */
+    n = winCheck(n);
+    if(n.over) return n;
   }
 
   /* A TRIGGER THAT ASKS HOLDS THE END PHASE (v5.71). Bloodrot Pox's "…unless

@@ -38,7 +38,8 @@ hide a keyword with no reader, so read this as a floor on the work, not a ceilin
   1. **DONE v6.37** — play a card from the banished zone ("You may play this from your
      banished zone"; `test/banroute.test.js`). The route was already built (`playZoneWhy`,
      `fx.fromBan`); only the clause was unread. The soul zone also already exists (Boltyn).
-  2. Blood Debt (end-phase life loss while it sits in banish)
+  2. **DONE v6.38** — Blood Debt (end-phase life loss while it sits in banish; `parser.bloodDebt`,
+     `effects.beginEndPhase` step (6a), `test/blooddebt.test.js`)
   3. Usurp (in the keyword section of the rules: an additional cost that destroys a Runechant, +2 power, and the
      "usurped" fact other cards ask about)
   4. "banish the top card of your deck / if it's red|blue" and "banish a card from your

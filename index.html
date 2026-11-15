@@ -961,7 +961,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "6.37"; /* v6.37 - the first reader for the new Viserai deck: a card that prints "You may play this from your banished zone" is read as saying so; no card a player can be dealt changed. See CHANGELOG.md. */
+window.APP_VER = "6.38"; /* v6.38 - the second reader for the new Viserai deck: Blood Debt bills its owner 1 life at each of their end phases while the card sits banished; no card a player can be dealt changed. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -4976,6 +4976,10 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
 
     /* Beginning-of-end-phase triggers, ahead of (a). */
     n = beginEndPhase(n, 0);
+    /* ONE OF THEM CAN END THE GAME (v6.38): blood debt is life loss at the
+       beginning of the end phase, and the table asks the same question at
+       the same beat (`judge.doEndTurn`). */
+    if(you(n).hp<=0){ n.over={win:false}; return L(n,`You hit the boards. ${opp(n).name} remains standing.`); }
 
     /* A TRIGGER THAT ASKS HOLDS THE END PHASE (v5.71) — Bloodrot Pox's "…
        unless you pay {r}{r}{r}" queues the shared pay sheet, and this
@@ -5391,6 +5395,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     let n = L({...s, mode:"act"}, `— ${opp(s).name}'s end phase (CR 4.4). No priority. —`);
     /* Beginning-of-end-phase triggers, ahead of (a). */
     n = beginEndPhase(n, 1);
+    n = winCheck(n); if(n.over) return n;   /* v6.38: as `endTurn`, for the other seat */
     /* A TRIGGER THAT ASKS HOLDS IT — see `endTurn` (v5.71). A sheet addressed
        to seat 1 is answered on the spot by `foeAnswerPay`/`foeAnswerSoak`,
        whose drain resumes `foeEndRest`. */

@@ -105,6 +105,8 @@ test("every parser reading the pool never reaches is pinned", {skip}, () => {
        this line until that hero opens. Driven by test/banroute.test.js
        against the staged records. This entry leaves the day he is decked. */
     "return R([[\"noop\", \"a standing permission — it may be played from its owner's banished zone\"]], {fromBan: true});",
+    /* v6.38: the same, for Blood Debt (test/blooddebt.test.js). */
+    "if(/^blood debt$/.test(c)) return NOOP(\"printed keyword — while this sits in its owner's banished zone, they lose 1 life at the beginning of each of their end phases\");",
   ].sort());
 });
 

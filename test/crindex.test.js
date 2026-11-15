@@ -95,9 +95,11 @@ test("crindex — the verdict counts are pinned", () => {
      cease to exist (game.js resetLeavers, test/ctrreset.test.js). */
   /* 88 -> 89 and 78 -> 79 guarded AT the arsenal close-out: CR 3.1.1a, the zones outside the
      arena (parser.arsenalPutSource, test/arsenalsrc.test.js). */
-  assert.equal(rs.length, 89, "the number of distinct CR rules this project cites moved");
+  /* 89 -> 91 and 79 -> 81 guarded AT v6.38: CR 8.3.11 and 8.3.11a, Blood Debt and its
+     public-source rule (parser.bloodDebt, effects.beginEndPhase, test/blooddebt.test.js). */
+  assert.equal(rs.length, 91, "the number of distinct CR rules this project cites moved");
   /* 50 -> 51 guarded and 6 -> 5 drill-only AT v4.66: CR 7.1.2, built. */
-  assert.equal(by(rs, "guarded").length,   79, "guarded count moved");
+  assert.equal(by(rs, "guarded").length,   81, "guarded count moved");
   assert.equal(by(rs, "UNGUARDED").length,  3, "UNGUARDED count moved");
   assert.equal(by(rs, "drill-only").length, 5, "drill-only count moved");
   assert.equal(by(rs, "prose").length,      2, "prose count moved");
