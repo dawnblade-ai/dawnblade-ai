@@ -2,7 +2,7 @@
 /* tools/sql-pglite.js — RUN server/supabase/*.sql ON PGLITE (WASM Postgres), OFFLINE (SERVER S4.1)
    The repo keeps zero dependencies: install PGlite into a scratch dir and point at it.
      npm install --prefix <scratch> @electric-sql/pglite
-     PGLITE_DIR=<scratch> node tools/sql-pglite.js [file.sql ...]        (default: 001..006)
+     PGLITE_DIR=<scratch> node tools/sql-pglite.js [file.sql ...]        (default: 001..007)
    Creates the three Supabase role names (anon, authenticated, service_role), runs each file TWICE (the self-checks are idempotent),
    prints the last row of each run, then proves anon cannot read the tables or call the functions. Exits 1 on any failure.
    NOT part of `npm test`. It does not touch any Supabase project. */
@@ -11,7 +11,7 @@ const path = require("path"), fs = require("fs");
 const dir = process.env.PGLITE_DIR;
 if(!dir){ console.error("set PGLITE_DIR to a directory with @electric-sql/pglite installed"); process.exit(2); }
 const {PGlite} = require(require.resolve("@electric-sql/pglite", {paths: [dir]}));
-const files = process.argv.slice(2).length ? process.argv.slice(2) : ["001_tables.sql", "002_players.sql", "003_names.sql", "004_recovery.sql", "005_table_cap.sql", "006_ratings.sql"].map(f => path.join(__dirname, "..", "server", "supabase", f));
+const files = process.argv.slice(2).length ? process.argv.slice(2) : ["001_tables.sql", "002_players.sql", "003_names.sql", "004_recovery.sql", "005_table_cap.sql", "006_ratings.sql", "007_forfeit.sql"].map(f => path.join(__dirname, "..", "server", "supabase", f));
 (async () => {
   const db = new PGlite(); let bad = 0;
   await db.exec("create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;");
