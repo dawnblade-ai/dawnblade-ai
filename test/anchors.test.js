@@ -150,14 +150,17 @@ test("`runOps`'s vocabulary and what the pool emits are pinned both ways", {skip
      97 -> 98 AT S-2: `intimidate`, Sadistic Scowl's "Intimidate target
      hero" on a non-attack (`effects.intimidateFoe`, the one body).
      98 -> 99 AT S-4: `loseLife`, "they lose N{h}" — life loss is not damage
-     (CR 8.5.12b), so it never meets `preventDamage`. */
-  assert.equal(r.dispatched, 99, "runOps's op vocabulary moved");
+     (CR 8.5.12b), so it never meets `preventDamage`.
+     99 -> 100 AT v6.40: `banTop`, "banish the top card of your deck" — Pull
+     from Beyond, a STAGED card, so the pool has no emitter for it yet and
+     it is named below until Viserai is decked (test/banishif.test.js). */
+  assert.equal(r.dispatched, 100, "runOps's op vocabulary moved");
   /* DISPATCHED WITH NO EMITTER — the `perBoost` shape. Three have a
      producer that is not the parser and are named for it; two have none
      anywhere and are latent readers whose printed wording the pool only
      ever spells inside a cost. */
   assert.deepEqual(r.noEmitter,
-    ["arcTaken", "deckDestroy", "destroyGear", "soulSpend", "tapSelfHero"]);
+    ["arcTaken", "banTop", "deckDestroy", "destroyGear", "soulSpend", "tapSelfHero"]);
   /* EMITTED WITH NO CASE IN `runOps` — each dispatched at a named site
      instead. v3.99 ran this half by hand, once; the three `per…` kinds
      joined it at v4.48 and had ZERO emitters until that version. */

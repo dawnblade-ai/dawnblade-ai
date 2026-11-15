@@ -7249,20 +7249,20 @@ function makeEffects(ctx){
       if(!oc || oc.trigger !== "defends") continue;
       /* CORRUPTED CROWN (v6.40, staged): "you may banish a card from your
          hand. If you do, this gets +1{d}."
-         (1) A DECLARED DEFENDER IS NOT IN THE HAND. Judge keeps the wall's
-         cards in `hand` under `blockH` until the link closes, so a pick
+         (1) A DECLARED DEFENDER IS NOT IN THE HAND. The table keeps the
+         wall's cards in the hand zone until the link closes, so a pick
          that MOVES a card out of that zone must not offer them — paying
          the cost with a card that is also blocking is two uses of one
-         card. A reveal moves nothing and keeps its pool.
+         card. WHICH cards those are is the caller's answer (`wall`), as
+         it is for everything else in this body. A reveal moves nothing
+         and keeps its pool.
          (2) "THIS GETS +1{d}" IS THE DEFENDING PIECE'S, so the payload
          rides as `defUid` exactly as the pay-cost family's does: `runOps`
          only logs a `defBuff`, and the number has to reach `defMod`. */
-      const _os = optCostSpec(oc, dc, defSeat, false);
-      const _dsd = n.sides[defSeat] || {};
-      if(oc.kind !== "reveal" && oc.zone === "hand" && (_dsd.blockH || []).length)
-        _os.filter = {...(_os.filter || {}), notUids: (_dsd.blockH || []).slice()};
-      if(defBuffOf(oc.ops)) _os.defUid = dc.uid;
-      n.promptQ = [...(n.promptQ||[]), _os];
+      const _held = (oc.kind !== "reveal" && oc.zone === "hand") ? (wall || []).map(c => c && c.uid).filter(u => u != null) : [];
+      n.promptQ = [...(n.promptQ||[]), Object.assign(optCostSpec(oc, dc, defSeat, false),
+        _held.length ? {filter: {...(oc.filter || {}), ...(oc.filter && oc.filter.notSelf ? {notUid: dc.uid} : {}), notUids: _held}} : {},
+        defBuffOf(oc.ops) ? {defUid: dc.uid} : {})];
       queued++;
     }
     return {game: n, queued};

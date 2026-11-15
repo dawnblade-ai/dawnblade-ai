@@ -341,7 +341,9 @@ test("`filters` is a spec field `buildPrompt` NAMES (v2.34, ninth field)", () =>
      field, inserted beside the counter cost it is the twin of. */
   /* < 12,500 -> < 13,000 AT v4.81, READ FIRST: still the pick branch; the
      growth is the chosen discard's `discard` field, opt-in beside `jab`. */
-  assert.ok(body.length > 200 && body.length < 13000, "re-anchor this slice");
+  /* < 13,000 -> < 13,500 AT v6.40, READ FIRST: still the pick branch; the
+     growth is the pick's `defUid` (Corrupted Crown) and its comment. */
+  assert.ok(body.length > 200 && body.length < 13500, "re-anchor this slice");
   assert.match(body, /\bfilters,/, "`buildPrompt` must put `filters` on the prompt");
   const s = sheet([RATK("a1"), RNON("n1")]);
   assert.deepEqual(s.filters, FILT, "and it must arrive on the live prompt");

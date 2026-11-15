@@ -7,6 +7,13 @@ const T = require("./judgetable.js");
 const F = require("./serverfakes.js");
 const L = require("../../engine/lobby.js");
 const SHA = require("../../engine/sha256.js");
+const W = require("../../engine/wire.js");
+
+/* THE ROW RECORDS THE WIRE VERSION IT WAS WRITTEN UNDER (`wireV`), and v6.28 spoke 40. The recording is of the referee, not
+   of the wire, so that one field is read back as 40 before the row is hashed: a WIRE_V bump (40 -> 41 at v6.40) is not a
+   change to a casual table. Exactly one occurrence is rewritten, and only that key; anything else that moves still fails. */
+const WIRE_V628 = 40;
+const rowText = t => { const k = '"wireV":' + W.WIRE_V + ','; return t.split(k).length === 2 ? t.replace(k, '"wireV":' + WIRE_V628 + ',') : t; };
 
 function run(server){
   const store = F.memStore(), sent = [];
@@ -16,7 +23,7 @@ function run(server){
   let keys = [];
   const go = (what, req) => {
     const res = server.handleNow(req, deps), text = JSON.stringify(res);
-    steps.push({what, res: SHA.sha256(text), row: store.json(ID) ? SHA.sha256(store.json(ID)) : null, version: store.version(ID), ok: res.ok, refused: res.refused || null, pushes: sent.length});
+    steps.push({what, res: SHA.sha256(text), row: store.json(ID) ? SHA.sha256(rowText(store.json(ID))) : null, version: store.version(ID), ok: res.ok, refused: res.refused || null, pushes: sent.length});
     return res;
   };
   const keyOf = r => (r.frames.find(f => f.ch === "judge" && f.key) || {}).key;
