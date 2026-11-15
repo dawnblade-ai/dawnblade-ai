@@ -1112,6 +1112,36 @@ async function toServerChooser(page){
     await k.kit.close();
   }
 
+  /* ---- S5.3: tools/liveranked.js, PROVED OFFLINE: its `run` drives two real pages through one whole ranked game (names, a ranked table, the lobby, a concession, the end
+     screens, `me`, the ladder, the Ladder screen) against the fake referee with the fake ratings and ladder backends. Then each of two sabotages must make it FAIL.
+     (It is UNRUN on live: that needs 006-008 and the v6.34 function deployed; it writes to the live project.) ---- */
+  const LR = require("./liveranked.js");
+  const lrRun = async (label, ratOpts, ladOpts, show) => {
+    const kA = await open({ w: W, h: H }), kB = await open({ w: W, h: H });
+    const bld = await kA.page.evaluate(() => TABLE_BUILD);
+    const wd = makeWorld({ seedKey: "lr-" + label, build: bld, deal: dealLikeThePage });
+    wd.deps.now = () => Date.now();                     /* the recorded game's time is read against the page's clock, as on live ("just now") */
+    await wire(kA.page, wd); await wire(kB.page, wd);
+    const idp = F.memIdentity(), rat = F.withRatings(ratOpts), lad = F.withLadder(rat, idp, ladOpts);
+    wd.deps.identify = t => idp.identify(t); wd.deps.rename = (pl, n, f) => idp.rename(pl, n, f); Object.assign(wd.deps, rat.deps(), lad.deps());
+    const toks = [idp.issue("P-lr-a"), idp.issue("P-lr-b")];
+    for(const [k, t] of [[kA, toks[0]], [kB, toks[1]]]){ const shim = "window.__dawnServerIdentity = {token: () => Promise.resolve(" + JSON.stringify(t) + ")};"; await k.page.addInitScript(shim); await k.page.evaluate(shim); await k.page.evaluate(() => { window.SERVER_TABLE.on = true; }); }
+    const mkPh = (nm, k, i) => ({ name: nm, page: k.page, done: {}, tok: toks[i], get errors(){ return k.errors.filter(e => !/404|Failed to load resource/.test(e)); } });
+    const A = mkPh("host", kA, 0), B = mkPh("guest", kB, 1), got = [];
+    await LR.run({ A, B, post: b => wd.transport("lr").post(b), token: ph => Promise.resolve(ph.tok) }, (ok, name, d) => { got.push({ ok, name }); if(show) row(ok, "liveranked: " + name, d); });
+    await kA.close(); await kB.close();
+    return { got, rat, lad, wd };
+  };
+  {
+    const r = await lrRun("main", {}, {}, true);
+    row(r.got.length >= 18 && r.got.every(x => x.ok), "liveranked: the whole run passed offline (" + r.got.length + " checks), against the fake referee", r.got.filter(x => !x.ok).map(x => x.name).join(" | ").slice(0, 200));
+    row(r.rat.results.size === 1 && r.rat.records === 1 && [...r.rat.results.values()][0].how === "concession" && r.wd.errors.length === 0, "liveranked: exactly one concession was recorded and the fake server logged no error", r.wd.errors.slice(0, 1).join());
+  }
+  for(const [what, ro, lo] of [["a K of 16 (the winner reads 1208, not 1216)", { k: 16 }, {}], ["a ladder that lists players under the floor", {}, { noFloor: true }]]){
+    const r = await lrRun("sab", ro, lo, false);
+    row(r.got.some(x => !x.ok), "liveranked: its sabotage is SEEN: " + what, r.got.filter(x => !x.ok).map(x => x.name).join(" | ").slice(0, 160));
+  }
+
   const fail = rows.filter(r => !r.ok).length;
   console.log(`\n${rows.length - fail} passed, ${fail} failed in ${((Date.now() - t0) / 1000).toFixed(0)}s`);
   process.exit(fail ? 1 : 0);
