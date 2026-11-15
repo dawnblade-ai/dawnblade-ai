@@ -39,7 +39,7 @@ every session on every step, so **it stays short (budget: under 30 KB)**.
   `CARD_PROGRESS.md`, `CR-INDEX.md`, `STACK.md`, `SWEEP.md`. Reference:
   `ARCHITECTURE.md`, `UI-GUIDE.md` (any screen work), `POLISH.md` (the user's quality
   bar), `TORCH.md` (FaB rules and lore), `DESKTOP-TASKS.md` (jobs the sandbox cannot
-  reach). Future plans: `ROADMAP-MULTIPLAYER.md`, `SUPABASE.md`, `GEMMY.md`.
+  reach). Future plans: `ROADMAP-MULTIPLAYER.md`, `ROADMAP-NEWDECKS.md`, `SUPABASE.md`, `GEMMY.md`.
   **`docs/archive/`** holds finished plans and old handoffs (`HANDOFF.md`, `WEEK.md`,
   `FINISH.md`, …) — frozen history; code comments that cite them mean that folder.
   Do not start a new root handoff file: update `QUEUE.md`'s HANDOFF section.
