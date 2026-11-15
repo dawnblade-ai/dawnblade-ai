@@ -9,23 +9,31 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-15, at v6.38)
+## HANDOFF — START HERE (CEO, 2026-11-15, at v6.39)
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
-### LATEST (CEO session_013xG9xBi58nHH6Jvs5J1qrM, 2026-11-15, at v6.38)
-- **State:** live = v6.38 on `main` (6494424), livecheck ALL PASS. Function `table` version 30 = build `v6.38 · sage-v17`,
+### LATEST (CEO session_013xG9xBi58nHH6Jvs5J1qrM, 2026-11-15, at v6.39)
+- **State:** live = v6.39 on `main` (34e1a47), livecheck ALL PASS. Function `table` version 32 = build `v6.39 · sage-v17`,
   stamped; `--check` OK. No unreleased work. Everything in the two blocks below still holds.
-- **DONE v6.38, reader 2: Blood Debt** (CR 8.3.11 / 8.3.11a, quoted in `parser.bloodDebt`). One life per carrier in the seat's
-  own `banish`, in `effects.beginEndPhase` step (6a); life loss, not damage. `test/blooddebt.test.js` (6 drills, sabotaged 5 ways).
-- **NEW ENGINE FACT:** a beginning-of-end-phase trigger can end the game. `judge.doEndTurn` runs `winCheck` after the triggers
-  and returns before step (a); the trainer's `endTurn` / `foeEnd` ask the same. Before v6.38 nothing checked life there.
-- **NEXT: reader 3, Usurp** (ROADMAP "Viserai" list). Then 4-8 as listed below.
+- **DONE v6.38, reader 2: Blood Debt** (CR 8.3.11 / 8.3.11a). One life per carrier in the seat's own `banish`, in
+  `effects.beginEndPhase` step (6a); life loss, not damage. `parser.bloodDebt`, `test/blooddebt.test.js`.
+  NEW ENGINE FACT: a beginning-of-end-phase trigger can end the game (`judge.doEndTurn` runs `winCheck` after the triggers and
+  returns before step (a); the trainer's `endTurn` / `foeEnd` ask the same).
+- **DONE v6.39, reader 3: Usurp** (CR 8.3.49 / 8.3.49a). Paid at the top of `effects.executeInner`, BEFORE `atkTrigAt` is
+  captured (the usurped Runechant deals no arcane; the rest pop); +2 is a gain under the cap; the link carries `pend.usurped`.
+  "If able" = no question asked. `parser.usurps`, `parser.usurpTarget`, `test/usurp.test.js`.
+- **OPEN FROM USURP (owed before Viserai opens):** (a) reader 6's special Runechants make WHICH Runechant a player's choice:
+  `usurpTarget` must return candidates and the cost becomes a `pending`; "when an attack usurps this" reads `pend.usurped` plus
+  the destroyed card; (b) `judge.effPowerNow` and the Coach (`advisor.js`) do not count the +2, so the AI and the call
+  under-read a Gloomblade by 2; (c) 8.3.49a's "the PLAYER is considered to have usurped" has no per-turn fact (no staged
+  card asks yet).
+- **NEXT: reader 4** (banish-then-colour/type conditionals: Pull from Beyond, Embrace Ursur, Corrupted Crown), then 5-8.
 - **RELEASE NOTES FOR THE NEXT READER:** a new `classifyClause` line no pool card reaches is pinned in `test/anchors.test.js`
-  BY ITS WHOLE SOURCE LINE (the `if(...) return NOOP(...)` text, not just the return). A CR number first cited in engine source
-  needs a drill that names it (`npm run crindex`; repin the counts in `test/crindex.test.js`, now 91 cited / 81 guarded).
-  Scratch deps for `tools/page.js` + babel: the PAGE_DEPS list in its header; allow ~140 s, and do not run it beside `npm test`.
+  BY ITS WHOLE SOURCE LINE. A CR number first cited in engine source needs a drill that names it (`npm run crindex`; repin
+  `test/crindex.test.js`, now 93 cited / 83 guarded). `tools/page.js` takes ~140 s; do not run it beside `npm test`.
+  The whole validation set chained in one background command takes ~7 minutes.
 
 ### NEW DECKS — READ THIS FIRST (CEO session_013xG9x9uyRyTvTysrhdXW6D, 2026-11-15, at v6.37)
 - **State:** live = v6.37 on `main` (9d61853), livecheck ALL PASS. Function `table` version 28 = build `v6.37 · sage-v17`,
