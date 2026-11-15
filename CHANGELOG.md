@@ -1,3 +1,25 @@
+## v6.34 — the ladder: who stands where in ranked play, and the latest games
+
+- **A public ladder.** From the first screen ("The ladder"), the server table screen and the name sheet ("See the ladder") a player opens a plain list of ranked players, best rating first: rank, name,
+  rating, and the record (won, lost, drawn). Anyone can read it, **signed in or not, and looking never signs a phone in**. A player is listed once they have **a chosen name and three ranked games**
+  (one constant, `LADDER_FLOOR` in `server/referee.js`); fewer games is "provisional": rated, not listed. Order is **rating, then more games, then name**, a total order; the top **50** are shown
+  (`LADDER_CAP`). A player whose sign-in was left behind by a recovery (007's orphan) or who has no name never appears.
+- **Your own line.** A phone that is already signed in also hears where it stands: its rank when it is listed (also below the top 50), otherwise its rating and "2 more ranked games and you are on the
+  ladder" (or, for a player with games but no name, "Choose a player name and you are on the ladder"). Your row is highlighted. A phone with no sign-in, a forged or expired one, or a provider that is
+  down simply gets the list without the line: the public read never fails for the caller's sake.
+- **Latest games.** The same answer carries the last ten recorded ranked results, newest first: both names, both heroes, who won (or a draw), how it ended in plain words (won, conceded, forfeit, draw)
+  and how long ago. No identifiers.
+- **Cheap and read-only.** One function call, one database statement (`ladder_get`, STABLE, so it cannot write; the top list and the latest games through two indexes, the caller's rank one count).
+  No row is written or made, not even a rating for a stranger who asks. **Not cached**: the answer is one indexed statement, and a ladder that did not show a game that has just ended would read as a bug.
+- **Honest empty state and retry.** "No one is on the ladder yet. Be the first: play three ranked games."; a failure says so in a sentence and offers *Try again*. Names of 16 letters and four-digit ratings
+  fit at 393 and 320 wide; the rows are not controls because they do nothing. The screen says what this is: a fan-made ladder, for fun and glory, no ads, no prizes, free forever.
+- **No WIRE_V, no DATA_VER change.** No game payload, snapshot, prompt or game key changed (a new request op and a new engine call only); the function must still be re-bundled and redeployed because
+  `APP_VER` changed (the build id both phones and the function must agree on).
+- **To go live:** run `server/supabase/008_ladder.sql` (ends `dawnblade_ladder` / `ok`, safe to run twice, adds two indexes and one function; nothing 001-007 is edited) BEFORE redeploying; re-bundle and redeploy
+  `table`; `--stamp`; `node tools/livecheck.js` (the new ladder check is WRITTEN BUT NOT RUN on live). Optionally, once, `node tools/liveranked.js --go`: plays ONE ranked game between two fresh test players
+  (it leaves two players with one game each and one result row behind: read its header). Drills: `test/serverladder.test.js`, `test/serverladderphone.test.js` (each with sabotage),
+  `tools/sql-pglite.js` + `tools/sql-sab-008.js` (PGlite, 19 sabotages), the Deno rehearsal, `tools/serverpage.js` (the Ladder screen, and `liveranked.js` proved offline).
+
 ## v6.33 — ranked integrity: the forfeit clock, closing counts, recovery keeps a rating
 
 - **An abandoned ranked game can be claimed.** On a RANKED server table the function stamps (server time, never a phone's clock) when the player the game is waiting on last

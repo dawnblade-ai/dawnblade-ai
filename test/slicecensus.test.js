@@ -444,7 +444,9 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        Friendly/Ranked switch, `.rankchg` the rating change, `.prate` the rating on the board). */
     /* 72,329 -> 73,060 AT v6.33, READ FIRST: still `<style>` -> `</style>`; the growth is the forfeit clock's
        bar (`.ffbar`: the countdown, the claim button) and nothing else. */
-    "phasebar.test.js index.html 73060",
+    /* 73,060 -> 74,307 AT v6.34, READ FIRST: still `<style>` -> `</style>`; the growth is the ladder screen's rules (`.ladnote`, `.ladyou` the caller's line,
+       `.ladlist`/`.ladrow`/`.ladrk`/`.ladnm`/`.ladrt` the plain rows, `.ladgame` a latest game) and nothing else. */
+    "phasebar.test.js index.html 74307",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
        `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
        `abPickBound` in the pick legality it extends. */

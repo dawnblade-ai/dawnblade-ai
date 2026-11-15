@@ -124,8 +124,8 @@ deploy there is no stamp; `--check` then compares the generated copy only.
 
 - **Anonymous sign-in is ON** (the user's decision, 2026-11-14): `PATCH /v1/projects/{ref}/config/auth` body `{"external_anonymous_users_enabled":true}`.
   The page signs in with `POST /auth/v1/signup` body `{}` and refreshes with `POST /auth/v1/token?grant_type=refresh_token` (publishable key as `apikey`).
-- **SQL, in order, each safe to run twice:** `001_tables.sql`, `002_players.sql`, `003_names.sql`, `004_recovery.sql`, `005_table_cap.sql`, `006_ratings.sql`, `007_forfeit.sql` (`POST /v1/projects/{ref}/database/query`; each ends with one `ok` row;
-  `005` ends `dawnblade_table_cap`, `006` ends `dawnblade_ratings`, `007` ends `dawnblade_forfeit`). **Run `006` BEFORE redeploying the v6.32 function (ranked results call `result_record`, `me` calls `rating_get`). Run `005` BEFORE redeploying the v6.31 function:** a signed-in create calls `table_create_capped`, which must exist.
+- **SQL, in order, each safe to run twice:** `001_tables.sql`, `002_players.sql`, `003_names.sql`, `004_recovery.sql`, `005_table_cap.sql`, `006_ratings.sql`, `007_forfeit.sql`, `008_ladder.sql` (`POST /v1/projects/{ref}/database/query`; each ends with one `ok` row;
+  `005` ends `dawnblade_table_cap`, `006` ends `dawnblade_ratings`, `007` ends `dawnblade_forfeit`, `008` ends `dawnblade_ladder`). **Run `008` BEFORE redeploying the v6.34 function** (the ladder calls `ladder_get`; without it the ladder answers `internal` and nothing else is affected). **Run `006` BEFORE redeploying the v6.32 function (ranked results call `result_record`, `me` calls `rating_get`). Run `005` BEFORE redeploying the v6.31 function:** a signed-in create calls `table_create_capped`, which must exist.
   Offline check: `PGLITE_DIR=<scratch> node tools/sql-pglite.js`.
 - The function verifies a token at `/auth/v1/user`, maps it with `identity_resolve`, stores a name with `player_rename`. `TABLE_IDENTITY=off` (a function secret) switches all of it off:
   every table is then casual.
@@ -150,6 +150,16 @@ deploy there is no stamp; `--check` then compares the generated copy only.
   **Re-running 004 or 006 afterwards puts the old function bodies back: run 007 again.** Offline: `PGLITE_DIR=<scratch> node tools/sql-pglite.js` (001..007 twice) and `node tools/sql-sab-007.js`.
 - A ranked table is a v5 row (`clock`, `forfeit`); v4 ranked rows are still read; a v6.32 function refuses v5 (`wire`). The limit (`FORFEIT_MS`, five minutes) is in `server/referee.js`; the function needs no new secret or setting.
 - A closed-mid-game ranked table is no longer free: for a started game it is the creator's concession. A ranked game nobody finishes or claims records nothing and ages out with the row (48 hours).
+
+## The ladder (S5.3, v6.34)
+
+- `008_ladder.sql`: two indexes (`ratings_ladder_idx` on rating, games; `results_ended_idx` on ended_at) and ONE read-only function, `ladder_get(floor, limit, recent, player)` -> one jsonb `{ladder, recent, you?}`
+  (STABLE, service_role only, no id leaves it). Run it once, after 007; safe to run twice; it edits nothing from 001-007 and survives a re-run of 004/006/007. The numbers (floor 3, top 50, last 10) live in
+  `server/referee.js` and are passed in: changing the rule is a redeploy of the function, not a database change. Offline: `PGLITE_DIR=<scratch> node tools/sql-pglite.js` (001..008 twice) and
+  `PGLITE_DIR=<scratch> node tools/sql-sab-008.js`.
+- The request is `{op:"ladder", identity?:{token}}`: public, needs only the publishable key, never writes, never signs anyone in. Not cached (see S5-LOG). `TABLE_IDENTITY=off` still serves the list (without anyone's own line).
+- After deploying: `node tools/livecheck.js` (read-only ladder rows). `node tools/liveranked.js --go` is a separate, deliberate one-off that plays one real ranked game; it leaves two test players with one game each and
+  one result row (see its header).
 
 ## Known limits of the casual stage (see `001_tables.sql` for the channel decision)
 - Public channels: anyone who learns a seat's channel name can listen to that seat's hand and cannot be revoked; they cannot forge a frame (every push is sealed under the seat key). Private channels with sign-in are S4.

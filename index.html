@@ -955,7 +955,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "6.33"; /* v6.33 - a ranked game that is abandoned can be claimed as a win by forfeit after five minutes, closing a started ranked table counts as a loss, and recovery keeps a ranked rating. See CHANGELOG.md. */
+window.APP_VER = "6.34"; /* v6.34 - a public ladder of ranked players (a name and three ranked games to be listed) with the latest games, readable by anyone from the server table screens. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -7059,23 +7059,23 @@ function SrvLadder({wire, who}){
     <div className="tblerr">The ladder is not answering right now. Check your connection, then try again.</div>
     <button className="bigbtn" style={{marginTop:10}} onClick={load}>Try again</button>
   </div>;
-  const {r} = st, you = r.you;
+  const {r} = st, yl = r.you;
   const games = n => n+" ranked "+(n===1?"game":"games");
   return <>
     <div className="tblcard">
       <p className="ladnote">Ranked server tables only: a player name and {r.floor} ranked games put you on the list, the best {r.cap} by rating. Friendly tables are never counted. A fan-made ladder, for fun and glory: no ads, no prizes, free forever.</p>
     </div>
-    {you && <div className="ladyou" data-testid="ladder-you">
-      {you.listed ? <>You are number <strong>{you.rank}</strong> on the ladder with a rating of <strong>{you.rating}</strong>: {you.wins} won, {you.losses} lost, {you.draws} drawn.</>
-        : you.toGo>0 ? <>{you.games===0 ? <>Your rating is <strong>{you.rating}</strong>. </> : <>Your rating is <strong>{you.rating}</strong> after {games(you.games)}. </>}<strong>{you.toGo}</strong> more ranked {you.toGo===1?"game":"games"} and you are on the ladder.</>
-        : <>You have played {games(you.games)}. Choose a player name and you are on the ladder.</>}
+    {yl && <div className="ladyou" data-testid="ladder-you">
+      {yl.listed ? <>You are number <strong>{yl.rank}</strong> on the ladder with a rating of <strong>{yl.rating}</strong>: {yl.wins} won, {yl.losses} lost, {yl.draws} drawn.</>
+        : yl.toGo>0 ? <>{yl.games===0 ? <>Your rating is <strong>{yl.rating}</strong>. </> : <>Your rating is <strong>{yl.rating}</strong> after {games(yl.games)}. </>}<strong>{yl.toGo}</strong> more ranked {yl.toGo===1?"game":"games"} and you are on the ladder.</>
+        : <>You have played {games(yl.games)}. Choose a player name and you are on the ladder.</>}
     </div>}
-    {!you && <p className="ladnote" data-testid="ladder-anon">Open a ranked table to get a place here: a player name, then {r.floor} ranked games.</p>}
+    {!yl && <p className="ladnote" data-testid="ladder-anon">Open a ranked table to get a place here: a player name, then {r.floor} ranked games.</p>}
     <div className="tblcard" data-testid="ladder-board">
       <div className="tblgname">The ladder</div>
       {r.ladder.length===0
         ? <p className="ladnote" data-testid="ladder-empty" style={{marginTop:8}}>No one is on the ladder yet. Be the first: play {r.floor===3?"three":r.floor} ranked games.</p>
-        : <ol className="ladlist" style={{marginTop:6}}>{r.ladder.map(x=><li key={x.rank} className={"ladrow"+(you && you.listed && you.rank===x.rank ? " me" : "")} data-testid="ladder-row">
+        : <ol className="ladlist" style={{marginTop:6}}>{r.ladder.map(x=><li key={x.rank} className={"ladrow"+(yl && yl.listed && yl.rank===x.rank ? " me" : "")} data-testid="ladder-row">
             <span className="ladrk">{x.rank}</span>
             <span className="ladnm">{x.name}<small>{x.wins} won · {x.losses} lost{x.draws>0 ? " · "+x.draws+" drawn" : ""}</small></span>
             <span className="ladrt">{x.rating}</span>
