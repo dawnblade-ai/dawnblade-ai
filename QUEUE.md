@@ -9,7 +9,32 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-15, at v6.34)
+## HANDOFF — START HERE (CEO, 2026-11-15, at v6.35)
+
+**Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
+and `docs/progress/` on main. Do not start a root handoff file.
+
+### NEW THREAD: READ THIS BLOCK FIRST (written 2026-11-15 by CEO session_013xG9xBLTcXdm4N76msAF64)
+- **State:** live = v6.35 on `main` (3e45fbe), livecheck ALL PASS (median 297 ms, p95 493). Function `table` version 24 =
+  build `v6.35 · sage-v17`, stamped; `--check` OK. SQL 001-008 unchanged. No unreleased work.
+- **v6.35 = THE USER'S SEVEN ANSWERS (2026-11-15), all RULINGS now:** (1) `FORFEIT_MS` = 7.5 minutes; (2) the clock is a
+  CHESS CLOCK, on whoever must decide, NEVER paused ("I do expect it to be tricky") - `judge.waitingOn` and the stamp are
+  UNCHANGED (engine truth: in the defend step the attacker holds priority until it passes, CR 7.3.3, then the defender);
+  the attacker's button now reads "Pass — let <hero> block" so a polite attacker knows the table waits on that tap;
+  (3) the 0-turn lobby forfeit stays; (4) short games count - honour system, "let chaos reign"; (5) a named phone may redeem a
+  recovery code - "as much freedom as possible to start"; (6) ladder floor 3 / top 50 / last 10 stay; (7) the two liveranked
+  test players and their one result were DELETED from the project (results 0, rated players 0 afterwards).
+- **OPEN, the honest remainder of (2):** while the attacker has not tapped Pass, the defender's thinking burns the ATTACKER's
+  clock. A true fix needs one of: the page passing for an attacker who has nothing but Pass (needs a legal-action
+  enumerator; reveals "no instant in hand" by speed), or a CR-shaped declare-then-priority defend step in `judge.js`
+  (engine + AI + wire change). Not built; told to the user.
+- **ALSO OPEN:** Concede is offered only in the defend step and asks no confirmation (a misclick is a ranked loss); a real
+  forfeit claim has never been waited out on live (offline only); `tools/serverpage.js` now derives its clock jumps from the limit.
+- **HOW THIS THREAD WORKED:** inline, no subagents (small release). Scratch deps for `tools/serverpage.js`: the PAGE_DEPS
+  list in `tools/page.js`'s header; playwright from `/opt/node-tools/node_modules`.
+- **Supabase access / EVERY RELEASE / parked AI items / known limits:** unchanged, see the archived section just below.
+
+## HANDOFF ARCHIVE (CEO, 2026-11-15, at v6.34) — superseded by the section above
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
