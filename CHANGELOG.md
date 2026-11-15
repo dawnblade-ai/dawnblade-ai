@@ -12,7 +12,7 @@
 - **Cheap and read-only.** One function call, one database statement (`ladder_get`, STABLE, so it cannot write; the top list and the latest games through two indexes, the caller's rank one count).
   No row is written or made, not even a rating for a stranger who asks. **Not cached**: the answer is one indexed statement, and a ladder that did not show a game that has just ended would read as a bug.
 - **Honest empty state and retry.** "No one is on the ladder yet. Be the first: play three ranked games."; a failure says so in a sentence and offers *Try again*. Names of 16 letters and four-digit ratings
-  fit at 393 and 320 wide; the rows are not controls because they do nothing. The screen says what this is: a fan-made ladder, for fun and glory, no ads, no prizes, free forever.
+  fit at 393 and 320 wide; the rows are not controls because they do nothing. The screen says what this is: a fan-made ladder, for fun and glory, no ads, forever.
 - **No WIRE_V, no DATA_VER change.** No game payload, snapshot, prompt or game key changed (a new request op and a new engine call only); the function must still be re-bundled and redeployed because
   `APP_VER` changed (the build id both phones and the function must agree on).
 - **To go live:** run `server/supabase/008_ladder.sql` (ends `dawnblade_ladder` / `ok`, safe to run twice, adds two indexes and one function; nothing 001-007 is edited) BEFORE redeploying; re-bundle and redeploy

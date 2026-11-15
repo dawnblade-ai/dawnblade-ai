@@ -1036,7 +1036,7 @@ async function toServerChooser(page){
     row(rec.length === 3 && /^Rec Six \(Dorinthea\) beat Rec Five \(Viserai\) conceded · 5 min ago$/.test(rec[0].t) && /^Rec Three \(Bravo\) and Rec Four \(Katsu\) drew draw · 3 hours ago$/.test(rec[1].t) && /^Rec One \(Kayo\) beat Rec Two \(Dash\) won · 2 days ago$/.test(rec[2].t),
         "ladder " + w + ": the latest games read in plain words (who beat whom with which hero, how it ended, when), newest first", rec.map(r => r.t).join(" | ").slice(0, 400));
     const full = await ladText(pg);
-    row(ladJargon(full) && /fan-made ladder, for fun and glory: no ads, no prizes, free forever/.test(full), "ladder " + w + ": no identifier, field name or version number in the words, and the mission line is there");
+    row(ladJargon(full) && /fan-made ladder, for fun and glory: no ads, forever/.test(full), "ladder " + w + ": no identifier, field name or version number in the words, and the mission line is there");
     /* rows do nothing, so they are not controls: no button, link or tab stop inside the list, and tapping a row changes nothing */
     const ctl = await pg.evaluate(() => document.querySelectorAll('[data-testid="ladder-board"] button, [data-testid="ladder-board"] a, [data-testid="ladder-board"] [tabindex], [data-testid="ladder-board"] [role="button"], [data-testid="ladder-recent"] button').length + [...document.querySelectorAll('[data-testid="ladder-row"]')].filter(r => getComputedStyle(r).cursor === "pointer").length);
     const before = await text(pg); await pg.locator('[data-testid="ladder-row"]').first().click(); await wait(150);

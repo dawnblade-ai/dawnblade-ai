@@ -7063,7 +7063,7 @@ function SrvLadder({wire, who}){
   const games = n => n+" ranked "+(n===1?"game":"games");
   return <>
     <div className="tblcard">
-      <p className="ladnote">Ranked server tables only: a player name and {r.floor} ranked games put you on the list, the best {r.cap} by rating. Friendly tables are never counted. A fan-made ladder, for fun and glory: no ads, no prizes, free forever.</p>
+      <p className="ladnote">Ranked server tables only: a player name and {r.floor} ranked games put you on the list, the best {r.cap} by rating. Friendly tables are never counted. A fan-made ladder, for fun and glory: no ads, forever.</p>
     </div>
     {yl && <div className="ladyou" data-testid="ladder-you">
       {yl.listed ? <>You are number <strong>{yl.rank}</strong> on the ladder with a rating of <strong>{yl.rating}</strong>: {yl.wins} won, {yl.losses} lost, {yl.draws} drawn.</>
