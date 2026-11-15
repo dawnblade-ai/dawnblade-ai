@@ -91,9 +91,9 @@ test("(1)-(4) A PLAYER'S NAME IS ON BOTH PHONES DURING THE GAME, after a reload 
   assert.deepEqual(await guard(namesFailures(require(path.join(ROOT, "server", "referee.js")))), []);
 });
 test("SABOTAGE: a keyed join that answers no names, a takeover that answers none, and a referee that writes the name into the game are each seen", async () => {
-  const noKeyed = loadServer([["...(who && ownersOf(row)[req.seat] === who.player ? {owned: true} : {}), ...pub(row), frames: r.out[req.seat]};", "...(who && ownersOf(row)[req.seat] === who.player ? {owned: true} : {}), frames: r.out[req.seat]};"]]);
+  const noKeyed = loadServer([["...(who && ownersOf(row)[req.seat] === who.player ? {owned: true} : {}), ...pub(row, deps), frames: r.out[req.seat]};", "...(who && ownersOf(row)[req.seat] === who.player ? {owned: true} : {}), frames: r.out[req.seat]};"]]);
   assert.ok((await guard(namesFailures(noKeyed))).some(x => /after a reload/.test(x)), "a reload that learns no names must be seen");
-  const noTake = loadServer([["{seat, n: row.nonces[seat], owned: true, ...pub(row)},\n    ver =>", "{seat, n: row.nonces[seat], owned: true},\n    ver =>"]]);
+  const noTake = loadServer([["{seat, n: row.nonces[seat], owned: true, ...pub(row, deps)},\n    ver =>", "{seat, n: row.nonces[seat], owned: true},\n    ver =>"]]);
   assert.ok((await guard(namesFailures(noTake))).some(x => /took the seat reads/.test(x)), "a takeover that learns no names must be seen");
   const inState = loadServer([["row.hub = r.hub.persistTable();\n  /* S4.4:", "row.hub = r.hub.persistTable(); if(row.names) row.hub.nameLeak = row.names[0];\n  /* S4.4:"]]);
   assert.ok((await guard(namesFailures(inState))).some(x => /carries the player name/.test(x)), "a name in the stored hub must be seen");

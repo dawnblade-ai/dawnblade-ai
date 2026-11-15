@@ -442,7 +442,9 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
     /* 71,449 -> 72,329 AT v6.32, READ FIRST: still `<style>` -> `</style>`; the growth is
        the ranked table's rules (`.tblrk` the Ranked chip, `.tblrt` a rating, `.tblsw` the
        Friendly/Ranked switch, `.rankchg` the rating change, `.prate` the rating on the board). */
-    "phasebar.test.js index.html 72329",
+    /* 72,329 -> 73,060 AT v6.33, READ FIRST: still `<style>` -> `</style>`; the growth is the forfeit clock's
+       bar (`.ffbar`: the countdown, the claim button) and nothing else. */
+    "phasebar.test.js index.html 73060",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
        `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
        `abPickBound` in the pick legality it extends. */
