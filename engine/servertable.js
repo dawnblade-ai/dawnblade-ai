@@ -538,6 +538,38 @@ async function me(o, name){
 const whoAmI = o => me(o);
 const setName = (o, name) => me(o, name);
 
+/* ---- THE LADDER (S5.3): who stands where, and the last games — PUBLIC, read with no sign-in --------------------------------------------
+   o: {transport, identity?}. `ladder(o)` -> {floor, cap, ladder: [{rank, name, rating, games, wins, losses, draws}], recent: [{names: [a, b], heroes: [a, b],
+   winner: 0 | 1 | null, how: "life" | "concession" | "stalemate" | "forfeit", at}], you: {name | null, rating, games, wins, losses, draws, listed, rank | null, toGo} | null}.
+   `you` is the caller's own line and exists only when `o.identity` yields a token the server knows: pass an identity ONLY for a phone that already has a sign-in
+   (looking at the ladder must never sign anyone in; the page asks `known()` first). A token the server refuses is not an error: the list still answers, without `you`.
+   One copy: the page and the drills call this and nothing else. Rejects with `.why`: unavailable (no server, a function that does not do this yet, or an answer that is
+   not a ladder). Nothing is cached here and nothing is written anywhere. The server decides who is listed (a chosen name, three ranked games); nothing here judges it. */
+const LADDER_HOW = ["life", "concession", "stalemate", "forfeit"];
+const isInt = v => Number.isInteger(v) && v >= 0;
+async function ladder(o){
+  o = o || {};
+  const T = o.transport;
+  if(!T || typeof T.post !== "function") throw fail("unavailable", "no transport");
+  let token = null;
+  if(o.identity && typeof o.identity.token === "function"){ try { token = await o.identity.token(); } catch(_){ token = null; } }
+  const r = await call(T, {op: "ladder", ...(typeof token === "string" && token ? {identity: {token}} : {})});
+  if(!r.ok) throw fail("unavailable", "refused: " + r.refused);
+  const bad = () => fail("unavailable", "an answer that is not a ladder");
+  if(!Array.isArray(r.ladder) || !Array.isArray(r.recent) || !isInt(r.floor) || !isInt(r.cap)) throw bad();
+  const rec = x => x && typeof x === "object" && typeof x.name === "string" && ["rank", "rating", "games", "wins", "losses", "draws"].every(k => isInt(x[k]));
+  if(!r.ladder.every(rec)) throw bad();
+  const rows = r.ladder.map(x => ({rank: x.rank, name: x.name, rating: x.rating, games: x.games, wins: x.wins, losses: x.losses, draws: x.draws}));
+  const recent = r.recent.filter(x => x && Array.isArray(x.names) && x.names.length === 2 && Array.isArray(x.heroes) && x.heroes.length === 2 && x.heroes.every(h => typeof h === "string")
+    && (x.winner === null || x.winner === 0 || x.winner === 1) && LADDER_HOW.indexOf(x.how) >= 0 && isInt(x.at))
+    .map(x => ({names: x.names.map(n => typeof n === "string" ? n : null), heroes: x.heroes.slice(), winner: x.winner, how: x.how, at: x.at}));
+  let you = null;
+  const y = r.you;
+  if(y && typeof y === "object" && ["rating", "games", "wins", "losses", "draws", "toGo"].every(k => isInt(y[k])) && typeof y.listed === "boolean")
+    you = {name: typeof y.name === "string" ? y.name : null, rating: y.rating, games: y.games, wins: y.wins, losses: y.losses, draws: y.draws, listed: y.listed, rank: y.listed && isInt(y.rank) ? y.rank : null, toGo: y.toGo};
+  return {floor: r.floor, cap: r.cap, ladder: rows, recent, you};
+}
+
 /* ---- RECOVERY CODE (S4.3): a lost phone is not a lost player ---------------------------------------------------
    o: {transport, identity}, as whoAmI. `recoveryMint(o)` -> {code, days}: the signed-in player's NEW recovery code, in the clear, ONCE (the
    server keeps only its hash; the page must show it and then forget it — nothing here stores it). A new code retires the old one.
@@ -777,5 +809,5 @@ function defaultTransport(config, root_){
 }
 
 return {TABLE_CODE_CHARS: CODE_CHARS, CODE_LEN, STATUS, SUPABASE_JS, normalize, isValid, topicFor, open, startTable, sitAt, reclaim, savedSeats, doorChoice, doorOpen,
-        supabaseTransport, loadSupabase, defaultTransport, whoAmI, setName, recoveryMint, recoveryRedeem, closeTable, supabaseIdentity, defaultIdentity};
+        supabaseTransport, loadSupabase, defaultTransport, whoAmI, setName, ladder, recoveryMint, recoveryRedeem, closeTable, supabaseIdentity, defaultIdentity};
 });
