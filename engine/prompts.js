@@ -1350,7 +1350,11 @@ function applyPrompt(game, prompt){
     const _names = (_hidFrom && _hidTo)
       ? (picked.length === 1 ? "A card" : picked.length + " cards")
       : picked.map(c=>c.name).join(", ");
-    if(!prompt.discard) out.msgs.push(_names +
+    /* A GRANT ON A CARD WHERE IT LIES (v6.41) — the Gate to i'Arathael names
+       a card already in the banished zone, a public zone: nothing is revealed
+       and nothing moves, and the caller's stamp says what happened. */
+    const _stampOnly = !prompt.to && !!prompt.banStamp;
+    if(!prompt.discard && !_stampOnly) out.msgs.push(_names +
       (prompt.to ? (picked.length > 1 ? " go" : " goes") +
                    (prompt.zone ? " from the " + promptZoneWord(prompt.zone) : "") +
                    " to " + promptDestWord(_dest)

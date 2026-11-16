@@ -466,15 +466,16 @@ test("the arena activation census is pinned, both halves", {skip}, () => {
     if(!pw.sd) noDestroy.add(c.name);
   }
   assert.deepEqual([...reads].sort(),
-    ["Concealed Object", "Copper", "Diamond", "Energy Potion", "Fealty", "Gold", "Silver",
-     "Timesnap Potion"],
+    ["Concealed Object", "Copper", "Diamond", "Energy Potion", "Fealty", "Gate to i'Arathael",
+     "Gold", "Silver", "Timesnap Potion"],
     "the arena records whose ability READS — four decked (Lyath, Dorinthea, Fai, " +
-    "Gravy Bones), three treasure tokens with no creator yet, and Fealty (v5.53), " +
-    "whose creator is Display Loyalty's rider");
+    "Gravy Bones), three treasure tokens with no creator yet, Fealty (v5.53), " +
+    "whose creator is Display Loyalty's rider, and the Gate to i'Arathael (v6.41), " +
+    "whose creator is the staged Pull from Beyond");
   assert.deepEqual([...refuses].sort(),
-    ["Bait", "Gate to i'Arathael", "Goldkiss Rum"],
-    "and the three that refuse — Bait's payload is its own +1{p} (v3.63), Gate plays " +
-    "from the banished zone, and Goldkiss Rum's cost is a compound {t}-your-hero. " +
+    ["Bait", "Goldkiss Rum"],
+    "and the two that refuse — Bait's payload is its own +1{p} (v3.63) and Goldkiss " +
+    "Rum's cost is a compound {t}-your-hero. The Gate left at v6.41 (test/gate.test.js). " +
     "Fealty left at v5.53, when \"the next CARD you play is Draconic\" got a reader");
   /* THE TAP IS THE SHARP HALF: exactly one record prints it, and it is the
      only one of the seven that does NOT print "destroy this" — which is

@@ -6796,7 +6796,11 @@ function makeEffects(ctx){
             st.costOff ? {_banCostOff: st.costOff} : {},
             st.playThisTurn ? {_playTurn: n.turn, _asInstant: false} : {})
         : c);
-      n = L(n, `${p.src}: ${got.name} is banished`
+      /* THE CARD WAS ALREADY THERE (v6.41) — the Gate to i'Arathael's grant
+         has no `to`: it stamps a card where it lies, so "is banished" would
+         report a move that did not happen. */
+      if(!p.to) n = L(n, `${p.src}: ${got.name} may be played from ${sp(act(n))} banished zone this turn.`);
+      else n = L(n, `${p.src}: ${got.name} is banished`
              + (st.pow ? ` with +${st.pow}{p}` : "")
              + (st.costOff ? ` costing ${st.costOff} less` : "")
              + (st.playThisTurn ? ", and may be played this turn." : "."));

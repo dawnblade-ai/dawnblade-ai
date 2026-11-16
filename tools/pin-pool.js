@@ -88,12 +88,17 @@ function neededNames(W){
    two in the pool — measured, not assumed. The connective is allowed
    before each following word now; a leading verb or article is stripped
    after the fact, because "Destroy the Runechant token" would otherwise
-   capture the verb along with the name. */
+   capture the verb along with the name.
+
+   v6.41: "Gate to i'Arathael token" was read as "arathael" — the name has
+   a lowercase connective ("to") and a word that opens with a lowercase
+   letter and an apostrophe. Both are allowed now; measured over the pool
+   and the staged records, the only name that moves is the Gate's. */
 function tokenNames(records){
   const found = new Set();
   for(const c of records)
     for(const m of (c.functional_text || "")
-        .matchAll(/\b([A-Z][A-Za-z0-9'-]*(?:(?: of| the| and)? [A-Z][A-Za-z0-9'-]*){0,3}) tokens?\b/g))
+        .matchAll(/\b([A-Z][A-Za-z0-9'-]*(?:(?: of| the| and| to)? (?:[a-z]')?[A-Z][A-Za-z0-9'-]*){0,3}) tokens?\b/g))
       found.add(norm(m[1]
         .replace(/^(?:Create|Equip|Destroy|Put|Gain) (?:X |\d+ )?/, "")
         .replace(/^(?:a|an|the|of|and)\s+/i, "")));

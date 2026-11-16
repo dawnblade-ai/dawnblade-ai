@@ -1,3 +1,31 @@
+## v6.41 — the fifth reader for Viserai, Between Worlds: the Gate to i'Arathael
+
+- **Nothing a player can be dealt changed.** Engine groundwork (`ROADMAP-NEWDECKS.md`). Measured over every pool and staged record (850 parses, before and after): exactly ONE
+  record reads differently, the Gate itself (`none` -> `full`).
+- **The card:** Gate to i'Arathael (Shadow Token - Aura), "Instant - {r}, destroy this: You may play target action card with blood debt from your banished zone this turn."
+- **A CORRECTION to v6.40's stated limit, by asking the engine and not the note:** the token was ALREADY minted. Its record is in the pinned pool and Pull from Beyond's rider
+  resolves it (driven: a red card banished puts a real Gate in the arena). What was missing was the Gate's ABILITY: the table refused the activation ("prints no attack or
+  ability to activate") and the token sat there as a blank.
+- **The reader is no new machinery.** The printed target is declared when the ability is activated, before the cost (`abTargetSpec`, v5.72, Beckoning Haunt's route; one legal
+  target is declared on the spot, two are a question); with no legal target the activation is refused and nothing is paid (RULING 2026-11-13). The pick is over the banished zone
+  and moves nothing; the answer stamps the chosen card playable for this turn (`_playTurn`, the window `parser.playZoneWhy` has read on both boards since v3.92). The card is
+  then played by the ordinary route: its own speed, its own cost, an action point, and the graveyard afterwards (RULING 2026-10-31), with the permission stripped as it leaves.
+  "You may play" is the permission, not an option on the target. The destroyed token ceases to exist.
+- **Parser:** `RX_BAN_PLAY`, anchored whole (no window printed, another zone, an unreadable subject or a speed rider all refuse); "blood debt" joins the closed keyword
+  vocabulary a printed "with <keyword>" may name (`KW_VOCAB_SRC`), answered by `printedKw`, so a card that only mentions blood debt is not a target.
+- **The feed** says the card "may be played from the banished zone this turn"; the borrowed lines ("is banished", "revealed from") described a move that did not happen.
+- **Both boards' target buttons** look in the banished zone as well as the graveyard (the trainer's `targetpick`, the table's `abtarget`).
+- **The token-name scan reads the Gate's whole name** (`tools/pin-pool.js` `tokenNames`: a lowercase "to" and a word opening with a lowercase letter and an apostrophe). It read
+  "arathael" before, which a re-pin would have gone looking for. Measured: the only name that moves. The probe in `test/staged.test.js` is now an assertion.
+- **Drill `test/gate.test.js`** (sabotaged thirteen ways, each bit). The fixture is a twin, and has to be: every blood debt card in the staged list also prints "You may play
+  this from your banished zone", so a staged card is playable with or without the Gate (asserted, so the day that changes the drill says so).
+- **Pins repinned after reading:** the tokens reading nothing (6 -> 5), the arena activation census (the Gate moves from refuses to reads), the activation-pick family (seven),
+  the own-card hazard (an arena permanent is allowed when the picked zone is not the arena), `applyPrompt`'s answer reads (+`banStamp`), the tier counts (762 / 24 / 11).
+- **STATED LIMITS:** the trainer's route is the shared one but is undriven for the Gate (no deck can hold it yet); the AI seat declares a target when asked but has no policy for
+  WHEN to open a Gate, and no reason key for it; "created or activated a Gate this turn" (Viserai, Usurper) has no per-turn fact yet: that is the hero's reader (7).
+- **No WIRE_V change** (no new prompt or payload field: `banStamp`, `zone` and an absent `to` all existed). No DATA_VER change. The function is redeployed because
+  `APP_VER` and engine files changed.
+
 ## v6.40 — the fourth reader for Viserai, Between Worlds: banish a card, then ask what it was
 
 - **Nothing a player can be dealt changed.** Engine groundwork (`ROADMAP-NEWDECKS.md`). Three staged cards print one idea three ways: the card banishes something and the rest of

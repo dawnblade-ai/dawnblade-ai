@@ -76,7 +76,7 @@ const isWeapon = c => !!(c && /weapon/i.test(c.tt || "")
    `optFilter`'s reveal branch; v4.01's Compass of Sunken Depths asks the
    same question of a different clause, and two spellings of one closed
    list is the drift this file names on nearly every page. */
-const KW_VOCAB_SRC = "crush|stealth|dominate|go again|piercing|intimidate|blade break|battleworn|temper|guardwell|phantasm|reprise|boost|ward|watery grave";
+const KW_VOCAB_SRC = "crush|stealth|dominate|go again|piercing|intimidate|blade break|battleworn|temper|guardwell|phantasm|reprise|boost|ward|watery grave|blood debt";
 /* EVERY KEYWORD PREFIX THE POOL PRINTS (v4.21), measured over all 797
    records: a line beginning "<Keyword> - " that is not an ACTIVATION
    prefix (those are v3.59's, guarded above). Five have bespoke readers
@@ -520,6 +520,15 @@ const RX_GY_DECK  = /^put target (.+) from your graveyard on (?:the )?(top|botto
    than printed and visible in the audit. */
 const RX_GY_DECK2 = /^put target (.+?) and target (.+?) from your graveyard on (?:the )?(top|bottom) of your deck in any order$/;
 const RX_GY_HAND  = /^(you may )?return (.+) from your graveyard to your hand$/;
+/* A PERMISSION ON A TARGET IN THE BANISHED ZONE (v6.41) — Gate to i'Arathael:
+   "You may play target action card with blood debt from your banished zone
+   this turn." The target is PRINTED, so it is declared when the ability is
+   activated (`abTargetSpec`, v5.72) and the ability is illegal with none
+   (RULING 2026-11-13). "You may play" is the permission the effect grants,
+   not an option on the target: the pick is mandatory, nothing moves, and the
+   chosen card is stamped playable for this turn (`_playTurn`, the window
+   `playZoneWhy` already reads). Anchored whole: READ WHOLE OR REFUSE. */
+const RX_BAN_PLAY = /^you may play target (.+) from your banished zone this turn$/;
 const RX_RETRIEVE = /^(you may )?retrieve (.+) from your graveyard$/;
 /* A DECK SEARCH (v4.58) — Flamecall Awakening. It is the SAME pick with a
    different SOURCE ZONE, and the zone is the whole of what makes it a
@@ -3454,6 +3463,18 @@ function classifyClause(raw){
                : "Return a card from your graveyard to your hand",
       hint: xm ? "Only what you can pay for is offered." : may ? "Optional — choose none to decline." : undefined},
       xm ? {xOf: "cost"} : {}, tgt ? {tgt: true} : {})]]);
+  }
+  /* THE GATE'S GRANT (v6.41) — see RX_BAN_PLAY. `banStamp` is the stamp
+     Mounting Anger's rider writes on a card it has just banished; here the
+     card is already there (`zone` banish, no `to`), so the same answer path
+     stamps it where it lies. No speed is granted: the card is played at its
+     own printed speed, for its own printed cost. */
+  if(m=c.match(RX_BAN_PLAY)){
+    const filter = pickSubject(cased(RX_BAN_PLAY, 1, m[1]));
+    if(!filter) return null;
+    return R([["pickPrompt", {zone:"banish", filter, min:1, max:1, tgt:true,
+      banStamp:{playThisTurn:true},
+      title:"Choose a card in your banished zone — it may be played this turn"}]]);
   }
   /* THE DECK SEARCH — see RX_DECK_SEARCH's header for why the disposition
      is anchored and why the shuffle is the price of looking.

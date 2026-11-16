@@ -44,7 +44,8 @@ hide a keyword with no reader, so read this as a floor on the work, not a ceilin
      "usurped" fact other cards ask about)
   4. **DONE v6.40** (`banTop`, `optCost.classRiders`, `test/banishif.test.js`) — "banish the top card of your deck / if it's red|blue" and "banish a card from your
      hand / if it's Runeblade|Shadow" conditionals, and Corrupted Crown's "if you do"
-  5. the Gate to i'Arathael token and its grant
+  5. **DONE v6.41** (`RX_BAN_PLAY`, `test/gate.test.js`) — the Gate to i'Arathael token and its grant (a declared target in the
+     banished zone, stamped playable this turn; the token record was already in the pinned pool)
   6. the special Runechants ("counts as a Runechant", "when an attack usurps this")
   7. the hero: a trigger on creating Runechants, a per-turn count, and **traverse** — the
      hero is double-faced (Viserai, Usurper on the back, a Demon with its own text), which

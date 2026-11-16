@@ -104,7 +104,11 @@ let legs = 0, threw = 0;
    field leaving this set is a consumer that stopped obeying its spec
    (v3.53). The rest are the sheet's alone: a title, a hint, a stamp that
    rides onto the card the answer moves. */
-const ANSWER_READS = ["amount", "by", "cards", "cost", "defUid", "destroyUid", "discard", "elseOps",
+/* +banStamp (v6.41): `applyPrompt` asks only WHETHER a pick with no `to`
+   carries one, to keep its "revealed from" line off a grant that reveals
+   nothing (the Gate to i'Arathael). The stamp itself is still written by
+   effects.applyAnswer. */
+const ANSWER_READS = ["amount", "banStamp", "by", "cards", "cost", "defUid", "destroyUid", "discard", "elseOps",
                       "faceUp", "filter", "keepTop", "max", "min", "ops", "options",
                       "reveal", "side", "spendCtr", "src", "tag", "tapHero", "tapUid", "taps",
                       "to", "zone"];

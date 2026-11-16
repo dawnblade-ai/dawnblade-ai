@@ -125,6 +125,7 @@ test("SIX activation lines open a pick (FIVE until v4.71), and THREE were paid f
     "Blaze, Firemind",
     "Crown of Dichotomy [two targets]",
     "Fai",
+    "Gate to i'Arathael",     /* SEVEN AT v6.41: its target lies in the banished zone (test/gate.test.js) */
     "Halo of Illumination",
     "Hope Merchant's Hood",
   ], "the family moved — a new member is one more activation that can be paid for nothing");
@@ -676,12 +677,18 @@ test("a HAND ability's own card is not a candidate for its own pick — measured
         power: m.pw, def: m.d, tt: "Equipment Ability", ty: m.ty, kw: [], gkw: [],
         tx: String(hp.eff || "")});
       P.fxReset();
-      if((fx.ops || []).some(op => op[0] === "pickPrompt")) holders.push(String(m.tt || ""));
+      for(const op of (fx.ops || []))
+        if(op[0] === "pickPrompt") holders.push({tt: String(m.tt || ""), zone: (op[1] && op[1].zone) || "hand"});
     }
   }
-  for(const tt of holders)
-    assert.ok(/Equipment|Hero/.test(tt),
-      "an activation pick on a " + tt + " — its own card may be in the picked zone");
+  /* v6.41: the Gate to i'Arathael is an ARENA token whose pick is over the
+     BANISHED zone, and its card is never there while it can be activated
+     (a token that leaves the arena ceases to exist). So an arena permanent
+     is allowed exactly when the picked zone is not the arena. */
+  assert.ok(holders.length >= 6, "the scan found almost nothing");
+  for(const h of holders)
+    assert.ok(/Equipment|Hero/.test(h.tt) || (/Token|Aura|Item/.test(h.tt) && h.zone !== "board" && h.zone !== "hand"),
+      "an activation pick on a " + h.tt + " over the " + h.zone + " — its own card may be in the picked zone");
 });
 
 test("`abPickSpec` never throws — `legal` is fed JSON off a wire", () => {

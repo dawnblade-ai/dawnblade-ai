@@ -1946,8 +1946,10 @@ probe("pool-deck-complete", () => {
     "the cost; the rest are Arakni's own base form and heroes whose whole " +
     "printed line is read elsewhere, by `parseHeroPower` off the build");
   /* 7 -> 6 AT v5.53: FEALTY left, built with its only creator (Display
-     Loyalty's rider, QUEUE S15) — leaving because it was built. */
-  assert.equal(none.token.length, 6,
+     Loyalty's rider, QUEUE S15) — leaving because it was built.
+     6 -> 5 AT v6.41: the GATE TO I'ARATHAEL left, built with its grant
+     (test/gate.test.js); its creator is the staged Pull from Beyond. */
+  assert.equal(none.token.length, 5,
     "the set of TOKENS reading nothing moved. It was EIGHT at v4.02 and the " +
     "eighth was INERTIA — a token that WORKED while reading nothing, because " +
     "`effects.isInertia` matched it by NAME (v3.22's Runechant shape exactly, " +

@@ -85,15 +85,14 @@ test("every token the staged text names is a record the engine can find", () => 
     assert.ok(named.includes(n), "the staged text no longer names " + n);
     assert.ok(tokenRecs.has(n) && have.has(n), n + " is named and is not a token record");
   }
-  /* A STATED GAP, HELD AS A PROBE: the scan reads "Gate to i'Arathael token"
-     as "arathael", because the name has a lowercase word the scan's shape
-     does not allow. The record is staged anyway (it carries a staged print),
-     so nothing is lost today; the reader that creates the token must read
-     the whole name (ROADMAP-NEWDECKS.md, Viserai reader 5). This goes red the
-     day the scan learns the name, which is the day to delete this half. */
+  /* THE GATE'S WHOLE NAME (v6.41). Until reader 5 the scan read "Gate to
+     i'Arathael token" as "arathael": the name has a lowercase connective and
+     a word that opens with a lowercase letter and an apostrophe. The record
+     the scan names must be the token record, or a re-pin would go looking
+     for a card called "arathael". */
   assert.ok(tokenRecs.has("gate to i arathael"), "the Gate token is not staged");
-  assert.ok(named.includes("arathael") && !named.includes("gate to i arathael"),
-    "the token scan now reads the Gate's whole name — update this probe");
+  assert.ok(named.includes("gate to i arathael"), "the token scan lost the Gate's whole name");
+  assert.ok(!named.includes("arathael"), "the token scan reads the Gate's name as its last word again");
 });
 
 test("a card the pool already holds reads the same staged as pinned", () => {
