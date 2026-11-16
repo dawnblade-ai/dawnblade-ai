@@ -1173,7 +1173,41 @@ const APPROX = {
       "Strike is a dealt card and moving it is a balance change, not a reader. STRONGER than "+
       "printed in the common case (+1{p} and go again after a blocked swing). Work, not a "+
       "ruling: a `hist.dmg` credited at the same sites as `heroDmg` (plus ally damage) answers "+
-      "it exactly. The probe asserts the attack-only reading, so it goes red when it is fixed."}
+      "it exactly. The probe asserts the attack-only reading, so it goes red when it is fixed."},
+
+  "traverse-face-properties": {
+  status:"open", cr:"2.5.3c / 9.1", board:"both", since:"v6.44", swept:"v6.44",
+  claim:"Traverse (CR 8.5.60) changes a double-faced hero's active face, its name and the "+
+        "abilities in force, and NOTHING ELSE: life total, base life and intellect stay as "+
+        "they were, and the face the deck names is the one up at the deal.",
+  why:"The CR does not settle it for a HERO. CR 2.5.3c (verbatim): \"If the base life of an "+
+      "living-card changes, then the life total is recalculated using the new base life value "+
+      "of the object.\" But Viserai, Usurper prints life \"*\", which no CR page read here "+
+      "defines for a hero, and both faces print intellect 4. CR 9.1 defines three kinds of "+
+      "double-faced card and none names a hero: 9.1.3 (verbatim) \"A flip-card is a "+
+      "double-faced card that has a front-face and a back-face, with one of the following "+
+      "printed subtypes on its front-face: figment, invocation, or construct.\"; 9.1.4b "+
+      "(verbatim) \"If a twin-card is in the arena or on the stack, only one of its faces is "+
+      "active. Its active face is determined by the player that played it, or by the effect "+
+      "that put it into the arena or on the stack.\"; 9.1.5 transcend-cards turn by "+
+      "transcending. So: which kind is Viserai, which face starts, and does the life total "+
+      "move? The minimum the text supports is built; ASK THE USER. The probe asserts life and "+
+      "intellect are untouched by a traverse, so it goes red the day either is recalculated."},
+
+  "usurper-first-counts-the-turn": {
+  status:"open", cr:"6.6.5d", board:"both", since:"v6.44", swept:"v6.44",
+  claim:"Viserai, Usurper's \"The first attack action card with blood debt you play each turn "+
+        "gets go again\" counts every such card played THIS TURN, including one played while "+
+        "Between Worlds was the face up (`hist.atkKw`): traversing mid-turn does not restart "+
+        "\"first\".",
+  why:"The CR's ordinal rule is written for TRIGGERED effects. CR 6.6.5d (verbatim): \"If the "+
+      "trigger condition is preceded by an ordinal relative to a specified duration, the effect "+
+      "will only trigger on that ordinal of time the condition would be met. If the effect "+
+      "becomes functional only after the specified ordinal of time the condition would be met, "+
+      "the effect will not retroactively trigger for that ordinal.\" Usurper's line is a "+
+      "static grant, not a trigger, so 6.6.5d does not settle it; the reading built is 6.6.5d's "+
+      "by analogy (WEAKER than the other reading, never stronger). ASK THE USER. The probe "+
+      "asserts the earlier play is counted."}
 
 };
 

@@ -1135,6 +1135,13 @@ function actBase(g, seat, o){
       const lc = J.lookChoice(g, seat);
       if(lc) return tag(lc.own ? "lookOwn" : "lookFoe", {t: "promptChoose", choice: lc.i});
     }
+    /* "YOU MAY TRAVERSE" (v6.44) — `judge.traverseAsk` names the mode; the
+       answer is the default one, given its own reason key. */
+    if(g.prompt.tag === "modal" && g.prompt.choice == null){
+      const tv = J.traverseAsk(g, seat);
+      if(tv) return tag(tv.take ? "traverseYes" : "declineOptional",
+        tv.take ? {t: "promptChoose", choice: tv.i} : {t: "promptChoose", choice: "decline"});
+    }
     /* A SOAK PITCHED FOR IS PRICED AS THE CARD (QA-A H-4): `effects.soakPolicy`'s
        card price, asked through the one answer body. */
     const ans = J.autoAnswer(g, g.prompt.tag === "soak" && soakOn(g, seat) ? {cardPrice: true} : null), pt = g.prompt.tag;
@@ -1682,6 +1689,7 @@ const CALL_WHY = {
   pickFree: "Take it. It costs you nothing.",
   pickDone: "That is enough.",
   declineOptional: "Decline. It is optional, and not worth it here.",
+  traverseYes: "Traverse. The other face of the hero turns up, and its text is the one in force.",
   answer: "Answer it and play on.",
   endTurn: "End your turn. Nothing worth doing is left.",
   endTurnKeep: "End your turn. What you could still play is worth more held back than spent now.",

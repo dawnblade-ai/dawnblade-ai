@@ -285,7 +285,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      and only the stated/closed split below moves. */
   /* 58 -> 59 AT v6.42: `destroy-a-runechant-cost-unasked`, open. */
   /* 59 -> 61 AT v6.43: `zero-defence-gear-refused` and `dealt-damage-reads-attacks`, both open. */
-  assert.equal(Object.keys(APPROX).length, 61, "record count moved");
+  /* 61 -> 63 AT v6.44: `traverse-face-properties` and `usurper-first-counts-the-turn`, both open. */
+  assert.equal(Object.keys(APPROX).length, 63, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -412,7 +413,9 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 1 -> 3 AT v6.43: `zero-defence-gear-refused` (CR 7.3.2b: 0 is a value; both
      boards refuse a 0{d} piece, so Olde Leather Boots' +2 is unreachable) and
      `dealt-damage-reads-attacks` (Second Strike's gate reads attacks played). */
-  assert.equal(n("open"),    3, "open count moved");
+  /* 3 -> 5 AT v6.44: `traverse-face-properties` (what else a traverse changes on a hero:
+     CR 2.5.3c, 9.1) and `usurper-first-counts-the-turn` (CR 6.6.5d by analogy). */
+  assert.equal(n("open"),    5, "open count moved");
   /* 16 -> 17 AT v4.63: `steam-build-powcard-read`. 17 -> 18 AT v4.66:
      `play-held-on-the-stack`. 19 -> 20 AT v4.72: `x-cost-declared`.
      20 -> 21 AT v4.73: `crush-halving-rider-read`. 21 -> 22 AT v4.74:
@@ -2370,4 +2373,42 @@ probe("dealt-damage-reads-attacks", () => {
   assert.ok(g.pend, "no chain link");
   assert.equal(g.pend.ga, true, "Second Strike no longer counts an attack that dealt nothing — close this record");
   assert.equal(g.sides[0].hist.heroDmg, 0, "fixture: damage was dealt");
+});
+
+/* OPEN AT v6.44. DRIVEN: a traverse turns the face and leaves life and
+   intellect where they were (the back face prints life "*"). */
+probe("traverse-face-properties", () => {
+  const C2 = require("../engine/cards.js"), B2 = require("../engine/build.js"), R2 = require("../engine/rng.js");
+  const ST = C2.buildMaps(require("../data/staged.js").filter(c => c && c.name).map(C2.mapDbCard));
+  const d = {hero: {name: "Viserai, Between Worlds", code: "SBW001"}, deck: [], gear: []};
+  const {deck, gear, ...b} = B2.buildSide({code: "SBW001"}, d, ST, {}, R2.make("ap"), {n: 0}).b;
+  assert.equal(b.faces[1].hp, null, "fixture: the back face prints a numeric life now — reread CR 2.5.3c");
+  const g = H.state({hp: 13, maxHp: 20, int: 4, face: b.heroRec.n}, {}, {builds: [b, {}]});
+  const r = E.traverse(g, 0, b.heroRec.n);
+  assert.equal(r.ok, true, "fixture: the traverse failed");
+  assert.equal(r.game.sides[0].face, "Viserai, Usurper");
+  assert.deepEqual([r.game.sides[0].hp, r.game.sides[0].maxHp, r.game.sides[0].int], [13, 20, 4],
+    "a traverse recalculated the hero's life or intellect — close or rewrite this record");
+});
+
+/* OPEN AT v6.44. DRIVEN: with a blood debt attack action card already played
+   this turn (recorded before the face turned), Usurper's grant does not fire. */
+probe("usurper-first-counts-the-turn", () => {
+  H.db();
+  const C2 = require("../engine/cards.js"), B2 = require("../engine/build.js"), R2 = require("../engine/rng.js");
+  const ST = C2.buildMaps(require("../data/staged.js").filter(c => c && c.name).map(C2.mapDbCard));
+  const d = {hero: {name: "Viserai, Usurper", code: "SBW001"}, deck: [], gear: []};
+  const {deck, gear, ...b} = B2.buildSide({code: "SBW001"}, d, ST, {}, R2.make("ap"), {n: 0}).b;
+  const card = {...C2.resolveEntry(ST, {name: "Vexing Gloomblade", p: 1, code: null, q: 1}), uid: "vx", name: "Approx Debt Blade", tx: "Blood Debt"};
+  const run = atkKw => {
+    let g = {...H.state({res: 20, ap: 1, hand: [card], face: b.heroRec.n, hist: Object.assign(S.freshHist(), {atkKw})},
+      {hp: 20, hand: []}, {actor: 0, turnPlayer: 0, turn: 3, builds: [b, {}]}), phase: "action", step: "layer", priority: 0, passed: []};
+    g = J.reduce(g, {t: "play", uid: "vx", from: "hand"}, 0).state;
+    for(let i = 0; i < 12 && !g.pend; i++) g = H.move(g);
+    assert.ok(g.pend, "no chain link");
+    return g.pend.ga;
+  };
+  assert.equal(run([]), true, "fixture: the grant does not fire at all");
+  assert.equal(run([["blood debt"]]), false,
+    "an earlier blood debt attack this turn no longer counts — close or rewrite this record");
 });

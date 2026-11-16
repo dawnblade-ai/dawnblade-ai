@@ -772,7 +772,8 @@ test("a `filters` prompt survives the wire, which is what the bump is ABOUT", ()
   /* 40 -> 41 AT v6.40: the opt prompt's `ops`, the pick prompt's `defUid` (test/banishif.test.js). */
   /* 41 -> 42 AT v6.42: the `usurp` pending kind and action, the `_usurpUid` declaration (test/runechants.test.js). */
   /* 42 -> 43 AT v6.43: the `bancost` pending kind and action, the `_banCostUid` declaration, `hist.attacked/heroDmg/banPlay` (test/conditionals.test.js). */
-  assert.equal(W.WIRE_V, 43, "the bump moved — say what changed in wire.js's header");
+  /* 43 -> 44 AT v6.44: the side field `face`, `hist.runes/atkKw/actNames`, a board powCard's `_src`, a build's `faces` (test/traverse.test.js). */
+  assert.equal(W.WIRE_V, 44, "the bump moved — say what changed in wire.js's header");
   const g = H.state({grave: [RATK("a1"), RNON("n1")], res: 9, ap: 1}, {}, {actor: 0, turn: 3});
   g.prompt = sheet([RATK("a1"), RNON("n1")]);
   assert.ok(g.prompt && g.prompt.filters, "fixture: the sheet carries the field");

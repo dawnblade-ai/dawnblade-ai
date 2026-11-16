@@ -39,6 +39,11 @@
 const SIDE_FIELDS = [
   /* identity */
   "id","name","hero","heroKey",
+  /* `face` (v6.44) — the ACTIVE face's printed name for a double-faced hero
+     (Viserai, Between Worlds // Viserai, Usurper), null for every other
+     hero. Public: the hero is face up in the hero zone (CR 4.1.2). Traverse
+     (CR 8.5.60) changes it, through `effects.traverse` on both boards. */
+  "face",
   /* life & intellect — intWas parks a temporarily-rolled intellect
      (Knucklehead's d6) so the printed value can be restored after the draw */
   "hp","maxHp","int","baseInt","intWas",
@@ -148,8 +153,19 @@ const SIDE_FIELDS = [
    dealt (Bloodfrenzy Gloomblade, "if you've dealt damage to the defending
    hero this turn"). `banPlay`: how many cards this seat PLAYED from its
    banished zone (Galaxxi Black). Each is recorded where it becomes true,
-   in `effects.js`, which both boards call. */
-const freshHist = () => ({atk:0,non:0,arc:0,aura:0,made:0,booed:0,blue:0,red:0,trans:0,blueGY:0,atkNames:[],auraAtkNames:[],playTy:[],playNames:[],arcTaken:0,gyFirstKw:[],soulPut:[],madeNames:[],attacked:0,heroDmg:0,banPlay:0});
+   in `effects.js`, which both boards call.
+
+   `runes`, `atkKw`, `actNames` (v6.44) — the double-faced hero's facts.
+   `runes`: how many RUNECHANTS this seat created this turn, tokens not
+   events (Viserai, Between Worlds: "if you've created 3 or more Runechants
+   this turn"; `made` counts every token kind, and per event on one route).
+   `atkKw`: the printed keywords of each attack action card PLAYED this turn,
+   one entry per play (Viserai, Usurper: "the first attack action card with
+   blood debt you play each turn"). `actNames`: the names of the arena
+   permanents whose abilities this seat ACTIVATED this turn ("if you've
+   created or activated a Gate to i'Arathael this turn"; `madeNames` is the
+   created half). Recorded in `effects.js`. */
+const freshHist = () => ({atk:0,non:0,arc:0,aura:0,made:0,booed:0,blue:0,red:0,trans:0,blueGY:0,atkNames:[],auraAtkNames:[],playTy:[],playNames:[],arcTaken:0,gyFirstKw:[],soulPut:[],madeNames:[],attacked:0,heroDmg:0,banPlay:0,runes:0,atkKw:[],actNames:[]});
 
 function makeSide(o){
   o = o || {};
@@ -160,6 +176,7 @@ function makeSide(o){
     name: o.name || (o.id===1 ? "Opponent" : "You"),
     hero: o.hero || null,
     heroKey: o.heroKey || null,
+    face: o.face || null,
     hp, maxHp: o.maxHp!=null ? o.maxHp : hp,
     int, baseInt: o.baseInt!=null ? o.baseInt : int, intWas: null,
     deck: o.deck || [], hand: o.hand || [], arsenal: o.arsenal!=null ? o.arsenal : null,

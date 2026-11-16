@@ -206,6 +206,36 @@ function buildMaps(cards){
   return {status:"ready", byNP, byName, byCode, count:cards.length};
 }
 
+/* ---- THE OTHER FACE OF A DOUBLE-FACED HERO (v6.44) -------------------
+   CR 9.1.1 (verbatim, rules.fabtcg.com): "A double-faced card is a card with
+   two sets of properties - each set printed as a separate face on the card."
+   Upstream records each face as its OWN record (Viserai, Between Worlds and
+   Viserai, Usurper are two records naming neither), and the one thing the
+   pinned data carries that links them is the PRINT CODE: both faces of one
+   physical card share it (SBW001 is both; `test/staged.test.js` holds that
+   the staged two-faced cards are exactly the ones that share a code).
+
+   A SHARED CODE ALONE IS NOT ENOUGH. Double-sided TOKENS share one too
+   (Agility / Gold, Runechant / the Embodiments: two token cards printed back
+   to back), so the reader asks for the other record sharing a code that is
+   ITSELF a hero — the exact type word, so a Demi-Hero twin (Levia, Redeemed
+   // Blasmophet) is not read as a hero's face. More than one candidate is
+   ambiguous and answers null: a guess is not a face. A hero with no other
+   face answers null, which is every hero in the pool today. Data in, data
+   out: no hero is named here. */
+const isHeroRec = r => !!r && (r.ty || []).some(t => /^hero$/i.test(String(t)));
+function otherFace(db, rec){
+  if(!db || db.status !== "ready" || !isHeroRec(rec)) return null;
+  const codes = Object.keys(rec.pr || {}).filter(k => k !== "_first");
+  if(!codes.length) return null;
+  const found = new Map();
+  for(const list of Object.values(db.byName || {})) for(const r of list){
+    if(r === rec || r.n === rec.n || !isHeroRec(r)) continue;
+    if(Object.keys(r.pr || {}).some(k => k !== "_first" && codes.indexOf(k) >= 0)) found.set(r.n, r);
+  }
+  return found.size === 1 ? [...found.values()][0] : null;
+}
+
 return {setCDN, cdnImg, toNum, resolveEntry, resolveHero, mapDbCard, buildMaps,
-        SA_SETS, pickPrinting};
+        SA_SETS, pickPrinting, otherFace};
 });

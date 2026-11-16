@@ -55,6 +55,10 @@ function seat(sd){
   if(!sd) return null;
   return {
     name: sd.name, hero: sd.hero, heroKey: sd.heroKey,
+    /* THE ACTIVE FACE (v6.44) — a double-faced hero traverses, and a report
+       that names the deck's face while the other one is up sends the
+       reader after the wrong hero text (the Agent note below, one rule over). */
+    face: sd.face,
     hp: sd.hp, maxHp: sd.maxHp, int: sd.int, baseInt: sd.baseInt,
     res: sd.res, ap: sd.ap, wasted: sd.wasted,
     counts: {deck: list(sd.deck).length, hand: list(sd.hand).length, grave: list(sd.grave).length,

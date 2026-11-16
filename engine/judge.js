@@ -727,6 +727,8 @@ function newMatch(o){
       name: (o.names && o.names[i]) || ("Seat " + i),
       hero: b.HZOOM ? b.HZOOM.name : null,
       heroKey: (o.heroKeys && o.heroKeys[i]) || null,
+      /* the deck's face is up at the deal (v6.44; `effects.traverse`) */
+      face: Array.isArray(b.faces) && b.heroRec ? b.heroRec.n : null,
       hp: b.hp != null ? b.hp : 20, maxHp: b.hp != null ? b.hp : 20,
       int, baseInt: int,
       deck: (b.deck || []).slice(int),
@@ -2347,6 +2349,24 @@ const lookChoice = (g, seat) => {
   const want = knows(foe) && !knows(seat) ? seat : foe;
   const i = whose.indexOf(want);
   return i >= 0 ? {i, own: want === seat} : null;
+};
+/* ---- A TRAVERSE THE SEAT IS ASKED ABOUT (v6.44) --------------------------
+   For `sparring.js`, which reads no card text. Viserai, Usurper's "at the
+   beginning of each end phase, if you've created or activated a Gate to
+   i'Arathael this turn, you MAY traverse" is an optional one-mode sheet whose
+   mode is the `traverse` op (`effects.endTraverseAsks`). This answers
+   `{i, take}` for that sheet addressed to `seat`, null for any other.
+
+   THE ANSWER IS TO TAKE IT, and it is the answer `autoAnswer` already gives
+   every modal (the first mode), so naming it moves no game: what it buys is
+   the reason key. Whether a face is WORTH more than the other is not
+   measured: the hero is staged, no seat plays him yet, and CLAUDE.md's rule
+   is that a policy ships when measured. The opening release measures it. */
+const traverseAsk = (g, seat) => {
+  const p = g && g.prompt;
+  if(!p || p.tag !== "modal" || (p.side || 0) !== seat || !Array.isArray(p.options)) return null;
+  const i = p.options.findIndex(o => ((o && o.ops) || []).some(x => x && x[0] === "traverse"));
+  return i >= 0 ? {i, take: true} : null;
 };
 /* ---- WEAPON SWINGS A PENDING GRANT WOULD PUMP (H-DAGGER, trainer QA census) ----
    For `sparring.js`, which reads no card text. A "your next <qualifier> attack this
@@ -5065,7 +5085,7 @@ function moves(g, seat){
 }
 
 return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, moves, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
+        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, traverseAsk, arcaneOf, chargeView, effPowerNow, chargeMore,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf, waitingOn,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */

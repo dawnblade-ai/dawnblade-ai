@@ -381,10 +381,13 @@ test("WIRE_V moves when the payload shape moves, and only then", () => {
   /* 40 -> 41 AT v6.40: the opt prompt's `ops` and the pick prompt's `defUid` — prompt fields, so the digest holds. */
   /* 41 -> 42 AT v6.42: a `pending` KIND (`usurp`), its action and the `_usurpUid` declaration — outside the ledger lists, so the digest holds. */
   /* 42 -> 43 AT v6.43: a `pending` KIND (`bancost`), its action, the `_banCostUid` declaration and three `hist` counts — inside whole-shipped values, so the digest holds. */
-  assert.equal(W.WIRE_V, 43,
+  /* 43 -> 44 AT v6.44: the SIDE FIELD `face` (a double-faced hero's active face), so the
+     digest MOVES with it; plus `hist.runes/atkKw/actNames`, a board powCard's `_src` and a
+     build's `faces` inside whole-shipped values (test/traverse.test.js). */
+  assert.equal(W.WIRE_V, 44,
     "WIRE_V moved — if the payload shape moved with it, update the digest below " +
     "in the same edit and say what changed in the header");
-  assert.equal(h, 3759651216,
+  assert.equal(h, 2085193405,
     "the payload SHAPE moved and WIRE_V did not. A stale key decodes fine (the " +
     "lists are read by name) — what breaks is the FINGERPRINT, so two honest " +
     "peers desync on the opening state instead of being refused at the handshake.");

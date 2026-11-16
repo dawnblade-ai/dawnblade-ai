@@ -163,9 +163,14 @@ test("the pool's optional-modal family is FOUR records over TWO cards, all full"
   assert.deepEqual([...new Set(hits.map(h => h.tier))], ["full"]);
   /* AND `millCostSpec` IS THE ONE BUILDER THAT SETS THE FIELD, so the
      count above is the whole family rather than one reader's share. */
+  /* 1 -> 2 AT v6.44: `endTraverseAsks`, Viserai, Usurper's "you may traverse" — a
+     staged HERO's, not a pool card's, so the pool count above holds; it is the same
+     one-mode optional modal, answered by the same Decline control
+     (test/traverse.test.js drives the decline). */
   const EFX = read("engine/effects.js");
-  assert.equal((EFX.match(/optional: true/g) || []).length, 1,
-    "one spec builder sets `optional` — a second means this census is partial");
+  assert.equal((EFX.match(/optional: true/g) || []).length, 2,
+    "two spec builders set `optional` — a third means this census is partial");
+  assert.ok(/function endTraverseAsks[\s\S]{0,1200}optional: true/.test(EFX), "the second is no longer the traverse sheet");
 });
 
 /* ============================================================

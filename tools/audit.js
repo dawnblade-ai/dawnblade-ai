@@ -85,6 +85,17 @@ const HERO_STATICS = [
    note:"Arakni, Tarantula — a dagger of yours that hits a hero drains 1 more"},
   {key:"returnToBrood", re:/at the beginning of your end phase, return to the brood/,
    note:"an Agent of Chaos — its own end phase sends it home, and Arakni's clause fires again"},
+  /* VISERAI'S TWO FACES, built v6.44 (staged: data/staged.js). Between
+     Worlds' trigger is ONE passive across two sentences, so the second is a
+     ledger row with `build:false` (Blaze's reason: carried by the first). */
+  {key:"runeTrigger", re:/whenever you create 1 or more runechants, [^.]+/,
+   note:"Viserai, Between Worlds — creating Runechants banishes the top card of the deck (the effect read by classifyClause)"},
+  {key:"runeTraverse", build:false, re:/then if you'?(?:ve| have) created \d+ or more runechants this turn, traverse/,
+   note:"Viserai, Between Worlds — 3+ Runechants created this turn: traverse (no passive: `runeTrigger.traverseAt`)"},
+  {key:"firstKwGa", re:/the first attack action card with [a-z][a-z ]*? you play each turn gets go again/,
+   note:"Viserai, Usurper — the first blood debt attack action card each turn gets go again"},
+  {key:"endTraverse", re:/at the beginning of each end phase, if you'?(?:ve| have) created or activated an? .+? this turn, you may traverse/,
+   note:"Viserai, Usurper — each end phase, after a Gate was created or activated this turn: may traverse"},
   {key:"startItem", re:/start the game with a mechanologist item with cost 2 or less/,
    note:"Dash — pregame item (auto-picked; pick UI pending)"},
   /* FAI's clause 1, built v3.86 — Dash's shape one zone over, and the

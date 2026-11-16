@@ -363,6 +363,24 @@ function check(game){
            "chainCards");
   }
 
+  /* ---- the active face of a double-faced hero (v6.44) ----------------
+     `sd.face` names the face that is up (traverse, CR 8.5.60) and the
+     seat's build runs that face's text. A face the build does not carry,
+     or a build running the OTHER face's text, is a hero whose rules and
+     whose name disagree — the Agent-of-Chaos report note, one rule over. */
+  sides.forEach((sd, si) => {
+    if(sd.face == null) return;
+    const b = ((game.builds || [])[si]) || null;
+    if(!b) return;   /* a drill fixture with no build: nothing to compare */
+    const names = (Array.isArray(b.faces) ? b.faces : []).map(f => f && f.n);
+    if(names.indexOf(sd.face) < 0)
+      err("FACE-UNKNOWN", "sides[" + si + "].face is \"" + sd.face + "\", which is not a face of its hero ("
+        + (names.join(" // ") || "a one-faced hero") + ")", "face");
+    else if(b.heroRec && b.heroRec.n !== sd.face)
+      err("FACE-BUILD-DRIFT", "sides[" + si + "] shows " + sd.face + " but its build runs " + b.heroRec.n
+        + "'s text — traverse must swap both (effects.traverse)", "face");
+  });
+
   /* ---- prompts ------------------------------------------------------ */
   if(game.prompt){
     const ps = game.prompt.side;

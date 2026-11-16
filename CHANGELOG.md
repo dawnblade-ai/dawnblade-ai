@@ -1,3 +1,34 @@
+## v6.44 — the seventh reader for Viserai, Between Worlds: the double-faced hero and traverse
+
+- **Nothing a player can be dealt changed.** Engine groundwork (`ROADMAP-NEWDECKS.md`); the hero stays staged. `npm run audit`: the pool is unchanged (405 full).
+  Census: Viserai 35 / 0 / 0, and BOTH faces now report no unread clause (`tools/newdecks-census.js` reads the back face too).
+- **Two records, one card.** Upstream stores Viserai, Between Worlds and Viserai, Usurper as separate records naming neither; the pinned link is the shared
+  PRINT CODE (SBW001, IAR107). `cards.otherFace(db, rec)`: the one other HERO record sharing a code (a double-sided TOKEN shares one too, a Demi-Hero twin is not a
+  hero; more than one candidate answers null). No pool hero has a second face (drilled). No data, tool or loader change: no DATA_VER bump.
+- **The seat.** `buildSide` carries `faces` (the deck's face first) and `heroCode`; the new side field `face` is the ACTIVE face's name (public, CR 4.1.2),
+  set at the deal on both boards. `effects.traverse(game, seat, srcFace)` (CR 8.5.60 and 8.5.60a quoted) swaps the build's ability half through
+  `build.heroAbilities`, the body Arakni's Agents swap through, so the active face's text is in force on both boards; it FAILS for a one-faced hero and when the
+  non-active face generated it. Life and intellect are untouched (see NEEDS A RULING). A runOps op `traverse` runs it. Invariants `FACE-UNKNOWN`,
+  `FACE-BUILD-DRIFT`; `report.seat()` names the face; `view.js` CARRIERS `sides.face: names`; both hero zoom buttons show the live build's face.
+- **Between Worlds** (`runeTrigger`: the effect read by `classifyClause`, an unreadable one refuses; the threshold off the line): `effects.runesMade`, called after
+  EVERY Runechant mint (the ctx `mkRune` sites, and the `token` op when `parser.isRunechantCard` says so), bumps `hist.runes` (Runechants created this turn, tokens
+  not events) and fires the trigger ONCE per creation event (CR 6.6.5b quoted), inline: banish the top card, then traverse at 3+.
+- **Usurper** (`firstKwGa`, `endTraverse`): the first attack action card with blood debt played each turn gets go again (a gain, read against `hist.atkKw`, the printed
+  keywords of each attack action card played this turn); at the beginning of EACH end phase (CR 4.4.2: both seats are asked, at every end phase) a seat whose turn
+  records hold the printed token name, created (`hist.madeNames`) or activated (`hist.actNames`, new: a board powCard carries `_src`), is ASKED: an optional
+  one-mode modal (`endTraverseAsks`, step 8d of `beginEndPhase`) whose mode is the `traverse` op. The AI answers through `judge.traverseAsk` with its own key
+  `traverseYes` (the same answer `autoAnswer` gives; whether a face is worth more is unmeasured until the hero opens).
+- **Trainer fix (CR 4.4.4):** the trainer cleared `hist` for the incoming seat only, so the player's "this turn" read their own finished turn all through the
+  dummy's. Both seats clear now, as `judge.doEndTurn` always did.
+- **Drill `test/traverse.test.js`** (16 tests, sabotaged twenty ways, each bit).
+- **NEEDS A RULING (`tools/approx.js`, 61 -> 63 records, 3 -> 5 open):** `traverse-face-properties` (does a traverse recalculate life, CR 2.5.3c, when the back
+  prints life "*"; which CR 9.1 kind is a two-faced hero; which face starts) and `usurper-first-counts-the-turn` ("first ... each turn" counts a blood debt attack
+  played while the other face was up; CR 6.6.5d is written for triggers).
+- **Pins repinned after reading:** WIRE_V (dichotomy, wire: the side-field digest moves), the side-field census (`sides.test.js`, 53 -> 54), `runOps`'s vocabulary
+  (`anchors.test.js`, 100 -> 101, `traverse` has no card emitter), the optional-modal builders (`promptctl`, `wreckhavoc`: 1 -> 2), the reason census
+  (`explain.test.js`, +`traverseYes`, staged), the CR index (97 -> 112 rules, 87 -> 102 guarded), the approximation ledger.
+- **WIRE_V 43 -> 44** (a side field, three `hist` records, a powCard key, a build's faces). No DATA_VER change. The function must be redeployed (`APP_VER`, engine files).
+
 ## v6.43 — the eighth reader for Viserai, Between Worlds: the small conditionals
 
 - **Nothing a player can be dealt changed.** Engine groundwork (`ROADMAP-NEWDECKS.md`). Measured over every pool and staged record (851 parses, before and after): exactly

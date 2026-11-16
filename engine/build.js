@@ -40,8 +40,8 @@
   else root.DawnBuild = factory(root.DawnParser, root.DawnCards, root.DawnGame, root.DawnRNG);
 })(typeof self!=="undefined" ? self : this, function(PR, CD, GM, RNG){
 
-const {clean, isWeapon, weaponCost, isAttack, fxParse, hasKw, parseHeroPower, isCloaked, ARS_PUT} = PR;
-const {resolveEntry, resolveHero, cdnImg} = CD;
+const {clean, isWeapon, weaponCost, isAttack, fxParse, hasKw, parseHeroPower, isCloaked, ARS_PUT, classifyClause} = PR;
+const {resolveEntry, resolveHero, cdnImg, otherFace} = CD;
 const {slotOf, HANDS, handsUsed} = GM;
 
 /* ---- the equipment slots (official zones) -----------------------------
@@ -372,6 +372,34 @@ function heroAbilities(heroRec, displayName, code){
   const _dr = _htx.match(
     /this ability costs ((?:\{r\})+) less to activate for each draconic chain link you control/);
   const _dracRed = _dr ? (_dr[1].match(/\{r\}/g) || []).length : 0;
+  /* ---- THE DOUBLE-FACED HERO'S CLAUSES (v6.44) ------------------------
+     Viserai, Between Worlds: "Whenever you create 1 or more Runechants,
+     banish the top card of your deck. Then if you've created 3 or more
+     Runechants this turn, traverse."
+     Viserai, Usurper: "The first attack action card with blood debt you
+     play each turn gets go again." and "At the beginning of each end
+     phase, if you've created or activated a Gate to i'Arathael this turn,
+     you may traverse."
+
+     `runeTrigger` IS THE TRIGGER'S PAYLOAD AS OPS, read by the parser's
+     own `classifyClause` — the effect is card text like any other, and an
+     effect the parser cannot read REFUSES: the passive is null, the clause
+     reports unread in the audit, and nothing runs. The threshold is the
+     printed number (v3.21's rule). `effects.runesMade` fires it.
+
+     `firstKwGa` IS THE KEYWORD the printed line names, `endTraverse` THE
+     TOKEN NAME (captured with its printed capitals off the raw text, Briar's
+     reason): `effects.js` names neither. */
+  const _rtm = _htx.match(
+    /whenever you create 1 or more runechants, ([^.]+?)\.(?: then if you'?(?:ve| have) created (\d+) or more runechants this turn, traverse(?:\.|$))?/);
+  const _rtc = _rtm ? classifyClause(_rtm[1]) : null;
+  const runeTrigger = (_rtc && _rtc.status === "run" && (_rtc.ops || []).length)
+    ? {ops: _rtc.ops, traverseAt: _rtm[2] ? +_rtm[2] : 0} : null;
+  const _fkg = _htx.match(/the first attack action card with ([a-z][a-z ]*?) you play each turn gets go again/);
+  const firstKwGa = _fkg ? _fkg[1].trim() : "";
+  const _etv = _htxRaw.match(
+    /at the beginning of each end phase, if you'?(?:ve| have) created or activated an? (.+?) this turn, you may traverse/i);
+  const endTraverse = _etv ? _etv[1].trim() : "";
   const heroPow = heroRec.tx ? parseHeroPower(heroRec.tx) : null;
   /* THE HERO POWCARD CARRIES THE WHOLE ABILITY LINE (v3.39), which is the
      fix v2.34 made for EQUIPMENT and never made here: `parseHeroPower`
@@ -463,7 +491,8 @@ function heroAbilities(heroRec, displayName, code){
     arsenalInstant, iceFrostbite, viseraiPassive, wateryGrave, lyathBoo, energyOnOpt,
     earthOnFirstHeroDmg, lightningOnSecondNonAtk,
     atkPowOffChain, mightOnFirst6Discard, weaponRefresh, chargedDefBuff, stealthMarkedBuff,
-    becomeAgent, returnToBrood, daggerDrain, halveBase, auraDiscount};
+    becomeAgent, returnToBrood, daggerDrain, halveBase, auraDiscount,
+    runeTrigger, firstKwGa, endTraverse};
 }
 
 /* ---- the build --------------------------------------------------------
@@ -598,7 +627,13 @@ function boardPow(b){
        fix; `fxParse` credits the clause as read, and a credit with no
        route is the no-op blind spot. */
     _instant: pw.kind === "instant", _attackRx: pw.kind === "attackRx",
-    img: b.card.img, dbImg: b.card.dbImg, _gearArt: true, uid: "bp" + b.uid},
+    img: b.card.img, dbImg: b.card.dbImg, _gearArt: true, uid: "bp" + b.uid,
+    /* WHOSE ABILITY THIS IS (v6.44): the permanent's printed name, which
+       `effects.execute` records as activated this turn (`hist.actNames`) —
+       Viserai, Usurper asks "if you've … activated a Gate to i'Arathael this
+       turn", and a destroy-as-cost has taken the permanent off the board
+       by the time anything could look there. */
+    _src: b.card.name},
     /* ---- THE COSTS THAT GENERALISE, AND THE TWO THAT DO NOT ----------
        v3.63's rule, SIXTH outing, and the first time answering it needed
        a measurement in both directions rather than a copy. `equipPiece`
@@ -784,6 +819,14 @@ function buildSide(h, d, db, opts, rng, ctr){
      read here at deal time and again whenever the hero CHANGES. */
   const _ab = heroAbilities(heroRec, d.hero.name, d.hero.code);
   const heroPow = _ab.heroPow, HPOW = _ab.HPOW;
+  /* A DOUBLE-FACED HERO CARRIES BOTH FACES (v6.44): the deck's face first
+     (the one it names, active at the deal) and the other (`cards.otherFace`,
+     the hero record that shares its print code). `effects.traverse` swaps
+     the ability half between them; `heroCode` is the deck's printed code,
+     so the deck's face keeps its own art when it comes back. Absent for a
+     one-faced hero, which is every hero in the pool. */
+  const _back = otherFace(db, heroRec);
+  const _faces = _back ? {faces: [heroRec, _back], heroCode: d.hero.code || null} : {};
   const cuts = o.cuts||{};
   /* THIS HERO'S SILVER AGE SET, read off its own printed code (SAZ001 ->
      SAZ). Passed to every resolveEntry so a card wears the face it has in
@@ -861,7 +904,7 @@ function buildSide(h, d, db, opts, rng, ctr){
     if(gi >= 0){ startGrave = Object.assign({}, deck[gi], {_gy: 0}); deck.splice(gi, 1); }
   }
   return {b:Object.assign({deck,gear,hasBoost,read,startItem,startGrave,
-    hp:heroRec.hp!=null?heroRec.hp:20, int:heroRec.int!=null?heroRec.int:4}, _ab), rng};
+    hp:heroRec.hp!=null?heroRec.hp:20, int:heroRec.int!=null?heroRec.int:4}, _ab, _faces), rng};
 }
 
 /* Equip a hero to a legal default loadout and build it. The two seats
@@ -1017,7 +1060,10 @@ const PASSIVES = ["arsenalInstant","iceFrostbite","viseraiPassive","wateryGrave"
                      naming a build fact nothing verified, which is v3.21's
                      one-sided ledger in the other direction. Adding Fai's
                      `startGrave` is what made that visible. */
-                  "startItem","startGrave"];
+                  "startItem","startGrave",
+                  /* THE DOUBLE-FACED HERO (v6.44) — `effects.runesMade`,
+                     `execute`'s first-play grant, `beginEndPhase` (8d). */
+                  "runeTrigger","firstKwGa","endTraverse"];
 
 /* NOT EVERY PASSIVE IS A YES/NO. Most are — a hero either has Watery Grave
    or does not — but Kayo's clause 2 names its own MAGNITUDE ("get +1{p}"),
@@ -1054,7 +1100,11 @@ const PASSIVE_TYPE = {
   /* AN OBJECT each: the pregame placements are a CARD (or a board entry),
      which is the thing the printed line names. Dash's goes to the arena,
      Fai's to the graveyard. */
-  startItem: "object", startGrave: "object"
+  startItem: "object", startGrave: "object",
+  /* Viserai's two faces (v6.44): the trigger is OPS and a threshold (an
+     object), the grant names a KEYWORD and the end phase a TOKEN (strings,
+     Briar's reason). */
+  runeTrigger: "object", firstKwGa: "string", endTraverse: "string"
 };
 
 return {ARMOR_Z, HAND_Z, gearSlots, applyPick, defaultPicks, equipPiece, boardPow,

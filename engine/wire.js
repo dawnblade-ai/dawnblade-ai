@@ -345,7 +345,14 @@
    `banPlay` (per-turn facts, inside a whole-shipped field). A v42 peer answers
    no `bancost` and keeps none of the three counts, so the pair diverges on the
    first attack. Whole-shipped values: by hand, behind the release handshake. */
-const WIRE_V = 43;
+/* 43 -> 44 AT v6.44: the side field `face` arrives (the active face of a
+   double-faced hero; traverse, CR 8.5.60), `hist` gains `runes`, `atkKw` and
+   `actNames`, a board ability's powCard carries `_src`, and a build carries
+   `faces`/`heroCode` plus three passives (`runeTrigger`, `firstKwGa`,
+   `endTraverse`). A v43 peer has no face to turn and none of the three
+   records, so the pair diverges at the first Runechant a Viserai creates.
+   The shape digest moves with the side field. */
+const WIRE_V = 44;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------
@@ -372,7 +379,7 @@ const VIEW_ZONES  = ["unseen", "unseenGear"];
 /* Side fields that are NOT card containers. Listed so the drill can prove
    every SIDE_FIELD is accounted for one way or the other. */
 const NON_CARD_SIDE_FIELDS = [
-  "id","name","hero","heroKey","hp","maxHp","int","baseInt","intWas",
+  "id","name","hero","heroKey","face","hp","maxHp","int","baseInt","intWas",
   "res","ap","wasted","counters","weaponUsed","heroTapped","buffNext","buffQ","atkBuff","defMod","gaNext","gaNextQ","costOff","instantNextQ","defCapNext","defActionBuff","wardNext","hitNext","ctrEnd",
   "runeHitNext","amp","ward","awd","wardTurn","awdTurn","arcShield",
   "lifeLock","namedBuff","dracNext","dracChain","dracCard","marked","hist",

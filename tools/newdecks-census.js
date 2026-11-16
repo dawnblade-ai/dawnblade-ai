@@ -32,9 +32,14 @@ function main(){
     for(const [sec, s] of Object.entries(d.sections)) for(const r of s.rows){
       if(r.name === d.hero){
         const h = C.resolveHero(db, {name:r.name, code:r.code});
-        const a = A.analyzeHero(h, r.name);
-        const un = (a.clauses || []).filter(c => !c.covered).map(c => c.t);
-        if(un.length) gaps.push(`[hero] ${r.name}: ` + un.join(" || "));
+        /* AND ITS OTHER FACE (v6.44): a double-faced hero's back is a record
+           of its own that no list names (`cards.otherFace`). */
+        const back = C.otherFace(db, h);
+        for(const f of [h, back].filter(Boolean)){
+          const a = A.analyzeHero(f, f.n);
+          const un = (a.clauses || []).filter(c => !c.covered).map(c => c.t);
+          if(un.length) gaps.push(`[hero] ${f.n}: ` + un.join(" || "));
+        }
         continue;
       }
       const rc = C.resolveEntry(db, {name:r.name, p:r.p || 0, code:r.code, q:r.q});

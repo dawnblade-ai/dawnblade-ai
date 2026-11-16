@@ -153,8 +153,13 @@ test("widening the floor moved no pool record", {skip}, () => {
   const EFX = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8");
   const spec = EFX.slice(EFX.indexOf("function millCostSpec"), EFX.indexOf("function optCostSpec"));
   assert.equal((spec.match(/\{label:/g) || []).length, 2, "millCostSpec prints two modes");
-  assert.equal((EFX.match(/optional: true/g) || []).length, 1,
-    "and it is the only builder that sets the flag");
+  /* 1 -> 2 AT v6.44: `endTraverseAsks` (Viserai, Usurper's "you may traverse", a
+     staged HERO's line, no pool record) is the first builder to USE the one-mode
+     floor on purpose: its one mode is the traverse, its other answer Decline. */
+  assert.equal((EFX.match(/optional: true/g) || []).length, 2,
+    "millCostSpec and endTraverseAsks are the only builders that set the flag");
+  const tv = EFX.slice(EFX.indexOf("function endTraverseAsks"), EFX.indexOf("function thawFrost"));
+  assert.equal((tv.match(/\{label:/g) || []).length, 1, "the traverse sheet prints one mode");
 });
 
 /* ============================================================

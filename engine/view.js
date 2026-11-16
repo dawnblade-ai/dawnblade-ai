@@ -97,7 +97,7 @@ const CARRIERS = {
   promptQ: "sweep", _discWay: "sweep", _costWay: "sweep", _tookWay: "sweep",
   revealed: "revealed",
   chain: "names", chainHist: "names",
-  "sides.name": "names", "sides.hero": "names", "sides.hist": "names", "sides.wardNext": "names",
+  "sides.name": "names", "sides.hero": "names", "sides.face": "names", "sides.hist": "names", "sides.wardNext": "names",
   "sides.hitNext": "names", "sides.buffQ": "names"
 };
 /* The zones the view itself rules on (not carriers). */

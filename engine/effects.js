@@ -171,7 +171,53 @@ function makeEffects(ctx){
   const missing = CTX_KEYS.filter(k => ctx[k] === undefined);
   if(missing.length) throw new Error("effects.js: missing context — " + missing.join(", "));
   const {L, act, actMut, actorOf, bAct, bFoe, db, foe, foeMut,
-         gy, gyDisc, had6ThisTurn, mkRune, openPrompt, tokSeq, typeAbbr, winCheck} = ctx;
+         gy, gyDisc, had6ThisTurn, openPrompt, tokSeq, typeAbbr, winCheck} = ctx;
+  /* ---- "WHENEVER YOU CREATE 1 OR MORE RUNECHANTS" (v6.44) --------------
+     Viserai, Between Worlds: "Whenever you create 1 or more Runechants,
+     banish the top card of your deck. Then if you've created 3 or more
+     Runechants this turn, traverse."
+
+     ONE CREATION IS ONE EVENT, however many tokens it makes. CR 6.6.5b
+     (verbatim): "An event-based triggered effect only triggers if an event
+     that meets the triggered condition occurs." "Create 2 Runechants" is
+     one event that creates two, and "1 or more" is the printed way of
+     saying the count does not multiply the trigger — so it fires ONCE per
+     call here, never per token.
+
+     `hist.runes` IS THE TURN'S COUNT OF RUNECHANTS CREATED, tokens and
+     not events, which is what "3 or more Runechants" counts. It is bumped
+     BEFORE the trigger asks, so the creation that triggered is counted.
+     `made` is not this fact: the ctx mint counts tokens and the `token`
+     op counts events, and both count every token kind.
+
+     EVERY RUNECHANT MINT IN THIS FILE COMES THROUGH HERE: each call of the
+     ctx's `mkRune` (both boards hand one in) is followed by it, and the `token` op
+     calls it for a minted record `parser.isRunechantCard` says is one
+     (CR 1.8.8's "counts as", v6.42). A Runechant PLAYED from hand (the
+     special Runechants are Runeblade Instant - Auras) is played, not
+     created, and does not come through.
+
+     THE TRIGGER IS RESOLVED INLINE, the way Viserai's rite and every
+     other trigger in this file are: CR 6.6.6's triggered-layer is not put
+     on a stack (`tools/approx.js` `simultaneous-trigger-order` records the
+     ordering half). Read off the
+     ACTIVE face's build (`bAct(n).runeTrigger`), so once he traverses the
+     clause is no longer in force. */
+  const runesMade = (n, count, srcName) => {
+    if(!(count > 0)) return n;
+    actMut(n).hist = {...act(n).hist, runes: ((act(n).hist || {}).runes || 0) + count};
+    const rt = bAct(n).runeTrigger;
+    if(!rt) return n;
+    const who = (bAct(n).heroRec || {}).n || "Hero";
+    n = L(n, `${who}: ${count > 1 ? count + " Runechants" : "a Runechant"} created — the hero's trigger fires.`);
+    n = runOps(n, rt.ops, who);
+    if(rt.traverseAt){
+      const made = (act(n).hist || {}).runes || 0;
+      if(made >= rt.traverseAt) n = runOps(n, [["traverse", {face: who}]], who);
+      else n = L(n, `${who}: ${made} of ${rt.traverseAt} Runechants created this turn — no traverse yet.`);
+    }
+    return n;
+  };
 
   /* WHAT A DISCARD TRIGGERS. Kayo prints: "The first time you discard a
      card with 6 or more {p} during EACH OF YOUR ACTION PHASES, create a
@@ -2050,7 +2096,7 @@ function makeEffects(ctx){
         if((act(n).soul||[]).length >= v){ n = banishFromSoul(n, v); n = L(n,`${v} banished from the soul.`); n = runOps(n, op[2]||[], srcName); }
         else n = L(n,`Needs ${v} soul — ${sv(act(n), "have")} ${(act(n).soul||[]).length}.`);
       }
-      else if(k==="rune"){ n = mkRune(n, v); n=L(n,`+${v} Runechant${v>1?"s":""} — ${runeCount(act(n))} on the board.`); }
+      else if(k==="rune"){ n = ctx.mkRune(n, v); n=L(n,`+${v} Runechant${v>1?"s":""} — ${runeCount(act(n))} on the board.`); n = runesMade(n, v, srcName); }
       /* RULING: a token is a card. Resolve it through the same reader as
          everything else and stand it up on the correct player's board —
          never describe it, never hardcode what it does. */
@@ -2220,6 +2266,10 @@ function makeEffects(ctx){
           }
         }
         for(const tok of _minted) n = enterWithCounters(n, tok, tok.uid, _tseat, _ctr);
+        /* A RUNECHANT MINTED BY NAME IS A RUNECHANT CREATED (v6.44) — the
+           ctx mint is not the only door ("When this is destroyed, create a
+           Runechant token" reads here). One event, the minted count. */
+        if(P.isRunechantCard(rec)) n = runesMade(n, _minted.length, srcName);
         /* THE "SITS IDLE" NOTE IS GONE (v2.74) and it had to go. It read
            "pays no costs and takes no action phase, so anything that taxes
            those sits idle" — true of the training prop it was written for,
@@ -2619,6 +2669,14 @@ function makeEffects(ctx){
             } else n = L(n, `${srcName}: ${c.name} is not ${rider.word} — nothing more.`);
           });
         }
+      }
+      /* TRAVERSE (v6.44, CR 8.5.60) — the actor's hero turns to its other
+         face. `v.face` is the face whose ability generated the effect, which
+         CR 8.5.60a asks about; the body is `traverse` (module level, one copy
+         for both boards and for the end phase). */
+      else if(k==="traverse"){
+        const r = traverse(n, actorOf(n), v && v.face);
+        n = L(r.game, r.msg);
       }
       else if(k==="foeBanishTop"){
         const take = foe(n).deck.slice(0,v);
@@ -3935,6 +3993,10 @@ function makeEffects(ctx){
        arena record prints a `{t}` cost, and it is the only one of the
        seven that does NOT print "destroy this". */
     if(from === "board"){
+      /* "IF YOU'VE … ACTIVATED A <permanent> THIS TURN" (v6.44) — the name
+         of every arena permanent whose ability this seat activated, off the
+         powCard's `_src` (build.boardPow). Per turn: `hist`. */
+      if(card._src) actMut(n).hist = {...act(n).hist, actNames: [...((act(n).hist || {}).actNames || []), norm(card._src)]};
       const _te = act(n).board.find(x => x && ("bp" + x.uid) === card.uid);
       if(_te && P.tapsToActivate(_te.card.tx || "")){
         actMut(n).board = act(n).board.map(x => x === _te ? {...x, spent: true} : x);
@@ -4172,7 +4234,7 @@ function makeEffects(ctx){
        an activated ability plays nothing (`parser.isCardPlay`). The class
        comes off the structured array (v2.39), never `tt`. */
     if(bAct(n).viseraiPassive && P.isCardPlay(from) && (card.ty || []).some(t => /^runeblade$/i.test(String(t)))
-       && act(n).hist.non>0){ n = mkRune(n, 1); n=L(n,`Viserai's rite — a non-attack action card already down, so this Runeblade card conjures a Runechant (now ${runeCount(act(n))}).`); }
+       && act(n).hist.non>0){ n = ctx.mkRune(n, 1); n=L(n,`Viserai's rite — a non-attack action card already down, so this Runeblade card conjures a Runechant (now ${runeCount(act(n))}).`); n = runesMade(n, 1, card.name); }
     const preHP = foe(n).hp;
     /* THE COLOUR COUNTERS USED TO BE INCREMENTED HERE, 460 LINES ABOVE THE
        CONDITION THAT READS THEM, AND EVERY CARD THEREFORE SATISFIED ITS OWN
@@ -4312,6 +4374,28 @@ function makeEffects(ctx){
         n = L(n, `${P.gyFirstGaSource(act(n)).name}: ${card.name} is the first ${_gk} card out of the graveyard this turn — go again.`);
       }
     }
+    /* ---- "THE FIRST ATTACK ACTION CARD WITH <KW> YOU PLAY EACH TURN GETS
+       GO AGAIN" (v6.44) — Viserai, Usurper. The ACTIVE face's static
+       (`bAct(n).firstKwGa`, the keyword read off the printed line), so it is
+       in force only while Usurper is the face up.
+
+       "FIRST … EACH TURN" ASKS THE TURN'S RECORD, not a latch set by the
+       grant: `hist.atkKw` holds the printed keywords of every attack action
+       card PLAYED this turn (recorded after this point, below, so the card
+       asking is not in it). An earlier one played while the OTHER face was
+       active still was the first — the grant does not restart because the
+       face changed (CR 9.1.2c is about effects that apply to the card; this
+       is the turn's play history; CR 6.6.5d's ordinal rule, written for
+       triggers, read by analogy; `tools/approx.js` records the reading).
+
+       GO AGAIN IS A GAIN (CR 5.3.5), `ga = true`, as Compass above.
+       `printedKw`, never `hasKw` (v2.84). */
+    { const _fk = bAct(n).firstKwGa;
+      if(_fk && P.isCardPlay(from) && isAtkActionCard(card) && printedKw(card, _fk)
+         && !((act(n).hist || {}).atkKw || []).some(ks => (ks || []).indexOf(norm(_fk)) >= 0)){
+        ga = true;
+        n = L(n, `${(bAct(n).heroRec || {}).n || "Hero"}: ${card.name} is the first attack action card with ${_fk} played this turn — go again.`);
+      } }
     /* SPEND A WAITING NEXT-INSTANT GRANT (v3.37) — Stir the Aetherwinds.
        IT IS TAKEN HERE, AHEAD OF THE CARD'S OWN OPS, because the payload
        it carries is an AMP and `arcane` reads `sd.amp` as it resolves
@@ -4769,6 +4853,13 @@ function makeEffects(ctx){
     if(attacking && P.isCardPlay(from)){
       const _ty = playTyOf(card);
       if(_ty.length) actMut(n).hist = {...act(n).hist, playTy: [...(act(n).hist.playTy || []), _ty]};
+      /* AND ITS PRINTED KEYWORDS (v6.44), one entry per attack action card
+         played — what "the first attack action card with <keyword> you play
+         each turn" asks (Viserai, Usurper; read above, before this record).
+         The keyword index filtered by `printedKw`: an index is not
+         possession (v2.84). */
+      if(isAtkActionCard(card)) actMut(n).hist = {...act(n).hist,
+        atkKw: [...((act(n).hist || {}).atkKw || []), (card.kw || []).filter(k => printedKw(card, k)).map(k => norm(k))]};
     }
     /* ---- THE LATE "…THIS WAY" PASS, ONE BODY, BOTH BRANCHES (v3.62) --
        `execute` evaluates `fx.conds` BEFORE it runs the card's ops, so a
@@ -8632,8 +8723,9 @@ function makeEffects(ctx){
         else n = L(n, `${pc.name}: the granted on-hit bonus — condition not met (${condWhy(h, cond, h.pend.chargedWay, true)}).`);
       });
     }
-    if(n.pend.runeOnHit && total>0){ const many = n.pend.runeOnHit; n = mkRune(n, many);
-      n = L(n, `${pc.name} connects — ${many>1?`${many} Runechants are`:"a Runechant is"} forged (now ${runeCount(act(n))}), poised for ${sp(act(n))} next swing.`); }
+    if(n.pend.runeOnHit && total>0){ const many = n.pend.runeOnHit; n = ctx.mkRune(n, many);
+      n = L(n, `${pc.name} connects — ${many>1?`${many} Runechants are`:"a Runechant is"} forged (now ${runeCount(act(n))}), poised for ${sp(act(n))} next swing.`);
+      n = runesMade(n, many, pc.name); }
     /* ---- A WEAPON THAT HITS EARNS ITS COUNTERS -----------------------
        "The second time this hits each turn, put a +1{p} counter on it."
 
@@ -11359,6 +11451,19 @@ function beginEndPhase(game, seat, db){
     delete n.deckFlip;
   }
 
+  /* (8d) "AT THE BEGINNING OF EACH END PHASE … YOU MAY TRAVERSE" (v6.44) —
+     Viserai, Usurper. Each seat whose active face prints it and whose turn
+     records hold the named token is ASKED (`endTraverseAsks`); the sheet is
+     queued, and both callers already hold the end phase on a queued sheet
+     (v5.71). Its order among the other beginning-of-end-phase triggers is
+     this function's stated approximation (CR 6.6.6b's ordering is not
+     modelled). */
+  for(const a of endTraverseAsks(n, seat)){
+    n = Object.assign({}, n, {promptQ: [...(n.promptQ || []), {...a.spec, side: a.seat}]});
+    msgs.push(nameOf(a.seat) + ": " + a.spec.hint.split(".")[0] + " — traverse is offered.");
+    fired.push("traverse");
+  }
+
   /* (9) THE BROOD — ARAKNI'S AGENTS OF CHAOS (v3.76) ------------------
      Two printed lines, one cycle, and both fire at the beginning of the
      SAME end phase:
@@ -11436,6 +11541,93 @@ function beginEndPhase(game, seat, db){
   }
 
   return {game: n, msgs, ops, fired};
+}
+
+/* ---- TRAVERSE: THE HERO TURNS TO ITS OTHER FACE (v6.44) -------------
+   CR 8.5.60 (verbatim, rules.fabtcg.com): "Traverse is a discrete effect.
+   To traverse a double-faced card, its non-active face becomes its active
+   face.[9.1]"
+   CR 8.5.60a (verbatim, the site's own wording): "If the card is not a
+   double-faced card,  the traverse effect was generated an ability on the
+   non-active face, or the non-active face can otherwise not be made active,
+   the traverse effect fails."
+   CR 9.1.2 (verbatim): "Each face of a double-faced card has its own set of
+   printed properties."
+
+   WHAT A SEAT CARRIES. `sd.face` is the ACTIVE face's printed name (public:
+   a hero is face up in the hero zone, CR 4.1.2), null for a hero with one
+   face; the build carries both face records as `faces` (`build.buildSide`,
+   via `cards.otherFace`). Traversing swaps the half of the build that comes
+   off the printed text — `build.heroAbilities`, the same body Arakni's
+   Agents swap through (v3.76) — so the active face's text is the one in
+   force on both boards and nothing else reads a face.
+
+   WHAT DOES NOT CHANGE, AND WHY IT IS A QUESTION. Life and intellect stay
+   as they are. CR 2.5.3c (verbatim): "If the base life of an living-card
+   changes, then the life total is recalculated using the new base life
+   value of the object." But the back face prints life "*", which the CR
+   pages read here do not define for a hero, and both faces print intellect
+   4. Which double-faced category (CR 9.1) a two-faced HERO is is not settled
+   either: CR 9.1.3's flip-card names figment, invocation or construct;
+   CR 9.1.4b's twin-card has its active face "determined by the player that
+   played it, or by the effect that put it into the arena"; CR 9.1.5's
+   transcend-card turns by transcending. Recorded open in `tools/approx.js`
+   (`traverse-face-properties`); the minimum the text supports is the face
+   and its abilities.
+
+   PURE AND SEAT-RELATIVE, like `beginEndPhase`: returns {game, ok, msg}. */
+function traverse(game, seat, srcFace){
+  const sd = ((game.sides || [])[seat]) || {};
+  const b = ((game.builds || [])[seat]) || {};
+  const who = sd.name || ("seat " + seat);
+  const fail = why => ({game, ok: false, msg: who + ": traverse fails — " + why + " (CR 8.5.60a)."});
+  const faces = Array.isArray(b.faces) ? b.faces.filter(Boolean) : [];
+  if(sd.face == null || faces.length !== 2) return fail("the hero is not a double-faced card");
+  if(srcFace != null && srcFace !== sd.face) return fail("it was generated by an ability on the non-active face");
+  const next = faces.find(f => f.n !== sd.face);
+  if(!next) return fail("the other face cannot be made active");
+  const home = faces[0] === next;
+  const cur = Object.assign({}, b, BD.heroAbilities(next, next.n, home ? b.heroCode : null));
+  const builds = (game.builds || []).slice();
+  builds[seat] = cur;
+  const sides = (game.sides || []).slice();
+  sides[seat] = Object.assign({}, sd, {face: next.n, hero: sd.hero != null ? next.n : sd.hero});
+  return {game: Object.assign({}, game, {sides, builds}), ok: true,
+    msg: who + ": traverse — " + sd.face + " turns to " + next.n + "."};
+}
+
+/* ---- USURPER'S END PHASE: "YOU MAY TRAVERSE" (v6.44) ----------------
+   "At the beginning of each end phase, if you've created or activated a
+   Gate to i'Arathael this turn, you may traverse." The token's NAME comes
+   off the printed line (`build.heroAbilities`' `endTraverse`, v3.21's rule)
+   and is matched against two per-turn records: `hist.madeNames` (created,
+   v5.53) and `hist.actNames` (activated, v6.44). "EACH end phase" is every
+   player's (CR 4.4.2: "the 'beginning of the end phase' event occurs and
+   effects that trigger at the beginning of the end phase are triggered"),
+   so both seats are asked at every end phase, turn-player first.
+
+   "YOU MAY" IS A QUESTION, addressed to that seat: an optional one-mode
+   modal whose mode runs the `traverse` op, carrying the face whose ability
+   asked (CR 8.5.60a). Returned as specs; the caller queues them. */
+function endTraverseAsks(game, turnSeat){
+  const out = [];
+  for(const seat of [turnSeat, 1 - turnSeat]){
+    const b = ((game.builds || [])[seat]) || {};
+    const sd = ((game.sides || [])[seat]) || {};
+    const want = b.endTraverse ? norm(b.endTraverse) : "";
+    if(!want || sd.face == null) continue;
+    const h = sd.hist || {};
+    const made = (h.madeNames || []).indexOf(want) >= 0;
+    const used = (h.actNames || []).indexOf(want) >= 0;
+    if(!made && !used) continue;
+    const face = (b.heroRec || {}).n || sd.face;
+    out.push({seat, spec: {tag: "modal", side: seat, src: face, optional: true,
+      options: [{label: "Traverse", ops: [["traverse", {face}]]}],
+      title: face + ": traverse?",
+      hint: "A " + b.endTraverse + " was " + (made ? "created" : "activated")
+        + " this turn. Traverse, or decline and keep this face."}});
+  }
+  return out;
 }
 
 function thawFrost(game, seat){
@@ -11876,6 +12068,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, placeStartItem, jabTargets, arsNoOpWhy, DEFENDS_CONDS, defendsCondMet, CTX_KEYS, ACT_IF_KINDS, controlsAuraOf, PLAY_IF_KINDS, playIfOk, chainAtkOf, had6ThisTurn, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, restampHalving, returnStolen, pendPumped, attackBase, basePowOf, defLimitWhy, rxNoTargetWhy, pumpTargetWhy, playTargetWhy, ctrPutCands, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
+return {makeEffects, placeStartItem, jabTargets, arsNoOpWhy, DEFENDS_CONDS, defendsCondMet, CTX_KEYS, ACT_IF_KINDS, controlsAuraOf, PLAY_IF_KINDS, playIfOk, chainAtkOf, had6ThisTurn, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, restampHalving, returnStolen, pendPumped, attackBase, basePowOf, defLimitWhy, rxNoTargetWhy, pumpTargetWhy, playTargetWhy, ctrPutCands, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, traverse, endTraverseAsks, closeChainGrants, settleIntellect,
         activateIfOk, handAbilityOK, handAbilityWhy, soakPolicy, payPolicy};
 });
