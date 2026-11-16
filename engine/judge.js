@@ -2109,6 +2109,11 @@ const keepsActionPoint = (g, seat, uid, from) => {
     if(!PR.abilityGa(c) && PR.fxParse(c).ga === true) return true;
     atk = TY.isAttack(c);
     if(atk && c._arsGA && c._upTurn === g.turn) return true;
+    /* THE HERO'S FIRST-ATTACK GRANT (v6.44) — Viserai, Usurper's "the first
+       attack action card with blood debt you play each turn gets go again",
+       asked the way `effects.execute` asks it. */
+    { const fk = bOf(g, seat).firstAtkGaKw;
+      if(atk && fk && PR.printedKw(c, fk) && ((sd.hist || {}).atkKws || []).indexOf(fk) < 0) return true; }
   }
   if(atk && sd.gaNext) return true;
   const qc = atk ? {from: route, atk: true} : {from: route};

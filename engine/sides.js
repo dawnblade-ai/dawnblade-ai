@@ -149,7 +149,16 @@ const SIDE_FIELDS = [
    hero this turn"). `banPlay`: how many cards this seat PLAYED from its
    banished zone (Galaxxi Black). Each is recorded where it becomes true,
    in `effects.js`, which both boards call. */
-const freshHist = () => ({atk:0,non:0,arc:0,aura:0,made:0,booed:0,blue:0,red:0,trans:0,blueGY:0,atkNames:[],auraAtkNames:[],playTy:[],playNames:[],arcTaken:0,gyFirstKw:[],soulPut:[],madeNames:[],attacked:0,heroDmg:0,banPlay:0});
+/* `runes`, `actNames`, `atkKws` (v6.44) — the double-faced hero's three
+   per-turn facts. `runes`: how many Runechants this seat CREATED, the
+   special ones included (Viserai, Between Worlds, "if you've created 3 or
+   more Runechants this turn"). `actNames`: the name of every arena
+   permanent whose ability this seat activated (Viserai, Usurper, "created
+   or ACTIVATED a Gate to i'Arathael"). `atkKws`: the printed keywords of
+   every attack action card this seat played ("the FIRST attack action card
+   with blood debt you play each turn"). All public, all recorded in
+   `effects.js`. */
+const freshHist = () => ({atk:0,non:0,arc:0,aura:0,made:0,booed:0,blue:0,red:0,trans:0,blueGY:0,atkNames:[],auraAtkNames:[],playTy:[],playNames:[],arcTaken:0,gyFirstKw:[],soulPut:[],madeNames:[],attacked:0,heroDmg:0,banPlay:0,runes:0,actNames:[],atkKws:[]});
 
 function makeSide(o){
   o = o || {};

@@ -711,6 +711,35 @@ function makeEffects(ctx){
     const nm = String((b.HZOOM && b.HZOOM.name) || "The hero").split(",")[0];
     return `${G.spName(nm)} hero ability`;
   };
+  /* ---- "WHENEVER YOU CREATE 1 OR MORE RUNECHANTS" (v6.44) ---------------
+     Viserai, Between Worlds: "Whenever you create 1 or more Runechants,
+     banish the top card of your deck. Then if you've created 3 or more
+     Runechants this turn, traverse."
+
+     ONE CALL PER CREATION EVENT, not per token: the line says "1 or more",
+     so two Runechants off one effect banish one card. `hist.runes` is the
+     per-turn COUNT of Runechants the seat created, the special ones
+     included (CR 1.8.8, `parser.isRunechantCard`), and it is kept for
+     every hero, because the fact is about the turn and not about who was
+     listening: a seat that traverses back mid-turn must still know.
+
+     Every site that creates a Runechant calls this: the `rune` and `token`
+     ops, Viserai's rite and the on-hit mint. The banish is the shared
+     `banTop` op; an empty deck banishes nothing and the "then if" is still
+     asked. */
+  const runesMade = (n, count) => {
+    if(!(count > 0)) return n;
+    actMut(n).hist = {...act(n).hist, runes: (act(n).hist.runes || 0) + count};
+    const b = bAct(n);
+    if(!b || !b.runeBanish) return n;
+    const src = heroAbilityName(n);
+    n = runOps(n, [["banTop", b.runeBanish]], src);
+    if(b.runeTraverse && (act(n).hist.runes || 0) >= b.runeTraverse){
+      n = L(n, `${src}: ${act(n).hist.runes} Runechants created this turn.`);
+      n = runOps(n, [["traverse"]], src);
+    }
+    return n;
+  };
   /* WHOSE GO AGAIN IT WAS (v5.47, QUEUE FEED 20). The action-point line
      printed "Go again — action point kept." with no source, so a Compass of
      Sunken Depths activation read as a rule firing from nowhere. It names
@@ -2050,7 +2079,7 @@ function makeEffects(ctx){
         if((act(n).soul||[]).length >= v){ n = banishFromSoul(n, v); n = L(n,`${v} banished from the soul.`); n = runOps(n, op[2]||[], srcName); }
         else n = L(n,`Needs ${v} soul — ${sv(act(n), "have")} ${(act(n).soul||[]).length}.`);
       }
-      else if(k==="rune"){ n = mkRune(n, v); n=L(n,`+${v} Runechant${v>1?"s":""} — ${runeCount(act(n))} on the board.`); }
+      else if(k==="rune"){ n = mkRune(n, v); n=L(n,`+${v} Runechant${v>1?"s":""} — ${runeCount(act(n))} on the board.`); n = runesMade(n, v); }
       /* RULING: a token is a card. Resolve it through the same reader as
          everything else and stand it up on the correct player's board —
          never describe it, never hardcode what it does. */
@@ -2184,6 +2213,9 @@ function makeEffects(ctx){
            shape every other `runOps` line already has. */
         const _by = srcName && srcName !== rec.name ? `${srcName}: ` : "";
         n = L(n, `${_by}${rec.name}${(op[2]||1)>1?` ×${op[2]}`:""} created on ${who} board — ${_first}.`);
+        /* A RUNECHANT BY ANY NAME (v6.44): the hero's "whenever you create 1 or
+           more Runechants" hears this mint as ONE event (`runesMade`). */
+        if(P.isRunechantCard(rec)) n = runesMade(n, op[2] || 1);
         /* AFTER THE LINE THAT SAYS IT ARRIVED. In a training sim the
            sequence IS the lesson (v3.60), and a counter announced before
            the token it sits on reads as a counter on something else. */
@@ -2604,6 +2636,13 @@ function makeEffects(ctx){
          card is named. "If it's red, …" rides as `op[2]` and is answered
          off the banished card's printed PITCH, here, where "it" exists. An
          empty deck banishes nothing and so pays nothing. */
+      /* TRAVERSE (v6.44) — CR 8.5.60, one body: `traverse` below. `v.from` is
+         the face whose ability generated the effect (CR 8.5.60a). */
+      else if(k==="traverse"){
+        const t = traverse(n, actorOf(n), db, v && v.from);
+        n = Object.assign(n, {builds: t.game.builds});
+        n = L(n, t.msg);
+      }
       else if(k==="banTop"){
         const take = act(n).deck.slice(0,v);
         if(!take.length){ n = L(n, `${srcName}: ${sp(act(n))} deck is empty — nothing is banished.`); return; }
@@ -4172,7 +4211,7 @@ function makeEffects(ctx){
        an activated ability plays nothing (`parser.isCardPlay`). The class
        comes off the structured array (v2.39), never `tt`. */
     if(bAct(n).viseraiPassive && P.isCardPlay(from) && (card.ty || []).some(t => /^runeblade$/i.test(String(t)))
-       && act(n).hist.non>0){ n = mkRune(n, 1); n=L(n,`Viserai's rite — a non-attack action card already down, so this Runeblade card conjures a Runechant (now ${runeCount(act(n))}).`); }
+       && act(n).hist.non>0){ n = mkRune(n, 1); n=L(n,`Viserai's rite — a non-attack action card already down, so this Runeblade card conjures a Runechant (now ${runeCount(act(n))}).`); n = runesMade(n, 1); }
     const preHP = foe(n).hp;
     /* THE COLOUR COUNTERS USED TO BE INCREMENTED HERE, 460 LINES ABOVE THE
        CONDITION THAT READS THEM, AND EVERY CARD THEREFORE SATISFIED ITS OWN
@@ -4302,6 +4341,27 @@ function makeEffects(ctx){
        merely MENTIONS the keyword has not got it, and granting an action
        point off a mention is the most valuable keyword in the game to get
        wrong. */
+    /* ---- THE FIRST ATTACK ACTION CARD WITH A KEYWORD EACH TURN (v6.44) ----
+       VISERAI, USURPER — "The first attack action card with blood debt you
+       play each turn gets go again." The keyword is the hero line's own
+       (`firstAtkGaKw`), asked with `printedKw` for Compass's reason above.
+
+       "FIRST … YOU PLAY EACH TURN" IS A FACT ABOUT THE TURN, NOT THE FACE.
+       `hist.atkKws` records the printed keywords of EVERY attack action
+       card the seat plays, whoever its hero is at the time, so a seat that
+       played one as Between Worlds and then traversed does not get the
+       grant for its second. A weapon swing or an ability plays no card
+       (`parser.isCardPlay`). */
+    if(P.isCardPlay(from) && isAttack(card)){
+      const _kws = (card.kw || []).map(k => String(k).toLowerCase()).filter(k => P.printedKw(card, k));
+      const _fk = bAct(n).firstAtkGaKw;
+      if(_fk && _kws.indexOf(_fk) >= 0 && (act(n).hist.atkKws || []).indexOf(_fk) < 0){
+        ga = true;
+        n = L(n, `${heroAbilityName(n)}: ${card.name} is the first ${_fk} attack action card played this turn — go again.`);
+      }
+      const _seen = act(n).hist.atkKws || [], _new = _kws.filter(k => _seen.indexOf(k) < 0);
+      if(_new.length) actMut(n).hist = {...act(n).hist, atkKws: [..._seen, ..._new]};
+    }
     if(from === "grave"){
       const _gk = P.gyFirstGaKw(act(n));
       if(_gk && P.printedKw(card, _gk)
@@ -4758,6 +4818,17 @@ function makeEffects(ctx){
        reader of that question, v4.86 — keeps them out. */
     if(!P.isActivation(card, from))
       actMut(n).hist = {...act(n).hist, playNames: [...(act(n).hist.playNames || []), norm(card.name)]};
+    /* AND WHICH ARENA PERMANENTS WERE ACTIVATED, BY NAME (v6.44) —
+       `hist.actNames`, the record Viserai, Usurper asks ("if you've created
+       or ACTIVATED a Gate to i'Arathael this turn"). Creation is
+       `madeNames`; this is its twin. Recorded here, where the ability's
+       powCard resolves, while the permanent is still on the board (a
+       "destroy this" cost removes it further down). */
+    else if(from === "board"){
+      const _ae = (act(n).board || []).find(x => x && ("bp" + x.uid) === card.uid);
+      if(_ae && _ae.card) actMut(n).hist = {...act(n).hist,
+        actNames: [...(act(n).hist.actNames || []), norm(_ae.card.name)]};
+    }
     /* AND AN ATTACK'S TYPE WORDS (v5.53). `hist.playTy` was written in ONE
        place, after the non-attack branch — and the attack branch returns
        before it — so no attack card ever entered the record. "If you've
@@ -8632,7 +8703,7 @@ function makeEffects(ctx){
         else n = L(n, `${pc.name}: the granted on-hit bonus — condition not met (${condWhy(h, cond, h.pend.chargedWay, true)}).`);
       });
     }
-    if(n.pend.runeOnHit && total>0){ const many = n.pend.runeOnHit; n = mkRune(n, many);
+    if(n.pend.runeOnHit && total>0){ const many = n.pend.runeOnHit; n = mkRune(n, many); n = runesMade(n, many);
       n = L(n, `${pc.name} connects — ${many>1?`${many} Runechants are`:"a Runechant is"} forged (now ${runeCount(act(n))}), poised for ${sp(act(n))} next swing.`); }
     /* ---- A WEAPON THAT HITS EARNS ITS COUNTERS -----------------------
        "The second time this hits each turn, put a +1{p} counter on it."
@@ -11435,7 +11506,79 @@ function beginEndPhase(game, seat, db){
     }
   }
 
+  /* (10) "AT THE BEGINNING OF EACH END PHASE … YOU MAY TRAVERSE" (v6.44) —
+     Viserai, Usurper: "At the beginning of each end phase, if you've created
+     or activated a Gate to i'Arathael this turn, you may traverse."
+
+     EACH end phase, so both seats are asked, the turn-player first. The
+     two facts are `hist.madeNames` (v5.53) and `hist.actNames`, both still
+     standing here: CR 4.4.4 clears `hist` at the turn boundary.
+
+     "YOU MAY" IS A QUESTION, queued for the seat that owns the hero; the
+     end phase holds for it (`doEndTurn`, v5.71). Staying is the first
+     mode, so a policy that takes the first answer keeps the face it has.
+     The traverse names the face that asked (CR 8.5.60a). */
+  for(const i of [seat, 1 - seat]){
+    const b = ((n.builds || [])[i]) || null;
+    if(!b || !b.endTraverse || !b.heroRec) continue;
+    const want = norm(b.endTraverse), h = ((n.sides || [])[i] || {}).hist || {};
+    if((h.madeNames || []).indexOf(want) < 0 && (h.actNames || []).indexOf(want) < 0) continue;
+    const to = b._face || BD.facesOf(db, b.heroRec)[0] || null;
+    if(!to) continue;
+    n = Object.assign({}, n, {promptQ: [...(n.promptQ || []), {
+      tag: "modal", side: i, src: b.heroRec.n,
+      options: [{label: "Stay " + b.heroRec.n, ops: []},
+                {label: "Traverse to " + to.n, ops: [["traverse", {from: b.heroRec.n}]]}],
+      title: b.heroRec.n + " — traverse?",
+      hint: "A " + b.endTraverse + " was created or activated this turn. Life, deck and arena stay as they are."}]});
+    fired.push("traverse");
+  }
+
   return {game: n, msgs, ops, fired};
+}
+
+/* ---- TRAVERSE (v6.44) ---------------------------------------------------
+   CR 8.5.60 (verbatim): "Traverse is a discrete effect. To traverse a
+   double-faced card, its non-active face becomes its active face. [9.1]"
+   CR 8.5.60a (verbatim): "If the card is not a double-faced card, the
+   traverse effect was generated an ability on the non-active face, or the
+   non-active face can otherwise not be made active, the traverse effect
+   fails."
+
+   WHAT CHANGES IS THE ABILITY HALF OF THE BUILD AND NOTHING ELSE — the
+   brood's own rule (step 9 of `beginEndPhase`), and the same body does it:
+   `build.heroAbilities` of the other face. Deck, gear, intellect and the
+   seat's permanents are untouched; CR 9.1.2c (verbatim): "If an effect
+   applies to a double-faced card, it continues to apply to the card even
+   if its properties are defined by a different face, as long as it does
+   not cease to exist between changing properties."
+
+   LIFE IS CARRIED OVER, and that is a READING (tools/approx.js,
+   `traverse-life-carries`). The back face prints life "*", which the CR
+   does not define; CR 2.5.3c recalculates a life total "using the new base
+   life value" only when there is one. Every Agent of Chaos prints the same
+   "*" and the brood keeps its life for the same reason.
+
+   `_face` REMEMBERS THE FACE THE SEAT LEFT, on the build beside `_brood`.
+   A back face can be shared by two fronts (a young and an adult hero print
+   the same back), so the way home is the record the seat came from, and
+   the database is asked only on the first traverse.
+
+   `from` is the face whose ability generated the effect. If that face is
+   no longer the active one, the effect fails (8.5.60a). */
+function traverse(game, seat, db, from){
+  const b = ((game.builds || [])[seat]) || null;
+  const who = ((game.sides || [])[seat] || {}).name || "seat " + seat;
+  const here = b && b.heroRec;
+  if(!here) return {game, ok: false, msg: who + ": no hero card to traverse — the traverse fails."};
+  if(from && from !== here.n)
+    return {game, ok: false, msg: who + ": " + from + " is no longer the active face — the traverse fails."};
+  const to = b._face || BD.facesOf(db, here)[0] || null;
+  if(!to) return {game, ok: false, msg: who + ": " + here.n + " has no other face — the traverse fails."};
+  const builds = (game.builds || []).slice();
+  builds[seat] = Object.assign({}, b, BD.heroAbilities(to, to.n), {_face: here});
+  return {game: Object.assign({}, game, {builds}), ok: true,
+          msg: who + ": traverse — " + here.n + " turns over, now " + to.n + "."};
 }
 
 function thawFrost(game, seat){
@@ -11876,6 +12019,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, placeStartItem, jabTargets, arsNoOpWhy, DEFENDS_CONDS, defendsCondMet, CTX_KEYS, ACT_IF_KINDS, controlsAuraOf, PLAY_IF_KINDS, playIfOk, chainAtkOf, had6ThisTurn, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, restampHalving, returnStolen, pendPumped, attackBase, basePowOf, defLimitWhy, rxNoTargetWhy, pumpTargetWhy, playTargetWhy, ctrPutCands, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
+return {traverse, makeEffects, placeStartItem, jabTargets, arsNoOpWhy, DEFENDS_CONDS, defendsCondMet, CTX_KEYS, ACT_IF_KINDS, controlsAuraOf, PLAY_IF_KINDS, playIfOk, chainAtkOf, had6ThisTurn, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, restampHalving, returnStolen, pendPumped, attackBase, basePowOf, defLimitWhy, rxNoTargetWhy, pumpTargetWhy, playTargetWhy, ctrPutCands, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
         activateIfOk, handAbilityOK, handAbilityWhy, soakPolicy, payPolicy};
 });

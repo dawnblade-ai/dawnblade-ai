@@ -325,6 +325,36 @@ function heroAbilities(heroRec, displayName, code){
      names take the same shape for the same reason. */
   const becomeAgent = _agent ? _agent[1] : "";
   const returnToBrood = /at the beginning of your end phase, return to the brood/.test(_htx);
+  /* VISERAI, BETWEEN WORLDS AND HIS OTHER FACE (v6.44) — the double-faced
+     hero. Four facts, each read off the printed line of the face that
+     prints it (data/staged.js, verbatim):
+
+       front  "Whenever you create 1 or more Runechants, banish the top card
+               of your deck. Then if you've created 3 or more Runechants
+               this turn, traverse."
+       back   "The first attack action card with blood debt you play each
+               turn gets go again."
+              "At the beginning of each end phase, if you've created or
+               activated a Gate to i'Arathael this turn, you may traverse."
+
+     `runeBanish` is the NUMBER of cards banished (the printed line says
+     "the top card": 1), `runeTraverse` the printed threshold, both numbers
+     for Kayo's reason. `firstAtkGaKw` is the KEYWORD the line names and
+     `endTraverse` the NAME it names, strings for Briar's (v3.21): a boolean
+     would move "blood debt" and the token's name into effects.js. The name
+     is captured with its printed capitalisation, off the raw text.
+
+     THE TRAVERSE ITSELF is `effects.traverse`, which swaps this half of
+     the build for the other face's, the way the brood does. */
+  const _rb = _htx.match(/whenever you create 1 or more runechants, banish the top card of your deck/);
+  const runeBanish = _rb ? 1 : 0;
+  const _rt = _htx.match(/then if you(?:'ve| have) created (\d+) or more runechants this turn, traverse/);
+  const runeTraverse = _rb && _rt ? +_rt[1] : 0;
+  const _fk = _htx.match(/the first attack action card with ([a-z][a-z ]*?) you play each turn gets go again/);
+  const firstAtkGaKw = _fk ? _fk[1].trim() : "";
+  const _et = _htxRaw.match(
+    /at the beginning of each end phase, if you(?:'ve| have) created or activated an? ([A-Za-z][A-Za-z' -]*?) this turn, you may traverse/i);
+  const endTraverse = _et ? _et[1].trim() : "";
   /* ARAKNI, TARANTULA — one of the two Agents whose STATIC is readable:
      "Whenever a dagger you own hits a hero, they lose 1{h}."
 
@@ -463,7 +493,39 @@ function heroAbilities(heroRec, displayName, code){
     arsenalInstant, iceFrostbite, viseraiPassive, wateryGrave, lyathBoo, energyOnOpt,
     earthOnFirstHeroDmg, lightningOnSecondNonAtk,
     atkPowOffChain, mightOnFirst6Discard, weaponRefresh, chargedDefBuff, stealthMarkedBuff,
-    becomeAgent, returnToBrood, daggerDrain, halveBase, auraDiscount};
+    becomeAgent, returnToBrood, daggerDrain, halveBase, auraDiscount,
+    runeBanish, runeTraverse, firstAtkGaKw, endTraverse};
+}
+
+/* ---- THE OTHER FACE OF A DOUBLE-FACED HERO (v6.44) ----------------------
+   CR 9.1.1 (verbatim): "A double-faced card is a card with two sets of
+   properties - each set printed as a separate face on the card." CR 9.1.2:
+   "Each face of a double-faced card has its own set of printed properties."
+
+   THE DATABASE HAS NO FIELD THAT LINKS THE FACES. Each face is its own
+   record, and what they share is the print code: one physical card, one
+   collector number. So the other face of a hero is the OTHER hero record
+   that carries one of its print codes — derived from what is printed, the
+   way `agentsOf` derives the brood, never from a list of names.
+
+   A record with no such partner is not double-faced, and a traverse on it
+   fails (CR 8.5.60a). Several partners (a back shared by a young and an
+   adult front) are returned in name order; `effects.traverse` prefers the
+   face the seat came from, which the build remembers. */
+function facesOf(db, heroRec){
+  if(!db || db.status !== "ready" || !heroRec || !heroRec.pr) return [];
+  const isHero = c => (c.ty || []).some(t => /^hero$/i.test(String(t)));
+  if(!isHero(heroRec)) return [];
+  const codes = Object.keys(heroRec.pr).filter(k => k !== "_first");
+  const out = [];
+  for(const k of Object.keys(db.byName || {}))
+    for(const c of (db.byName[k] || [])){
+      if(c.n === heroRec.n || !isHero(c) || !c.pr) continue;
+      if(!codes.some(id => Object.prototype.hasOwnProperty.call(c.pr, id))) continue;
+      if(out.some(x => x.n === c.n)) continue;
+      out.push(c);
+    }
+  return out.sort((a, b) => String(a.n).localeCompare(String(b.n)));
 }
 
 /* ---- the build --------------------------------------------------------
@@ -1011,6 +1073,7 @@ const PASSIVES = ["arsenalInstant","iceFrostbite","viseraiPassive","wateryGrave"
                   "earthOnFirstHeroDmg","lightningOnSecondNonAtk","energyOnOpt",
                   "chargedDefBuff","stealthMarkedBuff","becomeAgent","returnToBrood",
                   "daggerDrain","halveBase","auraDiscount",
+                  "runeBanish","runeTraverse","firstAtkGaKw","endTraverse",
                   /* THE TWO PREGAME PLACEMENTS (v3.86). `startItem` has
                      been a build field since Dash and was never in this
                      list, so the census SKIPPED it — a HERO_STATICS row
@@ -1044,6 +1107,9 @@ const PASSIVE_TYPE = {
      — "your first SPECTRAL SHIELD attack costs {r} less". Two passives
      would be two readings of one sentence. */
   auraDiscount: "object",
+  /* THE DOUBLE-FACED HERO (v6.44): two printed numbers, a printed keyword
+     and a printed token name. */
+  runeBanish: "number", runeTraverse: "number", firstAtkGaKw: "string", endTraverse: "string",
   /* A STRING, and deliberately (v3.21). Briar's two clauses each NAME the
      token they create, so the passive carries that name and the mint site
      names nothing. A boolean here would move "Embodiment of Earth" into
@@ -1060,6 +1126,6 @@ const PASSIVE_TYPE = {
 return {ARMOR_Z, HAND_Z, gearSlots, applyPick, defaultPicks, equipPiece, boardPow,
   buildSide, buildSideDefault,
   halveCard,
-        buildSeed, buildMatch, buildVanilla, defaultBoard, heroAbilityLine, heroAbilities,
+        buildSeed, buildMatch, buildVanilla, defaultBoard, heroAbilityLine, heroAbilities, facesOf,
         agentsOf, PASSIVES, PASSIVE_TYPE};
 });
