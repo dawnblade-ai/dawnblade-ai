@@ -9,12 +9,39 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-16, at v6.43)
+## HANDOFF — START HERE (CEO, 2026-11-16, at v6.44)
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
-### LATEST (CEO session_013xG9xBdjSPqxKpK2H4msnK, 2026-11-16, at v6.43)
+### LATEST (CEO session_013xG9xAMiFN6pmpxfvY4LPe, 2026-11-16, at v6.44)
+- **State:** live = v6.44 on `main` (e532f80), livecheck ALL PASS. Function `table` version 40 = build `v6.44 · sage-v17`,
+  stamped; `--check` OK. WIRE_V 44. No unreleased work. Everything in the blocks below still holds.
+- **DONE v6.44, reader 7: the double-faced hero and traverse** (`test/traverse.test.js`, sabotaged 24 ways). `effects.traverse`
+  (CR 8.5.60 / 8.5.60a) swaps the ability half of the build, the brood's route; `build.facesOf` finds the other face (hero
+  records sharing a print code where exactly one image is `_BACK`; upstream has a promo code shared by two unrelated heroes);
+  the build remembers `_face`. Passives `runeBanish` / `runeTraverse` / `firstAtkGaKw` / `endTraverse`; per-turn facts
+  `hist.runes` / `actNames` / `atkKws`. `effects.runesMade` is called once per creation EVENT at all four Runechant sites.
+  The end-phase "you may traverse" is step (10) of `beginEndPhase`, a two-mode sheet, staying first (the AI stays).
+- **RULINGS (user, 2026-11-16):** (1) life carries over on a traverse ("Perfect"; `traverse-life-carries`, stated).
+  (2) "0 defense can be declared as a blocker (blank cannot)": `zero-defence-gear-refused` is to be BUILT next (a dealt-card
+  change: 27 pool 0{d} pieces; `test/defcap.test.js` pins the old refusal; measure the ladder).
+- **THE ROADMAP GATE IS MET:** `node tools/staged-play.js viseraiBetweenWorlds 21` (new; seats a staged hero): 630 games,
+  0 refusals / violations / stalls, 225 games ended on the other face. Census: no gap, both faces.
+- **BUT THE AI CANNOT PILOT HIM: 72 won, 558 lost.** Measured over 12 games: 12.3 plays from hand and 1.1 from banish per game,
+  3.8 life lost to blood debt, 23 of 86 own turns ended with the action point unspent, the opponent left on 11 life. Seen in
+  feeds: a go-again non-attack (Runehold Release, Malefic Incantation, Otherworldly Sins) and then a pass. Seven Sin Nebula
+  needs a banish play first. This is the H-work before he is an AI opponent; a PERSON piloting him is unaffected.
+- **NEXT, in order:** (1) the 0{d} ruling. (2) the opening release: `pin-pool.js` takes staged records AND both faces (the back is
+  on no list); `cards.buildMaps` `byCode` lets the back overwrite the front under the shared code (heroes resolve by name
+  first: check every `byCode` reader); `DECKS` / `HEROES` entry, art path (the back's art is `_BACK`), DATA_VER, formats.json;
+  drive the trainer's traverse sheet on the page (`tools/page.js`). (3) AI policy for Viserai, measured per CLAUDE.md
+  (`keepsActionPoint` reads no banished card's own go again yet, only the Usurper's grant). (4) Prism.
+- **RELEASE NOTES:** pins that moved: `anchors` (runOps vocabulary 101, `traverse` has no parser emitter), `crindex` (103 / 93),
+  `approx` (62 records, 20 stated), `dichotomy` + `wire` (WIRE_V), `dorinthea` needs a `HERO_STATICS` row per new passive.
+  Do NOT restore a sabotage with `git checkout <file>` when the file has uncommitted real edits (lost one edit that way).
+
+### PREVIOUS (CEO session_013xG9xBdjSPqxKpK2H4msnK, 2026-11-16, at v6.43)
 - **State:** live = v6.43 on `main` (c50ea36 = 762e3a3 + the stamp), livecheck ALL PASS. Function `table` version 38 = build
   `v6.43 · sage-v17`, stamped; `--check` OK. WIRE_V 43. No unreleased work. Everything in the blocks below still holds.
 - **DONE v6.42, reader 6: the special Runechants** (`test/runechants.test.js`). They count as Runechants (CR 1.8.8); usurp asks
