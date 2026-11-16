@@ -25,7 +25,7 @@
   prints life "*"; which CR 9.1 kind is a two-faced hero; which face starts) and `usurper-first-counts-the-turn` ("first ... each turn" counts a blood debt attack
   played while the other face was up; CR 6.6.5d is written for triggers).
 - **Pins repinned after reading:** WIRE_V (dichotomy, wire: the side-field digest moves), the side-field census (`sides.test.js`, 53 -> 54), `runOps`'s vocabulary
-  (`anchors.test.js`, 100 -> 101, `traverse` has no card emitter), the optional-modal builders (`promptctl`, `wreckhavoc`: 1 -> 2), the reason census
+  (`anchors.test.js`, 100 -> 101, `traverse` has no card emitter), the optional-modal builders (`promptctl`, `wreckhavoc`: 1 -> 2; `slicecensus`: effects.js slices 3 -> 4), the reason census
   (`explain.test.js`, +`traverseYes`, staged), the CR index (97 -> 112 rules, 87 -> 102 guarded), the approximation ledger.
 - **WIRE_V 43 -> 44** (a side field, three `hist` records, a powCard key, a build's faces). No DATA_VER change. The function must be redeployed (`APP_VER`, engine files).
 
