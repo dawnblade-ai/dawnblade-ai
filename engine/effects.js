@@ -873,6 +873,40 @@ function makeEffects(ctx){
     }
     return n;
   };
+  /* "YOU'VE DEALT DAMAGE TO THE DEFENDING HERO THIS TURN" (v6.43) — the
+     dealer's `hist.heroDmg`, credited HERE, where damage lands on a hero,
+     for `creditArc`'s reason. CR 6.4.10a (verbatim, rules.fabtcg.com): "If a
+     prevention effect is applied to a damage event, for every 1 damage of
+     the given type that would be dealt to the shielded object from the
+     damage source, the 1 damage is prevented and the remaining prevention
+     amount of the effect is reduced by 1. If the prevention amount has been
+     reduced to 0, any remaining damage is dealt as normal." So only what
+     survives prevention is dealt: every caller passes that number, and a
+     zero credits nothing. Damage to
+     an ally is never credited (it is not a hero). CR 7.2.3b (verbatim):
+     "The controller of the attack-target and their hero become the
+     'defending hero' until the active chain link resolves or the combat
+     chain closes." With two seats that is always the dealer's opponent, so
+     the record is "damage that landed on the opposing hero". */
+  const creditHeroDmg = (n, dealer, amount) => {
+    if(!((amount | 0) > 0) || dealer == null) return n;
+    const sd = dealer === actorOf(n) ? actMut(n) : foeMut(n);
+    sd.hist = {...sd.hist, heroDmg: ((sd.hist || {}).heroDmg || 0) + 1};
+    return n;
+  };
+  /* "IF YOU'VE BEEN ATTACKED N OR MORE TIMES THIS TURN" (v6.43) — the
+     DEFENDING seat's `hist.attacked`, counted when an attack aimed at its
+     hero becomes attacking. CR 1.4.5 (verbatim): "An attack-target is the
+     target of an attack that is declared when the attack or attack-layer is
+     put onto the stack." CR 7.3.1 (verbatim): "The Defend Step is a game
+     state where defending cards may be declared by a hero being attacked."
+     An attack whose target is an ALLY attacked the ally, not the hero
+     (Spectra's "This can be attacked" is said of the attack-target). */
+  const noteAttacked = (n, seat) => {
+    const sd = seat === actorOf(n) ? actMut(n) : foeMut(n);
+    sd.hist = {...sd.hist, attacked: ((sd.hist || {}).attacked || 0) + 1};
+    return n;
+  };
 
   /* PLAIN WARD, AND IT WAS INERT AT THE TABLE (v3.67).
 
@@ -1129,6 +1163,7 @@ function makeEffects(ctx){
     if(left > 0){
       mut().hp -= left;
       n = creditArc(n, 1 - seat, seat);
+      n = creditHeroDmg(n, 1 - seat, left);
       /* THE TRACE FOR "…DEALT THIS WAY" (v3.62), recorded where the damage
          actually LANDS — so CR 7.5.5's "prevented is not dealt" governs it
          for free, exactly as `creditArc` above relies on the same guard.
@@ -1740,6 +1775,7 @@ function makeEffects(ctx){
              prompt-confirm. That is the same inversion the dealer comment
              above describes, read from the other end. */
           if(op[3] != null) n = creditArc(n, op[3], actorOf(n));
+          if(op[3] != null) n = creditHeroDmg(n, op[3], v);
           n = L(n, `${op[2]||srcName}: ${v} arcane damage lands on ${act(n).name}.`);
         }
         else n = L(n, `${op[2]||srcName}: all of it soaked — no damage.`);
@@ -2618,6 +2654,7 @@ function makeEffects(ctx){
         n = L(n, pv.dealt > 0 ? `${srcName}: ${pv.dealt} damage.`
                               : `${srcName}: every point of it prevented.`);
         if(pv.dealt > 0) foeMut(n).hp -= pv.dealt;
+        n = creditHeroDmg(n, actorOf(n), pv.dealt);
       }
       /* LIFE LOSS IS NOT DAMAGE (S-4, QA-A). "They lose 1{h}" (Searing Shot,
          Arakni, Tarantula) read as `dmg`, so prevention could eat it and the
@@ -3285,6 +3322,9 @@ function makeEffects(ctx){
       allyDied:`no ally has hit ${sp(act(n))} graveyard this turn`,
       weaponSwung:`${mid(sv(act(n), "have"))} not attacked with a weapon this turn`,
       dealtDmg:`${mid(sv(act(n), "have"))} not dealt damage this turn`,
+      dealtHero:`${mid(sv(act(n), "have"))} not dealt damage to ${foe(n).name} this turn`,
+      banPlayed:`${mid(sv(act(n), "have"))} not played a card from the banished zone this turn`,
+      banCostPaid:"the additional cost was not paid",
       isDraconic:"this isn't Draconic",
       pitchOverBase:`nothing in ${sp(act(n))} pitch zone beats its base power`,
       charged:"no card charged to the soul this turn",
@@ -3426,6 +3466,13 @@ function makeEffects(ctx){
     : cond==="allyDied" ? (act(n).grave||[]).some(c=>c._gy===n.turn && /\bally\b/i.test(c.tt||""))
     : cond==="weaponSwung" ? Object.keys(act(n).weaponUsed||{}).length>0
     : cond==="dealtDmg" ? (act(n).hist.atk||0)>0 || (act(n).hist.arc||0)>0
+    /* (v6.43) damage that LANDED on the opposing hero this turn, credited by
+       `creditHeroDmg` — not `dealtDmg`'s "an attack was played" */
+    : cond==="dealtHero" ? (act(n).hist.heroDmg||0)>0
+    : cond==="banPlayed" ? (act(n).hist.banPlay||0)>0
+    /* (v6.43) THIS play's optional graveyard banish, paid in `execute`
+       before this loop runs (Looking for a Scrap) — never a turn fact */
+    : cond==="banCostPaid" ? !!x.banPaid
     : cond==="isDraconic" ? (/draconic/i.test(card.tt||"") || !!card._drac || !!act(n).dracNext || !!act(n).dracChain)
     : cond==="pitchOverBase" ? act(n).pitch.some(c=>(c.power||0) > (card.power||0))
     /* CHARGE (Boltyn): "charged" is a turn-scoped boolean; "chargedPitchN"
@@ -3489,7 +3536,7 @@ function makeEffects(ctx){
      adds nothing: the answer is then the printed power, never a guess. Reads `g`,
      writes nothing. `seat` acts: the state is read as that seat's turn. */
   const EFF_DECIDABLE = (cond, from) =>
-    /^(atk|non|lifeLt|lifeGt|marked|foeTurn|arcDealt|arcTakenTurn|auraTurn|madeCard|booed|blue|red|transcended|aim|weaponSwung|dealtDmg|isDraconic|charged|suspenseAura|allyDied|seismic)$/.test(cond)
+    /^(atk|non|lifeLt|lifeGt|marked|foeTurn|arcDealt|arcTakenTurn|auraTurn|madeCard|booed|blue|red|transcended|aim|weaponSwung|dealtDmg|dealtHero|banPlayed|isDraconic|charged|suspenseAura|allyDied|seismic)$/.test(cond)
     || /^(playedCls:|board:|noCtr:|atkNamed:|auras\d+$|hit\d+$|drac\d+$)/.test(cond)
     || (cond === "arsenal") || (cond === "hasArsenal" && from !== "arsenal");
   function effPowerNow(g, seat, card, from){
@@ -3508,6 +3555,13 @@ function makeEffects(ctx){
         bonus += +e.op[1]; gates.push(e.cond);
       }
     });
+    /* USURP'S +2 (v6.43, the handoff's Usurp open item b). The cost site's
+       own test, read off the same two readers and with the same exclusion:
+       only a card PLAYED pays a play cost (never a weapon or ally swing),
+       and only when a Runechant is there to destroy. */
+    if(from !== "weapon" && from !== "ally" && P.usurps(card) && P.usurpTarget(act(n))){
+      bonus += 2; gates.push("usurp");
+    }
     return {power: base + bonus, base, bonus, gates};
   }
 
@@ -3607,6 +3661,25 @@ function makeEffects(ctx){
       }
     }
     if(s._usurpUid !== undefined){ s = {...s}; delete s._usurpUid; }
+    /* AN OPTIONAL GRAVEYARD BANISH PAID AS AN ADDITIONAL COST (v6.43) —
+       Looking for a Scrap. The answer is `_banCostUid` (a uid, or null for a
+       decline), asked before the card resolves on both boards
+       (`prompts.banCostChoice`) and re-derived here (`banCostPaid`): a card
+       no longer in the graveyard, or one the printed subject excludes, pays
+       nothing, and then the rider stays off. Only a card PLAYED pays a play
+       cost. `banPaid` is THIS play's fact, handed to the condition loop. */
+    let banPaid = false;
+    if(fx.banCost && P.isCardPlay(from)){
+      const _bc = PR.banCostPaid(card, act(s), s._banCostUid);
+      if(_bc){
+        s = {...s};
+        actMut(s).grave = act(s).grave.filter(c => c.uid !== _bc.uid);
+        actMut(s).banish = [_bc, ...(act(s).banish || [])];
+        s = L(s, `${act(s).name}: ${_bc.name} is banished from the graveyard — the additional cost is paid.`);
+        banPaid = true;
+      }
+    }
+    if(s._banCostUid !== undefined){ s = {...s}; delete s._banCostUid; }
     /* "when an ATTACK usurps this": the printed subject is tested, not
        assumed — every staged usurp card is an attack today. */
     const usurpOps = usurped && isAttack(card) ? (fxParse(usurped).onUsurp || []) : [];
@@ -3762,7 +3835,10 @@ function makeEffects(ctx){
     if(from==="hand"){ actMut(n).hand = act(n).hand.filter((_,i)=>i!==idx); }
     if(from==="arsenal"){ actMut(n).arsenal = null; }
     if(from==="grave"){ actMut(n).grave = act(n).grave.filter((_,i)=>i!==idx); }
-    if(from==="banish"){ actMut(n).banish = act(n).banish.filter((_,i)=>i!==idx); }
+    if(from==="banish"){ actMut(n).banish = act(n).banish.filter((_,i)=>i!==idx);
+      /* "IF YOU'VE PLAYED A CARD FROM YOUR BANISHED ZONE THIS TURN" (v6.43)
+         — `hist.banPlay`, recorded where the played card leaves the zone */
+      if(P.isCardPlay(from)) actMut(n).hist = {...act(n).hist, banPlay: ((act(n).hist || {}).banPlay || 0) + 1}; }
     if(from==="weapon"||from==="hero"){ actMut(n).weaponUsed = {...act(n).weaponUsed,[card.uid]:true}; }
     /* A HERO THAT PAYS {t} IS TAPPED, and that is a DIFFERENT record from
        the allowance above (v3.48, and v2.46's lesson one zone further in).
@@ -4622,7 +4698,7 @@ function makeEffects(ctx){
          stamps). A non-attack is no link (the ruling of 2026-07-25). */
       const dracLinks = P.dracLinks(n.chain, actorOf(n))
         + (attacking && P.dracNow(card, act(n)) ? 1 : 0);
-      const met = condMetNow(n, s, card, from, cond, {chargedWay, fused, dracLinks});
+      const met = condMetNow(n, s, card, from, cond, {chargedWay, fused, dracLinks, banPaid});
       const why = condWhy(n, cond, chargedWay, false, dracLinks);
       if(!met){
         if(!_notMetSaid.has(cond)) n = L(n, `${card.name}: condition not met (${why}).`);
@@ -4810,6 +4886,9 @@ function makeEffects(ctx){
          drops by the revealed card's pitch. Excluded from pend.ops below so
          they cannot fire twice. */
       actMut(n).hist = {...act(n).hist, atkNames:[...(act(n).hist.atkNames||[]), norm(card.name)]};
+      /* THE OTHER SEAT'S HERO HAS BEEN ATTACKED (v6.43) — `noteAttacked`;
+         an attack aimed at an ally attacked the ally (CR 1.4.5). */
+      if(heroTarget) n = noteAttacked(n, 1 - actorOf(n));
       /* a queued "next <named> card you play gains +N" */
       if(act(n).namedBuff && act(n).namedBuff.name === norm(card.name)){
         n._condSelf = (n._condSelf||0) + act(n).namedBuff.amount;
@@ -8879,6 +8958,7 @@ function makeEffects(ctx){
                                 {unpreventable: !!(_pc.name && fxParse(_pc).unpreventable)});
       n = _pv.game; total = _pv.dealt; }
     foeMut(n).hp -= total;
+    n = creditHeroDmg(n, actorOf(n), total);
     /* Runechants no longer pop here. They trigger on PLAY and resolve above
        the attack on the stack, so they are dealt with at declaration in
        `execute`. `rd` stays 0 so the messages and hitSeq maths below read
@@ -8987,7 +9067,7 @@ function makeEffects(ctx){
     return n;
   }
 
-  return {runOps, execute, afterDefenders, defendsTriggers, resolveClash, resolveStack, afterDiscard, payAddCost, fileAttack, allyDeath,
+  return {runOps, execute, afterDefenders, defendsTriggers, resolveClash, resolveStack, afterDiscard, payAddCost, fileAttack, allyDeath, creditHeroDmg, noteAttacked,
           linkPumps, linkPayload, attackRx, preventDamage, autoPitch, applyAnswer,
           activateHandAbility, playAtSpeed, fileDestroyedGear, effPowerNow,
           /* `applyDefMod` IS NO LONGER EXPOSED (v4.57). It was exposed at
@@ -9461,6 +9541,10 @@ function defSelfMet(self, defSide, opts){
   if(!self) return false;
   if(self.when === "weaponAttack") return opts.weaponAttack === true;
   if(self.when === "arcDealt")     return (((defSide || {}).hist || {}).arc || 0) > 0;
+  /* HOW MANY TIMES THIS SEAT'S HERO HAS BEEN ATTACKED THIS TURN (v6.43) —
+     `hist.attacked`, counted by `noteAttacked` when the attack becomes
+     attacking, so the attack being defended is already in the count. */
+  if(self.when === "attackedN")    return (((defSide || {}).hist || {}).attacked || 0) >= (self.n || 0);
   if(self.when === "atkActionCostLe"){
     const a = opts.atkCard;
     if(!a) return false;

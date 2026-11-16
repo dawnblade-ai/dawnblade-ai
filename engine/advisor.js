@@ -32,6 +32,10 @@ function advCardOut(c, g, ctx){
   if(swings(c)){
     dmg = (c.power||0) + (fx.self||0) + you(g).buffNext + runeCount(you(g))*ctx.runeDmg;
     fx.conds.forEach(cd=>{ if(cd.op[0]==="self" && ((cd.cond==="atk"&&you(g).hist.atk>0)||(cd.cond==="non"&&you(g).hist.non>0))) dmg += cd.op[1]; });
+    /* USURP (v6.43): +2 when a Runechant is there to destroy, and that
+       Runechant is the cost, so it deals no arcane on this swing. A hand
+       card is a card played, so the cost site's weapon/ally exclusion holds. */
+    if(P.usurps(c) && P.usurpTarget(you(g))) dmg += 2 - (ctx.runeDmg || 0);
     if((ctx.dBlk||0)>0 && dmg>=4) dmg = Math.max(0, dmg-(ctx.dDef||1));
   }
   fx.ops.concat(swings(c)?fx.onHit:[]).forEach(op=>{ if(op[0]==="arcane") dmg += op[1] + you(g).amp; });

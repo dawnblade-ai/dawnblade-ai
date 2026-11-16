@@ -377,8 +377,10 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        the body each drill names.
        26,993 -> 27,014 AT v6.42, READ FIRST, same body: `usurppick` joins the
        opening guard's list of busy modes (+22) and the payment's exit calls
-       `maybeUsurp` instead of `maybeCharge` (-1). */
-    "costtaxes.test.js index.html 27014",
+       `maybeUsurp` instead of `maybeCharge` (-1).
+       27,014 -> 27,038 AT v6.43, READ FIRST, same body: `bancostpick` joins the
+       opening guard's list of busy modes (+24), nothing else. */
+    "costtaxes.test.js index.html 27038",
     "dichotomy.test.js engine/prompts.js 13123",   /* +263 AT the hand reveals: buildPrompt carries `reveal`; +237 AT v6.40, READ FIRST: still the pick branch, the pick's `defUid` and its comment */
     /* 8,550 -> 9,523 AT v4.60, and now THREE files take the same slice —
        `playRx`, anchored on its own declaration and bounded at `playRxA`, the
@@ -398,7 +400,7 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        ACTIVATED route asks too, so the body is shorter by the two
        declarations it no longer carries. Same anchors. `rxability.test.js`
        takes the same slice to pin that the destructure is there. */
-    "discost.test.js index.html 27014",
+    "discost.test.js index.html 27038",
     /* 9,905 -> 10,264 AT v4.92, READ FIRST, for all four rows of this body:
        still `playRx` -> `playRxA`. The growth is Put in Context's limit
        asked in the defence branch through `effects.defLimitWhy`, beside the
@@ -406,7 +408,7 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
     "dorinthea.test.js index.html 8982",
     "drx.test.js index.html 8982",
     /* +instantpump AT v5.03: the same `tryPlay` -> `confirmPay` body. */
-    "instantpump.test.js index.html 27014",
+    "instantpump.test.js index.html 27038",
     /* 18,386 -> 18,699 -> 20,096 AT lookahead phase 2, READ FIRST: still
        `function Loadout(` -> the APP banner. The growth is `sharp` on the
        table start with its comment, then the Sharp / Steady control
@@ -479,20 +481,20 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        `tryPlay` in `stack` (an activated ability, never a reaction card).
        Same signature, same anchors; `discost.test.js` and
        `rxability.test.js` take the same slice for claims of their own. */
-    "priority.test.js index.html 27014",
-    "priority.test.js index.html 27014",
+    "priority.test.js index.html 27038",
+    "priority.test.js index.html 27038",
     /* 10,264 -> 8,459 AT v4.95, READ FIRST, for the five `playRx` -> `playRxA`
        rows: still the hand door, bounded at the arsenal door. It SHRANK —
        the charge, the resolution and the wall are `effects.playAtSpeed` now. */
     "priority.test.js index.html 8982",
-    "routeap.test.js index.html 27014",
-    "rxability.test.js index.html 27014",
+    "routeap.test.js index.html 27038",
+    "rxability.test.js index.html 27038",
     "rxability.test.js index.html 8982",
     /* +soulcost AT v5.59: the same `tryPlay` -> `confirmPay` body, for the
        claim that the soul question sits after every legality and the
        discard's question and before the payment. */
-    "soulcost.test.js index.html 27014",
-    "zonerule.test.js index.html 27014"
+    "soulcost.test.js index.html 27038",
+    "zonerule.test.js index.html 27038"
   ], /* 15,440 -> 16,557 AT v4.59, READ FIRST (v4.57: a pin edited without
         being read is a guard switched off). Both rows are
         `tryPlay` -> `confirmPay` — anchored on the body's own declaration and

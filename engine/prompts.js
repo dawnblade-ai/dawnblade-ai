@@ -1068,6 +1068,35 @@ function discCostChoice(ab, sd){
   return uids.length >= 2 ? uids : null;
 }
 
+/* AN OPTIONAL GRAVEYARD BANISH PAID AS AN ADDITIONAL COST (v6.43) — Looking
+   for a Scrap (staged): "As an additional cost to play this, you may banish a
+   card with 1{p} from your graveyard." `parser` reads it as `fx.banCost`; this
+   is the ONE reader of the question both boards ask before the card resolves
+   (judge's `bancost` pending, the trainer's `bancostpick` sheet). "You may":
+   ONE candidate is still a question (declining is an answer), so the offer is
+   every DIFFERENT card that could pay (name and pitch), in graveyard order,
+   and null only when nothing can. `banCostPaid` re-derives the answer at the
+   payment: a uid that is no longer a candidate pays nothing. */
+function banCostChoice(card, sd){
+  const bc = card && card.name ? P.fxParse(card).banCost : null;
+  if(!bc) return null;
+  const pass = promptFilter(bc.filter);
+  const seen = new Set(), uids = [];
+  for(const c of ((sd && sd.grave) || [])){
+    if(!c || !pass(c)) continue;
+    const k = (c.name || "") + "|" + (c.pitch || 0);
+    if(seen.has(k)) continue;
+    seen.add(k); uids.push(c.uid);
+  }
+  return uids.length ? uids : null;
+}
+function banCostPaid(card, sd, uid){
+  const bc = card && card.name ? P.fxParse(card).banCost : null;
+  if(!bc || uid == null) return null;
+  const c = ((sd && sd.grave) || []).find(x => x && x.uid === uid);
+  return c && promptFilter(bc.filter)(c) ? c : null;
+}
+
 /* WHICH SOUL CARD A SOUL COST BANISHES (v5.59). Boltyn prints "Attack
    Reaction - Banish a card from your soul:" and Radiant Touch "Banish this
    and a card from your soul:", and `execute` banished the FRONT of the soul
@@ -1528,6 +1557,6 @@ return {PROMPT_ZONES, promptZoneWord, promptDestWord, promptZone, promptSideZone
         promptMatchSet, promptMatchAssign,
         promptPickPool, promptPickAskable, buildPrompt,
         promptToggleSel, promptChoose, promptDecline, promptTakeBack, promptMove, optOrder, promptReady, promptForcedSel, promptLapse, promptDestroyGone, promptLapseLine,
-        promptDiscardDefault, discCostChoice, soulCostChoice,
+        promptDiscardDefault, discCostChoice, soulCostChoice, banCostChoice, banCostPaid,
         moveCards, applyPrompt};
 });

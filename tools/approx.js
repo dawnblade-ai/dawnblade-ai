@@ -1143,7 +1143,37 @@ const APPROX = {
       "its own destroy line) but not the question. The direction is WEAKER than printed: the "+
       "player loses the option of spending a Runechant of Lust (which would pay a token) "+
       "instead of a token. Work, not a ruling: CR 1.8.8 settles that either may pay. The "+
-      "probe asserts the token is taken unasked, so it goes red the day the question is built."}
+      "probe asserts the token is taken unasked, so it goes red the day the question is built."},
+
+  "zero-defence-gear-refused": {
+  status:"open", cr:"7.3.2b", board:"both", since:"v6.43", swept:"v6.43",
+  claim:"Neither board lets a seat declare an equipment piece whose defence is 0, printed "+
+        "or worn (judge `legal`: \"has no defence left\"; the trainer's toggleBlock says the "+
+        "same). CR 7.3.2b (verbatim): \"A card cannot be declared if (A) it does not have the "+
+        "defense property (0 is a value), (B) it is already a defending card on a chain link, or "+
+        "(C) it would make the current set of declared cards illegal to become defending.\"",
+  why:"Found by reader 8: Olde Leather Boots (staged, printed 0{d}) reads \"if you've been "+
+      "attacked 2 or more times this turn, this gets +2{d}\", and the reader is built "+
+      "(`defSelf.when = attackedN`, `hist.attacked`, `defendValue`), but the piece can never be "+
+      "declared, so the +2 is unreachable at either table. WEAKER than printed, on 27 pinned "+
+      "pool pieces too (every 0{d} equipment). Not changed in v6.43: test/defcap.test.js pins the "+
+      "worn-to-zero refusal as a deliberate rule (v2.46's spent wall), and the AI's wall filters "+
+      "on defence above 0 as well, so the fix is a dealt-card change with a policy question in "+
+      "it. The probe asserts the refusal, so it goes red the day it is lifted."},
+
+  "dealt-damage-reads-attacks": {
+  status:"open", cr:"6.4.10a", board:"both", since:"v6.43", swept:"v6.43",
+  claim:"\"If you've dealt damage this turn\" (`cond: dealtDmg`, Second Strike) is answered "+
+        "`hist.atk > 0 || hist.arc > 0`: an attack PLAYED this turn counts whether or not it "+
+        "dealt any damage (blocked to nothing, prevented), and damage to an ally from a "+
+        "non-attack does not.",
+  why:"Measured by reader 8, which needed the stricter question \"dealt damage to the "+
+      "defending hero\" (Bloodfrenzy Gloomblade) and built it as its own record (`hist.heroDmg`, "+
+      "credited where damage lands, after prevention). `dealtDmg` was left alone because Second "+
+      "Strike is a dealt card and moving it is a balance change, not a reader. STRONGER than "+
+      "printed in the common case (+1{p} and go again after a blocked swing). Work, not a "+
+      "ruling: a `hist.dmg` credited at the same sites as `heroDmg` (plus ally damage) answers "+
+      "it exactly. The probe asserts the attack-only reading, so it goes red when it is fixed."}
 
 };
 

@@ -490,7 +490,10 @@ test("every condition the main loop ANSWERS has an emitter, or is pinned", {skip
   const emitted = allEmittedConds();
   assert.ok(emitted.size > 40, "the emitter walk found only " + emitted.size + " — aimed wrong");
   const orphan = [...new Set(answered)].filter(c => !emitted.has(c)).sort();
-  assert.deepEqual(orphan, ["arcDealt", "atk", "non"],
+  /* +banCostPaid, banPlayed, dealtHero AT v6.43: emitted by STAGED records only
+     (Looking for a Scrap, Galaxxi Black, Bloodfrenzy Gloomblade — reader 8,
+     test/conditionals.test.js drives each), and this walk reads the pool. */
+  assert.deepEqual(orphan, ["arcDealt", "atk", "banCostPaid", "banPlayed", "dealtHero", "non"],
     "an evaluator with no emitter is dead rules code that reads like a rule (v4.11)");
   /* THE THREE POWCARD LEGS CONTRIBUTE NOTHING TODAY, AND THAT IS PINNED
      RATHER THAN ASSUMED. They are there for v3.73's reason — a hero or

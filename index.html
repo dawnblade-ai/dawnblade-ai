@@ -961,7 +961,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "6.42"; /* v6.42 - the sixth reader for the new Viserai deck: the special Runechants count as Runechants, destroy themselves on schedule, pay out when usurped, and usurp now asks which Runechant when the choice matters; no card a player can be dealt changed. See CHANGELOG.md. */
+window.APP_VER = "6.43"; /* v6.43 - the eighth reader for the new Viserai deck: the small conditionals (attacked twice this turn, damage dealt to the defending hero, a card played from the banished zone, an arsenal banish on hit, an optional graveyard banish cost) now read; no card a player can be dealt changed. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -2820,6 +2820,7 @@ function phaseLabel(mode, bphase, over){
   if(mode === "fusepick")  return "fusion?";
   if(mode === "chargepick") return "charge?";
   if(mode === "usurppick") return "usurp?";
+  if(mode === "bancostpick") return "additional cost?";
   if(mode === "targetpick") return "choosing a target";
   if(mode === "act") return "your action phase";
   return mode || "—";
@@ -4137,6 +4138,8 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     if(n._chargeUids !== undefined){ n = {...n}; delete n._chargeUids; }
     /* AND THE USURP ANSWER (v6.42), for the same reason one cost over. */
     if(n._usurpUid !== undefined){ n = {...n}; delete n._usurpUid; }
+    /* AND THE OPTIONAL GRAVEYARD BANISH'S ANSWER (v6.43), one cost over. */
+    if(n._banCostUid !== undefined){ n = {...n}; delete n._banCostUid; }
     if(!n._declared) return n;          /* it resolved; the action phase continues */
     /* WHERE THE DECLARED ATTACK GOES IS THIS BOARD'S ANSWER (v2.77).
        `execute` used to file it to the graveyard itself, at declaration —
@@ -4227,16 +4230,33 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      of plain tokens asks nothing. "If able": no decline. The answer rides to
      `execute` on the state as `_usurpUid`; DawnParser.usurpOffer is the ONE
      reader of the question, shared with the table. */
+  /* AN OPTIONAL GRAVEYARD BANISH PAID AS AN ADDITIONAL COST (v6.43) — Looking
+     for a Scrap. judge.js's `maybeBanCost` carries the argument: a COST, so it
+     is asked before the card resolves, off DawnPrompts.banCostChoice (the ONE
+     reader, shared with the table); "you may", so one candidate is still a
+     question and Decline is an answer (null). The answer rides to `execute` on
+     the state as `_banCostUid`. */
+  const maybeBanCost = (s,card,from,idx) => {
+    const uids = s._banCostUid === undefined && DawnParser.isCardPlay(from) ? DawnPrompts.banCostChoice(card, act(s)) : null;
+    return uids ? {...s, mode:"bancostpick", pending:{card,from,idx,uids}}
+                : maybeCharge(s,card,from,idx);
+  };
+  const confirmBanCost = (uid) => setG(s=>{
+    if(s.mode!=="bancostpick"||!s.pending) return s;
+    const {card,from,idx,uids} = s.pending;
+    const pick = uid != null && (uids||[]).indexOf(uid) >= 0 ? uid : null;
+    return maybeCharge({...s, mode:"act", pending:null, _banCostUid: pick}, card, from, idx);
+  });
   const maybeUsurp = (s,card,from,idx) => {
     const off = s._usurpUid === undefined ? DawnParser.usurpOffer(card, act(s)) : null;
     return off ? {...s, mode:"usurppick", pending:{card,from,idx,uids:off.uids}}
-               : maybeCharge(s,card,from,idx);
+               : maybeBanCost(s,card,from,idx);
   };
   const confirmUsurp = (uid) => setG(s=>{
     if(s.mode!=="usurppick"||!s.pending) return s;
     const {card,from,idx,uids} = s.pending;
     const pick = (uids||[]).indexOf(uid) >= 0 ? uid : (uids||[])[0];
-    return maybeCharge({...s, mode:"act", pending:null, _usurpUid: pick}, card, from, idx);
+    return maybeBanCost({...s, mode:"act", pending:null, _usurpUid: pick}, card, from, idx);
   });
   const maybeCharge = (s,card,from,idx,picked) => {
     const got = picked || [];
@@ -4407,7 +4427,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        a dead tap (Lyath's Stand Strong, found by the sweep). */
     if(!s.over && !s.inspect && s.mode==="stack" && !(card&&(card._attackRx||card._instant)))
       return L(s, `${card ? card.name : "That"} is action speed — this is the reaction step. Pass to resolve the chain link first.`);
-    if(s.over||s.mode==="block"||s.mode==="arsenal"||s.mode==="boostpick"||s.mode==="fusepick"||s.mode==="chargepick"||s.mode==="usurppick"||s.mode==="splitpick"||s.mode==="xpick"||s.mode==="discpick"||s.mode==="soulpick"||s.mode==="targetpick"||s.mode==="rxaddpay"||s.mode==="foeturn") return s;
+    if(s.over||s.mode==="block"||s.mode==="arsenal"||s.mode==="boostpick"||s.mode==="fusepick"||s.mode==="chargepick"||s.mode==="usurppick"||s.mode==="bancostpick"||s.mode==="splitpick"||s.mode==="xpick"||s.mode==="discpick"||s.mode==="soulpick"||s.mode==="targetpick"||s.mode==="rxaddpay"||s.mode==="foeturn") return s;
     if(s.inspect){ setZoom(card); return s; }
     if(s.mode==="pay"){
       if(from!=="hand" || (s.pending&&s.pending.from==="hand"&&s.pending.idx===idx)) return s;
@@ -4901,7 +4921,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      adds only the trainer's own busy-modes, which are not a rule about
      the ability: a sheet is open, so nothing else may start. */
   const handAbilityOK = (s, c) => {
-    if(["pay","arsenal","boostpick","fusepick","chargepick","discpick","soulpick","targetpick","usurppick"].indexOf(s.mode) >= 0) return false;
+    if(["pay","arsenal","boostpick","fusepick","chargepick","discpick","soulpick","targetpick","usurppick","bancostpick"].indexOf(s.mode) >= 0) return false;
     return DawnEffects.handAbilityOK(s, c);
   };
   /* THE PAYMENT, THE OPS **AND** THE DEFENCE BUFF ARE ALL SHARED (v4.53).
@@ -4914,7 +4934,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      lands it now, so there is nothing here to route. */
   const activateHand = c => setG(s=>{
     { const _w = sheetFirst(s); if(_w) return _w; }
-    if(["pay","arsenal","boostpick","fusepick","chargepick","discpick","soulpick","targetpick","usurppick"].indexOf(s.mode) >= 0) return s;
+    if(["pay","arsenal","boostpick","fusepick","chargepick","discpick","soulpick","targetpick","usurppick","bancostpick"].indexOf(s.mode) >= 0) return s;
     /* WHICH CARD "Discard a card:" SPENDS (v4.87) — Rally the Coast
        Guard's, asked through the one reader both boards ask
        (`discCostChoice`), and answered by `confirmDiscCost`, which comes
@@ -5389,6 +5409,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        controls the token, so it reaches both engines and only the two
        cases the card names. */
     n.incoming = base;
+    /* YOUR HERO HAS BEEN ATTACKED (v6.43) — Olde Leather Boots counts it;
+       `noteAttacked` is the one body, the table's attacks reach it in `execute` */
+    n = _EFX.noteAttacked(n, 0);
     n.chain=[...n.chain,{n:opp(n).name,img:null,dbImg:null,dmg:n.incoming,ga:false,kind:"foe"}];
     n.featured = {foe:true, dmg:n.incoming, chip:`LINK ${n.chain.length} — ${opp(n).name.toUpperCase()} ATTACKS`};
     n.mode="block"; n.bphase="defend"; youMut(n).blockH=[]; youMut(n).blockG=[]; youMut(n).blockRx=[];
@@ -5589,6 +5612,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        the side that is defending, which is the actor on this path. */
     { const pv = _EFX.preventDamage(n, actorOf(n), through, "The attack");
       n = pv.game; through = pv.dealt; }
+    /* the attacker's "dealt damage to the defending hero" (v6.43), credited
+       where it lands, after prevention — `creditHeroDmg`, the one body */
+    n = _EFX.creditHeroDmg(n, 1 - actorOf(n), through);
     const defSide = actMut(n);
     defSide.hist = {...act(s).hist, blueGY:(act(s).hist.blueGY||0)+bcards.filter(c=>c.pitch===3).length};
     defSide.blockH = []; defSide.blockG = []; defSide.blockRx = [];
@@ -6140,6 +6166,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
               {g.mode==="boostpick" && <div className="statusline">Boost <b>{g.pending.card.name}</b>? Banish the top card of your deck — a Mechanologist card grants go again.</div>}
               {g.mode==="fusepick" && g.pending && <div className="statusline">Fuse <b>{g.pending.card.name}</b>? Reveal a {g.pending.types.join("/")} card from your hand — <b>your opponent sees it</b>.</div>}
               {g.mode==="usurppick" && g.pending && <div className="statusline">Usurp for <b>{g.pending.card.name}</b> — which Runechant is destroyed to pay for it?</div>}
+              {g.mode==="bancostpick" && g.pending && <div className="statusline"><b>{g.pending.card.name}</b> has an additional cost — banish a card from your graveyard, or decline.</div>}
               {g.mode==="chargepick" && g.pending && <div className="statusline">Charge for <b>{g.pending.card.name}</b>? A card from your hand goes to your <b>soul</b> — you may decline.</div>}
               {g.mode==="splitpick" && g.splitPick && <div className="statusline">
                 <b>{g.splitPick.name}</b> is a split card — one card, two halves.
@@ -6354,6 +6381,16 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
             return <button key={u} className="a go" onClick={()=>confirmUsurp(u)}>
               Usurp {b ? b.card.name : "Runechant"}</button>;
           })}
+        </>) : g.mode==="bancostpick" ? (<>
+          {/* ONE BUTTON PER DIFFERENT CARD THAT COULD PAY (v6.43), off
+              DawnPrompts.banCostChoice with the question, and a Decline:
+              the cost is printed "you may". */}
+          {(g.pending?.uids||[]).map(u => {
+            const c = (you(g).grave||[]).find(x=>x.uid===u);
+            return <button key={u} className="a go" onClick={()=>confirmBanCost(u)}>
+              Banish {c ? c.name : "card"}</button>;
+          })}
+          <button className="a" onClick={()=>confirmBanCost(null)}>Decline</button>
         </>) : g.mode==="chargepick" ? (<>
           {/* ONE BUTTON PER CARD IN HAND, because WHICH card is the
               decision - a charged card is GONE to the soul, so charging
@@ -8465,6 +8502,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
   const soulcost = kindIs("soulcost");
   const abtarget = kindIs("abtarget");
   const usurp = kindIs("usurp");
+  const bancost = kindIs("bancost");
   const theirPay  = g.pending && g.pending.seat !== mySeat;
   const myArsStep = g.phase === "end" && g.arsenalFor === mySeat;
   const defending = DawnPriority.canDeclareDefenders(g, mySeat);
@@ -8892,6 +8930,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                 : fuse ? <div className="statusline">Fuse <b>{fuse.card.name}</b>? Reveal a {(fuse.types||[]).join("/")} card from your hand as an additional cost — <b>{them.name} sees it</b>.</div>
                 : charge ? <div className="statusline">Charge for <b>{charge.card.name}</b>? A card from your hand goes to your <b>soul</b> as an additional cost — you may decline.</div>
                 : usurp ? <div className="statusline">Usurp for <b>{usurp.card.name}</b> — which Runechant is destroyed to pay for it?</div>
+                : bancost ? <div className="statusline"><b>{bancost.card.name}</b> has an additional cost — banish a card from your graveyard, or decline.</div>
                 : pay ? <div className="statusline">Paying <b>{pay.card.name}</b> — tap cards below to pitch · {(()=>{const short=Math.max(0,pay.need-me.res-DawnJudge.paySum(me)); /* COVERED IS NOT CONFIRMABLE when a second question refuses the pitch
      (v4.91 — Savage Feast's additional discard): say `legal`'s reason
      rather than "covered ✓" over a dead button (v2.83, v4.59). */
@@ -9125,6 +9164,17 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                 return <button key={u} className="a go" onClick={()=>fire({t:"usurp",uid:u})}>
                   Usurp {b ? b.card.name : "Runechant"}</button>;
               })}
+            </>
+          /* AN OPTIONAL GRAVEYARD BANISH COST (v6.43) — one button per
+             different card that could pay, off `prompts.banCostChoice`, the
+             one reader both boards ask, and a Decline: "you may". */
+          : bancost ? <>
+              {(bancost.uids||[]).map(u => {
+                const c = (me.grave||[]).find(x=>x.uid===u);
+                return <button key={u} className="a go" onClick={()=>fire({t:"bancost",uid:u})}>
+                  Banish {c ? c.name : "card"}</button>;
+              })}
+              <button className="a" onClick={()=>fire({t:"bancost",uid:null})}>Decline</button>
             </>
           : soulcost ? <>
               {(soulcost.uids||[]).map(u => {

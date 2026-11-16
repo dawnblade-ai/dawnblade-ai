@@ -52,7 +52,12 @@ function tokens(v, out){
   if(v == null) return out;
   if(Array.isArray(v)){ v.forEach(x => tokens(x, out)); return out; }
   /* a KEY can carry a uid inside it (`ct100083`, v6.25): its digit runs are tokens too */
-  if(typeof v === "object"){ for(const k of Object.keys(v)){ out.push(k); const m = k.match(/\d{6,}/g); if(m) out.push(...m); if(k !== "tokSeq") tokens(v[k], out); } return out; }
+  /* A COMMIT'S STATE HASH (`h`, hex) IS NOT A UID SIGNATURE (v6.43): a digest is
+     arbitrary hex, and one held "100037" by chance — a false leak the day the
+     state shape (and so every hash) moved. Skipped only when it IS a hex digest. */
+  if(typeof v === "object"){ for(const k of Object.keys(v)){ out.push(k); const m = k.match(/\d{6,}/g); if(m) out.push(...m);
+    if(k === "h" && typeof v[k] === "string" && /^[0-9a-f]{8,}$/.test(v[k])) continue;
+    if(k !== "tokSeq") tokens(v[k], out); } return out; }
   const s = String(v);
   out.push(s);
   if(typeof v === "string"){ const m = s.match(/\d{6,}/g); if(m) out.push(...m); }

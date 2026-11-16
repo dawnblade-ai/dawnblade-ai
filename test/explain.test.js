@@ -142,11 +142,13 @@ test("every reason is keyed from a site in the policy, and the census names what
      SPXEFFPOW (a hand attack ranked on the power it has now) re-routes the census: `effPower` is reached, and
      `grantKeep` is out of reach again (test/grantwait.test.js drives it).
      `usurp` (v6.42, which Runechant usurp destroys) needs a special Runechant, a staged card no
-     pool deck holds: test/runechants.test.js drives it. */
+     pool deck holds: test/runechants.test.js drives it.
+     `bancost` / `bancostNo` (v6.43, Looking for a Scrap's optional graveyard banish) are a staged
+     card's: test/conditionals.test.js drives both. */
   const seen = census().keys;
   for(const k of Object.keys(seen)) assert.ok(SP.CALL_WHY[k], "reached key " + k + " has no reason");
   assert.deepEqual(keys.filter(k => !seen[k]).sort(),
-    ["abtarget", "addPayNo", "allocAll", "allyTake", "answer", "arenaAP", "arenaRes", "arsenalSkip", "boostNo",
+    ["abtarget", "addPayNo", "allocAll", "allyTake", "answer", "arenaAP", "arenaRes", "arsenalSkip", "bancost", "bancostNo", "boostNo",
      "chargeDone", "chargeMore", "chargeNone", "discost", "gateFirst", "grantKeep", "laBlock", "laBoard", "laHit", "laHold", "laKeep", "laSafe", "laTake", "lookOwn",
      "payCancel", "pitchChi", "usurp"]);
 });

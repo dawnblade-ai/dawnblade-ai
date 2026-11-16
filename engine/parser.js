@@ -1584,6 +1584,22 @@ function classifyClause(raw){
       return Object.assign(rest,{cond:"defAtkAction"});
     if(/^you'?(?:ve| have) dealt damage this turn$/.test(cond))
       return Object.assign(rest,{cond:"dealtDmg"});
+    /* "IF YOU'VE DEALT DAMAGE TO THE DEFENDING HERO THIS TURN" (v6.43) —
+       Bloodfrenzy Gloomblade (staged). NOT `dealtDmg` one line up, which is
+       answered off `hist.atk || hist.arc` — "an attack was played or arcane
+       landed" — so a swing blocked to nothing, or a hit on an ally, would
+       count. This is its own record, `hist.heroDmg`, credited by
+       `effects.creditHeroDmg` where damage LANDS on the opposing hero
+       (prevented damage is not dealt, CR 7.5.5). CR 7.2.3b makes "the
+       defending hero" the controller of the attack-target; with two seats
+       that is always the opposing hero, which is the hero credited. */
+    if(/^you'?(?:ve| have) dealt damage to the defending hero this turn$/.test(cond))
+      return Object.assign(rest,{cond:"dealtHero"});
+    /* "IF YOU'VE PLAYED A CARD FROM YOUR BANISHED ZONE THIS TURN" (v6.43) —
+       Galaxxi Black (staged). `hist.banPlay`, recorded where a card PLAYED
+       leaves the banished zone in `execute` (one site, both boards). */
+    if(/^you'?(?:ve| have) played a card from your banished zone this turn$/.test(cond))
+      return Object.assign(rest,{cond:"banPlayed"});
     /* "{p} greater than its base" — the pump is known once the total is struck.
 
        TWO PRINTED WORDINGS OF ONE SHAPE (v3.71). The pool spells it both
@@ -2215,7 +2231,11 @@ function classifyClause(raw){
      Its sibling Mark of the Black Widow has read `full` since the marked
      trigger was built — same hero, same stealth line, same "when this
      hits a marked hero" gate — so this ONE payload was the whole gap. */
-  if(/^banish a card in their arsenal$/.test(c))
+  /* "THEY BANISH A CARD IN THEIR ARSENAL" (v6.43) — Plundersong Gloomblade
+     (staged), the same sentence with its subject printed: "they" and
+     "their" are one player, the hero the trigger names, so the card that
+     goes is the same one either way (the arsenal holds one card). */
+  if(/^(?:they )?banish a card in their arsenal$/.test(c))
     return R([["foeArsBanish", 1]]);
   /* AND THE FOE'S DECK (v3.96) — Goon Tactics' granted rider. `deckDestroy`
      (v3.90) mills the ACTOR's own for a cost; this mills the opponent's as
@@ -5145,6 +5165,15 @@ function fxParse(card){
       m = cl.match(/^if you.?ve dealt arcane damage this turn, this gets \+(\d+)\{d\}\.?$/i);
       if(m) ds = {amt: +m[1], when: "arcDealt"};
     }
+    /* "IF YOU'VE BEEN ATTACKED N OR MORE TIMES THIS TURN" (v6.43) — Olde
+       Leather Boots (staged). The defending side's own turn record,
+       `hist.attacked`, counted where an attack aimed at that seat's HERO
+       becomes attacking (`effects.noteAttacked`); the attack this piece is
+       defending has already been counted. The number is read off the line. */
+    if(!ds){
+      m = cl.match(/^if you(?:.?ve| have) been attacked (\d+) or more times this turn, this gets \+(\d+)\{d\}\.?$/i);
+      if(m) ds = {amt: +m[2], when: "attackedN", n: +m[1]};
+    }
     /* "while this is defending an ATTACK ACTION CARD WITH COST N" — Wax On
        x3. A property of the incoming attack, like the weapon test, so the
        caller supplies the card. The COST IS READ OFF THE CLAUSE rather
@@ -5870,6 +5899,46 @@ function fxParse(card){
     if(fx.optCost.zone === "graveyard") fx.optCost.zone = "grave";
     handled.add(i); handled.add(i+1);
     break;                                       /* one optional cost per card in the pool */
+  }
+  /* ---- AN OPTIONAL ADDITIONAL COST THAT BANISHES FROM THE GRAVEYARD (v6.43)
+     "As an additional cost to play this, you may banish a card with 1{p}
+      from your graveyard. If you do, this gets +1{p} and go again."
+      — LOOKING FOR A SCRAP (staged)
+
+     NOT `optCost`, whose offer is a queued prompt: those drain after the
+     card has resolved, and a COST is settled before it (CLAUDE.md: "a COST
+     is a `pending` settled before the card resolves"). So it is a whole-card
+     field, `fx.banCost`, asked as judge's `bancost` pending / the trainer's
+     `bancostpick` sheet (`banCostOffer` is the one reader of the question),
+     and paid at the top of `effects.executeInner`. "You may" is the whole
+     difference from a mandatory cost: declining is an answer.
+
+     THE RIDER IS "THIS", the card being played (not the banished card,
+     which is v3.92's "it"), so it is read by `classifyClause` and each op
+     becomes a `fx.conds` entry gated on `banCostPaid`, which the condition
+     loop answers off THIS play's payment and nothing else.
+
+     THE SUBJECT IS PINNED OR THE CARD STAYS UNCLAIMED. "A card with N{p}" is
+     the printed power, exactly (a card with no printed power has none);
+     anything else goes through `optFilter`, which refuses a bare "card". */
+  if(!fx.optCost){
+    for(let i = 0; i < clauses.length - 1; i++){
+      const bm = levelIdiom(clean(clauses[i]).toLowerCase().replace(/\.$/, ""))
+        .match(/^as an additional cost to play this, you may banish (.+) from your graveyard$/);
+      if(!bm) continue;
+      const rider = clauses[i+1];
+      if(!/^if you do\b/i.test(rider)) continue;
+      const pw = bm[1].match(/^(?:a|an|one) card with (\d+)\{p\}$/);
+      const filter = pw ? {powerGe: +pw[1], powerLe: +pw[1]} : optFilter(bm[1]);
+      if(!filter) continue;                          /* unreadable subject */
+      const rr = classifyClause(rider.replace(/^if you do,?\s*/i, ""));
+      if(!rr || !rr.ops || !rr.ops.length || rr.cond) continue; /* unreadable rider */
+      if(rr.ops.some(o => o[0] === "noop")) continue;
+      fx.banCost = {zone: "grave", filter};
+      rr.ops.forEach(op => fx.conds.push({cond: "banCostPaid", op, instead: false, atkHero: false}));
+      handled.add(i); handled.add(i+1);
+      break;
+    }
   }
   /* PAY-COST RIDER (Brothers in Arms): "When this defends, you may pay
      {r}. If you do, it gets +2{d}." Same two-clause pairing as optCost

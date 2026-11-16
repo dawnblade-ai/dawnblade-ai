@@ -338,7 +338,14 @@
    additional cost destroys), answered by a new action `usurp {uid}`, and the
    answer rides on a held play's `decl` as `_usurpUid` (`judge.HELD_DECL`). A v41
    peer answers no `usurp` and would play the first Runechant unasked. */
-const WIRE_V = 42;
+/* 42 -> 43 AT v6.43: `pending` gains a KIND (`bancost`, the graveyard card an
+   optional additional cost banishes, or a decline), answered by a new action
+   `bancost {uid|null}`, and the answer rides on a held play's `decl` as
+   `_banCostUid` (`judge.HELD_DECL`). `hist` gains `attacked`, `heroDmg` and
+   `banPlay` (per-turn facts, inside a whole-shipped field). A v42 peer answers
+   no `bancost` and keeps none of the three counts, so the pair diverges on the
+   first attack. Whole-shipped values: by hand, behind the release handshake. */
+const WIRE_V = 43;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

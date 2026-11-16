@@ -371,6 +371,15 @@ function payAction(g, seat, p, o){
      candidate worth most destroyed (`usurpWorth`: the Runechants and go
      again it pays, less the arcane it would have dealt), then uid. */
   if(p.kind === "usurp") return tag("usurp", {t: "usurp", uid: J.usurpAnswer(g)});
+  /* AN OPTIONAL GRAVEYARD BANISH COST (v6.43) — judge's `banCostAnswer`: the
+     candidate worth most banished (`banCostWorth`: playable from the banished
+     zone counts for it, blood debt against it), paid when that is worth at
+     least nothing, since the paid rider is printed as a gain; otherwise
+     declined. Its own reason key on each branch. */
+  if(p.kind === "bancost"){
+    const uid = J.banCostAnswer(g);
+    return uid != null ? tag("bancost", {t: "bancost", uid}) : tag("bancostNo", {t: "bancost", uid: null});
+  }
   /* THE TARGET AN ACTIVATED ABILITY DECLARES (v5.72) — judge's
      `abTargetAnswer`. The policy reads no card text: the order is the one
      the pick sheet used when this was chosen at the resolution. */
@@ -1618,6 +1627,8 @@ const CALL_WHY = {
   abtarget: "Aim it at the best card it can reach. The target is named now, before the other seat can answer.",
   soulcost: "Banish the soul card worth least as a resource. What counts is how many are in the soul, not which.",
   usurp: "Usurp the Runechant that pays you back. A plain one would have dealt its damage on this swing.",
+  bancost: "Pay the extra cost from your graveyard. The card you play is printed stronger when it is paid.",
+  bancostNo: "Keep your graveyard. Every card that could pay would cost you life from the banished zone.",
   arsenalBest: "Keep your biggest attack face down. It is the card you most want to lead with next turn.",
   arsenalOther: "Keep it face down. It can be played from there.",
   arsenalSkip: "Keep your hand. Nothing in it can be played from the arsenal.",
@@ -1729,6 +1740,7 @@ function lineOf(g, seat, a){
     case "discost": return "Discard " + nm(c) + " for the cost";
     case "soulcost": return "Banish " + nm(c) + " from the soul for the cost";
     case "usurp": return "Usurp " + nm(c);
+    case "bancost": return a.uid == null ? "Don't pay the extra cost" : "Banish " + nm(c) + " for the cost";
     case "abtarget": return "Aim it at " + nm(c);
     case "promptSel": { const x = p && ((p.cards || [])[a.i] || (p.options || [])[a.i]);
       return "Choose " + ((x && (x.name || x.label)) || "it"); }

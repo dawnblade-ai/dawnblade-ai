@@ -284,7 +284,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* v5.72 closes `trainer-no-stalemate-draw` and adds nothing: the count holds,
      and only the stated/closed split below moves. */
   /* 58 -> 59 AT v6.42: `destroy-a-runechant-cost-unasked`, open. */
-  assert.equal(Object.keys(APPROX).length, 59, "record count moved");
+  /* 59 -> 61 AT v6.43: `zero-defence-gear-refused` and `dealt-damage-reads-attacks`, both open. */
+  assert.equal(Object.keys(APPROX).length, 61, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -408,7 +409,10 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      user's ruling of 2026-07-25) and is `closed` with its probe turned round. */
   /* 0 -> 1 AT v6.42: `destroy-a-runechant-cost-unasked` — Runebleed Robe with a
      special Runechant and a token in the arena takes the token unasked. */
-  assert.equal(n("open"),    1, "open count moved");
+  /* 1 -> 3 AT v6.43: `zero-defence-gear-refused` (CR 7.3.2b: 0 is a value; both
+     boards refuse a 0{d} piece, so Olde Leather Boots' +2 is unreachable) and
+     `dealt-damage-reads-attacks` (Second Strike's gate reads attacks played). */
+  assert.equal(n("open"),    3, "open count moved");
   /* 16 -> 17 AT v4.63: `steam-build-powcard-read`. 17 -> 18 AT v4.66:
      `play-held-on-the-stack`. 19 -> 20 AT v4.72: `x-cost-declared`.
      20 -> 21 AT v4.73: `crush-halving-rider-read`. 21 -> 22 AT v4.74:
@@ -2332,4 +2336,38 @@ probe("destroy-a-runechant-cost-unasked", () => {
   assert.equal(PR.boardEntryNamed(both, "Runechant").uid, "tk", "the token is no longer taken first — build the question and close this record");
   assert.equal(PR.boardEntryNamed({board: [{uid: "ls", card: lust}]}, "Runechant").uid, "ls",
     "a special Runechant cannot pay a cost that destroys a Runechant");
+});
+
+/* OPEN AT v6.43. DRIVEN: at the defend step, a printed-0{d} piece (Olde Leather
+   Boots, staged) is refused although CR 7.3.2b says 0 is a value; the wall's
+   value body would give it +2 on the second attack. */
+probe("zero-defence-gear-refused", () => {
+  H.db();
+  const C2 = require("../engine/cards.js");
+  const ST = C2.buildMaps(require("../data/staged.js").filter(c => c && c.name).map(C2.mapDbCard));
+  const boots = {...C2.resolveEntry(ST, {name: "Olde Leather Boots", p: 0, code: null, q: 1}), uid: "ob"};
+  const atk = {...H.card("Brutal Assault", 3), uid: "a1"};
+  let g = {...H.state({res: 9, ap: 1, hand: [atk]}, {hp: 20, hand: [], gear: [boots]}, {actor: 0, turnPlayer: 0, turn: 3}),
+           phase: "action", step: "layer", priority: 0, passed: []};
+  g = J.reduce(g, {t: "play", uid: "a1", from: "hand"}, 0).state;
+  for(let i = 0; i < 10 && g.step !== "defend"; i++) g = J.reduce(g, {t: "pass"}, g.priority).state;
+  assert.equal(g.step, "defend");
+  assert.match(String(J.legal(g, {t: "defend", uid: "ob"}, 1)), /no defence left/,
+    "a 0{d} piece can be declared now (CR 7.3.2b) — close this record");
+  assert.equal(E.defendValue({hist: Object.assign(S.freshHist(), {attacked: 2})}, boots, {base: 0}), 2,
+    "the Boots' reader itself moved");
+});
+
+/* OPEN AT v6.43. DRIVEN: Second Strike after an attack that dealt no damage
+   still gets its +1{p} and go again, because `dealtDmg` reads `hist.atk`. */
+probe("dealt-damage-reads-attacks", () => {
+  H.db();
+  const ss = {...H.card("Second Strike", 1), uid: "ss"};
+  let g = {...H.state({res: 9, ap: 1, hand: [ss], hist: Object.assign(S.freshHist(), {atk: 1})}, {hp: 20, hand: []},
+           {actor: 0, turnPlayer: 0, turn: 3}), phase: "action", step: "layer", priority: 0, passed: []};
+  g = J.reduce(g, {t: "play", uid: "ss", from: "hand"}, 0).state;
+  for(let i = 0; i < 12 && !g.pend; i++) g = H.move(g);
+  assert.ok(g.pend, "no chain link");
+  assert.equal(g.pend.ga, true, "Second Strike no longer counts an attack that dealt nothing — close this record");
+  assert.equal(g.sides[0].hist.heroDmg, 0, "fixture: damage was dealt");
 });

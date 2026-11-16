@@ -138,8 +138,18 @@ const SIDE_FIELDS = [
 
    `madeNames` (v5.53) — the NAME of every token created this turn. `made`
    is a count, and Fealty's clock asks "if you haven't created a FEALTY
-   token this turn", which is a name. */
-const freshHist = () => ({atk:0,non:0,arc:0,aura:0,made:0,booed:0,blue:0,red:0,trans:0,blueGY:0,atkNames:[],auraAtkNames:[],playTy:[],playNames:[],arcTaken:0,gyFirstKw:[],soulPut:[],madeNames:[]});
+   token this turn", which is a name.
+
+   `attacked`, `heroDmg`, `banPlay` (v6.43) — three per-turn facts the
+   staged Viserai deck asks. `attacked`: how many attacks aimed at this
+   seat's HERO became attacking (Olde Leather Boots, "if you've been
+   attacked 2 or more times this turn"). `heroDmg`: how many times damage
+   from this seat LANDED on the opposing hero, prevented damage not being
+   dealt (Bloodfrenzy Gloomblade, "if you've dealt damage to the defending
+   hero this turn"). `banPlay`: how many cards this seat PLAYED from its
+   banished zone (Galaxxi Black). Each is recorded where it becomes true,
+   in `effects.js`, which both boards call. */
+const freshHist = () => ({atk:0,non:0,arc:0,aura:0,made:0,booed:0,blue:0,red:0,trans:0,blueGY:0,atkNames:[],auraAtkNames:[],playTy:[],playNames:[],arcTaken:0,gyFirstKw:[],soulPut:[],madeNames:[],attacked:0,heroDmg:0,banPlay:0});
 
 function makeSide(o){
   o = o || {};

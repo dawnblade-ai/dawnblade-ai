@@ -101,9 +101,11 @@ test("crindex — the verdict counts are pinned", () => {
      (parser.usurps, effects.execute, test/usurp.test.js). */
   /* 93 -> 94 and 83 -> 84 guarded AT v6.42: CR 1.8.8, "counts as" (parser `fx.countsAs`,
      test/runechants.test.js names it). */
-  assert.equal(rs.length, 94, "the number of distinct CR rules this project cites moved");
+  /* 94 -> 97 and 84 -> 87 guarded AT v6.43: CR 6.4.10a, 7.2.3b, 7.3.1 (effects
+     `creditHeroDmg` / `noteAttacked`, test/conditionals.test.js names them). */
+  assert.equal(rs.length, 97, "the number of distinct CR rules this project cites moved");
   /* 50 -> 51 guarded and 6 -> 5 drill-only AT v4.66: CR 7.1.2, built. */
-  assert.equal(by(rs, "guarded").length,   84, "guarded count moved");
+  assert.equal(by(rs, "guarded").length,   87, "guarded count moved");
   assert.equal(by(rs, "UNGUARDED").length,  3, "UNGUARDED count moved");
   assert.equal(by(rs, "drill-only").length, 5, "drill-only count moved");
   assert.equal(by(rs, "prose").length,      2, "prose count moved");

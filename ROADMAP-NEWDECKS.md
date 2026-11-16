@@ -51,8 +51,12 @@ hide a keyword with no reader, so read this as a floor on the work, not a ceilin
   7. the hero: a trigger on creating Runechants, a per-turn count, and **traverse** — the
      hero is double-faced (Viserai, Usurper on the back, a Demon with its own text), which
      no hero in the pool is today
-  8. the small conditionals (attacked twice this turn, dealt damage this turn, played from
-     banish this turn)
+  8. **DONE v6.43** (`hist.attacked` / `heroDmg` / `banPlay`, `fx.banCost` + the `bancost` pending,
+     `test/conditionals.test.js`) — the small conditionals (attacked twice this turn, dealt damage to
+     the defending hero this turn, played from banish this turn, "they banish a card in their arsenal",
+     an optional graveyard banish as an additional cost). Census after: 35 full / 0 part / 0 none; only
+     the hero (7) is left. Owed: Olde Leather Boots cannot be declared (0{d}, `tools/approx.js`
+     `zero-defence-gear-refused`)
 - **Prism, Advent of Thrones** — 21 full / 4 part / 7 none; 17 names not in the pool.
   Missing readers: the **soul** (a new zone: `sides.js`, `invariants.js` census, `view.js`
   visibility), Herald-named triggers, figments and **Awaken** (double-faced cards in the

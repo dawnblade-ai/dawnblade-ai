@@ -487,7 +487,9 @@ test("every pending kind judge can open has a branch at the table", () => {
      before the cost — one button per target it may name, and a Cancel. */
   /* +usurp AT v6.42: with a special Runechant in the arena (CR 1.8.8), WHICH
      Runechant usurp's additional cost destroys — one button per different card. */
-  assert.deepEqual([...kinds].sort(), ["abtarget", "addPay", "boost", "charge", "discost", "fuse", "pay", "soulcost", "split", "usurp", "xval"]);
+  /* +bancost AT v6.43: an optional additional cost that banishes a card from
+     the graveyard (Looking for a Scrap) — one button per different card, and a Decline. */
+  assert.deepEqual([...kinds].sort(), ["abtarget", "addPay", "bancost", "boost", "charge", "discost", "fuse", "pay", "soulcost", "split", "usurp", "xval"]);
   const strip = t => t.replace(/\/\*[\s\S]*?\*\//g, "");
   const htm = strip(fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8"));
   const i = htm.indexOf("const kindIs = k =>");
@@ -496,7 +498,8 @@ test("every pending kind judge can open has a branch at the table", () => {
      and the window is the span those lines occupy, not a claim about them. */
   /* 460 -> 520 AT v5.72: a tenth `kindIs` line (`abtarget`). */
   /* 520 -> 560 AT v6.42: an eleventh (`usurp`). */
-  const demux = htm.slice(i, i + 560);
+  /* 560 -> 600 AT v6.43: a twelfth (`bancost`). */
+  const demux = htm.slice(i, i + 600);
   for(const k of kinds)
     assert.ok(demux.indexOf('kindIs("' + k + '")') > 0,
       'the table must demux "' + k + '" explicitly — a kind with no branch is a screen with no exit');

@@ -206,7 +206,10 @@ test("the trainer asks the same reader, and its answer rides to execute", {skip}
   assert.ok(a > 0 && b > a, "maybeUsurp .. maybeCharge moved — re-anchor this drill");
   const calls = [];
   let held = null;
-  const T = new Function("act", "DawnParser", "maybeCharge", "setG",
+  /* v6.43: usurp hands on to the optional graveyard banish cost
+     (`maybeBanCost`), which then asks charge; the stub stands for the next
+     cost either way */
+  const T = new Function("act", "DawnParser", "maybeBanCost", "setG",
     HTML.slice(a, b) + "\nreturn {maybeUsurp, confirmUsurp};")(
     s => s.sides[0], P, (s, card, from, idx) => { calls.push(s); return {...s, charged: true}; },
     f => { held = f(held); });

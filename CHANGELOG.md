@@ -1,3 +1,33 @@
+## v6.43 — the eighth reader for Viserai, Between Worlds: the small conditionals
+
+- **Nothing a player can be dealt changed.** Engine groundwork (`ROADMAP-NEWDECKS.md`). Measured over every pool and staged record (851 parses, before and after): exactly
+  SIX records read differently, all staged and all `part` -> `full`: Olde Leather Boots, Galaxxi Black, Bloodfrenzy Gloomblade (both printings), Plundersong Gloomblade,
+  Looking for a Scrap. Census: Viserai 29 / 6 / 0 -> 35 / 0 / 0 (only the hero's own clauses, reader 7, are left).
+- **Three per-turn facts** in `freshHist`, each recorded where it becomes true in `effects.js` (both boards): `hist.attacked` (`noteAttacked`, at the attack's
+  declaration in `execute`, only when the attack-target is the hero, CR 1.4.5; the trainer's scripted dummy swing calls it too), `hist.heroDmg` (`creditHeroDmg`, where
+  damage LANDS on the opposing hero after prevention, CR 6.4.10a quoted: combat on both boards, arcane, the soak answer, direct damage; CR 7.2.3b makes "the defending hero"
+  the attack-target's controller, always the opponent with two seats), `hist.banPlay` (where a played card leaves the banished zone).
+- **Olde Leather Boots** ("if you've been attacked 2 or more times this turn, this gets +2{d}"): `defSelf.when = "attackedN"`, answered by `defSelfMet`.
+  **Galaxxi Black** (+2{p} after a card played from banish): cond `banPlayed`. **Bloodfrenzy Gloomblade** (go again after damage to the defending hero): cond `dealtHero`,
+  its own record and deliberately NOT `dealtDmg`, which reads "an attack was played" (`hist.atk || hist.arc`). **Plundersong Gloomblade**: "they banish a card in their
+  arsenal" is `foeArsBanish` with its subject printed.
+- **Looking for a Scrap** ("As an additional cost to play this, you may banish a card with 1{p} from your graveyard. If you do, this gets +1{p} and go again."): a COST,
+  so not `optCost` (a queued prompt, which drains after the card resolves). `fx.banCost` (subject pinned: printed power exactly N, else `optFilter`, which refuses a bare
+  card), the rider's ops as `fx.conds` gated on `banCostPaid` (THIS play's payment). Asked before the card resolves on both boards off one reader
+  (`prompts.banCostChoice`: every different card that could pay; "you may", so one candidate is a question and Decline is an answer): judge's `bancost` pending
+  (`maybeBanCost`, between usurp and charge) and the trainer's `bancostpick` sheet. Paid at the top of `executeInner`, re-derived (`banCostPaid`). The AI answers through
+  `judge.banCostAnswer` / `banCostWorth` (playable from banish +1, blood debt -1; pays at worth 0 or more), reason keys `bancost` / `bancostNo`.
+- **Usurp open item (b) closed:** `effPowerNow` counts usurp's +2 (gate `usurp`) with the cost site's exclusion (never a weapon or ally swing, only when a Runechant
+  can pay), and the Coach (`advCardOut`) counts +2 less the spent Runechant's arcane.
+- **Drill `test/conditionals.test.js`** (sabotaged twenty ways, each bit).
+- **OPEN (`tools/approx.js`, 59 -> 61 records, 1 -> 3 open):** `zero-defence-gear-refused` — CR 7.3.2b says "0 is a value", but both boards refuse to declare a 0{d}
+  piece ("has no defence left"; `test/defcap.test.js` pins the worn-to-zero refusal), so the Boots' +2 is unreachable at the table today, and 27 pool 0{d} pieces
+  cannot defend either (weaker than printed). `dealt-damage-reads-attacks` — Second Strike's "if you've dealt damage this turn" reads attacks PLAYED (stronger than
+  printed after a blocked swing); left alone because Second Strike is a dealt card.
+- **Pins repinned after reading:** WIRE_V (dichotomy, wire), the pending kinds the table demuxes (`split.test.js`, +`bancost`, window 560 -> 600), the trainer's busy
+  lists (`soulcost.test.js`), the sheet doors (+`confirmBanCost`, an answer), `runechants.test.js` (usurp now hands on to `maybeBanCost`), the approximation ledger.
+- **WIRE_V 42 -> 43** (a pending kind, an action, a held declaration, three `hist` counts). No DATA_VER change. The function must be redeployed (`APP_VER`, engine files).
+
 ## v6.42 — the sixth reader for Viserai, Between Worlds: the special Runechants
 
 - **Nothing a player can be dealt changed.** Engine groundwork (`ROADMAP-NEWDECKS.md`). Measured over every pool and staged record (851 parses, before and after): exactly TWO
