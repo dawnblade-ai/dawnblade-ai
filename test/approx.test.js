@@ -283,7 +283,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      holds, and only the stated/closed split below moves. */
   /* v5.72 closes `trainer-no-stalemate-draw` and adds nothing: the count holds,
      and only the stated/closed split below moves. */
-  assert.equal(Object.keys(APPROX).length, 58, "record count moved");
+  /* 58 -> 59 AT v6.42: `destroy-a-runechant-cost-unasked`, open. */
+  assert.equal(Object.keys(APPROX).length, 59, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -405,7 +406,9 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 2 -> 1 AT v5.11: `simultaneous-trigger-order` is `stated`. */
   /* 1 -> 0 AT v5.57: `cloaked-display`, the last open record, was BUILT (the
      user's ruling of 2026-07-25) and is `closed` with its probe turned round. */
-  assert.equal(n("open"),    0, "open count moved");
+  /* 0 -> 1 AT v6.42: `destroy-a-runechant-cost-unasked` — Runebleed Robe with a
+     special Runechant and a token in the arena takes the token unasked. */
+  assert.equal(n("open"),    1, "open count moved");
   /* 16 -> 17 AT v4.63: `steam-build-powcard-read`. 17 -> 18 AT v4.66:
      `play-held-on-the-stack`. 19 -> 20 AT v4.72: `x-cost-declared`.
      20 -> 21 AT v4.73: `crush-halving-rider-read`. 21 -> 22 AT v4.74:
@@ -2314,4 +2317,19 @@ probe("no-sudden-death", () => {
       .replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
     assert.ok(!/sudden[ _-]?death/i.test(src), f + " now speaks of sudden death — build it from the ruling and move the record");
   }
+});
+
+/* OPEN AT v6.42. DRIVEN: with a Runechant token AND a Runechant of Lust in
+   the arena, the Robe's cost reader takes the token and nothing asks; with
+   Lust alone, Lust pays (CR 1.8.8 — the reader half that IS built). */
+probe("destroy-a-runechant-cost-unasked", () => {
+  H.db();
+  const C2 = require("../engine/cards.js");
+  const ST = C2.buildMaps(require("../data/staged.js").filter(c => c && c.name).map(C2.mapDbCard));
+  const lust = {...C2.resolveEntry(ST, {name: "Runechant of Lust", p: 0, code: null, q: 1}), uid: "ls"};
+  const tokc = {...H.tok("Runechant"), uid: "tk"};
+  const both = {board: [{uid: "ls", card: lust}, {uid: "tk", card: tokc}]};
+  assert.equal(PR.boardEntryNamed(both, "Runechant").uid, "tk", "the token is no longer taken first — build the question and close this record");
+  assert.equal(PR.boardEntryNamed({board: [{uid: "ls", card: lust}]}, "Runechant").uid, "ls",
+    "a special Runechant cannot pay a cost that destroys a Runechant");
 });

@@ -46,7 +46,8 @@ hide a keyword with no reader, so read this as a floor on the work, not a ceilin
      hand / if it's Runeblade|Shadow" conditionals, and Corrupted Crown's "if you do"
   5. **DONE v6.41** (`RX_BAN_PLAY`, `test/gate.test.js`) — the Gate to i'Arathael token and its grant (a declared target in the
      banished zone, stamped playable this turn; the token record was already in the pinned pool)
-  6. the special Runechants ("counts as a Runechant", "when an attack usurps this")
+  6. **DONE v6.42** (`fx.countsAs`, `parser.usurpOffer`, `effects.payDestroyed`, `test/runechants.test.js`) — the special
+     Runechants ("counts as a Runechant", CR 1.8.8; "when an attack usurps this"; usurp asks which Runechant)
   7. the hero: a trigger on creating Runechants, a per-turn count, and **traverse** — the
      hero is double-faced (Viserai, Usurper on the back, a Demon with its own text), which
      no hero in the pool is today

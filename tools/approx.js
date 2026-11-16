@@ -1127,7 +1127,23 @@ const APPROX = {
       "play is not sourced here (rules.fabtcg.com is unreachable from this sandbox), "+
       "so it waits on the user rather than on a guess. The probe asserts the draw is "+
       "still a draw and that no engine source speaks of sudden death outside a comment, "+
-      "so it goes red the day somebody builds one and the record must move."}
+      "so it goes red the day somebody builds one and the record must move."},
+
+  /* ---------------------------------------------------------------- */
+  "destroy-a-runechant-cost-unasked": {
+  status:"open", cr:"1.8.8", board:"both", since:"v6.42", swept:"v6.42",
+  claim:"Runebleed Robe's activation cost \"destroy this and a Runechant you control\" "+
+        "(`parser.boardEntryNamed`) takes a card NAMED Runechant first, and a special "+
+        "Runechant (\"This counts as a Runechant\", CR 1.8.8) only when no token is in the "+
+        "arena: with both kinds there, which one pays is not asked.",
+  why:"Usurp's question was built at v6.42 (`usurpOffer`, a `usurp` pending on both boards) "+
+      "because the staged deck prints usurp on seven cards beside the special Runechants. "+
+      "The Robe is a different cost route (an activation, `_destroyBoard`) and is not in the "+
+      "staged Viserai list, so it was given the reader (a special Runechant may pay, and pays "+
+      "its own destroy line) but not the question. The direction is WEAKER than printed: the "+
+      "player loses the option of spending a Runechant of Lust (which would pay a token) "+
+      "instead of a token. Work, not a ruling: CR 1.8.8 settles that either may pay. The "+
+      "probe asserts the token is taken unasked, so it goes red the day the question is built."}
 
 };
 

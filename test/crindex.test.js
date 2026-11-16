@@ -99,9 +99,11 @@ test("crindex — the verdict counts are pinned", () => {
      public-source rule (parser.bloodDebt, effects.beginEndPhase, test/blooddebt.test.js). */
   /* 91 -> 93 and 81 -> 83 guarded AT v6.39: CR 8.3.49 and 8.3.49a, Usurp
      (parser.usurps, effects.execute, test/usurp.test.js). */
-  assert.equal(rs.length, 93, "the number of distinct CR rules this project cites moved");
+  /* 93 -> 94 and 83 -> 84 guarded AT v6.42: CR 1.8.8, "counts as" (parser `fx.countsAs`,
+     test/runechants.test.js names it). */
+  assert.equal(rs.length, 94, "the number of distinct CR rules this project cites moved");
   /* 50 -> 51 guarded and 6 -> 5 drill-only AT v4.66: CR 7.1.2, built. */
-  assert.equal(by(rs, "guarded").length,   83, "guarded count moved");
+  assert.equal(by(rs, "guarded").length,   84, "guarded count moved");
   assert.equal(by(rs, "UNGUARDED").length,  3, "UNGUARDED count moved");
   assert.equal(by(rs, "drill-only").length, 5, "drill-only count moved");
   assert.equal(by(rs, "prose").length,      2, "prose count moved");

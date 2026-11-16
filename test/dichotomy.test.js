@@ -770,7 +770,8 @@ test("a `filters` prompt survives the wire, which is what the bump is ABOUT", ()
   /* 38 -> 39 AT the hand reveals: the pick prompt's `reveal` (Crash and Bash, Flamecall Awakening). */
   /* 39 -> 40: a foe-minted token's `madeBy` (ship/sharp-board). */
   /* 40 -> 41 AT v6.40: the opt prompt's `ops`, the pick prompt's `defUid` (test/banishif.test.js). */
-  assert.equal(W.WIRE_V, 41, "the bump moved — say what changed in wire.js's header");
+  /* 41 -> 42 AT v6.42: the `usurp` pending kind and action, the `_usurpUid` declaration (test/runechants.test.js). */
+  assert.equal(W.WIRE_V, 42, "the bump moved — say what changed in wire.js's header");
   const g = H.state({grave: [RATK("a1"), RNON("n1")], res: 9, ap: 1}, {}, {actor: 0, turn: 3});
   g.prompt = sheet([RATK("a1"), RNON("n1")]);
   assert.ok(g.prompt && g.prompt.filters, "fixture: the sheet carries the field");

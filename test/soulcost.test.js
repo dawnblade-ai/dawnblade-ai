@@ -364,7 +364,7 @@ test("the table demuxes the pending and the trainer's busy lists name the new mo
   assert.match(HTML, /const soulcost = kindIs\("soulcost"\);/);
   assert.match(HTML, /: soulcost \? <>/, "the table's action bar has no branch for the question");
   assert.match(HTML, /fire\(\{t:"soulcost",uid:u\}\)/, "the table's button answers with the wrong action");
-  const lists = HTML.match(/\["pay","arsenal","boostpick","fusepick","chargepick","discpick"(?:,"soulpick")?(?:,"targetpick")?\]/g) || [];
+  const lists = HTML.match(/\["pay","arsenal","boostpick","fusepick","chargepick","discpick"(?:,"soulpick")?(?:,"targetpick")?(?:,"usurppick")?\]/g) || [];
   assert.equal(lists.length, 2, "a hand-ability busy list moved — re-anchor this drill");
   for(const l of lists) assert.match(l, /"soulpick"/, "a sheet is open and the hand ability may still start: " + l);
 });

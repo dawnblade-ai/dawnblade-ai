@@ -1,3 +1,31 @@
+## v6.42 — the sixth reader for Viserai, Between Worlds: the special Runechants
+
+- **Nothing a player can be dealt changed.** Engine groundwork (`ROADMAP-NEWDECKS.md`). Measured over every pool and staged record (851 parses, before and after): exactly TWO
+  records read differently, Runechant of Lust and Runechant of Sloth (`part` -> `full`). `npm run audit`: the pool is unchanged. Census: Viserai 27 / 8 / 0 -> 29 / 6 / 0.
+- **The cards** (Runeblade Instant - Aura): "This counts as a Runechant. When an attack usurps this, create a Runechant token. [Sloth: ... it gets go again.] When this is
+  destroyed, create a Runechant token. At the beginning of your action phase or when you play an attack action card, destroy this."
+- **"Counts as" is CR 1.8.8** (quoted verbatim at `fx.countsAs`): the card IS a Runechant to every rule and effect that asks, without gaining the token's text.
+  `parser.isRunechant` is the one reader, so `runeCount` (the "{r} less for each Runechant you control" discounts, the pips, the report), usurp and Runebleed Robe's
+  "destroy ... a Runechant you control" (`boardEntryNamed`) all see them, on both boards.
+- **Usurp asks WHICH Runechant when the choice matters** (handoff's Usurp open item a). `parser.usurpTargets` (the candidates), `usurpOffer` (one uid per DIFFERENT card,
+  null while every candidate is the same card: a board of plain tokens asks nothing, exactly as before) and `usurpTarget(sd, uid)`. The answer is a COST, so it is a `pending`
+  settled before the card resolves: `judge.maybeUsurp` -> `usurp {uid}` (no decline: "if able"), and the trainer's `usurppick` sheet; it rides to `execute` as `_usurpUid`
+  (a `HELD_DECL`), which re-derives it. The AI answers through `judge.usurpAnswer` / `usurpWorth` (what destroying it pays, less the arcane it would have dealt), reason key `usurp`.
+- **"When an attack usurps this, ..."** (`fx.onUsurp`: a Runechant token, or go again for the attack), paid where usurp is paid, gated on the played card being an attack.
+- **"At the beginning of your action phase or when you play an attack action card, destroy this"**: the attack-play trigger reads with an empty payload and the leading event
+  becomes the start-of-turn schedule (`selfDestruct "turn"`, `sweepArena`), the one every "at the beginning of your action phase, destroy this" card rides on.
+- **"When this is destroyed, create a Runechant token" did NOT already work** (ask the engine, not the note): it parsed, but `fx.onDestroy` was paid at one site only (an attack
+  popped by phantasm). It is now paid wherever a permanent is destroyed — usurp, the attack-play trigger, the start-of-turn sweep and the Robe's cost — through
+  `effects.fileDestroyed` (a real card goes to its owner's graveyard, turn-stamped; a token ceases to exist) and `effects.payDestroyed` (its controller's line). Usurped Lust
+  pays two tokens; both are made below the firing-set capture, so neither pops on the attack that usurped it (v2.23's rule).
+- **Drill `test/runechants.test.js`** (sabotaged twenty ways, each bit).
+- **Pins repinned after reading:** WIRE_V (dichotomy, wire), the pending kinds the table demuxes (`split.test.js`, +`usurp`, window 520 -> 560), the trainer's busy-mode
+  lists (`soulcost.test.js`), the sheet doors (+`confirmUsurp`, an answer), the policy census (`usurp` is driven by the drill, no pool deck reaches it), the `tryPlay` slice
+  (26,993 -> 27,014: `usurppick` in the busy list, `maybeUsurp` at the payment's exit), CR index 93 / 83 -> 94 / 84 (CR 1.8.8), the approximation ledger (58 -> 59 records,
+  0 -> 1 open).
+- **OPEN (`tools/approx.js` `destroy-a-runechant-cost-unasked`):** Runebleed Robe takes a token before a special Runechant and does not ask; weaker than printed.
+- **WIRE_V 41 -> 42** (a pending kind, an action, a held declaration). No DATA_VER change. The function must be redeployed (`APP_VER`, engine files).
+
 ## v6.41 — the fifth reader for Viserai, Between Worlds: the Gate to i'Arathael
 
 - **Nothing a player can be dealt changed.** Engine groundwork (`ROADMAP-NEWDECKS.md`). Measured over every pool and staged record (850 parses, before and after): exactly ONE

@@ -485,7 +485,9 @@ test("every pending kind judge can open has a branch at the table", () => {
   /* +abtarget AT v5.72: an activated ability's printed TARGET is declared
      when it is activated (Beckoning Haunt's aura, and the X it settles),
      before the cost — one button per target it may name, and a Cancel. */
-  assert.deepEqual([...kinds].sort(), ["abtarget", "addPay", "boost", "charge", "discost", "fuse", "pay", "soulcost", "split", "xval"]);
+  /* +usurp AT v6.42: with a special Runechant in the arena (CR 1.8.8), WHICH
+     Runechant usurp's additional cost destroys — one button per different card. */
+  assert.deepEqual([...kinds].sort(), ["abtarget", "addPay", "boost", "charge", "discost", "fuse", "pay", "soulcost", "split", "usurp", "xval"]);
   const strip = t => t.replace(/\/\*[\s\S]*?\*\//g, "");
   const htm = strip(fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8"));
   const i = htm.indexOf("const kindIs = k =>");
@@ -493,7 +495,8 @@ test("every pending kind judge can open has a branch at the table", () => {
   /* 400 -> 460 AT v5.59: the demux gained a ninth `kindIs` line (`soulcost`),
      and the window is the span those lines occupy, not a claim about them. */
   /* 460 -> 520 AT v5.72: a tenth `kindIs` line (`abtarget`). */
-  const demux = htm.slice(i, i + 520);
+  /* 520 -> 560 AT v6.42: an eleventh (`usurp`). */
+  const demux = htm.slice(i, i + 560);
   for(const k of kinds)
     assert.ok(demux.indexOf('kindIs("' + k + '")') > 0,
       'the table must demux "' + k + '" explicitly — a kind with no branch is a screen with no exit');

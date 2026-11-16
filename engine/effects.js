@@ -1164,6 +1164,42 @@ function makeEffects(ctx){
      NOTHING in the pool creates it, so no token an engine can make
      carries one. `test/leavearena.test.js` pins that partition, both
      sides, so a new removal route has to say which one it is. */
+  /* ---- WHAT A DESTROYED PERMANENT PAYS, WHEREVER IT IS DESTROYED (v6.42) --
+     "When this is destroyed, X" (`fx.onDestroy`) was read at v3.58 for the
+     one card that printed it then — Phantasmal Haze, an attack destroyed by
+     phantasm — and paid at that one site. The special Runechants print it
+     on a PERMANENT that leaves three other ways: paid for usurp, its own
+     attack-play trigger, and its start-of-turn schedule (`sweepArena`, which
+     returns the ops for its caller). `fileDestroyed` puts each card where a
+     destroyed card goes — its owner's graveyard, turn-stamped through `gy`,
+     which drops a token (it ceases to exist) — and `payDestroyed` runs each
+     card's own line as its CONTROLLER (`seat`, borrowed and handed back, the
+     contract `payLeave` keeps below). The caller has already taken the
+     entries off the board. */
+  const fileDestroyed = (s, entries, seat) => {
+    const list = (entries || []).filter(b => b && b.card);
+    if(!list.length) return s;
+    const sides = s.sides.slice();
+    for(const b of list){
+      const home = (b.owner != null && b.owner !== seat) ? b.owner : seat;
+      const filed = gy(s.turn, b.card).map(c => { const o = {...c}; delete o._owner; return o; });
+      if(filed.length) sides[home] = {...sides[home], grave: [...filed, ...(sides[home].grave || [])]};
+    }
+    return {...s, sides};
+  };
+  const payDestroyed = (s, cards, seat) => {
+    let n = s;
+    for(const card of (cards || [])){
+      const ops = (card && P.fxParse(card).onDestroy) || [];
+      if(!ops.length) continue;
+      const was = actorOf(n);
+      n = {...n, actor: seat};
+      n = L(n, card.name + " is destroyed — and it pays out.");
+      n = runOps(n, ops, card.name);
+      n = {...n, actor: was};
+    }
+    return n;
+  };
   const payLeave = (s, card, seat) => {
     const pay = leavePayout(card, (s.sides || [])[seat]);
     if(!pay.length) return s;
@@ -3550,15 +3586,30 @@ function makeEffects(ctx){
        damage, and the others still pop. A token that leaves the arena
        ceases to exist. Only a card PLAYED pays a play cost: a weapon or
        ally activation, or one half of a split card, never does. */
-    let usurped = null;
+    /* WHICH RUNECHANT IS THE PLAYER'S ANSWER (v6.42): `_usurpUid`, asked as
+       a pending before the card resolves on both boards (`parser.usurpOffer`)
+       and re-derived here — a uid that is not a candidate pays with the
+       first one, never with nothing. The destroyed card goes where a
+       destroyed card goes (`fileDestroyed`: a token ceases to exist, a
+       special Runechant is filed), and what it pays — "when an attack
+       usurps this" (`fx.onUsurp`) and "when this is destroyed"
+       (`fx.onDestroy`) — is paid BELOW the firing-set capture, so a
+       Runechant either line creates was not in the arena when the attack
+       was played and does not pop on it (v2.23's rule). */
+    let usurped = null, usurpedEntry = null;
     if(from !== "weapon" && from !== "ally" && P.usurps(card)){
-      const _ut = P.usurpTarget(act(s));
+      const _ut = P.usurpTarget(act(s), s._usurpUid);
       if(_ut){
-        usurped = _ut.card;
+        usurped = _ut.card; usurpedEntry = _ut;
         s = {...s};
         actMut(s).board = act(s).board.filter(b => b.uid !== _ut.uid);
+        s = fileDestroyed(s, [_ut], actorOf(s));
       }
     }
+    if(s._usurpUid !== undefined){ s = {...s}; delete s._usurpUid; }
+    /* "when an ATTACK usurps this": the printed subject is tested, not
+       assumed — every staged usurp card is an attack today. */
+    const usurpOps = usurped && isAttack(card) ? (fxParse(usurped).onUsurp || []) : [];
     const atkTrigAt = (act(s).board || [])
       .map(b => ({b, trig: fxParse(b.card).atkTrigger}))
       .filter(x => x.trig);
@@ -3988,6 +4039,7 @@ function makeEffects(ctx){
         actMut(n).grave = [...gy(n.turn, _de.card), ...act(n).grave];
         n = L(n, `${act(n).name}: ${_de.card.name} is destroyed — the cost is paid.`);
         n = payLeave(n, _de.card, actorOf(n));
+        n = payDestroyed(n, [_de.card], actorOf(n));
       } }
     /* ---- AN ALLY ATTACKS FROM THE ARENA (v3.44) ---------------------
        Nothing is spliced out of a zone: the ally is a permanent and it
@@ -4458,6 +4510,17 @@ function makeEffects(ctx){
        only op mints a Runechant. */
     if(isAtkActionCard(card) && from !== "weapon" && from !== "ally" && from !== "aura")
       n = ctrClock(n, "atkPlay");
+    /* THE USURPED RUNECHANT'S PAYOUT (v6.42), below the capture for v2.23's
+       reason (see where usurp is paid). Its `ga` belongs to the attack and
+       is read at the declaration; the Runechants it creates are made here. */
+    if(usurpedEntry){
+      const _mk = usurpOps.filter(o => o[0] === "rune");
+      if(_mk.length){
+        n = L(n, `${usurped.name} was usurped — and it pays out.`);
+        n = runOps(n, _mk, usurped.name);
+      }
+      n = payDestroyed(n, [usurped], actorOf(n));
+    }
     if(card._drac && act(n).dracCard){
       actMut(n).dracCard = false;
       n = L(n, `${card.name} is Draconic \u2014 the grant is spent.`);
@@ -5212,6 +5275,7 @@ function makeEffects(ctx){
       if(usurped){
         total += 2;
         declNote += ` Usurp — ${sv(act(n), "destroy")} a ${usurped.name} to pay for it, and ${card.name} gets +2 power.`;
+        if(usurpOps.some(o => o[0] === "ga")){ ga = true; declNote += ` ${usurped.name} gives it go again.`; }
       }
       {
         const _dbf = P.nextTurnDebuff(act(n), "firstAtkMinus");
@@ -5248,8 +5312,12 @@ function makeEffects(ctx){
         if(fire.length){
           const uids = new Set(fire.map(x => x.b.uid));
           /* A token that leaves the arena ceases to exist — it is not a
-             real card and never enters a graveyard. */
+             real card and never enters a graveyard. A CARD does (v6.42: the
+             special Runechants print this trigger with no payload), and its
+             own "when this is destroyed" line pays (`payDestroyed`). */
           actMut(n).board = act(n).board.filter(b => !uids.has(b.uid));
+          n = fileDestroyed(n, fire.map(x => x.b), actorOf(n));
+          n = payDestroyed(n, fire.map(x => x.b.card), actorOf(n));
           let arcCount = 0, arcDmg = 0, arcName = "";
           for(const x of fire){
             for(const op of x.trig.ops){
@@ -5597,8 +5665,11 @@ function makeEffects(ctx){
       { const fire = atkTrigAt.filter(x => (x.trig.on || []).indexOf("nonAtk") >= 0);
         if(fire.length && !isAttack(card)){
           const uids = new Set(fire.map(x => x.b.uid));
-          /* a token that leaves the arena ceases to exist */
+          /* a token that leaves the arena ceases to exist; a card is filed
+             and pays its own destroy line (v6.42, the attack route's rule) */
           actMut(n).board = act(n).board.filter(b => !uids.has(b.uid));
+          n = fileDestroyed(n, fire.map(x => x.b), actorOf(n));
+          n = payDestroyed(n, fire.map(x => x.b.card), actorOf(n));
           for(const x of fire) for(const op of x.trig.ops){
             if(op[0] === "ga"){ ga = true; n = L(n, `${x.b.card.name} pops — ${card.name} goes again.`); }
           }
@@ -10133,7 +10204,9 @@ function sweepArena(game, seat, when){
        happened to be built first. */
     const f = P.fxParse(b.card);
     const di = (f.ops || []).findIndex(o => o[0] === "selfDestruct");
-    const pay = [...(di >= 0 ? f.ops.slice(di + 1) : []), ...leavePayout(b.card, sd)];
+    /* AND "WHEN THIS IS DESTROYED, X" (v6.42) — the schedule destroys it,
+       so its own destroy line pays (the special Runechants' token). */
+    const pay = [...(di >= 0 ? f.ops.slice(di + 1) : []), ...leavePayout(b.card, sd), ...(f.onDestroy || [])];
     /* THE LEAVES HALF of "when this enters or leaves the arena" (v3.20).
        It queues rather than resolves, because the cost is a CHOICE — and
        it goes out as a `pickPrompt` op rather than onto `promptQ`

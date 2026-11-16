@@ -334,7 +334,11 @@
    card prints after the opt — Pull from Beyond's banish waits for the sheet) and
    a `pick` prompt carries `defUid` (the defender a paid +{d} belongs to — Corrupted
    Crown pays with a card). A `pick` filter may carry `notUids`. */
-const WIRE_V = 41;
+/* 41 -> 42 AT v6.42: `pending` gains a KIND (`usurp`, which Runechant usurp's
+   additional cost destroys), answered by a new action `usurp {uid}`, and the
+   answer rides on a held play's `decl` as `_usurpUid` (`judge.HELD_DECL`). A v41
+   peer answers no `usurp` and would play the first Runechant unasked. */
+const WIRE_V = 42;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

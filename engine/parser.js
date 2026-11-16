@@ -5300,15 +5300,30 @@ function fxParse(card){
      played. Latent rather than live — measured across all fifteen decks,
      none holds both a minter and an attacking ally — but the route has
      existed since v3.44 and the routes are named now. */
+  /* THE SPECIAL RUNECHANTS (v6.42) print the trigger with NO payload and a
+     second event in front of it:
+
+       "At the beginning of your action phase or when you play an attack
+        action card, destroy this."     — Runechant of Lust / of Sloth
+
+     Both halves are one printed sentence and both destroy the card, so the
+     reader takes them together: the leading event becomes the start-of-turn
+     schedule every other "at the beginning of your action phase, destroy
+     this" card rides on (`selfDestruct "turn"`, `sweepArena`), and the play
+     half is this trigger with an EMPTY payload — the destroy alone. What a
+     destroyed card pays out is its own "when this is destroyed" line
+     (`fx.onDestroy`), paid wherever it leaves (`effects.payDestroyed`). */
   for(let ci = 0; ci < clauses.length; ci++){
     const cl = clauses[ci];
     const m = cl.match(
-      /^when you (?:play an? (attack|non-attack) action card( or activate a weapon attack)?|activate a weapon attack), destroy (?:this|it) and (.+)$/i);
+      /^(at the beginning of your action phase or )?when you (?:play an? (attack|non-attack) action card( or activate a weapon attack)?|activate a weapon attack), destroy (?:this|it)(?: and (.+?))?\.?$/i);
     if(!m) continue;
+    const lead = !!m[1];
+    m.splice(1, 1);
     const on = !m[1] ? ["weapon"]
              : m[1].toLowerCase() === "non-attack" ? ["nonAtk"]
              : (m[2] ? ["atk", "weapon"] : ["atk"]);
-    const tail = m[3].trim().replace(/\.$/, "");
+    const tail = (m[3] || "").trim().replace(/\.$/, "");
     let ops = null;
     /* "THE ATTACK" and "THE CARD" name the same thing on their own route —
        the object just played or activated — so they share an op. Read off
@@ -5316,7 +5331,8 @@ function fxParse(card){
        cannot say "the attack", and one whose trigger is an attack cannot
        say "the card". */
     const subj = on[0] === "nonAtk" ? "card" : "attack";
-    if(new RegExp("^the " + subj + " (?:gains?|gets?|has) go again$", "i").test(tail)) ops = [["ga"]];
+    if(!tail) ops = [];                   /* the destroy alone (v6.42) */
+    else if(new RegExp("^the " + subj + " (?:gains?|gets?|has) go again$", "i").test(tail)) ops = [["ga"]];
     else {
       const pm = tail.match(/^the attack (?:gains?|gets?|has) \+(\d+)\{p\}$/i);
       if(pm) ops = [["pump", +pm[1]]];
@@ -5336,6 +5352,7 @@ function fxParse(card){
     }
     if(!ops) continue;                    /* unreadable payload — do not claim it */
     fx.atkTrigger = {on, ops};
+    if(lead) fx.ops.push(["selfDestruct", "turn"]);
     /* MARK IT CONSUMED, because it is WIRED. Rule 2 forbids parsing ahead
        of wiring — reading a clause raises the card's tier and makes the
        audit claim it works — and the other side of that rule is that a
@@ -5492,6 +5509,56 @@ function fxParse(card){
        the call v3.57 made for the leave-trigger. */
     if(sub.cond) continue;
     fx.onDestroy = sub.ops;
+    handled.add(ci);
+    break;
+  }
+
+  /* ---- THE SPECIAL RUNECHANTS (v6.42) — "THIS COUNTS AS A RUNECHANT" ----
+
+     CR 1.8.8 (verbatim, rules.fabtcg.com): "If an effect instructs a player
+     to perform an action "as though" the game state or rules were
+     modified, or if an effect states an object or action "counts as"
+     another object or action, rules and effects consider the modified game
+     state or rules for the applicable effect only."
+
+     So the card IS a Runechant to every rule and effect that asks for one:
+     it is counted ("for each Runechant you control"), and a cost that
+     destroys "a Runechant" may destroy it (usurp, CR 8.3.49 — and the card
+     says so itself: "when an attack usurps this"). It does NOT gain the
+     token's printed text: its own lines say what it does when an attack is
+     played. Carried as `fx.countsAs` (the lowercased object it counts as);
+     `isRunechant` is the one reader. */
+  for(let ci = 0; ci < clauses.length; ci++){
+    if(handled.has(ci)) continue;
+    const cm = clauses[ci].match(/^this counts as an? ([a-z][a-z' -]*?)\.?$/i);
+    if(!cm || !/^runechant$/i.test(cm[1])) continue;   /* only the object a reader asks about */
+    fx.countsAs = cm[1].toLowerCase();
+    handled.add(ci);
+    break;
+  }
+  /* ---- "WHEN AN ATTACK USURPS THIS, …" (v6.42) ---------------------------
+     CR 8.3.49a (verbatim): "If a player pays the additional cost to play a
+     card with usurp, the player and the played card are considered to have
+     usurped and Runechant that was destroyed is considered to have been
+     usurped." The trigger is the DESTROYED card's: it fires when the cost
+     is paid with it (`effects.executeInner`, where usurp is paid). Two
+     payloads are printed and both are read: "create a Runechant token" (the
+     one reader, `classifyClause`) and "it gets go again" — "it" is the
+     attack that usurped, so the op is the attack's `ga`. Anything else
+     refuses: `effects` runs only `rune` and `ga` from this list. */
+  for(let ci = 0; ci < clauses.length; ci++){
+    if(handled.has(ci)) continue;
+    const um = clauses[ci].match(/^when an attack usurps this, (.+?)\.?$/i);
+    if(!um) continue;
+    let ops = null;
+    if(/^it (?:gains?|gets?) (?:\*\*)?go again(?:\*\*)?$/i.test(um[1].trim())) ops = [["ga"]];
+    else {
+      const sub = classifyClause(um[1]);
+      if(sub && sub.status === "run" && !sub.cond && sub.ops && sub.ops.length
+         && sub.ops.every(o => o[0] === "rune")) ops = sub.ops;
+    }
+    if(!ops) continue;
+    fx.onUsurp = ops;
     handled.add(ci);
     break;
   }
@@ -8235,7 +8302,11 @@ function boardRed(c,sd){
 
    These live in the parser because it is the module everything else takes
    as its dependency, and because `boardRed` already reads `sd.board`. */
-const isRunechant = b => !!(b && b.card && norm(b.card.name) === "runechant");
+/* AND WHAT COUNTS AS ONE (v6.42, CR 1.8.8 — quoted at `fx.countsAs`): the
+   special Runechants are counted, and may pay a cost that destroys "a
+   Runechant", wherever this reader is asked. */
+const isRunechantCard = c => !!c && (norm(c.name) === "runechant" || fxParse(c).countsAs === "runechant");
+const isRunechant = b => !!(b && b.card && isRunechantCard(b.card));
 const runeCount = sd => (sd && sd.board) ? sd.board.filter(isRunechant).length : 0;
 /* Any aura this side controls — what "3 or more auras" has to count. */
 const isAura = b => !!(b && (b.kind === "aura" || (b.card && /\baura\b/i.test(b.card.tt || ""))));
@@ -9785,13 +9856,40 @@ const printedKw = (c, k) => {
    So there is nothing to ask while every Runechant is the same token.
 
    `printedKw`, NEVER `hasKw` (an additional cost is carried or it is not).
-   `usurpTarget` answers WHICH aura pays: the first Runechant on the board.
-   STATED LIMIT: the special Runechants ("This counts as a Runechant") are
-   not read yet; the day they are, two different Runechants make this a
-   choice the player is owed, and this reader must return the candidates. */
+
+   WHICH RUNECHANT IS THE PLAYER'S CHOICE (v6.42). The special Runechants
+   ("This counts as a Runechant", CR 1.8.8 at `fx.countsAs`) are Runechants
+   too, and destroying one is not the same play as destroying a token:
+   Runechant of Lust pays a Runechant token when an attack usurps it, Sloth
+   gives the attack go again. So:
+
+     usurpTargets(sd)       every entry that may pay — the CANDIDATES;
+     usurpOffer(card, sd)   the question, or null when there is none to
+                            ask: one uid per DIFFERENT card (by name), and
+                            null while every candidate is the same card (all
+                            plain Runechant tokens: nothing to choose, so no
+                            question is asked, exactly as before v6.42);
+     usurpTarget(sd, uid)   the entry that pays: the one the player named
+                            when it is a candidate, else the first.
+
+   The answer is a COST, so both boards ask it as a `pending` before the
+   card resolves (`judge.maybeUsurp`, the trainer's `usurppick`) and it rides
+   to `execute` on the state as `_usurpUid`, `_fuseUid`'s seam. */
 const usurps = c => !!c && printedKw(c, "usurp");
-function usurpTarget(sd){
-  return ((sd && sd.board) || []).find(isRunechant) || null;
+const usurpTargets = sd => ((sd && sd.board) || []).filter(isRunechant);
+function usurpOffer(card, sd){
+  if(!usurps(card)) return null;
+  const seen = new Set(), uids = [];
+  for(const b of usurpTargets(sd)){
+    const k = norm(b.card.name);
+    if(seen.has(k)) continue;
+    seen.add(k); uids.push(b.uid);
+  }
+  return uids.length > 1 ? {uids} : null;
+}
+function usurpTarget(sd, uid){
+  const all = usurpTargets(sd);
+  return (uid != null && all.find(b => b.uid === uid)) || all[0] || null;
 }
 
 /* ---- BLOOD DEBT — WHICH BANISHED CARDS BILL THEIR OWNER (v6.38) --------
@@ -10758,8 +10856,14 @@ const abilitiesLive = c => {
 function boardEntryNamed(sd, name){
   if(!sd || !name) return null;
   const want = String(name).toLowerCase();
-  return ((sd.board || []).find(b => b && b.card
-      && String(b.card.name || "").toLowerCase() === want)) || null;
+  /* AN OBJECT THAT COUNTS AS ONE PAYS TOO (v6.42, CR 1.8.8 at
+     `fx.countsAs`): Runebleed Robe's "destroy this and a Runechant you
+     control" may take a special Runechant. The card NAMED so is taken
+     first; WHICH one, when both kinds are in the arena, is not asked here —
+     an open item in tools/approx.js. */
+  const board = sd.board || [];
+  return board.find(b => b && b.card && String(b.card.name || "").toLowerCase() === want)
+      || board.find(b => b && b.card && fxParse(b.card).countsAs === want) || null;
 }
 
 function defCap(card, held, opts){
@@ -10997,7 +11101,7 @@ return {norm, noopFeedText, noopIsQuiet, isAttack, isArrow, isWeapon, hasGA, arc
         nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, qualColour, CLASS_TALENT_WORDS, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, isActionCard, costOffFor, heaveOf,
         classifyClause, fxParse, fxReset, playableFromZone, playZoneWhy, addCostWhy, isArrowCard, boostPays, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost, isActivation, isActionPaid, costTaxes, handAbilityTax,
         DECL_OPS, dracLinks, dracNow, dracLinksNow, weaponCost, payTrigger, OFFER_TRIGGERS, allyAttack, auraWeaponGrant, wardValue, wardBearers, wardTotal, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, routeCostsAP, rxAllowed, drxBarred, drxBarWhy, rxPump,
-        idleCounterWipes, rustedThrough, bloodDebt, usurps, usurpTarget,
+        idleCounterWipes, rustedThrough, bloodDebt, usurps, usurpTarget, usurpTargets, usurpOffer, isRunechantCard,
         isAtkActionCard, phantasmPops, zonePow, pow6, kwGated, hasKwNow, printedKw,
         crankCost, fusionOffer, chargeOffer,
         isRunechant, runeCount, isAura, auraCount, isFrostbite, frostCount,

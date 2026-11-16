@@ -308,6 +308,7 @@ const ACTIONS = [
   "discost",     /* {uid}        which card an activation's discard cost spends (v4.85) */
   "soulcost",    /* {uid}        which soul card an activation's soul banish takes (v5.59) */
   "abtarget",    /* {uid}        the target an activated ability declares, before the cost (v5.72) */
+  "usurp",       /* {uid}        which Runechant usurp's additional cost destroys (v6.42) */
   "defend",      /* {uid}        toggle a defender (hand card or gear)    */
   "pass",        /*              pass priority — CR 4.2.2                 */
   "arsenal",     /* {uid|null}   end-phase step (b); null leaves it empty */
@@ -344,7 +345,7 @@ const ACTIONS = [
 
    Exported so a board can be held to covering all of them rather than to
    remembering — the next kind added walks into the same fallback. */
-const PENDING_KINDS = ["pay", "boost", "addPay", "split", "fuse", "charge", "xval", "discost", "soulcost", "abtarget"];
+const PENDING_KINDS = ["pay", "boost", "addPay", "split", "fuse", "charge", "xval", "discost", "soulcost", "abtarget", "usurp"];
 const PROMPT_ACTIONS = ["promptSel", "promptChoose", "promptConfirm", "promptDecline",
                         "promptTakeBack", "promptMove"];
 
@@ -948,6 +949,16 @@ function legal(g, a, seat){
     return null;
   }
   if(a.t === "soulcost") return "nothing is asking which soul card to banish";
+  /* WHICH RUNECHANT USURP DESTROYS (v6.42). The candidates ride on the
+     pending, off `parser.usurpOffer` when the question was asked. "If able"
+     is not "you may" (CR 8.3.49), so there is no decline: a null or a uid
+     off the offer is refused. */
+  if(p && p.kind === "usurp"){
+    if(a.t !== "usurp") return "choose which Runechant " + p.card.name + " usurps first";
+    if((p.uids || []).indexOf(a.uid) < 0) return "that is not a Runechant the cost can destroy";
+    return null;
+  }
+  if(a.t === "usurp") return "nothing is asking which Runechant to usurp";
   /* THE TARGET AN ACTIVATED ABILITY DECLARES (v5.72). The candidates ride on
      the pending, taken off the same pool the activation's legality asked, so
      a wire answer naming anything else is refused rather than declared. A
@@ -3320,6 +3331,7 @@ function reduce(g, a, seat){
     case "discost":   n = doDiscCost(n, a, seat); break;
     case "soulcost":  n = doSoulCost(n, a, seat); break;
     case "abtarget":  n = doAbTarget(n, a, seat); break;
+    case "usurp":     n = doUsurp(n, a, seat); break;
     case "addPay":    n = doAddPay(n, a, seat); break;
     case "boost":     n = doBoost(n, a, seat); break;
     case "fuse":      n = doFuse(n, a, seat); break;
@@ -3520,7 +3532,7 @@ function doPlay(g, a, seat){
      cannot change the outcome — declining a boost refunds nothing and
      costs nothing. It matches the trainer's order deliberately, so a
      player who learns one board is not surprised by the other. */
-  return maybeCharge(g, card, zone, seat, window, target);
+  return maybeUsurp(g, card, zone, seat, window, target);
 }
 
 /* The window a card is actually being played in: the intersection of
@@ -3791,7 +3803,7 @@ function doPayConfirm(g, seat){
   /* A weapon swing never boosts (boost is printed on attack ACTIONS), but
      this asks rather than assuming — `boostable` reads the keyword, and a
      predicate that reads the card cannot be wrong about a card. */
-  return maybeCharge(n, p.card, p.from, seat, p.window, p.target);
+  return maybeUsurp(n, p.card, p.from, seat, p.window, p.target);
 }
 
 /* THE CARD RESOLVES, AND ITS TEXT RESOLVES WITH IT (v2.77).
@@ -3855,9 +3867,10 @@ function commitPlayBoosted(g, card, zone, seat, window, target, doBoost, addPaid
                          card, zone, seat, window, target);
   if(out && (out._doBoost !== undefined || out._addPaid !== undefined
           || out._half !== undefined || out._fuseUid !== undefined
-          || out._chargeUids !== undefined || out._x !== undefined)){
+          || out._chargeUids !== undefined || out._x !== undefined
+          || out._usurpUid !== undefined)){
     const n = {...out}; delete n._doBoost; delete n._addPaid; delete n._half;
-    delete n._fuseUid; delete n._chargeUids; delete n._x; return n;
+    delete n._fuseUid; delete n._chargeUids; delete n._x; delete n._usurpUid; return n;
   }
   return out;
 }
@@ -3922,6 +3935,51 @@ function commitPlayBoosted(g, card, zone, seat, window, target, doBoost, addPaid
    upstream's own wording — "you may elect to NOT pay the additional cost
    of charge" — and it is also the only reading under which the sheet
    terminates on a hand the player refuses to spend. */
+/* USURP — WHICH RUNECHANT PAYS (v6.42). CR 8.3.49 (verbatim): "Usurp is a
+   play-static ability that means 'As an additional cost to play this,
+   destroy a Runechant if able. If you destroy a Runechant in this way, this
+   gets +2 {p}.'" A Runechant of Lust or Sloth counts as one (CR 1.8.8, at
+   `parser.isRunechant`), so with two DIFFERENT cards that could pay, which
+   one is destroyed is the player's: Fusion's shape, with no decline ("if
+   able"). Asked only then (`parser.usurpOffer`, one uid per different
+   card): a board of plain Runechant tokens asks nothing, as before. The
+   answer rides to `execute` on the state as `_usurpUid` (a `HELD_DECL`),
+   which re-derives it. Asked first of the additional costs; no pool or
+   staged record prints usurp beside charge, fusion, boost or a resource
+   additional cost, so the order changes no outcome (stated, as
+   `maybeCharge` states its own). */
+function maybeUsurp(g, card, zone, seat, window, target){
+  const offer = g._usurpUid === undefined ? PR.usurpOffer(card, at(g, seat)) : null;
+  if(!offer) return maybeCharge(g, card, zone, seat, window, target);
+  return say({...g, pending: {kind: "usurp", seat, card, from: zone, window, target, uids: offer.uids}},
+    card.name + " has usurp — " + at(g, seat).name + " chooses which Runechant to destroy.");
+}
+function doUsurp(g, a, seat){
+  const p = g.pending;
+  const uid = (p.uids || []).indexOf(a.uid) >= 0 ? a.uid : (p.uids || [])[0];
+  return maybeCharge({...g, pending: null, _usurpUid: uid}, p.card, p.from, seat, p.window, p.target);
+}
+/* THE AI'S ANSWER, through a reader (sparring reads no card text): what each
+   candidate is worth destroyed, off `usurpWorth`, highest first, then uid. */
+function usurpWorth(g, seat, uid){
+  const b = ((at(g, seat) || {}).board || []).find(x => x && x.uid === uid);
+  if(!b) return -99;
+  const fx = PR.fxParse(b.card);
+  const made = ops => (ops || []).filter(o => o[0] === "rune").reduce((t, o) => t + (+o[1] || 0), 0);
+  /* what destroying it now pays (its usurp line and its destroy line), what
+     it would have dealt on this attack had it stayed (its pop), and go again */
+  const lost = ((fx.atkTrigger && fx.atkTrigger.ops) || []).filter(o => o[0] === "arcane").reduce((t, o) => t + (+o[1] || 0), 0);
+  const ga = (fx.onUsurp || []).some(o => o[0] === "ga") ? 1 : 0;
+  return made(fx.onUsurp) + made(fx.onDestroy) + ga - lost;
+}
+function usurpAnswer(g){
+  const p = pendingOf(g);
+  if(!p || p.kind !== "usurp") return null;
+  const by = (x, y) => usurpWorth(g, p.seat, y) - usurpWorth(g, p.seat, x)
+                    || (String(x) < String(y) ? -1 : String(x) > String(y) ? 1 : 0);
+  return [...(p.uids || [])].sort(by)[0] || null;
+}
+
 function maybeCharge(g, card, zone, seat, window, target, picked){
   const got = picked || [];
   const offer = PR.chargeOffer(card, at(g, seat), card && card.uid, got);
@@ -4222,7 +4280,7 @@ function doBoost(g, a, seat){
    outcome of the window is the one this produces. It is also what keeps
    the change invisible to every game in which neither seat holds an
    instant-speed answer. */
-const HELD_DECL = ["_half", "_doBoost", "_addPaid", "_fuseUid", "_chargeUids", "_x", "_discCostUid", "_addDiscPaid", "_soulCostUids", "_actTarget"];
+const HELD_DECL = ["_half", "_doBoost", "_addPaid", "_fuseUid", "_chargeUids", "_x", "_discCostUid", "_addDiscPaid", "_soulCostUids", "_actTarget", "_usurpUid"];
 const HELD_LIFT = {hand: 1, arsenal: 1, grave: 1, banish: 1};
 /* WHICH PLAYS WAIT: everything at ACTION speed. A card played in the
    action window, a weapon swing, an ally's or an aura's attack, and an
@@ -4955,7 +5013,7 @@ function moves(g, seat){
 }
 
 return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, moves, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
+        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, usurpAnswer, usurpWorth, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf, waitingOn,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */
