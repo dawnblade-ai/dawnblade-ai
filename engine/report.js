@@ -147,7 +147,7 @@ function build(g, ctx){
        running an Agent's ability sends the reader hunting a bug that is
        not there. `_brood` is who they go home as. */
     heroes: list(g.builds).map(b => (b && b.heroRec && b.heroRec.n)
-      + (b && b._brood ? " (as an Agent; brood: " + b._brood.n + ")" : ""))
+      + (b && b._brood ? " (as an Agent; brood: " + b._brood.n + ")" : "")
       /* a double-faced hero who has traversed (v6.44): the face it left */
       + (b && b._face ? " (traversed; other face: " + b._face.n + ")" : "")),
     chainOpen: g.chainOpen,
