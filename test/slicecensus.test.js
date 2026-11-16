@@ -295,7 +295,11 @@ test("which SOURCE FILE each slice reads is pinned, or the resolver is unwatched
        kind the pool emits has a BRANCH, the direction that census never
        asked, which is how `playedNamed` fell through for as long as the
        parser emitted it. */
-    "engine/effects.js": 3,
+    /* +1 AT v6.44, READ FIRST: `wreckhavoc.test.js` slices `endTraverseAsks` out of
+       `engine/effects.js`, bounded at `thawFrost`, its next declaration (the safe
+       form) — the second builder that sets `optional`, pinned to print ONE mode,
+       the floor v4.62 widened. A claim about a builder reads the builder. */
+    "engine/effects.js": 4,
     "DERIVED:TABLE": 1,
     "DERIVED:bar": 1,
     "DERIVED:lit": 1,
