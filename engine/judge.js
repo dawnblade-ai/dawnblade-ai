@@ -2105,6 +2105,16 @@ const keepsActionPoint = (g, seat, uid, from) => {
   } else {
     c = from === "arsenal" ? (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null)
       : from === "hand" ? (sd.hand || []).find(x => x && x.uid === uid) : null;
+    /* A PLAY FROM THE BANISHED ZONE ANSWERS THE HERO'S GRANT AND NOTHING ELSE
+       (v6.44). This reader has never looked in the banished zone, and reading
+       a banished card's own go again here would move every hero who plays
+       from banish (a policy change, to be measured). The Usurper's grant is
+       asked because most blood debt attacks are played from there, and no
+       dealt hero prints it. */
+    if(from === "banish"){
+      const bc = (sd.banish || []).find(x => x && x.uid === uid), fk = bOf(g, seat).firstAtkGaKw;
+      return !!(bc && fk && TY.isAttack(bc) && PR.printedKw(bc, fk) && ((sd.hist || {}).atkKws || []).indexOf(fk) < 0);
+    }
     if(!c) return false;
     if(!PR.abilityGa(c) && PR.fxParse(c).ga === true) return true;
     atk = TY.isAttack(c);

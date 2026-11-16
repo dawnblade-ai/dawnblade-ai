@@ -261,6 +261,21 @@ test("the grant is the back face's, and an attack without the keyword neither ta
   assert.equal(you(g).ap, 1, "the plain attack spent the blood debt grant");
 });
 
+test("the grant reaches a blood debt attack played from the banished zone, and the reader says so", {skip}, () => {
+  /* the staged card prints its own banished-zone line and no go again */
+  const real = staged("Cullingsong Gloomblade", "cg", 1);
+  assert.ok(P.fxParse(real).fromBan, "fixture: the staged card no longer prints its banished-zone line");
+  assert.ok(!P.fxParse(real).ga, "fixture: the staged card has go again of its own");
+  let g = world(build(BACK), {banish: [real, {...real, uid: "cg2"}]});
+  assert.equal(J.keepsActionPoint(g, 0, "cg", "banish"), true, "the reader does not see the grant on a banished card");
+  g = settle(act(g, {t: "play", uid: "cg", from: "banish"}, 0));
+  assert.equal(you(g).ap, 1, "a blood debt attack played from banish spent the action point");
+  assert.equal(J.keepsActionPoint(g, 0, "cg2", "banish"), false, "the reader offers the grant twice from banish");
+  /* and the front face gets nothing from there either */
+  const f = world(build(FRONT), {banish: [real]});
+  assert.equal(J.keepsActionPoint(f, 0, "cg", "banish"), false);
+});
+
 test("first means first this TURN: a blood debt attack played before the traverse has spent it", {skip}, () => {
   let g = world(build(BACK), {hand: [blade("b2")], hist: hist({atkKws: ["blood debt"]})});
   assert.equal(J.keepsActionPoint(g, 0, "b2", "hand"), false);
