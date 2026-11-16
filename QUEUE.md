@@ -9,12 +9,43 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-16, at v6.41)
+## HANDOFF — START HERE (CEO, 2026-11-16, at v6.43)
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
-### LATEST (CEO session_013xG9xApGfLDx12ufVr73HU, 2026-11-16, at v6.41)
+### LATEST (CEO session_013xG9xBdjSPqxKpK2H4msnK, 2026-11-16, at v6.43)
+- **State:** live = v6.43 on `main` (c50ea36 = 762e3a3 + the stamp), livecheck ALL PASS. Function `table` version 38 = build
+  `v6.43 · sage-v17`, stamped; `--check` OK. WIRE_V 43. No unreleased work. Everything in the blocks below still holds.
+- **DONE v6.42, reader 6: the special Runechants** (`test/runechants.test.js`). They count as Runechants (CR 1.8.8); usurp asks
+  WHICH Runechant through a `usurp` pending. CORRECTION: "When this is destroyed, create a Runechant token" did NOT already
+  work (v6.41's note was wrong): `onDestroy` was only paid on phantasm pops; it is now paid at every destroy site. Runebleed
+  Robe is a second "destroy a Runechant" consumer.
+- **DONE v6.43, reader 8: the small conditionals** (`test/conditionals.test.js`). Three per-turn facts: `hist.attacked`,
+  `hist.heroDmg`, `hist.banPlay`; a `bancost` pending (optional graveyard banish as an additional cost). Usurp item (b) is
+  CLOSED: `effPowerNow` and the Coach count the +2.
+- **NEEDS A RULING / OPEN (all recorded in tools/approx.js):**
+  - `zero-defence-gear-refused`: CR 7.3.2b says "0 is a value", yet both boards refuse to declare a 0{d} piece, so Olde Leather
+    Boots' +2 is unreachable and no pool 0{d} piece can defend. `test/defcap.test.js` pins the refusal. **ASK THE USER.**
+  - `dealt-damage-reads-attacks`: Second Strike (a dealt card) fires after a swing blocked to nothing: stronger than printed.
+  - `destroy-a-runechant-cost-unasked`: the Robe never asks which Runechant.
+  - `test/referee.test.js`'s leak scanner now skips a hex `h` state hash: worth a second look.
+  - Usurp (c) "the PLAYER usurped" still has no per-turn fact. Older lists (reader 4 a/b; reader 5 trainer route + AI policy
+    for WHEN to open a Gate) still stand.
+- **MEASURE:** `node tools/newdecks-census.js`: Viserai rows 35 full / 0 part / 0 none; Prism 21 full / 4 part / 7 none.
+- **NEXT: reader 7, the double-faced hero: the LAST thing before Viserai can open.** Scout: nothing in engine/ has two faces
+  (grep traverse/face finds only face-down gear and arsenal); staged "Viserai, Between Worlds" and "Viserai, Usurper" are
+  separate and unlinked. Traverse = CR 8.5.60 / 8.5.60a, double-faced cards = CR 9.1: quote verbatim when built. Hero -> seat is
+  build.js `parseHeroPower` / `heroAbilityLine` (one hero record, one ability shape today). "3 or more Runechants created this
+  turn" can read `hist.made`/`madeNames` (must count special Runechants). "created or activated a Gate this turn" needs an
+  activation fact. Usurper: "first attack action card with blood debt you play each turn gets go again". The CR does not say
+  whether a Young/Demon hero pair shares life or which double-faced category it is: read 9.1 in full first, ask the user if
+  unsettled. After 7: the opening release (pin-pool.js takes staged records, DATA_VER bump, formats.json), then Prism.
+- **RELEASE NOTES:** pins that moved: v6.42 `approx`, `crindex`, `dichotomy`, `explain`, `sheetdoors`, `slicecensus`,
+  `soulcost`, `split`, `wire` tests + audit.json; v6.43 the same plus `condcensus`, `referee`, `runechants` (and WIRE_V 42, 43).
+  The permission system refused a SUBAGENT's push to main; the CEO session pushed it after the user approved: ask early.
+
+### PREVIOUS (CEO session_013xG9xApGfLDx12ufVr73HU, 2026-11-16, at v6.41)
 - **State:** live = v6.41 on `main` (8ffc0bb), livecheck ALL PASS. Function `table` version 36 = build `v6.41 · sage-v17`,
   stamped; `--check` OK. No unreleased work. Everything in the blocks below still holds. WIRE_V unchanged (41).
 - **DONE v6.41, reader 5: the Gate to i'Arathael's grant** (`test/gate.test.js`, sabotaged thirteen ways). `RX_BAN_PLAY` in
