@@ -345,7 +345,12 @@
    `banPlay` (per-turn facts, inside a whole-shipped field). A v42 peer answers
    no `bancost` and keeps none of the three counts, so the pair diverges on the
    first attack. Whole-shipped values: by hand, behind the release handshake. */
-const WIRE_V = 43;
+/* 43 -> 44 AT v6.44: `hist` gains `runes`, `actNames` and `atkKws` (per-turn
+   facts, inside a whole-shipped field), a build may carry `_face` (the face a
+   double-faced hero left, beside `_brood`), and `runOps` gains `traverse`. A
+   v43 peer keeps none of the three facts and cannot turn a hero over, so the
+   pair diverges on the third Runechant. By hand, behind the release handshake. */
+const WIRE_V = 44;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

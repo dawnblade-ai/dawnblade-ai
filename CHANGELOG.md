@@ -1,3 +1,33 @@
+## v6.44 — the seventh reader for Viserai, Between Worlds: the double-faced hero and traverse
+
+- **Nothing a player can be dealt changed.** Engine groundwork (`ROADMAP-NEWDECKS.md`), and the LAST reader: `node tools/newdecks-census.js` prints no gap for
+  Viserai's list, hero included, both faces (the census now reads a hero's other face too). `npm run audit`: the pool is unchanged.
+- **The card** is two records sharing a print code (data/staged.js): Viserai, Between Worlds (Young, 20 life) "Whenever you create 1 or more Runechants, banish the
+  top card of your deck. Then if you've created 3 or more Runechants this turn, traverse." and Viserai, Usurper (Demon, life "*") "The first attack action card with
+  blood debt you play each turn gets go again." / "At the beginning of each end phase, if you've created or activated a Gate to i'Arathael this turn, you may traverse."
+- **Traverse is CR 8.5.60 / 8.5.60a** (quoted verbatim at `effects.traverse`): the non-active face becomes the active one; it fails on a card with no other face, or
+  when the ability that asked belongs to a face no longer active. One body, the brood's (v3.76): the ability half of the build is replaced by
+  `build.heroAbilities` of the other face; deck, gear, intellect and the arena are untouched (CR 9.1.2c). `build.facesOf` finds the other face by the shared print
+  code among HERO records (the database has no field linking faces); the build remembers the face it left (`_face`, beside `_brood`).
+- **Four passives off the printed lines** (`build.heroAbilities`, `PASSIVES`, `tools/audit.js` `HERO_STATICS`): `runeBanish`, `runeTraverse` (the printed 3),
+  `firstAtkGaKw` (the printed keyword), `endTraverse` (the printed token name).
+- **Three per-turn facts** in `freshHist`, recorded in `effects.js` for every hero (the facts are the turn's, not the face's): `hist.runes` (Runechants created, the
+  special ones included; one `runesMade` call per creation EVENT from the `rune` and `token` ops, Viserai's rite and the on-hit mint, so "1 or more" banishes one
+  card), `hist.actNames` (arena permanents activated, by name), `hist.atkKws` (printed keywords of attack action cards played, so "first ... each turn" survives a
+  mid-turn traverse).
+- **The Usurper's go again** is granted in `execute` beside Compass's first-graveyard-play grant; `judge.keepsActionPoint` answers it for the AI (hand and arsenal
+  routes; a play from the banished zone is still unread there, as before).
+- **The end-phase "you may traverse"** is step (10) of `beginEndPhase`: EACH end phase, both seats asked, a two-mode sheet addressed to the hero's own seat
+  (staying is the first mode, so the seat policy keeps its face; the end phase holds for the answer, v5.71's route).
+- **LIFE CARRIES OVER: a reading, `tools/approx.js` `traverse-life-carries` (stated, probe driven).** The back prints life "*", which the CR does not define
+  (CR 2.5.3c recalculates only from a new base value); the Agents of Chaos print the same and keep Arakni's life. The game starts on the front, the Silver Age legal face.
+- **Drill `test/traverse.test.js`** (sabotaged twenty-one ways, each bit).
+- **Pins repinned after reading:** `runOps` vocabulary 100 -> 101 (`traverse`, no parser emitter), CR index 97 -> 103 cited / 87 -> 93 guarded (8.5.60, 8.5.60a,
+  9.1.1, 9.1.2, 9.1.2c, 2.5.3c), the approximation ledger 61 -> 62 (19 -> 20 stated), WIRE_V (dichotomy, wire).
+- **WIRE_V 43 -> 44** (three `hist` facts, a build's `_face`, an op). No DATA_VER change. The function must be redeployed (`APP_VER`, engine files).
+- **OWED BEFORE VISERAI OPENS:** the pool's `byCode` map lets the back face overwrite the front under the shared print code (a hero resolves by NAME first, so
+  nothing breaks today); `pin-pool.js` must take BOTH faces; the trainer's route for the traverse sheet is undriven; the AI has no policy for when to turn back.
+
 ## v6.43 — the eighth reader for Viserai, Between Worlds: the small conditionals
 
 - **Nothing a player can be dealt changed.** Engine groundwork (`ROADMAP-NEWDECKS.md`). Measured over every pool and staged record (851 parses, before and after): exactly

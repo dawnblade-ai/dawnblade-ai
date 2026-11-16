@@ -103,9 +103,12 @@ test("crindex — the verdict counts are pinned", () => {
      test/runechants.test.js names it). */
   /* 94 -> 97 and 84 -> 87 guarded AT v6.43: CR 6.4.10a, 7.2.3b, 7.3.1 (effects
      `creditHeroDmg` / `noteAttacked`, test/conditionals.test.js names them). */
-  assert.equal(rs.length, 97, "the number of distinct CR rules this project cites moved");
+  /* 97 -> 103 and 87 -> 93 guarded AT v6.44: CR 8.5.60, 8.5.60a (traverse), 9.1.1, 9.1.2,
+     9.1.2c (double-faced cards) and 2.5.3c (a changed base life), cited at `effects.traverse`
+     and `build.facesOf`; test/traverse.test.js names them. */
+  assert.equal(rs.length, 103, "the number of distinct CR rules this project cites moved");
   /* 50 -> 51 guarded and 6 -> 5 drill-only AT v4.66: CR 7.1.2, built. */
-  assert.equal(by(rs, "guarded").length,   87, "guarded count moved");
+  assert.equal(by(rs, "guarded").length,   93, "guarded count moved");
   assert.equal(by(rs, "UNGUARDED").length,  3, "UNGUARDED count moved");
   assert.equal(by(rs, "drill-only").length, 5, "drill-only count moved");
   assert.equal(by(rs, "prose").length,      2, "prose count moved");

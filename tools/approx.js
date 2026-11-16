@@ -1173,7 +1173,22 @@ const APPROX = {
       "Strike is a dealt card and moving it is a balance change, not a reader. STRONGER than "+
       "printed in the common case (+1{p} and go again after a blocked swing). Work, not a "+
       "ruling: a `hist.dmg` credited at the same sites as `heroDmg` (plus ally damage) answers "+
-      "it exactly. The probe asserts the attack-only reading, so it goes red when it is fixed."}
+      "it exactly. The probe asserts the attack-only reading, so it goes red when it is fixed."},
+
+  "traverse-life-carries": {
+  status:"stated", cr:"2.5.3c", board:"both", since:"v6.44", swept:"v6.44",
+  claim:"When a double-faced hero traverses, the seat's life total does not move, and the game "+
+        "starts on the face the deck list names (Viserai, Between Worlds, 20 life). Viserai, "+
+        "Usurper prints life \"*\".",
+  why:"The CR does not define a printed life of \"*\". CR 2.5.3c says \"If the base life of an "+
+      "living-card changes, then the life total is recalculated using the new base life value "+
+      "of the object\", which needs a value to recalculate with, and \"*\" is not one. CR 9.1 "+
+      "names three kinds of double-faced card (flip, twin, transcend) and a Young hero with a "+
+      "Demon back is none of them by their printed definitions, so which face starts active is "+
+      "also read off the product: the front is the Silver Age legal hero and the back is not. "+
+      "The same reading the brood has had since v3.76 (every Agent of Chaos prints \"*\" and "+
+      "keeps Arakni's life). NEEDS A RULING if the user knows the table practice to differ. "+
+      "The probe drives a traverse at 17 life and reads 17."}
 
 };
 

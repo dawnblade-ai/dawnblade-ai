@@ -381,7 +381,8 @@ test("WIRE_V moves when the payload shape moves, and only then", () => {
   /* 40 -> 41 AT v6.40: the opt prompt's `ops` and the pick prompt's `defUid` — prompt fields, so the digest holds. */
   /* 41 -> 42 AT v6.42: a `pending` KIND (`usurp`), its action and the `_usurpUid` declaration — outside the ledger lists, so the digest holds. */
   /* 42 -> 43 AT v6.43: a `pending` KIND (`bancost`), its action, the `_banCostUid` declaration and three `hist` counts — inside whole-shipped values, so the digest holds. */
-  assert.equal(W.WIRE_V, 43,
+  /* 43 -> 44 AT v6.44: three `hist` facts (`runes`, `actNames`, `atkKws`), a build's `_face` and the `traverse` op — inside whole-shipped values, so the digest holds. */
+  assert.equal(W.WIRE_V, 44,
     "WIRE_V moved — if the payload shape moved with it, update the digest below " +
     "in the same edit and say what changed in the header");
   assert.equal(h, 3759651216,

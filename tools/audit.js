@@ -135,7 +135,18 @@ const HERO_STATICS = [
   {key:"mightOnFirst6Discard", re:/the first time you discard a card with 6 or more \{p\} during each of your action phases, create a might token/,
    note:"Kayo — first 6+{p} discard per action phase → Might token"},
   {key:"weaponRefresh", re:/(?:when a weapon you control hits|the first time your weapon attack hits each turn), you may attack an additional time with that weapon this turn/,
-   note:"Dorinthea — a weapon that hits may swing again this turn (once per turn; pays {r} and an action point again)"}
+   note:"Dorinthea — a weapon that hits may swing again this turn (once per turn; pays {r} and an action point again)"},
+  /* THE DOUBLE-FACED HERO (v6.44) — Viserai, Between Worlds and Viserai,
+     Usurper. Two sentences on each face; the audit splits on sentences, so
+     each half has its own row. */
+  {key:"runeBanish", re:/whenever you create 1 or more runechants, banish the top card of your deck/,
+   note:"Viserai, Between Worlds — each creation of Runechants banishes the top card of the deck"},
+  {key:"runeTraverse", re:/then if you(?:'ve| have) created (\d+) or more runechants this turn, traverse/,
+   note:"Viserai, Between Worlds — N Runechants created this turn: traverse to the other face"},
+  {key:"firstAtkGaKw", re:/the first attack action card with ([a-z][a-z ]*?) you play each turn gets go again/,
+   note:"Viserai, Usurper — the first attack action card with the named keyword each turn gets go again"},
+  {key:"endTraverse", re:/at the beginning of each end phase, if you(?:'ve| have) created or activated an? (.+?) this turn, you may traverse/,
+   note:"Viserai, Usurper — a named token created or activated this turn: may traverse at each end phase"}
 ];
 /* Tokens are read out of the pool's own text rather than listed by hand —
    a hardcoded list silently rots (it carried 6 of the 17 real tokens, and

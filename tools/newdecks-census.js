@@ -35,6 +35,14 @@ function main(){
         const a = A.analyzeHero(h, r.name);
         const un = (a.clauses || []).filter(c => !c.covered).map(c => c.t);
         if(un.length) gaps.push(`[hero] ${r.name}: ` + un.join(" || "));
+        /* A DOUBLE-FACED HERO IS TWO RECORDS (v6.44): the list names the
+           front, and the back's lines are dealt to nobody until a traverse.
+           Read them here or the census says "no gap" about half a card. */
+        for(const f of require("../engine/build.js").facesOf(db, h)){
+          const fa = A.analyzeHero(f, f.n);
+          const fun = (fa.clauses || []).filter(c => !c.covered).map(c => c.t);
+          if(fun.length) gaps.push(`[hero, other face] ${f.n}: ` + fun.join(" || "));
+        }
         continue;
       }
       const rc = C.resolveEntry(db, {name:r.name, p:r.p || 0, code:r.code, q:r.q});

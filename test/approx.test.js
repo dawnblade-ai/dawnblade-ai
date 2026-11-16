@@ -285,7 +285,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      and only the stated/closed split below moves. */
   /* 58 -> 59 AT v6.42: `destroy-a-runechant-cost-unasked`, open. */
   /* 59 -> 61 AT v6.43: `zero-defence-gear-refused` and `dealt-damage-reads-attacks`, both open. */
-  assert.equal(Object.keys(APPROX).length, 61, "record count moved");
+  /* 61 -> 62 AT v6.44: `traverse-life-carries`, stated. */
+  assert.equal(Object.keys(APPROX).length, 62, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -357,7 +358,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 21 -> 20 stated AT v6.00: `played-target-partial-resolution` closed — a
      target is required (RULING user 2026-11-07). */
   /* 20 -> 19 stated AT v6.02: `look-named-in-shared-feed` closed (HIDDEN HANDS H1). */
-  assert.equal(n("stated"), 19, "stated count moved");
+  /* 19 -> 20 AT v6.44: `traverse-life-carries` (the back face prints life "*"). */
+  assert.equal(n("stated"), 20, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -2356,6 +2358,26 @@ probe("zero-defence-gear-refused", () => {
     "a 0{d} piece can be declared now (CR 7.3.2b) — close this record");
   assert.equal(E.defendValue({hist: Object.assign(S.freshHist(), {attacked: 2})}, boots, {base: 0}), 2,
     "the Boots' reader itself moved");
+});
+
+/* STATED AT v6.44. DRIVEN: Viserai, Between Worlds at 17 life creates his third
+   Runechant of the turn, turns over to the Usurper (printed life "*"), and is
+   still at 17. */
+probe("traverse-life-carries", () => {
+  const C2 = require("../engine/cards.js"), B2 = require("../engine/build.js"), X = require("./helpers/extract");
+  const ST = require("../data/staged.js").filter(c => c && c.name).map(C2.mapDbCard);
+  const pool = H.db();
+  J.setDb(C2.buildMaps(X.readPool().filter(c => c && c.name).map(C2.mapDbCard).concat(ST)));
+  try {
+    const front = ST.find(c => c.n === "Viserai, Between Worlds"), back = ST.find(c => c.n === "Viserai, Usurper");
+    assert.equal(front.hp, 20);
+    assert.equal(back.hp, null, "the back face prints a life now — recalculate with it (CR 2.5.3c) and close this record");
+    let g = H.state({hp: 17, deck: []}, {hp: 20}, {actor: 0, turnPlayer: 0, turn: 3,
+      builds: [B2.heroAbilities(front, front.n), {}]});
+    g = H.runOps(g, [["rune", 3]], "probe");
+    assert.equal(g.builds[0].heroRec.n, "Viserai, Usurper", "fixture: no traverse happened");
+    assert.equal(g.sides[0].hp, 17, "life moved on a traverse — say which reading this is");
+  } finally { J.setDb(pool); }
 });
 
 /* OPEN AT v6.43. DRIVEN: Second Strike after an attack that dealt no damage

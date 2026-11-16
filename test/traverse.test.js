@@ -22,7 +22,11 @@
    non-active face can otherwise not be made active, the traverse effect
    fails." CR 9.1.1 (verbatim): "A double-faced card is a card with two sets
    of properties - each set printed as a separate face on the card."
-   CR 9.1.2c: an effect keeps applying across the change of face.
+   CR 9.1.2 (verbatim): "Each face of a double-faced card has its own set of
+   printed properties." CR 9.1.2c: an effect keeps applying across the change
+   of face. CR 2.5.3c (verbatim): "If the base life of an living-card changes,
+   then the life total is recalculated using the new base life value of the
+   object." The back prints no value to recalculate with.
 
    LIFE CARRIES OVER — a reading, recorded in tools/approx.js
    (`traverse-life-carries`): the back prints life "*".

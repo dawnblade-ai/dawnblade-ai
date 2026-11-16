@@ -48,9 +48,10 @@ hide a keyword with no reader, so read this as a floor on the work, not a ceilin
      banished zone, stamped playable this turn; the token record was already in the pinned pool)
   6. **DONE v6.42** (`fx.countsAs`, `parser.usurpOffer`, `effects.payDestroyed`, `test/runechants.test.js`) — the special
      Runechants ("counts as a Runechant", CR 1.8.8; "when an attack usurps this"; usurp asks which Runechant)
-  7. the hero: a trigger on creating Runechants, a per-turn count, and **traverse** — the
-     hero is double-faced (Viserai, Usurper on the back, a Demon with its own text), which
-     no hero in the pool is today
+  7. **DONE v6.44** (`effects.traverse`, `build.facesOf`, `effects.runesMade`, `test/traverse.test.js`) — the hero: a
+     trigger on creating Runechants, a per-turn count, and **traverse** — the hero is double-faced (Viserai, Usurper on
+     the back, a Demon with its own text). Census after: no gap, both faces. Life carries over on a traverse (a stated
+     reading, `tools/approx.js` `traverse-life-carries`)
   8. **DONE v6.43** (`hist.attacked` / `heroDmg` / `banPlay`, `fx.banCost` + the `bancost` pending,
      `test/conditionals.test.js`) — the small conditionals (attacked twice this turn, dealt damage to
      the defending hero this turn, played from banish this turn, "they banish a card in their arsenal",
