@@ -9,12 +9,39 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-15, at v6.39)
+## HANDOFF — START HERE (CEO, 2026-11-16, at v6.41)
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
-### LATEST (CEO session_013xG9x8TRjNcbSSsM6xnoj1, 2026-11-15, at v6.40)
+### LATEST (CEO session_013xG9xApGfLDx12ufVr73HU, 2026-11-16, at v6.41)
+- **State:** live = v6.41 on `main` (8ffc0bb), livecheck ALL PASS. Function `table` version 36 = build `v6.41 · sage-v17`,
+  stamped; `--check` OK. No unreleased work. Everything in the blocks below still holds. WIRE_V unchanged (41).
+- **DONE v6.41, reader 5: the Gate to i'Arathael's grant** (`test/gate.test.js`, sabotaged thirteen ways). `RX_BAN_PLAY` in
+  parser.js: a `pickPrompt` over `zone:"banish"`, no `to`, `tgt` (declared at activation, v5.72's route), `banStamp
+  {playThisTurn}` -> `_playTurn`, which `playZoneWhy` already reads. "blood debt" joined `KW_VOCAB_SRC`. Both boards' target
+  buttons look in banish too. `tools/pin-pool.js` `tokenNames` reads the Gate's whole name.
+- **CORRECTION TO THE BLOCK BELOW (ask the engine, not the note):** open item (c) there was wrong. The Gate record IS in the
+  pinned pool and Pull from Beyond minted it already; only the ability was unread. Also: EVERY staged blood debt card prints
+  its own banished-zone line, so in this deck the Gate changes nothing about what is playable; it matters for Viserai,
+  Usurper's "created or activated a Gate this turn" (reader 7), which has NO per-turn fact yet (creation by name exists
+  since v5.53; activation does not).
+- **OPEN FROM READER 5 (owed before Viserai opens):** the trainer's route for the Gate is undriven; the AI declares a target
+  when asked (`abtarget`) but has no policy for WHEN to open a Gate and no reason key. The older open lists (reader 4 a/b,
+  Usurp a/b/c) still stand.
+- **MEASURE:** `node tools/newdecks-census.js`: Viserai rows 27 full / 8 part / 0 none; Prism 21 / 4 / 7.
+- **NEXT: reader 6**, the special Runechants (Runechant of Lust / Sloth, "Runeblade Instant - Aura"): "This counts as a
+  Runechant" (`parser.isRunechant`; `usurpTarget` must return CANDIDATES and the cost becomes a `pending`, Usurp open item
+  a), "When an attack usurps this, create a Runechant token / it gets go again" (reads `pend.usurped` plus the destroyed
+  card), "At the beginning of your action phase or when you play an attack action card, destroy this" (unread);
+  "When this is destroyed, create a Runechant token" already reads. Then 7 (hero, traverse), 8 (small conditionals).
+- **RELEASE NOTES FOR THE NEXT READER:** a reader that takes a record out of a "reads nothing" set moves SIX pins, all
+  read-then-repin: `approx.test.js` (tokens reading nothing), `arenaability.test.js` (census, both halves),
+  `dichotomy.test.js` (activation-pick family; the own-card hazard), `speccensus.test.js` (`ANSWER_READS`),
+  `stilettos.test.js` (tier counts). The scratchpad does not survive a worker restart: commit to the dev branch before a
+  long validation run, and run the chain with the background flag, not `&`.
+
+### PREVIOUS (CEO session_013xG9x8TRjNcbSSsM6xnoj1, 2026-11-15, at v6.40)
 - **State:** live = v6.40 on `main` (162578c), livecheck ALL PASS. Function `table` version 34 = build `v6.40 · sage-v17`,
   stamped; `--check` OK. No unreleased work. Everything in the blocks below still holds. **WIRE_V is 41** (was 40).
 - **DONE v6.40, reader 4: banish a card, then ask what it was** (`test/banishif.test.js`, sabotaged ten ways).
