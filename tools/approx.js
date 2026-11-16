@@ -1159,7 +1159,9 @@ const APPROX = {
       "pool pieces too (every 0{d} equipment). Not changed in v6.43: test/defcap.test.js pins the "+
       "worn-to-zero refusal as a deliberate rule (v2.46's spent wall), and the AI's wall filters "+
       "on defence above 0 as well, so the fix is a dealt-card change with a policy question in "+
-      "it. The probe asserts the refusal, so it goes red the day it is lifted."},
+      "it. The probe asserts the refusal, so it goes red the day it is lifted. "+
+      "RULING (user, 2026-11-16): \"0 defense can be declared as a blocker (blank cannot)\". Not built "+
+      "in v6.44, which shipped the same day: it is the next release."},
 
   "dealt-damage-reads-attacks": {
   status:"open", cr:"6.4.10a", board:"both", since:"v6.43", swept:"v6.43",
@@ -1187,7 +1189,8 @@ const APPROX = {
       "Demon back is none of them by their printed definitions, so which face starts active is "+
       "also read off the product: the front is the Silver Age legal hero and the back is not. "+
       "The same reading the brood has had since v3.76 (every Agent of Chaos prints \"*\" and "+
-      "keeps Arakni's life). NEEDS A RULING if the user knows the table practice to differ. "+
+      "keeps Arakni's life). RULING (user, 2026-11-16), asked whether life carries over on a "+
+      "traverse: \"Perfect\". "+
       "The probe drives a traverse at 17 life and reads 17."}
 
 };
