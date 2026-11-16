@@ -109,6 +109,11 @@ test("the faces find each other by print code, and nothing else is a face", {ski
   /* ...and a hero's face is a HERO: a token printed on the back of the same card is not one */
   const lone = C.buildMaps([rec(FRONT), {...rec(GATE), pr: {...rec(FRONT).pr}}]);
   assert.deepEqual(BD.facesOf(lone, rec(FRONT)), [], "a non-hero sharing the print code was read as the other face");
+  /* ...and two heroes sharing a print code are faces only when ONE image is the back.
+     Upstream has such a pair: a promo code printed on two unrelated heroes. */
+  const promo = {...rec(BACK), n: "Drill Promo Twin", pr: {...rec(FRONT).pr}};
+  assert.deepEqual(BD.facesOf(C.buildMaps([rec(FRONT), promo]), rec(FRONT)), [],
+    "two front images under one print code were read as two faces of one card");
   /* census: no hero the pool seats today has a second face, and none reads a new passive */
   const pool = H.db();
   let heroes = 0;

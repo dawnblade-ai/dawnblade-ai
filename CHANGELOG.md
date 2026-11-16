@@ -7,21 +7,25 @@
   blood debt you play each turn gets go again." / "At the beginning of each end phase, if you've created or activated a Gate to i'Arathael this turn, you may traverse."
 - **Traverse is CR 8.5.60 / 8.5.60a** (quoted verbatim at `effects.traverse`): the non-active face becomes the active one; it fails on a card with no other face, or
   when the ability that asked belongs to a face no longer active. One body, the brood's (v3.76): the ability half of the build is replaced by
-  `build.heroAbilities` of the other face; deck, gear, intellect and the arena are untouched (CR 9.1.2c). `build.facesOf` finds the other face by the shared print
-  code among HERO records (the database has no field linking faces); the build remembers the face it left (`_face`, beside `_brood`).
+  `build.heroAbilities` of the other face; deck, gear, intellect and the arena are untouched (CR 9.1.2c). `build.facesOf` finds the other face: a HERO record
+  sharing a print code where exactly one of the two images is the back (`_BACK`). The pinned records carry no field linking faces, and a shared code alone is not
+  enough: upstream has a promo code printed on two unrelated heroes (measured over 5,218 records). The build remembers the face it left (`_face`, beside `_brood`).
 - **Four passives off the printed lines** (`build.heroAbilities`, `PASSIVES`, `tools/audit.js` `HERO_STATICS`): `runeBanish`, `runeTraverse` (the printed 3),
   `firstAtkGaKw` (the printed keyword), `endTraverse` (the printed token name).
 - **Three per-turn facts** in `freshHist`, recorded in `effects.js` for every hero (the facts are the turn's, not the face's): `hist.runes` (Runechants created, the
   special ones included; one `runesMade` call per creation EVENT from the `rune` and `token` ops, Viserai's rite and the on-hit mint, so "1 or more" banishes one
   card), `hist.actNames` (arena permanents activated, by name), `hist.atkKws` (printed keywords of attack action cards played, so "first ... each turn" survives a
   mid-turn traverse).
-- **The Usurper's go again** is granted in `execute` beside Compass's first-graveyard-play grant; `judge.keepsActionPoint` answers it for the AI (hand and arsenal
-  routes; a play from the banished zone is still unread there, as before).
+- **The Usurper's go again** is granted in `execute` beside Compass's first-graveyard-play grant; `judge.keepsActionPoint` answers it for the AI (hand, arsenal and, for
+  this grant only, the banished zone, where most blood debt attacks are played from; a banished card's own go again is still unread there, as before).
 - **The end-phase "you may traverse"** is step (10) of `beginEndPhase`: EACH end phase, both seats asked, a two-mode sheet addressed to the hero's own seat
   (staying is the first mode, so the seat policy keeps its face; the end phase holds for the answer, v5.71's route).
 - **LIFE CARRIES OVER: a reading, `tools/approx.js` `traverse-life-carries` (stated, probe driven).** The back prints life "*", which the CR does not define
   (CR 2.5.3c recalculates only from a new base value); the Agents of Chaos print the same and keep Arakni's life. The game starts on the front, the Silver Age legal face.
-- **Drill `test/traverse.test.js`** (sabotaged twenty-one ways, each bit).
+- **Drill `test/traverse.test.js`** (sabotaged twenty-four ways, each bit).
+- **`tools/staged-play.js` (new) seats a staged hero for self-play**, the roadmap's gate before a hero opens: `node tools/staged-play.js viseraiBetweenWorlds 21` =
+  630 games, 0 refusals, 0 violations, 0 stalls, 225 games ended on the other face. The gate is met. **The AI cannot pilot him yet: 72 won, 558 lost** (it plays
+  1.1 cards a game from the banished zone and ends a quarter of his turns with the action point unspent); that is policy work, and a person piloting him is unaffected.
 - **Pins repinned after reading:** `runOps` vocabulary 100 -> 101 (`traverse`, no parser emitter), CR index 97 -> 103 cited / 87 -> 93 guarded (8.5.60, 8.5.60a,
   9.1.1, 9.1.2, 9.1.2c, 2.5.3c), the approximation ledger 61 -> 62 (19 -> 20 stated), WIRE_V (dichotomy, wire).
 - **WIRE_V 43 -> 44** (three `hist` facts, a build's `_face`, an op). No DATA_VER change. The function must be redeployed (`APP_VER`, engine files).

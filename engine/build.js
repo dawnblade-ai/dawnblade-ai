@@ -502,16 +502,27 @@ function heroAbilities(heroRec, displayName, code){
    properties - each set printed as a separate face on the card." CR 9.1.2:
    "Each face of a double-faced card has its own set of printed properties."
 
-   THE DATABASE HAS NO FIELD THAT LINKS THE FACES. Each face is its own
-   record, and what they share is the print code: one physical card, one
-   collector number. So the other face of a hero is the OTHER hero record
-   that carries one of its print codes — derived from what is printed, the
-   way `agentsOf` derives the brood, never from a list of names.
+   THE PINNED RECORDS HAVE NO FIELD THAT LINKS THE FACES. Each face is its
+   own record. Upstream prints `double_sided_card_info` on SOME printings
+   (not on the Silver Age precon's own, SBW001), and the pool keeps only a
+   printing's code, set and image. What every printing of a double-faced
+   card does carry is: both faces under ONE print code, and the back face's
+   image named `_BACK`. So the other face of a hero is the other HERO record
+   that shares one of its print codes where exactly one of the two images is
+   the back — derived from what is printed, the way `agentsOf` derives the
+   brood, never from a list of names.
+
+   THE BACK MARK IS NOT DECORATION. Measured over the whole upstream
+   database (5,218 records at the staged commit): four print codes are
+   shared by two hero records, and one of them, a promo code, is two
+   unrelated heroes with two front images. A shared code alone would have
+   made them each other's faces.
 
    A record with no such partner is not double-faced, and a traverse on it
    fails (CR 8.5.60a). Several partners (a back shared by a young and an
    adult front) are returned in name order; `effects.traverse` prefers the
    face the seat came from, which the build remembers. */
+const isBackImg = url => /_BACK\.[a-z0-9]+$/i.test(String(url || ""));
 function facesOf(db, heroRec){
   if(!db || db.status !== "ready" || !heroRec || !heroRec.pr) return [];
   const isHero = c => (c.ty || []).some(t => /^hero$/i.test(String(t)));
@@ -521,7 +532,8 @@ function facesOf(db, heroRec){
   for(const k of Object.keys(db.byName || {}))
     for(const c of (db.byName[k] || [])){
       if(c.n === heroRec.n || !isHero(c) || !c.pr) continue;
-      if(!codes.some(id => Object.prototype.hasOwnProperty.call(c.pr, id))) continue;
+      if(!codes.some(id => Object.prototype.hasOwnProperty.call(c.pr, id)
+                           && isBackImg(c.pr[id]) !== isBackImg(heroRec.pr[id]))) continue;
       if(out.some(x => x.n === c.n)) continue;
       out.push(c);
     }
