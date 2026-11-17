@@ -1,3 +1,18 @@
+## v6.45 — a 0 defence piece may defend; a blank one may not
+
+- **RULING (user, 2026-11-16):** "0 defense can be declared as a blocker (blank cannot)". CR 7.3.2b (verbatim): "A card cannot be declared if (A) it does not
+  have the defense property (0 is a value), ...". CR 2.3.2: "0 is a valid printed defense"; a card with no printed defence has no defence property.
+- **Was:** both boards refused any equipment at 0 defence, printed or worn ("has no defence left"), so 27 dealt 0{d} pieces could never defend and the staged
+  Olde Leather Boots' "+2{d} if attacked twice" was unreachable. **Is:** one reader, `game.gearDeclareWhy`, called by `judge.legal` and the trainer's
+  `toggleBlock`, `gearBtn` and defend list: refuses a piece that prints no defence (a weapon, a blank equipment: 6 pool pieces) and a destroyed piece, nothing else.
+  A piece worn down to 0 may be declared again too (it stops nothing, and Blade Break / battleworn still apply).
+- **The AI did not move.** Its wall still picks only pieces with defence above 0, so it never throws a 0 piece in (drilled). It therefore never raises the
+  Boots for their +2 either: policy work for when Viserai is an AI seat.
+- **`tools/approx.js` `zero-defence-gear-refused` is CLOSED** (open 3 -> 2, closed 39 -> 40); its probe now drives the Boots on the second attack of a turn and
+  reads the 2 they stop. `test/defcap.test.js`: the old "no defence left" pin is replaced by four drills (every 0{d} pool piece declarable, every blank refused,
+  a driven Blade Break 0{d} block, the policy holds back). Sabotaged four ways, each bit. CR index 103 -> 104 cited / 93 -> 94 guarded (CR 2.3.2).
+- **No WIRE_V change** (no payload or prompt shape moved). No DATA_VER change. The function must be redeployed (`APP_VER`, engine files).
+
 ## v6.44 — the seventh reader for Viserai, Between Worlds: the double-faced hero and traverse
 
 - **Nothing a player can be dealt changed.** Engine groundwork (`ROADMAP-NEWDECKS.md`), and the LAST reader: `node tools/newdecks-census.js` prints no gap for
