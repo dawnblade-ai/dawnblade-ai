@@ -442,8 +442,10 @@ test("the pool's type census is what we think it is", {skip}, () => {
     permanent:  n(TY.isPermanent)
   };
   assert.deepEqual(census, {
-    cards: 401, action: 267, instant: 22, attackRx: 20, defenseRx: 15,
-    equipment: 58, weapon: 15, block: 4, attack: 175, permanent: 23
+    /* v6.46: Viserai, Between Worlds opened (+25 cards: two Runeblade Instant - Aura, the special
+       Runechants, are the two new instants AND two of the new permanents). */
+    cards: 426, action: 284, instant: 24, attackRx: 20, defenseRx: 16,
+    equipment: 61, weapon: 17, block: 4, attack: 189, permanent: 25
   }, "the pool's type census moved — check DATA_VER and the deck lists");
 });
 

@@ -82,6 +82,7 @@ const emitted = () => {
    here even though the field is still read. */
 const VIA_READER = {
   asInstant:     "playsAsInstant",
+  countsAs:      "isRunechantCard",   /* CR 1.8.8, v6.42: a special Runechant IS a Runechant */
   auraWeapon:    "auraAttackOf",
   gyFirstGa:     "gyFirstGaKw",
   handWipe:      "isHandWipe",
@@ -114,16 +115,19 @@ test("every `fx.*` field the pool emits is pinned", () => {
        with them (v4.11: no claimant, no field). */
     "activateIf", "addCost", "addPay", "arsUpDeck", "arsenalPut",
     "arsenalUp", "arsenalUpTurn", "asInstant", "atkTrigger", "auraWeapon",
-    "boostBanish", "bottomOnDiscard", "chargeCost", "chargeSoul", "clash",
-    "clashReveal", "clauses", "condOnHit", "condOnLeave", "conds", "crush",
+    "banCost", "boostBanish", "bottomOnDiscard", "chargeCost", "chargeSoul", "clash",
+    "clashReveal", "clauses", "condOnHit", "condOnLeave", "conds", "countsAs", "crush",
     "ctrTick", "daggerJab", "deckFaceUp", "defDebuff", "defGrant", "defLimit",
-    "defSelf", "dr", "emptyDies", "firstAtk", "fusionCost", "ga", "gaQ", "gyFirstGa",
+    "defSelf", "dr", "emptyDies", "firstAtk", "fromBan", "fusionCost", "ga", "gaQ", "gyFirstGa",
     "handAbility", "handWipe", "hitCounter", "hitWatch", "lifeTie", "millCost", "modes",
     "noDrx", "noEquipDefend", "onAtk", "onAtkHero", "onDeath", "onDestroy", "onHit",
-    "onHitHero", "onLeave", "ops", "optCost", "payCost", "perm", "playIf",
+    "onHitHero", "onLeave", "onUsurp", "ops", "optCost", "payCost", "perm", "playIf",
     "playable", "powFormula", "rustDestroy", "self", "selfQ",
     "tapCost", "tier", "unpreventable", "wipePowIfIdle",
   ]);
+  /* +banCost +countsAs +fromBan +onUsurp v6.46 — Viserai, Between Worlds opened, so four readers
+     built against his STAGED cards (v6.37 fromBan, v6.42 countsAs / onUsurp, v6.43 banCost) now
+     reach pool records. Each was drilled when it was built (banroute, runechants, conditionals). */
   /* -quotedUnread v5.53 — Display Loyalty, the last pool record with an
      unread quoted rider, got `quotedAtkHero`. The FLAG stays as a guard
      (test/quoted.test.js drives it on a synthetic); the pool emits none. */

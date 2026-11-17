@@ -201,7 +201,9 @@ function recordFor(card){
    network" is exactly the property it states. */
 test("the pinned pool carries every card a match can deal", () => {
   const raw = require("./helpers/extract").readCards(path.join(__dirname, "..", "data", "pool.js"));
-  assert.equal(raw.length, 797,
+  /* 797 -> 824 AT v6.46: Viserai, Between Worlds opened; `pin-pool.js --add-staged` added his 27
+     staged records (both hero faces included), every other record unchanged. */
+  assert.equal(raw.length, 824,
     "the pinned pool moved — re-derive CLAUDE.md's sentence with it");
 
   const db = C.buildMaps(raw.map(C.mapDbCard));
@@ -280,7 +282,9 @@ test("only Equipment and Weapons resolve to pitch 0, and every one of them does"
   for(const c of nonzero)
     assert.ok(!TY.isEquipment(c) && !TY.isWeaponType(c),
       c.name + " is equipment and carries a pitch value");
-  assert.equal(zero.length, 73, "the pool's equipment count moved");
+  /* 73 -> 78 AT v6.46: his five new pieces (Seven Sin Nebula, Corrupted Crown, Runehold Release,
+     Olde Leather Boots, Galaxxi Black). */
+  assert.equal(zero.length, 78, "the pool's equipment count moved");
   assert.equal(zero.length + nonzero.length, pool().length);
 });
 
@@ -308,7 +312,8 @@ test("every hero is seated at its PRINTED life and intellect", {skip}, () => {
     assert.equal(built.int, rec.int, h.n + " is seated at " + built.int + " intellect, prints " + rec.int);
     rows[h.n] = built.hp + "/" + built.int;
   }
-  assert.equal(Object.keys(rows).length, 15);
+  assert.equal(Object.keys(rows).length, 16);   /* v6.46: + Viserai, Between Worlds */
+  assert.equal(rows["Viserai, Between Worlds"], "20/4", "the front face's printed life and intellect");
   /* The three that are not 20/4. If a defaulting bug ever creeps in, it
      is these that catch it — the other twelve would look fine. */
   assert.equal(rows["Iyslander"], "18/4");

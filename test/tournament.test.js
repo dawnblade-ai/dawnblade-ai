@@ -140,10 +140,13 @@ test("the life tiebreak reads each leg's OWN chair, not a fixed index", () => {
 
 /* ---- the field ------------------------------------------------------- */
 
-test("the field is sixteen, and the sixteenth is the dummy", () => {
+/* v6.46: the sixteenth HERO took the seat the dummy filled (the 2026-08-16 ruling seated the dummy
+   because fifteen heroes left one of sixteen seats empty). The dummy is still the only filler. */
+test("the field is sixteen, and the dummy enters only while the roster is short", () => {
   assert.equal(T.ENTRANTS.length, 16, "a bracket of sixteen needs sixteen entrants");
-  assert.equal(T.ENTRANTS.filter(e => e.key == null).length, 1,
-    "exactly one seat is the vanilla pile — the 2026-08-16 ruling allows no other filler");
+  const W2 = require("./helpers/extract.js").loadData();
+  assert.equal(T.ENTRANTS.filter(e => e.key == null).length, W2.HEROES.length < 16 ? 1 : 0,
+    "the dummy is the only filler, and only while fewer than sixteen heroes are decked");
   assert.equal(new Set(T.ENTRANTS.map(e => e.name)).size, 16, "two entrants share a name");
 });
 

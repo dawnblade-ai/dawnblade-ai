@@ -219,6 +219,7 @@ const NON_PARSER = {
   arcTaken:    "engine/prompts.js — the arcane soak answer records who was dealt it",
   destroyGear: "engine/prompts.js — the spellvoid answer destroys the piece that soaked",
   deckDestroy: "engine/effects.js — the modal cost's mill branch (v3.90, Jittery Bones)",
+  traverse:    "engine/effects.js — `runesMade` and the end phase's offer; the hero line is read by build.heroAbilities (v6.44)",
 };
 /* THE SIX OPS `runOps` DOES NOT DISPATCH, and the site that does (v3.99
    ran this half by hand once; v4.48 built the last three). */

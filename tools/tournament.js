@@ -114,8 +114,14 @@ const QUICK = flag("--quick");
    than a training prop's number — twelve of the fifteen heroes print 4. */
 const DUMMY = {key: null, name: "The Dummy", hp: 20, int: W.DUMMY_INT};
 
-const ENTRANTS = W.HEROES.map(h => ({key: h.k, name: h.n, hero: h}))
-                         .concat([{key: null, name: DUMMY.name}]);
+/* THE DUMMY FILLS THE BRACKET, IT DOES NOT HOLD A PLACE IN IT (v6.46). The
+   2026-08-16 ruling seated it because fifteen heroes left one of sixteen seats
+   empty and it is the one other thing a seat may hold. The sixteenth hero
+   (Viserai, Between Worlds) fills that seat, so the dummy enters only while the
+   roster is short of sixteen. */
+const FIELD = 16;
+const ENTRANTS = W.HEROES.slice(0, FIELD).map(h => ({key: h.k, name: h.n, hero: h}))
+                         .concat(W.HEROES.length < FIELD ? [{key: null, name: DUMMY.name}] : []);
 const label = e => e.name;
 
 /* ---- ONE GAME --------------------------------------------------------

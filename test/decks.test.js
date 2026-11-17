@@ -14,15 +14,21 @@ test("data script exposes the versioned constants", () => {
   assert.equal(W.DUMMY_GEAR.length, 4);
 });
 
-test("roster — exactly 15 heroes across chapters 1-3", () => {
-  assert.equal(W.HEROES.length, 15);
+test("roster — the 15 heroes of chapters 1-3, and the Usurp the Shadow Throne heroes that have opened", () => {
+  /* v6.46: Viserai, Between Worlds opened. Usurp the Shadow Throne is a block, not a numbered
+     chapter: its heroes carry `blk` (the loadout shows it) and `ch: 4` (the stripe colour only). */
+  assert.equal(W.HEROES.length, 16);
   for(const ch of [1,2,3])
     assert.equal(W.HEROES.filter(h=>h.ch===ch).length, 5, `chapter ${ch} should field 5 heroes`);
+  const later = W.HEROES.filter(h => h.ch > 3);
+  assert.deepEqual(later.map(h => h.n), ["Viserai, Between Worlds"]);
+  for(const h of later) assert.equal(h.blk, "Usurp the Shadow Throne", h.n + " names no block");
+  assert.ok(W.HEROES.filter(h => h.ch <= 3).every(h => !h.blk), "a chapter 1-3 hero names a block");
 });
 
-test("DECKS — exactly 15, keys matching the roster", () => {
+test("DECKS — exactly 16, keys matching the roster", () => {
   const keys = Object.keys(W.DECKS);
-  assert.equal(keys.length, 15);
+  assert.equal(keys.length, 16);   /* v6.46: + viseraibw */
   assert.deepEqual(keys.sort(), W.HEROES.map(h=>h.k).sort());
 });
 

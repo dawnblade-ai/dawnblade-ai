@@ -136,8 +136,9 @@ test("the pool's 6-power records partition into POPS and EXCLUDED, and both are 
 
   /* THE OTHER SIDE OF THE PARTITION, so a predicate that stopped popping
      anything cannot satisfy the pin above by making the set bigger. */
-  assert.equal(six.length - excluded.length, 74,
-    "and 74 records still pop, which is what makes this a partition");
+  /* 74 -> 75 AT v6.46: Runic Disposition (printed 6{p}, Viserai, Between Worlds) pops. */
+  assert.equal(six.length - excluded.length, 75,
+    "and 75 records still pop, which is what makes this a partition");
 });
 
 test("the LATENT half is latent because nothing in the pool can reach a wall without it", () => {

@@ -60,7 +60,8 @@ test("defaultBoard is a legal loadout, not every printed piece", {skip}, () => {
 
 test("one game per hero through local.js: no refusal, no stall, no violation", {skip}, () => {
   const keys = DATA.HEROES.map(h => h.k);
-  assert.equal(keys.length, 15, "the roster is not fifteen heroes");
+  /* v6.46: Viserai, Between Worlds opened (the sixteenth hero, Usurp the Shadow Throne). */
+  assert.equal(keys.length, 16, "the roster is not sixteen heroes");
   for(let i = 0; i < keys.length; i++){
     const ai = keys[i], me = keys[(i + 7) % keys.length];
     const g = tableMatch(me, ai, "aiseat-" + ai);

@@ -274,7 +274,8 @@ test("a card played in an open window lands in the zone its TYPE sends it to", {
      the red printing alone (the pool file holds all three pitches). */
   /* grave 90 -> 88 AT v5.07: Astral Etchings and Memorial Ground above. */
   /* grave 88 -> 84 AT v6.00: the four the target rule added above. */
-  assert.deepEqual(tally, {chain: 171, arena: 23, grave: 84},
+  /* v6.46: Viserai, Between Worlds opened: 171 -> 185 chain, 23 -> 25 arena, 84 -> 87 grave. */
+  assert.deepEqual(tally, {chain: 185, arena: 25, grave: 87},
     "the pool's play destinations moved — that is a rules change, so it is a deliberate edit here");
   /* AND EVERY ARROW WAS REFUSED FROM THE HAND (v4.91). Twelve records,
      eleven names (Infecting Shot is printed at two pitches in the pool) —
@@ -383,8 +384,10 @@ test("a card with no open window is REFUSED, and told why", {skip}, () => {
      Cosmo, Crucible of Aetherweave) and are activated for a non-attack
      ability instead. That is the pinned `types.isWeaponType` vs
      `parser.isWeapon` split, counted from the other end. */
-  assert.deepEqual(kinds, {"Equipment": 58, "Weapon": 15, "Block": 4,
-                           "Attack Reaction": 20, "Defense Reaction": 15},
+  /* v6.46: + his three equipment, two weapons (Seven Sin Nebula, Galaxxi Black, both swinging)
+     and one defence reaction (Weeping Battleground). */
+  assert.deepEqual(kinds, {"Equipment": 61, "Weapon": 17, "Block": 4,
+                           "Attack Reaction": 20, "Defense Reaction": 16},
     "the set of cards with no action-phase play changed");
 });
 
@@ -400,7 +403,7 @@ test("CR 8.1.3a — a defence reaction is never DECLARED as a defender", {skip},
     else n++;
   }
   assert.deepEqual(bad, []);
-  assert.equal(n, 15, "the pool's defence reactions changed in number");
+  assert.equal(n, 16, "the pool's defence reactions changed in number");   /* v6.46: + Weeping Battleground */
 });
 
 test("a card cannot pitch for itself, whatever it is", {skip}, () => {
@@ -432,7 +435,8 @@ test("the four journeys account for every card in the pool", {skip}, () => {
   }
   assert.equal(playable + unplayable, pool().length);
   assert.deepEqual({total: pool().length, playable, unplayable, pitchable, defendable},
-    {total: 401, playable: 289, unplayable: 112, pitchable: 328, defendable: 332});
+    /* v6.46: Viserai, Between Worlds opened, 401 -> 426 cards. */
+    {total: 426, playable: 308, unplayable: 118, pitchable: 348, defendable: 352});
 });
 
 /* ===================================================================

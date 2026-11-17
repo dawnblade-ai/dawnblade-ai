@@ -82,7 +82,11 @@ test("every row carries a print code from its own set", () => {
 
 /* ---- the deviation: neither set exists upstream --------------------- */
 
-test("neither set is in the pinned pool — building one would invent card text", () => {
+test("a set is in the pinned pool exactly when its hero has opened", () => {
+  /* v6.46: THIS DRILL WENT RED ON PURPOSE. It asserted that neither set was in the pool, "so it goes
+     RED the day these are built". Viserai, Between Worlds opened (his staged text, pinned from one
+     upstream commit by tools/pin-staged.js, joined the pool through `pin-pool.js --add-staged`), so
+     the question is now per set: in the pool if and only if its hero is on the roster. */
   /* THE PROBE POINTS AT THE GAP (v4.02). It asserts the deviation is
      still there, so it goes RED the day these are built — which is
      exactly when this file, `data/newsets.json` and CLAUDE.md all have
@@ -96,9 +100,14 @@ test("neither set is in the pinned pool — building one would invent card text"
      answered ABSENT for every set including the fifteen. */
   for(const s of ["SAZ", "SDO", "SEN", "SKA"])
     assert.ok(codes.has(s), "the scan is alive — the pool carries " + s);
-  for(const k of SETS)
-    assert.equal(codes.has(NEW[k].set), false,
-      NEW[k].set + " is absent from the pool, so " + NEW[k].hero + " cannot be dealt");
+  const W = loadData();
+  for(const k of SETS){
+    const opened = W.HEROES.some(h => h.n === NEW[k].hero);
+    assert.equal(codes.has(NEW[k].set), opened,
+      NEW[k].set + (opened ? " is missing from the pool, yet " + NEW[k].hero + " is on the roster"
+                           : " is in the pool, yet " + NEW[k].hero + " has not opened"));
+  }
+  assert.ok(SETS.some(k => !W.HEROES.some(h => h.n === NEW[k].hero)), "the control: a set that has NOT opened is still checked (Prism)");
 });
 
 test("the recorded upstream gap is internally consistent with the lists", () => {
@@ -159,13 +168,27 @@ test("the blocking names are pinned by NAME, not by a count", () => {
 
 /* ---- and the fifteen we DO have are untouched ----------------------- */
 
-test("the fifteen built precons are unchanged by any of this", () => {
+test("the fifteen built precons are unchanged by any of this, and an opened list is dealt as pinned", () => {
   /* The control. A file that adds two heroes' worth of data must not
-     have moved the deck list the game actually plays. */
+     have moved the deck list the game actually plays. v6.46: Viserai, Between Worlds opened, so
+     sixteen decks, and HIS deck must be this file's list card for card (the Extras are tokens). */
   const W = loadData();
-  assert.equal(Object.keys(W.DECKS).length, 15, "still fifteen decks");
+  assert.equal(Object.keys(W.DECKS).length, 16, "fifteen decks and the one opened list");
   for(const k of SETS)
-    assert.equal(k in W.DECKS, false, k + " is a SPEC, not a playable deck");
+    assert.equal(k in W.DECKS, false, k + " is a SPEC key, not a deck key");
+  const G2 = require("../engine/game.js");
+  for(const k of SETS){
+    const h = W.HEROES.find(x => x.n === NEW[k].hero);
+    if(!h) continue;
+    const d = G2.parseDeck(W.DECKS[h.k]);
+    assert.equal(d.hero.name, NEW[k].hero);
+    const want = {}, got = {};
+    for(const [sec, o] of Object.entries(NEW[k].sections)) if(sec !== "Extras")
+      for(const r of o.rows) if(r.name !== NEW[k].hero) want[r.code] = (want[r.code] || 0) + r.q;
+    for(const e of d.gear) got[e.code] = (got[e.code] || 0) + 1;
+    for(const e of d.deck) got[e.code] = (got[e.code] || 0) + e.q;
+    assert.deepEqual(got, want, NEW[k].hero + "'s deck is not the pinned list");
+  }
   assert.ok(C.buildMaps, "and the loader is untouched");
 });
 

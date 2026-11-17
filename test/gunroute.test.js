@@ -333,8 +333,9 @@ test("exactly ONE pool piece prints both an attack and an ability", {skip}, () =
      reason: Topsy Turvy's payload got a reader, so its "Instant - {t}:"
      line builds a powCard — ninth outing of that shape. 34 -> 35 AT v4.71:
      Beckoning Haunt, whose X cost read once X was settled by the choice
-     — tenth. */
-  assert.equal(abOnly, 35, "and the count with an ability alone moved");
+     — tenth. 35 -> 36 AT v6.46: Runehold Release ("Action - Destroy this: Create a Runechant
+     token. Go again"), Viserai, Between Worlds' arms, opened with him. */
+  assert.equal(abOnly, 36, "and the count with an ability alone moved");
 });
 
 test("a PAID cost that resolves to nothing is refused first", {skip}, () => {

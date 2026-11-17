@@ -46,7 +46,7 @@ const report = () => _rep || (_rep = JSON.parse(execFileSync(process.execPath,
 
 test("the coverage scan is alive in both directions", {skip}, () => {
   const r = report();
-  assert.equal(r.records, 797, "the drive leg did not parse the pinned pool");
+  assert.equal(r.records, 824, "the drive leg did not parse the pinned pool");   /* 797 -> 824 AT v6.46 */
   assert.ok(r.powCards > 100, "only " + r.powCards + " powCards built — the builders are not reached");
   assert.ok(r.sites > 120, "only " + r.sites + " return sites found — the site scan is aimed wrong");
   /* A PAINTING THAT COVERS EVERYTHING REPORTS 0, and 0 reads as clean. */
@@ -99,18 +99,9 @@ test("every parser reading the pool never reaches is pinned", {skip}, () => {
     "return NOOP(\"clash — resolved when this blocks, off the clash keyword\");",
     "return NOOP(\"reveal payoff — fires if this is the card revealed on a winning clash\");",
     "return R([[\"soulSpend\", num(m[1]), sub.ops]]);",
-    /* v6.37: A READER FOR A STAGED CARD. The six Gloomblades of Viserai,
-       Between Worlds print "You may play this from your banished zone";
-       they are in data/staged.js, not the pool, so the pool cannot reach
-       this line until that hero opens. Driven by test/banroute.test.js
-       against the staged records. This entry leaves the day he is decked. */
-    "return R([[\"noop\", \"a standing permission — it may be played from its owner's banished zone\"]], {fromBan: true});",
-    /* v6.39: the same, for Usurp (test/usurp.test.js). */
-    "if(/^usurp$/.test(c)) return NOOP(\"printed keyword — as it is played, its owner destroys a Runechant if they have one, and if they do it gets +2 power\");",
-    /* v6.40: the same, for Pull from Beyond's own-deck banish (test/banishif.test.js). */
-    "if(/^banish the top card of your deck$/.test(c)) return R([[\"banTop\",1]]);",
-    /* v6.38: the same, for Blood Debt (test/blooddebt.test.js). */
-    "if(/^blood debt$/.test(c)) return NOOP(\"printed keyword — while this sits in its owner's banished zone, they lose 1 life at the beginning of each of their end phases\");",
+    /* v6.37-v6.40 PINNED FOUR READERS HERE that only STAGED cards reached (banished-zone play,
+       Usurp, Pull from Beyond's own-deck banish, Blood Debt), each noted "this entry leaves the
+       day he is decked". v6.46 decked him: all four are reached by the pool and left. */
   ].sort());
 });
 
@@ -163,7 +154,8 @@ test("`runOps`'s vocabulary and what the pool emits are pinned both ways", {skip
      anywhere and are latent readers whose printed wording the pool only
      ever spells inside a cost. */
   assert.deepEqual(r.noEmitter,
-    ["arcTaken", "banTop", "deckDestroy", "destroyGear", "soulSpend", "tapSelfHero", "traverse"]);
+    /* v6.46: `banTop` left (Pull from Beyond is dealt now). */
+    ["arcTaken", "deckDestroy", "destroyGear", "soulSpend", "tapSelfHero", "traverse"]);
   /* EMITTED WITH NO CASE IN `runOps` — each dispatched at a named site
      instead. v3.99 ran this half by hand, once; the three `per…` kinds
      joined it at v4.48 and had ZERO emitters until that version. */
@@ -264,7 +256,8 @@ test("exactly one pool record's weapon cost moved, and it is Teklovossen", {skip
   }
   assert.ok(rows.includes("Teklovossen, the Mechropotent=3"),
     "Teklovossen reads " + rows.find(r => /^Teklo/.test(r)));
-  assert.equal(new Set(rows).size, 26, "the Action-Attack population moved: " + new Set(rows).size);
+  /* 26 -> 28 AT v6.46: Viserai, Between Worlds' two swords, Seven Sin Nebula and Galaxxi Black. */
+  assert.equal(new Set(rows).size, 28, "the Action-Attack population moved: " + new Set(rows).size);
 });
 
 test("the two per-count anchors the pool never printed are gone", () => {

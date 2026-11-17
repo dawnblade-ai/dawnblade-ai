@@ -46,8 +46,8 @@ const GAMES = (() => {
 })();
 const every = (stride, fn) => { for(const G of GAMES) G.steps.forEach((st, i) => { if(i % stride === 0) fn(st, G.hero); }); };
 
-test("the positions: one self-play game for each of the 15 heroes, long enough to mean something", () => {
-  assert.equal(GAMES.length, 15);
+test("the positions: one self-play game for each of the 16 heroes, long enough to mean something", () => {
+  assert.equal(GAMES.length, 16);   /* v6.46: + Viserai, Between Worlds */
   for(const G of GAMES) assert.ok(G.steps.length >= 100, G.hero + " played only " + G.steps.length + " steps");
 });
 
@@ -298,7 +298,11 @@ test("LEGAL ON THE VIEW — every action taken is legal judged from the actor's 
    transcend's flip: both players see the card). "Hidden" = the name of a card
    in a hidden slot that appears nowhere public in the seat's view before or
    after the step. */
-const REVEAL_LINE = /\breveal(?:s|ed)?\b|\bflips to\b|\bfused\b/;
+/* A DISCARD IS A REVEAL TOO (v6.46): a discarded card goes face up into the graveyard, so both
+   seats see it. Found when the sixteenth hero re-paired the drill's games: Bare Fangs discarded
+   Reincarnate at random, whose own trigger then puts it on the bottom of the deck, a hidden zone,
+   so the drill read the (correct) line naming it as a leak. */
+const REVEAL_LINE = /\breveal(?:s|ed)?\b|\bflips to\b|\bfused\b|\bdiscarded\b/;
 /* Charge names the card it puts in the soul, untagged: the soul is public
    (RULING user 2026-11-07, HIDDEN-HANDS.md §7 q1), so the card is in a public
    zone after the step and the drill passes it for that reason, not a carve-out. */
