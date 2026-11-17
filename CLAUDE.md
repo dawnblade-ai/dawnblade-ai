@@ -9,8 +9,9 @@ the table, "Coach's call" in the trainer).
 
 **It plays DAWNBLADE, a fan-made sub-format of Silver Age (declared 2026-09-26).**
 The pool is the Silver Age precons this project has BUILT, as printed (the fifteen
-Chapter 1–3 decks today), and it does NOT follow Silver Age's rolling ban list or its
-seasonal hero bench: a card Silver Age has banned stays legal here. RULING (user,
+Chapter 1–3 decks and Viserai, Between Worlds today), and it does NOT follow Silver
+Age's rolling ban list or its seasonal hero bench: a card Silver Age has banned stays
+legal here. RULING (user,
 2026-11-15): new precons JOIN as they are built (`ROADMAP-NEWDECKS.md`); until a hero
 opens, its cards wait in `data/staged.js` (`tools/pin-staged.js`), which the page never loads. That is `data/formats.json`, held by
 `test/formats.test.js`. **Do not "fix" a banned card out of a deck list.**
@@ -143,7 +144,7 @@ npm run fairness      # is any card STRONGER than printed (exits non-zero on a f
 - After `index.html` edits: compile both `text/babel` blocks with `@babel/standalone`
   (`presets:["react"], sourceType:"script"`), installed into a scratch dir so the repo
   keeps zero dependencies. Bracket balance alone cannot see a broken page.
-- After rules or AI changes: `npm run play '' '' 3` (630 self-play games). Read
+- After rules or AI changes: `npm run play '' '' 3` (720 self-play games, 16 heroes). Read
   POLICY REFUSALS · INVARIANT VIOLATIONS · stalls first — all must be 0 (`draws`, the
   engine ending a dead position, are reported apart and are not a failure). Win counts are
   reproducible, not repeatable: the noise band is a median of ~3 wins and up to ~10, so

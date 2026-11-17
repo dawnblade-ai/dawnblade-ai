@@ -1,11 +1,11 @@
 {
- "generated": "2026-11-16T16:46:50.260Z",
- "appVer": "6.44",
- "dataVer": "sage-v17",
- "dbCount": 797,
- "poolUnique": 405,
+ "generated": "2026-11-17T15:37:39.063Z",
+ "appVer": "6.46",
+ "dataVer": "sage-v18",
+ "dbCount": 824,
+ "poolUnique": 430,
  "tiers": {
-  "full": 405,
+  "full": 430,
   "part": 0,
   "none": 0
  },
@@ -377,6 +377,29 @@
     }
    ],
    "flags": []
+  },
+  "viseraibw": {
+   "name": "Viserai, Between Worlds",
+   "hp": 20,
+   "int": 4,
+   "tt": "Shadow Runeblade Hero - Young",
+   "tx": "Whenever you create 1 or more Runechants, banish the top card of your deck. Then if you've created 3 or more Runechants this turn, traverse.",
+   "statics": [
+    "Viserai, Between Worlds — each creation of Runechants banishes the top card of the deck",
+    "Viserai, Between Worlds — N Runechants created this turn: traverse to the other face"
+   ],
+   "power": null,
+   "clauses": [
+    {
+     "t": "Whenever you create 1 or more Runechants, banish the top card of your deck",
+     "covered": true
+    },
+    {
+     "t": "Then if you've created 3 or more Runechants this turn, traverse.",
+     "covered": true
+    }
+   ],
+   "flags": []
   }
  },
  "tokens": {
@@ -443,6 +466,14 @@
    "pw": null,
    "def": null,
    "fx": "part"
+  },
+  "Gate to i'Arathael": {
+   "found": true,
+   "tt": "Shadow Token - Aura",
+   "tx": "Instant - {r}, destroy this: You may play target action card with blood debt from your banished zone this turn.",
+   "pw": null,
+   "def": null,
+   "fx": "full"
   },
   "Gold": {
    "found": true,
@@ -6083,9 +6114,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this is put face-up into your arsenal, it gets go again this turn.",
-   "flags": [
-    "text mentions go again but no clause parses it"
-   ]
+   "flags": []
   },
   "take aim|1": {
    "name": "Take Aim",
@@ -6394,10 +6423,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When a weapon attack you control hits, you may destroy this. If you do, the attack gets go again.\nBattleworn",
-   "flags": [
-    "granted go-again with no parsed grant path",
-    "text mentions go again but no clause parses it"
-   ]
+   "flags": []
   },
   "agile engagement|1": {
    "name": "Agile Engagement",
@@ -10916,9 +10942,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "As an additional cost to play this, you may charge your soul.\nWhen this hits, if a yellow card was charged this way, this gets go again.",
-   "flags": [
-    "text mentions go again but no clause parses it"
-   ]
+   "flags": []
   },
   "take flight|1": {
    "name": "Take Flight",
@@ -11181,9 +11205,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "As an additional cost to play this, you may charge your soul.\nWhen this hits, if a yellow card was charged this way, this gets go again.",
-   "flags": [
-    "text mentions go again but no clause parses it"
-   ]
+   "flags": []
   },
   "roaring beam|2": {
    "name": "Roaring Beam",
@@ -11702,9 +11724,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this attacks, you may banish a Nimblism from your graveyard. If you do, this gets +1{p} and go again.\nWhen this hits a hero, {u} an ally they control, then steal it until the end of this action phase.",
-   "flags": [
-    "text mentions go again but no clause parses it"
-   ]
+   "flags": []
   },
   "lightning press|1": {
    "name": "Lightning Press",
@@ -12814,9 +12834,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this attacks, you may discard a card or destroy the top card of your deck. If that card has watery grave, this gets go again.",
-   "flags": [
-    "text mentions go again but no clause parses it"
-   ]
+   "flags": []
   },
   "loot the arsenal|3": {
    "name": "Loot the Arsenal",
@@ -13967,6 +13985,989 @@
    "tx": "If this was played from arsenal, it gets +5{p}.",
    "flags": []
   },
+  "seven sin nebula|0": {
+   "name": "Seven Sin Nebula",
+   "pitch": 0,
+   "tt": "Shadow Runeblade Weapon - Sword (2H)",
+   "cost": null,
+   "power": 3,
+   "def": null,
+   "kw": [],
+   "gkw": [],
+   "symbols": [
+    "{r}",
+    "{t}"
+   ],
+   "mentions": [],
+   "tier": "full",
+   "playable": true,
+   "clauses": [
+    {
+     "t": "Action - {r}, {t}: Attack",
+     "st": "noop"
+    },
+    {
+     "t": "Activate this only if you've played a card from a banished zone this turn.",
+     "st": "noop"
+    },
+    {
+     "t": "When this hits a hero, create a Runechant token.",
+     "st": "run"
+    }
+   ],
+   "skipped": [],
+   "weaponCost": {
+    "cost": 1,
+    "addRust": false,
+    "needSteam": false,
+    "taps": true,
+    "oncePerTurn": false
+   },
+   "eqAbility": null,
+   "tx": "Action - {r}, {t}: Attack. Activate this only if you've played a card from a banished zone this turn.\nWhen this hits a hero, create a Runechant token.",
+   "flags": []
+  },
+  "corrupted crown|0": {
+   "name": "Corrupted Crown",
+   "pitch": 0,
+   "tt": "Shadow Equipment - Head",
+   "cost": null,
+   "power": null,
+   "def": 1,
+   "kw": [
+    "Blade Break"
+   ],
+   "gkw": [],
+   "symbols": [
+    "{d}"
+   ],
+   "mentions": [
+    "blade break"
+   ],
+   "tier": "full",
+   "playable": true,
+   "clauses": [
+    {
+     "t": "When this defends, you may banish a card from your hand",
+     "st": "run"
+    },
+    {
+     "t": "If you do, this gets +1{d}.",
+     "st": "run"
+    },
+    {
+     "t": "Blade Break",
+     "st": "noop"
+    }
+   ],
+   "skipped": [],
+   "weaponCost": null,
+   "eqAbility": null,
+   "tx": "When this defends, you may banish a card from your hand. If you do, this gets +1{d}.\nBlade Break",
+   "flags": []
+  },
+  "runehold release|0": {
+   "name": "Runehold Release",
+   "pitch": 0,
+   "tt": "Runeblade Equipment - Arms",
+   "cost": null,
+   "power": null,
+   "def": 0,
+   "kw": [],
+   "gkw": [],
+   "symbols": [],
+   "mentions": [
+    "go again"
+   ],
+   "tier": "full",
+   "playable": true,
+   "clauses": [
+    {
+     "t": "Action - Destroy this: Create a Runechant token",
+     "st": "noop"
+    },
+    {
+     "t": "Go again",
+     "st": "run"
+    }
+   ],
+   "skipped": [],
+   "weaponCost": null,
+   "eqAbility": "destroy: Create a Runechant token · go again",
+   "tx": "Action - Destroy this: Create a Runechant token. Go again",
+   "flags": []
+  },
+  "olde leather boots|0": {
+   "name": "Olde Leather Boots",
+   "pitch": 0,
+   "tt": "Generic Equipment - Legs",
+   "cost": null,
+   "power": null,
+   "def": 0,
+   "kw": [
+    "Blade Break"
+   ],
+   "gkw": [],
+   "symbols": [
+    "{d}"
+   ],
+   "mentions": [
+    "blade break"
+   ],
+   "tier": "full",
+   "playable": true,
+   "clauses": [
+    {
+     "t": "If you've been attacked 2 or more times this turn, this gets +2{d}.",
+     "st": "run"
+    },
+    {
+     "t": "Blade Break",
+     "st": "noop"
+    }
+   ],
+   "skipped": [],
+   "weaponCost": null,
+   "eqAbility": null,
+   "tx": "If you've been attacked 2 or more times this turn, this gets +2{d}.\nBlade Break",
+   "flags": []
+  },
+  "galaxxi black|0": {
+   "name": "Galaxxi Black",
+   "pitch": 0,
+   "tt": "Shadow Runeblade Weapon - Sword (2H)",
+   "cost": null,
+   "power": 1,
+   "def": null,
+   "kw": [],
+   "gkw": [],
+   "symbols": [
+    "{r}",
+    "{p}"
+   ],
+   "mentions": [],
+   "tier": "full",
+   "playable": true,
+   "clauses": [
+    {
+     "t": "Once per Turn Action - {r}: Attack",
+     "st": "noop"
+    },
+    {
+     "t": "If you've played a card from your banished zone this turn, this gets +2{p}.",
+     "st": "run"
+    },
+    {
+     "t": "When this hits a hero, deal 1 arcane damage to them.",
+     "st": "run"
+    }
+   ],
+   "skipped": [],
+   "weaponCost": {
+    "cost": 1,
+    "addRust": false,
+    "needSteam": false,
+    "taps": false,
+    "oncePerTurn": true
+   },
+   "eqAbility": null,
+   "tx": "Once per Turn Action - {r}: Attack\nIf you've played a card from your banished zone this turn, this gets +2{p}.\nWhen this hits a hero, deal 1 arcane damage to them.",
+   "flags": []
+  },
+  "bloodfrenzy gloomblade|1": {
+   "name": "Bloodfrenzy Gloomblade",
+   "pitch": 1,
+   "tt": "Shadow Runeblade Action - Attack",
+   "cost": 1,
+   "power": 3,
+   "def": 3,
+   "kw": [
+    "Usurp",
+    "Blood Debt",
+    "Go again"
+   ],
+   "gkw": [],
+   "symbols": [],
+   "mentions": [
+    "go again",
+    "blood debt",
+    "usurp"
+   ],
+   "tier": "full",
+   "playable": true,
+   "clauses": [
+    {
+     "t": "You may play this from your banished zone.",
+     "st": "run"
+    },
+    {
+     "t": "Usurp",
+     "st": "noop"
+    },
+    {
+     "t": "If you've dealt damage to the defending hero this turn, this gets go again.",
+     "st": "run"
+    },
+    {
+     "t": "Blood Debt",
+     "st": "noop"
+    }
+   ],
+   "skipped": [],
+   "weaponCost": null,
+   "eqAbility": null,
+   "tx": "You may play this from your banished zone.\nUsurp\nIf you've dealt damage to the defending hero this turn, this gets go again.\nBlood Debt",
+   "flags": []
+  },
+  "cullingsong gloomblade|1": {
+   "name": "Cullingsong Gloomblade",
+   "pitch": 1,
+   "tt": "Shadow Runeblade Action - Attack",
+   "cost": 0,
+   "power": 2,
+   "def": 3,
+   "kw": [
+    "Usurp",
+    "Blood Debt"
+   ],
+   "gkw": [],
+   "symbols": [],
+   "mentions": [
+    "blood debt",
+    "usurp"
+   ],
+   "tier": "full",
+   "playable": true,
+   "clauses": [
+    {
+     "t": "You may play this from your banished zone.",
+     "st": "run"
+    },
+    {
+     "t": "Usurp",
+     "st": "noop"
+    },
+    {
+     "t": "When this hits a hero, they banish a card from their hand.",
+     "st": "run"
+    },
+    {
+     "t": "Blood Debt",
+     "st": "noop"
+    }
+   ],
+   "skipped": [],
+   "weaponCost": null,
+   "eqAbility": null,
+   "tx": "You may play this from your banished zone.\nUsurp\nWhen this hits a hero, they banish a card from their hand.\nBlood Debt",
+   "flags": []
+  },
+  "demonbound gloomblade|1": {
+   "name": "Demonbound Gloomblade",
+   "pitch": 1,
+   "tt": "Shadow Runeblade Action - Attack",
+   "cost": 0,
+   "power": 3,
+   "def": 3,
+   "kw": [
+    "Usurp",
+    "Blood Debt"
+   ],
+   "gkw": [],
+   "symbols": [],
+   "mentions": [
+    "blood debt",
+    "usurp"
+   ],
+   "tier": "full",
+   "playable": true,
+   "clauses": [
+    {
+     "t": "You may play this from your banished zone.",
+     "st": "run"
+    },
+    {
+     "t": "Usurp",
+     "st": "noop"
+    },
+    {
+     "t": "Blood Debt",
+     "st": "noop"
+    }
+   ],
+   "skipped": [],
+   "weaponCost": null,
+   "eqAbility": null,
+   "tx": "You may play this from your banished zone.\nUsurp\nBlood Debt",
+   "flags": []
+  },
+  "embrace ursur|1": {
+   "name": "Embrace Ursur",
+   "pitch": 1,
+   "tt": "Shadow Runeblade Action - Attack",
+   "cost": 1,
+   "power": 3,
+   "def": 3,
+   "kw": [
+    "Go again"
+   ],
+   "gkw": [],
+   "symbols": [],
+   "mentions": [
+    "go again"
+   ],
+   "tier": "full",
+   "playable": false,
+   "clauses": [
+    {
+     "t": "When this attacks, you may banish a card from your hand",
+     "st": "run"
+    },
+    {
+     "t": "If it's Runeblade, create a Runechant token",
+     "st": "run"
+    },
+    {
+     "t": "If it's Shadow, this gets go again.",
+     "st": "run"
+    }
+   ],
+   "skipped": [],
+   "weaponCost": null,
+   "eqAbility": null,
+   "tx": "When this attacks, you may banish a card from your hand. If it's Runeblade, create a Runechant token. If it's Shadow, this gets go again.",
+   "flags": []
+  },
+  "murmuring gloomblade|1": {
+   "name": "Murmuring Gloomblade",
+   "pitch": 1,
+   "tt": "Shadow Runeblade Action - Attack",
+   "cost": 2,
+   "power": 4,
+   "def": 3,
+   "kw": [
+    "Usurp",
+    "Blood Debt"
+   ],
+   "gkw": [],
+   "symbols": [],
+   "mentions": [
+    "blood debt",
+    "usurp"
+   ],
+   "tier": "full",
+   "playable": true,
+   "clauses": [
+    {
+     "t": "You may play this from your banished zone.",
+     "st": "run"
+    },
+    {
+     "t": "Usurp",
+     "st": "noop"
+    },
+    {
+     "t": "When this attacks or hits, create a Runechant token.",
+     "st": "run"
+    },
+    {
+     "t": "Blood Debt",
+     "st": "noop"
+    }
+   ],
+   "skipped": [],
+   "weaponCost": null,
+   "eqAbility": null,
+   "tx": "You may play this from your banished zone.\nUsurp\nWhen this attacks or hits, create a Runechant token.\nBlood Debt",
+   "flags": []
+  },
+  "plundersong gloomblade|1": {
+   "name": "Plundersong Gloomblade",
+   "pitch": 1,
+   "tt": "Shadow Runeblade Action - Attack",
+   "cost": 0,
+   "power": 2,
+   "def": 3,
+   "kw": [
+    "Usurp",
+    "Blood Debt"
+   ],
+   "gkw": [],
+   "symbols": [],
+   "mentions": [
+    "blood debt",
+    "usurp"
+   ],
+   "tier": "full",
+   "playable": true,
+   "clauses": [
+    {
+     "t": "You may play this from your banished zone.",
+     "st": "run"
+    },
+    {
+     "t": "Usurp",
+     "st": "noop"
+    },
+    {
+     "t": "When this hits a hero, they banish a card in their arsenal.",
+     "st": "run"
+    },
+    {
+     "t": "Blood Debt",
+     "st": "noop"
+    }
+   ],
+   "skipped": [],
+   "weaponCost": null,
+   "eqAbility": null,
+   "tx": "You may play this from your banished zone.\nUsurp\nWhen this hits a hero, they banish a card in their arsenal.\nBlood Debt",
+   "flags": []
+  },
+  "runic disposition|1": {
+   "name": "Runic Disposition",
+   "pitch": 1,
+   "tt": "Runeblade Action - Attack",
+   "cost": 2,
+   "power": 6,
+   "def": 2,
+   "kw": [
+    "Usurp"
+   ],
+   "gkw": [],
+   "symbols": [],
+   "mentions": [
+    "usurp"
+   ],
+   "tier": "full",
+   "playable": true,
+   "clauses": [
+    {
+     "t": "Usurp",
+     "st": "noop"
+    },
+    {
+     "t": "Instant - Discard this: Create a Runechant token.",
+     "st": "run"
+    }
+   ],
+   "skipped": [],
+   "weaponCost": null,
+   "eqAbility": null,
+   "tx": "Usurp\nInstant - Discard this: Create a Runechant token.",
+   "flags": []
+  },
+  "vexing gloomblade|1": {
+   "name": "Vexing Gloomblade",
+   "pitch": 1,
+   "tt": "Shadow Runeblade Action - Attack",
+   "cost": 3,
+   "power": 5,
+   "def": 3,
+   "kw": [
+    "Usurp",
+    "Blood Debt"
+   ],
+   "gkw": [],
+   "symbols": [],
+   "mentions": [
+    "blood debt",
+    "usurp"
+   ],
+   "tier": "full",
+   "playable": true,
+   "clauses": [
+    {
+     "t": "You may play this from your banished zone.",
+     "st": "run"
+    },
+    {
+     "t": "Usurp",
+     "st": "noop"
+    },
+    {
+     "t": "When this hits a hero, deal 2 arcane damage to any target.",
+     "st": "run"
+    },
+    {
+     "t": "Blood Debt",
+     "st": "noop"
+    }
+   ],
+   "skipped": [],
+   "weaponCost": null,
+   "eqAbility": null,
+   "tx": "You may play this from your banished zone.\nUsurp\nWhen this hits a hero, deal 2 arcane damage to any target.\nBlood Debt",
+   "flags": []
+  },
+  "otherworldly sins|1": {
+   "name": "Otherworldly Sins",
+   "pitch": 1,
+   "tt": "Shadow Runeblade Action",
+   "cost": 1,
+   "power": null,
+   "def": 2,
+   "kw": [
+    "Go again"
+   ],
+   "gkw": [],
+   "symbols": [
+    "{p}"
+   ],
+   "mentions": [
+    "go again"
+   ],
+   "tier": "full",
+   "playable": true,
+   "clauses": [
+    {
+     "t": "Your next Runeblade or Shadow attack this turn gets +3{p}.",
+     "st": "run"
+    },
+    {
+     "t": "Create a Runechant token.",
+     "st": "run"
+    },
+    {
+     "t": "Go again",
+     "st": "run"
+    }
+   ],
+   "skipped": [],
+   "weaponCost": null,
+   "eqAbility": null,
+   "tx": "Your next Runeblade or Shadow attack this turn gets +3{p}.\nCreate a Runechant token.\nGo again",
+   "flags": []
+  },
+  "pull from beyond|1": {
+   "name": "Pull from Beyond",
+   "pitch": 1,
+   "tt": "Shadow Action",
+   "cost": 0,
+   "power": null,
+   "def": 3,
+   "kw": [
+    "Opt 2",
+    "Go again"
+   ],
+   "gkw": [],
+   "symbols": [],
+   "mentions": [
+    "go again",
+    "opt"
+   ],
+   "tier": "full",
+   "playable": true,
+   "clauses": [
+    {
+     "t": "Opt 2",
+     "st": "run"
+    },
+    {
+     "t": "Banish the top card of your deck",
+     "st": "run"
+    },
+    {
+     "t": "If it's red, create a Gate to i'Arathael token",
+     "st": "run"
+    },
+    {
+     "t": "Go again",
+     "st": "run"
+    }
+   ],
+   "skipped": [],
+   "weaponCost": null,
+   "eqAbility": null,
+   "tx": "Opt 2\nBanish the top card of your deck. If it's red, create a Gate to i'Arathael token. Go again",
+   "flags": []
+  },
+  "embrace ursur|2": {
+   "name": "Embrace Ursur",
+   "pitch": 2,
+   "tt": "Shadow Runeblade Action - Attack",
+   "cost": 1,
+   "power": 2,
+   "def": 3,
+   "kw": [
+    "Go again"
+   ],
+   "gkw": [],
+   "symbols": [],
+   "mentions": [
+    "go again"
+   ],
+   "tier": "full",
+   "playable": false,
+   "clauses": [
+    {
+     "t": "When this attacks, you may banish a card from your hand",
+     "st": "run"
+    },
+    {
+     "t": "If it's Runeblade, create a Runechant token",
+     "st": "run"
+    },
+    {
+     "t": "If it's Shadow, this gets go again.",
+     "st": "run"
+    }
+   ],
+   "skipped": [],
+   "weaponCost": null,
+   "eqAbility": null,
+   "tx": "When this attacks, you may banish a card from your hand. If it's Runeblade, create a Runechant token. If it's Shadow, this gets go again.",
+   "flags": []
+  },
+  "runechant of lust|2": {
+   "name": "Runechant of Lust",
+   "pitch": 2,
+   "tt": "Runeblade Instant - Aura",
+   "cost": 0,
+   "power": null,
+   "def": null,
+   "kw": [],
+   "gkw": [],
+   "symbols": [],
+   "mentions": [],
+   "tier": "full",
+   "playable": true,
+   "clauses": [
+    {
+     "t": "This counts as a Runechant",
+     "st": "run"
+    },
+    {
+     "t": "When an attack usurps this, create a Runechant token.",
+     "st": "run"
+    },
+    {
+     "t": "When this is destroyed, create a Runechant token.",
+     "st": "run"
+    },
+    {
+     "t": "At the beginning of your action phase or when you play an attack action card, destroy this.",
+     "st": "run"
+    }
+   ],
+   "skipped": [],
+   "weaponCost": null,
+   "eqAbility": null,
+   "tx": "This counts as a Runechant. When an attack usurps this, create a Runechant token.\nWhen this is destroyed, create a Runechant token.\nAt the beginning of your action phase or when you play an attack action card, destroy this.",
+   "flags": []
+  },
+  "runechant of sloth|2": {
+   "name": "Runechant of Sloth",
+   "pitch": 2,
+   "tt": "Runeblade Instant - Aura",
+   "cost": 0,
+   "power": null,
+   "def": null,
+   "kw": [],
+   "gkw": [
+    "Go again"
+   ],
+   "symbols": [],
+   "mentions": [
+    "go again"
+   ],
+   "tier": "full",
+   "playable": true,
+   "clauses": [
+    {
+     "t": "This counts as a Runechant",
+     "st": "run"
+    },
+    {
+     "t": "When an attack usurps this, it gets go again.",
+     "st": "run"
+    },
+    {
+     "t": "When this is destroyed, create a Runechant token.",
+     "st": "run"
+    },
+    {
+     "t": "At the beginning of your action phase or when you play an attack action card, destroy this.",
+     "st": "run"
+    }
+   ],
+   "skipped": [],
+   "weaponCost": null,
+   "eqAbility": null,
+   "tx": "This counts as a Runechant. When an attack usurps this, it gets go again.\nWhen this is destroyed, create a Runechant token.\nAt the beginning of your action phase or when you play an attack action card, destroy this.",
+   "flags": []
+  },
+  "bloodfrenzy gloomblade|3": {
+   "name": "Bloodfrenzy Gloomblade",
+   "pitch": 3,
+   "tt": "Shadow Runeblade Action - Attack",
+   "cost": 1,
+   "power": 1,
+   "def": 3,
+   "kw": [
+    "Usurp",
+    "Blood Debt",
+    "Go again"
+   ],
+   "gkw": [],
+   "symbols": [],
+   "mentions": [
+    "go again",
+    "blood debt",
+    "usurp"
+   ],
+   "tier": "full",
+   "playable": true,
+   "clauses": [
+    {
+     "t": "You may play this from your banished zone.",
+     "st": "run"
+    },
+    {
+     "t": "Usurp",
+     "st": "noop"
+    },
+    {
+     "t": "If you've dealt damage to the defending hero this turn, this gets go again.",
+     "st": "run"
+    },
+    {
+     "t": "Blood Debt",
+     "st": "noop"
+    }
+   ],
+   "skipped": [],
+   "weaponCost": null,
+   "eqAbility": null,
+   "tx": "You may play this from your banished zone.\nUsurp\nIf you've dealt damage to the defending hero this turn, this gets go again.\nBlood Debt",
+   "flags": []
+  },
+  "demonbound gloomblade|3": {
+   "name": "Demonbound Gloomblade",
+   "pitch": 3,
+   "tt": "Shadow Runeblade Action - Attack",
+   "cost": 0,
+   "power": 1,
+   "def": 3,
+   "kw": [
+    "Usurp",
+    "Blood Debt"
+   ],
+   "gkw": [],
+   "symbols": [],
+   "mentions": [
+    "blood debt",
+    "usurp"
+   ],
+   "tier": "full",
+   "playable": true,
+   "clauses": [
+    {
+     "t": "You may play this from your banished zone.",
+     "st": "run"
+    },
+    {
+     "t": "Usurp",
+     "st": "noop"
+    },
+    {
+     "t": "Blood Debt",
+     "st": "noop"
+    }
+   ],
+   "skipped": [],
+   "weaponCost": null,
+   "eqAbility": null,
+   "tx": "You may play this from your banished zone.\nUsurp\nBlood Debt",
+   "flags": []
+  },
+  "embrace ursur|3": {
+   "name": "Embrace Ursur",
+   "pitch": 3,
+   "tt": "Shadow Runeblade Action - Attack",
+   "cost": 1,
+   "power": 1,
+   "def": 3,
+   "kw": [
+    "Go again"
+   ],
+   "gkw": [],
+   "symbols": [],
+   "mentions": [
+    "go again"
+   ],
+   "tier": "full",
+   "playable": false,
+   "clauses": [
+    {
+     "t": "When this attacks, you may banish a card from your hand",
+     "st": "run"
+    },
+    {
+     "t": "If it's Runeblade, create a Runechant token",
+     "st": "run"
+    },
+    {
+     "t": "If it's Shadow, this gets go again.",
+     "st": "run"
+    }
+   ],
+   "skipped": [],
+   "weaponCost": null,
+   "eqAbility": null,
+   "tx": "When this attacks, you may banish a card from your hand. If it's Runeblade, create a Runechant token. If it's Shadow, this gets go again.",
+   "flags": []
+  },
+  "murmuring gloomblade|3": {
+   "name": "Murmuring Gloomblade",
+   "pitch": 3,
+   "tt": "Shadow Runeblade Action - Attack",
+   "cost": 2,
+   "power": 2,
+   "def": 3,
+   "kw": [
+    "Usurp",
+    "Blood Debt"
+   ],
+   "gkw": [],
+   "symbols": [],
+   "mentions": [
+    "blood debt",
+    "usurp"
+   ],
+   "tier": "full",
+   "playable": true,
+   "clauses": [
+    {
+     "t": "You may play this from your banished zone.",
+     "st": "run"
+    },
+    {
+     "t": "Usurp",
+     "st": "noop"
+    },
+    {
+     "t": "When this attacks or hits, create a Runechant token.",
+     "st": "run"
+    },
+    {
+     "t": "Blood Debt",
+     "st": "noop"
+    }
+   ],
+   "skipped": [],
+   "weaponCost": null,
+   "eqAbility": null,
+   "tx": "You may play this from your banished zone.\nUsurp\nWhen this attacks or hits, create a Runechant token.\nBlood Debt",
+   "flags": []
+  },
+  "pull from beyond|3": {
+   "name": "Pull from Beyond",
+   "pitch": 3,
+   "tt": "Shadow Action",
+   "cost": 0,
+   "power": null,
+   "def": 3,
+   "kw": [
+    "Opt 2",
+    "Go again"
+   ],
+   "gkw": [],
+   "symbols": [],
+   "mentions": [
+    "go again",
+    "opt"
+   ],
+   "tier": "full",
+   "playable": true,
+   "clauses": [
+    {
+     "t": "Opt 2",
+     "st": "run"
+    },
+    {
+     "t": "Banish the top card of your deck",
+     "st": "run"
+    },
+    {
+     "t": "If it's blue, create a Gate to i'Arathael token",
+     "st": "run"
+    },
+    {
+     "t": "Go again",
+     "st": "run"
+    }
+   ],
+   "skipped": [],
+   "weaponCost": null,
+   "eqAbility": null,
+   "tx": "Opt 2\nBanish the top card of your deck. If it's blue, create a Gate to i'Arathael token. Go again",
+   "flags": []
+  },
+  "looking for a scrap|1": {
+   "name": "Looking for a Scrap",
+   "pitch": 1,
+   "tt": "Generic Action - Attack",
+   "cost": 1,
+   "power": 4,
+   "def": 2,
+   "kw": [
+    "Go again"
+   ],
+   "gkw": [],
+   "symbols": [
+    "{p}"
+   ],
+   "mentions": [
+    "go again"
+   ],
+   "tier": "full",
+   "playable": true,
+   "clauses": [
+    {
+     "t": "As an additional cost to play this, you may banish a card with 1{p} from your graveyard",
+     "st": "run"
+    },
+    {
+     "t": "If you do, this gets +1{p} and go again.",
+     "st": "run"
+    }
+   ],
+   "skipped": [],
+   "weaponCost": null,
+   "eqAbility": null,
+   "tx": "As an additional cost to play this, you may banish a card with 1{p} from your graveyard. If you do, this gets +1{p} and go again.",
+   "flags": []
+  },
+  "weeping battleground|1": {
+   "name": "Weeping Battleground",
+   "pitch": 1,
+   "tt": "Runeblade Defense Reaction",
+   "cost": 0,
+   "power": null,
+   "def": 3,
+   "kw": [],
+   "gkw": [],
+   "symbols": [],
+   "mentions": [],
+   "tier": "full",
+   "playable": false,
+   "clauses": [
+    {
+     "t": "You may banish an aura from your graveyard",
+     "st": "run"
+    },
+    {
+     "t": "If you do, deal 1 arcane damage to target hero.",
+     "st": "run"
+    }
+   ],
+   "skipped": [],
+   "weaponCost": null,
+   "eqAbility": null,
+   "tx": "You may banish an aura from your graveyard. If you do, deal 1 arcane damage to target hero.",
+   "flags": []
+  },
   "ironrot helm|0": {
    "name": "Ironrot Helm",
    "pitch": 0,
@@ -14816,6 +15817,11 @@
     "hero": "briar",
     "q": 1,
     "zone": "gear"
+   },
+   {
+    "hero": "viseraibw",
+    "q": 1,
+    "zone": "gear"
    }
   ],
   "crown of dichotomy|0": [
@@ -14826,6 +15832,11 @@
    },
    {
     "hero": "briar",
+    "q": 1,
+    "zone": "gear"
+   },
+   {
+    "hero": "viseraibw",
     "q": 1,
     "zone": "gear"
    }
@@ -14843,6 +15854,11 @@
    },
    {
     "hero": "boltyn",
+    "q": 1,
+    "zone": "gear"
+   },
+   {
+    "hero": "viseraibw",
     "q": 1,
     "zone": "gear"
    }
@@ -14885,6 +15901,11 @@
   "malefic incantation|1": [
    {
     "hero": "viserai",
+    "q": 2,
+    "zone": "deck"
+   },
+   {
+    "hero": "viseraibw",
     "q": 2,
     "zone": "deck"
    }
@@ -14962,6 +15983,11 @@
     "hero": "viserai",
     "q": 2,
     "zone": "deck"
+   },
+   {
+    "hero": "viseraibw",
+    "q": 2,
+    "zone": "deck"
    }
   ],
   "shrill of skullform|2": [
@@ -15033,6 +16059,11 @@
   "vexing malice|3": [
    {
     "hero": "viserai",
+    "q": 2,
+    "zone": "deck"
+   },
+   {
+    "hero": "viseraibw",
     "q": 2,
     "zone": "deck"
    }
@@ -15978,6 +17009,11 @@
    },
    {
     "hero": "briar",
+    "q": 2,
+    "zone": "deck"
+   },
+   {
+    "hero": "viseraibw",
     "q": 2,
     "zone": "deck"
    }
@@ -17323,6 +18359,181 @@
   "power play|3": [
    {
     "hero": "lyath",
+    "q": 2,
+    "zone": "deck"
+   }
+  ],
+  "seven sin nebula|0": [
+   {
+    "hero": "viseraibw",
+    "q": 1,
+    "zone": "gear"
+   }
+  ],
+  "corrupted crown|0": [
+   {
+    "hero": "viseraibw",
+    "q": 1,
+    "zone": "gear"
+   }
+  ],
+  "runehold release|0": [
+   {
+    "hero": "viseraibw",
+    "q": 1,
+    "zone": "gear"
+   }
+  ],
+  "olde leather boots|0": [
+   {
+    "hero": "viseraibw",
+    "q": 1,
+    "zone": "gear"
+   }
+  ],
+  "galaxxi black|0": [
+   {
+    "hero": "viseraibw",
+    "q": 1,
+    "zone": "gear"
+   }
+  ],
+  "bloodfrenzy gloomblade|1": [
+   {
+    "hero": "viseraibw",
+    "q": 2,
+    "zone": "deck"
+   }
+  ],
+  "cullingsong gloomblade|1": [
+   {
+    "hero": "viseraibw",
+    "q": 2,
+    "zone": "deck"
+   }
+  ],
+  "demonbound gloomblade|1": [
+   {
+    "hero": "viseraibw",
+    "q": 2,
+    "zone": "deck"
+   }
+  ],
+  "embrace ursur|1": [
+   {
+    "hero": "viseraibw",
+    "q": 2,
+    "zone": "deck"
+   }
+  ],
+  "murmuring gloomblade|1": [
+   {
+    "hero": "viseraibw",
+    "q": 2,
+    "zone": "deck"
+   }
+  ],
+  "plundersong gloomblade|1": [
+   {
+    "hero": "viseraibw",
+    "q": 2,
+    "zone": "deck"
+   }
+  ],
+  "runic disposition|1": [
+   {
+    "hero": "viseraibw",
+    "q": 1,
+    "zone": "deck"
+   }
+  ],
+  "vexing gloomblade|1": [
+   {
+    "hero": "viseraibw",
+    "q": 2,
+    "zone": "deck"
+   }
+  ],
+  "otherworldly sins|1": [
+   {
+    "hero": "viseraibw",
+    "q": 2,
+    "zone": "deck"
+   }
+  ],
+  "pull from beyond|1": [
+   {
+    "hero": "viseraibw",
+    "q": 2,
+    "zone": "deck"
+   }
+  ],
+  "embrace ursur|2": [
+   {
+    "hero": "viseraibw",
+    "q": 2,
+    "zone": "deck"
+   }
+  ],
+  "runechant of lust|2": [
+   {
+    "hero": "viseraibw",
+    "q": 2,
+    "zone": "deck"
+   }
+  ],
+  "runechant of sloth|2": [
+   {
+    "hero": "viseraibw",
+    "q": 2,
+    "zone": "deck"
+   }
+  ],
+  "bloodfrenzy gloomblade|3": [
+   {
+    "hero": "viseraibw",
+    "q": 2,
+    "zone": "deck"
+   }
+  ],
+  "demonbound gloomblade|3": [
+   {
+    "hero": "viseraibw",
+    "q": 2,
+    "zone": "deck"
+   }
+  ],
+  "embrace ursur|3": [
+   {
+    "hero": "viseraibw",
+    "q": 2,
+    "zone": "deck"
+   }
+  ],
+  "murmuring gloomblade|3": [
+   {
+    "hero": "viseraibw",
+    "q": 2,
+    "zone": "deck"
+   }
+  ],
+  "pull from beyond|3": [
+   {
+    "hero": "viseraibw",
+    "q": 2,
+    "zone": "deck"
+   }
+  ],
+  "looking for a scrap|1": [
+   {
+    "hero": "viseraibw",
+    "q": 2,
+    "zone": "deck"
+   }
+  ],
+  "weeping battleground|1": [
+   {
+    "hero": "viseraibw",
     "q": 2,
     "zone": "deck"
    }

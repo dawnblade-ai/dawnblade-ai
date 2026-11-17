@@ -88,7 +88,7 @@ banish and double-face work is smaller than Prism's new zone.
 - Found while staging: the token-name scan reads "Gate to i'Arathael token" as
   "arathael" (held as a probe in `test/staged.test.js`); reader 5 must read the whole name.
 
-**Phase 2 — Viserai, Between Worlds.** The eight readers above, each its own release with
+**Phase 2 — Viserai, Between Worlds. OPENED v6.46** (`pin-pool.js --add-staged`, `HEROES`/`DECKS` key `viseraibw`, DATA_VER sage-v18; the AI pilots him poorly: see CHANGELOG v6.46). The eight readers above, each its own release with
 a drill that bites, a scene, fairness, and a CR quote in the source. The hero stays out of
 the loadout until the census prints no gap for his list and 630 self-play games with him
 seated show 0 refusals, 0 violations, 0 stalls. Then: `DECKS`/`HEROES` entry, art path,

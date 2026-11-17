@@ -1,3 +1,37 @@
+## v6.46 — Viserai, Between Worlds opens
+
+- **The sixteenth hero.** The Usurp the Shadow Throne precon joins the roster (`HEROES`/`DECKS` key `viseraibw`, the list exactly as
+  `data/newsets.json` pins it), under the RULING (user, 2026-11-15) that a precon joins when the engine reads its whole list. The census
+  printed no gap for it, both hero faces included (v6.37-v6.45). The loadout names his block, "Usurp the Shadow Throne", instead of a
+  chapter (`blk`; `ch: 4` only picks the stripe colour).
+- **The pool:** `node tools/pin-pool.js --add-staged` (new) adds the staged records the decks now need, and the other face of a needed
+  hero, keeping every other record byte for byte: 27 records (797 -> 824), no live download, so no unreviewed upstream drift rode along.
+  A full re-pin takes a needed name `develop` lacks from `data/staged.js` too. **DATA_VER sage-v17 -> sage-v18.** `cards.SA_SETS` gains SBW.
+  `data/formats.json` fields him; `tools/silver-age.js` rederived (no new ban).
+- **A bug found by dealing him:** Murmuring Gloomblade prints "When this attacks or hits, create a Runechant token" and only the hit half was
+  read, so the attack made nothing (weaker than printed). Two occasions, one payload: the "enters or leaves" precedent (`alsoAtk`, the attack
+  half on `fx.onAtk` at declaration). Drilled in `test/runechants.test.js`, sabotaged.
+- **The keyword ledger** (`tools/ledger.js`) knows Blood Debt, Usurp and Traverse (each live, CR cited).
+- **The audit** (`npm run audit`: 430 unique cards, all `full`) read his cards with two old blind spots, both fixed in the tool: its token
+  scan still cut "Gate to i'Arathael" to "Arathael" (the pinner's v6.41 pattern now), and its go-again check looked only at the four
+  top-level lists, so a go again carried on a cost's rider or a trigger's own list read as unparsed. Walking the whole parse cleared those
+  and six OLDER false flags (Jack Be Quick, Jittery Bones, Light the Way x2, Refraction Bolters, Swift Shot), each checked: the `ga` sits
+  on the clause that prints it. Flagged cards 13 -> 7. Baseline rewritten after reading the diff.
+- **The AI's answer to the traverse sheet has its own reasons**, `traverseStay` / `traverseBack` (`judge.traverseOffer` names the modes; the
+  AI reads no card text). Measured: turning back won 15 of 180 seated games and staying 17, noise, so it stays (gate `SPXTRAV`, off unless
+  it names a seat).
+- **HE IS A WEAK AI OPPONENT** (a person piloting him is unaffected): seated in self-play he wins about one game in nine. Measured, it is not
+  the engine (the deck reads `full`, card by card) and mostly not sequencing (66% of his usurp attacks find a Runechant): his printed attacks
+  average 2.6 power (the old Viserai's 3.6, Kayo's 5.6) and the deck lives on combos the rule policy does not plan. Policy work, queued.
+- **The cup:** sixteen heroes now fill the bracket, so the dummy (seated by the 2026-08-16 ruling because fifteen heroes left a seat empty)
+  enters only while the roster is short. **Self-play:** `npm run play '' '' 3` is 720 games now.
+- **Repins, each read first and noted in place:** roster and deck counts, the pool size and type census, the journeys, the condition, fx,
+  spec-field, on-hit, defends, hand-ability, tier, trigger and dead-reader censuses (each addition one of the readers built for his staged
+  cards), the anchors' four "staged only" entries (reached now), the new-sets drills (turned to "in the pool exactly when its hero opened",
+  plus a check that his deck IS the pinned list), the feed-leak drill (a DISCARD is a reveal: the sixteenth hero re-paired its games and a
+  discarded Reincarnate going to the deck bottom read as a leak).
+- No WIRE_V change. The function must be redeployed (`APP_VER`, `DATA_VER`, engine and data files).
+
 ## v6.45 — a 0 defence piece may defend; a blank one may not
 
 - **RULING (user, 2026-11-16):** "0 defense can be declared as a blocker (blank cannot)". CR 7.3.2b (verbatim): "A card cannot be declared if (A) it does not

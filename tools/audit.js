@@ -156,9 +156,13 @@ const HERO_STATICS = [
 const tokensReferencedIn = texts => {
   const found = new Set();
   for(const tx of texts)
-    for(const m of (tx||"").matchAll(/\b([A-Z][A-Za-z0-9'-]*(?: [A-Z][A-Za-z0-9'-]*){0,3}) tokens?\b/g)){
+    /* THE PINNER'S SHAPE (v6.46): a token name may carry a lowercase connective and an
+       apostrophe-led word ("Gate to i'Arathael token"). `tools/pin-pool.js` learned this at
+       v6.41 and this scan did not, so the audit reported "Arathael: not found" the day the
+       Gate's creator was dealt. Same pattern, kept capitalised because this list is shown. */
+    for(const m of (tx||"").matchAll(/\b([A-Z][A-Za-z0-9'-]*(?:(?: of| the| and| to)? (?:[a-z]')?[A-Z][A-Za-z0-9'-]*){0,3}) tokens?\b/g)){
       /* "Create X Frostbite tokens" — drop a leading count word */
-      found.add(m[1].replace(/^(?:Create|Equip|Destroy) (?:X |\d+ )?/, "").trim());
+      found.add(m[1].replace(/^(?:Create|Equip|Destroy|Put|Gain) (?:X |\d+ )?/, "").replace(/^(?:a|an|the|of|and)\s+/i, "").trim());
     }
   return [...found].sort();
 };
@@ -246,13 +250,21 @@ function analyzeCard(rc){
     flags.push("untap {u} — not parsed (see ledger)");
   /* the Kayo nuance: a granted keyword must be wired to a parsed grant
      (condition, on-hit, or a next-attack grant), never treated as printed */
+  /* A GO AGAIN CAN RIDE DEEPER THAN THE FOUR TOP-LEVEL LISTS (v6.46): on a cost's class rider
+     (Embrace Ursur, "If it's Shadow, this gets go again", `optCost.classRiders`, v6.40) or on a
+     trigger's own list (Runechant of Sloth, "When an attack usurps this, it gets go again",
+     `fx.onUsurp`, v6.42). Both were drilled when built; the audit flagged them as unread because
+     it looked only at the top. So it walks the whole parse for a `ga`/`gaNext` op. */
+  const deepGa = (function walk(v){ if(Array.isArray(v)) return v[0] === "ga" || v[0] === "gaNext" || v.some(walk);
+                                    return !!(v && typeof v === "object") && Object.values(v).some(walk); })(
+                   Object.fromEntries(Object.entries(fx).filter(([k]) => k !== "clauses")));
   if(gkws.includes("go again")){
     const wired = fx.conds.some(x=>x.op[0]==="ga") || fx.onHit.some(o=>o[0]==="ga")
-      || fx.ops.some(o=>o[0]==="gaNext") || fx.ga /* printed too (legit: e.g. boost grants) */;
+      || fx.ops.some(o=>o[0]==="gaNext") || fx.ga /* printed too (legit: e.g. boost grants) */ || deepGa;
     if(!wired && !kws.includes("boost")) flags.push("granted go-again with no parsed grant path");
   }
   if(/\bgo again\b/i.test(rc.tx||"") && !fx.ga && !fx.conds.some(x=>x.op[0]==="ga")
-     && !fx.onHit.some(o=>o[0]==="ga") && !fx.ops.some(o=>o[0]==="gaNext"))
+     && !fx.onHit.some(o=>o[0]==="ga") && !fx.ops.some(o=>o[0]==="gaNext") && !deepGa)
     flags.push("text mentions go again but no clause parses it");
   const syms = symbolsIn(rc.tx);
   for(const s of syms) if(!SYMBOLS[s]) flags.push(`UNDOCUMENTED symbol in text: ${s}`);
