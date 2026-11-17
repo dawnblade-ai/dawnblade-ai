@@ -1323,7 +1323,14 @@ function classifyClause(raw){
        stronger than printed, which is the direction that steals games. */
     if(/\bhits?\b/.test(cond)){
       if(!/^(?:this|it)\b/.test(cond)) return null;
-      return Object.assign(rest,{onHit:true, heroOnly: /\bhits?\s+(?:a\s+)?(?:marked\s+)?hero\b|\bhits?\s+them\b/.test(cond)});
+      /* "WHEN THIS ATTACKS OR HITS" IS TWO OCCASIONS, ONE PAYLOAD (v6.46) — Murmuring Gloomblade,
+         "When this attacks or hits, create a Runechant token". It was read as a hit trigger
+         alone, so the attack made no Runechant: weaker than printed, found when the card was
+         dealt. The "enters or leaves" precedent: the payload lands on BOTH lists, and the attack
+         half fires at declaration like every bare "when this attacks" (`fx.onAtk`, v4.08). */
+      const _both = /^when/.test(m[0]) && /^this attacks or hits$/.test(cond.trim());
+      return Object.assign(rest,{onHit:true, heroOnly: /\bhits?\s+(?:a\s+)?(?:marked\s+)?hero\b|\bhits?\s+them\b/.test(cond)},
+                           _both ? {alsoAtk:true} : {});
     }
     /* "IF THERE ARE NO CARDS IN YOUR SOUL" (v4.64) — Roaring Beam, the
        pool's only record, asked at the moment the card resolves. The
@@ -6891,7 +6898,10 @@ function fxParse(card){
          flag to live that some other reader will not mistake for a
          parameter. The split mirrors `condOnHit`, which is already a
          separate list for the same reason. */
-      if(r.onHit){ (r.heroOnly ? fx.onHitHero : fx.onHit).push(op); return; }
+      if(r.onHit){ (r.heroOnly ? fx.onHitHero : fx.onHit).push(op);
+        /* "attacks or hits" (v6.46): the attack half, for the ops that can honour declaration */
+        if(r.alsoAtk && DECL_OPS.has(op[0])) fx.onAtk.push(op);
+        return; }
       /* `wpnOnly` IS ADDED ONLY WHEN TRUE (v3.58). `instead` and `atkHero`
          are always present because every cond entry has had them since
          they were introduced; a fourth always-present key changes the

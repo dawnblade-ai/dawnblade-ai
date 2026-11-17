@@ -451,7 +451,9 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        bar (`.ffbar`: the countdown, the claim button) and nothing else. */
     /* 73,060 -> 74,307 AT v6.34, READ FIRST: still `<style>` -> `</style>`; the growth is the ladder screen's rules (`.ladnote`, `.ladyou` the caller's line,
        `.ladlist`/`.ladrow`/`.ladrk`/`.ladnm`/`.ladrt` the plain rows, `.ladgame` a latest game) and nothing else. */
-    "phasebar.test.js index.html 74705",
+    /* 74,705 -> 74,755 AT v6.46, READ FIRST: still `<style>` -> `</style>`; the growth is one rule,
+       `.hcard.ch4`, the loadout stripe for the Usurp the Shadow Throne block. */
+    "phasebar.test.js index.html 74755",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
        `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
        `abPickBound` in the pick legality it extends. */

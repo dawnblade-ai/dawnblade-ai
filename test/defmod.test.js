@@ -246,7 +246,8 @@ test("the pool's `defends` families are exactly these, and each has a site", {sk
   P.fxReset();
   const uniq = o => [...new Set(o)].sort();
   assert.deepEqual(uniq(fam.payCost),  ["Brothers in Arms"]);
-  assert.deepEqual(uniq(fam.optCost),  ["Crash and Bash"]);
+  /* + Corrupted Crown AT v6.46 (its "defends" offer was built for the staged card at v6.40). */
+  assert.deepEqual(uniq(fam.optCost),  ["Corrupted Crown", "Crash and Bash"]);
   assert.deepEqual(uniq(fam.millCost), ["Washed Up Wave"]);
   /* AND ALL THREE ARE SCANNED IN ONE LOOP. Pinning the readers alone
      cannot see a family leaving the list (v4.29), so the source half asks

@@ -138,8 +138,11 @@ test("the emitted SET is pinned, so a new condition is a deliberate edit", {skip
      …", a gate on a rider that must be answered AFTER the card's own ops
      have minted the tokens it counts, so it is a `way:` condition answered
      by `thisWayMet` in the late pass rather than by the main loop. */
-  assert.equal(conds.size, 55,
-    "55 distinct conditions across the pool. A 56th is fine — add it here AND " +
+  /* 55 -> 58 AT v6.46: Viserai, Between Worlds opened, so three conditions built for his staged
+     cards at v6.43 (`banCostPaid`, `banPlayed`, `dealtHero`) are emitted by the pool now; each has
+     its evaluator and test/conditionals.test.js drives it. */
+  assert.equal(conds.size, 58,
+    "58 distinct conditions across the pool. A 59th is fine — add it here AND " +
     "give it an evaluator, which is the whole point of this file. It went 48 -> 49 " +
     "at v3.97 (`way:dealtFused`) and 49 -> 51 at v3.99 (`hasGa` and `chainLinkGe4` — " +
     "two keyword-gated lines whose gate the loose matchers were eating): this drill " +
@@ -232,7 +235,9 @@ test("the other three evaluators' vocabularies are closed too", {skip}, () => {
     if(fx.activateIf) actIf.add(fx.activateIf.kind);
   }
   assert.deepEqual([...defSelf].sort(),
-    ["addCostPaid", "arcDealt", "atkActionCostLe", "fromArsenal", "weaponAttack", "withHandDefender"]);
+    /* + attackedN AT v6.46: Olde Leather Boots ("if you've been attacked 2 or more times this
+       turn"), staged at v6.43, dealt now; `defSelfMet` answers it off `hist.attacked`. */
+    ["addCostPaid", "arcDealt", "atkActionCostLe", "attackedN", "fromArsenal", "weaponAttack", "withHandDefender"]);
   /* THE COUNTABLE HALF IS PINNED SEPARATELY, and `undefined` may appear in
      NEITHER set — a `defSelf` entry carrying neither a gate nor a count is
      a clause read into a field nothing can evaluate. */
@@ -493,7 +498,8 @@ test("every condition the main loop ANSWERS has an emitter, or is pinned", {skip
   /* +banCostPaid, banPlayed, dealtHero AT v6.43: emitted by STAGED records only
      (Looking for a Scrap, Galaxxi Black, Bloodfrenzy Gloomblade — reader 8,
      test/conditionals.test.js drives each), and this walk reads the pool. */
-  assert.deepEqual(orphan, ["arcDealt", "atk", "banCostPaid", "banPlayed", "dealtHero", "non"],
+  /* ...and AT v6.46 those three left this list: the hero opened and the pool emits them. */
+  assert.deepEqual(orphan, ["arcDealt", "atk", "non"],
     "an evaluator with no emitter is dead rules code that reads like a rule (v4.11)");
   /* THE THREE POWCARD LEGS CONTRIBUTE NOTHING TODAY, AND THAT IS PINNED
      RATHER THAN ASSUMED. They are there for v3.73's reason — a hero or

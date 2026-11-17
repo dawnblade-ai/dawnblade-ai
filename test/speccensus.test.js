@@ -295,7 +295,9 @@ test("the driven census is alive — the legs really ran", () => {
 test("every spec field that reaches prompts.js is pinned", () => {
   drive();
   assert.deepEqual([...reached].sort(), [
-    "amount", "arsStamp", "avail", "banStamp", "by", "cards", "charge", "cost", "costRider",
+    /* +classRider AT v6.46: Embrace Ursur's "If it's Runeblade, … If it's Shadow, …" (v6.40,
+       `optCost.classRiders`), reached by the drive now that Viserai, Between Worlds is dealt. */
+    "amount", "arsStamp", "avail", "banStamp", "by", "cards", "charge", "classRider", "cost", "costRider",
     "ctrHeld", "ctrSpend", "ctrStamp", "defUid", "destroyEffect", "destroyUid", "discard", "elseOps", "equipStamp",
     "exactPitch", "faceUp", "filter", "hint", "jab", "keepTop", "lateGa", "max", "min", "moveFoe", "n",
     "ops", "optional", "options", "playThisTurn", "reveal", "shuffleAfter", "side", "spendCtr",

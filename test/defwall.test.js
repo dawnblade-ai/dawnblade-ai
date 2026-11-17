@@ -84,7 +84,7 @@ test("the pool's FOUR `defends` families, both directions", () => {
   /* PINNED AS SETS, both directions (v4.17) — pinning the members alone
      cannot see a name LEAVING the list, and every one of these is a printed
      line of play that has to reach BOTH walls. */
-  assert.deepEqual(names("optCost"),  ["Crash and Bash"]);
+  assert.deepEqual(names("optCost"),  ["Corrupted Crown", "Crash and Bash"]);   /* + Corrupted Crown AT v6.46 */
   assert.deepEqual(names("millCost"), ["Washed Up Wave"]);
   assert.deepEqual(names("payCost"),  ["Brothers in Arms"]);
   assert.deepEqual(names("clash"), ["Clash of Agility", "Clash of Might",

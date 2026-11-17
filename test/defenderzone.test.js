@@ -119,7 +119,9 @@ test("THE TRAINER'S DOORS: `playAtSpeed` refuses the wall, and its on-demand pit
    Reaper's Call's mark), and the damage step skipped the card that had
    left. GO AGAIN IS AN ACTION POINT and a withdrawn block is DAMAGE, so
    these assert the zones, the wall and the payload, never prose. */
-const SELF_COST = ["Agile Windup", "Arcane Twining", "Photon Splicing", "Reaper's Call"];
+/* + Runic Disposition AT v6.46 (Viserai, Between Worlds opened): "Instant - Discard this: Create a
+   Runechant token". The per-card drill below now drives it at the table too. */
+const SELF_COST = ["Agile Windup", "Arcane Twining", "Photon Splicing", "Reaper's Call", "Runic Disposition"];
 
 test("CENSUS: which hand abilities spend the card itself, and which spend another", {skip}, () => {
   /* Pinned both directions: a new pool record printing a hand ability is

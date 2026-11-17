@@ -217,6 +217,9 @@ test("the four Blade Beckoner pieces read the clause, and only they", {skip}, ()
     "Blade Beckoner Boots", "Blade Beckoner Gauntlets",
     "Blade Beckoner Helm", "Blade Beckoner Plating",
     "Gauntlets of Unity", "Helm of Unity",
+    /* + Olde Leather Boots AT v6.46 ("if you've been attacked 2 or more times this turn, this gets
+       +2{d}", built at v6.43 against the staged card, dealt now). */
+    "Olde Leather Boots",
     "Sigil of Suffering", "Springboard Somersault", "Staunch Response",
     "Unmovable", "Wax On"]);
   /* UNMOVABLE WAS NOT ON THE LIST THIS CYCLE SET OUT TO BUILD. It prints

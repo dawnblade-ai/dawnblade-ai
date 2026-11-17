@@ -254,3 +254,41 @@ test("Runebleed Robe may pay with a special Runechant, which is filed and pays i
   assert.ok(!onBoard(n.sides[0], "l1") && inGrave(n.sides[0], "l1"), "Lust was not destroyed into the graveyard");
   assert.equal(tokN(n.sides[0]), 1, "Lust's destroy line did not pay");
 });
+
+/* ---- "WHEN THIS ATTACKS OR HITS" (v6.46) --------------------------------
+   Murmuring Gloomblade, verbatim: "When this attacks or hits, create a Runechant
+   token." Found when Viserai, Between Worlds was dealt: it was read as a hit trigger
+   alone, so the attack made nothing. Two occasions, one payload (the "enters or
+   leaves" precedent): one Runechant as it attacks (CR 7.2's declaration, `fx.onAtk`),
+   another if it hits. Asserted on the board, both ways. */
+test("Murmuring Gloomblade makes a Runechant as it attacks, and another only if it hits", {skip: !H.hasDb() && "no cached card database"}, () => {
+  H.db();
+  const mg = {...H.card("Murmuring Gloomblade", 1), uid: "mg"};
+  assert.match(mg.tx || "", /When this attacks or hits, create a Runechant token/, "fixture: the printed line moved");
+  const fx = P.fxParse(mg);
+  assert.deepEqual(fx.onAtk, [["rune", 1]], "the attack half is not read");
+  assert.deepEqual(fx.onHit, [["rune", 1]], "the hit half is not read");
+  /* a bare hit trigger and a bare attack trigger are still one occasion each */
+  const tw = (nm, tx) => P.fxParse({...mg, name: nm, tx});
+  assert.deepEqual(tw("Drill Hit Only", "When this hits, create a Runechant token.").onAtk, []);
+  assert.deepEqual(tw("Drill Atk Only", "When this attacks, create a Runechant token.").onHit, []);
+  const swing = blockers => {
+    let g = {...H.state({res: 9, ap: 1, hand: [mg]}, {hp: 20, hand: blockers}, {actor: 0, turnPlayer: 0, turn: 3}),
+             phase: "action", step: "layer", priority: 0, passed: []};
+    g = J.reduce(g, {t: "play", uid: "mg", from: "hand"}, 0).state;
+    for(let i = 0; i < 10 && g.step !== "defend"; i++) g = J.reduce(g, {t: "pass"}, g.priority).state;
+    assert.equal(g.step, "defend");
+    const atAttack = P.runeCount(g.sides[0]);
+    for(const c of blockers){ const o = J.reduce(g, {t: "defend", uid: c.uid}, 1); assert.equal(o.error, null); g = o.state; }
+    for(let i = 0; i < 40 && g.pend; i++){ const m = H.move(g); if(m === g) break; g = m; }
+    return {atAttack, after: P.runeCount(g.sides[0]), hp: g.sides[1].hp};
+  };
+  const open = swing([]);
+  assert.equal(open.atAttack, 1, "no Runechant as it attacked");
+  assert.equal(open.after, 2, "the hit did not make the second");
+  assert.ok(open.hp < 20, "fixture: it did not hit");
+  const shut = swing(["d0", "d1"].map(u => ({...H.card("Brutal Assault", 3), uid: u})));
+  assert.equal(shut.hp, 20, "fixture: the wall did not stop it");
+  assert.equal(shut.atAttack, 1);
+  assert.equal(shut.after, 1, "a blocked swing made the on-hit Runechant");
+});

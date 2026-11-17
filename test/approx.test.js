@@ -562,8 +562,11 @@ probe("trainer-blocks-wall-no-defends-body", () => {
       if(fx[k] && fx[k].trigger === "defends") orphan.add(c.name);
   }
   PR.fxReset();
-  assert.deepEqual([...orphan].sort(), ["Crash and Bash", "Washed Up Wave"],
-    "the two families that could not reach the player-blocks wall");
+  /* + Corrupted Crown AT v6.46: an EQUIPMENT optCost "defends" offer (v6.40), dealt now. The
+     trainer hands its declared gear to the same body (`takeIt` passes `blockG`'s pieces as the
+     `gearWall`), so the Crown reaches it on both boards. */
+  assert.deepEqual([...orphan].sort(), ["Corrupted Crown", "Crash and Bash", "Washed Up Wave"],
+    "the families that could not reach the player-blocks wall before v4.57");
 
   /* THE BUILD. Bounded at the next same-indent declaration, never by a byte
      count — a bound too WIDE hides findings and one too NARROW invents them
@@ -728,7 +731,11 @@ function trigEvents(c){
 const PASSIVE_EVENTS = {mightOnFirst6Discard: ["discard"], weaponRefresh: ["hit"],
   earthOnFirstHeroDmg: ["hit"], lightningOnSecondNonAtk: ["play:nonAtk"],
   viseraiPassive: ["play:atk", "play:nonAtk"], iceFrostbite: ["play:oppTurn"],
-  energyOnOpt: ["opt"], lyathBoo: ["boo"], becomeAgent: ["end"], returnToBrood: ["end"]};
+  energyOnOpt: ["opt"], lyathBoo: ["boo"], becomeAgent: ["end"], returnToBrood: ["end"],
+  /* v6.46: Viserai, Between Worlds ("whenever you create 1 or more Runechants") and his back face
+     ("at the beginning of each end phase … you may traverse"; the census builds the FRONT, so this
+     one is listed for the day a deck starts on a face that prints it). */
+  runeBanish: ["runeMade"], endTraverse: ["end"]};
 function trigCensus(){
   const db = tdb(), W2 = X.loadData(), out = {};
   for(const h of W2.HEROES){
@@ -770,18 +777,23 @@ probe("simultaneous-trigger-order", () => {
      source arriving or leaving here is a parser change that can make an
      order observable — re-run the trace (CHANGELOG v5.09-v5.11) before
      moving this pin. */
+  /* v6.46: Viserai, Between Worlds opened; his deck adds five event rows (Runechants and the special
+     Runechants on an attack, three attack triggers (Murmuring Gloomblade's
+     "attacks or hits" is one of them since this version's fix), six on-hit sources, and the two special Runechants
+     again under "leave" and "start", which they destroy themselves at), all ordered by the same
+     fixed rule as every other pair. Read before repinning. */
   assert.deepEqual(trigCensus(), {
-    "attacks": {"arakni": ["Hyper Inflation", "Pick Up the Point"], "briar": ["Jack Be Quick", "Path of Same Ends"], "gravy": ["Golden Tipple", "Jittery Bones"], "viserai": ["Runic Fellingsong", "Spellblade Assault", "Vexing Malice"]},
-    "boost": {"dash": ["Big Bertha", "Crankshaft", "Hyper Driver"]},
-    "defends": {"bravo": ["Clash of Vigor", "Crash and Bash"], "iyslander": ["Brothers in Arms", "Fyendal's Fighting Spirit"], "kayo": ["Clash of Agility", "Clash of Might", "Test of Might"], "lyath": ["Brothers in Arms", "Full of Bravado", "Stonewall Impasse"]},
-    "discard": {"kayo": ["Beaten Trackers", "hero:mightOnFirst6Discard"]},
-    "end": {"arakni": ["Bloodrot Pox", "Frailty", "Inertia", "hero:becomeAgent"], "azalea": ["Bloodrot Pox", "Frailty", "Inertia"]},
-    "faceUp": {"azalea": ["Crow's Nest", "Dry Powder Shot", "Entangling Shot", "Ridge Rider Shot", "Spire Sniping", "Swift Shot"]},
-    "hit": {"arakni": ["Art of Desire: Body", "Art of Desire: Mind", "Infect", "Mark of the Black Widow", "Mark of the Funnel Web", "Mark of the Huntsman", "Mark the Prey", "Scar Tissue", "Spike with Bloodrot"], "azalea": ["Bolt'n' Shot", "Drill Shot", "Infecting Shot", "Searing Shot"], "boltyn": ["Banneret of Salvation", "Bolt of Courage", "Engulfing Light", "Illuminate", "Light the Way", "Snatch"], "bravo": ["Boulder Drop", "Buckling Blow", "Cartilage Crush", "Chokeslam", "Crush the Weak", "Debilitate", "Disable", "Fault Line", "Flatten the Field"], "briar": ["Burn Up // Shock", "Jack Be Quick", "Rush of Power", "Scorpio, Comet Tail", "Snatch", "Static Shock", "hero:earthOnFirstHeroDmg"], "dash": ["Boom Grenade", "Under Loop"], "dorinthea": ["Dawnblade", "Refraction Bolters", "Wreck Havoc", "hero:weaponRefresh"], "fai": ["Hot on Their Heels", "Mounting Anger", "Rising Resentment", "Snatch"], "lyath": ["Goon Beatdown", "Goon Tactics", "Short Shrift", "Walk in My Shoes", "Wee Wrecking Ball"]},
-    "leave": {"enigma": ["Phantasmal Haze", "Waning Vengeance"], "lyath": ["Act of Glory", "Booze!", "Edge of Their Seats", "Tension in the Air"]},
-    "play:atk": {"briar": ["Embodiment of Lightning", "Runechant"], "viserai": ["Runechant", "hero:viseraiPassive"]},
-    "play:weapon": {"boltyn": ["Courage", "Flurry"]},
-    "start": {"dorinthea": ["Agility", "Vigor"], "kayo": ["Agility", "Might", "Vigor"], "lyath": ["Booze!", "Confidence", "Might"]},
+    "attacks": {"arakni":  ["Hyper Inflation", "Pick Up the Point"], "briar":  ["Jack Be Quick", "Path of Same Ends"], "gravy":  ["Golden Tipple", "Jittery Bones"], "viserai":  ["Runic Fellingsong", "Spellblade Assault", "Vexing Malice"], "viseraibw":  ["Embrace Ursur", "Vexing Malice"]},
+    "boost": {"dash":  ["Big Bertha", "Crankshaft", "Hyper Driver"]},
+    "defends": {"bravo":  ["Clash of Vigor", "Crash and Bash"], "iyslander":  ["Brothers in Arms", "Fyendal's Fighting Spirit"], "kayo":  ["Clash of Agility", "Clash of Might", "Test of Might"], "lyath":  ["Brothers in Arms", "Full of Bravado", "Stonewall Impasse"]},
+    "discard": {"kayo":  ["Beaten Trackers", "hero:mightOnFirst6Discard"]},
+    "end": {"arakni":  ["Bloodrot Pox", "Frailty", "Inertia", "hero:becomeAgent"], "azalea":  ["Bloodrot Pox", "Frailty", "Inertia"]},
+    "faceUp": {"azalea":  ["Crow's Nest", "Dry Powder Shot", "Entangling Shot", "Ridge Rider Shot", "Spire Sniping", "Swift Shot"]},
+    "hit": {"arakni":  ["Art of Desire: Body", "Art of Desire: Mind", "Infect", "Mark of the Black Widow", "Mark of the Funnel Web", "Mark of the Huntsman", "Mark the Prey", "Scar Tissue", "Spike with Bloodrot"], "azalea":  ["Bolt'n' Shot", "Drill Shot", "Infecting Shot", "Searing Shot"], "boltyn":  ["Banneret of Salvation", "Bolt of Courage", "Engulfing Light", "Illuminate", "Light the Way", "Snatch"], "bravo":  ["Boulder Drop", "Buckling Blow", "Cartilage Crush", "Chokeslam", "Crush the Weak", "Debilitate", "Disable", "Fault Line", "Flatten the Field"], "briar":  ["Burn Up // Shock", "Jack Be Quick", "Rush of Power", "Scorpio, Comet Tail", "Snatch", "Static Shock", "hero:earthOnFirstHeroDmg"], "dash":  ["Boom Grenade", "Under Loop"], "dorinthea":  ["Dawnblade", "Refraction Bolters", "Wreck Havoc", "hero:weaponRefresh"], "fai":  ["Hot on Their Heels", "Mounting Anger", "Rising Resentment", "Snatch"], "lyath":  ["Goon Beatdown", "Goon Tactics", "Short Shrift", "Walk in My Shoes", "Wee Wrecking Ball"], "viseraibw":  ["Cullingsong Gloomblade", "Galaxxi Black", "Murmuring Gloomblade", "Plundersong Gloomblade", "Seven Sin Nebula", "Vexing Gloomblade"]},
+    "leave": {"enigma":  ["Phantasmal Haze", "Waning Vengeance"], "lyath":  ["Act of Glory", "Booze!", "Edge of Their Seats", "Tension in the Air"], "viseraibw":  ["Runechant of Lust", "Runechant of Sloth"]},
+    "play:atk": {"briar":  ["Embodiment of Lightning", "Runechant"], "viserai":  ["Runechant", "hero:viseraiPassive"], "viseraibw":  ["Runechant", "Runechant of Lust", "Runechant of Sloth"]},
+    "play:weapon": {"boltyn":  ["Courage", "Flurry"]},
+    "start": {"dorinthea":  ["Agility", "Vigor"], "kayo":  ["Agility", "Might", "Vigor"], "lyath":  ["Booze!", "Confidence", "Might"], "viseraibw":  ["Runechant of Lust", "Runechant of Sloth"]}
   }, "a trigger source arrived or left — measure the order again before re-pinning");
 });
 
@@ -1335,15 +1347,19 @@ probe("attack-ops-at-resolution", () => {
      the next attack cannot be declared until this one resolves, and none of
      the three prints phantasm, so each always resolves. The set below is
      named for that reason rather than dropped. */
-  assert.equal(rows.length, 13,
+  /* 13 -> 14 AND 5 -> 6 AT v6.46: Murmuring Gloomblade (Viserai, Between Worlds, dealt now). Its
+     "when this attacks or hits" Runechant fires at declaration (`fx.onAtk`, v6.46's own fix); what
+     rides to resolution is its three printed-keyword `noop`s (banished-zone play, Usurp, Blood
+     Debt), which change nothing there, so the OBSERVABLE set below is untouched. */
+  assert.equal(rows.length, 14,
     "the number of bare when-this-attacks ATTACK cards with a payload moved");
-  assert.equal(lateRows.length, 5,
+  assert.equal(lateRows.length, 6,
     "the number whose payload rides to RESOLUTION moved");
   assert.deepEqual(observable.map(r => r.name).sort(),
     ["Brand with Cinderclaw", "Fire Tenet: Strike First", "Teklo Trebuchet 2000"],
     "the set of cards whose payload is OBSERVABLY late moved. Down means one " +
     "was moved to declaration and the ledger must say so; up is a regression. " +
-    "(Two more are late and carry only a `noop`, which is not observable.)");
+    "(Three more are late and carry only a `noop`, which is not observable.)");
 
   /* AND THE CONTROL: the pre-run really does fire at declaration, so this
      probe can tell a late op from an early one rather than reporting
@@ -1952,7 +1968,10 @@ probe("pool-deck-complete", () => {
      while `build.js` reads both passives through its own readers, as it
      always did. The heroes' play is untouched; their record stopped
      reporting a reading nothing used. */
-  assert.equal(none.hero.length, 6,
+  /* 6 -> 8 AT v6.46: Viserai, Between Worlds and Viserai, Usurper (his two faces) joined the pool.
+     Like the other heroes here, their lines are read by the build (`build.heroAbilities`, both
+     faces; test/traverse.test.js), not by `fxParse`. */
+  assert.equal(none.hero.length, 8,
     "the set of HEROES reading nothing moved. Exactly ONE is now an Agent of " +
     "Chaos — Trap-Door, refusing on its PAYLOAD (a deck search) rather than on " +
     "the cost; the rest are Arakni's own base form and heroes whose whole " +

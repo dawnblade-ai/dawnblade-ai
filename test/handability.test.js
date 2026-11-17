@@ -43,7 +43,7 @@ function table(hand, o){
 
 /* ---- THE CENSUS -------------------------------------------------------- */
 
-test("exactly five pool cards print a hand ability, and nothing is named", {skip}, () => {
+test("exactly six pool cards print a hand ability, and nothing is named", {skip}, () => {
   const db = H.db(), hits = [];
   for(const k of Object.keys(W.DECKS)){
     const d = G.parseDeck(W.DECKS[k]);
@@ -56,7 +56,8 @@ test("exactly five pool cards print a hand ability, and nothing is named", {skip
   P.fxReset();
   const uniq = [...new Set(hits)].sort();
   assert.deepEqual(uniq,
-    ["Agile Windup", "Arcane Twining", "Photon Splicing", "Rally the Coast Guard", "Reaper's Call"],
+    /* + Runic Disposition AT v6.46 ("Instant - Discard this: Create a Runechant token"). */
+    ["Agile Windup", "Arcane Twining", "Photon Splicing", "Rally the Coast Guard", "Reaper's Call", "Runic Disposition"],
     "the reader claims exactly the cards that print one — three of them nothing to do with Kayo, " +
     "which is the golden rule working rather than a coincidence");
 });

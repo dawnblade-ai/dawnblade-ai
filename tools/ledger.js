@@ -129,6 +129,11 @@ const KEYWORDS = {
       loop that every coverage tool reported as `tier: full`. An ally that
       dies is now stamped `_fd` in the graveyard and
       `parser.playableFromZone` refuses it — one rule, both boards. */
+   /* THE NEW VISERAI'S THREE KEYWORDS (v6.46, when he opened and they reached the pool). Each was
+      built and drilled against his staged cards first; the CR is quoted where each is read. */
+   "blood debt":          {status:"live",        note:"v6.38 — CR 8.3.11/8.3.11a: while a carrier sits face up in its owner's banished zone, they lose 1 life at the beginning of their end phase (life loss, not damage). parser.bloodDebt, effects.beginEndPhase step (6a), both boards; test/blooddebt.test.js"},
+   "usurp":               {status:"live",        note:"v6.39/v6.42 — CR 8.3.49/8.3.49a: as the attack is played its owner destroys a Runechant (a special Runechant counts, CR 1.8.8, and the player picks which when it matters) and the attack gets +2 power, never a weapon or ally swing. parser.usurps / usurpOffer, effects.execute; test/usurp.test.js, test/runechants.test.js"},
+   "traverse":            {status:"live",        note:"v6.44 — CR 8.5.60/8.5.60a: the double-faced hero turns over; the ability half of the build becomes the other face's, life carries (RULING user 2026-11-16). effects.traverse, build.facesOf; test/traverse.test.js"},
    "watery grave":        {status:"live",        note:"RULED 2026-07-25: Gravy Bones' ability — playable from the graveyard once a blue card has hit it this turn, and a dead ally goes FACE-DOWN so it cannot be replayed"},
 };
 

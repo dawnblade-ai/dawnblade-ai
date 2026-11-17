@@ -685,8 +685,9 @@ test("the ability reader claims exactly the cards that print one", {skip}, () =>
     }
   }
   assert.deepEqual([...new Set(hits)].sort(),
+    /* + Runic Disposition|1 AT v6.46 (Viserai, Between Worlds opened). */
     ["Agile Windup|3", "Arcane Twining|3", "Photon Splicing|3",
-     "Rally the Coast Guard|3", "Reaper's Call|3"]);
+     "Rally the Coast Guard|3", "Reaper's Call|3", "Runic Disposition|1"]);
 });
 
 /* ---- STRONGEST SURVIVE: the defender's escape hatch -------------------- */

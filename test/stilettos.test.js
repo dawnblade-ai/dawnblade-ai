@@ -455,8 +455,12 @@ test(gate("exactly ONE pool record moves, and every sibling is unchanged"), () =
      `none` 13 -> 12. One record, and not a deck card.
      RE-PINNED AGAIN AT v6.41, after reading the diff: the GATE TO I'ARATHAEL
      token went `none` -> `full` when its grant got a reader, so `full`
-     761 -> 762 and `none` 12 -> 11. One record, and not a deck card. */
-  assert.deepEqual(tiers, {full: 762, none: 11, part: 24});
+     761 -> 762 and `none` 12 -> 11. One record, and not a deck card.
+     RE-PINNED AGAIN AT v6.46, after reading the diff: Viserai, Between Worlds OPENED, 27 staged
+     records joined the pool. All 25 card records parse `full` (762 -> 787); the two `none` are his
+     two HERO faces (11 -> 13), whose lines are read by `build.heroAbilities`, not `fxParse`, and
+     which `tools/newdecks-census.js` reports covered on both faces. `part` is untouched. */
+  assert.deepEqual(tiers, {full: 787, none: 13, part: 24});
   assert.deepEqual([...carriers.allyDiesOrPhantasm], ["Silent Stilettos"]);
   /* PINNED BOTH SIDES (v4.17) — pinning the new trigger alone cannot see
      a record LEAVING one of the others, which is what merging two

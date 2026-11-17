@@ -203,7 +203,9 @@ test("the pool's on-hit subjects are pinned as a SET, both halves", {skip}, () =
      empty, which satisfies "every third-person subject refuses" perfectly
      — so the SELF half is the positive control. */
   assert.deepEqual([...new Set(self)].sort(),
-    ["this hits", "this hits a **marked** hero", "this hits a hero"]);
+    /* + "this attacks or hits" AT v6.46: Murmuring Gloomblade ("When this attacks or hits, create a
+       Runechant token"), Viserai, Between Worlds, opened. */
+    ["this attacks or hits", "this hits", "this hits a **marked** hero", "this hits a hero"]);
   assert.deepEqual([...new Set(other)].sort(), [
     "a dagger you own hits a hero",              /* Arakni, Tarantula — v3.77, in linkPayload */
     "a mechanologist attack action card you control hits a hero", /* Boom Grenade — no route yet */
