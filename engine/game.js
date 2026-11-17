@@ -31,6 +31,26 @@ function parseDeck(raw){
 }
 
 const gearDef = gr => gr.destroyed ? 0 : (gr.curDef!=null ? gr.curDef : (gr.def||0));
+/* ---- MAY THIS PIECE BE DECLARED AS A DEFENDER? (v6.45) -------------------
+   CR 7.3.2b (verbatim): "A card cannot be declared if (A) it does not have
+   the defense property (0 is a value), (B) it is already a defending card on
+   a chain link, or (C) it would make the current set of declared cards
+   illegal to become defending." CR 2.3.2 (verbatim): "If a card does not
+   have a printed defense, it does not have the defense property (0 is a
+   valid printed defense)."
+   RULING (user, 2026-11-16): "0 defense can be declared as a blocker (blank
+   cannot)".
+
+   Until v6.45 both boards refused any piece whose defence was 0, printed or
+   worn down, so no 0{d} piece could ever defend. This answers (A) only: a
+   piece that prints a defence may be declared at any value, a piece that
+   prints none (a weapon, a blank equipment) may not, and a destroyed piece
+   is not there. (B) and (C) are the callers'. Null means it may; otherwise
+   the reason, in words a player reads. One body, both boards. */
+const gearDeclareWhy = gr => !gr ? "that piece is not there"
+  : gr.destroyed ? gr.name + " is destroyed"
+  : (gr.def == null && gr.curDef == null) ? gr.name + " prints no defence"
+  : null;
 function gearBlockApply(gr){
   const kws = (gr.kw||[]).map(k=>String(k).toLowerCase());
   const d = gearDef(gr); const n = {...gr};
@@ -526,7 +546,7 @@ function resetLeavers(game){
   return sides ? Object.assign({}, game, {sides}) : game;
 }
 
-return {parseDeck, gearDef, gearBlockApply, slotOf, HANDS, handsUsed, handsFree,
+return {parseDeck, gearDef, gearDeclareWhy, gearBlockApply, slotOf, HANDS, handsUsed, handsFree,
   isSecondPerson, thirdPerson, svName, sv, spName, sp, typeAbbr, pipParts, pipWords,
         ARMOR_SLOTS, exposedZones, hasExposedZone,
         isAlly, allyBaseLife, allyLife, isAttackable,

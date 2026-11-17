@@ -1146,22 +1146,20 @@ const APPROX = {
       "probe asserts the token is taken unasked, so it goes red the day the question is built."},
 
   "zero-defence-gear-refused": {
-  status:"open", cr:"7.3.2b", board:"both", since:"v6.43", swept:"v6.43",
-  claim:"Neither board lets a seat declare an equipment piece whose defence is 0, printed "+
-        "or worn (judge `legal`: \"has no defence left\"; the trainer's toggleBlock says the "+
-        "same). CR 7.3.2b (verbatim): \"A card cannot be declared if (A) it does not have the "+
-        "defense property (0 is a value), (B) it is already a defending card on a chain link, or "+
-        "(C) it would make the current set of declared cards illegal to become defending.\"",
-  why:"Found by reader 8: Olde Leather Boots (staged, printed 0{d}) reads \"if you've been "+
-      "attacked 2 or more times this turn, this gets +2{d}\", and the reader is built "+
-      "(`defSelf.when = attackedN`, `hist.attacked`, `defendValue`), but the piece can never be "+
-      "declared, so the +2 is unreachable at either table. WEAKER than printed, on 27 pinned "+
-      "pool pieces too (every 0{d} equipment). Not changed in v6.43: test/defcap.test.js pins the "+
-      "worn-to-zero refusal as a deliberate rule (v2.46's spent wall), and the AI's wall filters "+
-      "on defence above 0 as well, so the fix is a dealt-card change with a policy question in "+
-      "it. The probe asserts the refusal, so it goes red the day it is lifted. "+
-      "RULING (user, 2026-11-16): \"0 defense can be declared as a blocker (blank cannot)\". Not built "+
-      "in v6.44, which shipped the same day: it is the next release."},
+  status:"closed", cr:"7.3.2b", board:"both", since:"v6.43", swept:"v6.45",
+  claim:"WAS: neither board let a seat declare an equipment piece whose defence is 0, printed "+
+        "or worn (judge `legal`: \"has no defence left\"; the trainer's toggleBlock said the "+
+        "same), so Olde Leather Boots' +2{d} was unreachable and 27 pool 0{d} pieces could never "+
+        "defend. IS: `game.gearDeclareWhy`, one body both boards call, refuses only a piece that "+
+        "prints no defence at all (a weapon, a blank equipment) and a destroyed piece. CR 7.3.2b "+
+        "(verbatim): \"A card cannot be declared if (A) it does not have the defense property (0 "+
+        "is a value), (B) it is already a defending card on a chain link, or (C) it would make the "+
+        "current set of declared cards illegal to become defending.\"",
+  why:"RULING (user, 2026-11-16): \"0 defense can be declared as a blocker (blank cannot)\". "+
+      "Built in v6.45. The seat policy still declares only pieces with defence above 0 (its "+
+      "filters read the wear, not this rule), so the AI's play did not move; it also means the "+
+      "AI never raises the Boots for their +2, which is policy work for the day Viserai is an AI "+
+      "seat. The probe drives the Boots on the second attack of a turn and reads the 2 stopped."},
 
   "dealt-damage-reads-attacks": {
   status:"open", cr:"6.4.10a", board:"both", since:"v6.43", swept:"v6.43",

@@ -414,7 +414,9 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 1 -> 3 AT v6.43: `zero-defence-gear-refused` (CR 7.3.2b: 0 is a value; both
      boards refuse a 0{d} piece, so Olde Leather Boots' +2 is unreachable) and
      `dealt-damage-reads-attacks` (Second Strike's gate reads attacks played). */
-  assert.equal(n("open"),    3, "open count moved");
+  /* 3 -> 2 AT v6.45: `zero-defence-gear-refused` is CLOSED by the user's ruling
+     (a 0{d} piece may be declared, a blank may not). */
+  assert.equal(n("open"),    2, "open count moved");
   /* 16 -> 17 AT v4.63: `steam-build-powcard-read`. 17 -> 18 AT v4.66:
      `play-held-on-the-stack`. 19 -> 20 AT v4.72: `x-cost-declared`.
      20 -> 21 AT v4.73: `crush-halving-rider-read`. 21 -> 22 AT v4.74:
@@ -433,7 +435,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 36 -> 37 closed AT R9: `activation-target-declared`. */
   /* 37 -> 38 closed AT v6.00: `played-target-partial-resolution`. */
   /* 38 -> 39 closed AT v6.02: `look-named-in-shared-feed`. */
-  assert.equal(n("closed"), 39, "closed count moved");
+  /* 39 -> 40 closed AT v6.45: `zero-defence-gear-refused`. */
+  assert.equal(n("closed"), 40, "closed count moved");
 });
 
 /* ============================================================
@@ -2340,24 +2343,33 @@ probe("destroy-a-runechant-cost-unasked", () => {
     "a special Runechant cannot pay a cost that destroys a Runechant");
 });
 
-/* OPEN AT v6.43. DRIVEN: at the defend step, a printed-0{d} piece (Olde Leather
-   Boots, staged) is refused although CR 7.3.2b says 0 is a value; the wall's
-   value body would give it +2 on the second attack. */
+/* CLOSED AT v6.45 (RULING, user, 2026-11-16: "0 defense can be declared as a
+   blocker (blank cannot)"). DRIVEN: Olde Leather Boots (staged, printed 0{d})
+   is declared against the second attack of a turn and stops 2; against the
+   first it is declared and stops nothing. */
 probe("zero-defence-gear-refused", () => {
   H.db();
   const C2 = require("../engine/cards.js");
   const ST = C2.buildMaps(require("../data/staged.js").filter(c => c && c.name).map(C2.mapDbCard));
-  const boots = {...C2.resolveEntry(ST, {name: "Olde Leather Boots", p: 0, code: null, q: 1}), uid: "ob"};
-  const atk = {...H.card("Brutal Assault", 3), uid: "a1"};
-  let g = {...H.state({res: 9, ap: 1, hand: [atk]}, {hp: 20, hand: [], gear: [boots]}, {actor: 0, turnPlayer: 0, turn: 3}),
-           phase: "action", step: "layer", priority: 0, passed: []};
-  g = J.reduce(g, {t: "play", uid: "a1", from: "hand"}, 0).state;
-  for(let i = 0; i < 10 && g.step !== "defend"; i++) g = J.reduce(g, {t: "pass"}, g.priority).state;
-  assert.equal(g.step, "defend");
-  assert.match(String(J.legal(g, {t: "defend", uid: "ob"}, 1)), /no defence left/,
-    "a 0{d} piece can be declared now (CR 7.3.2b) — close this record");
-  assert.equal(E.defendValue({hist: Object.assign(S.freshHist(), {attacked: 2})}, boots, {base: 0}), 2,
-    "the Boots' reader itself moved");
+  const run = attacked => {
+    const boots = {...C2.resolveEntry(ST, {name: "Olde Leather Boots", p: 0, code: null, q: 1}), uid: "ob", gi: 0};
+    const atk = {...H.card("Brutal Assault", 3), uid: "a1"};
+    let g = {...H.state({res: 9, ap: 1, hand: [atk]},
+                        {hp: 20, hand: [], gear: [boots], hist: Object.assign(S.freshHist(), {attacked})},
+                        {actor: 0, turnPlayer: 0, turn: 3}),
+             phase: "action", step: "layer", priority: 0, passed: []};
+    g = J.reduce(g, {t: "play", uid: "a1", from: "hand"}, 0).state;
+    for(let i = 0; i < 10 && g.step !== "defend"; i++) g = J.reduce(g, {t: "pass"}, g.priority).state;
+    assert.equal(g.step, "defend");
+    const out = J.reduce(g, {t: "defend", uid: "ob"}, 1);
+    assert.equal(out.error, null, "a 0{d} piece is refused again (CR 7.3.2b) — reopen this record");
+    g = out.state;
+    for(let i = 0; i < 40 && g.pend; i++){ const m = H.move(g); if(m === g) break; g = m; }
+    return {lost: 20 - g.sides[1].hp, power: atk.power};
+  };
+  const second = run(1), first = run(0);
+  assert.equal(second.lost, second.power - 2, "the Boots did not stop 2 on the second attack of the turn");
+  assert.equal(first.lost, first.power, "the Boots stopped damage on the first attack");
 });
 
 /* STATED AT v6.44. DRIVEN: Viserai, Between Worlds at 17 life creates his third

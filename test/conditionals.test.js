@@ -149,9 +149,9 @@ test("Olde Leather Boots: the count reaches 2 on the second attack, and the wall
   const ob = staged("Olde Leather Boots");
   assert.equal(E.defendValue(g.sides[1], ob, {base: 0}), 2, "the Boots did not get +2{d} on the second attack");
   assert.equal(E.defendValue({hist: hist({attacked: 1})}, ob, {base: 0}), 0, "+2{d} on the first attack");
-  /* STATED LIMIT, tools/approx.js `zero-defence-gear-refused`: a printed-0{d}
-     piece cannot be declared on either board (CR 7.3.2b says 0 is a value),
-     so at the table the +2 is unreachable today; that record's probe holds it. */
+  /* v6.45: a printed-0{d} piece may be declared now (RULING, user, 2026-11-16),
+     so the +2 is reachable at the table; tools/approx.js
+     `zero-defence-gear-refused` is closed and its probe drives it. */
 });
 
 /* ---- "if you've dealt damage to the defending hero this turn" ---------- */

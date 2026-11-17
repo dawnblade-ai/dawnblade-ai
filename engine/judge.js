@@ -1042,7 +1042,8 @@ function legal(g, a, seat){
     if(gi < 0 && ci < 0) return "card is not in hand or gear";
     const c = gi >= 0 ? sd.gear[gi] : sd.hand[ci];
     if(gi >= 0){
-      if(gearDef(c) <= 0) return c.name + " has no defence left";
+      /* CR 7.3.2b (A): 0 is a value, a blank is not (`game.gearDeclareWhy`, v6.45) */
+      { const gw = GM.gearDeclareWhy(c); if(gw) return gw; }
       /* CR 7.3.2b — a piece already spent on THIS chain cannot block
          again. It clears when the chain breaks, not when the turn ends. */
       if((sd.chainBlocked || []).indexOf(a.uid) >= 0) return c.name + " already blocked this chain";

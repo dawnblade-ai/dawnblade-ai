@@ -5534,7 +5534,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     }
     const gr = you(s).gear[v];
     if(!gr) return s;
-    if(gearDef(gr)<=0) return L(s, `${gr.name} has no defence left.`);
+    { const _gw = DawnGame.gearDeclareWhy(gr); if(_gw) return L(s, _gw + "."); }
     const on = !you(s).blockG.includes(v);
     if(on){
       /* CR 7.3.2b, judge's refusal word for word */
@@ -5864,7 +5864,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     : g.featured;
   const prevLinks = g.chain.slice(0,-1).reverse();
   const gearBtn = (gr,i,extra,st,back) => {
-    const w = isWeapon(gr), blockable = g.mode==="block" && gearDef(gr)>0;
+    const w = isWeapon(gr), blockable = g.mode==="block" && !DawnGame.gearDeclareWhy(gr);
     const spent = gr.destroyed || (gr.curDef!=null && gr.curDef===0);
     const sel = you(g).blockG.includes(i);
     const tapped = w && !!you(g).weaponUsed[gr.uid] && /\btap\b|\{t\}/i.test(gr.tx||"");
@@ -6009,7 +6009,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     const out = [];
     if(g.mode==="block"){
       if(g.bphase==="defend"){
-        you(g).gear.forEach((gr,i)=>{ if(gearDef(gr)>0 && !gr.destroyed) out.push({card:{...gr,def:gearDef(gr)}, zone:"equip", sel:you(g).blockG.includes(i), verb:"tap again to defend", fn:()=>toggleBlock("g",i)}); });
+        you(g).gear.forEach((gr,i)=>{ if(!DawnGame.gearDeclareWhy(gr)) out.push({card:{...gr,def:gearDef(gr)}, zone:"equip", sel:you(g).blockG.includes(i), verb:"tap again to defend", fn:()=>toggleBlock("g",i)}); });
       } else if(g.bphase==="react" && you(g).arsenal){ const fx=fxParse(you(g).arsenal);
         if(rxAllowed(you(g).arsenal, "defense-reaction")) out.push({card:you(g).arsenal, zone:"arsenal", verb:"tap again to react", fn:playRxA});
         else if(built.arsenalInstant && !isAttack(you(g).arsenal) && (you(g).arsenal.pitch||0)>=3 && fx.ops.length>0) out.push({card:you(g).arsenal, zone:"arsenal", verb:"tap again to react", fn:playArsenalInstant});

@@ -276,16 +276,95 @@ test("THE TRAINER CAPS ITS HEURISTIC, IT DOES NOT REPLACE IT", () => {
    re-blocking is reachable rather than theoretical — and it is the exact
    shape of v2.46's bug, where a spent wall was counted a second time. */
 
-test("a piece with no defence left cannot be declared", {skip}, () => {
+/* ---- RULING (user, 2026-11-16): "0 defense can be declared as a blocker
+   (blank cannot)" — v6.45. The test that stood here pinned the opposite (a
+   piece at 0 refused, "no defence left"), the reading both boards had kept
+   since the wall was built. CR 7.3.2b (verbatim): "A card cannot be declared
+   if (A) it does not have the defense property (0 is a value), (B) it is
+   already a defending card on a chain link, or (C) it would make the current
+   set of declared cards illegal to become defending." CR 2.3.2 (verbatim):
+   "If a card does not have a printed defense, it does not have the defense
+   property (0 is a valid printed defense)." One reader, `game.gearDeclareWhy`,
+   both boards. */
+const GMX = require("../engine/game.js");
+const SPX = require("../engine/sparring.js");
+
+test("0 is a value: a piece at 0 defence may be declared, printed 0 or worn to it", {skip}, () => {
   H.db();
+  const zero = {uid: 9, name: "Zero Iron", tt: "Guardian Equipment - Chest", def: 0, gi: 0};
+  assert.equal(J.legal(wallState(PLAIN, [], [zero]), {t: "defend", uid: 9}, 1), null, "a printed 0{d} piece was refused");
   const worn = {uid: 9, name: "Worn Iron", tt: "Guardian Equipment - Chest", def: 2, curDef: 0, gi: 0};
-  const g = wallState(PLAIN, [], [worn]);
-  const why = J.legal(g, {t: "defend", uid: 9}, 1);
-  assert.ok(why && /no defence left/.test(why),
-    "a battleworn piece at 0 is not a defender — got: " + String(why));
-  /* the control: the same piece with its printed defence intact */
-  const ok = wallState(PLAIN, [], [{...worn, curDef: null}]);
-  assert.equal(J.legal(ok, {t: "defend", uid: 9}, 1), null);
+  assert.equal(J.legal(wallState(PLAIN, [], [worn]), {t: "defend", uid: 9}, 1), null, "a piece worn to 0 was refused");
+  /* a real one: every 0{d} equipment in the pool reads as declarable, and there are some */
+  const C2 = require("../engine/cards.js");
+  const zeros = require("../data/pool.js").map(C2.mapDbCard)
+    .filter(c => (c.ty || []).some(t => /^equipment$/i.test(t)) && c.d === 0);
+  assert.ok(zeros.length >= 20, "the census found no 0{d} equipment: the fixture is gone");
+  for(const z of zeros){
+    const piece = {...H.card(z.n, 0), uid: 9, gi: 0};
+    assert.equal(piece.def, 0, z.n + " did not resolve at 0{d}");
+    assert.equal(J.legal(wallState(PLAIN, [], [piece]), {t: "defend", uid: 9}, 1), null, z.n + " was refused");
+  }
+});
+
+test("a blank is not a value: no printed defence, no declaration; and a destroyed piece is not there", {skip}, () => {
+  H.db();
+  const blank = {uid: 9, name: "Blank Iron", tt: "Guardian Equipment - Chest", def: null, gi: 0};
+  assert.match(String(J.legal(wallState(PLAIN, [], [blank]), {t: "defend", uid: 9}, 1)), /prints no defence/);
+  const gone = {uid: 9, name: "Broken Iron", tt: "Guardian Equipment - Chest", def: 2, destroyed: true, gi: 0};
+  assert.match(String(J.legal(wallState(PLAIN, [], [gone]), {t: "defend", uid: 9}, 1)), /is destroyed/);
+  /* a destroyed piece that printed 0 is still not there */
+  assert.match(String(J.legal(wallState(PLAIN, [], [{...gone, def: 0}]), {t: "defend", uid: 9}, 1)), /is destroyed/);
+  /* real blanks: the pool's equipment that prints no defence, and a weapon */
+  const C2 = require("../engine/cards.js");
+  const blanks = require("../data/pool.js").map(C2.mapDbCard)
+    .filter(c => (c.ty || []).some(t => /^equipment$/i.test(t)) && c.d == null);
+  assert.ok(blanks.length >= 3, "the census found no blank equipment: the fixture is gone");
+  for(const z of blanks){
+    const piece = {...H.card(z.n, 0), uid: 9, gi: 0};
+    assert.match(String(J.legal(wallState(PLAIN, [], [piece]), {t: "defend", uid: 9}, 1)), /prints no defence/, z.n);
+  }
+  /* the reader itself, the body the trainer calls too */
+  assert.equal(GMX.gearDeclareWhy({name: "X", def: 0}), null);
+  assert.equal(GMX.gearDeclareWhy({name: "X", def: 3, curDef: 0}), null);
+  assert.match(GMX.gearDeclareWhy({name: "X", def: null}), /prints no defence/);
+  assert.match(GMX.gearDeclareWhy({name: "X", def: 0, destroyed: true}), /is destroyed/);
+});
+
+test("DRIVEN: a 0{d} piece joins the wall, stops nothing, and pays what defending costs it", {skip}, () => {
+  H.db();
+  /* Washed Up Wave prints 0{d} and Blade Break: declared, it stops 0 and is destroyed */
+  const wave = {...H.card("Washed Up Wave", 0), uid: 9, gi: 0};
+  assert.equal(wave.def, 0, "fixture: Washed Up Wave no longer prints 0{d}");
+  assert.ok((wave.kw || []).some(k => /blade break/i.test(k)), "fixture: Washed Up Wave no longer prints Blade Break");
+  const atk = {...H.card("Brutal Assault", 3), uid: "a1"};
+  let g = {...H.state({res: 9, ap: 1, hand: [atk]}, {hp: 20, hand: [], gear: [wave]}, {actor: 0, turnPlayer: 0, turn: 3}),
+           phase: "action", step: "layer", priority: 0, passed: []};
+  g = J.reduce(g, {t: "play", uid: "a1", from: "hand"}, 0).state;
+  for(let i = 0; i < 10 && g.step !== "defend"; i++) g = J.reduce(g, {t: "pass"}, g.priority).state;
+  const out = J.reduce(g, {t: "defend", uid: 9}, 1);
+  assert.equal(out.error, null, "the declaration was refused: " + out.error);
+  g = out.state;
+  for(let i = 0; i < 40 && g.pend; i++){ const m = H.move(g); if(m === g) break; g = m; }
+  assert.equal(g.sides[1].hp, 20 - atk.power, "a 0{d} piece stopped damage");
+  assert.ok(H.filed(g.sides[1], 9), "Blade Break did not destroy the 0{d} piece that defended");
+});
+
+test("the seat policy does not throw a 0{d} piece into a wall", {skip}, () => {
+  H.db();
+  const zero = {...H.card("Washed Up Wave", 0), uid: 9, gi: 0};
+  const atk = {...H.card("Brutal Assault", 3), uid: "a1"};
+  let g = {...H.state({res: 9, ap: 1, hand: [atk]}, {hp: 20, hand: [], gear: [zero]}, {actor: 0, turnPlayer: 0, turn: 3}),
+           phase: "action", step: "layer", priority: 0, passed: []};
+  g = J.reduce(g, {t: "play", uid: "a1", from: "hand"}, 0).state;
+  for(let i = 0; i < 10 && g.step !== "defend"; i++) g = J.reduce(g, {t: "pass"}, g.priority).state;
+  assert.equal(J.legal(g, {t: "defend", uid: 9}, 1), null, "fixture: the piece is not declarable");
+  for(let i = 0; i < 40 && g.pend; i++){
+    const a = SPX.act(g, 1) || SPX.act(g, 0);
+    assert.ok(!(a && a.t === "defend" && a.uid === 9), "the policy declared a piece that stops nothing");
+    const m = H.move(g); if(m === g) break; g = m;
+  }
+  assert.ok(!H.filed(g.sides[1], 9), "the 0{d} piece was spent on a wall");
 });
 
 test("…and a piece already spent on this chain cannot block again (CR 7.3.2b)", {skip}, () => {
