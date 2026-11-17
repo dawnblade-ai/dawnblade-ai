@@ -100,7 +100,9 @@ the AI-policy work for Viserai is on the back burner). The soul zone already exi
   1. **DONE (unreleased)** — "put it into your soul and <rider>" (`classifyClause`'s split,
      `test/herald.test.js`). Found by the census: three Heralds were `full` with the soul half
      dropped, and Herald of Judgment `full` with its rider dropped (now `part`, honest).
-  2. Herald-named subjects: "a card with Herald in its name" (Angelic Wrath, Luminaris), and the
+  2. **HALF DONE (unreleased)** — "with Herald in its name" is a qualifier atom (`attackTail` `named`,
+     `qualMatches`; Angelic Wrath driven in `test/herald.test.js`). Luminaris' "angel attack or attack
+     action card with Herald in its name" still refuses (the or-group plus a tail). Left: the
      hero's trigger "whenever a card with Herald in its name is put into your soul during an
      action phase" (a soul-entry event).
   3. Figments: "search your deck for a figment, put it into the arena" (Figment of Hope, an

@@ -4216,6 +4216,10 @@ function attackTail(raw){
      check, and it asks `printedKw`: seven pool cards CARRY stealth on its
      own line and seven only mention it in a sentence. */
   if(m = t.match(/^with stealth\b/)){ f.kw = "stealth"; t = t.slice(m[0].length).trim(); }
+  /* "WITH HERALD IN ITS NAME" (v6.47, Prism's Angelic Wrath) names a WORD of the card's
+     printed name: a printed field, matched whole-word by `qualMatches`. One word only;
+     a longer name in the phrase leaves a tail and refuses. */
+  if(m = t.match(/^with ([a-z][a-z'-]*) in (?:its|their) names?\b/)){ f.named = m[1]; t = t.slice(m[0].length).trim(); }
   if(m = t.match(/^with cost (\d+) or (less|more)\b/)){
     f[m[2] === "less" ? "costLe" : "costGe"] = +m[1]; t = t.slice(m[0].length).trim(); }
   if(m = t.match(/^with (\d+) or (less|more) base \{p\}/)){
@@ -4293,6 +4297,7 @@ function qualLabel(qual, o){
   const pre = qual.g ? qual.g.map(g => g.map(qualWord).join(" ")).join(" or ") + " " : "";
   const post = [];
   if(qual.kw) post.push("with " + qual.kw);
+  if(qual.named) post.push("with " + qual.named[0].toUpperCase() + qual.named.slice(1) + " in its name");
   if(qual.pitch != null && !(o && o.colour === false)) post.push("if it is " + qualColour(qual));
   if(qual.costLe != null) post.push("with cost " + qual.costLe + " or less");
   if(qual.costGe != null) post.push("with cost " + qual.costGe + " or more");
@@ -4330,6 +4335,8 @@ function qualMatches(qual, card, opts){
   if(qual.aac && !isAtkActionCard(c)) return false;
   if(qual.nonAtk && !isNonAtkActionCard(c)) return false;
   if(qual.kw && !printedKw(c, qual.kw)) return false;
+  if(qual.named && !new RegExp("(?:^|[^a-z])" + qual.named.replace(/[^a-z'-]/g, "") + "(?:$|[^a-z])")
+                      .test(String(c.name || "").toLowerCase())) return false;
   /* A PRINTED COLOUR IS A PRINTED FIELD (v4.12) — the safest kind, and the
      one atom in this matcher that the tail reader cannot set: only the
      whole-card fold for Flying High builds it, because the colour names a

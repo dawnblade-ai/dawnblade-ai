@@ -91,3 +91,49 @@ test("at the table: Herald of Ravages deals its arcane and goes to the soul", {s
   assert.deepEqual(names(me.soul), ["Herald of Ravages"]);
   assert.equal(g.sides[1].hp, 20 - power - 1, "the hit plus 1 arcane was not dealt");
 });
+
+/* ---- READER 2: "WITH HERALD IN ITS NAME" (v6.47) ------------------------
+   Angelic Wrath: "Target attack action card with Herald in its name gets +2{p}."
+   The tail reader refused the phrase, so the instant was unplayable. `named` is a
+   printed field (a whole word of the card's name), matched by `qualMatches`. */
+test("the qualifier: a whole word of the printed name, nothing longer, nothing partial", () => {
+  const q = P.classifyClause("Target attack action card with Herald in its name gets +2{p}").ops[0][2];
+  assert.deepEqual(q, {aac: true, named: "herald"});
+  const atk = nm => ({name: nm, tt: "Light Illusionist Action - Attack", ty: ["Light", "Illusionist", "Action", "Attack"]});
+  assert.ok(P.qualMatches(q, atk("Wartune Herald")));
+  assert.ok(P.qualMatches(q, atk("Herald of Hope")));
+  assert.ok(!P.qualMatches(q, atk("Heraldry Strike")), "a word inside a longer word matched");
+  assert.ok(!P.qualMatches(q, atk("Phantasmal Haze")), "a card without the word matched");
+  assert.equal(P.qualLabel(q), "an attack action card with Herald in its name");
+  assert.equal(P.classifyClause("Target attack action card with Herald of Hope in its name gets +2{p}"), null,
+    "a longer name was read as its first word");
+});
+
+/* the attack is on the chain and the defender has passed; seat 0 holds Angelic Wrath */
+function wrathOn(atkName){
+  H.db();
+  P.fxReset();
+  const atk = atkName === "drill" ? {...H.card("Brutal Assault", 3), uid: "a1"} : staged(atkName, "a1", 1);
+  let g = table(H.state({res: 9, ap: 1, hp: 15, hand: [atk, staged("Angelic Wrath", "w1", 3)]},
+    {hp: 20, hand: []}, {actor: 0, turnPlayer: 0, turn: 3}));
+  g = act(g, {t: "play", uid: "a1", from: "hand"}, 0);
+  for(let i = 0; i < 10 && !(g.pend && g.priority === 0 && g.step === "reaction") && !g.over; i++){
+    if(g.prompt){ g = act(g, {t: "promptConfirm"}, g.prompt.side); continue; }
+    const out = J.reduce(g, {t: "pass"}, g.priority);
+    if(out.error) break;
+    g = out.state;
+  }
+  return {g, power: atk.power};
+}
+test("at the table: Angelic Wrath pumps a Herald by 2, and is refused on any other attack", {skip}, () => {
+  const {g, power} = wrathOn("Wartune Herald");
+  assert.ok(g.pend, "fixture: no attack on the chain");
+  const PLAY = {t: "play", uid: "w1", from: "hand"};
+  assert.equal(J.legal(g, PLAY, 0), null, "Angelic Wrath was refused on a Herald");
+  let n = act(g, PLAY, 0);
+  for(let i = 0; i < 6 && (n.stack || []).length; i++) n = act(n, {t: "pass"}, n.priority);
+  assert.equal(n.pend.total, power + 2, "the Herald did not get +2{p}");
+  const other = wrathOn("drill").g;
+  assert.ok(other.pend, "fixture: no attack on the chain");
+  assert.ok(J.legal(other, PLAY, 0), "Angelic Wrath was legal on an attack without Herald in its name");
+});
