@@ -381,7 +381,7 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        27,014 -> 27,038 AT v6.43, READ FIRST, same body: `bancostpick` joins the
        opening guard's list of busy modes (+24), nothing else. */
     "costtaxes.test.js index.html 27038",
-    "dichotomy.test.js engine/prompts.js 13123",   /* +263 AT the hand reveals: buildPrompt carries `reveal`; +237 AT v6.40, READ FIRST: still the pick branch, the pick's `defUid` and its comment */
+    "dichotomy.test.js engine/prompts.js 13239",   /* +263 AT the hand reveals: buildPrompt carries `reveal`; +237 AT v6.40, READ FIRST: still the pick branch, the pick's `defUid` and its comment */
     /* 8,550 -> 9,523 AT v4.60, and now THREE files take the same slice —
        `playRx`, anchored on its own declaration and bounded at `playRxA`, the
        next one, which is the safe form. READ FIRST (v4.57: a pin edited

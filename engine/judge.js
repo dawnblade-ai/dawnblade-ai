@@ -402,7 +402,7 @@ function mint(g, tag){
    that exists on one board (v3.01), and the board it was missing from is
    the CR-exact one. One reader now, asked by both. */
 const toGrave = (g, i, cards) => put(g, i, s => ({...s,
-  grave: [...cards.filter(c => !PR.ceasesToExist(c)).map(c => ({...c, _gy: g.turn})),
+  grave: [...cards.filter(c => !PR.ceasesToExist(c)).map(c => ({...PR.offArenaFace(c), _gy: g.turn})),
           ...(s.grave || [])]}));
 
 /* ============================================================
@@ -661,6 +661,7 @@ function effectsFor(g){
      nothing on any of the 797 records. */
   const stamp = (turn, cards, disc) => cards
     .filter(c => c && !PR.ceasesToExist(c))   /* ephemeral AND tokens (v5.16) */
+    .map(PR.offArenaFace)                          /* an awakened figment files as the figment (v6.47) */
     .map(c => disc ? {...c, _gy: turn, _disc: true} : {...c, _gy: turn});
   const ctx = {
     L: say,

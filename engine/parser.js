@@ -1982,6 +1982,7 @@ function classifyClause(raw){
   if(/^(?:once per turn, )?when you [a-z ]+, remove (?:a|an|one|two|three|four|five|six|\d+) [a-z+{}0-9-]+ counters? from (?:this|it)\b/.test(c))
     return null;
   if(/^legendary$/.test(c)) return NOOP("deckbuilding marker — one copy per deck");
+  if(/^unlimited$/.test(c)) return NOOP("deckbuilding marker — any number of copies per deck");   /* v6.47, Figment of Hope */
   /* COLD SNAP's cost-offer half is UNREAD with the freeze it gates — see
      the long note above. Reading the offer alone would ask the opponent
      to pay for nothing. */
@@ -3501,6 +3502,12 @@ function classifyClause(raw){
       hint: xm ? "Only what you can pay for is offered." : may ? "Optional — choose none to decline." : undefined},
       xm ? {xOf: "cost"} : {}, tgt ? {tgt: true} : {})]]);
   }
+  /* AWAKEN (v6.47, CR 8.5.43: "To awaken a double-faced card, its back-face becomes its
+     active face"). Prism's hero prints "Awaken target figment you control": a declared
+     target among the seat's own permanents, flipped where it lies by `effects.awaken`. */
+  if(/^awaken target figment you control$/.test(c))
+    return R([["pickPrompt", {zone:"board", filter:{ty:"figment"}, min:1, max:1, tgt:true, awaken:true,
+      title:"Choose a figment you control — it awakens"}]]);
   /* THE GATE'S GRANT (v6.41) — see RX_BAN_PLAY. `banStamp` is the stamp
      Mounting Anger's rider writes on a card it has just banished; here the
      card is already there (`zone` banish, no `to`), so the same answer path
@@ -4871,6 +4878,7 @@ function fxParse(card){
   if(/\bally\b/.test(tt)) fx.perm="ally";
   else if(/\bitem\b/.test(tt)) fx.perm="item";
   else if(/\baura\b/.test(tt)) fx.perm="aura";
+  else if(/\bfigment\b/.test(tt)) fx.perm="figment";   /* CR 8.2.16b, v6.47 */
   /* A TRAP IS A SUBTYPE OF DEFENSE REACTION, NOT A PERMANENT (v3.08).
 
      `perm` used to be set off a `\btrap\b` match on the printed line, so
@@ -5562,6 +5570,19 @@ function fxParse(card){
        the call v3.57 made for the leave-trigger. */
     if(sub.cond) continue;
     fx.onDestroy = sub.ops;
+    handled.add(ci);
+    break;
+  }
+  /* "WHEN THIS IS AWAKENED, <payload>" (v6.47, the back face of a figment: Suraya, Archangel
+     of Endless Hope). Held off `fx.ops`, like `onDestroy` above: it is paid by
+     `effects.awaken` the moment the back face becomes active (CR 8.5.43), never on a play. */
+  for(let ci = 0; ci < clauses.length; ci++){
+    if(handled.has(ci)) continue;
+    const am = clauses[ci].match(/^when this is awakened, (.+)$/i);
+    if(!am) continue;
+    const sub = classifyClause(am[1]);
+    if(!sub || sub.status !== "run" || !sub.ops || !sub.ops.length || sub.cond) continue;
+    fx.onAwaken = sub.ops;
     handled.add(ci);
     break;
   }
@@ -7995,16 +8016,26 @@ function parseHeroPower(tx, allowDestroy){
      you can raise every turn for one soul card is a different card; the
      piece leaving for good is the price. Dropping it is the free-ability
      bug v2.04 fixed, one cost over. */
-  const soulM = costStr.match(/^banish (this and )?(a|an|one|two|three|\d+) cards? from your (?:hero'?s? )?soul$/i);
+  /* AND WITH RESOURCES IN FRONT, IN A SOUL CALLED BY THE HERO'S NAME (v6.47). Prism prints
+     "Once per Turn Instant - {r}{r}, banish a card from Prism's soul: Awaken target figment
+     you control." The pips are the resource cost, counted; the soul is the hero's own (her
+     name, possessive, is the only other owner a soul has). Nothing else moves. */
+  const pipM = costStr.match(/^((?:\{r\})+),\s*(banish .*)$/i);
+  const pips = pipM ? (pipM[1].match(/\{r\}/gi) || []).length : 0;
+  const soulM = (pipM ? pipM[2] : costStr).match(/^banish (this and )?(a|an|one|two|three|\d+) cards? from (?:your|[a-z][a-z' -]*'s) (?:hero'?s? )?soul$/i);
   if(soulM){
+    /* "…: ATTACK" MAKES THE SOURCE ATTACK, a route this reader does not build (v6.47). With
+       the pips allowed, Teklovossen's "{r}{r}{r}, banish 2 cards from your soul: Attack" read
+       ACROSS its line break as "the opponent discards a card": refused, as it was before. */
+    if(/^attack\b/i.test(String(m[4] || "").trim())) return null;
     const eff1 = classifyClause(m[4]);
     if(!eff1 || eff1.status !== "run" || eff1.cond || eff1.onHit) return null;
     const after1 = t.slice(m.index + m[0].length);
     const nSoul = {a:1, an:1, one:1, two:2, three:3}[soulM[2].toLowerCase()] || +soulM[2];
     const selfB = !!soulM[1];
-    return {cost: 0, ga: /^\.?\s*go again/i.test(after1), sd: false, kind,
+    return {cost: pips, ga: /^\.?\s*go again/i.test(after1), sd: false, kind,
             soul: nSoul, selfBanish: selfB, eff: m[4].trim(),
-            label: (m[1] ? "once/turn: " : "") + "banish "
+            label: (m[1] ? "once/turn: " : "") + (pips ? "{r}".repeat(pips) + ", " : "") + "banish "
                  + (selfB ? "this and " : "") + nSoul
                  + " from your soul: " + m[4].trim()};
   }
@@ -10668,6 +10699,12 @@ function arsenalPutSource(text){
   if(/\byou control\b|\bin the arena\b|\bpermanent\b|\b(?:aura|item|ally|equipment|weapon|token)\b/.test(c)) return "arena";
   return "unknown";
 }
+/* THE FACE A CARD HAS OFF THE ARENA (v6.47). CR 9.1.3b: a flip-card's "front-face is active
+   until a rule or effect would make its back-face active. If the card would then become a
+   new card, its front-face is active again" — and a card leaving the arena becomes a new
+   object. `effects.awaken` keeps the front as `_front` on the awakened card; every filer of a
+   board card asks this, so the graveyard holds the figment, never the angel. */
+function offArenaFace(c){ return c && c._front ? c._front : c; }
 const ceasesToExist = (c, to) => {
   const dest = to || "grave";
   if(ARENA_ZONES.indexOf(dest) >= 0) return false;
@@ -11204,6 +11241,6 @@ return {norm, noopFeedText, noopIsQuiet, isAttack, isArrow, isWeapon, hasGA, arc
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, spellvoidX, linksControlled, arcaneSoaks,
         ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
-        chiValue, chiSum, chiFloating, pitchExcessWhy, chiCeiling, payCeiling, handFree, isDeclaredDefender, rxDefenders, PLAY_ROUTES, isCardPlay, isNonAtkActionPlay, abChiCost, abSoulCost, soulPutNote, soulPutThisTurn, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, abTargetSpec, swingSpentWhy, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, abilitiesLive, boardEntryNamed, isEphemeral, isToken, ceasesToExist, PLAY_GRANT_STAMPS, spendPlayGrant, ARENA_ZONES, arsenalPutSource, isHandWipe, gyFirstGaKw, gyFirstGaSource,
+        chiValue, chiSum, chiFloating, pitchExcessWhy, chiCeiling, payCeiling, handFree, isDeclaredDefender, rxDefenders, PLAY_ROUTES, isCardPlay, isNonAtkActionPlay, abChiCost, abSoulCost, soulPutNote, soulPutThisTurn, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, abTargetSpec, swingSpentWhy, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, abilitiesLive, boardEntryNamed, isEphemeral, isToken, ceasesToExist, offArenaFace, PLAY_GRANT_STAMPS, spendPlayGrant, ARENA_ZONES, arsenalPutSource, isHandWipe, gyFirstGaKw, gyFirstGaSource,
         CARD_OVERRIDES};
 });

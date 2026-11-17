@@ -451,6 +451,8 @@ function buildPrompt(game, spec){
          about (v2.34, v3.33, v3.53), so a field threaded through and
          forgotten here vanishes and the rider does nothing. */
       banStamp: spec.banStamp || null,
+      /* AWAKEN (v6.47): the chosen figment flips where it lies (`effects.awaken`). */
+      awaken: !!spec.awaken,
       /* WHICH SEAT'S FREEZE THIS IS. Like `arsStamp` it is DATA, not ops:
          this module runs no effects, and the stamp belongs to the object
          that was chosen rather than to the source. `applyAnswer` reads it
@@ -1382,7 +1384,7 @@ function applyPrompt(game, prompt){
     /* A GRANT ON A CARD WHERE IT LIES (v6.41) — the Gate to i'Arathael names
        a card already in the banished zone, a public zone: nothing is revealed
        and nothing moves, and the caller's stamp says what happened. */
-    const _stampOnly = !prompt.to && !!prompt.banStamp;
+    const _stampOnly = !prompt.to && (!!prompt.banStamp || !!prompt.awaken);
     if(!prompt.discard && !_stampOnly) out.msgs.push(_names +
       (prompt.to ? (picked.length > 1 ? " go" : " goes") +
                    (prompt.zone ? " from the " + promptZoneWord(prompt.zone) : "") +

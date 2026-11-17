@@ -147,6 +147,19 @@ function check(game){
       err("TOKEN-OUT-OF-ARENA", "\"" + nameOf(c) + "\" is a token in sides[" + si + "]." + z +
           " — a token that leaves the arena ceases to exist", String(uidOf(c)));
   });
+  /* ---- an awakened face does not leave the arena (CR 9.1.3b, v6.47) ----
+     A flip-card off the arena has its FRONT active: the back face (`_front` carried) in
+     any zone but the board is a filer that forgot `parser.offArenaFace`. */
+  sides.forEach((sd, si) => {
+    for(const z of LIST_ZONES){
+      if(z === "board" || !Array.isArray(sd[z])) continue;
+      for(const c of sd[z]) if(c && c._front)
+        err("BACK-FACE-OFF-ARENA", "\"" + nameOf(c) + "\" is an awakened face in sides[" + si + "]." + z +
+            " — off the arena a flip-card's front face is active", String(uidOf(c)));
+    }
+    if(sd.arsenal && sd.arsenal._front)
+      err("BACK-FACE-OFF-ARENA", "\"" + nameOf(sd.arsenal) + "\" is an awakened face in sides[" + si + "].arsenal", String(uidOf(sd.arsenal)));
+  });
   (game.chainCards || []).forEach(entry => {
     const c = entry && (entry.card || entry);
     if(PR && PR.isToken && PR.isToken(c))

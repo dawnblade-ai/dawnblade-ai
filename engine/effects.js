@@ -1264,6 +1264,34 @@ function makeEffects(ctx){
     }
     return n;
   };
+  /* ---- AWAKEN (v6.47) — CR 8.5.43, verbatim: "Awaken is a discrete effect. To awaken a
+     double-faced card, its back-face becomes its active face." 8.5.43a: "If a card is not a
+     double-faced card, its back-face is already active, or its back-face can otherwise not be
+     made active, the awaken effect fails." CR 9.1.3: "The properties of a flip-card are defined
+     by its active face." So the permanent keeps its uid and its place on the board, and its
+     card becomes the back face (`build.flipBackOf`); the front rides along as `_front`, which
+     every filer puts back (CR 9.1.3b: off the arena "its front-face is active again").
+     THE TYPE LINE IS DERIVED FROM THE STRUCTURED TYPES: upstream prints the FRONT's type line
+     on the back record (Suraya's reads "Instant - Figment"), and the structured array wins
+     (ruling 2026-08-02). "When this is awakened, …" (`fx.onAwaken`) is paid here. */
+  const awaken = (s, seat, uid, srcName) => {
+    const b = ((s.sides[seat] || {}).board || []).find(x => x && x.uid === uid);
+    if(!b || !b.card || b.card._front) return L(s, `${srcName}: the awaken fails — that card has no face to turn.`);
+    const back = BD.flipBackOf(db, b.card.name);
+    const rec = back ? resolveEntry(db, {name: back.n, p: 0, code: null, q: 1}) : null;
+    if(!rec || !rec.resolved) return L(s, `${srcName}: the awaken fails — ${b.card.name} is not double-faced.`);
+    const ty = rec.ty || [];
+    const card = Object.assign({}, rec, {uid: b.uid, tt: ty.join(" "), _front: b.card});
+    const kind = ty.some(t => /^ally$/i.test(String(t))) ? "ally" : (P.fxParse(card).perm || "permanent");
+    const was = actorOf(s);
+    let n = {...s, actor: seat};
+    actMut(n).board = (act(n).board || []).map(x => x && x.uid === uid
+      ? Object.assign({}, x, {card, kind, spent: false, life: undefined}) : x);
+    n = L(n, `${srcName}: ${b.card.name} awakens — it is ${card.name} now.`);
+    const ops = P.fxParse(card).onAwaken || [];
+    if(ops.length) n = runOps(n, ops, card.name);
+    return {...n, actor: was};
+  };
   const payLeave = (s, card, seat) => {
     const pay = leavePayout(card, (s.sides || [])[seat]);
     if(!pay.length) return s;
@@ -7005,6 +7033,8 @@ function makeEffects(ctx){
        play it this turn" is about the card that MOVED, and the card is
        already in the banish zone by the time this runs — so the stamp is
        written onto the copy that is there. */
+    if(p.tag === "pick" && p.awaken && (r.picked||[]).length)
+      n = awaken(n, actorOf(n), r.picked[0].uid, p.src || "");
     if(p.tag === "pick" && p.banStamp && (r.picked||[]).length){
       const st = p.banStamp, got = r.picked[0];
       /* `_playTurn` IS THE WHOLE WINDOW — see the note beside `banPow` in
@@ -10413,9 +10443,9 @@ function sweepArena(game, seat, when){
      the arena. This sweep was the writer behind most of QUEUE item 3's
      graveyards of Might, Vigor and Embodiment of Earth. */
   const filed = dying.filter(b => !P.ceasesToExist(b.card));
-  sd.grave = [...filed.filter(b => !away(b)).map(b => Object.assign({}, b.card, {_gy: game.turn})), ...(sd.grave || [])];
+  sd.grave = [...filed.filter(b => !away(b)).map(b => Object.assign({}, P.offArenaFace(b.card), {_gy: game.turn})), ...(sd.grave || [])];
   for(const b of filed.filter(away)){
-    const c = Object.assign({}, b.card, {_gy: game.turn}); delete c._owner;
+    const c = Object.assign({}, P.offArenaFace(b.card), {_gy: game.turn}); delete c._owner;
     sides[b.owner] = Object.assign({}, sides[b.owner], {grave: [c, ...((sides[b.owner] || {}).grave || [])]});
   }
 

@@ -3297,7 +3297,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      path into the graveyard goes through here, so this is the place to drop it. */
   const gy = (turn, ...cards) => cards
     .filter(c => !DawnParser.ceasesToExist(c))   /* one reader, both boards — v3.82; tokens too, v5.16 */
-    .map(c=>({...c, _gy:turn}));
+    .map(c=>({...DawnParser.offArenaFace(c), _gy:turn}));   /* an awakened figment files as the figment (v6.47) */
   /* A DISCARD IS A DIFFERENT EVENT FROM "REACHED THE GRAVEYARD", and only
      this path stamps it. Cards arrive in the graveyard by being played, by
      blocking and by being discarded; the printed text of Kayo's engine asks

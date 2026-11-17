@@ -105,7 +105,14 @@ the AI-policy work for Viserai is on the back burner). The soul zone already exi
      action card with Herald in its name" still refuses (the or-group plus a tail). Left: the
      hero's trigger "whenever a card with Herald in its name is put into your soul during an
      action phase" (a soul-entry event).
-  3. Figments: "search your deck for a figment, put it into the arena" (Figment of Hope, an
+  3. **MOSTLY DONE (unreleased)** — a figment resolves into the arena as a permanent (CR 8.2.16;
+     `types` PERMANENT_SUBTYPES, `fx.perm` "figment"); Prism's "{r}{r}, banish a card from Prism's
+     soul: Awaken target figment you control" builds (`parseHeroPower` pips + named soul) and
+     awakens it into Suraya (`effects.awaken`, `build.flipBackOf`, `fx.onAwaken`); the front is
+     filed when it leaves (`parser.offArenaFace`, invariant BACK-FACE-OFF-ARENA);
+     `test/figment.test.js`. LEFT: the hero's Herald-to-soul trigger and its deck search; Suraya's
+     "{r}{r}: Attack" and Ward 4 driven as an ally; the AI never awakens yet. Was:
+     "search your deck for a figment, put it into the arena" (Figment of Hope, an
      Instant - Figment) and **Awaken** (the hero's instant; the back face is Suraya, Archangel of
      Endless Hope, sharing print code SAT023 — `build.facesOf`'s pattern, for a non-hero).
   4. Iris of Reality: Illusionist auras are weapons during your action phase.

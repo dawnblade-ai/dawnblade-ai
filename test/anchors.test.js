@@ -102,6 +102,10 @@ test("every parser reading the pool never reaches is pinned", {skip}, () => {
     /* v6.47: "put it into your soul and <rider>" is printed only by Prism's Heralds, which are
        staged until she opens (test/herald.test.js drives them). Unpin it the day she does. */
     "return R([[\"soulSelf\"], ...sub.ops]);",
+    /* v6.47, reader 3: Figment of Hope's "Unlimited" and Prism's "Awaken target figment you
+       control" — staged until she opens (test/figment.test.js drives both). Unpin them then. */
+    "if(/^unlimited$/.test(c)) return NOOP(\"deckbuilding marker — any number of copies per deck\");   /* v6.47, Figment of Hope */",
+    "return R([[\"pickPrompt\", {zone:\"board\", filter:{ty:\"figment\"}, min:1, max:1, tgt:true, awaken:true,",
     /* v6.37-v6.40 PINNED FOUR READERS HERE that only STAGED cards reached (banished-zone play,
        Usurp, Pull from Beyond's own-deck banish, Blood Debt), each noted "this entry leaves the
        day he is decked". v6.46 decked him: all four are reached by the pool and left. */

@@ -523,6 +523,27 @@ function heroAbilities(heroRec, displayName, code){
    adult front) are returned in name order; `effects.traverse` prefers the
    face the seat came from, which the build remembers. */
 const isBackImg = url => /_BACK\.[a-z0-9]+$/i.test(String(url || ""));
+/* THE BACK FACE OF A FLIP-CARD (v6.47). CR 9.1.3: "A flip-card is a double-faced card that
+   has a front-face and a back-face, with one of the following printed subtypes on its
+   front-face: figment, invocation, or construct." Found the way `facesOf` finds a hero's:
+   the one other record sharing a print code where that record's image is the `_BACK` and
+   this one's is not. `name` is the front's printed name; null when it is not a flip-card's
+   front or when the partner is not exactly one record (CR 8.5.43a: the awaken fails). */
+const FLIP_SUBTYPE = /^(?:figment|invocation|construct)$/i;
+function flipBackOf(db, name){
+  if(!db || db.status !== "ready" || !name) return null;
+  const all = [];
+  for(const k of Object.keys(db.byName || {})) for(const c of (db.byName[k] || [])) all.push(c);
+  const front = all.find(c => c.n === name && c.pr && (c.ty || []).some(t => FLIP_SUBTYPE.test(String(t))));
+  if(!front) return null;
+  const codes = Object.keys(front.pr).filter(id => id !== "_first" && !isBackImg(front.pr[id]));
+  const backs = [];
+  for(const c of all){
+    if(c === front || !c.pr || backs.some(x => x.n === c.n)) continue;
+    if(codes.some(id => Object.prototype.hasOwnProperty.call(c.pr, id) && isBackImg(c.pr[id]))) backs.push(c);
+  }
+  return backs.length === 1 ? backs[0] : null;
+}
 function facesOf(db, heroRec){
   if(!db || db.status !== "ready" || !heroRec || !heroRec.pr) return [];
   const isHero = c => (c.ty || []).some(t => /^hero$/i.test(String(t)));
@@ -1138,6 +1159,6 @@ const PASSIVE_TYPE = {
 return {ARMOR_Z, HAND_Z, gearSlots, applyPick, defaultPicks, equipPiece, boardPow,
   buildSide, buildSideDefault,
   halveCard,
-        buildSeed, buildMatch, buildVanilla, defaultBoard, heroAbilityLine, heroAbilities, facesOf,
+        buildSeed, buildMatch, buildVanilla, defaultBoard, heroAbilityLine, heroAbilities, facesOf, flipBackOf,
         agentsOf, PASSIVES, PASSIVE_TYPE};
 });

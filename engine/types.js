@@ -77,8 +77,11 @@ const CARD_TYPES = [
    Aura, an Item and an Ally do not go to a graveyard when they resolve,
    they go to the arena, and nothing in the trainer's type helpers can
    say so. */
-const PERMANENT_SUBTYPES = ["Aura", "Item", "Ally", "Landmark"];
-const SUBTYPES = ["Attack", "Arrow", "Trap", "Demi-Hero", "Figment"].concat(PERMANENT_SUBTYPES);
+/* "Figment" (v6.47, CR 8.2.16 Figment; CR 8.2.16a, 8.2.16b): "When a figment resolves as a layer on the stack, it enters
+   the arena. When a figment enters the arena, it becomes a permanent, except when it is added
+   as a defending card to a chain link." */
+const PERMANENT_SUBTYPES = ["Aura", "Item", "Ally", "Landmark", "Figment"];
+const SUBTYPES = ["Attack", "Arrow", "Trap", "Demi-Hero"].concat(PERMANENT_SUBTYPES);
 
 /* Equipment slots, as the type line spells them, mapped to the zone
    names game.js's `slotOf` already uses so the two cannot disagree. */
@@ -321,6 +324,7 @@ function permanentKind(c){
   if(isAllyCard(t)) return "ally";
   if(isAura(t)) return "aura";
   if(isItem(t)) return "item";
+  if(hasSubtype(t, "Figment")) return "figment";
   return "permanent";
 }
 

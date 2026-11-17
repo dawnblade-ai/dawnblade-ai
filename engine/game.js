@@ -316,7 +316,7 @@ function damageAlly(game, side, uid, amount, opts){
        changed, ownership did not. Filed to the thief's, it is a card that
        works until it dies and then lands in the wrong graveyard, which is
        v3.23's worst case and the reason the steal waited to be built. */
-    const dead = Object.assign({}, killed.card, {_fd: true});
+    const dead = Object.assign({}, killed.card._front || killed.card, {_fd: true});   /* CR 9.1.3b (v6.47): the front face is filed */
     if(opts && opts.ceases && opts.ceases(killed.card)){ /* a token: filed nowhere */ }
     else if(killed.owner != null && killed.owner !== side && sides[killed.owner]){
       delete dead._owner;
