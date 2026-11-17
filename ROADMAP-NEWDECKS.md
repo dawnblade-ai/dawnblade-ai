@@ -94,8 +94,24 @@ the loadout until the census prints no gap for his list and 630 self-play games 
 seated show 0 refusals, 0 violations, 0 stalls. Then: `DECKS`/`HEROES` entry, art path,
 the AI seat's policy keys (measured per CLAUDE.md), and the release that opens him.
 
-**Phase 3 — Prism, Advent of Thrones.** Same shape; the soul zone first, because every
-other Prism reader stands on it.
+**Phase 3 — Prism, Advent of Thrones. STARTED 2026-11-17** (user: "move along to prism";
+the AI-policy work for Viserai is on the back burner). The soul zone already exists (Boltyn's
+`soul`, `soulSelf`, `soulSpend`), so the order is by what stands on what:
+  1. **DONE (unreleased)** — "put it into your soul and <rider>" (`classifyClause`'s split,
+     `test/herald.test.js`). Found by the census: three Heralds were `full` with the soul half
+     dropped, and Herald of Judgment `full` with its rider dropped (now `part`, honest).
+  2. Herald-named subjects: "a card with Herald in its name" (Angelic Wrath, Luminaris), and the
+     hero's trigger "whenever a card with Herald in its name is put into your soul during an
+     action phase" (a soul-entry event).
+  3. Figments: "search your deck for a figment, put it into the arena" (Figment of Hope, an
+     Instant - Figment) and **Awaken** (the hero's instant; the back face is Suraya, Archangel of
+     Endless Hope, sharing print code SAT023 — `build.facesOf`'s pattern, for a non-hero).
+  4. Iris of Reality: Illusionist auras are weapons during your action phase.
+  5. Spectra; "loses and can't gain phantasm" (Passing Mirage, Dream Weavers); Pierce Reality's
+     "first Illusionist attack action card you play each turn".
+  6. "-1{p} while defending this" (Herald of Triumph) and Herald of Victoria's discard instant.
+  7. Lay Low ("if you are marked, you can't play this"); Herald of Judgment's banished-zone lock;
+     Silent Stilettos (destroyed by phantasm). Then the census, 630 seated games, the opening.
 
 **Phase 4 — Outbreak (2027-02).** When the lists publish: ask for `fabrary.net`, pin the
 lists into `data/newsets.json`, run the census, extend this file.

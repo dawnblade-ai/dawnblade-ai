@@ -696,6 +696,16 @@ function classifyClause(raw){
   if(!c) return null;
   const R = (ops,extra) => Object.assign({status:"run",ops},extra||{});
   const NOOP = why => ({status:"noop",ops:[["noop",why]]});
+  /* "PUT IT INTO YOUR SOUL AND <rider>" IS TWO OPS (v6.47, Prism's Heralds). The rider's
+     own unanchored reader ("gain 1{h}", "create a ... token", "deal 1 arcane damage")
+     matched first and the soul half was dropped, filed `full`. Split here, before any
+     reader sees the line; a rider that cannot be read refuses the whole clause. */
+  const soulAnd = c.match(/^put (?:it|this card) into your (?:hero'?s? )?soul and (.+)$/);
+  if(soulAnd){
+    const sub = classifyClause(soulAnd[1]);
+    if(!sub || sub.status!=="run") return null;
+    return R([["soulSelf"], ...sub.ops]);
+  }
   /* A NAMED-KEYWORD GATE IS STILL A GATE, and "instead" still REPLACES
      inside one. The generic if/when/while handler below marks a conditional
      payload containing "instead" so `execute` suppresses the unconditional
