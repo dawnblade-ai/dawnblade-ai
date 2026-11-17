@@ -9,12 +9,29 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-17, at v6.45)
+## HANDOFF — START HERE (CEO, 2026-11-17, at v6.46)
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
-### LATEST (CEO session_013xG9xAMiFN6pmpxfvY4LPe, 2026-11-17, at v6.45)
+### LATEST (CEO session_013xG9xAMiFN6pmpxfvY4LPe, 2026-11-17, at v6.46) — VISERAI, BETWEEN WORLDS IS OPEN
+- **State:** live = v6.46 on `main` (0cdb3e2), livecheck ALL PASS. Function `table` version 44 = build `v6.46 · sage-v18`,
+  stamped; `--check` OK. WIRE_V 44, **DATA_VER sage-v18**. No unreleased work. 16 heroes; `npm run play '' '' 3` = 720 games.
+- **DONE v6.46:** key `viseraibw`, `short: "Viserai BW"` (new `heroShort(h)`: every label used to cut at the comma, so two tiles
+  read "VISERAI"), `blk` names his block. Pool via `node tools/pin-pool.js --add-staged` (new; 27 records, nothing else moved).
+  `SA_SETS` + SBW. Fixed by dealing him: Murmuring Gloomblade's "when this attacks OR hits" read only the hit half; the audit's
+  token scan ("Arathael") and go-again check (it missed riders; 6 older false flags cleared too). Ledger knows Blood Debt / Usurp /
+  Traverse. Cup: the dummy fills only while heroes < 16 (it is out now): **confirm with the user** (it read the 2026-08-16 ruling's reason).
+- **AI:** traverse sheet keys `traverseStay` / `traverseBack` (gate SPXTRAV, off; 17 v 15 wins, noise). **He is a weak AI
+  opponent (~1 in 9 seated games)**: not the engine (all 25 cards `full`), mostly not sequencing (66% of usurp attacks find a
+  Runechant); printed attacks average 2.6{p} and the deck lives on combos. Policy work, measured per CLAUDE.md, is NEXT.
+- **STILL OWED:** drive the trainer's traverse sheet on the page (needs 3 Runechants in a turn; shared openPrompt path, undriven);
+  the AI never raises Olde Leather Boots (0{d}) for its +2; `byCode` lets the back face shadow the front under SBW001 (heroes
+  resolve by NAME first, so nothing breaks; check before Prism adds more double-faced records).
+- **NEXT:** (1) Viserai BW AI policy (seated probe: `node tools/staged-play.js` still works but the ladder seats him now:
+  `npm run play viseraibw '' 6`). (2) Prism: soul zone first (ROADMAP-NEWDECKS.md).
+
+### PREVIOUS (CEO session_013xG9xAMiFN6pmpxfvY4LPe, 2026-11-17, at v6.45)
 - **State:** live = v6.45 on `main` (1a45fcd), livecheck ALL PASS. Function `table` version 42 = build `v6.45 · sage-v17`,
   stamped; `--check` OK. WIRE_V 44. No unreleased work. The v6.44 block below still holds except where this one says.
 - **DONE v6.45, the 0{d} ruling** (user, 2026-11-16: "0 defense can be declared as a blocker (blank cannot)"):
