@@ -1016,7 +1016,7 @@ window.HEROES = [
  /* OPENED v6.46 (RULING user 2026-11-15: a new precon joins when the engine reads its
     whole list). Usurp the Shadow Throne, not a numbered chapter: `blk` names the block
     on the loadout and `ch` only picks the stripe colour. */
- {k:"viseraibw",n:"Viserai, Between Worlds",cls:"Shadow Runeblade",ch:4,blk:"Usurp the Shadow Throne",code:"SBW001",blurb:"Make runes, feed the banished zone, and cross over to the Demon on the other side."}
+ {k:"viseraibw",n:"Viserai, Between Worlds",short:"Viserai BW",cls:"Shadow Runeblade",ch:4,blk:"Usurp the Shadow Throne",code:"SBW001",blurb:"Make runes, feed the banished zone, and cross over to the Demon on the other side."}
 ];
 
 window.DECKS = {
@@ -1751,6 +1751,10 @@ var ARMOR_Z = DawnBuild.ARMOR_Z, HAND_Z = DawnBuild.HAND_Z, gearSlots = DawnBuil
 </script>
 <script type="text/babel" data-presets="env,react">
 const {useState,useEffect,useMemo,useCallback} = React;
+/* A HERO'S SHORT NAME (v6.46). Every label used to cut the name at its comma, which is right for
+   fifteen heroes and wrong the day two share a first name: Viserai and Viserai, Between Worlds both
+   read "VISERAI" on the roster. A HEROES entry may carry `short`; otherwise the old cut. */
+const heroShort = h => h ? (h.short || String(h.n || "").split(",")[0]) : "";
 
 /* ---------- storage ---------- */
 const store = {
@@ -1961,7 +1965,7 @@ function HeroGrid({onPick,best,db,selected}){
           <button key={h.k} className={"hcard clip-sm ch"+h.ch+(selected&&!selected.mystery&&selected.k===h.k?" sel":"")} onClick={()=>onPick(h)}>
             <HeroArt h={h} db={db} key={db.status}/>
             {best[h.k]!=null && <span className="best">★{best[h.k]}</span>}
-            <span className="nm">{h.n.split(",")[0]}</span>
+            <span className="nm">{heroShort(h)}</span>
           </button>
         ))}
         <button className={"hcard rand clip-sm"+(selected&&selected.mystery?" sel":"")} onClick={()=>onPick({random:true})}>
@@ -2007,7 +2011,7 @@ function VsStrip({hero,db,foe}){
       <div className="vs">
         <div className={"vslot p1 clip-sm"+(hero?"":" empty")}>
           <span className="ptag" style={{color:"var(--r)"}}>P1</span>
-          {hero && <><div className="port clip-sm"><HeroArt h={hero} db={db} key={db.status}/></div><span className="vname">{hero.n.split(",")[0]}</span></>}
+          {hero && <><div className="port clip-sm"><HeroArt h={hero} db={db} key={db.status}/></div><span className="vname">{heroShort(hero)}</span></>}
         </div>
         <div className="vsmid">VS</div>
         <div className="vslot p2 clip-sm">
@@ -2015,7 +2019,7 @@ function VsStrip({hero,db,foe}){
           {foe.mystery
             ? <><div className="port clip-sm"><div className="fallbackart" style={{aspectRatio:"1/1",fontSize:26,color:"var(--y)"}}>?</div></div><span className="vname">A random hero</span></>
             : <><div className="port clip-sm"><HeroArt h={foe} db={db} key={db.status}/></div>
-                <span className="vname">{foe.n.split(",")[0]} {fc && fc.hp!=null && <b className="mono" style={{color:"var(--r)"}}>{fc.hp}</b>}</span></>}
+                <span className="vname">{heroShort(foe)} {fc && fc.hp!=null && <b className="mono" style={{color:"var(--r)"}}>{fc.hp}</b>}</span></>}
         </div>
       </div>);
   }
@@ -2028,7 +2032,7 @@ function VsStrip({hero,db,foe}){
         {hero
           ? (hero.mystery
             ? <><div className="port clip-sm"><div className="fallbackart" style={{aspectRatio:"1/1",fontSize:26,color:"var(--y)"}}>?</div></div><span className="vname">???</span></>
-            : <><div className="port clip-sm"><HeroArt h={hero} db={db} key={db.status}/></div><span className="vname">{hero.n.split(",")[0]}</span></>)
+            : <><div className="port clip-sm"><HeroArt h={hero} db={db} key={db.status}/></div><span className="vname">{heroShort(hero)}</span></>)
           : <span style={{fontSize:11,textAlign:"center"}}>choose your fighter</span>}
       </div>
       <div className="vsmid">VS</div>
@@ -6313,7 +6317,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                 </div>
                 <div className="heromid clip-sm">
                   <button className="hport2" onClick={()=>setZoom(built.HZOOM)}><span className={"tapwrap"+(you(g).heroTapped?" tapped":"")}><HeroArt h={h} db={db}/></span></button>
-                  <span className="hname">{h.n.split(",")[0]}</span>
+                  <span className="hname">{heroShort(h)}</span>
                   <b className="hlife2">{you(g).hp}</b>
                   <span className="hlbl">life</span>
                   {/* A COUNTER THE ABILITY SPENDS MUST BE ON SCREEN (v3.39).
@@ -6817,7 +6821,7 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
                     default. */}
                 {netFoe
                   ? <><div className="port clip-sm" style={{width:96}}><HeroArt h={netFoe} db={db}/></div>
-                      <b>{netFoeHP}</b><span>{netFoe.n.split(",")[0]} · Life</span></>
+                      <b>{netFoeHP}</b><span>{heroShort(netFoe)} · Life</span></>
                   : <><div className="dmy"><div className="dhead"><span>✕</span><span>✕</span></div><div className="dbody"/><div className="dpost"/></div>
                       <b>{"42"}</b><span>The Dummy · Life</span></>}
               </div>
@@ -6833,14 +6837,14 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
               <div className="foefixed mono">
                 {netFoe ? netFoe.n+" — "+netFoe.cls
                         : "The Dummy — 42 life, vanilla pile"
-                          + (aiFoe ? " · new engine: "+(foeHero ? foeHero.n.split(",")[0]+", an AI seat" : "a random AI hero") : "")}</div>
+                          + (aiFoe ? " · new engine: "+(foeHero ? heroShort(foeHero)+", an AI seat" : "a random AI hero") : "")}</div>
               <div className="seatline mono">{(netFoe ? netOnPlay : onPlay)
                 ? "You are ON THE PLAY — first turn, and a card of tempo for it."
                 : "You are ON THE DRAW — they swing first, and you keep the extra card."}</div>
             </div>
             <div className="vfillsp"/>
             <p className="note">{netFoe
-              ? `${netFoe.n.split(",")[0]} is a person, sitting somewhere else, holding a real hand. `
+              ? `${heroShort(netFoe)} is a person, sitting somewhere else, holding a real hand. `
                 + (netOnPlay ? "You are on the play — you take the first turn and spend a card of tempo for it."
                              : "You are on the draw — they swing first, and you keep the extra card.")
               : "The Dummy swings the scripted escalation rather than a card from hand — the one deck where nothing can be faked. Real sideboarding shows you only the enemy hero; their iron and their habits you learn in the pit."}</p>
@@ -6857,7 +6861,7 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
                 </div>
                 <div className="heromid clip-sm">
                   <div className="hport2"><HeroArt h={h} db={db}/></div>
-                  <span className="hname">{h.n.split(",")[0]}</span>
+                  <span className="hname">{heroShort(h)}</span>
                   <b className="hlife2">{hHP}</b>
                   <span className="hlbl">life</span>
                 </div>
@@ -6925,7 +6929,7 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
               {HEROES.map(x=>{ const r = recOf(x.k);
                   return <button key={x.k} className={aiFoe===x.k?"on":""} onClick={()=>setAiFoe(x.k)} aria-label={x.n}>
                   <div className="fport"><HeroArt h={x} db={db} key={db.status}/></div>
-                  <span className="fname">{x.n.split(",")[0]}</span>
+                  <span className="fname">{heroShort(x)}</span>
                   {r && <span className="frec" title={`${r.w} won, ${r.l} lost${r.d ? ", "+r.d+" drawn" : ""} at ${aiLevel==="sharp"?"Sharp":"Steady"}`}>
                     {r.w}–{r.l}{r.d ? <span className="frecd"> · {r.d}d</span> : null}</span>}</button>; })}
             </div>
@@ -6985,7 +6989,7 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
                   ? <>The same 30-card pile, but played as a real seat: it holds a hand,
                     pays costs and blocks like a person. <b>Untuned and currently
                     winning most games.</b> This is the engine a second player will sit at.</>
-                  : <>An AI pilots {foeHero ? foeHero.n.split(",")[0] : "a random hero"}, playing <b>{aiLevel==="sharp"
+                  : <>An AI pilots {foeHero ? heroShort(foeHero) : "a random hero"}, playing <b>{aiLevel==="sharp"
                     ? "Sharp: it plays out each way to start its turn, and each way to block, before it commits"
                     : "Steady: the rules of thumb self-play uses"}</b>. Pick the opponent and how it plays on the Foe screen.</>}
               </p>
@@ -7159,7 +7163,7 @@ function Pregame({h, seed, onSeated, onBack}){
 /* THE LADDER (SERVER S5.3): the public standings of ranked server tables, and the last few games. Readable by anyone; it never signs a phone in (the caller's own
    line is asked for only when `who` says this phone already has a sign-in). The rows are plain text: nothing here is tappable because nothing here does anything. */
 const LAD_END = {life:"won", concession:"conceded", forfeit:"forfeit", stalemate:"draw"};
-const ladHero = k => { const h = HEROES.find(x=>x.k===k); return h ? h.n.split(",")[0] : String(k||"").replace(/^./,c=>c.toUpperCase()); };
+const ladHero = k => { const h = HEROES.find(x=>x.k===k); return h ? heroShort(h) : String(k||"").replace(/^./,c=>c.toUpperCase()); };
 const ladAgo = at => { const m = Math.floor(Math.max(0, Date.now()-at)/60000); if(m<1) return "just now"; if(m<60) return m+" min ago"; const h = Math.floor(m/60); if(h<48) return h+(h===1?" hour ago":" hours ago"); return Math.floor(h/24)+" days ago"; };
 function SrvLadder({wire, who}){
   const [st,setSt] = uS({s:"loading"});
@@ -8008,7 +8012,7 @@ function TableRoom({table, host, code, db, onExit, resume, judged}){
     if(lob.boards[mySeat]) return (
       <div className="tblwrap">{head}
         <div className="tblstat live"><span className="tbldot"></span>
-          Sideboard locked — waiting on {foeH ? foeH.n.split(",")[0] : "them"}…</div>
+          Sideboard locked — waiting on {foeH ? heroShort(foeH) : "them"}…</div>
         <button className="bigbtn alt" onClick={onExit}>Leave the table</button>
       </div>
     );
@@ -8038,7 +8042,7 @@ function TableRoom({table, host, code, db, onExit, resume, judged}){
               disabled={lob.heroes[mySeat]!=null}
               onClick={()=>setPick(x.k)}>
               <div className="lhport"><HeroArt h={x} db={db}/></div>
-              <span className="lhn">{x.n.split(",")[0]}</span>
+              <span className="lhn">{heroShort(x)}</span>
               <span className="lhc">{x.cls}</span>
             </button>
           ))}
@@ -8046,7 +8050,7 @@ function TableRoom({table, host, code, db, onExit, resume, judged}){
         {lob.heroes[mySeat]==null
           ? <button className="bigbtn" disabled={!pick}
               onClick={()=>say(DawnLobby.hero(mySeat, pick))}>
-              {pick ? "Lock in "+HEROES.find(h=>h.k===pick).n.split(",")[0] : "Pick a hero"}
+              {pick ? "Lock in "+heroShort(HEROES.find(h=>h.k===pick)) : "Pick a hero"}
             </button>
           : <div className="tblstat live"><span className="tbldot"></span>
               Locked. Waiting on the other seat…</div>}
@@ -8078,7 +8082,7 @@ function TableRoom({table, host, code, db, onExit, resume, judged}){
               </div>
             </>
           : <div className="tblstat live"><span className="tbldot"></span>
-              {(foeH?foeH.n.split(",")[0]:"They")} is deciding the seating…</div>}
+              {(foeH?heroShort(foeH):"They")} is deciding the seating…</div>}
       </div>}
 
       {step === "board" && !myH && <div className="tblstat">Waiting…</div>}
@@ -8151,7 +8155,7 @@ function JudgeRoom({handle, conns, code, db, resume, onExit}){
   },[]);
 
   const lob = info && info.lobby;
-  const heroName = k => { const h = k && HEROES.find(x=>x.k===k); return h ? h.n.split(",")[0] : null; };
+  const heroName = k => { const h = k && HEROES.find(x=>x.k===k); return h ? heroShort(h) : null; };
   const seatLine = i => {
     const sat = info && info.seats[i];
     const nm = pub ? pub.sides[i].name.split(",")[0] : lob && heroName(lob.heroes[i]);
@@ -8212,13 +8216,13 @@ function TableThrow({lob, mySeat, myH, foeH, onThrow}){
         {lob.ties>0 ? <>Tied <b>{lob.ties}</b> — throw again.</> : "Both throws land at once."}</p>
       <div className="rtable">
         <div className="rseat">
-          <span className="rwho">You · {myH?myH.n.split(",")[0]:"—"}</span>
+          <span className="rwho">You · {myH?heroShort(myH):"—"}</span>
           <span className="rglyph">{mine ? (both?RPS_GLYPH[mine]:"🔒") : "✊"}</span>
           <span className="rname">{mine ? (both?mine:"locked") : "choose"}</span>
         </div>
         <span className="rvs">VS</span>
         <div className="rseat">
-          <span className="rwho">{foeH?foeH.n.split(",")[0]:"Them"}</span>
+          <span className="rwho">{foeH?heroShort(foeH):"Them"}</span>
           <span className="rglyph">{theirs ? (both?RPS_GLYPH[theirs]:"🔒") : "✊"}</span>
           <span className="rname">{theirs ? (both?theirs:"locked") : "shaking"}</span>
         </div>
@@ -8806,7 +8810,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
     <div className="board">
       <div className="screennav">
         <button onClick={onExit} style={{flex:.7}}>✕ leave</button>
-        <button onClick={()=>jump(oppRef)}><span className="navtx">▲ {foeH?foeH.n.split(",")[0]:"Opp"}</span></button>
+        <button onClick={()=>jump(oppRef)}><span className="navtx">▲ {foeH?heroShort(foeH):"Opp"}</span></button>
         <button onClick={()=>jump(chainRef)}>Chain</button>
         <button onClick={()=>jump(youRef)}>You ▼</button>
       </div>

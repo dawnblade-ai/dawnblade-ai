@@ -4,6 +4,9 @@
   `data/newsets.json` pins it), under the RULING (user, 2026-11-15) that a precon joins when the engine reads its whole list. The census
   printed no gap for it, both hero faces included (v6.37-v6.45). The loadout names his block, "Usurp the Shadow Throne", instead of a
   chapter (`blk`; `ch: 4` only picks the stripe colour).
+- **Two Viserais on one roster.** Every hero label cut the name at its comma, so both tiles read "VISERAI". One helper, `heroShort(h)`
+  (`index.html`), reads an optional `short` and falls back to the old cut; his is "Viserai BW". Driven at 393x852: the tile, its SBW001 art,
+  the block's stripe, the sheet, the decklist, the loadout's weapons and 18 trainer taps with him seated, 0 page errors, no sideways scroll.
 - **The pool:** `node tools/pin-pool.js --add-staged` (new) adds the staged records the decks now need, and the other face of a needed
   hero, keeping every other record byte for byte: 27 records (797 -> 824), no live download, so no unreviewed upstream drift rode along.
   A full re-pin takes a needed name `develop` lacks from `data/staged.js` too. **DATA_VER sage-v17 -> sage-v18.** `cards.SA_SETS` gains SBW.
