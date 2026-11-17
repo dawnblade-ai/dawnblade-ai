@@ -144,13 +144,14 @@ test("every reason is keyed from a site in the policy, and the census names what
      `usurp` (v6.42, which Runechant usurp destroys) needs a special Runechant, a staged card no
      pool deck holds: test/runechants.test.js drives it.
      `bancost` / `bancostNo` (v6.43, Looking for a Scrap's optional graveyard banish) are a staged
-     card's: test/conditionals.test.js drives both. */
+     card's: test/conditionals.test.js drives both. `traverseStay` / `traverseBack` (v6.46, Viserai,
+     Usurper's end-phase offer) are a staged hero's: test/traverse.test.js drives both. */
   const seen = census().keys;
   for(const k of Object.keys(seen)) assert.ok(SP.CALL_WHY[k], "reached key " + k + " has no reason");
   assert.deepEqual(keys.filter(k => !seen[k]).sort(),
     ["abtarget", "addPayNo", "allocAll", "allyTake", "answer", "arenaAP", "arenaRes", "arsenalSkip", "bancost", "bancostNo", "boostNo",
      "chargeDone", "chargeMore", "chargeNone", "discost", "gateFirst", "grantKeep", "laBlock", "laBoard", "laHit", "laHold", "laKeep", "laSafe", "laTake", "lookOwn",
-     "payCancel", "pitchChi", "usurp"]);
+     "payCancel", "pitchChi", "traverseBack", "traverseStay", "usurp"]);
 });
 
 test("every reason and every line reads as game text", () => {

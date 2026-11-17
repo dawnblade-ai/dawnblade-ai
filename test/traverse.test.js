@@ -335,6 +335,37 @@ test("a Gate created this turn: the end phase holds, staying is the first answer
   assert.notEqual(go.turnPlayer, 0, "the turn was never handed over");
 }));
 
+test("the AI's answer to the traverse sheet is its own call: stay by default, turn back when the gate names the seat", {skip}, () => withStaged(() => {
+  const SP = require("../engine/sparring.js");
+  const g0 = endTurn(world(usurper(), {hist: hist(gateFact)}), 0);
+  assert.ok(g0.prompt, "fixture: no traverse sheet");
+  const g = {...g0, sides: g0.sides.map((s, i) => i === 0 ? {...s, heroKey: "vbw"} : s)};
+  assert.deepEqual(J.traverseOffer(g, 0), {go: 1, stay: 0});
+  assert.equal(J.traverseOffer(g, 1), null, "the other seat was offered the sheet");
+  assert.equal(J.traverseOffer(world({}), 0), null, "a state with no sheet answered");
+  /* the shipped default: stay, under its own reason */
+  const e = SP.explain(g, 0);
+  assert.equal(e.key, "traverseStay");
+  assert.deepEqual(e.action, {t: "promptChoose", choice: 0});
+  /* the gate turns it round for the named seat only */
+  const was = process.env.SPXTRAV;
+  process.env.SPXTRAV = "vbw";
+  try {
+    delete require.cache[require.resolve("../engine/sparring.js")];
+    const SP2 = require("../engine/sparring.js");
+    const e2 = SP2.explain(g, 0);
+    assert.equal(e2.key, "traverseBack");
+    assert.deepEqual(e2.action, {t: "promptChoose", choice: 1});
+    process.env.SPXTRAV = "someoneElse";
+    delete require.cache[require.resolve("../engine/sparring.js")];
+    assert.equal(require("../engine/sparring.js").explain(g, 0).key, "traverseStay", "the gate turned a seat it does not name");
+  } finally {
+    if(was == null) delete process.env.SPXTRAV; else process.env.SPXTRAV = was;
+    delete require.cache[require.resolve("../engine/sparring.js")];
+    require("../engine/sparring.js");
+  }
+}));
+
 test("activating a real Gate is the other fact, recorded where the ability resolves", {skip}, () => withStaged(db => {
   const debt = {...staged("Vexing Gloomblade", "d1", 1), name: "Drill Debt Target", tx: "Blood Debt"};
   let g = world(usurper(), {board: [gateEntry("gt1")], banish: [debt]});

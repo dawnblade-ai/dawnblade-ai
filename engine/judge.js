@@ -2088,6 +2088,18 @@ const arenaUseful = (g, seat, o) => {
   }
   return null;
 };
+/* ---- IS THIS SHEET A TRAVERSE, AND WHICH MODE IS WHICH? (v6.46) ----------
+   For `sparring.js`, which reads no card text: the end phase's "you may
+   traverse" sheet (`effects.beginEndPhase` step 10) is a modal whose one
+   mode runs a `traverse` op. Null for any other sheet. */
+const traverseOffer = (g, seat) => {
+  const p = g && g.prompt;
+  if(!p || p.tag !== "modal" || p.choice != null || (p.side || 0) !== seat) return null;
+  const opts = p.options || [];
+  const go = opts.findIndex(o => (o && o.ops || []).some(op => op && op[0] === "traverse"));
+  if(go < 0 || opts.length !== 2) return null;
+  return {go, stay: 1 - go};
+};
 const keepsActionPoint = (g, seat, uid, from) => {
   const sd = at(g, seat);
   let c = null, route = from, atk = false;
@@ -5081,7 +5093,7 @@ function moves(g, seat){
 }
 
 return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, moves, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
+        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, traverseOffer, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf, waitingOn,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */

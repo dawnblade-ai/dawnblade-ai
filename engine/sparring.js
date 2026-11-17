@@ -164,6 +164,16 @@ const subGate = k => {
 const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate("SPXPAY"), idleOn = subGate("SPXIDLE"),
       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
       wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW");
+/* SPXTRAV (v6.46): take Viserai, Usurper's end-phase traverse back to the front.
+   OFF unless named (unlike the fixes above): measured over 180 seated games each way
+   (`node tools/staged-play.js viseraiBetweenWorlds 6`), staying won 17 and turning
+   back won 15 — noise — so the shipped answer is the old one, to stay. A hero list
+   turns it on for those seats, for the next measurement. */
+const traverseOn = (g, seat) => {
+  const v = (typeof process !== "undefined" && process.env && process.env.SPXTRAV) || "";
+  const sd = g && g.sides && g.sides[seat];
+  return !!(v && v !== "none" && sd && v.split(",").indexOf(sd.heroKey) >= 0);
+};
 /* A card or ability that would land nothing right now is held (`judge.landsNothing`).
    Noted so the call can say why the turn ends with it still in hand. */
 const idleOK = (g, seat, uid, from) => {
@@ -1135,6 +1145,12 @@ function actBase(g, seat, o){
       const lc = J.lookChoice(g, seat);
       if(lc) return tag(lc.own ? "lookOwn" : "lookFoe", {t: "promptChoose", choice: lc.i});
     }
+    /* THE WAY BACK (v6.46) — Viserai, Usurper's "you may traverse" at an end phase.
+       `judge.traverseOffer` names the mode that turns the hero over; this file reads
+       no card text. `traverseOn` (SPXTRAV) decides whether to take it. */
+    { const tv = J.traverseOffer(g, seat);
+      if(tv) return traverseOn(g, seat) ? tag("traverseBack", {t: "promptChoose", choice: tv.go})
+                                        : tag("traverseStay", {t: "promptChoose", choice: tv.stay}); }
     /* A SOAK PITCHED FOR IS PRICED AS THE CARD (QA-A H-4): `effects.soakPolicy`'s
        card price, asked through the one answer body. */
     const ans = J.autoAnswer(g, g.prompt.tag === "soak" && soakOn(g, seat) ? {cardPrice: true} : null), pt = g.prompt.tag;
@@ -1675,6 +1691,8 @@ const CALL_WHY = {
   payNoPiece: "Don't pay. Keeping the piece is worth more than what destroying it buys.",
   payGoAgain: "Destroy it. The attack goes again, and you have another attack to spend the action point on.",
   firstOption: "Take the first option.",
+  traverseStay: "Stay on this face. Its first blood debt attack each turn keeps the action point.",
+  traverseBack: "Turn back over. Every Runechant you make digs a card into the banished zone again.",
   lookFoe: "Look at their deck. You can't already know their next card, and now you will.",
   lookOwn: "Look at your own deck. You already know their top card, so yours is the one worth seeing.",
   allocAll: "Place every counter on your strongest piece.",
