@@ -14,7 +14,25 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
-### LATEST (CEO session_013xG9xAMiFN6pmpxfvY4LPe, 2026-11-17, at v6.46) — VISERAI, BETWEEN WORLDS IS OPEN
+### LATEST (CEO session_013xG9x9bRibS57y9pv9vJyZ, 2026-11-17, at v6.46) — VISERAI BW POLICY: FOUR LEADS, ALL NULL
+- **State:** live still v6.46 (0cdb3e2). UNRELEASED on `claude/epic-feynman-cewlp0`: `buildMaps`' `byCode` keeps the FRONT
+  face under a shared print code (both copies, cards.js + index.html; 13 codes moved, SBW001 among them; drill in
+  traverse.test.js, sabotaged; npm test 4430/0/5). Not user-visible (names resolve first): ride the next release.
+- **MEASURE FIRST: `npm run play` (tourney) runs the RULE policy in both seats; Sharp needs `SPXLA=all`** (~55 s per 45 games).
+  Baseline viseraibw at 3 seeds: rules 10/45, Sharp-all 13/45. Probe (Sharp-all, 60 games): 146 of 455 own turns pass at an
+  action point, but 61 with an empty hand and 79 with one unaffordable card: starvation, not missed plays.
+- **TRIED AND REVERTED (measured; do not redo without a new idea)** — probes in `experiments/viseraibw-policy/`:
+  (1) Gate to i'Arathael "never activated": correct. Every blood-debt action in his deck prints its own banish line, so the
+  Gate unlocks nothing here (an `arenaUseful` "banPlay" kind was built, found idle, removed). Matters only for a future deck.
+  (2) Hold heal-only cards (Arcane Polarity) until the 4-life gate: LOSES (viseraibw 10->8, blaze 16->11, briar 42->34, fai =,
+  3 seeds): casting the free card thins the hand for the end-phase draw. Burning it is right.
+  (3) Go-again non-attacks first in the no-attack branch: viseraibw 19 = 19 at 6 seeds (no effect).
+  (4) Sharp counts playable banished cards as held (`fromBan`): Sharp-all 13 -> 9. Worse.
+- **NEXT:** policy ideas for him should start from the starvation numbers (what he pitches vs plays per turn, arsenal use),
+  not from the pass count. Or accept he is a weak AI seat and move to (2) Prism (soul zone first, ROADMAP-NEWDECKS.md).
+- **ASK THE USER (still open):** the cup's dummy fills only while heroes < 16, so it is out now; confirm.
+
+### PREVIOUS (CEO session_013xG9xAMiFN6pmpxfvY4LPe, 2026-11-17, at v6.46) — VISERAI, BETWEEN WORLDS IS OPEN
 - **State:** live = v6.46 on `main` (0cdb3e2), livecheck ALL PASS. Function `table` version 44 = build `v6.46 · sage-v18`,
   stamped; `--check` OK. WIRE_V 44, **DATA_VER sage-v18**. No unreleased work. 16 heroes; `npm run play '' '' 3` = 720 games.
 - **DONE v6.46:** key `viseraibw`, `short: "Viserai BW"` (new `heroShort(h)`: every label used to cut at the comma, so two tiles
