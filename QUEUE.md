@@ -9,12 +9,22 @@ before fixing. If it does not reproduce, skip it and say so in your release summ
 "CEO-verified" item below was re-driven in the CEO thread and reproduced. Measure the blast
 radius (pool census) before widening any reader, and drive a fixture that bites.
 
-## HANDOFF — START HERE (CEO, 2026-11-16, at v6.44)
+## HANDOFF — START HERE (CEO, 2026-11-17, at v6.45)
 
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
-### LATEST (CEO session_013xG9xAMiFN6pmpxfvY4LPe, 2026-11-16, at v6.44)
+### LATEST (CEO session_013xG9xAMiFN6pmpxfvY4LPe, 2026-11-17, at v6.45)
+- **State:** live = v6.45 on `main` (1a45fcd), livecheck ALL PASS. Function `table` version 42 = build `v6.45 · sage-v17`,
+  stamped; `--check` OK. WIRE_V 44. No unreleased work. The v6.44 block below still holds except where this one says.
+- **DONE v6.45, the 0{d} ruling** (user, 2026-11-16: "0 defense can be declared as a blocker (blank cannot)"):
+  `game.gearDeclareWhy`, one body both boards call; `zero-defence-gear-refused` CLOSED; `test/defcap.test.js` (4 drills, sabotaged
+  4 ways). The AI's wall still takes only pieces above 0, so it never raises Olde Leather Boots for their +2 (policy work).
+- **NEXT:** the opening release for Viserai, Between Worlds (item 2 of the v6.44 NEXT list), then his AI policy, then Prism.
+  Scouted: two heroes would show as "Viserai" (`HEROES[].n` must be the full name); `resolveHero` takes byName first, then
+  byCode, then a substring match, so the old deck's `H|Viserai|0|SVI001` must keep resolving to the old record.
+
+### PREVIOUS (CEO session_013xG9xAMiFN6pmpxfvY4LPe, 2026-11-16, at v6.44)
 - **State:** live = v6.44 on `main` (e532f80), livecheck ALL PASS. Function `table` version 40 = build `v6.44 · sage-v17`,
   stamped; `--check` OK. WIRE_V 44. No unreleased work. Everything in the blocks below still holds.
 - **DONE v6.44, reader 7: the double-faced hero and traverse** (`test/traverse.test.js`, sabotaged 24 ways). `effects.traverse`
