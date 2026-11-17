@@ -100,6 +100,16 @@ test("the builder reads both faces, and each face only its own lines", () => {
   assert.equal(lone.runeTraverse, 0, "a threshold with no trigger to ask it");
 });
 
+/* v6.47: two records share a double-faced card's print code, and `byCode` used to keep whichever came
+   LAST, so SBW001 named the back face. Names resolve first, so nothing broke; the code is the FRONT's.
+   Asked in both orders, and of the pool itself. */
+test("a back face never shadows its front under the shared print code", {skip}, () => {
+  for(const order of [[rec(FRONT), rec(BACK)], [rec(BACK), rec(FRONT)]])
+    for(const id of Object.keys(rec(FRONT).pr).filter(k => k !== "_first" && rec(BACK).pr[k]))
+      assert.equal(C.buildMaps(order).byCode[id].n, FRONT, id + " named the back face (" + order.map(c => c.n) + ")");
+  assert.equal(H.db().byCode.SBW001.n, FRONT, "the pool's SBW001 names the back face");
+});
+
 test("the faces find each other by print code, and nothing else is a face", {skip}, () => {
   assert.deepEqual(BD.facesOf(STAGED, rec(FRONT)).map(c => c.n), [BACK]);
   assert.deepEqual(BD.facesOf(STAGED, rec(BACK)).map(c => c.n), [FRONT]);

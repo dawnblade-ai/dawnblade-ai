@@ -202,7 +202,7 @@ function buildMaps(cards){
     const k=norm(c.n);
     byNP[k+"|"+(c.p==null?0:c.p)]=c;
     (byName[k]=byName[k]||[]).push(c);
-    Object.keys(c.pr||{}).forEach(id=>{ if(id!=="_first") byCode[id]=c; });
+    Object.keys(c.pr||{}).forEach(id=>{ if(id!=="_first" && !(byCode[id] && /_BACK\.[a-z0-9]+$/i.test(String(c.pr[id])))) byCode[id]=c; });  /* a back face never shadows its front under the shared code */
   });
   return {status:"ready", byNP, byName, byCode, count:cards.length};
 }
