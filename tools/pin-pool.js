@@ -40,6 +40,7 @@
      node tools/pin-pool.js            # rewrite data/pool.js
      node tools/pin-pool.js --check    # exit 1 if it would change
      node tools/pin-pool.js --only "Line Crossers"   # take one card's live record, keep the rest
+     node tools/pin-pool.js --add-staged  # a staged hero opened: add its staged records, keep the rest
    ============================================================ */
 const fs = require("fs");
 const path = require("path");
@@ -116,8 +117,41 @@ const slimPrinting = pr => {
   return o;
 };
 
-function build(db, W){
+/* ---- A STAGED HERO OPENS (v6.46) ----------------------------------------
+   RULING (user, 2026-11-15): a new precon joins the pool when the engine reads
+   its whole list. Its text was pinned beforehand from an unmerged upstream
+   branch into `data/staged.js` (tools/pin-staged.js), because `develop` does
+   not carry the set. So a name a deck needs that the database lacks is taken
+   from the staged file, whole, as fetched. Never authored either way.
+
+   A DOUBLE-FACED HERO BRINGS ITS OTHER FACE. The list names the front; the
+   back is on no list, and without it a traverse fails (CR 8.5.60a). The faces
+   are found the way `build.facesOf` finds them: another HERO record sharing a
+   print code, where exactly one of the two images is the back. One hop only. */
+const STAGED = path.join(ROOT, "data", "staged.js");
+const readStaged = () => fs.existsSync(STAGED) ? require(STAGED).filter(c => c && c.name) : [];
+const isHeroRec = c => (c.types || []).some(t => /^hero$/i.test(String(t)));
+const isBackUrl = u => /_BACK\.[a-z0-9]+$/i.test(String(u || ""));
+function facesRaw(records, hero){
+  if(!isHeroRec(hero)) return [];
+  const mine = new Map((hero.printings || []).map(p => [p.id, isBackUrl(p.image_url)]));
+  return records.filter(c => c && c.name !== hero.name && isHeroRec(c)
+    && (c.printings || []).some(p => mine.has(p.id) && mine.get(p.id) !== isBackUrl(p.image_url)));
+}
+function withStaged(db, need, staged){
+  const have = new Set(db.filter(c => c && c.name).map(c => norm(c.name)));
+  const took = staged.filter(c => need.has(norm(c.name)) && !have.has(norm(c.name)));
+  const all = db.concat(took);
+  const faces = [];
+  for(const h of all.filter(c => need.has(norm(c.name)) && isHeroRec(c)))
+    for(const f of facesRaw(db.concat(staged), h))
+      if(!all.includes(f) && !faces.includes(f) && !have.has(norm(f.name))) faces.push(f);
+  return {records: all.concat(faces), took: took.concat(faces)};
+}
+
+function build(db, W, staged){
   const need = neededNames(W);
+  db = withStaged(db, need, staged || readStaged()).records;
   const direct = db.filter(c => c && c.name && need.has(norm(c.name)));
   tokenNames(direct).forEach(t => need.add(t));
   /* A TOKEN IS KEPT BY ITS TYPE, THE WAY THE LOADER KEEPS ONE (v3.21).
@@ -146,7 +180,8 @@ function build(db, W){
      Redeemed and Teklovossen, which no hero in this pool can become. */
   const isDemi = c => /demi-hero/i.test(c.type_text || "")
                    || (c.types || []).some(t => /^demi-hero$/i.test(t));
-  const keep = db.filter(c => c && c.name && (need.has(norm(c.name)) || isTok(c) || isDemi(c)));
+  const faceNames = new Set(direct.filter(isHeroRec).flatMap(h => facesRaw(db, h)).map(c => norm(c.name)));
+  const keep = db.filter(c => c && c.name && (need.has(norm(c.name)) || faceNames.has(norm(c.name)) || isTok(c) || isDemi(c)));
   /* Stable order, so a re-pin against an unchanged upstream is an empty
      diff rather than a reshuffle nobody can review. */
   keep.sort((a, b) => (a.name === b.name)
@@ -169,7 +204,35 @@ function serialize(pool){
   return HEAD + "[\n" + pool.map(r => JSON.stringify(r)).join(",\n") + "\n]);\n";
 }
 
+/* `--add-staged`: the opening of a staged hero WITHOUT a full re-pin. Every
+   pinned record is kept byte for byte; the staged records the decks now need
+   (and the other face of a needed hero) are added, in the full build's order.
+   No live download, so no unreviewed upstream drift rides along. */
+function addStaged(W){
+  const pinned = fs.existsSync(OUT) ? require(OUT) : [];
+  const need = neededNames(W);
+  const {took} = withStaged(pinned, need, readStaged());
+  const fresh = took.map(c => ({...c, printings: (c.printings || []).map(slimPrinting)}));
+  const pool = pinned.concat(fresh);
+  pool.sort((a, b) => (a.name === b.name)
+    ? (a.pitch || 0) - (b.pitch || 0) || String(a.unique_id||"").localeCompare(String(b.unique_id||""))
+    : a.name.localeCompare(b.name));
+  return {pool, took: fresh.map(c => c.name + (c.pitch ? " " + c.pitch : ""))};
+}
+
 function main(){
+  if(process.argv.includes("--add-staged")){
+    const {pool, took} = addStaged(loadData());
+    const text = serialize(pool);
+    if(process.argv.includes("--check")){
+      const prev = fs.existsSync(OUT) ? fs.readFileSync(OUT, "utf8") : null;
+      if(prev === text){ console.log("data/pool.js holds every staged record the decks need."); return; }
+      console.error("data/pool.js lacks staged records the decks need: " + took.join(", ")); process.exit(1);
+    }
+    fs.writeFileSync(OUT, text);
+    console.log("Added " + took.length + " staged record(s): " + took.join(", ") + " (" + pool.length + " records).");
+    return;
+  }
   if(!fs.existsSync(CACHE)){
     console.error("no live database at " + path.relative(ROOT, CACHE) + " — run: node tools/audit.js");
     process.exit(2);
@@ -213,4 +276,4 @@ function main(){
 }
 
 if(require.main === module) main();
-module.exports = {build, neededNames, tokenNames, slimPrinting, serialize, OUT, CACHE};
+module.exports = {build, neededNames, tokenNames, slimPrinting, serialize, facesRaw, withStaged, addStaged, OUT, CACHE};

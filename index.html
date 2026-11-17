@@ -69,6 +69,7 @@ img{display:block;max-width:100%}
 .hcard.ch1{box-shadow:inset 0 -2px 0 var(--r)}
 .hcard.ch2{box-shadow:inset 0 -2px 0 var(--y)}
 .hcard.ch3{box-shadow:inset 0 -2px 0 var(--b)}
+.hcard.ch4{box-shadow:inset 0 -2px 0 var(--hold)}
 .hcard .best{position:absolute;top:2px;right:2px;background:var(--ink);border:1px solid var(--y);color:var(--y);font-size:8px;padding:0 3px;font-family:'Spline Sans Mono'}
 .openslot{border:1px dashed var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--bone-dim);background:transparent;min-height:64px}
 .openslot b{font-family:'Big Shoulders Display';font-size:16px;font-weight:700;line-height:1}
@@ -961,7 +962,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "6.45"; /* v6.45 - a piece of equipment that prints 0 defence can now be declared as a defender, as the rules say, while one that prints no defence still cannot. See CHANGELOG.md. */
+window.APP_VER = "6.46"; /* v6.46 - Viserai, Between Worlds opens: the Usurp the Shadow Throne precon joins the roster, double-faced hero and all. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -981,7 +982,7 @@ window.APP_VER = "6.45"; /* v6.45 - a piece of equipment that prints 0 defence c
    rule, not a feature of throwing hands. A coin that seated you directly
    would be a rules change wearing a convenience hat. */
 window.THROW_MODE = "coin";   /* "coin" (fast) | "rps" (the real thing) */
-window.DATA_VER = "sage-v17"; /* the full re-pin (2026-11-13): Hyper Inflation yellow and blue power and the ban metadata moved, no deck-played text did, so the bump keeps a phone on the old pool off a table with one on the new. Before that, the Line Crossers re-pin (2026-11-10): one pinned record's text changed ("as a hero" -> "as another hero", read the same), so the bump keeps a phone on the old pool off a table with one on the new. v5.74: the cards come from the PINNED POOL (data/pool.js) and nowhere else — RULING (user, 2026-11-02) — so there is no localStorage card cache any more; the bump retires every sage-v14 build id, so a table never seats a phone still playing live upstream text against one playing the pool. v4.72: cards carry `cx`, the X count of a printed "XX" cost — a warm sage-v13 cache has none, so Ice Eternal's X would be free. v3.76: the loader keeps DEMI-HERO records by type, the way it already keeps tokens. Arakni prints "you become a random Agent of Chaos" and the six Agents are Demi-Heroes no deck lists, so a warm sage-v12 cache has none of them and her hero ability finds nothing to become. v3.34: cards carry `hz` (`played_horizontally`), which is the database SAYING a card is a SPLIT card — two halves on one card, told apart by `tt`, playable one or both (Meld). A warm sage-v11 cache has no `hz` on any card, so both split cards would silently keep running BOTH halves for free with no choice offered. v2.44: cards carry `ty`, the STRUCTURED type array. `tt` is a display string and the two disagree on 5 database records — it calls Den of the Spider an "Action Defense Reaction", and a reaction cannot be an action. A warm sage-v10 cache has no `ty` on any card, so every type question would fall back to parsing the display string. v2.35: cards carry `prs` (image per SET), which is what lets a card resolve to its Silver Age printing instead of the database's arbitrary first — a warm sage-v9 cache has no `prs` at all and every card would fall back. v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
+window.DATA_VER = "sage-v18"; /* Viserai, Between Worlds opens (v6.46): his staged records joined the pool, both hero faces included, every other record unchanged. Before that, the full re-pin (2026-11-13): Hyper Inflation yellow and blue power and the ban metadata moved, no deck-played text did, so the bump keeps a phone on the old pool off a table with one on the new. Before that, the Line Crossers re-pin (2026-11-10): one pinned record's text changed ("as a hero" -> "as another hero", read the same), so the bump keeps a phone on the old pool off a table with one on the new. v5.74: the cards come from the PINNED POOL (data/pool.js) and nowhere else — RULING (user, 2026-11-02) — so there is no localStorage card cache any more; the bump retires every sage-v14 build id, so a table never seats a phone still playing live upstream text against one playing the pool. v4.72: cards carry `cx`, the X count of a printed "XX" cost — a warm sage-v13 cache has none, so Ice Eternal's X would be free. v3.76: the loader keeps DEMI-HERO records by type, the way it already keeps tokens. Arakni prints "you become a random Agent of Chaos" and the six Agents are Demi-Heroes no deck lists, so a warm sage-v12 cache has none of them and her hero ability finds nothing to become. v3.34: cards carry `hz` (`played_horizontally`), which is the database SAYING a card is a SPLIT card — two halves on one card, told apart by `tt`, playable one or both (Meld). A warm sage-v11 cache has no `hz` on any card, so both split cards would silently keep running BOTH halves for free with no choice offered. v2.44: cards carry `ty`, the STRUCTURED type array. `tt` is a display string and the two disagree on 5 database records — it calls Den of the Spider an "Action Defense Reaction", and a reaction cannot be an action. A warm sage-v10 cache has no `ty` on any card, so every type question would fall back to parsing the display string. v2.35: cards carry `prs` (image per SET), which is what lets a card resolve to its Silver Age printing instead of the database's arbitrary first — a warm sage-v9 cache has no `prs` at all and every card would fall back. v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 /* The dummy's 30-card pile: [name, pitch, copies]. Every one is a real
    Silver-Age-legal Generic attack action with NO rules text, chosen on
@@ -1011,7 +1012,11 @@ window.HEROES = [
  {k:"boltyn",n:"Boltyn",cls:"Light Warrior",ch:3,code:"SBL001",blurb:"Charge your soul, then spend it in blinding swings."},
  {k:"briar",n:"Briar",cls:"Elemental Runeblade",ch:3,code:"SBA001",blurb:"Lightning in one hand, rot in the other."},
  {k:"gravy",n:"Gravy Bones",cls:"Pirate Necromancer",ch:3,code:"SGB001",blurb:"Dead men tell no tales, but they crew a fine ship."},
- {k:"lyath",n:"Lyath Goldmane",cls:"Reviled Guardian",ch:3,code:"SLY001",blurb:"Five cards, dirty tricks, one colossal payoff."}
+ {k:"lyath",n:"Lyath Goldmane",cls:"Reviled Guardian",ch:3,code:"SLY001",blurb:"Five cards, dirty tricks, one colossal payoff."},
+ /* OPENED v6.46 (RULING user 2026-11-15: a new precon joins when the engine reads its
+    whole list). Usurp the Shadow Throne, not a numbered chapter: `blk` names the block
+    on the loadout and `ch` only picks the stripe colour. */
+ {k:"viseraibw",n:"Viserai, Between Worlds",cls:"Shadow Runeblade",ch:4,blk:"Usurp the Shadow Throne",code:"SBW001",blurb:"Make runes, feed the banished zone, and cross over to the Demon on the other side."}
 ];
 
 window.DECKS = {
@@ -1517,7 +1522,40 @@ G|Titan's Fist|0|
 2|Goon Tactics|3|
 2|Mocking Blow|3|
 2|Power Play|3|
-2|The Suspense is Killing Me|0|`
+2|The Suspense is Killing Me|0|`,
+viseraibw:`H|Viserai, Between Worlds|0|SBW001
+G|Seven Sin Nebula|0|SBW003
+G|Corrupted Crown|0|SBW004
+G|Blossom of Spring|0|SBW006
+G|Runehold Release|0|SBW007
+G|Olde Leather Boots|0|SBW009
+G|Galaxxi Black|0|SBW002
+G|Crown of Dichotomy|0|SBW005
+G|Nullrune Boots|0|SBW008
+2|Bloodfrenzy Gloomblade|1|SBW010
+2|Cullingsong Gloomblade|1|SBW011
+2|Demonbound Gloomblade|1|SBW012
+2|Embrace Ursur|1|SBW013
+2|Murmuring Gloomblade|1|SBW015
+2|Plundersong Gloomblade|1|SBW016
+1|Runic Disposition|1|SBW017
+2|Vexing Gloomblade|1|SBW018
+2|Malefic Incantation|1|SBW020
+2|Otherworldly Sins|1|SBW021
+2|Pull from Beyond|1|SBW022
+2|Embrace Ursur|2|SBW024
+2|Malefic Incantation|2|SBW025
+2|Runechant of Lust|2|SBW026
+2|Runechant of Sloth|2|SBW027
+2|Bloodfrenzy Gloomblade|3|SBW028
+2|Demonbound Gloomblade|3|SBW029
+2|Embrace Ursur|3|SBW030
+2|Murmuring Gloomblade|3|SBW031
+2|Vexing Malice|3|SBW032
+2|Pull from Beyond|3|SBW033
+2|Looking for a Scrap|1|SBW014
+2|Weeping Battleground|1|SBW019
+2|Arcane Polarity|1|SBW023`
 };
 
 window.JUDGE_QS = [
@@ -2033,7 +2071,7 @@ function HeroSheet({h,db,onBack,onFight,best}){
           <div style={{width:92,flex:"none"}} className="clip-sm"><HeroArt h={h} db={db} key={db.status}/></div>
           <div>
             <h2>{h.n}</h2>
-            <div className="cls">{h.cls} · Chapter {h.ch} · Silver Age precon</div>
+            <div className="cls">{h.cls} · {h.blk || ("Chapter " + h.ch)} · Silver Age precon</div>
             <p style={{fontSize:13.5}}>{h.blurb}</p>
           </div>
         </div>

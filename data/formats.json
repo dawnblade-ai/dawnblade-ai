@@ -26,7 +26,7 @@
     "name": "Dawnblade",
     "kind": "a fan-made sub-format of Silver Age",
     "declared": "2026-09-26",
-    "pool": "the Silver Age preconstructed decks this project has built, exactly as printed (window.DECKS; today the fifteen Chapter 1-3 precons), plus the tokens and Demi-Heroes their cards create",
+    "pool": "the Silver Age preconstructed decks this project has built, exactly as printed (window.DECKS; today the fifteen Chapter 1-3 precons and, since v6.46, Viserai, Between Worlds from Usurp the Shadow Throne), plus the tokens and Demi-Heroes their cards create",
     "growth": "RULING (user, 2026-11-15): the pool is no longer frozen at fifteen. A new Silver Age precon joins when the engine reads its whole list (ROADMAP-NEWDECKS.md); until then its cards wait in data/staged.js and nobody can be dealt them. Nothing ever leaves: Silver Age's ban list and hero bench still do not apply.",
     "heroes": [
       "arakni",
@@ -43,7 +43,8 @@
       "iyslander",
       "kayo",
       "lyath",
-      "viserai"
+      "viserai",
+      "viseraibw"
     ],
     "legality": "every card and every hero in the pool is legal, whatever Silver Age's own ban list or hero bench says",
     "rules": "the Flesh and Blood Comprehensive Rules as this engine encodes them; every stated deviation is a record in tools/approx.js"
