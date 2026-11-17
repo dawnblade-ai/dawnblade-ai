@@ -14,7 +14,22 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
-### LATEST (CEO session_013xG9x9bRibS57y9pv9vJyZ, 2026-11-17, at v6.46) — VISERAI BW POLICY: FOUR LEADS, ALL NULL
+### LATEST (CEO session_013xG9x9bRibS57y9pv9vJyZ, 2026-11-17, at v6.46) — PRISM STARTED (unreleased)
+- **RULING-ish (user, 2026-11-17):** "throw the player vs ai development on the back burner and move along to prism."
+- **State:** live still v6.46. ALL BELOW IS UNRELEASED on `claude/epic-feynman-cewlp0` (pushed; each commit validated:
+  npm test 4443/0/5, audit 430/430, scenes 107/0, fairness clean, babel OK). Pool behaviour unchanged (staged cards only),
+  but engine files moved: the release that ships it needs the full ritual (APP_VER, CHANGELOG, function redeploy, livecheck).
+  Commits: byCode front face; Prism reader 1 (soul + rider), 2a (`named` qualifier: "with Herald in its name"),
+  3 (figments enter the arena; Prism's awaken -> Suraya; front filed off-arena + invariant BACK-FACE-OFF-ARENA).
+- **Prism's order and what is left: ROADMAP-NEWDECKS.md Phase 3** (the authority). Next: the hero's Herald-to-soul trigger +
+  "search your deck for a figment, put it into the arena"; Suraya driven as an ally ("{r}{r}: Attack", Ward 4); then Iris
+  (auras as weapons), Spectra / "loses and can't gain phantasm", -1{p} while defending, Lay Low, Herald of Judgment.
+- **Pins that moved (unpin when she opens):** anchors.test.js (3 staged-only parser lines), crindex 104->111 / 94->101,
+  slicecensus prompts.js 13239. Upstream bug: Suraya's record carries the FRONT's type line; `effects.awaken` derives `tt`
+  from `ty` (ruling 2026-08-02). A widened soul-cost reader nearly read Teklovossen across a line break: now refused + drilled.
+- **ASK THE USER (still open):** the cup's dummy fills only while heroes < 16 (out now); confirm.
+
+### PREVIOUS (CEO session_013xG9x9bRibS57y9pv9vJyZ, 2026-11-17, at v6.46) — VISERAI BW POLICY: FOUR LEADS, ALL NULL
 - **State:** live still v6.46 (0cdb3e2). UNRELEASED on `claude/epic-feynman-cewlp0`: `buildMaps`' `byCode` keeps the FRONT
   face under a shared print code (both copies, cards.js + index.html; 13 codes moved, SBW001 among them; drill in
   traverse.test.js, sabotaged; npm test 4430/0/5). Not user-visible (names resolve first): ride the next release.
