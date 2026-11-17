@@ -248,7 +248,7 @@ Only rules cited in code. A rules revision is a lookup here, not an archaeology 
 *drills:* test/judge.test.js:566, test/judge.test.js:607, test/judge.test.js:1211, test/priority.test.js:117, test/priority.test.js:148, test/priority.test.js:161, test/priority.test.js:216, test/priority.test.js:251
 
 **CR 1.8.8** — engine/effects.js:722, engine/judge.js:3982, engine/parser.js:5554, engine/parser.js:8384, engine/parser.js:9940, engine/parser.js:10938  
-*drills:* test/approx.test.js:2352, test/crindex.test.js:102, test/fxcensus.test.js:85, test/runechants.test.js:14, test/split.test.js:488, test/traverse.test.js:176
+*drills:* test/approx.test.js:2352, test/crindex.test.js:102, test/fxcensus.test.js:85, test/runechants.test.js:14, test/split.test.js:488, test/traverse.test.js:186
 
 **CR 7.7** — engine/invariants.js:220, engine/invariants.js:333, engine/invariants.js:345, engine/invariants.js:362, engine/judge.js:3119, engine/priority.js:65, engine/priority.js:255  
 *drills:* test/invariants.test.js:160, test/invariants.test.js:164, test/priority.test.js:347
@@ -308,7 +308,7 @@ Only rules cited in code. A rules revision is a lookup here, not an archaeology 
 *drills:* test/blooddebt.test.js:5, test/crindex.test.js:98
 
 **CR 8.5.60a** — engine/build.js:522, engine/effects.js:2640, engine/effects.js:11520, engine/effects.js:11543  
-*drills:* test/crindex.test.js:106, test/traverse.test.js:20, test/traverse.test.js:207
+*drills:* test/crindex.test.js:106, test/traverse.test.js:20, test/traverse.test.js:217
 
 **CR 1.15.3** — engine/invariants.js:157, engine/judge.js:3307  
 *drills:* test/crindex.test.js:93, test/ctrclock.test.js:349, test/ctrreset.test.js:9, test/ctrreset.test.js:94
@@ -422,7 +422,7 @@ Only rules cited in code. A rules revision is a lookup here, not an archaeology 
 *drills:* test/crindex.test.js:81, test/loselife.test.js:7
 
 **CR 9.1.2c** — engine/effects.js:11551  
-*drills:* test/traverse.test.js:26, test/traverse.test.js:149
+*drills:* test/traverse.test.js:26, test/traverse.test.js:159
 
 **CR 7.3.1** — engine/effects.js:930  
 *drills:* test/conditionals.test.js:27, test/crindex.test.js:104
