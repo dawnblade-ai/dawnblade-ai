@@ -146,7 +146,9 @@ const HERO_STATICS = [
   {key:"firstAtkGaKw", re:/the first attack action card with ([a-z][a-z ]*?) you play each turn gets go again/,
    note:"Viserai, Usurper — the first attack action card with the named keyword each turn gets go again"},
   {key:"endTraverse", re:/at the beginning of each end phase, if you(?:'ve| have) created or activated an? (.+?) this turn, you may traverse/,
-   note:"Viserai, Usurper — a named token created or activated this turn: may traverse at each end phase"}
+   note:"Viserai, Usurper — a named token created or activated this turn: may traverse at each end phase"},
+  {key:"soulNamedTrig", re:/whenever a card with ([a-z][a-z'-]*) in its name is put into your soul during an action phase, you may search your deck for a figment, put it into the arena, then shuffle/,
+   note:"Prism, Advent of Thrones — a named card into the soul during an action phase: may search the deck for a figment into the arena"}
 ];
 /* Tokens are read out of the pool's own text rather than listed by hand —
    a hardcoded list silently rots (it carried 6 of the 17 real tokens, and

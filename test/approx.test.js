@@ -735,7 +735,10 @@ const PASSIVE_EVENTS = {mightOnFirst6Discard: ["discard"], weaponRefresh: ["hit"
   /* v6.46: Viserai, Between Worlds ("whenever you create 1 or more Runechants") and his back face
      ("at the beginning of each end phase … you may traverse"; the census builds the FRONT, so this
      one is listed for the day a deck starts on a face that prints it). */
-  runeBanish: ["runeMade"], endTraverse: ["end"]};
+  runeBanish: ["runeMade"], endTraverse: ["end"],
+  /* v6.47 (unreleased): Prism, Advent of Thrones, "whenever a card with Herald in its name is put
+     into your soul during an action phase" — listed for the day she opens. */
+  soulNamedTrig: ["soulPut"]};
 function trigCensus(){
   const db = tdb(), W2 = X.loadData(), out = {};
   for(const h of W2.HEROES){

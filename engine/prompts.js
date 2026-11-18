@@ -65,7 +65,7 @@ const promptDestWord = (to, pos) => {
   if(to === "deckTop") return "the top of " + p + " deck";
   if(to === "deckBottom") return "the bottom of " + p + " deck";
   if(to === "gear") return "play, equipped";
-  if(to === "board") return p + " arena";
+  if(to === "board" || to === "arena") return p + " arena";
   return p + " " + promptZoneWord(to);
 };
 
@@ -1181,6 +1181,9 @@ function moveCards(game, side, from, to, cards){
     const _to = to === "deckTop" ? P.deckTopTo(game) : to;
     if(_to === "arsenal") s.arsenal = cards[0] || s.arsenal;
     else if(_to === "board") s.board = [...(s.board||[]), ...cards.map(c=>({card:c, kind:"item", spent:false, uid:c.uid}))];
+    /* "PUT IT INTO THE ARENA" (v6.47): a permanent of its own printed kind, read through
+       `fxParse(c).perm` (a figment files as "figment"), never stamped "item" (CR 8.2.16b). */
+    else if(_to === "arena") s.board = [...(s.board||[]), ...cards.map(c=>({card:c, kind:(P.fxParse(c).perm || "permanent"), spent:false, uid:c.uid}))];
     else if(_to === "deckBottom") s.deck = [...(s.deck||[]), ...cards];
     else if(_to === "deckTop") s.deck = [...cards, ...(s.deck||[])];
     /* a card put into a SOUL is an EVENT (v5.40) — "a yellow card has been

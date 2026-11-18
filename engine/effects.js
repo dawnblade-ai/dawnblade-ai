@@ -727,6 +727,25 @@ function makeEffects(ctx){
      ops, Viserai's rite and the on-hit mint. The banish is the shared
      `banTop` op; an empty deck banishes nothing and the "then if" is still
      asked. */
+  /* ---- A CARD WAS PUT INTO A SOUL (v6.47, Prism, Advent of Thrones) ----
+     "Whenever a card with Herald in its name is put into your soul during an action phase,
+     you may search your deck for a figment, put it into the arena, then shuffle." The build
+     carries the named word and the payload (`build.js` `soulNamedTrig`); this names nothing.
+     Every writer that adds to the ACTOR's soul calls it after `soulPutNote`: the charge cost,
+     a card ascending on its hit ("put it into your soul"), and an answered pick to the soul.
+     ONE trigger per card put (the printed "whenever a card"). "During an action phase" is
+     `phase === "action"`, ANY player's: unlike Kayo's line, Prism's does not say "your". */
+  const soulEntered = (n, cards) => {
+    const t = (bAct(n) || {}).soulNamedTrig;
+    if(!t || !t.named || !Array.isArray(t.ops) || n.phase !== "action") return n;
+    const src = heroAbilityName(n);
+    for(const c of cards || []){
+      if(!c || !P.qualMatches({named: t.named.toLowerCase()}, c)) continue;
+      n = L(n, `${src}: ${c.name} went into the soul during an action phase.`);
+      n = runOps(n, t.ops, src);
+    }
+    return n;
+  };
   const runesMade = (n, count) => {
     if(!(count > 0)) return n;
     actMut(n).hist = {...act(n).hist, runes: (act(n).hist.runes || 0) + count};
@@ -4274,8 +4293,8 @@ function makeEffects(ctx){
        is "Once per Turn Action - {r}: Attack" with no keyword of its own,
        and `fx.ga` read off a Spectral Shield answers about the TOKEN's
        printed line, which says only "Ward 1". */
-    const _auraGa = !!(_auraAtk && _auraAtk.gaWithCounters
-      && ((act(n).counters[card.uid] || {}).pow || 0) > 0);
+    const _auraGa = !!(_auraAtk && (_auraAtk.ga || (_auraAtk.gaWithCounters
+      && ((act(n).counters[card.uid] || {}).pow || 0) > 0)));   /* Iris's quoted "Go again" (v6.47) */
     let ga = _auraAtk ? _auraGa
            : _allyAtk ? !!_allyAtk.ga
            : (!_activation && abilityGa(card)) ? false
@@ -4498,6 +4517,7 @@ function makeEffects(ctx){
         actMut(n).hist = P.soulPutNote(act(n).hist, [picked]);
         actMut(n).hand = act(n).hand.filter(c2 => c2.uid !== picked.uid);
         n = creditCharge(n, picked);
+        n = soulEntered(n, [picked]);
       }
     }
     n._chgWay = chargedWay;
@@ -6667,6 +6687,8 @@ function makeEffects(ctx){
        continuation runs back at the seat whose card asked for it. An
        optional discard COST carries the same marker with nothing to
        continue, so it is stamped and credited the same way. */
+    /* AN ANSWERED PICK INTO THE SOUL is the third soul writer (v6.47, `soulEntered`). */
+    if(p.tag === "pick" && p.to === "soul" && (r.picked || []).length) n = soulEntered(n, r.picked);
     if(p.tag === "pick" && p.discard && (r.picked || []).length){
       n = discardChosen(n, pSide, r.picked, p.src || "");
       n = {...n, actor: p.discard.by != null ? p.discard.by : pSide};
@@ -8939,7 +8961,7 @@ function makeEffects(ctx){
     if(n._soulSelf){ delete n._soulSelf;
       if(total>0){ n = liftSelf(n, pc);
         actMut(n).soul = [...act(n).soul, pc]; actMut(n).hist = P.soulPutNote(act(n).hist, [pc]);
-        n = L(n, `${pc.name} ascends to the soul.`); }
+        n = L(n, `${pc.name} ascends to the soul.`); n = soulEntered(n, [pc]); }
     }
     n.featured = {card:{name:pc.name,img:pc.img,dbImg:pc.dbImg,pitch:0}, chip:`LINK ${n.chain.length} — ${total} DMG`};
     if(n._gaGrant){ n.pend = {...n.pend, ga:true}; delete n._gaGrant; }
@@ -11723,7 +11745,14 @@ function rxPumpTotal(s){
    it is stamped onto the card at the deal (v3.78) and so is `card.power`. */
 function basePowOf(card, from, s){
   if(!card) return null;
-  if(from === "aura"){ const w = P.wardValue(card); if(w > 0) return w; }
+  /* THE GRANT NAMES THE BASE (v6.47): Cosmo's is the ward, Iris of Reality's a printed 4.
+     `auraAttackOf` is the one reader; an aura attacking is attacking on its controller's
+     turn, so the turn gate is answered yes here. */
+  if(from === "aura"){
+    const sd = s && (s.sides || []).find(x => x && (x.board || []).some(b => b && b.uid === card.uid));
+    const aa = sd ? P.auraAttackOf(card, sd, {yourTurn: true}) : null;
+    if(aa && aa.power > 0) return aa.power;
+    const w = P.wardValue(card); if(w > 0) return w; }
   /* `fxParse` memoizes on `name|pitch` and throws without a name, and this
      is reached from `judge.legal`, whose contract is that it never throws
      (v4.59's `abPickSpec` guard, one reader over): a nameless card off a

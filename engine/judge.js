@@ -754,7 +754,13 @@ function newMatch(o){
      What a build is kept FOR is the printed passives a rules site reads
      through `bAct` — Viserai's rite, Gravy Bones's watery grave — plus
      the hero records the effects port will want. Those are small. */
-  const rulesBuild = b => { const {deck, gear, ...rest} = b || {}; return rest; };
+  /* AND THE HERO RECORD'S PER-SET ART MAP (`prs`, v6.47) is a construction input too: `cards.pickArt`
+     reads it while the build is made (HZOOM's art) and no rule reads it after. It was 400–600 bytes per
+     seat, and a new passive (Prism's) took the worst opening (Iyslander v Blaze) 13 bytes over the
+     data-channel budget. `pr` stays: `build.facesOf` reads it at a traverse. */
+  const rulesBuild = b => { const {deck, gear, ...rest} = b || {};
+    if(rest.heroRec && rest.heroRec.prs){ const {prs, ...hr} = rest.heroRec; rest.heroRec = hr; }
+    return rest; };
 
   let g = S.makeGame({sides, firstPlayer: first, rng: o.rng, seed: o.seed});
   g = {...g, builds: builds.map(rulesBuild), tokSeq: o.tokSeq || 0, actor: first};
@@ -2114,6 +2120,7 @@ const keepsActionPoint = (g, seat, uid, from) => {
     } else {
       const aa = PR.auraAttackOf(c, sd, {yourTurn: seat === g.turnPlayer,
                                          discount: bOf(g, seat).auraDiscount});
+      if(aa && aa.ga) return true;                        /* Iris's quoted "Go again" (v6.47) */
       if(aa && aa.gaWithCounters && (((sd.counters || {})[uid] || {}).pow || 0) > 0) return true;
     }
   } else {

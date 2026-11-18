@@ -556,7 +556,12 @@ const RX_RETRIEVE = /^(you may )?retrieve (.+) from your graveyard$/;
    names the moved card in `msgs` and the feed is read by BOTH seats
    (v2.83) — which is what a printed reveal IS. A second line would be two
    records of one fact. */
-const RX_DECK_SEARCH = /^(you may )?search your deck for (.+), reveal it, put it into your hand, then shuffle$/;
+const RX_DECK_SEARCH = /^(you may )?search your deck for (.+), (?:reveal it, put it into your hand|(put it into the arena)), then shuffle$/;
+/* AND "PUT IT INTO THE ARENA" (v6.47, Prism, Advent of Thrones: "search your deck for a
+   figment, put it into the arena, then shuffle"). No reveal is printed, and none is needed:
+   a card in the arena is public. It goes to `to: "arena"`, which `applyPrompt` files as a
+   permanent of its own kind (`types.permanentKind`), never as an item (CR 8.2.16b: a
+   figment that enters the arena becomes a permanent). */
 /* SHUFFLE-AND-REDRAW (Hope Merchant's Hood) — and "ANY NUMBER OF" IS IN
    THE ANCHOR, not left to the subject reader. `pickSubject` answers NULL
    for "any number of cards" (measured), so a rule that handed it the whole
@@ -3535,11 +3540,12 @@ function classifyClause(raw){
     if(!filter) return null;
     const may = !!m[1];
     /* `reveal`: "reveal it" — the found card is KNOWN to both in the hand */
-    return R([["pickPrompt", {zone:"deck", to:"hand", filter, reveal:true,
-      min: may ? 0 : 1, max:1, shuffleAfter:true,
+    const arena = !!m[3];
+    return R([["pickPrompt", Object.assign({zone:"deck", to: arena ? "arena" : "hand", filter},
+      arena ? {} : {reveal:true}, {min: may ? 0 : 1, max:1, shuffleAfter:true,
       title: may ? "Search your deck?" : "Search your deck",
       hint: may ? "Optional — choose none to decline. Your deck is shuffled either way."
-                : "Your deck is shuffled afterwards."}]]);
+                : "Your deck is shuffled afterwards."})]]);
   }
   /* "THIS ENTERS THE ARENA WITH A +1{p} COUNTER" (v3.57) — the same
      counter vocabulary as `ctrPut`, aimed at the card itself as it
@@ -4639,6 +4645,11 @@ function optFilter(phrase){
      printing this subject, and an open "any word before `you control`"
      would claim every dynamic subject these readers exist to refuse. */
   if(/^weapons?$/.test(low))              { f.ty = "weapon";   return f; }
+  /* "A FIGMENT" (v6.47, Prism) — a printed SUBTYPE, read off the structured array, which
+     carries it ("Light Illusionist Instant Figment"). Lower-case only: a CAPITALISED
+     "Figment" was a name and still is (`cased`). Measured: Prism's own search is the one
+     pool or staged line printing it as a pick subject. */
+  if(/^figments?$/.test(low))             { f.ty = "figment";  return f; }
   if(/^attack action cards?$/.test(low))  { f.type = "attack"; return withCls(f); }
   /* "A NON-ATTACK ACTION CARD" — the pair, off the STRUCTURED array. An
      attack action card carries Action AND Attack, so excluding Attack is
@@ -5785,7 +5796,7 @@ function fxParse(card){
       for(let ci = 0; ci < clauses.length; ci++){
         if(handled.has(ci)) continue;
         const t = clauses[ci].toLowerCase();
-        if(/auras you control with ward are weapons/.test(t)
+        if(/auras you control (?:with ward )?are weapons/.test(t)
            || (g.gaWithCounters && /your aura attacks with one or more/.test(t)))
           handled.add(ci);
       }
@@ -9189,12 +9200,23 @@ function allyAttack(c){
    `weaponCost` matches the quoted line whether it belongs to the card or
    to something the card is talking about, so the ROUTE is decided by
    `isWeapon`, never by asking it. */
+/* AND IRIS OF REALITY (v6.47, Prism's weapon) prints the same grant with three words moved:
+     "During your action phase, Illusionist auras you control are weapons with 4 base {p} and
+      "Once per Turn Action - {r}{r}{r}: Attack. Go again""
+   The SUBJECT is a class word (`cls`, read off the aura's structured types) instead of "with
+   ward"; the POWER is a printed number (`basePow`) instead of the ward; and the GO AGAIN is on
+   the quoted ability itself (`ga`), unconditional. "During your action phase" is narrower than
+   Cosmo's "during your turn" and is asked of nothing more: the granted ability is an Action, so
+   it can only be activated in its controller's action phase anyway (`ownTurnOnly`). */
+const RX_AURA_GRANT = /(?:^|\. )(?:during your (turn|action phase), )?(?:auras you control with ward|([a-z]+) auras you control) are weapons with (?:base \{p\} equal to their ward|(\d+) base \{p\}) and "([^"]+)"/;
 function auraWeaponGrant(c){
   if(!c) return null;
   const t = clean(c.tx || "").toLowerCase();
-  const m = t.match(
-    /auras you control with ward are weapons with base \{p\} equal to their ward and "([^"]+)"/);
-  if(!m) return null;
+  const m0 = t.match(RX_AURA_GRANT);
+  if(!m0) return null;
+  /* the ward subject and the ward power travel together (Cosmo); the class subject with a number (Iris) */
+  if(!m0[2] !== !m0[3]) return null;
+  const m = [m0[0], m0[4]];
   const wc = weaponCost(m[1]);
   if(!wc) return null;                       /* an unreadable grant refuses */
   /* THE SECOND SENTENCE IS THE SAME CARD'S and rides with the grant, so
@@ -9204,7 +9226,9 @@ function auraWeaponGrant(c){
      than a rider nobody can turn on. */
   const ga = /your aura attacks with one or more \+1\{p\} counters get go again/.test(t);
   return {cost: wc.cost, taps: wc.taps, oncePerTurn: wc.oncePerTurn,
-          gaWithCounters: ga, ownTurnOnly: /^during your turn/.test(t)};
+          gaWithCounters: ga, ownTurnOnly: !!m0[1],
+          cls: m0[2] || null, basePow: m0[3] ? +m0[3] : null,
+          ga: /:\s*attack\.?\s*go again\b/.test(m[1])};
 }
 
 /* THE NUMBER AN AURA CARRIES, read off its printed keyword line.
@@ -9318,14 +9342,16 @@ function auraAttackOf(card, sd, o){
   o = o || {};
   if(!card || !sd) return null;
   const w = wardValue(card);
-  if(!(w > 0)) return null;                  /* no ward, no weapon */
   if(o.yourTurn !== true) return null;       /* "during your turn" */
   /* A DESTROYED PIECE GRANTS NOTHING — `gearDef` already answers 0 for
      one, and it is filed only when the resolution that destroyed it ends
-     (v4.79), so it can still be in the array while the grant is asked. */
+     (v4.79), so it can still be in the array while the grant is asked.
+     THE FIRST GRANT WHOSE SUBJECT THIS CARD IS (v6.47): Cosmo's asks for ward ("no ward, no
+     weapon"), Iris's for an AURA of the printed class, both off structured fields. */
+  const tys = (card.ty || []).map(x => String(x).toLowerCase());
   const g = (sd.gear || [])
     .map(x => abilitiesLive(x) ? auraWeaponGrant(x) : null)
-    .find(Boolean);
+    .find(gr => gr && (gr.cls ? (tys.indexOf("aura") >= 0 && tys.indexOf(gr.cls) >= 0) : w > 0));
   if(!g) return null;
   /* THE HERO'S FIRST-ATTACK DISCOUNT (v3.84) — Enigma's clause 1, and it
      is the CALLER'S ANSWER because it lives on a build, which this file
@@ -9346,7 +9372,7 @@ function auraAttackOf(card, sd, o){
           .some(n => String(n).toLowerCase() === String(d.name).toLowerCase()))
     cost = Math.max(0, cost - d.amt);
   return {cost, taps: g.taps, oncePerTurn: g.oncePerTurn,
-          power: w, gaWithCounters: !!g.gaWithCounters};
+          power: g.basePow != null ? g.basePow : w, gaWithCounters: !!g.gaWithCounters, ga: !!g.ga};
 }
 
 /* THE GO AGAIN ON *THIS* ABILITY, not on a sibling. Cutty Shark prints

@@ -133,3 +133,115 @@ test("Suraya dies, and the graveyard holds Figment of Hope (CR 9.1.3b); the judg
   const bad = {...g, sides: [{...g.sides[0], grave: [g.sides[0].board[0].card]}, g.sides[1]]};
   assert.ok(INV.check(bad).some(v => v.code === "BACK-FACE-OFF-ARENA"), "the judge did not see a back face in the graveyard");
 }));
+
+/* ---- THE HERO'S TRIGGER (v6.47): "Whenever a card with Herald in its name is put into your soul
+   during an action phase, you may search your deck for a figment, put it into the arena, then
+   shuffle." Wartune Herald: "When this hits, put it into your soul." */
+test("the readers: the passive builds off Prism's line; the search puts a figment into the arena", {skip}, () => withStaged(db => {
+  const rec = (db.byName[PRISM.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()] || [])[0];
+  const b = BD.heroAbilities(rec, PRISM);
+  assert.equal(b.soulNamedTrig && b.soulNamedTrig.named, "Herald");
+  assert.deepEqual(b.soulNamedTrig.ops, [["pickPrompt", {zone: "deck", to: "arena", filter: {ty: "figment"},
+    min: 0, max: 1, shuffleAfter: true, title: "Search your deck?",
+    hint: "Optional — choose none to decline. Your deck is shuffled either way."}]]);
+  const vis = (db.byName["viserai between worlds"] || [])[0];
+  assert.equal(BD.heroAbilities(vis, vis.name).soulNamedTrig, null, "a hero who prints no such line has the trigger");
+  assert.equal(P.classifyClause("you may search your deck for a figment, put it into your graveyard, then shuffle"), null,
+    "an unread disposition was read");
+}));
+
+function heraldSwing(db, o){
+  const hero = (db.byName[PRISM.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()] || [])[0];
+  const b = BD.heroAbilities(hero, PRISM);
+  const herald = card(db, (o && o.atk) || "Wartune Herald", "w1", 1);
+  const deck = [card(db, "Herald of Hope", "d1", 1), card(db, FIG, "f9", 2), card(db, "Herald of Hope", "d2", 1)];
+  let g = table(H.state({res: 9, ap: 1, hp: 15, hand: [herald], deck, soul: []},
+    {hp: 20, hand: []}, {actor: 0, turnPlayer: 0, turn: 3, builds: [(o && o.build) || b, {}]}));
+  if(o && o.phase) g = {...g, phase: o.phase};
+  g = act(g, {t: "play", uid: "w1", from: "hand"}, 0);
+  let asked = null;
+  for(let i = 0; i < 80 && !g.over; i++){
+    if(g.prompt){
+      if(g.prompt.zone === "deck" && g.prompt.to === "arena"){
+        asked = g.prompt;
+        const ix = (g.prompt.cards || g.prompt.pool || []).findIndex(c => c && c.uid === "f9");
+        if(o && o.decline){ g = act(g, {t: "promptConfirm"}, 0); continue; }
+        assert.ok(ix >= 0, "the figment was not offered: " + JSON.stringify(Object.keys(g.prompt)));
+        g = act(g, {t: "promptSel", i: ix}, 0);
+      }
+      g = act(g, {t: "promptConfirm"}, g.prompt.side); continue;
+    }
+    if(g.pending) break;
+    if(!g.pend && !(g.stack || []).length && !(g.chain || []).length) break;
+    const out = J.reduce(g, {t: "pass"}, g.priority);
+    if(out.error) break;
+    g = out.state;
+  }
+  return {g, asked};
+}
+
+test("at the table: a Herald hits, goes into Prism's soul, and the search puts Figment of Hope into the arena", {skip}, () => withStaged(db => {
+  P.fxReset();
+  const {g, asked} = heraldSwing(db);
+  const me = g.sides[0];
+  assert.ok(g.sides[1].hp < 20, "fixture: the Herald did not hit");
+  assert.deepEqual(names(me.soul), ["Wartune Herald"], "fixture: the Herald did not reach the soul");
+  assert.ok(asked, "the search was never offered");
+  assert.equal(asked.min, 0, "the search is a may");
+  assert.deepEqual((asked.cards || asked.pool || []).map(c => c.uid), ["f9"], "the search offered a card that is not a figment");
+  assert.deepEqual((me.board || []).map(b => [b.uid, b.kind, b.card.name]), [["f9", "figment", FIG]]);
+  assert.deepEqual(me.deck.map(c => c.uid).sort(), ["d1", "d2"], "the deck lost or kept the wrong cards");
+}));
+
+test("declined, the figment stays in the deck; no Herald, no search; outside an action phase, no search", {skip}, () => withStaged(db => {
+  P.fxReset();
+  const d = heraldSwing(db, {decline: true});
+  assert.ok(d.asked, "fixture: the search was not offered");
+  assert.deepEqual(d.g.sides[0].board || [], [], "a declined search put a card into the arena");
+  assert.ok(d.g.sides[0].deck.some(c => c.uid === "f9"), "a declined search took the figment");
+  /* the same swing for a hero who prints no such line */
+  const n = heraldSwing(db, {build: {}});
+  assert.deepEqual(names(n.g.sides[0].soul), ["Wartune Herald"], "fixture: the Herald did not reach the soul");
+  assert.equal(n.asked, null, "a hero without the line searched");
+  /* the trigger itself, outside an action phase: a pick into the soul at the end phase */
+  const rec = (db.byName[PRISM.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()] || [])[0];
+  const b = BD.heroAbilities(rec, PRISM);
+  for(const [phase, nm, want] of [["end", "Herald of Hope", 0], ["action", "Herald of Hope", 1], ["action", "Drill Soul x", 0]]){
+    const c = nm === "Drill Soul x" ? soulCard("x") : card(db, nm, "x", 1);
+    let g = table(H.state({hand: [c], deck: [card(db, FIG, "f9", 2)], soul: []}, {hp: 20},
+      {actor: 0, turnPlayer: 0, turn: 3, builds: [b, {}]}));
+    g = {...g, phase};
+    /* one card in hand, min 1: the judge confirms the forced pick as it opens (`promptForcedSel`) */
+    const s = J.openPrompt(H.runOps(g, [["pickPrompt", {zone: "hand", to: "soul", min: 1, max: 1, title: "t"}]]));
+    assert.deepEqual(names(s.sides[0].soul), [c.name], "fixture: the pick did not reach the soul (" + phase + ")");
+    const searching = (s.prompt && s.prompt.to === "arena" ? 1 : 0) + (s.promptQ || []).filter(q => q.to === "arena").length;
+    assert.equal(searching, want, `${nm} into the soul in the ${phase} phase`);
+  }
+}));
+
+/* ---- SURAYA AS AN ALLY (v6.47): "Once per Turn Action - {r}{r}: Attack" and "Ward 4". The readers
+   were already there (`parser.allyAttack`, `wardValue`); this drives them on the awakened face. */
+test("at the table: Suraya, awakened, attacks for {r}{r} once per turn and carries Ward 4", {skip}, () => withStaged(db => {
+  P.fxReset();
+  const fig = card(db, FIG, "f1", 2);
+  let g = world(db, {board: [{card: fig, kind: "figment", spent: false, uid: "f1"}]});
+  const SWING = {t: "activate", uid: "f1", from: "board"};
+  assert.ok(J.legal(g, SWING, 0), "a figment, not yet awakened, attacked");
+  g = settle(act(act(g, AWAKEN, 0), {t: "soulcost", uid: "s1"}, 0));
+  const sur = g.sides[0].board.find(x => x.uid === "f1").card;
+  assert.equal(P.wardValue(sur), 4, "Suraya's Ward 4 does not read");
+  assert.equal(g.sides[0].res, 7, "fixture: the awaken did not pay {r}{r}");
+  assert.equal(J.legal(g, SWING, 0), null, "the table refused Suraya's attack");
+  g = act(g, SWING, 0);
+  assert.equal(g.sides[0].res, 5, "Suraya's attack did not cost {r}{r}");
+  for(let i = 0; i < 60 && !g.over && (g.pend || (g.stack || []).length || (g.chain || []).length || g.prompt); i++){
+    if(g.prompt){ g = act(g, {t: "promptConfirm"}, g.prompt.side); continue; }
+    const out = J.reduce(g, {t: "pass"}, g.priority);
+    if(out.error) break;
+    g = out.state;
+  }
+  assert.equal(g.sides[1].hp, 16, "Suraya's 4{p} did not land unblocked");
+  assert.equal(g.sides[0].ap, 0, "the attack is an action and costs the action point (paid at the link's payload)");
+  g = {...g, sides: [{...g.sides[0], ap: 1}, g.sides[1]]};
+  assert.ok(J.legal(g, SWING, 0), "Suraya attacked twice in one turn");
+}));

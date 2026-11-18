@@ -102,20 +102,22 @@ the AI-policy work for Viserai is on the back burner). The soul zone already exi
      dropped, and Herald of Judgment `full` with its rider dropped (now `part`, honest).
   2. **HALF DONE (unreleased)** — "with Herald in its name" is a qualifier atom (`attackTail` `named`,
      `qualMatches`; Angelic Wrath driven in `test/herald.test.js`). Luminaris' "angel attack or attack
-     action card with Herald in its name" still refuses (the or-group plus a tail). Left: the
-     hero's trigger "whenever a card with Herald in its name is put into your soul during an
-     action phase" (a soul-entry event).
+     action card with Herald in its name" still refuses (the or-group plus a tail). The hero's
+     trigger is DONE (2026-11-18): `build` `soulNamedTrig`, `effects.soulEntered` at all three soul
+     writers (charge cost, ascend on hit, answered pick); the deck search reads "put it into the
+     arena" (`to: "arena"`, filed by its own permanent kind) and "a figment" (`ty`).
   3. **MOSTLY DONE (unreleased)** — a figment resolves into the arena as a permanent (CR 8.2.16;
      `types` PERMANENT_SUBTYPES, `fx.perm` "figment"); Prism's "{r}{r}, banish a card from Prism's
      soul: Awaken target figment you control" builds (`parseHeroPower` pips + named soul) and
      awakens it into Suraya (`effects.awaken`, `build.flipBackOf`, `fx.onAwaken`); the front is
      filed when it leaves (`parser.offArenaFace`, invariant BACK-FACE-OFF-ARENA);
-     `test/figment.test.js`. LEFT: the hero's Herald-to-soul trigger and its deck search; Suraya's
-     "{r}{r}: Attack" and Ward 4 driven as an ally; the AI never awakens yet. Was:
+     `test/figment.test.js`. The hero's Herald-to-soul search and Suraya as an ally ("{r}{r}: Attack",
+     Ward 4; the readers already answered) are DONE and driven (2026-11-18). LEFT: the AI never awakens. Was:
      "search your deck for a figment, put it into the arena" (Figment of Hope, an
      Instant - Figment) and **Awaken** (the hero's instant; the back face is Suraya, Archangel of
      Endless Hope, sharing print code SAT023 — `build.facesOf`'s pattern, for a non-hero).
-  4. Iris of Reality: Illusionist auras are weapons during your action phase.
+  4. **DONE (unreleased, 2026-11-18)** — Iris of Reality: `parser.auraWeaponGrant` reads a class
+     subject, a printed base {p} and the quoted go again beside Cosmo's ward grant (`test/iris.test.js`).
   5. Spectra; "loses and can't gain phantasm" (Passing Mirage, Dream Weavers); Pierce Reality's
      "first Illusionist attack action card you play each turn".
   6. "-1{p} while defending this" (Herald of Triumph) and Herald of Victoria's discard instant.

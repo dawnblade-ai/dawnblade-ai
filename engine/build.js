@@ -355,6 +355,16 @@ function heroAbilities(heroRec, displayName, code){
   const _et = _htxRaw.match(
     /at the beginning of each end phase, if you(?:'ve| have) created or activated an? ([A-Za-z][A-Za-z' -]*?) this turn, you may traverse/i);
   const endTraverse = _et ? _et[1].trim() : "";
+  /* PRISM, ADVENT OF THRONES (v6.47): "Whenever a card with Herald in its name is put into
+     your soul during an action phase, you may search your deck for a figment, put it into
+     the arena, then shuffle." An OBJECT for `auraDiscount`'s reason: the line names a WORD
+     of a card name and a payload. The payload is read ONCE here through `classifyClause`
+     (one reader per payload); a payload it cannot read leaves the passive off (null), the
+     honest gap. `effects.soulEntered` is its one consumer, at every soul writer. */
+  const _sn = _htxRaw.match(
+    /whenever a card with ([A-Za-z][A-Za-z'-]*) in its name is put into your soul during an action phase, ([^.]+)/i);
+  const _snc = _sn ? PR.classifyClause(_sn[2]) : null;
+  const soulNamedTrig = _snc && _snc.status === "run" ? {named: _sn[1], ops: _snc.ops} : null;
   /* ARAKNI, TARANTULA — one of the two Agents whose STATIC is readable:
      "Whenever a dagger you own hits a hero, they lose 1{h}."
 
@@ -494,7 +504,7 @@ function heroAbilities(heroRec, displayName, code){
     earthOnFirstHeroDmg, lightningOnSecondNonAtk,
     atkPowOffChain, mightOnFirst6Discard, weaponRefresh, chargedDefBuff, stealthMarkedBuff,
     becomeAgent, returnToBrood, daggerDrain, halveBase, auraDiscount,
-    runeBanish, runeTraverse, firstAtkGaKw, endTraverse};
+    runeBanish, runeTraverse, firstAtkGaKw, endTraverse, soulNamedTrig};
 }
 
 /* ---- THE OTHER FACE OF A DOUBLE-FACED HERO (v6.44) ----------------------
@@ -1106,7 +1116,7 @@ const PASSIVES = ["arsenalInstant","iceFrostbite","viseraiPassive","wateryGrave"
                   "earthOnFirstHeroDmg","lightningOnSecondNonAtk","energyOnOpt",
                   "chargedDefBuff","stealthMarkedBuff","becomeAgent","returnToBrood",
                   "daggerDrain","halveBase","auraDiscount",
-                  "runeBanish","runeTraverse","firstAtkGaKw","endTraverse",
+                  "runeBanish","runeTraverse","firstAtkGaKw","endTraverse","soulNamedTrig",
                   /* THE TWO PREGAME PLACEMENTS (v3.86). `startItem` has
                      been a build field since Dash and was never in this
                      list, so the census SKIPPED it — a HERO_STATICS row
@@ -1143,6 +1153,8 @@ const PASSIVE_TYPE = {
   /* THE DOUBLE-FACED HERO (v6.44): two printed numbers, a printed keyword
      and a printed token name. */
   runeBanish: "number", runeTraverse: "number", firstAtkGaKw: "string", endTraverse: "string",
+  /* Prism (v6.47): the named word and the payload's ops, or null. */
+  soulNamedTrig: "object",
   /* A STRING, and deliberately (v3.21). Briar's two clauses each NAME the
      token they create, so the passive carries that name and the mint site
      names nothing. A boolean here would move "Embodiment of Earth" into
