@@ -14,7 +14,28 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
-### LATEST (CEO session_013xG9x9bRibS57y9pv9vJyZ, 2026-11-18, at v6.46) — PRISM IN PROGRESS, UNRELEASED
+### LATEST (CEO session_013xG9xA2B1SP8EKQabRZqTq, 2026-11-18, at v6.46) — PRISM READERS 3 + 4 DONE, UNRELEASED
+**NEXT THREAD, START HERE:**
+1. **The unreleased work is now on `claude/ceo-thread-handoff-5s86ur`** (it contains all of `claude/epic-feynman-cewlp0`
+   plus 4209a08). Merge THAT branch: `git fetch origin claude/ceo-thread-handoff-5s86ur && git merge --no-edit FETCH_HEAD`.
+   `main` (live v6.46) has none of it. The release plan still holds: ONE release when Prism opens.
+2. **DONE this session (4209a08):** the hero's "Herald into your soul during an action phase -> may search for a figment,
+   put it into the arena" (`build` `soulNamedTrig`, `effects.soulEntered` at all 3 soul writers; deck search `to:"arena"`,
+   subject "a figment"); Suraya driven as an ally ({r}{r} attack, once per turn, Ward 4: the readers already answered);
+   Iris of Reality (`auraWeaponGrant`: class subject, printed base {p}, quoted go again; `basePowOf`, `keepsActionPoint`).
+   Census: Prism 23 full / 5 part / 4 none. Drills: test/figment.test.js, test/iris.test.js, sabotaged.
+3. **WATCH THE WIRE BUDGET:** the opening snapshot hit 16397 > 16384 bytes (table.test.js) from one new passive field.
+   Fixed by dropping `heroRec.prs` in `judge.newMatch`'s `rulesBuild` (now 15799). Every new build passive costs ~40 bytes:
+   the next cut is `heroRec` itself (~1.1-1.3 KB per seat, could ride the catalog).
+4. **NEXT readers (ROADMAP-NEWDECKS.md Phase 3 is the authority):** 5. Spectra + "loses and can't gain phantasm" (Passing
+   Mirage, Dream Weavers) + Pierce Reality's first-Illusionist-attack +2{p}; 6. Herald of Triumph -1{p} while defending,
+   Herald of Victoria; 7. Lay Low, Herald of Judgment's lock, Silent Stilettos; Luminaris' or-group. Then census, 630
+   seated games, opening. Still owed: the 17th-hero cup ruling and person-only vs AI awaken (ASK THE USER).
+- **Validation at 4209a08:** scenes 107/0, fairness clean, audit 430/430, targeted drills green; the final full `npm test`
+  was still running at handoff (the run before the last fix: 2 fails, both fixed and re-driven). Re-run it first.
+- The charge-cost soul writer calls the trigger but is undriven (no charge in Prism's deck).
+
+### PREVIOUS (CEO session_013xG9x9bRibS57y9pv9vJyZ, 2026-11-18, at v6.46) — PRISM IN PROGRESS, UNRELEASED
 **NEXT THREAD, START HERE (in this order):**
 1. **Take the unreleased work first:** `git fetch origin claude/epic-feynman-cewlp0 && git merge --no-edit FETCH_HEAD`
    into your own session branch. `main` (live v6.46) does NOT have it. Run `npm test` (expect fail 0, skipped 5).
