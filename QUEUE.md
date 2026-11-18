@@ -14,20 +14,29 @@ radius (pool census) before widening any reader, and drive a fixture that bites.
 **Keep this section SHORT (under ~50 lines).** History lives in the archived handoffs below, CHANGELOG.md
 and `docs/progress/` on main. Do not start a root handoff file.
 
-### LATEST (CEO session_013xG9x9bRibS57y9pv9vJyZ, 2026-11-17, at v6.46) — PRISM STARTED (unreleased)
-- **RULING-ish (user, 2026-11-17):** "throw the player vs ai development on the back burner and move along to prism."
-- **State:** live still v6.46. ALL BELOW IS UNRELEASED on `claude/epic-feynman-cewlp0` (pushed; each commit validated:
-  npm test 4443/0/5, audit 430/430, scenes 107/0, fairness clean, babel OK). Pool behaviour unchanged (staged cards only),
-  but engine files moved: the release that ships it needs the full ritual (APP_VER, CHANGELOG, function redeploy, livecheck).
-  Commits: byCode front face; Prism reader 1 (soul + rider), 2a (`named` qualifier: "with Herald in its name"),
-  3 (figments enter the arena; Prism's awaken -> Suraya; front filed off-arena + invariant BACK-FACE-OFF-ARENA).
-- **Prism's order and what is left: ROADMAP-NEWDECKS.md Phase 3** (the authority). Next: the hero's Herald-to-soul trigger +
-  "search your deck for a figment, put it into the arena"; Suraya driven as an ally ("{r}{r}: Attack", Ward 4); then Iris
-  (auras as weapons), Spectra / "loses and can't gain phantasm", -1{p} while defending, Lay Low, Herald of Judgment.
-- **Pins that moved (unpin when she opens):** anchors.test.js (3 staged-only parser lines), crindex 104->111 / 94->101,
-  slicecensus prompts.js 13239. Upstream bug: Suraya's record carries the FRONT's type line; `effects.awaken` derives `tt`
-  from `ty` (ruling 2026-08-02). A widened soul-cost reader nearly read Teklovossen across a line break: now refused + drilled.
-- **ASK THE USER (still open):** the cup's dummy fills only while heroes < 16 (out now); confirm.
+### LATEST (CEO session_013xG9x9bRibS57y9pv9vJyZ, 2026-11-18, at v6.46) — PRISM IN PROGRESS, UNRELEASED
+**NEXT THREAD, START HERE (in this order):**
+1. **Take the unreleased work first:** `git fetch origin claude/epic-feynman-cewlp0 && git merge --no-edit FETCH_HEAD`
+   into your own session branch. `main` (live v6.46) does NOT have it. Run `npm test` (expect fail 0, skipped 5).
+2. **Release plan (user, 2026-11-18, "the most important thing is ... keep making progress without hitting our limits"):**
+   do NOT release per reader. Keep building Prism on the branch; ship ONE release (APP_VER, CHANGELOG, DATA_VER, function
+   redeploy, livecheck) when she opens. Nothing on the branch changes the live pool, so waiting costs players nothing.
+3. **Continue Prism at ROADMAP-NEWDECKS.md Phase 3** (the authority on order and status). Next reader: the hero's trigger
+   "whenever a card with Herald in its name is put into your soul during an action phase, you may search your deck for a
+   figment, put it into the arena, then shuffle" (a soul-entry event + an existing deck-search pick with `to` arena).
+   Then Suraya as an ally ("{r}{r}: Attack", Ward 4), Iris, Spectra/phantasm-loss, -1{p}, Lay Low, Herald of Judgment.
+4. **Owed before she opens:** the cup cuts a 17th hero silently (`tools/tournament.js` FIELD, noted there): ask the user
+   (32 seats with byes, or a play-in). The AI never awakens a figment (policy work is on the back burner, so a person
+   piloting her is the target; she may open as a person-only hero if the user agrees: ASK).
+- **RULINGS (user):** 2026-11-17 "throw the player vs ai development on the back burner and move along to prism";
+  2026-11-18 "The training dummy out of the tournament is a great thing!" (recorded in tools/tournament.js).
+- **On the branch (all validated per commit: npm test 0 fail/5 skipped, audit 430/430, scenes 107/0, fairness clean,
+  babel OK):** byCode front face; Prism readers 1 (soul + rider), 2a ("with Herald in its name"), 3 (figments enter the
+  arena; Prism's awaken -> Suraya; front filed off the arena + invariant BACK-FACE-OFF-ARENA); the cup ruling.
+- **Pins to unpin when she opens:** anchors.test.js (3 staged-only parser lines), crindex 111/101, slicecensus prompts.js.
+- **Cheap habits that worked:** probes with staged cards (`test/figment.test.js` `withStaged`); `npm test` piped through
+  `grep -E '^# (tests|pass|fail|skipped)|^not ok'`; a sonnet agent for read-only diagnosis. Expensive: Sharp A/B
+  (`SPXLA=all`, ~55 s / 45 games) — not needed for Prism readers.
 
 ### PREVIOUS (CEO session_013xG9x9bRibS57y9pv9vJyZ, 2026-11-17, at v6.46) — VISERAI BW POLICY: FOUR LEADS, ALL NULL
 - **State:** live still v6.46 (0cdb3e2). UNRELEASED on `claude/epic-feynman-cewlp0`: `buildMaps`' `byCode` keeps the FRONT
