@@ -118,7 +118,10 @@ const DUMMY = {key: null, name: "The Dummy", hp: 20, int: W.DUMMY_INT};
    2026-08-16 ruling seated it because fifteen heroes left one of sixteen seats
    empty and it is the one other thing a seat may hold. The sixteenth hero
    (Viserai, Between Worlds) fills that seat, so the dummy enters only while the
-   roster is short of sixteen. */
+   roster is short of sixteen. RULING (user, 2026-11-18): "The training dummy out of the
+   tournament is a great thing!"
+   OWED BEFORE PRISM OPENS: a seventeenth hero is cut by `slice(0, FIELD)` below, silently.
+   The bracket needs a decision (32 seats with byes, or a play-in) before she joins. */
 const FIELD = 16;
 const ENTRANTS = W.HEROES.slice(0, FIELD).map(h => ({key: h.k, name: h.n, hero: h}))
                          .concat(W.HEROES.length < FIELD ? [{key: null, name: DUMMY.name}] : []);
