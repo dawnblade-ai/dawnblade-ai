@@ -31,8 +31,7 @@ and `docs/progress/` on main. Do not start a root handoff file.
    Mirage, Dream Weavers) + Pierce Reality's first-Illusionist-attack +2{p}; 6. Herald of Triumph -1{p} while defending,
    Herald of Victoria; 7. Lay Low, Herald of Judgment's lock, Silent Stilettos; Luminaris' or-group. Then census, 630
    seated games, opening. Still owed: the 17th-hero cup ruling and person-only vs AI awaken (ASK THE USER).
-- **Validation at 4209a08:** scenes 107/0, fairness clean, audit 430/430, targeted drills green; the final full `npm test`
-  was still running at handoff (the run before the last fix: 2 fails, both fixed and re-driven). Re-run it first.
+- **Validation at 4209a08:** npm test 4455 / 4450 pass / 0 fail / 5 skipped, scenes 107/0, fairness clean, audit 430/430.
 - The charge-cost soul writer calls the trigger but is undriven (no charge in Prism's deck).
 
 ### PREVIOUS (CEO session_013xG9x9bRibS57y9pv9vJyZ, 2026-11-18, at v6.46) — PRISM IN PROGRESS, UNRELEASED
