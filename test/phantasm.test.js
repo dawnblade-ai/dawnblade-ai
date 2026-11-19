@@ -159,7 +159,8 @@ test("the LATENT half is latent because nothing in the pool can reach a wall wit
 /* ---- the fire site asks the one reader ------------------------------ */
 
 test("the pop site asks `phantasmPops` and nothing re-derives the six", () => {
-  const i = SRC.indexOf('if(hasKw(card,"phantasm")){');
+  /* v6.47: the site also asks whether the attack LOST phantasm (Passing Mirage). */
+  const i = SRC.indexOf('if(hasKw(card,"phantasm") && !_lost){');
   assert.ok(i > 0, "the pop site is still there");
   const body = SRC.slice(i, i + 1400);
   assert.match(body, /\.find\(c => phantasmPops\(c\)\)/,

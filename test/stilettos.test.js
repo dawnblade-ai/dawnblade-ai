@@ -310,9 +310,10 @@ test(gate("the printed restriction is TESTED at the fire site, not assumed (v4.3
      exactly why the source is what carries the claim. v4.31 is the
      version that found this very block asking for a card's power and
      dropping both of the keyword's own printed restrictions. */
-  const i = SRC.indexOf('if(hasKw(card,"phantasm")){');
+  /* v6.47: the site also asks whether the attack LOST phantasm (Passing Mirage). */
+  const i = SRC.indexOf('if(hasKw(card,"phantasm") && !_lost){');
   assert.ok(i > 0, "the pop site moved — re-anchor this drill");
-  const body = SRC.slice(i, i + 3000);
+  const body = SRC.slice(i, i + 4500);   /* 3000 -> 4500 AT v6.47: the defender-power adjust sits above the offer */
   assert.match(body, /if\(isAtkActionCard\(card\)\) n = offerPayCost\(n, "allyDiesOrPhantasm"\)/,
     "the offer is gated on the printed type");
   /* THE PREMISE, MEASURED: nothing in the pool tells the two readings

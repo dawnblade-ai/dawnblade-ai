@@ -3849,6 +3849,48 @@ function classifyClause(raw){
      declaration, and applies while the attack is the turn's first. */
   if(m=c.match(/^your first attack each turn gets \+(\d+)\s*\{p\}$/))
     return R([["noop", "static — read off the arena at the turn's first attack"]], {firstAtk: +m[1]});
+  /* ---- "LOSES AND CAN'T GAIN PHANTASM" (v6.47, Prism reader 5b) ------------------------
+     Passing Mirage: "Your first Illusionist attack each turn loses and can't gain phantasm."
+     A STATIC on an aura (`firstAtk`'s shape): `fx.firstLoseKw` = {q, kw}, read off the
+     arena when an attack is declared (`effects.execute`), and it applies while that attack
+     is the turn's first one the qualifier matches (`hist.atkTy`). Dream Weavers: "The next
+     Illusionist attack action card you play this turn loses and can't gain phantasm" — a
+     one-shot grant on the `buffNext` queue with no power and a `loseKw` rider, spent by
+     the card it matches. Both land on the chain link as `pend.loseKw`, and the one site that
+     reads phantasm (`afterDefenders`) asks it: "loses" strikes the printed keyword and
+     "can't gain" a granted one, and that site is where either would act. The keyword is
+     closed to phantasm, the only one the pool says this of. */
+  if(m=c.match(/^your first (.+?) attack each turn loses and can't gain (phantasm)$/)){
+    const q = attackQual(m[1], "");
+    if(q === false) return null;
+    return R([["noop", "static — read off the arena when the turn's first such attack is declared"]], {firstLoseKw: {q, kw: m[2]}});
+  }
+  if(m=c.match(/^the next (.+?) attack (action cards?) you play this turn loses and can't gain (phantasm)$/)){
+    const q = attackQual(m[1], m[2] + " you play this turn");
+    if(q === false) return null;
+    return R([["buffNext", 0, q, {loseKw: m[3]}]]);
+  }
+  /* ---- "-N{p} WHILE DEFENDING" (v6.47, Prism reader 6) ---------------------------------
+     Herald of Triumph: "Attack action cards get -1{p} while defending this." A STATIC on the
+     attack (`fx.defAtkPow`), applied to the declared wall's attack action cards where a
+     defender's power is read: phantasm's pop (`afterDefenders`) is the only such reader, so
+     a 6{p} blocker meets this Herald as a 5. Herald of Victoria's discard instant: "Until end
+     of turn, attack action cards your opponents control get -1{p} while attacking and
+     defending." A "this turn" standing grant on the OPPONENT's `atkBuff` ({amt: -N, q:
+     attack action card, def: true}): `linkPumps` applies it while attacking (every standing
+     grant is read there) and the pop site while defending. */
+  if(m=c.match(/^attack action cards get -(\d+)\s*\{p\} while defending this$/))
+    return R([["noop", "static — the defending attack action cards' power, read when defenders are declared"]], {defAtkPow: -m[1]});
+  if(m=c.match(/^until end of turn, attack action cards your opponents control get -(\d+)\s*\{p\} while attacking and defending$/))
+    return R([["foeAtkBuff", -m[1], {aac: true}, "turn"]]);
+  /* "THE FIRST <qual> ATTACK ACTION CARD YOU PLAY EACH TURN GETS +N{p}" (v6.47, Pierce
+     Reality) — `firstAtk`'s static with a qualifier and the word PLAY: a weapon swing is
+     activated, not played, so only a card played counts toward "first" (`hist.atkTy`). */
+  if(m=c.match(/^the first (.+?) attack (action cards?) you play each turn gets \+(\d+)\s*\{p\}$/)){
+    const q = attackQual(m[1], m[2] + " you play");
+    if(q === false) return null;
+    return R([["noop", "static — read off the arena when the turn's first such card is played"]], {firstPlayBuff: {q, n: +m[3]}});
+  }
   /* "INTIMIDATE TARGET HERO" IS AN OP (S-2, QA-A). It was a NOOP whose text
      described the trainer dummy ("live — the dummy loses a card…") and
      nothing ran: the real intimidate lived only on an attack carrying the
@@ -6779,6 +6821,10 @@ function fxParse(card){
     /* v4.83, the same rule a third time: a board static the declaration
        reads, forwarded or it is a noop that does nothing. */
     if(r.firstAtk) fx.firstAtk = (fx.firstAtk || 0) + r.firstAtk;
+    /* v6.47 (Prism): two more board statics the declaration reads, forwarded. */
+    if(r.firstLoseKw) fx.firstLoseKw = [...(fx.firstLoseKw || []), r.firstLoseKw];
+    if(r.firstPlayBuff) fx.firstPlayBuff = [...(fx.firstPlayBuff || []), r.firstPlayBuff];
+    if(r.defAtkPow) fx.defAtkPow = (fx.defAtkPow || 0) + r.defAtkPow;
     /* A DROPPED QUOTED ABILITY MUST NOT REPORT AS READ (v3.40).
 
        `quotedOnHit` returns null on a payload it cannot read, and v3.10
