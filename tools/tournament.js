@@ -120,10 +120,13 @@ const DUMMY = {key: null, name: "The Dummy", hp: 20, int: W.DUMMY_INT};
    (Viserai, Between Worlds) fills that seat, so the dummy enters only while the
    roster is short of sixteen. RULING (user, 2026-11-18): "The training dummy out of the
    tournament is a great thing!"
-   OWED BEFORE PRISM OPENS: a seventeenth hero is cut by `slice(0, FIELD)` below, silently.
-   The bracket needs a decision (32 seats with byes, or a play-in) before she joins. */
+   MORE THAN SIXTEEN HEROES (CEO default, 2026-11-19, for the user to overrule): EVERY hero
+   plays the qualifier, and the bracket takes its top sixteen seeds. The cut is printed by
+   name ("did not qualify"), never silent. Chosen over 32 seats with byes (half the bracket
+   would be byes at seventeen) and over a play-in (one game would cut a hero the round robin
+   ranks above another). */
 const FIELD = 16;
-const ENTRANTS = W.HEROES.slice(0, FIELD).map(h => ({key: h.k, name: h.n, hero: h}))
+const ENTRANTS = W.HEROES.map(h => ({key: h.k, name: h.n, hero: h}))
                          .concat(W.HEROES.length < FIELD ? [{key: null, name: DUMMY.name}] : []);
 const label = e => e.name;
 
@@ -335,7 +338,9 @@ console.log("   seed  entrant                          W   L   D    life +/-");
 table.forEach((r, i) => console.log(
   `    ${String(i + 1).padStart(2)}   ${r.e.name.padEnd(30)} ${String(r.w).padStart(2)}  ${String(r.l).padStart(2)}  ${String(r.d).padStart(2)}    ${String(r.lifeFor - r.lifeAgainst).padStart(5)}`));
 
-const seeded = table.map(r => r.e);
+const seeded = table.map(r => r.e).slice(0, FIELD);
+if(table.length > FIELD)
+  console.log(`\n   did not qualify (the bracket seats the top ${FIELD}): ${table.slice(FIELD).map(r => r.e.name).join(", ")}`);
 const order = bracketOrder(16);
 let field = order.map(s => ({e: seeded[s - 1], seed: s}));
 const played = [];
