@@ -44,6 +44,7 @@ type and hierarchy here, not art. Before/after pairs sit beside this file
 | E | §3 step 1 — `RailMore`, shared by both hand rails: the rail's last child, zero-width and sticky to its right edge, paints a fade and a gold "+N" chip counting the tiles not fully shown; gone at the rail's end; `pointer-events:none`, so a tap on it peeks the clipped card under it (no dead tap). The rail's "Hand" label now snaps into view. The empty featured slot is a faint 60% card silhouette (diamond, rounded edge, "Most recently played lands here" at its foot). A card face reserves its 5:7 box before the lazy image loads (`.cfw:not(.hz)>img`), so the rail no longer grows as art arrives and offline drives see online geometry (the stand-in PNG is 50x70: before this, offline rail tiles drew 72px tall instead of 111). | `RailMore` after `LifeHud`; CSS after `.phand .hc.dis`, `.centerslot .featempty`, `.cfw` |
 | F | §3 step 2 — your board's footer (WASTED / TURN / SEAT / BOOST / inspect pills, `.mystat`, both boards) is sticky to the pane's bottom on the ink ground, so a board taller than the pane (tokens in play, a short phone) scrolls UNDER it instead of pushing it past the edge; its toggles take taps over 44px through an invisible `::after` inside the footer's own padding. Your empty arsenal says "empty" in the slot and "Arsenal" under it (it said "arsenal" twice); the opponent's `arsenal —` already wore the empty-slot style (row D). Measured: at rest the pills already fit at 393x852 and 360x740 once card faces reserve their box (row E); the overflow the audit saw was the jump caught mid-scroll plus the 50x70 stand-in, and a genuinely tall board (393x640) put them 49px under the pane. | CSS after `.vfillsp`; both `arscol`s |
 | G | §3 step 3 — the loadout bar has ONE plate per mode, and the Foe picker decides it. The Dummy: "FIGHT THE DUMMY" (trainer) on the plate, "The dummy at the table — harder" as the plain `.bigbtn.alt` under it. Any AI hero or Random: "FIGHT KAYO — SHARP" (the table; the name and level follow the picker, set tighter so "Fight Lyath Goldmane — Steady" stays one line at 360px), "Train against the dummy instead" under it. Before, the striped FIGHT stayed the trainer with Kayo picked. Each button keeps its own handler (`onClick={start}` / `onClick={startTable}`) with `data-start="trainer"|"table"`; CSS `order` puts the plate first. The two paragraphs fold into a one-line `<details className="lowhy">` (summary 44px, "why?" / "less"); the bar went from 176px to 141px, and the Sharp / Steady tiles above it are no longer cut. Drivers (`tools/page.js`, `tools/page-audit.js`) start a board by `data-start`, not by the old button name; `phasebar` / `flow` drills re-anchored on the new markup (still sabotage-checked: the trainer note must say "tuned"). | `Loadout` action bar; CSS after `.lo .actbar .battlebtn` |
+| H | §3 step 5, PART — `LifeNum`, shared: every life total on both boards (the four hero plates, `.hlife2`, and both `LifeHud` numbers) remembers the value it last drew; a drop re-keys with `lfdown` (a red flash and scale), a gain with `lfup` (green). The first draw and an unchanged total animate nothing; off under reduced motion. NOT built: the chain-link flash (hit / blocked) and the blue for prevention. A chain entry carries the attack's TOTAL (`dmg`), not whether it hit or what was prevented, so both need an engine field first (`effects.js`, which this session did not touch). | `LifeNum` above `LifeHud`; CSS before `</style>` |
 
 Verified: both babel blocks compile; `node tools/page.js` 79/79 PASS (same as before);
 box drive at 393x852 and 360x740 — HUD inside its box with the longest foe name, life
@@ -56,6 +57,8 @@ Step 1 verified: babel blocks compile; `node tools/page.js` 78/78 PASS (78 on th
 Step 2 verified: babel blocks compile; `node tools/page.js` 78/78 PASS; box drive on both boards at 393x852, 360x740 and 393x640 (content taller than the pane): every pill inside the pane, inspect takes taps over 44px and owns its centre, inspect still toggles, the arsenal is named once, no scrollWidth overflow, no page errors; sabotaged (footer `position:static`) the 393x640 rows fail (pills at 562..591 under a pane ending at 542). `before-board-fit.jpg` / `after-board-fit.jpg` (393x640).
 
 Step 3 verified: babel blocks compile; `node tools/page.js` 78/78 PASS (its table rows now start by `data-start`; "Sharp / Steady clear the bar" passes); box drive at 393x852 and 360x740: one plate whose label follows the picker (Dummy, Kayo, Steady, Random, the two longest names one line at 45px), one secondary, every bar control >= 44px and owning its centre, the disclosure opens (bar 141 -> 222px) with the flick screen still ending above the bar (`--lochrome` re-measures), the hero plate opens the table against that hero, the Dummy plate the trainer, the Dummy secondary the table; no overflow, no page errors. `before-loadout.jpg` / `after-loadout.jpg` (Kayo picked), `after-loadout-dummy.jpg`.
+
+Step 5 (part) verified: babel blocks compile; `node tools/page.js` 78/78 PASS; trainer drive at 393x852 and 360x740: nothing flashes on the first draw, the dummy's swings (20 -> 17 -> 13) flash `lfdown` on the plate and the HUD each time with the `lfdown` animation running, the plate number stays inside its plate, no overflow, no page errors. A gain was not forced in the drive (`lfup` is the same branch the other way). No screenshot: the flash lasts 0.6s.
 
 ## 3. The plan — one session each, in order
 
@@ -75,7 +78,7 @@ Step 3 verified: babel blocks compile; `node tools/page.js` 78/78 PASS (its tabl
    carry real art (`HeroArt`); give the selected hero a full-bleed banner on the sheet
    (art, class, chapter colour, one-line pitch) and grow tiles to 4 across with 11px
    names. Check online art loads at phone size (tools/phone/serve.sh) — offline is grey.
-5. **Damage and block feedback on the boards.** Reuse `LifeHud`'s re-key trick on the
+5. **PART DONE (see §2, row H: plates; the chain-link flash needs an engine field).** **Damage and block feedback on the boards.** Reuse `LifeHud`'s re-key trick on the
    hero plates (`.heroplate` life), and flash the chain link that hit / was blocked.
    Life drops red, prevention blue, gains green — three colours that mean three things
    (POLISH §4's sound rule, applied to sight first).
@@ -101,3 +104,9 @@ Step 3 verified: babel blocks compile; `node tools/page.js` 78/78 PASS (its tabl
 - `EndPanel` and `LifeHud` are shared by both boards: change them once. `WinPanel` stays
   trainer-reward only (UI-GUIDE §2); it now renders through `EndPanel`.
 - No engine change was needed for any of this.
+- Start a board from the loadout by `.lo .actbar [data-start="trainer"]` / `[data-start="table"]`,
+  never by button name: since step 3 the plate's label follows the Foe picker.
+- Offline geometry now matches online: card faces reserve a 5:7 box (row E), so the
+  page.js stand-in (a 50x70 PNG) no longer draws rail tiles 72px tall.
+- Left for step 5: a chain entry needs a "hit" / "prevented" fact from the engine before the
+  link can flash; then the blue for prevention is a third `LifeNum`-style class.

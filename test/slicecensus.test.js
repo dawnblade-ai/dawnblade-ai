@@ -475,7 +475,11 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        is presentation only: the loadout bar's one-plate rules (`.lo .actbar>.lo2`,
        `.battlebtn.lovs` for a hero's name, the plate's 10px padding) and the one-line disclosure
        (`.lowhy` and its summary, marker and paragraphs). */
-    "phasebar.test.js index.html 82622",
+    /* 82,622 -> 83,285 (UX roadmap, 2026-11-19), READ FIRST: still `<style>` -> `</style>`; the growth
+       is presentation only: a life total's direction flash (`.lfdown` red, `.lfup` green, on
+       `.hlife2` and `.lifehud .lhhp`, their two keyframes, and the reduced-motion line that turns
+       them off). */
+    "phasebar.test.js index.html 83285",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
        `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
        `abPickBound` in the pick legality it extends. */
