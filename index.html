@@ -349,6 +349,10 @@ img{display:block;max-width:100%}
 
 /* card frame overlay — real FaB corner order */
 .cfw{position:relative;width:100%}
+/* the face's box is reserved before the lazy image arrives, so a rail of cards
+   does not grow under the finger as the art loads (and the offline stand-in
+   takes the room a real face takes) */
+.cfw:not(.hz)>img{width:100%;aspect-ratio:5/7;object-fit:cover}
 .b-pit,.b-cost,.b-atk,.b-def{position:absolute;font-family:'Spline Sans Mono';font-weight:700;font-size:12px;line-height:1;padding:2px 5px;color:#FFF;background:rgba(16,12,10,.92);border:1px solid var(--line)}
 .b-pit{top:2px;left:2px;border:none}
 .b-pit.p1{background:var(--r)}
@@ -499,6 +503,17 @@ img{display:block;max-width:100%}
 .featempty{border:1px dashed var(--line);width:100%;aspect-ratio:auto;padding:10px;font-size:11px;color:var(--bone-dim);text-align:center}
 .hpane.vfill{display:flex;flex-direction:column}
 .vfillsp{flex:1;min-height:6px}
+/* YOUR BOARD'S FOOTER STAYS ON THE PANE (UX roadmap §3.2). The pills (wasted,
+   turn, seat, boost, inspect) sat after the spacer, so a board taller than the
+   pane (a row of tokens, a weapon pair, a short phone) pushed them under its
+   bottom edge, to be found by scrolling inside the pane. Sticky to the pane's
+   bottom, on the ink ground, they ride over the content instead. The hpane's
+   10px bottom padding is what -10px gives back. */
+.hpane .mystat{position:sticky;bottom:-10px;z-index:2;background:var(--ink);margin-top:0!important;padding:8px 0 10px}
+/* the toggles draw 29px; an invisible finger area takes them to 45px, inside
+   the footer's own padding and half of the 8px gap on each side */
+.mystat button.pill{position:relative}
+.mystat button.pill::after{content:"";position:absolute;inset:-8px -4px}
 
 .chand .hc{position:relative;padding:0;background:var(--forge);border:1px solid var(--line);transition:transform .12s}
 .chand .hc.sel{transform:translateY(-5px);border-color:var(--y);box-shadow:0 0 0 2px var(--y)}
@@ -558,7 +573,19 @@ img{display:block;max-width:100%}
    scout pane's last line off the bottom. The plate stays (it is the
    signature, and the primary tap should look like one); only the type
    comes down, and only on this screen. */
-.lo .actbar .battlebtn{font-size:22px;letter-spacing:.18em;padding:8px 8px}
+.lo .actbar .battlebtn{font-size:22px;letter-spacing:.18em;padding:10px 8px}
+/* ONE PLATE PER MODE (UX roadmap §3.3): the plate the foe picker chose, the
+   other board as a plain button under it, and the two notes folded into a
+   one-line disclosure. A hero's name rides on the plate, so it sets tighter
+   to stay one line ("Fight Lyath Goldmane — Steady" at 360px). */
+.lo .actbar>.battlebtn,.lo .actbar>.bigbtn{margin-top:0}
+.lo .actbar>.lo2{margin-top:6px;min-height:44px}
+.lo .actbar .battlebtn.lovs{font-size:19px;letter-spacing:.08em;padding:11px 8px}
+.lowhy summary{min-height:44px;display:flex;align-items:center;gap:10px;font-size:11.5px;color:var(--bone-dim);line-height:1.35;cursor:pointer;list-style:none}
+.lowhy summary::-webkit-details-marker{display:none}
+.lowhy summary::after{content:"why?";flex:none;margin-left:auto;font-family:'Spline Sans Mono';font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--y);border:1px solid var(--y);padding:2px 7px}
+.lowhy[open] summary::after{content:"less"}
+.lowhy p{font-size:11.5px;color:var(--bone-dim);line-height:1.5;margin:0 0 6px}
 /* AND THE RESERVE IS MEASURED, NOT STATED. This read `calc(100vh - 236px)`
    — a number written when the bar was one button tall. With two options
    and their disclosure the bar stands 163px at 393x852, so the fixed bar
@@ -614,7 +641,14 @@ img{display:block;max-width:100%}
 .centerslot .featfoe{width:100%;aspect-ratio:5/7;gap:4px}
 .centerslot .featfoe b{font-size:36px}
 .centerslot .featfoe .fx2{font-size:12px;padding:1px 7px}
-.centerslot .featempty{width:100%;aspect-ratio:5/7;border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;text-align:center;font-size:9px;color:var(--bone-dim);padding:8px;line-height:1.45}
+/* the empty featured slot is a faint card SILHOUETTE at 60% (UX roadmap §3.1):
+   it said "a card lands here" in a dashed box the size of a real card, the
+   loudest thing on an empty board */
+.centerslot .featempty{width:60%;aspect-ratio:5/7;border:1px solid rgba(232,223,208,.1);border-radius:6px;
+  background:linear-gradient(160deg,rgba(232,223,208,.05),rgba(232,223,208,.012));position:relative;
+  display:flex;align-items:flex-end;justify-content:center;text-align:center;font-size:9px;color:var(--bone-dim);opacity:.8;padding:8px 6px;line-height:1.4}
+.centerslot .featempty::before{content:"";position:absolute;top:40%;left:50%;width:28%;aspect-ratio:1;
+  transform:translate(-50%,-50%) rotate(45deg);border:1px solid rgba(232,223,208,.14)}
 .centerslot .linkchip{font-size:9px;text-align:center}
 .mini{border:1px solid var(--line);background:var(--forge);padding:4px 6px;font-size:10.5px;display:flex;flex-direction:column;gap:1px;line-height:1.3;word-break:normal;overflow-wrap:break-word;hyphens:none}
 .mini.atk{border-left:2px solid var(--r)}
@@ -638,6 +672,14 @@ img{display:block;max-width:100%}
 .phand .hc{flex:none;width:80px;position:relative;padding:0;background:var(--forge);border:1px solid var(--line);scroll-snap-align:start;transition:transform .12s}
 .phand .hc.sel{transform:translateY(-6px);border-color:var(--y);box-shadow:0 0 0 2px var(--y)}
 .phand .hc.dis{opacity:.4}
+/* the rail's hidden-count (`RailMore`): zero-width and sticky to the right
+   edge, so it adds no tile and rides the scroll; paint only, never the tap */
+.phand .railmore{flex:none;width:0;align-self:stretch;position:sticky;right:0;pointer-events:none;margin-left:-5px}
+.phand .railmore.on::before{content:"";position:absolute;top:-7px;bottom:-7px;right:-8px;width:34px;
+  background:linear-gradient(to right,rgba(46,36,29,0),var(--forge2) 78%)}
+.phand .railmore b{position:absolute;right:-5px;top:50%;transform:translateY(-50%);font-family:'Spline Sans Mono';
+  font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--y);background:var(--ink);border:1px solid var(--y);padding:2px 5px;border-radius:2px}
+.phand .hlbl{scroll-snap-align:start}
 
 /* v2.07 prompt sheet — the rulings ask for a popup that leaves the hand
    visible, so it docks above the action bar instead of covering the screen. */
@@ -981,7 +1023,14 @@ img{display:block;max-width:100%}
 @media (prefers-reduced-motion:reduce){
   .bigbtn:active,.battlebtn:active,.actbar button.a:active,.tab:active,.qopt:active,.statusline button:active{transform:none}
   .reveal .endtitle,.lifehud .lhhp{animation:none}
+  .hlife2.lfdown,.hlife2.lfup,.lifehud .lhhp.lfdown,.lifehud .lhhp.lfup{animation:none}
 }
+/* WHICH WAY A LIFE TOTAL MOVED (`LifeNum`, UX roadmap §3.5): a drop flashes red,
+   a gain green, on the hero plates and the life HUD alike, once per change */
+.hlife2.lfdown,.hlife2.lfup,.lifehud .lhhp.lfdown,.lifehud .lhhp.lfup{display:inline-block;animation:lfdown .6s ease-out}
+.hlife2.lfup,.lifehud .lhhp.lfup{animation-name:lfup}
+@keyframes lfdown{0%{transform:scale(1.4);color:#FF7A6E;text-shadow:0 0 14px rgba(196,48,43,.9)}100%{transform:none}}
+@keyframes lfup{0%{transform:scale(1.3);color:var(--ok);text-shadow:0 0 14px rgba(123,160,91,.85)}100%{transform:none}}
 </style>
 </head>
 <body>
@@ -2950,12 +2999,22 @@ function PipLine({s}){
    floating resources as labelled chips. A life total that changes re-keys its
    number, so the drop pulses once (`lhhit`). `frost` is the trainer's count
    of Frostbites on the opponent; the table passes none. Display only. */
+/* A LIFE TOTAL THAT SAYS WHICH WAY IT MOVED — both boards (UX roadmap §3.5).
+   The HUD re-keyed its number so a change pulsed, but a pulse cannot say
+   whether it was damage or a gain. This remembers the last value it drew:
+   a lower one re-keys with `lfdown` (red), a higher one with `lfup` (green).
+   The first draw and an unchanged total animate nothing. Display only. */
+function LifeNum({n, className}){
+  const v = Math.max(0, n|0);
+  const last = uR(v), seq = uR(0), dir = uR("");
+  if(last.current !== v){ dir.current = v < last.current ? "lfdown" : "lfup"; seq.current++; last.current = v; }
+  return <b key={seq.current} className={className + (dir.current ? " " + dir.current : "")}>{v}</b>;
+}
 function LifeHud({me, them, frost}){
-  const hp = n => Math.max(0, n|0);
   return (
     <div className="lifehud clip-sm">
       <div className="lhside">
-        <span key={"m"+hp(me.hp)} className="lhhp">{hp(me.hp)}</span>
+        <LifeNum n={me.hp} className="lhhp"/>
         <span className="lhwho">you</span>
       </div>
       <div className="lhmid">
@@ -2964,10 +3023,40 @@ function LifeHud({me, them, frost}){
       </div>
       <div className="lhside r">
         <span className="lhwho">{them.name.split(",")[0].toLowerCase()}{frost>0?` · ❄${frost}`:""}</span>
-        <span key={"t"+hp(them.hp)} className="lhhp">{hp(them.hp)}</span>
+        <LifeNum n={them.hp} className="lhhp"/>
       </div>
     </div>
   );
+}
+/* THE RAIL SAYS WHAT IT HIDES — both boards (UX roadmap §3.1). The hand rail
+   is a sideways scroller of 80px tiles and the fifth card was clipped by the
+   pane's edge with nothing saying more lay beyond it. This sits as the rail's
+   LAST child, sticky to its right edge: a fade and a count of the tiles not
+   fully shown, as "+3", gone once the last tile is. It is paint only
+   (pointer-events off), so a tap on the clipped card under it still peeks
+   that card: a badge that took the tap would be a dead control. It reads the
+   rail's own boxes, so it serves whichever board renders it. */
+function RailMore(){
+  const ref = uR(null);
+  const [n, setN] = uS(0);
+  uE(()=>{
+    const rail = ref.current && ref.current.parentElement;
+    if(!rail) return;
+    const count = () => {
+      const edge = rail.getBoundingClientRect().right;
+      let k = 0;
+      for(const c of rail.children) if(c.classList.contains("hc") && c.getBoundingClientRect().right > edge + 1) k++;
+      setN(k);
+    };
+    count();
+    rail.addEventListener("scroll", count, {passive:true});
+    const ro = typeof ResizeObserver === "function" ? new ResizeObserver(count) : null;
+    if(ro) ro.observe(rail);
+    const mo = new MutationObserver(count);
+    mo.observe(rail, {childList:true});
+    return () => { rail.removeEventListener("scroll", count); if(ro) ro.disconnect(); mo.disconnect(); };
+  },[]);
+  return <span ref={ref} className={"railmore"+(n?" on":"")} aria-hidden="true">{n ? <b>+{n}</b> : null}</span>;
 }
 function Ticker({feed}){
   const [idx,setIdx]=uS(0);
@@ -6175,7 +6264,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                 <div className="heromid clip-sm">
                   <div className="dhead" style={{width:36}}><span>✕</span><span>✕</span></div>
                   <span className="hname">{opp(g).name}</span>
-                  <b className="hlife2">{Math.max(0,opp(g).hp)}</b>
+                  <LifeNum n={opp(g).hp} className="hlife2"/>
                   {/* THE PREDICTION IS HONEST BECAUSE THE SWING IS SCRIPTED.
                       It reads the same [3,4,5] escalation `foeVanilla`
                       swings, so it cannot announce a number the dummy will
@@ -6332,6 +6421,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                     {p.sel && <span className="defsel">⛨ DEF</span>}
                     <CardFrame card={p.card} zone={p.zone}/>
                   </button>))}
+                <RailMore/>
               </div>
             </div>
             {/* PANE 3 — CHAIN: the links */}
@@ -6388,7 +6478,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                 <div className="heromid clip-sm">
                   <button className="hport2" onClick={()=>setZoom(built.HZOOM)}><span className={"tapwrap"+(you(g).heroTapped?" tapped":"")}><HeroArt h={h} db={db}/></span></button>
                   <span className="hname">{heroShort(h)}</span>
-                  <b className="hlife2">{you(g).hp}</b>
+                  <LifeNum n={you(g).hp} className="hlife2"/>
                   <span className="hlbl">life</span>
                   {/* A COUNTER THE ABILITY SPENDS MUST BE ON SCREEN (v3.39).
                       Blaze's whole cost is his energy pool, and a pool the
@@ -6437,7 +6527,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                 <div className="arscol">
                   <div className="slot clip-sm" style={{width:"100%"}}>{you(g).arsenal
                     ? <button style={{padding:0,width:"100%"}} onClick={()=> g.mode==="foeturn" ? playArsenalInstant() : g.mode==="block" ? (g.bphase==="react"&&playRxA()) : g.inspect?setZoom(you(g).arsenal) : g.mode==="stack" ? playRxA() : tryPlay(you(g).arsenal,"arsenal",0)}><CardFrame card={you(g).arsenal} className="sm"/></button>
-                    : "arsenal"}</div>
+                    : "empty"}</div>
                   <span className="zlbl">Arsenal</span>
                 </div>
                 <DeckPitchCol deck={you(g).deck} pitch={you(g).pitch}/>
@@ -6805,6 +6895,7 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
     onStart({gearIdx:sel, cuts, table:true, aiFoe: pickedFoe, sharp: !!pickedFoe && aiLevel==="sharp"});
   };
   const foeHero = aiFoe && aiFoe !== "random" ? HEROES.find(x=>x.k===aiFoe) : null;
+  const vsAI = aiFoe !== null;
   const deckRows = d.deck.map((e,ei)=>({ei, e, c:resolveEntry(db,e,saSet)}));
   const PD = {1:"var(--r)",2:"var(--y)",3:"var(--b)"};
   const Tile = ({x}) => {
@@ -7055,18 +7146,32 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
                   against the policy piloting each hero. So the label says
                   "harder", because a player who loses nine straight is
                   owed the reason before the game rather than after it. */}
-              <button className="battlebtn clip" style={{marginTop:0}} onClick={start}><span>Fight</span></button>
-              <p className="note" style={{marginTop:8,marginBottom:0}}>
-                The training dummy — a scripted, tuned opponent. Start here.
-              </p>
-              <button className="bigbtn alt" style={{marginTop:8}} onClick={startTable}>
-                Fight the new engine — harder
-              </button>
+              {/* ONE PRIMARY, AND THE FOE PICKER DECIDES IT (UX roadmap §3.3). The
+                  bar held two primary-looking plates with a paragraph under
+                  each, and the striped FIGHT stayed the trainer's even with
+                  an AI hero picked on the Foe screen: a player who chose Kayo
+                  and tapped the big button met the dummy. Now the Dummy makes
+                  the trainer the plate, any AI hero makes the table the plate
+                  and names it, and the other board is the plain button under
+                  it. Each button keeps its own handler; CSS `order` puts the
+                  plate first. The two notes fold into one line that opens. */}
+              <button data-start="trainer" className={vsAI ? "bigbtn alt lo2" : "battlebtn clip"}
+                style={{order:vsAI?2:1}} onClick={start}>
+                {vsAI ? "Train against the dummy instead" : <span>Fight the dummy</span>}</button>
+              <button data-start="table" className={vsAI ? "battlebtn clip lovs" : "bigbtn alt lo2"}
+                style={{order:vsAI?1:2}} onClick={startTable}>
+                {vsAI ? <span>Fight {foeHero ? heroShort(foeHero) : "a random hero"} — {aiLevel==="sharp" ? "Sharp" : "Steady"}</span>
+                      : "The dummy at the table — harder"}</button>
               {/* THE NOTE SAYS ONLY WHAT IS MEASURED (v5.35). No win rate
                   is quoted for a hero seat: none was measured per pair on
                   this release, and a number the player trusts has to be one
                   somebody took. */}
-              <p className="note" style={{marginTop:6,marginBottom:0}}>
+              <details className="lowhy" style={{order:3}}>
+                <summary>{!vsAI ? "The dummy is scripted and tuned. Start here."
+                  : aiLevel==="sharp" ? "Sharp plays out each line before it commits."
+                  : "Steady plays by rules of thumb: easier to beat."}</summary>
+                <p className="lotrain">The training dummy — a scripted, tuned opponent. Start here.</p>
+                <p className="lotable">
                 {aiFoe===null
                   ? <>The same 30-card pile, but played as a real seat: it holds a hand,
                     pays costs and blocks like a person. <b>Untuned and currently
@@ -7074,7 +7179,8 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
                   : <>An AI pilots {foeHero ? heroShort(foeHero) : "a random hero"}, playing <b>{aiLevel==="sharp"
                     ? "Sharp: it plays out each way to start its turn, and each way to block, before it commits"
                     : "Steady: the rules of thumb self-play uses"}</b>. Pick the opponent and how it plays on the Foe screen.</>}
-              </p>
+                </p>
+              </details>
             </>}
       </div>
       <CardModal card={zoom} onClose={()=>setZoom(null)}/>
@@ -8926,7 +9032,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                   {foeH ? <div className="hport2"><HeroArt h={foeH} db={db}/></div> : null}
                   <span className="hname">{them.name}</span>
                   {srvNames[1-mySeat] && <span className="pname" data-pname="foe" title={srvNames[1-mySeat]}>{srvNames[1-mySeat]}{srvRank.ranked && srvRank.ratings[1-mySeat]!=null && <span className="prate"> {srvRank.ratings[1-mySeat]}</span>}</span>}
-                  <b className="hlife2">{Math.max(0,them.hp)}</b>
+                  <LifeNum n={them.hp} className="hlife2"/>
                   <span className="hlbl">{g.turnPlayer===1-mySeat ? "their turn" : "life"}</span>
                 </div>
                 <div className={"wslot clip-sm"+(foeHands[1]?" filled":"")}>
@@ -9108,6 +9214,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                     onClick={ok ? tapTwice(me.arsenal,"play from arsenal",()=>fire(a)) : ()=>setZoom(me.arsenal)}>
                     <CardFrame card={me.arsenal} zone="arsenal"/></button>;
                 })()}
+                <RailMore/>
               </div>
             </div>
 
@@ -9181,7 +9288,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                     {myH ? <HeroArt h={myH} db={db}/> : null}</button>
                   <span className="hname">{me.name.split(",")[0]}</span>
                   {srvNames[mySeat] && <span className="pname" data-pname="me" title={srvNames[mySeat]}>{srvNames[mySeat]}{srvRank.ranked && srvRank.ratings[mySeat]!=null && <span className="prate"> {srvRank.ratings[mySeat]}</span>}</span>}
-                  <b className="hlife2">{Math.max(0,me.hp)}</b>
+                  <LifeNum n={me.hp} className="hlife2"/>
                   <span className="hlbl">life</span>
                   {/* THE SAME CHIP THE TRAINER DRAWS (v3.39) — a counter
                       the ability spends has to be visible on the board the
@@ -9213,7 +9320,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                   <div className="slot clip-sm" style={{width:"100%"}}>{me.arsenal
                     ? <button style={{padding:0,width:"100%"}} onClick={()=>setZoom(me.arsenal)}>
                         <CardFrame card={me.arsenal} className="sm"/></button>
-                    : "arsenal"}</div>
+                    : "empty"}</div>
                   <span className="zlbl">Arsenal</span>
                 </div>
                 <DeckPitchCol deck={me.deck} pitch={me.pitch}/>

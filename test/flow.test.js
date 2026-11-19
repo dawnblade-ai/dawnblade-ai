@@ -188,7 +188,7 @@ test("a networked sideboard offers one button, and it is not 'Fight'", () => {
   const bar = CODE.slice(j - 300, j + 700);
   assert.match(bar, /netFoe\s*\n?\s*\?/, "the bar branches on netFoe");
   const lock = bar.indexOf("Lock the sideboard");
-  const fight = bar.indexOf("<span>Fight</span>");
+  const fight = bar.indexOf('data-start="trainer"');
   assert.ok(lock > 0, "the table branch must say what it does");
   assert.ok(fight > lock,
     "Fight and the table button belong to the SOLO branch, after the netFoe one");

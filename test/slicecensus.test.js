@@ -418,8 +418,12 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        21,720 -> 21,768 AT v5.85: the block search's note says Sharp also
        plays out each way to block. Same anchors.
        21,768 -> 21,738 AT v6.46: shorter, read first: its hero labels call `heroShort(…)` instead
-       of cutting the name at the comma (two Viserais). Same anchors. */
-    "phasebar.test.js index.html 21738",
+       of cutting the name at the comma (two Viserais). Same anchors.
+       21,738 -> 23,068 (UX roadmap step 3, 2026-11-19), READ FIRST: still `function Loadout(` -> the
+       APP banner. The growth is the bar's one-primary rule: `vsAI`, the two buttons with
+       `data-start` and the foe-decided label, and the two notes folded into `<details className="lowhy">`
+       with the comment saying why. Same anchors. */
+    "phasebar.test.js index.html 23068",
     /* 63,730 -> 64,368 AT v5.57, READ FIRST: still the `<style>` block,
        `<style>` -> `</style>`; the growth is the Cloaked card back's three
        rules (`.deckback.gback`, `.gbtag`, `.gbname`).
@@ -461,7 +465,23 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        is presentation only: the result screen (`.reveal.end-*`, `.endtitle`, `.endstat`, `.endnote`,
        `.endleave`, `.endhint`), the life HUD (`.lifehud` and its parts), the empty arsenal slot,
        the status-line button paint and the press-feedback block (docs/ux/UX-ROADMAP.md). */
-    "phasebar.test.js index.html 79222",
+    /* 79,222 -> 80,764 (UX roadmap, 2026-11-19), READ FIRST: still `<style>` -> `</style>`; the growth
+       is presentation only: the reserved 5:7 box for a card face (`.cfw:not(.hz)>img`), the hand
+       rail's hidden-count (`.phand .railmore`, its fade and chip, the label's snap) and the empty
+       featured slot drawn as a 60% silhouette (`.centerslot .featempty`, its `::before`). */
+    /* 80,764 -> 81,587 (UX roadmap, 2026-11-19), READ FIRST: still `<style>` -> `</style>`; the growth
+       is presentation only: your board's footer made sticky to the pane's bottom (`.hpane
+       .mystat`) and its toggles' invisible finger areas (`.mystat button.pill`, its `::after`),
+       with the comment saying why. */
+    /* 81,587 -> 82,622 (UX roadmap, 2026-11-19), READ FIRST: still `<style>` -> `</style>`; the growth
+       is presentation only: the loadout bar's one-plate rules (`.lo .actbar>.lo2`,
+       `.battlebtn.lovs` for a hero's name, the plate's 10px padding) and the one-line disclosure
+       (`.lowhy` and its summary, marker and paragraphs). */
+    /* 82,622 -> 83,285 (UX roadmap, 2026-11-19), READ FIRST: still `<style>` -> `</style>`; the growth
+       is presentation only: a life total's direction flash (`.lfdown` red, `.lfup` green, on
+       `.hlife2` and `.lifehud .lhhp`, their two keyframes, and the reduced-motion line that turns
+       them off). */
+    "phasebar.test.js index.html 83285",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
        `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
        `abPickBound` in the pick legality it extends. */
