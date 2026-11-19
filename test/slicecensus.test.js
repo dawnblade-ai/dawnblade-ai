@@ -455,7 +455,11 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        `.ladlist`/`.ladrow`/`.ladrk`/`.ladnm`/`.ladrt` the plain rows, `.ladgame` a latest game) and nothing else. */
     /* 74,705 -> 74,755 AT v6.46, READ FIRST: still `<style>` -> `</style>`; the growth is one rule,
        `.hcard.ch4`, the loadout stripe for the Usurp the Shadow Throne block. */
-    "phasebar.test.js index.html 74755",
+    /* 74,755 -> 79,222 (UX overhaul, 2026-11-19), READ FIRST: still `<style>` -> `</style>`; the growth
+       is presentation only: the result screen (`.reveal.end-*`, `.endtitle`, `.endstat`, `.endnote`,
+       `.endleave`, `.endhint`), the life HUD (`.lifehud` and its parts), the empty arsenal slot,
+       the status-line button paint and the press-feedback block (docs/ux/UX-ROADMAP.md). */
+    "phasebar.test.js index.html 79222",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
        `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
        `abPickBound` in the pick legality it extends. */

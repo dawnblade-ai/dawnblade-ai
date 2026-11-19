@@ -106,13 +106,15 @@ board renders and the other hand-copies.
 | `PeekDock` | 2184 | the docked preview **and** the `--peekbot` measurement |
 | `PromptSheet` | 2297 | props-only; renders for BOTH seats at the table |
 | `Ticker` | 2506 | the feed |
+| `LifeHud` | (grep) | both life totals + the actor's action points / resources chips (2026-11-19, replaced two hand-copied `.scorebar`s) |
+| `EndPanel` | (grep) | the result screen for every ending on both boards; `WinPanel` / `DrawPanel` render through it (2026-11-19). Plan: `docs/ux/UX-ROADMAP.md` |
 
 ### What is deliberately NOT shared — also verified
 
 - **`usePeek` (2133) is TABLE ONLY.** `Battle` keeps its own `peek` state and
   its own `tapTwice`, because it reads `g.inspect` and zooms differently.
   Both boards have their own `peekables()` (`Battle` 4881, `TableBoard` 6519).
-- **`WinPanel` (5352) is trainer only** — it says "DUMMY DESTROYED" and pulls
+- **`WinPanel` (5352) is the Dummy-win reward only** (trainer, or a local table seat the Dummy fills) — it says "DUMMY DESTROYED" and pulls
   a random trophy. A trophy for beating a *person* would devalue the case.
 - **`Advisor` (2524) is seat 0 and local sessions only** — it reads its own
   hand through `you(g)` and prices your line against the opponent's gear.

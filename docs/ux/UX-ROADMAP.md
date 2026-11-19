@@ -1,0 +1,94 @@
+# UX ROADMAP — the graphical overhaul, phased
+
+Audit taken 2026-11-19 at v6.46 by driving the real page offline (`node tools/page.js`'s
+`open()`) at 393x852. Offline, card and hero art are grey stand-ins, so judge layout,
+type and hierarchy here, not art. Before/after pairs sit beside this file
+(`before-*.jpg` / `after-*.jpg`, deviceScaleFactor 2).
+
+## 1. The audit, ranked by how much a phone player sees it
+
+1. **The result screen was the weakest screen in the game.** The table's loss overlay
+   was see-through: `.reveal` + `.lose` let the plain `.lose` panel rule
+   (`background:rgba(196,48,43,.08)`) replace the overlay's dark ground, so the board
+   showed through the words. The way out was "Tap anywhere." in 13px body text. The
+   trainer's loss was not an overlay at all but a box under the board. Four hand-copies.
+2. **Life totals and resources were hard to read.** The scorebar was one 11px mono strip
+   ("20 you · R0 A1   kayo 20"), hand-copied on both boards; R and A were letters a
+   new player cannot decode.
+3. **Almost no control answered a finger.** Only `.judgebtn` had an `:active` state; a
+   tap that lands looked identical to one that missed until the game moved.
+4. **Status-line buttons ("skip", "✕ cancel") painted at 9px** with a faint border:
+   the hit area was already finger-sized (an invisible `::after`), the paint was not.
+5. **The empty arsenal was a stray lowercase word** ("arsenal", body font) next to
+   dashed weapon slots that read as slots.
+6. **Roster names at 8.5px** under 58px tiles; long names ellipsize ("LYATH GOLDMA…").
+7. **The chain pane's empty "Most recently played lands here" box** holds ~290px of
+   the pane while the hand rail below is cramped and clips its fifth card.
+8. **Your-board pane overflows its flick height**: the WASTED / TURN / inspect pills
+   sit under the pane's bottom edge at 393x852 (scroll inside the pane to reach them).
+9. **Two primary-looking fight buttons on the loadout** (striped FIGHT and FIGHT THE
+   NEW ENGINE — HARDER) with long prose between; the hierarchy says both are main.
+10. **The duplicate arsenal label** ("ARSENAL" in the slot, "ARSENAL" under it), and
+    the opponent pane's `arsenal —` in body type where every other slot label is mono.
+11. **No motion language.** Panes snap, cards appear, damage pops (`.dmgpop`) exist but
+    nothing ties a played card to where it went. No sound (POLISH §4, deliberately last).
+
+## 2. What was built (this session)
+
+| # | change | where |
+|---|---|---|
+| A | `EndPanel` — one result screen for every ending on both boards (trainer win/draw/loss, table win/loss/draw, the table's Dummy win). Opaque ground tinted by the outcome, a 44px headline in the outcome's colour with a short scale-in, the life left as a stat, a 51px full-width leave button ("Back to heroes" / "Leave the table"), "or tap anywhere" kept. The heading stays the overlay's first text line (page.js reads it). Fixes the see-through loss. | `index.html` script1, `EndPanel` above `DrawPanel`; CSS after `.reveal .rar` |
+| B | `LifeHud` — shared life HUD replacing both hand-copied scorebars: both totals 30px display face, action points and floating resources as labelled chips (gold when non-zero), name ellipsized, a changed total pulses once (re-keyed span). Trainer still shows the Frostbite count. | `LifeHud` above `Ticker`; CSS before `.scorebar` |
+| C | Press feedback: buttons sink 3% and brighten on `:active`; hand and hero tiles brighten only (their transform carries peek/selected). Off under `prefers-reduced-motion`. | end of `<style>` |
+| D | Status-line buttons painted as gold-outlined mono chips (10.5px); the `::after` finger area unchanged. Empty arsenal drawn as a dashed 5:7 slot (`:has()`, CSS only). Roster names 9.5px. | CSS |
+
+Verified: both babel blocks compile; `node tools/page.js` 79/79 PASS (same as before);
+box drive at 393x852 and 360x740 — HUD inside its box with the longest foe name, life
+30px, result button 300x51, opaque result ground, heading first, button leaves to the
+roster, status-line button owns its finger area above, below and beside, no scrollWidth
+overflow, no page errors.
+
+## 3. The plan — one session each, in order
+
+1. **Hand rail and peek polish.** Rail tiles are 80px and clip the fifth card with no
+   hint. Add an edge fade + count chip ("+2") on the rail, and make the chain pane's
+   empty featured slot a faint card silhouette at ~60% height so the rail can grow.
+   Check: `--peekbot` still tracks (UI-GUIDE §5), page.js `peek` checks.
+2. **Your-board pane fit.** Bring WASTED / TURN / inspect inside `--tv` at 393x852
+   (fold them into `LifeHud`'s row or the pane header), dedupe the arsenal label, make
+   the opponent pane's `arsenal —` use the same empty-slot style. Assert every pill's
+   bottom <= the pane's bottom.
+3. **Loadout hierarchy.** One primary action per mode: the AI-foe picker decides the
+   button ("FIGHT THE DUMMY" vs "FIGHT KAYO — SHARP"), the second becomes `.bigbtn.alt`,
+   prose collapses into a one-line disclosure. Keep page.js's button-name regexes or
+   update them in the same commit.
+4. **Hero-select with art.** The roster is a 6-across grid of 58px tiles. Online they
+   carry real art (`HeroArt`); give the selected hero a full-bleed banner on the sheet
+   (art, class, chapter colour, one-line pitch) and grow tiles to 4 across with 11px
+   names. Check online art loads at phone size (tools/phone/serve.sh) — offline is grey.
+5. **Damage and block feedback on the boards.** Reuse `LifeHud`'s re-key trick on the
+   hero plates (`.heroplate` life), and flash the chain link that hit / was blocked.
+   Life drops red, prevention blue, gains green — three colours that mean three things
+   (POLISH §4's sound rule, applied to sight first).
+6. **Motion between panes.** A short slide on `.screennav` jumps (CSS `scroll-behavior`
+   + snap is already there) and a card-to-zone glide on play (FLIP: measure the tile,
+   animate a ghost to the featured slot). Budget: no frame over 16 ms at 4x throttle
+   (`tools/perf-page.js`), off under reduced motion.
+7. **Prompt sheet pass.** Drive each `prompts.js` kind (opt pick modal pay reveal target
+   alloc soak) to the sheet, screenshot, and give the sheet the same headline / stat /
+   one-primary-button grammar `EndPanel` uses. `test/promptctl.test.js` must stay green.
+8. **Typography and token sweep.** Replace the remaining inline `style={{fontSize:…}}`
+   on shared components with classes; add `--fs-*` size tokens to `:root` and use them
+   in new CSS. Re-derive UI-GUIDE §4's class count after.
+9. **Sound (POLISH §4).** Three self-hosted sounds — hit, block, fizzle — behind a
+   mute toggle, distinguishable with the screen off. Files under `data/` or `assets/`,
+   no CDN.
+
+## 4. Notes for the next UI worker
+
+- Screenshots: `open()` from `tools/page.js`, then `page.screenshot({scale:"css"})` for
+  1x review. The board opens on the OPPONENT pane; the hand rail and status line live in
+  the Chain pane. `.screennav button` index 0 is LEAVE — don't click `.first()`.
+- `EndPanel` and `LifeHud` are shared by both boards: change them once. `WinPanel` stays
+  trainer-reward only (UI-GUIDE §2); it now renders through `EndPanel`.
+- No engine change was needed for any of this.
