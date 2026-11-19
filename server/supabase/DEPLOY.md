@@ -87,6 +87,8 @@ UNVERIFIED which). `fokcpzplomjsraquaaid.supabase.co` already works from the san
 
 ## Every release after that (the function must match the page)
 
+**One command (2026-11-19):** `node tools/supabase-deploy.js` cuts `dist/`, sends the Path B multipart deploy through the proxy and stamps on `ACTIVE` (`--dry-run` sends nothing). The manual steps below are what it does.
+
 A page of another release than the function reads as "different versions of the game" on the lobby screen. So, with every release
 that changes `APP_VER`, `DATA_VER`, the pool, or any engine file the function loads:
 
