@@ -143,11 +143,15 @@ test("the life tiebreak reads each leg's OWN chair, not a fixed index", () => {
 /* v6.46: the sixteenth HERO took the seat the dummy filled (the 2026-08-16 ruling seated the dummy
    because fifteen heroes left one of sixteen seats empty). The dummy is still the only filler. */
 test("the field is sixteen, and the dummy enters only while the roster is short", () => {
-  assert.equal(T.ENTRANTS.length, 16, "a bracket of sixteen needs sixteen entrants");
   const W2 = require("./helpers/extract.js").loadData();
+  /* 2026-11-19: past sixteen heroes every hero enters the qualifier and the bracket seats its top
+     sixteen (tools/tournament.js), so the field is max(16, heroes) and no hero is cut unseen. */
+  const n = Math.max(16, W2.HEROES.length);
+  assert.equal(T.ENTRANTS.length, n, "every hero enters, and a bracket of sixteen needs at least sixteen");
+  assert.ok(W2.HEROES.every(h => T.ENTRANTS.some(e => e.key === h.k)), "a decked hero is missing from the field");
   assert.equal(T.ENTRANTS.filter(e => e.key == null).length, W2.HEROES.length < 16 ? 1 : 0,
     "the dummy is the only filler, and only while fewer than sixteen heroes are decked");
-  assert.equal(new Set(T.ENTRANTS.map(e => e.name)).size, 16, "two entrants share a name");
+  assert.equal(new Set(T.ENTRANTS.map(e => e.name)).size, n, "two entrants share a name");
 });
 
 /* THE TOURNAMENT'S RULING, PINNED. `build.buildVanilla` defaults the
