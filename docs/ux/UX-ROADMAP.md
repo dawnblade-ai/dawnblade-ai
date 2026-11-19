@@ -42,6 +42,7 @@ type and hierarchy here, not art. Before/after pairs sit beside this file
 | C | Press feedback: buttons sink 3% and brighten on `:active`; hand and hero tiles brighten only (their transform carries peek/selected). Off under `prefers-reduced-motion`. | end of `<style>` |
 | D | Status-line buttons painted as gold-outlined mono chips (10.5px); the `::after` finger area unchanged. Empty arsenal drawn as a dashed 5:7 slot (`:has()`, CSS only). Roster names 9.5px. | CSS |
 | E | §3 step 1 — `RailMore`, shared by both hand rails: the rail's last child, zero-width and sticky to its right edge, paints a fade and a gold "+N" chip counting the tiles not fully shown; gone at the rail's end; `pointer-events:none`, so a tap on it peeks the clipped card under it (no dead tap). The rail's "Hand" label now snaps into view. The empty featured slot is a faint 60% card silhouette (diamond, rounded edge, "Most recently played lands here" at its foot). A card face reserves its 5:7 box before the lazy image loads (`.cfw:not(.hz)>img`), so the rail no longer grows as art arrives and offline drives see online geometry (the stand-in PNG is 50x70: before this, offline rail tiles drew 72px tall instead of 111). | `RailMore` after `LifeHud`; CSS after `.phand .hc.dis`, `.centerslot .featempty`, `.cfw` |
+| F | §3 step 2 — your board's footer (WASTED / TURN / SEAT / BOOST / inspect pills, `.mystat`, both boards) is sticky to the pane's bottom on the ink ground, so a board taller than the pane (tokens in play, a short phone) scrolls UNDER it instead of pushing it past the edge; its toggles take taps over 44px through an invisible `::after` inside the footer's own padding. Your empty arsenal says "empty" in the slot and "Arsenal" under it (it said "arsenal" twice); the opponent's `arsenal —` already wore the empty-slot style (row D). Measured: at rest the pills already fit at 393x852 and 360x740 once card faces reserve their box (row E); the overflow the audit saw was the jump caught mid-scroll plus the 50x70 stand-in, and a genuinely tall board (393x640) put them 49px under the pane. | CSS after `.vfillsp`; both `arscol`s |
 
 Verified: both babel blocks compile; `node tools/page.js` 79/79 PASS (same as before);
 box drive at 393x852 and 360x740 — HUD inside its box with the longest foe name, life
@@ -51,13 +52,15 @@ overflow, no page errors.
 
 Step 1 verified: babel blocks compile; `node tools/page.js` 78/78 PASS (78 on this base, before and after); box drive on both boards at 393x852 and 360x740: chip reads "+3" / "+4" and equals the count of clipped tiles, sits inside the rail, takes no taps (a tap at its centre peeks the card under it), disappears at the rail's end, the silhouette is 60% of the slot and centred, no scrollWidth overflow, no page errors. `before-rail.jpg` / `after-rail.jpg`.
 
+Step 2 verified: babel blocks compile; `node tools/page.js` 78/78 PASS; box drive on both boards at 393x852, 360x740 and 393x640 (content taller than the pane): every pill inside the pane, inspect takes taps over 44px and owns its centre, inspect still toggles, the arsenal is named once, no scrollWidth overflow, no page errors; sabotaged (footer `position:static`) the 393x640 rows fail (pills at 562..591 under a pane ending at 542). `before-board-fit.jpg` / `after-board-fit.jpg` (393x640).
+
 ## 3. The plan — one session each, in order
 
 1. **DONE (see §2).** **Hand rail and peek polish.** Rail tiles are 80px and clip the fifth card with no
    hint. Add an edge fade + count chip ("+2") on the rail, and make the chain pane's
    empty featured slot a faint card silhouette at ~60% height so the rail can grow.
    Check: `--peekbot` still tracks (UI-GUIDE §5), page.js `peek` checks.
-2. **Your-board pane fit.** Bring WASTED / TURN / inspect inside `--tv` at 393x852
+2. **DONE (see §2).** **Your-board pane fit.** Bring WASTED / TURN / inspect inside `--tv` at 393x852
    (fold them into `LifeHud`'s row or the pane header), dedupe the arsenal label, make
    the opponent pane's `arsenal —` use the same empty-slot style. Assert every pill's
    bottom <= the pane's bottom.

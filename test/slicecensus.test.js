@@ -463,7 +463,11 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        is presentation only: the reserved 5:7 box for a card face (`.cfw:not(.hz)>img`), the hand
        rail's hidden-count (`.phand .railmore`, its fade and chip, the label's snap) and the empty
        featured slot drawn as a 60% silhouette (`.centerslot .featempty`, its `::before`). */
-    "phasebar.test.js index.html 80764",
+    /* 80,764 -> 81,587 (UX roadmap, 2026-11-19), READ FIRST: still `<style>` -> `</style>`; the growth
+       is presentation only: your board's footer made sticky to the pane's bottom (`.hpane
+       .mystat`) and its toggles' invisible finger areas (`.mystat button.pill`, its `::after`),
+       with the comment saying why. */
+    "phasebar.test.js index.html 81587",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
        `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
        `abPickBound` in the pick legality it extends. */

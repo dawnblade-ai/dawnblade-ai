@@ -503,6 +503,17 @@ img{display:block;max-width:100%}
 .featempty{border:1px dashed var(--line);width:100%;aspect-ratio:auto;padding:10px;font-size:11px;color:var(--bone-dim);text-align:center}
 .hpane.vfill{display:flex;flex-direction:column}
 .vfillsp{flex:1;min-height:6px}
+/* YOUR BOARD'S FOOTER STAYS ON THE PANE (UX roadmap §3.2). The pills (wasted,
+   turn, seat, boost, inspect) sat after the spacer, so a board taller than the
+   pane (a row of tokens, a weapon pair, a short phone) pushed them under its
+   bottom edge, to be found by scrolling inside the pane. Sticky to the pane's
+   bottom, on the ink ground, they ride over the content instead. The hpane's
+   10px bottom padding is what -10px gives back. */
+.hpane .mystat{position:sticky;bottom:-10px;z-index:2;background:var(--ink);margin-top:0!important;padding:8px 0 10px}
+/* the toggles draw 29px; an invisible finger area takes them to 45px, inside
+   the footer's own padding and half of the 8px gap on each side */
+.mystat button.pill{position:relative}
+.mystat button.pill::after{content:"";position:absolute;inset:-8px -4px}
 
 .chand .hc{position:relative;padding:0;background:var(--forge);border:1px solid var(--line);transition:transform .12s}
 .chand .hc.sel{transform:translateY(-5px);border-color:var(--y);box-shadow:0 0 0 2px var(--y)}
@@ -6487,7 +6498,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                 <div className="arscol">
                   <div className="slot clip-sm" style={{width:"100%"}}>{you(g).arsenal
                     ? <button style={{padding:0,width:"100%"}} onClick={()=> g.mode==="foeturn" ? playArsenalInstant() : g.mode==="block" ? (g.bphase==="react"&&playRxA()) : g.inspect?setZoom(you(g).arsenal) : g.mode==="stack" ? playRxA() : tryPlay(you(g).arsenal,"arsenal",0)}><CardFrame card={you(g).arsenal} className="sm"/></button>
-                    : "arsenal"}</div>
+                    : "empty"}</div>
                   <span className="zlbl">Arsenal</span>
                 </div>
                 <DeckPitchCol deck={you(g).deck} pitch={you(g).pitch}/>
@@ -9264,7 +9275,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                   <div className="slot clip-sm" style={{width:"100%"}}>{me.arsenal
                     ? <button style={{padding:0,width:"100%"}} onClick={()=>setZoom(me.arsenal)}>
                         <CardFrame card={me.arsenal} className="sm"/></button>
-                    : "arsenal"}</div>
+                    : "empty"}</div>
                   <span className="zlbl">Arsenal</span>
                 </div>
                 <DeckPitchCol deck={me.deck} pitch={me.pitch}/>
