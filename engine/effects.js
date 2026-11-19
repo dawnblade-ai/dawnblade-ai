@@ -3013,6 +3013,16 @@ function makeEffects(ctx){
           n = L(n, `${srcName}: ${take.map(c=>c.name).join(", ")} destroyed off the top of the deck.`);
         }
       }
+      else if(k==="markedFoeNext"){
+        /* LAY LOW (v6.47): "If the attacking hero is marked, their next attack this turn gets
+           -N{p}." Asked as the card resolves; the defence reaction's controller is the actor,
+           so the attacking hero is `foe`. Their `buffNext` is spent by their next attack's
+           declaration (`execute`) and swept with the turn's grants (`beginEndPhase`). */
+        if(foe(n).marked){
+          foeMut(n).buffNext = (foe(n).buffNext || 0) + v;
+          n = L(n, `${srcName}: ${foe(n).name} is marked — their next attack this turn gets ${v}{p}.`);
+        } else n = L(n, `${srcName}: ${foe(n).name} is not marked — nothing more.`);
+      }
       else if(k==="foeAtkBuff"){
         /* THE OPPONENT'S ATTACKS, WEAKENED (v6.47, Herald of Victoria): "until end of turn,
            attack action cards your opponents control get -N{p} while attacking and
@@ -10792,7 +10802,7 @@ const ACT_IF_KINDS = ["atkNamed", "hits", "boosted", "controlPow", "defending", 
 
    Actor-relative: `game.actor` is whoever is playing, and their build is
    the one `pow6`/`zonePow` reads Kayo's clause 2 off. */
-const PLAY_IF_KINDS = ["pitchPow", "discardPow", "soulPitch", "unreadable"];
+const PLAY_IF_KINDS = ["pitchPow", "discardPow", "soulPitch", "notMarked", "unreadable"];
 /* "you've DISCARDED a card with N or more {p} this turn" — a discard, not
    a graveyard census: an attack reaches the graveyard AT DECLARATION, so
    without `_disc` any big attack already played would satisfy it, and one
@@ -10819,6 +10829,8 @@ function playIfOk(game, card){
      put in this turn was STILL there, so banishing it to Boltyn's ability
      shut the gate. `hist.soulPut` is the event, cleared at CR 4.4.4. */
   if(pif.kind === "soulPitch")  return P.soulPutThisTurn(sd, pif.pitch);
+  /* Lay Low (v6.47): "If you are marked, you can't play this." */
+  if(pif.kind === "notMarked")  return !sd.marked;
   /* `unreadable`, and any kind nobody answered: inert, never free (v2.04,
      v4.89's `activateIfOk` one gate over) */
   return false;
@@ -12047,6 +12059,16 @@ function playTargetWhy(s, c, seat){
     if(k === "atkMinus" && op[2] && op[2].target
        && !((s && s.pend && s.pend.card) || ((s && s.incoming) || 0) > 0))
       return c.name + ": no attack is on the chain for it to target";
+    /* "TARGET <qual> ATTACK GETS GO AGAIN" AT INSTANT SPEED (v6.47, Luminaris' ability):
+       the qualified `ga` op is only ever read off a printed target, so the attack on the
+       chain must be one the qualifier names — `rxNoTargetWhy`, the reader the reaction
+       window asks. The line does not say "you control", so neither does this. `fxParse`
+       lifts a bare qualified `ga` off `ops` into `fx.gaQ`, so it is asked there. */
+  }
+  if(fx.gaQ && !((fx.self || 0) > 0) && !P.isAR(c)){
+    if(!(s && s.pend && s.pend.card)) return c.name + ": no attack is on the chain for it to target";
+    const why = rxNoTargetWhy(s, c);
+    if(why) return why;
   }
   return null;
 }

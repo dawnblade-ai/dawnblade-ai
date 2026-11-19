@@ -711,6 +711,24 @@ function classifyClause(raw){
     if(!sub || sub.status!=="run") return null;
     return R([["soulSelf"], ...sub.ops]);
   }
+  /* ---- LAY LOW (v6.47, Prism reader 7) — two lines about a MARK -------------------------
+     "If you are marked, you can't play this." is a play gate: `fx.playIf` {kind: "notMarked"}
+     is hoisted in `fxParse` and answered by `effects.playIfOk` on both boards; the clause
+     itself is accounted for here. "If the attacking hero is marked, their next attack this
+     turn gets -1{p}." is the card's effect: the condition is asked as it resolves (the
+     defence reaction's controller is the actor, so the attacking hero is `foe`) and the
+     -N rides on that hero's `buffNext`, spent by their next attack and swept with the
+     turn's grants. */
+  if(/^if you are marked, you can't play this$/.test(c))
+    return NOOP("a play gate — a marked hero cannot play this (playIfOk)");
+  { const mk = c.match(/^if the attacking hero is marked, their next attack this turn gets -(\d+)\s*\{p\}$/);
+    if(mk) return R([["markedFoeNext", -mk[1]]]); }
+  /* HERALD OF JUDGMENT (v6.47): "the defending hero can't play cards from their banished
+     zone until the end of their next turn" — a `foeNextTurn` lock, `noBanPlay`, live at
+     once (the rest of this turn is inside "until the end of their next turn", the halving's
+     reading) and read by `nextTurnBars` with the zone the card is played from. */
+  if(/^the defending hero can't play cards from their banished zone until the end of their next turn$/.test(c))
+    return R([["foeNextTurn", "noBanPlay", 0]]);
   /* A NAMED-KEYWORD GATE IS STILL A GATE, and "instead" still REPLACES
      inside one. The generic if/when/while handler below marks a conditional
      payload containing "instead" so `execute` suppresses the unconditional
@@ -2403,6 +2421,18 @@ function classifyClause(raw){
      with the +3 landing and the piercing silently dropped. */
   if(m=c.match(/^(?:this|it) (?:gets?|gains?|has) piercing (\d+)$/))
     return R([["piercing", +m[1]]]);
+  /* AN OR-GROUP OF WHOLE QUALIFIERS (v6.47, Luminaris): "target angel attack or attack
+     action card with Herald in its name gets go again". `attackQual`'s word groups OR the
+     words BEFORE "attack" and share one tail, so a tail that belongs to one alternative only
+     refused the clause. Each alternative is read whole (its own words and its own tail),
+     every one must read, and the qualifier is `{any: [...]}`, which `qualMatches` answers
+     as either. Two alternatives each naming "attack" is the only shape claimed. */
+  if(m=c.match(/^target (.*?\battack\b.*?) or (.*?\battack\b.*?) (?:gets?|gains?) go again$/)){
+    const alt = s => { const a = s.match(/^(.*?)\battack\b(.*)$/); return a ? attackQual(a[1], a[2]) : false; };
+    const qs = [alt(m[1]), alt(m[2])];
+    if(qs.some(q => !q)) return null;
+    return R([["ga", 1, {any: qs}]]);
+  }
   /* the go-again twin of the target-attack pump, restriction and all */
   if(m=c.match(/^target ([^.]*?)\battack\b([^.]*?) (?:gets?|gains?) go again$/)){
     const q2 = attackQual(m[1], m[2]);
@@ -4354,6 +4384,7 @@ const qualColour = qual => !qual || qual.pitch == null ? null
   : (Object.keys(COLOR_PITCH).find(k => COLOR_PITCH[k] === qual.pitch) || ("pitch " + qual.pitch));
 function qualLabel(qual, o){
   if(!qual) return "an attack";
+  if(Array.isArray(qual.any)) return qual.any.map(q => qualLabel(q, o)).join(" or ");
   const pre = qual.g ? qual.g.map(g => g.map(qualWord).join(" ")).join(" or ") + " " : "";
   const post = [];
   if(qual.kw) post.push("with " + qual.kw);
@@ -4385,6 +4416,8 @@ function qualMatches(qual, card, opts){
      qualifier must cost a buff, never a session. */
   if(Array.isArray(qual)) return false;
   opts = opts || {};
+  /* AN OR-GROUP OF WHOLE QUALIFIERS (v6.47): either alternative, each with its own tail. */
+  if(Array.isArray(qual.any)) return qual.any.some(q => !!q && qualMatches(q, card, opts));
   const c = card || {};
   if(qual.g){
     /* A CARD FEALTY MADE DRACONIC IS ONE (v5.53) — the stamp is the played
@@ -7574,6 +7607,9 @@ function fxParse(card){
   else if(pm = tl.match(/play this only if an? (red|yellow|blue) card has been put into your soul this turn/))
     fx.playIf = {kind:"soulPitch", pitch:{red:1, yellow:2, blue:3}[pm[1]],
                  why:`no ${pm[1]} card has been put into your soul this turn`};
+  /* LAY LOW (v6.47): "If you are marked, you can't play this." */
+  else if(/\bif you are marked, you can.?t play this/.test(tl))
+    fx.playIf = {kind:"notMarked", why:"you are marked"};
   /* AN UNREAD PLAY CONDITION REFUSES — the activation gate's rule (v3.04),
      one gate over. Measured, no pool record reaches it today. */
   else if(/play this only if/.test(tl))
@@ -8836,8 +8872,15 @@ function nextTurnHas(sd, kind){
      BASE {p}              the printed number. A buff must not lift a
                            card over the line, and a debuff must not
                            push one under it. */
-function nextTurnBars(sd, card){
-  if(!card || !isAtkActionCard(card)) return null;
+function nextTurnBars(sd, card, from){
+  if(!card) return null;
+  /* HERALD OF JUDGMENT (v6.47): "can't play cards from their banished zone until the end of
+     their next turn". Live from the hit (an unarmed entry is this turn, an armed one their
+     next), gone when the armed entry is cleared at the end of their turn. A card played, not
+     an ability: the caller names the zone. */
+  if(from === "banish" && ((sd && sd.nextTurn) || []).some(e => e && !e.spent && e.kind === "noBanPlay"))
+    return "cards can't be played from the banished zone until the end of this hero's next turn";
+  if(!isAtkActionCard(card)) return null;
   for(const e of ((sd && sd.nextTurn) || [])){
     if(!e || !e.ready || e.spent || e.kind !== "noSmallAtk") continue;
     if((card.power || 0) <= (e.amt || 0))

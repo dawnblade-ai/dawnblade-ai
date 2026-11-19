@@ -1624,7 +1624,7 @@ function playableWhy(g, seat, c, win, zone){
   /* A RESTRICTION ARMED AGAINST THIS PHASE (v3.30). Refused BEFORE the
      card leaves the hand — a play the rules never allowed must not cost
      the player the card. */
-  const barred = PR.nextTurnBars(sd, c);
+  const barred = PR.nextTurnBars(sd, c, zone);
   if(barred) return c.name + ": " + barred;
 
   /* "PLAY THIS ONLY IF …" (v4.90). This board never asked it: Bear Hug,

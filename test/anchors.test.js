@@ -112,6 +112,12 @@ test("every parser reading the pool never reaches is pinned", {skip}, () => {
     /* v6.47, reader 6: Herald of Triumph's and Herald of Victoria's -1{p} (test/heraldminus.test.js). */
     "return R([[\"noop\", \"static — the defending attack action cards' power, read when defenders are declared\"]], {defAtkPow: -m[1]});",
     "return R([[\"foeAtkBuff\", -m[1], {aac: true}, \"turn\"]]);",
+    /* v6.47, reader 7: Lay Low, Herald of Judgment's lock and Luminaris' or-group target, all
+       staged (test/laylow.test.js, test/luminaris.test.js). */
+    "return NOOP(\"a play gate — a marked hero cannot play this (playIfOk)\");",
+    "if(mk) return R([[\"markedFoeNext\", -mk[1]]]); }",
+    "return R([[\"foeNextTurn\", \"noBanPlay\", 0]]);",
+    "return R([[\"ga\", 1, {any: qs}]]);",
     "return R([[\"noop\", \"static — read off the arena when the turn's first such card is played\"]], {firstPlayBuff: {q, n: +m[3]}});",
     "if(/^spectra$/.test(c)) return NOOP(\"static — this can be attacked, and it is destroyed when an attack targets it (the attack is then cleared)\");",
     "return R([[\"pickPrompt\", {zone:\"board\", filter:{ty:\"figment\"}, min:1, max:1, tgt:true, awaken:true,",
@@ -166,15 +172,17 @@ test("`runOps`'s vocabulary and what the pool emits are pinned both ways", {skip
      `effects.runesMade` and the end phase's offer (test/traverse.test.js).
      101 -> 102 AT v6.47: `foeAtkBuff`, Herald of Victoria's "attack action cards your
      opponents control get -1{p}" (a standing entry on the other seat). Staged: no pool
-     emitter until Prism is decked, so it is named below too. */
-  assert.equal(r.dispatched, 102, "runOps's op vocabulary moved");
+     emitter until Prism is decked, so it is named below too.
+     102 -> 103 AT v6.47: `markedFoeNext`, Lay Low's "if the attacking hero is marked, their
+     next attack this turn gets -1{p}". Staged, so named below too. */
+  assert.equal(r.dispatched, 103, "runOps's op vocabulary moved");
   /* DISPATCHED WITH NO EMITTER — the `perBoost` shape. Three have a
      producer that is not the parser and are named for it; two have none
      anywhere and are latent readers whose printed wording the pool only
      ever spells inside a cost. */
   assert.deepEqual(r.noEmitter,
     /* v6.46: `banTop` left (Pull from Beyond is dealt now). */
-    ["arcTaken", "deckDestroy", "destroyGear", "foeAtkBuff", "soulSpend", "tapSelfHero", "traverse"]);
+    ["arcTaken", "deckDestroy", "destroyGear", "foeAtkBuff", "markedFoeNext", "soulSpend", "tapSelfHero", "traverse"]);
   /* EMITTED WITH NO CASE IN `runOps` — each dispatched at a named site
      instead. v3.99 ran this half by hand, once; the three `per…` kinds
      joined it at v4.48 and had ZERO emitters until that version. */

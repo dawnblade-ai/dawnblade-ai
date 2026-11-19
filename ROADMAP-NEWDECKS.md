@@ -58,7 +58,7 @@ hide a keyword with no reader, so read this as a floor on the work, not a ceilin
      an optional graveyard banish as an additional cost). Census after: 35 full / 0 part / 0 none; only
      the hero (7) is left. Owed: Olde Leather Boots cannot be declared (0{d}, `tools/approx.js`
      `zero-defence-gear-refused`)
-- **Prism, Advent of Thrones** — 21 full / 4 part / 7 none; 17 names not in the pool.
+- **Prism, Advent of Thrones** — 32 full / 0 part / 0 none (2026-11-19, unreleased; was 21 / 4 / 7); 17 names not in the pool.
   Missing readers: the **soul** (a new zone: `sides.js`, `invariants.js` census, `view.js`
   visibility), Herald-named triggers, figments and **Awaken** (double-faced cards in the
   arena), auras that are weapons during the action phase, Phantasm, Spectra, Ward,
@@ -118,11 +118,25 @@ the AI-policy work for Viserai is on the back burner). The soul zone already exi
      Endless Hope, sharing print code SAT023 — `build.facesOf`'s pattern, for a non-hero).
   4. **DONE (unreleased, 2026-11-18)** — Iris of Reality: `parser.auraWeaponGrant` reads a class
      subject, a printed base {p} and the quoted go again beside Cosmo's ward grant (`test/iris.test.js`).
-  5. Spectra; "loses and can't gain phantasm" (Passing Mirage, Dream Weavers); Pierce Reality's
-     "first Illusionist attack action card you play each turn".
-  6. "-1{p} while defending this" (Herald of Triumph) and Herald of Victoria's discard instant.
-  7. Lay Low ("if you are marked, you can't play this"); Herald of Judgment's banished-zone lock;
-     Silent Stilettos (destroyed by phantasm). Then the census, 630 seated games, the opening.
+  5. **DONE (unreleased, 2026-11-19)** — Spectra (CR 8.3.14): a Spectra permanent is an
+     attack-target (`game.attackTargets`' `attackable` predicate, judge `ATTACKABLE`); targeting
+     it destroys it (`effects.spectraStrike`) and the attack is cleared, CR 7.2.2c (no attack
+     event, no link, the chain closes); the trigger resolves at once (`tools/approx.js`
+     `spectra-trigger-at-once`, stated; the trainer offers no targets). "Loses and can't gain
+     phantasm": Passing Mirage's board static (`fx.firstLoseKw`) and Dream Weavers' one-shot
+     (`buffNext` rider `loseKw`) land on `pend.loseKw`, read at the pop. Pierce Reality's
+     `fx.firstPlayBuff`. "First … each turn" reads `hist.atkTy` (this turn's declared attacks).
+     `test/spectra.test.js`, `test/phantasmlose.test.js`. The AI never targets a Spectra aura.
+  6. **DONE (unreleased, 2026-11-19)** — Herald of Triumph's `fx.defAtkPow` and Herald of
+     Victoria's `foeAtkBuff` (a `def` entry on the opponent's `atkBuff`): `linkPumps` while
+     attacking, the phantasm pop while defending (the only reader of a defender's power).
+     `test/heraldminus.test.js`.
+  7. **DONE (unreleased, 2026-11-19)** — Lay Low (`playIf` `notMarked`; `markedFoeNext` on the
+     attacking hero's `buffNext`); Herald of Judgment's lock (`foeNextTurn` `noBanPlay`, read by
+     `nextTurnBars` with the zone, both boards); Luminaris' or-group target (`{any: [...]}` in
+     `qualMatches`, refused by `playTargetWhy` without a matching attack). Silent Stilettos was
+     already built (v4.52). `test/laylow.test.js`, `test/luminaris.test.js`. Census: 32 full /
+     0 part / 0 none. LEFT: the AI never awakens; 630 seated games; the opening.
 
 **Phase 4 — Outbreak (2027-02).** When the lists publish: ask for `fabrary.net`, pin the
 lists into `data/newsets.json`, run the census, extend this file.
