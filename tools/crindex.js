@@ -109,7 +109,11 @@ function lineOf(txt, at) { return txt.slice(0, at).split("\n").length; }
 const GENERATED = (() => {
   const md = fs.readdirSync(ROOT).filter(f => f.endsWith(".md")).sort();
   const isGen = f => /\bGenerated\b/.test(fs.readFileSync(path.join(ROOT, f), "utf8").split("\n").slice(0, 5).join("\n"));
-  return { reports: md.filter(isGen), docs: md.filter(f => !isGen(f)) };
+  /* The archived CHANGELOG (moved out of the root 2026-11-19) is still the docs'
+     history: read it, so moving a file never silently drops a citation. */
+  const arch = fs.readdirSync(path.join(ROOT, "docs", "archive")).filter(f => /^CHANGELOG.*\.md$/.test(f)).sort()
+    .map(f => "docs/archive/" + f);
+  return { reports: md.filter(isGen), docs: md.filter(f => !isGen(f)).concat(arch) };
 })();
 
 /* ── the corpus, split by what a citation there MEANS ─────────────────── */
