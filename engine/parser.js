@@ -2068,6 +2068,11 @@ function classifyClause(raw){
      single 6+ power blocker", which is what the pop site asked for and
      not what the keyword prints — a `noop` must describe the clause in
      front of it (v3.16), and this one described an approximation. */
+  /* SPECTRA (CR 8.3.14, v6.47): "This can be attacked." and "When this becomes the target
+     of an attack, destroy this." Both halves are read off the printed keyword
+     (`printedKw`) where they act: the target list (`game.attackTargets`, judge's
+     `ATTACKABLE`) and the trigger (`effects.spectraStrike`, judge's `commitPlay`). */
+  if(/^spectra$/.test(c)) return NOOP("static — this can be attacked, and it is destroyed when an attack targets it (the attack is then cleared)");
   if(/^phantasm$/.test(c)) return NOOP("drawback — a non-Illusionist attack action card with 6 or more power destroys this attack (checked when defenders are declared)");
   /* RULING: "the crowd boos you" leaves a per-turn state and nothing else;
      Reviled is a static talent. Other cards read the state. */

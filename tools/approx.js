@@ -1189,7 +1189,23 @@ const APPROX = {
       "The same reading the brood has had since v3.76 (every Agent of Chaos prints \"*\" and "+
       "keeps Arakni's life). RULING (user, 2026-11-16), asked whether life carries over on a "+
       "traverse: \"Perfect\". "+
-      "The probe drives a traverse at 17 life and reads 17."}
+      "The probe drives a traverse at 17 life and reads 17."},
+
+  "spectra-trigger-at-once": {
+  status:"stated", cr:"CR 8.3.14b", board:"table", since:"v6.47", swept:"v6.47",
+  claim:"Spectra's \"when this becomes the target of an attack, destroy this\" resolves the "+
+        "moment the attack is put on the stack (`judge.commitPlay`, `effects.spectraStrike`), "+
+        "with no triggered-layer of its own and so no priority window between the trigger "+
+        "and its resolution. The trainer offers no attack-target at all (its dummy is the "+
+        "vanilla pile and always swings at the hero), so Spectra lives on the table only.",
+  why:"CR 8.3.14b, verbatim: \"When an object with Spectra becomes the target of an attack, a "+
+      "triggered-layer is put on the stack. When the triggered-layer resolves, the object with "+
+      "Spectra is destroyed.\" The window would let a seat answer the trigger before the "+
+      "permanent goes, and nothing in the pool interacts with a triggered-layer on the stack "+
+      "(no card here counters or copies a trigger), so the order of the destroy is the only "+
+      "observable and it is the printed one. The attack itself is cleared exactly as CR 7.2.2c "+
+      "reads (no attack event, no link, the chain closes). The probe asserts the aura is gone "+
+      "and no trigger layer sits on the stack the instant the attack is played."}
 
 };
 

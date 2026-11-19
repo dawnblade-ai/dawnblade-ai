@@ -105,6 +105,8 @@ test("every parser reading the pool never reaches is pinned", {skip}, () => {
     /* v6.47, reader 3: Figment of Hope's "Unlimited" and Prism's "Awaken target figment you
        control" — staged until she opens (test/figment.test.js drives both). Unpin them then. */
     "if(/^unlimited$/.test(c)) return NOOP(\"deckbuilding marker — any number of copies per deck\");   /* v6.47, Figment of Hope */",
+    /* v6.47, reader 5: Spectra is printed only by staged Prism auras (test/spectra.test.js). */
+    "if(/^spectra$/.test(c)) return NOOP(\"static — this can be attacked, and it is destroyed when an attack targets it (the attack is then cleared)\");",
     "return R([[\"pickPrompt\", {zone:\"board\", filter:{ty:\"figment\"}, min:1, max:1, tgt:true, awaken:true,",
     /* v6.37-v6.40 PINNED FOUR READERS HERE that only STAGED cards reached (banished-zone play,
        Usurp, Pull from Beyond's own-deck banish, Blood Debt), each noted "this entry leaves the

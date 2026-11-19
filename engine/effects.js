@@ -1283,6 +1283,24 @@ function makeEffects(ctx){
     }
     return n;
   };
+  /* ---- SPECTRA: "WHEN THIS BECOMES THE TARGET OF AN ATTACK, DESTROY THIS" (v6.47) --
+     CR 8.3.14b, verbatim: "When an object with Spectra becomes the target of an attack, a
+     triggered-layer is put on the stack. When the triggered-layer resolves, the object with
+     Spectra is destroyed. If there are not other legal attack-targets, the combat chain
+     closes." The permanent on `seat`'s board leaves through `fileDestroyed` /
+     `payDestroyed` like every destroyed permanent (its controller's "when this is
+     destroyed" pays as that seat). The layer resolves AT ONCE, with no priority window of
+     its own: a stated approximation (`tools/approx.js` "spectra-trigger-at-once"). An entry
+     already gone (the held play re-entering) is a no-op. */
+  const spectraStrike = (s, seat, uid, srcName) => {
+    const b = ((s.sides[seat] || {}).board || []).find(x => x && x.uid === uid);
+    if(!b || !b.card) return s;
+    const sides = s.sides.slice();
+    sides[seat] = {...sides[seat], board: (sides[seat].board || []).filter(x => x !== b)};
+    let n = L({...s, sides}, `${b.card.name} has spectra — it is destroyed the moment ${srcName} targets it.`);
+    n = fileDestroyed(n, [b], seat);
+    return payDestroyed(n, [b.card], seat);
+  };
   /* ---- AWAKEN (v6.47) — CR 8.5.43, verbatim: "Awaken is a discrete effect. To awaken a
      double-faced card, its back-face becomes its active face." 8.5.43a: "If a card is not a
      double-faced card, its back-face is already active, or its back-face can otherwise not be
@@ -3665,7 +3683,14 @@ function makeEffects(ctx){
        wires no ally targeting and can never field one against you, so
        absent means "the hero" — true for it, and the default keeps its
        behaviour identical. */
-    const heroTarget = !(opts && opts.target && opts.target.kind === "ally");
+    const heroTarget = !(opts && opts.target && opts.target.kind && opts.target.kind !== "hero");
+    /* AN ATTACK AIMED AT A SPECTRA PERMANENT HAS NO TARGET LEFT (v6.47). Spectra's trigger
+       destroyed it when the attack was put on the stack (`spectraStrike`), so at the attack
+       step CR 7.2.2c applies, verbatim: "If ... (C) the attack does not have any legal
+       attack-targets [1.4.5], instead the attack is cleared from the queue." That is BEFORE
+       CR 7.2.3, "the "attack" event occurs and effects that trigger from attacking are
+       triggered", so no "when this attacks" line fires; the card's play still happened. */
+    const cleared = !!(opts && opts.target && opts.target.kind === "spectra");
     /* WHICH HALF OF A SPLIT CARD IS BEING PLAYED (v3.34). `_half` is the
        declared answer and rides on the state, the same seam `_doBoost`
        and `_addPaid` use — a declaration is settled BEFORE the card
@@ -5612,7 +5637,7 @@ function makeEffects(ctx){
          Gated on the ATTACK-TARGET rather than on the hit: the trigger
          fires whether or not the swing connects, but "them" is the hero
          being attacked, and against an ally there is no them. */
-      if((fx.onAtkHero||[]).length){
+      if((fx.onAtkHero||[]).length && !cleared){
         if(heroTarget){
           n = runOps(n, fx.onAtkHero, card.name);
           n = winCheck(n);
@@ -5632,7 +5657,7 @@ function makeEffects(ctx){
 
          `parser.DECL_OPS` decides which kinds get here, and its header
          names the reason each of the others stays behind. */
-      if((fx.onAtk||[]).length){
+      if((fx.onAtk||[]).length && !cleared){
         n = runOps(n, fx.onAtk, card.name);
         n = winCheck(n);
         if(n.over) return n;
@@ -5702,7 +5727,7 @@ function makeEffects(ctx){
          defect — see the non-attack site below. `entersLeaves` is
          deliberately NOT listed here: a card that enters the arena is a
          permanent, and a permanent never reaches this branch. */
-      if(fx.optCost && (fx.optCost.trigger === "attacks" || fx.optCost.trigger === "play")){
+      if(fx.optCost && ((fx.optCost.trigger === "attacks" && !cleared) || fx.optCost.trigger === "play")){
         n.promptQ = [...(n.promptQ||[]), optCostSpec(fx.optCost, card, actorOf(n), false)];
       }
       /* THE MODAL OPTIONAL COST, ON THE ATTACK ROUTE (v3.90) — Jittery
@@ -5712,7 +5737,7 @@ function makeEffects(ctx){
       if(fx.millCost && fx.millCost.trigger === "attacks"){
         n.promptQ = [...(n.promptQ||[]), millCostSpec(fx.millCost, card, actorOf(n))];
       }
-      if(hasKw(card,"intimidate") && foe(n).hand.length){
+      if(hasKw(card,"intimidate") && foe(n).hand.length && !cleared){
         /* SEEDED, one body: `intimidateFoe` (S-2). */
         const _it = intimidateFoe(n); n = _it.game;
         declNote += ` Intimidate — ${_it.note}`;
@@ -9192,7 +9217,7 @@ function makeEffects(ctx){
 
   return {runOps, execute, afterDefenders, defendsTriggers, resolveClash, resolveStack, afterDiscard, payAddCost, fileAttack, allyDeath, creditHeroDmg, noteAttacked,
           linkPumps, linkPayload, attackRx, preventDamage, autoPitch, applyAnswer,
-          activateHandAbility, playAtSpeed, fileDestroyedGear, effPowerNow,
+          activateHandAbility, playAtSpeed, fileDestroyedGear, effPowerNow, spectraStrike,
           /* `applyDefMod` IS NO LONGER EXPOSED (v4.57). It was exposed at
              v4.53 for exactly one outside caller — `index.html`'s
              `confirmDefPay`, the trainer's own pause for one of the four
