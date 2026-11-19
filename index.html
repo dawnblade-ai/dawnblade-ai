@@ -349,6 +349,10 @@ img{display:block;max-width:100%}
 
 /* card frame overlay — real FaB corner order */
 .cfw{position:relative;width:100%}
+/* the face's box is reserved before the lazy image arrives, so a rail of cards
+   does not grow under the finger as the art loads (and the offline stand-in
+   takes the room a real face takes) */
+.cfw:not(.hz)>img{width:100%;aspect-ratio:5/7;object-fit:cover}
 .b-pit,.b-cost,.b-atk,.b-def{position:absolute;font-family:'Spline Sans Mono';font-weight:700;font-size:12px;line-height:1;padding:2px 5px;color:#FFF;background:rgba(16,12,10,.92);border:1px solid var(--line)}
 .b-pit{top:2px;left:2px;border:none}
 .b-pit.p1{background:var(--r)}
@@ -614,7 +618,14 @@ img{display:block;max-width:100%}
 .centerslot .featfoe{width:100%;aspect-ratio:5/7;gap:4px}
 .centerslot .featfoe b{font-size:36px}
 .centerslot .featfoe .fx2{font-size:12px;padding:1px 7px}
-.centerslot .featempty{width:100%;aspect-ratio:5/7;border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;text-align:center;font-size:9px;color:var(--bone-dim);padding:8px;line-height:1.45}
+/* the empty featured slot is a faint card SILHOUETTE at 60% (UX roadmap §3.1):
+   it said "a card lands here" in a dashed box the size of a real card, the
+   loudest thing on an empty board */
+.centerslot .featempty{width:60%;aspect-ratio:5/7;border:1px solid rgba(232,223,208,.1);border-radius:6px;
+  background:linear-gradient(160deg,rgba(232,223,208,.05),rgba(232,223,208,.012));position:relative;
+  display:flex;align-items:flex-end;justify-content:center;text-align:center;font-size:9px;color:var(--bone-dim);opacity:.8;padding:8px 6px;line-height:1.4}
+.centerslot .featempty::before{content:"";position:absolute;top:40%;left:50%;width:28%;aspect-ratio:1;
+  transform:translate(-50%,-50%) rotate(45deg);border:1px solid rgba(232,223,208,.14)}
 .centerslot .linkchip{font-size:9px;text-align:center}
 .mini{border:1px solid var(--line);background:var(--forge);padding:4px 6px;font-size:10.5px;display:flex;flex-direction:column;gap:1px;line-height:1.3;word-break:normal;overflow-wrap:break-word;hyphens:none}
 .mini.atk{border-left:2px solid var(--r)}
@@ -638,6 +649,14 @@ img{display:block;max-width:100%}
 .phand .hc{flex:none;width:80px;position:relative;padding:0;background:var(--forge);border:1px solid var(--line);scroll-snap-align:start;transition:transform .12s}
 .phand .hc.sel{transform:translateY(-6px);border-color:var(--y);box-shadow:0 0 0 2px var(--y)}
 .phand .hc.dis{opacity:.4}
+/* the rail's hidden-count (`RailMore`): zero-width and sticky to the right
+   edge, so it adds no tile and rides the scroll; paint only, never the tap */
+.phand .railmore{flex:none;width:0;align-self:stretch;position:sticky;right:0;pointer-events:none;margin-left:-5px}
+.phand .railmore.on::before{content:"";position:absolute;top:-7px;bottom:-7px;right:-8px;width:34px;
+  background:linear-gradient(to right,rgba(46,36,29,0),var(--forge2) 78%)}
+.phand .railmore b{position:absolute;right:-5px;top:50%;transform:translateY(-50%);font-family:'Spline Sans Mono';
+  font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--y);background:var(--ink);border:1px solid var(--y);padding:2px 5px;border-radius:2px}
+.phand .hlbl{scroll-snap-align:start}
 
 /* v2.07 prompt sheet — the rulings ask for a popup that leaves the hand
    visible, so it docks above the action bar instead of covering the screen. */
@@ -2968,6 +2987,36 @@ function LifeHud({me, them, frost}){
       </div>
     </div>
   );
+}
+/* THE RAIL SAYS WHAT IT HIDES — both boards (UX roadmap §3.1). The hand rail
+   is a sideways scroller of 80px tiles and the fifth card was clipped by the
+   pane's edge with nothing saying more lay beyond it. This sits as the rail's
+   LAST child, sticky to its right edge: a fade and a count of the tiles not
+   fully shown, as "+3", gone once the last tile is. It is paint only
+   (pointer-events off), so a tap on the clipped card under it still peeks
+   that card: a badge that took the tap would be a dead control. It reads the
+   rail's own boxes, so it serves whichever board renders it. */
+function RailMore(){
+  const ref = uR(null);
+  const [n, setN] = uS(0);
+  uE(()=>{
+    const rail = ref.current && ref.current.parentElement;
+    if(!rail) return;
+    const count = () => {
+      const edge = rail.getBoundingClientRect().right;
+      let k = 0;
+      for(const c of rail.children) if(c.classList.contains("hc") && c.getBoundingClientRect().right > edge + 1) k++;
+      setN(k);
+    };
+    count();
+    rail.addEventListener("scroll", count, {passive:true});
+    const ro = typeof ResizeObserver === "function" ? new ResizeObserver(count) : null;
+    if(ro) ro.observe(rail);
+    const mo = new MutationObserver(count);
+    mo.observe(rail, {childList:true});
+    return () => { rail.removeEventListener("scroll", count); if(ro) ro.disconnect(); mo.disconnect(); };
+  },[]);
+  return <span ref={ref} className={"railmore"+(n?" on":"")} aria-hidden="true">{n ? <b>+{n}</b> : null}</span>;
 }
 function Ticker({feed}){
   const [idx,setIdx]=uS(0);
@@ -6332,6 +6381,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                     {p.sel && <span className="defsel">⛨ DEF</span>}
                     <CardFrame card={p.card} zone={p.zone}/>
                   </button>))}
+                <RailMore/>
               </div>
             </div>
             {/* PANE 3 — CHAIN: the links */}
@@ -9108,6 +9158,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                     onClick={ok ? tapTwice(me.arsenal,"play from arsenal",()=>fire(a)) : ()=>setZoom(me.arsenal)}>
                     <CardFrame card={me.arsenal} zone="arsenal"/></button>;
                 })()}
+                <RailMore/>
               </div>
             </div>
 

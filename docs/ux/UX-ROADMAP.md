@@ -41,6 +41,7 @@ type and hierarchy here, not art. Before/after pairs sit beside this file
 | B | `LifeHud` — shared life HUD replacing both hand-copied scorebars: both totals 30px display face, action points and floating resources as labelled chips (gold when non-zero), name ellipsized, a changed total pulses once (re-keyed span). Trainer still shows the Frostbite count. | `LifeHud` above `Ticker`; CSS before `.scorebar` |
 | C | Press feedback: buttons sink 3% and brighten on `:active`; hand and hero tiles brighten only (their transform carries peek/selected). Off under `prefers-reduced-motion`. | end of `<style>` |
 | D | Status-line buttons painted as gold-outlined mono chips (10.5px); the `::after` finger area unchanged. Empty arsenal drawn as a dashed 5:7 slot (`:has()`, CSS only). Roster names 9.5px. | CSS |
+| E | §3 step 1 — `RailMore`, shared by both hand rails: the rail's last child, zero-width and sticky to its right edge, paints a fade and a gold "+N" chip counting the tiles not fully shown; gone at the rail's end; `pointer-events:none`, so a tap on it peeks the clipped card under it (no dead tap). The rail's "Hand" label now snaps into view. The empty featured slot is a faint 60% card silhouette (diamond, rounded edge, "Most recently played lands here" at its foot). A card face reserves its 5:7 box before the lazy image loads (`.cfw:not(.hz)>img`), so the rail no longer grows as art arrives and offline drives see online geometry (the stand-in PNG is 50x70: before this, offline rail tiles drew 72px tall instead of 111). | `RailMore` after `LifeHud`; CSS after `.phand .hc.dis`, `.centerslot .featempty`, `.cfw` |
 
 Verified: both babel blocks compile; `node tools/page.js` 79/79 PASS (same as before);
 box drive at 393x852 and 360x740 — HUD inside its box with the longest foe name, life
@@ -48,9 +49,11 @@ box drive at 393x852 and 360x740 — HUD inside its box with the longest foe nam
 roster, status-line button owns its finger area above, below and beside, no scrollWidth
 overflow, no page errors.
 
+Step 1 verified: babel blocks compile; `node tools/page.js` 78/78 PASS (78 on this base, before and after); box drive on both boards at 393x852 and 360x740: chip reads "+3" / "+4" and equals the count of clipped tiles, sits inside the rail, takes no taps (a tap at its centre peeks the card under it), disappears at the rail's end, the silhouette is 60% of the slot and centred, no scrollWidth overflow, no page errors. `before-rail.jpg` / `after-rail.jpg`.
+
 ## 3. The plan — one session each, in order
 
-1. **Hand rail and peek polish.** Rail tiles are 80px and clip the fifth card with no
+1. **DONE (see §2).** **Hand rail and peek polish.** Rail tiles are 80px and clip the fifth card with no
    hint. Add an edge fade + count chip ("+2") on the rail, and make the chain pane's
    empty featured slot a faint card silhouette at ~60% height so the rail can grow.
    Check: `--peekbot` still tracks (UI-GUIDE §5), page.js `peek` checks.

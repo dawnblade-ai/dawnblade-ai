@@ -108,6 +108,7 @@ board renders and the other hand-copies.
 | `Ticker` | 2506 | the feed |
 | `LifeHud` | (grep) | both life totals + the actor's action points / resources chips (2026-11-19, replaced two hand-copied `.scorebar`s) |
 | `EndPanel` | (grep) | the result screen for every ending on both boards; `WinPanel` / `DrawPanel` render through it (2026-11-19). Plan: `docs/ux/UX-ROADMAP.md` |
+| `RailMore` | (grep) | the hand rail's "+N" hidden-tile count and edge fade; the LAST child of each `.phand`, reads the rail's own boxes, paint only (2026-11-19, UX roadmap §3.1) |
 
 ### What is deliberately NOT shared — also verified
 
