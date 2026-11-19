@@ -5,6 +5,7 @@
   "description": "Dawnblade \u2014 FaB Silver Age sim. engine/ is the pure rules engine; index.html is the single-file trainer (served as-is by GitHub Pages).",
   "scripts": {
     "test": "node --test \"test/*.test.js\"",
+    "quick": "node tools/quick.js",
     "audit": "node tools/audit.js",
     "stack": "node tools/stack.js",
     "failstates": "node tools/failstates.js",

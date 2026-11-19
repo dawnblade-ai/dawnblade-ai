@@ -139,6 +139,8 @@ npm test 2>&1 | grep -E '^# (tests|pass|fail|skipped)'   # fail 0; skipped exact
 npm run scenes        # does each card DO what it prints (named observations)
 npm run fairness      # is any card STRONGER than printed (exits non-zero on a finding)
 ```
+- **Inner loop:** `npm run quick` (`-- <name>` narrows) skips the server-referee family (~60% of the CPU) and
+  prints only the summary; it is not the ship gate. Run `npm test` before a release and after any server/wire edit.
 - **Skipped must read 5** (the live-wire drills in `drift.test.js`; CI pins it). A drill
   that skipped is not a drill that passed.
 - After parser/card-text changes: `npm run audit` (read AUDIT.md; `--write-baseline`
