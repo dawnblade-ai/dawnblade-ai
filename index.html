@@ -573,7 +573,19 @@ img{display:block;max-width:100%}
    scout pane's last line off the bottom. The plate stays (it is the
    signature, and the primary tap should look like one); only the type
    comes down, and only on this screen. */
-.lo .actbar .battlebtn{font-size:22px;letter-spacing:.18em;padding:8px 8px}
+.lo .actbar .battlebtn{font-size:22px;letter-spacing:.18em;padding:10px 8px}
+/* ONE PLATE PER MODE (UX roadmap §3.3): the plate the foe picker chose, the
+   other board as a plain button under it, and the two notes folded into a
+   one-line disclosure. A hero's name rides on the plate, so it sets tighter
+   to stay one line ("Fight Lyath Goldmane — Steady" at 360px). */
+.lo .actbar>.battlebtn,.lo .actbar>.bigbtn{margin-top:0}
+.lo .actbar>.lo2{margin-top:6px;min-height:44px}
+.lo .actbar .battlebtn.lovs{font-size:19px;letter-spacing:.08em;padding:11px 8px}
+.lowhy summary{min-height:44px;display:flex;align-items:center;gap:10px;font-size:11.5px;color:var(--bone-dim);line-height:1.35;cursor:pointer;list-style:none}
+.lowhy summary::-webkit-details-marker{display:none}
+.lowhy summary::after{content:"why?";flex:none;margin-left:auto;font-family:'Spline Sans Mono';font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--y);border:1px solid var(--y);padding:2px 7px}
+.lowhy[open] summary::after{content:"less"}
+.lowhy p{font-size:11.5px;color:var(--bone-dim);line-height:1.5;margin:0 0 6px}
 /* AND THE RESERVE IS MEASURED, NOT STATED. This read `calc(100vh - 236px)`
    — a number written when the bar was one button tall. With two options
    and their disclosure the bar stands 163px at 393x852, so the fixed bar
@@ -6866,6 +6878,7 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
     onStart({gearIdx:sel, cuts, table:true, aiFoe: pickedFoe, sharp: !!pickedFoe && aiLevel==="sharp"});
   };
   const foeHero = aiFoe && aiFoe !== "random" ? HEROES.find(x=>x.k===aiFoe) : null;
+  const vsAI = aiFoe !== null;
   const deckRows = d.deck.map((e,ei)=>({ei, e, c:resolveEntry(db,e,saSet)}));
   const PD = {1:"var(--r)",2:"var(--y)",3:"var(--b)"};
   const Tile = ({x}) => {
@@ -7116,18 +7129,32 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
                   against the policy piloting each hero. So the label says
                   "harder", because a player who loses nine straight is
                   owed the reason before the game rather than after it. */}
-              <button className="battlebtn clip" style={{marginTop:0}} onClick={start}><span>Fight</span></button>
-              <p className="note" style={{marginTop:8,marginBottom:0}}>
-                The training dummy — a scripted, tuned opponent. Start here.
-              </p>
-              <button className="bigbtn alt" style={{marginTop:8}} onClick={startTable}>
-                Fight the new engine — harder
-              </button>
+              {/* ONE PRIMARY, AND THE FOE PICKER DECIDES IT (UX roadmap §3.3). The
+                  bar held two primary-looking plates with a paragraph under
+                  each, and the striped FIGHT stayed the trainer's even with
+                  an AI hero picked on the Foe screen: a player who chose Kayo
+                  and tapped the big button met the dummy. Now the Dummy makes
+                  the trainer the plate, any AI hero makes the table the plate
+                  and names it, and the other board is the plain button under
+                  it. Each button keeps its own handler; CSS `order` puts the
+                  plate first. The two notes fold into one line that opens. */}
+              <button data-start="trainer" className={vsAI ? "bigbtn alt lo2" : "battlebtn clip"}
+                style={{order:vsAI?2:1}} onClick={start}>
+                {vsAI ? "Train against the dummy instead" : <span>Fight the dummy</span>}</button>
+              <button data-start="table" className={vsAI ? "battlebtn clip lovs" : "bigbtn alt lo2"}
+                style={{order:vsAI?1:2}} onClick={startTable}>
+                {vsAI ? <span>Fight {foeHero ? heroShort(foeHero) : "a random hero"} — {aiLevel==="sharp" ? "Sharp" : "Steady"}</span>
+                      : "The dummy at the table — harder"}</button>
               {/* THE NOTE SAYS ONLY WHAT IS MEASURED (v5.35). No win rate
                   is quoted for a hero seat: none was measured per pair on
                   this release, and a number the player trusts has to be one
                   somebody took. */}
-              <p className="note" style={{marginTop:6,marginBottom:0}}>
+              <details className="lowhy" style={{order:3}}>
+                <summary>{!vsAI ? "The dummy is scripted and tuned. Start here."
+                  : aiLevel==="sharp" ? "Sharp plays out each line before it commits."
+                  : "Steady plays by rules of thumb: easier to beat."}</summary>
+                <p className="lotrain">The training dummy — a scripted, tuned opponent. Start here.</p>
+                <p className="lotable">
                 {aiFoe===null
                   ? <>The same 30-card pile, but played as a real seat: it holds a hand,
                     pays costs and blocks like a person. <b>Untuned and currently
@@ -7135,7 +7162,8 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
                   : <>An AI pilots {foeHero ? heroShort(foeHero) : "a random hero"}, playing <b>{aiLevel==="sharp"
                     ? "Sharp: it plays out each way to start its turn, and each way to block, before it commits"
                     : "Steady: the rules of thumb self-play uses"}</b>. Pick the opponent and how it plays on the Foe screen.</>}
-              </p>
+                </p>
+              </details>
             </>}
       </div>
       <CardModal card={zoom} onClose={()=>setZoom(null)}/>

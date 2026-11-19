@@ -167,7 +167,7 @@ function judgeBoxes({ W, H }) {
     const hero = await toLoadout(i, where0); if (!hero) return;
     const where = `trainer ${hero}`;
     await measure(where + " loadout");
-    if (!(await click(page.locator(".actbar .battlebtn"), "Fight", where))) return;
+    if (!(await click(page.locator('.lo .actbar [data-start="trainer"]'), "Fight", where))) return;
     await page.waitForSelector(".board", { timeout: 8000 });
     await measure(where + " board");
     let stuck = 0, lastSig = "", lastPick = null;
@@ -219,7 +219,7 @@ function judgeBoxes({ W, H }) {
     const foe = await foeBtn.getAttribute("aria-label");
     await click(foeBtn, "AI foe", where);
     await measure(where + " loadout vs " + foe);
-    if (!(await click(btn(/^Fight the new engine/), "Fight the new engine", where))) return;
+    if (!(await click(page.locator('.lo .actbar [data-start="table"]'), "Fight at the table", where))) return;
     await page.waitForSelector(".board", { timeout: 15000 });
     await measure(where + " board");
     let lastSeq = -1, still = 0;

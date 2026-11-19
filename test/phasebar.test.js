@@ -138,7 +138,7 @@ test("the trainer keeps its own, because there `mode` is the live one", () => {
    ============================================================ */
 test("the fight buttons describe the OPPONENT, not the architecture", () => {
   const bar = HTML.slice(HTML.indexOf('onClick={startTable}') - 3000,
-                         HTML.indexOf('onClick={startTable}') + 800);
+                         HTML.indexOf('onClick={startTable}') + 1800);
   assert.ok(!/>\s*Fight at the table — one engine/.test(HTML),
     "\"one engine\" is an architecture note wearing a button's clothes");
   assert.match(bar, /harder/,
@@ -148,7 +148,10 @@ test("the fight buttons describe the OPPONENT, not the architecture", () => {
      deleted, which is v2.44's Reaction-contains-action trap in a drill
      rather than in the parser. The sabotage that finds it is deleting the
      word from the first note only. */
-  const trainerNote = bar.slice(bar.indexOf("<span>Fight</span>"), bar.indexOf("onClick={startTable}"));
+  /* Since the UX roadmap's step 3 (2026-11-19) the two notes live in the
+     bar's one-line disclosure, each in its own paragraph: the trainer's is
+     `lotrain`, sliced up to the table's (`lotable`, which says "Untuned"). */
+  const trainerNote = bar.slice(bar.indexOf("className=\"lotrain\""), bar.indexOf("className=\"lotable\""));
   assert.ok(/(?:^|[^u])tuned/.test(trainerNote),
     "the trainer's own note must call it the tuned one: " + JSON.stringify(trainerNote.slice(0, 300)));
 });
@@ -206,8 +209,10 @@ test("the loadout's action bar is a COLUMN, because it holds a stack", () => {
   const i = HTML.indexOf('<div className="actbar" ref={bar}>');
   assert.ok(i > 0, "the loadout's action bar moved — re-anchor this drill");
   const bar = HTML.slice(i, HTML.indexOf("<CardModal", i));
-  const kids = (bar.match(/\n\s{14}<(?:button|p)\b/g) || []).length;
-  assert.ok(kids >= 4, "v3.51 puts two options and their disclosure in this " +
+  /* two options and their disclosure: since the UX roadmap's step 3 the
+     disclosure is ONE <details> (the notes fold into it), so three children */
+  const kids = (bar.match(/\n\s{14}<(?:button|p|details)\b/g) || []).length;
+  assert.ok(kids >= 3, "v3.51 puts two options and their disclosure in this " +
     "bar; found " + kids + " stacked children");
 
   assert.match(CSS, /\.lo \.actbar\{[^}]*flex-direction:column/,

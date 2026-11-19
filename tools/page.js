@@ -467,7 +467,7 @@ if(require.main === module){
     if(await toLoadout("trainer")){
       await screen("trainer: loadout");
       await jumpHits("trainer: loadout", ".lo");
-      if(await click(page.locator(".actbar .battlebtn"), "Fight")){
+      if(await click(page.locator('.lo .actbar [data-start="trainer"]'), "Fight")){
         await page.waitForSelector(".board", { timeout: 8000 });
         await screen("trainer: board", "actions: " + names(await handBar()));
         await jumpHits("trainer", ".board");
@@ -485,7 +485,7 @@ if(require.main === module){
        blanked the page. Hand the dummy the first turn, defend with the first
        card the rail offers, and play the step out. */
     if(await toLoadout("block", 1)){
-      if(await click(page.locator(".actbar .battlebtn"), "block: Fight")){
+      if(await click(page.locator('.lo .actbar [data-start="trainer"]'), "block: Fight")){
         await page.waitForSelector(".board", { timeout: 8000 });
         let bar = "";
         for(let i = 0; i < 20 && !/take it/i.test(bar); i++){
@@ -558,7 +558,7 @@ if(require.main === module){
           await lv.nth(0).click(); const sh = await lv.evaluateAll(bs => bs.map(b => b.classList.contains("on")));
           row(!st[0] && st[1] && sh[0] && !sh[1], "table: the level follows the tap", `steady ${st} · sharp ${sh}`);
         }
-        if(await click(btn(/^Fight the new engine/), "Fight the new engine")){
+        if(await click(page.locator('.lo .actbar [data-start="table"]'), "Fight at the table")){
           await page.waitForSelector(".board", { timeout: 15000 });
           /* the top nav names the foe hero only on the table board (the trainer says "Opp") */
           const top = (await page.locator(".screennav").innerText()).replace(/\s+/g, " ");
@@ -608,7 +608,7 @@ if(require.main === module){
         const act = DawnSparring.act; DawnSparring.act = (st, i) => i === 1 ? { t: "concede" } : act(st, i);
         window.__restoreAct = () => { DawnSparring.act = act; };
       });
-      if(!(await click(btn(/^Fight the new engine/), label + ": fight"))) return;
+      if(!(await click(page.locator('.lo .actbar [data-start="table"]'), label + ": fight"))) return;
       await page.waitForSelector(".board", { timeout: 15000 });
       /* the jump row stays one line with the longest foe name in the pool
          ("▲ LYATH GOLDMANE" wrapped and grew the row, 1.0 polish audit) */
@@ -688,7 +688,7 @@ if(require.main === module){
         await p2.waitForSelector(".lo .actbar", { timeout: 8000 });
         const tiles = await p2.locator(".aifoe button").count(), recs = await p2.locator(".aifoe .frec").count();
         await p2.locator(".aifoe button").nth(2).click();
-        await p2.getByRole("button", { name: /^Fight the new engine/ }).click();
+        await p2.locator('.lo .actbar [data-start="table"]').click();
         await p2.waitForSelector(".board", { timeout: 15000 });
         await p2.evaluate(() => window.__dawnTable.session.submit({ t: "concede" }));
         const head = await p2.waitForSelector(".reveal", { timeout: 15000 }).then(() => p2.locator(".reveal h2").innerText()).catch(() => "(no reveal)");
