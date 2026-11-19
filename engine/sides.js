@@ -158,7 +158,7 @@ const SIDE_FIELDS = [
    every attack action card this seat played ("the FIRST attack action card
    with blood debt you play each turn"). All public, all recorded in
    `effects.js`. */
-const freshHist = () => ({atk:0,non:0,arc:0,aura:0,made:0,booed:0,blue:0,red:0,trans:0,blueGY:0,atkNames:[],auraAtkNames:[],playTy:[],playNames:[],arcTaken:0,gyFirstKw:[],soulPut:[],madeNames:[],attacked:0,heroDmg:0,banPlay:0,runes:0,actNames:[],atkKws:[]});
+const freshHist = () => ({atk:0,non:0,arc:0,aura:0,made:0,booed:0,blue:0,red:0,trans:0,blueGY:0,atkNames:[],auraAtkNames:[],playTy:[],playNames:[],arcTaken:0,gyFirstKw:[],soulPut:[],madeNames:[],attacked:0,heroDmg:0,banPlay:0,runes:0,actNames:[],atkKws:[],atkTy:[]});
 
 function makeSide(o){
   o = o || {};

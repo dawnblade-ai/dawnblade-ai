@@ -711,6 +711,24 @@ function classifyClause(raw){
     if(!sub || sub.status!=="run") return null;
     return R([["soulSelf"], ...sub.ops]);
   }
+  /* ---- LAY LOW (v6.47, Prism reader 7) — two lines about a MARK -------------------------
+     "If you are marked, you can't play this." is a play gate: `fx.playIf` {kind: "notMarked"}
+     is hoisted in `fxParse` and answered by `effects.playIfOk` on both boards; the clause
+     itself is accounted for here. "If the attacking hero is marked, their next attack this
+     turn gets -1{p}." is the card's effect: the condition is asked as it resolves (the
+     defence reaction's controller is the actor, so the attacking hero is `foe`) and the
+     -N rides on that hero's `buffNext`, spent by their next attack and swept with the
+     turn's grants. */
+  if(/^if you are marked, you can't play this$/.test(c))
+    return NOOP("a play gate — a marked hero cannot play this (playIfOk)");
+  { const mk = c.match(/^if the attacking hero is marked, their next attack this turn gets -(\d+)\s*\{p\}$/);
+    if(mk) return R([["markedFoeNext", -mk[1]]]); }
+  /* HERALD OF JUDGMENT (v6.47): "the defending hero can't play cards from their banished
+     zone until the end of their next turn" — a `foeNextTurn` lock, `noBanPlay`, live at
+     once (the rest of this turn is inside "until the end of their next turn", the halving's
+     reading) and read by `nextTurnBars` with the zone the card is played from. */
+  if(/^the defending hero can't play cards from their banished zone until the end of their next turn$/.test(c))
+    return R([["foeNextTurn", "noBanPlay", 0]]);
   /* A NAMED-KEYWORD GATE IS STILL A GATE, and "instead" still REPLACES
      inside one. The generic if/when/while handler below marks a conditional
      payload containing "instead" so `execute` suppresses the unconditional
@@ -2068,6 +2086,11 @@ function classifyClause(raw){
      single 6+ power blocker", which is what the pop site asked for and
      not what the keyword prints — a `noop` must describe the clause in
      front of it (v3.16), and this one described an approximation. */
+  /* SPECTRA (CR 8.3.14, v6.47): "This can be attacked." and "When this becomes the target
+     of an attack, destroy this." Both halves are read off the printed keyword
+     (`printedKw`) where they act: the target list (`game.attackTargets`, judge's
+     `ATTACKABLE`) and the trigger (`effects.spectraStrike`, judge's `commitPlay`). */
+  if(/^spectra$/.test(c)) return NOOP("static — this can be attacked, and it is destroyed when an attack targets it (the attack is then cleared)");
   if(/^phantasm$/.test(c)) return NOOP("drawback — a non-Illusionist attack action card with 6 or more power destroys this attack (checked when defenders are declared)");
   /* RULING: "the crowd boos you" leaves a per-turn state and nothing else;
      Reviled is a static talent. Other cards read the state. */
@@ -2398,6 +2421,18 @@ function classifyClause(raw){
      with the +3 landing and the piercing silently dropped. */
   if(m=c.match(/^(?:this|it) (?:gets?|gains?|has) piercing (\d+)$/))
     return R([["piercing", +m[1]]]);
+  /* AN OR-GROUP OF WHOLE QUALIFIERS (v6.47, Luminaris): "target angel attack or attack
+     action card with Herald in its name gets go again". `attackQual`'s word groups OR the
+     words BEFORE "attack" and share one tail, so a tail that belongs to one alternative only
+     refused the clause. Each alternative is read whole (its own words and its own tail),
+     every one must read, and the qualifier is `{any: [...]}`, which `qualMatches` answers
+     as either. Two alternatives each naming "attack" is the only shape claimed. */
+  if(m=c.match(/^target (.*?\battack\b.*?) or (.*?\battack\b.*?) (?:gets?|gains?) go again$/)){
+    const alt = s => { const a = s.match(/^(.*?)\battack\b(.*)$/); return a ? attackQual(a[1], a[2]) : false; };
+    const qs = [alt(m[1]), alt(m[2])];
+    if(qs.some(q => !q)) return null;
+    return R([["ga", 1, {any: qs}]]);
+  }
   /* the go-again twin of the target-attack pump, restriction and all */
   if(m=c.match(/^target ([^.]*?)\battack\b([^.]*?) (?:gets?|gains?) go again$/)){
     const q2 = attackQual(m[1], m[2]);
@@ -3844,6 +3879,48 @@ function classifyClause(raw){
      declaration, and applies while the attack is the turn's first. */
   if(m=c.match(/^your first attack each turn gets \+(\d+)\s*\{p\}$/))
     return R([["noop", "static — read off the arena at the turn's first attack"]], {firstAtk: +m[1]});
+  /* ---- "LOSES AND CAN'T GAIN PHANTASM" (v6.47, Prism reader 5b) ------------------------
+     Passing Mirage: "Your first Illusionist attack each turn loses and can't gain phantasm."
+     A STATIC on an aura (`firstAtk`'s shape): `fx.firstLoseKw` = {q, kw}, read off the
+     arena when an attack is declared (`effects.execute`), and it applies while that attack
+     is the turn's first one the qualifier matches (`hist.atkTy`). Dream Weavers: "The next
+     Illusionist attack action card you play this turn loses and can't gain phantasm" — a
+     one-shot grant on the `buffNext` queue with no power and a `loseKw` rider, spent by
+     the card it matches. Both land on the chain link as `pend.loseKw`, and the one site that
+     reads phantasm (`afterDefenders`) asks it: "loses" strikes the printed keyword and
+     "can't gain" a granted one, and that site is where either would act. The keyword is
+     closed to phantasm, the only one the pool says this of. */
+  if(m=c.match(/^your first (.+?) attack each turn loses and can't gain (phantasm)$/)){
+    const q = attackQual(m[1], "");
+    if(q === false) return null;
+    return R([["noop", "static — read off the arena when the turn's first such attack is declared"]], {firstLoseKw: {q, kw: m[2]}});
+  }
+  if(m=c.match(/^the next (.+?) attack (action cards?) you play this turn loses and can't gain (phantasm)$/)){
+    const q = attackQual(m[1], m[2] + " you play this turn");
+    if(q === false) return null;
+    return R([["buffNext", 0, q, {loseKw: m[3]}]]);
+  }
+  /* ---- "-N{p} WHILE DEFENDING" (v6.47, Prism reader 6) ---------------------------------
+     Herald of Triumph: "Attack action cards get -1{p} while defending this." A STATIC on the
+     attack (`fx.defAtkPow`), applied to the declared wall's attack action cards where a
+     defender's power is read: phantasm's pop (`afterDefenders`) is the only such reader, so
+     a 6{p} blocker meets this Herald as a 5. Herald of Victoria's discard instant: "Until end
+     of turn, attack action cards your opponents control get -1{p} while attacking and
+     defending." A "this turn" standing grant on the OPPONENT's `atkBuff` ({amt: -N, q:
+     attack action card, def: true}): `linkPumps` applies it while attacking (every standing
+     grant is read there) and the pop site while defending. */
+  if(m=c.match(/^attack action cards get -(\d+)\s*\{p\} while defending this$/))
+    return R([["noop", "static — the defending attack action cards' power, read when defenders are declared"]], {defAtkPow: -m[1]});
+  if(m=c.match(/^until end of turn, attack action cards your opponents control get -(\d+)\s*\{p\} while attacking and defending$/))
+    return R([["foeAtkBuff", -m[1], {aac: true}, "turn"]]);
+  /* "THE FIRST <qual> ATTACK ACTION CARD YOU PLAY EACH TURN GETS +N{p}" (v6.47, Pierce
+     Reality) — `firstAtk`'s static with a qualifier and the word PLAY: a weapon swing is
+     activated, not played, so only a card played counts toward "first" (`hist.atkTy`). */
+  if(m=c.match(/^the first (.+?) attack (action cards?) you play each turn gets \+(\d+)\s*\{p\}$/)){
+    const q = attackQual(m[1], m[2] + " you play");
+    if(q === false) return null;
+    return R([["noop", "static — read off the arena when the turn's first such card is played"]], {firstPlayBuff: {q, n: +m[3]}});
+  }
   /* "INTIMIDATE TARGET HERO" IS AN OP (S-2, QA-A). It was a NOOP whose text
      described the trainer dummy ("live — the dummy loses a card…") and
      nothing ran: the real intimidate lived only on an attack carrying the
@@ -4307,6 +4384,7 @@ const qualColour = qual => !qual || qual.pitch == null ? null
   : (Object.keys(COLOR_PITCH).find(k => COLOR_PITCH[k] === qual.pitch) || ("pitch " + qual.pitch));
 function qualLabel(qual, o){
   if(!qual) return "an attack";
+  if(Array.isArray(qual.any)) return qual.any.map(q => qualLabel(q, o)).join(" or ");
   const pre = qual.g ? qual.g.map(g => g.map(qualWord).join(" ")).join(" or ") + " " : "";
   const post = [];
   if(qual.kw) post.push("with " + qual.kw);
@@ -4338,6 +4416,8 @@ function qualMatches(qual, card, opts){
      qualifier must cost a buff, never a session. */
   if(Array.isArray(qual)) return false;
   opts = opts || {};
+  /* AN OR-GROUP OF WHOLE QUALIFIERS (v6.47): either alternative, each with its own tail. */
+  if(Array.isArray(qual.any)) return qual.any.some(q => !!q && qualMatches(q, card, opts));
   const c = card || {};
   if(qual.g){
     /* A CARD FEALTY MADE DRACONIC IS ONE (v5.53) — the stamp is the played
@@ -6774,6 +6854,10 @@ function fxParse(card){
     /* v4.83, the same rule a third time: a board static the declaration
        reads, forwarded or it is a noop that does nothing. */
     if(r.firstAtk) fx.firstAtk = (fx.firstAtk || 0) + r.firstAtk;
+    /* v6.47 (Prism): two more board statics the declaration reads, forwarded. */
+    if(r.firstLoseKw) fx.firstLoseKw = [...(fx.firstLoseKw || []), r.firstLoseKw];
+    if(r.firstPlayBuff) fx.firstPlayBuff = [...(fx.firstPlayBuff || []), r.firstPlayBuff];
+    if(r.defAtkPow) fx.defAtkPow = (fx.defAtkPow || 0) + r.defAtkPow;
     /* A DROPPED QUOTED ABILITY MUST NOT REPORT AS READ (v3.40).
 
        `quotedOnHit` returns null on a payload it cannot read, and v3.10
@@ -7523,6 +7607,9 @@ function fxParse(card){
   else if(pm = tl.match(/play this only if an? (red|yellow|blue) card has been put into your soul this turn/))
     fx.playIf = {kind:"soulPitch", pitch:{red:1, yellow:2, blue:3}[pm[1]],
                  why:`no ${pm[1]} card has been put into your soul this turn`};
+  /* LAY LOW (v6.47): "If you are marked, you can't play this." */
+  else if(/\bif you are marked, you can.?t play this/.test(tl))
+    fx.playIf = {kind:"notMarked", why:"you are marked"};
   /* AN UNREAD PLAY CONDITION REFUSES — the activation gate's rule (v3.04),
      one gate over. Measured, no pool record reaches it today. */
   else if(/play this only if/.test(tl))
@@ -8785,8 +8872,15 @@ function nextTurnHas(sd, kind){
      BASE {p}              the printed number. A buff must not lift a
                            card over the line, and a debuff must not
                            push one under it. */
-function nextTurnBars(sd, card){
-  if(!card || !isAtkActionCard(card)) return null;
+function nextTurnBars(sd, card, from){
+  if(!card) return null;
+  /* HERALD OF JUDGMENT (v6.47): "can't play cards from their banished zone until the end of
+     their next turn". Live from the hit (an unarmed entry is this turn, an armed one their
+     next), gone when the armed entry is cleared at the end of their turn. A card played, not
+     an ability: the caller names the zone. */
+  if(from === "banish" && ((sd && sd.nextTurn) || []).some(e => e && !e.spent && e.kind === "noBanPlay"))
+    return "cards can't be played from the banished zone until the end of this hero's next turn";
+  if(!isAtkActionCard(card)) return null;
   for(const e of ((sd && sd.nextTurn) || [])){
     if(!e || !e.ready || e.spent || e.kind !== "noSmallAtk") continue;
     if((card.power || 0) <= (e.amt || 0))

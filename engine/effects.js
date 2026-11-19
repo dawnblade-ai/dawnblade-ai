@@ -136,12 +136,20 @@ const RIDER_OP_WORDS = {
   tapFoeHero:    o => "tap them" + (o[2] && o[2].allies ? " and all allies they control" : ""),
 };
 const RIDER_TOOK = {foeDiscard: "if they do", foeArsDestroy: "if one is destroyed"};
+/* THE KEYWORDS THIS ATTACK LOSES AND CAN'T GAIN (v6.47): a board static's (`_loseKw`, read at
+   the declaration) and a matched one-shot grant's (`buffQ` rider `loseKw`). Rides on `pend`. */
+function loseKwOf(fromBoard, matched){
+  const out = (fromBoard || []).slice();
+  for(const b of (matched || [])) if(b && b.rider && b.rider.loseKw && out.indexOf(b.rider.loseKw) < 0) out.push(b.rider.loseKw);
+  return out;
+}
 function riderWords(r){
   if(!r) return "";
   if(r.noDrx) return r.noDrx === true
     ? ", and no defence reaction can be played to its chain link"
     : ", and no defence reaction can be played from arsenal to its chain link";
   if(r.gaIf === "fused") return ", and it goes again if it was fused";
+  if(r.loseKw) return " loses and can't gain " + r.loseKw;
   const hit = [...(r.onHit || []), ...(r.onHitHero || [])];
   const tails = r.condOnHit || [];
   if(hit.length === 1 && hit[0][0] === "ga" && !tails.length)
@@ -1282,6 +1290,24 @@ function makeEffects(ctx){
       n = {...n, actor: was};
     }
     return n;
+  };
+  /* ---- SPECTRA: "WHEN THIS BECOMES THE TARGET OF AN ATTACK, DESTROY THIS" (v6.47) --
+     CR 8.3.14b, verbatim: "When an object with Spectra becomes the target of an attack, a
+     triggered-layer is put on the stack. When the triggered-layer resolves, the object with
+     Spectra is destroyed. If there are not other legal attack-targets, the combat chain
+     closes." The permanent on `seat`'s board leaves through `fileDestroyed` /
+     `payDestroyed` like every destroyed permanent (its controller's "when this is
+     destroyed" pays as that seat). The layer resolves AT ONCE, with no priority window of
+     its own: a stated approximation (`tools/approx.js` "spectra-trigger-at-once"). An entry
+     already gone (the held play re-entering) is a no-op. */
+  const spectraStrike = (s, seat, uid, srcName) => {
+    const b = ((s.sides[seat] || {}).board || []).find(x => x && x.uid === uid);
+    if(!b || !b.card) return s;
+    const sides = s.sides.slice();
+    sides[seat] = {...sides[seat], board: (sides[seat].board || []).filter(x => x !== b)};
+    let n = L({...s, sides}, `${b.card.name} has spectra — it is destroyed the moment ${srcName} targets it.`);
+    n = fileDestroyed(n, [b], seat);
+    return payDestroyed(n, [b.card], seat);
   };
   /* ---- AWAKEN (v6.47) — CR 8.5.43, verbatim: "Awaken is a discrete effect. To awaken a
      double-faced card, its back-face becomes its active face." 8.5.43a: "If a card is not a
@@ -2987,6 +3013,27 @@ function makeEffects(ctx){
           n = L(n, `${srcName}: ${take.map(c=>c.name).join(", ")} destroyed off the top of the deck.`);
         }
       }
+      else if(k==="markedFoeNext"){
+        /* LAY LOW (v6.47): "If the attacking hero is marked, their next attack this turn gets
+           -N{p}." Asked as the card resolves; the defence reaction's controller is the actor,
+           so the attacking hero is `foe`. Their `buffNext` is spent by their next attack's
+           declaration (`execute`) and swept with the turn's grants (`beginEndPhase`). */
+        if(foe(n).marked){
+          foeMut(n).buffNext = (foe(n).buffNext || 0) + v;
+          n = L(n, `${srcName}: ${foe(n).name} is marked — their next attack this turn gets ${v}{p}.`);
+        } else n = L(n, `${srcName}: ${foe(n).name} is not marked — nothing more.`);
+      }
+      else if(k==="foeAtkBuff"){
+        /* THE OPPONENT'S ATTACKS, WEAKENED (v6.47, Herald of Victoria): "until end of turn,
+           attack action cards your opponents control get -N{p} while attacking and
+           defending". A standing entry on the OTHER seat's `atkBuff` (swept with "this turn"
+           grants by `beginEndPhase`), applied while attacking by `linkPumps` and, because it
+           says `def`, to that seat's declared wall where a defender's power is read
+           (`afterDefenders`, phantasm). */
+        foeMut(n).atkBuff = [...(foe(n).atkBuff || []), {amt: v, q: op[2] || null, until: op[3] || "turn", def: true}];
+        const who = op[2] ? P.qualLabel(op[2]).replace(/^an? /, "") : "attack";
+        n = L(n, `${srcName}: ${sp(foe(n))} ${who}s get ${v}{p} while attacking or defending this turn.`);
+      }
       else if(k==="atkBuff"){
         /* A MULTIPLIED GRANT IS RESOLVED ONCE, HERE (v4.56). `op[4]` is a
            `PER_COUNT` countable and V of the Vanguard's counts what this
@@ -3665,7 +3712,14 @@ function makeEffects(ctx){
        wires no ally targeting and can never field one against you, so
        absent means "the hero" — true for it, and the default keeps its
        behaviour identical. */
-    const heroTarget = !(opts && opts.target && opts.target.kind === "ally");
+    const heroTarget = !(opts && opts.target && opts.target.kind && opts.target.kind !== "hero");
+    /* AN ATTACK AIMED AT A SPECTRA PERMANENT HAS NO TARGET LEFT (v6.47). Spectra's trigger
+       destroyed it when the attack was put on the stack (`spectraStrike`), so at the attack
+       step CR 7.2.2c applies, verbatim: "If ... (C) the attack does not have any legal
+       attack-targets [1.4.5], instead the attack is cleared from the queue." That is BEFORE
+       CR 7.2.3, "the "attack" event occurs and effects that trigger from attacking are
+       triggered", so no "when this attacks" line fires; the card's play still happened. */
+    const cleared = !!(opts && opts.target && opts.target.kind === "spectra");
     /* WHICH HALF OF A SPLIT CARD IS BEING PLAYED (v3.34). `_half` is the
        declared answer and rides on the state, the same seam `_doBoost`
        and `_addPaid` use — a declaration is settled BEFORE the card
@@ -5004,7 +5058,13 @@ function makeEffects(ctx){
          happen before the total is struck — Ravenous Rabble reveals, then
          drops by the revealed card's pitch. Excluded from pend.ops below so
          they cannot fire twice. */
-      actMut(n).hist = {...act(n).hist, atkNames:[...(act(n).hist.atkNames||[]), norm(card.name)]};
+      actMut(n).hist = {...act(n).hist, atkNames:[...(act(n).hist.atkNames||[]), norm(card.name)],
+        /* WHAT KIND OF ATTACK, AND WAS IT PLAYED (v6.47): "your first Illusionist attack each
+           turn" and "the first Illusionist attack action card you PLAY each turn" ask which
+           earlier attacks a qualifier matched. A stub `qualMatches` can read (type line and
+           structured types), recorded at the declaration, so the current attack is the last. */
+        atkTy:[...(act(n).hist.atkTy||[]), {tt: String(card.tt || "") + (card._drac ? " Draconic" : ""),
+          ty: (card.ty || []).slice(), play: P.isCardPlay(from)}]};
       /* THE OTHER SEAT'S HERO HAS BEEN ATTACKED (v6.43) — `noteAttacked`;
          an attack aimed at an ally attacked the ally (CR 1.4.5). */
       if(heroTarget) n = noteAttacked(n, 1 - actorOf(n));
@@ -5208,7 +5268,31 @@ function makeEffects(ctx){
           if(f > 0){ faBuff += f; n = L(n, `${b.card.name}: the first attack this turn gets +${f}{p}.`); }
         }
       }
-      const bonus = (fx.self||0)+(n._condSelf||0)+act(n).buffNext+qBuff+arsPow+banPow+payPenalty+frailPen+smBuff+faBuff;
+      /* "THE FIRST <qual> ATTACK ACTION CARD YOU PLAY EACH TURN GETS +N{p}" and "YOUR FIRST
+         <qual> ATTACK EACH TURN LOSES AND CAN'T GAIN PHANTASM" (v6.47, Pierce Reality and
+         Passing Mirage) — the same board static with a qualifier. `hist.atkTy` holds this
+         turn's declared attacks with this one last, so it is the first such attack exactly
+         when it matches and nothing earlier did. Read here, at the declaration, from every
+         permanent its controller has in the arena; two copies are two grants. */
+      const _firstOf = (q, playedOnly) => {
+        const seen = (act(n).hist.atkTy || []).filter(e => e && (!playedOnly || e.play));
+        return seen.length > 0 && qualMatches(q, card, {...qCtx})
+          && seen.filter(e => qualMatches(q, e, {atk: true, from: qCtx.from})).length === 1;
+      };
+      let fpBuff = 0;
+      const _loseKw = [];
+      for(const b of (act(n).board || [])){
+        if(!b || !b.card) continue;
+        const bfx = P.fxParse(b.card);
+        for(const g of (bfx.firstPlayBuff || []))
+          if(P.isCardPlay(from) && _firstOf(g.q, true)){
+            fpBuff += g.n; n = L(n, `${b.card.name}: ${card.name} is the first ${P.qualLabel(g.q).replace(/^an? /, "")} played this turn — +${g.n}{p}.`); }
+        for(const g of (bfx.firstLoseKw || []))
+          if(_firstOf(g.q, false) && _loseKw.indexOf(g.kw) < 0){
+            _loseKw.push(g.kw); n = L(n, `${b.card.name}: ${card.name} loses ${g.kw}.`); }
+      }
+      faBuff += fpBuff;
+      const bonus =(fx.self||0)+(n._condSelf||0)+act(n).buffNext+qBuff+arsPow+banPow+payPenalty+frailPen+smBuff+faBuff;
       /* CAPTURED HERE BECAUSE ITS SIBLING IS DELETED BELOW (v4.20).
          `_condPierce` is the condition loop's collector for a piercing
          grant, and `_condSelf` is cleared a few lines down — long before
@@ -5600,7 +5684,7 @@ function makeEffects(ctx){
          and that this play IS an attack), so the answer travels with the
          link rather than being re-derived over there — v3.24's rule about
          an argument threaded through two call sites. */
-      n.pend = {card, from, by: actorOf(n), defCap: _cap || null, total, ga, _qCtx: qCtx, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perChainHit"&&o[0]!=="perEquipDef"&&o[0]!=="piercing"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider, ...smRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:[...(fx.condOnHit||[]), ...qRiderCond], ...(qNoDrx.length ? {noDrx: qNoDrx} : {}), chargedWay, fused, ...(smCand ? {_sm: smCand} : {}), lateConds:fx.conds.filter(x=>isLateCond(x.cond)), lateOps:[...fx.ops.filter(o=>o[0]==="perEquipDef"||o[0]==="piercing"), ...(_pierce ? [["piercing", _pierce]] : [])], runeOnHit, ...(usurped ? {usurped: true} : {})};
+      n.pend = {card, from, by: actorOf(n), defCap: _cap || null, total, ga, _qCtx: qCtx, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perChainHit"&&o[0]!=="perEquipDef"&&o[0]!=="piercing"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider, ...smRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:[...(fx.condOnHit||[]), ...qRiderCond], ...(qNoDrx.length ? {noDrx: qNoDrx} : {}), chargedWay, fused, ...(loseKwOf(_loseKw, _qr).length ? {loseKw: loseKwOf(_loseKw, _qr)} : {}), ...(smCand ? {_sm: smCand} : {}), lateConds:fx.conds.filter(x=>isLateCond(x.cond)), lateOps:[...fx.ops.filter(o=>o[0]==="perEquipDef"||o[0]==="piercing"), ...(_pierce ? [["piercing", _pierce]] : [])], runeOnHit, ...(usurped ? {usurped: true} : {})};
       n.stack = [{k:"atk", label:`${card.name} — attack ${total}`}];
       /* ---- "WHEN THIS ATTACKS A HERO, …" FIRES AT DECLARATION (v3.46) --
          An attacks-trigger goes on the stack ABOVE the attack that
@@ -5612,7 +5696,7 @@ function makeEffects(ctx){
          Gated on the ATTACK-TARGET rather than on the hit: the trigger
          fires whether or not the swing connects, but "them" is the hero
          being attacked, and against an ally there is no them. */
-      if((fx.onAtkHero||[]).length){
+      if((fx.onAtkHero||[]).length && !cleared){
         if(heroTarget){
           n = runOps(n, fx.onAtkHero, card.name);
           n = winCheck(n);
@@ -5632,7 +5716,7 @@ function makeEffects(ctx){
 
          `parser.DECL_OPS` decides which kinds get here, and its header
          names the reason each of the others stays behind. */
-      if((fx.onAtk||[]).length){
+      if((fx.onAtk||[]).length && !cleared){
         n = runOps(n, fx.onAtk, card.name);
         n = winCheck(n);
         if(n.over) return n;
@@ -5702,7 +5786,7 @@ function makeEffects(ctx){
          defect — see the non-attack site below. `entersLeaves` is
          deliberately NOT listed here: a card that enters the arena is a
          permanent, and a permanent never reaches this branch. */
-      if(fx.optCost && (fx.optCost.trigger === "attacks" || fx.optCost.trigger === "play")){
+      if(fx.optCost && ((fx.optCost.trigger === "attacks" && !cleared) || fx.optCost.trigger === "play")){
         n.promptQ = [...(n.promptQ||[]), optCostSpec(fx.optCost, card, actorOf(n), false)];
       }
       /* THE MODAL OPTIONAL COST, ON THE ATTACK ROUTE (v3.90) — Jittery
@@ -5712,7 +5796,7 @@ function makeEffects(ctx){
       if(fx.millCost && fx.millCost.trigger === "attacks"){
         n.promptQ = [...(n.promptQ||[]), millCostSpec(fx.millCost, card, actorOf(n))];
       }
-      if(hasKw(card,"intimidate") && foe(n).hand.length){
+      if(hasKw(card,"intimidate") && foe(n).hand.length && !cleared){
         /* SEEDED, one body: `intimidateFoe` (S-2). */
         const _it = intimidateFoe(n); n = _it.game;
         declNote += ` Intimidate — ${_it.note}`;
@@ -7605,8 +7689,21 @@ function makeEffects(ctx){
        measurement. A keyword read at its one fire site is the shape this
        file keeps finding wrong; the reader is one body, and the drills
        drive it. */
-    if(hasKw(card,"phantasm")){
-      const popper = (wall || []).find(c => phantasmPops(c));
+    /* LOSES AND CAN'T GAIN PHANTASM (v6.47, Passing Mirage, Dream Weavers): this is the
+       one site phantasm acts at, so striking it here strikes the printed keyword (loses) and
+       any granted one (can't gain) alike. `pend.loseKw` is the link's, built at declaration. */
+    const _lost = ((n.pend && n.pend.loseKw) || []).indexOf("phantasm") >= 0;
+    if(hasKw(card,"phantasm") && !_lost){
+      /* A DEFENDER'S POWER, AS IT DEFENDS (v6.47): Herald of Triumph's "attack action cards get
+         -1{p} while defending this" (`fx.defAtkPow` on the attack) and Herald of Victoria's
+         grant on the defending seat (`atkBuff` entries marked `def`). Power is never below 0. */
+      const _dAdj = c => {
+        if(!isAtkActionCard(c)) return c;
+        const own = fxParse(card).defAtkPow || 0;
+        const vic = (foe(n).atkBuff || []).filter(b => b && b.def && qualMatches(b.q, c, {})).reduce((a, b) => a + b.amt, 0);
+        return (own + vic) ? {...c, power: Math.max(0, (+c.power || 0) + own + vic)} : c;
+      };
+      const popper = (wall || []).map(_dAdj).find(c => phantasmPops(c));
       if(popper){
         n.pend = null; n.stack = [];
         actMut(n).ap = act(n).ap - 1;
@@ -8168,7 +8265,7 @@ function makeEffects(ctx){
     const _sq = Object.assign({atk: true}, n.pend._qCtx || {});
     const _sb = (act(n).atkBuff||[]).filter(b => qualMatches(b.q, n.pend.card, _sq));
     const stand = _sb.reduce((a, b) => a + b.amt, 0);
-    if(stand) n = L(n, `${n.pend.card.name} carries +${stand}{p} from a standing grant.`);
+    if(stand) n = L(n, `${n.pend.card.name} carries ${stand > 0 ? "+" : ""}${stand}{p} from a standing grant.`);
     /* ARAKNI'S STEALTH-AT-A-MARKED-HERO, READ CONTINUOUSLY (CR 6.2.3c/d,
        quoted at `execute`'s declaration site): whether the hero being
        attacked is marked is asked NOW, at the damage step, so a mark placed
@@ -8180,7 +8277,8 @@ function makeEffects(ctx){
       n.pend = {...n.pend, onHit: [...(n.pend.onHit || []), ["ga"]]};
       n = L(n, `${n.pend.card.name} strikes from stealth at a marked hero — +${smNow} power, and go again if it lands.`);
     }
-    let total = capNoPump(n, n.pend.card, n.pend.total + pumps + stand + smNow);
+    /* A STANDING GRANT CAN BE NEGATIVE (v6.47, Herald of Victoria's -1{p}); power floors at 0. */
+    let total = capNoPump(n, n.pend.card, Math.max(0, n.pend.total + pumps + stand + smNow));
     /* RULING (Fender Bender): +1 per separate equipment the opponent defended
        with — only knowable once defenders are declared, so it lands here. */
     for(const op of (n.pend.lateOps||[])){
@@ -9192,7 +9290,7 @@ function makeEffects(ctx){
 
   return {runOps, execute, afterDefenders, defendsTriggers, resolveClash, resolveStack, afterDiscard, payAddCost, fileAttack, allyDeath, creditHeroDmg, noteAttacked,
           linkPumps, linkPayload, attackRx, preventDamage, autoPitch, applyAnswer,
-          activateHandAbility, playAtSpeed, fileDestroyedGear, effPowerNow,
+          activateHandAbility, playAtSpeed, fileDestroyedGear, effPowerNow, spectraStrike,
           /* `applyDefMod` IS NO LONGER EXPOSED (v4.57). It was exposed at
              v4.53 for exactly one outside caller — `index.html`'s
              `confirmDefPay`, the trainer's own pause for one of the four
@@ -10704,7 +10802,7 @@ const ACT_IF_KINDS = ["atkNamed", "hits", "boosted", "controlPow", "defending", 
 
    Actor-relative: `game.actor` is whoever is playing, and their build is
    the one `pow6`/`zonePow` reads Kayo's clause 2 off. */
-const PLAY_IF_KINDS = ["pitchPow", "discardPow", "soulPitch", "unreadable"];
+const PLAY_IF_KINDS = ["pitchPow", "discardPow", "soulPitch", "notMarked", "unreadable"];
 /* "you've DISCARDED a card with N or more {p} this turn" — a discard, not
    a graveyard census: an attack reaches the graveyard AT DECLARATION, so
    without `_disc` any big attack already played would satisfy it, and one
@@ -10731,6 +10829,8 @@ function playIfOk(game, card){
      put in this turn was STILL there, so banishing it to Boltyn's ability
      shut the gate. `hist.soulPut` is the event, cleared at CR 4.4.4. */
   if(pif.kind === "soulPitch")  return P.soulPutThisTurn(sd, pif.pitch);
+  /* Lay Low (v6.47): "If you are marked, you can't play this." */
+  if(pif.kind === "notMarked")  return !sd.marked;
   /* `unreadable`, and any kind nobody answered: inert, never free (v2.04,
      v4.89's `activateIfOk` one gate over) */
   return false;
@@ -11959,6 +12059,16 @@ function playTargetWhy(s, c, seat){
     if(k === "atkMinus" && op[2] && op[2].target
        && !((s && s.pend && s.pend.card) || ((s && s.incoming) || 0) > 0))
       return c.name + ": no attack is on the chain for it to target";
+    /* "TARGET <qual> ATTACK GETS GO AGAIN" AT INSTANT SPEED (v6.47, Luminaris' ability):
+       the qualified `ga` op is only ever read off a printed target, so the attack on the
+       chain must be one the qualifier names — `rxNoTargetWhy`, the reader the reaction
+       window asks. The line does not say "you control", so neither does this. `fxParse`
+       lifts a bare qualified `ga` off `ops` into `fx.gaQ`, so it is asked there. */
+  }
+  if(fx.gaQ && !((fx.self || 0) > 0) && !P.isAR(c)){
+    if(!(s && s.pend && s.pend.card)) return c.name + ": no attack is on the chain for it to target";
+    const why = rxNoTargetWhy(s, c);
+    if(why) return why;
   }
   return null;
 }

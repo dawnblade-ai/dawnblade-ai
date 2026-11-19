@@ -251,20 +251,37 @@ const isAttackable = b => isAlly(b) && allyLife(b) != null && allyLife(b) > 0;
 
 /* Every legal attack-target the given side controls, hero first.
    `heroCard` is display-only (the prompt sheet renders a card frame), so
-   this stays a pure query and never reaches for trainer internals. */
-function attackTargets(game, defIdx, heroCard){
+   this stays a pure query and never reaches for trainer internals.
+
+   SPECTRA (CR 8.3.14, v6.47 Prism reader 5), verbatim: "Spectra is a
+   static ability and a triggered-static ability that respectively mean
+   "This can be attacked." and "When this becomes the target of an attack,
+   destroy this."" 8.3.14a: "An object with Spectra can be the target of an
+   attack, even if it is not a living-card." That is CR 1.4.5a's "or if it
+   is made attackable by an effect". This module reads no card text, so the
+   caller hands the predicate in (`opts.attackable`; judge passes
+   `parser.printedKw(card, "spectra")`). A caller that says nothing offers
+   no such target, which is the trainer: its dummy is the vanilla pile and
+   always swings at the hero. A Spectra permanent is its own kind,
+   "spectra", whatever else it is, because the destroy trigger is what
+   targeting it means (`effects.spectraStrike`). */
+function attackTargets(game, defIdx, heroCard, opts){
   const sd = game && game.sides && game.sides[defIdx];
   if(!sd) return [];
+  const spectra = (opts && typeof opts.attackable === "function") ? opts.attackable : null;
   const hero = Object.assign({}, heroCard || {name: sd.name || "Hero", tt: "Hero", tx: ""}, {
     _target: {kind: "hero", side: defIdx, uid: null},
     _life: sd.hp
   });
-  const allies = (sd.board || []).filter(isAttackable).map(b =>
+  const isSpectra = b => !!(spectra && b && b.card && !b._dead && spectra(b.card));
+  const allies = (sd.board || []).filter(b => isAttackable(b) && !isSpectra(b)).map(b =>
     Object.assign({}, b.card, {
       _target: {kind: "ally", side: defIdx, uid: b.uid},
       _life: allyLife(b)
     }));
-  return [hero, ...allies];
+  const made = (sd.board || []).filter(isSpectra).map(b =>
+    Object.assign({}, b.card, {_target: {kind: "spectra", side: defIdx, uid: b.uid}}));
+  return [hero, ...allies, ...made];
 }
 
 /* CR 7.3.2a — only a hero target may be defended with cards. */

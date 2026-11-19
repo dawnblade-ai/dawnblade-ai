@@ -111,9 +111,12 @@ test("crindex — the verdict counts are pinned", () => {
   /* 104 -> 111 and 94 -> 101 guarded AT v6.47 (Prism reader 3): CR 8.2.16, 8.2.16a, 8.2.16b
      (figments), 8.5.43, 8.5.43a (awaken), 9.1.3, 9.1.3b (flip-cards), cited at `effects.awaken`,
      `build.flipBackOf`, `parser.offArenaFace` and `types.js`; test/figment.test.js names them. */
-  assert.equal(rs.length, 111, "the number of distinct CR rules this project cites moved");
+  /* 111 -> 116 and 101 -> 106 guarded AT v6.47 (Prism reader 5): Spectra's three rules and
+     the attack step's "no legal attack-target" and "attack event" rules, quoted where the
+     target and the clearing are built and drilled in test/spectra.test.js. */
+  assert.equal(rs.length, 116, "the number of distinct CR rules this project cites moved");
   /* 50 -> 51 guarded and 6 -> 5 drill-only AT v4.66: CR 7.1.2, built. */
-  assert.equal(by(rs, "guarded").length,  101, "guarded count moved");
+  assert.equal(by(rs, "guarded").length,  106, "guarded count moved");
   assert.equal(by(rs, "UNGUARDED").length,  3, "UNGUARDED count moved");
   assert.equal(by(rs, "drill-only").length, 5, "drill-only count moved");
   assert.equal(by(rs, "prose").length,      2, "prose count moved");

@@ -1624,7 +1624,7 @@ function playableWhy(g, seat, c, win, zone){
   /* A RESTRICTION ARMED AGAINST THIS PHASE (v3.30). Refused BEFORE the
      card leaves the hand — a play the rules never allowed must not cost
      the player the card. */
-  const barred = PR.nextTurnBars(sd, c);
+  const barred = PR.nextTurnBars(sd, c, zone);
   if(barred) return c.name + ": " + barred;
 
   /* "PLAY THIS ONLY IF …" (v4.90). This board never asked it: Bear Hug,
@@ -1785,7 +1785,11 @@ function playableWhy(g, seat, c, win, zone){
 
    With no ally in the arena there is exactly one target and nothing to
    ask, which is why solo play against the dummy never sees this. */
-const targets = (g, defIdx, heroCard) => GM.attackTargets(g, defIdx, heroCard);
+/* SPECTRA MAKES A PERMANENT ATTACKABLE (CR 1.4.5a, 8.3.14a) — the one
+   predicate `targets` and `targetOf` both hand to game.js, which reads no
+   card text: the printed keyword (`printedKw`). */
+const ATTACKABLE = {attackable: c => PR.printedKw(c, "spectra")};
+const targets = (g, defIdx, heroCard) => GM.attackTargets(g, defIdx, heroCard, ATTACKABLE);
 
 /* WHAT CAN THIS BOARD ENTRY ATTACK FOR, IF ANYTHING? (v3.84)
 
@@ -2596,8 +2600,8 @@ const chargeMore = (g, seat) => {
 const targetOf = (g, seat, spec) => {
   const def = P.other(seat);
   if(spec == null || spec === "hero") return {kind: "hero", side: def, uid: null};
-  const list = GM.attackTargets(g, def);
-  const hit = list.find(t => t._target.kind === "ally" && t._target.uid === spec);
+  const list = GM.attackTargets(g, def, null, ATTACKABLE);
+  const hit = list.find(t => t._target.kind !== "hero" && t._target.uid === spec);
   return hit ? hit._target : null;
 };
 /* THE ONE READER THAT TURNS A DISPLAY ENTRY INTO AN ACTION'S TARGET
@@ -2620,7 +2624,7 @@ const targetOf = (g, seat, spec) => {
    So the conversion is a FUNCTION rather than an expression at each call
    site: one reader, asked by every UI that offers the choice, and a drill
    pins that no board hands `reduce` a raw entry. */
-const targetSpec = t => (t && t._target && t._target.kind === "ally")
+const targetSpec = t => (t && t._target && t._target.kind !== "hero" && t._target.uid != null)
   ? t._target.uid : "hero";
 
 function targetWhy(g, seat, c, spec){
@@ -4501,6 +4505,13 @@ function resolveHeld(g){
 }
 
 function commitPlay(g, card, zone, seat, window, target){
+  /* SPECTRA'S TRIGGER (CR 8.3.14b) fires when the attack BECOMES THE TARGET's attacker,
+     which is when the attack is put on the stack: here, before the hold. `spectraStrike`
+     is the one body (a no-op when the held play re-enters and the permanent is gone).
+     Only an attack has an attack-target: a non-attack's `target` is never read. */
+  if(target && target.kind === "spectra"
+     && (isAttack(card) || zone === "weapon" || zone === "ally" || zone === "aura"))
+    g = withEffects({...g, actor: seat}, (fx, s) => fx.spectraStrike(s, target.side, target.uid, card.name));
   if(!g._resolvingHeld && heldSpeed(card, zone, window))
     return holdPlay(g, card, zone, seat, window, target);
   /* A WEAPON SWING IS AN ATTACK even though a weapon's printed type line
@@ -4632,6 +4643,28 @@ function declareAttack(g, card, seat, fromZone, target, declared){
      built. */
   const inPlay = fromWeapon || fromZone === "ally" || fromZone === "aura";
   const tgt = target || {kind: "hero", side: P.other(seat), uid: null};
+  /* THE SPECTRA PERMANENT IS GONE, AND WITH IT THE ONLY ATTACK-TARGET (v6.47). CR 7.2.2c:
+     "...(C) the attack does not have any legal attack-targets [1.4.5], instead the attack
+     is cleared from the queue. If there is another attack in the queue, the Attack Step
+     begins again with that attack, otherwise the Close Step begins." This engine queues
+     one attack, so the combat chain closes (CR 8.3.14b: "If there are not other legal
+     attack-targets, the combat chain closes"). The card never became a chain link: no
+     defend step, no damage, no go again (the action point stays spent). A played card is
+     filed where a spent attack goes (`closeChain` → `fileAttack`); an activated source
+     stays where it is. Earlier links close with the chain, and the action phase continues
+     (CR 7.7.7). */
+  if(tgt.kind === "spectra"){
+    const inArena = fromWeapon || fromZone === "ally" || fromZone === "aura";
+    let c = say({...g, pend: null, stack: [], featured: null,
+                 chainCards: inArena ? (g.chainCards || []) : [...(g.chainCards || []), {by: seat, card, from: fromZone}]},
+      card.name + " has no attack-target left — the attack is cleared and the combat chain closes.");
+    /* THE ACTION POINT: this engine charges an attack's point when its link resolves
+       (`effects.linkPayload`, "go again — kept" or spent), and a cleared attack never
+       resolves a link, so it is spent here, as the phantasm pop spends it. */
+    c = put(c, seat, s => ({...s, ap: Math.max(0, (s.ap || 0) - 1)}));
+    c = closeChain(c);
+    return openPrompt(settle(P.breakChain({...c, step: "close"})));
+  }
   /* THE TOTAL COMES FROM THE CARD, NOT FROM ITS PRINTED POWER (v2.77).
      `execute` has already applied every pump the card and the board
      printed — the hero's own clause, a queued "+N to your next attack", a

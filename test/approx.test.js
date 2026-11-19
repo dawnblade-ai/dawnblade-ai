@@ -286,7 +286,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 58 -> 59 AT v6.42: `destroy-a-runechant-cost-unasked`, open. */
   /* 59 -> 61 AT v6.43: `zero-defence-gear-refused` and `dealt-damage-reads-attacks`, both open. */
   /* 61 -> 62 AT v6.44: `traverse-life-carries`, stated. */
-  assert.equal(Object.keys(APPROX).length, 62, "record count moved");
+  /* 62 -> 63 AT v6.47: `spectra-trigger-at-once`, stated. */
+  assert.equal(Object.keys(APPROX).length, 63, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -359,7 +360,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      target is required (RULING user 2026-11-07). */
   /* 20 -> 19 stated AT v6.02: `look-named-in-shared-feed` closed (HIDDEN HANDS H1). */
   /* 19 -> 20 AT v6.44: `traverse-life-carries` (the back face prints life "*"). */
-  assert.equal(n("stated"), 20, "stated count moved");
+  /* 20 -> 21 AT v6.47: `spectra-trigger-at-once` (no layer for Spectra's destroy). */
+  assert.equal(n("stated"), 21, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -2397,6 +2399,22 @@ probe("zero-defence-gear-refused", () => {
 /* STATED AT v6.44. DRIVEN: Viserai, Between Worlds at 17 life creates his third
    Runechant of the turn, turns over to the Usurper (printed life "*"), and is
    still at 17. */
+/* STATED AT v6.47. DRIVEN: the instant an attack is played at a Spectra aura, the aura is
+   already destroyed and no trigger layer waits on the stack (CR 8.3.14b puts one there). */
+probe("spectra-trigger-at-once", () => {
+  const C2 = require("../engine/cards.js");
+  const ST = C2.buildMaps(require("../data/staged.js").filter(c => c && c.name).map(C2.mapDbCard));
+  const mir = {...C2.resolveEntry(ST, {name: "Passing Mirage", p: 3, code: null, q: 1}), uid: "pm"};
+  const atk = {...H.card("Spellblade Assault", 1), uid: "sa"};
+  let g = {...H.state({res: 9, ap: 1, hand: [atk]}, {hp: 20, hand: [], board: [{card: mir, kind: "aura", spent: false, uid: "pm"}]},
+           {actor: 0, turnPlayer: 0, turn: 3}), phase: "action", step: "layer", priority: 0, passed: []};
+  assert.equal(J.legal(g, {t: "play", uid: "sa", target: "pm"}, 0), null, "fixture: the attack on the aura was refused");
+  const out = J.reduce(g, {t: "play", uid: "sa", target: "pm"}, 0).state;
+  assert.equal((out.sides[1].board || []).some(b => b.uid === "pm"), false,
+    "the Spectra aura outlived its own trigger's declaration — a layer exists now; close this record");
+  assert.equal((out.stack || []).filter(l => l && l.k !== "play").length, 0, "a trigger layer sits on the stack — close this record");
+});
+
 probe("traverse-life-carries", () => {
   const C2 = require("../engine/cards.js"), B2 = require("../engine/build.js"), X = require("./helpers/extract");
   const ST = require("../data/staged.js").filter(c => c && c.name).map(C2.mapDbCard);

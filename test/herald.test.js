@@ -55,14 +55,19 @@ test("the line is two ops, the soul first; an unread rider refuses the line", ()
     [["soulSelf"], ["token", "spectral shield", 1, "self"]]);
   assert.deepEqual(cl("put it into your soul and deal 1 arcane damage to target hero").ops, [["soulSelf"], ["arcane", 1]]);
   assert.deepEqual(cl("put it into your soul").ops, [["soulSelf"]], "the bare line moved");
-  assert.equal(cl("put it into your soul and the defending hero can't play cards from their banished zone until the end of their next turn"),
+  /* v6.47 (reader 7): Herald of Judgment's rider READS now (`foeNextTurn` noBanPlay,
+     test/laylow.test.js drives it), so the refusal is asked of a rider nothing reads. */
+  assert.deepEqual(cl("put it into your soul and the defending hero can't play cards from their banished zone until the end of their next turn").ops,
+    [["soulSelf"], ["foeNextTurn", "noBanPlay", 0]]);
+  assert.equal(cl("put it into your soul and the defending hero can't play cards from their arsenal until the end of time"),
     null, "an unread rider was dropped instead of refusing");
 });
 
-test("Herald of Judgment is no longer filed full with its rider missing", {skip}, () => {
+test("Herald of Judgment is filed full with its rider READ (v6.47; it was honestly part until then)", {skip}, () => {
   P.fxReset();
   const f = P.fxParse(staged("Herald of Judgment"));
-  assert.notEqual(f.tier, "full", "the banished-zone lock is unread and the row says full");
+  assert.equal(f.tier, "full");
+  assert.deepEqual(f.onHit, [["soulSelf"], ["foeNextTurn", "noBanPlay", 0]], "full with the lock missing from the hit");
 });
 
 test("at the table: Herald of Hope hits, goes to the soul, and its player gains 1", {skip}, () => {

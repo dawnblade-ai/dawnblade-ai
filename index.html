@@ -4624,7 +4624,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     /* A RESTRICTION ARMED AGAINST THIS PHASE (v3.30) — Crush the Weak.
        Refused BEFORE the card leaves the hand; the same gate judge.js
        asks in `playableWhy`, out of the one reader. */
-    { const _bar = DawnParser.nextTurnBars(act(s), card);
+    { const _bar = DawnParser.nextTurnBars(act(s), card, from);
       if(_bar) return L(s, `${card.name} can't be played — ${_bar}.`); }
     const fx = fxParse(card);
     /* WHERE A CARD MAY BE PLAYED FROM IS ONE READER (v4.91) —
