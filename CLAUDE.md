@@ -32,11 +32,13 @@ every session on every step, so **it stays short (budget: under 30 KB)**.
   **`LESSONS.md`** (this file until 2026-10-31, moved word for word). Search it,
   don't read it: `grep -n -i "<topic>" LESSONS.md`. Older code comments that say
   "CLAUDE.md's …" mean LESSONS.md.
-- **Per-release summaries** are at the top of `CHANGELOG.md`.
+- **Per-release summaries** are at the top of `CHANGELOG.md` (v6.30 on; older in
+  `docs/archive/CHANGELOG-to-v6.29.md`, grep it).
 - **START HERE: the handoff and the work list** are `QUEUE.md` on the branch
   `findings/queue` — its top section is the current handoff (S-items = engine,
   H-items = AI policy, FEED items = feed text, NEEDS A RULING = questions for the
   user). `git fetch origin findings/queue && git show origin/findings/queue:QUEUE.md`.
+  Superseded handoffs and the v1–v4 item lists: `QUEUE-ARCHIVE.md` on the same branch (grep it).
   Experiment patches and probes live in `experiments/` on that branch.
 - **The other docs.** Generated (rerun the tool, never hand-edit): `AUDIT.md`,
   `CARD_PROGRESS.md`, `CR-INDEX.md`, `STACK.md`, `SWEEP.md`. Reference:
