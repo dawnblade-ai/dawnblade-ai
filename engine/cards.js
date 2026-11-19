@@ -41,7 +41,7 @@ const toNum = v => { const n = parseInt(v,10); return isNaN(n) ? null : n; };
    Silver Age printing at all (MON and PSM only), and pretending otherwise
    would be inventing a printing that does not exist. */
 /* + SBW (v6.46): Viserai, Between Worlds, the first Usurp the Shadow Throne precon to open. */
-const SA_SETS = ["SKA","SIY","SVI","SDA","SBR","SAZ","SDO","SFA","SEN","SAR","SBZ","SBL","SBA","SGB","SLY","SBW"];
+const SA_SETS = ["SKA","SIY","SVI","SDA","SBR","SAZ","SDO","SFA","SEN","SAR","SBZ","SBL","SBA","SGB","SLY","SBW","SAT"];
 function pickPrinting(card, code, prefer){
   /* AN EXPLICIT CODE ALWAYS WINS, even when the database has no record of
      that printing — the constructed CDN path is then the answer. Returning

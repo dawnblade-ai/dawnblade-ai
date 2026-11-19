@@ -1029,7 +1029,7 @@ window.APP_VER = "6.46"; /* v6.46 - Viserai, Between Worlds opens: the Usurp the
    rule, not a feature of throwing hands. A coin that seated you directly
    would be a rules change wearing a convenience hat. */
 window.THROW_MODE = "coin";   /* "coin" (fast) | "rps" (the real thing) */
-window.DATA_VER = "sage-v18"; /* Viserai, Between Worlds opens (v6.46): his staged records joined the pool, both hero faces included, every other record unchanged. Before that, the full re-pin (2026-11-13): Hyper Inflation yellow and blue power and the ban metadata moved, no deck-played text did, so the bump keeps a phone on the old pool off a table with one on the new. Before that, the Line Crossers re-pin (2026-11-10): one pinned record's text changed ("as a hero" -> "as another hero", read the same), so the bump keeps a phone on the old pool off a table with one on the new. v5.74: the cards come from the PINNED POOL (data/pool.js) and nowhere else — RULING (user, 2026-11-02) — so there is no localStorage card cache any more; the bump retires every sage-v14 build id, so a table never seats a phone still playing live upstream text against one playing the pool. v4.72: cards carry `cx`, the X count of a printed "XX" cost — a warm sage-v13 cache has none, so Ice Eternal's X would be free. v3.76: the loader keeps DEMI-HERO records by type, the way it already keeps tokens. Arakni prints "you become a random Agent of Chaos" and the six Agents are Demi-Heroes no deck lists, so a warm sage-v12 cache has none of them and her hero ability finds nothing to become. v3.34: cards carry `hz` (`played_horizontally`), which is the database SAYING a card is a SPLIT card — two halves on one card, told apart by `tt`, playable one or both (Meld). A warm sage-v11 cache has no `hz` on any card, so both split cards would silently keep running BOTH halves for free with no choice offered. v2.44: cards carry `ty`, the STRUCTURED type array. `tt` is a display string and the two disagree on 5 database records — it calls Den of the Spider an "Action Defense Reaction", and a reaction cannot be an action. A warm sage-v10 cache has no `ty` on any card, so every type question would fall back to parsing the display string. v2.35: cards carry `prs` (image per SET), which is what lets a card resolve to its Silver Age printing instead of the database's arbitrary first — a warm sage-v9 cache has no `prs` at all and every card would fall back. v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
+window.DATA_VER = "sage-v19"; /* Prism, Advent of Thrones opens (v6.47): her staged records joined the pool, both faces of Figment of Hope (Suraya) included, every other record unchanged. Before that, Viserai, Between Worlds opens (v6.46): his staged records joined the pool, both hero faces included, every other record unchanged. Before that, the full re-pin (2026-11-13): Hyper Inflation yellow and blue power and the ban metadata moved, no deck-played text did, so the bump keeps a phone on the old pool off a table with one on the new. Before that, the Line Crossers re-pin (2026-11-10): one pinned record's text changed ("as a hero" -> "as another hero", read the same), so the bump keeps a phone on the old pool off a table with one on the new. v5.74: the cards come from the PINNED POOL (data/pool.js) and nowhere else — RULING (user, 2026-11-02) — so there is no localStorage card cache any more; the bump retires every sage-v14 build id, so a table never seats a phone still playing live upstream text against one playing the pool. v4.72: cards carry `cx`, the X count of a printed "XX" cost — a warm sage-v13 cache has none, so Ice Eternal's X would be free. v3.76: the loader keeps DEMI-HERO records by type, the way it already keeps tokens. Arakni prints "you become a random Agent of Chaos" and the six Agents are Demi-Heroes no deck lists, so a warm sage-v12 cache has none of them and her hero ability finds nothing to become. v3.34: cards carry `hz` (`played_horizontally`), which is the database SAYING a card is a SPLIT card — two halves on one card, told apart by `tt`, playable one or both (Meld). A warm sage-v11 cache has no `hz` on any card, so both split cards would silently keep running BOTH halves for free with no choice offered. v2.44: cards carry `ty`, the STRUCTURED type array. `tt` is a display string and the two disagree on 5 database records — it calls Den of the Spider an "Action Defense Reaction", and a reaction cannot be an action. A warm sage-v10 cache has no `ty` on any card, so every type question would fall back to parsing the display string. v2.35: cards carry `prs` (image per SET), which is what lets a card resolve to its Silver Age printing instead of the database's arbitrary first — a warm sage-v9 cache has no `prs` at all and every card would fall back. v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 /* The dummy's 30-card pile: [name, pitch, copies]. Every one is a real
    Silver-Age-legal Generic attack action with NO rules text, chosen on
@@ -1063,7 +1063,10 @@ window.HEROES = [
  /* OPENED v6.46 (RULING user 2026-11-15: a new precon joins when the engine reads its
     whole list). Usurp the Shadow Throne, not a numbered chapter: `blk` names the block
     on the loadout and `ch` only picks the stripe colour. */
- {k:"viseraibw",n:"Viserai, Between Worlds",short:"Viserai BW",cls:"Shadow Runeblade",ch:4,blk:"Usurp the Shadow Throne",code:"SBW001",blurb:"Make runes, feed the banished zone, and cross over to the Demon on the other side."}
+ {k:"viseraibw",n:"Viserai, Between Worlds",short:"Viserai BW",cls:"Shadow Runeblade",ch:4,blk:"Usurp the Shadow Throne",code:"SBW001",blurb:"Make runes, feed the banished zone, and cross over to the Demon on the other side."},
+ /* OPENED v6.47: the same block's other precon. Her figments wake into
+    Suraya; the AI seat never awakens one yet (ROADMAP-NEWDECKS.md, Phase 3). */
+ {k:"prism",n:"Prism, Advent of Thrones",cls:"Light Illusionist",ch:4,blk:"Usurp the Shadow Throne",code:"SAT001",blurb:"Herald after Herald into the soul, then wake a figment into an archangel."}
 ];
 
 window.DECKS = {
@@ -1602,7 +1605,39 @@ G|Nullrune Boots|0|SBW008
 2|Pull from Beyond|3|SBW033
 2|Looking for a Scrap|1|SBW014
 2|Weeping Battleground|1|SBW019
-2|Arcane Polarity|1|SBW023`
+2|Arcane Polarity|1|SBW023`,
+prism:`H|Prism, Advent of Thrones|0|SAT001
+G|Iris of Reality|0|SAT002
+G|Luminaris, Celestial Fury|0|SAT003
+G|Halo of Illumination|0|SAT004
+G|Blossom of Spring|0|SAT005
+G|Dream Weavers|0|SAT006
+G|Ironhide Gauntlet|0|SAT007
+G|Wave of Reality|0|SAT008
+G|Blade Beckoner Boots|0|SAT009
+G|Silent Stilettos|0|SAT010
+2|Herald of Hope|1|SAT011
+2|Herald of Protection|1|SAT012
+2|Herald of Ravages|1|SAT013
+2|Herald of Triumph|1|SAT014
+2|Wartune Herald|1|SAT015
+2|Spectral Manifestations|1|SAT016
+2|Herald of Hope|2|SAT017
+2|Herald of Judgment|2|SAT018
+2|Herald of Protection|2|SAT019
+2|Herald of Victoria|2|SAT020
+2|Wartune Herald|2|SAT021
+2|Lay Low|2|SAT022
+4|Figment of Hope|2|SAT023
+2|Herald of Hope|3|SAT024
+2|Herald of Protection|3|SAT025
+2|Herald of Ravages|3|SAT026
+2|Herald of Triumph|3|SAT027
+2|Phantasmal Haze|3|SAT028
+2|Wartune Herald|3|SAT029
+2|Passing Mirage|3|SAT030
+2|Pierce Reality|3|SAT031
+2|Angelic Wrath|3|SAT032`
 };
 
 window.JUDGE_QS = [

@@ -127,23 +127,38 @@ const slimPrinting = pr => {
    A DOUBLE-FACED HERO BRINGS ITS OTHER FACE. The list names the front; the
    back is on no list, and without it a traverse fails (CR 8.5.60a). The faces
    are found the way `build.facesOf` finds them: another HERO record sharing a
-   print code, where exactly one of the two images is the back. One hop only. */
+   print code, where exactly one of the two images is the back. One hop only.
+
+   A FLIP-CARD BRINGS ITS BACK TOO (Prism's opening). CR 9.1.3: "A flip-card is a
+   double-faced card that has a front-face and a back-face, with one of the following
+   printed subtypes on its front-face: figment, invocation, or construct." Figment of
+   Hope's back, Suraya, Archangel of Endless Hope, shares print code SAT023 and is on no
+   list; without it the awaken fails (CR 8.5.43a). Found the way `build.flipBackOf`
+   finds it: a record sharing a print code whose image is the `_BACK` where the
+   front's is not. */
 const STAGED = path.join(ROOT, "data", "staged.js");
 const readStaged = () => fs.existsSync(STAGED) ? require(STAGED).filter(c => c && c.name) : [];
 const isHeroRec = c => (c.types || []).some(t => /^hero$/i.test(String(t)));
 const isBackUrl = u => /_BACK\.[a-z0-9]+$/i.test(String(u || ""));
-function facesRaw(records, hero){
-  if(!isHeroRec(hero)) return [];
-  const mine = new Map((hero.printings || []).map(p => [p.id, isBackUrl(p.image_url)]));
-  return records.filter(c => c && c.name !== hero.name && isHeroRec(c)
-    && (c.printings || []).some(p => mine.has(p.id) && mine.get(p.id) !== isBackUrl(p.image_url)));
+const isFlipFront = c => (c.types || []).some(t => /^(?:figment|invocation|construct)$/i.test(String(t)));
+const hasFaces = c => isHeroRec(c) || isFlipFront(c);
+function facesRaw(records, card){
+  if(isHeroRec(card)){
+    const mine = new Map((card.printings || []).map(p => [p.id, isBackUrl(p.image_url)]));
+    return records.filter(c => c && c.name !== card.name && isHeroRec(c)
+      && (c.printings || []).some(p => mine.has(p.id) && mine.get(p.id) !== isBackUrl(p.image_url)));
+  }
+  if(!isFlipFront(card)) return [];
+  const fronts = new Set((card.printings || []).filter(p => !isBackUrl(p.image_url)).map(p => p.id));
+  return records.filter(c => c && c.name !== card.name
+    && (c.printings || []).some(p => fronts.has(p.id) && isBackUrl(p.image_url)));
 }
 function withStaged(db, need, staged){
   const have = new Set(db.filter(c => c && c.name).map(c => norm(c.name)));
   const took = staged.filter(c => need.has(norm(c.name)) && !have.has(norm(c.name)));
   const all = db.concat(took);
   const faces = [];
-  for(const h of all.filter(c => need.has(norm(c.name)) && isHeroRec(c)))
+  for(const h of all.filter(c => need.has(norm(c.name)) && hasFaces(c)))
     for(const f of facesRaw(db.concat(staged), h))
       if(!all.includes(f) && !faces.includes(f) && !have.has(norm(f.name))) faces.push(f);
   return {records: all.concat(faces), took: took.concat(faces)};
@@ -180,7 +195,7 @@ function build(db, W, staged){
      Redeemed and Teklovossen, which no hero in this pool can become. */
   const isDemi = c => /demi-hero/i.test(c.type_text || "")
                    || (c.types || []).some(t => /^demi-hero$/i.test(t));
-  const faceNames = new Set(direct.filter(isHeroRec).flatMap(h => facesRaw(db, h)).map(c => norm(c.name)));
+  const faceNames = new Set(direct.filter(hasFaces).flatMap(h => facesRaw(db, h)).map(c => norm(c.name)));
   const keep = db.filter(c => c && c.name && (need.has(norm(c.name)) || faceNames.has(norm(c.name)) || isTok(c) || isDemi(c)));
   /* Stable order, so a re-pin against an unchanged upstream is an empty
      diff rather than a reshuffle nobody can review. */
