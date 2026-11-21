@@ -173,7 +173,7 @@ const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate(
       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
       wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW"),
       graveOn = subGate("SPXGRAVE"), booOn = subGate("SPXBOO"), energyOn = subGate("SPXENERGY"), putOn = subGate("SPXPUT"),
-      cycleOn = subGate("SPXCYCLE");
+      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY");
 /* SPXTRAV (v6.46): take Viserai, Usurper's end-phase traverse back to the front.
    OFF unless named (unlike the fixes above): measured over 180 seated games each way
    (`node tools/staged-play.js viseraiBetweenWorlds 6`), staying won 17 and turning
@@ -732,6 +732,21 @@ function offence(g, seat, o){
   const m = J.markFirst(g, seat);
   if(m) return tag("markFirst", {t: "activate", from: "hand", uid: m.uid});
   const a = offenceBase(g, seat, o);
+  /* A DRAW PAID WITH A CARD THE SEAT GETS BACK GOES FIRST (SPXCROWN). Carrion Crown
+     was legal on 72 of Gravy's turns and spent on 1: the gear fallback sits after the
+     attacks, and the attack spent the action point. Its go again keeps the point and
+     the ally it discards is still playable from the graveyard (`judge.discardDrawPiece`
+     answers both), so it costs a 2-defence blade-break piece for a card. */
+  if(crownOn(g, seat)){
+    const cp = (g.sides[seat].gear || []).slice().sort(byUid).find(x => x && J.discardDrawPiece(g, seat, x.uid));
+    if(cp) return tag("discardDraw", {t: "activate", uid: cp.uid});
+  }
+  const bt = bootsLine(g, seat, a, o);
+  if(bt) return bt;
+  const wp = weaponPumpFirst(g, seat, o);
+  if(wp) return tag("weaponPump", wp);
+  const pr = pieceRes(g, seat, a);
+  if(pr) return tag("pieceRes", {t: "activate", uid: pr});
   /* THE POOL IS SPOKEN FOR WHILE A RESOURCE PIECE IS BEING SPENT (v5.56's
      `resUnlock`): the floating resources plus the piece's payout are what
      make a held attack legal, so a draw paid out of them would undo it. */
@@ -739,6 +754,108 @@ function offence(g, seat, o){
   const u = J.arenaUseful(g, seat, {maxPitch: o.maxPitch, next: a, kinds: spoken ? ["res", "ap"] : ["draw", "res", "ap"]});
   const x = u && {t: "activate", uid: u.uid};
   return x && legal(g, x, seat) ? tag(ARENA_KEY[u.kind], x) : a;
+}
+/* A 0-DEFENCE RESOURCE PIECE PAYS FOR THE PLAY ABOUT TO BE PAID (SPXPIECE).
+   QUEUE v4 H11 holds a piece whose whole payout is resources unless it UNLOCKS an
+   attack (`resUnlock`), which is right at the end of a turn with nothing to spend
+   on — but Garland of Spring was legal on 555 of Boltyn's turns and spent on 9, so
+   most games ended with its {r} never paid. A piece that prints no defence blocks
+   nothing; its only worth is that {r}, and it is worth a card when the play the
+   policy is about to make costs more than the pool holds and the piece covers the
+   difference: the card that would have been pitched stays in hand. Printed numbers
+   only (`cost`, `def`); `judge.abPieceResGain` says what the piece pays. */
+/* A NON-ATTACK GO AGAIN IS BOUGHT FOR THE CARD THAT WOULD OTHERWISE END THE TURN (SPXBOOTS).
+   Mage Master Boots ("{r}, destroy this: the next non-attack action card you play this
+   turn gets go again") was legal on 766 of Gravy's turns and spent on 5: attacks are
+   picked first, so an ally in hand waited behind the swing that ended the turn, and the
+   piece was only ever reached with nothing left to attack with after. Two steps:
+     1. a non-attack the seat holds now KEEPS the action point (`judge.keepsActionPoint`
+        sees the waiting grant): it goes first, so the attack still has its point;
+     2. the policy is about to attack, a held non-attack would end the turn, and the
+        piece (`judge.gaNextPiece`) plus both cards fit in the hand: spend the piece.
+   Printed costs and pitches only; `legal` disposes. */
+function nonAtkHeld(g, seat){
+  const sd = g.sides[seat];
+  return J.nonAtkHeld(g, seat).map(x => ({c: cardIn(sd, x.uid), from: x.from}))
+    .filter(x => x.c && idleOK(g, seat, x.c.uid, x.from))
+    .sort((x, y) => num(x.c, "cost") - num(y.c, "cost") || byUid(x.c, y.c));
+}
+function bootsLine(g, seat, a, o){
+  if(!bootsOn(g, seat)) return null;
+  const sd = g.sides[seat];
+  const held = nonAtkHeld(g, seat);
+  if(!held.length) return null;
+  /* step 1: the grant is waiting */
+  const keep = held.find(x => J.keepsActionPoint(g, seat, x.c.uid, x.from) && affordableWithin(sd, x.c, o));
+  if(keep && ((sd.gaNextQ || []).length)) return tag("gaNextTaker", {t: "play", uid: keep.c.uid, from: keep.from});
+  /* step 2: spend the piece ahead of the attack */
+  if(!a || !(a.t === "play" || a.t === "activate") || a.from === "hero") return null;
+  let atkCard = null;
+  if(a.t === "play"){
+    const zs = a.from === "arsenal" ? (sd.arsenal ? [sd.arsenal] : []) : (sd[a.from] || []);
+    atkCard = zs.find(c => c && c.uid === a.uid) || null;
+    if(!atkCard || num(atkCard, "power") <= 0) return null;
+  } else {
+    const w = (sd.gear || []).find(x => x && x.uid === a.uid);
+    const b = (sd.board || []).find(x => x && x.uid === a.uid);
+    if(w){ if(w.power == null) return null; atkCard = w; }
+    else if(b && J.boardAttackOf(g, seat, a.uid)) atkCard = {uid: b.uid, cost: 0};
+    else return null;
+  }
+  const piece = (sd.gear || []).slice().sort(byUid).find(x => x && J.gaNextPiece(g, seat, x.uid)
+    && legal(g, {t: "activate", uid: x.uid}, seat));
+  if(!piece) return null;
+  const pcost = num(piece.powCard, "cost");
+  const t = held.find(x => !J.keepsActionPoint(g, seat, x.c.uid, x.from) && x.c.uid !== atkCard.uid);
+  if(!t) return null;
+  const need = pcost + num(t.c, "cost") + num(atkCard, "cost") - (sd.res || 0);
+  const pool = (sd.hand || []).filter(c => c && c.uid !== t.c.uid && c.uid !== atkCard.uid && num(c, "pitch") > 0)
+    .map(c => num(c, "pitch")).sort((x, y) => y - x);
+  let got = 0;
+  for(let i = 0; i < pool.length && i < o.maxPitch + 1 && got < need; i++) got += pool[i];
+  return got >= need ? tag("gaNextPiece", {t: "activate", uid: piece.uid}) : null;
+}
+/* A CARD THAT PUMPS AN UNSWUNG WEAPON GOES BEFORE THE SWING (SPXGLISTEN).
+   Glisten's four +1{p} counters on Raydn, a free 0-power swing, were played on 17
+   of the 79 own turns they were legal: an instant prints no power, so it ranked
+   with the non-attacks, after the swing it should have fed. `judge.weaponPumpOf`
+   answers the shape and names a weapon the seat can swing now; the card is played
+   when the seat can pay for it within its pitch cap and the weapon's swing prints
+   no cost (printed numbers). The swing itself is then the ordinary branch's. */
+function weaponPumpFirst(g, seat, o){
+  if(!glistenOn(g, seat)) return null;
+  const sd = g.sides[seat];
+  const from = (sd.hand || []).filter(Boolean).map(c => ({c, from: "hand"}))
+    .concat(sd.arsenal ? [{c: sd.arsenal, from: "arsenal"}] : []);
+  for(const x of from.slice().sort((p, q) => byUid(p.c, q.c))){
+    const v = J.weaponPumpOf(g, seat, x.c.uid, x.from);
+    if(!v) continue;
+    const w = (sd.gear || []).find(y => y && y.uid === v.weapon);
+    if(!w || num(w, "cost") > 0) continue;
+    if(!affordableWithin(sd, x.c, o)) continue;
+    const act = {t: "play", uid: x.c.uid, from: x.from};
+    if(legal(g, act, seat)) return act;
+  }
+  return null;
+}
+function pieceRes(g, seat, a){
+  if(!a || !pieceOn(g, seat)) return null;
+  const sd = g.sides[seat];
+  let card = null;
+  if(a.t === "play"){
+    const zs = a.from === "arsenal" ? (sd.arsenal ? [sd.arsenal] : []) : (sd[a.from] || []);
+    card = zs.find(c => c && c.uid === a.uid) || null;
+  } else if(a.t === "activate" && a.from == null){
+    const w = (sd.gear || []).find(x => x && x.uid === a.uid);
+    card = w && w.power != null ? w : null;
+  }
+  if(!card) return null;
+  const need = num(card, "cost") - (sd.res || 0);
+  if(need <= 0) return null;
+  const p = (sd.gear || []).slice().sort(byUid)
+    .filter(x => x && x.uid !== card.uid && x.power == null && num(x, "def") <= 0)
+    .find(x => J.abPieceResGain(g, seat, x.uid) >= need && legal(g, {t: "activate", uid: x.uid}, seat));
+  return p ? p.uid : null;
 }
 function offenceBase(g, seat, o){
   const sd = g.sides[seat];
@@ -899,6 +1016,17 @@ function offenceBase(g, seat, o){
     .map(w => ({w, v: J.chargeView(g, seat, w.uid, "weapon")}))
     .filter(x => x.v && x.v.charged && x.v.power > x.v.base)
     .map(x => ({c: Object.assign({}, x.w, {power: x.v.power}), uid: x.w.uid, weapon: true, kap: 0}));
+  /* A WEAPON CARRYING +1{p} COUNTERS SWINGS ON THEM (SPXGLISTEN). Glisten's four counters on
+     Raydn (printed 0) were put there and then a 3-power hand attack spent the action point:
+     the swing ranked on its printed power. The counters are on the state, not the card. */
+  if(glistenOn(g, seat)){
+    const ctrPow = uid => (((sd.counters || {})[uid] || {}).pow || 0);
+    pumped.forEach(x => { x.c = Object.assign({}, x.c, {power: num(x.c, "power") + ctrPow(x.uid)}); });
+    (sd.gear || []).slice().sort(byUid)
+      .filter(w => w && w.power != null && ctrPow(w.uid) > 0 && !pumped.some(p => p.uid === w.uid)
+        && !(sd.weaponUsed || {})[w.uid])
+      .forEach(w => pumped.push({c: Object.assign({}, w, {power: num(w, "power") + ctrPow(w.uid)}), uid: w.uid, weapon: true, kap: 0}));
+  }
   /* A WEAPON A PENDING GRANT PUMPS COMPETES ON ITS PUMPED POWER (H-DAGGER). Up Sticks and
      Run's "+4 to your next dagger attack" was lost behind a 3-power hand attack while the
      1-power dagger would have swung for 5. `judge.grantedSwings` answers; the swing ranks
@@ -1300,6 +1428,21 @@ function actBase(g, seat, o){
      CHEAPEST FIRST, ties on uid. A reaction spends a card and resources
      mid-combat; the cheapest legal one is the least the seat can commit
      while still exercising the route, and `cost` is a printed number. */
+  /* A LIFE GAIN IS PLAYED WHEN ITS "INSTEAD" IS TRUE (SPXPOLARITY). Arcane Polarity
+     gains 1, or 4 "if you've been dealt arcane damage this turn" — and was played for 1
+     on 18 of its 39 own-turn offers and never on the opponent's turn, where the arcane
+     is dealt. `judge.lifeGainOf` answers the gain now and the best it can be; at its
+     best, any window that admits an instant plays it. Below its best it is NOT held: a
+     hold measured 80 -> 64 wins of 384 (the card sat in hand and arsenal waiting for an
+     upgrade that came on 5 of 52 opposing turns). */
+  if(polarityOn(g, seat) && speeds.indexOf("instant") >= 0 && !(g.stack || []).length){
+    const sd = g.sides[seat];
+    const lc = (sd.hand || []).filter(Boolean).map(c => ({c, from: "hand"}))
+      .concat(sd.arsenal ? [{c: sd.arsenal, from: "arsenal"}] : []).sort((x, y) => byUid(x.c, y.c))
+      .find(x => { const v = J.lifeGainOf(g, seat, x.c.uid, x.from);
+        return v && v.now > v.base && v.now >= v.best && legal(g, {t: "play", uid: x.c.uid, from: x.from}, seat); });
+    if(lc) return tag("lifeAtBest", {t: "play", uid: lc.c.uid, from: lc.from});
+  }
   const rxWindow = speeds.some(w => w === "attack-reaction" || w === "defense-reaction");
   if(rxWindow && g.pend && !(g.stack || []).length && !g.pend.rxPump){
     const r = reaction(g, seat);
@@ -1746,6 +1889,12 @@ const CALL_WHY = {
   grantHold: "Keep the card that pumps your next attack. You can't pay for the attack it would pump this turn, and nothing else it does is within reach, so it waits.",
   weapon: "Swing your weapon. It costs no card.",
   resUnlock: "Spend the piece for its resource. It pays for an attack you are holding.",
+  lifeAtBest: "Gain the life now. The arcane damage you took this turn makes it the bigger gain.",
+  discardDraw: "Discard the ally for the draw. It still plays from your graveyard, so the card is free.",
+  gaNextTaker: "Play the card the go again is waiting for first. The attack still has its action point after.",
+  gaNextPiece: "Spend the piece for go again on the card you play next, so it does not end the turn before your attack.",
+  weaponPump: "Pump the weapon before it swings. The counters ride on this turn's swing.",
+  pieceRes: "Spend the piece for its resource first. It pays for this play, so the card you would pitch stays in hand.",
   resUnlockWeapon: "Spend the piece for its resource. It pays for a swing of your weapon.",
   gearAbility: "Use your equipment's ability. Nothing better is left to do.",
   gearAmp: "Use your equipment's ability. You can pay for an arcane card to take its extra damage.",

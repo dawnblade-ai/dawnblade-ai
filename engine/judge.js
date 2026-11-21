@@ -2329,6 +2329,20 @@ const nonAtkPlayable = (g, seat, except) => {
   }
   return false;
 };
+/* THE NON-ATTACK ACTION CARDS THE SEAT WOULD PLAY NOW (SPXBOOTS), for `sparring.js`:
+   every card `nonAtkPlayable` would count, as `{uid, from}` — legal now, an action
+   that is not an attack, and a taker the seat would play (`takerPlays`). */
+const nonAtkHeld = (g, seat) => {
+  const sd = at(g, seat), out = [];
+  for(const z of LANDS_ZONES){
+    const cs = z === "arsenal" ? (sd.arsenal ? [sd.arsenal] : []) : (sd[z] || []);
+    for(const c of cs)
+      if(c && c.uid != null && TY.isAction(c) && !TY.isAttack(c)
+         && legal(g, {t: "play", uid: c.uid, from: z}, seat) == null
+         && takerPlays(g, seat, c.uid, z)) out.push({uid: c.uid, from: z});
+  }
+  return out;
+};
 const opLandsNothing = (g, seat, op, except) => {
   const k = op && op[0], spec = (op && op[1]) || {};
   if(k === "ctrPut") return !E.ctrPutCands(at(g, seat), spec).length;
@@ -2353,6 +2367,81 @@ const landsNothing = (g, seat, uid, from) => {
   if((fx.conds || []).length || fx.optCost) return false;
   const ops = (fx.ops || []).filter(o => o && o[0] !== "noop");
   return ops.length > 0 && ops.every(o => opLandsNothing(g, seat, o, uid));
+};
+/* ---- A DRAW PAID WITH A DISCARD THE SEAT GETS BACK (SPXCROWN) ----
+   For `sparring.js`, which reads no card text. A gear piece whose ability is a
+   go-again draw, costs no resource, and is paid by discarding a card from hand
+   (Carrion Crown: "Discard an ally, destroy this: Draw a card. Go again") is a
+   free card when EVERY card the discard could take is still playable from the
+   graveyard once it lands there (Gravy Bones' watery grave): the discard is not
+   a loss and the draw is a gain. Asked of `legal` on a copy of the state with the
+   card moved, so the seat is never told a card comes back that the judge would
+   refuse. False otherwise, and for a piece `legal` will not activate now. */
+const discardDrawPiece = (g, seat, uid) => {
+  const sd = at(g, seat);
+  const piece = (sd.gear || []).find(x => x && x.uid === uid);
+  const pc = piece && !PR.isWeapon(piece) ? piece.powCard : null;
+  if(!pc || !(sd.deck || []).length) return false;
+  const fx = PR.fxParse(pc);
+  if(!fx.ga || (fx.conds || []).length || fx.optCost || (+pc.cost || 0) > 0) return false;
+  const ops = (fx.ops || []).filter(o => o && o[0] !== "noop");
+  if(!ops.length || !ops.every(o => o[0] === "draw")) return false;
+  const dc = PR.abDiscardCost(pc);
+  if(!dc || legal(g, {t: "activate", uid}, seat) != null) return false;
+  const cands = (sd.hand || []).filter(c => c && PM.promptFilter(dc)(c));
+  if(!cands.length) return false;
+  return cands.every(c => {
+    const moved = Object.assign({}, sd, {hand: sd.hand.filter(x => x !== c),
+      grave: [...(sd.grave || []), Object.assign({}, c, {_gy: g.turn})]});
+    const rich = Object.assign({}, g, {sides: g.sides.map((s, i) => i === seat ? moved : s)});
+    return legal(rich, {t: "play", uid: c.uid, from: "grave"}, seat) == null;
+  });
+};
+/* ---- A PIECE WHOSE WHOLE PAYOUT IS A NON-ATTACK GO AGAIN (SPXBOOTS) ----
+   For `sparring.js`, which reads no card text. True for a gear piece (not a
+   weapon) whose activated ability does nothing but grant "the next non-attack
+   action card you play this turn gets go again" (Mage Master Boots). Whether a
+   card would take it is `landsNothing`'s question, and whether a held card now
+   keeps the action point because of it is `keepsActionPoint`'s. */
+const gaNextPiece = (g, seat, uid) => {
+  const piece = (at(g, seat).gear || []).find(x => x && x.uid === uid);
+  const pc = piece && !PR.isWeapon(piece) ? piece.powCard : null;
+  if(!pc) return false;
+  const fx = PR.fxParse(pc);
+  if((fx.conds || []).length || fx.optCost || (fx.onHit || []).length || fx.self) return false;
+  const ops = (fx.ops || []).filter(o => o && o[0] !== "noop");
+  return ops.length > 0 && ops.every(o => o[0] === "gaNext" && o[1] && o[1].nonAtk);
+};
+/* ---- A CARD THAT PUMPS A WEAPON THE SEAT HAS YET TO SWING (SPXGLISTEN) ----
+   For `sparring.js`, which reads no card text. A card in hand or arsenal whose
+   whole payout is +1{p} counters put on weapons the seat controls (`ctrPut`
+   kind "pow" filtered to weapons, beside the `ctrEnd` wipe that comes with it):
+   Glisten, "Distribute up to four +1{p} counters among any number of weapons you
+   control". Answers `{n, weapon}` — the counters it puts and the uid of a weapon
+   it reaches (`effects.ctrPutCands`, the reader the op resolves through) that
+   `legal` lets the seat swing right now — or null. Anything else on the card
+   (a condition, an optional cost, another op) is not this shape: null. */
+const weaponPumpOf = (g, seat, uid, from) => {
+  const sd = at(g, seat);
+  const c = from === "arsenal" ? (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null)
+    : from === "hand" ? (sd.hand || []).find(x => x && x.uid === uid) || null : null;
+  if(!c) return null;
+  const fx = PR.fxParse(c);
+  if((fx.conds || []).length || fx.optCost || fx.self || (fx.onHit || []).length) return null;
+  const ops = (fx.ops || []).filter(o => o && o[0] !== "noop");
+  const puts = ops.filter(o => o[0] === "ctrPut");
+  if(!puts.length || !ops.every(o => o[0] === "ctrPut" || o[0] === "ctrEnd")) return null;
+  let n = 0, weapon = null;
+  for(const o of puts){
+    const spec = o[1] || {};
+    if(spec.kind !== "pow" || !spec.filter || spec.filter.ty !== "weapon") return null;
+    n += +spec.n || 0;
+    const w = E.ctrPutCands(sd, spec).filter(x => PR.isWeapon(x) && x.uid != null)
+      .sort((a, b) => String(a.uid) < String(b.uid) ? -1 : String(a.uid) > String(b.uid) ? 1 : 0)
+      .find(x => legal(g, {t: "activate", uid: x.uid}, seat) == null);
+    if(w && weapon == null) weapon = w.uid;
+  }
+  return n > 0 && weapon != null ? {n, weapon} : null;
 };
 /* ---- DOES THE ATTACK ON THE CHAIN ALREADY GO AGAIN? (QA-A H-5, ship/ai-misplays) ----
    For `sparring.js`, which reads no card text. True when the open link has go
@@ -2610,6 +2699,17 @@ const effPowerNow = (g, seat, uid, from) => {
           : from === "hand" ? (sd.hand || []).find(x => x && x.uid === uid) : null;
   if(!c || !c.name) return null;
   return effectsFor(g).fx.effPowerNow(g, seat, c, from);
+};
+/* ---- A LIFE GAIN THAT IS BIGGER LATER (SPXPOLARITY) ----
+   For `sparring.js`, which reads no card text: `effects.lifeNow` for a card in
+   hand or arsenal — `{base, now, best}`, the printed gain, the gain if played
+   now, and the most an "instead" can make it — or null. */
+const lifeGainOf = (g, seat, uid, from) => {
+  const sd = at(g, seat);
+  const c = from === "arsenal" ? (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null)
+          : from === "hand" ? (sd.hand || []).find(x => x && x.uid === uid) : null;
+  if(!c || !c.name) return null;
+  return effectsFor(g).fx.lifeNow(g, seat, c, from);
 };
 /* ---- ANOTHER CHARGE, AND WHAT IT BUYS AND LEAVES (v5.67, QUEUE v4 H24) ----
    V of the Vanguard prints "you may charge your soul ANY NUMBER OF TIMES" and
@@ -5206,7 +5306,7 @@ function moves(g, seat){
 }
 
 return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, moves, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, cyclePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
+        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, cyclePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, weaponPumpOf, gaNextPiece, nonAtkHeld, discardDrawPiece, lifeGainOf, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf, waitingOn,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */

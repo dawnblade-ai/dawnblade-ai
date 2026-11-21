@@ -3698,6 +3698,30 @@ function makeEffects(ctx){
     return {power: base + bonus, base, bonus, gates};
   }
 
+  /* ---- THE LIFE A CARD WOULD GAIN IF PLAYED NOW (SPXPOLARITY) ------------
+     `effPowerNow`'s sibling, for a card whose whole payout is gaining life:
+     `{base, now}` — the printed gain, and the gain with every "instead gain N"
+     whose gate `condMetNow` (the loop's own reader) answers TRUE from the board
+     and this seat's record (Arcane Polarity: "If you've been dealt arcane damage
+     this turn, instead gain 4{h}"). An undecidable gate adds nothing. null for
+     any card that does anything else. Reads `g`, writes nothing. */
+  function lifeNow(g, seat, card, from){
+    if(!card || !card.name) return null;
+    const fx = P.fxParse(card);
+    const ops = (fx.ops || []).filter(o => o && o[0] !== "noop");
+    if(!ops.length || !ops.every(o => o[0] === "life" && typeof o[1] === "number") || fx.optCost) return null;
+    const conds = fx.conds || [];
+    if(!conds.length || !conds.every(e => e && e.instead && e.op && e.op[0] === "life" && typeof e.op[1] === "number")) return null;
+    const base = ops.reduce((t, o) => t + o[1], 0);
+    const n = Object.assign({}, g, {actor: seat});
+    let now = base;
+    conds.forEach(e => {
+      if(!EFF_DECIDABLE(e.cond, from)) return;
+      if(condMetNow(n, n, card, from, e.cond, {chargedWay: [], fused: false, dracLinks: 0})) now = Math.max(now, e.op[1]);
+    });
+    return {base, now, best: Math.max(base, ...conds.map(e => e.op[1]))};
+  }
+
   const execute = (s,card,from,idx,opts) => {
     /* A DESTROYED PIECE GOES TO THE GRAVEYARD NOW (v4.79) — see
        `fileDestroyedGear`. One wrapper, so no return below can skip it. */
@@ -9316,7 +9340,7 @@ function makeEffects(ctx){
 
   return {runOps, execute, afterDefenders, defendsTriggers, resolveClash, resolveStack, afterDiscard, payAddCost, fileAttack, allyDeath, creditHeroDmg, noteAttacked,
           linkPumps, linkPayload, linkOutcome, attackRx, preventDamage, autoPitch, applyAnswer,
-          activateHandAbility, playAtSpeed, fileDestroyedGear, effPowerNow, spectraStrike,
+          activateHandAbility, playAtSpeed, fileDestroyedGear, effPowerNow, lifeNow, spectraStrike,
           /* `applyDefMod` IS NO LONGER EXPOSED (v4.57). It was exposed at
              v4.53 for exactly one outside caller — `index.html`'s
              `confirmDefPay`, the trainer's own pause for one of the four
