@@ -4,35 +4,32 @@
 answered NEEDS-A-RULING notes are in `QUEUE-ARCHIVE.md` on this branch (grep it, don't read it). History lives in
 CHANGELOG.md (v6.30 on; older in `docs/archive/CHANGELOG-to-v6.29.md`) and LESSONS.md on main.
 
-## HANDOFF — START HERE (CEO session_013xG9xA52ADmXDnyNU3TXDV, 2026-11-21, at v6.56)
+## HANDOFF — START HERE (CEO session_013xG9xAEHGDJRHeNPdYa83U, 2026-11-21, at v6.57)
 
-**State:** live = **v6.56** on `main`, livecheck ALL PASS. Function `table` version 64 = `v6.56 · sage-v19`, stamped, `--check` OK.
-WIRE_V 45 (unchanged). DATA_VER sage-v19. 17 heroes. No unreleased work. Session branch `claude/intelligent-galileo-46nta8` == main.
+**State:** live = **v6.57** on `main`, livecheck ALL PASS. Function `table` version 66 = `v6.57 · sage-v19`, stamped, `--check` OK.
+WIRE_V 45 (unchanged). DATA_VER sage-v19. 17 heroes. Session branch `claude/keen-hopper-gumd4k` == main.
 
-**Shipped this thread — v6.56, the AI spends what it held** (five gates, CHANGELOG has every number):
-SPXPIECE (0-defence resource piece pays for the next play: Garland/Blossom), SPXGLISTEN (`judge.weaponPumpOf`; Glisten before the
-swing, and a weapon ranks on printed power + its +1{p} counters), SPXBOOTS (`gaNextPiece`, `nonAtkHeld`: Boots -> non-attack keeps the
-point -> attack), SPXCROWN (`discardDrawPiece`: Carrion Crown's discard is free when the ally plays from the graveyard), SPXPOLARITY
-(`effects.lifeNow` / `judge.lifeGainOf`: a life gain is played when its "instead" is true). Ladder vs gates off: **Gravy 30 -> 40,
-Boltyn 23 -> 28, Viserai BW 18 -> 21**; 0 refusals/violations/stalls. Drill: test/gearpolicy.test.js.
+**Vision this thread: the stranger.** The AI plays like someone who means it, and a person who has never held a FaB card can pick
+the game up. **Shipped — v6.57** (CHANGELOG has every number):
+- **How to play** sheet under the roster (six paragraphs, coach voice; `tools/page.js` walks it). **Link preview**: description +
+  Open Graph + `icons/share.png` (original art, `tools/icon.js` writes it with PAGE_DEPS' fonts).
+- **SPXRXPUMP** (`judge.pumpsNow`): the attacking reaction window casts only an attack reaction, a pump/hit rider, or a permanent.
+  All 11 affected heroes within the band (sum 1872 -> 1885 of 4224); ships for the advice it corrects.
+- **SPXTOKENPIECE** (`judge.tokenPiece`, `TOKEN_DEF` 1): Runehold Release / Flat Trackers before the attack.
+  Viserai BW 136 -> 141 of 768, **Boltyn 224 -> 253 of 768**.
 
 **Measured and RULED OUT this thread (don't chase again):**
-- **Glisten at the close of the opponent's turn:** equal to the start of his own turn (counters last to HIS end phase either way).
-- **Holding Arcane Polarity until it is worth 4** (and out of the attack reaction window): 80 -> 64 of 384. It clogs hand AND arsenal.
-- **Gravy deploys allies before hand attacks:** 165 -> 143 of 384.
-- Arakni's ladder dip with SPXPIECE on (47 -> 38) is the field: her own seat A/B'd level (164 vs 163).
+- Holding auras/items out of the attacking window: **Lyath 133 -> 95 of 384** (Suspense auras belong in the arena). Permanents stay in.
+- Stand Strong (Lyath) via tokenPiece: it costs {r}{r}{r}, not admitted; identical either way.
 
 **NEXT, in order:**
-1. **The attacking reaction window casts the cheapest instant as a "pump"** (`reaction()` in sparring.js, `rxAttack`): when NOT
-   defending there is no `defendsNow`-style filter, so any legal instant goes (that is how Polarity was spent for 1). The defending
-   side was fixed by QUEUE v4 H8. A narrow test (life gains only) measured negative because it also held the card; try a filter of
-   "affects this link" (a judge reader, `pumpsNow`) as its own gate, A/B several heroes — expect it to matter for Briar/Viserai/BW.
-2. **Compass of Sunken Depths** (Gravy): legal on 433 opposing turns, used 0 ("{t}: look at the top card"). The AI uses no info;
-   only worth it if the look feeds Sharp's mask (view.js). Probably skip.
-3. **Gravy's Timesnap Potion** 63 / 2 and **Jittery Bones** 69 / 8; Boltyn's **Flat Trackers** 53 / 5 (destroy: Agility token).
-   Run `never.js <hero> 1` first — the probe is ~1 min a seed.
-4. Viserai BW is still bottom (21): Runehold Release 157 / 23 (destroy: Runechant) and Runechant of Lust/Sloth at opp turn 0 / ~40 —
-   the latter is the suspense shape (expect negative).
+1. **Gravy's Timesnap Potion** ("Destroy this: Gain 2 action points") 63 / 2 and **Jittery Bones** 69 / 8. Timesnap is worth it
+   when the hand holds 2+ more plays than the one point covers (an `apNeed` judge reader); run `never.js gravy 1` first.
+2. Viserai BW is still bottom (18-22 on the ladder). Runechant of Lust/Sloth at opp turn (suspense shape, expect negative). Look
+   at what she pitches vs plays (`experiments/census/rx.js`-style census of her calls).
+3. **Newcomer path, next steps:** a first-game nudge (the How to play button is quiet text; a first visit could open it once —
+   store a flag, try/catch storage), and the hero sheet could say each hero's style in one line (data, not prose in code).
+4. Compass of Sunken Depths (Gravy) — info the AI cannot use; skip unless Sharp's mask learns it (view.js).
 5. Phase 4 (Outbreak, 2027-02): when the lists publish, ROADMAP-NEWDECKS.md. Wire: next cut if needed is HZOOM (~500 B/seat).
 
 **ASK THE USER (defaults standing — overrule any):** the cup (all heroes qualify, top 16 bracket); Prism as an AI seat; Spectra resolves at
