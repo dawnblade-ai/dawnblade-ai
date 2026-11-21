@@ -182,6 +182,8 @@ The table flow is `TableScreen` (5890) → `TableRoom` (6038) →
 --line:#4A3B2E         borders
 --ok:#7BA05B   green
 --tv: calc(100vh - 152px)      the flick-pane height
+--fs-xs/sm/md/lg/xl/body/h2/big   9/10/11/12/13/15/22/26px — the type scale (v6.50); new CSS names a
+                               size by token, a half-pixel step stays a literal
 --peekbot                      MEASURED per frame — see §5
 --lochrome                     MEASURED on the loadout — see §5
 ```
@@ -194,6 +196,8 @@ The table flow is `TableScreen` (5890) → `TableRoom` (6038) →
   The display face. Brand, tabs, buttons, headings.
 - **`Spline Sans`** — body, 15px / 1.45.
 - **`Spline Sans Mono`** — `.mono`, numbers, counters, codes.
+- **No inline `fontSize` in markup** (v6.50): use a utility class (`.fs-md` … `.fs-big`, `!important`
+  so they win over contextual rules the way an inline style did) or a component class.
 
 ### The signature idiom
 
@@ -202,8 +206,8 @@ on nearly every panel and tile and it is what makes the look cohere. Keep it.
 
 ### Class vocabulary
 
-**205 classes**, re-derive with
-`sed -n '13,788p' index.html | grep -oE '^\.[a-z][a-zA-Z0-9_-]*' | sort -u | wc -l`.
+Count the classes that open a rule line (a number written here rots; v6.50 re-derived it) with
+`awk '/<style>/,/<\/style>/' index.html | grep -oE '^\.[a-z][a-zA-Z0-9_-]*' | sort -u | wc -l`.
 The style block is sectioned by comment (`/* shell */`, `/* battle */`,
 `/* card frame overlay */`, `/* tabletop */`, …) — `grep -n '^/\* ' index.html`
 gives the map. Several sections are labelled by the version that added them

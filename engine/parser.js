@@ -10351,6 +10351,18 @@ function chargeOffer(card, sd, uid, taken){
    shape exactly: a rule in a trainer closure does not exist at the
    table. The subtype is read off the STRUCTURED array (`isArrowCard`),
    never `tt` (v2.44). */
+/* "IF A BLUE CARD HAS BEEN PUT INTO YOUR GRAVEYARD THIS TURN" (Gravy Bones),
+   ANY ROUTE IN (v6.50). The counter `hist.blueGY` was bumped in one place:
+   a blue ATTACK filed after its link. A blue non-attack action resolving
+   (Portside Exchange, Avast Ye!, Loot the Hold), a blue instant, a discard,
+   a milled card and a blue block all put a blue card into the graveyard and
+   none counted, so in 16 measured games Gravy was offered a graveyard play
+   ONCE. Every path into a graveyard stamps `_gy` with the turn, so the
+   graveyard answers for itself — the same scan `allyDied` reads. The counter
+   stays (a blue card filed this turn and then moved on still counts). The
+   caller passes its own graveyard and turn: the parser stays pure. */
+const blueToGraveThisTurn = o => (o.blueGY || 0) > 0 ||
+  (o.grave || []).some(g => g && g._gy != null && g._gy === o.turn && Number(g.pitch) === 3);
 const playZoneWhy = (c, zone, o) => {
   o = o || {};
   if(!c) return "there is no such card";
@@ -10372,7 +10384,7 @@ const playZoneWhy = (c, zone, o) => {
        "specifically so it cannot be replayed infinitely" (RULING
        2026-07-25). Without this the six allies are a loop. */
     if(c._fd) return "it died face-down, so it cannot be replayed";
-    return (o.wateryGrave && (o.blueGY || 0) > 0 && printedKw(c, "watery grave")) ? null
+    return (o.wateryGrave && blueToGraveThisTurn(o) && printedKw(c, "watery grave")) ? null
       : "nothing lets it be played from the graveyard";
   }
   if(zone === "banish"){

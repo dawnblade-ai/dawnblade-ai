@@ -1,3 +1,32 @@
+## v6.50 — three sounds that mean three things; a type scale; Gravy replays his dead
+
+- **Sound (UX roadmap step 9, POLISH §4).** A resolved link is heard as well as stamped: a hit is a low falling thud, a block a short
+  bright clank, a prevention a falling hiss, three different shapes so they read with the screen off. All three are synthesized with Web
+  Audio in the page (`Sfx`): no file, no CDN, nothing to license. `LinkSfx` sits beside `LinkStamp` on both boards and plays once when the
+  last link gains its `out` (never for a board as it already stands when it mounts). A ♪ toggle on the board's nav row mutes it,
+  remembered as `dawnblade.sound`; a phone keeps the audio context asleep until the first tap. Driven in the page: mount silent, an open
+  link silent, its resolution one `hit`, a re-render silent, a new chain's prevention one `prevented`, muted nothing; every voice builds
+  in Chromium without an error. Drill: test/sfx.test.js (voices = the engine's three outcomes; both boards listen; no audio file).
+- **A type scale (UX roadmap step 8).** `--fs-xs … --fs-big` on `:root` (9/10/11/12/13/15/22/26px), and the 166 CSS sizes that matched
+  one now name it; half-pixel steps stay literals. Every inline `fontSize` in the markup (12) became a class (`.fs-md` … `.fs-big`,
+  `!important` so they keep the inline style's precedence over `.sheet h2`, `.heroplate .hact`, `.note`).
+- **Rules: Gravy Bones' watery grave saw only blue ATTACKS.** "If a blue card has been put into your graveyard this turn" was a counter
+  bumped in one place, `effects.fileAttack`. A blue non-attack (Portside Exchange, Avast Ye!, Loot the Hold, Loot the Arsenal, Flying
+  High), a blue instant (Throw Caution to the Wind), a discard, a milled card and a blue block never counted, so in 16 measured games Gravy
+  was offered a graveyard play ONCE. `parser.playZoneWhy` now also reads the graveyard (any blue card stamped `_gy` this turn — the same
+  scan `allyDied` uses), and both boards pass it. Offers: 1 -> 17 in the same 16 games.
+- **AI: a card the judge lets you play from the graveyard is a card you hold (`gravePlays`, gate `SPXGRAVE`).** The policy listed hand,
+  arsenal and banished zone; with Oysten (cost 0) playable from the graveyard and the action point unspent its call was "Nothing you hold
+  is worth playing". Measured on Gravy's own seat, same engine, gate on vs off: 41 -> 56 of 192 (12 seeds, Gravy first-named) and 20 -> 23
+  of 96 (6 seeds, second-named): 61 -> 79 of 288, the same direction in every slice. Other heroes do not move (Briar and Kayo identical).
+- Drills: test/bluegy.test.js (the parser's three rows; the table's `legal` with a blue non-attack filed this turn vs last turn vs a
+  non-blue card; the AI plays a free ally from the graveyard rather than pass — each sabotaged). Width pins: the trainer's `tryPlay` slice
+  27044 -> 27065, the style block 87035 -> 89304.
+- **Validation:** npm test 4492 / 4487 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; audit unchanged; ladder
+  `npm run play '' '' 3` = 816 games, 0 refusals / violations / stalls / draws; page.js 78/78 (0 page errors); both babel blocks compile.
+- **Census (the new angle the handoff asked for): `npm run play '' '' 6`**, 1632 games, before this release: Gravy 7.2 of 32 a seed,
+  Viserai BW 7.5, Boltyn 8.2, Lyath 9.2, Blaze 10.5 at the bottom; Briar 28.3, Kayo 25.3, Dorinthea 24.5 at the top.
+
 ## v6.49 — the prompt sheet pass (UX step 7)
 
 - **A target sheet drew no cards.** `buildPrompt` deals `cards` for a `target` prompt and `promptChoose` takes an index into them, but

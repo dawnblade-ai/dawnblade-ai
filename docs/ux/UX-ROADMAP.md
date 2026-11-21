@@ -95,10 +95,10 @@ Step 5 verified: drill `test/linkout.test.js`; a trainer drive plays Clash of Ag
 7. **DONE (v6.49: target cards, soak stat, tags off the pip).** **Prompt sheet pass.** Drive each `prompts.js` kind (opt pick modal pay reveal target
    alloc soak) to the sheet, screenshot, and give the sheet the same headline / stat /
    one-primary-button grammar `EndPanel` uses. `test/promptctl.test.js` must stay green.
-8. **Typography and token sweep.** Replace the remaining inline `style={{fontSize:…}}`
+8. **DONE (v6.50: `--fs-*` scale, 166 sizes named, every inline fontSize a class).** **Typography and token sweep.** Replace the remaining inline `style={{fontSize:…}}`
    on shared components with classes; add `--fs-*` size tokens to `:root` and use them
    in new CSS. Re-derive UI-GUIDE §4's class count after.
-9. **Sound (POLISH §4).** Three self-hosted sounds — hit, block, fizzle — behind a
+9. **DONE (v6.50: `Sfx`, synthesized with Web Audio — no files; ♪ toggle on the nav row).** **Sound (POLISH §4).** Three self-hosted sounds — hit, block, fizzle — behind a
    mute toggle, distinguishable with the screen off. Files under `data/` or `assets/`,
    no CDN.
 

@@ -150,7 +150,8 @@ const fixOn = (g, seat) => {
    SPXWPNFIRST a grant played before the only attack left, a weapon swing it pumps,
    SPXLABOARD a board term in Sharp's score (a permanent is worth its printed numbers, not -mu),
    SPXEFFPOW a hand attack ranked on the power it has NOW (`judge.effPowerNow`: a self-pump
-   whose gate is already true counts), not the power it prints. */
+   whose gate is already true counts), not the power it prints. SPXGRAVE (v6.50) a card
+   `legal` lets the seat play from its graveyard is a card it holds (`gravePlays`). */
 const subGate = k => {
   const v = (typeof process !== "undefined" && process.env && process.env[k]) || "";
   return (g, seat) => {
@@ -163,7 +164,8 @@ const subGate = k => {
 };
 const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate("SPXPAY"), idleOn = subGate("SPXIDLE"),
       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
-      wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW");
+      wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW"),
+      graveOn = subGate("SPXGRAVE");
 /* SPXTRAV (v6.46): take Viserai, Usurper's end-phase traverse back to the front.
    OFF unless named (unlike the fixes above): measured over 180 seated games each way
    (`node tools/staged-play.js viseraiBetweenWorlds 6`), staying won 17 and turning
@@ -688,6 +690,12 @@ function reaction(g, seat){
    there next time, and the card a draw finds can be a better one. */
 const ARENA_KEY = {pump: "arenaPump", draw: "arenaDraw", res: "arenaRes", ap: "arenaAP"};
 /* the banished cards `legal` lets this seat play now, in uid order */
+/* THE GRAVEYARD CARDS `legal` LETS THIS SEAT PLAY NOW (v6.50, SPXGRAVE), in uid order —
+   Gravy Bones' watery grave is the route today. This list never looked there: with
+   Oysten (cost 0) playable from the graveyard and the action point unspent, the call
+   was "Nothing you hold is worth playing" (17 offers in 16 games, 0 taken). */
+const gravePlays = (g, seat) => !graveOn(g, seat) ? [] : (g.sides[seat].grave || []).filter(c => c && c.uid != null
+  && legal(g, {t: "play", uid: c.uid, from: "grave"}, seat)).slice().sort(byUid);
 const banishPlays = (g, seat) => (g.sides[seat].banish || []).filter(c => c && c.uid != null
   && legal(g, {t: "play", uid: c.uid, from: "banish"}, seat)).slice().sort(byUid);
 /* every weapon swing this seat could ask for (a gear entry that prints power), in uid order.
@@ -747,6 +755,7 @@ function offenceBase(g, seat, o){
      and the action point unspent. `legal` answers which banished cards are
      playable now, so this reads no card text; one that is not is not listed. */
   banishPlays(g, seat).forEach(c => from.push({c, from: "banish"}));
+  gravePlays(g, seat).forEach(c => from.push({c, from: "grave"}));
 
   /* ---- AN ALLY IS A THIRD SOURCE OF ATTACKS (v3.50) ------------------
      Allies have attacked since v3.44 and this policy had never heard of
@@ -1329,6 +1338,7 @@ function laCands(g, seat, a0){
   (sd.hand || []).forEach(c => c && add({t: "play", uid: c.uid, from: "hand", ...atk(c)}));
   if(sd.arsenal) add({t: "play", uid: sd.arsenal.uid, from: "arsenal", ...atk(sd.arsenal)});
   banishPlays(g, seat).forEach(c => add({t: "play", uid: c.uid, from: "banish", ...atk(c)}));
+  gravePlays(g, seat).forEach(c => add({t: "play", uid: c.uid, from: "grave", ...atk(c)}));
   (sd.gear || []).forEach(c => c && add({t: "activate", uid: c.uid}));
   (sd.board || []).forEach(b => { if(!b) return; const at = J.boardAttackOf(g, seat, b.uid);
     add(at ? {t: "activate", uid: b.uid, target: targetFor(g, seat, Object.assign({}, b.card, {power: at.power}))} : {t: "activate", uid: b.uid}); });

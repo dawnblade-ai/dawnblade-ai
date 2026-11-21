@@ -381,8 +381,10 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        27,014 -> 27,038 AT v6.43, READ FIRST, same body: `bancostpick` joins the
        opening guard's list of busy modes (+24), nothing else.
        27,038 -> 27,044 AT v6.47, READ FIRST, same body: the trainer hands `nextTurnBars` the
-       zone a card is played from (`, from`, +6) for Herald of Judgment's banished-zone lock. */
-    "costtaxes.test.js index.html 27044",
+       zone a card is played from (`, from`, +6) for Herald of Judgment's banished-zone lock.
+       27,044 -> 27,065 AT v6.50, READ FIRST, same body: the zone check hands `playZoneWhy` the
+       seat's graveyard (`grave: act(s).grave, `, +21) so watery grave sees any blue card filed this turn. */
+    "costtaxes.test.js index.html 27065",
     "dichotomy.test.js engine/prompts.js 13239",   /* +263 AT the hand reveals: buildPrompt carries `reveal`; +237 AT v6.40, READ FIRST: still the pick branch, the pick's `defUid` and its comment */
     /* 8,550 -> 9,523 AT v4.60, and now THREE files take the same slice —
        `playRx`, anchored on its own declaration and bounded at `playRxA`, the
@@ -402,7 +404,7 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        ACTIVATED route asks too, so the body is shorter by the two
        declarations it no longer carries. Same anchors. `rxability.test.js`
        takes the same slice to pin that the destructure is there. */
-    "discost.test.js index.html 27044",
+    "discost.test.js index.html 27065",
     /* 9,905 -> 10,264 AT v4.92, READ FIRST, for all four rows of this body:
        still `playRx` -> `playRxA`. The growth is Put in Context's limit
        asked in the defence branch through `effects.defLimitWhy`, beside the
@@ -410,7 +412,7 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
     "dorinthea.test.js index.html 8982",
     "drx.test.js index.html 8982",
     /* +instantpump AT v5.03: the same `tryPlay` -> `confirmPay` body. */
-    "instantpump.test.js index.html 27044",
+    "instantpump.test.js index.html 27065",
     /* 18,386 -> 18,699 -> 20,096 AT lookahead phase 2, READ FIRST: still
        `function Loadout(` -> the APP banner. The growth is `sharp` on the
        table start with its comment, then the Sharp / Steady control
@@ -489,7 +491,12 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        growth is presentation only: the roster tile's zoomed illustration (`.hgrid .hcard img.art`),
        the name label lifted over it, and the picked hero's banner (`.hbanner` and its art, fade,
        text, class swatch, keyframe and reduced-motion line). */
-    "phasebar.test.js index.html 87035",
+    /* 87,035 -> 89,304 (UX roadmap steps 8 and 9, v6.50), READ FIRST: still `<style>` -> `</style>`; the
+       growth is presentation only: the type scale (`--fs-*` on `:root`, 166 literal sizes replaced
+       by the token of the same value), the type utility classes that replaced every inline fontSize
+       (`.fs-md` … `.fs-big`, with the comment on their `!important`), and the mute toggle's two
+       rules (`.screennav .sndbtn`, `.off`). */
+    "phasebar.test.js index.html 89304",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
        `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
        `abPickBound` in the pick legality it extends. */
@@ -519,20 +526,20 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        `tryPlay` in `stack` (an activated ability, never a reaction card).
        Same signature, same anchors; `discost.test.js` and
        `rxability.test.js` take the same slice for claims of their own. */
-    "priority.test.js index.html 27044",
-    "priority.test.js index.html 27044",
+    "priority.test.js index.html 27065",
+    "priority.test.js index.html 27065",
     /* 10,264 -> 8,459 AT v4.95, READ FIRST, for the five `playRx` -> `playRxA`
        rows: still the hand door, bounded at the arsenal door. It SHRANK —
        the charge, the resolution and the wall are `effects.playAtSpeed` now. */
     "priority.test.js index.html 8982",
-    "routeap.test.js index.html 27044",
-    "rxability.test.js index.html 27044",
+    "routeap.test.js index.html 27065",
+    "rxability.test.js index.html 27065",
     "rxability.test.js index.html 8982",
     /* +soulcost AT v5.59: the same `tryPlay` -> `confirmPay` body, for the
        claim that the soul question sits after every legality and the
        discard's question and before the payment. */
-    "soulcost.test.js index.html 27044",
-    "zonerule.test.js index.html 27044"
+    "soulcost.test.js index.html 27065",
+    "zonerule.test.js index.html 27065"
   ], /* 15,440 -> 16,557 AT v4.59, READ FIRST (v4.57: a pin edited without
         being read is a guard switched off). Both rows are
         `tryPlay` -> `confirmPay` — anchored on the body's own declaration and

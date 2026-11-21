@@ -78,8 +78,11 @@ Dawnblade has no 60fps physics loop, so the analogue is **determinism**:
 
 ### 4. IT SOUNDS AND LOOKS LIKE ONE THING
 
-Not built yet, and deliberately last — it is the half that ages worst if the
-foundation moves under it:
+BUILT at v6.50 (sound): `Sfx` in `index.html` synthesizes a hit (low falling
+thud), a block (short bright clank) and a prevention (falling hiss) with Web
+Audio, keyed to the engine's link outcome; a ♪ toggle mutes it. It was
+deliberately last — it is the half that ages worst if the foundation moves
+under it:
 
 - **sound is feedback, not decoration.** Melee's hits read as heavy because
   hitlag freezes the frame; the analogue here is that a hit, a block and a

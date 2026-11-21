@@ -1183,7 +1183,7 @@ function legal(g, a, seat){
        played here: the trainer's refusal was its own line, and this board
        never had it. */
     { const _zw = PR.playZoneWhy(c, zone, {wateryGrave: !!bOf(g, seat).wateryGrave,
-                                         blueGY: (sd.hist || {}).blueGY || 0, turn: g.turn});
+                                         blueGY: (sd.hist || {}).blueGY || 0, grave: sd.grave, turn: g.turn});
       if(_zw) return c.name + " cannot be played from your " + PM.promptZoneWord(zone) + " — " + _zw; }
     const win = P.speedAllowed(g, seat);
     if(!win.length) return "no window is open for you";
