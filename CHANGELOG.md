@@ -1,3 +1,19 @@
+## v6.48 — every chain link says what became of it; the hero select shows the art
+
+- **Hit, blocked or prevented, on the board (UX roadmap step 5, second half).** A resolved chain entry carries `out` — `"hit"` (damage was
+  dealt), `"blocked"` (the wall stopped all of it) or `"prevented"` (damage got past the wall and a prevention took it all, CR 7.5.5) — from
+  `effects.linkOutcome`, the one body: judge's strike, the trainer's own strike and the dummy's swing all feed it the numbers they already
+  held (power, what got past the wall, what was dealt). The featured slot stamps the card that just resolved (red HIT n, bone BLOCKED, blue
+  PREVENTED; `LinkStamp`, only while the slot still shows that link — `featOutcome`), and the chain tiles dim a blocked link and ring a
+  prevented one blue. **WIRE_V 44 -> 45** (a chain entry gained a field). Drill: test/linkout.test.js (self-play at the table checks every
+  new attack entry against the damage dealt and must see both a hit and a block; sabotaged twice).
+- **The hero select (UX roadmap step 4).** Roster tiles show the illustration, not the whole card (zoomed past the frame and the printed
+  name); names 10.5px, and a name the tile cannot hold shows its first word ("Lyath"). A picked hero gets a banner right under the roster —
+  art, class and block with the block's colour, the name, the one-line pitch — where before the only sign was a gold outline and the sheet
+  sat below the fold. The legend names every group on the roster (Usurp the Shadow Throne had no key). Kept at 6 across, not the roadmap's
+  4: at 4 across Battle falls off the first screen at 393x852. Before/after: `docs/ux/before-heroselect.jpg`, `after-heroselect*.jpg`,
+  `after-linkstamp.jpg`.
+
 ## v6.47 — Prism, Advent of Thrones opens; a new result screen, life display and hand rail
 
 - **The seventeenth hero.** Prism, Advent of Thrones joins the roster (key `prism`), under the RULING (user, 2026-11-15) that a

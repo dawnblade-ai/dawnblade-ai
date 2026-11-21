@@ -64,8 +64,24 @@ img{display:block;max-width:100%}
 .hgrid .hcard{width:calc((100% - 20px)/6)}
 .hcard{position:relative;background:var(--forge);border:1px solid var(--line);padding:0;overflow:hidden;display:flex;flex-direction:column}
 .hcard img.art{width:100%;aspect-ratio:1/1;object-fit:cover;object-position:50% 16%;filter:saturate(.92)}
+/* the roster tile shows the ILLUSTRATION, not the card (v6.48): zoomed past
+   the frame and the printed name strip; the name label paints over the edge */
+.hgrid .hcard img.art{transform:scale(1.42);transform-origin:50% 30%}
+.hbanner{position:relative;display:flex;align-items:stretch;min-height:104px;margin-top:10px;background:var(--forge);border:1px solid var(--line);border-left:4px solid var(--chc);overflow:hidden;animation:hbin .28s ease-out}
+.hbanner .hbart{position:absolute;left:0;top:0;bottom:0;width:42%;overflow:hidden}
+.hbanner .hbart img.art{width:100%;height:100%;object-fit:cover;object-position:50% 16%;transform:scale(1.5);transform-origin:50% 34%;filter:saturate(.95)}
+.hbanner .hbart .fallbackart{height:100%}
+.hbanner .hbart::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(30,24,20,0) 55%,var(--forge) 100%)}
+.hbanner .hbtxt{position:relative;margin-left:auto;width:60%;padding:10px 12px 10px 6px;display:flex;flex-direction:column;justify-content:center;gap:4px}
+.hbanner.mystery .hbtxt{width:100%;padding-left:12px}
+.hbanner .hbcls{font-family:'Spline Sans Mono';font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--bone-dim)}
+.hbanner .hbcls::before{content:"";display:inline-block;width:8px;height:8px;margin-right:6px;background:var(--chc);vertical-align:0}
+.hbanner .hbname{font-family:'Big Shoulders Display';font-weight:800;font-size:22px;line-height:1;text-transform:uppercase;letter-spacing:.02em;color:var(--bone)}
+.hbanner .hbpitch{font-size:12.5px;line-height:1.3;color:var(--bone-dim)}
+@keyframes hbin{0%{opacity:0;transform:translateY(-4px)}100%{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.hbanner{animation:none}}
 .hcard .fallbackart{aspect-ratio:1/1;font-size:12px}
-.hcard .nm{display:block;padding:2px 3px;background:var(--forge2);border-top:1px solid var(--line);font-family:'Big Shoulders Display';font-weight:700;font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;margin-top:auto}
+.hcard .nm{display:block;position:relative;z-index:1;padding:2px 2px;background:var(--forge2);border-top:1px solid var(--line);font-family:'Big Shoulders Display';font-weight:700;font-size:10.5px;letter-spacing:.01em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;margin-top:auto}
 .hcard.ch1{box-shadow:inset 0 -2px 0 var(--r)}
 .hcard.ch2{box-shadow:inset 0 -2px 0 var(--y)}
 .hcard.ch3{box-shadow:inset 0 -2px 0 var(--b)}
@@ -1073,7 +1089,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "6.47"; /* v6.47 - Prism, Advent of Thrones opens, with a new result screen, life display, hand rail and loadout; see CHANGELOG.md. */
+window.APP_VER = "6.48"; /* v6.48 - every chain link shows whether it hit, was blocked or was prevented, and the hero select shows the art; see CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -2103,6 +2119,33 @@ function DbBanner({db,reload}){
 }
 
 /* ---------- hero select + deck view ---------- */
+const CH_COLOR = {1:"var(--r)", 2:"var(--y)", 3:"var(--b)", 4:"var(--hold)"};
+const chapterName = ch => { const h = HEROES.find(x => x.ch === ch && x.blk); return h ? h.blk : "Chapter " + ch; };
+/* THE PICKED HERO, SAID WHERE THE PICK WAS MADE (UX roadmap step 4, v6.48).
+   The sheet with the hero's name, class and pitch sat under the Battle
+   button, the format note and the VS strip — off the first screen on a
+   phone — so a tap on a tile changed nothing a player could see but a gold
+   outline. The banner sits between the roster and Battle: the art cropped
+   wide, the name in the display face, class and chapter in the chapter's
+   colour, and the one-line pitch. The full sheet stays below for stats and
+   the decklist. */
+function HeroBanner({h,db}){
+  if(!h) return null;
+  if(h.mystery) return (
+    <div className="hbanner mystery clip-sm" style={{"--chc":"var(--y)"}}>
+      <div className="hbtxt"><span className="hbcls">Random</span><b className="hbname">Fate picks your fighter</b>
+        <span className="hbpitch">Revealed when you prepare for battle.</span></div>
+    </div>);
+  return (
+    <div className="hbanner clip-sm" style={{"--chc":CH_COLOR[h.ch]||"var(--line)"}}>
+      <div className="hbart"><HeroArt h={h} db={db} key={db.status}/></div>
+      <div className="hbtxt">
+        <span className="hbcls">{h.cls} · {h.blk || ("Chapter " + h.ch)}</span>
+        <b className="hbname">{h.n}</b>
+        {h.blurb && <span className="hbpitch">{h.blurb}</span>}
+      </div>
+    </div>);
+}
 function HeroGrid({onPick,best,db,selected}){
   return (
     <div>
@@ -2111,7 +2154,8 @@ function HeroGrid({onPick,best,db,selected}){
           <button key={h.k} className={"hcard clip-sm ch"+h.ch+(selected&&!selected.mystery&&selected.k===h.k?" sel":"")} onClick={()=>onPick(h)}>
             <HeroArt h={h} db={db} key={db.status}/>
             {best[h.k]!=null && <span className="best">★{best[h.k]}</span>}
-            <span className="nm">{heroShort(h)}</span>
+            {/* a name the 6-across tile cannot hold shows its first word (v6.48) */}
+            <span className="nm">{heroShort(h).length > 12 ? heroShort(h).split(" ")[0] : heroShort(h)}</span>
           </button>
         ))}
         <button className={"hcard rand clip-sm"+(selected&&selected.mystery?" sel":"")} onClick={()=>onPick({random:true})}>
@@ -2119,10 +2163,12 @@ function HeroGrid({onPick,best,db,selected}){
           <span className="nm">Random</span>
         </button>
       </div>
+      {/* EVERY GROUP ON THE ROSTER GETS A KEY (v6.48) — the fourth colour
+          (the Usurp the Shadow Throne heroes) had none. Read off HEROES, so
+          the next precon to open names itself. */}
       <div className="roster-legend">
-        <span><i style={{background:"var(--r)"}}/>Chapter 1</span>
-        <span><i style={{background:"var(--y)"}}/>Chapter 2</span>
-        <span><i style={{background:"var(--b)"}}/>Chapter 3</span>
+        {[...new Set(HEROES.map(h=>h.ch))].sort().map(ch=>
+          <span key={ch}><i style={{background:CH_COLOR[ch]||"var(--line)"}}/>{chapterName(ch)}</span>)}
         <span style={{marginLeft:"auto"}}>{HEROES.length} fighters · fate optional</span>
       </div>
     </div>
@@ -9691,6 +9737,7 @@ function App(){
       <DbBanner db={db} reload={reload}/>
       {tab==="heroes" && idle && <>
         <HeroGrid best={best} onPick={p=>setHero(p&&p.random ? {...HEROES[Math.floor(Math.random()*HEROES.length)], mystery:true} : p)} db={db} selected={hero}/>
+        <HeroBanner h={hero} db={db}/>
         {hero && <button className="battlebtn clip" disabled={db.status!=="ready"} onClick={()=>setLoHero({...hero, seed:battleSeed()})}><span>{db.status==="ready"?"Battle":"Forging…"}</span></button>}
         <button className="bigbtn alt" style={{marginTop:8}} onClick={()=>setTable("find")}>Find an opponent</button>
         {/* THE FORMAT, SAID WHERE A PLAYER LOOKS (v4.76). Dawnblade does not
