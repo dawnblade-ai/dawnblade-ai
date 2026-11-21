@@ -48,10 +48,15 @@ test("every row of both new lists resolves from the staged cards, by its own pri
   assert.ok(got.rows > 60, "the walk found almost no rows");
   assert.deepEqual(got.miss, [], "list rows the staged cards cannot deal");
 
-  /* THE CONTROL: the pool alone must NOT resolve them, or this drill would
-     pass with an empty staged file. */
-  const bare = resolvedRows(dbOf(readPool().filter(c => c && c.name)));
-  assert.ok(bare.miss.length > 30, "the pinned pool already resolves the new lists — the control is dead");
+  /* THE CONTROL: a database WITHOUT the staged records must NOT resolve them, or this drill
+     would pass with an empty staged file. Until v6.47 that database was the pinned pool; both
+     heroes have opened since (v6.46, v6.47), so the pool now carries their records and the
+     control is the pool with every staged name taken out. (The pool's reprints keep their
+     develop printings, so 16 rows still miss their own code there: the drill above is the
+     one that asks for it.) */
+  const stagedNames = new Set(staged().map(c => norm(c.name)));
+  const bare = resolvedRows(dbOf(readPool().filter(c => c && c.name && !stagedNames.has(norm(c.name)))));
+  assert.ok(bare.miss.length > 30, "a database without the staged records resolves the new lists — the control is dead");
 });
 
 test("the staged sets are exactly the lists' sets, and nothing else rides along but tokens", () => {

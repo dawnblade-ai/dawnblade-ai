@@ -46,7 +46,7 @@ const report = () => _rep || (_rep = JSON.parse(execFileSync(process.execPath,
 
 test("the coverage scan is alive in both directions", {skip}, () => {
   const r = report();
-  assert.equal(r.records, 824, "the drive leg did not parse the pinned pool");   /* 797 -> 824 AT v6.46 */
+  assert.equal(r.records, 851, "the drive leg did not parse the pinned pool");   /* 797 -> 824 AT v6.46; -> 851 AT v6.47 (Prism) */
   assert.ok(r.powCards > 100, "only " + r.powCards + " powCards built — the builders are not reached");
   assert.ok(r.sites > 120, "only " + r.sites + " return sites found — the site scan is aimed wrong");
   /* A PAINTING THAT COVERS EVERYTHING REPORTS 0, and 0 reads as clean. */
@@ -99,28 +99,11 @@ test("every parser reading the pool never reaches is pinned", {skip}, () => {
     "return NOOP(\"clash — resolved when this blocks, off the clash keyword\");",
     "return NOOP(\"reveal payoff — fires if this is the card revealed on a winning clash\");",
     "return R([[\"soulSpend\", num(m[1]), sub.ops]]);",
-    /* v6.47: "put it into your soul and <rider>" is printed only by Prism's Heralds, which are
-       staged until she opens (test/herald.test.js drives them). Unpin it the day she does. */
-    "return R([[\"soulSelf\"], ...sub.ops]);",
-    /* v6.47, reader 3: Figment of Hope's "Unlimited" and Prism's "Awaken target figment you
-       control" — staged until she opens (test/figment.test.js drives both). Unpin them then. */
-    "if(/^unlimited$/.test(c)) return NOOP(\"deckbuilding marker — any number of copies per deck\");   /* v6.47, Figment of Hope */",
-    /* v6.47, reader 5: Spectra, "loses and can't gain phantasm" and Pierce Reality's first-play
-       buff are printed only by staged Prism cards (test/spectra.test.js, test/phantasmlose.test.js). */
-    "return R([[\"noop\", \"static — read off the arena when the turn's first such attack is declared\"]], {firstLoseKw: {q, kw: m[2]}});",
-    "return R([[\"buffNext\", 0, q, {loseKw: m[3]}]]);",
-    /* v6.47, reader 6: Herald of Triumph's and Herald of Victoria's -1{p} (test/heraldminus.test.js). */
-    "return R([[\"noop\", \"static — the defending attack action cards' power, read when defenders are declared\"]], {defAtkPow: -m[1]});",
-    "return R([[\"foeAtkBuff\", -m[1], {aac: true}, \"turn\"]]);",
-    /* v6.47, reader 7: Lay Low, Herald of Judgment's lock and Luminaris' or-group target, all
-       staged (test/laylow.test.js, test/luminaris.test.js). */
-    "return NOOP(\"a play gate — a marked hero cannot play this (playIfOk)\");",
-    "if(mk) return R([[\"markedFoeNext\", -mk[1]]]); }",
-    "return R([[\"foeNextTurn\", \"noBanPlay\", 0]]);",
-    "return R([[\"ga\", 1, {any: qs}]]);",
-    "return R([[\"noop\", \"static — read off the arena when the turn's first such card is played\"]], {firstPlayBuff: {q, n: +m[3]}});",
-    "if(/^spectra$/.test(c)) return NOOP(\"static — this can be attacked, and it is destroyed when an attack targets it (the attack is then cleared)\");",
-    "return R([[\"pickPrompt\", {zone:\"board\", filter:{ty:\"figment\"}, min:1, max:1, tgt:true, awaken:true,",
+    /* v6.47 PINNED FIFTEEN READERS HERE that only STAGED Prism cards reached (the Heralds' "put it
+       into your soul and <rider>", Figment of Hope's "Unlimited", Awaken's figment pick, Spectra,
+       "loses and can't gain phantasm", Pierce Reality's first-play buff, the Heralds' -1{p}, Lay
+       Low, Herald of Judgment's lock, Luminaris' or-group), each noted "unpin it the day she
+       opens". v6.47 opened her: all fifteen are reached by the pool and left. */
     /* v6.37-v6.40 PINNED FOUR READERS HERE that only STAGED cards reached (banished-zone play,
        Usurp, Pull from Beyond's own-deck banish, Blood Debt), each noted "this entry leaves the
        day he is decked". v6.46 decked him: all four are reached by the pool and left. */
@@ -182,7 +165,8 @@ test("`runOps`'s vocabulary and what the pool emits are pinned both ways", {skip
      ever spells inside a cost. */
   assert.deepEqual(r.noEmitter,
     /* v6.46: `banTop` left (Pull from Beyond is dealt now). */
-    ["arcTaken", "deckDestroy", "destroyGear", "foeAtkBuff", "markedFoeNext", "soulSpend", "tapSelfHero", "traverse"]);
+    /* v6.47: `foeAtkBuff` and `markedFoeNext` left (Herald of Victoria and Lay Low are dealt now). */
+    ["arcTaken", "deckDestroy", "destroyGear", "soulSpend", "tapSelfHero", "traverse"]);
   /* EMITTED WITH NO CASE IN `runOps` — each dispatched at a named site
      instead. v3.99 ran this half by hand, once; the three `per…` kinds
      joined it at v4.48 and had ZERO emitters until that version. */
@@ -283,8 +267,10 @@ test("exactly one pool record's weapon cost moved, and it is Teklovossen", {skip
   }
   assert.ok(rows.includes("Teklovossen, the Mechropotent=3"),
     "Teklovossen reads " + rows.find(r => /^Teklo/.test(r)));
-  /* 26 -> 28 AT v6.46: Viserai, Between Worlds' two swords, Seven Sin Nebula and Galaxxi Black. */
-  assert.equal(new Set(rows).size, 28, "the Action-Attack population moved: " + new Set(rows).size);
+  /* 26 -> 28 AT v6.46: Viserai, Between Worlds' two swords, Seven Sin Nebula and Galaxxi Black.
+     28 -> 30 AT v6.47: Prism's Iris of Reality (the quoted "{r}{r}{r}: Attack" it grants, 3) and
+     Suraya, Archangel of Endless Hope ("{r}{r}: Attack", 2). Both read their printed pips. */
+  assert.equal(new Set(rows).size, 30, "the Action-Attack population moved: " + new Set(rows).size);
 });
 
 test("the two per-count anchors the pool never printed are gone", () => {

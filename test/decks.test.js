@@ -17,18 +17,18 @@ test("data script exposes the versioned constants", () => {
 test("roster — the 15 heroes of chapters 1-3, and the Usurp the Shadow Throne heroes that have opened", () => {
   /* v6.46: Viserai, Between Worlds opened. Usurp the Shadow Throne is a block, not a numbered
      chapter: its heroes carry `blk` (the loadout shows it) and `ch: 4` (the stripe colour only). */
-  assert.equal(W.HEROES.length, 16);
+  assert.equal(W.HEROES.length, 17);   /* v6.47: + Prism, Advent of Thrones */
   for(const ch of [1,2,3])
     assert.equal(W.HEROES.filter(h=>h.ch===ch).length, 5, `chapter ${ch} should field 5 heroes`);
   const later = W.HEROES.filter(h => h.ch > 3);
-  assert.deepEqual(later.map(h => h.n), ["Viserai, Between Worlds"]);
+  assert.deepEqual(later.map(h => h.n), ["Viserai, Between Worlds", "Prism, Advent of Thrones"]);
   for(const h of later) assert.equal(h.blk, "Usurp the Shadow Throne", h.n + " names no block");
   assert.ok(W.HEROES.filter(h => h.ch <= 3).every(h => !h.blk), "a chapter 1-3 hero names a block");
 });
 
-test("DECKS — exactly 16, keys matching the roster", () => {
+test("DECKS — exactly 17, keys matching the roster", () => {
   const keys = Object.keys(W.DECKS);
-  assert.equal(keys.length, 16);   /* v6.46: + viseraibw */
+  assert.equal(keys.length, 17);   /* v6.46: + viseraibw; v6.47: + prism */
   assert.deepEqual(keys.sort(), W.HEROES.map(h=>h.k).sort());
 });
 
@@ -147,8 +147,10 @@ test("dummy deck — the dummy draws to intellect", () => {
     /* Crouching Tiger (banished, playable that turn) and Inner Chi
        (transcend) are real database records created DURING PLAY — both are
        in the loader's NEEDED list precisely because no deck lists them.
-       Anything else here is a card the precon has and we do not. */
-    assert.deepEqual([...new Set(missing)].sort(), ["Crouching Tiger", "Inner Chi"],
+       Anything else here is a card the precon has and we do not.
+       v6.47: Suraya, Archangel of Endless Hope is Figment of Hope's BACK face (shared print
+       code SAT023, CR 9.1.3): no list names a back face; the figment awakens into it. */
+    assert.deepEqual([...new Set(missing)].sort(), ["Crouching Tiger", "Inner Chi", "Suraya, Archangel of Endless Hope"],
       "a set card missing from its own deck:\n" + missing.join("\n"));
   });
 }

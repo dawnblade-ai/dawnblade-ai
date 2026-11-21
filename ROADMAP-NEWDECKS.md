@@ -58,7 +58,7 @@ hide a keyword with no reader, so read this as a floor on the work, not a ceilin
      an optional graveyard banish as an additional cost). Census after: 35 full / 0 part / 0 none; only
      the hero (7) is left. Owed: Olde Leather Boots cannot be declared (0{d}, `tools/approx.js`
      `zero-defence-gear-refused`)
-- **Prism, Advent of Thrones** — 32 full / 0 part / 0 none (2026-11-19, unreleased; was 21 / 4 / 7); 17 names not in the pool.
+- **Prism, Advent of Thrones** — 32 full / 0 part / 0 none (2026-11-19; was 21 / 4 / 7). OPENED v6.47: every name is in the pool.
   Missing readers: the **soul** (a new zone: `sides.js`, `invariants.js` census, `view.js`
   visibility), Herald-named triggers, figments and **Awaken** (double-faced cards in the
   arena), auras that are weapons during the action phase, Phantasm, Spectra, Ward,
@@ -94,7 +94,12 @@ the loadout until the census prints no gap for his list and 630 self-play games 
 seated show 0 refusals, 0 violations, 0 stalls. Then: `DECKS`/`HEROES` entry, art path,
 the AI seat's policy keys (measured per CLAUDE.md), and the release that opens him.
 
-**Phase 3 — Prism, Advent of Thrones. STARTED 2026-11-17** (user: "move along to prism";
+**Phase 3 — Prism, Advent of Thrones. OPENED v6.47** (`pin-pool.js --add-staged`, which now also
+brings a flip-card's back (Suraya, Archangel of Endless Hope, SAT023); `HEROES`/`DECKS` key `prism`,
+DATA_VER sage-v19; the gate: `node tools/staged-play.js prism 20` = 640 games, 0 refusals / violations /
+stalls / draws, 281 won). She opens for people AND as an AI seat (decision 2026-11-19: she wins 44%
+without awakening). **Next H-item: the AI never awakens a figment** (it holds Figment of Hope as an
+instant and never pays Prism's {r}{r} Awaken; nor does it ever target a Spectra aura). Started 2026-11-17 (user: "move along to prism";
 the AI-policy work for Viserai is on the back burner). The soul zone already exists (Boltyn's
 `soul`, `soulSelf`, `soulSpend`), so the order is by what stands on what:
   1. **DONE (unreleased)** — "put it into your soul and <rider>" (`classifyClause`'s split,
@@ -136,7 +141,8 @@ the AI-policy work for Viserai is on the back burner). The soul zone already exi
      `nextTurnBars` with the zone, both boards); Luminaris' or-group target (`{any: [...]}` in
      `qualMatches`, refused by `playTargetWhy` without a matching attack). Silent Stilettos was
      already built (v4.52). `test/laylow.test.js`, `test/luminaris.test.js`. Census: 32 full /
-     0 part / 0 none. LEFT: the AI never awakens; 630 seated games; the opening.
+     0 part / 0 none. LEFT: the AI never awakens (the next H-item, above). 640 seated games and the
+     opening: DONE v6.47.
 
 **Phase 4 — Outbreak (2027-02).** When the lists publish: ask for `fabrary.net`, pin the
 lists into `data/newsets.json`, run the census, extend this file.

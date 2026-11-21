@@ -167,8 +167,8 @@ function scanUids(out, v, hostState, at, before){
 const RUNS = HEROES.map((h, i) => ({hero: h, foe: HEROES[(i + 4) % HEROES.length],
   ...loopback(h, HEROES[(i + 4) % HEROES.length], "h2-ref-" + i, i % 2)}));
 
-test("the loopback: one game per hero for all 16, played through the referee to a result", () => {
-  assert.equal(RUNS.length, 16);   /* v6.46: + Viserai, Between Worlds */
+test("the loopback: one game per hero for all 17, played through the referee to a result", () => {
+  assert.equal(RUNS.length, 17);   /* v6.46: + Viserai, Between Worlds; v6.47: + Prism */
   for(const r of RUNS){
     assert.ok(r.steps >= 100, r.hero + " played only " + r.steps + " steps");
     assert.ok(r.over, r.hero + " v " + r.foe + " did not finish");
@@ -186,7 +186,7 @@ test("…and seatView is view(hostState, guest) with exactly the four cuts (feed
   for(const r of RUNS) assert.deepEqual(r.cutMismatch.slice(0, 3), [], r.hero);
 });
 
-test("THE LOOPBACK LEAK DRILL — over a full game for all 16 heroes the guest holds and receives NO hidden uid", () => {
+test("THE LOOPBACK LEAK DRILL — over a full game for all 17 heroes the guest holds and receives NO hidden uid", () => {
   for(const r of RUNS) assert.deepEqual(r.uidLeaks.slice(0, 5), [], r.hero + " v " + r.foe + ": " + r.uidLeaks.length + " leaks");
 });
 

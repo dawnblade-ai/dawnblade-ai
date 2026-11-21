@@ -46,8 +46,8 @@ const GAMES = (() => {
 })();
 const every = (stride, fn) => { for(const G of GAMES) G.steps.forEach((st, i) => { if(i % stride === 0) fn(st, G.hero); }); };
 
-test("the positions: one self-play game for each of the 16 heroes, long enough to mean something", () => {
-  assert.equal(GAMES.length, 16);   /* v6.46: + Viserai, Between Worlds */
+test("the positions: one self-play game for each of the 17 heroes, long enough to mean something", () => {
+  assert.equal(GAMES.length, 17);   /* v6.46: + Viserai, Between Worlds; v6.47: + Prism */
   for(const G of GAMES) assert.ok(G.steps.length >= 100, G.hero + " played only " + G.steps.length + " steps");
 });
 
