@@ -205,6 +205,17 @@ function advise(g, ctx){
   if(you(g).arsenal && !isRx(you(g).arsenal) && (isAttack(you(g).arsenal)||fxParse(you(g).arsenal).playable) && (you(g).arsenal.cost||0)<=you(g).res+advPitchPotential(you(g).hand,null)
      && !P.playZoneWhy(you(g).arsenal, "arsenal", {}) && !P.addCostWhy(you(g), you(g).arsenal, effCost(you(g).arsenal, you(g))))
     cands.push({c:you(g).arsenal,from:"arsenal",idx:0,excl:null});
+  /* A CARD THE RULES LET YOU PLAY FROM THE GRAVEYARD IS COACHED TOO (v6.50) — Gravy
+     Bones' watery grave today. The same reader both boards ask (`playZoneWhy`), handed
+     the hero's flag (`ctx.wateryGrave`, the trainer's build) and this turn's graveyard. */
+  const zo = {wateryGrave: !!ctx.wateryGrave, blueGY: (you(g).hist||{}).blueGY||0, grave: you(g).grave, turn: g.turn};
+  (you(g).grave||[]).forEach((c,i)=>{
+    if(!c || P.playZoneWhy(c, "grave", zo) || isRx(c)) return;
+    if(!isAttack(c) && !fxParse(c).playable) return;
+    if(P.addCostWhy(you(g), c, effCost(c, you(g)))) return;
+    if(effCost(c, you(g)) > you(g).res + advPitchPotential(you(g).hand,null)) return;
+    cands.push({c,from:"grave",idx:i,excl:null});
+  });
   you(g).gear.forEach((w,i)=>{ if(isWeapon(w)&&!you(g).weaponUsed[w.uid]&&(w.cost||0)<=you(g).res+advPitchPotential(you(g).hand,null)) cands.push({c:w,from:"weapon",idx:i,excl:null}); });
   /* `ctx.noOpWhy` is effects.arsNoOpWhy — the reader the trainer's own door asks
      (it cannot be required here: effects requires this module). A power that
@@ -247,7 +258,7 @@ function advise(g, ctx){
   /* THE HERO POWER IS ALREADY NAMED (1.0 polish audit). Its card is built
      as "<Hero> — hero power" (build.js), so the source tag read "Play Bravo —
      hero power — hero power". Tag it only when the name does not say it. */
-  const srcTxt = best.from==="arsenal" ? " from arsenal" : best.from==="hero" ? (/hero power$/i.test(nm(best.c)) ? "" : " — hero power") : best.from==="weapon" ? " — weapon swing" : best.from==="ally" ? " — send the ally in" : "";
+  const srcTxt = best.from==="arsenal" ? " from arsenal" : best.from==="grave" ? " from your graveyard" : best.from==="hero" ? (/hero power$/i.test(nm(best.c)) ? "" : " — hero power") : best.from==="weapon" ? " — weapon swing" : best.from==="ally" ? " — send the ally in" : "";
   const bits=[]; if(out>0) bits.push(out+" dmg"); if(fx.ga) bits.push("go again");
   fx.ops.forEach(op=>{ if(op[0]==="draw") bits.push("draw "+op[1]); if(op[0]==="rune") bits.push("+"+op[1]+" runechant"); if(op[0]==="amp") bits.push("amp "+op[1]); });
   const why = fx.ga ? `Chain it: go again keeps your action point${best.next?` — ${Math.round(best.next)} more damage is waiting behind it`:""}.`

@@ -1104,7 +1104,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "6.50"; /* v6.50 - three sounds for hit, block and prevention, a type scale, and Gravy Bones replays his allies from the graveyard; see CHANGELOG.md. */
+window.APP_VER = "6.51"; /* v6.51 - a played card glides from your hand to the featured slot, and the coach looks in the graveyard; see CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -2545,6 +2545,51 @@ function SoundBtn(){
   return <button className={"sndbtn"+(on?"":" off")} style={{flex:.42}} aria-label={on ? "sound on — tap to mute" : "sound off — tap to unmute"} aria-pressed={on}
     onClick={flip}>{on ? "♪" : "♪̸"}</button>;
 }
+
+/* THE CARD GOES WHERE YOU SENT IT (UX roadmap step 6, v6.50). The commit tap of the
+   two-tap hand (`tapTwice`, both boards) marks where the tile was; when the featured
+   slot next shows THAT card, the slot itself is played back from the tile's box to
+   its own (FLIP, one compositor transform through the Web Animations API — no ghost
+   element, no layout per frame). Only the card the tap committed glides, so an
+   opponent's play or a stale mark never does; a mark is used once and goes stale
+   after 2.5 s; off under reduced motion. */
+const Glide = (() => {
+  let last = null;
+  const reduced = () => { try{ return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; }catch(e){ return false; } };
+  return {
+    mark(card, e){
+      const el = e && e.currentTarget;
+      if(!card || card.uid == null || !el || !el.getBoundingClientRect) return;
+      last = {uid: card.uid, r: el.getBoundingClientRect(), t: Date.now()};
+    },
+    take(uid){
+      const m = last;
+      if(!m || m.uid !== uid || Date.now() - m.t > 2500) return null;
+      last = null;
+      return reduced() ? null : m.r;
+    }
+  };
+})();
+function FeatCard({card}){
+  const ref = uR(null);
+  uE(() => {
+    const el = ref.current, from = card && Glide.take(card.uid);
+    if(!el || !from || !el.animate) return;
+    const to = el.getBoundingClientRect();
+    if(!to.width || !from.width) return;
+    const dx = (from.left + from.width / 2) - (to.left + to.width / 2), dy = (from.top + from.height / 2) - (to.top + to.height / 2);
+    /* the slot scrolls (overflow-y:auto), which would clip the flight: lift it for 240 ms */
+    const slot = el.parentNode, was = slot ? slot.style.overflow : "";
+    try{
+      if(slot) slot.style.overflow = "visible";
+      const an = el.animate([{transform: "translate(" + dx + "px," + dy + "px) scale(" + (from.width / to.width) + ")", opacity: .75},
+                             {transform: "none", opacity: 1}], {duration: 240, easing: "cubic-bezier(.2,.8,.2,1)"});
+      const done = () => { if(slot) slot.style.overflow = was; };
+      an.onfinish = done; an.oncancel = done;
+    }catch(e){ if(slot) slot.style.overflow = was; }
+  }, [card && card.uid]);
+  return <div className="featured" ref={ref}><CardFrame card={card}/></div>;
+}
 function ChainLink({l}){
   const [err,setErr]=uS(false);
   const s = !err ? (l.img||l.dbImg) : null;
@@ -2725,7 +2770,7 @@ function GravePane({sd, who, back, mine}){
 function usePeek(resetKey, inspect, onInspect){
   const [peek,setPeek] = uS(null);
   uE(()=>{ setPeek(null); },[resetKey]);
-  const tapTwice = (card, verb, commit) => () => {
+  const tapTwice = (card, verb, commit) => (e) => {
     if(inspect){ onInspect && onInspect(card); return; }
     /* THE SECOND TAP COMMITS THE ROUTE THE FIRST TAP NAMED (v5.44). A gear
        tile and the rail's entry for the same piece share a uid and may carry
@@ -2733,6 +2778,7 @@ function usePeek(resetKey, inspect, onInspect){
        peek armed on one must not commit the other: a different verb re-peeks. */
     if(!peek || peek.uid !== card.uid || peek.verb !== verb){ setPeek({uid:card.uid, verb}); return; }
     setPeek(null);
+    Glide.mark(card, e);
     commit();
   };
   return {peek, setPeek, tapTwice};
@@ -6392,10 +6438,11 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      Harmless while this is pure UI, a genuine trap the moment anything in
      here needs the acting side. Same-name-different-meaning is the class
      of bug test/sync.test.js pins for the engine; keep it out of the UI too. */
-  const tapTwice = (card, verb, commit) => () => {
+  const tapTwice = (card, verb, commit) => (e) => {
     if(g.inspect){ setZoom(card); return; }
     if(!peek || peek.uid !== card.uid){ setPeek({uid:card.uid, verb}); return; }
     setPeek(null);
+    Glide.mark(card, e);
     commit();
   };
   const handCell = (c,i) => {
@@ -6553,7 +6600,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                   the first draw to the last point of life. The trainer's
                   `mode` is live and authoritative, so it says so out loud;
                   the table derives the same answer with `advView`. */}
-              <Advisor g={g} ctx={{window:g.mode, incoming:g.incoming, runeDmg:built.runeDmg, hpow:built.HPOW, noOpWhy:DawnEffects.arsNoOpWhy, boostOn:g.boostOn, dBlk:opp(g).gear.filter(x=>gearDef(x)>0).length + opp(g).hand.filter(c=>(c.def||0)>0).length, dDef:gearDef(opp(g).gear.find(x=>gearDef(x)>0)||{})||1}} read={built.read}/>
+              <Advisor g={g} ctx={{window:g.mode, incoming:g.incoming, runeDmg:built.runeDmg, hpow:built.HPOW, wateryGrave:built.wateryGrave, noOpWhy:DawnEffects.arsNoOpWhy, boostOn:g.boostOn, dBlk:opp(g).gear.filter(x=>gearDef(x)>0).length + opp(g).hand.filter(c=>(c.def||0)>0).length, dDef:gearDef(opp(g).gear.find(x=>gearDef(x)>0)||{})||1}} read={built.read}/>
               <div className="gamelog" style={{marginTop:8}}>{[...g.feed].reverse().map((l,i)=><div key={i} className="gl"><PipLine s={l}/></div>)}</div>
             </div>
             {/* PANE 2 — PLAY: dummy hand · stack|card|defend · your hand+extras */}
@@ -6571,7 +6618,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                   {featured
                     ? (featured.foe
                         ? <div className="featfoe"><span className="fx2">✕✕</span><b>{featured.dmg}</b><span>Dummy</span></div>
-                        : <div className="featured"><CardFrame card={featured.card}/></div>)
+                        : <FeatCard card={featured.card}/>)
                     : <div className="featempty">Most recently played lands here</div>}
                   <LinkStamp l={featOutcome(featured, g.chain)} seq={g.chain.length}/>
                   <LinkSfx chain={g.chain}/>
@@ -9363,7 +9410,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                 </div>
                 <div className="centerslot">
                   {featured
-                    ? <div className="featured"><CardFrame card={featured.card}/></div>
+                    ? <FeatCard card={featured.card}/>
                     : <div className="featempty">Most recently played lands here</div>}
                   <LinkStamp l={featOutcome(featured, g.chain)} seq={g.chain.length}/>
                   <LinkSfx chain={g.chain}/>

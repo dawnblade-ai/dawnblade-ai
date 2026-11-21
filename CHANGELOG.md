@@ -1,3 +1,19 @@
+## v6.51 — the card you play flies to the slot; the coach looks in the graveyard
+
+- **Motion (UX roadmap step 6, the last open step).** The pane jumps already slid (`scrollIntoView` smooth, snap). New: the commit tap of
+  the two-tap hand (`tapTwice`, both boards) marks the tile's box (`Glide.mark`), and when the featured slot next shows THAT card it plays
+  itself back from the tile to its own box (`FeatCard`: FLIP, one 240 ms compositor transform through the Web Animations API, no ghost
+  element). Only the committed card glides (an opponent's play never does), a mark is used once and is stale after 2.5 s, and reduced
+  motion turns it off. The slot scrolls, so its overflow is lifted for the flight and restored. Measured at 393x852 under 4x CPU throttle:
+  every frame of the glide 17 ms; the one long frame (33–50 ms) is the play's own re-render and is there with the glide off.
+- **The coach looks in the graveyard (`advisor.advise`).** The trainer's Coach's call listed hand, arsenal, weapon, hero and allies, so
+  for Gravy Bones it never named a watery-grave replay (v6.50 taught the table's AI). It now asks `playZoneWhy` with the hero's flag
+  (`ctx.wateryGrave`) and this turn's graveyard: "Play Swabbie from your graveyard".
+- Drills: test/glide.test.js (both commits mark; both slots are `FeatCard`; reduced motion; one mark, once — each sabotaged);
+  bluegy.test.js gains the coach row (with the no-watery-grave control; sabotaged).
+- **Validation:** npm test 4496 / 4491 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; page.js 78/78 (0 page errors) plus
+  the glide drive above; both babel blocks compile. No policy change (the coach is the trainer's advice, not the AI seat): no ladder.
+
 ## v6.50 — three sounds that mean three things; a type scale; Gravy replays his dead
 
 - **Sound (UX roadmap step 9, POLISH §4).** A resolved link is heard as well as stamped: a hit is a low falling thud, a block a short

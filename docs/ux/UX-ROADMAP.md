@@ -88,7 +88,7 @@ Step 5 verified: drill `test/linkout.test.js`; a trainer drive plays Clash of Ag
    hero plates (`.heroplate` life), and flash the chain link that hit / was blocked.
    Life drops red, prevention blue, gains green — three colours that mean three things
    (POLISH §4's sound rule, applied to sight first).
-6. **Motion between panes.** A short slide on `.screennav` jumps (CSS `scroll-behavior`
+6. **DONE (v6.51: pane jumps were already smooth-scrolled; `Glide` + `FeatCard` fly the played card from its tile).** **Motion between panes.** A short slide on `.screennav` jumps (CSS `scroll-behavior`
    + snap is already there) and a card-to-zone glide on play (FLIP: measure the tile,
    animate a ghost to the featured slot). Budget: no frame over 16 ms at 4x throttle
    (`tools/perf-page.js`), off under reduced motion.

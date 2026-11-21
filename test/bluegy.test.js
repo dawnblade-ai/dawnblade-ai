@@ -101,3 +101,18 @@ test("the AI plays a free ally from the graveyard rather than pass", () => {
   }
   assert.ok(played, "Oysten is played from the graveyard before the turn ends");
 });
+
+/* THE COACH (trainer's Coach's call) looks in the graveyard too, through the same reader.
+   Control: the same position without the hero's watery grave coaches no graveyard play.
+   Sabotage checked: dropping the graveyard loop from `advise` fails the first row. */
+test("the coach names a graveyard play when the rules allow one, and not otherwise", () => {
+  const A = require("../engine/advisor.js");
+  const deck = SPL.match("gravy", "kayo", "bluegy-coach", 0).sides[0].deck;
+  const sw = deck.find(c => c.name === "Swabbie"), port = deck.find(c => c.name === "Portside Exchange");
+  const side = {hp: 20, hand: [], arsenal: null, gear: [], board: [], deck: [], pitch: [], banish: [], soul: [], counters: {},
+                weaponUsed: {}, res: 3, ap: 1, hist: {atk: 0, non: 0}, grave: [Object.assign({}, sw, {_gy: 4}), Object.assign({}, port, {_gy: 5})]};
+  const g = {mode: "act", turn: 5, ap: 1, res: 3, hist: {atk: 0, non: 0}, weaponUsed: {}, incoming: 0,
+             sides: [side, {hp: 20, hand: [], arsenal: null, gear: [], board: [], deck: [], pitch: [], grave: [], banish: [], soul: []}]};
+  assert.match(A.advise(g, {window: "act", runeDmg: 1, wateryGrave: true}).line, /^Play Swabbie from your graveyard/);
+  assert.doesNotMatch(A.advise(g, {window: "act", runeDmg: 1, wateryGrave: false}).line, /graveyard/);
+});

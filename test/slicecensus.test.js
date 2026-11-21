@@ -266,7 +266,11 @@ test("which SOURCE FILE each slice reads is pinned, or the resolver is unwatched
        trainer is a closure inside `Battle`, so the rest is a source scan and
        says so; the behaviour was driven on the page at phone dimensions, the
        arsenal door and the hand door. */
-    "index.html": 41,
+    /* 41 -> 42 AT v6.51, READ FIRST: `glide.test.js` takes `const Glide = ` ->
+       `function FeatCard` (the glide's module: reduced motion, one mark used once,
+       only the committed card). A source scan, and it says so; the glide was driven
+       on the page at 393x852 under 4x CPU throttle. */
+    "index.html": 42,
     "engine/build.js": 1,
     /* +2 AT v4.59, READ FIRST: `dichotomy.test.js` pins that `buildPrompt`
        names the new `filters` field (v2.34's rule, ninth field) and that
