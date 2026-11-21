@@ -117,14 +117,17 @@ test("every `fx.*` field the pool emits is pinned", () => {
     "arsenalUp", "arsenalUpTurn", "asInstant", "atkTrigger", "auraWeapon",
     "banCost", "boostBanish", "bottomOnDiscard", "chargeCost", "chargeSoul", "clash",
     "clashReveal", "clauses", "condOnHit", "condOnLeave", "conds", "countsAs", "crush",
-    "ctrTick", "daggerJab", "deckFaceUp", "defDebuff", "defGrant", "defLimit",
-    "defSelf", "dr", "emptyDies", "firstAtk", "fromBan", "fusionCost", "ga", "gaQ", "gyFirstGa",
+    "ctrTick", "daggerJab", "deckFaceUp", "defAtkPow", "defDebuff", "defGrant", "defLimit",
+    "defSelf", "dr", "emptyDies", "firstAtk", "firstLoseKw", "firstPlayBuff", "fromBan", "fusionCost", "ga", "gaQ", "gyFirstGa",
     "handAbility", "handWipe", "hitCounter", "hitWatch", "lifeTie", "millCost", "modes",
-    "noDrx", "noEquipDefend", "onAtk", "onAtkHero", "onDeath", "onDestroy", "onHit",
+    "noDrx", "noEquipDefend", "onAtk", "onAtkHero", "onAwaken", "onDeath", "onDestroy", "onHit",
     "onHitHero", "onLeave", "onUsurp", "ops", "optCost", "payCost", "perm", "playIf",
     "playable", "powFormula", "rustDestroy", "self", "selfQ",
     "tapCost", "tier", "unpreventable", "wipePowIfIdle",
   ]);
+  /* +defAtkPow +firstLoseKw +firstPlayBuff +onAwaken v6.47 — Prism opened: Herald of Triumph's -1{p} while
+     defending, Passing Mirage's "loses and can't gain phantasm", Pierce Reality's first-play +2{p}, Suraya's
+     "when this is awakened" (drills heraldminus, phantasmlose, figment). */
   /* +banCost +countsAs +fromBan +onUsurp v6.46 — Viserai, Between Worlds opened, so four readers
      built against his STAGED cards (v6.37 fromBan, v6.42 countsAs / onUsurp, v6.43 banCost) now
      reach pool records. Each was drilled when it was built (banroute, runechants, conditionals). */

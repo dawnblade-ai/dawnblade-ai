@@ -284,7 +284,7 @@ test("exactly one pool record emits the new trigger, and the siblings are unmove
   assert.deepEqual([...sibs.discardRandom], ["Beaten Trackers"]);
   assert.deepEqual([...sibs.weaponHit],     ["Refraction Bolters"]);
   assert.deepEqual([...sibs.playAura],      ["Magmatic Carapace"]);
-  assert.deepEqual([...sibs.defends],       ["Brothers in Arms"]);
+  assert.deepEqual([...sibs.defends],       ["Brothers in Arms", "Ironhide Gauntlet"]);   /* + Ironhide v6.47 */
   /* v4.52 — the set moved by ONE because a card was BUILT, which is what
      a census pinned in both directions is for (v4.12). */
   assert.deepEqual([...sibs.allyDiesOrPhantasm], ["Silent Stilettos"]);

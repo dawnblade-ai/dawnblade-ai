@@ -266,7 +266,8 @@ test("a card played in an open window lands in the zone its TYPE sends it to", {
   /* +A Drop in the Ocean, +Edict of Steel, +Pass Over, +Preserve Tradition AT
      v6.00: a target is required (RULING user 2026-11-07), even on a card that
      prints something beside it. Driven in test/targetreq.test.js. */
-  assert.deepEqual(untargeted.sort(), ["A Drop in the Ocean", "Astral Etchings", "Edict of Steel", "Lightning Press", "Memorial Ground", "Pass Over", "Preserve Tradition"],
+  /* +Angelic Wrath AT v6.47: "Target attack action card with Herald in its name" needs its target (targetreq). */
+  assert.deepEqual(untargeted.sort(), ["A Drop in the Ocean", "Angelic Wrath", "Astral Etchings", "Edict of Steel", "Lightning Press", "Memorial Ground", "Pass Over", "Preserve Tradition"],
     "the cards refused for want of a printed TARGET in an empty state moved (v5.03, v5.07, v6.00)");
   /* grave 91 -> 90 AT v5.03: Lightning Press is an instant, and the
      census can no longer reach its play without an attack to target. ONE
@@ -275,7 +276,8 @@ test("a card played in an open window lands in the zone its TYPE sends it to", {
   /* grave 90 -> 88 AT v5.07: Astral Etchings and Memorial Ground above. */
   /* grave 88 -> 84 AT v6.00: the four the target rule added above. */
   /* v6.46: Viserai, Between Worlds opened: 171 -> 185 chain, 23 -> 25 arena, 84 -> 87 grave. */
-  assert.deepEqual(tally, {chain: 185, arena: 25, grave: 87},
+  /* v6.47: + Prism's attacks (chain +15) and three arena records (Figment of Hope, Passing Mirage, Pierce Reality). */
+  assert.deepEqual(tally, {chain: 200, arena: 28, grave: 87},
     "the pool's play destinations moved — that is a rules change, so it is a deliberate edit here");
   /* AND EVERY ARROW WAS REFUSED FROM THE HAND (v4.91). Twelve records,
      eleven names (Infecting Shot is printed at two pitches in the pool) —
@@ -386,8 +388,9 @@ test("a card with no open window is REFUSED, and told why", {skip}, () => {
      `parser.isWeapon` split, counted from the other end. */
   /* v6.46: + his three equipment, two weapons (Seven Sin Nebula, Galaxxi Black, both swinging)
      and one defence reaction (Weeping Battleground). */
-  assert.deepEqual(kinds, {"Equipment": 61, "Weapon": 17, "Block": 4,
-                           "Attack Reaction": 20, "Defense Reaction": 16},
+  /* v6.47: + Prism's three equipment, two weapon records and one defence reaction (Lay Low). */
+  assert.deepEqual(kinds, {"Equipment": 64, "Weapon": 19, "Block": 4,
+                           "Attack Reaction": 20, "Defense Reaction": 17},
     "the set of cards with no action-phase play changed");
 });
 
@@ -403,7 +406,7 @@ test("CR 8.1.3a — a defence reaction is never DECLARED as a defender", {skip},
     else n++;
   }
   assert.deepEqual(bad, []);
-  assert.equal(n, 16, "the pool's defence reactions changed in number");   /* v6.46: + Weeping Battleground */
+  assert.equal(n, 17, "the pool's defence reactions changed in number");   /* v6.46: + Weeping Battleground; v6.47: + Prism's */
 });
 
 test("a card cannot pitch for itself, whatever it is", {skip}, () => {
@@ -436,7 +439,8 @@ test("the four journeys account for every card in the pool", {skip}, () => {
   assert.equal(playable + unplayable, pool().length);
   assert.deepEqual({total: pool().length, playable, unplayable, pitchable, defendable},
     /* v6.46: Viserai, Between Worlds opened, 401 -> 426 cards. */
-    {total: 426, playable: 308, unplayable: 118, pitchable: 348, defendable: 352});
+    /* v6.47: + Prism's 25 records (playable +19, unplayable +6, pitchable +20, defendable +19). */
+    {total: 451, playable: 327, unplayable: 124, pitchable: 368, defendable: 371});
 });
 
 /* ===================================================================

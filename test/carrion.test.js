@@ -88,7 +88,15 @@ test("an ALLY is a printed type the cost reader can pin", {skip}, () => {
   const ttSays = arr.filter(c => /ally/i.test(c.type_text || ""));
   const tySays = arr.filter(c => (c.types || []).some(t => /^ally$/i.test(t)));
   assert.ok(tySays.length >= 10, "the scan stopped finding allies — it is aimed wrong");
-  assert.deepEqual(ttSays.map(c => c.name).sort(), tySays.map(c => c.name).sort(),
+  /* v6.47: Suraya, Archangel of Endless Hope (Figment of Hope's back face) is
+     pinned with the FRONT's type line ("Light Illusionist Instant - Figment")
+     and the BACK's array (Light Angel Ally). The array wins (ruling
+     2026-08-02); the `tt` filter merely misses her, the weaker direction,
+     and no deck that pays "an ally" can hold her. Named, so a second one is not. */
+  const TY_ONLY = ["Suraya, Archangel of Endless Hope"];
+  assert.deepEqual(tySays.map(c => c.name).filter(n => !ttSays.some(c => c.name === n)).sort(), TY_ONLY,
+    "a record's array says Ally and its type line does not: decide, then name it here");
+  assert.deepEqual(ttSays.map(c => c.name).sort(), tySays.map(c => c.name).filter(n => TY_ONLY.indexOf(n) < 0).sort(),
     "a card's type line says `ally` and its structured array does not — the filter " +
     "now offers a card that is not an Ally, so add the word boundary");
 });

@@ -2320,6 +2320,13 @@ function classifyClause(raw){
     return R([[_pk, +m[1]]]);
   }
   if(m=c.match(/(?:target )?defending card (?:gains?|gets?) \+(\d+)\s*(?:\{d\}|defense)/)) return R([["defBuff",+m[1]]]);
+  /* IRONHIDE GAUNTLET (v6.47): "it gets +2{d} and \"When the combat chain closes, destroy this.\""
+     The unanchored line below matched the head and DROPPED the quoted rider, so the piece kept
+     its +2 and survived: stronger than printed. The rider is Blade Break's own meaning (destroy it
+     when the combat chain closes), so it rides as `breakAtClose` and the defend-cost answer marks
+     the piece (`effects`, the `defUid` site); `game.gearBlockApply` destroys a marked piece on both
+     boards. Measured: Ironhide is the only pool record whose +N{d} carries a tail no earlier reader claims. */
+  if(m=c.match(/^(?:this|it) (?:gains?|gets?) \+(\d+)\s*(?:\{d\}|defense) and "?when the combat chain closes, destroy (?:this|it)\.?"?$/)) return R([["defBuff",+m[1]],["breakAtClose"]]);
   if(m=c.match(/(?:^|this |it )(?:gains?|gets?|has) \+(\d+)\s*(?:\{d\}|defense)/)) return R([["defBuff",+m[1]]]);
   /* the printed "target" rides as a flag (v6.00): `effects.playTargetWhy`
      refuses the play when no attack is there to be its target */
@@ -7484,7 +7491,11 @@ function fxParse(card){
        and the census in `test/quoted.test.js` would carry a card that
        works. `fx.auraWeapon` is set only when the grant actually parsed,
        so an unreadable one still reports. */
-    if(fx.auraWeapon && /are weapons with base/.test(low)) return;
+    /* v6.47: Iris of Reality prints the base AFTER a number ("weapons with 4 base {p}"). */
+    if(fx.auraWeapon && /are weapons with (?:\d+ )?base/.test(low)) return;
+    /* v6.47: Ironhide Gauntlet's quoted destroy rider rides its defend cost as `breakAtClose`. */
+    if(/^when the combat chain closes, destroy this\.?$/.test(q)
+       && [fx.payCost, fx.optCost].some(x => x && (x.ops || []).some(o => o[0] === "breakAtClose"))) return;
     fx.quotedUnread = [...(fx.quotedUnread || []), q];
   });
   applyOverride(card, fx);

@@ -54,7 +54,9 @@ const gearDeclareWhy = gr => !gr ? "that piece is not there"
 function gearBlockApply(gr){
   const kws = (gr.kw||[]).map(k=>String(k).toLowerCase());
   const d = gearDef(gr); const n = {...gr};
-  if(kws.some(k=>k.includes("blade break"))) n.destroyed = true;
+  /* `brk`: a defend-cost rider ("When the combat chain closes, destroy this", Ironhide Gauntlet,
+     v6.47) granted the piece Blade Break's meaning for this block. */
+  if(gr.brk || kws.some(k=>k.includes("blade break"))) n.destroyed = true;
   else if(kws.some(k=>k.includes("guardwell"))){ n.curDef = 0; }
   else if(kws.some(k=>k.includes("temper"))){ n.curDef = Math.max(0,d-1); if(n.curDef===0) n.destroyed = true; }
   else if(kws.some(k=>k.includes("battleworn"))){ n.curDef = Math.max(0,d-1); }

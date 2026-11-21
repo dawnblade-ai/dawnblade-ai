@@ -124,6 +124,9 @@ test("the pool's 6-power records partition into POPS and EXCLUDED, and both are 
   assert.deepEqual(excluded, [
     "Blasmophet, the Soul Harvester|0",
     "Enigma Chimera|1", "Enigma Chimera|2", "Enigma Chimera|3",
+    /* v6.47: Prism's Heralds — Illusionist attacks, so a 6{p} Herald never pops phantasm (CR's own exception). */
+    "Herald of Hope|1", "Herald of Judgment|2", "Herald of Protection|1", "Herald of Protection|2",
+    "Herald of Ravages|1", "Herald of Triumph|1", "Herald of Victoria|2",
     "Nasreth, the Soul Harrower|0",
     "Phantasmal Haze|1", "Phantasmal Haze|2", "Phantasmal Haze|3",
     "Riggermortis|2",
@@ -131,7 +134,8 @@ test("the pool's 6-power records partition into POPS and EXCLUDED, and both are 
     "Spectral Rider|1", "Spectral Rider|2", "Spectral Rider|3",
     "Swabbie|2",
     "Teklovossen, the Mechropotent|0",
-    "Ursur, the Soul Reaper|0"
+    "Ursur, the Soul Reaper|0",
+    "Wartune Herald|1", "Wartune Herald|2"   /* v6.47, with the Heralds above */
   ], "the excluded set is a deliberate edit, not a drift");
 
   /* THE OTHER SIDE OF THE PARTITION, so a predicate that stopped popping
@@ -256,11 +260,13 @@ test("hasKw and printedKw disagree on exactly two pool records, and neither can 
      GRANTED phantasm, which is `defCap`'s shape (v3.71) and needs the
      grant wired first — parsing ahead of wiring, otherwise. */
   const rows = POOL().filter(c => P.hasKw(c, "phantasm") || P.printedKw(c, "phantasm"));
-  assert.equal(rows.filter(c => P.hasKw(c, "phantasm")).length, 14, "hasKw claims 14");
-  assert.equal(rows.filter(c => P.printedKw(c, "phantasm")).length, 12, "printedKw claims 12");
+  /* v6.47: Prism's phantasm cards (+17 / +15), and two more MENTION it without carrying it: Dream Weavers
+     and Passing Mirage make an attack LOSE phantasm (test/phantasmlose.test.js) and neither can attack. */
+  assert.equal(rows.filter(c => P.hasKw(c, "phantasm")).length, 31, "hasKw claims 31");
+  assert.equal(rows.filter(c => P.printedKw(c, "phantasm")).length, 27, "printedKw claims 27");
   assert.deepEqual(rows.filter(c => P.hasKw(c, "phantasm") !== P.printedKw(c, "phantasm"))
                        .map(c => c.name).sort(),
-    ["Ash", "Silent Stilettos"], "and the two that disagree are named");
+    ["Ash", "Dream Weavers", "Passing Mirage", "Silent Stilettos"], "and the four that disagree are named");
   for(const c of rows) if(P.hasKw(c, "phantasm") && !P.printedKw(c, "phantasm"))
     assert.equal(P.isAttack(c), false, c.name + " cannot be the resolving attack");
 });

@@ -86,7 +86,8 @@ test("the pool's FOUR `defends` families, both directions", () => {
      line of play that has to reach BOTH walls. */
   assert.deepEqual(names("optCost"),  ["Corrupted Crown", "Crash and Bash"]);   /* + Corrupted Crown AT v6.46 */
   assert.deepEqual(names("millCost"), ["Washed Up Wave"]);
-  assert.deepEqual(names("payCost"),  ["Brothers in Arms"]);
+  /* + Ironhide Gauntlet AT v6.47 (test/ironhide.test.js drives its rider). */
+  assert.deepEqual(names("payCost"),  ["Brothers in Arms", "Ironhide Gauntlet"]);
   assert.deepEqual(names("clash"), ["Clash of Agility", "Clash of Might",
     "Clash of Vigor", "Stonewall Impasse", "Test of Might", "Test of Strength"]);
   /* AND THE TWO THAT PAY OUT A `defBuff` ARE WHY THE PAUSE EXISTS. Crash

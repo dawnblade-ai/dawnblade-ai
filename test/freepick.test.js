@@ -100,8 +100,9 @@ test("H12 taken (driven games): the reveal for Crash and Bash's Seismic Surge, a
 });
 
 test("H12 still declined: every priced pick keeps its refusal", {skip}, () => {
-  /* Condemn to Slaughter re-anchored from leg 2 to "13b" (H-DAGGER moved leg 2's game) */
-  const declined = [[4, "Pick Up the Point"], ["13b", "Condemn to Slaughter"], [8, "Golden Tipple"], [10, "Blaze"]];
+  /* Condemn to Slaughter re-anchored from leg 2 to "13b" (H-DAGGER moved leg 2's game), and back to leg 2
+     at v6.47: a seventeenth entrant moved every (i+5) pairing; leg 2 is Viserai v Fai again and reaches it. */
+  const declined = [[4, "Pick Up the Point"], [2, "Condemn to Slaughter"], [8, "Golden Tipple"], [10, "Blaze"]];
   for(const [a, src] of declined) for(const r of seen(a, src)){
     assert.equal(r.cls, null, src + " is not a free pick");
     assert.equal(r.ans, "promptConfirm", src + " is declined");

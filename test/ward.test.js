@@ -350,13 +350,18 @@ test("THE POOL CENSUS, pinned as a SET — eight records, and one is GEAR", () =
   const all = wardPool().map(c => c.name + "|" + c.pitch + "=" + P.wardValue(c)).sort();
   assert.deepEqual(all, [
     "Spectral Shield|0=1",
+    /* v6.47: Suraya (Ward 4, Figment of Hope's back) and Wave of Reality (Ward 1), Prism's. */
+    "Suraya, Archangel of Endless Hope|0=4",
     "Uphold Tradition|0=1",
     "Waning Vengeance|1=3", "Waning Vengeance|2=2", "Waning Vengeance|3=1",
+    "Wave of Reality|0=1",
     "Waxing Specter|1=3",   "Waxing Specter|2=2",   "Waxing Specter|3=1"
   ]);
   const gear = wardPool().filter(c => /equipment/i.test(c.tt));
-  assert.deepEqual(gear.map(c => c.name), ["Uphold Tradition"],
-    "the gear half is one record and it is the one a board-only scan loses");
+  /* + Wave of Reality AT v6.47 (Prism's equipment, Ward 1): the second gear record, spent by the same
+     `preventDamage` gear scan as Uphold Tradition. */
+  assert.deepEqual(gear.map(c => c.name).sort(), ["Uphold Tradition", "Wave of Reality"],
+    "the gear half is two records and it is the one a board-only scan loses");
 
   /* AND THE AMOUNT IS READ, WHICH THE POOL ITSELF PROVES (v3.32, and for
      once no synthetic is needed): both Wa* cards print 3 / 2 / 1 across

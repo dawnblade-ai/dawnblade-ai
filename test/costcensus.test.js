@@ -74,7 +74,8 @@ const ATOMS = [
   {rx: /^destroy this$/i,                               flag: "sd"},
   {rx: /^destroy (?:a|an|one) ([A-Za-z'’ -]+) you control$/i, flag: "destroyBoard"},
   {rx: /^discard (?:a|an|another) [a-z][a-z -]*$/i,     flag: "discardCost"},
-  {rx: /^banish (?:this and )?(?:a|an|one|two|three|\d+) cards? from your (?:hero'?s? )?soul$/i,
+  /* v6.47: "from Prism's soul" — the hero's own name for her soul (parseHeroPower reads it: `soul: 1`). */
+  {rx: /^banish (?:this and )?(?:a|an|one|two|three|\d+) cards? from (?:your (?:hero'?s? )?|\w+'s )soul$/i,
                                                         flag: "soul"},
   {rx: /^remove (?:x|a|an|\d+) [a-z]+ counters? from [a-z]+$/i, flag: "ctr"},
   {rx: /^turn this face-?up$/i,                         flag: "flipUp"},

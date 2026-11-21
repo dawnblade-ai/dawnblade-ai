@@ -149,7 +149,9 @@ test("THE FAMILY: the readers this asks are exactly the instant pumps the pool p
       if((P.fxParse(x).self || 0) > 0) names.add(x.name);
     }
   }
-  assert.deepEqual([...names].sort(), ["Concealed Object — ability", "Lightning Press"]);
+  /* + Angelic Wrath AT v6.47 ("Target attack action card with Herald in its name gets +2{p}", an Instant;
+     driven at the table in test/herald.test.js). */
+  assert.deepEqual([...names].sort(), ["Angelic Wrath", "Concealed Object — ability", "Lightning Press"]);
 });
 
 test("EVERY DOOR ASKS IT, as a whole conditional (v4.55: an identifier alone survives `&& false`)", () => {

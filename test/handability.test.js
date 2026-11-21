@@ -57,7 +57,8 @@ test("exactly six pool cards print a hand ability, and nothing is named", {skip}
   const uniq = [...new Set(hits)].sort();
   assert.deepEqual(uniq,
     /* + Runic Disposition AT v6.46 ("Instant - Discard this: Create a Runechant token"). */
-    ["Agile Windup", "Arcane Twining", "Photon Splicing", "Rally the Coast Guard", "Reaper's Call", "Runic Disposition"],
+    /* + Herald of Victoria AT v6.47 ("Instant - Discard this: ...", Prism; test/heraldminus.test.js) */
+    ["Agile Windup", "Arcane Twining", "Herald of Victoria", "Photon Splicing", "Rally the Coast Guard", "Reaper's Call", "Runic Disposition"],
     "the reader claims exactly the cards that print one — three of them nothing to do with Kayo, " +
     "which is the golden rule working rather than a coincidence");
 });

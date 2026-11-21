@@ -108,7 +108,8 @@ let legs = 0, threw = 0;
    carries one, to keep its "revealed from" line off a grant that reveals
    nothing (the Gate to i'Arathael). The stamp itself is still written by
    effects.applyAnswer. */
-const ANSWER_READS = ["amount", "banStamp", "by", "cards", "cost", "defUid", "destroyUid", "discard", "elseOps",
+/* + awaken AT v6.47: Prism's "Awaken target figment" pick (`applyPrompt` awakens the chosen figment). */
+const ANSWER_READS = ["amount", "awaken", "banStamp", "by", "cards", "cost", "defUid", "destroyUid", "discard", "elseOps",
                       "faceUp", "filter", "keepTop", "max", "min", "ops", "options",
                       "reveal", "side", "spendCtr", "src", "tag", "tapHero", "tapUid", "taps",
                       "to", "zone"];
@@ -283,8 +284,9 @@ const fnBody = name => {
 
 test("the driven census is alive — the legs really ran", () => {
   drive();
-  assert.equal(legs, 42, "the leg count moved; the pinned field set is taken at 42 "
-    + "(32 in the ring, plus the six named legs that keep `keepTop`, `ctrStamp`, "
+  /* 42 -> 44 AT v6.47: a seventeenth entrant (Prism) makes the ring 34 legs. */
+  assert.equal(legs, 44, "the leg count moved; the pinned field set is taken at 44 "
+    + "(34 in the ring, plus the six named legs that keep `keepTop`, `ctrStamp`, "
     + "`shuffleAfter`, crank's `avail`/`spendCtr` and `charge` in it — see `drive`)");
   assert.equal(threw, 0,
     "a leg threw — `leg` reports that as `threw: true` rather than raising, so a "
@@ -297,7 +299,8 @@ test("every spec field that reaches prompts.js is pinned", () => {
   assert.deepEqual([...reached].sort(), [
     /* +classRider AT v6.46: Embrace Ursur's "If it's Runeblade, … If it's Shadow, …" (v6.40,
        `optCost.classRiders`), reached by the drive now that Viserai, Between Worlds is dealt. */
-    "amount", "arsStamp", "avail", "banStamp", "by", "cards", "charge", "classRider", "cost", "costRider",
+    /* +awaken AT v6.47: Prism's awaken pick, reached once she is dealt. */
+    "amount", "arsStamp", "avail", "awaken", "banStamp", "by", "cards", "charge", "classRider", "cost", "costRider",
     "ctrHeld", "ctrSpend", "ctrStamp", "defUid", "destroyEffect", "destroyUid", "discard", "elseOps", "equipStamp",
     "exactPitch", "faceUp", "filter", "hint", "jab", "keepTop", "lateGa", "max", "min", "moveFoe", "n",
     "ops", "optional", "options", "playThisTurn", "reveal", "shuffleAfter", "side", "spendCtr",

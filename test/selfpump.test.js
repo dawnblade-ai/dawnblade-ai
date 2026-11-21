@@ -57,8 +57,10 @@ test("CENSUS: the only non-attacks carrying a self-pump are attack reactions and
      reading a printed reaction pump removes one. Lightning Press is the
      Instant — its pump names a TARGET attack, which is v5.02's next
      finding rather than this one's. */
+  /* + Angelic Wrath AT v6.47: an Instant whose pump names a TARGET attack (Lightning Press's shape;
+     "with Herald in its name", test/herald.test.js). */
   assert.deepEqual([...names].sort(), [
-    "Agile Engagement", "Lightning Press", "Nip at the Heels", "Out for Blood", "Overpower",
+    "Agile Engagement", "Angelic Wrath", "Lightning Press", "Nip at the Heels", "Out for Blood", "Overpower",
     "Puncture", "Scar Tissue", "Spike with Bloodrot", "Stains of the Redback", "Stroke of Foresight",
   ].sort());
 });

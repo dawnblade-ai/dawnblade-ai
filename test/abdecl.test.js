@@ -274,6 +274,9 @@ test("the census — Beckoning Haunt is the pool's one Action-speed activation t
     "Concealed Object — ability": "instant",
     "Danger Digits — ability": "attack-reaction",
     "Prey Spotters — ability": "attack-reaction",
+    /* v6.47: "Awaken TARGET figment you control" — an instant (CR 8.1.6) whose target is
+       chosen as it is played, the board pick test/figment.test.js drives. */
+    "Prism — hero power": "instant DECLARES",
   }, "a new activation that prints a target: decide its speed and whether it declares, and pin it here");
 });
 

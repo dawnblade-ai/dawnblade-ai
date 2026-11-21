@@ -93,7 +93,10 @@ test("the pool prints exactly three Weapon-typed pieces with no ATTACK",
   assert.deepEqual([...found].sort(), [
     "Cosmo, Scroll of Ancestral Tapestry",
     "Crucible of Aetherweave",
-    "Death Dealer"
+    "Death Dealer",
+    /* v6.47: Prism's Iris of Reality (a grant: auras become weapons) and Luminaris (an instant ability). */
+    "Iris of Reality",
+    "Luminaris, Celestial Fury"
   ]);
   /* AND THE ONE THAT LEFT, pinned from this end too — the departure is
      invisible to a drill that only lists who remains. It is Weapon-typed,

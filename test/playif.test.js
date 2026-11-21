@@ -142,7 +142,8 @@ test("the evaluator answers every kind the pool emits, and refuses one it does n
                           tx: c.functional_text || "", kw: c.card_keywords || [], power: c.power});
     if(fx.playIf) kinds.add(fx.playIf.kind);
   }
-  assert.deepEqual([...kinds].sort(), ["discardPow", "pitchPow", "soulPitch"], "the emitted set moved");
+  /* + notMarked AT v6.47: Lay Low's "If you are marked, you can't play this" (test/laylow.test.js). */
+  assert.deepEqual([...kinds].sort(), ["discardPow", "notMarked", "pitchPow", "soulPitch"], "the emitted set moved");
   const src = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8");
   /* bounded at the function's own closing brace, never a byte count (v4.57) */
   const at = src.indexOf("function playIfOk(");

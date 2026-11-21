@@ -162,7 +162,8 @@ test("the pool emits `shuffleDraw` from EXACTLY ONE record, and the census is bo
      shuffle" is the tail of a different mechanic, so the anchor must not
      reach them. Pinning only the emitters cannot see a new claimant. */
   assert.deepEqual([...new Set(mentions)].sort(),
-    ["Arakni, Trap-Door", "Flamecall Awakening", "Hope Merchant's Hood"]);
+    /* + Prism AT v6.47: her figment search's "then shuffle" is a deck search's tail too (the emitters are unmoved). */
+    ["Arakni, Trap-Door", "Flamecall Awakening", "Hope Merchant's Hood", "Prism, Advent of Thrones"]);
 });
 
 test("EVERY multi-card bound the parser emits is pinned — there are two families", () => {

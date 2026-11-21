@@ -6938,6 +6938,13 @@ function makeEffects(ctx){
         if(dc) n = applyDefMod(n, actorOf(n), dc, db, p.src || "");
         _ops = _ops.filter(o => o[0] !== "defBuff");
       }
+      /* "…and \"When the combat chain closes, destroy this.\"" (v6.47): the named GEAR piece is
+         marked; `gearBlockApply` (both boards) destroys it as the block resolves, as Blade Break. */
+      if(_ops.some(o => o[0] === "breakAtClose")){
+        if((act(n).gear || []).some(x => x && x.uid === r.defUid))
+          actMut(n).gear = act(n).gear.map(x => x && x.uid === r.defUid ? {...x, brk: true} : x);
+        _ops = _ops.filter(o => o[0] !== "breakAtClose");
+      }
     }
     const _dd0 = n._discDeferred || 0;        /* a mode's discard may ask in turn (v4.81) */
     if(_ops.length) n = runOps(n, _ops, p.src || "prompt");

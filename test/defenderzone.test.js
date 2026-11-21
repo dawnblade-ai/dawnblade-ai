@@ -121,7 +121,8 @@ test("THE TRAINER'S DOORS: `playAtSpeed` refuses the wall, and its on-demand pit
    these assert the zones, the wall and the payload, never prose. */
 /* + Runic Disposition AT v6.46 (Viserai, Between Worlds opened): "Instant - Discard this: Create a
    Runechant token". The per-card drill below now drives it at the table too. */
-const SELF_COST = ["Agile Windup", "Arcane Twining", "Photon Splicing", "Reaper's Call", "Runic Disposition"];
+/* v6.47: Herald of Victoria ("Instant - Discard this: ...") is a self-cost hand ability: the same door, and the drill below runs for it too. */
+const SELF_COST = ["Agile Windup", "Arcane Twining", "Herald of Victoria", "Photon Splicing", "Reaper's Call", "Runic Disposition"];
 
 test("CENSUS: which hand abilities spend the card itself, and which spend another", {skip}, () => {
   /* Pinned both directions: a new pool record printing a hand ability is

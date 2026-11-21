@@ -660,7 +660,9 @@ test("…and adding it moved exactly the card that needed it", () => {
   for(const r of pool)
     for(const m of (r.functional_text || "").matchAll(/target ([a-z]+) you control/gi))
       subs.add(m[1].toLowerCase());
-  assert.deepEqual([...subs].sort(), ["ally", "dagger", "sword"],
+  /* v6.47: "figment" (Prism's "Awaken target figment you control") is read by
+     its own reader: a board pick filtered on the figment type (test/figment.test.js). */
+  assert.deepEqual([...subs].sort(), ["ally", "dagger", "figment", "sword"],
     "a new printed subject of this shape needs a decision, not a default");
 });
 

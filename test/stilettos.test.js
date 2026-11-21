@@ -460,8 +460,12 @@ test(gate("exactly ONE pool record moves, and every sibling is unchanged"), () =
      RE-PINNED AGAIN AT v6.46, after reading the diff: Viserai, Between Worlds OPENED, 27 staged
      records joined the pool. All 25 card records parse `full` (762 -> 787); the two `none` are his
      two HERO faces (11 -> 13), whose lines are read by `build.heroAbilities`, not `fxParse`, and
-     which `tools/newdecks-census.js` reports covered on both faces. `part` is untouched. */
-  assert.deepEqual(tiers, {full: 787, none: 13, part: 24});
+     which `tools/newdecks-census.js` reports covered on both faces. `part` is untouched.
+     RE-PINNED AGAIN AT v6.47, after reading the diff: Prism, Advent of Thrones OPENED. Every card record
+     parses `full` (787 -> 813, Suraya's back face among them); the one `part` is her HERO record
+     (24 -> 25), whose lines `build.heroAbilities` reads (`soulNamedTrig`, the awaken HPOW;
+     test/figment.test.js), not `fxParse`. */
+  assert.deepEqual(tiers, {full: 813, none: 13, part: 25});
   assert.deepEqual([...carriers.allyDiesOrPhantasm], ["Silent Stilettos"]);
   /* PINNED BOTH SIDES (v4.17) — pinning the new trigger alone cannot see
      a record LEAVING one of the others, which is what merging two

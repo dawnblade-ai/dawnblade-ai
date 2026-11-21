@@ -131,8 +131,11 @@ test("THE CENSUS: which pool cards a missing target refuses", {skip}, () => {
     try { const pc = B.equipPiece({...c}).powCard; if(pc) cands.push(pc); } catch(e){}
     for(const x of cands) if(E.playTargetWhy(at(), x, 0)) out.add(x.name);
   }
+  /* + Angelic Wrath and Luminaris' ability AT v6.47: both name a target attack "with Herald in its name"
+     (Luminaris: "angel attack or attack action card with ..."), and with none there is no play
+     (RULING user 2026-11-07; test/herald.test.js, test/luminaris.test.js). */
   assert.deepEqual([...out].sort(), [
-    "A Drop in the Ocean", "Astral Etchings", "Beckoning Haunt — ability", "Concealed Object — ability",
+    "A Drop in the Ocean", "Angelic Wrath", "Astral Etchings", "Beckoning Haunt — ability", "Concealed Object — ability",
     "Crown of Dichotomy — ability", "Edict of Steel", "Fai — ability", "Lightning Press",
-    "Memorial Ground", "Pass Over", "Preserve Tradition", "Scuttle Toes — ability"]);
+    "Luminaris, Celestial Fury — ability", "Memorial Ground", "Pass Over", "Preserve Tradition", "Scuttle Toes — ability"]);
 });

@@ -153,7 +153,9 @@ test("exactly TWO pool records print a deck search, and only one reads", () => {
       searchers.set(c.name, tx);
   }
   assert.deepEqual([...searchers.keys()].sort(),
-    ["Arakni, Trap-Door", "Flamecall Awakening"]);
+    /* v6.47: Prism's Herald-to-soul trigger searches for a figment and puts it into the
+       arena (`to: "arena"`, test/figment.test.js): it READS. */
+    ["Arakni, Trap-Door", "Flamecall Awakening", "Prism, Advent of Thrones"]);
   /* AND TRAP-DOOR'S BLOCKER IS NAMED, not guessed. Half-building a
      disposition is worse than the honest gap (v3.23): its found card is
      BANISHED FACE-DOWN — hidden information — and a second printed sentence

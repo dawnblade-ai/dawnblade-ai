@@ -313,9 +313,11 @@ test("every qualifier atom the pool emits is tested by `qualMatches`", {skip}, (
     }
   }
   assert.deepEqual([...atoms].sort(),
-    ["aac", "atk", "boosted", "costGe", "costLe", "from", "g", "kw", "nonAtk",
+    /* v6.47: `named` ("with Herald in its name", Prism reader 2a) is tested by
+       `qualMatches` (whole word on the printed name; test/herald.test.js). */
+    ["aac", "atk", "boosted", "costGe", "costLe", "from", "g", "kw", "named", "nonAtk",
      "pitch", "powLe"],
-    "eleven qualifier atoms across the pool. A twelfth needs a test in " +
+    "twelve qualifier atoms across the pool. A twelfth needs a test in " +
     "`qualMatches` — an atom the matcher ignores is a printed restriction dropped. " +
     "`pitch` arrived at v4.12 with Flying High, and it is the one atom no tail " +
     "reader sets: a printed COLOUR is a condition on the card the head sentence " +

@@ -216,7 +216,10 @@ test("the parser/types weapon split is exactly the three that print no attack",
   assert.deepEqual(dis, [
     "Cosmo, Scroll of Ancestral Tapestry",
     "Crucible of Aetherweave",
-    "Death Dealer"
+    "Death Dealer",
+    /* v6.47: Prism's Iris of Reality (a grant: auras become weapons) and Luminaris (an instant ability). */
+    "Iris of Reality",
+    "Luminaris, Celestial Fury"
   ]);
   for(const c of pool().filter(c => dis.indexOf(c.name) >= 0))
     assert.equal(c.power, null, `${c.name} is in the split list but prints power`);
@@ -343,7 +346,8 @@ test("auras, items and allies resolve to the ARENA, not the graveyard", {skip}, 
   assert.ok(perms.length > 10, `only ${perms.length} permanents found`);
   for(const c of perms){
     assert.equal(TY.destination(c), "arena", `${c.name} [${c.tt}] resolves to the graveyard`);
-    assert.ok(["ally", "aura", "item", "permanent"].includes(TY.permanentKind(c)));
+    /* + "figment" AT v6.47: a figment resolves into the arena as a permanent of its own kind (CR 8.2.16; test/figment.test.js). */
+    assert.ok(["ally", "aura", "figment", "item", "permanent"].includes(TY.permanentKind(c)), c.name + " has an unknown permanent kind");
   }
   const kinds = {};
   perms.forEach(c => { const k = TY.permanentKind(c); kinds[k] = (kinds[k] || 0) + 1; });
@@ -444,8 +448,10 @@ test("the pool's type census is what we think it is", {skip}, () => {
   assert.deepEqual(census, {
     /* v6.46: Viserai, Between Worlds opened (+25 cards: two Runeblade Instant - Aura, the special
        Runechants, are the two new instants AND two of the new permanents). */
-    cards: 426, action: 284, instant: 24, attackRx: 20, defenseRx: 16,
-    equipment: 61, weapon: 17, block: 4, attack: 189, permanent: 25
+    /* v6.47: Prism opened (+25 cards: Angelic Wrath and Figment of Hope are the new instants, Figment
+       of Hope and the two Spectra auras the new permanents, Lay Low the defence reaction). */
+    cards: 451, action: 301, instant: 26, attackRx: 20, defenseRx: 17,
+    equipment: 64, weapon: 19, block: 4, attack: 204, permanent: 28
   }, "the pool's type census moved — check DATA_VER and the deck lists");
 });
 

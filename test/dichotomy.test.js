@@ -128,6 +128,7 @@ test("SIX activation lines open a pick (FIVE until v4.71), and THREE were paid f
     "Gate to i'Arathael",     /* SEVEN AT v6.41: its target lies in the banished zone (test/gate.test.js) */
     "Halo of Illumination",
     "Hope Merchant's Hood",
+    "Prism, Advent of Thrones",  /* EIGHT AT v6.47: Awaken target figment; with none it is refused before paying (test/figment.test.js) */
   ], "the family moved — a new member is one more activation that can be paid for nothing");
 });
 

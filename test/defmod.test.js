@@ -245,7 +245,8 @@ test("the pool's `defends` families are exactly these, and each has a site", {sk
   }
   P.fxReset();
   const uniq = o => [...new Set(o)].sort();
-  assert.deepEqual(uniq(fam.payCost),  ["Brothers in Arms"]);
+  /* + Ironhide Gauntlet AT v6.47 (its quoted destroy rider is read: test/ironhide.test.js). */
+  assert.deepEqual(uniq(fam.payCost),  ["Brothers in Arms", "Ironhide Gauntlet"]);
   /* + Corrupted Crown AT v6.46 (its "defends" offer was built for the staged card at v6.40). */
   assert.deepEqual(uniq(fam.optCost),  ["Corrupted Crown", "Crash and Bash"]);
   assert.deepEqual(uniq(fam.millCost), ["Washed Up Wave"]);

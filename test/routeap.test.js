@@ -43,7 +43,9 @@ test("the PREMISE: which board attackers asking the card would miss", {skip}, ()
     if((isAuraCard || isAllyCard) && !P.costsAP(r)) missed.add(r.name);
   }
   assert.ok(allies >= 6, "the scan sees only " + allies + " attacking allies — aimed wrong");
-  assert.deepEqual([...missed].sort(), ["Waning Vengeance", "Waxing Specter"]);
+  /* + Suraya AT v6.47: her record carries the figment front's type line ("Instant - Figment") with the
+     back's Ally array, so the CARD says no point while her ally attack is an action: the route answers. */
+  assert.deepEqual([...missed].sort(), ["Suraya, Archangel of Endless Hope", "Waning Vengeance", "Waxing Specter"]);
 });
 
 test("the READER: the ally and aura routes cost a point; every other route asks the card", {skip}, () => {
