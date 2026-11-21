@@ -4,35 +4,42 @@
 answered NEEDS-A-RULING notes are in `QUEUE-ARCHIVE.md` on this branch (grep it, don't read it). History lives in
 CHANGELOG.md (v6.30 on; older in `docs/archive/CHANGELOG-to-v6.29.md`) and LESSONS.md on main.
 
-## HANDOFF — START HERE (CEO session_013xG9xBabg1FM1NrVtAAD1y, 2026-11-21, at v6.49)
+## HANDOFF — START HERE (CEO session_013xG9xCkP4yVbvz1X7saGFP, 2026-11-21, at v6.52)
 
-**State:** live = **v6.49** on `main`, livecheck ALL PASS. Function `table` version 50 = `v6.49 · sage-v19`, stamped, `--check` OK.
-WIRE_V 45 (unchanged). DATA_VER sage-v19. 17 heroes. No unreleased work. Session branch `claude/dazzling-wright-tsnh88` == main.
+**State:** live = **v6.52** on `main`, livecheck ALL PASS. Function `table` version 56 = `v6.52 · sage-v19`, stamped, `--check` OK.
+WIRE_V 45 (unchanged). DATA_VER sage-v19. 17 heroes. No unreleased work. Session branch `claude/serene-hopper-di9us5` == main.
 
-**Done this thread (v6.49):**
-- **UX step 7 done (prompt sheets):** a `target` sheet drew NO cards (Confirm dark forever; no producer yet); the soak sheet printed a
-  literal "{r}"; its running total is now a `PStat` (big "2/3 still gets through"); selection tags moved off the pitch pip.
-  Every prompt kind can be rendered without a game: mount `PromptSheet` with hand-made `p` objects via `ReactDOM.render` inside
-  `open()` (it is a page global). The script: `experiments/ui/sheets.js` on this branch.
-- **Wire budget:** opening snapshot 15821 -> 15202 B (`rulesBuild` slims `heroRec.pr` to codes + back-face markers + `_first`).
-- **H: awaken timing measured NULL:** instant hero ability first fired earlier (15/20 with an action point left, vs 6/17) but Prism won
-  82 vs 86 of 192 (12 seeds). Patch: `experiments/awaken-first/`. `npm run play prism '' 12` takes ~1 min: A/B is cheap.
+**Done this thread (v6.50–v6.52) — the UX roadmap is FINISHED (steps 1–9):**
+- **v6.50 sound** (`Sfx`: hit thud / block clank / prevention hiss, synthesized with Web Audio, no files; `LinkSfx` beside `LinkStamp` on
+  both boards; ♪ mute on the nav row, `dawnblade.sound`). **Type scale** `--fs-*` (166 sizes named), no inline fontSize left.
+- **v6.50 rules: watery grave counted only blue ATTACKS** (`hist.blueGY` bumped in `fileAttack` alone). `playZoneWhy` now also reads the
+  graveyard's `_gy` stamps. **AI `gravePlays` (SPXGRAVE)**: Gravy 61 -> 79 of 288 own-seat games.
+- **v6.51 motion**: `Glide` + `FeatCard` fly the committed card from its rail tile to the featured slot (FLIP, 240 ms, 17 ms frames at 4x
+  throttle, off under reduced motion). The trainer's coach now names graveyard plays.
+- **v6.52 Lyath boos while defending** (`judge.defActGainNow`, `rxBoo`, SPXBOO): 117 -> 140 of 384 own-seat; ladder Lyath 30 -> 35.
+
+**The census that found both AI wins** (`npm run play '' '' 6`, 1632 games, ~3 min, before v6.50): wins of 32 a seed — Briar 28.3, Kayo 25.3,
+Dorinthea 24.5 ... Blaze 10.5, Lyath 9.2, Boltyn 8.2, Viserai BW 7.5, Gravy 7.2. **The method that worked twice:** for a bottom hero, count
+what the AI NEVER does that `legal` offers (probe: tally actions by kind and zone over 16 games; then ask `legal` at each decision for the
+missing kind). Gravy: zero graveyard plays. Lyath: hero ability legal ~every turn, used only on his own turn where half of it is dead.
+Ruled out (don't chase): Lyath's wall (halving is applied at build), end-turn "holds" of resource gear (deliberate), Boltyn's charging
+(long measured history in QUEUE-ARCHIVE, v5.68 H24).
 
 **NEXT, in order:**
-1. **UX steps 6, 8, 9** (motion, type tokens, sound) — docs/ux/UX-ROADMAP.md §3. Step 8 is mechanical (inline fontSize -> `--fs-*`).
-   Step 9 needs sound files we may legally ship (self-made or CC0, under `assets/`).
-2. **AI ideas need a NEW angle** — Prism awaken (null), Viserai BW (four nulls, QUEUE-ARCHIVE "VISERAI BW POLICY"). Try a
-   win-rate census per hero first (`npm run play '' '' 6`) and attack the weakest hero's numbers, not a guess.
-3. **Phase 4 (Outbreak, 2027-02)**: when the lists publish, ROADMAP-NEWDECKS.md.
-4. Wire: next cut if needed is HZOOM (~500 B/seat; `_first` art could be re-derived).
+1. **Same method on Blaze (ladder 32), Viserai BW (20), Boltyn (27), Gravy (24)**: Blaze's hero ability is legal in 149 of 201 turns and used
+   in 41 (an instant that makes a Wizard non-attack an instant — when does that pay?). Gravy's own ability (destroy a Gold: draw, discard)
+   legal 31 turns, used 16. Gravy still bottom-3: Mage Master Boots held 16 times as "land nothing".
+2. **Phase 4 (Outbreak, 2027-02)**: when the lists publish, ROADMAP-NEWDECKS.md.
+3. The UX roadmap is done; next UI work would be POLISH.md's bar or a phone pass on the real device (DESKTOP-TASKS.md).
+4. Wire: next cut if needed is HZOOM (~500 B/seat).
 
 **ASK THE USER (defaults standing — overrule any):** the cup (all heroes qualify, top 16 bracket); Prism as an AI seat; Spectra resolves at
-once (`spectra-trigger-at-once`); Prism's block named "Usurp the Shadow Throne"; hero select kept 6 across rather than the roadmap's 4.
+once (`spectra-trigger-at-once`); Prism's block named "Usurp the Shadow Throne"; hero select kept 6 across rather than the roadmap's 4;
+**sound defaults ON** (a ♪ toggle mutes it; iOS's ringer switch also silences Web Audio).
 
-**Cheap habits:** `npm run quick` inner loop (~2 min). The full `npm test` is ~10 min: run it ONCE at the end, in the background, and
-read failures with `node --test "test/*.test.js" > tap.txt; grep -n "^not ok" tap.txt` (npm test swallows `--test-reporter`). Source-
-order pins exist for the policy (allyseat: hero ability AFTER the attacks) — a gated experiment that moves a branch trips them, so
-keep experiments as patches. A `<style>` change moves `slicecensus`'s phasebar pin; a PromptSheet change moves promptctl's width pin.
-page.js deps: `npm install --prefix <scratch>/deps ...` (its header), pass `deps:` to `open()`. After pushing main, curl the page until
-it serves the new APP_VER, THEN `livecheck.js`.
-
+**Cheap habits:** `npm run quick` inner loop (~2.5 min). The full `npm test` is ~10 min: run it ONCE at the end, and read failures with
+`node --test "test/*.test.js" 2>/dev/null | grep "^not ok"`. A gated A/B on one hero: `SPXFOO=none npm run play hero '' 12` vs on, AND the
+other chair (`'' hero 12`) — four runs in parallel take ~3 min. Source-order pins exist for the policy (allyseat now anchors on
+`tag("heroAbility", ...)`); keycensus pins the judge-only parser readers. page.js deps: `npm install --prefix <scratch>/deps ...` (its
+header); a board drive needs the coin screen: click `.rseatpick button` 0 before `.lo .actbar [data-start=...]`. After pushing main, curl the
+page until it serves the new APP_VER, THEN `livecheck.js`.
