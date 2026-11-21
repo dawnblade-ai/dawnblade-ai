@@ -1058,7 +1058,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "6.46"; /* v6.46 - Viserai, Between Worlds opens: the Usurp the Shadow Throne precon joins the roster, double-faced hero and all. See CHANGELOG.md. */
+window.APP_VER = "6.47"; /* v6.47 - Prism, Advent of Thrones opens, with a new result screen, life display, hand rail and loadout; see CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -2108,7 +2108,7 @@ function HeroGrid({onPick,best,db,selected}){
         <span><i style={{background:"var(--r)"}}/>Chapter 1</span>
         <span><i style={{background:"var(--y)"}}/>Chapter 2</span>
         <span><i style={{background:"var(--b)"}}/>Chapter 3</span>
-        <span style={{marginLeft:"auto"}}>15 fighters · fate optional</span>
+        <span style={{marginLeft:"auto"}}>{HEROES.length} fighters · fate optional</span>
       </div>
     </div>
   );
@@ -9656,7 +9656,7 @@ function App(){
             follow Silver Age's rolling ban list or its hero bench — see
             data/formats.json — so a player who knows Silver Age is told why
             a card they cannot bring to an event is legal here. */}
-        <p className="note" style={{textAlign:"center",marginTop:10}}>Dawnblade is a fan-made Silver Age format: the fifteen Chapter 1–3 precons exactly as printed, and every card in them is legal here — even ones Silver Age has since banned.</p>
+        <p className="note" style={{textAlign:"center",marginTop:10}}>Dawnblade is a fan-made Silver Age format: every precon built here, exactly as printed (the Chapter 1–3 decks and the Usurp the Shadow Throne heroes), and every card in them is legal here — even ones Silver Age has since banned.</p>
         <VsStrip hero={hero} db={db}/>
         {hero && !hero.mystery && <HeroSheet h={hero} db={db} best={best} onBack={()=>setHero(null)} onFight={h=>setFighting(h)}/>}
         {hero && hero.mystery && <p className="note" style={{textAlign:"center"}}>Fate holds the card — your fighter is revealed at preparation.</p>}

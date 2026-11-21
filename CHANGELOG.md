@@ -1,3 +1,37 @@
+## v6.47 — Prism, Advent of Thrones opens; a new result screen, life display and hand rail
+
+- **The seventeenth hero.** Prism, Advent of Thrones joins the roster (key `prism`), under the RULING (user, 2026-11-15) that a
+  precon joins when the engine reads its whole list: the census reads 32 full / 0 part / 0 none. Gate: `node tools/staged-play.js prism 20`,
+  640 seated games, 0 refusals / violations / stalls / draws, 281 won.
+  Opening: `pin-pool.js --add-staged` (27 records, and it now brings a flip-card's back: Suraya), **DATA_VER sage-v18 -> sage-v19**, SAT a
+  Silver Age set, `data/formats.json`. The pool census pins that moved were each read and noted in their drill (40 of them).
+- **Readers built for her (one release, user's plan of 2026-11-18):** "put it into your soul and <rider>" is two ops; "with Herald in its
+  name" is a qualifier; figments enter the arena as permanents (CR 8.2.16) and Prism's ability awakens one into Suraya (CR 8.5.43, 9.1.3;
+  the front is filed off the arena, invariant BACK-FACE-OFF-ARENA); her Herald-to-soul trigger searches for a figment; Iris of Reality's aura
+  grant; **Spectra** (CR 8.3.14, quoted): a Spectra permanent can be attacked, and attacking it destroys it and closes the chain
+  (`effects.spectraStrike`; stated approximation `spectra-trigger-at-once`: no stack layer of its own); "loses and can't gain phantasm"
+  (Passing Mirage, Dream Weavers); Pierce Reality's first-Illusionist-attack +2{p} (`hist.atkTy`); -1{p} while defending (Herald of Triumph)
+  and Herald of Victoria's discard; Lay Low; Herald of Judgment's banished-zone lock (both boards); Luminaris' or-group.
+  **Ironhide Gauntlet** (her arms) read `full` but dropped its quoted "When the combat chain closes, destroy this." (an unanchored +N{d}
+  matcher): stronger than printed. Now `breakAtClose`; the pay answer marks the piece and `game.gearBlockApply` destroys it on both boards
+  (test/ironhide.test.js, sabotaged twice). Drills: herald, figment, iris, spectra, phantasmlose, heraldminus, laylow, luminaris — each sabotaged.
+- **The AI never awakens a figment** (next H-item). She still wins 44% of seated games, so she opens as an AI seat as well as for people.
+- **The cup past sixteen heroes** (CEO default, for the user to overrule): every hero plays the qualifier; the bracket seats its top sixteen
+  and prints who did not qualify.
+- **The screen (docs/ux/UX-ROADMAP.md, before/after shots in docs/ux/):** one result screen for every ending on both boards (`EndPanel`:
+  opaque, tinted by outcome, a large headline, life left, a full-width leave button); `LifeHud` shows both life totals at 30px with labelled
+  action-point and resource chips, and every life total flashes red/green when it moves (`LifeNum`); buttons answer a press; the hand rail
+  says how many cards are off-screen (`RailMore`); your board's bottom pills stay inside the pane on short phones; the loadout has ONE primary
+  button, named for the foe you picked (it used to start the trainer even with an AI hero picked).
+- **Cheaper sessions:** `npm run quick` (the inner loop; skips the server-referee family, ~60% of the suite's CPU); `node tools/supabase-deploy.js`
+  (cut, deploy, stamp in one command); CHANGELOG.md keeps v6.30 on (older in `docs/archive/CHANGELOG-to-v6.29.md`); QUEUE.md's history moved to
+  `QUEUE-ARCHIVE.md` on findings/queue.
+- The roster legend counts its heroes (it said 15) and the format note no longer says "the fifteen precons".
+- **Validation:** npm test 0 fail / 5 skipped; scenes 107/0; fairness clean; audit 455/455 full (baseline rewritten after reading);
+  ladder `npm run play '' '' 3` = 816 games (17 heroes), 0 refusals / violations / stalls / draws, Prism 39 wins; `staged-play prism 20` =
+  640 games, 0 / 0 / 0; page.js 78/78 + a drive with Prism seated (0 page errors, no sideways scroll); both babel blocks compile.
+  No WIRE_V change (`hist.atkTy` rides inside `hist`; a gear piece's `brk` is a per-instance diff). The function is redeployed.
+
 ## v6.46 — Viserai, Between Worlds opens
 
 - **The sixteenth hero.** The Usurp the Shadow Throne precon joins the roster (`HEROES`/`DECKS` key `viseraibw`, the list exactly as
