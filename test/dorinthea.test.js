@@ -1027,10 +1027,9 @@ test("the pool's ability NAMES are exactly Briar's and Iyslander's", {skip}, () 
     "Ash :: Material",
     "Blasmophet, Levia Consumed :: Transform",
     "Briar :: Essence of Earth and Lightning",
-    "Figment of Hope :: Unlimited",   /* v6.47: a deckbuilding marker (any number of copies), read as a noop by the parser */
-    "Iyslander :: Essence of Ice",
-    "Luminaris, Celestial Fury :: Instant"   /* v6.47: upstream indexes its instant ability's speed as a keyword */
-  ], "six entries are not ledger keywords, and only two are on a HERO");
+    "Iyslander :: Essence of Ice"
+    /* v6.47: Figment of Hope's "Unlimited" and Luminaris' "Instant" are ledger `info` entries (tools/ledger.js). */
+  ], "four entries are not ledger keywords, and only two are on a HERO");
 });
 
 test("a REAL keyword on a line of its own is not an ability name", {skip}, () => {
