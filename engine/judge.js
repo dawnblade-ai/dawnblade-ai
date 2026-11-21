@@ -562,6 +562,28 @@ const freePick = p => {
   if(p.zone === "deck" && p.to === "arena") return "put";
   return null;
 };
+/* AN OPTIONAL DISCARD THAT DRAWS IT BACK (v6.55, SPXCYCLE). Golden Tipple: "you may
+   discard a yellow card. If you do, draw a card and create a Gold token." The structural
+   answer declined all 49 in a census of 272 games, which turned down a Gold (Gravy's hero
+   ability spends them) for a hand of the same size. Answers the index of the card to
+   discard, or -1: only the seat's own one-card self-discard from hand whose rider (`ops`,
+   data `optCostSpec` carries) draws at least one card, and the lowest-power card the sheet
+   admits (uid breaks ties), so the attack it gives up is the smallest. */
+const cyclePick = (g, seat) => {
+  const p = g && g.prompt;
+  if(!p || p.tag !== "pick" || (p.side || 0) !== seat || p.zone !== "hand" || p.to !== "grave") return -1;
+  if(!p.discard || !p.discard.self || (p.max || 0) !== 1 || p.filters || (p.cost || 0) > 0 || (p.sel || []).length) return -1;
+  const draws = (p.ops || []).reduce((a, op) => a + (op && op[0] === "draw" ? (+op[1] || 0) : 0), 0);
+  const cs = p.cards || [];
+  if(draws < 1 || !cs.length) return -1;
+  let best = 0;
+  for(let i = 1; i < cs.length; i++){
+    const a = cs[i], c = cs[best];
+    const pa = (a && a.power) || 0, pc = (c && c.power) || 0;
+    if(pa < pc || (pa === pc && String(a.uid) < String(c.uid))) best = i;
+  }
+  return best;
+};
 function autoAnswer(g, o){
   const p = g && g.prompt;
   if(!p) return null;
@@ -5184,7 +5206,7 @@ function moves(g, seat){
 }
 
 return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, moves, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
+        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, cyclePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf, waitingOn,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */

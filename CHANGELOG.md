@@ -1,3 +1,22 @@
+## v6.55 — Gravy takes the Tipple
+
+- **AI: Golden Tipple's rider is taken (`judge.cyclePick`, gate `SPXCYCLE`).** "When this attacks, you may discard a yellow card. If you
+  do, draw a card and create a Gold token." The sheet is an optional self-discard whose rider (`ops`, carried by `optCostSpec`) draws
+  the card back, and the structural "decline what is optional" turned down all 49 in the decline census (272 games): a Gold, the fuel
+  Gravy's hero ability spends, refused for a hand of the same size. `cyclePick` names the card to give up (the lowest-power one the
+  sheet admits) only for the seat's own one-card discard from hand whose rider draws at least one.
+  Measured on his own seat, gate on vs off, 12 seeds each chair: **103 -> 135 of 384** (52 -> 70 first-named, 51 -> 65 second-named).
+  Ladder `npm run play '' '' 3`: 816 games, 0 refusals / violations / stalls (1 engine-ended draw); Gravy 24 -> 30 against the same
+  ladder gate-off, everyone else within the band.
+- **Measured and NOT shipped — Arakni's dagger retrieves are right to decline.** Taking "you may retrieve a dagger" ({r}, graveyard to
+  gear) whenever the seat could reach the price cost her **174 -> 143 of 384** (12 seeds each chair): the {r} is usually a pitched
+  card, worth more than a 1-power dagger back. Taking it only from floating resources was level (172 vs 174). The structural decline
+  stands; Corrupted Crown / Embrace Ursur (a whole card for +1) and Condemn to Slaughter are trade-offs, not leaks, and stay declined.
+- Drill: test/goldtipple.test.js (the classifier with its exclusions; self-play finds the first Tipple sheet, it is taken, the card is
+  in the graveyard, the hand is the same size and a Gold is on the board — sabotaged: `cyclePick` refusing fails both).
+- **Validation:** npm test 4502 / 4497 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; ladder above; both babel blocks compile
+  (the page changed only its version line).
+
 ## v6.54 — Prism takes her figment
 
 - **AI: Prism's Herald search is taken (`judge.freePick` class "put", gate `SPXPUT`).** "Whenever a card with Herald in its name is put
