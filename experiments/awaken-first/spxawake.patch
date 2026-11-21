@@ -1,0 +1,39 @@
+diff --git a/engine/sparring.js b/engine/sparring.js
+index 394f239..bf302fd 100644
+--- a/engine/sparring.js
++++ b/engine/sparring.js
+@@ -164,6 +164,14 @@ const subGate = k => {
+ const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate("SPXPAY"), idleOn = subGate("SPXIDLE"),
+       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
+       wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW");
++/* SPXAWAKE (v6.49): an INSTANT hero ability (Prism's awaken, Blaze's) spends no action
++   point, so it is offered at the head of the turn rather than as the last resort for a
++   point it never needed. OFF unless named, until measured (QUEUE "H: awaken timing"). */
++const awakeOn = (g, seat) => {
++  const v = (typeof process !== "undefined" && process.env && process.env.SPXAWAKE) || "";
++  const sd = g && g.sides && g.sides[seat];
++  return !!(v && v !== "none" && sd && (v === "all" || v.split(",").indexOf(sd.heroKey) >= 0));
++};
+ /* SPXTRAV (v6.46): take Viserai, Usurper's end-phase traverse back to the front.
+    OFF unless named (unlike the fixes above): measured over 180 seated games each way
+    (`node tools/staged-play.js viseraiBetweenWorlds 6`), staying won 17 and turning
+@@ -812,6 +820,11 @@ function offenceBase(g, seat, o){
+      `judge.keepsActionPoint` answers that, so this file still reads no
+      card text. Cheapest first, ties on pitch then uid, as below. */
+   const haveAtk = from.some(x => x.c && num(x.c, "power") > 0) || allies.length > 0;
++  /* AN INSTANT HERO ABILITY FIRST (SPXAWAKE): it keeps the action point, and an awakened
++     figment can then attack this turn. `judge.abWindowOf` answers; no card text read. */
++  if(awakeOn(g, seat) && J.abWindowOf(g, seat, "hpow") === "instant" && idleOK(g, seat, "hpow", "hero")
++     && legal(g, {t: "activate", from: "hero", uid: "hpow"}, seat))
++    return tag("heroInstant", {t: "activate", from: "hero", uid: "hpow"});
+   /* a grant that is in hand, playable, and waiting on its attack (H29): the call says so */
+   let waiting = false;
+   /* A WEAPON SWING IS AN ATTACK TO FOLLOW TOO (v6.16's open item). With no attack in hand or
+@@ -1676,6 +1689,7 @@ const CALL_WHY = {
+   resUnlockWeapon: "Spend the piece for its resource. It pays for a swing of your weapon.",
+   gearAbility: "Use your equipment's ability. Nothing better is left to do.",
+   gearAmp: "Use your equipment's ability. You can pay for an arcane card to take its extra damage.",
++  heroInstant: "Use your hero's instant ability now. It costs no action point, and what it makes can still act this turn.",
+   heroAbility: "Use your hero's ability. Nothing better is left for the action point.",
+   arenaPump: "Tap it. Your attack gets the extra damage for free.",
+   arenaDraw: "Cash it in. It draws a card for resources you already have floating, and it keeps your action point.",
