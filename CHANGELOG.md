@@ -1,3 +1,22 @@
+## v6.52 — Lyath boos while he is the wall
+
+- **AI: Lyath's hero ability, used where it pays (`rxBoo`, gate `SPXBOO`).** "{r}{r}, {t}: The crowd boos you. Defending action cards
+  you control get +1{d} this turn" (and a Might token for his next attack) was only ever offered on his OWN turn, as the policy's last
+  resort, where nothing of his defends: the wall half was wasted on all 50 uses in 212 measured turns. A new judge reader,
+  `defActGainNow(g, seat, uid)`, says what an ability's `defActBuff` adds to the block declared right now (the amount times the action
+  cards declared; 0 while the seat is not defending), so `sparring.js` still reads no card text. While damage would still get through,
+  the reaction step boos first when the boo alone stops the leak, else after the defence-reaction cards for what they leave.
+  Measured on his own seat, gate on vs off, 12 seeds each chair: **117 -> 140 of 384** (54 -> 66 first-named, 63 -> 74 second-named).
+  Ladder `npm run play '' '' 3`: 816 games, 0 refusals / violations / stalls / draws; Lyath 30 -> 35, nobody else outside the band.
+- Census leads ruled out on the way (so nobody chases them): Lyath's wall is NOT overstated (his halving is applied to the cards at
+  build time, so `wallOf`'s printed numbers are already halved); the bottom heroes' "ended the turn with a legal play" cases are
+  deliberate holds of resource gear (Blossom of Spring, Garland of Spring, Crucible of Aetherweave), not route gaps like Gravy's.
+- Drill: test/boo.test.js (self-play finds the first `rxBoo`; reader = defending action cards; resolving it sets the grant and mints
+  Might; on his own turn the reader answers 0 — sabotaged twice, and it says which guard it does NOT prove). Pins: allyseat's
+  "hero ability after the attacks" re-anchored on the offence branch's own tag; keycensus records `isActionCard` as judge-only.
+- **Validation:** npm test 4497 / 4492 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; ladder above; both babel blocks compile
+  (the page changed only its version line).
+
 ## v6.51 — the card you play flies to the slot; the coach looks in the graveyard
 
 - **Motion (UX roadmap step 6, the last open step).** The pane jumps already slid (`scrollIntoView` smooth, snap). New: the commit tap of

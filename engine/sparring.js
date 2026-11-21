@@ -151,7 +151,9 @@ const fixOn = (g, seat) => {
    SPXLABOARD a board term in Sharp's score (a permanent is worth its printed numbers, not -mu),
    SPXEFFPOW a hand attack ranked on the power it has NOW (`judge.effPowerNow`: a self-pump
    whose gate is already true counts), not the power it prints. SPXGRAVE (v6.50) a card
-   `legal` lets the seat play from its graveyard is a card it holds (`gravePlays`). */
+   `legal` lets the seat play from its graveyard is a card it holds (`gravePlays`). SPXBOO
+   (v6.51) an ability that raises the declared wall (`judge.defActGainNow`) is used while
+   defending when damage would still get through. */
 const subGate = k => {
   const v = (typeof process !== "undefined" && process.env && process.env[k]) || "";
   return (g, seat) => {
@@ -165,7 +167,7 @@ const subGate = k => {
 const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate("SPXPAY"), idleOn = subGate("SPXIDLE"),
       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
       wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW"),
-      graveOn = subGate("SPXGRAVE");
+      graveOn = subGate("SPXGRAVE"), booOn = subGate("SPXBOO");
 /* SPXTRAV (v6.46): take Viserai, Usurper's end-phase traverse back to the front.
    OFF unless named (unlike the fixes above): measured over 180 seated games each way
    (`node tools/staged-play.js viseraiBetweenWorlds 6`), staying won 17 and turning
@@ -610,6 +612,17 @@ function reaction(g, seat){
      point: three cards where Unmovable alone was two. Among the legal defenders, the
      cheapest whose own printed defence covers what the wall leaves goes first; when none
      covers it, cheapest first stands. Printed numbers only, ties on defence then uid. */
+  /* THE WALL'S OWN ABILITY, WHILE IT IS THE WALL (v6.51, SPXBOO). Lyath's boo makes every
+     defending action card of his +1{d} this turn and mints a Might token for his next attack;
+     the policy only ever offered it on his OWN turn, as a last resort, where nothing of his
+     defends (50 uses in 212 turns, the wall half wasted every time). Asked while damage would
+     still get through: first when the ability alone stops the leak (cheaper than a card),
+     else after the cards, for whatever leak they leave. `judge.defActGainNow` answers how
+     much it adds; `legal` answers whether it can be paid. */
+  const booLeak = defending && booOn(g, seat) ? ((g.pend && g.pend.total) || 0) - wallNow(sd) : 0;
+  const booGain = booLeak > 0 ? J.defActGainNow(g, seat, "hpow") : 0;
+  const boo = booGain > 0 && legal(g, {t: "activate", from: "hero", uid: "hpow"}, seat) ? {t: "activate", from: "hero", uid: "hpow"} : null;
+  if(boo && (!pick || booGain >= booLeak)) return tag("rxBoo", boo);
   if(pick && defending && fitOn(g, seat)){
     const leak = ((g.pend && g.pend.total) || 0) - wallNow(sd);
     const fit = legalRx.filter(x => num(x.c, "def") >= leak)
@@ -1667,6 +1680,7 @@ const CALL_WHY = {
   rxFit: "Play this one. It stops everything your blocks leave on its own, so no second card is needed.",
   rxAttack: "React with your cheapest card to pump this attack.",
   rxAbility: "Use the ability. It is printed for this window.",
+  rxBoo: "Use your hero ability now. Your defending action cards get stronger, and that stops damage this hit would deal.",
   rxGaHeld: "Keep the piece. This attack already goes again, so its ability would buy nothing.",
   keepsAP: "Play it before you attack. It keeps your action point.",
   grantBeforeSwing: "Play it before you swing. It keeps your action point, and your weapon's swing takes what it gives.",

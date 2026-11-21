@@ -342,7 +342,7 @@ test("the one-board reader sets are pinned", {skip}, () => {
     assert.ok(both.includes(n), n + " is demonstrably asked by both boards");
 
   assert.deepEqual(onlyJ.sort(),
-    ["abilityGa", "arcAmount", "boostPays", "chiValue", "handFree", "isAtkActionCard", "isDeclaredDefender", "isDR", "isToken",
+    ["abilityGa", "arcAmount", "boostPays", "chiValue", "handFree", "isActionCard", "isAtkActionCard", "isDeclaredDefender", "isDR", "isToken",
      "printedKw", "qualMatches", "splitCostsAP", "weaponCost"].sort(),
     "a reader judge asks and the trainer does not. TWO LEFT this list at " +
     "v3.99: `tapsToActivate` (the trainer now refuses a tapped hero) and " +
@@ -382,7 +382,10 @@ test("the one-board reader sets are pinned", {skip}, () => {
     "(a token is counted by its name, since its uid is a serial minted fresh each time). " +
     "The trainer reaches it through `DawnJudge.stalemateCheck`, which its `setG` runs on every " +
     "state (v5.72, `trainer-no-stalemate-draw`, closed): one body, so the trainer's SOURCE never " +
-    "asks `isToken` and the name stays on this list for the right reason.");
+    "asks `isToken` and the name stays on this list for the right reason.\n" +
+    "v6.51: `isActionCard` ARRIVED, read inside `judge.defActGainNow`, the seam `sparring.js` asks " +
+    "to price Lyath's boo while he defends (`chiValue`'s reason). The trainer reaches it through the " +
+    "shared `effects.defendValue`, and a human decides their own boo.");
 
   assert.deepEqual(onlyT.sort(),
     ["clean", "defCap", "dracLinksNow", "frostCount", "hasKwNow", "instantAbilityReady",

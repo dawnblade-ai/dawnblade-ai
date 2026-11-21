@@ -187,7 +187,9 @@ test("the hero's own ability is proposed too — it never was", {skip}, () => {
      damage — and deciding otherwise would mean reading the card. */
   const src = fs.readFileSync(path.join(__dirname, "..", "engine", "sparring.js"), "utf8");
   const ally = src.indexOf('x.ally ? {t: "activate"');
-  const hero = src.indexOf('from: "hero", uid: "hpow"');
+  /* anchored on the offence branch's own tag (v6.51): the defending boo (`rxBoo`, in
+     `reaction`) proposes the same action earlier in the file and is a different decision */
+  const hero = src.indexOf('tag("heroAbility", {t: "activate", from: "hero", uid: "hpow"})');
   assert.ok(ally > 0 && hero > 0, "both branches must exist");
   assert.ok(hero > ally, "the hero ability is proposed after the attacks, not before");
 });

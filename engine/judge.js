@@ -1871,6 +1871,25 @@ const abWindowOf = (g, seat, uid) => {
   const gr = (sd.gear || []).find(x => x && x.uid === uid);
   return gr && gr.powCard ? abWindow(gr.powCard) : null;
 };
+/* HOW MUCH WALL WOULD THIS ABILITY ADD TO THE BLOCK DECLARED NOW? (v6.51, SPXBOO)
+   Lyath's boo prints "Defending action cards you control get +1{d} this turn"
+   (`defActBuff`): worth the amount times the action cards this seat has declared
+   as defenders, and nothing on his own turn, where nothing of his defends. For
+   `sparring.js`, which reads no card text. 0 for an ability with no such op, for
+   one the side already has standing (a second boo is tapped anyway), and while
+   this seat is not the one defending. */
+const defActGainNow = (g, seat, uid) => {
+  const sd = at(g, seat);
+  if(!g.pend || g.pend.by == null || g.pend.by === seat) return 0;
+  const ab = (uid === "hpow" || uid === "hero") ? bOf(g, seat).HPOW
+           : ((sd.gear || []).find(x => x && x.uid === uid) || {}).powCard;
+  if(!ab) return 0;
+  const v = (PR.fxParse(ab).ops || []).filter(o => o[0] === "defActBuff").reduce((t, o) => t + (+o[1] || 0), 0);
+  if(!v) return 0;
+  const n = (sd.blockH || []).map(u => (sd.hand || []).find(c => c && c.uid === u))
+    .filter(c => c && PR.isActionCard(c)).length;
+  return v * n;
+};
 /* DOES THIS CARD HELP THE LINK BEING DEFENDED? (QUEUE v4 H8) For `sparring.js`,
    which reads no card text: a defence reaction, or a card whose payload
    prevents damage. Every other card held in hand while the seat defends is
@@ -5142,7 +5161,7 @@ function moves(g, seat){
 }
 
 return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, moves, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, keepsActionPoint, traverseOffer, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
+        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf, waitingOn,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */
