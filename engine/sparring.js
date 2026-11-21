@@ -158,7 +158,11 @@ const fixOn = (g, seat) => {
    activated when one exists, and the banished instant is played before the hand. SPXPUT (v6.54)
    a free search from the deck into the arena (`judge.freePick` "put": Prism's figment) is taken.
    SPXCYCLE (v6.55) an optional discard whose rider draws the card back (`judge.cyclePick`:
-   Golden Tipple's draw and Gold) is taken with the lowest-power card it admits. */
+   Golden Tipple's draw and Gold) is taken with the lowest-power card it admits. SPXRXPUMP (v6.57)
+   the attacking reaction window casts only what `judge.pumpsNow` admits (a pump, a hit rider, a
+   permanent): a prevention, a life gain or a draw is kept for a window where it does something.
+   SPXTOKENPIECE (v6.57) a free go-again piece that makes its own token (`judge.tokenPiece`:
+   Runehold Release, Flat Trackers) is spent before the attack, not after it. */
 const subGate = k => {
   const v = (typeof process !== "undefined" && process.env && process.env[k]) || "";
   return (g, seat) => {
@@ -173,7 +177,11 @@ const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate(
       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
       wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW"),
       graveOn = subGate("SPXGRAVE"), booOn = subGate("SPXBOO"), energyOn = subGate("SPXENERGY"), putOn = subGate("SPXPUT"),
-      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY");
+      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE");
+/* THE BLOCK A TOKEN PIECE MAY GIVE UP (SPXTOKENPIECE): one point. Flat Trackers (1 defence, blade
+   break: "Destroy this: Create an Agility token. Go again") measured on Boltyn's own seat, 24 seeds
+   each chair: 224 -> 253 of 768 spent this way against kept to block once. */
+const TOKEN_DEF = 1;
 /* SPXTRAV (v6.46): take Viserai, Usurper's end-phase traverse back to the front.
    OFF unless named (unlike the fixes above): measured over 180 seated games each way
    (`node tools/staged-play.js viseraiBetweenWorlds 6`), staying won 17 and turning
@@ -589,6 +597,8 @@ function reaction(g, seat){
   }
   const legalRx = from
     .filter(x => !defending || J.defendsNow(g, seat, x.c.uid, x.from))
+    /* WHILE ATTACKING, ONLY WHAT PUMPS THIS LINK (SPXRXPUMP): `judge.pumpsNow`. */
+    .filter(x => defending || !rxPumpOn(g, seat) || J.pumpsNow(g, seat, x.c.uid, x.from))
     /* an instant that would land nothing is not a reaction either (QA-B H-5) */
     .filter(x => idleOK(g, seat, x.c.uid, x.from))
     .filter(x => legal(g, {t: "play", uid: x.c.uid, from: x.from}, seat))
@@ -740,6 +750,16 @@ function offence(g, seat, o){
   if(crownOn(g, seat)){
     const cp = (g.sides[seat].gear || []).slice().sort(byUid).find(x => x && J.discardDrawPiece(g, seat, x.uid));
     if(cp) return tag("discardDraw", {t: "activate", uid: cp.uid});
+  }
+  /* A PIECE THAT MAKES ITS OWN TOKEN WITH GO AGAIN GOES BEFORE THE ATTACK (SPXTOKENPIECE).
+     Runehold Release was legal on 157 of Viserai BW's turns and used on 23: the gear
+     fallback sits after the attacks, and by then the attack has spent the action point the
+     piece needs. Its go again gives that point back, it blocks nothing (0 defence), and the
+     Runechant it makes waits for the next attack. Flat Trackers' Agility token (go again for
+     next turn's first attack) is worth its 1-point block too (`TOKEN_DEF`). `judge.tokenPiece` answers. */
+  if(tokenPieceOn(g, seat)){
+    const tp = (g.sides[seat].gear || []).slice().sort(byUid).find(x => x && J.tokenPiece(g, seat, x.uid, TOKEN_DEF));
+    if(tp) return tag("tokenPiece", {t: "activate", uid: tp.uid});
   }
   const bt = bootsLine(g, seat, a, o);
   if(bt) return bt;
@@ -1894,6 +1914,7 @@ const CALL_WHY = {
   gaNextTaker: "Play the card the go again is waiting for first. The attack still has its action point after.",
   gaNextPiece: "Spend the piece for go again on the card you play next, so it does not end the turn before your attack.",
   weaponPump: "Pump the weapon before it swings. The counters ride on this turn's swing.",
+  tokenPiece: "Spend the piece for its token first. It has go again, so the action point is still yours to attack with.",
   pieceRes: "Spend the piece for its resource first. It pays for this play, so the card you would pitch stays in hand.",
   resUnlockWeapon: "Spend the piece for its resource. It pays for a swing of your weapon.",
   gearAbility: "Use your equipment's ability. Nothing better is left to do.",

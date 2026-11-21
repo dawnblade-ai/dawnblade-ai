@@ -125,7 +125,9 @@ test("H22: the attacker's own reaction is not held by the rule", {skip}, () => {
      rule is the DEFENDER's, so the attacker's `rxAttack` is unchanged. */
   H.db();
   let g = J.newMatch({builds: [null, null], names: ["A", "B"], heroKeys: [null, null], seed: "rxhold-atk"});
-  const pump = Object.assign({}, C.resolveEntry(H.db(), {name: "Oasis Respite", p: 1, code: null, q: 1}), {uid: "rx1"});
+  /* a real attack reaction (v6.57: Oasis Respite was the pump here, and SPXRXPUMP now keeps
+     a prevention out of the attacker's own window — `judge.pumpsNow`, test/rxpump.test.js) */
+  const pump = Object.assign({}, C.resolveEntry(H.db(), {name: "Nip at the Heels", p: 3, code: null, q: 1}), {uid: "rx1"});
   g.sides[0].hand = [SWING(3), pump]; g.sides[0].ap = 1; g.sides[0].res = 9; g.sides[0].gear = [];
   g.sides[1].hand = [wall("b1", 3), wall("b2", 3)]; g.sides[1].gear = []; g.sides[1].hp = 20;
   g.phase = "action"; g.step = "layer"; g.priority = 0; g.turnPlayer = 0;

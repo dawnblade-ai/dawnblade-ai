@@ -12,6 +12,19 @@
 <meta name="apple-mobile-web-app-title" content="Dawnblade"/>
 <meta name="application-name" content="Dawnblade"/>
 <meta name="theme-color" content="#14100E"/>
+<!-- THE LINK PREVIEW (v6.57): what a messenger shows under a shared link. The image is
+     icons/share.png (original art, written by tools/icon.js) and must be an ABSOLUTE url,
+     so it names the live page; from file:// it is simply unused. -->
+<meta name="description" content="Flesh and Blood sparring on your phone: real Silver Age precons, an AI that plays them, a coach at your side. Fan-made, free, no ads."/>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="Dawnblade"/>
+<meta property="og:title" content="Dawnblade — Flesh and Blood sparring on your phone"/>
+<meta property="og:description" content="Real Silver Age precons, an AI that plays them, a coach at your side. Fan-made, free, no ads."/>
+<meta property="og:url" content="https://dawnblade-ai.github.io/dawnblade-ai/"/>
+<meta property="og:image" content="https://dawnblade-ai.github.io/dawnblade-ai/icons/share.png"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta name="twitter:card" content="summary_large_image"/>
 <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png"/>
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png"/>
 <link rel="icon" type="image/svg+xml" href="icons/icon.svg"/>
@@ -914,6 +927,15 @@ img{display:block;max-width:100%}
 /* A blocked clipboard is not a success. Never dressed as one. */
 .bugok.warn{color:var(--r)}
 .bugrow{display:flex;gap:7px;margin-top:10px}
+/* How to play (v6.57): the Judge sheet's frame, in the gold of a lesson rather than the red of a report */
+.howsheet{border-top-color:var(--y)}
+.howt{color:var(--y)}
+.howh{font-family:'Big Shoulders Display';font-weight:800;font-size:var(--fs-body);letter-spacing:.06em;
+  text-transform:uppercase;color:var(--bone);margin:12px 0 3px}
+.howbtn{display:block;width:100%;margin-top:8px;padding:12px 6px;background:none;border:0;
+  color:var(--bone-dim);font-size:var(--fs-xl);text-align:center;cursor:pointer}
+.howbtn b{color:var(--y);font-weight:700}
+.howp{font-size:var(--fs-body);color:var(--bone-dim);line-height:1.5;margin:0}
 .bugrow .bigbtn{flex:1;font-size:var(--fs-lg);padding:11px 6px}
 /* ---- the table: find an opponent, and the networked board ------------ */
 .tblwrap{display:flex;flex-direction:column;gap:12px;padding:4px 0}
@@ -1104,7 +1126,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "6.56"; /* v6.56 - the AI spends the gear and instants it used to hold (Garland, Glisten, Boots, Crown, Polarity); see CHANGELOG.md. */
+window.APP_VER = "6.57"; /* v6.57 - How to play for a newcomer on the roster, and the AI keeps its non-pump instants out of its own reaction window; see CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -3193,6 +3215,51 @@ function JudgeSheet({open, onClose, report, meta, warn}){
           <button className="bigbtn alt" onClick={doCopy}>Copy</button>
           <button className="bigbtn" onClick={doSave}>Save report</button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* HOW TO PLAY (v6.57) — the roster's door for a player who has never held a Flesh
+   and Blood card. Six short paragraphs, the spine of the game and nothing the feed
+   will not teach on the first turn: the goal, the three uses of a card, the action
+   point, combat, the end of turn, and how this app is driven. Every rule here is
+   one the engine plays, said the way the feed says it. */
+function HowToPlay({open, onClose}){
+  if(!open) return null;
+  return (
+    <div className="bugwrap" onClick={e=>{ if(e.target===e.currentTarget) onClose(); }}>
+      <div className="bugsheet clip howsheet">
+        <div className="bugh"><span className="bugt howt">How to play</span>
+          <span className="bugmeta">Flesh and Blood in two minutes</span></div>
+        <p className="bughint">The rest you will learn from the feed: it writes every step down.</p>
+        <h4 className="howh">The goal</h4>
+        <p className="howp">Two heroes, one fight. Bring the other hero's life to 0. Your hero card gives
+          you two numbers: your life, and your intellect, the number of cards you draw up to.</p>
+        <h4 className="howh">Every card is three things</h4>
+        <p className="howp">Play it for what it does. Pitch it to pay for other cards: the coloured stripe
+          says how much it pays (red 1, yellow 2, blue 3). Or defend with it, for the number on its shield.
+          Choosing which, every turn, is the whole game.</p>
+        <h4 className="howh">Your turn</h4>
+        <p className="howp">You get one action point. Playing an attack or an action spends it, unless the
+          card has go again, which gives it back. Instants cost no action point. Pay a cost by pitching
+          cards from your hand.</p>
+        <h4 className="howh">Combat</h4>
+        <p className="howp">When you attack, your opponent may defend with cards from hand and with their
+          equipment. Then both sides may react: attack reactions make the attack bigger, defence
+          reactions add defence. Whatever power gets past the defence is damage.</p>
+        <h4 className="howh">The end of your turn</h4>
+        <p className="howp">You may set one card from hand face down in your arsenal, to play on a later
+          turn. The cards you pitched go to the bottom of your deck, then you draw back up to your
+          intellect. What you keep in hand is your defence on their turn, so every turn asks the same
+          question: swing now, or hold cards to block?</p>
+        <h4 className="howh">Here, in Dawnblade</h4>
+        <p className="howp">Pick a hero, tap Battle, and start with Fight the dummy: it swings on a fixed
+          pattern while you learn your deck. When you are ready, pick an AI hero as your foe and it plays a
+          real precon against you. Tap a card once to see it large, and again to play it.
+          The Coach's call says the play it would make, and why. If something looks wrong, tap JUDGE!!
+          and it saves the whole board with your note.</p>
+        <div className="bugrow"><button className="bigbtn" onClick={onClose}>Got it</button></div>
       </div>
     </div>
   );
@@ -9876,6 +9943,7 @@ function App(){
   const [seating,setSeating]=uS(null);
   /* the table: null -> "find" (the code screen) -> {table,host,code} (seated) */
   const [table,setTable]=uS(null);
+  const [how,setHow]=uS(false);
   const [best,setBest]=uS(()=>store.get("best",{}));
   const record=(k,score)=>setBest(b=>{
     const nb={...b,[k]: b[k]==null?score:Math.min(b[k],score)}; store.set("best",nb); return nb;
@@ -9895,6 +9963,8 @@ function App(){
         <HeroBanner h={hero} db={db}/>
         {hero && <button className="battlebtn clip" disabled={db.status!=="ready"} onClick={()=>setLoHero({...hero, seed:battleSeed()})}><span>{db.status==="ready"?"Battle":"Forging…"}</span></button>}
         <button className="bigbtn alt" style={{marginTop:8}} onClick={()=>setTable("find")}>Find an opponent</button>
+        <button className="howbtn" onClick={()=>setHow(true)}>New to Flesh and Blood? <b>How to play</b></button>
+        <HowToPlay open={how} onClose={()=>setHow(false)}/>
         {/* THE FORMAT, SAID WHERE A PLAYER LOOKS (v4.76). Dawnblade does not
             follow Silver Age's rolling ban list or its hero bench — see
             data/formats.json — so a player who knows Silver Age is told why

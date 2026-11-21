@@ -149,12 +149,13 @@ test("every reason is keyed from a site in the policy, and the census names what
      card's: test/conditionals.test.js drives both. `traverseStay` / `traverseBack` (v6.46, Viserai,
      Usurper's end-phase offer) are a staged hero's: test/traverse.test.js drives both.
      v6.56's gear fixes (SPXPIECE, SPXGLISTEN, SPXBOOTS, SPXCROWN, SPXPOLARITY) re-route the census:
-     `gateFirst` and `pitchChi` are reached now. */
+     `gateFirst` and `pitchChi` are reached now. v6.57's SPXRXPUMP (the attacker's own reaction window
+     keeps its preventions and life gains) re-routes it once more: `grantKeep` is reached now. */
   const seen = census().keys;
   for(const k of Object.keys(seen)) assert.ok(SP.CALL_WHY[k], "reached key " + k + " has no reason");
   assert.deepEqual(keys.filter(k => !seen[k]).sort(),
     ["abtarget", "addPayNo", "allocAll", "allyTake", "answer", "arenaAP", "arenaRes", "arsenalSkip", "bancost", "bancostNo", "boostNo",
-     "chargeDone", "chargeMore", "chargeNone", "discost", "grantKeep", "laBlock", "laBoard", "laHit", "laHold", "laKeep", "laSafe", "laTake", "lookOwn",
+     "chargeDone", "chargeMore", "chargeNone", "discost", "laBlock", "laBoard", "laHit", "laHold", "laKeep", "laSafe", "laTake", "lookOwn",
      "payCancel", "traverseBack", "traverseStay", "usurp"]);
 });
 

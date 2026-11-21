@@ -1929,6 +1929,44 @@ const defendsNow = (g, seat, uid, from) => {
   const fx = PR.fxParse(c);
   return !!fx.dr || (fx.ops || []).some(o => DEFENDS_OPS.indexOf(o[0]) >= 0);
 };
+/* IS THIS CARD WORTH CASTING INTO THE REACTION WINDOW OF THIS SEAT'S OWN ATTACK? (SPXRXPUMP)
+   `defendsNow`'s twin for the attacking side. For `sparring.js`, which reads no card text: an
+   attack reaction (played into the reaction step to affect the attack); a card whose
+   payload is the attack's own power (`self`, a mode's or an `if`'s) or a rider on its hit
+   (`hitNext`); or a permanent (an aura, an item), which the arena keeps whenever it lands — Lyath's
+   Suspense auras are worth their place on his own turn (holding them measured 133 -> 95 of 384).
+   Every other card (a prevention, a life gain, a draw, a graveyard pick) does nothing for this
+   swing, and is kept for a window where it does: the opponent's turn, or its best "instead". */
+const PUMP_OPS = ["hitNext"];
+const pumpsNow = (g, seat, uid, from) => {
+  const sd = at(g, seat);
+  const c = from === "arsenal" ? (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null)
+          : (sd.hand || []).find(x => x && x.uid === uid);
+  if(!c) return false;
+  if(TY.isAR(c) || TY.isPermanent(c)) return true;
+  const fx = PR.fxParse(c);
+  return (+fx.self || 0) > 0
+    || (fx.modes || []).some(m => m && (+m.self || 0) > 0)
+    || (fx.conds || []).some(k => k && k.op && k.op[0] === "self")
+    || (fx.ops || []).some(o => o && PUMP_OPS.indexOf(o[0]) >= 0);
+};
+/* A PIECE THAT SPENDS ITSELF FOR A TOKEN OF ITS OWN, WITH GO AGAIN (SPXTOKENPIECE). For
+   `sparring.js`, which reads no card text: an equipment ability that costs no resource,
+   destroys or banishes the piece, has go again, and pays out only tokens for its controller
+   (Runehold Release: "Destroy this: Create a Runechant token. Go again"). The go again gives
+   the action point back, so it is free of the turn, and the token stays until it is used.
+   `maxDef` bounds the piece's printed defence (the block it gives up); `legal` answers the rest. */
+const TOKEN_PIECE_OP = o => o && (o[0] === "rune" || (o[0] === "token" && o[3] === "self"));
+const tokenPiece = (g, seat, uid, maxDef) => {
+  const piece = (at(g, seat).gear || []).find(x => x && x.uid === uid);
+  const pc = piece && !PR.isWeapon(piece) ? piece.powCard : null;
+  if(!pc || !(pc.sd || pc._selfBanish) || (+pc.cost || 0) > 0) return false;
+  if((+piece.def || 0) > (maxDef || 0)) return false;
+  const fx = PR.fxParse(pc);
+  if(!fx.ga || (fx.conds || []).length || fx.optCost) return false;
+  const ops = (fx.ops || []).filter(o => o && o[0] !== "noop");
+  return ops.length > 0 && ops.every(TOKEN_PIECE_OP) && legal(g, {t: "activate", uid}, seat) == null;
+};
 /* THE RESOURCE OPS OF A PIECE THAT SPENDS ITSELF FOR NOTHING ELSE, or null.
    One reader for the two questions below, so they cannot disagree. */
 const abResOps = (g, seat, uid) => {
@@ -5306,7 +5344,7 @@ function moves(g, seat){
 }
 
 return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, moves, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, cyclePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, weaponPumpOf, gaNextPiece, nonAtkHeld, discardDrawPiece, lifeGainOf, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
+        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, cyclePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, pumpsNow, tokenPiece, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, weaponPumpOf, gaNextPiece, nonAtkHeld, discardDrawPiece, lifeGainOf, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf, waitingOn,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */

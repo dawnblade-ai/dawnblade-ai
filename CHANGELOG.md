@@ -1,3 +1,43 @@
+## v6.57 — How to play, a link that shows itself, and the AI spends its cards where they count
+
+A thread about the stranger: the first person who opens the link and has never held a Flesh and Blood card.
+
+- **How to play.** Under the roster, "New to Flesh and Blood? **How to play**" opens a sheet (the Judge sheet's frame, in gold):
+  the goal, the three uses of a card (play, pitch, defend), the action point and go again, combat and the reactions, the end
+  of turn (arsenal, pitch to the bottom, draw to intellect, and the swing-or-hold question it leaves), and how this app is driven
+  (Fight the dummy first, the two-tap, the Coach's call, JUDGE!!). Six short paragraphs; every rule in them is one the engine
+  plays. Driven at 393x852: no horizontal scroll, the sheet scrolls inside itself, "Got it" closes it. `tools/page.js` walks it
+  (6 sections, closes). README says where it is.
+- **The link shows itself.** The page had no description and no link-preview tags, so a shared link arrived bare. Now: a
+  description, Open Graph and a large Twitter card, with `icons/share.png` (1200x630, original art: the icon's blade and sun beside
+  the name and one line), written by `tools/icon.js` in the page's own fonts (it refuses without them).
+- **AI: the attacking reaction window casts only what is worth it there (`judge.pumpsNow`, gate `SPXRXPUMP`).** The defending side
+  was filtered in QUEUE v4 H8 (`defendsNow`); the attacking side cast the cheapest legal instant as a "pump", whatever it did. A
+  census over every pairing (1 seed) found Oasis Respite, Cloud Cover and Toe the Line preventing damage on a turn nobody was hitting
+  the seat, Arcane Polarity gaining 1, Memorial Ground and Enigma's transcend instants spent for nothing on the swing, and the call
+  told a player in that seat to do the same ("React with your cheapest card to pump this attack"). `pumpsNow` admits an attack
+  reaction, a card that pumps the attack (`self`, a mode's or an `if`'s) or rides on its hit (`hitNext`), and a permanent.
+  **Measured on the way:** without the permanent clause Lyath fell 133 -> 95 of 384 (his Suspense auras belong in the arena on his
+  own turn), so auras and items still go down. Shipped, each hero's own seat, gate on vs off, 12 seeds each chair (wins of 384):
+  Enigma 191 -> 199, Dorinthea 257 -> 260, Viserai BW 80 -> 82, Lyath 133 -> 134, Boltyn 117 -> 118, Fai 216 -> 217, Briar 326 ->
+  326, Azalea 219 -> 219, Blaze 129 -> 128, Gravy 157 -> 156, Iyslander 127 -> 126: all inside the band (sum 1872 -> 1885). It ships
+  as a noise-level change that corrects the advice the call shows. Drill: test/rxpump.test.js (reader rows with refusals; self-play:
+  the seat never casts a refused, legal card into its own reaction window, and still casts pumps — sabotaged: SPXRXPUMP=none fails
+  the policy row, the reader answering true fails the refusals, dropping the permanent clause fails the Suspense row).
+- **AI: a free piece that makes its own token goes before the attack (`judge.tokenPiece`, gate `SPXTOKENPIECE`).** Runehold
+  Release ("Destroy this: Create a Runechant token. Go again", 0 defence) was legal on 157 of Viserai BW's turns and used on 23:
+  the gear fallback sits after the attacks, and the attack had spent the action point the ability needs. The reader answers an
+  equipment ability that costs no resource, spends the piece, has go again and pays out only its controller's tokens, on a piece
+  of at most 1 defence. Own seat, 24 seeds each chair (wins of 768): **Viserai BW 136 -> 141** (noise-level; the play costs
+  nothing). Allowing the 1-defence piece: **Boltyn's Flat Trackers (Agility token) 224 -> 253** (+18 and +11 a chair, outside the
+  band). Lyath's Stand Strong costs {r}{r}{r} and is not admitted (measured identical). Drill: test/gearpolicy.test.js (Runehold
+  goes, a Runechant lands, the action point stays; Flat Trackers likewise with an Agility token; the reader's bound and refusals —
+  sabotaged: SPXTOKENPIECE=none fails both drives, the reader answering false fails its rows). Its SPXPIECE fixture moved with
+  Boltyn's games (the first Garland found is now a layer made before the play) and is resolved before it is read.
+- Drills moved by the new trajectories (re-anchored, not weakened): test/rxhold.test.js's attacker fixture pumps with Nip at the
+  Heels (it was Oasis Respite, which the window now keeps); test/explain.test.js — `grantKeep` is reached by the census now;
+  test/slicecensus.test.js — the style block grew by the How to play rules.
+
 ## v6.56 — The AI spends what it held
 
 The never-used census (`experiments/census/never.js` on findings/queue: per card or ability, the turns `legal` offered it vs the turns

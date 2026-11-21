@@ -17,6 +17,9 @@ button, then **Add to Home Screen** — it saves as "Dawnblade" with its own ico
 and opens in Safari, so your trophies and loadouts are the same either way. The
 game is built for a phone held upright; it works on any modern browser too.
 
+**New to Flesh and Blood?** Tap **How to play** under the roster: the whole
+game in six short paragraphs, then the feed teaches the rest as you play.
+
 **Pick a hero.** The roster shows every precon in the format. Tap one to see the
 hero and the official decklist, then **Battle**. A coin decides who picks the
 seating, then the loadout lets you choose your gear and cut cards before you start.

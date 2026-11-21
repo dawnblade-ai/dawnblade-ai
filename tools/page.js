@@ -241,6 +241,16 @@ if(require.main === module){
 
     console.log(`dawnblade v${ver} at ${W}x${H}, offline (routed hosts: ${Object.entries(routed).map(([k, v]) => k + "x" + v).join(", ")})`);
     await screen("home: roster");
+    /* how to play (v6.57): the sheet opens from the roster, fits the phone, every
+       section is there, and "Got it" closes it */
+    if(await click(page.locator(".howbtn"), "how to play")){
+      await page.waitForSelector(".howsheet");
+      const n = await page.locator(".howsheet .howh").count();
+      await screen("home: how to play", n === 6 ? "6 sections" : "SECTIONS " + n);
+      if(n !== 6) row(false, "home: how to play sections", n + " of 6");
+      await click(page.locator(".howsheet .bigbtn"), "how to play: got it");
+      row(!(await has(".howsheet")), "home: how to play closes");
+    }
 
     /* the heroes: the first pick leads the whole walk */
     if(await click(page.locator(".hcard").first(), "pick a hero")){

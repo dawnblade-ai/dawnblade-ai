@@ -64,7 +64,10 @@ test("SPXPIECE: Garland of Spring pays for Boltyn's play and the pool rises by i
   const piece = (sd.gear || []).find(x => x && x.uid === e.action.uid);
   assert.equal(piece.def || 0, 0, "a piece that blocks nothing");
   assert.equal(J.abPieceResGain(n, seat, piece.uid), 1);
-  const m = step(n, e.action, seat);
+  /* v6.57: the first find is now an activation made before the play (a layer that resolves when
+     both seats pass), not one made inside the payment, so it is resolved before it is read */
+  let m = step(n, e.action, seat);
+  m = until(m, seat, x => !gearNamed(x.sides[seat], piece.name) && !(x.stack || []).length);
   assert.ok(!gearNamed(m.sides[seat], piece.name), "destroyed");
   assert.equal(m.sides[seat].res || 0, (sd.res || 0) + 1, "its {r} floats for the play");
 });
@@ -142,4 +145,67 @@ test("the readers refuse what they do not describe", () => {
     assert.equal(J.weaponPumpOf(n, 0, c.uid, "hand"), null, c.name + " pumps no weapon");
   const boots = gearNamed(n.sides[1], "Mage Master Boots");
   assert.ok(boots && J.gaNextPiece(n, 1, boots.uid), "Gravy's Boots are one");
+});
+
+/* SPXTOKENPIECE (v6.57): Runehold Release ("Destroy this: Create a Runechant token. Go again") was
+   legal on 157 of Viserai BW's turns and used on 23 — the gear fallback sits after the attacks,
+   and the attack had spent the point. Sabotage checked: SPXTOKENPIECE=none fails the drive (the
+   branch is never found); `tokenPiece` answering false fails the reader row. */
+test("SPXTOKENPIECE: Runehold Release goes first, makes its Runechant and keeps the action point", () => {
+  const f = find("viseraibw", "tokenPiece");
+  assert.ok(f, "found in self-play");
+  const {seat, e} = f; let n = f.n;
+  const sd = n.sides[seat], piece = (sd.gear || []).find(x => x && x.uid === e.action.uid);
+  assert.equal(piece.name, "Runehold Release");
+  assert.equal(piece.def || 0, 0, "it blocks nothing");
+  const runes = s => (s.board || []).filter(b => b && b.card && b.card.name === "Runechant").length;
+  const before = runes(sd), ap = sd.ap;
+  assert.ok(ap >= 1, "an action point to spend on it");
+  n = step(n, e.action, seat);
+  n = until(n, seat, m => !gearNamed(m.sides[seat], "Runehold Release") && !(m.stack || []).length);
+  assert.ok(!gearNamed(n.sides[seat], "Runehold Release"), "destroyed");
+  assert.equal(runes(n.sides[seat]), before + 1, "a Runechant on the board");
+  assert.equal(n.sides[seat].ap, ap, "go again: the point is still there for the attack");
+});
+
+test("SPXTOKENPIECE: Flat Trackers gives up its 1-point block for Boltyn's Agility token", () => {
+  const f = find("boltyn", "tokenPiece");
+  assert.ok(f, "found in self-play");
+  const {seat, e} = f; let n = f.n;
+  const piece = (n.sides[seat].gear || []).find(x => x && x.uid === e.action.uid);
+  assert.equal(piece.name, "Flat Trackers");
+  const agi = s => (s.board || []).filter(b => b && b.card && b.card.name === "Agility").length;
+  const before = agi(n.sides[seat]), ap = n.sides[seat].ap;
+  n = step(n, e.action, seat);
+  n = until(n, seat, m => !gearNamed(m.sides[seat], "Flat Trackers") && !(m.stack || []).length);
+  assert.equal(agi(n.sides[seat]), before + 1, "an Agility token on the board");
+  assert.equal(n.sides[seat].ap, ap, "go again");
+});
+
+/* the first self-play state where `hero` (seat 0) holds priority in its own action phase,
+   with an action point, an empty stack and the named piece still in its gear */
+function ownMain(hero, foe, piece){
+  let n = SPL.match(hero, foe, "tokenpiece-" + hero, 0);
+  for(let i = 0; i < 3000 && !n.over; i++){
+    if(n.turnPlayer === 0 && n.priority === 0 && n.phase === "action" && !(n.stack || []).length && !n.pend
+       && !n.prompt && (n.sides[0].ap || 0) >= 1 && gearNamed(n.sides[0], piece)) return n;
+    let moved = false;
+    for(const s of [0, 1]){
+      const a = SP.act(n, s); if(!a) continue;
+      const o = J.reduce(n, a, s); if(o.error) continue;
+      n = o.state; moved = true; break;
+    }
+    if(!moved) break;
+  }
+  return null;
+}
+test("tokenPiece: the reader admits the token piece and refuses the rest", () => {
+  const n = ownMain("viseraibw", "boltyn", "Runehold Release"), m = ownMain("boltyn", "viseraibw", "Flat Trackers");
+  assert.ok(n && m, "both states found");
+  const g0 = (g, name) => gearNamed(g.sides[0], name);
+  assert.equal(J.tokenPiece(n, 0, g0(n, "Runehold Release").uid, 0), true, "0 defence, a Runechant, go again");
+  if(g0(n, "Blossom of Spring")) assert.equal(J.tokenPiece(n, 0, g0(n, "Blossom of Spring").uid, 0), false, "a resource, not a token");
+  assert.equal(J.tokenPiece(m, 0, g0(m, "Flat Trackers").uid, 0), false, "a 1-defence piece is a block given up");
+  assert.equal(J.tokenPiece(m, 0, g0(m, "Flat Trackers").uid, 1), true, "...unless the caller allows it");
+  assert.equal(J.tokenPiece(n, 1, g0(n, "Runehold Release").uid, 0), false, "not the other seat's piece");
 });
