@@ -40,6 +40,8 @@ seat, gate on vs off, 12 seeds each chair (wins of 384).
 - Ladder `npm run play '' '' 3`: 816 games, 0 refusals / violations / stalls (3 engine-ended draws). Against the same ladder with the
   five gates off: **Gravy 30 -> 40, Boltyn 23 -> 28, Viserai BW 18 -> 21**; Arakni 47 -> 38 (she holds a Blossom: her own seat A/B'd
   level, 164 -> 163 of 384, so it is the field), everyone else within the band.
+- **Validation:** npm test 4508 / 4503 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; ladder above (the page changed only
+  its version line).
 
 ## v6.55 — Gravy takes the Tipple
 
