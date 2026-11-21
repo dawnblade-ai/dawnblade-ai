@@ -182,8 +182,9 @@ test("Scout the Periphery's look goes where it adds information: their deck, unl
 test("defending, the cheapest reaction that stops the whole leak by itself goes first — and cheapest-first stands when the cheapest covers", {skip}, () => {
   const {match} = SPP();
   /* replayed to the first reaction window where Enigma defends and the cheapest legal
-     defender leaves a leak a dearer one would close alone (enigma-kayo-0, census probe) */
-  let n = match("enigma", "kayo", "enigma-kayo-0", 0), at = null;
+     defender leaves a leak a dearer one would close alone (enigma-kayo-0, census probe; re-anchored
+     to enigma-kayo-2 at v6.56, when SPXPIECE spending Enigma's Blossom moved the first game) */
+  let n = match("enigma", "kayo", "enigma-kayo-2", 0), at = null;
   for(let i = 0; i < 6000 && !n.over && !at; i++){
     let moved = false;
     for(const seat of [0, 1]){

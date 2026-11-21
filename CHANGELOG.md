@@ -1,3 +1,46 @@
+## v6.56 — The AI spends what it held
+
+The never-used census (`experiments/census/never.js` on findings/queue: per card or ability, the turns `legal` offered it vs the turns
+the AI used it) ran on the three bottom heroes and found five holds. Each is fixed behind its own gate, measured on the hero's own
+seat, gate on vs off, 12 seeds each chair (wins of 384).
+
+- **SPXPIECE: a 0-defence resource piece pays for the play about to be paid.** Garland of Spring ("Destroy this: Gain {r}. Go again")
+  was legal on 555 of Boltyn's turns and spent on 9. QUEUE v4 H11 holds a resource-only piece unless it unlocks an attack, but a piece
+  that prints no defence blocks nothing: its {r} is its whole worth, and it is worth a card when the next play costs more than the
+  pool holds and the piece covers the difference. After: 30 of 83 legal turns. Boltyn **95 -> 106**, Viserai BW 77 -> 79 (both noise-
+  positive; the play is the correct one and the call shows it).
+- **SPXGLISTEN: Glisten before the swing, and the swing ranks on its counters.** Glisten's four +1{p} counters were played on 17 of 79
+  own turns; when they were, a 3-power hand attack spent the action point and Raydn (printed 0) never swung on them. A new judge
+  reader, `weaponPumpOf`, answers the shape (a card whose whole payout is +1{p} counters on weapons) and names a weapon `legal` lets
+  the seat swing now; the policy plays it first, and a weapon carrying +1{p} counters ranks on printed power plus counters. After: 41 of
+  42. Boltyn **107 -> 118**. Ruled out on the way: Glisten at the close of the OPPONENT's turn is worth no more than at the start of
+  Boltyn's own (the counters last until his end phase either way, same hand, same pitch), so it is not chased.
+- **SPXBOOTS: Mage Master Boots buys the go again for the ally, then the attack.** "{r}, destroy this: the next non-attack action card
+  you play this turn gets go again" was legal on 766 of Gravy's turns and spent on 5: attacks are picked first, so the ally waited
+  behind the swing that ended the turn. Two steps (`judge.gaNextPiece`, `judge.nonAtkHeld`): with an attack about to be made and a
+  held non-attack that would end the turn, the piece is spent when all three fit the hand; with the grant waiting, the card it admits
+  (`keepsActionPoint` sees it) goes first. Gravy **132 -> 154** (+10, +12 a chair: outside the band).
+- **SPXCROWN: Carrion Crown's draw goes first when the ally it discards still plays from the graveyard.** "Discard an ally, destroy
+  this: Draw a card. Go again" — 72 / 1. `judge.discardDrawPiece` asks `legal` of a copy of the state with each candidate moved to the
+  graveyard: Gravy's watery grave makes the discard free and the draw a card. Gravy **154 -> 165**.
+- **SPXPOLARITY: a life gain is played when its "instead" is true.** Arcane Polarity gains 1, or 4 "if you've been dealt arcane damage
+  this turn", and was never played on the opponent's turn, where that damage is dealt. `effects.lifeNow` (`condMetNow`, the loop's own
+  gate reader, as `effPowerNow` uses it) and `judge.lifeGainOf` answer the gain now and its best; at its best any instant window plays
+  it. Level (80 -> 81). **Measured and NOT shipped:** holding it below its best (and out of the attacking reaction window, which casts
+  any cheapest instant as a "pump") cost **80 -> 64**: it sat in hand and arsenal for an upgrade that came on 5 of 52 opposing turns.
+- **Measured and NOT shipped — Gravy deploys allies before hand attacks:** 165 -> 143. Allies keep ranking with attacks on printed power.
+- Drill: test/gearpolicy.test.js (each branch found in self-play and its observable checked: the pool rises by the piece's {r}; four
+  counters on Raydn and it swings that turn; the Boots are paid and the non-attack keeps the action point; the Crown leaves the hand
+  the same size with the ally playable from the graveyard; Polarity reads 1 then 4; the readers refuse other gear and cards —
+  sabotaged: each gate "none" fails its own drive, each reader stubbed fails its rows).
+- Drills moved by the new trajectories (re-anchored, not weakened): test/arspay.test.js's "affordable attack" now asserts SPXPIECE
+  (Blossom pays, the card in hand is kept — the old answer pitched it); test/explain.test.js lets `pieceRes` spend a resource piece
+  beside `resUnlock`, and `gateFirst` / `pitchChi` are reached by the census now; test/freepick.test.js's Golden Tipple leg 8 -> "8b"
+  and Blaze leg 10 -> "10d"; test/misplays.test.js's rxFit fixture enigma-kayo-0 -> enigma-kayo-2.
+- Ladder `npm run play '' '' 3`: 816 games, 0 refusals / violations / stalls (3 engine-ended draws). Against the same ladder with the
+  five gates off: **Gravy 30 -> 40, Boltyn 23 -> 28, Viserai BW 18 -> 21**; Arakni 47 -> 38 (she holds a Blossom: her own seat A/B'd
+  level, 164 -> 163 of 384, so it is the field), everyone else within the band.
+
 ## v6.55 — Gravy takes the Tipple
 
 - **AI: Golden Tipple's rider is taken (`judge.cyclePick`, gate `SPXCYCLE`).** "When this attacks, you may discard a yellow card. If you

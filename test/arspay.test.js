@@ -160,8 +160,19 @@ test("a piece the judge would refuse is not proposed, however much the attack wa
   assert.ok(!isBlossom(SP.act(g, 0)), "not proposed: " + JSON.stringify(SP.act(g, 0)));
 });
 
-test("an affordable attack is played as before; the piece waits", {skip}, () => {
-  const g = pinned({arsenal: ent("Widowmaker", 2, 60), hand: [other(70, 3)]});
-  const a = SP.act(g, 0);
-  assert.ok(isWidow(a), "plays the arrow, paying with the card in hand: " + JSON.stringify(a));
+test("an affordable attack: the 0-defence piece pays for it, and the card in hand is kept (SPXPIECE)", {skip}, () => {
+  /* Until v6.56 the arrow was played here, pitching the card in hand, and Blossom waited.
+     Blossom prints no defence, so its {r} is its whole worth and it pays for this play
+     instead (test/gearpolicy.test.js): the 3-pitch card stays in hand. */
+  let g = pinned({arsenal: ent("Widowmaker", 2, 60), hand: [other(70, 3)]});
+  assert.equal(J.legal(g, {t: "play", uid: 60, from: "arsenal"}, 0), null, "control: already affordable");
+  const x = SP.explain(g, 0);
+  assert.ok(isBlossom(x.action), "spends the piece first: " + JSON.stringify(x.action));
+  assert.equal(x.key, "pieceRes");
+  g = H.drain(J.reduce(g, x.action, 0).state);
+  assert.equal(g.sides[0].res, 1, "its {r} floats");
+  const next = SP.act(g, 0);
+  assert.ok(isWidow(next), "then the arrow: " + JSON.stringify(next));
+  g = H.drain(J.reduce(g, next, 0).state);
+  assert.ok(g.sides[0].hand.some(c => c.uid === 70), "and the card in hand was never pitched");
 });
