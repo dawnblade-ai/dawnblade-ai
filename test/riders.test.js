@@ -280,7 +280,10 @@ test("the granted-rider census — pinned, so a regression is a number", {skip},
           entry carrying `atkHero` (Display Loyalty). */
        || (f.conds || []).some(x => x.atkHero)) carried++;
   }
-  assert.equal(total, 28, "pool cards granting a quoted ability");
+  /* 28 -> 30 AT v6.47: Iris of Reality (a grant like Cosmo's: auras become weapons with a quoted attack)
+     and Ironhide Gauntlet (its quoted rider is `breakAtClose`, test/ironhide.test.js). Neither is an
+     on-hit rider, so `carried` does not move. */
+  assert.equal(total, 30, "pool cards granting a quoted ability");
   assert.equal(carried, 26, "carrying their rider — 7 before v3.10, 15 after it, " +
     "the targeted and modal shapes at v3.12, Avast Ye! at v3.42 (whose rider read " +
     "fine all along and was simply never asked for), Drop the Anchor at v3.48, " +
@@ -295,5 +298,5 @@ test("the granted-rider census — pinned, so a regression is a number", {skip},
     "was built, and Display Loyalty at v5.53, when its attacks-a-hero rider rode " +
     "behind its gate as an `atkHero` condition. The two left uncounted are Release " +
     "the Tension (a static restriction, `noDrx`, which this census does not ask) " +
-    "and Cosmo.");
+    "and Cosmo — and since v6.47 Iris of Reality and Ironhide Gauntlet, above.");
 });

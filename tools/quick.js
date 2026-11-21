@@ -13,6 +13,7 @@ const want = process.argv[2] || "";
 const dir = path.join(__dirname, "..", "test");
 const files = fs.readdirSync(dir).filter(f => f.endsWith(".test.js") && !SLOW.test(f) && f.includes(want))
   .sort().map(f => path.join("test", f));
+if(!files.length){ console.log("no drill file name contains \"" + want + "\""); process.exit(1); }   /* node --test with no files runs EVERYTHING */
 const t0 = Date.now();
 const r = spawnSync(process.execPath, ["--test", "--test-reporter=tap"].concat(files),
   {cwd: path.join(__dirname, ".."), encoding: "utf8", maxBuffer: 1 << 28});
