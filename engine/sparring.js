@@ -155,7 +155,8 @@ const fixOn = (g, seat) => {
    (v6.51) an ability that raises the declared wall (`judge.defActGainNow`) is used while
    defending when damage would still get through. SPXENERGY (v6.53) a counter-spending hero
    pick (Blaze's banish) takes the biggest-arcane card the seat can afford to play, is only
-   activated when one exists, and the banished instant is played before the hand. */
+   activated when one exists, and the banished instant is played before the hand. SPXPUT (v6.54)
+   a free search from the deck into the arena (`judge.freePick` "put": Prism's figment) is taken. */
 const subGate = k => {
   const v = (typeof process !== "undefined" && process.env && process.env[k]) || "";
   return (g, seat) => {
@@ -169,7 +170,7 @@ const subGate = k => {
 const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate("SPXPAY"), idleOn = subGate("SPXIDLE"),
       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
       wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW"),
-      graveOn = subGate("SPXGRAVE"), booOn = subGate("SPXBOO"), energyOn = subGate("SPXENERGY");
+      graveOn = subGate("SPXGRAVE"), booOn = subGate("SPXBOO"), energyOn = subGate("SPXENERGY"), putOn = subGate("SPXPUT");
 /* SPXTRAV (v6.46): take Viserai, Usurper's end-phase traverse back to the front.
    OFF unless named (unlike the fixes above): measured over 180 seated games each way
    (`node tools/staged-play.js viseraiBetweenWorlds 6`), staying won 17 and turning
@@ -1208,6 +1209,9 @@ function actBase(g, seat, o){
         return tag("energyPick", {t: "promptConfirm"});
       }
     }
+    /* THE GATE ON A FREE SEARCH INTO THE ARENA (v6.54, SPXPUT): off, the old decline. */
+    if(g.prompt.tag === "pick" && J.freePick(g.prompt) === "put" && !putOn(g, seat) && !(g.prompt.sel || []).length)
+      return tag("declineOptional", {t: "promptConfirm"});
     /* A SOAK PITCHED FOR IS PRICED AS THE CARD (QA-A H-4): `effects.soakPolicy`'s
        card price, asked through the one answer body. */
     const ans = J.autoAnswer(g, g.prompt.tag === "soak" && soakOn(g, seat) ? {cardPrice: true} : null), pt = g.prompt.tag;

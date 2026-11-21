@@ -1,3 +1,18 @@
+## v6.54 — Prism takes her figment
+
+- **AI: Prism's Herald search is taken (`judge.freePick` class "put", gate `SPXPUT`).** "Whenever a card with Herald in its name is put
+  into your soul during an action phase, you may search your deck for a figment, put it into the arena, then shuffle." The sheet is an
+  optional pick from the deck into the arena, which none of H12's free classes (dead, rev, ars) covered, so the AI declined it every
+  time (157 in 272 games) and her figments never left the deck. "put" is that class: free, nothing filtered, deck to arena. Taken, her
+  hero ability awakens the figment into Suraya (an ally with Ward 4) and the deck plays as built.
+  Measured on her own seat, gate on vs off, 12 seeds each chair: **170 -> 307 of 384** (84 -> 154 first-named, 86 -> 153 second-named;
+  up on all 24 seeds). Ladder `npm run play '' '' 3`: 816 games, 0 refusals / violations / stalls / draws; Prism 38 -> 81 (2nd, behind
+  Briar 85); every other hero within the band (each gives up a game or two to her).
+- Drill: test/figmentput.test.js (the classifier with its exclusions; self-play finds the first figment sheet, it is taken, the figment
+  is on her board and out of her deck — sabotaged: the class removed fails both).
+- **Validation:** npm test 4500 / 4495 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; ladder above; both babel blocks compile
+  (the page changed only its version line).
+
 ## v6.53 — Blaze spends his energy
 
 - **AI: Blaze's hero ability actually does something (`energyBanish` / `energyPick`, gate `SPXENERGY`).** "Remove X energy counters:

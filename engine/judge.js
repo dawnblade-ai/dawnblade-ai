@@ -556,6 +556,10 @@ const freePick = p => {
   if(["grave", "deck", "banish"].indexOf(p.zone) >= 0 && (p.to === "hand" || p.to === "banish")) return "dead";
   if(p.zone === "hand" && p.to == null) return "rev";
   if(p.zone === "hand" && p.to === "arsenal") return "ars";
+  /* A SEARCH INTO THE ARENA (v6.54, SPXPUT): Prism's "you may search your deck for a
+     figment, put it into the arena, then shuffle" costs nothing and takes a card that
+     was waiting in the deck onto the board. Declined 157 times in 272 games. */
+  if(p.zone === "deck" && p.to === "arena") return "put";
   return null;
 };
 function autoAnswer(g, o){
