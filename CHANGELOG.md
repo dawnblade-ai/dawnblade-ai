@@ -1,3 +1,17 @@
+## v6.58 — a new phone sees the way in
+
+- **How to play is a button until it has been opened.** On a phone that has never opened the sheet and has no game recorded, the
+  roster's "New to Flesh and Blood? How to play" wears a gold frame; the first tap records it (`store`, "howSeen"; storage that
+  throws reads as not seen, which only frames it) and after that it is quiet text, out of a regular's way. `tools/page.js` asserts
+  framed before, unframed after (81/81 screens at 393x852).
+- **Measured and ruled out (no change):** Gravy's Timesnap Potion (legal 62 of his turns, played 2) — in every one of those states
+  the competing play is an attack for the same action point, and the potion pitches for 3; Runechant of Lust / Sloth on the
+  opponent's turn — turning into a plain Runechant at the start of her turn throws away the usurp rider the card prints.
+- Drills: test/tapdoor.test.js's plain-arrow census 18 -> 19 (the button sets state, returns no handler); test/slicecensus.test.js
+  (the style block grew by the frame).
+- **Validation:** npm test 4514 / 4509 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; both babel blocks compile; no
+  engine change (no ladder needed).
+
 ## v6.57 — How to play, a link that shows itself, and the AI spends its cards where they count
 
 A thread about the stranger: the first person who opens the link and has never held a Flesh and Blood card.

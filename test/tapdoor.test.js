@@ -54,7 +54,9 @@ test("CENSUS: no plain-arrow onClick returns a tapTwice handler", () => {
      welcome card's "Done" (clears the code state, returns to the chooser) are plain arrows that set screen state; neither returns a handler. */
   /* 15 -> 18 AT SERVER S5.3, READ FIRST: the three "The ladder" / "See the ladder" buttons (the first screen, the server table screen, the name sheet) are plain arrows
      that clear the error, remember where the ladder was opened from and set the screen state; none returns a handler, so the census below still holds. */
-  assert.equal(bodies.length, 18, "the plain-arrow onClick count moved (" + bodies.length + ") — read the new one, then repin");
+  /* 18 -> 19 AT v6.58, READ FIRST: the roster's "How to play" button opens the sheet and, the first time, records that
+     it was seen (`store.set`, `setHowSeen`); a plain arrow that sets state, it returns no handler. */
+  assert.equal(bodies.length, 19, "the plain-arrow onClick count moved (" + bodies.length + ") — read the new one, then repin");
   const dead = bodies.filter(b => /return tapTwice\(/.test(b));
   assert.deepEqual(dead.map(b => b.slice(0, 120)), [], "a tap that builds its handler and throws it away");
 });

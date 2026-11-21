@@ -243,6 +243,7 @@ if(require.main === module){
     await screen("home: roster");
     /* how to play (v6.57): the sheet opens from the roster, fits the phone, every
        section is there, and "Got it" closes it */
+    const fresh0 = await has(".howbtn.fresh");
     if(await click(page.locator(".howbtn"), "how to play")){
       await page.waitForSelector(".howsheet");
       const n = await page.locator(".howsheet .howh").count();
@@ -250,6 +251,8 @@ if(require.main === module){
       if(n !== 6) row(false, "home: how to play sections", n + " of 6");
       await click(page.locator(".howsheet .bigbtn"), "how to play: got it");
       row(!(await has(".howsheet")), "home: how to play closes");
+      /* a new phone sees it framed; once opened, it is quiet text */
+      row(fresh0 && !(await has(".howbtn.fresh")), "home: how to play is framed until opened", `before ${fresh0}`);
     }
 
     /* the heroes: the first pick leads the whole walk */
