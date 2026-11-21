@@ -92,7 +92,7 @@ Step 5 verified: drill `test/linkout.test.js`; a trainer drive plays Clash of Ag
    + snap is already there) and a card-to-zone glide on play (FLIP: measure the tile,
    animate a ghost to the featured slot). Budget: no frame over 16 ms at 4x throttle
    (`tools/perf-page.js`), off under reduced motion.
-7. **Prompt sheet pass.** Drive each `prompts.js` kind (opt pick modal pay reveal target
+7. **DONE (v6.49: target cards, soak stat, tags off the pip).** **Prompt sheet pass.** Drive each `prompts.js` kind (opt pick modal pay reveal target
    alloc soak) to the sheet, screenshot, and give the sheet the same headline / stat /
    one-primary-button grammar `EndPanel` uses. `test/promptctl.test.js` must stay green.
 8. **Typography and token sweep.** Replace the remaining inline `style={{fontSize:…}}`

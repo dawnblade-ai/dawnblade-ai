@@ -1,3 +1,25 @@
+## v6.49 — the prompt sheet pass (UX step 7)
+
+- **A target sheet drew no cards.** `buildPrompt` deals `cards` for a `target` prompt and `promptChoose` takes an index into them, but
+  `PromptSheet` rendered only the title and hint, so Confirm stayed dark forever (no card produces one today, so this was a livelock waiting
+  for its first producer). It now draws the cards; a tap chooses, the chosen card is tagged TARGET.
+- **The soak sheet printed a literal "{r}"** ("costs 1{r} of 4 reachable" — a template literal outside `PipLine`). The running total is
+  now the sheet's stat (`PStat`, EndPanel's headline / stat / one primary button at sheet scale): a big "2/3 still gets through" in red,
+  green at "all prevented", the cost line through `PipLine`.
+- **Selection tags moved off the pitch pip.** "1st draw", "✓ chosen", "+2" sat over the card's top-left corner; they sit bottom-centre now.
+- **Measured, not shipped: an instant hero ability first (`SPXAWAKE`).** Prism's awaken is an Instant, so the policy's
+  last-resort branch spent no action point on it anyway. Offering it at the head of the turn fired earlier (15 of 20 activations with an
+  action point left, vs 6 of 17) but Prism's seat won 82 vs 86 of 192 games (12 seeds): noise, so nothing ships: the patch is `experiments/awaken-first/` on `findings/queue`.
+- **Wire budget: the opening snapshot 15821 -> 15202 bytes** (worst pair Iyslander v Blaze, budget 16384). `newMatch`'s `rulesBuild`
+  keeps the hero record's print map (`pr`) only as far as it is read: `facesOf` asks which codes exist and whether each image is a back
+  face, `heroAbilities` reads `_first` when an Agent goes home; every other URL becomes "" or a "_BACK" marker (`build.isBackImg`
+  answers the same). Traverse, brood and wire drills unchanged. Next cut if needed: HZOOM (~500 bytes a seat).
+- Drill: promptctl "a target sheet draws the cards it offers" (sabotaged: dropping the tap fails it). Width pins moved for the deliberate
+  growth (sheet slice < 6400; phasebar 87035).
+- **Validation:** npm test 4486 / 4479 pass before the last two pins (both fixed and rerun: slicecensus repin; allyseat's order pin,
+  which retired the SPXAWAKE code); `npm run quick` 4238 / 0 fail / 5 skipped after; scenes 107/0; fairness clean; ladder 816 games,
+  0 refusals / violations / stalls / draws; page.js 78/78 + every prompt kind driven at 393x852 (0 page errors); both babel blocks compile.
+
 ## v6.48 — every chain link says what became of it; the hero select shows the art
 
 - **Hit, blocked or prevented, on the board (UX roadmap step 5, second half).** A resolved chain entry carries `out` — `"hit"` (damage was

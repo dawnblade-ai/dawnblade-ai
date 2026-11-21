@@ -758,8 +758,15 @@ function newMatch(o){
      reads it while the build is made (HZOOM's art) and no rule reads it after. It was 400–600 bytes per
      seat, and a new passive (Prism's) took the worst opening (Iyslander v Blaze) 13 bytes over the
      data-channel budget. `pr` stays: `build.facesOf` reads it at a traverse. */
+  /* AND `pr` KEEPS ONLY WHAT IS READ (v6.49): `facesOf` asks which print codes the hero has and
+     whether each one's image is a back face (`isBackImg`), and `heroAbilities` reads `_first` for
+     HZOOM's art when an Agent goes home to its brood. Every other URL (~90 bytes a code, 400–500 a
+     seat) shrinks to "" or a "_BACK" marker the same reader answers identically. */
+  const slimPr = pr => Object.fromEntries(Object.keys(pr).map(k =>
+    [k, k === "_first" ? pr[k] : BD.isBackImg(pr[k]) ? "_BACK.webp" : ""]));
   const rulesBuild = b => { const {deck, gear, ...rest} = b || {};
     if(rest.heroRec && rest.heroRec.prs){ const {prs, ...hr} = rest.heroRec; rest.heroRec = hr; }
+    if(rest.heroRec && rest.heroRec.pr) rest.heroRec = {...rest.heroRec, pr: slimPr(rest.heroRec.pr)};
     return rest; };
 
   let g = S.makeGame({sides, firstPlayer: first, rng: o.rng, seed: o.seed});

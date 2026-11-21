@@ -1171,6 +1171,6 @@ const PASSIVE_TYPE = {
 return {ARMOR_Z, HAND_Z, gearSlots, applyPick, defaultPicks, equipPiece, boardPow,
   buildSide, buildSideDefault,
   halveCard,
-        buildSeed, buildMatch, buildVanilla, defaultBoard, heroAbilityLine, heroAbilities, facesOf, flipBackOf,
+        buildSeed, buildMatch, buildVanilla, defaultBoard, heroAbilityLine, heroAbilities, facesOf, flipBackOf, isBackImg,
         agentsOf, PASSIVES, PASSIVE_TYPE};
 });

@@ -489,7 +489,7 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        growth is presentation only: the roster tile's zoomed illustration (`.hgrid .hcard img.art`),
        the name label lifted over it, and the picked hero's banner (`.hbanner` and its art, fade,
        text, class swatch, keyframe and reduced-motion line). */
-    "phasebar.test.js index.html 86348",
+    "phasebar.test.js index.html 87035",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
        `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
        `abPickBound` in the pick legality it extends. */

@@ -359,7 +359,7 @@ test("the sheet slice this census reads is bounded and carries no regex literal"
   /* WIDTH IS THE ONLY THING A SCAN CAN CHECK WITHOUT KNOWING INTENT
      (v4.57), so it is pinned as data: a slice that grows has started
      reading its neighbours. */
-  assert.ok(SHEET.length > 3600 && SHEET.length < 5600,
+  assert.ok(SHEET.length > 3600 && SHEET.length < 6400,   /* v6.49: +target cards, +soak stat */
     "PromptSheet slice is " + SHEET.length + " chars");
   assert.ok(PACT.length > 300 && PACT.length < 1400,
     "the action row is " + PACT.length + " chars");
@@ -488,4 +488,18 @@ test("Jittery Bones' printed 'you may' can be refused, and then costs nothing",
   assert.equal(n.sides[0].deck.length, deckBefore, "the deck is not milled");
   assert.equal(n.sides[0].hand.length, handBefore, "and no card is discarded");
   assert.ok(!(n.pend && n.pend.ga), "so the watery-grave rider does not resolve");
+});
+
+test("a target sheet draws the cards it offers, and a tap chooses one (v6.49)", () => {
+  /* `buildPrompt` deals `cards` for a target and `promptChoose` takes an
+     index into them; until v6.49 the sheet drew neither, so Confirm stayed
+     dark forever — `promptReady` waits on a choice nothing could make. */
+  const blk = tagBlock("target");
+  assert.match(blk, /p\.cards\.map\(/, "the target block renders its cards");
+  assert.match(blk, /onClick=\{go\(\(\)=>onPick\(i\)\)\}/, "a tap sends the index through onPick");
+  /* AND NO PIP TOKEN IS PRINTED RAW: a "{r}" inside a template literal only
+     becomes a pip through PipLine (the soak tally printed "1{r}" to v6.48). */
+  const soak = tagBlock("soak");
+  assert.doesNotMatch(soak, /<div className="phint">[^<]*\{r\}/, "the soak tally goes through PipLine");
+  assert.match(soak, /<PStat /, "the soak sheet's stat is the running total");
 });
