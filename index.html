@@ -313,6 +313,7 @@ img{display:block;max-width:100%}
 .advhead::after{content:"";position:absolute;inset:0 0 -18px}
 .advbody{padding:0 10px 9px;font-size:var(--fs-xl)}
 .advwhy{font-size:var(--fs-md);color:var(--bone-dim);margin-top:3px;line-height:1.4}
+.advnew{font-size:var(--fs-md);color:var(--y);margin-top:7px;padding-top:6px;border-top:1px dashed rgba(232,179,60,.35);line-height:1.4}
 
 /* hero plate, combat chain, damage pops, sticky actions */
 .heroplate{display:flex;gap:8px;align-items:center;background:var(--forge);border:1px solid var(--line);padding:6px 8px}
@@ -1127,7 +1128,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "6.58"; /* v6.58 - a new phone sees How to play as a framed button until it has been opened once; see CHANGELOG.md. */
+window.APP_VER = "6.59"; /* v6.59 - Viserai BW banishes a Gloomblade for Embrace Ursur, and a first game says what the Coach's call is for; see CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -3412,8 +3413,13 @@ function Ticker({feed}){
    the Coach's; the table's is the seat policy itself, explained
    (`sparring.explain`), and labelled with the hero who would make it. The
    component takes the label and, when one is handed in, the call. */
+/* THE FIRST GAME POINTS AT THE CALL, ONCE PER PHONE (v6.59). A newcomer met a gold box
+   and no word on what it was for. Until both seats have had a turn in a phone's first game,
+   the box says what it is; then `coachSeen` is stored and it never says it again. */
 function Advisor({g,ctx,read,label,call}){
   const [open,setOpen]=uS(()=>store.get("adv",true));
+  const [fresh]=uS(()=>!store.get("coachSeen",false));
+  uE(()=>{ if(fresh && (g.turn>2 || g.over)) store.set("coachSeen",true); },[g.turn,g.over]);
   const rec = uM(()=>{ try{return call ? call() : advise(g,ctx);}catch(e){return {line:"(advisor hiccup)",why:String(e)};} },[g]);
   if(g.over) return null;
   return (
@@ -3423,6 +3429,7 @@ function Advisor({g,ctx,read,label,call}){
         <div><PipLine s={rec.line}/></div>
         {rec.why ? <div className="advwhy"><PipLine s={rec.why}/></div> : null}
         {g.turn===1 && you(g).hist.atk===0 && you(g).hist.non===0 && read ? <div className="advwhy">{read}</div> : null}
+        {fresh && g.turn<=2 ? <div className="advnew">New here? This box reads the board for you. At every step it names the play it would make and why, so follow it while you learn your deck. Tap the header to fold it away.</div> : null}
       </div>}
     </div>
   );

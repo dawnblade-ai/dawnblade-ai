@@ -584,6 +584,56 @@ const cyclePick = (g, seat) => {
   }
   return best;
 };
+/* A BANISH THAT KEEPS THE CARD (v6.59, SPXRIDER). Embrace Ursur: "you may banish a card
+   from your hand. If it's Runeblade, create a Runechant token. If it's Shadow, this gets go
+   again." The structural answer declined all 15 in a 32-game census, even holding a
+   Gloomblade, which prints "you may play this from your banished zone": banishing one
+   loses no card and buys a Runechant and the go again to play it from there. Answers the
+   index of the card to banish, or -1: only the seat's own free hand-to-banish pick with
+   class riders (`classRider`, the data `buildPrompt` carries), and only a card that may be
+   played from the banished zone (`fxParse.fromBan`) and fires at least one rider. Most
+   riders first, then the cheapest (the go again is spent on it), then uid. A card that
+   would be gone for good is never offered up for a rider. */
+const riderPick = (g, seat) => {
+  const p = g && g.prompt;
+  if(!p || p.tag !== "pick" || (p.side || 0) !== seat || p.zone !== "hand" || p.to !== "banish") return -1;
+  if(!p.classRider || (p.max || 0) < 1 || p.filters || (p.cost || 0) > 0 || p.discard || (p.sel || []).length) return -1;
+  const rs = [].concat(p.classRider), cs = p.cards || [];
+  let best = -1, bn = 0;
+  for(let i = 0; i < cs.length; i++){
+    const c = cs[i];
+    if(!c || !PR.fxParse(c).fromBan) continue;
+    const n = rs.filter(r => r && r.cls && PM.promptFilter({ty: r.cls})(c)).length;
+    if(n < 1) continue;
+    if(best < 0) { best = i; bn = n; continue; }
+    const b = cs[best], ca = c.cost || 0, cb = b.cost || 0;
+    if(n > bn || (n === bn && (ca < cb || (ca === cb && String(c.uid) < String(b.uid))))){ best = i; bn = n; }
+  }
+  return best;
+};
+/* AND THE ATTACK THAT ASKS FOR IT LEADS (v6.59, SPXRIDER). Holding Embrace Ursur and a
+   Gloomblade, the policy swung the Gloomblade first and the turn ended on it: led with
+   Embrace Ursur instead, the Gloomblade is banished for its Shadow rider's go again and a
+   Runechant, then played from the banished zone. True when the card at `uid` prints a
+   hand-banish offer whose rider grants go again (`fx.optCost.classRiders`), another card
+   in hand would fire that rider and still plays from the banished zone (`fromBan`), and
+   floating resources plus the rest of the hand's pitch pay for both. */
+const riderLead = (g, seat, uid, from) => {
+  const sd = at(g, seat);
+  if(!sd || (from !== "hand" && from !== "arsenal")) return false;
+  const c = from === "arsenal" ? (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null)
+    : (sd.hand || []).find(x => x && x.uid === uid);
+  const oc = c && PR.fxParse(c).optCost;
+  if(!oc || oc.kind !== "banish" || oc.zone !== "hand" || !oc.classRiders) return false;
+  const gaCls = [].concat(oc.classRiders).filter(r => r && r.cls && (r.ops || []).some(op => op && op[0] === "ga")).map(r => r.cls);
+  if(!gaCls.length) return false;
+  const hand = (sd.hand || []).filter(x => x && x.uid !== uid);
+  return hand.some(b => {
+    if(!PR.fxParse(b).fromBan || !gaCls.some(k => PM.promptFilter({ty: k})(b))) return false;
+    const pitch = hand.reduce((a, x) => a + (x.uid === b.uid ? 0 : (+x.pitch || 0)), 0);
+    return effCost(c, sd, PR.costCtx(g, seat)) + effCost(b, sd, PR.costCtx(g, seat)) <= (sd.res || 0) + pitch;
+  });
+};
 function autoAnswer(g, o){
   const p = g && g.prompt;
   if(!p) return null;
@@ -5344,7 +5394,7 @@ function moves(g, seat){
 }
 
 return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, moves, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, cyclePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, pumpsNow, tokenPiece, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, weaponPumpOf, gaNextPiece, nonAtkHeld, discardDrawPiece, lifeGainOf, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
+        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, cyclePick, riderPick, riderLead, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, pumpsNow, tokenPiece, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, weaponPumpOf, gaNextPiece, nonAtkHeld, discardDrawPiece, lifeGainOf, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf, waitingOn,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */

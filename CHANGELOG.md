@@ -1,3 +1,27 @@
+## v6.59 — Viserai BW feeds Embrace Ursur, and the first game points at the call
+
+- **AI: a banish that keeps the card (`judge.riderPick` / `judge.riderLead`, gate `SPXRIDER`).** Embrace Ursur: "When this
+  attacks, you may banish a card from your hand. If it's Runeblade, create a Runechant token. If it's Shadow, this gets go
+  again." A census of Viserai BW's calls (32 games) found the sheet declined 15 of 15 times, and the policy swinging a
+  Gloomblade *before* Embrace Ursur, so the turn ended on it. Every Gloomblade prints "You may play this from your banished
+  zone": banished for the riders it costs no card and buys a Runechant and the go again to play it from there. `riderPick`
+  names a card that fires a rider (the sheet's `classRider` data) and still plays from banish (`fxParse.fromBan`), never a card
+  that would be gone; `riderLead` ranks the attack that asks for it with the attacks that keep the point, when a payable
+  Gloomblade is in hand. New reasons `riderPick`, `riderFirst`. Measured on his own seat, gate on vs off, 12 seeds each chair
+  (wins of 384): **rule policy 76 -> 114** (33 -> 55 first-named, 43 -> 59 second-named); **Sharp in every seat (`SPXLA=all`)
+  92 -> 104** (42 -> 45, 50 -> 59). Ladder (816 games, every seat on): 0 refusals, 0 violations, 0 stalls, 2 engine draws.
+  Drill: test/embraceursur.test.js (reader rows with refusals; self-play: Embrace Ursur leads with a Gloomblade waiting, and
+  the sheet banishes one for a Runechant and go again; sabotaged: SPXRIDER=none fails both drives).
+- **The first game points at the Coach's call.** A newcomer met a gold box and no word on what it was for. Until both seats have
+  had a turn in a phone's first game, the box ends with one line: what it is, that it names the play and why, and how to fold
+  it away (`store` "coachSeen"; the table's "<Hero>'s call" box says it too). `tools/page.js` asserts the line inside its box on
+  a new phone's first trainer game and gone once seen (83/83 screens at 393x852).
+- **Measured and ruled out (no change):** Gravy's Jittery Bones (legal on 69 of his turns, played 8) — he never ended a turn
+  with it playable; every time it stayed in hand the action point went to a bigger attack or a card that keeps the point.
+- Drills moved: test/explain.test.js (the census's unreached keys gain `riderFirst` / `riderPick`, driven by the new drill);
+  test/slicecensus.test.js (the style block grew by `.advnew`).
+- **Validation:** npm test 4517 / 4512 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; both babel blocks compile.
+
 ## v6.58 — a new phone sees the way in
 
 - **How to play is a button until it has been opened.** On a phone that has never opened the sheet and has no game recorded, the

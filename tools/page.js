@@ -484,7 +484,16 @@ if(require.main === module){
         await page.waitForSelector(".board", { timeout: 8000 });
         await screen("trainer: board", "actions: " + names(await handBar()));
         await jumpHits("trainer", ".board");
-        await nav("trainer", ["Chain"]); await hitCheck("trainer", ".board .judgebtn", 40); await advHits("trainer");
+        await nav("trainer", ["Chain"]);
+        /* the first game points at the call (v6.59): a phone that has never seen it reads one
+           line saying what the box is for, inside the screen, until both seats have had a turn */
+        /* measured against its own box: the log pane may sit beside the screen in the pane row */
+        { const nb = await page.evaluate(() => { const n = document.querySelector(".advnew"), a = n && n.closest(".adv");
+            if(!n || !a) return null; const r = n.getBoundingClientRect(), q = a.getBoundingClientRect();
+            return {w: Math.round(r.width), h: Math.round(r.height), inside: r.left >= q.left && r.right <= q.right, sw: n.scrollWidth <= n.clientWidth}; });
+          row(!!nb && nb.inside && nb.sw && nb.w <= W && nb.h > 0, "trainer: a new phone's first game says what the call is for",
+            nb ? `${nb.w}x${nb.h}px, inside its box ${nb.inside}` : "no line"); }
+        await hitCheck("trainer", ".board .judgebtn", 40); await advHits("trainer");
         await nav("trainer", ["You", "Opp"]);
         await playOn("trainer");
         await click(page.locator(".screennav button", { hasText: "leave" }), "leave the trainer");
@@ -597,7 +606,12 @@ if(require.main === module){
           row(!!crowd && crowd.right <= W && crowd.left >= 0 && crowd.tall <= 96 && crowd.top >= 0, "table: a crowded action bar stays on screen",
             crowd ? `${crowd.n} buttons span x ${crowd.left}..${crowd.right}, tallest ${crowd.tall}px, top ${crowd.top}` : "no action bar");
           await jumpHits("table", ".board");
-          await nav("table", ["Chain"]); await hitCheck("table", ".board .judgebtn", 40); await advHits("table");
+          await nav("table", ["Chain"]);
+          /* once the first game has gone past both seats' turns, the line is stored as seen and never shows again */
+          { const seen = await page.evaluate(() => localStorage.getItem("dawnblade.coachSeen"));
+            const shown = await has(".advnew");
+            row(seen === "true" ? !shown : true, "table: the call's newcomer line is gone once seen", `seen ${seen}, shown ${shown}`); }
+          await hitCheck("table", ".board .judgebtn", 40); await advHits("table");
           await nav("table", ["You", first]);
           await playOn("table");
           await click(page.locator(".screennav button", { hasText: "leave" }), "leave the table");

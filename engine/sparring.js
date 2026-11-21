@@ -162,7 +162,9 @@ const fixOn = (g, seat) => {
    the attacking reaction window casts only what `judge.pumpsNow` admits (a pump, a hit rider, a
    permanent): a prevention, a life gain or a draw is kept for a window where it does something.
    SPXTOKENPIECE (v6.57) a free go-again piece that makes its own token (`judge.tokenPiece`:
-   Runehold Release, Flat Trackers) is spent before the attack, not after it. */
+   Runehold Release, Flat Trackers) is spent before the attack, not after it. SPXRIDER (v6.59)
+   an optional hand banish with class riders (`judge.riderPick`: Embrace Ursur) gives up a card
+   that still plays from the banished zone and fires a rider. */
 const subGate = k => {
   const v = (typeof process !== "undefined" && process.env && process.env[k]) || "";
   return (g, seat) => {
@@ -177,7 +179,7 @@ const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate(
       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
       wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW"),
       graveOn = subGate("SPXGRAVE"), booOn = subGate("SPXBOO"), energyOn = subGate("SPXENERGY"), putOn = subGate("SPXPUT"),
-      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE");
+      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER");
 /* THE BLOCK A TOKEN PIECE MAY GIVE UP (SPXTOKENPIECE): one point. Flat Trackers (1 defence, blade
    break: "Destroy this: Create an Agility token. Go again") measured on Boltyn's own seat, 24 seeds
    each chair: 224 -> 253 of 768 spent this way against kept to block once. */
@@ -1062,6 +1064,10 @@ function offenceBase(g, seat, o){
     .filter(x => x.c && num(x.c, "power") > 0)
     .filter(x => x.ally || affordableWithin(sd, x.c, o))
     .map(x => Object.assign(x, {kap: J.keepsActionPoint(g, seat, x.uid, x.ally ? "board" : x.from) ? 1 : 0}))
+    /* SPXRIDER (v6.59): an attack whose hand-banish rider buys its go again, with a card in
+       hand that fires it and still plays from the banished zone, keeps the point too. */
+    .map(x => Object.assign(x, {rl: !x.ally && !x.kap && riderOn(g, seat) && J.riderLead(g, seat, x.uid, x.from) ? 1 : 0}))
+    .map(x => Object.assign(x, {kap: x.kap || x.rl}))
     .map(x => Object.assign(x, {cv: cv(x)}))
     .map(x => Object.assign(x, {gr: !x.ally && J.gateRaises(g, seat, x.uid, x.from)}))
     .concat(pumped).concat(granted);
@@ -1092,6 +1098,7 @@ function offenceBase(g, seat, o){
      charge turned on its go again changed no key over 30 games, so it is
      not written.) */
   const pickWhy = x => x.granted ? "grantSwing" : x.weapon ? "pumpedWeapon"
+    : x.rl ? "riderFirst"
     : x.kap ? "atkKeepsAP"
     : rankC(x) < 3 && x.cv && !x.cv.charged ? (x.gr && !x.cv.gaIf ? "gateFirst" : "chargeFirst")
     : x.ally ? (targetFor(g, seat, x.c) !== "hero" ? "allyTake" : "allyIn") : epMoved ? "effPower" : waiting ? "grantWait" : "biggestAttack";
@@ -1366,6 +1373,13 @@ function actBase(g, seat, o){
     if(g.prompt.tag === "pick" && (g.prompt.side || 0) === seat && cycleOn(g, seat)){
       const ci = J.cyclePick(g, seat);
       if(ci >= 0) return tag("cyclePick", {t: "promptSel", i: ci});
+    }
+    /* A BANISH THAT KEEPS THE CARD (v6.59, SPXRIDER). Embrace Ursur's riders for a card
+       that still plays from the banished zone; `judge.riderPick` names it. The confirm that
+       follows is the ordinary "pickDone". */
+    if(g.prompt.tag === "pick" && (g.prompt.side || 0) === seat && riderOn(g, seat)){
+      const ri = J.riderPick(g, seat);
+      if(ri >= 0) return tag("riderPick", {t: "promptSel", i: ri});
     }
     /* THE GATE ON A FREE SEARCH INTO THE ARENA (v6.54, SPXPUT): off, the old decline. */
     if(g.prompt.tag === "pick" && J.freePick(g.prompt) === "put" && !putOn(g, seat) && !(g.prompt.sel || []).length)
@@ -1944,6 +1958,8 @@ const CALL_WHY = {
   pickDone: "That is enough.",
   declineOptional: "Decline. It is optional, and not worth it here.",
   cyclePick: "Discard it to draw a fresh card. Same hand size, and a Gold on top.",
+  riderFirst: "Lead with the attack that can banish a card for go again. The card you banish still plays from your banished zone, so you get both swings.",
+  riderPick: "Banish it. It still plays from your banished zone, so it costs you no card, and the rider is free.",
   energyPick: "Banish your biggest arcane you can still pay for. It plays as an instant this turn.",
   energyBanish: "Spend your energy. A spell cast as an instant leaves your action point free.",
   answer: "Answer it and play on.",
