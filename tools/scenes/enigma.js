@@ -317,9 +317,13 @@ module.exports = [
       "…and destroyed, once":                           vsTheirs.sides[0].grave.length
     };
   },
+  /* 9 -> 18 AT v6.47, read first: Prism opened, and her Heralds (Hope, Judgment, Protection,
+     Ravages, Triumph, Victoria, Wartune) are 6+-power Illusionist attack action cards too, so the
+     pool's Illusionist sixes are hers AND Prism's now (nine records each). The scene's point is
+     unchanged: an Illusionist six cannot pop a phantasm attack. */
   want: {
-    "her 6+-power Illusionist attacks in the pool": 9,
-    "…and they are": "Enigma Chimera, Phantasmal Haze, Spectral Rider",
+    "her 6+-power Illusionist attacks in the pool": 18,
+    "…and they are": "Enigma Chimera, Herald of Hope, Herald of Judgment, Herald of Protection, Herald of Ravages, Herald of Triumph, Herald of Victoria, Phantasmal Haze, Spectral Rider, Wartune Herald",
     "blocked by one of her own, the attack RESOLVES": true,
     "blocked by a Generic six, it is popped": true,
     "…and destroyed, once": 1

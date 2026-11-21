@@ -107,7 +107,11 @@ test("a set is in the pinned pool exactly when its hero has opened", () => {
       NEW[k].set + (opened ? " is missing from the pool, yet " + NEW[k].hero + " is on the roster"
                            : " is in the pool, yet " + NEW[k].hero + " has not opened"));
   }
-  assert.ok(SETS.some(k => !W.HEROES.some(h => h.n === NEW[k].hero)), "the control: a set that has NOT opened is still checked (Prism)");
+  /* v6.47: Prism opened too, so no staged set is left unopened. The control is now the other
+     direction made explicit: the fifteen sets ARE in the pool (above), and a set code no list
+     names is not. */
+  assert.ok(SETS.every(k => W.HEROES.some(h => h.n === NEW[k].hero)), "both staged heroes have opened (v6.46, v6.47)");
+  assert.ok(!codes.has("SLV") && !codes.has("SFC"), "the control: an unopened set (Outbreak) is not in the pool");
 });
 
 test("the recorded upstream gap is internally consistent with the lists", () => {
@@ -171,11 +175,17 @@ test("the blocking names are pinned by NAME, not by a count", () => {
 test("the fifteen built precons are unchanged by any of this, and an opened list is dealt as pinned", () => {
   /* The control. A file that adds two heroes' worth of data must not
      have moved the deck list the game actually plays. v6.46: Viserai, Between Worlds opened, so
-     sixteen decks, and HIS deck must be this file's list card for card (the Extras are tokens). */
+     sixteen decks, and HIS deck must be this file's list card for card (the Extras are tokens).
+     v6.47: Prism opened, seventeen, and HER deck is held the same way. */
   const W = loadData();
-  assert.equal(Object.keys(W.DECKS).length, 16, "fifteen decks and the one opened list");
+  assert.equal(Object.keys(W.DECKS).length, 17, "fifteen decks and the two opened lists");
+  /* A SPEC KEY IS NOT A DECK KEY, unless the deck is that spec's own opened list. v6.47: Prism's
+     roster key is `prism`, the same word as her spec key, and that is safe only because the deck
+     under it is her hero's, checked card for card below. Any other collision is a spec dealt by
+     accident. */
   for(const k of SETS)
-    assert.equal(k in W.DECKS, false, k + " is a SPEC key, not a deck key");
+    if(k in W.DECKS)
+      assert.equal(require("../engine/game.js").parseDeck(W.DECKS[k]).hero.name, NEW[k].hero, k + " is a SPEC key, and the deck under it is another hero's");
   const G2 = require("../engine/game.js");
   for(const k of SETS){
     const h = W.HEROES.find(x => x.n === NEW[k].hero);
