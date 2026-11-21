@@ -153,7 +153,9 @@ const fixOn = (g, seat) => {
    whose gate is already true counts), not the power it prints. SPXGRAVE (v6.50) a card
    `legal` lets the seat play from its graveyard is a card it holds (`gravePlays`). SPXBOO
    (v6.51) an ability that raises the declared wall (`judge.defActGainNow`) is used while
-   defending when damage would still get through. */
+   defending when damage would still get through. SPXENERGY (v6.53) a counter-spending hero
+   pick (Blaze's banish) takes the biggest-arcane card the seat can afford to play, is only
+   activated when one exists, and the banished instant is played before the hand. */
 const subGate = k => {
   const v = (typeof process !== "undefined" && process.env && process.env[k]) || "";
   return (g, seat) => {
@@ -167,7 +169,7 @@ const subGate = k => {
 const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate("SPXPAY"), idleOn = subGate("SPXIDLE"),
       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
       wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW"),
-      graveOn = subGate("SPXGRAVE"), booOn = subGate("SPXBOO");
+      graveOn = subGate("SPXGRAVE"), booOn = subGate("SPXBOO"), energyOn = subGate("SPXENERGY");
 /* SPXTRAV (v6.46): take Viserai, Usurper's end-phase traverse back to the front.
    OFF unless named (unlike the fixes above): measured over 180 seated games each way
    (`node tools/staged-play.js viseraiBetweenWorlds 6`), staying won 17 and turning
@@ -1011,8 +1013,14 @@ function offenceBase(g, seat, o){
      ability in this pool draws, digs or buffs rather than dealing damage,
      so spending the action point on it ahead of a swing would be a
      judgement this file cannot make without reading the card. */
-  if(legal(g, {t: "activate", from: "hero", uid: "hpow"}, seat))
-    return tag("heroAbility", {t: "activate", from: "hero", uid: "hpow"});
+  /* A COUNTER-SPENDING PICK IS ACTIVATED ONLY FOR A CARD IT CAN PLAY (v6.53, SPXENERGY):
+     the once-per-turn is burned by the activation, so tapping it with nothing affordable
+     to banish wastes the turn's one use. Its own reason, so the call says what it is. */
+  if(legal(g, {t: "activate", from: "hero", uid: "hpow"}, seat)){
+    const ctr = energyOn(g, seat) ? J.ctrPickTakers(g, seat) : null;
+    if(!ctr) return tag("heroAbility", {t: "activate", from: "hero", uid: "hpow"});
+    if(energyPick(g, seat, o)) return tag("energyBanish", {t: "activate", from: "hero", uid: "hpow"});
+  }
 
   /* ---- A NON-ATTACK IS STILL A PLAY (v3.80) --------------------------
      THE FILTER ABOVE IS `num(x.c, "power") > 0`, AND A NON-ATTACK PRINTS
@@ -1067,7 +1075,10 @@ function offenceBase(g, seat, o){
        this file reads no card text; a non-attack that prints none ranks as
        0, and ties fall back to the cheapest, then pitch, then uid. */
     .map(x => Object.assign(x, {arc: J.arcaneOf(g, seat, x.uid, x.from)}))
-    .sort((a, b) => (b.arc - a.arc) || num(a.c, "cost") - num(b.c, "cost")
+    /* A BANISHED CARD PLAYABLE NOW IS PLAYED FIRST (v6.53, SPXENERGY): "this turn" only,
+       so it is lost at the end of the turn, and the hand card keeps. */
+    .sort((a, b) => (energyOn(g, seat) ? (b.from === "banish") - (a.from === "banish") : 0)
+                 || (b.arc - a.arc) || num(a.c, "cost") - num(b.c, "cost")
                  || num(a.c, "pitch") - num(b.c, "pitch") || byUid(a, b))
     .find(x => legal(g, {t: "play", uid: x.uid, from: x.from}, seat));
   if(nonAtk) return tag(nonAtk.arc > 0 ? "arcaneFirst" : "nonAttack", {t: "play", uid: nonAtk.uid, from: nonAtk.from});
@@ -1127,6 +1138,16 @@ function affordableWithin(sd, card, o){
   return false;
 }
 
+/* THE CARD A COUNTER-SPENDING HERO PICK SHOULD TAKE (v6.53, SPXENERGY): of what
+   `judge.ctrPickTakers` admits, the biggest arcane the seat can pay for out of the
+   pool and the rest of its hand, then the cheapest, then uid. null: none. */
+function energyPick(g, seat, o){
+  const sd = g.sides[seat];
+  return (J.ctrPickTakers(g, seat) || [])
+    .filter(t => affordableWithin(sd, t.card, o))
+    .sort((a, b) => (b.arc - a.arc) || (a.cost - b.cost) || byUid(a, b))[0] || null;
+}
+
 /* ---- the policy -------------------------------------------------------
    ONE legal action for this seat, or null when it has nothing to do right
    now — which is the normal answer for most of the game, because for most
@@ -1173,6 +1194,20 @@ function actBase(g, seat, o){
     { const tv = J.traverseOffer(g, seat);
       if(tv) return traverseOn(g, seat) ? tag("traverseBack", {t: "promptChoose", choice: tv.go})
                                         : tag("traverseStay", {t: "promptChoose", choice: tv.stay}); }
+    /* THE ENERGY IS SPENT ON A CARD THE SEAT CAN PLAY (v6.53, SPXENERGY). Blaze's banish
+       is an optional pick, and the structural answer declined it every time: 93
+       activations in 32 games, no card ever banished, ~10 energy left at the end.
+       `judge.ctrPickTakers` names what the sheet admits; the biggest arcane the seat
+       can still pay for is taken (cost, then uid, breaking ties). None affordable: the
+       ordinary decline, so a card is never banished to sit there unplayable. */
+    if(g.prompt.tag === "pick" && g.prompt.ctrSpend && energyOn(g, seat)){
+      const pick = energyPick(g, seat, cfg(o));
+      const i = pick ? (g.prompt.cards || []).findIndex(c => c && c.uid === pick.uid) : -1;
+      if(i >= 0){
+        if((g.prompt.sel || []).indexOf(i) < 0) return tag("energyPick", {t: "promptSel", i});
+        return tag("energyPick", {t: "promptConfirm"});
+      }
+    }
     /* A SOAK PITCHED FOR IS PRICED AS THE CARD (QA-A H-4): `effects.soakPolicy`'s
        card price, asked through the one answer body. */
     const ans = J.autoAnswer(g, g.prompt.tag === "soak" && soakOn(g, seat) ? {cardPrice: true} : null), pt = g.prompt.tag;
@@ -1724,6 +1759,8 @@ const CALL_WHY = {
   pickFree: "Take it. It costs you nothing.",
   pickDone: "That is enough.",
   declineOptional: "Decline. It is optional, and not worth it here.",
+  energyPick: "Banish your biggest arcane you can still pay for. It plays as an instant this turn.",
+  energyBanish: "Spend your energy. A spell cast as an instant leaves your action point free.",
   answer: "Answer it and play on.",
   endTurn: "End your turn. Nothing worth doing is left.",
   endTurnKeep: "End your turn. What you could still play is worth more held back than spent now.",

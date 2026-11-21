@@ -2520,8 +2520,27 @@ const boostShare = (g, seat) => {
 const arcaneOf = (g, seat, uid, from) => {
   const sd = at(g, seat);
   const c = from === "arsenal" ? (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null)
-          : from === "hand" ? (sd.hand || []).find(x => x && x.uid === uid) : null;
+          : from === "hand" || from === "banish" ? (sd[from] || []).find(x => x && x.uid === uid) : null;
   return c ? PR.arcAmount(c) : 0;
+};
+/* ---- WHAT CAN THE HERO'S COUNTER-SPENDING PICK TAKE? (v6.53, SPXENERGY) ----
+   Blaze's "Remove X energy counters: banish a Wizard non-attack ... deals
+   arcane damage equal to X. You may play it this turn as though it were an
+   instant." `sparring.js` reads no card text, so this answers for it: null
+   when the hero's ability is not a counter-spending pick; otherwise every
+   card the pick would admit NOW (the SAME filter `legal` and the queue site
+   build, bounded by the counters held), with its arcane and printed cost.
+   Measured before: the ability was activated 93 times in 32 games and the
+   sheet declined every time ("optional"), so ~10 energy sat unspent a game. */
+const ctrPickTakers = (g, seat) => {
+  const sd = at(g, seat), ab = bOf(g, seat).HPOW;
+  if(!ab) return null;
+  const pk = (PR.fxParse(ab).ops || []).find(op => op[0] === "pickPrompt" && op[1] && op[1].ctrSpend);
+  if(!pk) return null;
+  const held = ((sd.counters || {}).hero || {})[pk[1].ctrSpend] || 0;
+  const f = PM.promptFilter(Object.assign({}, pk[1].filter, {arcLe: held}));
+  return (sd[pk[1].zone || "hand"] || []).filter(c => c && f(c))
+    .map(c => ({uid: c.uid, card: c, arc: PR.arcAmount(c), cost: c.cost || 0}));
 };
 /* ---- WHAT DOES A CHARGE DO FOR THIS PLAY? (v5.41, QUEUE v4 H6) -------
    `keepsActionPoint`'s sibling, for `sparring.js`, which reads no card
@@ -5161,7 +5180,7 @@ function moves(g, seat){
 }
 
 return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, moves, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
+        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf, waitingOn,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */

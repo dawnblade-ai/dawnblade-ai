@@ -1,3 +1,24 @@
+## v6.53 — Blaze spends his energy
+
+- **AI: Blaze's hero ability actually does something (`energyBanish` / `energyPick`, gate `SPXENERGY`).** "Remove X energy counters:
+  banish a Wizard non-attack ... that deals arcane damage equal to X. You may play it this turn as though it were an instant." The
+  policy activated it (93 times in 32 games) and then answered the banish sheet, an OPTIONAL pick, with the structural "decline what is
+  optional": no card was ever banished and ~10 energy counters sat unspent at the end of every game. A new judge reader,
+  `ctrPickTakers(g, seat)`, names what a counter-spending hero pick admits now (the same filter `legal` and the queue site build);
+  the policy activates only when one of those cards is affordable, takes the biggest arcane it can still pay for, and plays a banished
+  card that is playable now before the hand ("this turn" only). `arcaneOf` also reads the banished zone.
+  After: 55 banishes in 32 games, every one played; energy left at the end 10.4 -> 5.2.
+  Measured on his own seat, gate on vs off, 12 seeds each chair: **113 -> 136 of 384** (52 -> 65 first-named, 61 -> 71 second-named;
+  first chair up on 9 of 12 seeds, down on 1). Ladder `npm run play '' '' 3`: 816 games, 0 refusals / violations / stalls / draws;
+  Blaze 32 -> 40, nobody else outside the band.
+- **The census that found it generalises** (`decline` probe: every optional pick the AI declined, by source). Still declined, for the
+  next steps: Prism's free figment search on a Herald into her soul (157 in 272 games), Arakni's dagger retrieves (76, priced {r}),
+  Golden Tipple's discard-for-draw-and-Gold (51), Corrupted Crown's hand banish (32), Condemn to Slaughter (18).
+- Drill: test/energy.test.js (self-play finds the first `energyBanish`; the sheet is answered, X = the card's arcane is removed, the card
+  is played from the banished zone the same turn with no action point spent — sabotaged twice: no reader, no pick branch).
+- **Validation:** npm test 4498 / 4493 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; ladder above; both babel blocks compile
+  (the page changed only its version line).
+
 ## v6.52 — Lyath boos while he is the wall
 
 - **AI: Lyath's hero ability, used where it pays (`rxBoo`, gate `SPXBOO`).** "{r}{r}, {t}: The crowd boos you. Defending action cards
