@@ -13,6 +13,11 @@
   sat below the fold. The legend names every group on the roster (Usurp the Shadow Throne had no key). Kept at 6 across, not the roadmap's
   4: at 4 across Battle falls off the first screen at 393x852. Before/after: `docs/ux/before-heroselect.jpg`, `after-heroselect*.jpg`,
   `after-linkstamp.jpg`.
+- **Measured, not built: the AI does awaken a figment.** The v6.47 note said it never did; a probe of 12 seated Prism games saw 10 awakenings
+  (the hero ability is the policy's last-resort play, legal at 315 of 3014 decisions). A stronger awaken timing is an open H-item lead.
+- **Validation:** npm test 4485 / 4480 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; ladder `npm run play '' '' 3` = 816 games,
+  0 refusals / violations / stalls / draws; page.js 78/78 + drives (trainer link stamp; hero select with real art at 393x852 and 360x740,
+  no clipped name, no sideways scroll, 0 page errors); both babel blocks compile. WIRE_V 45; the function is redeployed.
 
 ## v6.47 — Prism, Advent of Thrones opens; a new result screen, life display and hand rail
 

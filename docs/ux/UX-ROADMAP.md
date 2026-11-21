@@ -60,6 +60,12 @@ Step 3 verified: babel blocks compile; `node tools/page.js` 78/78 PASS (its tabl
 
 Step 5 (part) verified: babel blocks compile; `node tools/page.js` 78/78 PASS; trainer drive at 393x852 and 360x740: nothing flashes on the first draw, the dummy's swings (20 -> 17 -> 13) flash `lfdown` on the plate and the HUD each time with the `lfdown` animation running, the plate number stays inside its plate, no overflow, no page errors. A gain was not forced in the drive (`lfup` is the same branch the other way). No screenshot: the flash lasts 0.6s.
 
+| I | §3 step 4 — the roster tile shows the ILLUSTRATION (the art zoomed 1.42x past the card frame and printed name; the name label painted over the edge), names 10.5px, a name the tile cannot hold shows its first word ("Lyath"). `HeroBanner` under the roster for the picked hero: art at the left 42% fading into the panel, class and block with the block's colour as a swatch (the purple of block 4 failed contrast as text), the name 22px, the one-line pitch; Random gets a text-only banner. The legend is read off `HEROES` (`CH_COLOR`, `chapterName`): it names block 4. **Kept 6 across, not 4**: at 4 across the roster alone is ~590px and Battle leaves the first screen at 393x852. | `HeroBanner`, `CH_COLOR` above `HeroGrid`; CSS after `.hcard img.art` |
+| J | §3 step 5, rest — an engine fact first: a chain entry carries `out` (`effects.linkOutcome(power, afterWall, dealt)`: hit / blocked / prevented / null for a 0-power swing), fed by judge's strike, the trainer's strike and the dummy's `takeIt`; WIRE_V 45. `LinkStamp` stamps the featured slot (red HIT n, bone BLOCKED, blue PREVENTED; scale-in, off under reduced motion) while `featOutcome` says the slot still shows that link; `ChainLink` dims a blocked tile and rings a prevented one blue (and says it in `title`). The trainer's dummy swing closes its chain at once, so its outcome lives on the link tile, not the slot. | `LinkStamp`/`featOutcome` above `ChainLink`; CSS after `.clink:not(:last-child)::after` |
+
+Step 4 verified with REAL art (hero images fetched once into a scratch folder and served through `page.route`; `docs/ux/before-heroselect.jpg`, `after-heroselect.jpg`, `after-heroselect-360.jpg`): no name clipped at 393 or 360, banner 104-151px, Battle at y=470-518 (on the first screen), no sideways scroll, no page errors.
+Step 5 verified: drill `test/linkout.test.js`; a trainer drive plays Clash of Agility into the dummy's wall and the slot stamps BLOCKED inside the centre slot (`after-linkstamp.jpg`).
+
 ## 3. The plan — one session each, in order
 
 1. **DONE (see §2).** **Hand rail and peek polish.** Rail tiles are 80px and clip the fifth card with no
@@ -74,11 +80,11 @@ Step 5 (part) verified: babel blocks compile; `node tools/page.js` 78/78 PASS; t
    button ("FIGHT THE DUMMY" vs "FIGHT KAYO — SHARP"), the second becomes `.bigbtn.alt`,
    prose collapses into a one-line disclosure. Keep page.js's button-name regexes or
    update them in the same commit.
-4. **Hero-select with art.** The roster is a 6-across grid of 58px tiles. Online they
+4. **DONE (v6.48, see §2 rows I).** **Hero-select with art.** The roster is a 6-across grid of 58px tiles. Online they
    carry real art (`HeroArt`); give the selected hero a full-bleed banner on the sheet
    (art, class, chapter colour, one-line pitch) and grow tiles to 4 across with 11px
    names. Check online art loads at phone size (tools/phone/serve.sh) — offline is grey.
-5. **PART DONE (see §2, row H: plates; the chain-link flash needs an engine field).** **Damage and block feedback on the boards.** Reuse `LifeHud`'s re-key trick on the
+5. **DONE (v6.48: row H plates, row J the link outcome).** **Damage and block feedback on the boards.** Reuse `LifeHud`'s re-key trick on the
    hero plates (`.heroplate` life), and flash the chain link that hit / was blocked.
    Life drops red, prevention blue, gains green — three colours that mean three things
    (POLISH §4's sound rule, applied to sight first).
