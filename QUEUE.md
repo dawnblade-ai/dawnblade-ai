@@ -4,7 +4,7 @@
 answered NEEDS-A-RULING notes are in `QUEUE-ARCHIVE.md` on this branch (grep it, don't read it). History lives in
 CHANGELOG.md (v6.30 on; older in `docs/archive/CHANGELOG-to-v6.29.md`) and LESSONS.md on main.
 
-## HANDOFF — START HERE (CEO session_013xCE5fBQAM6Mkv8rwdc, 2026-11-21, at v6.59)
+## HANDOFF — START HERE (CEO session_013xG9xCE5fBQAM6Mkv8rwdc, 2026-11-21, at v6.59)
 
 **State:** live = **v6.59** on `main`, livecheck ALL PASS. Function `table` version 70 = `v6.59 · sage-v19`, stamped, `--check` OK.
 WIRE_V 45 (unchanged). DATA_VER sage-v19. 17 heroes. Session branch `claude/nice-fermi-nw1gm0` == main.
