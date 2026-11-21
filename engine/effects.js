@@ -8576,6 +8576,20 @@ function makeEffects(ctx){
     return L(n, `${nm} is destroyed — ${src} says so.`);
   };
 
+  /* ---- WHAT BECAME OF THE LINK (UX roadmap step 5, v6.48) ----------
+     A chain entry carried the attack's TOTAL and nothing about where it
+     went, so the board could not flash a link that hit apart from one the
+     wall stopped or one a prevention turned aside. Three facts, three
+     outcomes, read from numbers both callers already hold:
+       power      the attack's power before the wall
+       afterWall  what got past the wall, before prevention
+       dealt      what was DEALT (CR 7.5.5: prevented damage is not dealt)
+     "hit" — something was dealt; "prevented" — the wall let damage
+     through and prevention took all of it; "blocked" — the wall stopped
+     it all. A 0-power attack nobody blocked is none of these (null). */
+  const linkOutcome = (power, afterWall, dealt) =>
+    dealt > 0 ? "hit" : afterWall > 0 ? "prevented" : power > 0 ? "blocked" : null;
+
   const linkPayload = (s, info) => {
     let n = {...s};
     let total = info.total;
@@ -8627,7 +8641,11 @@ function makeEffects(ctx){
        question about a RESOLVED link can be answered — "if you control a
        Lightning attack" reads the whole chain (`chainAtkOf`). */
     n.chain = [...n.chain, {n:pc.name, img:pc.img, dbImg:pc.dbImg, dmg:total, ga:n.pend.ga, drac:/draconic/i.test(pc.tt||"")||!!pc._drac||_dracGrant||_dracStand, kind:"atk",
-                            ty:(pc.ty || []).slice(), by:(n.pend.by != null ? n.pend.by : actorOf(n))}];
+                            ty:(pc.ty || []).slice(), by:(n.pend.by != null ? n.pend.by : actorOf(n)),
+                            /* `out` (v6.48): what became of it — `linkOutcome`. A caller
+                               that hands no `afterWall` (an older path) records none. */
+                            out:(info.afterWall == null ? null
+                                 : linkOutcome(info.power != null ? info.power : info.afterWall, info.afterWall, total))}];
     /* THE OPEN ATTACK IS ON THE STRIP NOW (v5.55) — `parser.dracLinksNow`
        stops adding it. The table keeps `pend` through the resolution step. */
     n.pend = {...n.pend, linked: true};
@@ -9181,6 +9199,7 @@ function makeEffects(ctx){
        permanent, so nothing moves today. A printed rule reachable from
        one direction only is still a hole (v3.01), and the number this
        hands on is the one CR 7.5.5 makes every rider read. */
+    const _afterWall = total;
     { const _pc = (n.pend && n.pend.card) || {};
       const _pv = preventDamage(n, 1 - actorOf(n), total, _pc.name,
                                 {unpreventable: !!(_pc.name && fxParse(_pc).unpreventable)});
@@ -9191,7 +9210,7 @@ function makeEffects(ctx){
        the attack on the stack, so they are dealt with at declaration in
        `execute`. `rd` stays 0 so the messages and hitSeq maths below read
        the same shape. */
-    const _out = linkPayload(n, {total, pumps, blkNote,
+    const _out = linkPayload(n, {total, pumps, blkNote, afterWall: _afterWall, power: _pre.total,
                                /* the trainer has no ally targeting wired, so a
                                   resolved attack always landed on the hero */
                                heroHit: total > 0});
@@ -9296,7 +9315,7 @@ function makeEffects(ctx){
   }
 
   return {runOps, execute, afterDefenders, defendsTriggers, resolveClash, resolveStack, afterDiscard, payAddCost, fileAttack, allyDeath, creditHeroDmg, noteAttacked,
-          linkPumps, linkPayload, attackRx, preventDamage, autoPitch, applyAnswer,
+          linkPumps, linkPayload, linkOutcome, attackRx, preventDamage, autoPitch, applyAnswer,
           activateHandAbility, playAtSpeed, fileDestroyedGear, effPowerNow, spectraStrike,
           /* `applyDefMod` IS NO LONGER EXPOSED (v4.57). It was exposed at
              v4.53 for exactly one outside caller — `index.html`'s

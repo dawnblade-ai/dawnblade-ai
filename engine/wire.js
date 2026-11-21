@@ -350,7 +350,11 @@
    double-faced hero left, beside `_brood`), and `runOps` gains `traverse`. A
    v43 peer keeps none of the three facts and cannot turn a hero over, so the
    pair diverges on the third Runechant. By hand, behind the release handshake. */
-const WIRE_V = 44;
+/* 44 -> 45 AT v6.48: a combat chain entry gains `out` ("hit" / "blocked" /
+   "prevented", `effects.linkOutcome`) so the board can show what became of a
+   link. `chain` ships whole; a v44 peer's entries carry none, and the hashes
+   diverge on the first resolved link. By hand, behind the release handshake. */
+const WIRE_V = 45;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

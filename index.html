@@ -301,6 +301,21 @@ img{display:block;max-width:100%}
 .clink i{position:absolute;top:-2px;right:-3px;background:var(--ink);border:1px solid var(--y);color:var(--y);font-style:normal;font-size:9px;padding:0 2px}
 .clink.foe img,.clink.foe .ct{border-color:var(--r)}
 .clink:not(:last-child)::after{content:"";position:absolute;right:-5px;top:50%;width:4px;height:2px;background:var(--line)}
+/* the link's outcome (v6.48): a wall that held dims the link, a prevention rings it blue */
+.clink.o-blocked img,.clink.o-blocked .ct{opacity:.5;border-color:var(--bone-dim)}
+.clink.o-prevented img,.clink.o-prevented .ct{opacity:.7;border-color:var(--b)}
+.clink.o-blocked b{border-color:var(--bone-dim);color:var(--bone-dim);text-decoration:line-through}
+.clink.o-prevented b{border-color:var(--b);color:#8FB4E8;text-decoration:line-through}
+.centerslot{position:relative}
+.lstamp{position:absolute;left:50%;top:84%;transform:translate(-50%,-50%) rotate(-8deg);z-index:3;pointer-events:none;
+  font-family:'Big Shoulders Display';font-weight:800;font-size:26px;letter-spacing:.06em;text-transform:uppercase;line-height:1;
+  padding:5px 12px 4px;border:3px solid currentColor;border-radius:4px;background:rgba(14,10,8,.82);white-space:nowrap;
+  animation:lstamp .45s cubic-bezier(.2,1.6,.4,1) both}
+.lstamp.o-hit{color:#FF6B5E;box-shadow:0 0 18px rgba(196,48,43,.55)}
+.lstamp.o-blocked{color:var(--bone)}
+.lstamp.o-prevented{color:#8FB4E8;box-shadow:0 0 18px rgba(59,111,176,.55)}
+@keyframes lstamp{0%{opacity:0;transform:translate(-50%,-50%) rotate(-8deg) scale(1.8)}100%{opacity:1;transform:translate(-50%,-50%) rotate(-8deg) scale(1)}}
+@media (prefers-reduced-motion:reduce){.lstamp{animation:none}}
 .dummy{position:relative}
 .dmgpop{position:absolute;top:8px;right:10px;font-family:'Big Shoulders Display';font-weight:800;font-size:24px;color:var(--r);animation:dpop .9s ease-out forwards;pointer-events:none}
 @keyframes dpop{0%{opacity:0;transform:translateY(6px)}15%{opacity:1}100%{opacity:0;transform:translateY(-20px)}}
@@ -2385,11 +2400,29 @@ function FxCoverage({cards}){
 
 /* ---------- ADVISOR — pure move evaluation ---------- */
 
+/* WHAT BECAME OF THE LINK, SHOWN (UX roadmap step 5, v6.48). A resolved
+   chain entry carries `out` — "hit", "blocked" or "prevented", the engine's
+   `linkOutcome` — and the board says it in three colours that mean three
+   things: red for damage that landed, bone for a wall that held, blue for a
+   prevention. `featOutcome` answers whether the card in the featured slot IS
+   the last resolved link (by name, or the dummy's swing), so a later
+   non-attack in the slot never wears an old link's stamp. */
+const OUT_WORD = {hit:"Hit", blocked:"Blocked", prevented:"Prevented"};
+function featOutcome(featured, chain){
+  const last = (chain || [])[(chain || []).length - 1];
+  if(!featured || !last || !last.out) return null;
+  if(featured.foe ? last.kind !== "foe" : !(featured.card && last.n === featured.card.name)) return null;
+  return last;
+}
+function LinkStamp({l, seq}){
+  if(!l || !OUT_WORD[l.out]) return null;
+  return <span key={seq} className={"lstamp o-"+l.out} role="status">{OUT_WORD[l.out]}{l.out==="hit" && l.dmg>0 ? " "+l.dmg : ""}</span>;
+}
 function ChainLink({l}){
   const [err,setErr]=uS(false);
   const s = !err ? (l.img||l.dbImg) : null;
   return (
-    <div className={"clink "+l.kind}>
+    <div className={"clink "+l.kind+(l.out?" o-"+l.out:"")} title={OUT_WORD[l.out] ? l.n+" — "+OUT_WORD[l.out].toLowerCase() : l.n}>
       {s ? <img src={s} loading="lazy" alt={l.n} onError={()=>setErr(true)}/> : <span className="ct">{l.n[0]}</span>}
       <b>{l.dmg}</b>
       {l.ga && <i>↻</i>}
@@ -5849,8 +5882,14 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        the prevention fires from inside it rather than from either caller.
        The pool is the ACTOR's here: `takeIt` resolves an attack against
        the side that is defending, which is the actor on this path. */
+    const _aw = through;
     { const pv = _EFX.preventDamage(n, actorOf(n), through, "The attack");
       n = pv.game; through = pv.dealt; }
+    /* WHAT BECAME OF THE SWING (v6.48) — the dummy's link records it like
+       every other link (`linkOutcome`, the one body), so the board flashes it */
+    { const ch = n.chain || [], li = ch.length - 1;
+      if(li >= 0 && ch[li].kind === "foe")
+        n.chain = [...ch.slice(0, li), {...ch[li], out: _EFX.linkOutcome(s.incoming, _aw, through)}]; }
     /* the attacker's "dealt damage to the defending hero" (v6.43), credited
        where it lands, after prevention — `creditHeroDmg`, the one body */
     n = _EFX.creditHeroDmg(n, 1 - actorOf(n), through);
@@ -6383,6 +6422,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                         ? <div className="featfoe"><span className="fx2">✕✕</span><b>{featured.dmg}</b><span>Dummy</span></div>
                         : <div className="featured"><CardFrame card={featured.card}/></div>)
                     : <div className="featempty">Most recently played lands here</div>}
+                  <LinkStamp l={featOutcome(featured, g.chain)} seq={g.chain.length}/>
                 </div>
                 <div className="sidecol defend">
                   <div className="scol-lbl">Defend</div>
@@ -9172,6 +9212,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                   {featured
                     ? <div className="featured"><CardFrame card={featured.card}/></div>
                     : <div className="featempty">Most recently played lands here</div>}
+                  <LinkStamp l={featOutcome(featured, g.chain)} seq={g.chain.length}/>
                 </div>
                 <div className="sidecol defend">
                   <div className="scol-lbl">Defend</div>

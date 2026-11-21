@@ -3006,6 +3006,7 @@ function strike(g){
      damage dealt to the ally's controller's board and their hero's ward
      does not stand in front of it — so the prevention is applied to the
      hero branch only. */
+  const afterWall = total;   /* `effects.linkOutcome` reads it (v6.48) */
   if(!(link.target && link.target.kind === "ally")){
     const pv = withEffects(n, (fx, st) =>
       fx.preventDamage(st, def, total, (link.card || {}).name,
@@ -3097,7 +3098,7 @@ function strike(g){
      board and wrong on this one. Briar's Earth reads it. */
   const heroHit = total > 0 && !(link.target && link.target.kind === "ally");
   const paid = withEffects(n, (fx, s) => fx.linkPayload(s, {
-    total, pumps: pre.pumps, blkNote, heroHit}));
+    total, pumps: pre.pumps, blkNote, heroHit, afterWall, power: pre.total || 0}));
   n = paid.game;
 
   /* CR 7.5.5 — if prevention means no damage is dealt it is NOT a hit, so

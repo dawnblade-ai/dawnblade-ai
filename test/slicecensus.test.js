@@ -481,7 +481,11 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        is presentation only: a life total's direction flash (`.lfdown` red, `.lfup` green, on
        `.hlife2` and `.lifehud .lhhp`, their two keyframes, and the reduced-motion line that turns
        them off). */
-    "phasebar.test.js index.html 83285",
+    /* 83,285 -> 84,588 (UX roadmap step 5, v6.48), READ FIRST: still `<style>` -> `</style>`; the
+       growth is presentation only: a resolved link's outcome (`.clink.o-blocked` dimmed,
+       `.clink.o-prevented` ringed blue), the featured slot's stamp (`.lstamp` and its three
+       colours, its keyframe, the reduced-motion line) and `.centerslot` made positioned. */
+    "phasebar.test.js index.html 84588",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
        `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
        `abPickBound` in the pick legality it extends. */

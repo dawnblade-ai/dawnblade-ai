@@ -213,5 +213,6 @@ test("judge answers heroHit itself, because CR 1.4.5 routes damage there", {skip
     .replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
   assert.match(src, /const heroHit = total > 0 && !\(link\.target && link\.target\.kind === "ally"\)/,
     "judge must decide heroHit off the CR 1.4.5 attack-target");
-  assert.match(src, /blkNote,\s*heroHit\}\)\)/, "and pass it into the shared body");
+  /* v6.48: `afterWall` and `power` follow it (`effects.linkOutcome`) */
+  assert.match(src, /blkNote,\s*heroHit[,}]/, "and pass it into the shared body");
 });
