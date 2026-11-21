@@ -28,8 +28,7 @@ the game up. **Shipped — v6.57 and v6.58** (CHANGELOG has every number):
 **NEXT, in order:**
 1. **Jittery Bones** (Gravy) 69 / 8 — an attack ranked below his bigger ones; check whether its mill-for-go-again rider is ever
    the better line before calling it a leak.
-2. Viserai BW is still bottom (18-22 on the ladder). Runechant of Lust/Sloth at opp turn (suspense shape, expect negative). Look
-   at what she pitches vs plays (`experiments/census/rx.js`-style census of her calls).
+2. Viserai BW is still bottom (18-22 on the ladder). Look at what she pitches vs plays (`experiments/census/rx.js`-style census of her calls).
 3. **Newcomer path, next steps:** the hero sheet could say each hero's play style in one line (data in HEROES, sourced, not prose
    in code); the first trainer turn could point at the Coach's call once. Drive both at 393x852.
 4. Compass of Sunken Depths (Gravy) — info the AI cannot use; skip unless Sharp's mask learns it (view.js).
