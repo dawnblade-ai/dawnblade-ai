@@ -21,7 +21,7 @@ Closed, no gap: Gravy's Timesnap Potion and Jittery Bones (both blue pitch cards
 Chaos: table salt d6 (EPS 0.3, 289 games) + Iyslander salt `ice` (EPS 0.4): 0 findings.
 
 **WORKERS IN FLIGHT (assigned 2026-11-22 ~21:50Z by CEO session_013xG9xADa79zsMdfx4Ha7Ri, env_011rwpp2MyBTt3cEsZKDoVGk):**
-- `session_013xG9xCPAciqbr5nPRbgoCS` (Opus) — NEXT 1 done (negative); now NEXT 3: Iyslander remaining cards + Viserai BW census; pushes ONLY `ship/blaze-energy-offturn`.
+- `session_013xG9xCPAciqbr5nPRbgoCS` (Opus) — NEXT 1 done (negative); NEXT 3 done; now finishing SPXSTIRIDLE for ship; pushes ONLY `ship/blaze-energy-offturn`.
 - `session_013xG9x8VDdx8D1FfSJq5SjC` (Opus) — NEXT 4 Spellfire Cloak census + NEXT 3 Boltyn census; pushes ONLY `ship/cloak-boltyn-census`.
 Both report via send_message to the CEO; neither pushes main. A limit stop sends NO report: check with get_session
 (status_bucket failed) / list_events and nudge. A new CEO tells both its session id. The CEO replays + re-validates + ships.
@@ -33,8 +33,12 @@ Both report via send_message to the CEO; neither pushes main. A limit stop sends
    so no arsenal version exists. `experiments/H33-blaze-energy-offturn-{NEGATIVE.patch,NOTES.md}`, census/blazeoff-*.js.
 2. Chaos, further: trainer (`node tools/trainchaos.js '' 3 3`, ~45 min, after any `Battle` change); table salt d7 CLEAN (289 games, EPS 0.3, 0 findings, 2026-11-22); next salt **d8**; staged decks
    wait for Outbreak (`tools/staged-play.js`).
-3. Weakest seats, by census (`never.js <hero> 1`): not yet run for Boltyn (35) or Iyslander's remaining cards; Lyath is a deck ceiling.
-   Untried: Viserai BW's Runechant of Sloth/Lust off-turn (43/0, 35/0 — likely loses the usurp synergy).
+3. Weakest seats, by census (worker A, 2026-11-22; `experiments/H34-H35-NEXT3-NOTES.md`): Iyslander's low-use cards are blue
+   pitch/blockers doing their job. **MISPLAY:** Stir the Aetherwinds cast off-turn from the arsenal (SPXOPPARS) 16x/96 games, each
+   pitching hand cards, never followed by a Wizard card. SPXSTIRIDLE (`judge.instantNextTakers`) is win-noise (24 seeds 287->284 of
+   768) but corrects the call: worker A is finishing it (drill + CALL_WHY) to ship as an advice fix. Viserai BW Runechant of
+   Lust/Sloth off-turn: NEGATIVE (114 -> 94 / 100 of 384; destroyed at his action phase, never usurped). Viserai BW and Lyath look
+   like deck ceilings. Boltyn: worker B. Unmeasured, low value: Gate to i'Arathael activation (98/0, 71/0).
 4. Spellfire Cloak as the off-turn payment (Iyslander, Blaze: 251/0, 276/0). By today's lesson it is the RIGHT kind of off-turn
    resource (it costs no hand card), so a census is worth it: how often does an off-turn payment pitch a card the next turn needed?
 5. Compass of Sunken Depths (Gravy) — skip unless Sharp's mask learns it (view.js).
