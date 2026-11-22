@@ -17,6 +17,11 @@ both ways, pitches fewer cards; Iyslander 287->308, Blaze 246->270 of 768 at 24 
 Runechants off-turn, Boltyn charge-keep. **The off-turn lesson held four times; the Cloak is its positive form (a resource
 that is not a card).** Latent: Energy Potion (Dorinthea, Fai) would need cloakFirst to scan `sd.board`; no game reaches it.
 
+**Lesson sweep (worker A, `experiments/census/offsweep.js`, rerun after any off-turn policy change):** every off-turn play from hand,
+forked to see what its pitch would have done. Only defence plays pitch next turn's card >70%. Both candidates NOISE at 24 seeds:
+H36 Lyath boo only for leak >= 2 (230 -> 228 of 768; the Might token pays), H37 hold 1-point defence reactions (blaze +6, enigma -4,
+iyslander +4). `experiments/H36-H37-NOTES.md`. Off-turn pitch is now closed as a lever.
+
 **WORKERS IN FLIGHT (assigned 2026-11-22 ~21:50Z by CEO session_013xG9xADa79zsMdfx4Ha7Ri, env_011rwpp2MyBTt3cEsZKDoVGk):**
 - `session_013xG9xCPAciqbr5nPRbgoCS` (Opus) — NEXT 1 done (negative); NEXT 3 done; now finishing SPXSTIRIDLE for ship; pushes ONLY `ship/blaze-energy-offturn`.
 - `session_013xG9x8VDdx8D1FfSJq5SjC` (Opus) — NEXT 4 Spellfire Cloak census + NEXT 3 Boltyn census; pushes ONLY `ship/cloak-boltyn-census`.

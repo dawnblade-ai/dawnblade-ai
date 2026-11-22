@@ -1,0 +1,24 @@
+diff --git a/engine/sparring.js b/engine/sparring.js
+index 63a1ac0..c1d6af0 100644
+--- a/engine/sparring.js
++++ b/engine/sparring.js
+@@ -186,7 +186,7 @@ const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate(
+       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
+       wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW"),
+       graveOn = subGate("SPXGRAVE"), booOn = subGate("SPXBOO"), energyOn = subGate("SPXENERGY"), putOn = subGate("SPXPUT"),
+-      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST"), arsPowOn = subGate("SPXARSPOW"), oppArsOn = subGate("SPXOPPARS"), oppAmpOn = subGate("SPXOPPAMP"), oppIceOn = subGate("SPXOPPICE");
++      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST"), arsPowOn = subGate("SPXARSPOW"), oppArsOn = subGate("SPXOPPARS"), oppAmpOn = subGate("SPXOPPAMP"), oppIceOn = subGate("SPXOPPICE"), booCheapOn = subGate("SPXBOOCHEAP");
+ /* THE BLOCK A TOKEN PIECE MAY GIVE UP (SPXTOKENPIECE): one point. Flat Trackers (1 defence, blade
+    break: "Destroy this: Create an Agility token. Go again") measured on Boltyn's own seat, 24 seeds
+    each chair: 224 -> 253 of 768 spent this way against kept to block once. */
+@@ -668,7 +668,9 @@ function reaction(g, seat){
+   const booLeak = defending && booOn(g, seat) ? ((g.pend && g.pend.total) || 0) - wallNow(sd) : 0;
+   const booGain = booLeak > 0 ? J.defActGainNow(g, seat, "hpow") : 0;
+   const boo = booGain > 0 && legal(g, {t: "activate", from: "hero", uid: "hpow"}, seat) ? {t: "activate", from: "hero", uid: "hpow"} : null;
+-  if(boo && (!pick || booGain >= booLeak)) return tag("rxBoo", boo);
++  const booPitch = boo && booCheapOn(g, seat) ? num(J.bOf(g, seat).HPOW, "cost") - (sd.res || 0) > 0 : false;
++  const booMin = +(process.env.BOOMIN || 2);
++  if(boo && (!pick || booGain >= booLeak) && !(booPitch && Math.min(booGain, booLeak) < booMin)) return tag("rxBoo", boo);
+   if(pick && defending && fitOn(g, seat)){
+     const leak = ((g.pend && g.pend.total) || 0) - wallNow(sd);
+     const fit = legalRx.filter(x => num(x.c, "def") >= leak)
