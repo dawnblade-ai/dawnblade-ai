@@ -186,7 +186,7 @@ const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate(
       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
       wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW"),
       graveOn = subGate("SPXGRAVE"), booOn = subGate("SPXBOO"), energyOn = subGate("SPXENERGY"), putOn = subGate("SPXPUT"),
-      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST"), arsPowOn = subGate("SPXARSPOW"), oppArsOn = subGate("SPXOPPARS"), oppAmpOn = subGate("SPXOPPAMP"), oppIceOn = subGate("SPXOPPICE");
+      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST"), arsPowOn = subGate("SPXARSPOW"), oppArsOn = subGate("SPXOPPARS"), oppAmpOn = subGate("SPXOPPAMP"), oppIceOn = subGate("SPXOPPICE"), cloakOn = subGate("SPXCLOAK");
 /* THE BLOCK A TOKEN PIECE MAY GIVE UP (SPXTOKENPIECE): one point. Flat Trackers (1 defence, blade
    break: "Destroy this: Create an Agility token. Go again") measured on Boltyn's own seat, 24 seeds
    each chair: 224 -> 253 of 768 spent this way against kept to block once. */
@@ -1894,7 +1894,67 @@ function laBlockSearch(g, seat, o){
   }
 }
 
-function act(g, seat, o){
+/* A PIECE THAT PAYS ON THE OPPONENT'S TURN PAYS INSTEAD OF A CARD (SPXCLOAK).
+   Spellfire Cloak ("Instant - Destroy this: Gain {r}. Activate this only during an
+   opponent's turn") was legal on 251 of Iyslander's opponent turns and 276 of Blaze's,
+   and spent on none. v6.68's lesson is that a card pitched on the opponent's turn is a
+   card missing from your own: you draw only at the end of your own turn. A census at
+   1 seed found 70 of Iyslander's 130 off-turn pitches (Blaze 32 of 37) were one card
+   for one last point, with the Cloak legal. So before an off-turn play or activation
+   that would open a payment the piece covers, the piece is spent first and the card
+   stays in hand. The owed amount is read off judge's own payment (the action is tried
+   through `reduce`), the payout off `judge.abPieceResGain`; a piece that blocks or
+   swings is never spent this way. This file still reads no card text. */
+function cloakFirst(g, seat, a){
+  if(CLOAK_ROLL || IN_SEARCH || !a || !g || g.over || g.turnPlayer === seat || g.pending || g.prompt || !cloakOn(g, seat)) return a;
+  if(a.t !== "play" && a.t !== "activate") return a;
+  const sd = g.sides[seat];
+  const pieces = (sd.gear || []).slice().sort(byUid)
+    .filter(x => x && x.uid !== a.uid && x.power == null && num(x, "def") <= 0);
+  if(!pieces.length) return a;
+  let owe = 0;
+  try {
+    const out = J.reduce(g, a, seat);
+    const p = !out.error && out.state.pending;
+    if(!p || p.kind !== "pay" || p.seat !== seat) return a;
+    const s2 = out.state.sides[seat];
+    owe = p.need - (s2.res || 0) - J.paySum(s2);
+  } catch(e){ return a; }
+  if(owe <= 0) return a;
+  const pc = pieces.find(x => { const gain = J.abPieceResGain(g, seat, x.uid);
+    return gain > 0 && gain >= owe && legal(g, {t: "activate", uid: x.uid}, seat); });
+  if(!pc) return a;
+  /* THE LINE, NOT THE ONE PAYMENT. An amp ability then an arsenal cast is one line: a blue
+     pitched for the first pays the second out of what floats, so the piece spent on the first
+     saved nothing (found by the drill). The seat's own line is played out both ways (the
+     opponent only passes: nothing hidden is read) and the piece goes only when it leaves
+     fewer cards pitched. Not asked inside Sharp's search: its budget counts engine steps and these
+     trial reduces are not among them. Measured at 24 seeds per chair (768 games a hero): Iyslander
+     287 -> 308, Blaze 246 -> 270, 0 refusals / violations / stalls. */
+  return pitchedOnLine(g, seat, pc.uid) < pitchedOnLine(g, seat, null) ? tag("cloakPay", {t: "activate", uid: pc.uid}) : a;
+}
+let CLOAK_ROLL = false;
+function pitchedOnLine(g, seat, piece){
+  const keep = NOTE; NOTE = null; CLOAK_ROLL = true;
+  try {
+    let n = g;
+    if(piece != null){ const o = J.reduce(n, {t: "activate", uid: piece}, seat); if(o.error) return 99; n = o.state; }
+    const p0 = (n.sides[seat].pitch || []).length, turn = n.turn;
+    for(let i = 0; i < 40 && !n.over && n.turn === turn; i++){
+      const w = J.waitingOn(n);
+      let x = null, s = seat;
+      if(w === seat){ x = act(n, seat); if(!x) break;
+        if(!n.pending && !n.prompt && x.t !== "play" && x.t !== "activate") break; }
+      else if(w === 1 - seat && !n.pending && !n.prompt){ s = w; x = {t: "pass"}; }
+      else break;
+      const o = J.reduce(n, x, s); if(o.error) break; n = o.state;
+    }
+    return (n.sides[seat].pitch || []).length - p0;
+  } catch(e){ return 99; }
+  finally { CLOAK_ROLL = false; NOTE = keep; }
+}
+function act(g, seat, o){ return cloakFirst(g, seat, actSharp(g, seat, o)); }
+function actSharp(g, seat, o){
   const a0 = actBase(g, seat, o);
   if(IN_SEARCH || !g || g.over || !laGated(g, seat, o)) return a0;
   if(LA.blocks && laBlockPoint(g, seat)){
@@ -2007,6 +2067,7 @@ const CALL_WHY = {
   resUnlock: "Spend the piece for its resource. It pays for an attack you are holding.",
   lifeAtBest: "Gain the life now. The arcane damage you took this turn makes it the bigger gain.",
   oppArsAmp: "Amp first: your arsenal card is about to go on their turn, and this adds 1 to its arcane damage.",
+  cloakPay: "Spend the piece first. It pays this cost, so the card you would have pitched stays in your hand for your own turn.",
   oppIce: "Cast it from your arsenal now, on their turn: your hero adds a Frostbite of its own, so they pay for two plays instead of one.",
   oppArs: "Cast your arsenal card now, on their turn: your hero lets it go at instant speed, so it lands early and your arsenal refills at the end of your turn.",
   discardDraw: "Discard the ally for the draw. It still plays from your graveyard, so the card is free.",

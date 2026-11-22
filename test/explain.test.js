@@ -69,8 +69,8 @@ function census(){
              a different branch with its own key, spending the piece for an
              attack it makes affordable, and so is SPXPIECE's `pieceRes` (v6.56,
              test/gearpolicy.test.js): a 0-defence piece paying for the play
-             about to be paid. */
-          if(a.t === "activate" && J.abPieceForRes(g, s, a.uid) && e.key !== "resUnlock" && e.key !== "resUnlockWeapon" && e.key !== "pieceRes")
+             about to be paid. SPXCLOAK's `cloakPay` is the off-turn twin (test/cloakpay.test.js). */
+          if(a.t === "activate" && J.abPieceForRes(g, s, a.uid) && e.key !== "resUnlock" && e.key !== "resUnlockWeapon" && e.key !== "pieceRes" && e.key !== "cloakPay")
             out.resBurn.push(`${k0}/${k1} seat ${s}: ${a.uid}`);
           const o = J.reduce(g, a, s);
           if(o.error) continue;
@@ -155,13 +155,16 @@ test("every reason is keyed from a site in the policy, and the census names what
      seat: test/embraceursur.test.js drives both. v6.64's SPXOPPARS (Iyslander casts her arsenal on the
      opponent's turn) re-routes it: `arsenalSkip` is reached now, and `oppArs` is. v6.66's `boardcost`
      (Runebleed Robe's destroy cost with a token and a special Runechant) is Viserai's: test/boardcost.test.js. v6.66's `payBack` (an over-pitch the policy did not make) only
-     follows a person's taps: test/payback.test.js. */
+     follows a person's taps: test/payback.test.js. SPXCLOAK (`cloakPay`, the Cloak pays an off-turn cost)
+     re-routes it: `cloakPay` is reached, `abtarget` is reached again, and `arsenalSkip`, `soak` and
+     `soakCard` are out of reach (a spent Cloak is an Arcane Barrier 1 gone; test/cloakpay.test.js drives
+     `cloakPay`, test/arcane.test.js and test/sparring.test.js drive the soak answer). */
   const seen = census().keys;
   for(const k of Object.keys(seen)) assert.ok(SP.CALL_WHY[k], "reached key " + k + " has no reason");
   assert.deepEqual(keys.filter(k => !seen[k]).sort(),
-    ["abtarget", "addPayNo", "allocAll", "allyTake", "answer", "arenaAP", "arenaRes", "bancost", "bancostNo", "boardcost", "boostNo",
+    ["addPayNo", "allocAll", "allyTake", "answer", "arenaAP", "arenaRes", "arsenalSkip", "bancost", "bancostNo", "boardcost", "boostNo",
      "chargeDone", "chargeMore", "chargeNone", "discost", "laBlock", "laBoard", "laHit", "laHold", "laKeep", "laSafe", "laTake", "lookOwn",
-     "payBack", "payCancel", "riderFirst", "riderPick", "traverseBack", "traverseStay", "usurp"]);
+     "payBack", "payCancel", "riderFirst", "riderPick", "soak", "soakCard", "traverseBack", "traverseStay", "usurp"]);
 });
 
 test("every reason and every line reads as game text", () => {
