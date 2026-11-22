@@ -2105,7 +2105,7 @@ const CALL_WHY = {
   gearAbility: "Use your equipment's ability. Nothing better is left to do.",
   gearAmp: "Use your equipment's ability. You can pay for an arcane card to take its extra damage.",
   heroAbility: "Use your hero's ability. Nothing better is left for the action point.",
-  flipFirst: "Turn your arsenal card face-up first. It has crush, so it gets +2 power and dominate for the attack you make with it.",
+  flipFirst: "Turn your arsenal card face-up first. Your hero's bonus applies to it, so the attack you make with it hits harder.",
   arenaPump: "Tap it. Your attack gets the extra damage for free.",
   arenaDraw: "Cash it in. It draws a card for resources you already have floating, and it keeps your action point.",
   arenaRes: "Break it open first. Its resources pay for what you are about to play, so no card has to be pitched.",
