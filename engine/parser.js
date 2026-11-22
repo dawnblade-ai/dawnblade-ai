@@ -10687,6 +10687,20 @@ function drxBarred(link, from){
     if(b && (b.from == null || b.from === from)) return {src: b.src || link.card && link.card.name, from: b.from};
   return null;
 }
+/* "THIS CAN'T BE DEFENDED BY EQUIPMENT" (Out Pace) — a RESTRICTION on the declare step.
+   CR 1.0.2 (rules.fabtcg.com/en/cr/01-game-concepts/, fetched 2026-11-22), verbatim:
+     "A restriction is a rule or effect that states something cannot happen. ... A
+      restriction takes precedence over any requirement or allowance, subject to [1.0.1a]."
+     "'They can't defend this with equipment' is a restriction, ..."
+   So it beats CR 7.3.2a's allowance to declare "public equipment permanents they control".
+   It was read on ONE board only: the trainer's dummy skipped its iron, while the table
+   (judge.legal's defend door) let equipment defend an Out Pace attack: 18 such blocks in
+   Dash's 48 self-play games at 3 seeds. One body now, asked by both doors. `atk` is the
+   attacking card (a chain link's `card`); answers the refusal in plain words, or null. */
+function noEquipDefendWhy(atk){
+  if(!atk || !atk.name || !fxParse(atk).noEquipDefend) return null;
+  return atk.name + " can't be defended by equipment";
+}
 function drxBarWhy(link, c, from){
   if(!c || !isDR(c)) return null;
   const bar = drxBarred(link, from);
@@ -11411,7 +11425,7 @@ return {norm, noopFeedText, noopIsQuiet, isAttack, isArrow, isWeapon, hasGA, arc
   PER_COUNT, DEF_PER, perCountKey, chainHits, pickSubject, attackQual, markRed, costCtx, qualMatches, abWindow, defCap, defCounts, defCapWhy, defCapRxWhy, isBlockCard,
         nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, qualColour, CLASS_TALENT_WORDS, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, isActionCard, costOffFor, heaveOf,
         classifyClause, fxParse, fxReset, playableFromZone, playZoneWhy, addCostWhy, isArrowCard, boostPays, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost, isActivation, isActionPaid, costTaxes, handAbilityTax,
-        DECL_OPS, dracLinks, dracNow, dracLinksNow, weaponCost, payTrigger, OFFER_TRIGGERS, allyAttack, auraWeaponGrant, wardValue, wardBearers, wardTotal, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, routeCostsAP, rxAllowed, drxBarred, drxBarWhy, rxPump,
+        DECL_OPS, dracLinks, dracNow, dracLinksNow, weaponCost, payTrigger, OFFER_TRIGGERS, allyAttack, auraWeaponGrant, wardValue, wardBearers, wardTotal, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, routeCostsAP, rxAllowed, drxBarred, drxBarWhy, noEquipDefendWhy, rxPump,
         idleCounterWipes, rustedThrough, bloodDebt, usurps, usurpTarget, usurpTargets, usurpOffer, isRunechantCard,
         isAtkActionCard, phantasmPops, zonePow, pow6, kwGated, hasKwNow, printedKw, arsGrantMet,
         crankCost, fusionOffer, chargeOffer,

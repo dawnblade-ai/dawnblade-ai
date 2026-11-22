@@ -168,7 +168,9 @@ function advise(g, ctx){
     const dTTK = Math.max(1, Math.ceil(hp/4.2));
     const target = hp<=8 ? 0 : hp<=14 ? 1 : 2;
     const cards = you(g).hand.map((c,i)=>({t:"h",i,d:c.def||0,v:V(c),n:nm(c)})).filter(x=>x.d>0).sort((a,b)=>(a.v-b.v)||(b.d-a.d));
-    const gearB = you(g).gear.map((c,i)=>({t:"g",i,d:c.def||0,used:c.used,n:nm(c)})).filter(x=>x.d>0&&!x.used);
+    /* an attack that can't be defended by equipment gets no iron advice (CR 1.0.2, `parser.noEquipDefendWhy`) */
+    const noIron = !!P.noEquipDefendWhy(g.pend && g.pend.card);
+    const gearB = noIron ? [] : you(g).gear.map((c,i)=>({t:"g",i,d:c.def||0,used:c.used,n:nm(c)})).filter(x=>x.d>0&&!x.used);
     const pool = hp<=14 ? gearB.concat(cards) : cards.concat(gearB);
     let sum=0, picks=[];
     for(const p of pool){ if(inc-sum<=target) break; picks.push(p); sum+=p.d; }

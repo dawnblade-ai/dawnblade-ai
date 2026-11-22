@@ -1147,6 +1147,10 @@ function legal(g, a, seat){
       /* CR 7.3.2b — a piece already spent on THIS chain cannot block
          again. It clears when the chain breaks, not when the turn ends. */
       if((sd.chainBlocked || []).indexOf(a.uid) >= 0) return c.name + " already blocked this chain";
+      /* CR 1.0.2 — "This can't be defended by equipment" is a restriction, and it beats
+         7.3.2a's allowance above. `parser.noEquipDefendWhy` is the one body; the trainer's
+         dummy asks the same. */
+      { const nw = PR.noEquipDefendWhy(g.pend && g.pend.card); if(nw) return nw; }
     } else {
       if(c.def == null) return c.name + " prints no defence";
       /* CR 8.1.3a — a defence reaction "can only be played/activated by a
