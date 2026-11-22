@@ -7,7 +7,7 @@ CHANGELOG.md (v6.30 on; older in `docs/archive/CHANGELOG-to-v6.29.md`) and LESSO
 ## HANDOFF — START HERE (CEO session_013xG9x9GrXFSawJ12C5YkG8, 2026-11-22, at v6.67)
 
 **State:** live = **v6.67** on `main`, livecheck ALL PASS. Function `table` version 86 = `v6.67 · sage-v19`, stamped, `--check` OK.
-**WIRE_V 49** (`boardcost`). DATA_VER sage-v19. 17 heroes. Session branch `claude/zealous-newton-d7sohl` == main.
+**WIRE_V 49** (`boardcost`). DATA_VER sage-v19. 17 heroes. Session branch `claude/zealous-newton-d7sohl` == main (main also carries chaos's `SALT`, tools only).
 page.js 89/89 at 393x852 as of v6.66. **Approximation ledger: 0 open** (21 stated, 42 closed). Pool 455/455 full.
 
 **Shipped today:**
@@ -24,8 +24,9 @@ page.js 89/89 at 393x852 as of v6.66. **Approximation ledger: 0 open** (21 state
 **NEXT, in order:**
 0. **Chaos, further** (cheap, high yield for "a person could, the policy never did"): (a) the trainer has no chaos — its
    doors live in index.html's `Battle`; drive them through tools/page.js with random taps, or move a door into effects.js first;
-   (b) chaos on the STAGED decks before they open (`tools/staged-play.js` builds them) so a new precon lands pre-fuzzed;
-   (c) chaos only rolls one seed per pairing so far — `node tools/chaos.js '' '' 3` with EPS 0.25 and 0.6 is ~40 min on 4 cores.
+   (b) chaos on the STAGED decks before they open (`tools/staged-play.js` builds them; today's staged list holds only the already-open
+   Prism and Viserai BW, so this waits for Outbreak) so a new precon lands pre-fuzzed;
+   (c) DONE at v6.67 (`SALT=d1/d2/d3`): EPS 0.25 x2, 0.6 x2, 0.9 x1 — 1,445 games, 600,738 random moves, 0 findings. Next salt: d4.
 1. Weakest ladder seats (rule policy, 48 games each, v6.65 ladder): Viserai BW 22, Lyath 28, Iyslander 33, Gravy/Blaze 34 of 96.
    Lyath looks like a deck/halving ceiling; BW is strong under Sharp (the page's AI). Prefer correcting advice over chasing wins:
    run `never.js <hero> 1` for each and look for a printed play the call never offers. Done for BW/Gravy/Blaze/Lyath
