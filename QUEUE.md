@@ -34,7 +34,7 @@ Both report via send_message to the CEO; neither pushes main. A limit stop sends
    from hand off-turn, `experiments/H32-blaze-opphand-NOISE.patch`) was noise: 173->176 of 576 over both chairs. The win, if any, is the
    energy -> off-turn arcane cast that follows. Start: census when Blaze holds energy on the opponent's turn with an X-matching arcane
    card in hand (SPXENERGY v6.53 spends energy on HIS turn: read `judge.ctrPickTakers`). Ship only a measured line.
-2. Chaos, further: trainer (`node tools/trainchaos.js '' 3 3`, ~45 min, after any `Battle` change); table next salt **d7**; staged decks
+2. Chaos, further: trainer (`node tools/trainchaos.js '' 3 3`, ~45 min, after any `Battle` change); table salt d7 CLEAN (289 games, EPS 0.3, 0 findings, 2026-11-22); next salt **d8**; staged decks
    wait for Outbreak (`tools/staged-play.js`).
 3. Weakest seats, by census (`never.js <hero> 1`): not yet run for Boltyn (35) or Iyslander's remaining cards; Lyath is a deck ceiling.
    Untried: Viserai BW's Runechant of Sloth/Lust off-turn (43/0, 35/0 — likely loses the usurp synergy).
