@@ -22,7 +22,7 @@
   never by the rule policy. This driver mixes uniformly random LEGAL actions (every play, activation, pass, odd pitch,
   cancelled payment, declined cost and prompt answer `judge.legal` accepts) into self-play at rate `EPS`, and reports
   `legal`/`reduce` disagreements, throws, invariant violations and cards in no zone (stalls are expected and not counted).
-  First run: 289 games at EPS 0.25 (34,060 random moves) and 578 at EPS 0.6 — 0 engine findings. The one policy refusal it
+  First run: 289 games at EPS 0.25 (34,060 random moves) and 578 at EPS 0.6 (213,132) — 0 engine findings. The one policy refusal it
   meets (`payConfirm` after a random over-pitch) is a state only a mixed hand on one seat makes. `selfplay.play` takes
   `opts.act` for it.
 - Drills moved: test/approx.test.js (the record closed, its probe turned round), test/split.test.js (the table demuxes
