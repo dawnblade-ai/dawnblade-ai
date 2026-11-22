@@ -33,6 +33,7 @@
        node tools/chaos.js                  # every hero vs every hero, 1 seed, EPS 0.25
        node tools/chaos.js viserai '' 2     # Viserai against everyone, 2 seeds
        EPS=0.5 node tools/chaos.js kayo,gravy iyslander 3
+       SALT=b node tools/chaos.js '' '' 2   # different games from the default seeds
    ============================================================ */
 const {match, play, W, J, SP} = require("./selfplay.js");
 const RNG = require("../engine/rng.js");
@@ -162,7 +163,7 @@ function main(){
   };
   for(let s = 0; s < seeds; s++) for(const a of heroes) for(const b of foes){
     if(a === b && heroArg && !foeArg) continue;
-    const seed = `chaos-${a}-${b}-${s}`;
+    const seed = `chaos${process.env.SALT || ""}-${a}-${b}-${s}`;   /* SALT: fresh games, same pairings */
     tally.where = seed;
     const g = match(a, b, seed, s % 2);
     const r = play(g, LIMIT, {act: chaosActor(seed + "-x", tally)});
