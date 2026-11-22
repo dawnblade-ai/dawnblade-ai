@@ -4,10 +4,10 @@
 answered NEEDS-A-RULING notes are in `QUEUE-ARCHIVE.md` on this branch (grep it, don't read it). History lives in
 CHANGELOG.md (v6.30 on; older in `docs/archive/CHANGELOG-to-v6.29.md`) and LESSONS.md on main.
 
-## HANDOFF — START HERE (CEO session_013xG9x9GrXFSawJ12C5YkG8, 2026-11-22, at v6.67)
+## HANDOFF — START HERE (CEO session_013xG9x9iZ6h3pqkkhaHmRjq, 2026-11-22, at v6.67; tools-only since)
 
 **State:** live = **v6.67** on `main`, livecheck ALL PASS. Function `table` version 86 = `v6.67 · sage-v19`, stamped, `--check` OK.
-**WIRE_V 49** (`boardcost`). DATA_VER sage-v19. 17 heroes. Session branch `claude/zealous-newton-d7sohl` == main (main also carries chaos's `SALT`, tools only).
+**WIRE_V 49** (`boardcost`). DATA_VER sage-v19. 17 heroes. Branch `claude/elegant-einstein-st9zq6` = main + `tools/trainchaos.js` + its CLAUDE.md line (tools only, NOT on main yet: merge it with the next release).
 page.js 89/89 at 393x852 as of v6.66. **Approximation ledger: 0 open** (21 stated, 42 closed). Pool 455/455 full.
 
 **Shipped today:**
@@ -22,11 +22,14 @@ page.js 89/89 at 393x852 as of v6.66. **Approximation ledger: 0 open** (21 state
   back. Ladder byte-identical to v6.66. Drill test/payback.test.js.
 
 **NEXT, in order:**
-0. **Chaos, further** (cheap, high yield for "a person could, the policy never did"): (a) the trainer has no chaos — its
-   doors live in index.html's `Battle`; drive them through tools/page.js with random taps, or move a door into effects.js first;
-   (b) chaos on the STAGED decks before they open (`tools/staged-play.js` builds them; today's staged list holds only the already-open
-   Prism and Viserai BW, so this waits for Outbreak) so a new precon lands pre-fuzzed;
-   (c) DONE at v6.67 (`SALT=d1/d2/d3`): EPS 0.25 x2, 0.6 x2, 0.9 x1 — 1,445 games, 600,738 random moves, 0 findings. Next salt: d4.
+0. **Chaos, further** (cheap, high yield for "a person could, the policy never did"):
+   (a) DONE (session_013xG9x9iZ6h3pqkkhaHmRjq): **`tools/trainchaos.js`** taps random enabled buttons on the REAL page (page.js
+   offline, 393x852) through whole trainer games, every hero; reads pageerror/console.error and `window.__dawnJudge`. 56 games, all to
+   game over, **0 findings** (an earlier 18 found only the tool artifact below). Lesson in its header: two `.click()`s in ONE page task both read the pre-render closure and a peeked
+   card commits twice (CARD-DUP-IN-ZONE) — not reachable by a thumb (React flushes between real events), so taps are separate tasks.
+   Next: more seeds (`node tools/trainchaos.js '' 3 3`, ~45 min); run it after any `Battle` change (CLAUDE.md lists it).
+   (b) chaos on the STAGED decks before they open (`tools/staged-play.js` builds them) — waits for Outbreak.
+   (c) table chaos: d1–d5 done, 2,023 games, 761,284 random legal moves, 0 findings (d4 EPS 0.4, d5 EPS 0.6 this session). Next salt: d6.
 1. Weakest ladder seats (rule policy, 48 games each, v6.65 ladder): Viserai BW 22, Lyath 28, Iyslander 33, Gravy/Blaze 34 of 96.
    Lyath looks like a deck/halving ceiling; BW is strong under Sharp (the page's AI). Prefer correcting advice over chasing wins:
    run `never.js <hero> 1` for each and look for a printed play the call never offers. Done for BW/Gravy/Blaze/Lyath
