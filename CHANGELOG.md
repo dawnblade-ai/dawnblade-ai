@@ -1,3 +1,17 @@
+## v6.62 — the arsenal keeps the card that swings biggest from there
+
+- **AI: the arsenal step ranks on power FROM the arsenal (`judge.arsenalPower`, gate `SPXARSPOW`).** A census of Lyath's turns (1 seed)
+  found Power Play ("If this was played from arsenal, it gets +5{p}") legal on 36 of his decisions and never once played: the arsenal
+  step stored the hand's biggest PRINTED attack, so a 1-power card that is 6 from the arsenal sat behind a 3. `arsenalPower` is the base
+  the engine plays (`effects.basePowOf`; Lyath's halving is already on the dealt card) plus every self-pump gated on "played from
+  arsenal" (`cond: arsenal`, the gate `execute` reads); other gates are facts of a turn not yet started, so they add nothing. Now Power
+  Play is stored (5 times in 32 games) and swung from the arsenal. Lyath, own seat, 12 seeds each chair (wins of 384): 126 -> 127
+  (noise: the card is in 2 copies and blue, so it is usually pitched; it ships because it corrects what the call tells a player at the
+  arsenal step). Drill: test/freepick.test.js (Power Play, 3 + 5, is stored over Brothers in Arms, 6; a printed 9 still beats it; the
+  reader answers null for a card not in hand; sabotaged: the printed sort fails it). Cold Snap and Lightning Surge also gate on
+  the arsenal, but on a draw and a go again, not on power, so they rank as before.
+- **Validation:** npm test 4524 / 4519 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; ladder 816 games, 0 refusals /
+  0 violations / 0 stalls (2 engine draws); both babel blocks compile.
 ## v6.61 — a zoomed card explains its keywords; the sheet prints the hero
 
 - **A zoomed card's keywords open their rules.** The card zoom (the decklist, the loadout, both boards) shows the card's keywords

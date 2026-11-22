@@ -154,6 +154,21 @@ test("H13: with an attack in hand it is the one stored; Inner Chi never is", {sk
   assert.equal(J.arsenalUsable(c, 0, "ic"), false, "Inner Chi has no play");
   assert.deepEqual(SP.act(c, 0), {t: "arsenal", uid: null});
 });
+/* SPXARSPOW (v6.62): the arsenal stores the card with the most power FROM the arsenal.
+   Power Play prints 3 and "If this was played from arsenal, it gets +5{p}"; Brothers in Arms
+   prints 6. Ranked on printed power Brothers in Arms was stored, and Power Play never was. */
+test("SPXARSPOW: Power Play (3, +5 from arsenal) is stored over Brothers in Arms (6)", {skip}, () => {
+  const pp = ent("Power Play", 1, "pp"), bia = ent("Brothers in Arms", 1, "bia");   /* the red copies: 3 and 6 */
+  const g = arsenalStep([bia, pp], "Bravo");
+  assert.equal(J.arsenalPower(g, 0, "pp"), 8, "Power Play from the arsenal: 3 + 5");
+  assert.equal(J.arsenalPower(g, 0, "bia"), 6, "Brothers in Arms has no arsenal rider");
+  assert.equal(J.arsenalPower(g, 0, "nope"), null, "a card not in hand answers null");
+  assert.deepEqual(SP.act(g, 0), {t: "arsenal", uid: "pp"});
+  assert.equal(SP.explain(g, 0).key, "arsenalBest");
+  /* the refusal: a bigger printed attack still beats a rider that does not reach it */
+  const big = Object.assign(atk("big", 1, 9), {name: "Probe Nine"});
+  assert.deepEqual(SP.act(arsenalStep([pp, big], "Bravo"), 0), {t: "arsenal", uid: "big"}, "9 printed beats 3 + 5");
+});
 test("H13: a playable non-attack is kept under its own reason", {skip}, () => {
   const g = arsenalStep([ent("Condemn to Slaughter", 1, "cs")]);
   const x = SP.explain(g, 0);

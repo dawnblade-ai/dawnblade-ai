@@ -165,7 +165,8 @@ const fixOn = (g, seat) => {
    Runehold Release, Flat Trackers) is spent before the attack, not after it. SPXRIDER (v6.59)
    an optional hand banish with class riders (`judge.riderPick`: Embrace Ursur) gives up a card
    that still plays from the banished zone and fires a rider. SPXBANFIRST (v6.60) of two attacks
-   that tie on rank, power and cost, the one played from the banished zone goes first. */
+   that tie on rank, power and cost, the one played from the banished zone goes first. SPXARSPOW
+   (v6.62) the arsenal step stores the card with the most power FROM the arsenal (`judge.arsenalPower`). */
 const subGate = k => {
   const v = (typeof process !== "undefined" && process.env && process.env[k]) || "";
   return (g, seat) => {
@@ -180,7 +181,7 @@ const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate(
       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
       wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW"),
       graveOn = subGate("SPXGRAVE"), booOn = subGate("SPXBOO"), energyOn = subGate("SPXENERGY"), putOn = subGate("SPXPUT"),
-      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST");
+      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST"), arsPowOn = subGate("SPXARSPOW");
 /* THE BLOCK A TOKEN PIECE MAY GIVE UP (SPXTOKENPIECE): one point. Flat Trackers (1 defence, blade
    break: "Destroy this: Create an Agility token. Go again") measured on Boltyn's own seat, 24 seeds
    each chair: 224 -> 253 of 768 spent this way against kept to block once. */
@@ -1414,9 +1415,11 @@ function actBase(g, seat, o){
      goes face down: it is the card this seat most wants to lead with, and
      it is the one card that survives the hand being spent. */
   if(g.arsenalFor === seat){
+    /* SPXARSPOW (v6.62): ranked on the power it would have played from there */
+    const pw = arsPowOn(g, seat) ? (c => { const v = J.arsenalPower(g, seat, c.uid); return v == null ? num(c, "power") : v; }) : (c => num(c, "power"));
     const best = (g.sides[seat].hand || []).slice()
       .filter(c => J.arsenalUsable(g, seat, c.uid))
-      .sort((a, b) => num(b, "power") - num(a, "power") || byUid(a, b))[0];
+      .sort((a, b) => pw(b) - pw(a) || byUid(a, b))[0];
     return tag(!best ? "arsenalSkip" : J.arsenalAttack(g, seat, best.uid) ? "arsenalBest" : "arsenalOther", {t: "arsenal", uid: best ? best.uid : null});
   }
 

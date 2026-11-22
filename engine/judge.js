@@ -2077,6 +2077,21 @@ const arsenalAttack = (g, seat, uid) => {
   const c = (at(g, seat).hand || []).find(x => x && x.uid === uid);
   return !!c && TY.isAttack(c);
 };
+/* THE POWER A HAND CARD WOULD SWING FOR FROM THE ARSENAL (v6.62, SPXARSPOW). The arsenal
+   step stored the hand's biggest PRINTED attack, and Power Play ("If this was played from
+   arsenal, it gets +5{p}") was never once stored or played from there in a Lyath census (legal
+   36 times on his turns, played 0). The base the engine plays (`effects.basePowOf`, which
+   halves Lyath's) plus every self-pump gated on "played from arsenal" (`cond: arsenal`, the
+   gate `execute` reads). Other gates are left out: they are facts of a turn that has not
+   started. Null for a card the seat does not hold in hand. */
+const arsenalPower = (g, seat, uid) => {
+  const c = (at(g, seat).hand || []).find(x => x && x.uid === uid);
+  if(!c || !c.name) return null;
+  const base = E.basePowOf(c, "arsenal", g) || 0;
+  const pump = (PR.fxParse(c).conds || []).filter(e => e && e.cond === "arsenal" && !e.instead && e.op && e.op[0] === "self")
+    .reduce((t, e) => t + (+e.op[1] || 0), 0);
+  return base + pump;
+};
 /* THE PLAY GATE A HELD CARD WAITS ON (H23). `fx.playIf` is the card's "Play this only if ..."
    line and `effects.playIfOk` answers it; this is the reader for `sparring.js`, which reads no
    card text. null for a card with no gate (or one the seat does not hold in hand/arsenal);
@@ -5396,7 +5411,7 @@ function moves(g, seat){
 }
 
 return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, moves, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, cyclePick, riderPick, riderLead, arsenalAttack, arsenalUsable, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, pumpsNow, tokenPiece, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, weaponPumpOf, gaNextPiece, nonAtkHeld, discardDrawPiece, lifeGainOf, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
+        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, cyclePick, riderPick, riderLead, arsenalAttack, arsenalUsable, arsenalPower, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, pumpsNow, tokenPiece, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, weaponPumpOf, gaNextPiece, nonAtkHeld, discardDrawPiece, lifeGainOf, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf, waitingOn,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */
