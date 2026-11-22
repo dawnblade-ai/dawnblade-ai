@@ -1,3 +1,25 @@
+## v6.70 — Bravo stores a card he can pay for, and turns it face-up only when crush pays
+
+- **AI: the arsenal step never stores a card next turn cannot pay for (SPXARSPAY).** It stored the hand's biggest printed
+  attack whatever its cost, and the policy's own affordability rule then refused to play it: Bravo's Macho Grande (cost 7,
+  Dominate) was arsenalled 20 times in 96 games, played from the arsenal 2 of 85 legal times, and sat there at the start of
+  205 of 1171 turns (the slot's #1 occupant). New judge reader `arsenalPayable` asks the same `maxPitch` rule of next turn's
+  hand (the kept cards, plus draws up to intellect counted at the mean pitch of the seat's own deck; no order is read). It
+  changes 18 of 96 Bravo arsenal steps and 0-4 for every other hero.
+- **AI: Bravo's hero ability turns the arsenal card face-up only when crush makes it pay, and before it attacks
+  (SPXFLIPCRUSH, new reason `flipFirst`).** "{r}{r}, {t}: Turn a face-down card in your arsenal face-up. If it has crush, it
+  gets +2{p} and dominate this turn. Go again" was the last-resort action and aimed blind: 33 of 65 uses turned a card
+  without crush ({r}{r} for nothing). New judge reader `arsTurnPays` reads the ability's parsed rider; the rider test is now
+  ONE body, `parser.arsGrantMet`, shared by `effects.applyArsGrant` (no behaviour change). Wasted flips 33 -> 0, crush flips
+  32 -> 119 per 96 games.
+- **Measured, Bravo own seat + other chair, 24 seeds (768 games): 309 -> 371 (+62)**; SPXARSPAY alone 355 (+46), and the
+  flip adds +16 on top (more crush cards now sit in the slot). Dash (the other hero the arsenal step touches most), 12 seeds:
+  218 -> 215, neutral. 0 refusals / violations / stalls in every run. Drill: test/bravoarsenal.test.js (4 tests, sabotaged
+  each way).
+- **Validation:** npm test 4549 / 4544 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; ladder 816 games, 0 refusals /
+  0 violations / 0 stalls (3 engine draws), Bravo 42 -> 52 of 96; chaos 289 games (33,413 random moves) 0 findings; trainer
+  chaos on v6.69 (54 games, every hero) clean. No wire, data or page change beyond `APP_VER`.
+
 ## v6.69 — Spellfire Cloak pays on the opponent's turn; Stir the Aetherwinds is no longer thrown away
 
 - **AI: a piece that pays on the opponent's turn pays instead of a pitched card (SPXCLOAK, new reason `cloakPay`).**
