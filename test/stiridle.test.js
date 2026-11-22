@@ -80,8 +80,13 @@ test("SPXSTIRIDLE: the same window casts a non-grant arsenal card (the skip is t
   assert.ok(F, "found in self-play");
   const {n, c} = intoArsenal(F.n, F.seat, "Photon Splicing");
   assert.equal(J.instantNextTakers(n, F.seat, c.uid, "arsenal"), null, "not a pure grant");
-  const e = SP.explain(n, F.seat);
+  /* v6.69: SPXCLOAK would spend Spellfire Cloak first to pay this very cast. This drill is about the
+     grant skip, not the payment, so the Cloak is taken off this copy (test/cloakpay.test.js owns it). */
+  const m = {...n, sides: n.sides.map((sd, i) => i !== F.seat ? sd
+    : {...sd, gear: (sd.gear || []).filter(x => !(x && /Spellfire Cloak/.test(x.name || x.n || "")))})};
+  const e = SP.explain(m, F.seat);
   assert.ok(e.key === "oppArs" || e.key === "oppArsAmp", "cast on their turn: " + e.key);
+  if(e.key === "oppArs") assert.equal(e.action && e.action.uid, c.uid, "the cast is the arsenal card");
 });
 
 test("SPXSTIRIDLE: the reader counts a Wizard non-attack in the arsenal as a taker for a hand Stir", () => {

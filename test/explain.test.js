@@ -158,11 +158,12 @@ test("every reason is keyed from a site in the policy, and the census names what
      follows a person's taps: test/payback.test.js. SPXCLOAK (`cloakPay`, the Cloak pays an off-turn cost)
      re-routes it: `cloakPay` is reached, `abtarget` is reached again, and `arsenalSkip`, `soak` and
      `soakCard` are out of reach (a spent Cloak is an Arcane Barrier 1 gone; test/cloakpay.test.js drives
-     `cloakPay`, test/arcane.test.js and test/sparring.test.js drive the soak answer). */
+     `cloakPay`, test/arcane.test.js and test/sparring.test.js drive the soak answer). With SPXSTIRIDLE beside
+     it (v6.69: an arsenal Stir with no taker is held on their turn) `arsenalSkip` is reached again. */
   const seen = census().keys;
   for(const k of Object.keys(seen)) assert.ok(SP.CALL_WHY[k], "reached key " + k + " has no reason");
   assert.deepEqual(keys.filter(k => !seen[k]).sort(),
-    ["addPayNo", "allocAll", "allyTake", "answer", "arenaAP", "arenaRes", "arsenalSkip", "bancost", "bancostNo", "boardcost", "boostNo",
+    ["addPayNo", "allocAll", "allyTake", "answer", "arenaAP", "arenaRes", "bancost", "bancostNo", "boardcost", "boostNo",
      "chargeDone", "chargeMore", "chargeNone", "discost", "laBlock", "laBoard", "laHit", "laHold", "laKeep", "laSafe", "laTake", "lookOwn",
      "payBack", "payCancel", "riderFirst", "riderPick", "soak", "soakCard", "traverseBack", "traverseStay", "usurp"]);
 });
