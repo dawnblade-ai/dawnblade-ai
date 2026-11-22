@@ -14373,6 +14373,14 @@ needs the verbatim quote IN THE REPO (source comment, `tools/approx.js` record, 
 - So: declared on activation; a target gone at resolution fails THAT effect only, the rest of the
   ability still resolves, and nothing refunds the paid cost.
 
+### v6.65 — a held play's price is the price it was played at
+- CR 5.1.6: "Calculate Asset-Costs : Fifth, all asset-costs of the proposed card are calculated. [1.13]"
+- CR 5.1.7: "Pay Asset-Costs : Sixth, the player pays all asset-costs (if any). [1.14.2]"
+- CR 5.1.10: "Play : Ninth and finally, the card is now considered played and the player regains priority."
+- So: the price is fixed and paid before anyone may respond. The table's hold (v4.66) charges at resolution
+  as an approximation, so `holdPlay` records `price` and `execute` charges it (`_heldPrice`). Lesson: v6.64
+  fixed one input (Frostbite) of a price re-read late; the class was every input — look for the class.
+
 ### v6.00 — a target is required (RULING user, 2026-11-07)
 - Asked whether Preserve Tradition ("Put target action card from your graveyard on the bottom of your
   deck.") can be played with no legal target, the user answered "You're right - target required."

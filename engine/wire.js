@@ -362,7 +362,10 @@
    controller held when it was played; `judge.resolveHeld` sets aside any made while it
    waited). `stack` ships whole; a v46 peer taxes the play with the late Frostbite and the
    resources diverge (to -1) on the first Ice card answering a held play. By hand. */
-const WIRE_V = 47;
+/* 47 -> 48 AT v6.65: a held play's layer gains `price` (its cost as it was played; `execute` charges
+   exactly that at resolution, via `_heldPrice`). A v47 peer re-reads the price at resolution, and the
+   resources diverge on the first Runechant made or destroyed while a Rune Flash waits. By hand. */
+const WIRE_V = 48;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

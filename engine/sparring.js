@@ -168,7 +168,8 @@ const fixOn = (g, seat) => {
    that tie on rank, power and cost, the one played from the banished zone goes first. SPXARSPOW
    (v6.62) the arsenal step stores the card with the most power FROM the arsenal (`judge.arsenalPower`).
    SPXOPPARS (v6.64) an arsenal card a hero grant makes an instant (`judge.grantedInstant`: Iyslander's
-   blue non-attacks) is cast on the opponent's turn, at the first window outside a defence. */
+   blue non-attacks) is cast on the opponent's turn, at the first window outside a defence. SPXOPPAMP
+   (v6.65) an amp piece (`judge.abAmpTakers`: Crucible of Aetherweave) goes first when that cast takes it. */
 const subGate = k => {
   const v = (typeof process !== "undefined" && process.env && process.env[k]) || "";
   return (g, seat) => {
@@ -183,7 +184,7 @@ const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate(
       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
       wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW"),
       graveOn = subGate("SPXGRAVE"), booOn = subGate("SPXBOO"), energyOn = subGate("SPXENERGY"), putOn = subGate("SPXPUT"),
-      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST"), arsPowOn = subGate("SPXARSPOW"), oppArsOn = subGate("SPXOPPARS");
+      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST"), arsPowOn = subGate("SPXARSPOW"), oppArsOn = subGate("SPXOPPARS"), oppAmpOn = subGate("SPXOPPAMP");
 /* THE BLOCK A TOKEN PIECE MAY GIVE UP (SPXTOKENPIECE): one point. Flat Trackers (1 defence, blade
    break: "Destroy this: Create an Agility token. Go again") measured on Boltyn's own seat, 24 seeds
    each chair: 224 -> 253 of 768 spent this way against kept to block once. */
@@ -1506,8 +1507,23 @@ function actBase(g, seat, o){
      263 -> 266, noise; it ships because it is the hero's printed play and the call never offered it. */
   if(oppArsOn(g, seat) && g.turnPlayer !== seat && !g.pend && !(g.stack || []).some(l => l && l.seat === seat)){
     const u = J.grantedInstant(g, seat);
-    if(u != null && !J.defendsNow(g, seat, u, "arsenal") && idleOK(g, seat, u, "arsenal"))
+    if(u != null && !J.defendsNow(g, seat, u, "arsenal") && idleOK(g, seat, u, "arsenal")){
+      /* AN AMP PIECE GOES FIRST WHEN THE CAST TAKES IT AND BOTH ARE AFFORDABLE (SPXOPPAMP, v6.65).
+         Crucible of Aetherweave: "Once per Turn Instant - {r}: The next card you play this turn with an
+         arcane damage effect, instead deals that much arcane damage plus 1." Legal on ~275 of
+         Iyslander's off-turn windows, used on 0: the amp branches live on her own turn. Own seat, 24
+         seeds each chair, wins of 768: 266 -> 279 (135 -> 141 and 131 -> 138), 0 refusals. */
+      if(oppAmpOn(g, seat)){
+        const sd = g.sides[seat];
+        const amp = (sd.gear || []).slice().sort(byUid).find(w => {
+          const v = J.abAmpTakers(g, seat, w.uid);
+          return v && v.takers.some(t => t.uid === u && t.from === "arsenal")
+            && affordsBoth(sd, v.cost, sd.arsenal, o) && legal(g, {t: "activate", uid: w.uid}, seat);
+        });
+        if(amp) return tag("oppArsAmp", {t: "activate", uid: amp.uid});
+      }
       return tag("oppArs", {t: "play", uid: u, from: "arsenal"});
+    }
   }
   const rxWindow = speeds.some(w => w === "attack-reaction" || w === "defense-reaction");
   if(rxWindow && g.pend && !(g.stack || []).length && !g.pend.rxPump){
@@ -1956,6 +1972,7 @@ const CALL_WHY = {
   weapon: "Swing your weapon. It costs no card.",
   resUnlock: "Spend the piece for its resource. It pays for an attack you are holding.",
   lifeAtBest: "Gain the life now. The arcane damage you took this turn makes it the bigger gain.",
+  oppArsAmp: "Amp first: your arsenal card is about to go on their turn, and this adds 1 to its arcane damage.",
   oppArs: "Cast your arsenal card now, on their turn: your hero lets it go at instant speed, so it lands early and your arsenal refills at the end of your turn.",
   discardDraw: "Discard the ally for the draw. It still plays from your graveyard, so the card is free.",
   gaNextTaker: "Play the card the go again is waiting for first. The attack still has its action point after.",

@@ -4734,8 +4734,18 @@ function holdPlay(g, card, zone, seat, window, target){
      taxes a card that has already been paid for (a player cannot owe resources) nor is destroyed by
      it, and stays to tax the next card. */
   const frostAt = (sd.board || []).filter(PR.isFrostbite).map(b => b.uid);
+  /* …AND SO IS EVERY OTHER PART OF ITS PRICE (v6.65). The cost is what the card cost WHEN IT WAS
+     PLAYED. CR 5.1.6: "Calculate Asset-Costs : Fifth, all asset-costs of the proposed card are
+     calculated." CR 5.1.7: "Pay Asset-Costs : Sixth, the player pays all asset-costs (if any)." Both
+     before CR 5.1.10's "the card is now considered played"; `execute` reading it again at resolution
+     let anything made in the window move a paid price. Driven: Rune Flash ("This costs {r} less to
+     play for each Runechant you control") waiting with one Runechant, a second made at instant speed
+     (Runic Disposition, Arcane Seeds), resolved a resource cheaper — a refund no invariant sees; a
+     Runechant destroyed in the window (Runebleed Robe) charged it again. The price is read here, off
+     the state the payment just covered, and `execute` charges exactly it (`_heldPrice`). */
+  const price = PR.effCost(card, sd, PR.costCtx(g, seat));
   const layer = {k: "play", label: shown + aimed + " (on the stack)", seat, card, zone, window,
-                 target: target || null, decl, res: sd.res || 0, lifted, frostAt};
+                 target: target || null, decl, res: sd.res || 0, lifted, frostAt, price};
   n = {...n, stack: [...(n.stack || []), layer],
            featured: {card, chip: "ON THE STACK"}};
   n = P.give(n, seat);
@@ -4794,10 +4804,12 @@ function resolveHeld(g){
     return lateFrost.length ? {...s, board: (s.board || []).filter(b => lateFrost.indexOf(b) < 0)} : s;
   });
   n = {...n, ...L.decl, _resolvingHeld: true};
+  if(L.price != null && L.card && L.card.uid != null) n._heldPrice = {uid: L.card.uid, cost: L.price};
   let out = commitPlay(n, L.card, L.zone, L.seat, L.window, L.target);
   if(lateFrost.length) out = put(out, L.seat, s => ({...s, board: [...(s.board || []), ...lateFrost]}));
   out = {...out};
   delete out._resolvingHeld;
+  delete out._heldPrice;
   for(const k of HELD_DECL) delete out[k];
   /* A CARD PUT INTO THE ARSENAL WHILE THIS WAITED is put back. Only an
      instant-speed answer could have done that, and `execute` empties the

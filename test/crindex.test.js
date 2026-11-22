@@ -117,9 +117,11 @@ test("crindex — the verdict counts are pinned", () => {
   /* 116 -> 118 and 106 -> 108 guarded AT v6.60: the deck-building rule (the hero sheet's
      keyword row leaves those keywords out) and Fusion's written form (the row's lookup finds
      the rule from "Ice Fusion"), cited in engine/cards.js, driven in test/crkw.test.js. */
-  assert.equal(rs.length, 118, "the number of distinct CR rules this project cites moved");
+  /* 118 -> 121 and 108 -> 111 guarded AT v6.65: CR 5.1.6, 5.1.7 and 5.1.10, a held play pays the
+     price calculated as it was played (judge.holdPlay, test/heldprice.test.js names them). */
+  assert.equal(rs.length, 121, "the number of distinct CR rules this project cites moved");
   /* 50 -> 51 guarded and 6 -> 5 drill-only AT v4.66: CR 7.1.2, built. */
-  assert.equal(by(rs, "guarded").length,  108, "guarded count moved");
+  assert.equal(by(rs, "guarded").length,  111, "guarded count moved");
   assert.equal(by(rs, "UNGUARDED").length,  3, "UNGUARDED count moved");
   assert.equal(by(rs, "drill-only").length, 5, "drill-only count moved");
   assert.equal(by(rs, "prose").length,      2, "prose count moved");

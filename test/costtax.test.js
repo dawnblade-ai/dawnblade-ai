@@ -277,7 +277,9 @@ test("the additional-cost check asks the GAME's half too", {skip}, () => {
      argument was invisible. One level of nesting is enough here and the
      count is asserted, because a scan that matches nothing passes. */
   const bare = code.match(/effCost\((?:[^()]|\([^()]*\))*\)/g) || [];
-  assert.ok(bare.length >= 2, "the scan found no `effCost` call at all — it is aimed wrong");
+  /* 2 -> 1 AT v6.65: the charge and the additional-cost check now share ONE read (`_price`, a held
+     play's locked price or `effCost(…, _costO)`), which is this drill's point made structural. */
+  assert.ok(bare.length >= 1, "the scan found no `effCost` call at all — it is aimed wrong");
   assert.ok(bare.every(c => /\(/.test(c.slice(8))),
     "the scan is truncating its matches again — it must span the nested call");
   const missing = bare.filter(c => !/_costO/.test(c));

@@ -3898,6 +3898,10 @@ function makeEffects(ctx){
        against a marked defending hero) would have had to be threaded by
        hand at four sites, which is v3.80's bug waiting to happen again. */
     const _costO = P.costCtx(s, actorOf(s));
+    /* A HELD PLAY PAYS THE PRICE IT WAS PLAYED AT (v6.65) — judge's `holdPlay` read it when the card
+       was played and the payment covered it; whatever the window made since does not move it. */
+    const _price = (s._heldPrice && s._heldPrice.uid === card.uid) ? s._heldPrice.cost
+                 : effCost(card, act(s), _costO);
     /* ---- A CHI COST IS GUARDED BEFORE THE POOL IS TOUCHED (v4.54) -----
        Enigma prints "{c}{c}{c}", and Inner Chi's own reminder text makes
        the relation one-way — "{c} can pay for {c} and/or {r} costs" — so
@@ -3936,7 +3940,7 @@ function makeEffects(ctx){
        activation it prints a tax on, went free. `costTaxes` with the route
        named is the one reader; judge's `boardAtkCost` asks the same. */
     exSide.res = act(s).res - (_allyCost != null ? _allyCost + P.costTaxes(card, act(s), _costO, from)
-                                                 : effCost(card, act(s), _costO));
+                                                 : _price);
     exSide.paySel = [];
     /* THE OPTIONAL ADDITIONAL COST IS CHARGED HERE, beside the resource
        cost, because that is what "as an additional cost to play this"
@@ -3949,7 +3953,7 @@ function makeEffects(ctx){
        verbatim and the exact shape `costCtx` was built to stop. Under a
        Frostbite or Hyper Inflation's tax the two disagreed, so the
        affordability test passed on a price the charge above did not use. */
-    if(n._addPaid && fx.addPay && act(s).res >= effCost(card, act(s), _costO) + fx.addPay.cost){
+    if(n._addPaid && fx.addPay && act(s).res >= _price + fx.addPay.cost){
       exSide.res = exSide.res - fx.addPay.cost;
       n = L(n, `${card.name}: the additional ${fx.addPay.cost} is paid.`);
     } else if(n._addPaid){

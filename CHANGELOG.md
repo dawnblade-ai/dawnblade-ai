@@ -1,3 +1,32 @@
+## v6.65 — a play waiting on the stack pays the price it was played at; Iyslander amps her off-turn casts
+
+- **Rules: a held play's cost is locked when it is played (the rest of v6.64's class).** The table holds an action-speed play on
+  the stack (v4.66) and `execute` charged its cost as the layer RESOLVED, reading the board again. CR 5.1.6 ("all asset-costs of
+  the proposed card are calculated") and CR 5.1.7 ("the player pays all asset-costs") both come before CR 5.1.10's "the card is
+  now considered played". Driven: Rune Flash ("This costs {r} less to play for each Runechant you control") waiting with one
+  Runechant, a second made at instant speed (Runic Disposition, Arcane Seeds), resolved a resource cheaper — a refund no invariant
+  sees; a Runechant destroyed in the window (Viserai's Runebleed Robe) charged it a resource more. `holdPlay` records the `price`
+  on the layer and `execute` charges exactly it (`_heldPrice`, cleared after the resolution). The audit behind it: `costOff` is
+  made only by Seismic Surge (start of the action phase) and a `nextTurn` tax is born not ready, so neither can appear in the
+  window; the board-dependent discounts (Runechants, Hyper Driver, marks, Draconic links) are what the lock covers. A probe over
+  the full ladder (816 games) found no held play whose price moved, so the rule policy never hit it: a person (or Sharp) could.
+  The trainer has no stack. **WIRE_V 47 -> 48.** Drill: test/heldprice.test.js (made / destroyed / unchanged / the declaration
+  does not outlive the play; sabotaged: the charge re-reading the board fails both window rows).
+- **AI: Iyslander amps the arsenal card she casts on the opponent's turn (gate `SPXOPPAMP`).** Crucible of Aetherweave: "Once per
+  Turn Instant - {r}: The next card you play this turn with an arcane damage effect, instead deals that much arcane damage plus 1."
+  Legal on ~275 of her off-turn windows, used on 0. When the arsenal cast (v6.64's `oppArs`) is one the amp reaches
+  (`judge.abAmpTakers`) and both are affordable, the Crucible goes first (new reason `oppArsAmp`). Own seat, 24 seeds each chair,
+  wins of 768: 266 -> 279 (135 -> 141 and 131 -> 138), 0 refusals / violations. Drill: test/oppamp.test.js (found in self-play;
+  the amp lands, the cast follows and takes it; sabotaged with the gate off).
+- **Measured, not shipped — Spellfire Cloak paying for those casts.** "Instant - Destroy this: Gain {r}. Activate this only during
+  an opponent's turn." Its {r} never made an arsenal cast affordable that the hand could not (0 of 111 windows with the Cloak and an
+  arsenal card); on vs off identical over 384 games. Deleted. Its real use is saving a pitched card, which is a payment-policy
+  question, not this branch.
+- Drills moved: test/costtax.test.js (the charge and the additional-cost check share one read now, so the scan finds one
+  `effCost` call), test/crindex.test.js (CR 5.1.6, 5.1.7, 5.1.10 cited and guarded), the two WIRE_V pins.
+- **Validation:** npm test 4532 / 4527 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; ladder 816 games, 0 refusals /
+  0 violations / 0 stalls (2 engine draws).
+
 ## v6.64 — Iyslander plays her hero; a Frostbite cannot tax a card already paid for
 
 - **Rules: a Frostbite made while a play waits on the table's stack no longer taxes it.** Frostbite: "Cards and abilities cost
