@@ -33,11 +33,13 @@ Enflame / Display Loyalty, lifeLt Scar for a Scar). Worker A on SPXCONDGA (via `
 
 **Never-sweep v6.70 (worker B, 16 heroes, legal>=50 / used<=5%):** the "free ability never looked at" shape does NOT recur.
 Own-turn abilities are used or have nothing to pay; off-turn ones all cost a hand card (out by the lesson). Leads: Blaze Aether
-Quickening 1/96 played (arcane ranked like physical power; worker B on SPXARCRANK); Dash Hyper Driver 51/2 (expected noise, skipped).
+Quickening 1/96 played; Dash Hyper Driver 51/2 (expected noise, skipped). **H39 SPXARCRANK NEGATIVE** (rank arcane by landed
+damage vs attack power minus expected block): Blaze 136->109, Iyslander 134->116 of 384. **LESSON: blocked damage still has value —
+it costs the foe hand cards. Never rank on landed damage alone.** `experiments/H39-arcane-rank-NEGATIVE.patch` (has judge.arcaneSoakOf).
 
 **WORKERS IN FLIGHT (assigned 2026-11-22 ~21:50Z by CEO session_013xG9xADa79zsMdfx4Ha7Ri, env_011rwpp2MyBTt3cEsZKDoVGk):**
 - `session_013xG9xCPAciqbr5nPRbgoCS` (Opus) — shipped SPXSTIRIDLE (v6.69), SPXARSPAY/SPXFLIPCRUSH (v6.70); now Fai Fealty (SPXFEALTY) — pushes ONLY `ship/fai-fealty` (and its earlier ship/* branches).
-- `session_013xG9x8VDdx8D1FfSJq5SjC` (Opus) — shipped SPXCLOAK (v6.69); trainchaos clean; never-sweep done; now SPXARCRANK (arcane vs physical ranking, Blaze first) on `ship/arcane-rank`.
+- `session_013xG9x8VDdx8D1FfSJq5SjC` (Opus) — shipped SPXCLOAK (v6.69); trainchaos clean; SPXARCRANK negative; now the rules-gap audit (failstates/gaps/sweep) on `ship/rules-gaps`.
 Both report via send_message to the CEO; neither pushes main. A limit stop sends NO report: check with get_session
 (status_bucket failed) / list_events and nudge. A new CEO tells both its session id. The CEO replays + re-validates + ships.
 
