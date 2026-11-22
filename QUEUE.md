@@ -4,12 +4,17 @@
 answered NEEDS-A-RULING notes are in `QUEUE-ARCHIVE.md` on this branch (grep it, don't read it). History lives in
 CHANGELOG.md (v6.30 on; older in `docs/archive/CHANGELOG-to-v6.29.md`) and LESSONS.md on main.
 
-## HANDOFF — START HERE (CEO session_013xG9xADa79zsMdfx4Ha7Ri, 2026-11-22, at v6.69)
+## HANDOFF — START HERE (CEO session_013xG9xADa79zsMdfx4Ha7Ri, 2026-11-22, at v6.70)
 
-**State:** live = **v6.69** on `main`, livecheck ALL PASS. Function `table` version 90 = `v6.69 · sage-v19`, stamped, `--check` OK.
+**State:** live = **v6.70** on `main`, livecheck ALL PASS. Function `table` version 92 = `v6.70 · sage-v19`, stamped, `--check` OK.
 **WIRE_V 49**. DATA_VER sage-v19. 17 heroes. Approximation ledger: 0 open. Pool 455/455.
 Ladder v6.69 (816 games, 48 each): briar 81 prism 76 kayo 71 dorinthea 60 azalea 59 enigma 57 dash 50 fai 48 viserai 42 bravo 42
 blaze 39 arakni 38 gravy 37 boltyn 32 iyslander 30 lyath 28 viseraibw 24. 0 refusals / violations / stalls (2 draws). Noise band max 9.
+
+**Shipped v6.70:** Bravo SPXARSPAY (arsenal never stores a card next turn cannot pay, `judge.arsenalPayable`) + SPXFLIPCRUSH
+(hero flip only when the rider applies, before the attack; `judge.arsTurnPays`, one body `parser.arsGrantMet`): **309 -> 371 of
+768**. Dash's 19/199 changed arsenal steps are late-game empty-deck cases (correct; 12 seeds neutral). Trainer chaos v6.69 clean.
+**The new shape to hunt: a free/cheap ability the policy never looks at** (Bravo's flip; Fai's Fealty 221/0 — worker A on it).
 
 **Shipped today (v6.69):** SPXCLOAK (`cloakPay`: Spellfire Cloak pays an off-turn cost when the seat's own line, played out
 both ways, pitches fewer cards; Iyslander 287->308, Blaze 246->270 of 768 at 24 seeds/chair; phone p95 9 ms) and SPXSTIRIDLE
@@ -23,8 +28,8 @@ H36 Lyath boo only for leak >= 2 (230 -> 228 of 768; the Might token pays), H37 
 iyslander +4). `experiments/H36-H37-NOTES.md`. Off-turn pitch is now closed as a lever.
 
 **WORKERS IN FLIGHT (assigned 2026-11-22 ~21:50Z by CEO session_013xG9xADa79zsMdfx4Ha7Ri, env_011rwpp2MyBTt3cEsZKDoVGk):**
-- `session_013xG9xCPAciqbr5nPRbgoCS` (Opus) — NEXT 1 done (negative); NEXT 3 done; now finishing SPXSTIRIDLE for ship; pushes ONLY `ship/blaze-energy-offturn`.
-- `session_013xG9x8VDdx8D1FfSJq5SjC` (Opus) — NEXT 4 Spellfire Cloak census + NEXT 3 Boltyn census; pushes ONLY `ship/cloak-boltyn-census`.
+- `session_013xG9xCPAciqbr5nPRbgoCS` (Opus) — shipped SPXSTIRIDLE (v6.69), SPXARSPAY/SPXFLIPCRUSH (v6.70); now Fai Fealty (SPXFEALTY) on `ship/fai-fealty`; pushes ONLY `ship/blaze-energy-offturn`.
+- `session_013xG9x8VDdx8D1FfSJq5SjC` (Opus) — shipped SPXCLOAK (v6.69); trainchaos clean; now the never-sweep (free abilities legal>=50/used<=5%, 16 heroes) on `ship/never-sweep`.
 Both report via send_message to the CEO; neither pushes main. A limit stop sends NO report: check with get_session
 (status_bucket failed) / list_events and nudge. A new CEO tells both its session id. The CEO replays + re-validates + ships.
 
