@@ -12,6 +12,9 @@
   any engine or policy finding. Run: 289 games at EPS 0.25 (34,060 random moves) and 289 at EPS 0.6 — 0 engine findings on
   every surface; the only policy finding was the over-pitch above.
 - Drills moved: test/explain.test.js (`payBack` unreached in self-play — it follows a person's taps).
+- **Validation:** npm test 4538 / 4533 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; ladder 816 games, 0 refusals /
+  0 violations / 0 stalls (2 engine draws), byte-identical to v6.66's; chaos at EPS 0.6 on the fixed policy: 103,434 random
+  moves, 0 engine / 0 policy findings.
 
 ## v6.66 — Runebleed Robe asks which Runechant pays
 
