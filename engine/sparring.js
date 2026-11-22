@@ -110,6 +110,10 @@ const num = (c, k) => (c && c[k] != null) ? c[k] : 0;
 const byUid = (a, b) => String(a.uid) < String(b.uid) ? -1 : String(a.uid) > String(b.uid) ? 1 : 0;
 
 const legal = (g, a, seat) => J.legal(g, a, seat) == null;
+/* DOES THIS PLAY KEEP THE ACTION POINT? `judge.keepsActionPoint`, plus the card's own gated go again
+   when its gate holds now (`judge.condGaNow`, SPXCONDGA). */
+const kap = (g, seat, uid, from) => J.keepsActionPoint(g, seat, uid, from)
+  || (condGaOn(g, seat) && (from === "hand" || from === "arsenal") && J.condGaNow(g, seat, uid, from));
 
 /* both the ability's cost and the taker's printed cost, out of the floating pool plus the rest of the hand */
 const affordsBoth = (sd, abCost, t, o) => {
@@ -186,7 +190,7 @@ const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate(
       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
       wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW"),
       graveOn = subGate("SPXGRAVE"), booOn = subGate("SPXBOO"), energyOn = subGate("SPXENERGY"), putOn = subGate("SPXPUT"),
-      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST"), arsPowOn = subGate("SPXARSPOW"), oppArsOn = subGate("SPXOPPARS"), oppAmpOn = subGate("SPXOPPAMP"), oppIceOn = subGate("SPXOPPICE"), stirIdleOn = subGate("SPXSTIRIDLE"), cloakOn = subGate("SPXCLOAK"), flipOn = subGate("SPXFLIPCRUSH"), arsPayOn = subGate("SPXARSPAY");
+      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST"), arsPowOn = subGate("SPXARSPOW"), oppArsOn = subGate("SPXOPPARS"), oppAmpOn = subGate("SPXOPPAMP"), oppIceOn = subGate("SPXOPPICE"), stirIdleOn = subGate("SPXSTIRIDLE"), cloakOn = subGate("SPXCLOAK"), flipOn = subGate("SPXFLIPCRUSH"), arsPayOn = subGate("SPXARSPAY"), condGaOn = subGate("SPXCONDGA");
 /* THE BLOCK A TOKEN PIECE MAY GIVE UP (SPXTOKENPIECE): one point. Flat Trackers (1 defence, blade
    break: "Destroy this: Create an Agility token. Go again") measured on Boltyn's own seat, 24 seeds
    each chair: 224 -> 253 of 768 spent this way against kept to block once. */
@@ -850,7 +854,7 @@ function bootsLine(g, seat, a, o){
   const held = nonAtkHeld(g, seat);
   if(!held.length) return null;
   /* step 1: the grant is waiting */
-  const keep = held.find(x => J.keepsActionPoint(g, seat, x.c.uid, x.from) && affordableWithin(sd, x.c, o));
+  const keep = held.find(x => kap(g, seat, x.c.uid, x.from) && affordableWithin(sd, x.c, o));
   if(keep && ((sd.gaNextQ || []).length)) return tag("gaNextTaker", {t: "play", uid: keep.c.uid, from: keep.from});
   /* step 2: spend the piece ahead of the attack */
   if(!a || !(a.t === "play" || a.t === "activate") || a.from === "hero") return null;
@@ -870,7 +874,7 @@ function bootsLine(g, seat, a, o){
     && legal(g, {t: "activate", uid: x.uid}, seat));
   if(!piece) return null;
   const pcost = num(piece.powCard, "cost");
-  const t = held.find(x => !J.keepsActionPoint(g, seat, x.c.uid, x.from) && x.c.uid !== atkCard.uid);
+  const t = held.find(x => !kap(g, seat, x.c.uid, x.from) && x.c.uid !== atkCard.uid);
   if(!t) return null;
   const need = pcost + num(t.c, "cost") + num(atkCard, "cost") - (sd.res || 0);
   const pool = (sd.hand || []).filter(c => c && c.uid !== t.c.uid && c.uid !== atkCard.uid && num(c, "pitch") > 0)
@@ -1032,7 +1036,7 @@ function offenceBase(g, seat, o){
   if(haveAtk || viaWeapon){
     const cands = from
       .map(x => ({c: x.c, uid: x.c && x.c.uid, from: x.from}))
-      .filter(x => x.c && num(x.c, "power") <= 0 && J.keepsActionPoint(g, seat, x.uid, x.from))
+      .filter(x => x.c && num(x.c, "power") <= 0 && kap(g, seat, x.uid, x.from))
       .filter(x => { if(!viaWeapon) return true;
         const t = J.grantTakers(g, seat, x.uid, x.from, grantPayOn(g, seat) ? {idlePick: true} : null);
         return !!t && t.some(k => k.from === "weapon"); });
@@ -1105,7 +1109,7 @@ function offenceBase(g, seat, o){
     .concat(allies)
     .filter(x => x.c && num(x.c, "power") > 0)
     .filter(x => x.ally || affordableWithin(sd, x.c, o))
-    .map(x => Object.assign(x, {kap: J.keepsActionPoint(g, seat, x.uid, x.ally ? "board" : x.from) ? 1 : 0}))
+    .map(x => Object.assign(x, {kap: kap(g, seat, x.uid, x.ally ? "board" : x.from) ? 1 : 0}))
     /* SPXRIDER (v6.59): an attack whose hand-banish rider buys its go again, with a card in
        hand that fires it and still plays from the banished zone, keeps the point too. */
     .map(x => Object.assign(x, {rl: !x.ally && !x.kap && riderOn(g, seat) && J.riderLead(g, seat, x.uid, x.from) ? 1 : 0}))

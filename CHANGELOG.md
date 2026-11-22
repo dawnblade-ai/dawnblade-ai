@@ -1,3 +1,24 @@
+## v6.71 — the AI sees a card's own conditional go again
+
+- **AI: a card's own gated go again counts when its gate holds now (SPXCONDGA).** `judge.keepsActionPoint` read printed go
+  again, the face-up arsenal stamp, the hero's grant and waiting grants, but never a card's OWN "if ... this gets go again":
+  Fai's Cinderskin Devotion / Hot on Their Heels / Enflame the Firebrand / Display Loyalty ("If you control 2 or more Draconic
+  chain links"), Scar for a Scar ("If you have less {h} than an opposing hero"), and gated go again on 24 cards across 13
+  heroes. New `effects.gatesMetNow` (effPowerNow's own gate loop, for any op; only gates the engine can settle NOW count, so
+  a payment, way-of-play or "if this hits" gate never does; the attack's own Draconic link counts, RULING user 2026-10-31)
+  and judge reader `condGaNow`; the policy's four action-point sites ask both. `keepsActionPoint` itself is unchanged, so its
+  judge-side callers are too. **Measured, Fai own seat + other chair, 24 seeds: 431 -> 464 of 768 (+33)**; 12 seeds of 384:
+  Briar 315 -> 321, Enigma 195 -> 201, Dorinthea 253 -> 258, Viserai 173 -> 174, Boltyn 125 -> 125, Viserai BW 114 -> 112.
+  0 refusals / violations / stalls. Drill: test/condga.test.js (sabotaged four ways).
+- **Found on the way:** Fai's Fealty token ("the next card you play this turn is Draconic", 221 legal / 0 used) changed
+  nothing when spent, because of this blindness; re-measured on top of SPXCONDGA it is still noise (219 -> 224 / 222 of 384)
+  and is not shipped (patch in experiments/ on findings/queue).
+- **Measured NO, not shipped:** ranking arcane by landed damage against an attack's power minus the expected block (Blaze
+  136 -> 109, Iyslander 134 -> 116 of 384): a blocked attack still costs the defender hand cards.
+- **Validation:** npm test 4552 / 4547 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; ladder 816 games, 0 refusals /
+  0 violations / 0 stalls (3 engine draws), Fai 48 -> 55 of 96; chaos 289 games (32,942 random moves) 0 findings. No wire,
+  data or page change beyond `APP_VER`.
+
 ## v6.70 — Bravo stores a card he can pay for, and turns it face-up only when crush pays
 
 - **AI: the arsenal step never stores a card next turn cannot pay for (SPXARSPAY).** It stored the hand's biggest printed

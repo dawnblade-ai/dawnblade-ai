@@ -103,8 +103,9 @@ test("H12 still declined: every priced pick keeps its refusal", {skip}, () => {
   /* Condemn to Slaughter re-anchored from leg 2 to "13b" (H-DAGGER moved leg 2's game), and back to leg 2
      at v6.47: a seventeenth entrant moved every (i+5) pairing; leg 2 is Viserai v Fai again and reaches it.
      Golden Tipple re-anchored from leg 8 to "8b" and Blaze from 10 to "10d" at v6.56 (the gear and Polarity
-     fixes moved both games). */
-  const declined = [[4, "Pick Up the Point"], [2, "Condemn to Slaughter"], ["8b", "Golden Tipple"], ["10d", "Blaze"]];
+     fixes moved both games). Condemn to Slaughter re-anchored from leg 2 to "2c" at v6.71 (SPXCONDGA moved
+     Fai's sequencing in that game; still Viserai v Fai). */
+  const declined = [[4, "Pick Up the Point"], ["2c", "Condemn to Slaughter"], ["8b", "Golden Tipple"], ["10d", "Blaze"]];
   for(const [a, src] of declined) for(const r of seen(a, src)){
     assert.equal(r.cls, null, src + " is not a free pick");
     assert.equal(r.ans, "promptConfirm", src + " is declined");
