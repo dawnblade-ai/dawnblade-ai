@@ -1,3 +1,33 @@
+## v6.64 — Iyslander plays her hero; a Frostbite cannot tax a card already paid for
+
+- **Rules: a Frostbite made while a play waits on the table's stack no longer taxes it.** Frostbite: "Cards and abilities cost
+  you an additional {r} to play or activate" / "When you play a card or activate an ability, destroy this" — both at the PLAY. The
+  table holds an action-speed play on the stack (v4.66) and `execute` charges as the layer resolves, so a Frostbite made in the
+  window (Iyslander's Ice card at instant speed) taxed a card already paid for: Kayo's Buckwild resolved with his resources at -1
+  (NEGATIVE-RES, 784 times in 192 games once Iyslander cast on the opponent's turn). `holdPlay` records the Frostbites there at the
+  play (`frostAt` on the layer) and `resolveHeld` sets the late ones aside: no tax, not destroyed, still there for the next card. The
+  trainer has no stack, so it has no such window. **WIRE_V 46 -> 47** (the layer's new field). Drill: test/frostheld.test.js (a late
+  Frostbite neither taxes nor shatters; one there at the play still does — v2.74's ruling stands; sabotaged).
+- **AI: Iyslander casts her arsenal on the opponent's turn (`judge.grantedInstant`, gate `SPXOPPARS`).** Her hero: "If it's not
+  your turn, you may play blue non-attack action cards from your arsenal as though they were instants. Whenever you play an Ice card
+  during an opponent's turn, create a Frostbite token under their control." The census: those casts legal ~80 times in 32 games,
+  made 0. The reader names an arsenal card that is not an instant or reaction by type yet `legal` lets its seat play on the
+  opponent's turn — one a hero grant made castable — and the policy casts it at the first window it holds outside a defence, so the
+  Frostbite taxes the rest of their turn. Own seat, wins of 768 at 24 seeds each chair: 263 -> 266 (noise; the LAST window instead,
+  where the Frostbite dies unused at their end phase: 128 of 384, the same as off). Ships for the advice: it is the hero's printed play
+  and the call never offered it (new reason `oppArs`).
+- **AI: the payment pitches around the card a discard cost named.** Five Frostbites made Carrion Crown's free draw cost 5; Gravy named
+  Cutty Shark for the discard and the pitch reached for the same card — a policy refusal (`legal`: "already spent on the discard").
+  Drill: test/discpitch.test.js (sabotaged).
+- **Measured, not shipped — Lyath's Suspense auras cast in the opponent's last window.** The clock ticks at the start of his turn, so
+  a leave-payout aura (Act of Glory, Tension in the Air, Edge of Their Seats) cast then pays out a turn sooner. It lost: 127 -> 112 of
+  384 (113 with The Suspense is Killing Me included). The cards pitched to pay 2-4 for the aura on the opponent's turn are the cards he
+  swings with on his. Deleted. Also settled: Brothers in Arms (47 legal / 8 played) is a blocker that loses a fair ranking, and Act of
+  Glory is pitched, never stranded (Lyath ends 291 of 291 turns with no castable card left in hand).
+- Drills moved: test/speccensus.test.js (`freezeSide` reached: Cold Snap's freeze from the arsenal), test/explain.test.js
+  (`arsenalSkip` reached), test/keycensus.test.js (`isFrostbite` is judge's: the trainer has no stack), the two WIRE_V pins.
+- **Validation:** npm test 4527 / 4522 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; ladder 816 games, 0 refusals /
+  0 violations / 0 stalls (2 engine draws).
 ## v6.63 — the peek names a card's keywords
 
 - **The in-game peek (`PeekDock`, both boards) names the card's keywords** under its name ("Go again · Intimidate", "Phantasm",

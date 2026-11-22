@@ -152,11 +152,12 @@ test("every reason is keyed from a site in the policy, and the census names what
      `gateFirst` and `pitchChi` are reached now. v6.57's SPXRXPUMP (the attacker's own reaction window
      keeps its preventions and life gains) re-routes it once more: `grantKeep` is reached now. v6.59's
      `riderFirst` / `riderPick` (Embrace Ursur's banish) are Viserai BW's, whom these 30 games do not
-     seat: test/embraceursur.test.js drives both. */
+     seat: test/embraceursur.test.js drives both. v6.64's SPXOPPARS (Iyslander casts her arsenal on the
+     opponent's turn) re-routes it: `arsenalSkip` is reached now, and `oppArs` is. */
   const seen = census().keys;
   for(const k of Object.keys(seen)) assert.ok(SP.CALL_WHY[k], "reached key " + k + " has no reason");
   assert.deepEqual(keys.filter(k => !seen[k]).sort(),
-    ["abtarget", "addPayNo", "allocAll", "allyTake", "answer", "arenaAP", "arenaRes", "arsenalSkip", "bancost", "bancostNo", "boostNo",
+    ["abtarget", "addPayNo", "allocAll", "allyTake", "answer", "arenaAP", "arenaRes", "bancost", "bancostNo", "boostNo",
      "chargeDone", "chargeMore", "chargeNone", "discost", "laBlock", "laBoard", "laHit", "laHold", "laKeep", "laSafe", "laTake", "lookOwn",
      "payCancel", "riderFirst", "riderPick", "traverseBack", "traverseStay", "usurp"]);
 });

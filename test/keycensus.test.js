@@ -342,7 +342,7 @@ test("the one-board reader sets are pinned", {skip}, () => {
     assert.ok(both.includes(n), n + " is demonstrably asked by both boards");
 
   assert.deepEqual(onlyJ.sort(),
-    ["abilityGa", "arcAmount", "boostPays", "chiValue", "handFree", "isActionCard", "isAtkActionCard", "isDeclaredDefender", "isDR", "isToken",
+    ["abilityGa", "arcAmount", "boostPays", "chiValue", "handFree", "isActionCard", "isAtkActionCard", "isDeclaredDefender", "isDR", "isFrostbite", "isToken",
      "printedKw", "qualMatches", "splitCostsAP", "weaponCost"].sort(),
     "a reader judge asks and the trainer does not. TWO LEFT this list at " +
     "v3.99: `tapsToActivate` (the trainer now refuses a tapped hero) and " +
@@ -385,7 +385,10 @@ test("the one-board reader sets are pinned", {skip}, () => {
     "asks `isToken` and the name stays on this list for the right reason.\n" +
     "v6.51: `isActionCard` ARRIVED, read inside `judge.defActGainNow`, the seam `sparring.js` asks " +
     "to price Lyath's boo while he defends (`chiValue`'s reason). The trainer reaches it through the " +
-    "shared `effects.defendValue`, and a human decides their own boo.");
+    "shared `effects.defendValue`, and a human decides their own boo.\n" +
+    "v6.64: `isFrostbite` ARRIVED, read in `judge.holdPlay` / `resolveHeld`: a Frostbite made while a " +
+    "play waits on the TABLE's stack does not tax it. The trainer has no stack — it resolves a play the " +
+    "moment it is paid — so there is no window for a late Frostbite to arrive in, and the job is judge's.");
 
   assert.deepEqual(onlyT.sort(),
     ["clean", "defCap", "dracLinksNow", "frostCount", "hasKwNow", "instantAbilityReady",

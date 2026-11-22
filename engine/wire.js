@@ -358,7 +358,11 @@
    Strike's "if you've dealt damage this turn"), inside a whole-shipped field. A v45 peer
    keeps no count and reads the old gate, so the pair diverges on the first Second Strike
    after a blocked swing. By hand, behind the release handshake. */
-const WIRE_V = 46;
+/* 46 -> 47 AT v6.64: a held play's layer gains `frostAt` (the uids of the Frostbites its
+   controller held when it was played; `judge.resolveHeld` sets aside any made while it
+   waited). `stack` ships whole; a v46 peer taxes the play with the late Frostbite and the
+   resources diverge (to -1) on the first Ice card answering a held play. By hand. */
+const WIRE_V = 47;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

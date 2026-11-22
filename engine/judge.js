@@ -2000,6 +2000,17 @@ const pumpsNow = (g, seat, uid, from) => {
     || (fx.conds || []).some(k => k && k.op && k.op[0] === "self")
     || (fx.ops || []).some(o => o && PUMP_OPS.indexOf(o[0]) >= 0);
 };
+/* IS THIS ARSENAL CARD AN INSTANT ONLY BY A GRANT, AND CASTABLE NOW? (SPXOPPARS, v6.64) For
+   `sparring.js`, which reads no card text. Iyslander: "If it's not your turn, you may play blue
+   non-attack action cards from your arsenal as though they were instants." A card that is neither
+   an instant nor a reaction by type, that `legal` lets its seat play on the OPPONENT's turn, is one
+   such a grant made castable; the
+   policy casts it at the first window it holds outside a defence. False on the seat's own turn. */
+const grantedInstant = (g, seat) => {
+  const c = at(g, seat).arsenal;
+  if(!c || g.turnPlayer === seat || TY.isInstant(c) || TY.isAR(c) || TY.isDR(c)) return null;
+  return legal(g, {t: "play", uid: c.uid, from: "arsenal"}, seat) == null ? c.uid : null;
+};
 /* A PIECE THAT SPENDS ITSELF FOR A TOKEN OF ITS OWN, WITH GO AGAIN (SPXTOKENPIECE). For
    `sparring.js`, which reads no card text: an equipment ability that costs no resource,
    destroys or banishes the piece, has go again, and pays out only tokens for its controller
@@ -4715,8 +4726,16 @@ function holdPlay(g, card, zone, seat, window, target){
   /* THE DECLARED TARGET IS ON THE LAYER'S FACE (v5.72): the other seat
      answers knowing what the ability is aimed at. */
   const aimed = decl._actTarget && decl._actTarget.name ? " → " + decl._actTarget.name : "";
+  /* THE FROSTBITES THIS PLAY MEETS ARE THE ONES THERE NOW (v6.64). Frostbite: "Cards and abilities
+     cost you an additional {r} to play or activate" and "When you play a card or activate an ability,
+     destroy this." Both happen as the card is PLAYED, which is this moment; `execute` charges and
+     shatters as the layer resolves (the hold is the approximation), so `resolveHeld` sets aside any
+     Frostbite made while this waited (Iyslander's instant-speed Ice card answering it): it neither
+     taxes a card that has already been paid for (a player cannot owe resources) nor is destroyed by
+     it, and stays to tax the next card. */
+  const frostAt = (sd.board || []).filter(PR.isFrostbite).map(b => b.uid);
   const layer = {k: "play", label: shown + aimed + " (on the stack)", seat, card, zone, window,
-                 target: target || null, decl, res: sd.res || 0, lifted};
+                 target: target || null, decl, res: sd.res || 0, lifted, frostAt};
   n = {...n, stack: [...(n.stack || []), layer],
            featured: {card, chip: "ON THE STACK"}};
   n = P.give(n, seat);
@@ -4768,8 +4787,15 @@ function resolveHeld(g){
     }
     return o;
   });
+  /* Frostbites made while the play waited sit out its resolution (see `holdPlay`). */
+  let lateFrost = [];
+  if(L.frostAt) n = put(n, L.seat, s => {
+    lateFrost = (s.board || []).filter(b => PR.isFrostbite(b) && L.frostAt.indexOf(b.uid) < 0);
+    return lateFrost.length ? {...s, board: (s.board || []).filter(b => lateFrost.indexOf(b) < 0)} : s;
+  });
   n = {...n, ...L.decl, _resolvingHeld: true};
   let out = commitPlay(n, L.card, L.zone, L.seat, L.window, L.target);
+  if(lateFrost.length) out = put(out, L.seat, s => ({...s, board: [...(s.board || []), ...lateFrost]}));
   out = {...out};
   delete out._resolvingHeld;
   for(const k of HELD_DECL) delete out[k];
@@ -5411,7 +5437,7 @@ function moves(g, seat){
 }
 
 return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, moves, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, cyclePick, riderPick, riderLead, arsenalAttack, arsenalUsable, arsenalPower, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, pumpsNow, tokenPiece, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, weaponPumpOf, gaNextPiece, nonAtkHeld, discardDrawPiece, lifeGainOf, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
+        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, cyclePick, riderPick, riderLead, arsenalAttack, arsenalUsable, arsenalPower, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, pumpsNow, grantedInstant, tokenPiece, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, weaponPumpOf, gaNextPiece, nonAtkHeld, discardDrawPiece, lifeGainOf, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf, waitingOn,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */

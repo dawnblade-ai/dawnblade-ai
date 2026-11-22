@@ -166,7 +166,9 @@ const fixOn = (g, seat) => {
    an optional hand banish with class riders (`judge.riderPick`: Embrace Ursur) gives up a card
    that still plays from the banished zone and fires a rider. SPXBANFIRST (v6.60) of two attacks
    that tie on rank, power and cost, the one played from the banished zone goes first. SPXARSPOW
-   (v6.62) the arsenal step stores the card with the most power FROM the arsenal (`judge.arsenalPower`). */
+   (v6.62) the arsenal step stores the card with the most power FROM the arsenal (`judge.arsenalPower`).
+   SPXOPPARS (v6.64) an arsenal card a hero grant makes an instant (`judge.grantedInstant`: Iyslander's
+   blue non-attacks) is cast on the opponent's turn, at the first window outside a defence. */
 const subGate = k => {
   const v = (typeof process !== "undefined" && process.env && process.env[k]) || "";
   return (g, seat) => {
@@ -181,7 +183,7 @@ const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate(
       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
       wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW"),
       graveOn = subGate("SPXGRAVE"), booOn = subGate("SPXBOO"), energyOn = subGate("SPXENERGY"), putOn = subGate("SPXPUT"),
-      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST"), arsPowOn = subGate("SPXARSPOW");
+      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST"), arsPowOn = subGate("SPXARSPOW"), oppArsOn = subGate("SPXOPPARS");
 /* THE BLOCK A TOKEN PIECE MAY GIVE UP (SPXTOKENPIECE): one point. Flat Trackers (1 defence, blade
    break: "Destroy this: Create an Agility token. Go again") measured on Boltyn's own seat, 24 seeds
    each chair: 224 -> 253 of 768 spent this way against kept to block once. */
@@ -447,9 +449,15 @@ function payAction(g, seat, p, o){
   const held = gr && gr.filter(k => (sd.paySel || []).indexOf(k.uid) < 0 && jointly(sd, p.card, k, o, owe))
     .sort((a, b) => b.power - a.power || a.cost - b.cost || byUid(a, b))[0];
   const keep = gate || (held ? [held.uid] : null);
-  const c = pitchPick(sd, p.card, o, keep, owe);
+  /* THE CARD A DISCARD COST NAMED IS NOT PITCHED (v6.64). `legal` refuses it (v4.87: pitched, the
+     cost it was named for has nothing left to spend), and the payment never offered it until five
+     Frostbites made Carrion Crown's free draw cost 5: Gravy named Cutty Shark for the discard, and
+     the pitch then reached for Cutty Shark beside Barnacle (equal pitch, lower power) — a refusal.
+     Passed over here as if already selected. */
+  const pz = g._discCostUid != null ? {...sd, paySel: [...(sd.paySel || []), g._discCostUid]} : sd;
+  const c = pitchPick(pz, p.card, o, keep, owe);
   /* the call names the gate, or the grant's attack, only when keeping it changed the card pitched */
-  if(c && keep){ const plain = pitchPick(sd, p.card, o); if(plain && plain.uid !== c.uid) return tag(gate ? "gateKeep" : "grantKeep", {t: "paySel", uid: c.uid}); }
+  if(c && keep){ const plain = pitchPick(pz, p.card, o); if(plain && plain.uid !== c.uid) return tag(gate ? "gateKeep" : "grantKeep", {t: "paySel", uid: c.uid}); }
   /* Unreachable after a play this policy proposed — `legal` guarantees
      the hand covers the cost. It is here for a payment the policy did not
      open: a human who taps a card and hands the seat over mid-decision
@@ -1486,6 +1494,21 @@ function actBase(g, seat, o){
         return v && v.now > v.base && v.now >= v.best && legal(g, {t: "play", uid: x.c.uid, from: x.from}, seat); });
     if(lc) return tag("lifeAtBest", {t: "play", uid: lc.c.uid, from: lc.from});
   }
+  /* THE ARSENAL CARD A HERO GRANT MAKES AN INSTANT, ON THE OPPONENT'S TURN (v6.64, SPXOPPARS).
+     Iyslander plays blue non-attack actions from her arsenal "as though they were instants" when it
+     is not her turn, and every Ice card she plays then gives the opponent a Frostbite ("Cards and
+     abilities cost you an additional {r}"). The census: those arsenal casts legal on the opponent's
+     turn some 80 times in 32 games, made 0 times. Cast at the first window this seat holds outside a
+     defence, so the Frostbite meets the rest of their turn (cast in their LAST window it is destroyed
+     at their end phase unused: 128 of 384, the same as off), and the arsenal refills at the end of
+     her turn. `judge.grantedInstant` answers (not an instant by type, `legal` now); one per window,
+     structurally (nothing of this seat's on the stack). Own seat, 24 seeds each chair, wins of 768:
+     263 -> 266, noise; it ships because it is the hero's printed play and the call never offered it. */
+  if(oppArsOn(g, seat) && g.turnPlayer !== seat && !g.pend && !(g.stack || []).some(l => l && l.seat === seat)){
+    const u = J.grantedInstant(g, seat);
+    if(u != null && !J.defendsNow(g, seat, u, "arsenal") && idleOK(g, seat, u, "arsenal"))
+      return tag("oppArs", {t: "play", uid: u, from: "arsenal"});
+  }
   const rxWindow = speeds.some(w => w === "attack-reaction" || w === "defense-reaction");
   if(rxWindow && g.pend && !(g.stack || []).length && !g.pend.rxPump){
     const r = reaction(g, seat);
@@ -1933,6 +1956,7 @@ const CALL_WHY = {
   weapon: "Swing your weapon. It costs no card.",
   resUnlock: "Spend the piece for its resource. It pays for an attack you are holding.",
   lifeAtBest: "Gain the life now. The arcane damage you took this turn makes it the bigger gain.",
+  oppArs: "Cast your arsenal card now, on their turn: your hero lets it go at instant speed, so it lands early and your arsenal refills at the end of your turn.",
   discardDraw: "Discard the ally for the draw. It still plays from your graveyard, so the card is free.",
   gaNextTaker: "Play the card the go again is waiting for first. The attack still has its action point after.",
   gaNextPiece: "Spend the piece for go again on the card you play next, so it does not end the turn before your attack.",

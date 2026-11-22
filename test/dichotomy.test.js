@@ -776,7 +776,8 @@ test("a `filters` prompt survives the wire, which is what the bump is ABOUT", ()
   /* 43 -> 44 AT v6.44: `hist.runes/actNames/atkKws`, a build's `_face`, the `traverse` op (test/traverse.test.js). */
   /* 44 -> 45 AT v6.48: a chain entry's `out` (test/linkout.test.js). */
   /* 45 -> 46 AT v6.60: `hist.dmg` (test/conditionals.test.js). */
-  assert.equal(W.WIRE_V, 46, "the bump moved — say what changed in wire.js's header");
+  /* 46 -> 47 AT v6.64: a held layer's `frostAt` (test/frostheld.test.js). */
+  assert.equal(W.WIRE_V, 47, "the bump moved — say what changed in wire.js's header");
   const g = H.state({grave: [RATK("a1"), RNON("n1")], res: 9, ap: 1}, {}, {actor: 0, turn: 3});
   g.prompt = sheet([RATK("a1"), RNON("n1")]);
   assert.ok(g.prompt && g.prompt.filters, "fixture: the sheet carries the field");

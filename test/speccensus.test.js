@@ -300,9 +300,12 @@ test("every spec field that reaches prompts.js is pinned", () => {
     /* +classRider AT v6.46: Embrace Ursur's "If it's Runeblade, … If it's Shadow, …" (v6.40,
        `optCost.classRiders`), reached by the drive now that Viserai, Between Worlds is dealt. */
     /* +awaken AT v6.47: Prism's awaken pick, reached once she is dealt. */
+    /* +freezeSide AT v6.64: Cold Snap's freeze pick ("freeze a card in their arsenal"), reached now that
+       Iyslander casts it from her arsenal on the opponent's turn (SPXOPPARS). Named in `buildPrompt`;
+       read by `applyAnswer` (effects.js). */
     "amount", "arsStamp", "avail", "awaken", "banStamp", "by", "cards", "charge", "classRider", "cost", "costRider",
     "ctrHeld", "ctrSpend", "ctrStamp", "defUid", "destroyEffect", "destroyUid", "discard", "elseOps", "equipStamp",
-    "exactPitch", "faceUp", "filter", "hint", "jab", "keepTop", "lateGa", "max", "min", "moveFoe", "n",
+    "exactPitch", "faceUp", "filter", "freezeSide", "hint", "jab", "keepTop", "lateGa", "max", "min", "moveFoe", "n",
     "ops", "optional", "options", "playThisTurn", "reveal", "shuffleAfter", "side", "spendCtr",
     "src", "tag", "tapHero", "tapUid", "taps", "title", "to", "wayRider", "zone",
   /* +reveal (hand reveals, after H3) — Crash and Bash's reveal cost and Flamecall
