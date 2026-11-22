@@ -1,0 +1,91 @@
+H34 (NEGATIVE) — SPXARCRANK: an arcane non-attack over an attack that ends the turn, ranked on what lands.
+Census (3 seeds): Blaze card attacks printed 7.3 avg, landed 0.98 (0 of 100 landed in full); its arcane printed 3.4, landed 3.7.
+Iyslander attacks landed 0.79 of 6.5, arcane 4.35. 76 Blaze / 95 Iyslander attack plays had an arcane card legal beside them.
+Model: attack lands power - (3 x foe hand + foe gear defence); arcane lands arcane - judge.arcaneSoakOf(foe).
+Fires: Aether Quickening played 12x in 96 Blaze games (was 1); Blaze card attacks 100 -> 30.
+A/B 12 seeds, off -> on, 0 refusals / violations / stalls:
+  Blaze     A 70 -> 56, B 66 -> 53  (136 -> 109 of 384)
+  Iyslander A 68 -> 62, B 66 -> 54  (134 -> 116 of 384)
+Why: a blocked attack is not wasted — the foe spends 2-3 hand cards on it, roughly its power's worth.
+Variant ARCV=pow (attack valued at full power; arcane only when arcane - soak >= power): Iyslander 134 -> 133 (noise); Blaze never meets it.
+Not shipped.
+
+diff --git a/engine/judge.js b/engine/judge.js
+index 4f94e69..ad71a9e 100644
+--- a/engine/judge.js
++++ b/engine/judge.js
+@@ -2829,6 +2829,11 @@ const arcaneOf = (g, seat, uid, from) => {
+           : from === "hand" || from === "banish" ? (sd[from] || []).find(x => x && x.uid === uid) : null;
+   return c ? PR.arcAmount(c) : 0;
+ };
++/* ---- HOW MUCH ARCANE CAN THIS SEAT'S WORN IRON SOAK? (SPXARCRANK) ----
++   For `sparring.js`, which reads no card text: the total of every arcane barrier and
++   spellvoid `parser.arcaneSoaks` lists on the seat's live gear (public: equipment is
++   face up). An upper bound: a barrier still costs its wearer resources to pay. */
++const arcaneSoakOf = (g, seat) => PR.arcaneSoaks(at(g, seat)).reduce((t, x) => t + (+x.amount || 0), 0);
+ /* ---- WHAT CAN THE HERO'S COUNTER-SPENDING PICK TAKE? (v6.53, SPXENERGY) ----
+    Blaze's "Remove X energy counters: banish a Wizard non-attack ... deals
+    arcane damage equal to X. You may play it this turn as though it were an
+@@ -5584,7 +5589,7 @@ function moves(g, seat){
+ 
+ return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, moves, reduce, settle, strike, closeChain,
+         playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, cyclePick, riderPick, riderLead, arsenalAttack, arsenalUsable, arsenalPayable, arsenalPower, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, boardCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, arsTurnPays, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, pumpsNow, grantedInstant, oppTurnTrigger, oppTurnTriggerPlay, tokenPiece, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, instantNextTakers, weaponPumpOf, gaNextPiece, nonAtkHeld, discardDrawPiece, lifeGainOf, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
+-        actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf, waitingOn,
++        actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf, waitingOn, arcaneSoakOf,
+         handFree: PR.handFree,
+         /* the card semantics seam (v2.77) */
+         setDb, effectsFor, withEffects, openPrompt, autoAnswer,
+diff --git a/engine/sparring.js b/engine/sparring.js
+index 629f93f..ed3f3b0 100644
+--- a/engine/sparring.js
++++ b/engine/sparring.js
+@@ -186,7 +186,7 @@ const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate(
+       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
+       wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW"),
+       graveOn = subGate("SPXGRAVE"), booOn = subGate("SPXBOO"), energyOn = subGate("SPXENERGY"), putOn = subGate("SPXPUT"),
+-      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST"), arsPowOn = subGate("SPXARSPOW"), oppArsOn = subGate("SPXOPPARS"), oppAmpOn = subGate("SPXOPPAMP"), oppIceOn = subGate("SPXOPPICE"), stirIdleOn = subGate("SPXSTIRIDLE"), cloakOn = subGate("SPXCLOAK"), flipOn = subGate("SPXFLIPCRUSH"), arsPayOn = subGate("SPXARSPAY");
++      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST"), arsPowOn = subGate("SPXARSPOW"), oppArsOn = subGate("SPXOPPARS"), oppAmpOn = subGate("SPXOPPAMP"), oppIceOn = subGate("SPXOPPICE"), stirIdleOn = subGate("SPXSTIRIDLE"), cloakOn = subGate("SPXCLOAK"), arcRankOn = subGate("SPXARCRANK"), flipOn = subGate("SPXFLIPCRUSH"), arsPayOn = subGate("SPXARSPAY");
+ /* THE BLOCK A TOKEN PIECE MAY GIVE UP (SPXTOKENPIECE): one point. Flat Trackers (1 defence, blade
+    break: "Destroy this: Create an Agility token. Go again") measured on Boltyn's own seat, 24 seeds
+    each chair: 224 -> 253 of 768 spent this way against kept to block once. */
+@@ -1149,6 +1149,32 @@ function offenceBase(g, seat, o){
+     : x.kap ? "atkKeepsAP"
+     : rankC(x) < 3 && x.cv && !x.cv.charged ? (x.gr && !x.cv.gaIf ? "gateFirst" : "chargeFirst")
+     : x.ally ? (targetFor(g, seat, x.c) !== "hero" ? "allyTake" : "allyIn") : epMoved ? "effPower" : waiting ? "grantWait" : "biggestAttack";
++  /* ARCANE IS NOT BLOCKED (SPXARCRANK). Every attack above outranks every non-attack, so a
++     4-arcane Aether Quickening waited behind a 7-power swing the foe then blocked: over 3 seeds
++     Blaze's card attacks printed 7.3 on average and landed 0.98 (none of 100 landed in full),
++     while its arcane printed 3.4 and landed 3.7; Iyslander's attacks landed 0.79 of 6.5 and her
++     arcane 4.35. When the attack picked would end the turn (it keeps no action point, is not a
++     charge line, a weapon, an ally or a grant), it is weighed against the best arcane card the
++     seat can play instead, on what lands: the attack's power less what the foe can block with
++     what is public (3 for each card in hand, plus the defence of the iron it wears), the arcane
++     less the barrier and spellvoid that iron carries (`judge.arcaneSoakOf`). */
++  if(pick && !pick.weapon && !pick.ally && !pick.granted && !pick.kap && rankC(pick) === 3 && arcRankOn(g, seat)){
++    const foe = g.sides[1 - seat];
++    const wall = 3 * (foe.hand || []).length + (foe.gear || []).reduce((t, x) => t + Math.max(0, num(x, "def")), 0);
++    const atkLands = process.env.ARCV === "pow" ? effOf(pick) - 1 : Math.max(0, effOf(pick) - wall);
++    const soak = J.arcaneSoakOf(g, 1 - seat);
++    const arc = from
++      .map(x => ({c: x.c, uid: x.c && x.c.uid, from: x.from}))
++      .filter(x => x.c && num(x.c, "power") <= 0)
++      .filter(x => grantOK(x))
++      .filter(x => idleOK(g, seat, x.uid, x.from))
++      .filter(x => affordableWithin(sd, x.c, o))
++      .map(x => Object.assign(x, {lands: J.arcaneOf(g, seat, x.uid, x.from) - soak}))
++      .filter(x => x.lands > atkLands)
++      .sort((a, b) => b.lands - a.lands || num(a.c, "cost") - num(b.c, "cost") || byUid(a, b))
++      .find(x => legal(g, {t: "play", uid: x.uid, from: x.from}, seat));
++    if(arc) return tag("arcaneOverAttack", {t: "play", uid: arc.uid, from: arc.from});
++  }
+   if(pick && pick.weapon) return tag(pickWhy(pick), {t: "activate", uid: pick.uid});
+   if(pick) return tag(pickWhy(pick), pick.ally
+     ? {t: "activate", uid: pick.uid, target: targetFor(g, seat, pick.c)}
+@@ -2092,6 +2118,7 @@ const CALL_WHY = {
+   resUnlock: "Spend the piece for its resource. It pays for an attack you are holding.",
+   lifeAtBest: "Gain the life now. The arcane damage you took this turn makes it the bigger gain.",
+   oppArsAmp: "Amp first: your arsenal card is about to go on their turn, and this adds 1 to its arcane damage.",
++  arcaneOverAttack: "Cast the arcane card instead of the attack. Arcane damage cannot be blocked, and they hold enough to block most of that swing.",
+   cloakPay: "Spend the piece first. It pays this cost, so the card you would have pitched stays in your hand for your own turn.",
+   oppIce: "Cast it from your arsenal now, on their turn: your hero adds a Frostbite of its own, so they pay for two plays instead of one.",
+   oppArs: "Cast your arsenal card now, on their turn: your hero lets it go at instant speed, so it lands early and your arsenal refills at the end of your turn.",
