@@ -154,6 +154,8 @@ npm run fairness      # is any card STRONGER than printed (exits non-zero on a f
   engine ending a dead position, are reported apart and are not a failure). Win counts are
   reproducible, not repeatable: the noise band is a median of ~3 wins and up to ~10, so
   a balance claim needs several seeds on both sides of the change.
+- After rules, wire or AI changes: `node tools/chaos.js` (random LEGAL moves mixed into self-play: `legal`/`reduce`
+  disagreements, wire replay divergence, view throws, invariants, policy and Sharp refusals; `EPS=0.6` for more). Exit 0 = clean.
 - UI changes: drive the real page at phone size (393×852) and assert on element boxes,
   not screenshots. `node tools/page.js` does it offline (CDNs and the card DB served
   locally; deps in a scratch dir, see its header) and exports `open()` for drives.
@@ -257,7 +259,7 @@ Both resolve card text through `effects.js`.
 `tools/approx.js` (approximation ledger: stated/open/closed, each with a driven probe) ·
 `tools/ledger.js` (keyword status) · `npm run gaps` · `npm run sweep` ·
 `npm run crindex` (which CR rules a drill guards) · `npm run cup` / `npm run eight`
-(brackets) · `tools/selfplay.js` (the self-play driver every probe builds on).
+(brackets) · `tools/selfplay.js` (the self-play driver every probe builds on) · `tools/chaos.js` (the same, played badly on purpose).
 
 ## Editing conventions
 
