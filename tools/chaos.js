@@ -36,9 +36,44 @@
    ============================================================ */
 const {match, play, W, J, SP} = require("./selfplay.js");
 const RNG = require("../engine/rng.js");
+const WR = require("../engine/wire.js");
+const V = require("../engine/view.js");
 
 const EPS = process.env.EPS ? +process.env.EPS : 0.25;
 const LIMIT = +(process.env.LIMIT || 3000);
+/* every Nth chaos move also asks Sharp (the page's AI) for its move from the
+   chaotic state; 0 turns it off. Sharp is the expensive half of a run. */
+const SHARP = +(process.env.SHARP == null ? 25 : process.env.SHARP);
+
+/* THE OTHER SURFACES A CHAOTIC STATE REACHES (v6.66, second pass). A table's
+   two peers each hold a DECODED copy and replay the same action, so:
+     WIRE-ROUNDTRIP  encode -> JSON -> decode throws on this state;
+     WIRE-REPLAY     the action replayed on the decoded copy lands on a
+                     different state (hash) than on the original — the
+                     two phones diverge;
+     VIEW-THREW      `view(g, seat)` (what each seat may see) throws;
+     SHARP-REFUSAL   Sharp's search proposes an illegal action. */
+function surfaces(g, a, seat, tally, sharp){
+  let dec;
+  try { dec = WR.decode(JSON.parse(JSON.stringify(WR.encode(g)))); }
+  catch(e){ tally.find("WIRE-ROUNDTRIP", e.message, g); return; }
+  try {
+    const x = J.reduce(g, a, seat), y = J.reduce(dec, a, seat);
+    if(!x.error && !y.error && WR.hash(x.state) !== WR.hash(y.state)){
+      const d = WR.diffPaths(x.state, y.state, 3);
+      tally.find("WIRE-REPLAY", a.t + " diverges at " + JSON.stringify(d), g);
+    } else if(!!x.error !== !!y.error) tally.find("WIRE-REPLAY", a.t + " legal on one copy only: " + (x.error || y.error), g);
+  } catch(e){ tally.find("THREW", "replay " + a.t + ": " + e.message, g); }
+  for(const s of [0, 1]){
+    try { V.view(g, s); } catch(e){ tally.find("VIEW-THREW", e.message, g); }
+  }
+  if(sharp){
+    try {
+      const b = SP.act(g, seat, {search: true});
+      if(b){ const why = J.legal(g, b, seat); if(why !== null) tally.find("SHARP-REFUSAL", b.t + " — " + why, g); }
+    } catch(e){ tally.find("THREW", "sharp: " + e.message, g); }
+  }
+}
 
 /* Every action worth trying for this seat now, before `legal` filters. */
 function candidates(g, seat){
@@ -104,6 +139,7 @@ function chaosActor(seed, tally){
       if(out.error) tally.find("JUDGE-DISAGREE", a.t + " " + JSON.stringify(a) + " — " + out.error, g);
     } catch(e){ tally.find("THREW", "reduce " + a.t + ": " + e.message, g); return SP.act(g, seat); }
     tally.chaos++;
+    surfaces(g, a, seat, tally, SHARP > 0 && tally.chaos % SHARP === 0);
     return a;
   };
 }

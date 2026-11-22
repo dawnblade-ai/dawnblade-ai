@@ -442,7 +442,18 @@ function payAction(g, seat, p, o){
     const u = chi.uids.find(x => (sd.paySel || []).indexOf(x) < 0);
     if(u != null) return tag("pitchChi", {t: "paySel", uid: u});
   }
-  if(p.need - sd.res - J.paySum(sd) <= 0 && chi.short <= 0) return tag("payConfirm", {t: "payConfirm"});
+  if(p.need - sd.res - J.paySum(sd) <= 0 && chi.short <= 0){
+    /* A PAYMENT THE POLICY DID NOT FILL (v6.66, found by tools/chaos.js). A card is pitched only
+       while the cost is unpaid, so a selection a person (or a seat handed over mid-payment) made
+       past the cost is refused at `payConfirm`. Take back the first selected card the rest still
+       covers without, in selection order, before confirming. */
+    if(J.legal(g, {t: "payConfirm"}, seat) !== null){
+      const sel = sd.paySel || [];
+      const back = sel.find(u => p.need - sd.res - J.paySum({...sd, paySel: sel.filter(x => x !== u)}) <= 0);
+      if(back != null) return tag("payBack", {t: "paySel", uid: back});
+    }
+    return tag("payConfirm", {t: "payConfirm"});
+  }
   const gate = J.gateReserve(g, seat, p.card);
   const owe = p.need - sd.res - J.paySum(sd);
   /* THE ATTACK A GRANT IS FOR STAYS IN THE HAND (H29). `pitchPick` takes the highest pitch, and
@@ -1925,6 +1936,7 @@ const CALL_WHY = {
   pitchChi: "Pitch the Chi card. Only Chi pays this part of the cost.",
   payCancel: "Cancel. Your hand cannot cover this cost.",
   payConfirm: "That covers the cost.",
+  payBack: "Take a card back. It is pitched only while the cost is unpaid, and this one is past it.",
   boostYes: "Boost: most of what is left in your deck pays it off.",
   boostNo: "Don't boost: too little of what is left in your deck pays it off.",
   fuse: "Fuse it. Revealing the card costs you nothing.",
