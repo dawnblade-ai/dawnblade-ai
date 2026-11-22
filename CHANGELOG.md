@@ -18,8 +18,19 @@
   the AI's pick, a cancel clears it; sabotaged: the reader ignoring the answer, the AI's ordering flattened to a uid
   tie-break — the fixture's token uid sorts first so a tie-break alone fails).
 - The approximation ledger now holds **0 open** records (21 stated, 42 closed).
+- **Tool: `tools/chaos.js` — the table played badly on purpose.** v6.64's and v6.65's bugs were reachable by a person and
+  never by the rule policy. This driver mixes uniformly random LEGAL actions (every play, activation, pass, odd pitch,
+  cancelled payment, declined cost and prompt answer `judge.legal` accepts) into self-play at rate `EPS`, and reports
+  `legal`/`reduce` disagreements, throws, invariant violations and cards in no zone (stalls are expected and not counted).
+  First run: 289 games at EPS 0.25 (34,060 random moves) and 578 at EPS 0.6 — 0 engine findings. The one policy refusal it
+  meets (`payConfirm` after a random over-pitch) is a state only a mixed hand on one seat makes. `selfplay.play` takes
+  `opts.act` for it.
 - Drills moved: test/approx.test.js (the record closed, its probe turned round), test/split.test.js (the table demuxes
-  `boardcost`), test/explain.test.js (`boardcost` unreached in the 30-game census — Viserai's), the two WIRE_V pins.
+  `boardcost`), test/explain.test.js (`boardcost` unreached in the 30-game census — Viserai's), test/sheetdoors.test.js
+  (`cancelBoardCost`, an answer), test/slicecensus.test.js (`tryPlay` 27,065 -> 27,318), test/soulcost.test.js (the busy
+  lists name `boardpick`), the two WIRE_V pins.
+- **Validation:** npm test 4537 / 4532 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; ladder 816 games, 0 refusals /
+  0 violations / 0 stalls (2 engine draws); page.js 89/89 at 393x852.
 
 ## v6.65 — a play waiting on the stack pays the price it was played at; Iyslander amps her off-turn casts
 
