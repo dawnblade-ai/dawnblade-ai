@@ -1,3 +1,18 @@
+## v6.67 — the AI takes back an over-pitch; chaos reaches the wire, the view and Sharp
+
+- **AI: an over-pitched payment is taken back, not confirmed (new reason `payBack`).** Found by `tools/chaos.js`: a payment
+  selected PAST the cost (a person taps one card too many, then the seat is handed to the AI — or Sharp, whose payment is
+  the rule policy's) left the policy proposing `payConfirm`, which `legal` refuses ("a card is pitched only while the cost
+  is unpaid", ruling 2026-08-01). It now takes back the first selected card the rest still covers without, then pays. The
+  policy never over-pitches on its own: the ladder is byte-identical to v6.66's. Drill: test/payback.test.js (sabotaged).
+- **Tool: chaos reaches three more surfaces.** At every random move it now also (1) round-trips the state through
+  `wire.encode` -> JSON -> `decode` and replays the action on the decoded copy, comparing hashes (`WIRE-REPLAY`: what the two
+  phones of a table would do; sabotaged by shifting a life total on the copy), (2) builds `view(g, seat)` for both seats, and
+  (3) every 25th move asks Sharp for its move and checks it is legal (a Sharp refusal is a POLICY finding). Exit code 1 on
+  any engine or policy finding. Run: 289 games at EPS 0.25 (34,060 random moves) and 289 at EPS 0.6 — 0 engine findings on
+  every surface; the only policy finding was the over-pitch above.
+- Drills moved: test/explain.test.js (`payBack` unreached in self-play — it follows a person's taps).
+
 ## v6.66 — Runebleed Robe asks which Runechant pays
 
 - **Rules: a destroy cost with two different cards that could pay asks which (closes the ledger's last open record,
