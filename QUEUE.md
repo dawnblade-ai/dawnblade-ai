@@ -28,7 +28,7 @@ H36 Lyath boo only for leak >= 2 (230 -> 228 of 768; the Might token pays), H37 
 iyslander +4). `experiments/H36-H37-NOTES.md`. Off-turn pitch is now closed as a lever.
 
 **WORKERS IN FLIGHT (assigned 2026-11-22 ~21:50Z by CEO session_013xG9xADa79zsMdfx4Ha7Ri, env_011rwpp2MyBTt3cEsZKDoVGk):**
-- `session_013xG9xCPAciqbr5nPRbgoCS` (Opus) — shipped SPXSTIRIDLE (v6.69), SPXARSPAY/SPXFLIPCRUSH (v6.70); now Fai Fealty (SPXFEALTY) on `ship/fai-fealty`; pushes ONLY `ship/blaze-energy-offturn`.
+- `session_013xG9xCPAciqbr5nPRbgoCS` (Opus) — shipped SPXSTIRIDLE (v6.69), SPXARSPAY/SPXFLIPCRUSH (v6.70); now Fai Fealty (SPXFEALTY) — pushes ONLY `ship/fai-fealty` (and its earlier ship/* branches).
 - `session_013xG9x8VDdx8D1FfSJq5SjC` (Opus) — shipped SPXCLOAK (v6.69); trainchaos clean; now the never-sweep (free abilities legal>=50/used<=5%, 16 heroes) on `ship/never-sweep`.
 Both report via send_message to the CEO; neither pushes main. A limit stop sends NO report: check with get_session
 (status_bucket failed) / list_events and nudge. A new CEO tells both its session id. The CEO replays + re-validates + ships.
