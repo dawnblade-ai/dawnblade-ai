@@ -20,6 +20,12 @@ the census shows the pitch was not needed. Also: a reader that names a whole tal
 Closed, no gap: Gravy's Timesnap Potion and Jittery Bones (both blue pitch cards; Gravy ends turns with an empty hand).
 Chaos: table salt d6 (EPS 0.3, 289 games) + Iyslander salt `ice` (EPS 0.4): 0 findings.
 
+**WORKERS IN FLIGHT (assigned 2026-11-22 ~21:50Z by CEO session_013xG9xADa79zsMdfx4Ha7Ri, env_011rwpp2MyBTt3cEsZKDoVGk):**
+- `session_013xG9xCPAciqbr5nPRbgoCS` (Opus) — NEXT 1, Blaze energy off-turn; pushes ONLY `ship/blaze-energy-offturn`.
+- `session_013xG9x8VDdx8D1FfSJq5SjC` (Opus) — NEXT 4 Spellfire Cloak census + NEXT 3 Boltyn census; pushes ONLY `ship/cloak-boltyn-census`.
+Both report via send_message to the CEO; neither pushes main. A limit stop sends NO report: check with get_session
+(status_bucket failed) / list_events and nudge. A new CEO tells both its session id. The CEO replays + re-validates + ships.
+
 **NEXT, in order:**
 1. **Blaze off-turn, the two-part line** (bottom-4 seat, 34/96). His hero: "Whenever you opt, put energy counters on Blaze equal to the
    number of cards looked at" + "Once per Turn Instant - Remove X energy counters: Banish a Wizard non-attack action card from your hand
