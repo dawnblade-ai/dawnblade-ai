@@ -4,9 +4,9 @@
 answered NEEDS-A-RULING notes are in `QUEUE-ARCHIVE.md` on this branch (grep it, don't read it). History lives in
 CHANGELOG.md (v6.30 on; older in `docs/archive/CHANGELOG-to-v6.29.md`) and LESSONS.md on main.
 
-## HANDOFF — START HERE (CEO session_013xG9xADa79zsMdfx4Ha7Ri, 2026-11-22, at v6.70)
+## HANDOFF — START HERE (CEO session_013xG9xADa79zsMdfx4Ha7Ri, 2026-11-22, at v6.71)
 
-**State:** live = **v6.70** on `main`, livecheck ALL PASS. Function `table` version 92 = `v6.70 · sage-v19`, stamped, `--check` OK.
+**State:** live = **v6.71** on `main`, livecheck ALL PASS. Function `table` version 94 = `v6.71 · sage-v19`, stamped, `--check` OK.
 **WIRE_V 49**. DATA_VER sage-v19. 17 heroes. Approximation ledger: 0 open. Pool 455/455.
 Ladder v6.69 (816 games, 48 each): briar 81 prism 76 kayo 71 dorinthea 60 azalea 59 enigma 57 dash 50 fai 48 viserai 42 bravo 42
 blaze 39 arakni 38 gravy 37 boltyn 32 iyslander 30 lyath 28 viseraibw 24. 0 refusals / violations / stalls (2 draws). Noise band max 9.
@@ -29,7 +29,7 @@ iyslander +4). `experiments/H36-H37-NOTES.md`. Off-turn pitch is now closed as a
 
 **H38 Fai Fealty — ZERO effect (`experiments/H38-fai-fealty-NOTES.md`):** spending Fealty fires but changes nothing, because
 **`judge.keepsActionPoint` cannot see CONDITIONAL go again** (cond-gated `ga`: drac2 Cinderskin Devotion / Hot on Their Heels /
-Enflame / Display Loyalty, lifeLt Scar for a Scar). **SPXCONDGA shipping v6.71: Fai 431 -> 464 of 768**; 13 heroes print gated ga;
+Enflame / Display Loyalty, lifeLt Scar for a Scar). **SPXCONDGA SHIPPED v6.71: Fai 431 -> 464 of 768**; 13 heroes print gated ga;
 Fealty on top still noise (H40, `experiments/H40-*`).
 
 **Never-sweep v6.70 (worker B, 16 heroes, legal>=50 / used<=5%):** the "free ability never looked at" shape does NOT recur.
@@ -43,8 +43,12 @@ it costs the foe hand cards. Never rank on landed damage alone.** `experiments/H
 table 18 equipment defends in 48 Dash games that should be illegal. Worker B fixing (parser reader, one body, judge.legal). Also:
 failstates.js/sweep.js grep only index.html for keyword carriers — 44 stale false positives; fix in a separate commit.
 
+**Gated-op census (worker A, `experiments/census/gated.js`):** of ops under `conds`, power (effPowerNow), ga (v6.71) and life
+are read gated-now; token/draw/gainKw/arcane/buffNext are not read at all. Next: Lyath Mocking Blow's on-attack self-boo makes its
+own +4 (worker A, SPXBOOSELF); then Dorinthea Hit and Run ordering (+3 half used 1/38).
+
 **WORKERS IN FLIGHT (assigned 2026-11-22 ~21:50Z by CEO session_013xG9xADa79zsMdfx4Ha7Ri, env_011rwpp2MyBTt3cEsZKDoVGk):**
-- `session_013xG9xCPAciqbr5nPRbgoCS` (Opus) — shipped SPXSTIRIDLE (v6.69), SPXARSPAY/SPXFLIPCRUSH (v6.70); now Fai Fealty (SPXFEALTY) — pushes ONLY `ship/fai-fealty` (and its earlier ship/* branches).
+- `session_013xG9xCPAciqbr5nPRbgoCS` (Opus) — shipped SPXSTIRIDLE (v6.69), SPXARSPAY/SPXFLIPCRUSH (v6.70); now SPXBOOSELF (Lyath) — pushes ONLY `ship/fai-fealty` (and its earlier ship/* branches).
 - `session_013xG9x8VDdx8D1FfSJq5SjC` (Opus) — shipped SPXCLOAK (v6.69); trainchaos clean; SPXARCRANK negative; rules-gap audit done; now the Out Pace table fix on `ship/rules-gaps` (v6.71).
 Both report via send_message to the CEO; neither pushes main. A limit stop sends NO report: check with get_session
 (status_bucket failed) / list_events and nudge. A new CEO tells both its session id. The CEO replays + re-validates + ships.
