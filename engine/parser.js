@@ -11129,17 +11129,44 @@ const abilitiesLive = c => {
    there is no choice to offer, and a sheet with one forced option is a
    tap that teaches nothing (v3.55). Board order is a TOTAL order, which
    is what keeps two peers replaying one log on the same entry. */
-function boardEntryNamed(sd, name){
-  if(!sd || !name) return null;
-  const want = String(name).toLowerCase();
+function boardEntryNamed(sd, name, uid){
   /* AN OBJECT THAT COUNTS AS ONE PAYS TOO (v6.42, CR 1.8.8 at
      `fx.countsAs`): Runebleed Robe's "destroy this and a Runechant you
-     control" may take a special Runechant. The card NAMED so is taken
-     first; WHICH one, when both kinds are in the arena, is not asked here —
-     an open item in tools/approx.js. */
-  const board = sd.board || [];
-  return board.find(b => b && b.card && String(b.card.name || "").toLowerCase() === want)
-      || board.find(b => b && b.card && fxParse(b.card).countsAs === want) || null;
+     control" may take a special Runechant. WHICH one, when two DIFFERENT
+     cards could pay, is the player's (v6.66, `boardCostOffer`): the answer
+     rides in as `uid` and is taken when it is a candidate; otherwise the
+     card NAMED so first, then the first that counts as one. */
+  const all = boardCostTargets(sd, name);
+  return (uid != null && all.find(b => b.uid === uid)) || all[0] || null;
+}
+/* EVERY ENTRY THAT MAY PAY a cost naming a permanent — the card NAMED so in
+   board order, then those that count as one (CR 1.8.8) in board order. */
+function boardCostTargets(sd, name){
+  if(!sd || !name) return [];
+  const want = String(name).toLowerCase();
+  const board = (sd.board || []).filter(b => b && b.card);
+  return [...board.filter(b => String(b.card.name || "").toLowerCase() === want),
+          ...board.filter(b => String(b.card.name || "").toLowerCase() !== want && fxParse(b.card).countsAs === want)];
+}
+/* THE QUESTION A DESTROY COST ASKS (v6.66) — `usurpOffer`'s shape for an
+   activation (`abDestroyBoard`): one uid per DIFFERENT card (by name) that
+   could pay, or null while every candidate is the same card (two Gold
+   tokens, three Runechant tokens: nothing to choose, nothing asked). CR
+   1.8.8 (verbatim): "An object that counts as another object for the
+   purposes of rules and effects is considered to be that object, in
+   addition to its other properties." Destroying a Runechant of Lust is not
+   the play destroying a token is (its "When this is destroyed" line pays,
+   the token's pop is kept), so with both in the arena the player chooses. */
+function boardCostOffer(ab, sd){
+  const name = abDestroyBoard(ab);
+  if(!name) return null;
+  const seen = new Set(), uids = [];
+  for(const b of boardCostTargets(sd, name)){
+    const k = norm(b.card.name);
+    if(seen.has(k)) continue;
+    seen.add(k); uids.push(b.uid);
+  }
+  return uids.length > 1 ? {uids, name} : null;
 }
 
 function defCap(card, held, opts){
@@ -11384,6 +11411,6 @@ return {norm, noopFeedText, noopIsQuiet, isAttack, isArrow, isWeapon, hasGA, arc
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, spellvoidX, linksControlled, arcaneSoaks,
         ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
-        chiValue, chiSum, chiFloating, pitchExcessWhy, chiCeiling, payCeiling, handFree, isDeclaredDefender, rxDefenders, PLAY_ROUTES, isCardPlay, isNonAtkActionPlay, abChiCost, abSoulCost, soulPutNote, soulPutThisTurn, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, abTargetSpec, swingSpentWhy, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, abilitiesLive, boardEntryNamed, isEphemeral, isToken, ceasesToExist, offArenaFace, PLAY_GRANT_STAMPS, spendPlayGrant, ARENA_ZONES, arsenalPutSource, isHandWipe, gyFirstGaKw, gyFirstGaSource,
+        chiValue, chiSum, chiFloating, pitchExcessWhy, chiCeiling, payCeiling, handFree, isDeclaredDefender, rxDefenders, PLAY_ROUTES, isCardPlay, isNonAtkActionPlay, abChiCost, abSoulCost, soulPutNote, soulPutThisTurn, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, abTargetSpec, swingSpentWhy, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, abilitiesLive, boardEntryNamed, boardCostTargets, boardCostOffer, isEphemeral, isToken, ceasesToExist, offArenaFace, PLAY_GRANT_STAMPS, spendPlayGrant, ARENA_ZONES, arsenalPutSource, isHandWipe, gyFirstGaKw, gyFirstGaSource,
         CARD_OVERRIDES};
 });

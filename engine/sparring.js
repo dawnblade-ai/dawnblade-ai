@@ -406,6 +406,10 @@ function payAction(g, seat, p, o){
      candidate worth most destroyed (`usurpWorth`: the Runechants and go
      again it pays, less the arcane it would have dealt), then uid. */
   if(p.kind === "usurp") return tag("usurp", {t: "usurp", uid: J.usurpAnswer(g)});
+  /* WHICH PERMANENT A DESTROY COST TAKES (v6.66) — judge's `boardCostAnswer`:
+     Runebleed Robe with a token and a special Runechant destroys the one worth
+     most gone (the special one's destroy line pays, the token keeps its pop). */
+  if(p.kind === "boardcost") return tag("boardcost", {t: "boardcost", uid: J.boardCostAnswer(g)});
   /* AN OPTIONAL GRAVEYARD BANISH COST (v6.43) — judge's `banCostAnswer`: the
      candidate worth most banished (`banCostWorth`: playable from the banished
      zone counts for it, blood debt against it), paid when that is worth at
@@ -1939,6 +1943,7 @@ const CALL_WHY = {
   discost: "Discard this card to pay the cost.",
   abtarget: "Aim it at the best card it can reach. The target is named now, before the other seat can answer.",
   soulcost: "Banish the soul card worth least as a resource. What counts is how many are in the soul, not which.",
+  boardcost: "Spend the Runechant that pays you back when it goes. A plain one keeps its damage for your next swing.",
   usurp: "Usurp the Runechant that pays you back. A plain one would have dealt its damage on this swing.",
   bancost: "Pay the extra cost from your graveyard. The card you play is printed stronger when it is paid.",
   bancostNo: "Keep your graveyard. Every card that could pay would cost you life from the banished zone.",
@@ -2070,6 +2075,7 @@ function lineOf(g, seat, a){
     case "discost": return "Discard " + nm(c) + " for the cost";
     case "soulcost": return "Banish " + nm(c) + " from the soul for the cost";
     case "usurp": return "Usurp " + nm(c);
+    case "boardcost": return "Destroy " + nm(c) + " for the cost";
     case "bancost": return a.uid == null ? "Don't pay the extra cost" : "Banish " + nm(c) + " for the cost";
     case "abtarget": return "Aim it at " + nm(c);
     case "promptSel": { const x = p && ((p.cards || [])[a.i] || (p.options || [])[a.i]);

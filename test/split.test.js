@@ -489,7 +489,9 @@ test("every pending kind judge can open has a branch at the table", () => {
      Runechant usurp's additional cost destroys — one button per different card. */
   /* +bancost AT v6.43: an optional additional cost that banishes a card from
      the graveyard (Looking for a Scrap) — one button per different card, and a Decline. */
-  assert.deepEqual([...kinds].sort(), ["abtarget", "addPay", "bancost", "boost", "charge", "discost", "fuse", "pay", "soulcost", "split", "usurp", "xval"]);
+  /* +boardcost AT v6.66: an activation's destroy cost with two DIFFERENT cards that
+     could pay (Runebleed Robe: a Runechant token or a Runechant of Lust, CR 1.8.8). */
+  assert.deepEqual([...kinds].sort(), ["abtarget", "addPay", "bancost", "boardcost", "boost", "charge", "discost", "fuse", "pay", "soulcost", "split", "usurp", "xval"]);
   const strip = t => t.replace(/\/\*[\s\S]*?\*\//g, "");
   const htm = strip(fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8"));
   const i = htm.indexOf("const kindIs = k =>");

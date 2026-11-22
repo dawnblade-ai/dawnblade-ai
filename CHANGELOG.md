@@ -1,3 +1,26 @@
+## v6.66 — Runebleed Robe asks which Runechant pays
+
+- **Rules: a destroy cost with two different cards that could pay asks which (closes the ledger's last open record,
+  `destroy-a-runechant-cost-unasked`).** Runebleed Robe: "Instant - Destroy this and a Runechant you control: Prevent the
+  next 1 arcane damage that would be dealt to you this turn." Runechant of Lust and Sloth print "This counts as a
+  Runechant", and CR 1.8.8 (verbatim): "An object that counts as another object for the purposes of rules and effects is
+  considered to be that object, in addition to its other properties." Since v6.42 the cost reader took a token first and
+  asked nothing, so a player holding a token and Lust could never spend Lust (whose "When this is destroyed, create a
+  Runechant token" pays, while the token would keep its arcane pop) — weaker than printed. Now `parser.boardCostOffer`
+  (one uid per DIFFERENT card that could pay; null while every candidate is the same card, so two Gold or three tokens
+  still ask nothing) is asked before the payment on both boards: judge's new `boardcost` pending on the hero, gear and
+  arena activation routes, the trainer's `boardpick` sheet on both of its activation doors. The answer rides to
+  `execute` as `_destroyUid` (a held declaration, so a cancelled payment takes it with it). The AI answers through
+  `judge.boardCostAnswer` (usurp's worth, without the usurp line) and spends Lust; new reason `boardcost`. Neither built
+  deck carries the Robe beside a special Runechant today (the Robe is Viserai's; Lust and Sloth are Viserai, Between
+  Worlds'), so the question waits for the board where they meet. **WIRE_V 48 -> 49.** Drill: test/boardcost.test.js
+  (asks with both kinds, the answer is what is destroyed both ways, silent with tokens only, an off-offer answer refused,
+  the AI's pick, a cancel clears it; sabotaged: the reader ignoring the answer, the AI's ordering flattened to a uid
+  tie-break — the fixture's token uid sorts first so a tie-break alone fails).
+- The approximation ledger now holds **0 open** records (21 stated, 42 closed).
+- Drills moved: test/approx.test.js (the record closed, its probe turned round), test/split.test.js (the table demuxes
+  `boardcost`), test/explain.test.js (`boardcost` unreached in the 30-game census — Viserai's), the two WIRE_V pins.
+
 ## v6.65 — a play waiting on the stack pays the price it was played at; Iyslander amps her off-turn casts
 
 - **Rules: a held play's cost is locked when it is played (the rest of v6.64's class).** The table holds an action-speed play on

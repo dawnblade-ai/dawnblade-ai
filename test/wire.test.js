@@ -386,7 +386,8 @@ test("WIRE_V moves when the payload shape moves, and only then", () => {
   /* 45 -> 46 AT v6.60: `hist` gains `dmg` — inside a whole-shipped field, so the digest holds. */
   /* 46 -> 47 AT v6.64: a held play's layer gains `frostAt` — inside the whole-shipped `stack`, so the digest holds. */
   /* 47 -> 48 AT v6.65: a held play's layer gains `price` — inside the whole-shipped `stack`, so the digest holds. */
-  assert.equal(W.WIRE_V, 48,
+  /* 48 -> 49 AT v6.66: the `boardcost` pending kind — `pending` ships whole, so the digest holds. */
+  assert.equal(W.WIRE_V, 49,
     "WIRE_V moved — if the payload shape moved with it, update the digest below " +
     "in the same edit and say what changed in the header");
   assert.equal(h, 3759651216,

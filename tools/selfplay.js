@@ -107,7 +107,9 @@ function play(g, limit, opts){
   for(let i = 0; i < limit && !n.over; i++){
     let moved = false;
     for(const s of [0, 1]){
-      const a = SP.act(n, s);
+      /* `opts.act` (v6.66): a caller's own seat policy — tools/chaos.js mixes
+         random legal moves into the rule policy's. Default: the rule policy. */
+      const a = (opts.act || SP.act)(n, s);
       if(!a) continue;
       const out = J.reduce(n, a, s);
       if(out.error){ errs.push({t: a.t, seat: s, why: out.error, turn: n.turn}); continue; }

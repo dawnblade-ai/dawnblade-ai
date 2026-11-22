@@ -1131,19 +1131,24 @@ const APPROX = {
 
   /* ---------------------------------------------------------------- */
   "destroy-a-runechant-cost-unasked": {
-  status:"open", cr:"1.8.8", board:"both", since:"v6.42", swept:"v6.42",
-  claim:"Runebleed Robe's activation cost \"destroy this and a Runechant you control\" "+
-        "(`parser.boardEntryNamed`) takes a card NAMED Runechant first, and a special "+
-        "Runechant (\"This counts as a Runechant\", CR 1.8.8) only when no token is in the "+
-        "arena: with both kinds there, which one pays is not asked.",
-  why:"Usurp's question was built at v6.42 (`usurpOffer`, a `usurp` pending on both boards) "+
-      "because the staged deck prints usurp on seven cards beside the special Runechants. "+
-      "The Robe is a different cost route (an activation, `_destroyBoard`) and is not in the "+
-      "staged Viserai list, so it was given the reader (a special Runechant may pay, and pays "+
-      "its own destroy line) but not the question. The direction is WEAKER than printed: the "+
-      "player loses the option of spending a Runechant of Lust (which would pay a token) "+
-      "instead of a token. Work, not a ruling: CR 1.8.8 settles that either may pay. The "+
-      "probe asserts the token is taken unasked, so it goes red the day the question is built."},
+  status:"closed", cr:"1.8.8", board:"both", since:"v6.42", swept:"v6.66",
+  claim:"WAS: Runebleed Robe's activation cost \"destroy this and a Runechant you control\" "+
+        "(`parser.boardEntryNamed`) took a card NAMED Runechant first, and a special "+
+        "Runechant (\"This counts as a Runechant\", CR 1.8.8) only when no token was in the "+
+        "arena: with both kinds there, which one paid was not asked. IS (v6.66): "+
+        "`parser.boardCostOffer` (one uid per DIFFERENT card that could pay, null while every "+
+        "candidate is the same card) is asked on both boards before the payment — judge's "+
+        "`boardcost` pending on the three activation routes, the trainer's `boardpick` on both "+
+        "doors — and the answer rides to `execute` as `_destroyUid` (a `HELD_DECL`, so a "+
+        "cancelled payment takes it with it). The AI answers through `judge.boardCostAnswer` "+
+        "(`usurpWorth` without the usurp line: Lust's destroy line pays, a token's pop is kept).",
+  why:"CR 1.8.8 (verbatim): \"An object that counts as another object for the purposes of "+
+      "rules and effects is considered to be that object, in addition to its other "+
+      "properties.\" So either may pay, and the choice is the controller's, exactly as usurp's "+
+      "(v6.42). The direction was WEAKER than printed. Neither built deck carries the Robe and "+
+      "a special Runechant together today (the Robe is Viserai's, Lust and Sloth are Viserai, "+
+      "Between Worlds'), so the question waits for the board where they meet. The probe asserts "+
+      "the offer and that the named entry is the one taken."},
 
   "zero-defence-gear-refused": {
   status:"closed", cr:"7.3.2b", board:"both", since:"v6.43", swept:"v6.45",

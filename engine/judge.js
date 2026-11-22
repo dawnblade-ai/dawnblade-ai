@@ -307,6 +307,7 @@ const ACTIONS = [
   "xval",        /* {x}          declare X for a card whose cost prints X (v4.72) */
   "discost",     /* {uid}        which card an activation's discard cost spends (v4.85) */
   "soulcost",    /* {uid}        which soul card an activation's soul banish takes (v5.59) */
+  "boardcost",   /* {uid}        which permanent an activation's destroy cost takes (v6.66) */
   "abtarget",    /* {uid}        the target an activated ability declares, before the cost (v5.72) */
   "usurp",       /* {uid}        which Runechant usurp's additional cost destroys (v6.42) */
   "bancost",     /* {uid|null}   which graveyard card an optional banish cost takes; null declines (v6.43) */
@@ -346,7 +347,7 @@ const ACTIONS = [
 
    Exported so a board can be held to covering all of them rather than to
    remembering — the next kind added walks into the same fallback. */
-const PENDING_KINDS = ["pay", "boost", "addPay", "split", "fuse", "charge", "xval", "discost", "soulcost", "abtarget", "usurp", "bancost"];
+const PENDING_KINDS = ["pay", "boost", "addPay", "split", "fuse", "charge", "xval", "discost", "soulcost", "boardcost", "abtarget", "usurp", "bancost"];
 const PROMPT_ACTIONS = ["promptSel", "promptChoose", "promptConfirm", "promptDecline",
                         "promptTakeBack", "promptMove"];
 
@@ -1040,6 +1041,15 @@ function legal(g, a, seat){
     return null;
   }
   if(a.t === "soulcost") return "nothing is asking which soul card to banish";
+  /* WHICH PERMANENT A DESTROY COST TAKES (v6.66) — the candidates ride on the
+     pending, off `parser.boardCostOffer` when the question was asked. A cost,
+     not a "you may": no decline. */
+  if(p && p.kind === "boardcost"){
+    if(a.t !== "boardcost") return "choose which " + (p.name || "permanent") + " " + p.card.name + " destroys first";
+    if((p.uids || []).indexOf(a.uid) < 0) return "that is not a " + (p.name || "permanent") + " the cost can destroy";
+    return null;
+  }
+  if(a.t === "boardcost") return "nothing is asking which permanent to destroy";
   /* WHICH RUNECHANT USURP DESTROYS (v6.42). The candidates ride on the
      pending, off `parser.usurpOffer` when the question was asked. "If able"
      is not "you may" (CR 8.3.49), so there is no decline: a null or a uid
@@ -3670,6 +3680,7 @@ function reduce(g, a, seat){
     case "xval":      n = doXval(n, a, seat); break;
     case "discost":   n = doDiscCost(n, a, seat); break;
     case "soulcost":  n = doSoulCost(n, a, seat); break;
+    case "boardcost": n = doBoardCost(n, a, seat); break;
     case "abtarget":  n = doAbTarget(n, a, seat); break;
     case "usurp":     n = doUsurp(n, a, seat); break;
     case "bancost":   n = doBanCost(n, a, seat); break;
@@ -4002,7 +4013,7 @@ function doActivate(g, a, seat){
        `effCost` here would disagree with the charge in the other
        direction. Each read asks what its own charge site asks. */
     const ab = bOf(g, seat).HPOW;
-    { const q = askDiscCost(g, seat, ab, a) || askSoulCost(g, seat, ab, a) || askAbTarget(g, seat, ab, a); if(q) return q; }
+    { const q = askDiscCost(g, seat, ab, a) || askSoulCost(g, seat, ab, a) || askBoardCost(g, seat, ab, a) || askAbTarget(g, seat, ab, a); if(q) return q; }
     const acost = effCost(ab, sd, PR.costCtx(g, seat));
     if(acost > sd.res || chiShort(sd, ab) > 0)   /* v4.54 — see `chiShort` */
       return say({...g, pending: {kind: "pay", seat, card: ab, from: "hero", need: acost, target: null}},
@@ -4045,7 +4056,7 @@ function doActivate(g, a, seat){
          reason that version made `uid === "hpow"` the discriminator. */
       if(!_ally && !_aura){
         const ab = BD.boardPow(b);
-        { const q = askDiscCost(g, seat, ab, a) || askSoulCost(g, seat, ab, a) || askAbTarget(g, seat, ab, a); if(q) return q; }
+        { const q = askDiscCost(g, seat, ab, a) || askSoulCost(g, seat, ab, a) || askBoardCost(g, seat, ab, a) || askAbTarget(g, seat, ab, a); if(q) return q; }
         const bcost = effCost(ab, sd, PR.costCtx(g, seat));
         if(bcost > sd.res || chiShort(sd, ab) > 0)   /* v4.54 — see `chiShort` */
           return say({...g, pending: {kind: "pay", seat, card: ab, from: "board",
@@ -4079,7 +4090,7 @@ function doActivate(g, a, seat){
   /* THE SAME SPLIT, AND THE SAME ROUTE (v3.83) — see `legal`. */
   if(_abUid || !PR.isWeapon(piece)){
     const ab = piece.powCard;
-    { const q = askDiscCost(g, seat, ab, a) || askSoulCost(g, seat, ab, a) || askAbTarget(g, seat, ab, a); if(q) return q; }
+    { const q = askDiscCost(g, seat, ab, a) || askSoulCost(g, seat, ab, a) || askBoardCost(g, seat, ab, a) || askAbTarget(g, seat, ab, a); if(q) return q; }
     const acost = effCost(ab, sd, PR.costCtx(g, seat));   /* v3.80 — see doActivate's hero branch */
     if(acost > sd.res || chiShort(sd, ab) > 0)   /* v4.54 — see `chiShort` */
       return say({...g, pending: {kind: "pay", seat, card: ab, from: "hero", need: acost, target: null}},
@@ -4341,7 +4352,7 @@ function banCostAnswer(g){
 }
 /* THE AI'S ANSWER, through a reader (sparring reads no card text): what each
    candidate is worth destroyed, off `usurpWorth`, highest first, then uid. */
-function usurpWorth(g, seat, uid){
+function usurpWorth(g, seat, uid, noUsurp){
   const b = ((at(g, seat) || {}).board || []).find(x => x && x.uid === uid);
   if(!b) return -99;
   const fx = PR.fxParse(b.card);
@@ -4349,6 +4360,7 @@ function usurpWorth(g, seat, uid){
   /* what destroying it now pays (its usurp line and its destroy line), what
      it would have dealt on this attack had it stayed (its pop), and go again */
   const lost = ((fx.atkTrigger && fx.atkTrigger.ops) || []).filter(o => o[0] === "arcane").reduce((t, o) => t + (+o[1] || 0), 0);
+  if(noUsurp) return made(fx.onDestroy) - lost;   /* a destroy cost (v6.66): no usurp line */
   const ga = (fx.onUsurp || []).some(o => o[0] === "ga") ? 1 : 0;
   return made(fx.onUsurp) + made(fx.onDestroy) + ga - lost;
 }
@@ -4505,6 +4517,41 @@ function doSoulCost(g, a, seat){
     + String(p.card.name).replace(/ — (?:ability|hero power)$/, "") + ".");
   return doActivate(n, p.act, seat);
 }
+/* AN ACTIVATION'S DESTROY COST ASKS WHICH PERMANENT (v6.66) — `askSoulCost`'s
+   shape, one zone over, asked straight after it on the same three routes.
+   Runebleed Robe: "Destroy this and a Runechant you control". A Runechant of
+   Lust or Sloth counts as one (CR 1.8.8, verbatim at `parser.boardCostOffer`),
+   so with a token AND a special Runechant in the arena which one pays is the
+   player's — the question usurp asks (v6.42) for a play. Only with a real
+   choice (`boardCostOffer`: two DIFFERENT cards), and only once per
+   activation: the answer rides on the STATE as `_destroyUid` (a `HELD_DECL`),
+   so re-entering `doActivate` finds it and goes on; `execute` reads it. */
+function askBoardCost(g, seat, ab, a){
+  if(g._destroyUid !== undefined) return null;
+  const offer = PR.boardCostOffer(ab, at(g, seat));
+  if(!offer) return null;
+  const name = offer.name;
+  return say({...g, pending: {kind: "boardcost", seat, card: ab, act: {...a}, uids: offer.uids, name}},
+    String(ab.name).replace(/ — (?:ability|hero power)$/, "") + " costs a " + name + " — which one?");
+}
+function doBoardCost(g, a, seat){
+  const p = g.pending;
+  const b = ((at(g, seat).board) || []).find(x => x && x.uid === a.uid);
+  const n = say({...g, pending: null, _destroyUid: a.uid},
+    at(g, seat).name + " will destroy " + (b ? b.card.name : "that permanent") + " to pay for "
+    + String(p.card.name).replace(/ — (?:ability|hero power)$/, "") + ".");
+  return doActivate(n, p.act, seat);
+}
+/* THE POLICY'S ANSWER (v6.66), through a reader: what each candidate is worth
+   destroyed, off `usurpWorth` without the usurp line (an activation usurps
+   nothing), highest first, then uid. */
+function boardCostAnswer(g){
+  const p = pendingOf(g);
+  if(!p || p.kind !== "boardcost") return null;
+  const by = (x, y) => usurpWorth(g, p.seat, y, true) - usurpWorth(g, p.seat, x, true)
+                    || (String(x) < String(y) ? -1 : String(x) > String(y) ? 1 : 0);
+  return [...(p.uids || [])].sort(by)[0] || null;
+}
 /* WHAT THE POLICY ANSWERS TO THAT QUESTION, as a uid (v5.59). `sparring.js`
    reads no card text, so the order lives here, where judge already answers
    the policy's other readers (`chargePitchWanted`, `chiNeed`).
@@ -4660,7 +4707,7 @@ function doBoost(g, a, seat){
    outcome of the window is the one this produces. It is also what keeps
    the change invisible to every game in which neither seat holds an
    instant-speed answer. */
-const HELD_DECL = ["_half", "_doBoost", "_addPaid", "_fuseUid", "_chargeUids", "_x", "_discCostUid", "_addDiscPaid", "_soulCostUids", "_actTarget", "_usurpUid", "_banCostUid"];
+const HELD_DECL = ["_half", "_doBoost", "_addPaid", "_fuseUid", "_chargeUids", "_x", "_discCostUid", "_addDiscPaid", "_soulCostUids", "_actTarget", "_usurpUid", "_banCostUid", "_destroyUid"];
 const HELD_LIFT = {hand: 1, arsenal: 1, grave: 1, banish: 1};
 /* WHICH PLAYS WAIT: everything at ACTION speed. A card played in the
    action window, a weapon swing, an ally's or an aura's attack, and an
@@ -4860,7 +4907,7 @@ function commitPlay(g, card, zone, seat, window, target){
      RESOLUTION (v5.72) — an instant-speed activation never rides a layer, so
      nothing else would clear it. A card play's `_x` is stripped by
      `commitPlayBoosted`; an activation's is stripped here. */
-  if(zone === "hero" || zone === "board"){ delete n._actTarget; delete n._x; }
+  if(zone === "hero" || zone === "board"){ delete n._actTarget; delete n._x; delete n._destroyUid; }
   if(n._declared){
     const d = n._declared; delete n._declared;
     return declareAttack(n, card, seat, zone, target, d);
@@ -5449,7 +5496,7 @@ function moves(g, seat){
 }
 
 return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, moves, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, cyclePick, riderPick, riderLead, arsenalAttack, arsenalUsable, arsenalPower, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, pumpsNow, grantedInstant, tokenPiece, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, weaponPumpOf, gaNextPiece, nonAtkHeld, discardDrawPiece, lifeGainOf, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
+        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, cyclePick, riderPick, riderLead, arsenalAttack, arsenalUsable, arsenalPower, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, boardCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, pumpsNow, grantedInstant, tokenPiece, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, weaponPumpOf, gaNextPiece, nonAtkHeld, discardDrawPiece, lifeGainOf, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf, waitingOn,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */

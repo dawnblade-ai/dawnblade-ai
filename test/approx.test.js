@@ -420,7 +420,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 3 -> 2 AT v6.45: `zero-defence-gear-refused` is CLOSED by the user's ruling
      (a 0{d} piece may be declared, a blank may not). */
   /* 2 -> 1 AT v6.60: `dealt-damage-reads-attacks` is CLOSED (`hist.dmg`). */
-  assert.equal(n("open"),    1, "open count moved");
+  /* 1 -> 0 AT v6.66: `destroy-a-runechant-cost-unasked` is CLOSED (`boardcost`). */
+  assert.equal(n("open"),    0, "open count moved");
   /* 16 -> 17 AT v4.63: `steam-build-powcard-read`. 17 -> 18 AT v4.66:
      `play-held-on-the-stack`. 19 -> 20 AT v4.72: `x-cost-declared`.
      20 -> 21 AT v4.73: `crush-halving-rider-read`. 21 -> 22 AT v4.74:
@@ -441,7 +442,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 38 -> 39 closed AT v6.02: `look-named-in-shared-feed`. */
   /* 39 -> 40 closed AT v6.45: `zero-defence-gear-refused`. */
   /* 40 -> 41 closed AT v6.60: `dealt-damage-reads-attacks`. */
-  assert.equal(n("closed"), 41, "closed count moved");
+  /* 41 -> 42 closed AT v6.66: `destroy-a-runechant-cost-unasked`. */
+  assert.equal(n("closed"), 42, "closed count moved");
 });
 
 /* ============================================================
@@ -2358,9 +2360,10 @@ probe("no-sudden-death", () => {
   }
 });
 
-/* OPEN AT v6.42. DRIVEN: with a Runechant token AND a Runechant of Lust in
-   the arena, the Robe's cost reader takes the token and nothing asks; with
-   Lust alone, Lust pays (CR 1.8.8 — the reader half that IS built). */
+/* OPEN AT v6.42, CLOSED AT v6.66. DRIVEN: with a Runechant token AND a
+   Runechant of Lust in the arena, the Robe's cost asks which (`boardCostOffer`,
+   one uid per different card) and the reader takes the one named; with Lust
+   alone, Lust pays unasked (CR 1.8.8). */
 probe("destroy-a-runechant-cost-unasked", () => {
   H.db();
   const C2 = require("../engine/cards.js");
@@ -2368,7 +2371,11 @@ probe("destroy-a-runechant-cost-unasked", () => {
   const lust = {...C2.resolveEntry(ST, {name: "Runechant of Lust", p: 0, code: null, q: 1}), uid: "ls"};
   const tokc = {...H.tok("Runechant"), uid: "tk"};
   const both = {board: [{uid: "ls", card: lust}, {uid: "tk", card: tokc}]};
-  assert.equal(PR.boardEntryNamed(both, "Runechant").uid, "tk", "the token is no longer taken first — build the question and close this record");
+  assert.deepEqual(PR.boardCostOffer({_destroyBoard: "Runechant"}, both), {uids: ["tk", "ls"], name: "Runechant"},
+    "the Robe no longer asks which Runechant pays — reopen this record");
+  assert.equal(PR.boardEntryNamed(both, "Runechant", "ls").uid, "ls", "the named Runechant is not the one taken");
+  assert.equal(PR.boardEntryNamed(both, "Runechant", "tk").uid, "tk");
+  assert.equal(PR.boardCostOffer({_destroyBoard: "Runechant"}, {board: [{uid: "ls", card: lust}]}), null, "one candidate asked a question");
   assert.equal(PR.boardEntryNamed({board: [{uid: "ls", card: lust}]}, "Runechant").uid, "ls",
     "a special Runechant cannot pay a cost that destroys a Runechant");
 });

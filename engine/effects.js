@@ -4131,6 +4131,7 @@ function makeEffects(ctx){
        v3.11), so reaching here short is a bug rather than a play; it is
        still guarded, because `execute` is fed by `reduce`, which is fed by
        JSON off a wire. */
+    let _destroyWant;
     { const _sc = P.abSoulCost(card);
       /* THE DECLARED CARD, IF THERE IS ONE (v5.59) — asked before the
          payment on both boards (`soulCostChoice`) and riding on the state
@@ -4138,6 +4139,9 @@ function makeEffects(ctx){
          anything can return, so it cannot answer the next activation. */
       const _want = n._soulCostUids;
       delete n._soulCostUids;
+      /* and the destroy cost's (v6.66), read here for the same reason */
+      _destroyWant = n._destroyUid;
+      delete n._destroyUid;
       if(_sc){
         /* AN UNPAYABLE COST IS INERT, NEVER FREE (v2.04). Both boards
            refuse it first, so reaching here short means a stale or crafted
@@ -4288,7 +4292,10 @@ function makeEffects(ctx){
        second clause; that falls out of the card rather than being said. */
     { const _dn = P.abDestroyBoard(card);
       if(_dn){
-        const _de = P.boardEntryNamed(act(n), _dn);
+        /* WHICH ONE PAYS is the player's when two different cards could
+           (v6.66, `parser.boardCostOffer`, asked before the payment on both
+           boards): the answer rode in as `_destroyUid`, read with the soul's. */
+        const _de = P.boardEntryNamed(act(n), _dn, _destroyWant);
         if(!_de)
           return L(n, `${card.name} — ${sv(act(n), "control")} no ${_dn}. Nothing happens.`);
         actMut(n).board = act(n).board.filter(x => x !== _de);

@@ -365,7 +365,11 @@
 /* 47 -> 48 AT v6.65: a held play's layer gains `price` (its cost as it was played; `execute` charges
    exactly that at resolution, via `_heldPrice`). A v47 peer re-reads the price at resolution, and the
    resources diverge on the first Runechant made or destroyed while a Rune Flash waits. By hand. */
-const WIRE_V = 48;
+/* 48 -> 49 AT v6.66: `pending` gains a KIND (`boardcost`, which permanent an activation's destroy
+   cost takes — Runebleed Robe with a Runechant token and a Runechant of Lust), answered by a new
+   action `boardcost {uid}`, and the answer rides on the game as `_destroyUid` (`judge.HELD_DECL`).
+   A v48 peer answers no `boardcost` and destroys the token unasked. By hand. */
+const WIRE_V = 49;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------
