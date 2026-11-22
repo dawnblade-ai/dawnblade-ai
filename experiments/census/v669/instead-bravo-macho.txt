@@ -1,0 +1,20 @@
+{ games: 96, wins: 42, played: 0 } {
+  'ACT play:Thunder Quake': 8,
+  biggestAttack: 45,
+  'ACT play:Boulder Drop': 3,
+  'ACT play:Flatten the Field': 3,
+  'ACT play:Chokeslam': 4,
+  'ACT play:arsenal': 11,
+  'ACT play:Buckling Blow': 3,
+  'ACT play:Cartilage Crush': 4,
+  'ACT play:Debilitate': 4,
+  'ACT play:Disable': 2,
+  'ACT play:Crush the Weak': 2,
+  'ACT play:Fault Line': 1
+}
+{"k":"biggestAttack","turn":7,"life":[null,null],"hand":["Buckling Blow(3)","Macho Grande(3)","Thunder Quake(3)"],"ap":1,"x":"play"}
+{"k":"biggestAttack","turn":1,"life":[null,null],"hand":["Crush the Weak(3)","Macho Grande(3)","Disable(3)","Boulder Drop(1)"],"ap":1,"x":"play"}
+{"k":"biggestAttack","turn":31,"life":[null,null],"hand":["Pummel(1)","Flatten the Field(3)","Boulder Drop(3)","Macho Grande(3)"],"ap":1,"x":"play"}
+{"k":"biggestAttack","turn":19,"life":[null,null],"hand":["Chokeslam(3)","Macho Grande(3)","Flatten the Field(3)","Crash and Bash(1)"],"ap":1,"x":"play"}
+{"k":"biggestAttack","turn":15,"life":[null,null],"hand":["Staunch Response(1)","Crush the Weak(3)","The Suspense is Killing Me(3)","Macho Grande(3)"],"ap":1,"x":"play"}
+{"k":"biggestAttack","turn":31,"life":[null,null],"hand":["Zealous Belting(1)","Macho Grande(3)","Boulder Drop(3)","Buckling Blow(3)"],"ap":1,"x":"play"}

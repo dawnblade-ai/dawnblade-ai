@@ -1,0 +1,15 @@
+{ games: 96, wins: 40, turns: 1088 } {
+  'why you do not hold priority': 373,
+  'why no action point left': 342,
+  'why Swiftwater Sloop costs 2 and you cannot raise it': 6,
+  'why Battalion Barque costs 4 and you cannot raise it': 1,
+  'why Riggermortis costs 1 and you cannot raise it': 1,
+  'why Swabbie costs 3 and you cannot raise it': 1,
+  'why Saltwater Swell costs 1 and you cannot raise it': 1
+}
+{"turn":1,"phase":"action","step":"layer","x":"endTurn","why":"endTurn","hand":[],"legal":[],"life":[null,null]}
+{"turn":3,"phase":"action","step":"layer","x":"endTurn","why":"endTurn","hand":[],"legal":[],"life":[null,null]}
+{"turn":5,"phase":"action","step":"layer","x":"endTurn","why":"endTurn","hand":[],"legal":[],"life":[null,null]}
+{"turn":7,"phase":"end","step":"layer","x":"arsenal","why":"arsenalBest","hand":["Battalion Barque(1)"],"legal":[],"life":[null,null]}
+{"turn":9,"phase":"end","step":"layer","x":"arsenal","why":"arsenalOther","hand":["Barnacle(2)"],"legal":[],"life":[null,null]}
+{"turn":11,"phase":"action","step":"layer","x":"endTurn","why":"endTurn","hand":[],"legal":[],"life":[null,null]}

@@ -1,0 +1,9 @@
+{ games: 96, wins: 35 } {
+  'arsenal own arsenalBest': 20,
+  'paySel own pitch': 127,
+  'defend opp blockLethal': 17,
+  'play own biggestAttack': 5,
+  'defend opp blockHand': 12,
+  'defend opp blockSpare': 3,
+  'paySel opp pitch': 11
+}

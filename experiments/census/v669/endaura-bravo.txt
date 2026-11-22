@@ -1,0 +1,29 @@
+{ games: 96, wins: 40, turns: 1062 } {
+  'why you do not hold priority': 418,
+  'why no action point left': 240,
+  'why Chokeslam costs 4 and you cannot raise it': 19,
+  'why Staunch Response is a defence reaction — it belongs to the reaction step, not the action phase': 49,
+  'why Crash and Bash: a block card can only be pitched or declared as a defender': 10,
+  'why Pummel is an attack reaction — it belongs to the reaction step, not the action phase': 53,
+  'why Boulder Drop costs 3 and you cannot raise it': 3,
+  'why Debilitate costs 4 and you cannot raise it': 13,
+  'why Fault Line costs 3 and you cannot raise it': 7,
+  'why Zealous Belting costs 2 and you cannot raise it': 27,
+  'why Cartilage Crush costs 3 and you cannot raise it': 3,
+  'why Buckling Blow costs 4 and you cannot raise it': 12,
+  'why Chokeslam costs 3 and you cannot raise it': 3,
+  'why Disable costs 5 and you cannot raise it': 1,
+  'why Buckling Blow costs 3 and you cannot raise it': 2,
+  'why Debilitate costs 3 and you cannot raise it': 3,
+  'Fault Line': 2,
+  'why null': 2,
+  'why Fault Line costs 2 and you cannot raise it': 2,
+  'why Thunder Quake costs 6 and you cannot raise it': 1,
+  'why Cartilage Crush costs 2 and you cannot raise it': 1
+}
+{"turn":1,"phase":"action","step":"layer","x":"endTurn","why":"endTurn","hand":[],"legal":[],"life":[null,null]}
+{"turn":3,"phase":"action","step":"layer","x":"endTurn","why":"endTurn","hand":[],"legal":[],"life":[null,null]}
+{"turn":5,"phase":"action","step":"layer","x":"endTurn","why":"endTurn","hand":[],"legal":[],"life":[null,null]}
+{"turn":7,"phase":"end","step":"layer","x":"arsenal","why":"arsenalBest","hand":["Thunder Quake(3)"],"legal":[],"life":[null,null]}
+{"turn":9,"phase":"action","step":"layer","x":"endTurn","why":"endTurn","hand":[],"legal":[],"life":[null,null]}
+{"turn":11,"phase":"action","step":"layer","x":"endTurn","why":"endTurn","hand":[],"legal":[],"life":[null,null]}

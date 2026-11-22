@@ -1,0 +1,27 @@
+{ games: 96, wins: 43, turns: 926 } {
+  'why you do not hold priority': 298,
+  'why no action point left': 77,
+  'why Inertia Trap is a defence reaction — it belongs to the reaction step, not the action phase': 16,
+  'why Concoct Disorder costs 1 and you cannot raise it': 3,
+  'Up Sticks and Run': 7,
+  'why null': 7,
+  'why Lair of the Spider is a defence reaction — it belongs to the reaction step, not the action phase': 20,
+  'why Frailty Trap is a defence reaction — it belongs to the reaction step, not the action phase': 13,
+  'why Den of the Spider is a defence reaction — it belongs to the reaction step, not the action phase': 13,
+  'why Spike with Bloodrot is an attack reaction — it belongs to the reaction step, not the action phase': 6,
+  'why Stains of the Redback is an attack reaction — it belongs to the reaction step, not the action phase': 6,
+  'why Two Sides to the Blade is an attack reaction — it belongs to the reaction step, not the action phase': 6,
+  'why Scar Tissue is an attack reaction — it belongs to the reaction step, not the action phase': 28,
+  'why Infect costs 1 and you cannot raise it': 1,
+  'why Mark of the Funnel Web costs 2 and you cannot raise it': 1,
+  'why Art of Desire: Body costs 1 and you cannot raise it': 1,
+  'why Shred is an attack reaction — it belongs to the reaction step, not the action phase': 1,
+  'why Infect costs 2 and you cannot raise it': 1,
+  'why Mark the Prey costs 1 and you cannot raise it': 1
+}
+{"turn":1,"phase":"action","step":"layer","x":"endTurn","why":"endTurn","hand":[],"legal":[],"life":[null,null]}
+{"turn":3,"phase":"end","step":"layer","x":"arsenal","why":"arsenalBest","hand":["Art of Desire: Mind(3)","Scar Tissue(1)"],"legal":[],"life":[null,null]}
+{"turn":5,"phase":"end","step":"layer","x":"arsenal","why":"arsenalOther","hand":["Scar Tissue(1)"],"legal":[],"life":[null,null]}
+{"turn":7,"phase":"action","step":"layer","x":"endTurn","why":"endTurn","hand":[],"legal":[],"life":[null,null]}
+{"turn":9,"phase":"action","step":"layer","x":"endTurn","why":"endTurn","hand":["Mark of the Black Widow(1)"],"legal":[],"life":[null,null]}
+{"turn":11,"phase":"action","step":"layer","x":"endTurn","why":"endTurn","hand":["Mark of the Black Widow(1)"],"legal":[],"life":[null,null]}
