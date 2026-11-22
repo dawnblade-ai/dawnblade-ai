@@ -1,0 +1,39 @@
+{ games: 96, wins: 39, played: 6 } {
+  'ACT activate:54': 31,
+  weapon: 80,
+  'ACT activate:109': 49,
+  'ACT play:Malefic Incantation': 25,
+  keepsAP: 75,
+  'ACT play:Rune Flash': 5,
+  atkKeepsAP: 23,
+  'ACT play:arsenal': 29,
+  biggestAttack: 54,
+  'ACT play:Runic Fellingsong': 5,
+  'ACT play:Flying High': 18,
+  grantBeforeSwing: 5,
+  'ACT activate:102': 4,
+  gearAbility: 8,
+  'ACT activate:105': 11,
+  pieceRes: 13,
+  'ACT play:Shrill of Skullform': 10,
+  effPower: 2,
+  'ACT play:Trot Along': 5,
+  'ACT play:Condemn to Slaughter': 6,
+  'ACT play:Spellblade Assault': 6,
+  'ACT play:Runerager Swarm': 4,
+  resUnlock: 3,
+  'ACT play:Mauvrion Skies': 19,
+  'ACT activate:50': 5,
+  'ACT activate:47': 4,
+  'ACT play:Hit the High Notes': 20,
+  'ACT play:Vexing Malice': 3,
+  gaNextTaker: 6,
+  'ACT play:Amplify the Arknight': 4,
+  'ACT play:Sigil of Silphidae': 6
+}
+{"k":"weapon","turn":5,"life":[null,null],"hand":["Read the Runes(1)","Read the Runes(1)"],"ap":1,"x":"activate"}
+{"k":"weapon","turn":8,"life":[null,null],"hand":["Rune Flash(1)","Read the Runes(1)"],"ap":1,"x":"activate"}
+{"k":"weapon","turn":16,"life":[null,null],"hand":["Read the Runes(1)"],"ap":1,"x":"activate"}
+{"k":"keepsAP","turn":15,"life":[null,null],"hand":["Rune Flash(1)","Spellblade Assault(3)","Read the Runes(1)","Malefic Incantation(2)"],"ap":1,"x":"play"}
+{"k":"atkKeepsAP","turn":15,"life":[null,null],"hand":["Rune Flash(1)","Spellblade Assault(3)","Read the Runes(1)"],"ap":1,"x":"play"}
+{"k":"biggestAttack","turn":15,"life":[null,null],"hand":["Read the Runes(1)"],"ap":1,"x":"play"}

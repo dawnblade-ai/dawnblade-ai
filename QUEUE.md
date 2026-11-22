@@ -27,6 +27,10 @@ forked to see what its pitch would have done. Only defence plays pitch next turn
 H36 Lyath boo only for leak >= 2 (230 -> 228 of 768; the Might token pays), H37 hold 1-point defence reactions (blaze +6, enigma -4,
 iyslander +4). `experiments/H36-H37-NOTES.md`. Off-turn pitch is now closed as a lever.
 
+**H38 Fai Fealty — ZERO effect (`experiments/H38-fai-fealty-NOTES.md`):** spending Fealty fires but changes nothing, because
+**`judge.keepsActionPoint` cannot see CONDITIONAL go again** (cond-gated `ga`: drac2 Cinderskin Devotion / Hot on Their Heels /
+Enflame / Display Loyalty, lifeLt Scar for a Scar). Worker A on SPXCONDGA (via `effects.gatesMetNow`); Fealty re-measured after.
+
 **WORKERS IN FLIGHT (assigned 2026-11-22 ~21:50Z by CEO session_013xG9xADa79zsMdfx4Ha7Ri, env_011rwpp2MyBTt3cEsZKDoVGk):**
 - `session_013xG9xCPAciqbr5nPRbgoCS` (Opus) — shipped SPXSTIRIDLE (v6.69), SPXARSPAY/SPXFLIPCRUSH (v6.70); now Fai Fealty (SPXFEALTY) — pushes ONLY `ship/fai-fealty` (and its earlier ship/* branches).
 - `session_013xG9x8VDdx8D1FfSJq5SjC` (Opus) — shipped SPXCLOAK (v6.69); trainchaos clean; now the never-sweep (free abilities legal>=50/used<=5%, 16 heroes) on `ship/never-sweep`.
