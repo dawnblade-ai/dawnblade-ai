@@ -4,21 +4,18 @@
 answered NEEDS-A-RULING notes are in `QUEUE-ARCHIVE.md` on this branch (grep it, don't read it). History lives in
 CHANGELOG.md (v6.30 on; older in `docs/archive/CHANGELOG-to-v6.29.md`) and LESSONS.md on main.
 
-## HANDOFF — START HERE (CEO session_013xG9x8nRjrUMDyVuG21srj, 2026-11-22, at v6.68)
+## HANDOFF — START HERE (CEO session_013xG9xADa79zsMdfx4Ha7Ri, 2026-11-22, at v6.69)
 
-**State:** live = **v6.68** on `main`, livecheck ALL PASS. Function `table` version 88 = `v6.68 · sage-v19`, stamped, `--check` OK.
-**WIRE_V 49** (`boardcost`). DATA_VER sage-v19. 17 heroes. Session branch `claude/friendly-shannon-a0k6f5` == main (trainchaos merged).
-page.js 89/89 at 393x852 as of v6.66 (no UI change since). **Approximation ledger: 0 open** (21 stated, 42 closed). Pool 455/455 full.
-Ladder v6.68 (rule policy, 816 games, 48 each): briar 81 prism 76 kayo 71 azalea 61 dorinthea 59 enigma 57 dash 49 fai 48 bravo 44
-viserai 41 arakni 39 iyslander 35 boltyn 35 blaze 34 gravy 34 lyath 28 viseraibw 22. 0 refusals / violations / stalls.
+**State:** live = **v6.69** on `main`, livecheck ALL PASS. Function `table` version 90 = `v6.69 · sage-v19`, stamped, `--check` OK.
+**WIRE_V 49**. DATA_VER sage-v19. 17 heroes. Approximation ledger: 0 open. Pool 455/455.
+Ladder v6.69 (816 games, 48 each): briar 81 prism 76 kayo 71 dorinthea 60 azalea 59 enigma 57 dash 50 fai 48 viserai 42 bravo 42
+blaze 39 arakni 38 gravy 37 boltyn 32 iyslander 30 lyath 28 viseraibw 24. 0 refusals / violations / stalls (2 draws). Noise band max 9.
 
-**Shipped today (v6.68):** Iyslander casts an ARSENAL Frost Spike on the opponent's turn: two Frostbites (spike + hero trigger).
-`judge.oppTurnTrigger` / `oppTurnTriggerPlay`, SPXOPPICE, reason `oppIce`, drill test/oppice.test.js. Own seat 75->79, other 60->62 of 192.
-**THE LESSON, twice in one day: a hand card cast off-turn is a pitch card missing from your own turn.** Iyslander hand-cast 75->67;
-Blaze hand-cast of Cindering Foresight (any colour) 64->48. Off-turn casts ship from the ARSENAL (unpitchable) or not at all, unless
-the census shows the pitch was not needed. Also: a reader that names a whole talent ("Ice") held Ice Bolt too: 75->21. Name the kind.
-Closed, no gap: Gravy's Timesnap Potion and Jittery Bones (both blue pitch cards; Gravy ends turns with an empty hand).
-Chaos: table salt d6 (EPS 0.3, 289 games) + Iyslander salt `ice` (EPS 0.4): 0 findings.
+**Shipped today (v6.69):** SPXCLOAK (`cloakPay`: Spellfire Cloak pays an off-turn cost when the seat's own line, played out
+both ways, pitches fewer cards; Iyslander 287->308, Blaze 246->270 of 768 at 24 seeds/chair; phone p95 9 ms) and SPXSTIRIDLE
+(advice fix: an arsenal Stir with no taker is held; `judge.instantNextTakers`). Measured NOs: Blaze energy off-turn, Viserai BW
+Runechants off-turn, Boltyn charge-keep. **The off-turn lesson held four times; the Cloak is its positive form (a resource
+that is not a card).** Latent: Energy Potion (Dorinthea, Fai) would need cloakFirst to scan `sd.board`; no game reaches it.
 
 **WORKERS IN FLIGHT (assigned 2026-11-22 ~21:50Z by CEO session_013xG9xADa79zsMdfx4Ha7Ri, env_011rwpp2MyBTt3cEsZKDoVGk):**
 - `session_013xG9xCPAciqbr5nPRbgoCS` (Opus) — NEXT 1 done (negative); NEXT 3 done; now finishing SPXSTIRIDLE for ship; pushes ONLY `ship/blaze-energy-offturn`.
