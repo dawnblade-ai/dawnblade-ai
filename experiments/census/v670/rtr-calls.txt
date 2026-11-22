@@ -1,0 +1,8 @@
+{ games: 96, wins: 44 } {
+  'paySel own pitch': 110,
+  'defend opp blockHand': 18,
+  'defend opp blockLethal': 17,
+  'arsenal own arsenalOther': 15,
+  'paySel opp pitch': 9,
+  'play own nonAttack': 12
+}

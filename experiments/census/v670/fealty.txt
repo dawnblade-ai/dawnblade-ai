@@ -1,0 +1,18 @@
+{ games: 96, fealtyTurns: 228, fealtyExpired: 0, plays: 499 } [
+  [ 'drac Phoenix Flame', 115 ],
+  [ 'drac Brand with Cinderclaw', 65 ],
+  [ 'drac Blaze Headlong', 27 ],
+  [ 'NON-drac Fire Tenet: Strike First', 24 ],
+  [ 'drac Rise from the Ashes', 24 ],
+  [ 'drac Rising Resentment', 24 ],
+  [ 'drac Mounting Anger', 23 ],
+  [ 'drac Ronin Renegade', 21 ],
+  [ 'NON-drac Scar for a Scar', 20 ],
+  [ 'NON-drac Snatch', 20 ],
+  [ 'drac Flamecall Awakening', 17 ],
+  [ 'drac Display Loyalty', 16 ],
+  [ 'drac Lava Burst', 16 ],
+  [ 'drac Fire that Burns Within', 14 ],
+  [ 'NON-drac Art of the Dragon: Fire', 12 ],
+  [ 'NON-drac Nip at the Heels', 11 ]
+]

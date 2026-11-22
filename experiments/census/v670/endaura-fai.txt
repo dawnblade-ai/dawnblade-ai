@@ -1,0 +1,13 @@
+{ games: 96, wins: 55, turns: 739 } {
+  'why you do not hold priority': 355,
+  'why Display Loyalty costs 1 and you cannot raise it': 1,
+  'why no action point left': 19,
+  'why Wax On is a defence reaction — it belongs to the reaction step, not the action phase': 2,
+  'why Fire that Burns Within costs 1 and you cannot raise it': 1
+}
+{"turn":1,"phase":"end","step":"layer","x":"arsenal","why":"arsenalBest","hand":["Phoenix Flame(1)"],"legal":[],"life":[null,null]}
+{"turn":3,"phase":"end","step":"layer","x":"arsenal","why":"arsenalBest","hand":["Phoenix Flame(1)"],"legal":[],"life":[null,null]}
+{"turn":5,"phase":"action","step":"layer","x":"endTurn","why":"endTurn","hand":[],"legal":[],"life":[null,null]}
+{"turn":7,"phase":"action","step":"layer","x":"endTurn","why":"endTurn","hand":[],"legal":[],"life":[null,null]}
+{"turn":9,"phase":"action","step":"layer","x":"endTurn","why":"endTurn","hand":[],"legal":[],"life":[null,null]}
+{"turn":11,"phase":"action","step":"layer","x":"endTurn","why":"endTurnKeep","hand":[],"legal":[],"life":[null,null]}
