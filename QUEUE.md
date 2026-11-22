@@ -29,7 +29,8 @@ iyslander +4). `experiments/H36-H37-NOTES.md`. Off-turn pitch is now closed as a
 
 **H38 Fai Fealty — ZERO effect (`experiments/H38-fai-fealty-NOTES.md`):** spending Fealty fires but changes nothing, because
 **`judge.keepsActionPoint` cannot see CONDITIONAL go again** (cond-gated `ga`: drac2 Cinderskin Devotion / Hot on Their Heels /
-Enflame / Display Loyalty, lifeLt Scar for a Scar). Worker A on SPXCONDGA (via `effects.gatesMetNow`); Fealty re-measured after.
+Enflame / Display Loyalty, lifeLt Scar for a Scar). **SPXCONDGA shipping v6.71: Fai 431 -> 464 of 768**; 13 heroes print gated ga;
+Fealty on top still noise (H40, `experiments/H40-*`).
 
 **Never-sweep v6.70 (worker B, 16 heroes, legal>=50 / used<=5%):** the "free ability never looked at" shape does NOT recur.
 Own-turn abilities are used or have nothing to pay; off-turn ones all cost a hand card (out by the lesson). Leads: Blaze Aether
