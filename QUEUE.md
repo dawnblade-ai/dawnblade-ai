@@ -4,11 +4,15 @@
 answered NEEDS-A-RULING notes are in `QUEUE-ARCHIVE.md` on this branch (grep it, don't read it). History lives in
 CHANGELOG.md (v6.30 on; older in `docs/archive/CHANGELOG-to-v6.29.md`) and LESSONS.md on main.
 
-## HANDOFF — START HERE (CEO session_013xG9xAXQ9r9hWnresN2KmP, 2026-11-22, at v6.60)
+## HANDOFF — START HERE (CEO session_013xG9xAXQ9r9hWnresN2KmP, 2026-11-22, at v6.61)
 
-**State:** live = **v6.60** on `main`, livecheck ALL PASS (a first run reported 1 failed check that two reruns did not reproduce —
-watch for a flaky server-table check). Function `table` version 72 = `v6.60 · sage-v19`, stamped, `--check` OK. **WIRE_V 46**
+**State:** live = **v6.61** on `main`, livecheck ALL PASS (at v6.60 a first run reported 1 failed check that reruns did not
+reproduce — watch for a flaky server-table check). Function `table` version 74 = `v6.61 · sage-v19`, stamped, `--check` OK. **WIRE_V 46**
 (`hist.dmg`). DATA_VER sage-v19. 17 heroes. Session branch `claude/determined-curie-6rl15k` == main.
+
+**Shipped v6.61:** a zoomed card's keywords open their CR rules (`CardKw` in `CardModal`, every board); the hero sheet prints the
+hero card's ability verbatim. page.js 88/88. **Settled: Sharp is NOT worse on Viserai BW** — own seat only (`SPXLA=viseraibw`) he
+wins 277/384 vs the rule policy's 115 (the v6.59 "104" had Sharp in every seat); the wall search is worth 69 of those.
 
 **Shipped v6.60** (CHANGELOG has every number):
 - **Keywords on the hero banner/sheet, tap for the CR definition.** `cards.deckKeywords` (from `card_keywords`, params folded,
@@ -22,11 +26,10 @@ watch for a flaky server-table check). Function `table` version 72 = `v6.60 · s
   end of turn; misses are fair rankings). Censuses: `experiments/census/sharprider.js`, `over.js`, `banins.js`.
 
 **NEXT, in order:**
-1. **Sharp is now WORSE than the rule policy on Viserai BW** (104 vs 114 of 384 at v6.59). `experiments/census/over.js viseraibw 1`:
-   most overrules are walls (`laBlock` swaps, `laTake` passes with a Gloomblade/Vexing Malice in hand). A/B `SPXLA=viseraibw` with
-   `SPXLA_BLK=0` vs default at 12 seeds; if blocks are the loss, look at what `bMu` prices a Gloomblade (it replays from banish).
-2. Keywords row follow-ups: the hero's own ability text (hero card, verbatim) on the sheet; a keyword on a CARD in the zoom modal
-   could open the same rule (`crKeyword`). Drive at 393x852.
+1. The in-game peek (`PeekDock`, tap-to-close) shows no keywords; a newcomer mid-game meets "Phantasm" there first. A keyword line
+   that does not steal the closing tap (POLISH condition 1) — design it at 393x852 before building.
+2. AI census next targets: pick the weakest seats on the ladder (`npm run play '' '' 3`: Viserai BW 22, Lyath 28, Iyslander 32 of 96)
+   and run `experiments/census/instead.js` on their most-held cards.
 3. Compass of Sunken Depths (Gravy) — info the AI cannot use; skip unless Sharp's mask learns it (view.js).
 4. Phase 4 (Outbreak, 2027-02): when the lists publish, ROADMAP-NEWDECKS.md. Wire: next cut if needed is HZOOM (~500 B/seat).
 
