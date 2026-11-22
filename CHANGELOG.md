@@ -1,3 +1,31 @@
+## v6.69 — Spellfire Cloak pays on the opponent's turn; Stir the Aetherwinds is no longer thrown away
+
+- **AI: a piece that pays on the opponent's turn pays instead of a pitched card (SPXCLOAK, new reason `cloakPay`).**
+  Spellfire Cloak ("Instant - Destroy this: Gain {r}. Activate this only during an opponent's turn") was legal on 251 of
+  Iyslander's and 276 of Blaze's opponent turns and spent on none. A census found 70 of Iyslander's 130 off-turn pitches
+  (Blaze 32 of 37) were one card for one last point with the Cloak up. Before an off-turn play or activation whose payment
+  the piece covers, the seat plays its own line out both ways (the opponent only passes, so nothing hidden is read) and
+  spends the piece only when that line pitches fewer cards. The first cut spent it on any covered payment; its drill caught
+  the waste (an amp then an arsenal Ice Bolt is paid by ONE blue, so a Cloak on the amp saved nothing). Not asked inside
+  Sharp's search. **Measured, 24 seeds per chair (768 games a hero): Iyslander 287 -> 308, Blaze 246 -> 270**, positive in
+  all four chairs, 0 refusals / violations / stalls. Drill: test/cloakpay.test.js (sabotaged both ways). A spent Cloak
+  takes its Arcane Barrier 1 with it, so `soak`, `soakCard` and `arsenalSkip` are no longer reached in the explain pin.
+- **AI: a pure instant-speed grant with nothing to take it is held (SPXSTIRIDLE; advice fix).** Stir the Aetherwinds
+  ("your next Wizard non-attack card this turn as though it were an instant") was cast from Iyslander's arsenal on the
+  opponent's turn 16 times in 96 games; every cast pitched hand cards and none was followed by a Wizard card. New judge
+  reader `instantNextTakers` (counts the OTHER cards the grant's qualifier admits, by zone, through `qualMatches`); the
+  off-turn arsenal cast now waits for an arsenal taker. Win-noise (24 seeds 287 -> 284 of 768), shipped because the call
+  showed a player a play that spends next turn's cards for nothing. Drill: test/stiridle.test.js.
+- **Measured NO, not shipped (QUEUE.md on findings/queue, patches in experiments/):** Blaze's energy -> off-turn arcane
+  cast (~95% of what it spends is next turn's card; 125 -> 97 / 107 of 384); Viserai BW's Runechant of Lust/Sloth off-turn
+  (114 -> 94 / 100; destroyed at his action phase, never usurped); Boltyn keeping charge-riders out of the soul
+  (238 -> 244 of 768, noise). The off-turn lesson — a hand card spent on their turn is missing from yours — held each time.
+- **Chaos:** table salt d7 (EPS 0.3, 289 games, 41,680 random legal moves): 0 findings.
+- **Validation:** npm test 4545 / 4540 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; ladder 816 games, 0 refusals /
+  0 violations / 0 stalls (2 engine draws); chaos 289 games (EPS 0.25, 33,268 random moves) 0 findings. Cloak at 4x CPU
+  throttle on the real page: rule policy p95 8.0 / worst 21.6 ms, Sharp p95 9.2 / worst 14.1 ms (bound 150 / 400). No wire,
+  data or page change beyond `APP_VER`.
+
 ## v6.68 — Iyslander casts an arsenal Frost Spike on the opponent's turn
 
 - **AI: an Ice instant in the arsenal goes on the opponent's turn (SPXOPPICE, new reason `oppIce`).** Frost Spike (0-cost
