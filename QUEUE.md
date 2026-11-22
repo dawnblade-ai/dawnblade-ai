@@ -4,29 +4,31 @@
 answered NEEDS-A-RULING notes are in `QUEUE-ARCHIVE.md` on this branch (grep it, don't read it). History lives in
 CHANGELOG.md (v6.30 on; older in `docs/archive/CHANGELOG-to-v6.29.md`) and LESSONS.md on main.
 
-## HANDOFF — START HERE (CEO session_013xG9xCE5fBQAM6Mkv8rwdc, 2026-11-21, at v6.59)
+## HANDOFF — START HERE (CEO session_013xG9xAXQ9r9hWnresN2KmP, 2026-11-22, at v6.60)
 
-**State:** live = **v6.59** on `main`, livecheck ALL PASS. Function `table` version 70 = `v6.59 · sage-v19`, stamped, `--check` OK.
-WIRE_V 45 (unchanged). DATA_VER sage-v19. 17 heroes. Session branch `claude/nice-fermi-nw1gm0` == main.
+**State:** live = **v6.60** on `main`, livecheck ALL PASS (a first run reported 1 failed check that two reruns did not reproduce —
+watch for a flaky server-table check). Function `table` version 72 = `v6.60 · sage-v19`, stamped, `--check` OK. **WIRE_V 46**
+(`hist.dmg`). DATA_VER sage-v19. 17 heroes. Session branch `claude/determined-curie-6rl15k` == main.
 
-**Shipped v6.59** (CHANGELOG has every number):
-- **SPXRIDER** (`judge.riderPick` / `judge.riderLead`): Embrace Ursur's "banish a card from hand" sheet was declined 15/15, and
-  a Gloomblade was swung BEFORE Embrace Ursur. Now a card that still plays from banish and fires a rider is banished, and
-  Embrace Ursur leads while a payable Gloomblade waits. **Viserai BW, own seat, 12 seeds each chair: rule policy 76 -> 114 of
-  384; Sharp (`SPXLA=all`) 92 -> 104.** Ladder clean. Drill test/embraceursur.test.js.
-- First game points at the Coach's call once per phone (`coachSeen`, `.advnew`); page.js 83/83.
-- Ruled out: Jittery Bones (Gravy) — never held while a turn ended; the point always went to a bigger or go-again play.
+**Shipped v6.60** (CHANGELOG has every number):
+- **Keywords on the hero banner/sheet, tap for the CR definition.** `cards.deckKeywords` (from `card_keywords`, params folded,
+  deck-building keywords out) + `cards.crKeyword` over **`data/crkw.js`** — pinned verbatim from CR chapter 8 by
+  **`tools/pin-crkw.js`** (130 rows; `--check` each release cycle, CLAUDE.md says so). Drill test/crkw.test.js; page.js 86/86.
+- **Rules: `dealtDmg` reads `hist.dmg`** (damage that landed, hero or ally) — approx `dealt-damage-reads-attacks` CLOSED (open 1 left:
+  `destroy-a-runechant-cost-unasked`, which never arises: the Robe is in Viserai's list, the special Runechants in Viserai BW's).
+  Briar 164 -> 156 of 192 (Second Strike no longer goes again after a blocked swing). Ladder clean.
+- **SPXBANFIRST**: on a power/cost tie the banished copy is played first (Viserai BW 114 -> 115, ships for the advice).
+- Ruled out: Sharp skipping the Embrace Ursur lead (keeps it 13/16); Viserai BW's Gloomblades in banish (never left unplayed at
+  end of turn; misses are fair rankings). Censuses: `experiments/census/sharprider.js`, `over.js`, `banins.js`.
 
 **NEXT, in order:**
-1. **Sharp under-uses SPXRIDER** (+12 vs the rule policy's +38). Census Sharp's root picks (`SPXLA=all`, `SP.explain` keys) on
-   Viserai BW turns where `J.riderLead` is true: does `laHit` pick a Gloomblade first? Its playout scores damage only to the end of
-   the turn, so the Runechant (dealt later) may be under-counted, or the mask may hide the banish follow-up.
-2. Viserai BW's other census rows (`experiments/census/never.js viseraibw 1`): Murmuring Gloomblade from banish 50/10,
-   Bloodfrenzy from banish 44/15. Check the same way (what was played instead, never just legal-vs-used).
-3. **Newcomer path:** the hero sheet could say each hero's play style in one line (data in HEROES, sourced from the precon's
-   own product text, not invented prose). Drive at 393x852.
-4. Compass of Sunken Depths (Gravy) — info the AI cannot use; skip unless Sharp's mask learns it (view.js).
-5. Phase 4 (Outbreak, 2027-02): when the lists publish, ROADMAP-NEWDECKS.md. Wire: next cut if needed is HZOOM (~500 B/seat).
+1. **Sharp is now WORSE than the rule policy on Viserai BW** (104 vs 114 of 384 at v6.59). `experiments/census/over.js viseraibw 1`:
+   most overrules are walls (`laBlock` swaps, `laTake` passes with a Gloomblade/Vexing Malice in hand). A/B `SPXLA=viseraibw` with
+   `SPXLA_BLK=0` vs default at 12 seeds; if blocks are the loss, look at what `bMu` prices a Gloomblade (it replays from banish).
+2. Keywords row follow-ups: the hero's own ability text (hero card, verbatim) on the sheet; a keyword on a CARD in the zoom modal
+   could open the same rule (`crKeyword`). Drive at 393x852.
+3. Compass of Sunken Depths (Gravy) — info the AI cannot use; skip unless Sharp's mask learns it (view.js).
+4. Phase 4 (Outbreak, 2027-02): when the lists publish, ROADMAP-NEWDECKS.md. Wire: next cut if needed is HZOOM (~500 B/seat).
 
 **ASK THE USER (defaults standing — overrule any):** the cup (all heroes qualify, top 16 bracket); Prism as an AI seat; Spectra resolves at
 once (`spectra-trigger-at-once`); Prism's block named "Usurp the Shadow Throne"; hero select kept 6 across rather than the roadmap's 4;
