@@ -1,3 +1,15 @@
+## v6.63 — the peek names a card's keywords
+
+- **The in-game peek (`PeekDock`, both boards) names the card's keywords** under its name ("Go again · Intimidate", "Phantasm",
+  "Blood Debt · Usurp") — a newcomer meets them there first. Plain text, not chips: the whole dock is one tap-to-close surface (POLISH
+  condition 1), so a tap on the line closes the peek like any other; the full card, one more tap away, keeps the chips that open each
+  keyword's Comprehensive Rules sentence (`CardKw`). Same reader and filter as `CardKw` (`PeekKw`), so the two never disagree.
+  Measured at 393x852 over every hero's opening hand (117 peeks, 66 with keywords): the line always inside the screen and above the
+  hand rail, and a tap on it always closes the preview.
+- Drills: `tools/page.js` peeks trainer hand cards until one carries a keyword and checks the line is inside, takes no tap, and closes
+  the peek (89/89; sabotaged: making the line a button fails it). test/slicecensus.test.js repinned (`.peekbar .pkkw`).
+- **Validation:** npm test 4524 / 4519 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; both babel blocks compile; page 89/89;
+  no engine change (no ladder needed).
 ## v6.62 — the arsenal keeps the card that swings biggest from there
 
 - **AI: the arsenal step ranks on power FROM the arsenal (`judge.arsenalPower`, gate `SPXARSPOW`).** A census of Lyath's turns (1 seed)

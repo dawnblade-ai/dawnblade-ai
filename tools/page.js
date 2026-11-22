@@ -481,6 +481,38 @@ if(require.main === module){
       await page.evaluate(() => { const w = document.querySelector(".peekwrap"); if(w) w.click(); });
       await page.waitForTimeout(250);
     };
+    /* THE PEEK NAMES A CARD'S KEYWORDS AND THE LINE TAKES NO TAP (v6.63): peek hand
+       cards until one carries a keyword; its line must sit inside the screen, above the
+       rail, and a tap ON it must close the preview (the dock is one tap-to-close surface). */
+    const peekKw = async prefix => {
+      const cards = page.locator(".board .phand .hc:visible");
+      const n = await cards.count(), seen = [];
+      let got = null;
+      for(let i = 0; i < n && !got; i++){
+        await cards.nth(i).click({ timeout: 3000 }).catch(() => {});
+        await page.waitForTimeout(300);
+        const r = await page.evaluate(() => {
+          const w = document.querySelector(".peekwrap"), k = w && w.querySelector(".pkkw");
+          if(!w) return null;
+          const nm = w.querySelector(".pknm").innerText;
+          if(!k) return { nm };
+          const b = k.getBoundingClientRect(), rail = document.querySelector(".board .phand").getBoundingClientRect();
+          const top = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+          return { nm, kw: k.innerText, inside: b.left >= 0 && b.right <= innerWidth && b.top >= 0 && b.bottom <= rail.top,
+                   plain: !!top && !!top.closest(".peekwrap") && !top.closest("button,a,[role=button]") };
+        });
+        if(r && r.kw){
+          await page.locator(".peekwrap .pkkw").click().catch(() => {});
+          await page.waitForTimeout(250);
+          r.closed = !(await page.locator(".peekwrap").count());
+          got = r;
+        } else if(r){ seen.push(r.nm); }
+        await page.evaluate(() => { const w = document.querySelector(".peekwrap"); if(w) w.click(); });
+        await page.waitForTimeout(200);
+      }
+      row(!!got && got.inside && got.plain && got.closed, prefix + ": a peeked card names its keywords, and a tap on them closes the peek",
+        got ? `${got.nm}: "${got.kw}" inside ${got.inside} plain ${got.plain} closed ${got.closed}` : "no keyworded card in hand: " + seen.join(", "));
+    };
     const playOn = async prefix => {
       const sigs = new Set(), board = () => page.locator(".board").innerText();
       let moved = 0, taps = 0;
@@ -526,6 +558,7 @@ if(require.main === module){
             nb ? `${nb.w}x${nb.h}px, inside its box ${nb.inside}` : "no line"); }
         await hitCheck("trainer", ".board .judgebtn", 40); await advHits("trainer");
         await nav("trainer", ["You", "Opp"]);
+        await peekKw("trainer");
         await playOn("trainer");
         await click(page.locator(".screennav button", { hasText: "leave" }), "leave the trainer");
         await page.waitForSelector(".hgrid", { timeout: 5000 }).catch(() => {});

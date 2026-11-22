@@ -508,7 +508,9 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
     /* 91,025 -> 91,338 (v6.61), READ FIRST: still `<style>` -> `</style>`; the growth is presentation
        only: the hero sheet's ability text (`.herotx`) and the card zoom scrolling inside itself
        (`.modal .inner` max-height / overflow). */
-    "phasebar.test.js index.html 91338",
+    /* 91,338 -> 91,491 (v6.63), READ FIRST: still `<style>` -> `</style>`; the growth is presentation
+       only: the peek's keyword line (`.peekbar .pkkw`). */
+    "phasebar.test.js index.html 91491",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
        `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
        `abPickBound` in the pick legality it extends. */

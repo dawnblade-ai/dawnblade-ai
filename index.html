@@ -836,6 +836,8 @@ img{display:block;max-width:100%}
   box-shadow:0 6px 18px rgba(0,0,0,.6)}
 .peekbar .pknm{font-family:'Big Shoulders Display';font-weight:700;font-size:14px;
   letter-spacing:.03em;text-transform:uppercase;color:var(--bone);line-height:1.1}
+.peekbar .pkkw{font-family:'Spline Sans Mono';font-size:var(--fs-xs);color:var(--bone);opacity:.85;
+  max-width:70vw;text-align:center;line-height:1.25}
 .peekbar .pkhint{font-family:'Spline Sans Mono';font-size:var(--fs-xs);letter-spacing:.09em;
   text-transform:uppercase;color:var(--y)}
 .hand .hc.peek,.chand .hc.peek,.phand .hc.peek{transform:translateY(-7px);
@@ -1139,7 +1141,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "6.62"; /* v6.62 - the AI stores the card that swings biggest from the arsenal (Power Play); see CHANGELOG.md. */
+window.APP_VER = "6.63"; /* v6.63 - the in-game peek names the card's keywords; see CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -2966,10 +2968,23 @@ function PeekDock({card, verb, onClose}){
       <div className="peekcard"><CardFrame card={card}/></div>
       <div className="peekbar">
         <span className="pknm">{card.name}</span>
+        <PeekKw card={card}/>
         <span className="pkhint">{verb}</span>
       </div>
     </div>
   );
+}
+
+/* THE PEEK NAMES THE CARD'S KEYWORDS (v6.63) — a newcomer mid-game meets
+   "Phantasm" here first. Plain text, NOT chips: the whole dock is one
+   tap-to-close surface (POLISH condition 1), so nothing on it may take a tap
+   of its own. The full card — the next tap — carries the chips that open
+   each keyword's Comprehensive Rules sentence (`CardKw`). Same reader and
+   filter as `CardKw`, so the two never disagree. */
+function PeekKw({card}){
+  const rows = card ? deckKeywords([Object.assign({}, card, {q: 1})]).filter(r => crKeyword(r.k, CRKW)) : [];
+  if(!rows.length) return null;
+  return <span className="pkkw" aria-label="Keywords on this card">{rows.map(r => r.k).join(" · ")}</span>;
 }
 
 /* ============================================================
