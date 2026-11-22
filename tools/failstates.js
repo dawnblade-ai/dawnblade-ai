@@ -257,6 +257,12 @@ function noopBlindSpots(card, RULINGS, mentionsFn){
     const likelyHandled = claimedBuilt
       && ((led && led.status === "live") || (hits != null && hits >= 3));
     out.push({
+      /* CARRIED (v6.71): a keyword the LEDGER marks live is drill-backed (`test/ledger.test.js`),
+         so the row is kept for `classify` (graded built, sev 1) and left out of the REPORT
+         (`failStates` below). The mention count greps the trainer only: since the rules moved to
+         engine/, it filed 44 "verify" rows for suspense, fusion, meld, watery grave, phantasm and
+         crank, each carried with 6-25 drills. */
+      carried: !!(led && led.status === "live"),
       cat: "noop-with-meaning",
       /* a keyword the trainer clearly names is a VERIFY, not a defect */
       sev: likelyHandled ? 1 : (isDrawback ? 3 : 2),
@@ -372,8 +378,12 @@ function failStates(A, RULINGS, mentionsFn){
   const idx = rulingIndex(RULINGS);
   const out = [];
   for(const c of Object.values(A.cards || {})){
-    const f = classify(c, RULINGS, mentionsFn);
-    if(!f) continue;
+    const f0 = classify(c, RULINGS, mentionsFn);
+    if(!f0) continue;
+    /* a row the ledger proves carried is not a fail state (see `carried` above) */
+    const cats = (f0.cats || []).filter(x => !x.carried);
+    if(!cats.length) continue;
+    const f = Object.assign({}, f0, {cats, sev: Math.max(...cats.map(x => x.sev))});
     const key = slug(c.name) + "-" + (c.pitch || 0);
     const mechanics = idx.byCard.get(key) || [];
     const ruled = mechanics.length > 0 || idx.bySlug.has("card-" + key);
