@@ -1,0 +1,53 @@
+diff --git a/engine/judge.js b/engine/judge.js
+index 5fdc581..10c64d9 100644
+--- a/engine/judge.js
++++ b/engine/judge.js
+@@ -2021,6 +2021,12 @@ const grantedInstant = (g, seat) => {
+   if(!c || g.turnPlayer === seat || TY.isInstant(c) || TY.isAR(c) || TY.isDR(c)) return null;
+   return legal(g, {t: "play", uid: c.uid, from: "arsenal"}, seat) == null ? c.uid : null;
+ };
++/* EXPERIMENT (SPXOPPHAND): hand cards castable now on the opponent's turn only by a grant or their own text. */
++const grantedInstantHand = (g, seat) => {
++  if(g.turnPlayer === seat) return [];
++  return (at(g, seat).hand || []).filter(c => c && !TY.isInstant(c) && !TY.isAR(c) && !TY.isDR(c)
++    && legal(g, {t: "play", uid: c.uid, from: "hand"}, seat) == null).map(c => c.uid);
++};
+ /* A CARD WHOSE PLAY FIRES ONE OF ITS SEAT'S OWN TRIGGERS ONLY ON THE OPPONENT'S TURN (SPXOPPICE,
+    v6.68). For `sparring.js`, which reads no card text. Iyslander: "Whenever you play an Ice card
+    during an opponent's turn, create a Frostbite token under their control" — `build.js` reads the
+@@ -5520,7 +5526,7 @@ function moves(g, seat){
+ }
+ 
+ return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, moves, reduce, settle, strike, closeChain,
+-        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, cyclePick, riderPick, riderLead, arsenalAttack, arsenalUsable, arsenalPower, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, boardCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, pumpsNow, grantedInstant, oppTurnTrigger, oppTurnTriggerPlay, tokenPiece, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, weaponPumpOf, gaNextPiece, nonAtkHeld, discardDrawPiece, lifeGainOf, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
++        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, cyclePick, riderPick, riderLead, arsenalAttack, arsenalUsable, arsenalPower, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, boardCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, pumpsNow, grantedInstant, grantedInstantHand, oppTurnTrigger, oppTurnTriggerPlay, tokenPiece, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, weaponPumpOf, gaNextPiece, nonAtkHeld, discardDrawPiece, lifeGainOf, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
+         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf, waitingOn,
+         handFree: PR.handFree,
+         /* the card semantics seam (v2.77) */
+diff --git a/engine/sparring.js b/engine/sparring.js
+index 63a1ac0..d192792 100644
+--- a/engine/sparring.js
++++ b/engine/sparring.js
+@@ -1557,6 +1557,14 @@ function actBase(g, seat, o){
+     const ic = J.oppTurnTriggerPlay(g, seat);
+     if(ic && !J.defendsNow(g, seat, ic.uid, ic.from)) return tag("oppIce", {t: "play", uid: ic.uid, from: ic.from});
+   }
++  if(process.env.OPPHAND && g.turnPlayer !== seat && !g.pend && !(g.stack || []).some(l => l && l.seat === seat)
++     && process.env.OPPHAND.split(",").indexOf(g.sides[seat].heroKey) >= 0){
++    const maxP = +(process.env.OPPHANDP || 9), sd = g.sides[seat];
++    const hc = J.grantedInstantHand(g, seat).map(u => sd.hand.find(c => c && c.uid === u))
++      .filter(c => c && num(c, "pitch") <= maxP && !J.defendsNow(g, seat, c.uid, "hand") && idleOK(g, seat, c.uid, "hand"))
++      .sort((a, b) => num(a, "pitch") - num(b, "pitch") || byUid(a, b))[0];
++    if(hc) return tag("oppHand", {t: "play", uid: hc.uid, from: "hand"});
++  }
+   const rxWindow = speeds.some(w => w === "attack-reaction" || w === "defense-reaction");
+   if(rxWindow && g.pend && !(g.stack || []).length && !g.pend.rxPump){
+     const r = reaction(g, seat);
+@@ -2007,6 +2015,7 @@ const CALL_WHY = {
+   resUnlock: "Spend the piece for its resource. It pays for an attack you are holding.",
+   lifeAtBest: "Gain the life now. The arcane damage you took this turn makes it the bigger gain.",
+   oppArsAmp: "Amp first: your arsenal card is about to go on their turn, and this adds 1 to its arcane damage.",
++  oppHand: "x",
+   oppIce: "Cast it from your arsenal now, on their turn: your hero adds a Frostbite of its own, so they pay for two plays instead of one.",
+   oppArs: "Cast your arsenal card now, on their turn: your hero lets it go at instant speed, so it lands early and your arsenal refills at the end of your turn.",
+   discardDraw: "Discard the ally for the draw. It still plays from your graveyard, so the card is free.",
