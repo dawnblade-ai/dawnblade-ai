@@ -214,8 +214,11 @@ const drive = () => {
      sheet, v4.24). The same change moved the ring's games off it. Measured
      over every pairing Dash can sit in, both chairs: exactly one reaches
      it — Dash v Fai with Fai's chair first, the ring's own pairing turned
-     round. Every other field it brings is already pinned. */
-  { const r = T.leg(E[3], E[7], "spec-3-7", 1); legs++; if(r && r.threw) threw++; }
+     round. Every other field it brings is already pinned.
+     REPLACED AT v6.71: SPXCONDGA (Fai plays a gated go-again attack first) moved that game off it.
+     Measured over every Dash pairing, both chairs: seventeen reach it; Dash v Kayo with Dash's chair
+     first is the first, and holds no Fai seat to move again. Swapped, so the count stands. */
+  { const r = T.leg(E[3], E[0], "spec-3-0", 0); legs++; if(r && r.threw) threw++; }
   /* AND THE 37th (v5.36): `keepTop` LEFT AGAIN. The seat policy now plays a
      go-again non-attack before its attack, so Azalea's games moved and
      Enigma v Azalea stopped reaching Spire Sniping's reorder. Measured over

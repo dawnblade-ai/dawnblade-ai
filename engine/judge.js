@@ -2375,6 +2375,23 @@ const keepsActionPoint = (g, seat, uid, from) => {
   const qc = atk ? {from: route, atk: true} : {from: route};
   return (sd.gaNextQ || []).some(x => x && x.q && PR.qualMatches(x.q, c, qc));
 };
+/* ---- DOES THIS CARD'S OWN CONDITIONAL GO AGAIN HOLD NOW? (SPXCONDGA) ----
+   `keepsActionPoint`'s sibling, for `sparring.js`, which reads no card text. That reader answers
+   printed go again, a face-up arsenal stamp, the hero's first-attack grant and waiting grants, but
+   never a card's OWN gated go again: Cinderskin Devotion / Hot on Their Heels / Enflame the
+   Firebrand / Display Loyalty ("If you control 2 or more Draconic chain links, this gets go
+   again"), Scar for a Scar ("If you have less {h} than an opposing hero"), and 13 heroes' worth
+   more. True when a `ga` gate of the card the seat holds in `from` ("hand" / "arsenal") is true
+   NOW by `effects.gatesMetNow` — the engine's own gate loop, decidable gates only, the attack's
+   own Draconic link counted. Kept apart from `keepsActionPoint` so that reader's judge-side
+   callers (`arenaUseful`, `chargeMore`) are unchanged; `sparring.js` asks both behind SPXCONDGA. */
+const condGaNow = (g, seat, uid, from) => {
+  const sd = at(g, seat);
+  const c = from === "arsenal" ? (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null)
+          : from === "hand" ? (sd.hand || []).find(x => x && x.uid === uid) : null;
+  if(!c) return false;
+  return effectsFor(g).fx.gatesMetNow(g, seat, c, from).some(x => x[1] === "ga");
+};
 /* ---- WHICH ATTACKS COULD TAKE THIS GRANT NOW? (v5.38, QUEUE v4 H4) ----
 
    `keepsActionPoint`'s sibling, for `sparring.js`, which reads no card
@@ -5583,7 +5600,7 @@ function moves(g, seat){
 }
 
 return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, moves, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, cyclePick, riderPick, riderLead, arsenalAttack, arsenalUsable, arsenalPayable, arsenalPower, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, boardCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, arsTurnPays, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, pumpsNow, grantedInstant, oppTurnTrigger, oppTurnTriggerPlay, tokenPiece, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, instantNextTakers, weaponPumpOf, gaNextPiece, nonAtkHeld, discardDrawPiece, lifeGainOf, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
+        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, cyclePick, riderPick, riderLead, arsenalAttack, arsenalUsable, arsenalPayable, arsenalPower, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, boardCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, condGaNow, arsTurnPays, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, pumpsNow, grantedInstant, oppTurnTrigger, oppTurnTriggerPlay, tokenPiece, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, instantNextTakers, weaponPumpOf, gaNextPiece, nonAtkHeld, discardDrawPiece, lifeGainOf, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf, waitingOn,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */

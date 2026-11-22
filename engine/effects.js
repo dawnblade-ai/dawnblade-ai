@@ -3709,6 +3709,26 @@ function makeEffects(ctx){
     }
     return {power: base + bonus, base, bonus, gates};
   }
+  /* EVERY GATED OP OF THIS CARD WHOSE GATE IS TRUE NOW (SPXCONDGA): `effPowerNow`'s loop over the
+     same decidable gates (`EFF_DECIDABLE`: a gate settled at the payment, by the way the card was
+     played, or by what it does on resolution — "if this hits" — is NOT decidable and never counts),
+     for any op rather than the power ones alone, as `[cond, opName]` pairs. An attack counts its own
+     chain link, the ruling `dracLinks` carries — RULING (user, 2026-10-31): "Yes, an attack counts
+     its own chain link." Writes nothing. */
+  function gatesMetNow(g, seat, card, from){
+    if(!card || !card.name) return [];
+    const n = Object.assign({}, g, {actor: seat});
+    const fx = P.splitFx(card, P.isSplit(card) ? 0 : null);
+    const out = [];
+    (fx.conds || []).forEach(e => {
+      if(!e || !e.op || !e.op[0]) return;
+      if(e.wpnOnly && from !== "weapon") return;
+      if(!EFF_DECIDABLE(e.cond, from)) return;
+      const dracLinks = P.dracLinks(n.chain, actorOf(n)) + (P.dracNow(card, act(n)) ? 1 : 0);
+      if(condMetNow(n, n, card, from, e.cond, {chargedWay: [], fused: false, dracLinks})) out.push([e.cond, e.op[0]]);
+    });
+    return out;
+  }
 
   /* ---- THE LIFE A CARD WOULD GAIN IF PLAYED NOW (SPXPOLARITY) ------------
      `effPowerNow`'s sibling, for a card whose whole payout is gaining life:
@@ -9361,7 +9381,7 @@ function makeEffects(ctx){
 
   return {runOps, execute, afterDefenders, defendsTriggers, resolveClash, resolveStack, afterDiscard, payAddCost, fileAttack, allyDeath, creditHeroDmg, creditDmg, noteAttacked,
           linkPumps, linkPayload, linkOutcome, attackRx, preventDamage, autoPitch, applyAnswer,
-          activateHandAbility, playAtSpeed, fileDestroyedGear, effPowerNow, lifeNow, spectraStrike,
+          activateHandAbility, playAtSpeed, fileDestroyedGear, effPowerNow, gatesMetNow, lifeNow, spectraStrike,
           /* `applyDefMod` IS NO LONGER EXPOSED (v4.57). It was exposed at
              v4.53 for exactly one outside caller — `index.html`'s
              `confirmDefPay`, the trainer's own pause for one of the four
