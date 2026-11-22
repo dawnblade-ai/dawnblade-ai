@@ -2021,6 +2021,30 @@ const grantedInstant = (g, seat) => {
   if(!c || g.turnPlayer === seat || TY.isInstant(c) || TY.isAR(c) || TY.isDR(c)) return null;
   return legal(g, {t: "play", uid: c.uid, from: "arsenal"}, seat) == null ? c.uid : null;
 };
+/* A CARD WHOSE PLAY FIRES ONE OF ITS SEAT'S OWN TRIGGERS ONLY ON THE OPPONENT'S TURN (SPXOPPICE,
+   v6.68). For `sparring.js`, which reads no card text. Iyslander: "Whenever you play an Ice card
+   during an opponent's turn, create a Frostbite token under their control" — `build.js` reads the
+   clause into `iceFrostbite`, and `effects.foeTurnIce` is its one body; this asks the same two facts
+   (the seat carries the clause, the card's structured types name the Ice talent), so the policy and
+   the rule cannot disagree — and only of an INSTANT by type (a first cut that named every Ice card
+   and held them on her own turn, Ice Bolt included, took her own seat 75 -> 21 of 192). An arsenal
+   card a grant makes an instant is SPXOPPARS's (`grantedInstant`). Answers whatever the turn. */
+const oppTurnTrigger = (g, seat, uid, from) => {
+  if(!bOf(g, seat).iceFrostbite) return false;
+  const sd = at(g, seat);
+  const c = from === "arsenal" ? (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null)
+                               : (sd.hand || []).find(x => x && x.uid === uid);
+  return !!c && TY.isInstant(c) && (c.ty || []).some(t => /^ice$/i.test(String(t)));
+};
+/* AND THE ARSENAL CARD TO CAST NOW, or null: the arsenal card, if `oppTurnTrigger` names it and
+   `legal` lets this seat play it on the opponent's turn. ARSENAL ONLY: a hand card is also a pitch
+   card for the seat's own turn, and casting it there measured worse (sparring.js, SPXOPPICE). Null
+   on the seat's own turn. */
+const oppTurnTriggerPlay = (g, seat) => {
+  const c = at(g, seat).arsenal;
+  if(!c || g.turnPlayer === seat || !oppTurnTrigger(g, seat, c.uid, "arsenal")) return null;
+  return legal(g, {t: "play", uid: c.uid, from: "arsenal"}, seat) == null ? {uid: c.uid, from: "arsenal"} : null;
+};
 /* A PIECE THAT SPENDS ITSELF FOR A TOKEN OF ITS OWN, WITH GO AGAIN (SPXTOKENPIECE). For
    `sparring.js`, which reads no card text: an equipment ability that costs no resource,
    destroys or banishes the piece, has go again, and pays out only tokens for its controller
@@ -5496,7 +5520,7 @@ function moves(g, seat){
 }
 
 return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, moves, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, cyclePick, riderPick, riderLead, arsenalAttack, arsenalUsable, arsenalPower, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, boardCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, pumpsNow, grantedInstant, tokenPiece, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, weaponPumpOf, gaNextPiece, nonAtkHeld, discardDrawPiece, lifeGainOf, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
+        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, cyclePick, riderPick, riderLead, arsenalAttack, arsenalUsable, arsenalPower, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, boardCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, pumpsNow, grantedInstant, oppTurnTrigger, oppTurnTriggerPlay, tokenPiece, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, weaponPumpOf, gaNextPiece, nonAtkHeld, discardDrawPiece, lifeGainOf, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf, waitingOn,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */

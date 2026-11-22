@@ -1,3 +1,26 @@
+## v6.68 — Iyslander casts an arsenal Frost Spike on the opponent's turn
+
+- **AI: an Ice instant in the arsenal goes on the opponent's turn (SPXOPPICE, new reason `oppIce`).** Frost Spike (0-cost
+  Ice instant): "Create a Frostbite token in an exposed head, chest, arms, or legs zone." Iyslander: "Whenever you play an
+  Ice card during an opponent's turn, create a Frostbite token under their control." Off-turn it makes two Frostbites; the
+  `never.js` census had it legal on the opponent's turn 41 times in 32 games and cast 0. New judge readers
+  `oppTurnTrigger` (the seat carries `iceFrostbite` and the card is an Ice INSTANT by type — the same two facts
+  `effects.foeTurnIce` asks) and `oppTurnTriggerPlay` (the arsenal card, legal now); the policy casts it at the first
+  window outside a defence, like SPXOPPARS. **Measured, and narrowed by the measurement:** a first cut that held every Ice
+  card on her own turn took her own seat 75 -> 21 of 192 (it held Ice Bolt too); casting a HAND Spike off-turn cost
+  75 -> 67 and 60 -> 57 (a blue hand card is the 3-pitch her own turn needed). From the arsenal, where a card cannot be
+  pitched: own seat 75 -> 79, other chair 60 -> 62 (12 seeds each, 0 refusals) — noise, shipped as the hero's printed play
+  the call never made. Rare (about 4 casts in 96 games). Drill: test/oppice.test.js (an arsenal Spike is cast and the
+  opponent gains two Frostbites; a hand Spike is kept; sabotaged both ways).
+- **Census closed, no gap (handoff item 1):** Gravy's Timesnap Potion (legal 62 / played 2) is a blue 3-pitch card and
+  Gravy ends almost every turn with an empty hand (`endaura.js`: no spare action point ever met it); blue Jittery Bones
+  (67/8) is a pitch-and-block card. Neither is advice the call is missing.
+- **Tools:** `tools/trainchaos.js` (random taps on the real page through whole trainer games) merged from the tools
+  branch. Table chaos salt d6 (EPS 0.3, 289 games, 41,070 random legal moves): 0 engine / 0 policy findings.
+- **Validation:** npm test 4540 / 4535 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; ladder 816 games, 0 refusals /
+  0 violations / 0 stalls (2 engine draws), Iyslander 33 -> 35 of 96; chaos on Iyslander (EPS 0.4, 48 games, 7,680 random
+  moves) 0 findings. No wire, data or page change beyond `APP_VER`.
+
 ## v6.67 — the AI takes back an over-pitch; chaos reaches the wire, the view and Sharp
 
 - **AI: an over-pitched payment is taken back, not confirmed (new reason `payBack`).** Found by `tools/chaos.js`: a payment

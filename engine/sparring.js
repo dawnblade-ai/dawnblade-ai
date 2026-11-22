@@ -169,7 +169,9 @@ const fixOn = (g, seat) => {
    (v6.62) the arsenal step stores the card with the most power FROM the arsenal (`judge.arsenalPower`).
    SPXOPPARS (v6.64) an arsenal card a hero grant makes an instant (`judge.grantedInstant`: Iyslander's
    blue non-attacks) is cast on the opponent's turn, at the first window outside a defence. SPXOPPAMP
-   (v6.65) an amp piece (`judge.abAmpTakers`: Crucible of Aetherweave) goes first when that cast takes it. */
+   (v6.65) an amp piece (`judge.abAmpTakers`: Crucible of Aetherweave) goes first when that cast takes it.
+   SPXOPPICE (v6.68) an arsenal instant whose play fires a trigger of the seat's own only on the
+   opponent's turn (`judge.oppTurnTrigger`: Iyslander's Ice instants, Frost Spike) is cast on theirs. */
 const subGate = k => {
   const v = (typeof process !== "undefined" && process.env && process.env[k]) || "";
   return (g, seat) => {
@@ -184,7 +186,7 @@ const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate(
       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
       wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW"),
       graveOn = subGate("SPXGRAVE"), booOn = subGate("SPXBOO"), energyOn = subGate("SPXENERGY"), putOn = subGate("SPXPUT"),
-      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST"), arsPowOn = subGate("SPXARSPOW"), oppArsOn = subGate("SPXOPPARS"), oppAmpOn = subGate("SPXOPPAMP");
+      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST"), arsPowOn = subGate("SPXARSPOW"), oppArsOn = subGate("SPXOPPARS"), oppAmpOn = subGate("SPXOPPAMP"), oppIceOn = subGate("SPXOPPICE");
 /* THE BLOCK A TOKEN PIECE MAY GIVE UP (SPXTOKENPIECE): one point. Flat Trackers (1 defence, blade
    break: "Destroy this: Create an Agility token. Go again") measured on Boltyn's own seat, 24 seeds
    each chair: 224 -> 253 of 768 spent this way against kept to block once. */
@@ -1540,6 +1542,21 @@ function actBase(g, seat, o){
       return tag("oppArs", {t: "play", uid: u, from: "arsenal"});
     }
   }
+  /* AN ARSENAL CARD WHOSE PLAY IS WORTH MORE ON THEIR TURN, CAST THEN (v6.68, SPXOPPICE). Frost
+     Spike, a 0-cost Ice instant: "Create a Frostbite token in an exposed head, chest, arms, or legs
+     zone." On the opponent's turn Iyslander's hero adds a second Frostbite ("Whenever you play an Ice
+     card during an opponent's turn ..."). The census (32 games): legal on the opponent's turn 41
+     times, cast 0. `judge.oppTurnTriggerPlay` answers the card; the same first-window-outside-a-
+     defence rule as SPXOPPARS above, so both Frostbites meet the rest of their turn.
+     ONLY FROM THE ARSENAL, MEASURED. Cast from the hand as well, her own seat went 75 -> 67 of 192
+     and the other chair 60 -> 57: the Spike is blue, and a hand card spent on their turn is a 3-pitch
+     card missing from her own (Ice Bolt costs 3). An arsenal card cannot be pitched, so there the
+     cast costs nothing: 75 -> 79 and 76 with an own-turn hold (noise; the hold is not shipped). Rare
+     (4 casts in 96 games); it ships because it is the hero's printed play and the call never made it. */
+  if(oppIceOn(g, seat) && g.turnPlayer !== seat && !g.pend && !(g.stack || []).some(l => l && l.seat === seat)){
+    const ic = J.oppTurnTriggerPlay(g, seat);
+    if(ic && !J.defendsNow(g, seat, ic.uid, ic.from)) return tag("oppIce", {t: "play", uid: ic.uid, from: ic.from});
+  }
   const rxWindow = speeds.some(w => w === "attack-reaction" || w === "defense-reaction");
   if(rxWindow && g.pend && !(g.stack || []).length && !g.pend.rxPump){
     const r = reaction(g, seat);
@@ -1990,6 +2007,7 @@ const CALL_WHY = {
   resUnlock: "Spend the piece for its resource. It pays for an attack you are holding.",
   lifeAtBest: "Gain the life now. The arcane damage you took this turn makes it the bigger gain.",
   oppArsAmp: "Amp first: your arsenal card is about to go on their turn, and this adds 1 to its arcane damage.",
+  oppIce: "Cast it from your arsenal now, on their turn: your hero adds a Frostbite of its own, so they pay for two plays instead of one.",
   oppArs: "Cast your arsenal card now, on their turn: your hero lets it go at instant speed, so it lands early and your arsenal refills at the end of your turn.",
   discardDraw: "Discard the ally for the draw. It still plays from your graveyard, so the card is free.",
   gaNextTaker: "Play the card the go again is waiting for first. The attack still has its action point after.",
