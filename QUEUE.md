@@ -4,33 +4,28 @@
 answered NEEDS-A-RULING notes are in `QUEUE-ARCHIVE.md` on this branch (grep it, don't read it). History lives in
 CHANGELOG.md (v6.30 on; older in `docs/archive/CHANGELOG-to-v6.29.md`) and LESSONS.md on main.
 
-## HANDOFF — START HERE (CEO session_013xG9x8zcxAkbX2jCAXysk4, 2026-11-22, at v6.65)
+## HANDOFF — START HERE (CEO session_013xG9x9GrXFSawJ12C5YkG8, 2026-11-22, at v6.67)
 
-**State:** live = **v6.65** on `main`, livecheck ALL PASS. Function `table` version 82 = `v6.65 · sage-v19`, stamped, `--check` OK.
-**WIRE_V 48** (a held layer's `price`). DATA_VER sage-v19. 17 heroes. Session branch `claude/quirky-brahmagupta-2pr645` == main.
-page.js 89/89 at 393x852 as of v6.63 (deps: `npm install --prefix <scratch>/pagedeps ...` per its header; v6.65 touched no UI).
+**State:** live = **v6.67** on `main`, livecheck ALL PASS. Function `table` version 86 = `v6.67 · sage-v19`, stamped, `--check` OK.
+**WIRE_V 49** (`boardcost`). DATA_VER sage-v19. 17 heroes. Session branch `claude/zealous-newton-d7sohl` == main.
+page.js 89/89 at 393x852 as of v6.66. **Approximation ledger: 0 open** (21 stated, 42 closed). Pool 455/455 full.
 
-**Shipped v6.65:**
-- **Rules: a held play pays the price it was PLAYED at** (CR 5.1.6/5.1.7/5.1.10, quoted in judge.holdPlay and LESSONS "CR READINGS").
-  v6.64's Frostbite was one input of a class: `execute` re-read the whole price at resolution. Rune Flash waiting with one Runechant,
-  a second made at instant speed -> refunded 1 (silent); one destroyed (Runebleed Robe) -> charged 1 more. `holdPlay` records `price`,
-  `execute` charges it (`_heldPrice`). Audit: `costOff` is only Seismic Surge (start of action phase), `nextTurn` taxes are born
-  not-ready, so neither can be born in the window. A probe over the full ladder found 0 held plays whose price moved (the rule
-  policy never did it; a person or Sharp could). Drill test/heldprice.test.js.
-- **SPXOPPAMP:** Crucible of Aetherweave amps Iyslander's off-turn arsenal cast. 266 -> 279 of 768 (both chairs up), reason `oppArsAmp`.
-- **Measured and dropped:** Spellfire Cloak paying for those casts — its {r} never unlocked one (0/111 windows; on == off over 384
-  games). Its real value is SAVING a pitched card on an off-turn cast (a card for Arcane Barrier 1) — a payment-policy question.
-
-**Measured after v6.65 shipped (Blaze, 12 seeds each chair, wins of 384; both deleted — do not retry as-is):**
-- SPXOPPHAND — a free hand card granted instant speed off-turn (Cindering Foresight) cast in the opponent's last window:
-  125 -> 85. Its amp and energy are worth more on Blaze's own turn.
-- SPXOPPENERGY — Blaze's hero pick (and the spell it banished) in the opponent's last window: 125 -> 97. The energy and the
-  pitch come out of his own turn. Emeritus Scolding's off-turn 6 alone might differ, but the AI cannot read that clause.
-
-**Earlier (v6.64):** Frostbite-in-the-window fix (`frostAt`), SPXOPPARS (Iyslander casts her arsenal on the opponent's turn),
-Gravy's discard-cost pitch. Dropped then (do not retry as-is): Lyath's Suspense auras in the opponent's last window (127 -> 112).
+**Shipped today:**
+- **v6.66 rules:** Runebleed Robe's "destroy this and a Runechant you control" asks WHICH when a token and a Runechant of
+  Lust/Sloth are both there (CR 1.8.8). `parser.boardCostOffer`, judge `boardcost` pending (3 activation routes), trainer
+  `boardpick` (both doors), `_destroyUid` in HELD_DECL, AI `judge.boardCostAnswer`. Closed the ledger's last open record.
+  Drill test/boardcost.test.js. Unreachable with today's built decks (Robe = Viserai, Lust/Sloth = Viserai BW).
+- **New tool `tools/chaos.js`** (in CLAUDE.md's validation list): random LEGAL moves mixed into self-play at rate EPS; reports
+  legal/reduce disagreement, throws, invariants, NO-ZONE, wire round-trip + replay divergence (the two phones), view throws,
+  rule-policy and Sharp refusals. ~1M random legal moves over the day across all 289 pairings: **0 engine findings.**
+- **v6.67 AI:** the one finding — a payment over-pitched by someone else got `payConfirm` (refused); now `payBack` takes a card
+  back. Ladder byte-identical to v6.66. Drill test/payback.test.js.
 
 **NEXT, in order:**
+0. **Chaos, further** (cheap, high yield for "a person could, the policy never did"): (a) the trainer has no chaos — its
+   doors live in index.html's `Battle`; drive them through tools/page.js with random taps, or move a door into effects.js first;
+   (b) chaos on the STAGED decks before they open (`tools/staged-play.js` builds them) so a new precon lands pre-fuzzed;
+   (c) chaos only rolls one seed per pairing so far — `node tools/chaos.js '' '' 3` with EPS 0.25 and 0.6 is ~40 min on 4 cores.
 1. Weakest ladder seats (rule policy, 48 games each, v6.65 ladder): Viserai BW 22, Lyath 28, Iyslander 33, Gravy/Blaze 34 of 96.
    Lyath looks like a deck/halving ceiling; BW is strong under Sharp (the page's AI). Prefer correcting advice over chasing wins:
    run `never.js <hero> 1` for each and look for a printed play the call never offers. Done for BW/Gravy/Blaze/Lyath

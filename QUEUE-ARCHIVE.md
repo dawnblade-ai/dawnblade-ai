@@ -1,5 +1,31 @@
 # QUEUE ARCHIVE — superseded handoffs and the v1–v4 item lists (moved out of QUEUE.md on 2026-11-19, word for word). grep it, don't read it.
 
+### PREVIOUS (CEO session_013xG9x8zcxAkbX2jCAXysk4, 2026-11-22, at v6.65)
+
+**State:** live = **v6.65** on `main`, livecheck ALL PASS. Function `table` version 82 = `v6.65 · sage-v19`, stamped, `--check` OK.
+**WIRE_V 48** (a held layer's `price`). DATA_VER sage-v19. 17 heroes. Session branch `claude/quirky-brahmagupta-2pr645` == main.
+page.js 89/89 at 393x852 as of v6.63 (deps: `npm install --prefix <scratch>/pagedeps ...` per its header; v6.65 touched no UI).
+
+**Shipped v6.65:**
+- **Rules: a held play pays the price it was PLAYED at** (CR 5.1.6/5.1.7/5.1.10, quoted in judge.holdPlay and LESSONS "CR READINGS").
+  v6.64's Frostbite was one input of a class: `execute` re-read the whole price at resolution. Rune Flash waiting with one Runechant,
+  a second made at instant speed -> refunded 1 (silent); one destroyed (Runebleed Robe) -> charged 1 more. `holdPlay` records `price`,
+  `execute` charges it (`_heldPrice`). Audit: `costOff` is only Seismic Surge (start of action phase), `nextTurn` taxes are born
+  not-ready, so neither can be born in the window. A probe over the full ladder found 0 held plays whose price moved (the rule
+  policy never did it; a person or Sharp could). Drill test/heldprice.test.js.
+- **SPXOPPAMP:** Crucible of Aetherweave amps Iyslander's off-turn arsenal cast. 266 -> 279 of 768 (both chairs up), reason `oppArsAmp`.
+- **Measured and dropped:** Spellfire Cloak paying for those casts — its {r} never unlocked one (0/111 windows; on == off over 384
+  games). Its real value is SAVING a pitched card on an off-turn cast (a card for Arcane Barrier 1) — a payment-policy question.
+
+**Measured after v6.65 shipped (Blaze, 12 seeds each chair, wins of 384; both deleted — do not retry as-is):**
+- SPXOPPHAND — a free hand card granted instant speed off-turn (Cindering Foresight) cast in the opponent's last window:
+  125 -> 85. Its amp and energy are worth more on Blaze's own turn.
+- SPXOPPENERGY — Blaze's hero pick (and the spell it banished) in the opponent's last window: 125 -> 97. The energy and the
+  pitch come out of his own turn. Emeritus Scolding's off-turn 6 alone might differ, but the AI cannot read that clause.
+
+**Earlier (v6.64):** Frostbite-in-the-window fix (`frostAt`), SPXOPPARS (Iyslander casts her arsenal on the opponent's turn),
+Gravy's discard-cost pitch. Dropped then (do not retry as-is): Lyath's Suspense auras in the opponent's last window (127 -> 112).
+
 ### PREVIOUS (CEO session_013xG9xCE5fBQAM6Mkv8rwdc, 2026-11-21, at v6.59)
 
 **State:** live = **v6.59** on `main`, livecheck ALL PASS. Function `table` version 70 = `v6.59 · sage-v19`, stamped, `--check` OK.
