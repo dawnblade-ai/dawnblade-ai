@@ -26,6 +26,14 @@
                                  the game is not over
    A finding is printed with the hero, the seed and the last taps.
 
+   MEASURED ONCE, WORTH KNOWING (2026-11-22): the first cut fired a tile's
+   two taps as two .click() calls in ONE page task. React had not re-rendered
+   between them, so both read the same closure: with the peek already armed,
+   both COMMITTED and a card was played twice (CARD-DUP-IN-ZONE, Lyath's
+   Concealed Object, Viserai BW's Runic Disposition). A thumb cannot do that
+   (each real tap is its own event and React flushes between them), so each
+   tap is now its own task. The handlers trust that flush; nothing else does.
+
    NOT TAPPED: JUDGE!! (opens the bug sheet — a person's report, not
    play), "leave" (ends the run), the sound toggle, and anything outside
    the board/sheets while a game runs.
@@ -87,7 +95,12 @@ async function oneGame(kit, heroIx, seed, log){
     const pick = c[Math.floor(r() * c.length)];
     const twice = pick.tile && r() < 0.75;
     taps.push(pick.t + (twice ? " ×2" : ""));
-    await page.evaluate(([i, twice]) => { const b = document.querySelectorAll("button")[i]; if(b){ b.click(); if(twice) b.click(); } }, [pick.i, twice]);
+    /* each tap is its own task, as two thumb taps are: React flushes between them
+       (two .click() calls in ONE evaluate both read the pre-render closure) */
+    const tap = () => page.evaluate(([i, t]) => { const b = document.querySelectorAll("button")[i];
+      if(b && b.innerText.replace(/\s+/g, " ").trim().slice(0, 40) === t) b.click(); }, [pick.i, pick.t]);
+    await tap();
+    if(twice){ await page.waitForTimeout(40); await tap(); }
     await page.waitForTimeout(PAUSE);
   }
   const j1 = await judge();

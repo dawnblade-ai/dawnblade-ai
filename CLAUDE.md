@@ -156,6 +156,7 @@ npm run fairness      # is any card STRONGER than printed (exits non-zero on a f
   a balance claim needs several seeds on both sides of the change.
 - After rules, wire or AI changes: `node tools/chaos.js` (random LEGAL moves mixed into self-play: `legal`/`reduce`
   disagreements, wire replay divergence, view throws, invariants, policy and Sharp refusals; `EPS=0.6` for more). Exit 0 = clean.
+- After trainer (`Battle`) changes: `node tools/trainchaos.js` (random taps on the real page through whole trainer games, every hero; page.js deps). Exit 0 = clean.
 - UI changes: drive the real page at phone size (393×852) and assert on element boxes,
   not screenshots. `node tools/page.js` does it offline (CDNs and the card DB served
   locally; deps in a scratch dir, see its header) and exports `open()` for drives.
