@@ -2118,6 +2118,27 @@ const arsenalUsable = (g, seat, uid) => {
   const c = (at(g, seat).hand || []).find(x => x && x.uid === uid);
   return !!c && TY.isPlayable(c);
 };
+/* COULD THIS HAND CARD BE PAID FOR FROM THE ARSENAL NEXT TURN? (SPXARSPAY) For `sparring.js`,
+   which reads no card text. The arsenal step stored the hand's biggest printed attack whatever its
+   cost, and the policy's own affordability rule (pay within `maxPitch` pitched cards) then refused
+   to play it: Bravo's Macho Grande (cost 7, Dominate) was stored 20 times in 96 games, played from
+   the arsenal 2 of 85 times it was legal, and sat there at the start of 205 of 1171 turns. The same
+   rule asked of next turn's hand: the cards the seat keeps (the hand without this one) plus a draw
+   up to its intellect, each draw counted at the mean pitch of its own deck (its list is its own
+   knowledge; no order is read); the `maxPitch` biggest pitches must cover the printed cost.
+   False for a card the seat does not hold in hand. */
+const arsenalPayable = (g, seat, uid, maxPitch) => {
+  const sd = at(g, seat), c = (sd.hand || []).find(x => x && x.uid === uid);
+  if(!c) return false;
+  const need = +c.cost || 0;
+  if(need <= 0) return true;
+  const keep = (sd.hand || []).filter(x => x && x.uid !== uid);
+  const deck = (sd.deck || []).filter(Boolean);
+  const mean = deck.length ? deck.reduce((t, x) => t + (+x.pitch || 0), 0) / deck.length : 0;
+  const draws = Math.max(0, Math.min(deck.length, (+sd.int || 0) - keep.length));
+  const pitches = keep.map(x => +x.pitch || 0).concat(Array(draws).fill(mean)).sort((a, b) => b - a);
+  return pitches.slice(0, Math.max(0, maxPitch | 0)).reduce((t, x) => t + x, 0) >= need;
+};
 const arsenalAttack = (g, seat, uid) => {
   const c = (at(g, seat).hand || []).find(x => x && x.uid === uid);
   return !!c && TY.isAttack(c);
@@ -2826,6 +2847,26 @@ const ctrPickTakers = (g, seat) => {
   const f = PM.promptFilter(Object.assign({}, pk[1].filter, {arcLe: held}));
   return (sd[pk[1].zone || "hand"] || []).filter(c => c && f(c))
     .map(c => ({uid: c.uid, card: c, arc: PR.arcAmount(c), cost: c.cost || 0}));
+};
+/* ---- DOES TURNING THE ARSENAL CARD FACE-UP PAY? (SPXFLIPCRUSH) ----
+   For `sparring.js`, which reads no card text. Bravo's hero ability: "Turn a face-down card in
+   your arsenal face-up. If it has crush, it gets +2{p} and dominate this turn. Go again" — one
+   `arsTurn` op whose rider carries its qualifier (`{ifKw: "crush", pow, kw}`). null when the
+   ability (the hero's for "hpow"/"hero", else a gear piece's) is not an arsenal turn with a
+   rider; otherwise `{pays, cost, uid}`: `pays` is true only for a FACE-DOWN arsenal card the
+   rider applies to (`parser.arsGrantMet`, the body `effects.applyArsGrant` grants with), `cost`
+   the ability's printed resource cost, `uid` the arsenal card's. Census (96 games): 65 uses, 33
+   on a card without crush ({r}{r} for nothing), 32 on crush, with a crush card face-down at
+   the start of 422 of 1171 turns. */
+const arsTurnPays = (g, seat, uid) => {
+  const sd = at(g, seat);
+  const ab = (uid === "hpow" || uid === "hero") ? bOf(g, seat).HPOW
+           : ((sd.gear || []).find(x => x && x.uid === uid) || {}).powCard;
+  if(!ab) return null;
+  const op = (PR.fxParse(ab).ops || []).find(o => o && o[0] === "arsTurn");
+  if(!op || !op[1]) return null;
+  const c = sd.arsenal;
+  return {pays: !!c && !c._faceUp && PR.arsGrantMet(c, op[1]), cost: +ab.cost || 0, uid: c ? c.uid : null};
 };
 /* ---- WHAT DOES A CHARGE DO FOR THIS PLAY? (v5.41, QUEUE v4 H6) -------
    `keepsActionPoint`'s sibling, for `sparring.js`, which reads no card
@@ -5542,7 +5583,7 @@ function moves(g, seat){
 }
 
 return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, moves, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, cyclePick, riderPick, riderLead, arsenalAttack, arsenalUsable, arsenalPower, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, boardCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, pumpsNow, grantedInstant, oppTurnTrigger, oppTurnTriggerPlay, tokenPiece, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, instantNextTakers, weaponPumpOf, gaNextPiece, nonAtkHeld, discardDrawPiece, lifeGainOf, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
+        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, cyclePick, riderPick, riderLead, arsenalAttack, arsenalUsable, arsenalPayable, arsenalPower, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, boardCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, arsTurnPays, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, pumpsNow, grantedInstant, oppTurnTrigger, oppTurnTriggerPlay, tokenPiece, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, instantNextTakers, weaponPumpOf, gaNextPiece, nonAtkHeld, discardDrawPiece, lifeGainOf, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf, waitingOn,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */

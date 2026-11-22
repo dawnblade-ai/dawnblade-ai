@@ -6662,9 +6662,7 @@ function makeEffects(ctx){
     if(!grant || !cur) return n;
     const what = [grant.pow ? `+${grant.pow}{p}` : null, ...grant.kw]
       .filter(Boolean).join(" and ");
-    const met = grant.ifKw ? printedKw(cur, grant.ifKw)
-              : grant.ifTt ? new RegExp("\\b" + grant.ifTt + "\\b", "i").test(cur.tt || "")
-              : true;
+    const met = P.arsGrantMet(cur, grant);
     if(!met){
       const subj = grant.ifKw ? `has no ${grant.ifKw}`
                               : `is no ${grant.ifTt}`;

@@ -186,7 +186,7 @@ const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate(
       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
       wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW"),
       graveOn = subGate("SPXGRAVE"), booOn = subGate("SPXBOO"), energyOn = subGate("SPXENERGY"), putOn = subGate("SPXPUT"),
-      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST"), arsPowOn = subGate("SPXARSPOW"), oppArsOn = subGate("SPXOPPARS"), oppAmpOn = subGate("SPXOPPAMP"), oppIceOn = subGate("SPXOPPICE"), stirIdleOn = subGate("SPXSTIRIDLE"), cloakOn = subGate("SPXCLOAK");
+      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST"), arsPowOn = subGate("SPXARSPOW"), oppArsOn = subGate("SPXOPPARS"), oppAmpOn = subGate("SPXOPPAMP"), oppIceOn = subGate("SPXOPPICE"), stirIdleOn = subGate("SPXSTIRIDLE"), cloakOn = subGate("SPXCLOAK"), flipOn = subGate("SPXFLIPCRUSH"), arsPayOn = subGate("SPXARSPAY");
 /* THE BLOCK A TOKEN PIECE MAY GIVE UP (SPXTOKENPIECE): one point. Flat Trackers (1 defence, blade
    break: "Destroy this: Create an Agility token. Go again") measured on Boltyn's own seat, 24 seeds
    each chair: 224 -> 253 of 768 spent this way against kept to block once. */
@@ -771,6 +771,20 @@ function offence(g, seat, o){
      mark off, so a chain that goes again can be marked again. */
   const m = J.markFirst(g, seat);
   if(m) return tag("markFirst", {t: "activate", from: "hand", uid: m.uid});
+  /* THE ARSENAL CARD IS TURNED FACE-UP BEFORE IT ATTACKS, AND ONLY WHEN THAT PAYS (SPXFLIPCRUSH).
+     Bravo: "{r}{r}, {t}: Turn a face-down card in your arsenal face-up. If it has crush, it gets
+     +2{p} and dominate this turn. Go again". The hero ability sat last, after the attacks, and was
+     aimed blind: 33 of 65 uses turned a card without crush (Macho Grande, Pummel), paying {r}{r}
+     for nothing, while a crush card lay face-down at the start of 422 of 1171 turns. Turned here
+     when `judge.arsTurnPays` says the rider applies, the card is an attack `legal` lets the seat
+     play from the arsenal now, and the pool and hand cover both the {r}{r} and the attack's cost
+     (go again gives the action point back). Not turned at all when the rider would not apply. */
+  if(flipOn(g, seat) && legal(g, {t: "activate", from: "hero", uid: "hpow"}, seat)){
+    const ft = J.arsTurnPays(g, seat, "hpow"), sd = g.sides[seat];
+    if(ft && ft.pays && sd.arsenal && num(sd.arsenal, "power") > 0 && legal(g, {t: "play", uid: ft.uid, from: "arsenal"}, seat)
+       && affordsBoth(sd, ft.cost, sd.arsenal, o))
+      return tag("flipFirst", {t: "activate", from: "hero", uid: "hpow"});
+  }
   const a = offenceBase(g, seat, o);
   /* A DRAW PAID WITH A CARD THE SEAT GETS BACK GOES FIRST (SPXCROWN). Carrion Crown
      was legal on 72 of Gravy's turns and spent on 1: the gear fallback sits after the
@@ -1210,7 +1224,9 @@ function offenceBase(g, seat, o){
      to banish wastes the turn's one use. Its own reason, so the call says what it is. */
   if(legal(g, {t: "activate", from: "hero", uid: "hpow"}, seat)){
     const ctr = energyOn(g, seat) ? J.ctrPickTakers(g, seat) : null;
-    if(!ctr) return tag("heroAbility", {t: "activate", from: "hero", uid: "hpow"});
+    /* AN ARSENAL TURN THAT PAYS NOTHING IS NOT TAKEN (SPXFLIPCRUSH): see `flipFirst` in `offence`. */
+    const ft = flipOn(g, seat) ? J.arsTurnPays(g, seat, "hpow") : null;
+    if(!ctr && !(ft && !ft.pays)) return tag("heroAbility", {t: "activate", from: "hero", uid: "hpow"});
     if(energyPick(g, seat, o)) return tag("energyBanish", {t: "activate", from: "hero", uid: "hpow"});
   }
 
@@ -1445,6 +1461,9 @@ function actBase(g, seat, o){
     const pw = arsPowOn(g, seat) ? (c => { const v = J.arsenalPower(g, seat, c.uid); return v == null ? num(c, "power") : v; }) : (c => num(c, "power"));
     const best = (g.sides[seat].hand || []).slice()
       .filter(c => J.arsenalUsable(g, seat, c.uid))
+      /* SPXARSPAY: never a card next turn could not pay for (`judge.arsenalPayable`, the
+         policy's own maxPitch rule asked of next turn's hand) */
+      .filter(c => !arsPayOn(g, seat) || J.arsenalPayable(g, seat, c.uid, cfg(o).maxPitch))
       .sort((a, b) => pw(b) - pw(a) || byUid(a, b))[0];
     return tag(!best ? "arsenalSkip" : J.arsenalAttack(g, seat, best.uid) ? "arsenalBest" : "arsenalOther", {t: "arsenal", uid: best ? best.uid : null});
   }
@@ -2086,6 +2105,7 @@ const CALL_WHY = {
   gearAbility: "Use your equipment's ability. Nothing better is left to do.",
   gearAmp: "Use your equipment's ability. You can pay for an arcane card to take its extra damage.",
   heroAbility: "Use your hero's ability. Nothing better is left for the action point.",
+  flipFirst: "Turn your arsenal card face-up first. It has crush, so it gets +2 power and dominate for the attack you make with it.",
   arenaPump: "Tap it. Your attack gets the extra damage for free.",
   arenaDraw: "Cash it in. It draws a card for resources you already have floating, and it keeps your action point.",
   arenaRes: "Break it open first. Its resources pay for what you are about to play, so no card has to be pitched.",

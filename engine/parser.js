@@ -10099,6 +10099,14 @@ const printedKw = (c, k) => {
     return (c.kw || []).some(x => String(x).toLowerCase().includes(kw));
   return false;
 };
+/* DOES AN ARSENAL TURN'S RIDER APPLY TO THIS CARD? (SPXFLIPCRUSH) One body for the engine
+   (`effects.applyArsGrant`, which grants it) and the judge (`judge.arsTurnPays`, which tells the
+   AI seat whether turning the card pays): Bravo's "If it has crush, it gets +2{p} and dominate"
+   is `{ifKw: "crush"}`, answered by `printedKw`; `{ifTt}` by the type line; no qualifier: always. */
+const arsGrantMet = (c, grant) => !!c && !!grant
+  && (grant.ifKw ? printedKw(c, grant.ifKw)
+    : grant.ifTt ? new RegExp("\\b" + grant.ifTt + "\\b", "i").test(c.tt || "")
+    : true);
 
 /* ---- USURP — THE COST AND WHAT PAYS IT (v6.39) -------------------------
 
@@ -11405,7 +11413,7 @@ return {norm, noopFeedText, noopIsQuiet, isAttack, isArrow, isWeapon, hasGA, arc
         classifyClause, fxParse, fxReset, playableFromZone, playZoneWhy, addCostWhy, isArrowCard, boostPays, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost, isActivation, isActionPaid, costTaxes, handAbilityTax,
         DECL_OPS, dracLinks, dracNow, dracLinksNow, weaponCost, payTrigger, OFFER_TRIGGERS, allyAttack, auraWeaponGrant, wardValue, wardBearers, wardTotal, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, routeCostsAP, rxAllowed, drxBarred, drxBarWhy, rxPump,
         idleCounterWipes, rustedThrough, bloodDebt, usurps, usurpTarget, usurpTargets, usurpOffer, isRunechantCard,
-        isAtkActionCard, phantasmPops, zonePow, pow6, kwGated, hasKwNow, printedKw,
+        isAtkActionCard, phantasmPops, zonePow, pow6, kwGated, hasKwNow, printedKw, arsGrantMet,
         crankCost, fusionOffer, chargeOffer,
         isRunechant, runeCount, isAura, auraCount, isFrostbite, frostCount,
         isFrailty, frailtyCount,
