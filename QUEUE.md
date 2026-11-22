@@ -21,13 +21,21 @@ page.js 89/89 at 393x852 as of v6.63 (deps: `npm install --prefix <scratch>/page
 - **Measured and dropped:** Spellfire Cloak paying for those casts — its {r} never unlocked one (0/111 windows; on == off over 384
   games). Its real value is SAVING a pitched card on an off-turn cast (a card for Arcane Barrier 1) — a payment-policy question.
 
+**Measured after v6.65 shipped (Blaze, 12 seeds each chair, wins of 384; both deleted — do not retry as-is):**
+- SPXOPPHAND — a free hand card granted instant speed off-turn (Cindering Foresight) cast in the opponent's last window:
+  125 -> 85. Its amp and energy are worth more on Blaze's own turn.
+- SPXOPPENERGY — Blaze's hero pick (and the spell it banished) in the opponent's last window: 125 -> 97. The energy and the
+  pitch come out of his own turn. Emeritus Scolding's off-turn 6 alone might differ, but the AI cannot read that clause.
+
 **Earlier (v6.64):** Frostbite-in-the-window fix (`frostAt`), SPXOPPARS (Iyslander casts her arsenal on the opponent's turn),
 Gravy's discard-cost pitch. Dropped then (do not retry as-is): Lyath's Suspense auras in the opponent's last window (127 -> 112).
 
 **NEXT, in order:**
 1. Weakest ladder seats (rule policy, 48 games each, v6.65 ladder): Viserai BW 22, Lyath 28, Iyslander 33, Gravy/Blaze 34 of 96.
    Lyath looks like a deck/halving ceiling; BW is strong under Sharp (the page's AI). Prefer correcting advice over chasing wins:
-   run `never.js <hero> 1` for each and look for a printed play the call never offers.
+   run `never.js <hero> 1` for each and look for a printed play the call never offers. Done for BW/Gravy/Blaze/Lyath
+   (2026-11-22): left untried — BW's Runechant of Sloth/Lust off-turn (43/0, 35/0; likely loses the usurp synergy),
+   Gravy's Timesnap Potion (62/2) and Jittery Bones (67/8).
 2. Spellfire Cloak as a payment source on the opponent's turn (instead of pitching a card) — only if a census shows the off-turn
    pitch is often a card she needed. A/B per the habits.
 3. Compass of Sunken Depths (Gravy) — info the AI cannot use; skip unless Sharp's mask learns it (view.js).
