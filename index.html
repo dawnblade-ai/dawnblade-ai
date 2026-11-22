@@ -104,6 +104,9 @@ img{display:block;max-width:100%}
 .kwdef{margin:6px 0 10px;padding:8px 10px;border-left:2px solid var(--y);background:rgba(0,0,0,.25);font-size:var(--fs-lg);line-height:1.45;color:var(--bone)}
 .kwdef .kwref{display:block;margin-bottom:3px;font-family:'Spline Sans Mono';font-size:var(--fs-sm);letter-spacing:.06em;text-transform:uppercase;color:var(--bone-dim)}
 .kwdef .kwref b{color:var(--y);font-weight:600}
+.herotx{margin:10px 0 2px;font-size:var(--fs-lg);line-height:1.45;color:var(--bone)}
+.herotx .kwref{display:block;margin-bottom:3px;font-family:'Spline Sans Mono';font-size:var(--fs-sm);letter-spacing:.06em;text-transform:uppercase;color:var(--bone-dim)}
+.herotx p{margin:0 0 4px}
 .sheet .kwrow{margin:8px 0 2px}.sheet .kwrow .kw{font-size:var(--fs-md)}
 @keyframes hbin{0%{opacity:0;transform:translateY(-4px)}100%{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.hbanner{animation:none}}
@@ -191,7 +194,7 @@ img{display:block;max-width:100%}
 
 /* card modal */
 .modal{position:fixed;inset:0;background:rgba(10,8,7,.82);display:flex;align-items:center;justify-content:center;z-index:60;padding:20px}
-.modal .inner{max-width:340px;width:100%}
+.modal .inner{max-width:340px;width:100%;max-height:100%;overflow-y:auto}
 .modal img{width:100%;border:1px solid var(--line)}
 .modal .txt{background:var(--forge);border:1px solid var(--line);padding:10px;font-size:var(--fs-xl);margin-top:8px}
 .modal .chip{display:inline-block;margin-top:8px;font-size:var(--fs-sm);letter-spacing:.1em;text-transform:uppercase;color:var(--bone-dim);border:1px solid var(--line);padding:2px 7px}
@@ -1136,7 +1139,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "6.60"; /* v6.60 - each hero shows its keywords and their rules, and Second Strike goes again only after damage that landed; see CHANGELOG.md. */
+window.APP_VER = "6.61"; /* v6.61 - a zoomed card opens its keywords' rules, and the hero sheet prints the hero's own ability; see CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -2149,7 +2152,8 @@ function CardModal({card,onClose}){
         <div className="txt">
           <b>{card.name}</b>{card.pitch?<span className="mono"> · pitch {card.pitch} ({PITCH_NAME[card.pitch]})</span>:null}
           <div className="mono" style={{margin:"4px 0"}}>{card.tt}</div>
-          {card.tx ? <div>{card.tx}</div> : <div className="dim">Stats loaded; rules text pending database.</div>}
+          {card.tx ? <div><PipLine s={card.tx}/></div> : <div className="dim">Stats loaded; rules text pending database.</div>}
+          <CardKw card={card}/>
           <FxChip card={card}/>
         </div>
         <button className="bigbtn alt" onClick={onClose}>Close</button>
@@ -2203,6 +2207,18 @@ function KwDef({name}){
   if(!def) return null;
   return <div className="kwdef" role="note">
     <span className="kwref"><b>{name}</b> · Comprehensive Rules {def.r}</span><PipLine s={def.t}/></div>;
+}
+/* A ZOOMED CARD'S KEYWORDS (v6.60), the same chips and rule as the hero
+   sheet's row, for the one card (`deckKeywords` of a single copy, so the
+   counts are dropped and the deck-building keywords stay out). */
+function CardKw({card}){
+  const [open,setOpen] = useKwOpen(card && card.name);
+  const rows = card ? deckKeywords([Object.assign({}, card, {q: 1})]).filter(r => crKeyword(r.k, CRKW)) : [];
+  if(!rows.length) return null;
+  return <><div className="kwrow" aria-label="Keywords on this card">
+    {rows.map(r => <button key={r.k} className={"kw" + (open === r.k ? " on" : "")} aria-expanded={open === r.k}
+      onClick={() => setOpen(open === r.k ? null : r.k)}>{r.k}</button>)}
+  </div><KwDef name={open}/></>;
 }
 /* one open keyword per holder, folded when the hero changes */
 function useKwOpen(k){
@@ -2358,6 +2374,10 @@ function HeroSheet({h,db,onBack,onFight,best}){
         </div>
         <KwRow h={h} db={db} n={6} open={kwOpen} onOpen={setKwOpen}/>
         <KwDef name={kwOpen}/>
+        {/* THE HERO'S OWN TEXT (v6.60), verbatim off the pinned hero card, one paragraph per
+            printed line: what the hero does every game, which the blurb only gestures at */}
+        {hc && hc.tx && <div className="herotx"><span className="kwref">Hero ability</span>
+          {String(hc.tx).split(/\n+/).filter(Boolean).map((l,i)=><p key={i}><PipLine s={l.split("**").join("")}/></p>)}</div>}
         <div className="statrow">
           <span>LIFE <b>{hHP}</b></span><span>INTELLECT <b>{hINT}</b></span>
           <span>DECK <b>{d.deck.reduce((a,e)=>a+e.q,0)}</b></span><span>GEAR <b>{d.gear.length}</b></span>

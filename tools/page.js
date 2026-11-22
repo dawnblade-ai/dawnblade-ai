@@ -272,7 +272,25 @@ if(require.main === module){
           "home: a keyword opens its rule under the banner, full width", JSON.stringify(d && {chips, below: d.below, w: d.w, bw: d.bw}));
         await click(page.locator(".hbanner .kwrow .kw").first(), "the keyword again");
         row(!(await has(".kwdef")), "home: a second tap folds the rule"); }
-      if(await click(btn(/^View official/), "view the decklist")){ await page.waitForSelector(".sheet ~ *"); await screen("home: decklist"); await click(btn(/^Hide official/), "hide the decklist"); }
+      if(await click(btn(/^View official/), "view the decklist")){ await page.waitForSelector(".sheet ~ *"); await screen("home: decklist");
+        /* A ZOOMED CARD'S KEYWORDS (v6.60): the first card in the list that carries one shows
+           it as a chip, and the chip opens the same rule as the banner's */
+        let z = null;
+        for(let i = 0, n = await page.locator(".cgrid .cc").count(); i < n && i < 30 && !z; i++){
+          await page.locator(".cgrid .cc").nth(i).click();
+          await page.waitForSelector(".modal");
+          if(await page.locator(".modal .kw").count()){
+            await page.locator(".modal .kw").first().click(); await page.waitForTimeout(150);
+            z = await page.evaluate(() => { const d = document.querySelector(".modal .kwdef"), b = document.querySelector(".modal .inner");
+              return {card: (document.querySelector(".modal .txt b") || {}).innerText, rule: d ? d.innerText.split("\n")[0] : null,
+                      scrolls: b.scrollHeight <= b.clientHeight + 1 || getComputedStyle(b).overflowY === "auto"}; });
+            await screen("home: a zoomed card's keyword rule");
+          }
+          await page.mouse.click(4, 4);   /* the backdrop closes the zoom */
+          await page.waitForSelector(".modal", {state: "detached", timeout: 3000}).catch(() => {});
+        }
+        row(!!z && /COMPREHENSIVE RULES 8\.\d+\.\d+/i.test(z.rule || "") && z.scrolls, "home: a zoomed card's keyword opens its rule", JSON.stringify(z));
+        await click(btn(/^Hide official/), "hide the decklist"); }
     }
     for(const [tab, label] of [["Judge", "judge tab"], ["Trophies", "trophies tab"]]){
       if(await click(page.locator("nav.tabs .tab", { hasText: tab }), label)) await screen(label);

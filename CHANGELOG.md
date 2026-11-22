@@ -1,3 +1,20 @@
+## v6.61 — a zoomed card explains its keywords; the sheet prints the hero
+
+- **A zoomed card's keywords open their rules.** The card zoom (the decklist, the loadout, both boards) shows the card's keywords
+  as chips under its text — the same reader as the hero banner (`deckKeywords` of one copy, `crKeyword` over the pinned chapter) —
+  and a tap opens the Comprehensive Rules sentence beneath. The zoom's text now tints its pips like the feed (`PipLine`), and the
+  zoom scrolls inside itself when the rule makes it taller than the phone. `tools/page.js` walks the decklist until a card carries a
+  keyword, taps it, reads the rule (88/88 at 393x852).
+- **The hero sheet prints the hero.** Under the keyword row, "Hero ability": the hero card's own text, verbatim off the pinned card,
+  one paragraph per printed line (Bravo: "Action - 2 resources, tap: Turn a face-down card in your arsenal face-up. If it has crush, it
+  gets +2 power and dominate this turn. Go again"). What the hero does every game, which the blurb only gestures at.
+- **Measured and settled (no change): Sharp is not worse than the rule policy on Viserai BW.** v6.59's "Sharp 104" had Sharp in
+  EVERY seat; on his own seat only (`SPXLA=viseraibw`), 12 seeds each chair, he wins **277 of 384** against the rule policy's 115.
+  The wall search is most of it: with `SPXLA_BLK=0` he wins 208.
+- Drills moved: test/slicecensus.test.js (the style block grew by `.herotx` and the zoom's scroll).
+- **Validation:** npm test 4523 / 4518 pass / 0 fail / 5 skipped; both babel blocks compile; page 88/88 at 393x852; no engine change
+  (no ladder needed).
+
 ## v6.60 — each hero shows its keywords and what they mean; damage dealt means damage that landed
 
 - **The keywords a deck uses, and what each one means.** A newcomer picking a hero read a one-line blurb and nothing about how
