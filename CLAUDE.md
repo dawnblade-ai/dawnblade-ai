@@ -235,6 +235,8 @@ Both resolve card text through `effects.js`.
   block sets out through `judge.reduce` from `laMask`'s view: it NEVER sees hidden cards (the
   scramble drill in `test/lookahead.test.js`), its budget is engine STEPS, and Steady/no option is
   the rule policy byte for byte. Phone bound: p95 < 150 ms, worst < 400 ms at 4x CPU throttle.
+- A HAND card cast on the opponent's turn is a pitch card missing from your own (v6.68: Iyslander 75->67, Blaze 64->48);
+  off-turn casts come from the arsenal, or a census must show the pitch was not needed.
 - A policy change ships only when measured: gate it per seat (`SPX`), A/B the hero's
   own seat at 3 seeds (6–12 if unresolved), then the full ladder with every seat on
   (0 refusals / violations / stalls). Record results that do not resolve in QUEUE.md;

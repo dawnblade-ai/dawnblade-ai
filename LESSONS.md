@@ -14489,3 +14489,15 @@ needs the verbatim quote IN THE REPO (source comment, `tools/approx.js` record, 
   the URL it asks for (`test/servertable.test.js` "page-shaped config", `tools/serverpage.js` row "real loader"). Measurements and
   the fallback poll: `server/PERF-LOG.md`.
 
+
+## v6.68 — an off-turn cast from the hand spends next turn's pitch (2026-11-22)
+
+- The census said Frost Spike (Iyslander) was legal on the opponent's turn 41 times and cast 0, and off-turn it makes two
+  Frostbites instead of one. Casting it whenever legal took her own seat 75 -> 67 of 192 and the other chair 60 -> 57: the
+  Spike is blue, and every hand card spent on their turn is a 3-pitch card missing when her own Ice Bolt (cost 3) comes up.
+  Blaze, same day, same shape: Cindering Foresight from the hand off-turn 64 -> 48 (red copies only: noise). From the ARSENAL
+  (a card there cannot be pitched) the same cast was free: 75 -> 79. Rule: "legal and never made" is a lead, not a verdict;
+  an off-turn hand cast must beat the card's pitch, so measure it, and prefer the arsenal or a piece that spends no card.
+- A reader that names a TALENT names more than the card you meant: `oppTurnTrigger` first asked only "Ice", so the own-turn
+  hold also held Ice Bolt and every Ice non-attack (75 -> 21). Name the kind too (`TY.isInstant`), and read a catastrophe in
+  an A/B as a bug in the change before reading it as strategy.
