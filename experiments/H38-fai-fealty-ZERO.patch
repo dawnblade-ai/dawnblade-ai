@@ -1,0 +1,140 @@
+diff --git a/engine/effects.js b/engine/effects.js
+index 8f423ed..8fa079b 100644
+--- a/engine/effects.js
++++ b/engine/effects.js
+@@ -3709,6 +3709,25 @@ function makeEffects(ctx){
+     }
+     return {power: base + bonus, base, bonus, gates};
+   }
++  /* EVERY GATED OP OF THIS CARD WHOSE GATE IS TRUE NOW (SPXFEALTY): `effPowerNow`'s loop over the
++     same decidable gates, for any op rather than the power ones alone (Dragon Power's +3{p}, Art of
++     the Dragon: Fire's "deal 2", Cinderskin Devotion's go again), as `[cond, opName]` pairs. Asked by
++     `judge.dracGrantFor` of a card as stamped and as it is, and of a later card with one more
++     Draconic link on the chain; writes nothing. */
++  function gatesMetNow(g, seat, card, from){
++    if(!card || !card.name) return [];
++    const n = Object.assign({}, g, {actor: seat});
++    const fx = P.splitFx(card, P.isSplit(card) ? 0 : null);
++    const out = [];
++    (fx.conds || []).forEach(e => {
++      if(!e || !e.op || !e.op[0]) return;
++      if(e.wpnOnly && from !== "weapon") return;
++      if(!EFF_DECIDABLE(e.cond, from)) return;
++      const dracLinks = P.dracLinks(n.chain, actorOf(n)) + (P.dracNow(card, act(n)) ? 1 : 0);
++      if(condMetNow(n, n, card, from, e.cond, {chargedWay: [], fused: false, dracLinks})) out.push([e.cond, e.op[0]]);
++    });
++    return out;
++  }
+ 
+   /* ---- THE LIFE A CARD WOULD GAIN IF PLAYED NOW (SPXPOLARITY) ------------
+      `effPowerNow`'s sibling, for a card whose whole payout is gaining life:
+@@ -9363,7 +9382,7 @@ function makeEffects(ctx){
+ 
+   return {runOps, execute, afterDefenders, defendsTriggers, resolveClash, resolveStack, afterDiscard, payAddCost, fileAttack, allyDeath, creditHeroDmg, creditDmg, noteAttacked,
+           linkPumps, linkPayload, linkOutcome, attackRx, preventDamage, autoPitch, applyAnswer,
+-          activateHandAbility, playAtSpeed, fileDestroyedGear, effPowerNow, lifeNow, spectraStrike,
++          activateHandAbility, playAtSpeed, fileDestroyedGear, effPowerNow, gatesMetNow, lifeNow, spectraStrike,
+           /* `applyDefMod` IS NO LONGER EXPOSED (v4.57). It was exposed at
+              v4.53 for exactly one outside caller — `index.html`'s
+              `confirmDefPay`, the trainer's own pause for one of the four
+diff --git a/engine/judge.js b/engine/judge.js
+index 224d9fd..47ff4ac 100644
+--- a/engine/judge.js
++++ b/engine/judge.js
+@@ -2827,6 +2827,47 @@ const ctrPickTakers = (g, seat) => {
+   return (sd[pk[1].zone || "hand"] || []).filter(c => c && f(c))
+     .map(c => ({uid: c.uid, card: c, arc: PR.arcAmount(c), cost: c.cost || 0}));
+ };
++/* ---- A "NEXT CARD IS DRACONIC" PIECE, AND WHAT IT ADDS TO THIS PLAY (SPXFEALTY) ----
++   For `sparring.js`, which reads no card text. Fai's Fealty token: "Instant - Destroy this: The
++   next card you play this turn is Draconic" (`dracCard`). The engine stamps the next card PLAYED
++   (`_drac`, effects' play site) and every reader asks the card, so the gain is asked of the
++   engine itself: `effects.effPowerNow` on the card as stamped against the card as it is. null
++   when no board piece of the seat prints that grant (or `legal` will not activate one), the
++   grant is already up, the card is not one the seat holds in `from`, or being Draconic adds
++   gate; otherwise `{uid, own, chain}`: the piece (uid order), how many of the card's OWN gated
++   ops the stamp opens (`effects.gatesMetNow`, the engine's gate loop), and how many gated ops of
++   the seat's OTHER held attacks open with this attack's link counted Draconic on the chain.
++   Census (96 games): Fealty legal 221 times on Fai's turns, used 0; she played Dragon Power
++   ("When this attacks, if it is Draconic, it gets +3{p}") and other non-Draconic cards with one
++   on the board. `own` is version (a); `chain` is (b), behind its own sub-gate. */
++const dracGrantFor = (g, seat, uid, from) => {
++  const sd = at(g, seat);
++  if(sd.dracCard || !PR.isCardPlay(from)) return null;
++  const c = from === "arsenal" ? (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null)
++          : from === "hand" ? (sd.hand || []).find(x => x && x.uid === uid) : null;
++  if(!c || c._drac) return null;
++  const piece = (sd.board || []).filter(b => b && b.uid != null).slice()
++    .sort((a, b) => String(a.uid) < String(b.uid) ? -1 : String(a.uid) > String(b.uid) ? 1 : 0)
++    .find(b => { const p = BD.boardPow(b);
++      return p && (PR.fxParse(p).ops || []).some(o => o && o[0] === "dracCard")
++        && legal(g, {t: "activate", uid: b.uid}, seat) == null; });
++  if(!piece) return null;
++  const fx = effectsFor(g).fx, key = x => x.join("|");
++  const opened = (before, after) => { const b = new Set(before.map(key)); return after.filter(x => !b.has(key(x))).length; };
++  /* its OWN gates: the card as the engine would stamp it against the card as it is */
++  const own = opened(fx.gatesMetNow(g, seat, c, from), fx.gatesMetNow(g, seat, Object.assign({}, c, {_drac: true}), from));
++  /* the gates of every OTHER attack it holds, asked with this attack's chain link on the strip, as
++     a Draconic link against a plain one ("if you control 2 or more Draconic chain links") */
++  let chain = 0;
++  if(TY.isAttack(c)){
++    const link = drac => Object.assign({}, g, {chain: (g.chain || []).concat([{n: c.name, kind: "atk", drac, by: seat}])});
++    const g0 = link(false), g1 = link(true);
++    const held = (sd.hand || []).map(x => ({x, f: "hand"})).concat(sd.arsenal ? [{x: sd.arsenal, f: "arsenal"}] : []);
++    for(const {x, f} of held) if(x && x.uid !== c.uid && TY.isAttack(x))
++      chain += opened(fx.gatesMetNow(g0, seat, x, f), fx.gatesMetNow(g1, seat, x, f));
++  }
++  return own > 0 || chain > 0 ? {uid: piece.uid, own, chain} : null;
++};
+ /* ---- WHAT DOES A CHARGE DO FOR THIS PLAY? (v5.41, QUEUE v4 H6) -------
+    `keepsActionPoint`'s sibling, for `sparring.js`, which reads no card
+    text. Boltyn's deck turns on "if you've charged this turn" (`charged`,
+@@ -5542,7 +5583,7 @@ function moves(g, seat){
+ }
+ 
+ return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, moves, reduce, settle, strike, closeChain,
+-        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, cyclePick, riderPick, riderLead, arsenalAttack, arsenalUsable, arsenalPower, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, boardCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, pumpsNow, grantedInstant, oppTurnTrigger, oppTurnTriggerPlay, tokenPiece, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, instantNextTakers, weaponPumpOf, gaNextPiece, nonAtkHeld, discardDrawPiece, lifeGainOf, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
++        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, cyclePick, riderPick, riderLead, arsenalAttack, arsenalUsable, arsenalPower, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, boardCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, dracGrantFor, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, pumpsNow, grantedInstant, oppTurnTrigger, oppTurnTriggerPlay, tokenPiece, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, instantNextTakers, weaponPumpOf, gaNextPiece, nonAtkHeld, discardDrawPiece, lifeGainOf, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
+         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf, waitingOn,
+         handFree: PR.handFree,
+         /* the card semantics seam (v2.77) */
+diff --git a/engine/sparring.js b/engine/sparring.js
+index 315fb14..4844bef 100644
+--- a/engine/sparring.js
++++ b/engine/sparring.js
+@@ -186,7 +186,7 @@ const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate(
+       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
+       wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW"),
+       graveOn = subGate("SPXGRAVE"), booOn = subGate("SPXBOO"), energyOn = subGate("SPXENERGY"), putOn = subGate("SPXPUT"),
+-      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST"), arsPowOn = subGate("SPXARSPOW"), oppArsOn = subGate("SPXOPPARS"), oppAmpOn = subGate("SPXOPPAMP"), oppIceOn = subGate("SPXOPPICE"), stirIdleOn = subGate("SPXSTIRIDLE"), cloakOn = subGate("SPXCLOAK");
++      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST"), arsPowOn = subGate("SPXARSPOW"), oppArsOn = subGate("SPXOPPARS"), oppAmpOn = subGate("SPXOPPAMP"), oppIceOn = subGate("SPXOPPICE"), stirIdleOn = subGate("SPXSTIRIDLE"), cloakOn = subGate("SPXCLOAK"), fealtyOn = subGate("SPXFEALTY"), fealtyChainOn = subGate("SPXFEALTYCHAIN");
+ /* THE BLOCK A TOKEN PIECE MAY GIVE UP (SPXTOKENPIECE): one point. Flat Trackers (1 defence, blade
+    break: "Destroy this: Create an Agility token. Go again") measured on Boltyn's own seat, 24 seeds
+    each chair: 224 -> 253 of 768 spent this way against kept to block once. */
+@@ -772,6 +772,17 @@ function offence(g, seat, o){
+   const m = J.markFirst(g, seat);
+   if(m) return tag("markFirst", {t: "activate", from: "hand", uid: m.uid});
+   const a = offenceBase(g, seat, o);
++  /* THE PLAY ABOUT TO BE MADE IS MADE DRACONIC FIRST WHEN THAT ADDS POWER (SPXFEALTY). Fai's Fealty
++     ("Instant - Destroy this: The next card you play this turn is Draconic") was legal on 221 of her
++     turns and used on 0, while Dragon Power ("if it is Draconic, it gets +3{p}") went out without it.
++     `judge.dracGrantFor` asks the engine what the stamp adds to THIS play; an instant costs no
++     action point, so the play itself is unchanged and comes next. */
++  if(fealtyOn(g, seat) && a && a.t === "play"){
++    const dg = J.dracGrantFor(g, seat, a.uid, a.from);
++    if(dg && dg.own > 0) return tag("fealtyFirst", {t: "activate", uid: dg.uid});
++    /* (b) SPXFEALTYCHAIN: the link it adds opens a gate of another attack the seat holds */
++    if(dg && dg.chain > 0 && fealtyChainOn(g, seat)) return tag("fealtyChain", {t: "activate", uid: dg.uid});
++  }
+   /* A DRAW PAID WITH A CARD THE SEAT GETS BACK GOES FIRST (SPXCROWN). Carrion Crown
+      was legal on 72 of Gravy's turns and spent on 1: the gear fallback sits after the
+      attacks, and the attack spent the action point. Its go again keeps the point and
+@@ -2086,6 +2097,8 @@ const CALL_WHY = {
+   gearAbility: "Use your equipment's ability. Nothing better is left to do.",
+   gearAmp: "Use your equipment's ability. You can pay for an arcane card to take its extra damage.",
+   heroAbility: "Use your hero's ability. Nothing better is left for the action point.",
++  fealtyFirst: "Spend the token first: it makes the card you are about to play Draconic, and that card is stronger for it.",
++  fealtyChain: "Spend the token first: this attack becomes a Draconic chain link, and a card you are holding is stronger with one more.",
+   arenaPump: "Tap it. Your attack gets the extra damage for free.",
+   arenaDraw: "Cash it in. It draws a card for resources you already have floating, and it keeps your action point.",
+   arenaRes: "Break it open first. Its resources pay for what you are about to play, so no card has to be pitched.",
