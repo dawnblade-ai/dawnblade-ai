@@ -354,7 +354,11 @@
    "prevented", `effects.linkOutcome`) so the board can show what became of a
    link. `chain` ships whole; a v44 peer's entries carry none, and the hashes
    diverge on the first resolved link. By hand, behind the release handshake. */
-const WIRE_V = 45;
+/* 45 -> 46 AT v6.60: `hist` gains `dmg` (damage this seat dealt that landed, Second
+   Strike's "if you've dealt damage this turn"), inside a whole-shipped field. A v45 peer
+   keeps no count and reads the old gate, so the pair diverges on the first Second Strike
+   after a blocked swing. By hand, behind the release handshake. */
+const WIRE_V = 46;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

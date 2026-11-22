@@ -287,6 +287,7 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 59 -> 61 AT v6.43: `zero-defence-gear-refused` and `dealt-damage-reads-attacks`, both open. */
   /* 61 -> 62 AT v6.44: `traverse-life-carries`, stated. */
   /* 62 -> 63 AT v6.47: `spectra-trigger-at-once`, stated. */
+  /* v6.60 closes `dealt-damage-reads-attacks` and adds nothing. */
   assert.equal(Object.keys(APPROX).length, 63, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
@@ -418,7 +419,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      `dealt-damage-reads-attacks` (Second Strike's gate reads attacks played). */
   /* 3 -> 2 AT v6.45: `zero-defence-gear-refused` is CLOSED by the user's ruling
      (a 0{d} piece may be declared, a blank may not). */
-  assert.equal(n("open"),    2, "open count moved");
+  /* 2 -> 1 AT v6.60: `dealt-damage-reads-attacks` is CLOSED (`hist.dmg`). */
+  assert.equal(n("open"),    1, "open count moved");
   /* 16 -> 17 AT v4.63: `steam-build-powcard-read`. 17 -> 18 AT v4.66:
      `play-held-on-the-stack`. 19 -> 20 AT v4.72: `x-cost-declared`.
      20 -> 21 AT v4.73: `crush-halving-rider-read`. 21 -> 22 AT v4.74:
@@ -438,7 +440,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 37 -> 38 closed AT v6.00: `played-target-partial-resolution`. */
   /* 38 -> 39 closed AT v6.02: `look-named-in-shared-feed`. */
   /* 39 -> 40 closed AT v6.45: `zero-defence-gear-refused`. */
-  assert.equal(n("closed"), 40, "closed count moved");
+  /* 40 -> 41 closed AT v6.60: `dealt-damage-reads-attacks`. */
+  assert.equal(n("closed"), 41, "closed count moved");
 });
 
 /* ============================================================
@@ -2435,16 +2438,20 @@ probe("traverse-life-carries", () => {
   } finally { J.setDb(pool); }
 });
 
-/* OPEN AT v6.43. DRIVEN: Second Strike after an attack that dealt no damage
-   still gets its +1{p} and go again, because `dealtDmg` reads `hist.atk`. */
+/* OPENED AT v6.43, CLOSED AT v6.60. DRIVEN: Second Strike after an attack that
+   dealt no damage gets NO +1{p} and go again; after one that landed, it does. */
 probe("dealt-damage-reads-attacks", () => {
   H.db();
-  const ss = {...H.card("Second Strike", 1), uid: "ss"};
-  let g = {...H.state({res: 9, ap: 1, hand: [ss], hist: Object.assign(S.freshHist(), {atk: 1})}, {hp: 20, hand: []},
-           {actor: 0, turnPlayer: 0, turn: 3}), phase: "action", step: "layer", priority: 0, passed: []};
-  g = J.reduce(g, {t: "play", uid: "ss", from: "hand"}, 0).state;
-  for(let i = 0; i < 12 && !g.pend; i++) g = H.move(g);
-  assert.ok(g.pend, "no chain link");
-  assert.equal(g.pend.ga, true, "Second Strike no longer counts an attack that dealt nothing — close this record");
-  assert.equal(g.sides[0].hist.heroDmg, 0, "fixture: damage was dealt");
+  const run = (extra, uid) => {
+    const ss = {...H.card("Second Strike", 1), uid};
+    let g = {...H.state({res: 9, ap: 1, hand: [ss], hist: Object.assign(S.freshHist(), extra)}, {hp: 20, hand: []},
+             {actor: 0, turnPlayer: 0, turn: 3}), phase: "action", step: "layer", priority: 0, passed: []};
+    g = J.reduce(g, {t: "play", uid, from: "hand"}, 0).state;
+    for(let i = 0; i < 12 && !g.pend; i++) g = H.move(g);
+    assert.ok(g.pend, "no chain link");
+    return g;
+  };
+  const blocked = run({atk: 1}, "ssA"), landed = run({atk: 1, heroDmg: 1, dmg: 1}, "ssB");
+  assert.equal(blocked.pend.ga, false, "an attack that dealt nothing counts as damage dealt again — reopen this record");
+  assert.equal(landed.pend.ga, true, "fixture: damage that landed no longer counts");
 });

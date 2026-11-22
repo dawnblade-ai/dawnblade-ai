@@ -149,6 +149,11 @@ const SIDE_FIELDS = [
    hero this turn"). `banPlay`: how many cards this seat PLAYED from its
    banished zone (Galaxxi Black). Each is recorded where it becomes true,
    in `effects.js`, which both boards call. */
+/* `dmg` (v6.60) — how many times damage from this seat LANDED on anything,
+   a hero or an ally, after prevention (Second Strike, "if you've dealt
+   damage this turn"). Credited at `effects.creditHeroDmg`'s sites and at
+   `effects.creditDmg` for an attack on an ally. Until v6.60 that condition
+   read `atk || arc`: an attack played counted, blocked to nothing or not. */
 /* `runes`, `actNames`, `atkKws` (v6.44) — the double-faced hero's three
    per-turn facts. `runes`: how many Runechants this seat CREATED, the
    special ones included (Viserai, Between Worlds, "if you've created 3 or
@@ -158,7 +163,7 @@ const SIDE_FIELDS = [
    every attack action card this seat played ("the FIRST attack action card
    with blood debt you play each turn"). All public, all recorded in
    `effects.js`. */
-const freshHist = () => ({atk:0,non:0,arc:0,aura:0,made:0,booed:0,blue:0,red:0,trans:0,blueGY:0,atkNames:[],auraAtkNames:[],playTy:[],playNames:[],arcTaken:0,gyFirstKw:[],soulPut:[],madeNames:[],attacked:0,heroDmg:0,banPlay:0,runes:0,actNames:[],atkKws:[],atkTy:[]});
+const freshHist = () => ({atk:0,non:0,arc:0,aura:0,made:0,booed:0,blue:0,red:0,trans:0,blueGY:0,atkNames:[],auraAtkNames:[],playTy:[],playNames:[],arcTaken:0,gyFirstKw:[],soulPut:[],madeNames:[],attacked:0,heroDmg:0,dmg:0,banPlay:0,runes:0,actNames:[],atkKws:[],atkTy:[]});
 
 function makeSide(o){
   o = o || {};

@@ -1,3 +1,42 @@
+## v6.60 — each hero shows its keywords and what they mean; damage dealt means damage that landed
+
+- **The keywords a deck uses, and what each one means.** A newcomer picking a hero read a one-line blurb and nothing about how
+  the deck plays. The banner under the roster now shows the deck's three most-used keywords with copy counts (Kayo: Go again
+  ×10 · Clash ×7 · Dominate ×2; Viserai BW: Go again ×22 · Usurp ×19 · Blood Debt ×18), and the sheet shows six. They are
+  counted off the pinned cards (`cards.deckKeywords`, from the database's own keyword index): a parameter folds into its keyword
+  ("Opt 1" and "Opt 3" are one Opt), and the deck-building keywords (Legendary, Specialization, Unlimited) are left out. **Tap
+  one and its Comprehensive Rules definition opens beneath**, verbatim with its rule number ("Go again is a special resolution
+  ability that means "Gain 1 action point."" — 8.3.5); a second tap folds it. The definitions are pinned like the pool:
+  `tools/pin-crkw.js` reads chapter 8 of rules.fabtcg.com (130 ability, label and effect keywords) into `data/crkw.js`, a
+  `<script src>` the page loads, so a phone never fetches the rules site. `cards.crKeyword` finds the rule for every keyword all
+  17 decks use, including "Ice Fusion" (written "[SUPERTYPES] Fusion") and "The Crowd Boos". Drills: test/crkw.test.js (the pin's
+  shape; every deck keyword has a rule; the counter and the lookup with their refusals; the bridge; sabotaged three ways).
+  `tools/page.js` taps a keyword on the banner: the rule opens full width under it and folds on a second tap (86/86 at 393x852).
+  Rerun `node tools/pin-crkw.js --check` each release cycle beside the pool's re-pin.
+- **Rules: "if you've dealt damage this turn" reads damage that LANDED (approx `dealt-damage-reads-attacks`, closed).** Second
+  Strike (Briar's list): "When this attacks, if you've dealt damage this turn, this gets +1{p} and **go again**." Since v6.43 the
+  gate was answered by "an attack or arcane was played this turn", so a swing blocked to nothing, or prevented in full, still bought
+  the +1 and the go again: stronger than printed. Now each seat's `hist.dmg` counts damage events that landed after prevention (CR
+  6.4.10a), on a hero (`effects.creditHeroDmg`, every site both boards already call) or on an ally (`effects.creditDmg`, judge's
+  attack-target branch). WIRE_V 45 -> 46 (`hist` gains `dmg`). Briar, own seat, 6 seeds each chair (wins of 192): **164 -> 156**
+  (81 -> 76 first-named, 83 -> 80 second-named); she is still the strongest seat. Drills: test/conditionals.test.js (blocked
+  swing: no damage, no go again; landed: go again; a swing at an ally: credited as damage but not as damage to the hero; a ward that
+  prevents it all: none; sabotaged both halves), test/approx.test.js (the probe turned round: open 2 -> 1, closed 40 -> 41),
+  test/keywordgate.test.js and the Briar scene seed `hist.dmg` and assert the attack-only control now refuses.
+- **AI: a tie goes to the banished zone (`SPXBANFIRST`).** A census of Viserai BW's turns with a Gloomblade playable from banish
+  (2 seeds) found him never ending a turn with one unplayed — every miss was another play that ranked higher — but on a power and
+  cost tie he sometimes played the same Gloomblade from HAND, on a uid tie-break. A card played from the banished zone is not a
+  held card, so the banished copy goes first and the hand keeps its copy to pitch or defend. Viserai BW, own seat, 12 seeds each
+  chair (wins of 384): 114 -> 115 (noise; it ships because it corrects what the call would tell a player in that seat).
+- **Measured and ruled out (no change):** Sharp and the Embrace Ursur lead (QUEUE item 1). At every point where the rule policy leads
+  with Embrace Ursur (`judge.riderLead`), Sharp keeps it 13 of 16 times (1 seed); the 3 overrules each score a Runechant of Lust line
+  or a banished Gloomblade higher, and are fair. Sharp's smaller gain from SPXRIDER is not a missed rider.
+- Drills moved: test/crindex.test.js (118 cited rules, 108 guarded: the deck-building rule and Fusion's written form, cited in
+  engine/cards.js and driven by the new drill), test/slicecensus.test.js (the style block grew by the keyword chips), Briar's
+  scene (seeds `hist.dmg`), test/wire.test.js and test/dichotomy.test.js (WIRE_V 46).
+- **Validation:** npm test 4523 / 4518 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; ladder 816 games, 0 refusals /
+  0 violations / 0 stalls (2 engine draws); both babel blocks compile; page 86/86 at 393x852.
+
 ## v6.59 — Viserai BW feeds Embrace Ursur, and the first game points at the call
 
 - **AI: a banish that keeps the card (`judge.riderPick` / `judge.riderLead`, gate `SPXRIDER`).** Embrace Ursur: "When this

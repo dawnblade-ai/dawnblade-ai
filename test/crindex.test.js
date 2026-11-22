@@ -114,9 +114,12 @@ test("crindex — the verdict counts are pinned", () => {
   /* 111 -> 116 and 101 -> 106 guarded AT v6.47 (Prism reader 5): Spectra's three rules and
      the attack step's "no legal attack-target" and "attack event" rules, quoted where the
      target and the clearing are built and drilled in test/spectra.test.js. */
-  assert.equal(rs.length, 116, "the number of distinct CR rules this project cites moved");
+  /* 116 -> 118 and 106 -> 108 guarded AT v6.60: the deck-building rule (the hero sheet's
+     keyword row leaves those keywords out) and Fusion's written form (the row's lookup finds
+     the rule from "Ice Fusion"), cited in engine/cards.js, driven in test/crkw.test.js. */
+  assert.equal(rs.length, 118, "the number of distinct CR rules this project cites moved");
   /* 50 -> 51 guarded and 6 -> 5 drill-only AT v4.66: CR 7.1.2, built. */
-  assert.equal(by(rs, "guarded").length,  106, "guarded count moved");
+  assert.equal(by(rs, "guarded").length,  108, "guarded count moved");
   assert.equal(by(rs, "UNGUARDED").length,  3, "UNGUARDED count moved");
   assert.equal(by(rs, "drill-only").length, 5, "drill-only count moved");
   assert.equal(by(rs, "prose").length,      2, "prose count moved");

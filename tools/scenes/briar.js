@@ -210,7 +210,8 @@ module.exports = [
     const S = require("../../engine/sides.js");
     const play = (dealt) => {
       const card = c.card("Second Strike", 1, "ss");
-      const hist = Object.assign({}, S.freshHist(), dealt ? {atk: 1} : {});
+      /* v6.60: "dealt damage" is `hist.dmg` (damage that landed), no longer `atk` */
+      const hist = Object.assign({}, S.freshHist(), dealt ? {atk: 1, dmg: 1} : {atk: 1});
       const g = c.acting(Object.assign(c.state({hand: [card], res: 9, ap: 1, hist},
                                                {hp: 40}, {turn: 3}), {builds: [{}, {}]}));
       const out = c.exec(g, card, "hand", 0);

@@ -947,7 +947,19 @@ function makeEffects(ctx){
   const creditHeroDmg = (n, dealer, amount) => {
     if(!((amount | 0) > 0) || dealer == null) return n;
     const sd = dealer === actorOf(n) ? actMut(n) : foeMut(n);
-    sd.hist = {...sd.hist, heroDmg: ((sd.hist || {}).heroDmg || 0) + 1};
+    sd.hist = {...sd.hist, heroDmg: ((sd.hist || {}).heroDmg || 0) + 1, dmg: ((sd.hist || {}).dmg || 0) + 1};
+    return n;
+  };
+  /* "IF YOU'VE DEALT DAMAGE THIS TURN" (v6.60, approx
+     `dealt-damage-reads-attacks` closed) — the dealer's `hist.dmg`, every
+     damage event that LANDED, on a hero (`creditHeroDmg` counts it too) or
+     an ally (here: an attack aimed at an ally, judge's attack-target
+     branch). CR 6.4.10a, quoted above: what prevention eats is not dealt,
+     so the caller passes what survived and a zero credits nothing. */
+  const creditDmg = (n, dealer, amount) => {
+    if(!((amount | 0) > 0) || dealer == null) return n;
+    const sd = dealer === actorOf(n) ? actMut(n) : foeMut(n);
+    sd.hist = {...sd.hist, dmg: ((sd.hist || {}).dmg || 0) + 1};
     return n;
   };
   /* "IF YOU'VE BEEN ATTACKED N OR MORE TIMES THIS TURN" (v6.43) — the
@@ -3598,7 +3610,7 @@ function makeEffects(ctx){
     : /^pitchCost\d+$/.test(cond) ? act(n).pitch.some(c=>(c.cost||0) >= +cond.slice(9))
     : cond==="allyDied" ? (act(n).grave||[]).some(c=>c._gy===n.turn && /\bally\b/i.test(c.tt||""))
     : cond==="weaponSwung" ? Object.keys(act(n).weaponUsed||{}).length>0
-    : cond==="dealtDmg" ? (act(n).hist.atk||0)>0 || (act(n).hist.arc||0)>0
+    : cond==="dealtDmg" ? (act(n).hist.dmg||0)>0
     /* (v6.43) damage that LANDED on the opposing hero this turn, credited by
        `creditHeroDmg` — not `dealtDmg`'s "an attack was played" */
     : cond==="dealtHero" ? (act(n).hist.heroDmg||0)>0
@@ -9338,7 +9350,7 @@ function makeEffects(ctx){
     return n;
   }
 
-  return {runOps, execute, afterDefenders, defendsTriggers, resolveClash, resolveStack, afterDiscard, payAddCost, fileAttack, allyDeath, creditHeroDmg, noteAttacked,
+  return {runOps, execute, afterDefenders, defendsTriggers, resolveClash, resolveStack, afterDiscard, payAddCost, fileAttack, allyDeath, creditHeroDmg, creditDmg, noteAttacked,
           linkPumps, linkPayload, linkOutcome, attackRx, preventDamage, autoPitch, applyAnswer,
           activateHandAbility, playAtSpeed, fileDestroyedGear, effPowerNow, lifeNow, spectraStrike,
           /* `applyDefMod` IS NO LONGER EXPOSED (v4.57). It was exposed at

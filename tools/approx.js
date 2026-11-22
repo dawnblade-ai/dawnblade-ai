@@ -1162,8 +1162,11 @@ const APPROX = {
       "seat. The probe drives the Boots on the second attack of a turn and reads the 2 stopped."},
 
   "dealt-damage-reads-attacks": {
-  status:"open", cr:"6.4.10a", board:"both", since:"v6.43", swept:"v6.43",
-  claim:"\"If you've dealt damage this turn\" (`cond: dealtDmg`, Second Strike) is answered "+
+  status:"closed", cr:"6.4.10a", board:"both", since:"v6.43", swept:"v6.60",
+  claim:"IS (v6.60): \"If you've dealt damage this turn\" (`cond: dealtDmg`) reads `hist.dmg`, "+
+        "credited where damage LANDS after prevention, on a hero (`effects.creditHeroDmg`) or an "+
+        "ally (`effects.creditDmg`, judge's attack-target branch). WAS: "+
+        "\"If you've dealt damage this turn\" (`cond: dealtDmg`, Second Strike) is answered "+
         "`hist.atk > 0 || hist.arc > 0`: an attack PLAYED this turn counts whether or not it "+
         "dealt any damage (blocked to nothing, prevented), and damage to an ally from a "+
         "non-attack does not.",
@@ -1173,7 +1176,9 @@ const APPROX = {
       "Strike is a dealt card and moving it is a balance change, not a reader. STRONGER than "+
       "printed in the common case (+1{p} and go again after a blocked swing). Work, not a "+
       "ruling: a `hist.dmg` credited at the same sites as `heroDmg` (plus ally damage) answers "+
-      "it exactly. The probe asserts the attack-only reading, so it goes red when it is fixed."},
+      "it exactly. BUILT v6.60 (Second Strike is in Briar's list, so her play moved; CHANGELOG has the "+
+      "ladder): the probe drives Second Strike after an attack that dealt nothing (no go again) "+
+      "and after one that landed (go again)."},
 
   "traverse-life-carries": {
   status:"stated", cr:"2.5.3c", board:"both", since:"v6.44", swept:"v6.44",

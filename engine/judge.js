@@ -3285,6 +3285,8 @@ function strike(g){
       .find(b => b && b.uid === link.target.uid);
     const out = GM.damageAlly(n, link.target.side, link.target.uid, total, {ceases: c => PR.ceasesToExist(c)});
     n = out.game;
+    /* "if you've dealt damage this turn" (v6.60): damage to an ally is dealt too */
+    if(total > 0) n = withEffects(n, (fx, st) => fx.creditDmg(st, P.other(def), total));
     (out.msgs || []).forEach(m => { n = say(n, m); });
     /* A NEW PATH INTO A GRAVEYARD MUST STAMP THE TURN. `damageAlly` files
        the dead ally itself rather than going through `toGrave`, so `_gy`

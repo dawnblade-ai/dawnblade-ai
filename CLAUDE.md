@@ -91,7 +91,8 @@ something new, teach the parser to read its text — never special-case a card b
   file:// refuses fetch) is what the page loads AND every drill reads (`require` it, or
   `readPool()` for a fresh copy). Upstream still moves: each release cycle re-pins on
   purpose (`node tools/audit.js --refresh`, read `test/drift.test.js` — the ONLY drill
-  on the live wire — then `node tools/pin-pool.js`). `test/poolreach.test.js` proves the
+  on the live wire — then `node tools/pin-pool.js`; `node tools/pin-crkw.js --check` for `data/crkw.js`, the CR
+  keyword definitions the hero sheet opens). `test/poolreach.test.js` proves the
   pool holds every card the page resolves.
 - **Read both wordings.** Upstream prints contractions both ways at once. `parser.js`'s
   `SYNONYMS` levels idioms (synonyms only, never a change of meaning) before

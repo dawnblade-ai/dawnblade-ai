@@ -383,7 +383,8 @@ test("WIRE_V moves when the payload shape moves, and only then", () => {
   /* 42 -> 43 AT v6.43: a `pending` KIND (`bancost`), its action, the `_banCostUid` declaration and three `hist` counts — inside whole-shipped values, so the digest holds. */
   /* 43 -> 44 AT v6.44: three `hist` facts (`runes`, `actNames`, `atkKws`), a build's `_face` and the `traverse` op — inside whole-shipped values, so the digest holds. */
   /* 44 -> 45 AT v6.48: a chain entry gains `out` — an entry key inside the whole-shipped `chain`, so the digest holds. */
-  assert.equal(W.WIRE_V, 45,
+  /* 45 -> 46 AT v6.60: `hist` gains `dmg` — inside a whole-shipped field, so the digest holds. */
+  assert.equal(W.WIRE_V, 46,
     "WIRE_V moved — if the payload shape moved with it, update the digest below " +
     "in the same edit and say what changed in the header");
   assert.equal(h, 3759651216,

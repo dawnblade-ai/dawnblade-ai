@@ -502,7 +502,10 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        rules (`.screennav .sndbtn`, `.off`). */
     /* 90,042 -> 90,179 (v6.59), READ FIRST: still `<style>` -> `</style>`; the growth is presentation
        only: `.advnew`, the one line the Coach's call box shows a phone's first game. */
-    "phasebar.test.js index.html 90179",
+    /* 90,179 -> 91,025 (v6.60), READ FIRST: still `<style>` -> `</style>`; the growth is presentation
+       only: the hero sheet's keyword chips (`.kwrow`, `.kw`, `.kw.on`) and the opened rule's box
+       (`.kwdef`, `.kwref`). */
+    "phasebar.test.js index.html 91025",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
        `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
        `abPickBound` in the pick legality it extends. */

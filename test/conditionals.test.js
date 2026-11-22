@@ -178,6 +178,41 @@ test("damage credited where it lands on the hero: combat, arcane, direct — and
   assert.equal(w.sides[0].hist.heroDmg, 0, "prevented damage was credited as dealt (CR 6.4.10a)");
 });
 
+/* ---- "if you've dealt damage this turn" (v6.60) ------------------------ */
+
+/* `hist.dmg`, credited where damage LANDS on anything (approx
+   `dealt-damage-reads-attacks`, closed): a blocked swing deals none, a
+   swing at an ally deals some. Second Strike is the reader (Briar's list). */
+test("Second Strike: damage dealt counts where it lands, a hero or an ally, and a blocked swing deals none", {skip}, () => {
+  H.db();
+  const ss = uid => ({...H.card("Second Strike", 1), uid});
+  /* blocked to nothing: no damage dealt, so no go again */
+  let b = start({hand: [assault("a1"), ss("s1")], ap: 2},
+    {hand: [{...H.card("Brutal Assault", 3), uid: "d1"}, {...H.card("Wounding Blow", 1), uid: "d2"}]});
+  b = defendWith(toLink(play(b, "a1")), ["d1", "d2"]);
+  assert.equal(b.sides[1].hp, 20, "fixture: the wall did not stop the attack");
+  assert.equal(b.sides[0].hist.atk, 1, "fixture: the attack was not counted");
+  assert.equal(b.sides[0].hist.dmg, 0, "a swing blocked to nothing was credited as damage dealt");
+  assert.equal(toLink(play(b, "s1")).pend.ga, false, "Second Strike went again after a swing that dealt nothing");
+  /* the same swing unblocked: it lands, and Second Strike goes again */
+  let h = resolve(toLink(play(start({hand: [assault("a1"), ss("s1")], ap: 2}), "a1")));
+  assert.equal(h.sides[1].hp, 16, "fixture: the swing did not land");
+  assert.equal(h.sides[0].hist.dmg, 1, "damage that landed on the hero was not credited");
+  assert.equal(toLink(play(h, "s1")).pend.ga, true, "Second Strike did not go again after a hit");
+  /* a swing at an ally deals damage too (CR 1.4.5: the attack-target takes it) */
+  const swab = {...H.card("Swabbie", 2), uid: "sw1"};
+  let a = start({hand: [assault("a1"), ss("s1")], ap: 2},
+    {board: [{card: swab, kind: "ally", uid: swab.uid, spent: false, life: 3}]});
+  a = resolve(toLink(act(a, {t: "play", uid: "a1", from: "hand", target: swab.uid}, 0)));
+  assert.equal(a.sides[1].hp, 20, "fixture: the hero was hit, not the ally");
+  assert.equal(a.sides[1].board.length, 0, "fixture: the ally was not dealt the damage");
+  assert.equal(a.sides[0].hist.heroDmg, 0, "damage to an ally was credited as damage to the hero");
+  assert.equal(a.sides[0].hist.dmg, 1, "damage that landed on an ally was not credited");
+  /* and direct damage the ward prevents in full is not dealt (CR 6.4.10a) */
+  assert.equal(H.runOps(start({}, {ward: 5}), [["dmg", 2]], "drill").sides[0].hist.dmg, 0, "prevented damage was credited as dealt");
+  assert.equal(H.runOps(start({}), [["arcane", 1]], "drill").sides[0].hist.dmg, 1, "arcane that landed was not credited");
+});
+
 test("Bloodfrenzy Gloomblade: go again after damage to the hero, not after an attack that dealt none", {skip}, () => {
   for(const p of [1, 3]){
     const bf = staged("Bloodfrenzy Gloomblade", "bf1", p);

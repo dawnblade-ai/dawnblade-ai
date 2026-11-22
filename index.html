@@ -97,6 +97,14 @@ img{display:block;max-width:100%}
 .hbanner .hbcls::before{content:"";display:inline-block;width:8px;height:8px;margin-right:6px;background:var(--chc);vertical-align:0}
 .hbanner .hbname{font-family:'Big Shoulders Display';font-weight:800;font-size:var(--fs-h2);line-height:1;text-transform:uppercase;letter-spacing:.02em;color:var(--bone)}
 .hbanner .hbpitch{font-size:12.5px;line-height:1.3;color:var(--bone-dim)}
+.kwrow{display:flex;flex-wrap:wrap;gap:4px 5px;margin-top:2px}
+.kwrow .kw{font-family:'Spline Sans Mono';font-size:var(--fs-sm);letter-spacing:.03em;line-height:1.4;min-height:26px;padding:2px 7px;border:1px solid var(--line);background:transparent;color:var(--bone);white-space:nowrap}
+.kwrow .kw.on{border-color:var(--y);background:rgba(232,178,58,.12)}
+.kwrow b{color:var(--y);font-weight:600}
+.kwdef{margin:6px 0 10px;padding:8px 10px;border-left:2px solid var(--y);background:rgba(0,0,0,.25);font-size:var(--fs-lg);line-height:1.45;color:var(--bone)}
+.kwdef .kwref{display:block;margin-bottom:3px;font-family:'Spline Sans Mono';font-size:var(--fs-sm);letter-spacing:.06em;text-transform:uppercase;color:var(--bone-dim)}
+.kwdef .kwref b{color:var(--y);font-weight:600}
+.sheet .kwrow{margin:8px 0 2px}.sheet .kwrow .kw{font-size:var(--fs-md)}
 @keyframes hbin{0%{opacity:0;transform:translateY(-4px)}100%{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.hbanner{animation:none}}
 .hcard .fallbackart{aspect-ratio:1/1;font-size:var(--fs-lg)}
@@ -1128,7 +1136,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "6.59"; /* v6.59 - Viserai BW banishes a Gloomblade for Embrace Ursur, and a first game says what the Coach's call is for; see CHANGELOG.md. */
+window.APP_VER = "6.60"; /* v6.60 - each hero shows its keywords and their rules, and Second Strike goes again only after damage that landed; see CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -1790,6 +1798,7 @@ window.TROPHIES = [
      script, not a .json, because fetch() of a local file is refused over
      file://. It assigns window.DAWN_POOL; useCardDB maps it. -->
 <script src="data/pool.js"></script>
+<script src="data/crkw.js"></script>
 <script src="engine/rng.js"></script>
 <script src="engine/parser.js"></script>
 <script src="engine/game.js"></script>
@@ -1941,7 +1950,8 @@ var PROMPT_ZONES = DawnPrompts.PROMPT_ZONES, promptZone = DawnPrompts.promptZone
     promptDeclineSpec = DawnPrompts.promptDecline,
     applyPrompt = DawnPrompts.applyPrompt;
 var cdnImg = DawnCards.cdnImg, toNum = DawnCards.toNum,
-    resolveEntry = DawnCards.resolveEntry, resolveHero = DawnCards.resolveHero;
+    resolveEntry = DawnCards.resolveEntry, resolveHero = DawnCards.resolveHero,
+    deckKeywords = DawnCards.deckKeywords, crKeyword = DawnCards.crKeyword;
 var advPitchPotential = DawnAdvisor.advPitchPotential, advCardOut = DawnAdvisor.advCardOut,
     advValue = DawnAdvisor.advValue, advBestPitch = DawnAdvisor.advBestPitch,
     advView = DawnAdvisor.advView, advise = DawnAdvisor.advise;
@@ -2168,22 +2178,57 @@ const chapterName = ch => { const h = HEROES.find(x => x.ch === ch && x.blk); re
    wide, the name in the display face, class and chapter in the chapter's
    colour, and the one-line pitch. The full sheet stays below for stats and
    the decklist. */
+/* THE KEYWORDS THE DECK USES (v6.60) — counted off the pinned cards
+   (`deckKeywords`, engine/cards.js), most copies first, so a newcomer reads
+   what a deck does from its own cards and not from prose. A tap opens what
+   the keyword MEANS: its Comprehensive Rules number and defining sentence,
+   verbatim (data/crkw.js, `crKeyword`); a second tap folds it. Nothing until
+   the pool is loaded. `n` caps the row: three on the banner, more on the sheet. */
+const CRKW = (typeof window !== "undefined" && window.DAWN_CRKW && window.DAWN_CRKW.rows) || [];
+function KwRow({h,db,n,open,onOpen}){
+  const rows = useMemo(() => {
+    if(!db || db.status !== "ready") return [];
+    const d = PARSED[h.k], sa = (d.hero.code || "").slice(0, 3) || null;
+    return deckKeywords(d.deck.map(e => resolveEntry(db, e, sa)));
+  }, [h.k, db && db.status]);
+  if(!rows.length) return null;
+  return <div className="kwrow" aria-label="Keywords this deck uses">
+    {rows.slice(0, n).map(r => <button key={r.k} className={"kw" + (open === r.k ? " on" : "")} aria-expanded={open === r.k}
+      disabled={!crKeyword(r.k, CRKW)} onClick={() => onOpen(open === r.k ? null : r.k)}>{r.k} <b>×{r.n}</b></button>)}
+  </div>;
+}
+/* the opened keyword's rule, full width under whatever holds the row */
+function KwDef({name}){
+  const def = name ? crKeyword(name, CRKW) : null;
+  if(!def) return null;
+  return <div className="kwdef" role="note">
+    <span className="kwref"><b>{name}</b> · Comprehensive Rules {def.r}</span><PipLine s={def.t}/></div>;
+}
+/* one open keyword per holder, folded when the hero changes */
+function useKwOpen(k){
+  const [open,setOpen] = useState(null);
+  useEffect(() => setOpen(null), [k]);
+  return [open, setOpen];
+}
 function HeroBanner({h,db}){
+  const [kwOpen,setKwOpen] = useKwOpen(h && h.k);
   if(!h) return null;
   if(h.mystery) return (
     <div className="hbanner mystery clip-sm" style={{"--chc":"var(--y)"}}>
       <div className="hbtxt"><span className="hbcls">Random</span><b className="hbname">Fate picks your fighter</b>
         <span className="hbpitch">Revealed when you prepare for battle.</span></div>
     </div>);
-  return (
+  return (<>
     <div className="hbanner clip-sm" style={{"--chc":CH_COLOR[h.ch]||"var(--line)"}}>
       <div className="hbart"><HeroArt h={h} db={db} key={db.status}/></div>
       <div className="hbtxt">
         <span className="hbcls">{h.cls} · {h.blk || ("Chapter " + h.ch)}</span>
         <b className="hbname">{h.n}</b>
         {h.blurb && <span className="hbpitch">{h.blurb}</span>}
+        <KwRow h={h} db={db} n={3} open={kwOpen} onOpen={setKwOpen}/>
       </div>
-    </div>);
+    </div>
+    <KwDef name={kwOpen}/></>);
 }
 function HeroGrid({onPick,best,db,selected}){
   return (
@@ -2298,6 +2343,7 @@ function HeroSheet({h,db,onBack,onFight,best}){
   const hINT = hc&&hc.int!=null ? hc.int : 4;
   const [view,setView]=useState(false);
   const [zoom,setZoom]=useState(null);
+  const [kwOpen,setKwOpen]=useKwOpen(h.k);
   return (
     <div>
       <button className="tag" onClick={onBack}>✕ clear fighter</button>
@@ -2310,6 +2356,8 @@ function HeroSheet({h,db,onBack,onFight,best}){
             <p className="fs-lede">{h.blurb}</p>
           </div>
         </div>
+        <KwRow h={h} db={db} n={6} open={kwOpen} onOpen={setKwOpen}/>
+        <KwDef name={kwOpen}/>
         <div className="statrow">
           <span>LIFE <b>{hHP}</b></span><span>INTELLECT <b>{hINT}</b></span>
           <span>DECK <b>{d.deck.reduce((a,e)=>a+e.q,0)}</b></span><span>GEAR <b>{d.gear.length}</b></span>

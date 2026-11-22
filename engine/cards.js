@@ -207,6 +207,61 @@ function buildMaps(cards){
   return {status:"ready", byNP, byName, byCode, count:cards.length};
 }
 
+/* ---- THE KEYWORDS A DECK USES (v6.60) --------------------------------
+   The hero sheet's "Keywords" row: every keyword the list's cards use, counted
+   in copies, most first, so a newcomer reads what the deck does off the cards
+   themselves, not off prose somebody wrote. The source is the database's own
+   index (`card_keywords`), which lists a keyword the text USES: Kayo's "clash
+   with the attacking hero" and "intimidate" sit inside sentences, so
+   `printedKw` (does the card CARRY it as a keyword line) would hide a whole
+   deck. This row is a description and grants nothing; no rule reads it.
+   - A parameter folds into its keyword: "Opt 1" and "Opt 3" are one Opt row.
+   - Deck-building keywords are left out (CR 1.3: Legendary, Specialization and
+     Unlimited say how many copies a deck may hold or which hero may hold it,
+     not what the card does in a game).
+   One count per card per keyword, times its copies; case folded; ties break
+   on the name, so the row reads the same on every phone. */
+const DECKBUILD_KW = /^(legendary|unlimited|.* specialization|specialization)$/i;
+const deckKeywords = entries => {
+  const m = new Map();
+  (entries || []).forEach(c => {
+    if(!c) return;
+    const q = +c.q || 1, seen = new Set();
+    (c.kw || []).forEach(k => {
+      const name = String(k || "").trim().replace(/\s+(\d+|X)$/i, "");
+      const key = name.toLowerCase();
+      if(!key || seen.has(key) || DECKBUILD_KW.test(name)) return;
+      seen.add(key);
+      const row = m.get(key) || {k: name, n: 0};
+      row.n += q; m.set(key, row);
+    });
+  });
+  return [...m.values()].sort((a, b) => (b.n - a.n) || (a.k.toLowerCase() < b.k.toLowerCase() ? -1 : 1));
+};
+
+/* ---- WHAT A KEYWORD MEANS (v6.60) -------------------------------------
+   The Comprehensive Rules row (data/crkw.js, pinned verbatim by
+   tools/pin-crkw.js) that defines a keyword the deck uses. A rule's name may
+   carry alternatives ("The Crowd Cheers / The Crowd Boos") or a bracketed
+   argument ("Pairs [with CARD]", "Create (token)"); each alternative is a name.
+   An exact name wins; otherwise the longest rule name the keyword ENDS with,
+   on a word boundary, because CR 8.3.17 writes Fusion as "[SUPERTYPES] Fusion"
+   and the card index writes "Ice Fusion". Null when no row names it. */
+const crKeyword = (name, rows) => {
+  const key = String(name || "").trim().toLowerCase();
+  if(!key) return null;
+  let best = null, bl = 0;
+  (rows || []).forEach(r => {
+    String(r && r.n || "").split("/").map(x => x.replace(/\[[^\]]*\]|\([^)]*\)/g, "").trim().toLowerCase())
+      .filter(Boolean).forEach(n => {
+        const exact = n === key, tail = !exact && key.endsWith(" " + n);
+        const score = exact ? 1e6 : tail ? n.length : 0;
+        if(score > bl){ best = r; bl = score; }
+      });
+  });
+  return best;
+};
+
 return {setCDN, cdnImg, toNum, resolveEntry, resolveHero, mapDbCard, buildMaps,
-        SA_SETS, pickPrinting};
+        SA_SETS, pickPrinting, deckKeywords, crKeyword};
 });

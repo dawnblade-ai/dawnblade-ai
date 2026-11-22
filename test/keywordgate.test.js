@@ -206,19 +206,23 @@ test("driven: the go again is an action point, not a log line", {skip}, () => {
   assert.equal(unmet.ga, false, "no damage dealt this turn — no go again");
   assert.equal(unmet.ap, 0, "…and the action point the attack spent stays spent");
   /* CHECK YOUR OWN FIXTURE. The first draft seeded `hist.dmg`, which no
-     evaluator reads — `dealtDmg` asks `hist.atk || hist.arc`, the two
-     records that actually count a hit. A fixture that seeds a field
-     nothing reads reports the gate unmet and looks exactly like a gate
-     that is broken. */
-  const withDmg = (() => {
+     evaluator read then — `dealtDmg` asked `hist.atk || hist.arc`. A fixture
+     that seeds a field nothing reads reports the gate unmet and looks exactly
+     like a gate that is broken. SINCE v6.60 `dealtDmg` reads `hist.dmg`
+     (damage that LANDED, approx `dealt-damage-reads-attacks` closed), so the
+     fixture seeds it, and `attackOnly` below is the attack that dealt nothing. */
+  const mk = extra => (() => {
     const cc = Object.assign({}, c, {uid: "ss1"});
     let g = H.state({name: "Alice", hand: [cc], res: 9, ap: 1,
-                     hist: Object.assign({}, require("../engine/sides.js").freshHist(), {atk: 1})},
+                     hist: Object.assign({}, require("../engine/sides.js").freshHist(), extra)},
                     {name: "Bob", hp: 40, deck: [junk("T", "t1")]}, {turn: 3, turnPlayer: 0});
     g.builds = [{}, {}];
     return unwrap(H.execute(Object.assign({}, g, {phase: "action", step: "layer", chain: []}),
                             cc, "hand", 0, {}));
   })();
+  const withDmg = mk({atk: 1, dmg: 1}), attackOnly = mk({atk: 1, arc: 0});
+  assert.equal(attackOnly.pend.ga, false,
+    "an attack was PLAYED this turn but dealt nothing — Second Strike prints \"dealt damage\"");
   assert.equal(withDmg.pend.ga, true,
     "damage was dealt this turn, so the printed go again is granted");
   const done = unwrap(H.fx(withDmg, (fx, m) => {

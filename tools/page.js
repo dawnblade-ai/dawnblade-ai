@@ -259,6 +259,19 @@ if(require.main === module){
     if(await click(page.locator(".hcard").first(), "pick a hero")){
       await page.waitForSelector(".sheet");
       await screen("home: hero sheet");
+      /* THE KEYWORDS A DECK USES (v6.60): the banner shows up to three, a tap opens the
+         rule that defines one (full width, under the banner), a second tap folds it */
+      { const chips = await page.locator(".hbanner .kwrow .kw").count();
+        await click(page.locator(".hbanner .kwrow .kw").first(), "a keyword on the banner");
+        await page.waitForTimeout(200);
+        const d = await page.evaluate(() => { const e = document.querySelector(".kwdef"), b = document.querySelector(".hbanner");
+          if(!e || !b) return null; const r = e.getBoundingClientRect(), q = b.getBoundingClientRect();
+          return {t: e.innerText, below: r.top >= q.bottom - 1, w: Math.round(r.width), bw: Math.round(q.width)}; });
+        await screen("home: a keyword's rule", d ? d.t.split("\n")[0] : "no rule shown");
+        row(chips >= 1 && chips <= 3 && !!d && /COMPREHENSIVE RULES 8\.\d+\.\d+/i.test(d.t) && d.below && d.w >= d.bw - 2,
+          "home: a keyword opens its rule under the banner, full width", JSON.stringify(d && {chips, below: d.below, w: d.w, bw: d.bw}));
+        await click(page.locator(".hbanner .kwrow .kw").first(), "the keyword again");
+        row(!(await has(".kwdef")), "home: a second tap folds the rule"); }
       if(await click(btn(/^View official/), "view the decklist")){ await page.waitForSelector(".sheet ~ *"); await screen("home: decklist"); await click(btn(/^Hide official/), "hide the decklist"); }
     }
     for(const [tab, label] of [["Judge", "judge tab"], ["Trophies", "trophies tab"]]){

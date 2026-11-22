@@ -164,7 +164,8 @@ const fixOn = (g, seat) => {
    SPXTOKENPIECE (v6.57) a free go-again piece that makes its own token (`judge.tokenPiece`:
    Runehold Release, Flat Trackers) is spent before the attack, not after it. SPXRIDER (v6.59)
    an optional hand banish with class riders (`judge.riderPick`: Embrace Ursur) gives up a card
-   that still plays from the banished zone and fires a rider. */
+   that still plays from the banished zone and fires a rider. SPXBANFIRST (v6.60) of two attacks
+   that tie on rank, power and cost, the one played from the banished zone goes first. */
 const subGate = k => {
   const v = (typeof process !== "undefined" && process.env && process.env[k]) || "";
   return (g, seat) => {
@@ -179,7 +180,7 @@ const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate(
       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
       wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW"),
       graveOn = subGate("SPXGRAVE"), booOn = subGate("SPXBOO"), energyOn = subGate("SPXENERGY"), putOn = subGate("SPXPUT"),
-      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER");
+      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST");
 /* THE BLOCK A TOKEN PIECE MAY GIVE UP (SPXTOKENPIECE): one point. Flat Trackers (1 defence, blade
    break: "Destroy this: Create an Agility token. Go again") measured on Boltyn's own seat, 24 seeds
    each chair: 224 -> 253 of 768 spent this way against kept to block once. */
@@ -1077,10 +1078,15 @@ function offenceBase(g, seat, o){
      asks the engine's own gate reader without playing: a gate it cannot settle counts as
      nothing, so the number is never above what is known. */
   const effOf = x => x.ep != null ? x.ep : num(x.c, "power");
+  /* A TIE GOES TO THE BANISHED ZONE (SPXBANFIRST, v6.60). A census of Viserai BW's turns with a
+     Gloomblade playable from banish found the same Gloomblade played from HAND on a uid
+     tie-break. A card played from the banished zone is not a held card: playing it keeps the
+     hand's copy to pitch or defend with. Zone facts only (`banishPlays` came from `legal`). */
+  const zr = x => (x.from === "banish" && banFirstOn(g, seat)) ? 0 : 1;
   const order = useEp => pick0.slice()
     .sort((a, b) => (rankC(a) - rankC(b)) || (b.kap - a.kap)
                  || (useEp ? effOf(b) - effOf(a) : num(b.c, "power") - num(a.c, "power"))
-                 || num(a.c, "cost") - num(b.c, "cost") || byUid(a, b))
+                 || num(a.c, "cost") - num(b.c, "cost") || (zr(a) - zr(b)) || byUid(a, b))
     .find(x => legal(g, x.weapon ? {t: "activate", uid: x.uid}
                      : x.ally ? {t: "activate", uid: x.uid, target: targetFor(g, seat, x.c)}
                                : {t: "play", uid: x.uid, from: x.from,
