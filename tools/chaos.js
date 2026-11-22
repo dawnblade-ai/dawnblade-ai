@@ -52,7 +52,8 @@ const SHARP = +(process.env.SHARP == null ? 25 : process.env.SHARP);
                      different state (hash) than on the original — the
                      two phones diverge;
      VIEW-THREW      `view(g, seat)` (what each seat may see) throws;
-     SHARP-REFUSAL   Sharp's search proposes an illegal action. */
+     SHARP-REFUSAL   Sharp's search proposes an illegal action (a POLICY
+                     finding, counted with the rule policy's refusals). */
 function surfaces(g, a, seat, tally, sharp){
   let dec;
   try { dec = WR.decode(JSON.parse(JSON.stringify(WR.encode(g)))); }
@@ -175,11 +176,12 @@ function main(){
   stats.chaos = tally.chaos;
   console.log(`CHAOS — ${stats.games} games, EPS ${EPS}, ${stats.chaos} random legal moves`);
   console.log(`  violations ${stats.viols} · no-zone ${stats.nozone} · policy refusals ${stats.refusals} · stalls ${stats.stalls} (expected)`);
-  const rows = [...finds.values()].sort((x, y) => (x.kind === "policy-refusal") - (y.kind === "policy-refusal") || y.n - x.n);
+  const POLICY = k => k === "policy-refusal" || k === "SHARP-REFUSAL";   /* the AI's, not the referee's */
+  const rows = [...finds.values()].sort((x, y) => POLICY(x.kind) - POLICY(y.kind) || y.n - x.n);
   for(const f of rows) console.log(`  ${String(f.n).padStart(4)}  ${f.kind.padEnd(15)} ${f.msg.slice(0, 160)}   [first: ${f.at}]`);
-  const engine = rows.filter(f => f.kind !== "policy-refusal").length;
-  console.log(engine ? `ENGINE FINDINGS: ${engine}` : "ENGINE FINDINGS: 0");
-  process.exitCode = engine ? 1 : 0;
+  const engine = rows.filter(f => !POLICY(f.kind)).length, policy = rows.length - engine;
+  console.log(`ENGINE FINDINGS: ${engine} · POLICY FINDINGS: ${policy}`);
+  process.exitCode = engine || policy ? 1 : 0;
 }
 
 if(require.main === module) main();
