@@ -39,8 +39,10 @@ Both report via send_message to the CEO; neither pushes main. A limit stop sends
    768) but corrects the call: worker A is finishing it (drill + CALL_WHY) to ship as an advice fix. Viserai BW Runechant of
    Lust/Sloth off-turn: NEGATIVE (114 -> 94 / 100 of 384; destroyed at his action phase, never usurped). Viserai BW and Lyath look
    like deck ceilings. Boltyn: worker B. Unmeasured, low value: Gate to i'Arathael activation (98/0, 71/0).
-4. Spellfire Cloak as the off-turn payment (Iyslander, Blaze: 251/0, 276/0). By today's lesson it is the RIGHT kind of off-turn
-   resource (it costs no hand card), so a census is worth it: how often does an off-turn payment pitch a card the next turn needed?
+4. ~~Spellfire Cloak as the off-turn payment~~ **SHIPPING v6.69 (worker B, SPXCLOAK, key `cloakPay`)**: census 70/130 of Iyslander's
+   off-turn pitches were one card for one last point with the Cloak legal. v2 plays the seat's own line out both ways (opponent
+   passes only) and spends the piece only when fewer cards are pitched. 24 seeds/chair: Iyslander 287->308, Blaze 246->270 of 768.
+   Boltyn: charge-keep (`experiments/H33-boltyn-chargekeep-NOISE.patch`) 238->244 noise; Glisten off-turn not a line; deck ceiling.
 5. Compass of Sunken Depths (Gravy) — skip unless Sharp's mask learns it (view.js).
 6. Phase 4 (Outbreak, 2027-02): when the lists publish, ROADMAP-NEWDECKS.md. Wire: next cut if needed is HZOOM (~500 B/seat).
 

@@ -1,0 +1,158 @@
+H33 (NOISE) — Boltyn: the first charge pick keeps the cards only another card's charge pays off
+(Valiant Thrust, Courageous Steelhand; judge.ridesCharge), gate SPXCHARGEKEEP, key chargeKeep.
+Census (3 seeds, 96 games): 48 of 453 first charges put a rider into the soul, 32 with a plain card beside it;
+the patch changes 12 calls in 96 games.
+A/B (SPXCHARGEKEEP=none vs on, SPXCLOAK on both sides):
+  12 seeds: boltyn seat A 55 -> 57, seat B 71 -> 69 (126 -> 126 of 384)
+  24 seeds: boltyn seat A 110 -> 115, seat B 128 -> 129 (238 -> 244 of 768). 0 refusals / violations / stalls.
+Drill test/chargekeep.test.js passes and fails under sabotage (ride always 0). Not shipped: noise.
+Apply on top of the SPXCLOAK commit; test/explain.test.js's unreached pin did not move.
+
+diff --git a/engine/judge.js b/engine/judge.js
+index 5fdc581..7ce9545 100644
+--- a/engine/judge.js
++++ b/engine/judge.js
+@@ -2833,6 +2833,18 @@ const chargeView = (g, seat, uid, from) => {
+   return {charged, offers: !!fx.chargeCost, gaIf: conds.some(e => e.op[0] === "ga"),
+           base, power: base + ctr + pump};
+ };
++/* ---- A CARD THAT RIDES ON SOMEONE ELSE'S CHARGE (SPXCHARGEKEEP) ----
++   For `sparring.js`, which reads no card text: true when a card in hand prints a
++   "charged this turn" rider (`conds` with `cond === "charged"`) and does NOT offer a
++   charge of its own (`fx.chargeCost`), so the only way it is ever paid off is another
++   card's charge. Valiant Thrust ("+3{p}") and Courageous Steelhand are the pool's two.
++   Charged into the soul, the card that would have cashed the charge is the one spent. */
++const ridesCharge = (g, seat, uid) => {
++  const c = (at(g, seat).hand || []).find(x => x && x.uid === uid);
++  if(!c || !c.name) return false;
++  const fx = PR.fxParse(c);
++  return !fx.chargeCost && (fx.conds || []).some(e => e && e.cond === "charged");
++};
+ /* ---- WHAT POWER WOULD THIS ATTACK HAVE IF PLAYED NOW? (effpower) ----
+    `chargeView`'s sibling, for `sparring.js`, which reads no card text. A hand or arsenal
+    attack ("hand" / "arsenal") or a weapon ("weapon") the seat holds, answered by
+@@ -5521,7 +5533,7 @@ function moves(g, seat){
+ 
+ return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, moves, reduce, settle, strike, closeChain,
+         playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, cyclePick, riderPick, riderLead, arsenalAttack, arsenalUsable, arsenalPower, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, boardCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, pumpsNow, grantedInstant, oppTurnTrigger, oppTurnTriggerPlay, tokenPiece, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, weaponPumpOf, gaNextPiece, nonAtkHeld, discardDrawPiece, lifeGainOf, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
+-        actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf, waitingOn,
++        actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf, waitingOn, ridesCharge,
+         handFree: PR.handFree,
+         /* the card semantics seam (v2.77) */
+         setDb, effectsFor, withEffects, openPrompt, autoAnswer,
+diff --git a/engine/sparring.js b/engine/sparring.js
+index 991b382..d9963a6 100644
+--- a/engine/sparring.js
++++ b/engine/sparring.js
+@@ -186,7 +186,7 @@ const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate(
+       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
+       wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW"),
+       graveOn = subGate("SPXGRAVE"), booOn = subGate("SPXBOO"), energyOn = subGate("SPXENERGY"), putOn = subGate("SPXPUT"),
+-      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST"), arsPowOn = subGate("SPXARSPOW"), oppArsOn = subGate("SPXOPPARS"), oppAmpOn = subGate("SPXOPPAMP"), oppIceOn = subGate("SPXOPPICE"), cloakOn = subGate("SPXCLOAK");
++      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST"), arsPowOn = subGate("SPXARSPOW"), oppArsOn = subGate("SPXOPPARS"), oppAmpOn = subGate("SPXOPPAMP"), oppIceOn = subGate("SPXOPPICE"), cloakOn = subGate("SPXCLOAK"), chargeKeepOn = subGate("SPXCHARGEKEEP");
+ /* THE BLOCK A TOKEN PIECE MAY GIVE UP (SPXTOKENPIECE): one point. Flat Trackers (1 defence, blade
+    break: "Destroy this: Create an Agility token. Go again") measured on Boltyn's own seat, 24 seeds
+    each chair: 224 -> 253 of 768 spent this way against kept to block once. */
+@@ -337,10 +337,18 @@ function payAction(g, seat, p, o){
+     const wantG = wantC == null ? J.gateColourWanted(g, seat) : null;
+     const want = wantC != null ? wantC : wantG;
+     const hit = h => num(h, "pitch") === want && !(wantG != null && J.playGate(g, seat, h.uid));
+-    const c = (sd.hand || []).filter(h => (p.uids || []).indexOf(h.uid) >= 0)
+-      .sort((a, b) => (want != null ? ((hit(a) ? 0 : 1) - (hit(b) ? 0 : 1)) : 0)
+-                   || num(a, "pitch") - num(b, "pitch") || byUid(a, b))[0];
+-    return tag(!c ? "chargeNone" : want != null && hit(c) ? (wantG != null ? "gateColour" : "chargeColour") : "charge",
++    /* A CARD THAT CASHES THE CHARGE IS NOT THE ONE CHARGED (SPXCHARGEKEEP). Lowest pitch first put
++       the red Valiant Thrust (+3{p} once you have charged) and the red Courageous Steelhand into the
++       soul: 48 of 453 first charges at 3 seeds, 32 with a plain card beside them.
++       `judge.ridesCharge` names the cards only another card's charge pays off; they go last. */
++    const ride = chargeKeepOn(g, seat) ? (h => J.ridesCharge(g, seat, h.uid) ? 1 : 0) : (() => 0);
++    const offer = (sd.hand || []).filter(h => (p.uids || []).indexOf(h.uid) >= 0);
++    const rank = (r, a, b) => (want != null ? ((hit(a) ? 0 : 1) - (hit(b) ? 0 : 1)) : 0)
++                   || r(a) - r(b) || num(a, "pitch") - num(b, "pitch") || byUid(a, b);
++    const c = offer.slice().sort((a, b) => rank(ride, a, b))[0];
++    const plain = c && offer.slice().sort((a, b) => rank(() => 0, a, b))[0];
++    return tag(!c ? "chargeNone" : want != null && hit(c) ? (wantG != null ? "gateColour" : "chargeColour")
++      : plain && plain.uid !== c.uid ? "chargeKeep" : "charge",
+       {t: "charge", uid: c ? c.uid : null});
+   }
+   /* ---- THE TWO KINDS THIS POLICY HAD NEVER MET (v3.80) --------------
+@@ -2067,6 +2075,7 @@ const CALL_WHY = {
+   resUnlock: "Spend the piece for its resource. It pays for an attack you are holding.",
+   lifeAtBest: "Gain the life now. The arcane damage you took this turn makes it the bigger gain.",
+   oppArsAmp: "Amp first: your arsenal card is about to go on their turn, and this adds 1 to its arcane damage.",
++  chargeKeep: "Charge a different card. The one you keep gets stronger once you have charged this turn.",
+   cloakPay: "Spend the piece first. It pays this cost, so the card you would have pitched stays in your hand for your own turn.",
+   oppIce: "Cast it from your arsenal now, on their turn: your hero adds a Frostbite of its own, so they pay for two plays instead of one.",
+   oppArs: "Cast your arsenal card now, on their turn: your hero lets it go at instant speed, so it lands early and your arsenal refills at the end of your turn.",
+diff --git a/test/chargekeep.test.js b/test/chargekeep.test.js
+new file mode 100644
+index 0000000..35eeb3a
+--- /dev/null
++++ b/test/chargekeep.test.js
+@@ -0,0 +1,66 @@
++/* ============================================================
++   SPXCHARGEKEEP: THE CARD THAT CASHES THE CHARGE IS NOT THE ONE CHARGED
++
++   Valiant Thrust (pinned): "If you've charged this turn, this gets +3{p}."
++   Courageous Steelhand: "If you've charged this turn, target attack gets
++   +3{p}." Neither offers a charge of its own, so only another card's charge
++   ever pays them off. The first charge pick ranked lowest pitch first and put
++   the red ones into the soul: 48 of 453 first charges at 3 seeds, 32 with a
++   plain card beside them. `judge.ridesCharge` names them and they go last.
++   The fixture is a real Boltyn self-play state where the call is
++   `chargeKeep`. Observables: the charged card is a plain one, and the rider
++   is still in hand after the charge. Refusal half: the reader answers false
++   for a card that offers its own charge (Take Flight) and for a plain attack
++   (Snatch).
++   Sabotage checked: `ride` always 0 fails the first test (no `chargeKeep`).
++   ============================================================ */
++const test = require("node:test");
++const assert = require("node:assert/strict");
++const SPL = require("../tools/selfplay.js");
++const J = SPL.J, SP = SPL.SP;
++
++function find(hero, hit, games){
++  const foes = SPL.W.HEROES.map(h => h.k).filter(k => k !== hero);
++  for(let gi = 0; gi < (games || 48); gi++){
++    const seat = gi % 2, foe = foes[gi % foes.length];
++    let n = SPL.match(seat ? foe : hero, seat ? hero : foe, "chargekeep-" + gi, gi % 2);
++    for(let i = 0; i < 3000 && !n.over; i++){
++      let moved = false;
++      for(const s of [0, 1]){
++        const e = SP.explain(n, s); if(!e || !e.action) continue;
++        if(s === seat && hit(n, seat, e)) return {n, seat, e};
++        const o = J.reduce(n, e.action, s); if(o.error) continue;
++        n = o.state; moved = true; break;
++      }
++      if(!moved) break;
++    }
++  }
++  return null;
++}
++const F = find("boltyn", (n, s, e) => e.key === "chargeKeep");
++
++test("SPXCHARGEKEEP: a plain card is charged and the rider stays in hand", () => {
++  assert.ok(F, "found in self-play");
++  const {n, seat, e} = F;
++  const sd = n.sides[seat];
++  assert.equal(n.pending && n.pending.kind, "charge");
++  const offer = sd.hand.filter(h => (n.pending.uids || []).indexOf(h.uid) >= 0);
++  const riders = offer.filter(h => J.ridesCharge(n, seat, h.uid));
++  assert.ok(riders.length, "a rider was on offer");
++  assert.equal(e.action.t, "charge");
++  assert.equal(J.ridesCharge(n, seat, e.action.uid), false, "the charged card is plain");
++  const o = J.reduce(n, e.action, seat); assert.equal(o.error, null);
++  const hand = o.state.sides[seat].hand.map(h => h.uid);
++  for(const r of riders) assert.ok(hand.indexOf(r.uid) >= 0, r.name + " is still in hand");
++});
++
++test("SPXCHARGEKEEP: the reader names only cards another card's charge pays off", () => {
++  const g = SPL.match("boltyn", "briar", "chargekeep-reader", 0);
++  const sd = g.sides[0];
++  const pick = name => { const c = sd.deck.find(x => x && x.name === name); sd.hand.push(c); return c.uid; };
++  assert.equal(J.ridesCharge(g, 0, pick("Valiant Thrust")), true);
++  assert.equal(J.ridesCharge(g, 0, pick("Courageous Steelhand")), true);
++  assert.equal(J.ridesCharge(g, 0, pick("Take Flight")), false, "it offers its own charge");
++  assert.equal(J.ridesCharge(g, 0, pick("Snatch")), false, "no charge rider");
++  assert.equal(J.ridesCharge(g, 0, 99999), false, "an unknown uid answers false");
++});
