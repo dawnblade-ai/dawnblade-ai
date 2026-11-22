@@ -186,7 +186,7 @@ const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate(
       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
       wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW"),
       graveOn = subGate("SPXGRAVE"), booOn = subGate("SPXBOO"), energyOn = subGate("SPXENERGY"), putOn = subGate("SPXPUT"),
-      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST"), arsPowOn = subGate("SPXARSPOW"), oppArsOn = subGate("SPXOPPARS"), oppAmpOn = subGate("SPXOPPAMP"), oppIceOn = subGate("SPXOPPICE");
+      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST"), arsPowOn = subGate("SPXARSPOW"), oppArsOn = subGate("SPXOPPARS"), oppAmpOn = subGate("SPXOPPAMP"), oppIceOn = subGate("SPXOPPICE"), stirIdleOn = subGate("SPXSTIRIDLE");
 /* THE BLOCK A TOKEN PIECE MAY GIVE UP (SPXTOKENPIECE): one point. Flat Trackers (1 defence, blade
    break: "Destroy this: Create an Agility token. Go again") measured on Boltyn's own seat, 24 seeds
    each chair: 224 -> 253 of 768 spent this way against kept to block once. */
@@ -1524,7 +1524,13 @@ function actBase(g, seat, o){
      263 -> 266, noise; it ships because it is the hero's printed play and the call never offered it. */
   if(oppArsOn(g, seat) && g.turnPlayer !== seat && !g.pend && !(g.stack || []).some(l => l && l.seat === seat)){
     const u = J.grantedInstant(g, seat);
-    if(u != null && !J.defendsNow(g, seat, u, "arsenal") && idleOK(g, seat, u, "arsenal")){
+    /* A GRANT WITH NOTHING TO TAKE IT IS HELD (SPXSTIRIDLE): Stir the Aetherwinds' whole payload is
+       "your next Wizard non-attack card this turn as though it were an instant". On their turn a
+       follower could only come from the hand, which is next turn's card (v6.68's lesson), so a
+       pure instant-speed grant is cast off-turn only when its arsenal holds a taker, which it
+       cannot (the grant is the arsenal card). `judge.instantNextTakers` answers. */
+    const ig = u != null && stirIdleOn(g, seat) ? J.instantNextTakers(g, seat, u, "arsenal") : null;
+    if(u != null && !(ig && !ig.arsenal) && !J.defendsNow(g, seat, u, "arsenal") && idleOK(g, seat, u, "arsenal")){
       /* AN AMP PIECE GOES FIRST WHEN THE CAST TAKES IT AND BOTH ARE AFFORDABLE (SPXOPPAMP, v6.65).
          Crucible of Aetherweave: "Once per Turn Instant - {r}: The next card you play this turn with an
          arcane damage effect, instead deals that much arcane damage plus 1." Legal on ~275 of

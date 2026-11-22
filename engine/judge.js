@@ -2516,6 +2516,28 @@ const landsNothing = (g, seat, uid, from) => {
   const ops = (fx.ops || []).filter(o => o && o[0] !== "noop");
   return ops.length > 0 && ops.every(o => opLandsNothing(g, seat, o, uid));
 };
+/* ---- WHO COULD TAKE AN INSTANT-SPEED GRANT? (SPXSTIRIDLE) ----
+   For `sparring.js`, which reads no card text. A card whose WHOLE payload is "you may play
+   your next <qualifier> card this turn as though it were an instant" (`instantNext` ops, no
+   condition, no optional cost: Stir the Aetherwinds) lands nothing unless a card the
+   qualifier admits follows it. null for anything that is not such a pure grant; otherwise
+   how many OTHER cards the seat holds that the qualifier admits, by zone: `{hand, arsenal}`,
+   matched through `qualMatches`, the matcher `takeInstantNext` spends the grant with.
+   Measured: Iyslander cast Stir from her arsenal on the opponent's turn 16 times in 96
+   games, pitched hand cards for its {r}{r} every time, and followed it with nothing. */
+const instantNextTakers = (g, seat, uid, from) => {
+  const sd = at(g, seat);
+  const c = from === "arsenal" ? (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null)
+          : from === "hand" ? (sd.hand || []).find(x => x && x.uid === uid) : null;
+  if(!c) return null;
+  const fx = PR.fxParse(c);
+  if((fx.conds || []).length || fx.optCost) return null;
+  const ops = (fx.ops || []).filter(o => o && o[0] !== "noop");
+  if(!ops.length || !ops.every(o => o[0] === "instantNext" && o[1] && o[1].q)) return null;
+  const takes = (card, f) => ops.some(o => PR.qualMatches(o[1].q, card, {from: f}));
+  return {hand: (sd.hand || []).filter(h => h && h.uid !== uid && takes(h, "hand")).length,
+          arsenal: sd.arsenal && sd.arsenal.uid !== uid && takes(sd.arsenal, "arsenal") ? 1 : 0};
+};
 /* ---- A DRAW PAID WITH A DISCARD THE SEAT GETS BACK (SPXCROWN) ----
    For `sparring.js`, which reads no card text. A gear piece whose ability is a
    go-again draw, costs no resource, and is paid by discarding a card from hand
@@ -5520,7 +5542,7 @@ function moves(g, seat){
 }
 
 return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, moves, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, cyclePick, riderPick, riderLead, arsenalAttack, arsenalUsable, arsenalPower, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, boardCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, pumpsNow, grantedInstant, oppTurnTrigger, oppTurnTriggerPlay, tokenPiece, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, weaponPumpOf, gaNextPiece, nonAtkHeld, discardDrawPiece, lifeGainOf, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
+        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, cyclePick, riderPick, riderLead, arsenalAttack, arsenalUsable, arsenalPower, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, boardCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, pumpsNow, grantedInstant, oppTurnTrigger, oppTurnTriggerPlay, tokenPiece, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, instantNextTakers, weaponPumpOf, gaNextPiece, nonAtkHeld, discardDrawPiece, lifeGainOf, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf, waitingOn,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */
