@@ -1755,7 +1755,12 @@ function laLucky(root, n, seat){
   const me = n.sides[seat], kept = new Set((me.deck || []).concat(me.hand || []).map(c => c && c.uid));
   return (root.sides[seat].deck || []).some(c => c && !kept.has(c.uid));
 }
-function laSearch(g, seat, a0){
+function laSearch(g, seat, a0){   /* PROBE: per-hero budgets */
+  const xh = envOf("SPXLA_XH"), b0 = LA.budget, bo0 = LA.budgetOwn;
+  if(xh && g.sides[seat].heroKey === xh){ if(envOf("SPXLA_XB")) LA.budget = +envOf("SPXLA_XB"); if(envOf("SPXLA_XBO")) LA.budgetOwn = +envOf("SPXLA_XBO"); }
+  try { return laSearch0(g, seat, a0); } finally { LA.budget = b0; LA.budgetOwn = bo0; }
+}
+function laSearch0(g, seat, a0){
   LA.stats.decisions++;
   const t0 = Date.now(), keep = NOTE; NOTE = null; IN_SEARCH = true;
   let best = null, spent = 0, cands = [];
@@ -1895,7 +1900,12 @@ function wallOrder(sd, uids){
   const isG = u => (sd.gear || []).some(x => x && x.uid === u);
   return uids.slice().sort((a, b) => (isG(b) - isG(a)) || (String(a) < String(b) ? -1 : String(a) > String(b) ? 1 : 0));
 }
-function laBlockSearch(g, seat, o){
+function laBlockSearch(g, seat, o){   /* PROBE: per-hero budgets */
+  const xh = envOf("SPXLA_XH"), b0 = LA.budget, bo0 = LA.budgetOwn;
+  if(xh && g.sides[seat].heroKey === xh){ if(envOf("SPXLA_XB")) LA.budget = +envOf("SPXLA_XB"); if(envOf("SPXLA_XBO")) LA.budgetOwn = +envOf("SPXLA_XBO"); }
+  try { return laBlockSearch0(g, seat, o); } finally { LA.budget = b0; LA.budgetOwn = bo0; }
+}
+function laBlockSearch0(g, seat, o){
   LA.stats.decisions++;
   const t0 = Date.now(), keep = NOTE; NOTE = null; IN_SEARCH = true;
   let best = null, spent = 0, cands = [];
