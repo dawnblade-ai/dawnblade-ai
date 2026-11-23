@@ -1,5 +1,5 @@
 /* ============================================================
-   THE TRAINER'S DUMMY DEFENDS UNDER THE TABLE'S CAP (v6.74)
+   THE TRAINER'S DUMMY DEFENDS UNDER THE TABLE'S CAP (v6.75)
 
    `dummyDefence` read the cap's NUMBER as a limit on hand cards and added
    the iron freely: against Confidence ("can't be defended by more than 2

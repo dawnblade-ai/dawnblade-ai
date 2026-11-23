@@ -257,7 +257,7 @@ test("THE TRAINER CAPS ITS HEURISTIC, IT DOES NOT REPLACE IT", () => {
      rule caps rather than assigns. */
   const fs = require("fs"), path = require("path");
   const src = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
-  /* v6.74: the cap is no longer a hand-card COUNT here — `parser.defCapWhy` judges each
+  /* v6.75: the cap is no longer a hand-card COUNT here — `parser.defCapWhy` judges each
      candidate (equipment counts where the cap counts it). The heuristic stays 2, and
      test/dummydefence.test.js runs the real body against Confidence, overpower and dominate. */
   assert.ok(/const cap = 2;/.test(src) && /if\(!capOK\(x\.c, false\)\) continue;/.test(src),

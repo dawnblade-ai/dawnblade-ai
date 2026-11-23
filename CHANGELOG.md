@@ -1,3 +1,23 @@
+## v6.75 — the trainer's dummy defends under the table's cap; allies untap at the end phase on both boards
+
+- **Rules (trainer): the dummy asks `parser.defCapWhy` for every defender, in its pick order.** It read a defence cap's number as
+  a limit on HAND cards and added its iron freely: against a Confidence attack ("can't be defended by more than 2 non-block
+  cards", equipment counts) it fielded three non-block defenders (driven: Beaten Trackers + Bear Hug + Rough Up against Lyath's
+  Mocking Blow), where the table refuses the third; and against overpower (one ACTION card) any hand card spent the cap. Now the
+  one body the table's defend door and the player's toggleBlock already ask judges each candidate (gear first, then hand) against
+  those declared; the dummy's own 2-card heuristic still caps it from above. Dominate (iron + 1 hand card) is unchanged.
+- **Rules (trainer): allies and other permanents untap at the turn-player's end phase (CR 4.4.3d).** "The turn-player untaps all
+  permanents they control." The trainer untapped them at the start of the controller's next turn, the table at the end phase;
+  the start-of-turn untaps are removed, so both boards untap at the same beat. Latent today (no ally in the pool prints an Instant
+  {t} ability), now one rule.
+- **Found by a sweep of the trainer's inline rules logic against judge/effects** (worker B): every other declare, damage,
+  prevention, end-phase and play-door decision already goes through an engine body or agrees with it.
+- **Drill:** test/dummydefence.test.js runs the trainer's REAL `dummyDefence` source against the engine (control, Confidence,
+  overpower, dominate, plus a source pin for the end-phase untap); sabotaged two ways.
+- **Validation:** npm test 4567 / 4562 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; both babel blocks compile;
+  trainer chaos on Lyath and Enigma (3 games each) clean; table chaos salt d8 (289 games, 41,270 random moves) 0 findings. No
+  engine, wire or data change.
+
 ## v6.74 — the trainer's Coach gives the advice the table's AI now plays
 
 - **Coach parity: the trainer's Coach's call asks the same judge readers the table's AI asks.** v6.69–v6.73 taught the AI

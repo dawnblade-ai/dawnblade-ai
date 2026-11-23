@@ -1141,7 +1141,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "6.74"; /* v6.74 - the trainer's Coach gives the advice the table's AI now plays (judge readers in its ctx); see CHANGELOG.md. */
+window.APP_VER = "6.75"; /* v6.75 - the trainer's dummy defends under the table's defence caps, and allies untap at the end phase on both boards; see CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -4142,7 +4142,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     const gi = noIron ? -1
       : opp(n).gear.findIndex(x=>gearDef(x)>0 && !usedThisChain.has(x.uid));
     if(noIron) n = L(n, `${card.name} can't be defended by equipment — the iron stays down.`);
-    /* THE RULE ASKS EVERY CANDIDATE, IN PICK ORDER (v6.74). The cap's number used to be read as a
+    /* THE RULE ASKS EVERY CANDIDATE, IN PICK ORDER (v6.75). The cap's number used to be read as a
        limit on HAND cards with the iron added freely, so a Confidence attack ("can't be defended by
        more than 2 NON-BLOCK cards", equipment counts) met three defenders here while the table refused
        the third, and overpower's ACTION-card cap was spent by any hand card. `parser.defCapWhy` is the
@@ -5862,7 +5862,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        step that lifts it — the turn-player's own, so a hero tapped by an
        opponent stays tapped for the rest of that turn and no longer. */
     if(act(n).heroTapped) actMut(n).heroTapped = false;
-    /* AND THE ARENA'S PERMANENTS (v6.74). CR 4.4.3d (rules.fabtcg.com/en/cr/04-game-structure/,
+    /* AND THE ARENA'S PERMANENTS (v6.75). CR 4.4.3d (rules.fabtcg.com/en/cr/04-game-structure/,
        verbatim): "The turn-player untaps all permanents they control." An ally that tapped to
        attack untapped at the start of its controller's NEXT turn here and at the end phase at the
        table (judge (d)), so it sat tapped through the opponent's turn on this board alone. Latent
