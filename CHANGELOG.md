@@ -1,3 +1,19 @@
+## v6.77 — the AI thinks a third faster, every decision unchanged; the shared feed's last "you" is gone
+
+- **AI speed (phone bound), decision-identical.** `types.cardType` is memoised per card object (a WeakMap, re-used while `tt`/`ty`
+  are unchanged) — it was the top hotspot (~18% self time) of Sharp's rollouts — and `parser`'s pure string readers `norm` and
+  `clean` share a bounded Map memo. Sharp's budget counts engine steps, never time, so nothing it decides can move: the full action
+  log (sha256) of 4 heroes x 3 seeds is identical before and after, as is the 816-game ladder; one full `npm test` ran with a check
+  that every cache hit equals a fresh parse. On one cloud box (node, no throttle), 4,474 Sharp decisions: total 16-17 s -> 10.5-11.5 s;
+  own-turn p95 19 -> 12-13 ms, opp-turn p95 31-33 -> 19-22 ms; worst ~unchanged (noisy). The real-iPhone measurement is still open.
+- **Feed voice (POLISH.md condition 2).** The 20 second-person literals in `effects.js` were classified one by one: 11 prompts
+  addressed to one side, 5 refusals, 3 code (inflection), and ONE feed line — an ally hit quoted "the next time you hit a hero";
+  it now reads "<card> hit an ally — a waiting grant for hitting a hero still waits." The drill's 20/12 ceiling is now an exact
+  allow-list (kind + count per literal): any new second-person literal fails it, as does an entry that stops matching. judge.js's 20
+  such literals are all refusals returned to the actor.
+- **Chaos d11** (salt d11, 289 games, 33,504 random legal moves; and EPS=0.6, 105,693): 0 findings. **trainchaos** 54 games, every
+  hero: clean.
+
 ## v6.76 — the Coach says "activate the Cloak first"; Sharp's block search fits the phone again
 
 - **Coach (trainer): activate Spellfire Cloak, then play the card.** On the opponent's turn (their action phase or your reaction
