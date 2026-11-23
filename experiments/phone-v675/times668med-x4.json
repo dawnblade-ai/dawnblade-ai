@@ -1,0 +1,114 @@
+[
+ {
+  "h": "azalea",
+  "n": 60,
+  "p50": 45.4,
+  "p95": 158.1,
+  "worst": 185,
+  "ownP95": 102.7,
+  "ownWorst": 158.1,
+  "oppP95": 161.3,
+  "oppWorst": 185,
+  "slow": [
+   "185ms opp blockHand defend",
+   "161ms opp blockGear defend",
+   "158ms own gearAbility layer"
+  ]
+ },
+ {
+  "h": "boltyn",
+  "n": 60,
+  "p50": 32.7,
+  "p95": 154.4,
+  "worst": 220.4,
+  "ownP95": 88.2,
+  "ownWorst": 88.4,
+  "oppP95": 171.2,
+  "oppWorst": 220.4,
+  "slow": [
+   "220ms opp laTake defend",
+   "171ms opp blockHand defend",
+   "154ms opp laTake defend"
+  ]
+ },
+ {
+  "h": "fai",
+  "n": 60,
+  "p50": 27.6,
+  "p95": 170.3,
+  "worst": 204.8,
+  "ownP95": 105.4,
+  "ownWorst": 151.9,
+  "oppP95": 184.6,
+  "oppWorst": 204.8,
+  "slow": [
+   "205ms opp blockGear defend",
+   "185ms opp blockHand defend",
+   "170ms opp blockGear defend"
+  ]
+ },
+ {
+  "h": "kayo",
+  "n": 60,
+  "p50": 28.6,
+  "p95": 111.8,
+  "worst": 124.3,
+  "ownP95": 47.6,
+  "ownWorst": 57.8,
+  "oppP95": 118,
+  "oppWorst": 124.3,
+  "slow": [
+   "124ms opp blockSpare defend",
+   "118ms opp blockGear defend",
+   "112ms opp laBlock defend"
+  ]
+ },
+ {
+  "h": "prism",
+  "n": 60,
+  "p50": 33.1,
+  "p95": 176.8,
+  "worst": 234.9,
+  "ownP95": 155.2,
+  "ownWorst": 164.2,
+  "oppP95": 210.5,
+  "oppWorst": 234.9,
+  "slow": [
+   "235ms opp blockSpare defend",
+   "211ms opp blockHand defend",
+   "177ms opp laTake defend"
+  ]
+ },
+ {
+  "h": "viserai",
+  "n": 60,
+  "p50": 26.1,
+  "p95": 162.7,
+  "worst": 201.2,
+  "ownP95": 62.2,
+  "ownWorst": 67.2,
+  "oppP95": 176.5,
+  "oppWorst": 201.2,
+  "slow": [
+   "201ms opp laTake defend",
+   "177ms opp blockSpare defend",
+   "163ms opp laBlock defend"
+  ]
+ },
+ {
+  "h": "viseraibw",
+  "n": 60,
+  "p50": 26.9,
+  "p95": 141.5,
+  "worst": 190.4,
+  "ownP95": 82.1,
+  "ownWorst": 112.7,
+  "oppP95": 169.7,
+  "oppWorst": 190.4,
+  "slow": [
+   "190ms opp blockSpare defend",
+   "170ms opp blockHand defend",
+   "142ms opp blockSpare defend"
+  ]
+ }
+]

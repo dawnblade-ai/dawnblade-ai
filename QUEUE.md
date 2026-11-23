@@ -25,8 +25,8 @@ landed damage alone (H39). (3) When a lever "fires but changes nothing", look fo
 rule living on one board is a bug even when the other board is "just the trainer" (Out Pace, and worker B's sweep below).
 
 **WORKERS IN FLIGHT (env_011rwpp2MyBTt3cEsZKDoVGk; a new CEO sends each its own session id first):**
-- **A `session_013xG9xCPAciqbr5nPRbgoCS`** — PHONE-BOUND re-measure across 17 heroes (Sharp p95 < 150 / worst < 400 ms at 4x
-  throttle) + table chaos salt d9; branch `phone-v674`. Hit the 5-hour limit ~01:00Z mid-task; nudged to resume 2026-11-23 ~11:30Z.
+- **A `session_013xG9xCPAciqbr5nPRbgoCS`** — phone-bound re-measure DONE (`experiments/phone-v675/`) + chaos d9 CLEAN.
+  STANDING BY for the next CEO's assignment.
 - **B `session_013xG9x8VDdx8D1FfSJq5SjC`** — shipped Cloak (v6.69), Out Pace (v6.72), one-board (v6.75); chaos d8 clean.
   STANDING BY for the next CEO's assignment.
 Both report via send_message, push only their ship/* branch, never main. A limit stop sends NO report: get_session (status_bucket
@@ -35,12 +35,17 @@ failed) + list_events, nudge. The CEO replays each branch onto main (cherry-pick
 bumps APP_VER + CHANGELOG, pushes main, waits for Pages, `tools/supabase-deploy.js` (--dry-run first), commits DEPLOYED.json, livecheck.
 
 **NEXT (after the workers):**
+00. **PHONE BOUND — PRE-EXISTING p95 OVERSHOOT (worker A, `experiments/phone-v675/`, real page at 4x throttle, median-of-5):**
+   Sharp's OPPONENT-TURN block search (laBlock / laTake / blockHand / blockSpare / blockLethal) runs p95 ~150-190 ms for azalea
+   189, prism 170, boltyn 159, viseraibw 158, fai 153 (bound 150). Worst stays < 400 everywhere (max ~208). Own-turn p95 < 150 for
+   all 17. v6.68 (before today's six changes) measures the same band — NOT a regression. Lever: the step budget of Sharp's
+   defend-step search (view/sparring LA config); measure play strength (A/B) when cutting it.
 0. FEED/UI — trainer Cloak: Spellfire Cloak can be activated in the trainer's reaction step BEFORE a play, but not from the pay
    sheet (no gear route), and the Coach never advises it. To match the table's cloakFirst: either offer gear payment on the pay
    sheet or have the Coach say "activate the Cloak, then play X" via a judge-exposed cloakFirst reader. Needs a UI decision.
 1. Gated ops still read only as PRINTED by the policy (census `experiments/census/gated.js`): token/draw/gainKw/buffNext/arcane —
    each 1-8 cards; low volume, take only with a census showing the gate holds often.
-2. Chaos: d8 CLEAN (289 games, 0 findings); d9 with worker A; next **d10**; trainer `node tools/trainchaos.js '' 3 3` after any Battle change (v6.69 run: clean).
+2. Chaos: d8 + d9 CLEAN (289 games each, 0 findings); next **d10**; trainer `node tools/trainchaos.js '' 3 3` after any Battle change (v6.69 run: clean).
 3. Weakest seats (viseraibw, lyath, iyslander, boltyn) have all been censused today and look like deck ceilings for this policy;
    a further gain there likely needs Sharp/search, not a rule.
 4. Compass of Sunken Depths (Gravy) — skip unless Sharp's mask learns it. Energy Potion (Dorinthea, Fai) would need cloakFirst to
