@@ -2086,6 +2086,25 @@ const abPieceForRes = (g, seat, uid) => !!abResOps(g, seat, uid);
    payout that is not a plain number (it asks no guess of the parse). */
 const abPieceResGain = (g, seat, uid) =>
   (abResOps(g, seat, uid) || []).reduce((t, o) => t + (typeof o[1] === "number" && o[1] > 0 ? o[1] : 0), 0);
+/* WHICH PIECE PAYS THIS OWED AMOUNT, AND ONLY ITSELF? (SPXCLOAK; the Coach's `ctx.cloakFor`)
+   One reader for `sparring.js`'s cloakFirst (which reads no card text) and for the trainer's
+   Coach (advisor.js, which cannot require this module). The seat's gear in uid order, skipping
+   `except` (the card being played), a weapon or anything that defends, the first piece that is
+   only a resource payout (`abPieceResGain`) covering `owe` and may be activated now (`legal`).
+   null when none does. A piece that blocks or swings is never offered. `{uid, name, gain}`. */
+const cloakFor = (g, seat, owe, except) => {
+  if(!(owe > 0)) return null;
+  const sd = at(g, seat);
+  const byU = (a, b) => (String(a.uid) < String(b.uid) ? -1 : String(a.uid) > String(b.uid) ? 1 : 0);
+  for(const x of (sd.gear || []).slice().sort(byU)){
+    if(!x || x.uid === except || x.power != null || (+x.def || 0) > 0) continue;
+    const gain = abPieceResGain(g, seat, x.uid);
+    let ok = false;
+    try { ok = gain >= owe && !legal(g, {t: "activate", uid: x.uid}, seat); } catch(e){ ok = false; }
+    if(ok) return {uid: x.uid, name: x.name, gain};
+  }
+  return null;
+};
 /* ---- DOES THIS CARD KEEP THE TURN'S ACTION POINT? (v5.36) -----------
 
    `abWindowOf`'s sibling, for the same reason: `sparring.js` reads NO card
@@ -5604,7 +5623,7 @@ function moves(g, seat){
 }
 
 return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, moves, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, cyclePick, riderPick, riderLead, arsenalAttack, arsenalUsable, arsenalPayable, arsenalPower, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, boardCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, condGaNow, arsTurnPays, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, pumpsNow, grantedInstant, oppTurnTrigger, oppTurnTriggerPlay, tokenPiece, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, instantNextTakers, weaponPumpOf, gaNextPiece, nonAtkHeld, discardDrawPiece, lifeGainOf, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
+        playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, cyclePick, riderPick, riderLead, arsenalAttack, arsenalUsable, arsenalPayable, arsenalPower, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, boardCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, condGaNow, arsTurnPays, cloakFor, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, pumpsNow, grantedInstant, oppTurnTrigger, oppTurnTriggerPlay, tokenPiece, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, instantNextTakers, weaponPumpOf, gaNextPiece, nonAtkHeld, discardDrawPiece, lifeGainOf, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf, waitingOn,
         handFree: PR.handFree,
         /* the card semantics seam (v2.77) */
