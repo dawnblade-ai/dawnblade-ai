@@ -105,9 +105,14 @@ test("H11 stays: with no weapon to pay for, Blossom is held", {skip}, () => {
 
 /* ---- 3. an overrule holds on more than one deal ----------------------- */
 /* Azalea's opening hand with one of its arrows set in the arsenal. On the
-   search's first deal the flip finds a better arrow; on four it does not. */
+   search's first deal the flip finds a better arrow; on four it does not.
+   v6.78: the fixture moved az6 -> az10. On az6 the four-deal "keep" was the
+   300-step budget running OUT (LA.stats.over; A0 stood by default), not the
+   verify rejecting: with the own-turn search at 600 steps the flip held on 4,
+   6 and 8 deals there. az10's rejection is the verify's own (`unverified`,
+   with `over` 0) — asserted below, so a budget bail-out cannot pass again. */
 function azalea(){
-  const g0 = match("azalea", "viserai", "az6", 0), sd = g0.sides[0];
+  const g0 = match("azalea", "viserai", "az10", 0), sd = g0.sides[0];
   const arr = sd.hand.find(c => /Arrow/.test(c.tt || ""));
   return {...g0, sides: [{...sd, arsenal: arr, hand: sd.hand.filter(c => c !== arr)}, g0.sides[1]]};
 }
@@ -121,8 +126,12 @@ test("Sharp does not bin a known arrow for a flip that won on one deal", {skip},
      (`bW: 0`, ship/sharp-board): with it, even one deal keeps the arrow on this fixture, so
      the board term would hide the very overrule the verify exists to catch. */
   assert.deepEqual(withLA({verify: 1, bW: 0}, () => SP.act(g, 0, {search: true})), HPOW, "one deal overrules into the flip");
-  const a = withLA({verify: 4}, () => SP.act(g, 0, {search: true}));
+  const fresh = () => ({decisions: 0, searched: 0, overruled: 0, steps: 0, ms: 0, maxSteps: 0, over: 0, hist: {}});
+  let st = null;
+  const a = withLA({verify: 4, stats: fresh()}, () => { const x = SP.act(g, 0, {search: true}); st = SP.LA.stats; return x; });
   assert.notEqual(a.uid, "hpow", "four deals keep the arrow: " + JSON.stringify(a));
+  assert.equal(st.over, 0, "the search finished inside its budget — not a bail-out");
+  assert.ok(st.unverified >= 1, "the verify is what turned the flip down");
   /* under the old scoring the rule policy's move stands; with the board term (ship/sharp-board)
      the search keeps the arrow by FIRING it from the arsenal — still not the flip */
   assert.deepEqual(withLA({verify: 4, bW: 0}, () => SP.act(g, 0, {search: true})), SP.act(g, 0, {search: false}), "and, scored the old way, the rule policy's move stands");

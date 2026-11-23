@@ -13,7 +13,7 @@ Chapter 1–3 decks, Viserai, Between Worlds and Prism, Advent of Thrones today)
 Age's rolling ban list or its seasonal hero bench: a card Silver Age has banned stays
 legal here. RULING (user,
 2026-11-15): new precons JOIN as they are built (`ROADMAP-NEWDECKS.md`); until a hero
-opens, its cards wait in `data/staged.js` (`tools/pin-staged.js`), which the page never loads. That is `data/formats.json`, held by
+opens, its cards wait in `data/staged.js` (`tools/pin-staged.js`), which the page never loads; only cards a precon list actually prints join (RULING, user, 2026-11-23 — no set-only extras). That is `data/formats.json`, held by
 `test/formats.test.js`. **Do not "fix" a banned card out of a deck list.**
 Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`), derived
 by `tools/silver-age.js` from the pinned pool (rerun it after every re-pin; `benched` is `null`).

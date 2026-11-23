@@ -22,6 +22,8 @@ Every number below was measured on 2026-11-15. Re-derive before trusting:
   only, so it has not fired.
 - **Probe 2026-11-23: `docs/OUTBREAK-PROBE.md`** (census, missing readers in build order, hosts). OBK holds both heroes
   again plus Azalea, Huxley, Min, Vyle; whether the precon lists use OBK cards is unknown until they publish.
+  RULING (user, 2026-11-23): **only cards actually in the precons** — an OBK card joins only if a precon list prints it;
+  OBK-only heroes (Azalea's new card, Huxley, Min, Vyle) are out unless a precon carries them.
 - **The Outbreak pair is not buildable**: no deck lists exist and the text is a handful of
   spoilers. They stay a probe, as the September pair was.
 - **No environment change is needed today.** `raw.githubusercontent.com` (card text) and
