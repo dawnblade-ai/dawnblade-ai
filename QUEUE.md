@@ -24,7 +24,8 @@ landed damage alone (H39). (3) When a lever "fires but changes nothing", look fo
 rule living on one board is a bug even when the other board is "just the trainer" (Out Pace, and worker B's sweep below).
 
 **WORKERS IN FLIGHT (env_011rwpp2MyBTt3cEsZKDoVGk; a new CEO sends each its own session id first):**
-- **A `session_013xG9xCPAciqbr5nPRbgoCS`** — shipped coach parity (v6.74). IDLE: give it the next item.
+- **A `session_013xG9xCPAciqbr5nPRbgoCS`** — shipped coach parity (v6.74); now the PHONE-BOUND re-measure across 17 heroes on v6.74
+  (Sharp p95 < 150 / worst < 400 ms at 4x throttle) + table chaos salt d9. Read-only unless a hero is over bound.
 - **B `session_013xG9x8VDdx8D1FfSJq5SjC`** — ONE-BOARD fixes GREEN-LIT, branch `ship/oneboard`: the trainer dummy over-blocks a
   Confidence attack (counts only hand cards against "no more than 2 non-block cards"; driven repro: gear + 2 hand cards) and
   under-blocks Overpower — fix = dummyDefence asks `parser.defCapWhy` per candidate; plus ally untap at the end phase (CR 4.4.3d)
@@ -40,7 +41,7 @@ bumps APP_VER + CHANGELOG, pushes main, waits for Pages, `tools/supabase-deploy.
    sheet or have the Coach say "activate the Cloak, then play X" via a judge-exposed cloakFirst reader. Needs a UI decision.
 1. Gated ops still read only as PRINTED by the policy (census `experiments/census/gated.js`): token/draw/gainKw/buffNext/arcane —
    each 1-8 cards; low volume, take only with a census showing the gate holds often.
-2. Chaos: table salt after d8 = **d9**; trainer `node tools/trainchaos.js '' 3 3` after any Battle change (v6.69 run: clean).
+2. Chaos: d8 (worker B) and d9 (worker A) in flight; next **d10**; trainer `node tools/trainchaos.js '' 3 3` after any Battle change (v6.69 run: clean).
 3. Weakest seats (viseraibw, lyath, iyslander, boltyn) have all been censused today and look like deck ceilings for this policy;
    a further gain there likely needs Sharp/search, not a rule.
 4. Compass of Sunken Depths (Gravy) — skip unless Sharp's mask learns it. Energy Potion (Dorinthea, Fai) would need cloakFirst to
