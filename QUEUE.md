@@ -30,7 +30,10 @@ a resource that is NOT a card (the Cloak) is its positive form. (2) Blocked dama
 landed damage alone (H39). (3) When a lever "fires but changes nothing", look for a reader blind to it (H38 -> SPXCONDGA). (4) A
 rule living on one board is a bug even when the other board is "just the trainer" (Out Pace, and worker B's sweep below).
 
-**WORKERS: NONE IN FLIGHT.** C and D (Sonnet) are archived; all their work is on main or filed. D also found the 4 `tools/page.js`
+**CEO session_013xG9xC8LtKqHaSNpJD2zxV (2026-11-23 afternoon) — WORKERS IN FLIGHT (Sonnet, one task each, branch ship/<L>-*):**
+E session_013xG9xBrBHycAWzUy4YQ8pA = Sharp speed WITHOUT changing a decision (ladder byte-identical; before/after p95). F session_013xG9xC4FKUkbN45pVuSfFC
+= second-person feed debt in effects.js (20 literals -> exact allow-list of refusals/prompts). G session_013xG9x8VBQdeADqbVd9Yvvp = chaos d11 + EPS=0.6 + trainchaos.
+**PREVIOUSLY: NONE IN FLIGHT.** C and D (Sonnet) are archived; all their work is on main or filed. D also found the 4 `tools/page.js`
 FAILs were sandbox artifacts (the @fontsource packages missing from scratch deps): page.js now WARNs and tags them (on main,
 bef0172, tools-only, no APP_VER). Install the fonts with page.js's deps and it reads 89/89. Costs this session: C $1, D $2.6 (old
 Opus workers ran ~$30 each). Next CEO: launch fresh Sonnet workers per item with self-contained prompts (see git log of this file
