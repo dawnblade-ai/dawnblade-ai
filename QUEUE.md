@@ -6,7 +6,7 @@ CHANGELOG.md (v6.30 on; older in `docs/archive/CHANGELOG-to-v6.29.md`) and LESSO
 
 ## HANDOFF — START HERE (CEO session_013xG9xAJ3EWKtYzW591tMdX, 2026-11-23, at v6.75)
 
-**This CEO (2026-11-23 midday):** archived the old workers A/B (contexts 500-640k tokens: too costly to continue) and launched two
+**This CEO (2026-11-23 midday, session ENDED clean):** archived the old workers A/B (contexts 500-640k tokens: too costly to continue) and launched two
 fresh **Sonnet** workers, one task each. **Shipped v6.76** (live, livecheck ALL PASS, function v104 `v6.76 · sage-v19` stamped):
 the Coach advises "activate the Cloak, then play X" off-turn (judge.cloakFor, shared with sparring.cloakFirst; arsenal card only —
 the Coach still has no off-turn HAND advice) + Sharp's defend-step search keeps 2 block sets not 4 (SPXBLOCKCAP; p95 on C's box
@@ -32,13 +32,11 @@ a resource that is NOT a card (the Cloak) is its positive form. (2) Blocked dama
 landed damage alone (H39). (3) When a lever "fires but changes nothing", look for a reader blind to it (H38 -> SPXCONDGA). (4) A
 rule living on one board is a bug even when the other board is "just the trainer" (Out Pace, and worker B's sweep below).
 
-**WORKERS IN FLIGHT (env_011rwpp2MyBTt3cEsZKDoVGk, model claude-sonnet-5-5; they report to the CEO session above —
-a new CEO sends each its own session id first):**
-- **C** (archived) — cap 1 measured, NOT shipped: strength flat (net -8 of 1920) but p95 not reliably < 150 (box noise ±20 ms);
-  evidence `experiments/phone-blockcap1/` on branch `ship/phonebound` (commit c129548, gate SPXBLOCKCAP1).
-- **D `session_013xG9xBsFXkCPaNQtbpeymF`** — Cloak advice + d10 SHIPPED in v6.76; now on the 4 pre-existing `tools/page.js`
-  FAILs (3 jump-row hit areas, table action bar): real at 393x852 or sandbox artifact? Branch `ship/pagefix`.
-Both push only their ship/* branch, never main, and do NOT bump APP_VER. A limit stop sends NO report: get_session (status_bucket
+**WORKERS: NONE IN FLIGHT.** C and D (Sonnet) are archived; all their work is on main or filed. D also found the 4 `tools/page.js`
+FAILs were sandbox artifacts (the @fontsource packages missing from scratch deps): page.js now WARNs and tags them (on main,
+bef0172, tools-only, no APP_VER). Install the fonts with page.js's deps and it reads 89/89. Costs this session: C $1, D $2.6 (old
+Opus workers ran ~$30 each). Next CEO: launch fresh Sonnet workers per item with self-contained prompts (see git log of this file
+for the C/D prompts' shape); workers push only their ship/* branch, never main, and do NOT bump APP_VER. A limit stop sends NO report: get_session (status_bucket
 failed) + list_events, nudge. The CEO replays each branch onto main (cherry-pick; on a CR-INDEX.md conflict take main's then
 `npm run crindex`), re-gates (npm test fail 0 / skipped 5, scenes, fairness, ladder, chaos; babel + trainchaos if index.html moved),
 bumps APP_VER + CHANGELOG, pushes main, waits for Pages, `tools/supabase-deploy.js` (--dry-run first), commits DEPLOYED.json, livecheck.
