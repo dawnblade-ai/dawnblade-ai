@@ -190,7 +190,7 @@ const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate(
       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
       wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW"),
       graveOn = subGate("SPXGRAVE"), booOn = subGate("SPXBOO"), energyOn = subGate("SPXENERGY"), putOn = subGate("SPXPUT"),
-      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST"), arsPowOn = subGate("SPXARSPOW"), oppArsOn = subGate("SPXOPPARS"), oppAmpOn = subGate("SPXOPPAMP"), oppIceOn = subGate("SPXOPPICE"), stirIdleOn = subGate("SPXSTIRIDLE"), cloakOn = subGate("SPXCLOAK"), flipOn = subGate("SPXFLIPCRUSH"), arsPayOn = subGate("SPXARSPAY"), condGaOn = subGate("SPXCONDGA"), booSelfOn = subGate("SPXBOOSELF");
+      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST"), arsPowOn = subGate("SPXARSPOW"), oppArsOn = subGate("SPXOPPARS"), oppAmpOn = subGate("SPXOPPAMP"), oppIceOn = subGate("SPXOPPICE"), stirIdleOn = subGate("SPXSTIRIDLE"), cloakOn = subGate("SPXCLOAK"), flipOn = subGate("SPXFLIPCRUSH"), arsPayOn = subGate("SPXARSPAY"), condGaOn = subGate("SPXCONDGA"), booSelfOn = subGate("SPXBOOSELF"), blockCapOn = subGate("SPXBLOCKCAP");
 /* THE BLOCK A TOKEN PIECE MAY GIVE UP (SPXTOKENPIECE): one point. Flat Trackers (1 defence, blade
    break: "Destroy this: Create an Agility token. Go again") measured on Boltyn's own seat, 24 seeds
    each chair: 224 -> 253 of 768 spent this way against kept to block once. */
@@ -1876,7 +1876,11 @@ function laBlockSets(g, seat, o){
   const out = [], seen = new Set();
   const add = uids => { const k = wallKey(sd, uids); if(seen.has(k)) return; seen.add(k); out.push(uids); };
   add(a0); add([]);
-  for(const x of sets){ if(out.length >= 2 + LA.blockN) break; add(x.uids); }
+  /* PHONE BOUND (SPXBLOCKCAP): two sets besides the rules' and taking it, not four. Each set is a
+     rollout through this seat's next turn, so the defend-step search's cost is its candidate count;
+     "2 and 8 measured the same" (phase c) and the top sets by score are the ones kept. */
+  const keepN = blockCapOn(g, seat) ? Math.min(LA.blockN, 2) : LA.blockN;
+  for(const x of sets){ if(out.length >= 2 + keepN) break; add(x.uids); }
   return out;
 }
 /* the order a set is declared in: armour first, then hand, each by uid */
