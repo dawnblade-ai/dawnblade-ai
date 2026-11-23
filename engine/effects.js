@@ -3684,9 +3684,29 @@ function makeEffects(ctx){
     /^(atk|non|lifeLt|lifeGt|marked|foeTurn|arcDealt|arcTakenTurn|auraTurn|madeCard|booed|blue|red|transcended|aim|weaponSwung|dealtDmg|dealtHero|banPlayed|isDraconic|charged|suspenseAura|allyDied|seismic)$/.test(cond)
     || /^(playedCls:|board:|noCtr:|atkNamed:|auras\d+$|hit\d+$|drac\d+$)/.test(cond)
     || (cond === "arsenal") || (cond === "hasArsenal" && from !== "arsenal");
-  function effPowerNow(g, seat, card, from){
+  /* THE CARD'S OWN BOO, WHEN ITS GATE HOLDS NOW (SPXBOOSELF). Mocking Blow: "When this attacks a hero,
+     if you have more {h} than them, the crowd boos you. / If you've been booed this turn, this gets
+     +N{p}". The boo is an on-attack rider (`boo` op under `conds`), so the attack resolves booed and
+     its own "booed" pump applies (driven: ahead on life the link carries 4, behind 1), while a reader
+     asked before the attack saw "booed" false. True when a played card (not a weapon or an ally
+     swing) prints a `boo` whose gate is DECIDABLE and true now. */
+  function selfBooNow(n, card, from){
+    if(from === "weapon" || from === "ally") return false;
+    const fx = P.splitFx(card, P.isSplit(card) ? 0 : null);
+    return (fx.conds || []).some(e => e && e.op && e.op[0] === "boo" && EFF_DECIDABLE(e.cond, from)
+      && condMetNow(n, n, card, from, e.cond, {chargedWay: [], fused: false, dracLinks: 0}));
+  }
+  /* `n` as the attack will see it: booed this turn when its own boo will fire (`opts.selfBoo`) */
+  function asBooed(n, seat, card, from, opts){
+    if(!opts || !opts.selfBoo || ((act(n).hist || {}).booed || 0) > 0 || !selfBooNow(n, card, from)) return null;
+    const sides = n.sides.slice();
+    sides[seat] = Object.assign({}, sides[seat], {hist: Object.assign({}, sides[seat].hist || {}, {booed: 1})});
+    return Object.assign({}, n, {sides});
+  }
+  function effPowerNow(g, seat, card, from, opts){
     if(!card || !card.name) return null;
-    const n = Object.assign({}, g, {actor: seat});
+    let n = Object.assign({}, g, {actor: seat});
+    const nb = asBooed(n, seat, card, from, opts); if(nb) n = nb;
     const fx = P.splitFx(card, P.isSplit(card) ? 0 : null);
     const base = basePowOf(card, from, n) || 0;
     const gates = [];
@@ -3715,9 +3735,10 @@ function makeEffects(ctx){
      for any op rather than the power ones alone, as `[cond, opName]` pairs. An attack counts its own
      chain link, the ruling `dracLinks` carries — RULING (user, 2026-10-31): "Yes, an attack counts
      its own chain link." Writes nothing. */
-  function gatesMetNow(g, seat, card, from){
+  function gatesMetNow(g, seat, card, from, opts){
     if(!card || !card.name) return [];
-    const n = Object.assign({}, g, {actor: seat});
+    let n = Object.assign({}, g, {actor: seat});
+    const nb = asBooed(n, seat, card, from, opts); if(nb) n = nb;
     const fx = P.splitFx(card, P.isSplit(card) ? 0 : null);
     const out = [];
     (fx.conds || []).forEach(e => {

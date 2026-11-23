@@ -190,7 +190,7 @@ const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate(
       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
       wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW"),
       graveOn = subGate("SPXGRAVE"), booOn = subGate("SPXBOO"), energyOn = subGate("SPXENERGY"), putOn = subGate("SPXPUT"),
-      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST"), arsPowOn = subGate("SPXARSPOW"), oppArsOn = subGate("SPXOPPARS"), oppAmpOn = subGate("SPXOPPAMP"), oppIceOn = subGate("SPXOPPICE"), stirIdleOn = subGate("SPXSTIRIDLE"), cloakOn = subGate("SPXCLOAK"), flipOn = subGate("SPXFLIPCRUSH"), arsPayOn = subGate("SPXARSPAY"), condGaOn = subGate("SPXCONDGA");
+      cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST"), arsPowOn = subGate("SPXARSPOW"), oppArsOn = subGate("SPXOPPARS"), oppAmpOn = subGate("SPXOPPAMP"), oppIceOn = subGate("SPXOPPICE"), stirIdleOn = subGate("SPXSTIRIDLE"), cloakOn = subGate("SPXCLOAK"), flipOn = subGate("SPXFLIPCRUSH"), arsPayOn = subGate("SPXARSPAY"), condGaOn = subGate("SPXCONDGA"), booSelfOn = subGate("SPXBOOSELF");
 /* THE BLOCK A TOKEN PIECE MAY GIVE UP (SPXTOKENPIECE): one point. Flat Trackers (1 defence, blade
    break: "Destroy this: Create an Agility token. Go again") measured on Boltyn's own seat, 24 seeds
    each chair: 224 -> 253 of 768 spent this way against kept to block once. */
@@ -1137,7 +1137,7 @@ function offenceBase(g, seat, o){
                                : {t: "play", uid: x.uid, from: x.from,
                                   target: targetFor(g, seat, x.c)}, seat));
   if(effPowOn(g, seat)) pick0.forEach(x => { if(!x.ally && !x.weapon){
-    const e = J.effPowerNow(g, seat, x.uid, x.from); if(e && e.bonus > 0) x.ep = e.power; } });
+    const e = J.effPowerNow(g, seat, x.uid, x.from, booSelfOn(g, seat) ? {selfBoo: true} : null); if(e && e.bonus > 0) x.ep = e.power; } });
   const pick = order(pick0.some(x => x.ep != null));
   const epMoved = pick0.some(x => x.ep != null) && !!pick && (order(false) || {}).uid !== pick.uid;
   /* THE KEY FOLLOWS THE RANK THAT PUT THE CARD FIRST (v5.49, QUEUE S14).
