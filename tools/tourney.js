@@ -60,7 +60,7 @@ let draws = [], quietMax = {turns: 0, seed: null};   /* quietMax: the longest un
 const faults = Object.fromEntries(FAULTS.map(k => [k, []]));
 for(const a of A) for(const b of B){
   if(a === b) continue;
-  for(let s = 0; s < SEEDS; s++){
+  for(let s = +(process.env.TOURNEY_S0 || 0); s < SEEDS + +(process.env.TOURNEY_S0 || 0); s++){   /* PROBE */
     const seed = `${a}-${b}-${s}`;
     let r;
     try { r = play(match(a, b, seed, s % 2)); }
@@ -79,7 +79,7 @@ for(const a of A) for(const b of B){
       if(r.longestQuiet > quietMax.turns) quietMax = {turns: r.longestQuiet, seed};
       const w = over.winner === 0 ? a : b;
       wins[w] = (wins[w] || 0) + 1;
-      winsBySeed[s][w] = (winsBySeed[s][w] || 0) + 1;
+      winsBySeed[s - +(process.env.TOURNEY_S0 || 0)][w] = (winsBySeed[s - +(process.env.TOURNEY_S0 || 0)][w] || 0) + 1;
       turnsum += r.game.turn;
       games.push({seed, a, b, win: w, how: over.how, turn: r.game.turn, steps: r.steps,
                   hp: r.game.sides.map(x => x.hp)});
