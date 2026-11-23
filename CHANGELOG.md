@@ -1,3 +1,21 @@
+## v6.76 — the Coach says "activate the Cloak first"; Sharp's block search fits the phone again
+
+- **Coach (trainer): activate Spellfire Cloak, then play the card.** On the opponent's turn (their action phase or your reaction
+  step), when your arsenal reaction or instant costs more than your pool and a resource-only gear piece covers the difference, the
+  Coach now says to activate the piece first so nothing is pitched — the line the table's AI has played since v6.69 (SPXCLOAK).
+  One new judge reader, `judge.cloakFor(g, seat, owe, except)`, answers it for both: `sparring.cloakFirst` now asks it (same
+  behaviour) and the trainer hands it to the Coach through ctx. Scope: the arsenal card only; the Coach still has no off-turn
+  advice for hand cards. Drill test/coachcloak.test.js (table state and a trainer-shaped state, both windows; sabotaged three ways).
+- **AI (Sharp, phone bound): the defend-step search keeps 2 block sets besides the rules' wall and taking it, not 4**
+  (`SPXBLOCKCAP`; `none` = old). Each set is one rollout. p95 at 4x CPU throttle on one box, before -> after: azalea 234->158,
+  prism 195->164, boltyn 260->154, viseraibw 226->187, fai 223->144, blaze 149->116, iyslander 105->72; worst fai 355->154,
+  azalea 296->233 (bound 400). That box measured ~1.3x slower than v6.75's, so azalea, prism and viseraibw likely remain near or
+  over 150 there: cap 1 is being measured. Strength flat: Sharp A/B at 12 seeds per chair for the five heroes, net -2 wins of
+  1920, every run 0 refusals / violations. Evidence: `experiments/phone-blockcap/` (driver, timings, ab.sh).
+- **Chaos d10** (salt d10, 289 games, 33,697 random legal moves): 0 findings.
+- **Validation:** npm test 4571 / 4566 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; ladder 816 games 0 refusals /
+  violations / stalls (3 draws); chaos 0 findings; both babel blocks compile (worker D); trainchaos Iyslander and Blaze clean.
+
 ## v6.75 — the trainer's dummy defends under the table's cap; allies untap at the end phase on both boards
 
 - **Rules (trainer): the dummy asks `parser.defCapWhy` for every defender, in its pick order.** It read a defence cap's number as
