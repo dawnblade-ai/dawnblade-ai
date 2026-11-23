@@ -36,8 +36,9 @@
        react-dom@18.2.0 @babel/standalone@7.23.5 peerjs@1.5.4 @supabase/supabase-js@2.115.0 \
        @fontsource/big-shoulders-display @fontsource/spline-sans \
        @fontsource/spline-sans-mono
-   The fonts are optional: without them the CSS is empty and the page
-   falls back to system fonts, so widths are only approximate. The
+   The fonts are optional for loading, NOT for the width rows: without them the CSS is empty and the
+   page falls back to system fonts, so the jump-row and action-bar rows can FAIL for the sandbox's
+   reason (the run now warns and tags those FAILs). The
    card art is always a stand-in, so card images are placeholders.
    Needs `playwright` resolvable by require (NODE_PATH, or run from a
    directory that has it). PW_CHROMIUM names an explicit browser binary.
@@ -60,6 +61,12 @@ const ROOT = path.join(__dirname, "..");
 const INDEX = path.join(ROOT, "index.html");
 const DEFAULT_DEPS = "/tmp/claude-0/-home-user-dawnblade-ai/0e392574-df59-5e28-9290-d593d0b10def/scratchpad/pagedeps";
 const depsDir = () => process.env.PAGE_DEPS || DEFAULT_DEPS;
+/* THE FONT PACKAGES THIS RUN IS MISSING. Without them the page falls back to system fonts and
+   the width-sensitive rows (the jump row's hit areas, the crowded action bar) FAIL at 393 px for
+   a reason that is the sandbox's, not the page's (2026-11-23: four such FAILs, all clean with the
+   fonts installed). A FAIL under missing fonts is therefore printed with the cause. */
+const missingFonts = (deps = depsDir()) => Object.values(FONT_FAMILIES).map(x => x[0])
+  .filter(pkg => !fs.existsSync(path.join(deps, "node_modules", pkg, "package.json")));
 
 /* ---------- the stand-ins ---------- */
 
@@ -208,7 +215,9 @@ if(require.main === module){
     catch(e){ console.log("FAIL  load: " + e.message); process.exit(1); }
     const { page, errors, routed } = kit;
     const ver = await page.evaluate(() => window.APP_VER);
-    const row = (ok, name, detail) => { rows.push({ ok, name }); console.log((ok ? "PASS  " : "FAIL  ") + name + (detail ? "  " + detail : "")); };
+    const noFonts = missingFonts();
+    if(noFonts.length) console.log("WARN  fonts not installed (" + noFonts.join(", ") + "): system fonts stand in, so a width FAIL below may be the sandbox's; install them (header of tools/page.js) before trusting it");
+    const row = (ok, name, detail) => { rows.push({ ok, name }); console.log((ok ? "PASS  " : "FAIL  ") + name + (detail ? "  " + detail : "") + (!ok && noFonts.length ? "  [fonts missing: may be an artifact]" : "")); };
 
     /* No horizontal overflow. The page is judged by scrollWidth; the elements
        that stick out (outside any scroller of their own) are the diagnosis. */
