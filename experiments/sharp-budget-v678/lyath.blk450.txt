@@ -1,0 +1,3 @@
+GAMES 192 · stalls 0 · draws 0 · avg turns 17.7
+POLICY REFUSALS 0 · INVARIANT VIOLATIONS 0 · MALFORMED 0 · SECOND-PERSON 0 · NO-ZONE 0
+WINS: lyath 62 · kayo 12 · briar 12 · viserai 11 · bravo 11 · enigma 11 · dorinthea 10 · arakni 9 · prism 9 · iyslander 8 · azalea 8 · fai 8 · blaze 7 · dash 5 · boltyn 3 · gravy 3 · viseraibw 3

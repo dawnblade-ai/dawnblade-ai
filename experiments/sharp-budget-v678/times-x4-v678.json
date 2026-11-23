@@ -1,0 +1,274 @@
+[
+ {
+  "h": "arakni",
+  "n": 160,
+  "p50": 7.3,
+  "p95": 109.7,
+  "worst": 145.6,
+  "ownP95": 92.7,
+  "ownWorst": 122,
+  "oppP95": 115.7,
+  "oppWorst": 145.6,
+  "slow": [
+   "146ms opp laBlock defend",
+   "141ms opp laBlock defend",
+   "122ms own biggestAttack layer"
+  ]
+ },
+ {
+  "h": "azalea",
+  "n": 160,
+  "p50": 19.5,
+  "p95": 83.6,
+  "worst": 147.6,
+  "ownP95": 83.6,
+  "ownWorst": 147.6,
+  "oppP95": 83.6,
+  "oppWorst": 105.6,
+  "slow": [
+   "148ms own keepsAP layer",
+   "125ms own pieceRes layer",
+   "106ms opp laBlock defend"
+  ]
+ },
+ {
+  "h": "blaze",
+  "n": 160,
+  "p50": 4.4,
+  "p95": 65,
+  "worst": 81.1,
+  "ownP95": 47.7,
+  "ownWorst": 65.1,
+  "oppP95": 75.3,
+  "oppWorst": 81.1,
+  "slow": [
+   "81ms opp laBlock defend",
+   "78ms opp laBlock defend",
+   "76ms opp laBlock defend"
+  ]
+ },
+ {
+  "h": "boltyn",
+  "n": 160,
+  "p50": 17.5,
+  "p95": 81.6,
+  "worst": 138.8,
+  "ownP95": 99.9,
+  "ownWorst": 137.3,
+  "oppP95": 81.6,
+  "oppWorst": 138.8,
+  "slow": [
+   "139ms opp laTake defend",
+   "137ms own tokenPiece layer",
+   "120ms own laSafe layer"
+  ]
+ },
+ {
+  "h": "bravo",
+  "n": 160,
+  "p50": 1.1,
+  "p95": 62.5,
+  "worst": 129.1,
+  "ownP95": 32.8,
+  "ownWorst": 116,
+  "oppP95": 74.4,
+  "oppWorst": 129.1,
+  "slow": [
+   "129ms opp blockGear defend",
+   "116ms own laKeep layer",
+   "86ms opp blockHand defend"
+  ]
+ },
+ {
+  "h": "briar",
+  "n": 160,
+  "p50": 30.9,
+  "p95": 68.7,
+  "worst": 95,
+  "ownP95": 66.1,
+  "ownWorst": 95,
+  "oppP95": 72.7,
+  "oppWorst": 91.6,
+  "slow": [
+   "95ms own laHit layer",
+   "94ms own laHit layer",
+   "92ms opp blockHand defend"
+  ]
+ },
+ {
+  "h": "dash",
+  "n": 160,
+  "p50": 15.4,
+  "p95": 73.3,
+  "worst": 105.1,
+  "ownP95": 63.7,
+  "ownWorst": 90.6,
+  "oppP95": 83.8,
+  "oppWorst": 105.1,
+  "slow": [
+   "105ms opp laBlock defend",
+   "92ms opp laBlock defend",
+   "91ms own laHit layer"
+  ]
+ },
+ {
+  "h": "dorinthea",
+  "n": 160,
+  "p50": 13.5,
+  "p95": 82.1,
+  "worst": 194,
+  "ownP95": 39.7,
+  "ownWorst": 52,
+  "oppP95": 87.2,
+  "oppWorst": 194,
+  "slow": [
+   "194ms opp blockHand defend",
+   "90ms opp blockSpare defend",
+   "90ms opp laBlock defend"
+  ]
+ },
+ {
+  "h": "enigma",
+  "n": 160,
+  "p50": 0.5,
+  "p95": 69.3,
+  "worst": 97.3,
+  "ownP95": 55.7,
+  "ownWorst": 75.1,
+  "oppP95": 74.6,
+  "oppWorst": 97.3,
+  "slow": [
+   "97ms opp blockSpare defend",
+   "88ms opp laTake defend",
+   "79ms opp blockGear defend"
+  ]
+ },
+ {
+  "h": "fai",
+  "n": 160,
+  "p50": 7.3,
+  "p95": 107,
+  "worst": 181,
+  "ownP95": 122.9,
+  "ownWorst": 176.8,
+  "oppP95": 107,
+  "oppWorst": 181,
+  "slow": [
+   "181ms opp blockHand defend",
+   "177ms own laHit layer",
+   "158ms own laHit layer"
+  ]
+ },
+ {
+  "h": "gravy",
+  "n": 160,
+  "p50": 0.9,
+  "p95": 73.7,
+  "worst": 188.4,
+  "ownP95": 77.8,
+  "ownWorst": 188.4,
+  "oppP95": 73.7,
+  "oppWorst": 161.2,
+  "slow": [
+   "188ms own laHit layer",
+   "169ms own gaNextTaker layer",
+   "161ms opp blockSpare defend"
+  ]
+ },
+ {
+  "h": "iyslander",
+  "n": 160,
+  "p50": 1.3,
+  "p95": 49.4,
+  "worst": 87.1,
+  "ownP95": 25.4,
+  "ownWorst": 40,
+  "oppP95": 57.8,
+  "oppWorst": 87.1,
+  "slow": [
+   "87ms opp laBlock defend",
+   "64ms opp blockGear defend",
+   "60ms opp laBlock defend"
+  ]
+ },
+ {
+  "h": "kayo",
+  "n": 160,
+  "p50": 8.8,
+  "p95": 67.8,
+  "worst": 75.5,
+  "ownP95": 44.5,
+  "ownWorst": 64.8,
+  "oppP95": 69.5,
+  "oppWorst": 75.5,
+  "slow": [
+   "76ms opp laBlock defend",
+   "72ms opp laBlock defend",
+   "71ms opp laBlock defend"
+  ]
+ },
+ {
+  "h": "lyath",
+  "n": 160,
+  "p50": 0.4,
+  "p95": 66.3,
+  "worst": 116.8,
+  "ownP95": 56.9,
+  "ownWorst": 116.8,
+  "oppP95": 68.6,
+  "oppWorst": 86,
+  "slow": [
+   "117ms own effPower layer",
+   "86ms opp blockSpare defend",
+   "80ms opp blockHand defend"
+  ]
+ },
+ {
+  "h": "prism",
+  "n": 160,
+  "p50": 17.3,
+  "p95": 94.9,
+  "worst": 136.9,
+  "ownP95": 106.3,
+  "ownWorst": 129.1,
+  "oppP95": 94.9,
+  "oppWorst": 136.9,
+  "slow": [
+   "137ms opp blockHand defend",
+   "129ms own atkKeepsAP layer",
+   "117ms opp blockGear defend"
+  ]
+ },
+ {
+  "h": "viserai",
+  "n": 160,
+  "p50": 21.6,
+  "p95": 69.7,
+  "worst": 101,
+  "ownP95": 49.8,
+  "ownWorst": 64.7,
+  "oppP95": 79.1,
+  "oppWorst": 101,
+  "slow": [
+   "101ms opp blockSpare defend",
+   "97ms opp blockSpare defend",
+   "91ms opp laBlock defend"
+  ]
+ },
+ {
+  "h": "viseraibw",
+  "n": 160,
+  "p50": 1.6,
+  "p95": 89.2,
+  "worst": 113.8,
+  "ownP95": 79,
+  "ownWorst": 91.4,
+  "oppP95": 92.5,
+  "oppWorst": 113.8,
+  "slow": [
+   "114ms opp blockSpare defend",
+   "113ms opp laBlock defend",
+   "109ms opp blockSpare defend"
+  ]
+ }
+]

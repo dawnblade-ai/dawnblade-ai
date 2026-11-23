@@ -1,0 +1,3 @@
+GAMES 192 · stalls 0 · draws 1 (arakni-prism-12) · avg turns 17.9
+POLICY REFUSALS 0 · INVARIANT VIOLATIONS 0 · MALFORMED 0 · SECOND-PERSON 0 · NO-ZONE 0
+WINS: arakni 109 · dorinthea 10 · briar 10 · iyslander 9 · kayo 8 · bravo 8 · azalea 7 · blaze 6 · prism 6 · enigma 5 · viserai 4 · viseraibw 4 · fai 3 · dash 1 · boltyn 1
