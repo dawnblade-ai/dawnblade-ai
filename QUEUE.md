@@ -11,7 +11,7 @@ version 102 = `v6.75 · sage-v19`, stamped, `--check` OK. WIRE_V 49, DATA_VER sa
 Ladder v6.73 (816 games): briar 81 prism 74 kayo 69 azalea 59 enigma 59 dorinthea 56 fai 55 dash 49 bravo 47 viserai 41 blaze 38
 arakni 36 gravy 36 boltyn 31 iyslander 29 lyath 27 viseraibw 26. 0 refusals / violations / stalls. Noise band max ~9.
 
-**This CEO shipped v6.69–v6.73 (CHANGELOG.md has each):** v6.69 SPXCLOAK (Iyslander +21, Blaze +24 of 768) + SPXSTIRIDLE (advice);
+**This CEO shipped v6.69–v6.75 (CHANGELOG.md has each):** v6.69 SPXCLOAK (Iyslander +21, Blaze +24 of 768) + SPXSTIRIDLE (advice);
 v6.70 Bravo SPXARSPAY + SPXFLIPCRUSH (+62 of 768); v6.71 SPXCONDGA — the policy now sees a card's own GATED go again (Fai +33);
 v6.72 Out Pace's "can't be defended by equipment" enforced at the TABLE too (CR 1.0.2; it was trainer-only); v6.73 SPXBOOSELF
 (Mocking Blow ranked at its real power; advice fix); v6.74 COACH PARITY (the trainer's Coach asks the same judge readers via ctx); v6.75 ONE-BOARD (the trainer dummy asks
