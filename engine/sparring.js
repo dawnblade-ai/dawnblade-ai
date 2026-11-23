@@ -1749,6 +1749,11 @@ function laLucky(root, n, seat){
   return (root.sides[seat].deck || []).some(c => c && !kept.has(c.uid));
 }
 function laSearch(g, seat, a0){
+  const xh = envOf("SPXLA_XH"), xb0 = LA.budget, xk0 = LA.dets;   /* PROBE: per-hero budget/dets */
+  if(xh && g.sides[seat].heroKey === xh){ if(envOf("SPXLA_XB")) LA.budget = +envOf("SPXLA_XB"); if(envOf("SPXLA_XK")) LA.dets = +envOf("SPXLA_XK"); }
+  try { return laSearch0(g, seat, a0); } finally { LA.budget = xb0; LA.dets = xk0; }
+}
+function laSearch0(g, seat, a0){
   LA.stats.decisions++;
   const t0 = Date.now(), keep = NOTE; NOTE = null; IN_SEARCH = true;
   let best = null, spent = 0, cands = [];
