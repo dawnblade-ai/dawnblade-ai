@@ -1,3 +1,22 @@
+## v6.72 — Out Pace can't be defended by equipment at the table either
+
+- **Rules: "This can't be defended by equipment" is enforced on BOTH boards (CR 1.0.2).** Out Pace (Dash) set
+  `fx.noEquipDefend`, but only the trainer's dummy read it: at the table (`judge.legal`'s defend door — the server, the
+  two-phone game and the AI hero) an Out Pace attack could be defended by equipment, 18 times in Dash's 48 self-play games at
+  3 seeds. CR 1.0.2, quoted verbatim at the reader: "A restriction is a rule or effect that states something cannot happen.
+  ... A restriction takes precedence over any requirement or allowance", with the rulebook's own example "'They can't defend
+  this with equipment' is a restriction" — so it beats CR 7.3.2a's allowance to declare equipment. One body,
+  `parser.noEquipDefendWhy`, asked by the table's defend door, the trainer's dummy and the Coach's block advice; the refusal
+  reads "Out Pace can't be defended by equipment". The AI's blockers go through `legal`, so they never declare the iron.
+  Drill: test/outpace.test.js (every equipment piece refused against Out Pace, a hand card accepted, the same piece legal
+  against a plain attack; sabotaged). No wire shape change.
+- **Tools:** `tools/failstates.js` counts a keyword the ledger marks live (drill-backed in the engine) as carried, not a
+  fail state; it only searched the trainer page, so the engine's move to `effects.js` had left 44 stale false alarms.
+  `SWEEP.md`: 46 fail-state entries -> 3.
+- **Validation:** npm test 4554 / 4549 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; ladder 816 games, 0 refusals /
+  0 violations / 0 stalls (3 engine draws); chaos 289 games 0 findings; both babel blocks compile; trainer chaos on Dash and
+  Kayo (3 games each) clean. No wire or data change.
+
 ## v6.71 — the AI sees a card's own conditional go again
 
 - **AI: a card's own gated go again counts when its gate holds now (SPXCONDGA).** `judge.keepsActionPoint` read printed go

@@ -87,6 +87,7 @@ const VIA_READER = {
   gyFirstGa:     "gyFirstGaKw",
   handWipe:      "isHandWipe",
   noDrx:         "drxBarWhy",
+  noEquipDefend: "noEquipDefendWhy",  /* CR 1.0.2, v6.71: Out Pace, asked by both boards' defend doors */
   rustDestroy:   "rustedThrough",
   wipePowIfIdle: "idleCounterWipes",
 };

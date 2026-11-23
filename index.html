@@ -1141,7 +1141,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "6.71"; /* v6.71 - the AI sees a card's own conditional go again when its condition already holds; see CHANGELOG.md. */
+window.APP_VER = "6.72"; /* v6.72 - Out Pace can't be defended by equipment at the table either (CR 1.0.2); see CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -4133,15 +4133,15 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     let n = {...s};
     const links = [];
     let soak = 0;
-    const cfx = fxParse(card);
     /* RULING (Out Pace): "This can't be defended by equipment" — restrict the
        declare step, not the damage maths. RULING (Under Loop's side note): an
        equipment already used as a defender this chain can't block again until
        the chain breaks, so skip anything that has blocked on this chain. */
     const usedThisChain = new Set((opp(n).chainBlocked||[]));
-    const gi = cfx.noEquipDefend ? -1
+    const noIron = DawnParser.noEquipDefendWhy(card);
+    const gi = noIron ? -1
       : opp(n).gear.findIndex(x=>gearDef(x)>0 && !usedThisChain.has(x.uid));
-    if(cfx.noEquipDefend) n = L(n, `${card.name} can't be defended by equipment — the iron stays down.`);
+    if(noIron) n = L(n, `${card.name} can't be defended by equipment — the iron stays down.`);
     if(total>=4 && gi>=0){
       links.push({k:"def", label:`${opp(n).name}: ${opp(n).gear[gi].name} — defend ${gearDef(opp(n).gear[gi])}`, gi});
       soak += gearDef(opp(n).gear[gi]);
