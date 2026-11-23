@@ -4,57 +4,40 @@
 answered NEEDS-A-RULING notes are in `QUEUE-ARCHIVE.md` on this branch (grep it, don't read it). History lives in
 CHANGELOG.md (v6.30 on; older in `docs/archive/CHANGELOG-to-v6.29.md`) and LESSONS.md on main.
 
-## HANDOFF — START HERE (CEO session_013xG9xAJ3EWKtYzW591tMdX, 2026-11-23, at v6.76)
+## HANDOFF — START HERE (CEO session_013xG9xC8LtKqHaSNpJD2zxV, 2026-11-23 afternoon, at v6.77 — session ENDED clean)
 
-**This CEO (2026-11-23 midday, session ENDED clean):** archived the old workers A/B (contexts 500-640k tokens: too costly to continue) and launched two
-fresh **Sonnet** workers, one task each. **Shipped v6.76** (live, livecheck ALL PASS, function v104 `v6.76 · sage-v19` stamped):
-the Coach advises "activate the Cloak, then play X" off-turn (judge.cloakFor, shared with sparring.cloakFirst; arsenal card only —
-the Coach still has no off-turn HAND advice) + Sharp's defend-step search keeps 2 block sets not 4 (SPXBLOCKCAP; p95 on C's box
-azalea 234->158 prism 195->164 viseraibw 226->187 boltyn 260->154 fai 223->144; strength flat at 12 seeds) + chaos d10 clean.
-Ladder v6.76: briar 81 prism 74 kayo 69 azalea 59 enigma 59 dorinthea 56 fai 55 dash 49 bravo 47 viserai 41 blaze 38 arakni 36
-gravy 36 boltyn 31 iyslander 29 lyath 27 viseraibw 26 (0/0/0, 3 draws).
-
-**State:** live = **v6.76** on `main` (+ bef0172 tools-only), livecheck ALL PASS. Function `table` v104 = `v6.76 · sage-v19`,
+**State:** live = **v6.77** on `main` (+ a docs-only roadmap commit), livecheck ALL PASS. Function `table` v106 = `v6.77 · sage-v19`,
 stamped, `--check` OK. WIRE_V 49, DATA_VER sage-v19, 17 heroes, approx ledger 0 open, pool 455/455. Noise band max ~9.
+**WORKERS: NONE IN FLIGHT** (E F G H I all archived; each cost $0.6-0.9 on Sonnet, ~20-45 min).
 
-**The morning CEO (session_013xG9xADa79zsMdfx4Ha7Ri) shipped v6.69–v6.75 (CHANGELOG.md has each):** v6.69 SPXCLOAK (Iyslander +21, Blaze +24 of 768) + SPXSTIRIDLE (advice);
-v6.70 Bravo SPXARSPAY + SPXFLIPCRUSH (+62 of 768); v6.71 SPXCONDGA — the policy now sees a card's own GATED go again (Fai +33);
-v6.72 Out Pace's "can't be defended by equipment" enforced at the TABLE too (CR 1.0.2; it was trainer-only); v6.73 SPXBOOSELF
-(Mocking Blow ranked at its real power; advice fix); v6.74 COACH PARITY (the trainer's Coach asks the same judge readers via ctx); v6.75 ONE-BOARD (the trainer dummy asks
-parser.defCapWhy — Confidence/overpower caps; allies untap at the end phase on both boards, CR 4.4.3d). Measured NOs, all filed in `experiments/` here: H33 Blaze energy off-turn,
-H34/H35 Iyslander remainder + Viserai BW Runechants off-turn, H36/H37 defensive 1-point pitches, H38/H40 Fai Fealty, H39 arcane
-ranking, Boltyn charge-keep, Dorinthea Hit and Run (deck runs only the blue +1).
+**This CEO:** v6.77 = Sharp ~1/3 faster with decisions byte-identical (types.cardType memo per card object, parser norm/clean memo)
++ the effects.js second-person ledger became an exact allow-list (the one feed line fixed) + chaos d11 (also EPS=0.6) and trainchaos
+54 games CLEAN. Ladder 816 0/0/0, 3 draws. **THE PHONE BOUND IS MET** on the page at 4x throttle (cloud box): every hero p95 <= 90 ms,
+worst 236 (`experiments/phone-v677/RESULT.md`); only a real-iPhone check is open (DESKTOP-TASKS.md). **Outbreak probe:**
+`docs/OUTBREAK-PROBE.md` on main — upstream `outbreak` has SLV 4 + SFC 1 + a 41-card OBK set; no lists (fabrary.net 403); reader
+build order recorded; Cure/Veil are not in the CR yet. The two earlier CEOs today shipped v6.69-v6.76 (CHANGELOG.md; old handoff text
+in git history of this file).
 
-**LESSONS (new today, keep):** (1) a hand card spent on their turn is missing from yours — off-turn pitch is CLOSED as a lever;
-a resource that is NOT a card (the Cloak) is its positive form. (2) Blocked damage still costs the foe cards — never rank on
-landed damage alone (H39). (3) When a lever "fires but changes nothing", look for a reader blind to it (H38 -> SPXCONDGA). (4) A
-rule living on one board is a bug even when the other board is "just the trainer" (Out Pace, and worker B's sweep below).
+**LESSONS (keep):** (1) a hand card spent on their turn is missing from yours — off-turn pitch is CLOSED; a resource that is not a
+card (the Cloak) is its positive form. (2) Blocked damage still costs the foe cards — never rank on landed damage alone. (3) A lever
+that "fires but changes nothing" → look for a reader blind to it. (4) A rule on one board only is a bug. (5) NEW: Sharp's budget is
+engine STEPS, so making a step cheaper is decision-identical by construction — prove it with sha256 of full action logs; the profile
+is now flat (no single function >5%).
 
-**CEO session_013xG9xC8LtKqHaSNpJD2zxV (2026-11-23 afternoon): SHIPPED v6.77** (live, livecheck ALL PASS, function v106 `v6.77 · sage-v19`
-stamped): E = Sharp ~1/3 faster, decisions byte-identical (memo types.cardType per card object + parser norm/clean; node own p95
-19->12 ms, opp 32->20); F = the effects.js second-person ledger is an exact allow-list (11 prompt / 5 refusal / 3 code; the one feed
-line fixed); G = chaos d11 + EPS=0.6 + trainchaos 54 games CLEAN. Ladder v6.77 816 games 0/0/0, 3 draws. Workers E/F/G archived
-(cost $0.58-0.89 each). **H DONE: the PHONE BOUND IS MET at v6.77 on the page at 4x throttle (cloud box)** — every hero p95 <= 90 (was up to 144), worst
-236 viseraibw (v6.76 had briar 426): `experiments/phone-v677/RESULT.md`. Only a real-iPhone check remains (DESKTOP-TASKS.md). I = Outbreak probe DONE (docs/OUTBREAK-PROBE.md on main): upstream `outbreak` holds SLV 4 + SFC 1 + a 41-card OBK set; no
-lists reachable (fabrary.net 403). Readers 1-4, 6-7 (disease tokens per CR 8.6, Cure, face-up-from-deck triggers, top-card-to-arsenal,
-random chain-link card, disease swap) are list-independent — but Cure/Veil are NOT in the CR yet: build only what the CR already defines. C and D (Sonnet) are archived; all their work is on main or filed. D also found the 4 `tools/page.js`
-FAILs were sandbox artifacts (the @fontsource packages missing from scratch deps): page.js now WARNs and tags them (on main,
-bef0172, tools-only, no APP_VER). Install the fonts with page.js's deps and it reads 89/89. Costs this session: C $1, D $2.6 (old
-Opus workers ran ~$30 each). Next CEO: launch fresh Sonnet workers per item with self-contained prompts (see git log of this file
-for the C/D prompts' shape); workers push only their ship/* branch, never main, and do NOT bump APP_VER. A limit stop sends NO report: get_session (status_bucket
-failed) + list_events, nudge. The CEO replays each branch onto main (cherry-pick; on a CR-INDEX.md conflict take main's then
-`npm run crindex`), re-gates (npm test fail 0 / skipped 5, scenes, fairness, ladder, chaos; babel + trainchaos if index.html moved),
-bumps APP_VER + CHANGELOG, pushes main, waits for Pages, `tools/supabase-deploy.js` (--dry-run first), commits DEPLOYED.json, livecheck.
-**Cost habit:** retire a worker once its context passes ~300k; start fresh ones on Sonnet with a self-contained prompt.
+**How to run the shop (works well):** one Sonnet worker per item via create_session with a SELF-CONTAINED prompt (git log of this
+file 2026-11-23 has the shape: rules preamble + one task + "report with send_message to the CEO session, then stop"). Workers push
+only ship/<letter>-*, never main, never bump APP_VER. Archive each on its report. A limit stop sends NO report: set a send_later
+check-in (~90 min), then get_session + list_events. The CEO cherry-picks onto main (CR-INDEX.md conflict: take main's, `npm run
+crindex`), re-gates (npm test fail 0 / skipped 5, scenes, fairness, `npm run play '' '' 3`, chaos; babel + trainchaos if index.html's
+babel blocks moved), bumps APP_VER + CHANGELOG, pushes main, curls until Pages serves the new APP_VER, `tools/supabase-deploy.js`
+(--dry-run first), commits DEPLOYED.json, `node tools/livecheck.js`. Next worker letter: J.
 
 **NEXT:**
-00. **PHONE BOUND — MET at v6.77 on a cloud box (experiments/phone-v677); a real iPhone is the only open check.** Old notes: v6.76 cap 2 cut opp-turn p95 hard; cap 1 (evidence above) gets opp-turn to ~110-155. What's left
-   is mostly OWN-turn Sharp search (laSearch, LA.budget 300 steps: azalea own p95 175-298 on C's box). Cloud boxes differ ~1.3x and
-   ±20 ms run to run, so the bound can't be judged there: the honest next step is a REAL iPhone measurement (DESKTOP-TASKS.md), then
-   levers: a lower own-turn budget, reusing the rollout prefix across candidates, memoising laTake. A/B strength for any of them.
-0. **[DONE v6.76, advice route]** FEED/UI — trainer Cloak: Spellfire Cloak can be activated in the trainer's reaction step BEFORE a play, but not from the pay
-   sheet (no gear route), and the Coach never advises it. To match the table's cloakFirst: either offer gear payment on the pay
-   sheet or have the Coach say "activate the Cloak, then play X" via a judge-exposed cloakFirst reader. Needs a UI decision.
+00. **SPEND THE HEADROOM ON STRENGTH (best next lever).** v6.77 left every hero's page p95 at <= 90 ms against a 150 bound, and
+   the weakest seats (item 3) look like deck ceilings for the RULE policy — so the gain is in Sharp. Try a bigger own-turn budget
+   (`SPXLA_B`, today 300 steps) and/or more determinizations (`LA.dets`): A/B strength per CLAUDE.md (hero's own seat, 12 seeds,
+   24 if inside noise), then re-measure the page with `experiments/phone-v675` time.js (H's method, `experiments/phone-v677`) —
+   ship only if p95 stays < 150 and worst < 400 at 4x throttle. Also open: a real-iPhone measurement (DESKTOP-TASKS.md).
 1. Gated ops still read only as PRINTED by the policy (census `experiments/census/gated.js`): token/draw/gainKw/buffNext/arcane —
    each 1-8 cards; low volume, take only with a census showing the gate holds often.
 2. Chaos: d8-d11 CLEAN (289 games each; d11 also EPS=0.6, v6.77); next **d12**; trainer `node tools/trainchaos.js '' 3 3` after any Battle change (v6.69 run: clean).
