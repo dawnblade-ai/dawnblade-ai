@@ -1,3 +1,18 @@
+## v6.78 — the AI thinks twice as far on its own turn (the speed headroom spent on strength)
+
+- **AI strength (Sharp): the own-turn action search gets 600 engine steps per decision, not 300** (`LA.budgetOwn`, env
+  `SPXLA_BO`; the defend-step search keeps 300). A larger budget only spends steps where 300 used to give up and let the rule
+  policy's move stand. A/B, each hero's own seat against every hero, 24 seeds (two honest samples of 12 — `TOURNEY_S0=12` is new in
+  `tools/tourney.js`): 300 won 3215 of 6528, 600 won 3300; both samples positive (+44, +41), no hero down by more than one game; Fai
+  +23, Gravy +18, Azalea +16, Dash +12, Arakni +7. Two determinizations at 600 won about as much (3303) for twice the steps and cost
+  Arakni 18 (215 -> 197): not taken. Every arm 0 refusals / violations. **Phone bound still met** (page, 4x CPU throttle, one cloud box,
+  80 own + 80 opp positions per hero): max p95 110 ms (arakni; own-turn max p95 123, fai), worst 194 (dorinthea, a defend step);
+  bound 150 / 400.
+- **A drill that a budget bail-out was passing.** "Sharp does not bin a known arrow for a flip that won on one deal" held on az6
+  only because the four-deal check ran OUT of its 300 steps (A0 stood by default): with room to finish, the flip held on 4, 6 and 8
+  deals there. The fixture is now az10, where the verify itself turns the flip down, and the drill asserts `over` 0 and
+  `unverified` >= 1 (sabotaged: at 300 steps it fails on the bail-out). The explain memo key now carries `budgetOwn`.
+
 ## v6.77 — the AI thinks a third faster, every decision unchanged; the shared feed's last "you" is gone
 
 - **AI speed (phone bound), decision-identical.** `types.cardType` is memoised per card object (a WeakMap, re-used while `tt`/`ty`

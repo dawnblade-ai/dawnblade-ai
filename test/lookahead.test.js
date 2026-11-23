@@ -151,9 +151,9 @@ test("explain is memoized per state, seat and setting, and the memo is the same 
       const steady = SP.explain(g, s, {search: false});
       assert.notEqual(steady.key, e1.key, "Steady's call is its own, not the stored Sharp one");
       assert.deepEqual(steady.action, SP.actBase(g, s));
-      const b = SP.LA.budget; SP.LA.budget = 0;
+      const b = SP.LA.budget, bo = SP.LA.budgetOwn; SP.LA.budget = 0; SP.LA.budgetOwn = 0;
       try { assert.ok(!/^la[A-Z]/.test(SP.explain(g, s, {search: true}).key || ""), "a new budget is a new call"); }
-      finally { SP.LA.budget = b; }
+      finally { SP.LA.budget = b; SP.LA.budgetOwn = bo; }
     }
     const out = J.reduce(g, a, s); if(out.error) break; g = out.state;
   }

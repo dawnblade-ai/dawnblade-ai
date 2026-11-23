@@ -1636,7 +1636,8 @@ function actBase(g, seat, o){
    this seat's turn) and a budget of 300 engine steps per decision. Through
    the opponent's next turn gained less at every budget tried and cost twice
    the steps; 300 steps caps a decision at roughly 150 ms on the page under
-   4x CPU throttling and gives up nothing measurable against no cap. The
+   4x CPU throttling and gives up nothing measurable against no cap (true
+   then; after v6.77's speedup the own-turn search takes 600 — `budgetOwn`). The
    budget is counted in engine steps, never time, so two phones agree. */
 const envOf = k => (typeof process !== "undefined" && process.env && process.env[k]) || "";
 const LA = {
@@ -1652,7 +1653,13 @@ const LA = {
   blockN: envOf("SPXLA_BN") !== "" ? +envOf("SPXLA_BN") : 4,      /* block sets kept besides the rules' and taking it */
   bW: envOf("SPXLA_BW") !== "" ? +envOf("SPXLA_BW") : 1,     /* SPXLABOARD: life-points per board point */
   stepCap: 400,       /* per rollout */
-  budget: envOf("SPXLA_B") !== "" ? +envOf("SPXLA_B") : 300,  /* engine steps per decision, all rollouts together; over it, A0 stands */
+  budget: envOf("SPXLA_B") !== "" ? +envOf("SPXLA_B") : 300,  /* engine steps per BLOCK decision, all rollouts together; over it, A0 stands */
+  /* OWN-TURN BUDGET (v6.78, measured): 600 steps for the action search. v6.77 left the page's p95 at
+     <= 90 ms of 150, so the headroom went to strength: at 24 seeds per hero (two honest samples of 12)
+     600 won 3300 of 6528 against 300's 3215, no hero down by more than one game (Fai +23, Gravy +18,
+     Azalea +16, Dash +12). Two determinizations at 600 won about as much (3303) at twice the steps and
+     cost Arakni 18 — not taken. A larger budget only spends steps where 300 used to give up (A0 stood). */
+  budgetOwn: envOf("SPXLA_BO") !== "" ? +envOf("SPXLA_BO") : 600,
   stats: {decisions: 0, searched: 0, overruled: 0, steps: 0, ms: 0, maxSteps: 0, over: 0, hist: {}}
 };
 let IN_SEARCH = false;
@@ -1720,11 +1727,11 @@ function laEval(n, seat, root, mu){
   const board = boardOn(root, seat) ? (boardVal(me, op, seat) - boardVal(m0, o0, seat)) - (boardVal(op, me, 1 - seat) - boardVal(o0, m0, 1 - seat)) : 0;
   return {v: dealt - taken + (mu != null ? mu : LA.mu) * cards + LA.bW * board, dealt, taken, cards, board};
 }
-function laRollout(n, seat, root, spent, until, skip){
+function laRollout(n, seat, root, spent, until, skip, cap){
   const stop = root.turn + (LA.horizon === "own" ? 1 : 2);
   const end = until || (x => x.turn >= stop);
   let steps = 0;
-  while(steps < LA.stepCap && !n.over && !end(n) && spent + steps < LA.budget){
+  while(steps < LA.stepCap && !n.over && !end(n) && spent + steps < (cap != null ? cap : LA.budget)){
     let moved = false;
     for(const s of [0, 1]){
       const a = actBase(n, s, skip && skip(n, s));
@@ -1749,11 +1756,6 @@ function laLucky(root, n, seat){
   return (root.sides[seat].deck || []).some(c => c && !kept.has(c.uid));
 }
 function laSearch(g, seat, a0){
-  const xh = envOf("SPXLA_XH"), xb0 = LA.budget, xk0 = LA.dets;   /* PROBE: per-hero budget/dets */
-  if(xh && g.sides[seat].heroKey === xh){ if(envOf("SPXLA_XB")) LA.budget = +envOf("SPXLA_XB"); if(envOf("SPXLA_XK")) LA.dets = +envOf("SPXLA_XK"); }
-  try { return laSearch0(g, seat, a0); } finally { LA.budget = xb0; LA.dets = xk0; }
-}
-function laSearch0(g, seat, a0){
   LA.stats.decisions++;
   const t0 = Date.now(), keep = NOTE; NOTE = null; IN_SEARCH = true;
   let best = null, spent = 0, cands = [];
@@ -1767,7 +1769,7 @@ function laSearch0(g, seat, a0){
       for(let i = 0; i < cands.length; i++){
         const out = J.reduce(root, cands[i], seat);
         if(out.error){ tot[i].v = -Infinity; continue; }
-        const r = laRollout(out.state, seat, root, spent); spent += r.steps + 1;
+        const r = laRollout(out.state, seat, root, spent, null, null, LA.budgetOwn); spent += r.steps + 1;
         if(!r.done){ LA.stats.over++; return null; }   /* over budget: the rule policy's move stands */
         if(laLucky(root, r.n, seat)) luck[i] = true;
         const e = laEval(r.n, seat, root);
@@ -1793,7 +1795,7 @@ function laSearch0(g, seat, a0){
       for(const i of [0, bi]){
         const out = J.reduce(root, cands[i], seat);
         if(out.error){ tot[i].v = -Infinity; continue; }
-        const r = laRollout(out.state, seat, root, spent); spent += r.steps + 1;
+        const r = laRollout(out.state, seat, root, spent, null, null, LA.budgetOwn); spent += r.steps + 1;
         if(!r.done){ LA.stats.over++; return null; }
         const e = laEval(r.n, seat, root);
         ["v", "dealt", "taken", "cards", "board"].forEach(f => tot[i][f] += e[f]);
@@ -2227,7 +2229,7 @@ function lineOf(g, seat, a){
    gets a fresh answer every time). */
 const EXPLAINED = typeof WeakMap === "function" ? new WeakMap() : null;
 const explainKey = (seat, o) => (o && Object.keys(o).some(k => k !== "search")) ? null
-  : [seat, o && o.search != null ? !!o.search : "-", LA.seats.join(","), LA.horizon, LA.budget, LA.mu, LA.margin, LA.dets, LA.stepCap,
+  : [seat, o && o.search != null ? !!o.search : "-", LA.seats.join(","), LA.horizon, LA.budget, LA.budgetOwn, LA.mu, LA.margin, LA.dets, LA.stepCap,
      LA.blocks, LA.blockN, LA.bMu, LA.bH].join("|");
 function explain(g, seat, o){
   const key = EXPLAINED && g && typeof g === "object" ? explainKey(seat, o) : null;

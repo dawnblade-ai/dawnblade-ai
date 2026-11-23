@@ -60,7 +60,7 @@ let draws = [], quietMax = {turns: 0, seed: null};   /* quietMax: the longest un
 const faults = Object.fromEntries(FAULTS.map(k => [k, []]));
 for(const a of A) for(const b of B){
   if(a === b) continue;
-  for(let s = +(process.env.TOURNEY_S0 || 0); s < SEEDS + +(process.env.TOURNEY_S0 || 0); s++){   /* PROBE */
+  for(let s = +(process.env.TOURNEY_S0 || 0); s < SEEDS + +(process.env.TOURNEY_S0 || 0); s++){   /* TOURNEY_S0: first seed index, so seeds 12-23 are an honest second sample without re-running 0-11 */
     const seed = `${a}-${b}-${s}`;
     let r;
     try { r = play(match(a, b, seed, s % 2)); }
