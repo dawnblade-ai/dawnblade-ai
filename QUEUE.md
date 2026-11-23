@@ -4,17 +4,17 @@
 answered NEEDS-A-RULING notes are in `QUEUE-ARCHIVE.md` on this branch (grep it, don't read it). History lives in
 CHANGELOG.md (v6.30 on; older in `docs/archive/CHANGELOG-to-v6.29.md`) and LESSONS.md on main.
 
-## HANDOFF — START HERE (CEO session_013xG9xADa79zsMdfx4Ha7Ri, 2026-11-23, at v6.73)
+## HANDOFF — START HERE (CEO session_013xG9xADa79zsMdfx4Ha7Ri, 2026-11-23, at v6.74)
 
-**State:** live = **v6.73** on `main`, livecheck ALL PASS, CI green through v6.70 (later runs were in flight). Function `table`
-version 98 = `v6.73 · sage-v19`, stamped, `--check` OK. WIRE_V 49, DATA_VER sage-v19, 17 heroes, approx ledger 0 open, pool 455/455.
+**State:** live = **v6.74** on `main`, livecheck ALL PASS, CI green through v6.70 (later runs were in flight). Function `table`
+version 100 = `v6.74 · sage-v19`, stamped, `--check` OK. WIRE_V 49, DATA_VER sage-v19, 17 heroes, approx ledger 0 open, pool 455/455.
 Ladder v6.73 (816 games): briar 81 prism 74 kayo 69 azalea 59 enigma 59 dorinthea 56 fai 55 dash 49 bravo 47 viserai 41 blaze 38
 arakni 36 gravy 36 boltyn 31 iyslander 29 lyath 27 viseraibw 26. 0 refusals / violations / stalls. Noise band max ~9.
 
 **This CEO shipped v6.69–v6.73 (CHANGELOG.md has each):** v6.69 SPXCLOAK (Iyslander +21, Blaze +24 of 768) + SPXSTIRIDLE (advice);
 v6.70 Bravo SPXARSPAY + SPXFLIPCRUSH (+62 of 768); v6.71 SPXCONDGA — the policy now sees a card's own GATED go again (Fai +33);
 v6.72 Out Pace's "can't be defended by equipment" enforced at the TABLE too (CR 1.0.2; it was trainer-only); v6.73 SPXBOOSELF
-(Mocking Blow ranked at its real power; advice fix). Measured NOs, all filed in `experiments/` here: H33 Blaze energy off-turn,
+(Mocking Blow ranked at its real power; advice fix); v6.74 COACH PARITY (the trainer's Coach asks the same judge readers via ctx). Measured NOs, all filed in `experiments/` here: H33 Blaze energy off-turn,
 H34/H35 Iyslander remainder + Viserai BW Runechants off-turn, H36/H37 defensive 1-point pitches, H38/H40 Fai Fealty, H39 arcane
 ranking, Boltyn charge-keep, Dorinthea Hit and Run (deck runs only the blue +1).
 
@@ -24,21 +24,20 @@ landed damage alone (H39). (3) When a lever "fires but changes nothing", look fo
 rule living on one board is a bug even when the other board is "just the trainer" (Out Pace, and worker B's sweep below).
 
 **WORKERS IN FLIGHT (env_011rwpp2MyBTt3cEsZKDoVGk; a new CEO sends each its own session id first):**
-- **A `session_013xG9xCPAciqbr5nPRbgoCS`** — COACH PARITY, GREEN-LIT, branch `ship/coach-parity`: the audit
-  (`experiments/census/coachparity.js` on ship/census-v669) found the trainer's Coach's call (engine/advisor.js) gives the OLD advice
-  for SPXFLIPCRUSH, SPXARSPAY, SPXCONDGA, SPXBOOSELF. Fix = the trainer passes the judge readers in advisor ctx (as it passes
-  arsNoOpWhy); nothing re-implemented. Cloak: settle by driving the trainer pay sheet (include if it can spend gear, else file a
-  UI item). Touches index.html => babel + trainchaos. Ship as v6.74 or v6.75 (whichever lands second).
+- **A `session_013xG9xCPAciqbr5nPRbgoCS`** — shipped coach parity (v6.74). IDLE: give it the next item.
 - **B `session_013xG9x8VDdx8D1FfSJq5SjC`** — ONE-BOARD fixes GREEN-LIT, branch `ship/oneboard`: the trainer dummy over-blocks a
   Confidence attack (counts only hand cards against "no more than 2 non-block cards"; driven repro: gear + 2 hand cards) and
   under-blocks Overpower — fix = dummyDefence asks `parser.defCapWhy` per candidate; plus ally untap at the end phase (CR 4.4.3d)
-  in endPhaseCF. Trainer-only => babel + trainchaos lyath/enigma; ship as **v6.74**. Also running table chaos salt **d8**.
+  in endPhaseCF. Trainer-only => babel + trainchaos lyath/enigma; ship as **v6.75** (merge main v6.74 first: index.html moved). Also running table chaos salt **d8**.
 Both report via send_message, push only their ship/* branch, never main. A limit stop sends NO report: get_session (status_bucket
 failed) + list_events, nudge. The CEO replays each branch onto main (cherry-pick; on a CR-INDEX.md conflict take main's then
 `npm run crindex`), re-gates (npm test fail 0 / skipped 5, scenes, fairness, ladder, chaos; babel + trainchaos if index.html moved),
 bumps APP_VER + CHANGELOG, pushes main, waits for Pages, `tools/supabase-deploy.js` (--dry-run first), commits DEPLOYED.json, livecheck.
 
 **NEXT (after the workers):**
+0. FEED/UI — trainer Cloak: Spellfire Cloak can be activated in the trainer's reaction step BEFORE a play, but not from the pay
+   sheet (no gear route), and the Coach never advises it. To match the table's cloakFirst: either offer gear payment on the pay
+   sheet or have the Coach say "activate the Cloak, then play X" via a judge-exposed cloakFirst reader. Needs a UI decision.
 1. Gated ops still read only as PRINTED by the policy (census `experiments/census/gated.js`): token/draw/gainKw/buffNext/arcane —
    each 1-8 cards; low volume, take only with a census showing the gate holds often.
 2. Chaos: table salt after d8 = **d9**; trainer `node tools/trainchaos.js '' 3 3` after any Battle change (v6.69 run: clean).
