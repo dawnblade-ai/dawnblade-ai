@@ -1937,10 +1937,7 @@ function laBlockSearch(g, seat, o){
 function cloakFirst(g, seat, a){
   if(CLOAK_ROLL || IN_SEARCH || !a || !g || g.over || g.turnPlayer === seat || g.pending || g.prompt || !cloakOn(g, seat)) return a;
   if(a.t !== "play" && a.t !== "activate") return a;
-  const sd = g.sides[seat];
-  const pieces = (sd.gear || []).slice().sort(byUid)
-    .filter(x => x && x.uid !== a.uid && x.power == null && num(x, "def") <= 0);
-  if(!pieces.length) return a;
+  if(!(g.sides[seat].gear || []).some(x => x && x.uid !== a.uid && x.power == null && num(x, "def") <= 0)) return a;
   let owe = 0;
   try {
     const out = J.reduce(g, a, seat);
@@ -1950,8 +1947,7 @@ function cloakFirst(g, seat, a){
     owe = p.need - (s2.res || 0) - J.paySum(s2);
   } catch(e){ return a; }
   if(owe <= 0) return a;
-  const pc = pieces.find(x => { const gain = J.abPieceResGain(g, seat, x.uid);
-    return gain > 0 && gain >= owe && legal(g, {t: "activate", uid: x.uid}, seat); });
+  const pc = J.cloakFor(g, seat, owe, a.uid);
   if(!pc) return a;
   /* THE LINE, NOT THE ONE PAYMENT. An amp ability then an arsenal cast is one line: a blue
      pitched for the first pays the second out of what floats, so the piece spent on the first

@@ -154,6 +154,20 @@ function advise(g, ctx){
     return {line:`Pitch ${names} — exactly ${set.gain}${left}.`,
             why:"Fodder first — feed the fire with the cards you'd least like to swing."};
   }
+  /* A PIECE THAT PAYS ON THEIR TURN PAYS INSTEAD OF A CARD (SPXCLOAK's reader, `ctx.cloakFor` =
+     judge.cloakFor, the one `sparring.cloakFirst` asks). Off your own turn a pitched card is one
+     missing from the hand you only draw back up at YOUR end step. When the card you could cast now
+     from the arsenal (a reaction or instant: the reaction step, or their action phase) costs more
+     than your pool and Spellfire Cloak-type gear covers the difference, say so: activate it first,
+     then play the card with nothing pitched. `cloak` / `then` carry the uids as data. */
+  const offTurn = (g.turnPlayer != null && g.turnPlayer !== 0) || g.mode === "foeturn" || (g.mode === "block" && g.bphase === "react");
+  const ac = you(g).arsenal;
+  if(offTurn && ctx.cloakFor && ac && (isRx(ac) || isInstantT(ac)) && win !== "pay" && win !== "arsenal"){
+    const owed = effCost(ac, you(g)) - (you(g).res || 0), pc = owed > 0 ? ctx.cloakFor(g, 0, owed, ac.uid) : null;
+    if(pc) return {line:`If you play ${nm(ac)} from your arsenal, activate ${pc.name} first — it pays the ${owed} and nothing gets pitched.`,
+      why:"Off your turn a pitched card is gone until your own end step; the piece pays so the hand stays full.",
+      cloak: pc.uid, then: ac.uid};
+  }
   if(win==="stack"){
     const rx = you(g).hand.map(c=>({c,fx:fxParse(c)})).filter(x=>(isAR(x.c)||(isInstantT(x.c)&&x.fx.ops.length>0)) && (x.c.cost||0)<=you(g).res)
       .map(x=>({...x,p:(x.fx.self||0)+x.fx.ops.filter(o=>o[0]==="buffNext").reduce((a,o)=>a+o[1],0)}))
