@@ -14501,3 +14501,23 @@ needs the verbatim quote IN THE REPO (source comment, `tools/approx.js` record, 
 - A reader that names a TALENT names more than the card you meant: `oppTurnTrigger` first asked only "Ice", so the own-turn
   hold also held Ice Bolt and every Ice non-attack (75 -> 21). Name the kind too (`TY.isInstant`), and read a catastrophe in
   an A/B as a bug in the change before reading it as strategy.
+
+## v6.69–v6.73 — what a day of censuses taught (2026-11-22/23)
+
+- The off-turn lesson held four more times (Blaze energy cast, Viserai BW Runechants, Lyath's defensive boo, 1-point defence
+  reactions): off-turn PITCH is closed as a lever. Its positive form is a resource that is not a card: Spellfire Cloak paying
+  instead of a pitched card (SPXCLOAK, Iyslander +21, Blaze +24 of 768). Decide by playing the seat's own line out both ways,
+  not by the one payment (an amp then an arsenal cast is paid by one blue; a Cloak on the amp saved nothing).
+- A lever that "fires but changes nothing" points at a blind reader. Fai's Fealty made cards Draconic and every game came out
+  identical, because `keepsActionPoint` could not see a card's own GATED go again. The fix was the reader (SPXCONDGA, Fai +33),
+  not the lever (Fealty on top stays noise). Ask what the policy cannot see before tuning what it does.
+- A free ability aimed blind is a misplay the census shows directly: Bravo turned a card without crush face-up 33 of 65 times,
+  and stored a 7-cost card he could pay for 2 of 85 times. Fixing both (SPXFLIPCRUSH + SPXARSPAY) was +62 of 768. The same
+  shape searched across the other 16 heroes did not recur: a sweep that says "no" is a result.
+- Blocked damage still has value: it costs the defender hand cards. Ranking arcane by landed damage against an attack's power
+  minus the expected block lost clearly (Blaze 136 -> 109, Iyslander 134 -> 116 of 384). Never rank on landed damage alone.
+- A rule living on one board is a bug even when that board is "only the trainer": Out Pace's "can't be defended by equipment"
+  was read by the trainer alone, so the table let equipment defend it (18 times in 48 Dash games). A sweep of fx FIELDS found
+  it; a sweep of trainer LOGIC found the dummy counting only hand cards against Confidence's non-block cap. Sweep both.
+- A prediction must equal what the engine does: Mocking Blow was ranked at 1 while the engine resolved it at 4 (its own
+  on-attack boo). Drill a reader by comparing its prediction with the chain link's real total, in both gate states.
