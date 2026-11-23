@@ -102,7 +102,9 @@ test("the rule policy leads with the attack that is bigger NOW, and says why", {
   const {g, c: mb} = find("Mocking Blow");
   const alt = g.sides[0].deck.find(x => x !== mb && +x.power === 2 && +x.cost === 0 && /Attack/.test(x.tt || ""));
   assert.ok(alt, "an equal-cost 2-power attack to compare against");
-  const shut = side(g, 0, {hand: [mb, alt], arsenal: null, res: 3});
+  /* SHUT means no boo coming either: under SPXBOOSELF the ranking reads Mocking Blow's own
+     on-attack boo ("if you have more {h} than them"), so Lyath is set BEHIND on life here */
+  const shut = side(g, 0, {hand: [mb, alt], arsenal: null, res: 3, hp: Math.max(1, (+g.sides[1].hp || 20) - 5)});
   const open = withHist(shut, {booed: 1});
   const a = SP.explain(shut, 0), b = SP.explain(open, 0);
   assert.equal(a.action.uid, alt.uid, "gate shut: the printed 2 beats the printed 1");
