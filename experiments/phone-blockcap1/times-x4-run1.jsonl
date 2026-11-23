@@ -1,0 +1,7 @@
+{"h":"azalea","n":60,"p50":45.9,"p95":172.9,"worst":311.6,"ownP95":298.4,"ownWorst":311.6,"oppP95":138.8,"oppWorst":152.7,"slow":["312ms own gearAbility layer","298ms own keepsAP layer","173ms own laHit layer"]}
+{"h":"blaze","n":60,"p50":4.9,"p95":71.6,"worst":85.2,"ownP95":71.6,"ownWorst":85.2,"oppP95":70.9,"oppWorst":78.9,"slow":["85ms own gearAmp layer","79ms opp blockSpare defend","72ms own laKeep layer"]}
+{"h":"boltyn","n":60,"p50":44.6,"p95":153.1,"worst":160.2,"ownP95":126.5,"ownWorst":153.1,"oppP95":158.9,"oppWorst":160.2,"slow":["160ms opp blockHand defend","159ms opp laTake defend","153ms own laHit layer"]}
+{"h":"fai","n":60,"p50":32.4,"p95":174.5,"worst":191.3,"ownP95":174.5,"ownWorst":183,"oppP95":153.2,"oppWorst":191.3,"slow":["191ms opp laTake defend","183ms own laBoard layer","175ms own atkKeepsAP layer"]}
+{"h":"iyslander","n":60,"p50":1.3,"p95":43.6,"worst":53.8,"ownP95":31.9,"ownWorst":32,"oppP95":53.7,"oppWorst":53.8,"slow":["54ms opp blockHand defend","54ms opp blockGear defend","44ms opp blockGear defend"]}
+{"h":"prism","n":60,"p50":16.5,"p95":145.4,"worst":171.6,"ownP95":151.4,"ownWorst":171.6,"oppP95":116.5,"oppWorst":145.4,"slow":["172ms own laBoard layer","151ms own laBoard layer","145ms opp laTake defend"]}
+{"h":"viseraibw","n":60,"p50":32.2,"p95":141.4,"worst":166.3,"ownP95":119.1,"ownWorst":124.5,"oppP95":150.8,"oppWorst":166.3,"slow":["166ms opp laBlock defend","151ms opp blockSpare defend","141ms opp blockSpare defend"]}
