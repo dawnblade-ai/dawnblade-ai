@@ -257,8 +257,13 @@ test("THE TRAINER CAPS ITS HEURISTIC, IT DOES NOT REPLACE IT", () => {
      rule caps rather than assigns. */
   const fs = require("fs"), path = require("path");
   const src = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
-  assert.ok(/const cap = _cap \? Math\.min\(2, _cap\.n\) : 2;/.test(src),
-    "the rule must CAP the heuristic (Math.min), never assign over it");
+  /* v6.74: the cap is no longer a hand-card COUNT here — `parser.defCapWhy` judges each
+     candidate (equipment counts where the cap counts it). The heuristic stays 2, and
+     test/dummydefence.test.js runs the real body against Confidence, overpower and dominate. */
+  assert.ok(/const cap = 2;/.test(src) && /if\(!capOK\(x\.c, false\)\) continue;/.test(src),
+    "the heuristic stays 2 and the rule refuses past it (defCapWhy), never raises it");
+  assert.ok(/DawnParser\.defCapWhy\(_capPend, declared, c, gear\)/.test(src),
+    "the dummy asks the table's ONE body for every defender");
   assert.ok(/DawnParser\.defCap\(card, n\.pend && n\.pend\.defCap, \{kwGrant: n\._kwGrant\}\)/.test(src),
     "the trainer must ask the ONE reader, and hand it the granted keyword");
 });
