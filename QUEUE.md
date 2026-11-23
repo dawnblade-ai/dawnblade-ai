@@ -34,8 +34,8 @@ rule living on one board is a bug even when the other board is "just the trainer
 stamped): E = Sharp ~1/3 faster, decisions byte-identical (memo types.cardType per card object + parser norm/clean; node own p95
 19->12 ms, opp 32->20); F = the effects.js second-person ledger is an exact allow-list (11 prompt / 5 refusal / 3 code; the one feed
 line fixed); G = chaos d11 + EPS=0.6 + trainchaos 54 games CLEAN. Ladder v6.77 816 games 0/0/0, 3 draws. Workers E/F/G archived
-(cost $0.58-0.89 each). **IN FLIGHT (Sonnet):** H session_013xG9xB54uibmtEP2Q5SEfd = perf-page 4x throttle, every hero, v6.76 vs v6.77
-on one box (which heroes still miss 150/400). I = Outbreak probe DONE (docs/OUTBREAK-PROBE.md on main): upstream `outbreak` holds SLV 4 + SFC 1 + a 41-card OBK set; no
+(cost $0.58-0.89 each). **H DONE: the PHONE BOUND IS MET at v6.77 on the page at 4x throttle (cloud box)** — every hero p95 <= 90 (was up to 144), worst
+236 viseraibw (v6.76 had briar 426): `experiments/phone-v677/RESULT.md`. Only a real-iPhone check remains (DESKTOP-TASKS.md). I = Outbreak probe DONE (docs/OUTBREAK-PROBE.md on main): upstream `outbreak` holds SLV 4 + SFC 1 + a 41-card OBK set; no
 lists reachable (fabrary.net 403). Readers 1-4, 6-7 (disease tokens per CR 8.6, Cure, face-up-from-deck triggers, top-card-to-arsenal,
 random chain-link card, disease swap) are list-independent — but Cure/Veil are NOT in the CR yet: build only what the CR already defines. C and D (Sonnet) are archived; all their work is on main or filed. D also found the 4 `tools/page.js`
 FAILs were sandbox artifacts (the @fontsource packages missing from scratch deps): page.js now WARNs and tags them (on main,
@@ -48,7 +48,7 @@ bumps APP_VER + CHANGELOG, pushes main, waits for Pages, `tools/supabase-deploy.
 **Cost habit:** retire a worker once its context passes ~300k; start fresh ones on Sonnet with a self-contained prompt.
 
 **NEXT:**
-00. **PHONE BOUND (parked).** v6.76 cap 2 cut opp-turn p95 hard; cap 1 (evidence above) gets opp-turn to ~110-155. What's left
+00. **PHONE BOUND — MET at v6.77 on a cloud box (experiments/phone-v677); a real iPhone is the only open check.** Old notes: v6.76 cap 2 cut opp-turn p95 hard; cap 1 (evidence above) gets opp-turn to ~110-155. What's left
    is mostly OWN-turn Sharp search (laSearch, LA.budget 300 steps: azalea own p95 175-298 on C's box). Cloud boxes differ ~1.3x and
    ±20 ms run to run, so the bound can't be judged there: the honest next step is a REAL iPhone measurement (DESKTOP-TASKS.md), then
    levers: a lower own-turn budget, reusing the rollout prefix across candidates, memoising laTake. A/B strength for any of them.
