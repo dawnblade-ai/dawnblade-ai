@@ -8816,7 +8816,7 @@ function makeEffects(ctx){
         for(const e of due) n = runOps(n, e.ops || [], e.src || pc.name);
       }
       else if(keep.length)
-        n = L(n, `${pc.name} hit an ally — a waiting "the next time you hit a hero" grant still waits.`);
+        n = L(n, `${pc.name} hit an ally — a waiting grant for hitting a hero still waits.`);
     }
     /* ---- "WHEN THIS HITS A HERO, YOU MAY … DESTROY THIS AND …" (v4.37)
 
