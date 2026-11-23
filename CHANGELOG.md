@@ -1,3 +1,18 @@
+## v6.74 — the trainer's Coach gives the advice the table's AI now plays
+
+- **Coach parity: the trainer's Coach's call asks the same judge readers the table's AI asks.** v6.69–v6.73 taught the AI
+  (sparring.js) four lines the trainer's Coach (engine/advisor.js, a separate module) still advised the old way. Driven on
+  real positions, before -> after: Bravo with Macho Grande face-down, "Play Bravo — hero power" -> no flip (`arsTurnPays`);
+  the arsenal step, "Arsenal Macho Grande" -> "Arsenal Cartilage Crush" (`arsenalPayable`); Fai behind on life, "Play Art of
+  the Dragon: Fire" -> "Play Scar for a Scar → 4 dmg, go again" (`condGaNow`); Lyath ahead on life, "Play Full of Bravado" ->
+  "Play Mocking Blow → 4 dmg" (`effPowerNow` with its own boo). One body each: the trainer passes the readers in the Coach's
+  ctx (as it already passed `arsNoOpWhy`), and advisor.js only consults them; a missing reader gives the old line. Checked
+  first that every reader answers the trainer's own state. Spellfire Cloak: not applicable — the trainer's pay sheet has no
+  gear route (filed as a UI item). Drill: test/coachparity.test.js (wiring scan + before/after per line; sabotaged).
+- **Validation:** npm test 4562 / 4557 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; both babel blocks compile;
+  trainer chaos on Bravo, Fai, Lyath and Iyslander clean; the Coach renders in the real page with the readers. No engine rule,
+  wire or data change (the AI and the table are untouched).
+
 ## v6.73 — Mocking Blow is ranked at the power it actually attacks with
 
 - **AI: the attack ranking reads a card's own on-attack boo when its gate holds now (SPXBOOSELF; correctness fix).** Lyath's
