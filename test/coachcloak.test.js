@@ -61,6 +61,23 @@ test("the Coach does not offer the Cloak when the pool pays or the piece blocks"
   assert.equal(A.advise(own, ctxOf(own, true)).cloak, undefined, "never on your own turn");
 });
 
+/* THE TRAINER'S OWN SHAPE. Battle speaks mode/bphase and `setG` merges the CR fields
+   `DawnPriority.fromTrainer` derives (index.html's withPriority) — that is what `judge.legal`
+   reads for "only during an opponent's turn". Proven on the real page (tools/page.js, Iyslander
+   trainer, a real Battle state with the Cloak worn and an arsenal reaction, the react step and
+   `foeturn` both): the advice fires there. This drill rebuilds that shape without the page. */
+test("the Coach says it on a trainer-shaped state too (react step and foe's turn)", () => {
+  assert.ok(F, "found in self-play");
+  const PRI = require("../engine/priority.js");
+  const mk = (mode, bphase) => { const n = clone(F); delete n.turnPlayer; n.mode = mode; n.bphase = bphase; n.step = null;
+    const p = PRI.fromTrainer(n, false); for(const k of PRI.PRI_FIELDS) n[k] = p[k]; return n; };
+  for(const [mode, bphase] of [["block", "react"], ["foeturn", null]]){
+    const n = mk(mode, bphase), cloak = cloakOf(n.sides[0]);
+    assert.equal(n.turnPlayer, 1, mode + ": derived as their turn");
+    assert.equal(A.advise(n, Object.assign(ctxOf(n, true), {window: "act"})).cloak, cloak.uid, mode);
+  }
+});
+
 test("the trainer hands the Coach the cloakFor reader", () => {
   const src = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
   const ctxLine = src.split("\n").find(l => l.includes("<Advisor g={g} ctx={{window:g.mode"));
