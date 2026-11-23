@@ -30,10 +30,12 @@ a resource that is NOT a card (the Cloak) is its positive form. (2) Blocked dama
 landed damage alone (H39). (3) When a lever "fires but changes nothing", look for a reader blind to it (H38 -> SPXCONDGA). (4) A
 rule living on one board is a bug even when the other board is "just the trainer" (Out Pace, and worker B's sweep below).
 
-**CEO session_013xG9xC8LtKqHaSNpJD2zxV (2026-11-23 afternoon) — WORKERS IN FLIGHT (Sonnet, one task each, branch ship/<L>-*):**
-E session_013xG9xBrBHycAWzUy4YQ8pA = Sharp speed WITHOUT changing a decision (ladder byte-identical; before/after p95). F session_013xG9xC4FKUkbN45pVuSfFC
-= second-person feed debt in effects.js (20 literals -> exact allow-list of refusals/prompts). G session_013xG9x8VBQdeADqbVd9Yvvp = chaos d11 + EPS=0.6 + trainchaos.
-**PREVIOUSLY: NONE IN FLIGHT.** C and D (Sonnet) are archived; all their work is on main or filed. D also found the 4 `tools/page.js`
+**CEO session_013xG9xC8LtKqHaSNpJD2zxV (2026-11-23 afternoon): SHIPPED v6.77** (live, livecheck ALL PASS, function v106 `v6.77 · sage-v19`
+stamped): E = Sharp ~1/3 faster, decisions byte-identical (memo types.cardType per card object + parser norm/clean; node own p95
+19->12 ms, opp 32->20); F = the effects.js second-person ledger is an exact allow-list (11 prompt / 5 refusal / 3 code; the one feed
+line fixed); G = chaos d11 + EPS=0.6 + trainchaos 54 games CLEAN. Ladder v6.77 816 games 0/0/0, 3 draws. Workers E/F/G archived
+(cost $0.58-0.89 each). **IN FLIGHT (Sonnet):** H session_013xG9xB54uibmtEP2Q5SEfd = perf-page 4x throttle, every hero, v6.76 vs v6.77
+on one box (which heroes still miss 150/400). I session_013xG9x9xgQEYavkuAeHHuba = Outbreak (SLV/SFC) read-only readiness probe. C and D (Sonnet) are archived; all their work is on main or filed. D also found the 4 `tools/page.js`
 FAILs were sandbox artifacts (the @fontsource packages missing from scratch deps): page.js now WARNs and tags them (on main,
 bef0172, tools-only, no APP_VER). Install the fonts with page.js's deps and it reads 89/89. Costs this session: C $1, D $2.6 (old
 Opus workers ran ~$30 each). Next CEO: launch fresh Sonnet workers per item with self-contained prompts (see git log of this file
@@ -53,7 +55,7 @@ bumps APP_VER + CHANGELOG, pushes main, waits for Pages, `tools/supabase-deploy.
    sheet or have the Coach say "activate the Cloak, then play X" via a judge-exposed cloakFirst reader. Needs a UI decision.
 1. Gated ops still read only as PRINTED by the policy (census `experiments/census/gated.js`): token/draw/gainKw/buffNext/arcane —
    each 1-8 cards; low volume, take only with a census showing the gate holds often.
-2. Chaos: d8 + d9 CLEAN (289 games each, 0 findings); d10 CLEAN (v6.76); next **d11**; trainer `node tools/trainchaos.js '' 3 3` after any Battle change (v6.69 run: clean).
+2. Chaos: d8-d11 CLEAN (289 games each; d11 also EPS=0.6, v6.77); next **d12**; trainer `node tools/trainchaos.js '' 3 3` after any Battle change (v6.69 run: clean).
 3. Weakest seats (viseraibw, lyath, iyslander, boltyn) have all been censused today and look like deck ceilings for this policy;
    a further gain there likely needs Sharp/search, not a rule.
 4. Compass of Sunken Depths (Gravy) — skip unless Sharp's mask learns it. Energy Potion (Dorinthea, Fai) would need cloakFirst to
