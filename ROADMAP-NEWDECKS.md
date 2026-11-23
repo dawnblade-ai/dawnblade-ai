@@ -13,13 +13,15 @@ Every number below was measured on 2026-11-15. Re-derive before trusting:
 |---|---|---|---|---|
 | Prism, Advent of Thrones | SAT | 2026-09-18 | pinned in `data/newsets.json` | upstream branch `usurp-the-shadow-throne`: every row resolves, with its printing |
 | Viserai, Between Worlds | SBW | 2026-09-18 | pinned in `data/newsets.json` | same branch: every row resolves |
-| Mortimer, Living Virus | SLV | announced 2027-02 (Outbreak) | none | upstream branch `outbreak`: 4 cards only |
-| α-01, First Cogwarden | SFC | announced 2027-02 (Outbreak) | none | upstream branch `outbreak`: the hero only |
+| Mortimer, Living Virus | SLV | announced 2027-02 (Outbreak) | none | upstream branch `outbreak` (fa8e6bd, 2026-11-23): 4 SLV cards (hero + 3 tokens), plus a 41-card OBK set |
+| α-01, First Cogwarden | SFC | announced 2027-02 (Outbreak) | none | upstream branch `outbreak`: the hero (SFC), plus OBK |
 
 - **The blocker recorded since v4.32 has moved.** `develop` (the branch this project pins
   from) still lists fifteen Silver Age sets. But the-fab-cube now carries both September
   sets, complete, on an unmerged feature branch. `test/drift.test.js` watches `develop`
   only, so it has not fired.
+- **Probe 2026-11-23: `docs/OUTBREAK-PROBE.md`** (census, missing readers in build order, hosts). OBK holds both heroes
+  again plus Azalea, Huxley, Min, Vyle; whether the precon lists use OBK cards is unknown until they publish.
 - **The Outbreak pair is not buildable**: no deck lists exist and the text is a handful of
   spoilers. They stay a probe, as the September pair was.
 - **No environment change is needed today.** `raw.githubusercontent.com` (card text) and
