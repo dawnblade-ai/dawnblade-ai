@@ -34,8 +34,8 @@ rule living on one board is a bug even when the other board is "just the trainer
 
 **WORKERS IN FLIGHT (env_011rwpp2MyBTt3cEsZKDoVGk, model claude-sonnet-5-5; they report to the CEO session above —
 a new CEO sends each its own session id first):**
-- **C `session_013xG9xAvDMn6DXZttxRUF12`** — cap 2 SHIPPED in v6.76; now measuring CAP 1 for azalea/prism/viseraibw (still
-  over 150 on its box). Will push a NEW commit on `ship/phonebound` if p95 < 150 everywhere and strength holds, else report numbers.
+- **C** (archived) — cap 1 measured, NOT shipped: strength flat (net -8 of 1920) but p95 not reliably < 150 (box noise ±20 ms);
+  evidence `experiments/phone-blockcap1/` on branch `ship/phonebound` (commit c129548, gate SPXBLOCKCAP1).
 - **D `session_013xG9xBsFXkCPaNQtbpeymF`** — Cloak advice + d10 SHIPPED in v6.76; now on the 4 pre-existing `tools/page.js`
   FAILs (3 jump-row hit areas, table action bar): real at 393x852 or sandbox artifact? Branch `ship/pagefix`.
 Both push only their ship/* branch, never main, and do NOT bump APP_VER. A limit stop sends NO report: get_session (status_bucket
@@ -45,11 +45,10 @@ bumps APP_VER + CHANGELOG, pushes main, waits for Pages, `tools/supabase-deploy.
 **Cost habit:** retire a worker once its context passes ~300k; start fresh ones on Sonnet with a self-contained prompt.
 
 **NEXT (after the workers):**
-00. **[worker C: cap 2 shipped v6.76, cap 1 in flight] PHONE BOUND — PRE-EXISTING p95 OVERSHOOT (worker A, `experiments/phone-v675/`, real page at 4x throttle, median-of-5):**
-   Sharp's OPPONENT-TURN block search (laBlock / laTake / blockHand / blockSpare / blockLethal) runs p95 ~150-190 ms for azalea
-   189, prism 170, boltyn 159, viseraibw 158, fai 153 (bound 150). Worst stays < 400 everywhere (max ~208). Own-turn p95 < 150 for
-   all 17. v6.68 (before today's six changes) measures the same band — NOT a regression. Lever: the step budget of Sharp's
-   defend-step search (view/sparring LA config); measure play strength (A/B) when cutting it.
+00. **PHONE BOUND (parked).** v6.76 cap 2 cut opp-turn p95 hard; cap 1 (evidence above) gets opp-turn to ~110-155. What's left
+   is mostly OWN-turn Sharp search (laSearch, LA.budget 300 steps: azalea own p95 175-298 on C's box). Cloud boxes differ ~1.3x and
+   ±20 ms run to run, so the bound can't be judged there: the honest next step is a REAL iPhone measurement (DESKTOP-TASKS.md), then
+   levers: a lower own-turn budget, reusing the rollout prefix across candidates, memoising laTake. A/B strength for any of them.
 0. **[DONE v6.76, advice route]** FEED/UI — trainer Cloak: Spellfire Cloak can be activated in the trainer's reaction step BEFORE a play, but not from the pay
    sheet (no gear route), and the Coach never advises it. To match the table's cloakFirst: either offer gear payment on the pay
    sheet or have the Coach say "activate the Cloak, then play X" via a judge-exposed cloakFirst reader. Needs a UI decision.
