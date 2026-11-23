@@ -4142,9 +4142,20 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     const gi = noIron ? -1
       : opp(n).gear.findIndex(x=>gearDef(x)>0 && !usedThisChain.has(x.uid));
     if(noIron) n = L(n, `${card.name} can't be defended by equipment — the iron stays down.`);
-    if(total>=4 && gi>=0){
+    /* THE RULE ASKS EVERY CANDIDATE, IN PICK ORDER (v6.74). The cap's number used to be read as a
+       limit on HAND cards with the iron added freely, so a Confidence attack ("can't be defended by
+       more than 2 NON-BLOCK cards", equipment counts) met three defenders here while the table refused
+       the third, and overpower's ACTION-card cap was spent by any hand card. `parser.defCapWhy` is the
+       one body (judge's defend door and the player's toggleBlock ask it): handed the tightest cap
+       `defCap` reads, granted keywords included, it answers for each defender against those declared. */
+    const _cap = DawnParser.defCap(card, n.pend && n.pend.defCap, {kwGrant: n._kwGrant});
+    const _capPend = {card, defCap: _cap};
+    const declared = [];
+    const capOK = (c, gear) => !DawnParser.defCapWhy(_capPend, declared, c, gear);
+    if(total>=4 && gi>=0 && capOK(opp(n).gear[gi], true)){
       links.push({k:"def", label:`${opp(n).name}: ${opp(n).gear[gi].name} — defend ${gearDef(opp(n).gear[gi])}`, gi});
       soak += gearDef(opp(n).gear[gi]);
+      declared.push({card: opp(n).gear[gi], gear: true});
     }
     /* DOMINATE MUST BE ACTIVE, NOT MERELY MENTIONED. `hasKw` matches the raw
        text as well as card_keywords, so Pulping — "IF a card with 6 or more
@@ -4164,17 +4175,18 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                            enforces the same reader at the table, where it
                            was enforced by NOTHING before v3.64.
 
-       So the rule CAPS the heuristic rather than replacing it: `Math.min`,
-       never an assignment. Raising the heuristic to the rule's limit would
-       make the dummy block harder than it was tuned to. */
-    const _cap = DawnParser.defCap(card, n.pend && n.pend.defCap, {kwGrant: n._kwGrant});
-    const cap = _cap ? Math.min(2, _cap.n) : 2;
+       So the rule CAPS the heuristic rather than replacing it: the 2 stays,
+       and `capOK` (defCapWhy, above) refuses each defender past the rule —
+       counting the iron where the cap counts it. Raising the heuristic to the
+       rule's limit would make the dummy block harder than it was tuned to. */
+    const cap = 2;
     const pick = opp(n).hand.map((c,i)=>({c,i})).filter(x=>(x.c.def||0)>0)
       .sort((a,b)=>((b.c.def||0)-(a.c.def||0)) || ((a.c.power||0)-(b.c.power||0)));
     const chosen = [];
     for(const x of pick){
       if(chosen.length>=cap || total-soak<=0) break;
-      chosen.push(x); soak += (x.c.def||0);
+      if(!capOK(x.c, false)) continue;
+      chosen.push(x); soak += (x.c.def||0); declared.push({card: x.c, gear: false});
     }
     chosen.forEach(x=>links.push({k:"def", label:`${opp(n).name}: ${x.c.name} — defend ${x.c.def}`, uid:x.c.uid}));
     n.stack = [...n.stack, ...links];
@@ -5850,6 +5862,13 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        step that lifts it — the turn-player's own, so a hero tapped by an
        opponent stays tapped for the rest of that turn and no longer. */
     if(act(n).heroTapped) actMut(n).heroTapped = false;
+    /* AND THE ARENA'S PERMANENTS (v6.74). CR 4.4.3d (rules.fabtcg.com/en/cr/04-game-structure/,
+       verbatim): "The turn-player untaps all permanents they control." An ally that tapped to
+       attack untapped at the start of its controller's NEXT turn here and at the end phase at the
+       table (judge (d)), so it sat tapped through the opponent's turn on this board alone. Latent
+       today (no ally in the pool prints an Instant {t} ability) and one rule now: the start-of-turn
+       untaps in `newTurn` and `foeBegin` are gone. */
+    actMut(n).board = (act(n).board||[]).map(b => b && b.spent ? {...b, spent:false} : b);
     n = L(n, tapped ? `(d) ${_me()} untap${_you()?"":"s"} ${tapped} permanent${tapped>1?"s":""}.`
                     : `(d) Nothing of ${_you()?"yours":_me()+"'s"} is tapped.`);
     /* THE OTHER SEAT KEEPS ITS TAPS AND LOSES ITS ALLOWANCE. CR 4.4.3d
@@ -6026,7 +6045,6 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        4.4.4's clearing, which the CR review found missing for the
        incoming seat. */
     oppMut(n).hist = freshHist();
-    oppMut(n).board = (opp(n).board||[]).map(b=>({...b, spent:false}));
     /* WHAT WAS ARMED AGAINST SEAT 1'S TURN TURNS ON HERE TOO (v4.73). Only
        your turn ever called it, so an entry aimed at seat 1 was never
        armed and so never EXPIRED — harmless while every kind waited on a
@@ -6477,7 +6495,6 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        Both were invisible while one seat acted and both are real the moment
        a second seat has a turn between yours. */
     nt.hist = freshHist();
-    nt.board = you(n).board.map(b=>({...b,spent:false}));
     /* CR 4.2: the start phase. No priority is held here (CR 4.2.1); it exists
        so turn-start triggers have somewhere to happen. The crumbling auras
        above ARE those triggers. */
