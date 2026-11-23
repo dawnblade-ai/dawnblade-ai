@@ -1,0 +1,98 @@
+[
+ {
+  "h": "azalea",
+  "n": 60,
+  "p50": 43.5,
+  "p95": 176.8,
+  "worst": 185.8,
+  "ownP95": 139.4,
+  "ownWorst": 176.8,
+  "oppP95": 185.2,
+  "oppWorst": 185.8,
+  "slow": [
+   "186ms opp laBlock defend",
+   "185ms opp blockHand defend",
+   "177ms own keepsAP layer"
+  ]
+ },
+ {
+  "h": "boltyn",
+  "n": 60,
+  "p50": 40,
+  "p95": 146.8,
+  "worst": 197.2,
+  "ownP95": 112.5,
+  "ownWorst": 138.7,
+  "oppP95": 154.2,
+  "oppWorst": 197.2,
+  "slow": [
+   "197ms opp blockHand defend",
+   "154ms opp laTake defend",
+   "147ms opp blockHand defend"
+  ]
+ },
+ {
+  "h": "fai",
+  "n": 60,
+  "p50": 25,
+  "p95": 156.9,
+  "worst": 178.9,
+  "ownP95": 95.6,
+  "ownWorst": 102.5,
+  "oppP95": 176,
+  "oppWorst": 178.9,
+  "slow": [
+   "179ms opp blockHand defend",
+   "176ms opp blockHand defend",
+   "157ms opp blockHand defend"
+  ]
+ },
+ {
+  "h": "kayo",
+  "n": 60,
+  "p50": 36.3,
+  "p95": 136.1,
+  "worst": 143.2,
+  "ownP95": 73.7,
+  "ownWorst": 126.5,
+  "oppP95": 141,
+  "oppWorst": 143.2,
+  "slow": [
+   "143ms opp blockGear defend",
+   "141ms opp laBlock defend",
+   "136ms opp laBlock defend"
+  ]
+ },
+ {
+  "h": "prism",
+  "n": 60,
+  "p50": 16.2,
+  "p95": 178.2,
+  "worst": 272.4,
+  "ownP95": 160.9,
+  "ownWorst": 260.2,
+  "oppP95": 178.2,
+  "oppWorst": 272.4,
+  "slow": [
+   "272ms opp laTake defend",
+   "260ms own laBoard layer",
+   "178ms opp laBlock defend"
+  ]
+ },
+ {
+  "h": "viseraibw",
+  "n": 60,
+  "p50": 32.5,
+  "p95": 177.8,
+  "worst": 258.9,
+  "ownP95": 142.1,
+  "ownWorst": 148.9,
+  "oppP95": 236.1,
+  "oppWorst": 258.9,
+  "slow": [
+   "259ms opp blockHand defend",
+   "236ms opp blockSpare defend",
+   "178ms opp blockSpare defend"
+  ]
+ }
+]
