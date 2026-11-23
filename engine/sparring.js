@@ -153,6 +153,7 @@ const fixOn = (g, seat) => {
    other text is an optional pick it cannot use, held for a taker it can pay for,
    SPXWPNFIRST a grant played before the only attack left, a weapon swing it pumps,
    SPXLABOARD a board term in Sharp's score (a permanent is worth its printed numbers, not -mu),
+   SPXLATGT (v6.79) Sharp also tries each attack at the hero and at every ally (CR 1.4.5),
    SPXEFFPOW a hand attack ranked on the power it has NOW (`judge.effPowerNow`: a self-pump
    whose gate is already true counts), not the power it prints. SPXGRAVE (v6.50) a card
    `legal` lets the seat play from its graveyard is a card it holds (`gravePlays`). SPXBOO
@@ -188,7 +189,7 @@ const subGate = k => {
 };
 const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate("SPXPAY"), idleOn = subGate("SPXIDLE"),
       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
-      wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW"),
+      wpnFirstOn = subGate("SPXWPNFIRST"), tgtOn = subGate("SPXLATGT"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW"),
       graveOn = subGate("SPXGRAVE"), booOn = subGate("SPXBOO"), energyOn = subGate("SPXENERGY"), putOn = subGate("SPXPUT"),
       cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST"), arsPowOn = subGate("SPXARSPOW"), oppArsOn = subGate("SPXOPPARS"), oppAmpOn = subGate("SPXOPPAMP"), oppIceOn = subGate("SPXOPPICE"), stirIdleOn = subGate("SPXSTIRIDLE"), cloakOn = subGate("SPXCLOAK"), flipOn = subGate("SPXFLIPCRUSH"), arsPayOn = subGate("SPXARSPAY"), condGaOn = subGate("SPXCONDGA"), booSelfOn = subGate("SPXBOOSELF"), blockCapOn = subGate("SPXBLOCKCAP");
 /* THE BLOCK A TOKEN PIECE MAY GIVE UP (SPXTOKENPIECE): one point. Flat Trackers (1 defence, blade
@@ -1690,8 +1691,20 @@ function laCands(g, seat, a0){
   const add = a => { if(!legal(g, a, seat) || idle(a)) return; const k = keyOf(a); if(seen.has(k)) return; seen.add(k); out.push(a); };
   if(a0) add(a0);
   const atk = c => num(c, "power") > 0 ? {target: targetFor(g, seat, c)} : {};
+  /* EVERY DECLARATION, WEIGHED (SPXLATGT). An attack's target is declared as it is played
+     (CR 1.4.5) and `targetFor` names one: the ally a swing can kill, else the hero. The search
+     proposed only that one, so it never asked whether the hero was the better target with a
+     killable ally out, or whether chipping an ally beat the face. Now each attack from hand or
+     arsenal is also proposed at the hero and at every ally of theirs (rule pick first, so A0 and
+     its ties are unchanged). Each is one more rollout within the same step budget. Measured:
+     CHANGELOG v6.79. */
+  const alts = (c, from) => { if(!tgtOn(g, seat) || !(num(c, "power") > 0)) return;
+    const foe = g.sides[1 - seat] || {};
+    ["hero"].concat((foe.board || []).filter(b => b && GM.isAlly(b)).map(b => b.uid)).forEach(t => add({t: "play", uid: c.uid, from, target: t})); };
   (sd.hand || []).forEach(c => c && add({t: "play", uid: c.uid, from: "hand", ...atk(c)}));
   if(sd.arsenal) add({t: "play", uid: sd.arsenal.uid, from: "arsenal", ...atk(sd.arsenal)});
+  (sd.hand || []).forEach(c => c && alts(c, "hand"));
+  if(sd.arsenal) alts(sd.arsenal, "arsenal");
   banishPlays(g, seat).forEach(c => add({t: "play", uid: c.uid, from: "banish", ...atk(c)}));
   gravePlays(g, seat).forEach(c => add({t: "play", uid: c.uid, from: "grave", ...atk(c)}));
   (sd.gear || []).forEach(c => c && add({t: "activate", uid: c.uid}));
