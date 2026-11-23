@@ -24,9 +24,11 @@ landed damage alone (H39). (3) When a lever "fires but changes nothing", look fo
 rule living on one board is a bug even when the other board is "just the trainer" (Out Pace, and worker B's sweep below).
 
 **WORKERS IN FLIGHT (env_011rwpp2MyBTt3cEsZKDoVGk; a new CEO sends each its own session id first):**
-- **A `session_013xG9xCPAciqbr5nPRbgoCS`** — COACH PARITY audit (read-only first, branch `ship/coach-parity`): do the trainer's
-  Coach's call (engine/advisor.js) and today's sparring.js fixes agree (Cloak, Stir, Bravo flip/arsenal, cond-ga, self-boo)? Any
-  "old advice" is fixed by calling the SAME judge reader. Waits for a green light before building.
+- **A `session_013xG9xCPAciqbr5nPRbgoCS`** — COACH PARITY, GREEN-LIT, branch `ship/coach-parity`: the audit
+  (`experiments/census/coachparity.js` on ship/census-v669) found the trainer's Coach's call (engine/advisor.js) gives the OLD advice
+  for SPXFLIPCRUSH, SPXARSPAY, SPXCONDGA, SPXBOOSELF. Fix = the trainer passes the judge readers in advisor ctx (as it passes
+  arsNoOpWhy); nothing re-implemented. Cloak: settle by driving the trainer pay sheet (include if it can spend gear, else file a
+  UI item). Touches index.html => babel + trainchaos. Ship as v6.74 or v6.75 (whichever lands second).
 - **B `session_013xG9x8VDdx8D1FfSJq5SjC`** — ONE-BOARD fixes GREEN-LIT, branch `ship/oneboard`: the trainer dummy over-blocks a
   Confidence attack (counts only hand cards against "no more than 2 non-block cards"; driven repro: gear + 2 hand cards) and
   under-blocks Overpower — fix = dummyDefence asks `parser.defCapWhy` per candidate; plus ally untap at the end phase (CR 4.4.3d)
