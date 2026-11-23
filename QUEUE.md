@@ -4,9 +4,9 @@
 answered NEEDS-A-RULING notes are in `QUEUE-ARCHIVE.md` on this branch (grep it, don't read it). History lives in
 CHANGELOG.md (v6.30 on; older in `docs/archive/CHANGELOG-to-v6.29.md`) and LESSONS.md on main.
 
-## HANDOFF — START HERE (CEO session_013xG9xADa79zsMdfx4Ha7Ri, 2026-11-22, at v6.71)
+## HANDOFF — START HERE (CEO session_013xG9xADa79zsMdfx4Ha7Ri, 2026-11-22, at v6.72)
 
-**State:** live = **v6.71** on `main`, livecheck ALL PASS. Function `table` version 94 = `v6.71 · sage-v19`, stamped, `--check` OK.
+**State:** live = **v6.72** on `main`, livecheck ALL PASS. Function `table` version 96 = `v6.72 · sage-v19`, stamped, `--check` OK.
 **WIRE_V 49**. DATA_VER sage-v19. 17 heroes. Approximation ledger: 0 open. Pool 455/455.
 Ladder v6.69 (816 games, 48 each): briar 81 prism 76 kayo 71 dorinthea 60 azalea 59 enigma 57 dash 50 fai 48 viserai 42 bravo 42
 blaze 39 arakni 38 gravy 37 boltyn 32 iyslander 30 lyath 28 viseraibw 24. 0 refusals / violations / stalls (2 draws). Noise band max 9.
@@ -39,7 +39,7 @@ damage vs attack power minus expected block): Blaze 136->109, Iyslander 134->116
 it costs the foe hand cards. Never rank on landed damage alone.** `experiments/H39-arcane-rank-NEGATIVE.patch` (has judge.arcaneSoakOf).
 
 **Rules-gap audit v6.70 (worker B):** audit 455/455 full, 0 one-clause gaps, no noop that matters. ONE real bug: **Out Pace
-("can't be defended by equipment") is enforced only in the trainer** (`fx.noEquipDefend` read at index.html, no judge reader): at the
+("can't be defended by equipment") was enforced only in the trainer — FIXED v6.72 (CR 1.0.2)** (`fx.noEquipDefend` read at index.html, no judge reader): at the
 table 18 equipment defends in 48 Dash games that should be illegal. Worker B fixing (parser reader, one body, judge.legal). Also:
 failstates.js/sweep.js grep only index.html for keyword carriers — 44 stale false positives; fix in a separate commit.
 
@@ -49,7 +49,7 @@ own +4 (worker A, SPXBOOSELF); then Dorinthea Hit and Run ordering (+3 half used
 
 **WORKERS IN FLIGHT (assigned 2026-11-22 ~21:50Z by CEO session_013xG9xADa79zsMdfx4Ha7Ri, env_011rwpp2MyBTt3cEsZKDoVGk):**
 - `session_013xG9xCPAciqbr5nPRbgoCS` (Opus) — shipped SPXSTIRIDLE (v6.69), SPXARSPAY/SPXFLIPCRUSH (v6.70); now SPXBOOSELF (Lyath) — pushes ONLY `ship/fai-fealty` (and its earlier ship/* branches).
-- `session_013xG9x8VDdx8D1FfSJq5SjC` (Opus) — shipped SPXCLOAK (v6.69); trainchaos clean; SPXARCRANK negative; rules-gap audit done; now the Out Pace table fix on `ship/rules-gaps` (v6.71).
+- `session_013xG9x8VDdx8D1FfSJq5SjC` (Opus) — shipped SPXCLOAK (v6.69); trainchaos clean; SPXARCRANK negative; shipped Out Pace (v6.72); now Dorinthea Hit and Run (SPXHITRUN) on `ship/hit-and-run`.
 Both report via send_message to the CEO; neither pushes main. A limit stop sends NO report: check with get_session
 (status_bucket failed) / list_events and nudge. A new CEO tells both its session id. The CEO replays + re-validates + ships.
 
