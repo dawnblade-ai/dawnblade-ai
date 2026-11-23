@@ -36,6 +36,14 @@ function advCardOut(c, g, ctx){
        Runechant is the cost, so it deals no arcane on this swing. A hand
        card is a card played, so the cost site's weapon/ally exclusion holds. */
     if(P.usurps(c) && P.usurpTarget(you(g))) dmg += 2 - (ctx.runeDmg || 0);
+    /* THE CARD'S OWN ON-ATTACK BOO (SPXBOOSELF's reader, `ctx.effPowerNow` = judge.effPowerNow):
+       Mocking Blow ahead on life swings booed, so its own "+N if booed" applies. Only the boo's
+       share is added (the reader with `selfBoo` minus without), so nothing else here moves. */
+    if(ctx.effPowerNow && c.uid != null){
+      const z = you(g).arsenal && you(g).arsenal.uid === c.uid ? "arsenal" : (you(g).hand || []).some(h => h && h.uid === c.uid) ? "hand" : null;
+      const a1 = z && ctx.effPowerNow(g, 0, c.uid, z, {selfBoo: true}), a0 = z && ctx.effPowerNow(g, 0, c.uid, z);
+      if(a1 && a0 && a1.power > a0.power) dmg += a1.power - a0.power;
+    }
     if((ctx.dBlk||0)>0 && dmg>=4) dmg = Math.max(0, dmg-(ctx.dDef||1));
   }
   fx.ops.concat(swings(c)?fx.onHit:[]).forEach(op=>{ if(op[0]==="arcane") dmg += op[1] + you(g).amp; });
@@ -154,10 +162,16 @@ function advise(g, ctx){
     return {line:"Pass — let it resolve.", why:"No profitable reaction in hand; keep your cards for the swing back."};
   }
   if(win==="arsenal"){
-    const arrows = you(g).hand.map((c,i)=>({c,i})).filter(x=>isAttack(x.c)&&isArrow(x.c));
+    /* NEVER A CARD NEXT TURN COULD NOT PAY FOR (SPXARSPAY's reader, `ctx.arsenalPayable` =
+       judge.arsenalPayable, the table policy's own maxPitch rule): Macho Grande (cost 7) was
+       coached into the arsenal, where it then sat. */
+    const payable = c => !ctx.arsenalPayable || ctx.arsenalPayable(g, 0, c.uid, 2);
+    if(ctx.arsenalPayable && you(g).hand.length && !you(g).hand.some(payable))
+      return {line:"Skip — nothing in hand could be paid for from there next turn.", why:"A card you can't pay for blocks the slot until you can."};
+    const arrows = you(g).hand.map((c,i)=>({c,i})).filter(x=>payable(x.c)).filter(x=>isAttack(x.c)&&isArrow(x.c));
     if(arrows.length){ const b=arrows.sort((a,z)=>V(z.c)-V(a.c))[0]; return {line:`Arsenal ${nm(b.c)} — arrows only fire from there.`, why:"Ranger law: the arsenal is your bowstring."}; }
     if(!you(g).hand.length) return {line:"Skip — nothing to stash.", why:""};
-    const b = you(g).hand.map((c,i)=>({c,i})).sort((a,z)=>V(z.c)-V(a.c))[0];
+    const b = you(g).hand.map((c,i)=>({c,i})).filter(x=>payable(x.c)).sort((a,z)=>V(z.c)-V(a.c))[0];
     return {line:`Arsenal ${nm(b.c)} — it swings again tomorrow.`, why:"Bank your best card; you'll draw back to full anyway."};
   }
   if(win==="block"){
@@ -223,7 +237,10 @@ function advise(g, ctx){
      (it cannot be required here: effects requires this module). A power that
      would do nothing now (Azalea with an empty arsenal) is not coached. */
   if(ctx.hpow && !you(g).weaponUsed["hpow"] && (ctx.hpow.cost||0)<=you(g).res+advPitchPotential(you(g).hand,null)
-     && !(ctx.noOpWhy && ctx.noOpWhy(you(g), ctx.hpow, effCost(ctx.hpow, you(g)))))
+     && !(ctx.noOpWhy && ctx.noOpWhy(you(g), ctx.hpow, effCost(ctx.hpow, you(g))))
+     /* AN ARSENAL TURN THAT PAYS NOTHING IS NOT COACHED (SPXFLIPCRUSH's reader, `ctx.arsTurnPays` =
+        judge.arsTurnPays): Bravo's turn on a card without crush is {r}{r} for nothing. */
+     && !(ctx.arsTurnPays && (t => t && !t.pays)(ctx.arsTurnPays(g, 0, "hpow"))))
     cands.push({c:ctx.hpow,from:"hero",idx:0,excl:null});
   you(g).board.forEach((b,i)=>{ if(b.kind==="ally"&&!b.spent&&b.card.power>0) cands.push({c:b.card,from:"ally",idx:i,excl:null,free:true}); });
   /* With the action point gone, only the instants are still legal — plus the
@@ -235,13 +252,17 @@ function advise(g, ctx){
             why:"Wasted resources scar your score; empty swings scar your hand."};
   }
   let best=null;
+  /* GO AGAIN IS PRINTED OR GATED-AND-TRUE-NOW (SPXCONDGA's reader, `ctx.condGaNow` = judge.condGaNow):
+     Scar for a Scar behind on life, a drac2 card on a Draconic chain. */
+  const gaOf = cd => fxParse(cd.c).ga || !!(ctx.condGaNow && (cd.from==="hand"||cd.from==="arsenal") && ctx.condGaNow(g, 0, cd.c.uid, cd.from));
   live.forEach(cd=>{
     const fx=fxParse(cd.c);
+    cd.ga = gaOf(cd);
     const need=Math.max(0,(cd.c.cost||0)-you(g).res);
     const set = need>0 ? advBestPitch(you(g).hand,need,cd.excl,PV) : {idxs:[],gain:0,waste:0,loss:0};
     if(!set) return;
     let v = advValue(cd.c,g,ctx);
-    if(fx.ga){
+    if(cd.ga){
       const rest = you(g).hand.filter((c,i)=> i!==cd.idx || cd.from!=="hand").filter(c=>!set.idxs.includes(you(g).hand.indexOf(c)));
       const next = rest.filter(c=>(isAttack(c)&&!isArrow(c)) || fxParse(c).ops.concat(fxParse(c).onHit).some(o=>o[0]==="arcane"))
         .map(c=>advCardOut(c,g,ctx)).sort((a,b)=>b-a)[0]||0;
@@ -261,9 +282,9 @@ function advise(g, ctx){
      as "<Hero> — hero power" (build.js), so the source tag read "Play Bravo —
      hero power — hero power". Tag it only when the name does not say it. */
   const srcTxt = best.from==="arsenal" ? " from arsenal" : best.from==="grave" ? " from your graveyard" : best.from==="hero" ? (/hero power$/i.test(nm(best.c)) ? "" : " — hero power") : best.from==="weapon" ? " — weapon swing" : best.from==="ally" ? " — send the ally in" : "";
-  const bits=[]; if(out>0) bits.push(out+" dmg"); if(fx.ga) bits.push("go again");
+  const bits=[]; if(out>0) bits.push(out+" dmg"); if(best.ga) bits.push("go again");
   fx.ops.forEach(op=>{ if(op[0]==="draw") bits.push("draw "+op[1]); if(op[0]==="rune") bits.push("+"+op[1]+" runechant"); if(op[0]==="amp") bits.push("amp "+op[1]); });
-  const why = fx.ga ? `Chain it: go again keeps your action point${best.next?` — ${Math.round(best.next)} more damage is waiting behind it`:""}.`
+  const why = best.ga ? `Chain it: go again keeps your action point${best.next?` — ${Math.round(best.next)} more damage is waiting behind it`:""}.`
     : runeCount(you(g))>0 && swings(best.c) ? `Your ${runeCount(you(g))} runechant${runeCount(you(g))>1?"s":""} pop on this swing — cash them in.`
     : out>=5 ? "Biggest clean hit on the table; anything smaller wastes the turn."
     : "Best value line available right now.";
