@@ -2920,13 +2920,13 @@ const chargeView = (g, seat, uid, from) => {
    self-pump whose gate is already TRUE (the very reader `execute` runs). A gate that waits
    on the wall, the payment or hidden cards adds nothing, so the answer is never more than
    what is known. Writes nothing; null for a card the seat does not hold there. */
-const effPowerNow = (g, seat, uid, from) => {
+const effPowerNow = (g, seat, uid, from, opts) => {
   const sd = at(g, seat);
   const c = from === "weapon" ? (sd.gear || []).find(x => x && x.uid === uid && PR.isWeapon(x))
           : from === "arsenal" ? (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null)
           : from === "hand" ? (sd.hand || []).find(x => x && x.uid === uid) : null;
   if(!c || !c.name) return null;
-  return effectsFor(g).fx.effPowerNow(g, seat, c, from);
+  return effectsFor(g).fx.effPowerNow(g, seat, c, from, opts);
 };
 /* ---- A LIFE GAIN THAT IS BIGGER LATER (SPXPOLARITY) ----
    For `sparring.js`, which reads no card text: `effects.lifeNow` for a card in
