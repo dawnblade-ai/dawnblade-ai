@@ -1,3 +1,20 @@
+## v6.73 — Mocking Blow is ranked at the power it actually attacks with
+
+- **AI: the attack ranking reads a card's own on-attack boo when its gate holds now (SPXBOOSELF; correctness fix).** Lyath's
+  Mocking Blow: "When this attacks a hero, if you have more {h} than them, the crowd boos you. If you've been booed this
+  turn, this gets +4{p}". Ahead on life the engine resolves the link at 4 (driven: 18 v 10 life), but `effPowerNow` asked
+  before the attack saw "booed" false and predicted 1, so the call ranked it below Full of Bravado's printed 3. New
+  `effects.selfBooNow` / `asBooed`: a played card (not a weapon or ally swing) whose `boo` rider is decidable and true now
+  is read as booed for its own gates, behind an opt-in `selfBoo` option only the attack ranking passes, so every other
+  reader and every other hero is unchanged. The prediction now equals the engine's link total in both states. Measured,
+  Lyath own seat + other chair, 24 seeds: 225 -> 227 of 768 (noise); shipped because the call showed a player the wrong
+  number. Drill: test/booself.test.js (sabotaged three ways); test/effpower.test.js's gate-shut fixture now puts Lyath
+  behind on life (ahead, Mocking Blow correctly boos itself).
+- **Measured NO, not shipped:** Dorinthea's Hit and Run swing-first ordering (her list runs only the blue +1, and Dawnblade's
+  swing never keeps the action point while Hit and Run is legal: 0 chances in 96 games).
+- **Validation:** npm test 4557 / 4552 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; ladder 816 games, 0 refusals /
+  0 violations / 0 stalls (3 engine draws); chaos 289 games 0 findings. No wire, data or page change beyond `APP_VER`.
+
 ## v6.72 — Out Pace can't be defended by equipment at the table either
 
 - **Rules: "This can't be defended by equipment" is enforced on BOTH boards (CR 1.0.2).** Out Pace (Dash) set
