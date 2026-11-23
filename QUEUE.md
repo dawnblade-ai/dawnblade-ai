@@ -35,7 +35,9 @@ stamped): E = Sharp ~1/3 faster, decisions byte-identical (memo types.cardType p
 19->12 ms, opp 32->20); F = the effects.js second-person ledger is an exact allow-list (11 prompt / 5 refusal / 3 code; the one feed
 line fixed); G = chaos d11 + EPS=0.6 + trainchaos 54 games CLEAN. Ladder v6.77 816 games 0/0/0, 3 draws. Workers E/F/G archived
 (cost $0.58-0.89 each). **IN FLIGHT (Sonnet):** H session_013xG9xB54uibmtEP2Q5SEfd = perf-page 4x throttle, every hero, v6.76 vs v6.77
-on one box (which heroes still miss 150/400). I session_013xG9x9xgQEYavkuAeHHuba = Outbreak (SLV/SFC) read-only readiness probe. C and D (Sonnet) are archived; all their work is on main or filed. D also found the 4 `tools/page.js`
+on one box (which heroes still miss 150/400). I = Outbreak probe DONE (docs/OUTBREAK-PROBE.md on main): upstream `outbreak` holds SLV 4 + SFC 1 + a 41-card OBK set; no
+lists reachable (fabrary.net 403). Readers 1-4, 6-7 (disease tokens per CR 8.6, Cure, face-up-from-deck triggers, top-card-to-arsenal,
+random chain-link card, disease swap) are list-independent — but Cure/Veil are NOT in the CR yet: build only what the CR already defines. C and D (Sonnet) are archived; all their work is on main or filed. D also found the 4 `tools/page.js`
 FAILs were sandbox artifacts (the @fontsource packages missing from scratch deps): page.js now WARNs and tags them (on main,
 bef0172, tools-only, no APP_VER). Install the fonts with page.js's deps and it reads 89/89. Costs this session: C $1, D $2.6 (old
 Opus workers ran ~$30 each). Next CEO: launch fresh Sonnet workers per item with self-contained prompts (see git log of this file
@@ -60,9 +62,9 @@ bumps APP_VER + CHANGELOG, pushes main, waits for Pages, `tools/supabase-deploy.
    a further gain there likely needs Sharp/search, not a rule.
 4. Compass of Sunken Depths (Gravy) — skip unless Sharp's mask learns it. Energy Potion (Dorinthea, Fai) would need cloakFirst to
    scan `sd.board`; no game reaches it.
-5. Phase 4 (Outbreak, 2027-02): when the lists publish, ROADMAP-NEWDECKS.md. Wire: next cut if needed is HZOOM (~500 B/seat).
+5. Phase 4 (Outbreak, 2027-02): when the lists publish, ROADMAP-NEWDECKS.md + docs/OUTBREAK-PROBE.md (reader build order). Wire: next cut if needed is HZOOM (~500 B/seat).
 
-**ASK THE USER (defaults standing — overrule any):** the cup (all heroes qualify, top 16 bracket); Prism as an AI seat; Spectra resolves at
+**ASK THE USER (defaults standing — overrule any):** OBK-only heroes (Azalea's new card, Huxley, Min, Vyle) in Dawnblade scope? (default: precon lists only); the cup (all heroes qualify, top 16 bracket); Prism as an AI seat; Spectra resolves at
 once (`spectra-trigger-at-once`); Prism's block named "Usurp the Shadow Throne"; hero select kept 6 across rather than the roadmap's 4;
 sound defaults ON; Prism as the 2nd-strongest AI (default: fine for a sparring partner).
 
