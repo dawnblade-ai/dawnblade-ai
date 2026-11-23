@@ -1706,12 +1706,50 @@ test("the second-person debt in the shared semantics does not grow", () => {
      seat that tried the play, the printed "the next time you hit a hero"
      quoted from a card, and the `/^you$/` tests that choose a verb. */
   /* 19 -> 20 AT v6.25, DELIBERATELY: playTargetWhy refuses Scuttle Toes with "you control no ally for it to target" - a refusal returned to the seat that tried the play (RULING user, 2026-11-13). */
-  assert.ok(lits.length <= 20,
-    `second-person literals in effects.js rose to ${lits.length} — the shared feed is read by both seats`);
-  /* AND IT MUST NOT PASS BY FINDING NOTHING: if the scan ever stops
-     matching, an empty result reads as a clean file. */
+  /* 20 -> 19 (ship/f-second-person): the last FEED line, the hit-an-ally line that quoted the card's
+     "the next time you hit a hero", now says "a waiting grant for hitting a hero still waits".
+     THE LEDGER IS NOW AN ACCOUNTING, NOT A CEILING. Every remaining literal is named below with the
+     reason its second person is correct; a literal that matches no entry FAILS, so a new second-person
+     FEED line cannot hide under a number that a fix elsewhere freed up. Adding an entry is an edit
+     with a reason attached: a refusal returned to the seat that tried, or a prompt addressed to
+     `spec.side` — never a line the shared feed carries. `n` is how many literals the anchor covers
+     (the scan counts a string twice when two sites use it). */
+  const ALLOW = [
+    ["PROMPT", "Reload \u2014 put a card face-down into your arsenal?", 1],
+    ["PROMPT", "Charge your soul", 1],
+    ["PROMPT", "Put a card from your hand under your hero.", 1],
+    ["PROMPT", "It cannot be played or activated until the start of your next turn.", 1],
+    ["PROMPT", "Destroy an aura you control", 1],
+    ["PROMPT", "Put an arrow face up in your arsenal?", 1],
+    ["PROMPT", "your hero stays tapped until your untap step", 1],
+    ["PROMPT", "Destroy the top card of your deck", 1],
+    ["PROMPT", "Optional. If the card you spend has ", 1],
+    ["PROMPT", "The card is shown and stays in your hand.", 1],
+    ["PROMPT", "The rider only resolves if you pay.", 1],
+    ["REFUSAL", " targets an attack you control \u2014 none is on the chain", 1],
+    ["REFUSAL", " targets an attack you control \u2014 ", 1],
+    ["REFUSAL", ": you control nothing it can target", 1],
+    ["REFUSAL", ": nothing in your graveyard can be its target", 1],
+    ["REFUSAL", ": you control no ally for it to target", 1],
+    /* not spoken to anyone: the possessive Concoct Disorder picks for the seat whose name is literally "You" (v3.88),
+       the `\byou control\b` pattern + "you" replacement that INFLECTS a printed phrase, and the /^you$/ verb pick */
+    ["CODE", "\"your\"", 1],
+    ["CODE", "\\byou control\\b", 1],
+    ["CODE", "/^you$/i.test(act(n).name", 1],
+  ];
+  const seen = ALLOW.map(() => 0), stray = [];
+  for(const l of lits){
+    const k = ALLOW.findIndex(([, a]) => l.includes(a));
+    if(k < 0) stray.push(l); else seen[k]++;
+  }
+  assert.deepEqual(stray, [], "second-person literals in effects.js outside the allow-list — the shared feed is read by both seats; name the seat with sv/sp, or add a REFUSAL/PROMPT entry with a reason");
+  ALLOW.forEach(([kind, a, n], k) => assert.equal(seen[k], n, `allow-list entry [${kind}] ${JSON.stringify(a)} matched ${seen[k]} literal(s), expected ${n} — the file moved, repoint this entry`));
+  /* AND IT MUST NOT PASS BY FINDING NOTHING (floor) */
   assert.ok(lits.length >= 12,
     `only ${lits.length} matched — the scan shape moved, repoint this drill rather than banking the win`);
+  /* SABOTAGE: a fake feed literal must be stray, and a removed one must unbalance the list */
+  const fake = lits.concat(['`${act(n).name} loses your life.`']);
+  assert.equal(fake.filter(l => ALLOW.findIndex(([, a]) => l.includes(a)) < 0).length, 1, "sabotage: the fake feed literal was not caught");
 });
 
 /* THE SHARED SEMANTICS MUST NOT NAME THE OPPONENT (v2.84)
