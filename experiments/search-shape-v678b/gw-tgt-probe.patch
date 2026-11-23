@@ -1,0 +1,77 @@
+diff --git a/engine/sparring.js b/engine/sparring.js
+index c7c6c68..9bbbe41 100644
+--- a/engine/sparring.js
++++ b/engine/sparring.js
+@@ -188,7 +188,7 @@ const subGate = k => {
+ };
+ const soakOn = subGate("SPXSOAK"), lookOn = subGate("SPXLOOK"), payOn = subGate("SPXPAY"), idleOn = subGate("SPXIDLE"),
+       fitOn = subGate("SPXRXFIT"), swingOn = subGate("SPXGRANTSWING"), grantPayOn = subGate("SPXGRANTPAY"),
+-      wpnFirstOn = subGate("SPXWPNFIRST"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW"),
++      wpnFirstOn = subGate("SPXWPNFIRST"), tgtOn = subGate("SPXLATGT"), boardOn = subGate("SPXLABOARD"), effPowOn = subGate("SPXEFFPOW"),
+       graveOn = subGate("SPXGRAVE"), booOn = subGate("SPXBOO"), energyOn = subGate("SPXENERGY"), putOn = subGate("SPXPUT"),
+       cycleOn = subGate("SPXCYCLE"), pieceOn = subGate("SPXPIECE"), glistenOn = subGate("SPXGLISTEN"), bootsOn = subGate("SPXBOOTS"), crownOn = subGate("SPXCROWN"), polarityOn = subGate("SPXPOLARITY"), rxPumpOn = subGate("SPXRXPUMP"), tokenPieceOn = subGate("SPXTOKENPIECE"), riderOn = subGate("SPXRIDER"), banFirstOn = subGate("SPXBANFIRST"), arsPowOn = subGate("SPXARSPOW"), oppArsOn = subGate("SPXOPPARS"), oppAmpOn = subGate("SPXOPPAMP"), oppIceOn = subGate("SPXOPPICE"), stirIdleOn = subGate("SPXSTIRIDLE"), cloakOn = subGate("SPXCLOAK"), flipOn = subGate("SPXFLIPCRUSH"), arsPayOn = subGate("SPXARSPAY"), condGaOn = subGate("SPXCONDGA"), booSelfOn = subGate("SPXBOOSELF"), blockCapOn = subGate("SPXBLOCKCAP");
+ /* THE BLOCK A TOKEN PIECE MAY GIVE UP (SPXTOKENPIECE): one point. Flat Trackers (1 defence, blade
+@@ -1651,6 +1651,7 @@ const LA = {
+   bMu: envOf("SPXLA_BMU") !== "" ? +envOf("SPXLA_BMU") : 2,  /* a held card's worth at a block (null: mu) */
+   bH: envOf("SPXLA_BH") || "own",           /* block rollouts: "next" to this seat's next decision; "own" through its next turn */
+   blockN: envOf("SPXLA_BN") !== "" ? +envOf("SPXLA_BN") : 4,      /* block sets kept besides the rules' and taking it */
++  gW: envOf("SPXLA_GW") !== "" ? +envOf("SPXLA_GW") : 0,
+   bW: envOf("SPXLA_BW") !== "" ? +envOf("SPXLA_BW") : 1,     /* SPXLABOARD: life-points per board point */
+   stepCap: 400,       /* per rollout */
+   budget: envOf("SPXLA_B") !== "" ? +envOf("SPXLA_B") : 300,  /* engine steps per BLOCK decision, all rollouts together; over it, A0 stands */
+@@ -1690,8 +1691,15 @@ function laCands(g, seat, a0){
+   const add = a => { if(!legal(g, a, seat) || idle(a)) return; const k = keyOf(a); if(seen.has(k)) return; seen.add(k); out.push(a); };
+   if(a0) add(a0);
+   const atk = c => num(c, "power") > 0 ? {target: targetFor(g, seat, c)} : {};
++  /* PROBE SPXLATGT: an attack that targetFor sends at an ally is also tried at the hero, and vice versa
++     (any ally of theirs) — the search weighs both declarations (CR 1.4.5). */
++  const alts = (c, from) => { if(!tgtOn(g, seat) || !(num(c, "power") > 0)) return;
++    const foe = g.sides[1 - seat] || {};
++    ["hero"].concat((foe.board || []).filter(b => b && GM.isAlly(b)).map(b => b.uid)).forEach(t => add({t: "play", uid: c.uid, from, target: t})); };
+   (sd.hand || []).forEach(c => c && add({t: "play", uid: c.uid, from: "hand", ...atk(c)}));
+   if(sd.arsenal) add({t: "play", uid: sd.arsenal.uid, from: "arsenal", ...atk(sd.arsenal)});
++  (sd.hand || []).forEach(c => c && alts(c, "hand"));
++  if(sd.arsenal) alts(sd.arsenal, "arsenal");
+   banishPlays(g, seat).forEach(c => add({t: "play", uid: c.uid, from: "banish", ...atk(c)}));
+   gravePlays(g, seat).forEach(c => add({t: "play", uid: c.uid, from: "grave", ...atk(c)}));
+   (sd.gear || []).forEach(c => c && add({t: "activate", uid: c.uid}));
+@@ -1725,7 +1733,10 @@ function laEval(n, seat, root, mu){
+   if(n.over) return {v: n.over.winner === seat ? 1000 : n.over.winner == null ? 0 : -1000, dealt: 0, taken: 0, cards: 0, board: 0, over: true};
+   const dealt = (o0.hp - op.hp), taken = (m0.hp - me.hp), cards = held(me) - held(op);
+   const board = boardOn(root, seat) ? (boardVal(me, op, seat) - boardVal(m0, o0, seat)) - (boardVal(op, me, 1 - seat) - boardVal(o0, m0, 1 - seat)) : 0;
+-  return {v: dealt - taken + (mu != null ? mu : LA.mu) * cards + LA.bW * board, dealt, taken, cards, board};
++  /* PROBE gW: equipment is worth its standing defence — a worn or destroyed piece is a loss, mine minus theirs */
++  const gs = sd => (sd.gear || []).reduce((t, x) => t + (x ? Math.max(0, GM.gearDef(x)) : 0), 0);
++  const gear = LA.gW ? (gs(me) - gs(m0)) - (gs(op) - gs(o0)) : 0;
++  return {v: dealt - taken + (mu != null ? mu : LA.mu) * cards + LA.bW * board + LA.gW * gear, dealt, taken, cards, board};
+ }
+ function laRollout(n, seat, root, spent, until, skip, cap){
+   const stop = root.turn + (LA.horizon === "own" ? 1 : 2);
+@@ -1755,7 +1766,16 @@ function laLucky(root, n, seat){
+   const me = n.sides[seat], kept = new Set((me.deck || []).concat(me.hand || []).map(c => c && c.uid));
+   return (root.sides[seat].deck || []).some(c => c && !kept.has(c.uid));
+ }
+-function laSearch(g, seat, a0){
++/* PROBE: per-hero LA overrides (SPXLA_XH=hero SPXLA_XSET="horizon=opp,mu=2") */
++function laX(g, seat, f){
++  const xh = envOf("SPXLA_XH"), set = envOf("SPXLA_XSET");
++  if(!xh || !set || g.sides[seat].heroKey !== xh) return f();
++  const save = {};
++  set.split(",").forEach(kv => { const [k, v] = kv.split("="); save[k] = LA[k]; LA[k] = isNaN(+v) ? v : +v; });
++  try { return f(); } finally { Object.assign(LA, save); }
++}
++function laSearch(g, seat, a0){ return laX(g, seat, () => laSearch0(g, seat, a0)); }
++function laSearch0(g, seat, a0){
+   LA.stats.decisions++;
+   const t0 = Date.now(), keep = NOTE; NOTE = null; IN_SEARCH = true;
+   let best = null, spent = 0, cands = [];
+@@ -1895,7 +1915,8 @@ function wallOrder(sd, uids){
+   const isG = u => (sd.gear || []).some(x => x && x.uid === u);
+   return uids.slice().sort((a, b) => (isG(b) - isG(a)) || (String(a) < String(b) ? -1 : String(a) > String(b) ? 1 : 0));
+ }
+-function laBlockSearch(g, seat, o){
++function laBlockSearch(g, seat, o){ return laX(g, seat, () => laBlockSearch0(g, seat, o)); }
++function laBlockSearch0(g, seat, o){
+   LA.stats.decisions++;
+   const t0 = Date.now(), keep = NOTE; NOTE = null; IN_SEARCH = true;
+   let best = null, spent = 0, cands = [];

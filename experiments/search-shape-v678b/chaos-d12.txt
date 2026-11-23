@@ -1,0 +1,4 @@
+CHAOS — 289 games, EPS 0.25, 32559 random legal moves
+  violations 0 · no-zone 0 · policy refusals 0 · stalls 0 (expected)
+ENGINE FINDINGS: 0 · POLICY FINDINGS: 0
+EXIT 0

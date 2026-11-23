@@ -1,0 +1,3 @@
+GAMES 192 · stalls 0 · draws 1 (iyslander-dash-5) · avg turns 14.8
+POLICY REFUSALS 0 · INVARIANT VIOLATIONS 0 · MALFORMED 0 · SECOND-PERSON 0 · NO-ZONE 0
+WINS: iyslander 113 · briar 9 · dorinthea 8 · viserai 7 · dash 7 · fai 7 · blaze 7 · enigma 6 · bravo 5 · azalea 5 · viseraibw 5 · kayo 4 · arakni 2 · gravy 2 · lyath 2 · boltyn 1 · prism 1
