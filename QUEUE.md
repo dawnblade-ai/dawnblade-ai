@@ -4,7 +4,7 @@
 answered NEEDS-A-RULING notes are in `QUEUE-ARCHIVE.md` on this branch (grep it, don't read it). History lives in
 CHANGELOG.md (v6.30 on; older in `docs/archive/CHANGELOG-to-v6.29.md`) and LESSONS.md on main.
 
-## HANDOFF — START HERE (CEO session_013xG9xAJ3EWKtYzW591tMdX, 2026-11-23, at v6.75)
+## HANDOFF — START HERE (CEO session_013xG9xAJ3EWKtYzW591tMdX, 2026-11-23, at v6.76)
 
 **This CEO (2026-11-23 midday, session ENDED clean):** archived the old workers A/B (contexts 500-640k tokens: too costly to continue) and launched two
 fresh **Sonnet** workers, one task each. **Shipped v6.76** (live, livecheck ALL PASS, function v104 `v6.76 · sage-v19` stamped):
@@ -12,12 +12,10 @@ the Coach advises "activate the Cloak, then play X" off-turn (judge.cloakFor, sh
 the Coach still has no off-turn HAND advice) + Sharp's defend-step search keeps 2 block sets not 4 (SPXBLOCKCAP; p95 on C's box
 azalea 234->158 prism 195->164 viseraibw 226->187 boltyn 260->154 fai 223->144; strength flat at 12 seeds) + chaos d10 clean.
 Ladder v6.76: briar 81 prism 74 kayo 69 azalea 59 enigma 59 dorinthea 56 fai 55 dash 49 bravo 47 viserai 41 blaze 38 arakni 36
-gravy 36 boltyn 31 iyslander 29 lyath 27 viseraibw 26 (0/0/0, 3 draws). The State line below is the morning's.
+gravy 36 boltyn 31 iyslander 29 lyath 27 viseraibw 26 (0/0/0, 3 draws).
 
-**State:** live = **v6.75** on `main`, livecheck ALL PASS, CI green through v6.70 (later runs were in flight). Function `table`
-version 102 = `v6.75 · sage-v19`, stamped, `--check` OK. WIRE_V 49, DATA_VER sage-v19, 17 heroes, approx ledger 0 open, pool 455/455.
-Ladder v6.73 (816 games): briar 81 prism 74 kayo 69 azalea 59 enigma 59 dorinthea 56 fai 55 dash 49 bravo 47 viserai 41 blaze 38
-arakni 36 gravy 36 boltyn 31 iyslander 29 lyath 27 viseraibw 26. 0 refusals / violations / stalls. Noise band max ~9.
+**State:** live = **v6.76** on `main` (+ bef0172 tools-only), livecheck ALL PASS. Function `table` v104 = `v6.76 · sage-v19`,
+stamped, `--check` OK. WIRE_V 49, DATA_VER sage-v19, 17 heroes, approx ledger 0 open, pool 455/455. Noise band max ~9.
 
 **The morning CEO (session_013xG9xADa79zsMdfx4Ha7Ri) shipped v6.69–v6.75 (CHANGELOG.md has each):** v6.69 SPXCLOAK (Iyslander +21, Blaze +24 of 768) + SPXSTIRIDLE (advice);
 v6.70 Bravo SPXARSPAY + SPXFLIPCRUSH (+62 of 768); v6.71 SPXCONDGA — the policy now sees a card's own GATED go again (Fai +33);
@@ -42,7 +40,7 @@ failed) + list_events, nudge. The CEO replays each branch onto main (cherry-pick
 bumps APP_VER + CHANGELOG, pushes main, waits for Pages, `tools/supabase-deploy.js` (--dry-run first), commits DEPLOYED.json, livecheck.
 **Cost habit:** retire a worker once its context passes ~300k; start fresh ones on Sonnet with a self-contained prompt.
 
-**NEXT (after the workers):**
+**NEXT:**
 00. **PHONE BOUND (parked).** v6.76 cap 2 cut opp-turn p95 hard; cap 1 (evidence above) gets opp-turn to ~110-155. What's left
    is mostly OWN-turn Sharp search (laSearch, LA.budget 300 steps: azalea own p95 175-298 on C's box). Cloud boxes differ ~1.3x and
    ±20 ms run to run, so the bound can't be judged there: the honest next step is a REAL iPhone measurement (DESKTOP-TASKS.md), then
