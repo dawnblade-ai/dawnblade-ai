@@ -14,7 +14,11 @@
   else root.DawnParser = factory();
 })(typeof self!=="undefined" ? self : this, function(){
 
-const norm = s => s.toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+/* MEMO (speed, decision-identical): `norm` and `clean` are pure string functions asked the
+   same few thousand card strings on every rollout step; a bounded Map answers repeats. */
+const strMemo = f => { const m = new Map(); return s => { if(typeof s !== "string") return f(s);
+  let r = m.get(s); if(r === undefined){ r = f(s); if(m.size > 20000) m.clear(); m.set(s, r); } return r; }; };
+const norm = strMemo(s => s.toLowerCase().replace(/[^a-z0-9]+/g," ").trim());
 /* A NOOP'S REASON HAS TWO READERS, AND THIS IS WHERE THEY PART (1.0 polish
    audit). The audit wants the reason to NAME THE READER that makes the clause
    real (v3.16: "(resolveInertia)"); the player reads the same string in the
@@ -113,7 +117,7 @@ const num = w => NWORD[w] || parseInt(w,10) || 1;
    and one record in the pool ("Washed Up Wave") carries a stray empty
    emphasis run — `**Blade Break** __` — which left the clause reading
    "blade break __" and stopped the keyword line being recognised at all. */
-const clean = t => (t||"").replace(/\*\*?/g,"").replace(/__?/g,"").replace(/\s+/g," ").trim();
+const clean = strMemo(t => (t||"").replace(/\*\*?/g,"").replace(/__?/g,"").replace(/\s+/g," ").trim());
 /* A PRINTED PROPER NOUN — every word capitalised, e.g. "Nimblism",
    "Phoenix Flame", "Spectral Shield". ONE spelling, because this pattern
    is the discriminator in TWO places now (`optFilter`'s named-card branch

@@ -120,7 +120,21 @@ const frontFace = line => clean(line).split("//")[0];
 
    Parsing `tt` is kept only as the fallback for a record with no `ty`:
    a warm cache from before DATA_VER sage-v11, or a hand-built fixture. */
+/* MEMO (speed, decision-identical): the parse reads only a card's `tt` and `ty`, so it is
+   cached per card object and re-used while both are the same values. Sharp's rollouts ask
+   the same few hundred card objects the same question thousands of times. */
+const TYPE_MEMO = typeof WeakMap === "function" ? new WeakMap() : null;
 function cardType(c){
+  if(TYPE_MEMO && c && typeof c === "object"){
+    const m = TYPE_MEMO.get(c);
+    if(m && m.tt === c.tt && m.ty === c.ty && m.tyN === (Array.isArray(c.ty) ? c.ty.length : -1)) return m.res;
+    const res = cardTypeRaw(c);
+    TYPE_MEMO.set(c, {tt: c.tt, ty: c.ty, tyN: Array.isArray(c.ty) ? c.ty.length : -1, res});
+    return res;
+  }
+  return cardTypeRaw(c);
+}
+function cardTypeRaw(c){
   const obj  = typeof c === "object" && c ? c : null;
   const raw  = typeof c === "string" ? c : (obj && obj.tt) || "";
   const line = frontFace(raw);
