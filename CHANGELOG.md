@@ -1,3 +1,32 @@
+## v6.80 — Find a match: the server pairs you with the next player looking
+
+- **Matchmaking (SERVER S6.1).** *Find an opponent* now leads with **Find a match**, and the server table screen offers it
+  too (**Find a ranked match** with the switch on). The referee keeps a queue (`op:"seek"`, `server/supabase/009_seek.sql`):
+  with nobody waiting, the function opens a table for the seeker, who sits in chair one and waits on a ticking clock (asking
+  again every 20 s; a seek not seen for 60 s is forgotten); the next seeker is sent to THAT table and both phones reach the
+  lobby together. Ranked never meets friendly, and a ranked search needs a player name like any ranked table. *Stop looking*
+  leaves the queue and closes the waiting table; a seek already taken is not cancelled (the phone is told where to go).
+  A queued table that closed meanwhile is never handed out; two seekers who both found the queue empty are joined on the next
+  heartbeat (the newer one's table is closed). `op:"looking"` is a public count, shown as "1 player is looking for a match
+  right now" when the screen opens. A found match buzzes the phone where it can and flags the tab title for five seconds.
+  The queue is one table and three service-role functions under one advisory lock; run on the live project (self-check `ok`
+  twice on real Postgres) before the function. No rating window yet (oldest seek first).
+- **Drills:** test/serverseek.test.js (8: the meeting, kinds, cancel, the heartbeat's table, stale matches, the race, the
+  edges, the count; each sabotaged). `tools/sql-sab-009.js`: 15 sabotages of the SQL, each caught by its own self-check.
+  `tools/serverpage.js` gains 22 rows (two real pages meet through the queue; Stop looking; ranked beside friendly; the
+  nameless refusal; two page sabotages seen; the count is read on the server table screen only, so the first screen still
+  makes no request while a player only looks). `tools/livecheck.js` gains a live match through the queue (two signed-in
+  phones; the table is closed after); `tools/supabase-rehearse.js` runs it against the generated function.
+- **Fixed in the tools:** `tools/supabase-rehearse.js`'s forfeit phase aged a table 301 s against a limit that is now 450 s
+  (it failed on clean v6.79); it now reads the referee's `FORFEIT_MS`.
+- **Direction (user, 2026-11-24):** the AI logic goes on the back burner; graphical UI/UX polish and matchmaking lead.
+- **Open finding (not this release):** `tools/serverpage.js`'s card-database probe ("a token goes missing when the judge has no
+  database") reads 0 missing: its seeded Viserai game, played by the rule policy, no longer reaches a token the sabotage removes.
+  The probe needs a new seed or a direct token check.
+- **Validation:** npm test 4580 / 4575 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; PGlite 001..009 twice `ok`;
+  `sql-sab-009` 15/15; Deno rehearsal single + folder ALL PASS; `tools/serverpage.js` 319 / 1 (the probe above); both babel
+  blocks compile. No engine rule or AI change: no ladder, no chaos.
+
 ## v6.79 — the AI weighs every target for an attack (search shape, measured)
 
 - **AI strength (Sharp): every attack from hand or arsenal is also proposed at the hero and at each of the opponent's

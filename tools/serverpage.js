@@ -223,7 +223,7 @@ async function toServerChooser(page){
     let r = await offersServer(k0.page);
     row(r.btn && !r.note, "the door: no query - everyone sees the server option, and it is not called an early test");
     const txt = await (async () => { await k0.page.getByRole("button", { name: /^Find an opponent/ }).click(); await k0.page.waitForSelector(".tblwrap"); const t = await text(k0.page); await click(k0.page, btn(k0.page, /^Back/), "back"); await k0.page.waitForSelector("button:has-text('Find an opponent')"); return t; })();
-    row(!/sb_publishable|supabase|v6\.\d|seedG|nonce|SERVER_TABLE/i.test(txt.match(/Server table Share a code[\s\S]{0,120}/i)[0] + txt.match(/At a server table[\s\S]{0,330}/i)[0]), "the door: the option reads in player language (no identifiers or version numbers)");
+    row(!/sb_publishable|supabase|v6\.\d|seedG|nonce|SERVER_TABLE/i.test(txt.match(/Server table Get matched[\s\S]{0,160}/i)[0] + txt.match(/At a server table[\s\S]{0,330}/i)[0]), "the door: the option reads in player language (no identifiers or version numbers)");
     await reopen(k0.page, k0.href, "?server=0");
     r = await offersServer(k0.page);
     row(!r.btn, "the door: ?server=0 hides it on this phone (kill switch)");
@@ -1135,7 +1135,6 @@ async function toServerChooser(page){
     await toFirst(k.A); await toFirst(k.B);
     const fb = await boxes(k.A, '[data-testid="seek-open"]');
     row(fb.length === 1 && /^find a match$/i.test(fb[0].t) && fb[0].h >= 44 && fb[0].x >= 0 && fb[0].r <= W, "seek: the first screen offers Find a match, thumb-sized, inside the screen", JSON.stringify(fb[0]));
-    row((await boxes(k.A, '[data-testid="looking"]')).length === 0, "seek: with nobody in the queue, no 'players looking' line");
     await click(k.A, k.A.locator('[data-testid="seek-open"]'), "A: find a match");
     await k.A.waitForSelector('[data-testid="seek-card"]', { timeout: 8000 }).catch(() => {});
     await k.A.waitForFunction(() => /Looking for an opponent/.test(document.body.innerText), null, { timeout: 8000 }).catch(() => {});
@@ -1152,12 +1151,13 @@ async function toServerChooser(page){
     row(k.sk.q.size === 1 && k.sk.count(60).friendly === 1, "seek: A is in the queue (one friendly seek)");
     const aTable = [...k.sk.q.values()][0] && [...k.sk.q.values()][0].table;
     row(!!aTable && k.wd.row(aTable) && k.wd.row(aTable).creator === "P-sk-a", "seek: A waits at a table opened for A");
-    /* B, on the first screen, now sees one player looking (it reads the count when the screen opens: re-open it) */
-    await click(k.B, btn(k.B, /^Back/), "B back"); await toFirst(k.B);
-    await k.B.waitForSelector('[data-testid="looking"]', { timeout: 6000 }).catch(() => {});
-    const lk = await boxes(k.B, '[data-testid="looking"]');
-    row(lk.length === 1 && lk[0].t === "1 player is looking for a match right now." && lk[0].r <= W, "seek: another phone's first screen says one player is looking", lk[0] && lk[0].t);
-    await click(k.B, k.B.locator('[data-testid="seek-open"]'), "B: find a match");
+    /* B, on the SERVER TABLE screen, sees one player looking (the first screen asks the server nothing while a player only looks) */
+    row((await boxes(k.B, '[data-testid="looking"]')).length === 0, "seek: the first screen shows no count (it makes no request while a player only looks)");
+    await click(k.B, btn(k.B, /^Join a server table/), "B: the server table screen");
+    await k.B.waitForSelector('[data-testid="looking-srv"]', { timeout: 6000 }).catch(() => {});
+    const lk = await boxes(k.B, '[data-testid="looking-srv"]');
+    row(lk.length === 1 && lk[0].t === "1 player is looking for a match right now." && lk[0].r <= W, "seek: another phone's server table screen says one player is looking", lk[0] && lk[0].t);
+    await click(k.B, k.B.locator('[data-testid="seek-go"]'), "B: find a match");
     const upA = await lobbyUp(k.A), upB = await lobbyUp(k.B);
     row(upA && upB, "seek: both pages reach the lobby (Choose your fighter) together", "A " + upA + ", B " + upB);
     const r = k.wd.row(aTable);

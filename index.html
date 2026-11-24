@@ -1142,7 +1142,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "6.79"; /* v6.79 - the AI weighs every target for an attack, the hero and each ally, instead of only the one its rules pick; see CHANGELOG.md. */
+window.APP_VER = "6.80"; /* v6.80 - Find a match: the server pairs you with the next player looking, friendly or ranked; see CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -8084,9 +8084,10 @@ function TableScreen({onBack, onSeated}){
   const [,setTick] = uS(0);
   uE(()=>{ if(mode!=="srv-seek") return; const h = setInterval(()=>setTick(t=>t+1), 1000); return ()=>clearInterval(h); },[mode]);
   uE(()=>()=>{ const k = seekRef.current; seekRef.current = null; if(k && k.timer) clearTimeout(k.timer); },[]);
-  const [looking,setLooking] = uS(null);
-  uE(()=>{ if(!srvOn || (mode!==null && mode!=="srv")) return; let dead = false;
-    DawnServerTable.looking({transport: srvWire()}).then(r=>{ if(!dead && live.current) setLooking(r); }).catch(()=>{});
+  const [lookN,setLookN] = uS(null);
+  /* read on the server table screen only: the first screen makes no request to the server while a player only looks: the lazy rule */
+  uE(()=>{ if(!srvOn || mode!=="srv") return; let dead = false;
+    DawnServerTable.looking({transport: srvWire()}).then(r=>{ if(!dead && live.current) setLookN(r); }).catch(()=>{});
     return ()=>{ dead = true; }; },[mode, srvOn]);
   const seekStop = () => { const k = seekRef.current; seekRef.current = null; if(k && k.timer) clearTimeout(k.timer); return k; };
   const seekFail = e => {
@@ -8227,9 +8228,8 @@ function TableScreen({onBack, onSeated}){
             game with the referee on the web, so the two phones never need to reach each other. */}
         {srvOn && <div className="tblgroup">
           <div className="tblgname">Server table</div>
-          <p className="tblgnote">Get matched with the next player looking, or share a code with a friend. Works across any network.</p>
+          <p className="tblgnote">Get matched with the next player looking, or share a code with a friend — no direct link needed. Works across any network.</p>
           {srvWho && <button className="bigbtn" data-testid="seek-open" onClick={()=>seekGo(false)}>Find a match</button>}
-          {looking && looking.friendly+looking.ranked>0 && <p className="tblgnote" data-testid="looking">{lookLine(looking)}</p>}
           <div className="tblrow"><button className={"bigbtn"+(srvWho?" alt":"")} onClick={()=>{ setErr(null); setGone(false); setMode("srv"); }}>Join a server table</button>
             <button className="bigbtn alt" data-testid="ladder-open" onClick={()=>{ setErr(null); setGone(false); ladFrom.current = null; setMode("srv-ladder"); }}>The ladder</button></div>
         </div>}
@@ -8305,7 +8305,7 @@ function TableScreen({onBack, onSeated}){
         {srvWho && !gone && ranked && <p className="note" data-testid="ranked-note">A ranked table needs a player name for both of you. Everyone starts at 1200. The throw still decides who chooses to go first.</p>}
         {gone ? null : <>
           {srvWho && <button className="bigbtn" data-testid="seek-go" disabled={busy} onClick={()=>seekGo(ranked)}>{ranked ? "Find a ranked match" : "Find a match"}</button>}
-          {srvWho && looking && (ranked ? looking.ranked : looking.friendly)>0 && <p className="note" data-testid="looking-srv" style={{marginTop:-4}}>{lookLine(looking, ranked)}</p>}
+          {srvWho && lookN && (ranked ? lookN.ranked : lookN.friendly)>0 && <p className="note" data-testid="looking-srv" style={{marginTop:-4}}>{lookLine(lookN, ranked)}</p>}
           <button className={"bigbtn"+(srvWho?" alt":"")} disabled={busy} onClick={()=>srvSit("create")}>{busy ? (PHRASE[stat]||"…") : ranked ? "Open a ranked table" : "Open a server table"}</button>
           <button className="bigbtn alt" disabled={busy} onClick={()=>{ setCode(""); setMode("srv-join"); }}>Enter a table code</button>
           {srvSaved.map(r=><button key={r.code} className="bigbtn alt" disabled={busy} onClick={()=>{ setCode(r.code); srvSit("reclaim", r.code, r.role); }}>Resume table {r.code}</button>)}
