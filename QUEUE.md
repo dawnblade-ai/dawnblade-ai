@@ -10,10 +10,11 @@ CHANGELOG.md (v6.30 on; older in `docs/archive/CHANGELOG-to-v6.29.md`) and LESSO
 matchmaking**. Do not open AI-strength probes. A card that plays wrong is still a bug: fix it.
 
 **State:** live = **v6.86** on `main`. Function `table` v124 = `v6.86 · sage-v19`, stamped, `--check` OK; **livecheck ALL PASS**
-(now also proves the live function knows `op:"rematch"`). SQL **001..010** on the project (010 run 2026-11-24). WIRE_V 49
+(now also proves the live function knows `op:"rematch"`). SQL **001..011** on the project (011 run 2026-11-24). WIRE_V 49
 (unchanged: Rematch rides its own sealed `rematch` channel, not the game payload), DATA_VER sage-v19, 17 heroes.
 **v6.87 SHIPPED (P, item 4): Leave takes the rematch ask back, cap line, live rematch probe in livecheck — function v126 stamped, livecheck ALL PASS.** Follow-up: inline Close buttons for the cap's open codes in RematchRow.
 **v6.88 SHIPPED (O, items 2+3): practice grid tidy, practice measured at 4x (nothing to fix) — function v128, livecheck ALL PASS.**
+**v6.89 SHIPPED (Q, item 5): "Players usually find a match in about N s" — SQL 011 run on live, function v130, livecheck ALL PASS. livecheck now deletes its own 0 s probe wait from seek_wait_log (Management API; WARN if unreachable) — any OTHER live seek probe must do the same.**
 **WORKERS OUT (CEO session_013xG9xBhp1ZDNBkoYpUuM35, 2026-11-24 eve):** O `ship/O-practice` (items 2+3) session_013xG9x91mB8js1JxFxUvTtU · P `ship/P-rematch` (item 4) session_013xG9x9W7FG6U7PY1jZdzei · Q `ship/Q-waitview` (item 5, SQL 011) session_013xG9xADdaJFbcBqyZcCLSp · R `ship/R-promptsweep` (item 6) session_013xG9xB1Bzw2ykQJmN9bTer. Briefs: experiments/WORKER-PROMPT-UI.txt + experiments/ui/TASK-<L>.txt. If this CEO died: read each branch and integrate.
 
 **This CEO (four releases, workers L, M, N):**
