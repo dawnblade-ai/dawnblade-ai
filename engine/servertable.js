@@ -705,7 +705,7 @@ function defaultIdentity(config, keep, root_){
 /* ---- FIND A MATCH (S6.1): the queue of players looking for an opponent -------------------------------------------------------------------------
    o: {transport, identity}. `seek(o, {ranked?, table?, cancel?})` asks the referee's queue once and resolves with
      {state: "matched", table}           somebody was waiting: sit down at `table` (sitAt) — the game starts at once
-     {state: "waiting" | "taken", table, beat}   wait at `table` (this player's own: sitAt it, then call seek again every `beat` ms with {table});
+     {state: "waiting" | "taken", table, beat, typical?}   (`typical`: the usual wait in seconds, only when the server had enough seeks to say)   wait at `table` (this player's own: sitAt it, then call seek again every `beat` ms with {table});
                                          "taken": somebody is on their way there
      {state: "cancelled" | "none"}        (cancel) the seek is gone and its table closed
    `ranked: true` queues for a ranked table (a chosen name). The server decides every match; nothing here judges one. Rejects with `.why`: unavailable (no sign-in,
@@ -723,7 +723,8 @@ async function seek(o, q){
   if(r.ok){
     const st = r.state;
     if((st === "matched" || st === "waiting" || st === "taken") && isValid(normalize(r.table)))
-      return {state: st, table: normalize(r.table), ...(st !== "matched" ? {beat: Number.isInteger(r.beat) && r.beat >= 2000 ? r.beat : 20000} : {})};
+      return {state: st, table: normalize(r.table), ...(st !== "matched" ? {beat: Number.isInteger(r.beat) && r.beat >= 2000 ? r.beat : 20000} : {}),
+        ...(st === "waiting" && Number.isInteger(r.typical) && r.typical >= 5 && r.typical <= 86400 ? {typical: r.typical} : {})};
     if(st === "cancelled" || st === "none") return {state: st};
     throw fail("unavailable", "an answer that is not a seek");
   }

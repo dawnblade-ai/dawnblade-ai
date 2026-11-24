@@ -1309,6 +1309,29 @@ async function toServerChooser(page){
     row(bad.length === 0 && k.wd.errors.length === 0, "waiting: no page error and no internal error", bad.concat(k.wd.errors).join(" | ").slice(0, 200));
     await k.kA.close(); await k.kB.close();
   }
+  /* K1c: THE USUAL WAIT. A waiting seeker is told how long players usually wait — only when the server had 5+ completed seeks to say (011_seek_wait.sql);
+     with none the card says nothing; the line is plain, inside the screen, and goes when the search is over */
+  {
+    const k = await seekKit("usual");
+    for(const sec of [30, 40, 50, 60, 1000]) k.sk.log.push({ ranked: false, s: sec, at: k.sk.clock });   /* median 50 -> "about 50 seconds" */
+    await toFirst(k.A); await toFirst(k.B);
+    await click(k.A, k.A.locator('[data-testid="seek-open"]'), "A: find a match");
+    await k.A.waitForSelector('[data-testid="seek-typical"]', { timeout: 8000 }).catch(() => {});
+    const ty = await boxes(k.A, '[data-testid="seek-typical"]');
+    row(ty.length === 1 && ty[0].t === "Players usually find a match in about 50 seconds." && ty[0].x >= 0 && ty[0].r <= W && ty[0].b <= H && seekJargon(ty[0].t), "waiting: the card says how long players usually wait, from the day's completed seeks", ty[0] && ty[0].t);
+    await click(k.B, k.B.locator('[data-testid="seek-open"]'), "B: find a match");
+    await lobbyUp(k.A);
+    row((await boxes(k.A, '[data-testid="seek-typical"]')).length === 0, "waiting: the line is gone once the match is made");
+    await k.kA.close(); await k.kB.close();
+    const q = await seekKit("usualnone");
+    for(const sec of [30, 40, 50, 60]) q.sk.log.push({ ranked: false, s: sec, at: q.sk.clock });   /* four: too few to say anything */
+    await toFirst(q.A);
+    await click(q.A, q.A.locator('[data-testid="seek-open"]'), "A: find a match, with too little to go on");
+    await q.A.waitForFunction(() => /Looking for an opponent/.test(document.body.innerText), null, { timeout: 8000 }).catch(() => {});
+    await wait(500);
+    row((await boxes(q.A, '[data-testid="seek-typical"]')).length === 0 && (await boxes(q.A, '[data-testid="seek-card"]')).length === 1, "waiting: with too few completed seeks the card says nothing about the usual wait");
+    await q.kA.close(); await q.kB.close();
+  }
   /* K2: Stop looking takes A out of the queue and closes the table; a ranked search from the server screen needs a name and meets only a ranked seeker */
   {
     const k = await seekKit("cancel", { names: ["Dawn Smith", "Rival One"] });
