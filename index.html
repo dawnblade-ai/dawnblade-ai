@@ -5972,36 +5972,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       }
     }
 
-    /* THERE IS NO DECK-OUT LOSS IN FLESH AND BLOOD — RETIRED AT v4.26.
-       CR 4.5.3 lists every way a player loses and there are exactly
-       three: 4.5.3a, their hero's life reaches zero or they control no
-       hero at all; 4.5.3b, an effect says they lose; 4.5.3c, they
-       concede. An empty deck is not on that list, and a draw that
-       cannot be filled simply draws what it can.
-
-       (The rule numbers lead here on purpose: `test/sync.test.js` scans
-       RAW source, comments included, so an English sentence that puts a
-       parenthesised citation straight after a bare noun reports that
-       noun as an unbridged call. Reword the prose rather than weakening
-       the scan — CLAUDE.md's own instruction, and the third sentence in
-       this project to trip it.)
-
-       `judge.js` deleted this at v2.45 and wrote down why; the trainer
-       kept it for four dozen versions, so the invented rule lived on the
-       board a PLAYER USES while the CR-exact board had it right —
-       v3.01's shape with the sign that matters, because a trainer
-       teaches. The record in `tools/approx.js` justified leaving it on
-       the grounds that "seat 1 reshuffles, so this is a decision about
-       solo play": that is a fact about the DUMMY and the rule being
-       broken is the PLAYER's loss condition. A reason that does not
-       reach the thing it excuses is not a reason (v3.69).
-
-       WHAT HAPPENS INSTEAD IS THE RULE. A hero who runs their deck out
-       keeps playing, keeps blocking with what is in hand, and loses only
-       when their life reaches 0 like anyone. The dummy still swings
-       every turn, so a decked-out solo game still ENDS — it just ends
-       the way the CR says. The line names the rule, because in a
-       training sim the sequence is the lesson. */
+    /* THERE IS NO DECK-OUT LOSS (retired at v4.26): CR 4.5.3 lists three ways to lose (life zero or no hero, an effect, a concession) and an empty
+       deck is not one. A hero who runs out keeps playing and loses only at life 0; the dummy still swings, so the game ends the way the CR says.
+       (Rule numbers lead on purpose: test/sync.test.js scans raw source, comments included. Full history: LESSONS.md.) */
     if(drawn.length < need)
       n = L(n, `${_me()} draw${_you()?"":"s"} ${drawn.length} of ${need} — the deck is empty. (CR 4.5.3: that is not a loss.)`);
     /* THE BLOODROT TICK IS GONE (v3.09). It was a per-turn, unavoidable,
@@ -8584,6 +8557,7 @@ function RematchRow({table, seat, name, onGo}){
   const [asked,setAsked] = uS(0);                       /* when this phone asked (its own clock), 0 = not asked */
   const [,setTick] = uS(0);
   const went = uR(false);
+  const [capOpen,setCapOpen] = uS([]), [capAsk,setCapAsk] = uS(null), [capFreed,setCapFreed] = uS(false), [capNote,setCapNote] = uS(null);   /* v6.88: the cap's open tables, each closable here */
   uE(()=>{ if(!table || !table.onRematch) return; return table.onRematch(r=>{ setRm(r); if(r.theirs) setMsg(null); }); },[table]);
   uE(()=>{ if(rm && rm.table && !went.current && onGo){ went.current = true; onGo(rm.table); } },[rm && rm.table]);
   /* while this phone waits: a calm count, a resync every 10 s in case a push went missing, and the two-minute give-up */
@@ -8599,10 +8573,17 @@ function RematchRow({table, seat, name, onGo}){
     table.askRematch(cancel).then(r=>{ setBusy(false); setRm(table.rematch()); setAsked(r.state==="waiting" ? Date.now() : 0); },
       e=>{ setBusy(false); setAsked(0); setRm(table.rematch());
         const why = e && e.why;
-        setMsg(why==="table-cap" ? "Your open tables are full, and one player can only keep so many. Close one from Find an opponent, then you and your opponent can ask for a rematch again."
+        if(why==="table-cap"){ setCapOpen(Array.isArray(e.open) ? e.open : []); setCapFreed(false); setCapAsk(null); }
+        setMsg(why==="table-cap" ? "Your open tables are full, and one player can only keep so many. Close one of these, then tap Ask again."
           : why==="ranked-name" || why==="ranked-signin" || why==="identity" ? "A ranked rematch needs you signed in with a name."
           : why==="no-table" || why==="auth" ? "This table has closed, so a rematch is not possible here. You can find another match instead."
           : "The server is not answering. Try again in a moment."); });
+  };
+  const closeCap = c => {
+    setCapAsk(null); if(busy || !table.closeOwn) return; setBusy(true);
+    const done = n => { setBusy(false); setCapOpen(l=>l.filter(x=>x!==c)); setCapFreed(true); setMsg(null); setCapNote("Table "+c+n+" You can ask again now."); };
+    table.closeOwn(c).then(r=>done(r && r.conceded ? " had a ranked game under way, so closing it counted as a loss." : " is closed."),
+      e=>{ if(e && e.why==="no-table") return done(" was already gone."); setBusy(false); setMsg("That table could not be closed just now. Try again in a moment."); });
   };
   const left = asked ? Math.max(0, Math.ceil((REMATCH_WAIT - (Date.now() - asked))/1000)) : 0;
   return <div className="rematch" data-testid="rematch-row" onClick={e=>e.stopPropagation()}>
@@ -8613,9 +8594,19 @@ function RematchRow({table, seat, name, onGo}){
         </>
       : <>
           {rm.theirs && <p className="note" data-testid="rematch-note"><strong>{name}</strong> wants a rematch.</p>}
-          <button className="bigbtn" data-testid="rematch" disabled={busy} onClick={()=>ask(false)}>{busy ? "Asking…" : rm.theirs ? "Rematch — say yes" : "Rematch"}</button>
+          <button className="bigbtn" data-testid="rematch" disabled={busy} onClick={()=>ask(false)}>{busy ? "Asking…" : capFreed ? "Ask again" : rm.theirs ? "Rematch — say yes" : "Rematch"}</button>
         </>}
     {msg && <p className="tblerr" data-testid="rematch-msg">{msg}</p>}
+    {capNote && !msg && <p className="note" data-testid="rematch-capnote">{capNote}</p>}
+    {!rm.table && !rm.mine && capOpen.length>0 && <div className="tblcard" data-testid="rematch-cap-open">
+      {capOpen.map(c=><div key={c} className="tblopen"><span className="mono">{c}</span>
+        <button disabled={busy} aria-label={"Close table "+c} onClick={()=>setCapAsk(capAsk===c ? null : c)}>Close</button></div>)}
+      {capAsk && <div className="tblerr" role="alertdialog" data-testid="rematch-close-warn" aria-label={"Close table "+capAsk+"?"}>
+        <p><strong>Counts as a loss</strong> if {capAsk} is a ranked game under way.</p>
+        <div className="tblopen"><button disabled={busy} data-testid="rematch-close-yes" onClick={()=>closeCap(capAsk)}>Yes, close it</button>
+          <button disabled={busy} data-testid="rematch-close-no" onClick={()=>setCapAsk(null)}>Keep it</button></div>
+      </div>}
+    </div>}
   </div>;
 }
 /* THE FORFEIT CLOCK, AS A HOOK AND A BAR (SERVER S5.2): the server stamps when the player the game waits on last moved; this phone shows a calm countdown made of

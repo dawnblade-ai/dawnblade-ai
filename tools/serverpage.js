@@ -936,9 +936,47 @@ async function toServerChooser(page){
     await click(pg, pg.locator('[data-testid="rematch"]'), "say yes to the rematch");
     await pg.waitForSelector('[data-testid="rematch-msg"]', { timeout: 8000 }).catch(() => {});
     const m = await boxes(pg, '[data-testid="rematch-msg"]'), rb = await boxes(pg, '[data-testid="rematch"]');
-    row(a1.state === "waiting" && made === wd.server.OPEN_CAP && m.length === 1 && /^Your open tables are full, and one player can only keep so many\. Close one from Find an opponent, then you and your opponent can ask for a rematch again\.$/.test(m[0].t), "rematch cap: at the open-table cap the page says, in one plain sentence, to close a table", m[0] && m[0].t);
+    row(a1.state === "waiting" && made === wd.server.OPEN_CAP && m.length === 1 && /^Your open tables are full, and one player can only keep so many\. Close one of these, then tap Ask again\.$/.test(m[0].t), "rematch cap: at the open-table cap the page says, in one plain sentence, to close one of the listed tables", m[0] && m[0].t);
     row(m.length === 1 && noJargon(m[0].t) && m[0].x >= 0 && m[0].r <= W && m[0].b <= H && await overflow(pg), "rematch cap: the sentence is inside 393x852, no identifier, no horizontal overflow");
     row(wd.store.rows.size === rows0 && rb.length === 1 && rb[0].h >= 44, "rematch cap: no table was opened, and Rematch is still there to tap again, thumb-sized", JSON.stringify(rb[0])); await thumbs(pg, "rematch cap", ".reveal");
+    B.ch.close(); await k.kit.close();
+  }
+
+  /* RM4: CLOSE A TABLE RIGHT THERE (v6.88) — at the open-table cap the refusal's codes are listed on the end screen, each with a thumb-sized Close; closing one (after
+     the loss warning) turns the button into Ask again, and tapping it opens the rematch and sits the page down at it. At 393x852 and at 320x568. */
+  for(const [w, h] of [[W, H], [320, 568]]){
+    const k = await rankedKit("rematch-capclose-" + w, { me: "Dawn Smith", w, h }), pg = k.pg, wd = k.wd, B = k.Bp, L = "(" + w + "x" + h + ") ";
+    await toServerChooser(pg);
+    await click(pg, pg.locator('[data-testid="ranked-switch"]'), "switch to ranked");
+    await toTheBoard(pg, wd, B, { asHost: true, openRe: /^Open a ranked table/ });
+    await playSome(pg, wd, B, 0, 4);
+    B.sess.submit({ t: "concede" }); await wd.settle([B.ch]);
+    await pg.waitForSelector('[data-testid="rematch"]', { timeout: 15000 }).catch(() => {});
+    const filler = wd.transport("filler"), codes = [];
+    for(let i = 0; i < wd.server.OPEN_CAP; i++){ const c = await filler.post({ op: "create", identity: { token: k.tokMe } }); if(c && c.ok) codes.push(c.table); }
+    await B.ch.askRematch(); await wd.settle([B.ch]);
+    await pg.waitForFunction(() => /wants a rematch/.test((document.querySelector('[data-testid="rematch-note"]') || {}).innerText || ""), null, { timeout: 8000 }).catch(() => {});
+    await click(pg, pg.locator('[data-testid="rematch"]'), "say yes at the cap");
+    await pg.waitForSelector('[data-testid="rematch-cap-open"]', { timeout: 8000 }).catch(() => {});
+    const lst = await boxes(pg, '[data-testid="rematch-cap-open"] .mono'), cl = await boxes(pg, '[data-testid="rematch-cap-open"] .tblopen > button');
+    row(codes.length === wd.server.OPEN_CAP && lst.length === codes.length && lst.every(x => codes.indexOf(x.t) >= 0), L + "rematch cap: the page lists the open tables that fill the cap", JSON.stringify(lst.map(x => x.t)));
+    row(cl.length === codes.length && cl.every(b => b.h >= 44 && b.r - b.x >= 44 && b.x >= 0 && b.r <= w), L + "rematch cap: every table has a Close button, 44px or more, on screen", JSON.stringify(cl.map(b => [b.r - b.x, b.h])));
+    row(await pg.evaluate(x => document.scrollingElement.scrollWidth <= x, w) && noJargon(await pg.evaluate(() => document.querySelector('[data-testid="rematch-row"]').innerText)), L + "rematch cap: no horizontal overflow, no identifier in the words"); await thumbs(pg, "rematch cap close " + w, ".reveal");
+    const rows0 = wd.store.rows.size;
+    await click(pg, pg.locator('[data-testid="rematch-cap-open"] .tblopen > button').first(), "Close the first table");
+    await pg.waitForSelector('[data-testid="rematch-close-yes"]', { timeout: 5000 }).catch(() => {});
+    const yes = await boxes(pg, '[data-testid="rematch-close-yes"]'), no = await boxes(pg, '[data-testid="rematch-close-no"]');
+    row(yes.length === 1 && no.length === 1 && yes[0].h >= 44 && no[0].h >= 44 && yes[0].r <= w && no[0].r <= w, L + "rematch cap: Close asks first (the loss warning), with thumb-sized Yes and Keep", JSON.stringify([yes[0], no[0]]));
+    const first = lst[0].t;
+    await click(pg, pg.locator('[data-testid="rematch-close-yes"]'), "Yes, close it");
+    await pg.waitForFunction(() => /Ask again/i.test((document.querySelector('[data-testid="rematch"]') || {}).innerText || ""), null, { timeout: 8000 }).catch(() => {});
+    const ag = await boxes(pg, '[data-testid="rematch"]'), cn = await boxes(pg, '[data-testid="rematch-capnote"]'), lst2 = await boxes(pg, '[data-testid="rematch-cap-open"] .mono');
+    row(wd.row(first).closed === true && wd.store.rows.size === rows0 && lst2.length === codes.length - 1 && lst2.every(x => x.t !== first), L + "rematch cap: Yes closes that table (and only it) and the list loses it", JSON.stringify(lst2.map(x => x.t)));
+    row(ag.length === 1 && /^ask again$/i.test(ag[0].t) && ag[0].h >= 44 && ag[0].r <= w && cn.length === 1 && /You can ask again now/.test(cn[0].t), L + "rematch cap: the button now says Ask again, with a plain note", ag[0] && ag[0].t);
+    await click(pg, pg.locator('[data-testid="rematch"]'), "Ask again");
+    await pg.waitForFunction(() => !document.querySelector('[data-testid="rematch-row"]'), null, { timeout: 15000 }).catch(() => {});
+    const nt = [...wd.store.rows.keys()].filter(c => codes.indexOf(c) < 0 && wd.row(c) && wd.row(c).ranked === true && wd.row(c).creator === "P-rk-me" && c !== B.code);
+    row(nt.length >= 1 && (await text(pg)).indexOf(nt[nt.length - 1]) >= 0, L + "rematch cap: Ask again opened the rematch and the page sat down at it", nt.join(","));
     B.ch.close(); await k.kit.close();
   }
 
