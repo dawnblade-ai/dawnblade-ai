@@ -1236,6 +1236,44 @@ async function toServerChooser(page){
     row(bad.length === 0 && k.wd.errors.length === 0, "seek: no page error and no internal error on the fake server", bad.concat(k.wd.errors).join(" | ").slice(0, 200));
     await k.kA.close(); await k.kB.close();
   }
+  /* K1b: WAITING IS LONELY (SEEK N). After the quiet minute (shortened here through SERVER_TABLE.quietMs) the card offers Play the AI while you wait;
+     the search keeps running behind the practice screens; a match that lands mid-practice is a banner, taken only by a tap, and ignored it is just an unanswered match */
+  {
+    const k = await seekKit("lonely");
+    await k.A.evaluate(() => { window.SERVER_TABLE.quietMs = 3500; });
+    await toFirst(k.A); await toFirst(k.B);
+    await click(k.A, k.A.locator('[data-testid="seek-open"]'), "A: find a match");
+    await k.A.waitForFunction(() => /Looking for an opponent/.test(document.body.innerText), null, { timeout: 8000 }).catch(() => {});
+    row((await boxes(k.A, '[data-testid="seek-play-ai"]')).length === 0 && (await boxes(k.A, '[data-testid="seek-quiet"]')).length === 0, "waiting: no offer of the AI before the quiet minute has passed");
+    await k.A.waitForSelector('[data-testid="seek-play-ai"]', { timeout: 9000 }).catch(() => {});
+    const ai = await boxes(k.A, '[data-testid="seek-play-ai"]'), qn = await boxes(k.A, '[data-testid="seek-quiet"]');
+    row(ai.length === 1 && /^play the ai while you wait$/i.test(ai[0].t) && ai[0].h >= 40 && ai[0].x >= 0 && ai[0].r <= W && ai[0].b <= H, "waiting: after the quiet minute the card offers Play the AI while you wait, thumb-sized, on screen", JSON.stringify(ai[0]));
+    row(qn.length === 1 && seekJargon(qn[0].t) && /keeps going/.test(qn[0].t), "waiting: the line under the clock is plain and says the search keeps going", qn[0] && qn[0].t);
+    const aTable = [...k.sk.q.values()][0] && [...k.sk.q.values()][0].table;
+    await click(k.A, k.A.locator('[data-testid="seek-play-ai"]'), "A: play the AI while waiting");
+    await k.A.waitForSelector('[data-testid="wait-bar"]', { timeout: 6000 }).catch(() => {});
+    const wb = await boxes(k.A, '[data-testid="wait-bar"]');
+    row(wb.length === 1 && wb[0].r <= W && seekJargon(wb[0].t) && (await boxes(k.A, '[data-testid="seek-card"]')).length === 0, "waiting: tapping it opens the hero grid with a Still looking bar, and the seek card is out of sight", wb[0] && wb[0].t);
+    await wait(400);
+    row(k.sk.q.size === 1 && !!aTable && k.wd.row(aTable) && k.wd.row(aTable).closed !== true, "waiting: the search is NOT cancelled by practising (A still queued, table open)", "queue " + k.sk.q.size);
+    await k.A.locator(".hcard").first().click(); await k.A.locator(".battlebtn").first().click();
+    await k.A.waitForFunction(() => /throw|first|coin|who goes/i.test(document.body.innerText) && !document.querySelector('[data-testid="wait-bar"]'), null, { timeout: 8000 }).catch(() => {});
+    row((await boxes(k.A, '[data-testid="wait-bar"]')).length === 0 && (await boxes(k.A, '[data-testid="match-ready"]')).length === 0, "waiting: a practice game starts, no banner yet");
+    await click(k.B, k.B.locator('[data-testid="seek-open"]'), "B: find a match");
+    await k.A.waitForSelector('[data-testid="match-ready"]', { timeout: 15000 }).catch(() => {});
+    const bn = await boxes(k.A, '[data-testid="match-ready"]'), tk = await boxes(k.A, '[data-testid="match-take"]');
+    row(bn.length === 1 && /^your match is ready/i.test(bn[0].t) && seekJargon(bn[0].t) && bn[0].y <= 2 && bn[0].r <= W, "waiting: a match arriving mid-practice shows Your match is ready over the game", bn[0] && bn[0].t);
+    row(tk.length === 1 && tk[0].h >= 44 && tk[0].r <= W && !/Choose your fighter/i.test(await text(k.A)), "waiting: the practice game is not taken away from the player, and the take button is thumb-sized", JSON.stringify(tk[0]));
+    await wait(1500);
+    const r0 = k.wd.row(aTable);
+    row((await boxes(k.A, '[data-testid="match-ready"]')).length === 1 && !!r0 && r0.owners && r0.owners[1] === "P-sk-b" && r0.closed !== true, "waiting: ignored, the match simply stands as an unanswered match does (banner stays, table open, both chairs held)", JSON.stringify(r0 && r0.owners));
+    await click(k.A, k.A.locator('[data-testid="match-take"]'), "A: join them");
+    const upA = await lobbyUp(k.A), upB = await lobbyUp(k.B);
+    row(upA && upB && (await boxes(k.A, '[data-testid="match-ready"]')).length === 0, "waiting: taking the match leaves the practice game and both reach the lobby", "A " + upA + ", B " + upB);
+    const bad = k.kA.errors.concat(k.kB.errors).filter(e => !/404|Failed to load resource/.test(e));
+    row(bad.length === 0 && k.wd.errors.length === 0, "waiting: no page error and no internal error", bad.concat(k.wd.errors).join(" | ").slice(0, 200));
+    await k.kA.close(); await k.kB.close();
+  }
   /* K2: Stop looking takes A out of the queue and closes the table; a ranked search from the server screen needs a name and meets only a ranked seeker */
   {
     const k = await seekKit("cancel", { names: ["Dawn Smith", "Rival One"] });

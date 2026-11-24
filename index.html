@@ -958,6 +958,12 @@ img{display:block;max-width:100%}
 .tblcard{background:var(--forge);border:1px solid var(--line);padding:14px 12px}
 .tblcode{font-family:'Spline Sans Mono',monospace;font-size:46px;letter-spacing:.28em;text-align:center;color:var(--y);padding:10px 0 4px;text-shadow:0 2px 0 rgba(20,16,14,.5)}
 .seekclock{font-size:40px;letter-spacing:.08em;text-align:center;color:var(--y);padding:8px 0 2px;font-variant-numeric:tabular-nums;text-shadow:0 2px 0 rgba(20,16,14,.5)}
+.seekbanner{position:fixed;left:0;right:0;top:0;z-index:90;display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;background:var(--y);color:var(--ink);box-shadow:0 3px 0 rgba(20,16,14,.55)}
+.seekbanner span{flex:1;font-weight:700;line-height:1.25}
+.seekbanner button{min-height:44px;padding:0 16px;background:var(--ink);color:var(--y);border:1px solid var(--ink);font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.waitbar{display:flex;align-items:center;gap:10px;margin:8px 0;padding:10px 12px;background:var(--forge);border:1px solid var(--line)}
+.waitbar span{flex:1;line-height:1.3}
+.waitbar button{min-height:44px;padding:0 14px}
 .tblin{width:100%;background:var(--ink);border:1px solid var(--line);color:var(--bone);font-family:'Spline Sans Mono',monospace;font-size:34px;letter-spacing:.24em;text-align:center;text-transform:uppercase;padding:12px 6px}
 .tblin:focus{outline:none;border-color:var(--y)}
 .tblstat{font-size:12.5px;color:var(--bone-dim);text-align:center;min-height:18px}
@@ -7936,7 +7942,7 @@ function HiddenHandsSheet({open, srvOn, onClose}){
     </div>
   );
 }
-function TableScreen({onBack, onSeated, again}){
+function TableScreen({onBack, onSeated, again, away, onPlayAI}){
   const [mode,setMode] = uS(null);           /* null | "host" | "join" */
   const [handsOpen,setHandsOpen] = uS(false); /* the honest-lines sheet (v6.82) */
   const [code,setCode] = uS("");
@@ -7946,6 +7952,12 @@ function TableScreen({onBack, onSeated, again}){
   const [gone,setGone] = uS(false);           /* the server cannot be reached */
   const live = uR(true);
   const waitRef = uR(null);                   /* a server table opened, its other player not yet heard */
+  /* WAITING IS LONELY (SEEK N): while a player practises against the AI, this screen stays mounted (hidden) so the search keeps going on its own
+     heartbeat. A match that lands meanwhile is HELD here as `ready` and offered as a banner; the seat is taken only when the player taps it. */
+  const awayRef = uR(!!away); awayRef.current = !!away;
+  const [ready,setReady] = uS(null);
+  const deliver = s => { if(awayRef.current) setReady(s); else onSeated(s); };
+  uE(()=>{ if(!away && ready){ const s = ready; setReady(null); onSeated(s); } },[away, ready]);
   uE(()=>()=>{ live.current = false; const w = waitRef.current; waitRef.current = null; if(w){ try{ w.ch.close(); }catch(_){} } },[]);
 
   const PHRASE = {
@@ -8117,7 +8129,7 @@ function TableScreen({onBack, onSeated, again}){
   const [seekT0,setSeekT0] = uS(0);
   const [seekNote,setSeekNote] = uS(null);
   const [,setTick] = uS(0);
-  uE(()=>{ if(mode!=="srv-seek") return; const h = setInterval(()=>setTick(t=>t+1), 1000); return ()=>clearInterval(h); },[mode]);
+  uE(()=>{ if(mode!=="srv-seek" || away) return; const h = setInterval(()=>setTick(t=>t+1), 1000); return ()=>clearInterval(h); },[mode, away]);
   uE(()=>()=>{ const k = seekRef.current; seekRef.current = null; if(k && k.timer) clearTimeout(k.timer); },[]);
   const [lookN,setLookN] = uS(null);
   /* read on the server table screen only: the first screen makes no request to the server while a player only looks: the lazy rule */
@@ -8143,7 +8155,7 @@ function TableScreen({onBack, onSeated, again}){
         onStatus: s=>{ if(live.current) setStat("srv-"+s); }
       }).then(ch=>{
         if(!live.current){ ch.close(); return; }
-        setCode(ch.code); seekFound(); onSeated({table: ch, host:false, code: ch.code, judged: {seat: ch.seat, key: null, srv: true}});
+        setCode(ch.code); seekFound(); deliver({table: ch, host:false, code: ch.code, judged: {seat: ch.seat, key: null, srv: true}});
       }).catch(e=>{
         if(!live.current) return;
         /* the table filled or closed on the way there: look again */
@@ -8165,7 +8177,7 @@ function TableScreen({onBack, onSeated, again}){
       if(!live.current){ ch.close(); return; }
       if(seekRef.current!==k){ try{ ch.close(); }catch(_){} return; }
       setCode(ch.code);
-      const go = () => onSeated({table: ch, host:false, code: ch.code, judged: {seat: ch.seat, key: null, srv: true}});
+      const go = () => deliver({table: ch, host:false, code: ch.code, judged: {seat: ch.seat, key: null, srv: true}});
       if(ch.peerHeard()){ seekStop(); seekFound(); return go(); }
       waitRef.current = {ch, go, seek: k};
       setStat("srv-seeking"); beat();
@@ -8254,8 +8266,11 @@ function TableScreen({onBack, onSeated, again}){
     sit(false, code);
   };
 
-  return (
-    <div className="tblwrap">
+  const quietMs = (window.SERVER_TABLE && window.SERVER_TABLE.quietMs) || 60000;
+  return (<>
+    {ready && <div className="seekbanner" data-testid="match-ready" role="status"><span>Your match is ready — an opponent is waiting.</span>
+      <button data-testid="match-take" onClick={()=>{ const s = ready; setReady(null); onSeated(s); }}>Join them</button></div>}
+    <div className="tblwrap" style={away ? {display:"none"} : null}>
       <div className="tblhead">Find an opponent</div>
 
       {!mode && <>
@@ -8353,6 +8368,9 @@ function TableScreen({onBack, onSeated, again}){
           <div className="seekclock mono" data-testid="seek-clock">{clockOf(Date.now()-seekT0)}</div>
           <div className={"tblstat"+(stat==="srv-seeking"?" live":"")}>{stat==="srv-seeking" && <span className="tbldot"></span>}{err||gone ? "" : (PHRASE[stat]||"…")}</div>
           {seekNote && <p className="note" data-testid="seek-note">{seekNote}</p>}
+          {Date.now()-seekT0 >= quietMs && stat==="srv-seeking" && onPlayAI && <>
+            <p className="note" data-testid="seek-quiet">Nobody has sat down yet. Sometimes it takes a few minutes. Practise while you wait: your search keeps going, and you will be told the moment someone arrives.</p>
+            <button className="bigbtn alt" data-testid="seek-play-ai" onClick={onPlayAI}>Play the AI while you wait</button></>}
           <p className="note">You are matched with the next player who taps {seekRk ? "Find a ranked match" : "Find a match"}. Keep this screen open — the game starts here the moment they arrive.{seekRk && myRank ? <> Your rating is <strong>{myRank.rating}</strong>.</> : null}</p>
         </div>
       </>}
@@ -8469,7 +8487,7 @@ function TableScreen({onBack, onSeated, again}){
         : mode && /^srv/.test(mode) ? <button className="bigbtn alt" onClick={mode==="srv-ladder" ? ()=>{ setMode(ladFrom.current); setErr(null); } : mode==="srv-join" || mode==="srv-name" ? ()=>{ recBack(); setMode("srv"); setErr(null); setGone(false); setBusy(false); setCode(""); } : srvLeave}>{mode==="srv-host" ? "Cancel" : "Back"}</button>
         : <button className="bigbtn alt" onClick={onBack}>Back</button>}
     </div>
-  );
+  </>);
 }
 
 /* THE SERVER LINE, ON ANY SCREEN OF A SERVER TABLE (SERVER S2): what the link is doing, said at the top of the
@@ -10278,6 +10296,7 @@ function App(){
   const [seating,setSeating]=uS(null);
   /* the table: null -> "find" (the code screen) -> {table,host,code} (seated) */
   const [table,setTable]=uS(null);
+  const [awayPlay,setAwayPlay]=uS(false);   /* playing the AI while the table screen keeps searching, hidden (SEEK N) */
   const [seekAgain,setSeekAgain]=uS(null);   /* {ranked}: the end screen's Find another match opens the table screen already searching (v6.81) */
   const [how,setHow]=uS(false);
   const [howSeen,setHowSeen]=uS(()=>!!store.get("howSeen",false));
@@ -10288,6 +10307,7 @@ function App(){
   /* One screen at a time. `idle` is the lobby: no match, no loadout, no
      seating throw and nobody at a table. */
   const idle = !fighting && !loHero && !seating && !table && !localTable;
+  const picking = awayPlay && table==="find" && !fighting && !loHero && !seating && !localTable;   /* the hero grid again, search still running */
   return (
     <div className="shell">
       {!fighting && !table && !localTable && <div className="topbar">
@@ -10295,11 +10315,13 @@ function App(){
         <span className="tag">v{APP_VER}{db.status==="ready" ? " · "+db.count+" cards" : ""}</span>
       </div>}
       <DbBanner db={db} reload={reload}/>
-      {tab==="heroes" && idle && <>
+      {tab==="heroes" && (idle || picking) && <>
+        {picking && <div className="waitbar" data-testid="wait-bar"><span>Still looking for a match. Pick a hero to practise; you will be told the moment someone arrives.</span>
+          <button className="bigbtn alt" data-testid="wait-back" onClick={()=>setAwayPlay(false)}>Back to the search</button></div>}
         <HeroGrid best={best} onPick={p=>setHero(p&&p.random ? {...HEROES[Math.floor(Math.random()*HEROES.length)], mystery:true} : p)} db={db} selected={hero}/>
         <HeroBanner h={hero} db={db}/>
         {hero && <button className="battlebtn clip" disabled={db.status!=="ready"} onClick={()=>setLoHero({...hero, seed:battleSeed()})}><span>{db.status==="ready"?"Battle":"Forging…"}</span></button>}
-        <button className="bigbtn alt" style={{marginTop:8}} onClick={()=>setTable("find")}>Find an opponent</button>
+        {!picking && <button className="bigbtn alt" style={{marginTop:8}} onClick={()=>setTable("find")}>Find an opponent</button>}
         {/* A NEW PHONE SEES IT AS A BUTTON (v6.57): until How to play has been opened once on this
             device (and no game has been recorded), it wears a gold frame; after that it is quiet text,
             out of a regular's way. Storage that throws reads as "not seen", which only frames it. */}
@@ -10315,7 +10337,8 @@ function App(){
         {hero && !hero.mystery && <HeroSheet h={hero} db={db} best={best} onBack={()=>setHero(null)} onFight={h=>setFighting(h)}/>}
         {hero && hero.mystery && <p className="note" style={{textAlign:"center"}}>Fate holds the card — your fighter is revealed at preparation.</p>}
       </>}
-      {table==="find" && <TableScreen again={seekAgain} onBack={()=>{ setSeekAgain(null); setTable(null); }} onSeated={s=>{ setSeekAgain(null); setTable(s); }}/>}
+      {table==="find" && <TableScreen again={seekAgain} away={awayPlay} onPlayAI={()=>setAwayPlay(true)} onBack={()=>{ setSeekAgain(null); setAwayPlay(false); setTable(null); }}
+        onSeated={s=>{ setSeekAgain(null); setAwayPlay(false); setFighting(null); setLoHero(null); setSeating(null); setLocalTable(null); setTable(s); }}/>}
       {/* The card database has to be READY before a table is dealt: both
           phones build the same two decks out of it, so a client that is
           still fetching would deal from a half-built map. The lobby's
