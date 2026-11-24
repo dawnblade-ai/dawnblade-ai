@@ -423,7 +423,7 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
     "drx.test.js index.html 8982",
     /* +dummydefence AT v6.75: `endPhaseCF` -> `afterArsenal`, the end phase's (c)-(f), for
        the arena untap at (d). Bounded at the next declaration. */
-    "dummydefence.test.js index.html 10045",
+    "dummydefence.test.js index.html 8643",
     /* +instantpump AT v5.03: the same `tryPlay` -> `confirmPay` body. */
     "instantpump.test.js index.html 27318",
     /* 18,386 -> 18,699 -> 20,096 AT lookahead phase 2, READ FIRST: still

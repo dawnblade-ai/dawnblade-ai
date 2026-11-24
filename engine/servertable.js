@@ -550,6 +550,9 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep, who){
       }
       throw fail("unavailable", "the table kept changing");
     },
+    /* v6.88: close one of THIS player's own open tables from here (the end screen's full-tables help): the same call as `closeTable`, over this table's wire and
+       sign-in. Resolves as closeTable does; rejects with its `.why`. */
+    closeOwn: c => closeTable({transport: T, identity: o.identity, sleep: o.sleep}, c),
     owned: () => owned,                  /* this seat is bound to this phone's player */
     quietFor: () => (o.now || Date.now)() - lastIn,
     setHave(fn){ haveFn = fn; },
