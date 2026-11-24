@@ -868,7 +868,7 @@ async function toServerChooser(page){
     const rb0 = await boxes(pg, '[data-testid="rematch"]');
     row(rb0.length === 1 && /^rematch$/i.test(rb0[0].t) && rb0[0].h >= 44 && rb0[0].x >= 0 && rb0[0].r <= W && rb0[0].b <= H, "rematch: the end screen offers Rematch, thumb-sized, on screen", JSON.stringify(rb0[0]));
     const ag = await boxes(pg, '[data-testid="seek-again"]');
-    row(ag.length === 1 && rb0.length === 1 && ag[0].y > rb0[0].y && await overflow(pg), "rematch: Find another ranked match is still there, under it; no horizontal overflow"); await thumbs(pg, "rematch end screen");
+    row(ag.length === 1 && rb0.length === 1 && ag[0].y > rb0[0].y && await overflow(pg), "rematch: Find another ranked match is still there, under it; no horizontal overflow"); await thumbs(pg, "rematch end screen", ".reveal");
     /* the opponent asks first: the page hears it from the push */
     const a1 = await B.ch.askRematch(); await wd.settle([B.ch]);
     await pg.waitForFunction(() => /wants a rematch/.test((document.querySelector('[data-testid="rematch-note"]') || {}).innerText || ""), null, { timeout: 8000 }).catch(() => {});
@@ -884,7 +884,7 @@ async function toServerChooser(page){
     const n2 = await boxes(pg, '[data-testid="rematch-note"]'), cx = await boxes(pg, '[data-testid="rematch-cancel"]');
     row(n2.length === 1 && /^You asked for a rematch\. Waiting for Rival One to say yes… [12]:\d\d$/.test(n2[0].t) && cx.length === 1 && cx[0].h >= 44 && cx[0].b <= H, "rematch: the page says it is waiting for Rival One, with a calm count and Take it back", n2[0] && n2[0].t);
     row(B.ch.rematch().theirs === true && wd.store.rows.size === rows0, "rematch: the opponent's phone heard the ask; no table opened on one ask", JSON.stringify(B.ch.rematch()));
-    row(n2.length === 1 && noJargon(n2[0].t) && await overflow(pg), "rematch: the waiting words carry no jargon; no horizontal overflow"); await thumbs(pg, "rematch waiting");
+    row(n2.length === 1 && noJargon(n2[0].t) && await overflow(pg), "rematch: the waiting words carry no jargon; no horizontal overflow"); await thumbs(pg, "rematch waiting", ".reveal");
     /* the opponent says yes: the page sits down at the new table */
     const b2 = await B.ch.askRematch(); await wd.settle([B.ch]);
     const nc = b2.table;
