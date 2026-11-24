@@ -61,6 +61,11 @@
                                                  counter resumes (above it)
      {op:"frame", table, seat, key, n, frame}    `frame` is a hub frame:
                 {ch:"lobby", m} | {ch:"net", m} (intent, hello, resync…)
+     {op:"rematch", table, seat, key, identity?, cancel?}   v6.83: both seats
+                                                 ask; the second opens a NEW
+                                                 table of the same kind and
+                                                 both are handed its code (see
+                                                 "REMATCH" below the claim op)
      {op:"resync", table, seat, key, have?}      shorthand for the net
                                                  resync frame; never writes
      `key` is the secret hub.js dealt that seat. `n` is the phone's frame
@@ -167,7 +172,8 @@
         response asks `resync`.
      {ok:false, refused: "auth"|"stale"|"conflict"|"no-table"|"exists"|
                  "full"|"not-dealt"|"bad-request"|"wire"|"internal"|
-                 "identity"|"seat-owned"|"table-cap"|"not-creator"|"ranked-signin"|"ranked-name"|"unavailable", retry?}
+                 "identity"|"seat-owned"|"table-cap"|"not-creator"|"ranked-signin"|"ranked-name"|"unavailable"|
+                 "rematch-playing"|"rematch-alone", retry?}
         `conflict` (someone else wrote first) is the only retry:true.
 
    ---- broadcasts ---------------------------------------------------------
@@ -290,7 +296,7 @@ const ownersOf = row => Array.isArray(row.owners) ? row.owners : [null, null];
 const namesOf = row => Array.isArray(row.names) ? row.names : [null, null];
 const retiredOf = row => Array.isArray(row.retired) ? row.retired : [[], []];
 /* the public part of the stored identity: display names only, and only when there is one */
-const pub = (row, deps) => { const n = namesOf(row); return {...(n[0] != null || n[1] != null ? {names: n.slice()} : {}), ...rankPub(row, deps)}; };
+const pub = (row, deps) => { const n = namesOf(row); return {...(n[0] != null || n[1] != null ? {names: n.slice()} : {}), ...rankPub(row, deps), ...rematchPub(row, deps)}; };
 /* ---- S5.1 row readers: a casual row has none of these fields, and rankPub answers {} for it (a casual answer is byte for byte v6.31's) ---- */
 const ratingsOf = row => Array.isArray(row.ratings) ? row.ratings : [null, null];
 /* public by design: that the table is ranked, the two ratings as each player SAT DOWN, and, once recorded, how the game ended and the rating moves */
@@ -869,6 +875,90 @@ function resync(req, got, deps){
     r => r.ok ? {...r, ...pub(got.row, deps)} : r);
 }
 
+/* ---- {op:"rematch", table, seat, key, identity?, cancel?:true} (v6.83) — REMATCH: THE SAME TWO PLAYERS AGAIN -----------------------------
+   A finished game's two players each ask for a rematch; when BOTH have (each within REMATCH_MS of the other), the function opens a NEW table of the
+   same kind (ranked after ranked, friendly after friendly) and hands its code to both seats, who sit down at it as at any table: back to the hero pick,
+   both seed halves fresh, and a ranked rematch is a NEW ranked game (a new table is a new game id, recorded on its own). Nobody else learns the code:
+   it rides only this table's answers and the two seats' own sealed pushes.
+   Who may ask: the seat's own key (as a frame or a claim), at a table whose game is over (a casual table's row may not say so: the game is read from the
+   rehydrated hub) and where both chairs were dealt. The new table is opened as the player who completed the pair: with `identity` it is a signed-in
+   create counted against that player's open tables like any other (a ranked rematch needs it, and its chairs need two signed-in players with names
+   exactly as at any ranked table); a friendly rematch with no identity is a casual table. The row keeps {at:[ms|null, ms|null], table|null}: an ask
+   older than REMATCH_MS is forgotten (a phone that walked away does not leave a rematch armed for hours).
+   -> {ok:true, state:"waiting", want} (the other player has not asked: they are pushed {ch:"rematch", m:{want, table:null}})
+      {ok:true, state:"ready", table}    (both asked: the new table; the other seat is pushed {want:[true,true], table}; asked again it answers the same)
+      cancel:true -> {ok:true, state:"cancelled"|"none"}, or {state:"ready", table} when it is already too late
+   Refusals: auth | bad-request | rematch-playing (the game is not over) | rematch-alone (the other chair was never dealt) | ranked-signin | ranked-name |
+   table-cap (+ cap, open) | identity | unavailable | conflict (retry:true: the other player wrote first; asked again it meets the answers above) | internal.
+   Every answer to a join or a resync at this table also carries `rematch:{want, table}` once anybody has asked (pub), so a missed push heals. */
+const REMATCH_MS = 2 * 60 * 1000, CH_REMATCH = "rematch";
+function rematchOf(row, deps){
+  const r = row.rematch, now = deps && deps.now ? deps.now() : 0;
+  if(!r || typeof r !== "object") return {at: [null, null], table: null};
+  if(typeof r.table === "string" && ID_RE.test(r.table)) return {at: [null, null], table: r.table};
+  return {at: [0, 1].map(s => Array.isArray(r.at) && Number.isFinite(r.at[s]) && now - r.at[s] < REMATCH_MS ? r.at[s] : null), table: null};
+}
+function rematchPub(row, deps){
+  if(!row.rematch) return {};
+  const r = rematchOf(row, deps);
+  return {rematch: {want: r.table ? [true, true] : r.at.map(x => x != null), table: r.table}};
+}
+function gameOver(id, row, deps){
+  if(row.over === true) return true;
+  const s = rig(id, row, deps).hub.session();
+  return !!(s && s.over());
+}
+/* a table opened for a rematch whose save then lost the race: closed at once (nobody has its code), a failure logged and left to age out */
+function rematchDrop(code, deps){
+  const soft = e => { try { if(deps.log) deps.log(e); } catch(_){} return null; };
+  try {
+    return then(deps.store.get(code), got => {
+      if(!got || !got.row || got.row.closed === true) return null;
+      const orphan = got.row; orphan.over = true; orphan.closed = true;
+      const v = save(code, orphan, got.version, deps, [[], []], []);
+      return isP(v) ? v.then(() => null, soft) : null;
+    });
+  } catch(e){ return soft(e); }
+}
+function rematch(req, got, deps){
+  const row = got.row, id = row.id, seat = req.seat;
+  if((seat !== 0 && seat !== 1) || !keyEq(req.key, row.hub.keys[seat])) return authFail(row, seat, req.key);
+  if(req.cancel !== undefined && req.cancel !== true) return no("bad-request");
+  if(!gameOver(id, row, deps)) return no("rematch-playing");
+  const other = 1 - seat;
+  if(row.hub.keys[other] == null) return no("rematch-alone");
+  const cur = rematchOf(row, deps), now = deps.now ? deps.now() : 0;
+  if(cur.table) return {ok: true, state: "ready", table: cur.table};
+  const tell = (want, table) => { const p = [[], []]; p[other] = [{ch: CH_REMATCH, m: {want: want.slice(), table}}]; return p; };
+  if(req.cancel === true){
+    if(cur.at[seat] == null) return {ok: true, state: "none"};
+    const at = cur.at.slice(); at[seat] = null;
+    row.rematch = {at, table: null};
+    return then(save(id, row, got.version, deps, tell(at.map(x => x != null), null), []), a => a.ok ? {ok: true, state: "cancelled"} : a);
+  }
+  if(cur.at[other] == null){
+    const at = cur.at.slice(); at[seat] = now;
+    row.rematch = {at, table: null};
+    const want = at.map(x => x != null);
+    return then(save(id, row, got.version, deps, tell(want, null), []), a => a.ok ? {ok: true, state: "waiting", want} : a);
+  }
+  /* both have asked: open the new table (a code drawn twice is drawn again, as a seek does) */
+  const ranked = row.ranked === true;
+  if(ranked && req.identity === undefined) return no("ranked-signin");      /* a ranked table is only for signed-in players, as at a create */
+  const open1 = tries => then(req.identity !== undefined || ranked ? createAs({identity: req.identity, ...(ranked ? {ranked: true} : {})}, newId(deps), false, deps) : create({}, deps), c => {
+    if(!c.ok && c.refused === "exists" && tries < SEEK_TRIES) return open1(tries + 1);
+    return c;
+  });
+  return then(open1(1), c => {
+    if(!c.ok) return c;
+    row.rematch = {at: cur.at.slice(), table: c.table};
+    return then(save(id, row, got.version, deps, tell([true, true], c.table), []), a => {
+      if(a.ok) return {ok: true, state: "ready", table: c.table};
+      return then(rematchDrop(c.table, deps), () => a);
+    });
+  });
+}
+
 /* ---- {op:"seek", identity:{token}, ranked?:true, table?, cancel?:true} (S6.1) — FIND A MATCH -------------------------------------------
    A QUEUE OF PLAYERS LOOKING FOR AN OPPONENT (009_seek.sql). The phone asks; the answer is one of
      {ok:true, state:"matched", table}   somebody was waiting: sit down at THEIR table (as the second player)
@@ -985,7 +1075,7 @@ function serve(req, deps){
   if(req.op === "recovery-mint") return opMintCode(req, deps);
   if(req.op === "recovery-redeem") return opRedeemCode(req, deps);
   if(typeof req.table !== "string" || !ID_RE.test(req.table)) return no("bad-request");
-  const fn = req.op === "join" ? join : req.op === "frame" ? frame : req.op === "resync" ? resync : req.op === "claim" ? claim : null;
+  const fn = req.op === "join" ? join : req.op === "frame" ? frame : req.op === "resync" ? resync : req.op === "claim" ? claim : req.op === "rematch" ? rematch : null;
   if(!fn) return no("bad-request");
   return then(deps.store.get(req.table), got => {
     if(!got || !got.row || got.row.closed === true) return no("no-table");       /* a closed table (S4.4) is gone for both seats */
@@ -1011,5 +1101,5 @@ function handleNow(req, deps){
   return v;
 }
 
-return {handle, handleNow, topic, SEEK_TTL, SEEK_BEAT, OPEN_CAP, FORFEIT_MS, LADDER_FLOOR, LADDER_CAP, LADDER_RECENT, ROW_V, ROW_V_CASUAL, ROW_V_RANKED, ROW_V_RANKED_4, validateName, nameFold, recoveryNormal, recoveryHash, RECOVERY_DAYS, RECOVERY_CHARS, RECOVERY_LEN};
+return {handle, handleNow, topic, REMATCH_MS, CH_REMATCH, SEEK_TTL, SEEK_BEAT, OPEN_CAP, FORFEIT_MS, LADDER_FLOOR, LADDER_CAP, LADDER_RECENT, ROW_V, ROW_V_CASUAL, ROW_V_RANKED, ROW_V_RANKED_4, validateName, nameFold, recoveryNormal, recoveryHash, RECOVERY_DAYS, RECOVERY_CHARS, RECOVERY_LEN};
 });

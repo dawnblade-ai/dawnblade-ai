@@ -979,6 +979,8 @@ img{display:block;max-width:100%}
 .tblsw.on{border-color:var(--y);color:var(--y)}
 .tblsw .tblswsub{font-size:var(--fs-lg);color:var(--bone-dim);text-align:right}
 .rankchg{font-size:14px;line-height:1.45;margin-top:10px;padding:9px 10px;border:1px solid var(--line);background:rgba(0,0,0,.25)}
+.rematch{margin-top:10px}
+.rematch .note{margin:0 0 8px}
 .rankchg strong{color:var(--y);font-family:'Spline Sans Mono',monospace}
 .ffbar{position:fixed;left:12px;right:12px;top:max(8px,env(safe-area-inset-top));z-index:59;max-width:536px;margin:0 auto;padding:9px 10px;border:1px solid var(--line);background:var(--ink);box-shadow:0 4px 14px rgba(0,0,0,.5);font-size:14px;line-height:1.45}   /* fixed like the server banner (which, at z 60, covers it when the link is in trouble): a countdown or a claim is never below the fold */
 .ffbar strong{color:var(--y);font-family:'Spline Sans Mono',monospace}
@@ -8180,7 +8182,10 @@ function TableScreen({onBack, onSeated, again}){
   };
   /* sent here by a finished server game's Find another match (v6.81): start the same kind of search once, as if the player had tapped it on this screen */
   const againRef = uR(false);
-  uE(()=>{ if(!again || againRef.current || !srvOn || !srvWho) return; againRef.current = true; if(again.ranked) setRanked(true); seekGo(!!again.ranked); },[again, srvOn]);
+  uE(()=>{ if(!again || againRef.current || !srvOn) return;
+    /* a REMATCH (v6.83): both players agreed and the referee opened the new table: sit down at it at once (back to the hero pick) */
+    if(again.rematch){ againRef.current = true; if(again.ranked) setRanked(true); setCode(again.rematch); return srvSit("join", again.rematch); }
+    if(!srvWho) return; againRef.current = true; if(again.ranked) setRanked(true); seekGo(!!again.ranked); },[again, srvOn, srvWho]);
   const seekCancel = () => {
     const k = seekStop(), w = waitRef.current; waitRef.current = null;
     if(w){ try{ w.ch.forget(); w.ch.close(); }catch(_){} }
@@ -8525,6 +8530,51 @@ function RankChange({table, seat}){
     {" "}<span style={{color:"var(--bone-dim)"}}>A ranked game counts for both players.</span>
   </div>;
 }
+/* REMATCH (v6.83): the same two players again. Each taps Rematch on the end screen; the referee opens a NEW table of the same kind once both have (a ranked
+   rematch is a new ranked game) and hands both phones its code (engine/servertable.js `askRematch` / `onRematch`), and this phone sits down there at once: back to
+   the hero pick. An ask the other player does not answer within two minutes is taken back (the referee forgets it too), and the screen says so plainly. */
+const REMATCH_WAIT = 120000;
+function RematchRow({table, seat, name, onGo}){
+  const [rm,setRm] = uS(()=>table && table.rematch ? table.rematch() : null);
+  const [busy,setBusy] = uS(false);
+  const [msg,setMsg] = uS(null);
+  const [asked,setAsked] = uS(0);                       /* when this phone asked (its own clock), 0 = not asked */
+  const [,setTick] = uS(0);
+  const went = uR(false);
+  uE(()=>{ if(!table || !table.onRematch) return; return table.onRematch(r=>{ setRm(r); if(r.theirs) setMsg(null); }); },[table]);
+  uE(()=>{ if(rm && rm.table && !went.current && onGo){ went.current = true; onGo(rm.table); } },[rm && rm.table]);
+  /* while this phone waits: a calm count, a resync every 10 s in case a push went missing, and the two-minute give-up */
+  uE(()=>{ if(!asked || !table) return; const h = setInterval(()=>{
+      setTick(t=>t+1);
+      const left = REMATCH_WAIT - (Date.now() - asked);
+      if(left <= 0){ setAsked(0); setMsg("No answer from "+name+" — they may have left. You can find another match instead."); table.askRematch(true).catch(()=>{}); return; }
+      if(Math.floor(left/1000) % 10 === 0 && table.heal) table.heal();
+    }, 1000); return ()=>clearInterval(h); },[asked, table]);
+  if(!table || !table.srv || !table.askRematch || !rm) return null;
+  const ask = cancel => {
+    if(busy) return; setBusy(true); setMsg(null);
+    table.askRematch(cancel).then(r=>{ setBusy(false); setRm(table.rematch()); setAsked(r.state==="waiting" ? Date.now() : 0); },
+      e=>{ setBusy(false); setAsked(0); setRm(table.rematch());
+        const why = e && e.why;
+        setMsg(why==="table-cap" ? "You already have the most open tables there may be. Close one from Find an opponent, then try again."
+          : why==="ranked-name" || why==="ranked-signin" || why==="identity" ? "A ranked rematch needs you signed in with a name."
+          : why==="no-table" || why==="auth" ? "This table has closed, so a rematch is not possible here. You can find another match instead."
+          : "The server is not answering. Try again in a moment."); });
+  };
+  const left = asked ? Math.max(0, Math.ceil((REMATCH_WAIT - (Date.now() - asked))/1000)) : 0;
+  return <div className="rematch" data-testid="rematch-row" onClick={e=>e.stopPropagation()}>
+    {rm.table ? <p className="note" data-testid="rematch-note">Rematch on — sitting down at the new table…</p>
+      : rm.mine ? <>
+          <p className="note" data-testid="rematch-note">You asked for a rematch. Waiting for {name} to say yes… <span className="mono">{Math.floor(left/60)}:{String(left%60).padStart(2,"0")}</span></p>
+          <button className="bigbtn alt" data-testid="rematch-cancel" disabled={busy} onClick={()=>ask(true)}>Take it back</button>
+        </>
+      : <>
+          {rm.theirs && <p className="note" data-testid="rematch-note"><strong>{name}</strong> wants a rematch.</p>}
+          <button className="bigbtn" data-testid="rematch" disabled={busy} onClick={()=>ask(false)}>{busy ? "Asking…" : rm.theirs ? "Rematch — say yes" : "Rematch"}</button>
+        </>}
+    {msg && <p className="tblerr" data-testid="rematch-msg">{msg}</p>}
+  </div>;
+}
 /* THE FORFEIT CLOCK, AS A HOOK AND A BAR (SERVER S5.2): the server stamps when the player the game waits on last moved; this phone shows a calm countdown made of
    that stamp plus its own elapsed time (engine/servertable.js `clock()`), and the claim itself is the server's decision. It says only THAT the game waits on a seat,
    never what is being decided. A friendly table has no clock (clock() answers null). The limit is the server's: the page never restates it. */
@@ -8648,7 +8698,7 @@ const CH_LOBBY = "lobby", CH_NET = "net";
    spelled by the lobby module so the two sites cannot disagree. */
 const TABLE_BUILD = DawnLobby.buildId(window.APP_VER, window.DATA_VER);
 
-function TableRoom({table, host, code, db, onExit, resume, judged, onAgain}){
+function TableRoom({table, host, code, db, onExit, resume, judged, onAgain, onRematch}){
   /* `mySeat`, NOT `seat`. engine/priority.js exports a `seat` helper
      meaning "seat a game with this first player"; a local `seat` meaning
      "which chair is this client in" is the same-name-different-meaning
@@ -8802,7 +8852,7 @@ function TableRoom({table, host, code, db, onExit, resume, judged, onAgain}){
   );
 
   if(match) return <TableBoard match={match} mySeat={mySeat} host={host} code={code} db={db}
-    table={table} netRef={netRef} netQ={netQ} onExit={onExit} judged={judged} onAgain={onAgain}/>;
+    table={table} netRef={netRef} netQ={netQ} onExit={onExit} judged={judged} onAgain={onAgain} onRematch={onRematch}/>;
 
   /* ---- the sideboard: the trainer's own loadout screen ---------------- */
   if(step === "board" && myH){
@@ -9069,7 +9119,7 @@ function TableThrow({lob, mySeat, myH, foeH, onThrow}){
    next-swing prediction — seat 1 is a person, so there is nothing to
    predict.
    ============================================================ */
-function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit, local, heroKey, onRecord, judged, onAgain}){
+function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit, local, heroKey, onRecord, judged, onAgain, onRematch}){
   /* AT A TWO-PHONE TABLE THIS PHONE SHOWS ITS OWN SEAT'S VIEW (HIDDEN HANDS
      H2). The host's referee holds the game; until the guest's first snapshot
      lands, the guest shows its blind deal as seen from NEITHER seat: every
@@ -10150,7 +10200,8 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
         {!local && <RankChange table={table} seat={mySeat}/>}
         {/* PLAY AGAIN (v6.81, NEXT 1): a server game's end screen goes straight back into the queue, the same kind of match (friendly or ranked); the walk
             back through three screens is gone. The finished table no longer counts toward the open-table cap (005), so the new search is never refused for it. */}
-        {!local && judged && judged.srv && onAgain && <button className="bigbtn" data-testid="seek-again" style={{marginTop:10}}
+        {!local && judged && judged.srv && onRematch && <RematchRow table={table} seat={mySeat} name={srvNames[1-mySeat] || "your opponent"} onGo={c=>onRematch(c, !!srvRank.ranked)}/>}
+        {!local && judged && judged.srv && onAgain && <button className={"bigbtn"+(onRematch ? " alt" : "")} data-testid="seek-again" style={{marginTop:10}}
           onClick={e=>{e.stopPropagation(); onAgain(!!srvRank.ranked);}}>{srvRank.ranked ? "Find another ranked match" : "Find another match"}</button>}
         {!local && !host && <div onClick={e=>e.stopPropagation()} style={{marginTop:10}}>
           <p className="fs-lg">{judged ? (judged.srv ? "The server" : "The judge's device") : "The host's phone"} held the deck. It has now sent its half of the seed and every move.</p>
@@ -10276,7 +10327,8 @@ function App(){
               resume={table.resume} onExit={()=>setTable(null)}/>
           : <TableRoom table={table.table} host={table.host} code={table.code} db={db}
               judged={table.judged || null} resume={table.resume} onExit={()=>setTable(null)}
-              onAgain={rk=>{ setSeekAgain({ranked: !!rk}); setTable("find"); }}/>)
+              onAgain={rk=>{ setSeekAgain({ranked: !!rk}); setTable("find"); }}
+              onRematch={(c, rk)=>{ setSeekAgain({ranked: !!rk, rematch: c}); setTable("find"); }}/>)
         : <div className="tblwrap">
             <div className="tblhead">Table {table.code}</div>
             <div className="tblstat live"><span className="tbldot"></span>Forging the card pool…</div>

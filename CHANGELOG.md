@@ -1,3 +1,33 @@
+## v6.83 — Rematch: both players say yes, and the same two sit down again
+
+- **Rematch (NEXT 1, second half).** A server game's end screen now offers **Rematch** above *Find another match*. One tap
+  asks. The other player's phone hears it from a sealed push: "*Rival One* wants a rematch." Their button becomes
+  **Rematch — say yes**. While a player waits, the screen says so with a calm two-minute count and offers *Take it back*.
+  When both have said yes, the referee opens a **new table of the same kind** (ranked after ranked, friendly after
+  friendly), hands both phones its code, and both phones sit down there by themselves: back to the hero pick, both seed
+  halves fresh. A ranked rematch is a new ranked game, recorded under its own game id. If the other player does not answer
+  within two minutes, the ask is taken back on both sides and the screen says so plainly.
+- **The referee (`server/referee.js`, `op:"rematch"`).** Who may ask: a seat with its own key, once the game is over (read
+  from the rehydrated hub, so a casual table whose row never says `over` works too) and once both chairs were dealt. The row
+  keeps `rematch:{at:[ms|null, ms|null], table|null}`. An ask older than `REMATCH_MS` (2 min) is forgotten. The player who
+  completes the pair opens the new table: with a sign-in it counts against their open tables (005) like any table they
+  open; a ranked rematch needs that sign-in. A friendly table nobody signed in to rematches as a casual table. A lost
+  version race answers `conflict` and closes the table it had just opened (nobody holds its code). Every join and resync
+  answer carries `rematch:{want, table}` once anybody has asked, so a missed push heals on the next resync. No SQL change.
+  No WIRE_V bump: the game's wire payload is unchanged. The new push rides its own sealed channel (`rematch`), which an
+  older page skips like any channel it does not know.
+- **The phone (`engine/servertable.js`).** `rematch()`, `onRematch(fn)` and `askRematch(cancel)`. The push is read on its own
+  channel, and join and resync answers are read too. A known code is never taken back.
+- **Drills:** `test/serverrematch.test.js` (7 checks over the referee: both ask, one new table of the same kind, the same
+  code for both, both chairs taken there, its own game id; mid-game, wrong key and a ranked rematch with no sign-in are
+  refused and write nothing; asks go stale; cancel; resync carries the state; a casual rematch; a lost race closes its
+  orphan). Each check has a sabotage that fails it. `test/serverrematchphone.test.js` plays two phones over the real
+  referee: the ask arrives by push alone; both phones hold the new code; the rematch is dealt, conceded and recorded as a
+  second ranked game, both ratings moved twice; a dropped push heals on a resync. Sabotaged three ways.
+  `tools/serverpage.js` +10 rows (RM): the button and its place, the opponent's ask and take-back seen on the page, the
+  waiting words and count, no table opened on one ask, the page sitting down at the new ranked table by itself, no jargon,
+  no overflow.
+
 ## v6.82 — Find an opponent is short: the honest lines are one sheet
 
 - **How each table keeps hands hidden (NEXT 4).** Four paragraphs sat under *Find an opponent*'s buttons: the "two real hero

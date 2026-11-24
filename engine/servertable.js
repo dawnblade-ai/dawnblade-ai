@@ -94,7 +94,7 @@ const isValid = c => normalize(c).length === CODE_LEN;
 const topicFor = (code, seat, key) => SHA.seatTopic(code, seat, key);
 
 const STATUS = ["connecting", "waiting", "seated", "reconnecting", "unavailable", "closed"];
-const CH_JUDGE = "judge", CH_LOBBY = "lobby", CH_NET = "net", CH_CLOCK = "clock";
+const CH_JUDGE = "judge", CH_LOBBY = "lobby", CH_NET = "net", CH_CLOCK = "clock", CH_REMATCH = "rematch";
 const clone = v => JSON.parse(JSON.stringify(v));
 const defaultSleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -277,6 +277,20 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep, who){
   };
   readRank(who);
   if(who && who.ranked === true) readClock(who.clock);
+  /* v6.83: REMATCH — who has asked for one ([seat 0, seat 1]) and, once both have, the NEW table's code. A sealed push on its own channel when the
+     other player asks or cancels, and `rematch` in a join's or resync's answer (so a missed push heals). Only ever moves forward to a code. */
+  let rm = {want: [false, false], table: null};
+  const rmFns = [];
+  const readRematch = v => {
+    if(!v || typeof v !== "object" || !Array.isArray(v.want) || v.want.length !== 2) return;
+    const table = typeof v.table === "string" && isValid(v.table) ? normalize(v.table) : null;
+    if(rm.table && !table) return;                                     /* a code, once known, is never taken back */
+    const nx = {want: table ? [true, true] : v.want.map(x => x === true), table};
+    if(nx.table === rm.table && nx.want[0] === rm.want[0] && nx.want[1] === rm.want[1]) return;
+    rm = nx;
+    for(const f of rmFns.slice()) try { f(handle.rematch()); } catch(_){}
+  };
+  readRematch(who && who.rematch);
 
   const deliver = f => { if(sink) sink(f); else backlog.push(f); };
   /* what comes up from the server: the seat offer once (key taken out), lobby and net frames as they are */
@@ -292,6 +306,7 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep, who){
         deliver(clone(rest)); continue;
       }
       if(f0.ch === CH_CLOCK){ readClock(f0.m); continue; }                 /* S5.2: the forfeit clock, sealed with the push; never handed up to the game */
+      if(f0.ch === CH_REMATCH){ readRematch(f0.m); continue; }             /* v6.83: the other player asked for (or took back) a rematch */
       if(f0.ch !== CH_LOBBY && f0.ch !== CH_NET) continue;
       if(f0.ch === CH_NET) sawNet = true;
       if(!peerHeard && ((f0.ch === CH_LOBBY && f0.m && f0.m.seat === peerSeat) || (f0.ch === CH_NET))){ peerHeard = true; }
@@ -361,7 +376,7 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep, who){
     let r;
     try { r = await call(T, {op: "join", table: code, seat, key}); } catch(_){ return null; }
     if(!r.ok){ if(r.refused === "auth" || r.refused === "no-table") fatal(r.refused === "auth" && r.taken === true ? "taken" : r.refused); return null; }
-    readNames(r.names); readRank(r);
+    readNames(r.names); readRank(r); readRematch(r.rematch);
     ingest(r.frames);
     return r.n | 0;
   }
@@ -379,7 +394,7 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep, who){
         else {                                                             /* a game: the net session's catch-up */
           let r = null;
           try { r = await call(T, {op: "resync", table: code, seat, key, have: haveFn ? haveFn() : undefined}); } catch(_){ r = null; }
-          if(r && r.ok){ readNames(r.names); readRank(r); ingest(r.frames); ok1 = true; }
+          if(r && r.ok){ readNames(r.names); readRank(r); readRematch(r.rematch); ingest(r.frames); ok1 = true; }
           else if(r && (r.refused === "auth" || r.refused === "no-table")) fatal(r.refused === "auth" && r.taken === true ? "taken" : r.refused);
           else ev("heal-failed");
         }
@@ -495,6 +510,36 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep, who){
         if(r.refused === "auth" || r.refused === "no-table") throw fail(r.refused);
         if(/^claim-/.test(String(r.refused))) throw fail(r.refused);
         throw fail("unavailable", "refused: " + r.refused);
+      }
+      throw fail("unavailable", "the table kept changing");
+    },
+    /* v6.83: REMATCH. `rematch()` -> {want: [seat 0 asked, seat 1 asked], table: the new table's code | null, mine: this seat asked, theirs: the other did};
+       `onRematch(fn)` calls fn with it whenever it changes (returns an unsubscribe). `askRematch(cancel)` asks (or takes the ask back) — the referee decides:
+       resolves {state: "waiting"|"ready"|"cancelled"|"none", table?}; rejects with `.why`: rematch-playing | rematch-alone | ranked-signin | ranked-name |
+       table-cap (`.open`) | identity | auth | no-table | unavailable. A lost version race (the other player wrote first) is asked again. With a sign-in the ask
+       carries it: the player who completes the pair opens the new table, counted like any table they open. */
+    rematch: () => ({want: rm.want.slice(), table: rm.table, mine: rm.want[seat], theirs: rm.want[peerSeat]}),
+    onRematch(fn){ if(typeof fn !== "function") return () => {}; rmFns.push(fn); return () => { const i = rmFns.indexOf(fn); if(i >= 0) rmFns.splice(i, 1); }; },
+    async askRematch(cancel){
+      if(closed) throw fail("no-table");
+      let tok = null;
+      if(!cancel && o.identity && typeof o.identity.token === "function"){ try { tok = await o.identity.token(); } catch(_){ tok = null; } }
+      if(typeof tok !== "string" || !tok) tok = null; else scrub.add(tok);
+      for(let k = 0; k < 6; k++){
+        let r;
+        try { r = await call(T, {op: "rematch", table: code, seat, key, ...(tok ? {identity: {token: tok}} : {}), ...(cancel ? {cancel: true} : {})}); }
+        catch(e){ if(k < 2){ await pause(k); continue; } throw e; }
+        if(r.ok){
+          const st = String(r.state);
+          if(st === "ready" && typeof r.table === "string" && isValid(r.table)) readRematch({want: [true, true], table: r.table});
+          else if(st === "waiting" && Array.isArray(r.want)) readRematch({want: r.want, table: null});
+          else if(st === "cancelled" || st === "none"){ const w = rm.want.slice(); w[seat] = false; readRematch({want: w, table: null}); }
+          return {state: st, ...(rm.table ? {table: rm.table} : {})};
+        }
+        if(r.refused === "conflict" || r.retry === true){ await pause(k); continue; }
+        if(r.refused === "table-cap") throw Object.assign(fail("table-cap"), {open: (Array.isArray(r.open) ? r.open : []).map(normalize).filter(isValid).slice(0, 10)});
+        if(r.refused === "rematch-playing" || r.refused === "rematch-alone") throw fail(r.refused);
+        throw fail(WHY_OF[r.refused] || "unavailable", "refused: " + r.refused);
       }
       throw fail("unavailable", "the table kept changing");
     },
