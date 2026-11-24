@@ -24,7 +24,7 @@ const path = require("path");
 const fs = require("fs");
 const ROOT = path.join(__dirname, "..");
 const { open } = require(path.join(ROOT, "tools/page.js"));
-const W = 393, H = 852;
+const W = +(process.env.AUDIT_W || 393), H = +(process.env.AUDIT_H || 852);
 const OUT = process.env.AUDIT_OUT || path.join(require("os").tmpdir(), "dawnblade-page-audit.json");
 const ONLY = process.env.HEROES ? process.env.HEROES.split(",").map(Number) : null;
 const STEPS = +(process.env.STEPS || 40);

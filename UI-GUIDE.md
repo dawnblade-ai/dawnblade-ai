@@ -484,3 +484,10 @@ Then open `index.html` at **line 4983** (the trainer's opponent pane) and
 **line 6660** (the table's). Reading those two side by side is the shortest
 path to understanding this file: same screen, two boards, and one of them
 currently tells the truth about the arsenal.
+
+### The 44px tap floor (M)
+Every control takes a tap at least 44 CSS px tall and wide, at 393x852 and at 320x568. `tools/tapjudge.js` measures the HIT AREA (elementFromPoint,
+so an invisible `::after` counts), plus stolen centre taps, clipping and overlap; `tools/tapsweep.js` (`node tools/tapsweep.js`, also a block of
+`tools/page.js` rows) walks every screen; `tools/serverpage.js` has the ranked end screen at 320. Small paint with a big `::after` is the pattern for
+the jump row, JUDGE!!, the status line's buttons and "clear fighter"; the rest grew. No control is exempt (`EXEMPT` in tapjudge.js is empty): add one only
+with a ruling and the section here that records it. The end panel (`.reveal`) scrolls when its stack outgrows the screen.
