@@ -899,6 +899,87 @@ async function toServerChooser(page){
     B.ch.close(); await k.kit.close();
   }
 
+  /* RM2: LEAVING TAKES THE ASK BACK (v6.87) — the page asks, then taps Leave the table: the opponent's phone stops seeing the ask at once */
+  {
+    const k = await rankedKit("rematch-leave", { me: "Dawn Smith" }), pg = k.pg, wd = k.wd, B = k.Bp;
+    await toServerChooser(pg);
+    await click(pg, pg.locator('[data-testid="ranked-switch"]'), "switch to ranked");
+    await toTheBoard(pg, wd, B, { asHost: true, openRe: /^Open a ranked table/ });
+    await playSome(pg, wd, B, 0, 4);
+    B.sess.submit({ t: "concede" }); await wd.settle([B.ch]);
+    await pg.waitForSelector('[data-testid="rematch"]', { timeout: 15000 }).catch(() => {});
+    await click(pg, pg.locator('[data-testid="rematch"]'), "rematch");
+    await pg.waitForSelector('[data-testid="rematch-cancel"]', { timeout: 8000 }).catch(() => {});
+    await wd.settle([B.ch]);
+    row(B.ch.rematch().theirs === true, "rematch leave: the opponent's phone sees the page's ask before it leaves", JSON.stringify(B.ch.rematch()));
+    await click(pg, pg.locator(".endleave"), "Leave the table");
+    for(let i = 0; i < 30 && B.ch.rematch().theirs; i++){ await wd.settle([B.ch]); await new Promise(r => setTimeout(r, 100)); }
+    row(B.ch.rematch().theirs === false && B.ch.rematch().table === null, "rematch leave: tapping Leave the table takes the ask back; the opponent's phone stops showing it at once", JSON.stringify(B.ch.rematch()));
+    B.ch.close(); await k.kit.close();
+  }
+
+  /* RM3: A FULL HOUSE OF OPEN TABLES (v6.87) — the page's player already holds the most open tables; the opponent asked first and the page says yes: the referee
+     refuses the new table, and the page says in one plain sentence what to do. No table is opened; the opponent's ask is untouched. */
+  {
+    const k = await rankedKit("rematch-cap", { me: "Dawn Smith" }), pg = k.pg, wd = k.wd, B = k.Bp;
+    await toServerChooser(pg);
+    await click(pg, pg.locator('[data-testid="ranked-switch"]'), "switch to ranked");
+    await toTheBoard(pg, wd, B, { asHost: true, openRe: /^Open a ranked table/ });
+    await playSome(pg, wd, B, 0, 4);
+    B.sess.submit({ t: "concede" }); await wd.settle([B.ch]);
+    await pg.waitForSelector('[data-testid="rematch"]', { timeout: 15000 }).catch(() => {});
+    const filler = wd.transport("filler"); let made = 0;
+    for(let i = 0; i < wd.server.OPEN_CAP + 1 && made < wd.server.OPEN_CAP; i++){ const c = await filler.post({ op: "create", identity: { token: k.tokMe } }); if(c && c.ok) made++; }
+    const a1 = await B.ch.askRematch(); await wd.settle([B.ch]);
+    await pg.waitForFunction(() => /wants a rematch/.test((document.querySelector('[data-testid="rematch-note"]') || {}).innerText || ""), null, { timeout: 8000 }).catch(() => {});
+    const rows0 = wd.store.rows.size;
+    await click(pg, pg.locator('[data-testid="rematch"]'), "say yes to the rematch");
+    await pg.waitForSelector('[data-testid="rematch-msg"]', { timeout: 8000 }).catch(() => {});
+    const m = await boxes(pg, '[data-testid="rematch-msg"]'), rb = await boxes(pg, '[data-testid="rematch"]');
+    row(a1.state === "waiting" && made === wd.server.OPEN_CAP && m.length === 1 && /^Your open tables are full, and one player can only keep so many\. Close one of these, then tap Ask again\.$/.test(m[0].t), "rematch cap: at the open-table cap the page says, in one plain sentence, to close one of the listed tables", m[0] && m[0].t);
+    row(m.length === 1 && noJargon(m[0].t) && m[0].x >= 0 && m[0].r <= W && m[0].b <= H && await overflow(pg), "rematch cap: the sentence is inside 393x852, no identifier, no horizontal overflow");
+    row(wd.store.rows.size === rows0 && rb.length === 1 && rb[0].h >= 44, "rematch cap: no table was opened, and Rematch is still there to tap again, thumb-sized", JSON.stringify(rb[0])); await thumbs(pg, "rematch cap", ".reveal");
+    B.ch.close(); await k.kit.close();
+  }
+
+  /* RM4: CLOSE A TABLE RIGHT THERE (v6.88) — at the open-table cap the refusal's codes are listed on the end screen, each with a thumb-sized Close; closing one (after
+     the loss warning) turns the button into Ask again, and tapping it opens the rematch and sits the page down at it. At 393x852 and at 320x568. */
+  for(const [w, h] of [[W, H], [320, 568]]){
+    const k = await rankedKit("rematch-capclose-" + w, { me: "Dawn Smith", w, h }), pg = k.pg, wd = k.wd, B = k.Bp, L = "(" + w + "x" + h + ") ";
+    await toServerChooser(pg);
+    await click(pg, pg.locator('[data-testid="ranked-switch"]'), "switch to ranked");
+    await toTheBoard(pg, wd, B, { asHost: true, openRe: /^Open a ranked table/ });
+    await playSome(pg, wd, B, 0, 4);
+    B.sess.submit({ t: "concede" }); await wd.settle([B.ch]);
+    await pg.waitForSelector('[data-testid="rematch"]', { timeout: 15000 }).catch(() => {});
+    const filler = wd.transport("filler"), codes = [];
+    for(let i = 0; i < wd.server.OPEN_CAP; i++){ const c = await filler.post({ op: "create", identity: { token: k.tokMe } }); if(c && c.ok) codes.push(c.table); }
+    await B.ch.askRematch(); await wd.settle([B.ch]);
+    await pg.waitForFunction(() => /wants a rematch/.test((document.querySelector('[data-testid="rematch-note"]') || {}).innerText || ""), null, { timeout: 8000 }).catch(() => {});
+    await click(pg, pg.locator('[data-testid="rematch"]'), "say yes at the cap");
+    await pg.waitForSelector('[data-testid="rematch-cap-open"]', { timeout: 8000 }).catch(() => {});
+    const lst = await boxes(pg, '[data-testid="rematch-cap-open"] .mono'), cl = await boxes(pg, '[data-testid="rematch-cap-open"] .tblopen > button');
+    row(codes.length === wd.server.OPEN_CAP && lst.length === codes.length && lst.every(x => codes.indexOf(x.t) >= 0), L + "rematch cap: the page lists the open tables that fill the cap", JSON.stringify(lst.map(x => x.t)));
+    row(cl.length === codes.length && cl.every(b => b.h >= 44 && b.r - b.x >= 44 && b.x >= 0 && b.r <= w), L + "rematch cap: every table has a Close button, 44px or more, on screen", JSON.stringify(cl.map(b => [b.r - b.x, b.h])));
+    row(await pg.evaluate(x => document.scrollingElement.scrollWidth <= x, w) && noJargon(await pg.evaluate(() => document.querySelector('[data-testid="rematch-row"]').innerText)), L + "rematch cap: no horizontal overflow, no identifier in the words"); await thumbs(pg, "rematch cap close " + w, ".reveal");
+    const rows0 = wd.store.rows.size;
+    await click(pg, pg.locator('[data-testid="rematch-cap-open"] .tblopen > button').first(), "Close the first table");
+    await pg.waitForSelector('[data-testid="rematch-close-yes"]', { timeout: 5000 }).catch(() => {});
+    const yes = await boxes(pg, '[data-testid="rematch-close-yes"]'), no = await boxes(pg, '[data-testid="rematch-close-no"]');
+    row(yes.length === 1 && no.length === 1 && yes[0].h >= 44 && no[0].h >= 44 && yes[0].r <= w && no[0].r <= w, L + "rematch cap: Close asks first (the loss warning), with thumb-sized Yes and Keep", JSON.stringify([yes[0], no[0]]));
+    const first = lst[0].t;
+    await click(pg, pg.locator('[data-testid="rematch-close-yes"]'), "Yes, close it");
+    await pg.waitForFunction(() => /Ask again/i.test((document.querySelector('[data-testid="rematch"]') || {}).innerText || ""), null, { timeout: 8000 }).catch(() => {});
+    const ag = await boxes(pg, '[data-testid="rematch"]'), cn = await boxes(pg, '[data-testid="rematch-capnote"]'), lst2 = await boxes(pg, '[data-testid="rematch-cap-open"] .mono');
+    row(wd.row(first).closed === true && wd.store.rows.size === rows0 && lst2.length === codes.length - 1 && lst2.every(x => x.t !== first), L + "rematch cap: Yes closes that table (and only it) and the list loses it", JSON.stringify(lst2.map(x => x.t)));
+    row(ag.length === 1 && /^ask again$/i.test(ag[0].t) && ag[0].h >= 44 && ag[0].r <= w && cn.length === 1 && /You can ask again now/.test(cn[0].t), L + "rematch cap: the button now says Ask again, with a plain note", ag[0] && ag[0].t);
+    await click(pg, pg.locator('[data-testid="rematch"]'), "Ask again");
+    await pg.waitForFunction(() => !document.querySelector('[data-testid="rematch-row"]'), null, { timeout: 15000 }).catch(() => {});
+    const nt = [...wd.store.rows.keys()].filter(c => codes.indexOf(c) < 0 && wd.row(c) && wd.row(c).ranked === true && wd.row(c).creator === "P-rk-me" && c !== B.code);
+    row(nt.length >= 1 && (await text(pg)).indexOf(nt[nt.length - 1]) >= 0, L + "rematch cap: Ask again opened the rematch and the page sat down at it", nt.join(","));
+    B.ch.close(); await k.kit.close();
+  }
+
   /* R2c — THE RANKED END SCREEN AT 320x568 (M, QUEUE NEXT 6; POLISH.md condition 1). The end panel stacks the title, the names card, the life left,
      the note, the rating change, Find another ranked match, (a joiner's) the Verify paragraph and button, and Leave the table. On the smallest phone
      none may be pushed off the screen with no way back, and every button takes a 44px tap (tools/tapjudge.js; its scroll passes put the panel's
@@ -1289,6 +1370,14 @@ async function toServerChooser(page){
     await k.A.waitForSelector('[data-testid="wait-bar"]', { timeout: 6000 }).catch(() => {});
     const wb = await boxes(k.A, '[data-testid="wait-bar"]');
     row(wb.length === 1 && wb[0].r <= W && seekJargon(wb[0].t) && (await boxes(k.A, '[data-testid="seek-card"]')).length === 0, "waiting: tapping it opens the hero grid with a Still looking bar, and the seek card is out of sight", wb[0] && wb[0].t);
+    /* TIDY (O): practice is the hero grid and the bar, nothing of the lobby's chatter; tap-judged at 393 and 320 */
+    row((await boxes(k.A, '[data-testid="format-note"]')).length === 0 && (await boxes(k.A, '[data-testid="how-btn"]')).length === 0 && !/New to Flesh and Blood|fan-made Silver Age/.test(await text(k.A)), "waiting: in practice the format note and How to play are out of sight");
+    for (const [vw, vh] of [[W, H], [320, 568]]) {
+      await k.A.setViewportSize({ width: vw, height: vh }); await wait(350);
+      const r = await judgeScreen(k.A), bad = ["small", "stolen", "clipped", "overlap"].flatMap(x => r[x].map(f => x + ": " + f.m)), wbx = await boxes(k.A, '[data-testid="wait-bar"]'), bk = await boxes(k.A, '[data-testid="wait-back"]');
+      row(bad.length === 0 && wbx.length === 1 && wbx[0].x >= 0 && wbx[0].r <= vw && bk.length === 1 && bk[0].h >= 44 && bk[0].r <= vw && await k.A.evaluate(w => document.scrollingElement.scrollWidth <= w, vw), "waiting: practice screen at " + vw + " wide: every tap 44 px, no overlap, bar and back button on screen, no sideways scroll", bad.join(" | ").slice(0, 300) + " " + JSON.stringify(bk[0]));
+    }
+    await k.A.setViewportSize({ width: W, height: H }); await wait(300);
     await wait(400);
     row(k.sk.q.size === 1 && !!aTable && k.wd.row(aTable) && k.wd.row(aTable).closed !== true, "waiting: the search is NOT cancelled by practising (A still queued, table open)", "queue " + k.sk.q.size);
     await k.A.locator(".hcard").first().click(); await k.A.locator(".battlebtn").first().click();
@@ -1308,6 +1397,29 @@ async function toServerChooser(page){
     const bad = k.kA.errors.concat(k.kB.errors).filter(e => !/404|Failed to load resource/.test(e));
     row(bad.length === 0 && k.wd.errors.length === 0, "waiting: no page error and no internal error", bad.concat(k.wd.errors).join(" | ").slice(0, 200));
     await k.kA.close(); await k.kB.close();
+  }
+  /* K1c: THE USUAL WAIT. A waiting seeker is told how long players usually wait — only when the server had 5+ completed seeks to say (011_seek_wait.sql);
+     with none the card says nothing; the line is plain, inside the screen, and goes when the search is over */
+  {
+    const k = await seekKit("usual");
+    for(const sec of [30, 40, 50, 60, 1000]) k.sk.log.push({ ranked: false, s: sec, at: k.sk.clock });   /* median 50 -> "about 50 seconds" */
+    await toFirst(k.A); await toFirst(k.B);
+    await click(k.A, k.A.locator('[data-testid="seek-open"]'), "A: find a match");
+    await k.A.waitForSelector('[data-testid="seek-typical"]', { timeout: 8000 }).catch(() => {});
+    const ty = await boxes(k.A, '[data-testid="seek-typical"]');
+    row(ty.length === 1 && ty[0].t === "Players usually find a match in about 50 seconds." && ty[0].x >= 0 && ty[0].r <= W && ty[0].b <= H && seekJargon(ty[0].t), "waiting: the card says how long players usually wait, from the day's completed seeks", ty[0] && ty[0].t);
+    await click(k.B, k.B.locator('[data-testid="seek-open"]'), "B: find a match");
+    await lobbyUp(k.A);
+    row((await boxes(k.A, '[data-testid="seek-typical"]')).length === 0, "waiting: the line is gone once the match is made");
+    await k.kA.close(); await k.kB.close();
+    const q = await seekKit("usualnone");
+    for(const sec of [30, 40, 50, 60]) q.sk.log.push({ ranked: false, s: sec, at: q.sk.clock });   /* four: too few to say anything */
+    await toFirst(q.A);
+    await click(q.A, q.A.locator('[data-testid="seek-open"]'), "A: find a match, with too little to go on");
+    await q.A.waitForFunction(() => /Looking for an opponent/.test(document.body.innerText), null, { timeout: 8000 }).catch(() => {});
+    await wait(500);
+    row((await boxes(q.A, '[data-testid="seek-typical"]')).length === 0 && (await boxes(q.A, '[data-testid="seek-card"]')).length === 1, "waiting: with too few completed seeks the card says nothing about the usual wait");
+    await q.kA.close(); await q.kB.close();
   }
   /* K2: Stop looking takes A out of the queue and closes the table; a ranked search from the server screen needs a name and meets only a ranked seeker */
   {

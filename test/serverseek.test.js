@@ -11,6 +11,8 @@
      (5) STALE MATCHES ARE SKIPPED — a queued table that was closed meanwhile is never handed out; the queue is asked again.
      (6) A SEEKER WHO HELD A TABLE AND IS MATCHED ELSEWHERE — their own table is closed (the race of two simultaneous first seekers).
      (9) THE RATING WINDOW — a ranked seek pairs only inside 100 + 50 per 20 s waited (010_rating_window.sql); casual never windowed.
+    (10) THE USUAL WAIT — a waiting answer carries `typical` (the day's median wait, seconds) only when 5+ seeks were completed; none, a failing
+         statement or a missing dependency answer without it; kinds are counted apart; a heartbeat after the match never carries it (011_seek_wait.sql).
      (7) THE EDGES — no identity, a forged one, bad fields, no queue wired; the cap of open tables still applies; the answers carry public keys only. */
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -31,7 +33,7 @@ function loadServer(edits){
   return m.exports;
 }
 const probe = f => { try { return f(); } catch(e){ if(e && /sabotage anchor/.test(e.message)) throw e; return ["the probe threw: " + (e && e.message)]; } };
-const KEYS = ["beat", "ok", "state", "table"];
+const KEYS = ["beat", "ok", "state", "table", "typical"];
 
 function world(server, o){
   o = o || {};
@@ -77,7 +79,7 @@ test("(1) two strangers meet at the first one's table; the heartbeat hears it; a
   assert.deepEqual(meetFailures(SERVER), []);
   assert.ok(probe(() => meetFailures(SERVER, {retake: true})).length > 0, "sabotage (a taken seek matched again) must fail");
   assert.ok(probe(() => meetFailures(SERVER, {selfMatch: true})).length > 0, "sabotage (a seeker matched to itself) must fail");
-  assert.ok(probe(() => meetFailures(loadServer([["if(a.state === \"waiting\" || a.state === \"taken\") return fin({ok: true, state: a.state, table: a.table, beat: SEEK_BEAT});", "if(a.state === \"waiting\" || a.state === \"taken\") return fin({ok: true, state: a.state, table: a.table});"]]))).length > 0, "sabotage (no beat) must fail");
+  assert.ok(probe(() => meetFailures(loadServer([["state: \"waiting\", table: a.table, beat: SEEK_BEAT, ...(t == null", "state: \"waiting\", table: a.table, ...(t == null"]]))).length > 0, "sabotage (no beat on waiting) must fail");
 });
 
 /* ---------------------------------------------------------------------------------------------- (2) */
@@ -297,4 +299,60 @@ test("(9) ranked pairing by rating: 400 apart wait, 50 apart pair at once, the w
   assert.ok(probe(() => windowFailures({noWiden: true})).length > 0, "sabotage (window never widens) must fail");
   assert.ok(probe(() => windowFailures({casualWindow: true})).length > 0, "sabotage (casual windowed) must fail");
   assert.ok(probe(() => windowFailures({noCap: true})).length > 0, "sabotage (window never opens fully) must fail");
+});
+
+/* ---------------------------------------------------------------------------------------------- (10) */
+function typicalFailures(server, so, deps){
+  const bad = [], w = world(server, {salt: "typ", seek: so});
+  if(deps) Object.assign(w.deps, deps(w));
+  const A = w.player("pa"), B = w.player("pb"), C = w.player("pc", "Cora"), D = w.player("pd", "Dale");
+  const first = w.seek(A);
+  if(first.state !== "waiting") return ["the first seeker did not wait: " + JSON.stringify(first)];
+  if("typical" in first) bad.push("a number was told with no completed seeks behind it: " + JSON.stringify(first));
+  /* four completed friendly seeks (10,20,30,40 s) are still too few */
+  for(const s of [10, 20, 30, 40]) w.sk.log.push({ranked: false, s, at: w.sk.clock});
+  if("typical" in w.seek(A, {table: first.table})) bad.push("four seeks were enough to tell a number");
+  w.sk.log.push({ranked: false, s: 1000, at: w.sk.clock});   /* the fifth: median 30 */
+  const t5 = w.seek(A, {table: first.table});
+  if(t5.typical !== 30) bad.push("five friendly seeks (10,20,30,40,1000) did not tell the median 30: " + JSON.stringify(t5));
+  /* ranked is counted apart: the friendly log tells a ranked seeker nothing */
+  const r1 = w.seek(C, {ranked: true});
+  if(r1.state !== "waiting" || "typical" in r1) bad.push("friendly seeks were told to a ranked seeker: " + JSON.stringify(r1));
+  for(const s of [7, 7, 7, 7, 7]) w.sk.log.push({ranked: true, s, at: w.sk.clock});
+  const r2 = w.seek(C, {ranked: true, table: r1.table});
+  if(r2.typical !== 10) bad.push("five ranked 7 s waits were not told as 10 s (rounded up to 5): " + JSON.stringify(r2));
+  /* a day later the log is stale: nothing */
+  w.sk.clock += 86400e3 + 1000;
+  if("typical" in w.seek(A, {table: first.table})) bad.push("a day-old log was still told");
+  w.sk.clock -= 86400e3 + 1000;
+  /* the heartbeat that hears 'taken' carries nothing; the matched answer carries nothing */
+  const m = w.seek(B);
+  if(m.state !== "matched" || "typical" in m) bad.push("a matched answer carried a number: " + JSON.stringify(m));
+  const tk = w.seek(A, {table: first.table});
+  if(tk.state !== "taken" || "typical" in tk) bad.push("a taken answer carried a number: " + JSON.stringify(tk));
+  /* a failing or nonsense statement never fails the seek: the line is simply left out */
+  for(const [what, f] of [["throws", () => { throw new Error("boom"); }], ["nonsense", () => ({n: 9, typical: -3})], ["fractional", () => ({n: 9, typical: 7.5})], ["too few", () => ({n: 2, typical: 30})], ["none", () => null]]){
+    const w2 = world(server, {salt: "typ2" + what, seek: so}); w2.deps.seekWait = f;   /* handleNow is synchronous: a rejecting statement is held by the async probe in the test body */
+    const P = w2.player("px"), got = w2.seek(P);
+    if(!got.ok || got.state !== "waiting" || "typical" in got) bad.push("a " + what + " wait statement did not leave the line out: " + JSON.stringify(got));
+  }
+  const w3 = world(server, {salt: "typ3", seek: {noWait: true}}); const P3 = w3.player("pq"), g3 = w3.seek(P3);
+  if(!g3.ok || g3.state !== "waiting" || "typical" in g3) bad.push("no wait dependency broke the seek or told a number: " + JSON.stringify(g3));
+  return bad;
+}
+test("(10) the usual wait: told only from 5+ completed seeks of the same kind in the last day; never on a match; a failing statement leaves it out", async () => {
+  assert.deepEqual(typicalFailures(SERVER), []);
+  assert.ok(probe(() => typicalFailures(SERVER, {noWait: true})).length > 0, "sabotage (the queue tells nothing) must fail");
+  assert.ok(probe(() => typicalFailures(loadServer([["intIn(v.n, 5, 1e9)", "intIn(v.n, 0, 1e9)"]]))).length > 0, "sabotage (told from too few) must fail");
+  assert.ok(probe(() => typicalFailures(loadServer([["intIn(v.typical, 5, 86400) ? v.typical : null", "v.typical"]]))).length > 0, "sabotage (nonsense passed on) must fail");
+  assert.ok(probe(() => typicalFailures(loadServer([["try { const r = deps.seekWait(ranked); return isP(r) ? r.then(ok, () => null) : ok(r); } catch(_){ return null; }", "const r = deps.seekWait(ranked); return isP(r) ? r.then(ok) : ok(r);"]]))).length > 0, "sabotage (a failing statement fails the seek) must fail");
+  assert.ok(probe(() => typicalFailures(loadServer([["fin({ok: true, state: \"taken\", table: a.table, beat: SEEK_BEAT})", "fin({ok: true, state: \"taken\", table: a.table, beat: SEEK_BEAT, typical: 30})"]]))).length > 0, "sabotage (told on taken) must fail");
+  assert.ok(probe(() => typicalFailures(SERVER, {}, () => ({seekWait: r => ({n: 9, typical: 25})}))).length > 0, "sabotage (kinds not counted apart) must fail");
+  /* the async statement: a rejection is swallowed on the real (promise) path */
+  const w = world(SERVER, {salt: "typasync"}); w.deps.seekWait = () => Promise.reject(new Error("boom"));
+  const out = await SERVER.handle({op: "seek", identity: {token: w.player("pz").tok}}, w.deps);
+  assert.ok(out.ok && out.state === "waiting" && !("typical" in out), "a rejecting wait statement must not fail the seek: " + JSON.stringify(out));
+  const w4 = world(SERVER, {salt: "typasync2"}); w4.deps.seekWait = () => Promise.resolve({n: 9, typical: 25});
+  const ok4 = await SERVER.handle({op: "seek", identity: {token: w4.player("py").tok}}, w4.deps);
+  assert.equal(ok4.typical, 25, "an async wait statement's number must reach the answer");
 });

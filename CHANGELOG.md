@@ -1,3 +1,68 @@
+## v6.90 — Close a full table right on the rematch screen
+
+- **The cap no longer strands a rematch (worker P, the v6.87 follow-up).** When a rematch is refused because the
+  player's open tables are full, the end screen now lists those tables, each with a 44 px *Close* button.
+  - *Close* first warns that it counts as a loss if that table is a ranked game under way, with *Yes* and *Keep*.
+  - *Yes* closes that one table. The main button then reads *Ask again*, and the rematch opens without leaving the screen.
+  - Under the hood it is `servertable` `handle.closeOwn(code)`, the existing close path. No referee change.
+  - serverpage: 16 new rows at 393 and 320; 392 rows pass.
+- **Feed voice audited (worker O).** All 19 second-person literals in `effects.js` are prompt text addressed to that
+  side, refusals returned to the actor, or code. None is a feed line, so the pin stays at 19 and the drill records the audit.
+- **Watch: the trainer's babel block is at 499,004 characters.** Babel deoptimises above 500,000, and that console
+  error crashes the page drives. A retired comment was trimmed to make room (history in LESSONS.md), and
+  slicecensus's dummydefence slice was repinned to 8643. The next page addition must make room first (QUEUE).
+
+## v6.89 — Find a match says how long players usually wait
+
+- **Matchmaking visibility (QUEUE item 5, worker Q).** The *Finding a match* card shows one quiet line under the
+  clock: *Players usually find a match in about 50 seconds* (from 90 s on it says minutes).
+  - **Where the number comes from.** It is the median wait of the last 24 hours' completed seeks of that kind (ranked
+    and friendly counted apart), rounded up to 5 s.
+  - **When it hides.** With fewer than 5 completed seeks it shows nothing rather than a made-up number. It is gone
+    when the search ends.
+  - **No new request.** It rides the existing seek and heartbeat answer (`typical`), and the first screen still makes
+    no request while a player only looks.
+- **`server/supabase/011_seek_wait.sql`** (run on live 2026-11-24): `seek_wait_log` holds only the kind and the
+  seconds (no player, no table; RLS forced). A trigger on `seeks` fills it the first time `taken_at` is set, and
+  `seek_step` is untouched. Rows prune at 7 days. Cancelled and stale seeks are never counted.
+  `seek_wait_stats(p_ranked) -> {n, typical}`.
+  - The referee adds `typical` only for a sane answer. A missing table, an error or nonsense means no key, and the
+    seek never fails because of it.
+  - `tools/sql-sab-011.js`: 15 sabotages, all caught. PGlite runs 001..011. Deno rehearsal passes in both variants.
+    The serverseek drill gains row 10.
+- **Not built, deliberately:** "players looking near your rating". While you wait, anyone inside your window would
+  already have been matched, so that count would always read 0.
+
+## v6.88 — Practice while waiting: tidy, and measured
+
+- **Tidy (QUEUE item 3, worker O).** While the *Still looking* bar is up, the practice hero grid no longer carries the
+  lobby's format note or *How to play* underneath. serverpage +3 rows: both are out of sight, and the practice screen
+  passes the tap judge at 393 and 320 (44 px floor, no overlap, bar and back button on screen, no sideways scroll).
+  Sabotaged: with the guard removed, the note row and the 320 row fail.
+- **Measured (item 2).** New `tools/perf-practice.js` (not in npm test): 4x CPU throttle, 120 taps of one seeded
+  trainer game with the seek heartbeating. Per-tap main-thread ms, p50/p95/worst:
+  - no search: 27/102/156;
+  - the real 20 s heartbeat: 30/90/209;
+  - a 2 s heartbeat (10x the real rate): 29/80/138.
+
+  All inside run-to-run noise. Every long task came from the game's own moves; none came from a beat. A beat on the idle
+  grid costs about 6 ms/s and causes no DOM mutations. The *match is ready* banner costs about 50 ms, with no long task.
+  Nothing needed fixing.
+
+## v6.87 — Leaving takes the rematch ask back; a live rematch probe
+
+- **Leave takes the ask back (QUEUE item 4, worker P).** Every *Leave* button on a finished server table now withdraws
+  a pending rematch ask at once (`servertable` `close()` sends `op:"rematch", cancel:true`, best effort). The other
+  player's end screen stops saying "they want a rematch" right away. Before, the ask went stale only after two minutes.
+  No referee change: cancel and its push already existed.
+- **The full-tables refusal reads plainly.** A ranked player at the open-table cap who says yes to a rematch is told:
+  *Your open tables are full… Close one from Find an opponent, then you and your opponent can ask for a rematch again.*
+  serverpage "rematch cap" rows (5 filler tables, no new table opened, the button keeps its 44 px).
+- **`tools/rematchprobe.js`.** Two scripted seats go through a whole rematch over HTTPS: concede, ask, the other seat
+  learns on resync, the asker leaves (ask withdrawn), re-sits, both ask, the same new code, both sit, every table closed.
+  livecheck.js and the Deno rehearsal (both variants) run it. `test/rematchprobe.test.js` runs it offline, sabotaged.
+- Follow-up (open): inline *Close* buttons for the cap's open codes in the rematch row (the refusal already carries them).
+
 ## v6.86 — The tap is never lost: a 44 px floor on every screen, and an end panel that scrolls
 
 - **POLISH.md condition 1, swept (NEXT 5 and 6).** Every screen was measured at 393x852 and 320x568 by the area a tap

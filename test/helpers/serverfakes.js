@@ -202,7 +202,13 @@ function withSeek(o){
   o = o || {};
   const q = new Map(); let born = 0;
   const rate = p => (o.rate ? o.rate(p) : null) ?? 1200;
-  const st = {q, clock: 1700000000000, steps: 0, cancels: 0,
+  const st = {q, clock: 1700000000000, steps: 0, cancels: 0, log: [],
+    /* 011_seek_wait.sql's seek_wait_stats: the median wait (rounded UP to 5 s) of the last 24 h's completed seeks of this kind; null under 5 of them */
+    wait(ranked){
+      const live = st.log.filter(e => e.ranked === (ranked === true) && e.at >= st.clock - 86400000).map(e => e.s).sort((a, b) => a - b), n = live.length;
+      const med = n === 0 ? 0 : n % 2 ? live[(n - 1) / 2] : (live[n / 2 - 1] + live[n / 2]) / 2;
+      return {n, typical: n >= 5 ? Math.ceil(med / 5) * 5 : null};
+    },
     age(ttl){ if(o.noAge) return; for(const [p, e] of q) if(e.seen < st.clock - ttl * 1000) q.delete(p); },
     seek(x){
       if(x.cancel === true){
@@ -223,6 +229,7 @@ function withSeek(o){
         .sort((a, b) => a[1].born - b[1].born || (a[0] < b[0] ? -1 : 1))[0];
       if(other){
         other[1].taken = true; other[1].seen = st.clock;
+        if(!o.noLog) st.log.push({ranked: other[1].ranked, s: Math.max(0, Math.round((st.clock - other[1].at) / 1000)), at: st.clock});   /* 011_seek_wait.sql's trigger */
         if(mine){ if(other[0] !== x.player) q.delete(x.player); drop = mine.table; }
         if(!drop && x.table) drop = x.table;
         return out("matched", other[1].table);
@@ -232,7 +239,7 @@ function withSeek(o){
       return out("none");
     },
     count(ttl){ const live = [...q.values()].filter(e => !e.taken && e.seen >= st.clock - ttl * 1000); return {friendly: live.filter(e => !e.ranked).length, ranked: live.filter(e => e.ranked).length}; },
-    deps: () => ({seek: x => st.seek(x), seekCount: ttl => st.count(ttl)})};
+    deps: () => ({seek: x => st.seek(x), seekCount: ttl => st.count(ttl), ...(o.noWait ? {} : {seekWait: r => st.wait(r)})})};
   return st;
 }
 function hash(s){ let h = 7; for(let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return h; }

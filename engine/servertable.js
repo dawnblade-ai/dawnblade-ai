@@ -468,7 +468,14 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep, who){
         (o.setTimeout || setTimeout)(() => { if(!done){ done = true; sink = prev; res(null); } }, ms || 2500);
       });
     },
-    close(){ stop(); },
+    /* v6.87: LEAVING TAKES A PENDING REMATCH ASK BACK — the other player's page stops saying "wants a rematch" at once, not after REMATCH_MS. Best effort,
+       sent before the table shuts; never waited for, never thrown. A code already agreed (rm.table) is not taken back. */
+    close(){
+      if(!closed && rm.want[seat] === true && !rm.table){
+        try { const p = call(T, {op: "rematch", table: code, seat, key, cancel: true}); if(p && p.catch) p.catch(() => {}); } catch(_){}
+      }
+      stop();
+    },
     status: () => st,
     /* beyond room.js's shape */
     peerHeard: () => peerHeard,
@@ -543,6 +550,9 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep, who){
       }
       throw fail("unavailable", "the table kept changing");
     },
+    /* v6.88: close one of THIS player's own open tables from here (the end screen's full-tables help): the same call as `closeTable`, over this table's wire and
+       sign-in. Resolves as closeTable does; rejects with its `.why`. */
+    closeOwn: c => closeTable({transport: T, identity: o.identity, sleep: o.sleep}, c),
     owned: () => owned,                  /* this seat is bound to this phone's player */
     quietFor: () => (o.now || Date.now)() - lastIn,
     setHave(fn){ haveFn = fn; },
@@ -705,7 +715,7 @@ function defaultIdentity(config, keep, root_){
 /* ---- FIND A MATCH (S6.1): the queue of players looking for an opponent -------------------------------------------------------------------------
    o: {transport, identity}. `seek(o, {ranked?, table?, cancel?})` asks the referee's queue once and resolves with
      {state: "matched", table}           somebody was waiting: sit down at `table` (sitAt) — the game starts at once
-     {state: "waiting" | "taken", table, beat}   wait at `table` (this player's own: sitAt it, then call seek again every `beat` ms with {table});
+     {state: "waiting" | "taken", table, beat, typical?}   (`typical`: the usual wait in seconds, only when the server had enough seeks to say)   wait at `table` (this player's own: sitAt it, then call seek again every `beat` ms with {table});
                                          "taken": somebody is on their way there
      {state: "cancelled" | "none"}        (cancel) the seek is gone and its table closed
    `ranked: true` queues for a ranked table (a chosen name). The server decides every match; nothing here judges one. Rejects with `.why`: unavailable (no sign-in,
@@ -723,7 +733,8 @@ async function seek(o, q){
   if(r.ok){
     const st = r.state;
     if((st === "matched" || st === "waiting" || st === "taken") && isValid(normalize(r.table)))
-      return {state: st, table: normalize(r.table), ...(st !== "matched" ? {beat: Number.isInteger(r.beat) && r.beat >= 2000 ? r.beat : 20000} : {})};
+      return {state: st, table: normalize(r.table), ...(st !== "matched" ? {beat: Number.isInteger(r.beat) && r.beat >= 2000 ? r.beat : 20000} : {}),
+        ...(st === "waiting" && Number.isInteger(r.typical) && r.typical >= 5 && r.typical <= 86400 ? {typical: r.typical} : {})};
     if(st === "cancelled" || st === "none") return {state: st};
     throw fail("unavailable", "an answer that is not a seek");
   }

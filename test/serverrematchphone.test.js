@@ -85,3 +85,46 @@ test("(d) a missed push heals: the next resync carries who asked and the code", 
   assert.deepEqual(await guard(rematchFailures(ST, {salt: "drop", dropPush: true})), []);
   assert.ok((await guard(rematchFailures(stCopy([["if(r && r.ok){ readNames(r.names); readRank(r); readRematch(r.rematch); ingest(r.frames); ok1 = true; }", "if(r && r.ok){ readNames(r.names); readRank(r); ingest(r.frames); ok1 = true; }"]]), {salt: "drop", dropPush: true}))).length > 0, "sabotage (a resync ignores the rematch) must fail");
 });
+
+/* (e) LEAVING TAKES THE ASK BACK (v6.87): a phone that asked and then leaves the table (closes it) cancels its ask, so the other phone stops seeing
+   "wants a rematch" at once; a phone that never asked sends nothing; a phone that closes after the code is agreed does not cancel it. */
+async function leaveFailures(M, o){
+  o = o || {};
+  const bad = [], w = rankedWorld("rmp-leave-" + (o.salt || "a"));
+  const P = w.player("P-rml-zero", "Dawn Smith"), Q = w.player("P-rml-one", "Rival One");
+  const mk = (n, h, pl, extra) => PH.makePhone(w.world, n, {hero: h, rand: T.seeded("rml|" + n + "|" + (o.salt || "")), ST: M, throws: [["rock", "rock"], ["paper", "rock"]], identity: pl.identity, ...(extra || {})});
+  const A = mk("A", "blaze", P, {ranked: true}), B = mk("B", "dorinthea", Q);
+  if(!await seat(w, A, B)) return ["the game did not start"];
+  B.sess.submit({t: "concede"});
+  await w.world.settle([A.ch, B.ch]);
+  await A.ch.askRematch(); await w.world.settle([A.ch, B.ch]);
+  if(!B.ch.rematch().theirs) return ["the other phone did not hear the ask"];
+  A.ch.close(); await w.world.settle([B.ch]);
+  if(B.ch.rematch().theirs) bad.push("the other phone still shows the ask after the asker left");
+  return bad;
+}
+test("(e) leaving the table takes a pending rematch ask back; the other phone stops seeing it", async () => {
+  assert.deepEqual(await guard(leaveFailures(ST)), []);
+  assert.ok((await guard(leaveFailures(stCopy([["      if(!closed && rm.want[seat] === true && !rm.table){", "      if(false){"]]), {salt: "sab"}))).length > 0, "sabotage (close does not cancel) must fail");
+});
+
+/* (f) CLOSE ONE OF MY OWN TABLES FROM HERE (v6.88): the handle's `closeOwn` is closeTable over the same wire and sign-in — it ends the player's own table
+   and rejects with the referee's word for somebody else's / a missing one. Sabotage: a handle with no sign-in closes nothing. */
+async function closeOwnFailures(M){
+  const bad = [], w = rankedWorld("rmp-closeown");
+  const P = w.player("P-rmc-zero", "Dawn Smith"), Q = w.player("P-rmc-one", "Rival One");
+  const mk = (n, h, pl, extra) => PH.makePhone(w.world, n, {hero: h, rand: T.seeded("rmc|" + n), ST: M, throws: [["rock", "rock"], ["paper", "rock"]], identity: pl.identity, ...(extra || {})});
+  const A = mk("A", "blaze", P, {ranked: true}), B = mk("B", "dorinthea", Q);
+  if(!await seat(w, A, B)) return ["the game did not start"];
+  const mine = await M.startTable({transport: w.world.transport("S"), identity: P.identity, tune: {fallbackMs: 0, pollMs: 0}});
+  const r = await A.ch.closeOwn(mine.code).catch(e => ({threw: e.why}));
+  if(!r || r.closed !== true) bad.push("closeOwn did not close the player's own table: " + JSON.stringify(r));
+  if(w.world.row(mine.code).closed !== true) bad.push("the table is not closed on the server");
+  const r2 = await B.ch.closeOwn(A.code).catch(e => ({threw: e.why}));
+  if(!r2 || r2.threw !== "not-creator") bad.push("closing somebody else's table was not refused as not-creator: " + JSON.stringify(r2));
+  return bad;
+}
+test("(f) closeOwn closes the player's own table over the table's wire and refuses another's", async () => {
+  assert.deepEqual(await guard(closeOwnFailures(ST)), []);
+  assert.ok((await guard(closeOwnFailures(stCopy([["    closeOwn: c => closeTable({transport: T, identity: o.identity, sleep: o.sleep}, c),", "    closeOwn: c => Promise.resolve({closed: false}),"]])))).length > 0, "sabotage (closeOwn does nothing) must fail");
+});

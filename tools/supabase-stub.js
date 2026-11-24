@@ -127,6 +127,10 @@ function makeStub(o){
           }
           return reply(200, out);
         }
+        if(req.method === "POST" && url.pathname === "/rest/v1/rpc/seek_wait_stats"){   /* 011_seek_wait.sql: the usual wait (the drills' fake queue's log) */
+          stats.seekWaits = (stats.seekWaits || 0) + 1; seekQ.clock = Date.now();
+          return reply(200, seekQ.wait(JSON.parse(body).p_ranked));
+        }
         if(req.method === "POST" && /^\/rest\/v1\/rpc\/seek_(step|cancel|count)$/.test(url.pathname)){   /* 009_seek.sql: the queue (the drills' fake queue, on this process's clock) */
           stats.seeks = (stats.seeks || 0) + 1;
           const a = JSON.parse(body), fn = url.pathname.split("_").pop();

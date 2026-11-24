@@ -211,6 +211,15 @@ const mkSeekCount = (c: any) => async (ttl: number) => {
     return await r.json();
   } finally { c.get += nowMs() - t; }
 };
+const mkSeekWait = (c: any) => async (ranked: boolean) => {
+  const t = nowMs();
+  try {
+    const k = conf();
+    const r = await fetch(k.url + "/rest/v1/rpc/seek_wait_stats", {method: "POST", headers: k.headers, body: JSON.stringify({p_ranked: ranked === true})});
+    if(!r.ok) throw new Error("seek wait " + r.status);
+    return await r.json();
+  } finally { c.get += nowMs() - t; }
+};
 const mkBroadcast = (c: any) => async (topic: string, payload: any) => {
   const body = JSON.stringify({messages: [{topic, event: "frame", payload, private: false}]});
   if(body.length > MAX_BROADCAST) throw new Error("broadcast too large: " + body.length);
@@ -331,7 +340,7 @@ Deno.serve(async (req: Request) => {
   const tr = nowMs();
   try { r = ready(); } catch(e){ console.error(e); return send(req, {ok: false, refused: "internal"}); }
   c.ready = nowMs() - tr;
-  const answer = await G.DawnServer.handle(request, {store: mkStore(c), broadcast: mkBroadcast(c), deal: r.deal, build: r.build, now: () => Date.now(), ladder: mkLadder(c), seekCount: mkSeekCount(c),
+  const answer = await G.DawnServer.handle(request, {store: mkStore(c), broadcast: mkBroadcast(c), deal: r.deal, build: r.build, now: () => Date.now(), ladder: mkLadder(c), seekCount: mkSeekCount(c), seekWait: mkSeekWait(c),
     ...(Deno.env.get("TABLE_IDENTITY") === "off" ? {} : {identify: mkIdentify(c), rename: mkRename(c), mint: mkMint(c), redeem: mkRedeem(c), rating: mkRating(c), record: mkRecord(c), seek: mkSeek(c)}),
     log: (e: any) => console.error(String(e && e.stack || e))});          // operator logs only; an error never rides a response
   return send(req, answer, 200, timingHeaders(c, cold));
