@@ -7,7 +7,7 @@ CHANGELOG.md (v6.30 on; older in `docs/archive/CHANGELOG-to-v6.29.md`) and LESSO
 ## HANDOFF — START HERE (CEO session_013xG9x8HgMKuk2aa2wUQPCV, 2026-11-24 night, at v6.79)
 
 **State:** live = **v6.79** on `main`, livecheck ALL PASS. Function `table` v110 = `v6.79 · sage-v19`, stamped, `--check` OK.
-WIRE_V 49, DATA_VER sage-v19, 17 heroes, approx ledger 0 open, pool 455/455. **WORKERS: NONE** (CEO ran the sweeps itself).
+WIRE_V 49, DATA_VER sage-v19, 17 heroes, approx ledger 0 open, pool 455/455. **WORKERS IN FLIGHT (CEO session_013xG9xCCHmaDbKTPm38cqzb, 2026-11-24 14:28Z, Sonnet):** J `session_013xG9x8wauLXTKFuj1vwrUY` (ship/j-pitchsearch: Sharp searches WHICH card to pitch, item 00a) · K `session_013xG9xBb6BYLKcSfaSMLzkX` (ship/k-handworth: hand composition by printed def in laEval, item 00b). CEO: chaos d14.
 
 **This CEO:** v6.79 = Sharp also proposes every attack at the hero AND at each ally (`SPXLATGT`, `laCands`; CR 1.4.5). 24 seeds,
 own seat: +19 (s1) and +9 (s2) = +28 of 6528, no hero down > 3. Small but principled and both samples positive. Drill latarget.
