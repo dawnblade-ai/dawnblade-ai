@@ -131,7 +131,7 @@ img{display:block;max-width:100%}
 .statrow{display:flex;gap:14px;margin:10px 0;font-family:'Spline Sans Mono';font-size:var(--fs-xl)}
 .statrow b{color:var(--y)}
 .bigbtn{display:block;width:100%;padding:14px;background:var(--r);color:var(--bone);font-family:'Big Shoulders Display';font-weight:800;font-size:19px;letter-spacing:.1em;text-transform:uppercase;text-align:center;margin-top:12px}
-.bigbtn.alt{background:var(--forge2);border:1px solid var(--line);color:var(--bone);font-size:var(--fs-body);padding:11px}
+.bigbtn.alt{background:var(--forge2);border:1px solid var(--line);color:var(--bone);font-size:var(--fs-body);padding:11px;min-height:44px}
 .bigbtn:disabled{opacity:.4}
 
 /* deck viewer */
@@ -1144,7 +1144,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "6.82"; /* v6.82 - Find an opponent is short: who holds the deck at each table is one sheet, one tap away; see CHANGELOG.md. */
+window.APP_VER = "6.83"; /* v6.83 - Rematch: both players say yes on the end screen and sit down together at a new table of the same kind; see CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
