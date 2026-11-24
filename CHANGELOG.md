@@ -1,3 +1,17 @@
+## v6.87 — Leaving takes the rematch ask back; a live rematch probe
+
+- **Leave takes the ask back (QUEUE item 4, worker P).** Every *Leave* button on a finished server table now withdraws
+  a pending rematch ask at once (`servertable` `close()` sends `op:"rematch", cancel:true`, best effort). The other
+  player's end screen stops saying "they want a rematch" right away. Before, the ask went stale only after two minutes.
+  No referee change: cancel and its push already existed.
+- **The full-tables refusal reads plainly.** A ranked player at the open-table cap who says yes to a rematch is told:
+  *Your open tables are full… Close one from Find an opponent, then you and your opponent can ask for a rematch again.*
+  serverpage "rematch cap" rows (5 filler tables, no new table opened, the button keeps its 44 px).
+- **`tools/rematchprobe.js`.** Two scripted seats go through a whole rematch over HTTPS: concede, ask, the other seat
+  learns on resync, the asker leaves (ask withdrawn), re-sits, both ask, the same new code, both sit, every table closed.
+  livecheck.js and the Deno rehearsal (both variants) run it. `test/rematchprobe.test.js` runs it offline, sabotaged.
+- Follow-up (open): inline *Close* buttons for the cap's open codes in the rematch row (the refusal already carries them).
+
 ## v6.86 — The tap is never lost: a 44 px floor on every screen, and an end panel that scrolls
 
 - **POLISH.md condition 1, swept (NEXT 5 and 6).** Every screen was measured at 393x852 and 320x568 by the area a tap
