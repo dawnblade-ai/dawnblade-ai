@@ -402,6 +402,7 @@ async function ladderPhase(label, base, stub, log){
     await LC.seekOverHttp(cfg, [hostTok, guestTok], R);
     await require("./rematchprobe.js").rematchOverHttp(cfg, await Promise.all(["sub-rm-a", "sub-rm-b"].map(async (s, i) => { const t = keyed(s); await post({op: "me", identity: {token: t}, name: i ? "Rematch Bee" : "Rematch Ay"}); return t; })), R);
     R((stub.stats.seeks || 0) - seeks0 >= 4, "seek: the queue was reached through seek_count / seek_step on the stub", String((stub.stats.seeks || 0) - seeks0));
+    R((stub.stats.seekWaits || 0) >= 1, "seek: a waiting answer asked seek_wait_stats (011_seek_wait.sql); the stub had too little to say, and the seek still answered", String(stub.stats.seekWaits || 0));
   }
   R((stub.stats.ladders || 0) - calls0 === 3, "ladder: each of the three requests (public, signed in, forged) was exactly ONE ladder_get call (no call per row)", String((stub.stats.ladders || 0) - calls0));
   /* a ladder of 55 players, and the cases that must not appear */

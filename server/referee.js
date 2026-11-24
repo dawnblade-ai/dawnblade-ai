@@ -1017,6 +1017,14 @@ function opLooking(req, deps){
     return {ok: true, friendly: c.friendly, ranked: c.ranked};
   });
 }
+/* HOW LONG PLAYERS USUALLY WAIT (011_seek_wait.sql): `deps.seekWait(ranked)` -> {n, typical}; `typical` is the median wait in seconds of the day's completed seeks
+   and is null under 5 of them. A waiting seeker's answer carries `typical` (a whole number of seconds) ONLY when the count is real: too little data, a missing
+   dependency or a failing statement all answer without it — a number that cannot be trusted is left out, and the seek itself never fails over it. */
+const typicalWait = (ranked, deps) => {
+  if(typeof deps.seekWait !== "function") return null;
+  const ok = v => v && typeof v === "object" && intIn(v.n, 5, 1e9) && intIn(v.typical, 5, 86400) ? v.typical : null;
+  try { const r = deps.seekWait(ranked); return isP(r) ? r.then(ok, () => null) : ok(r); } catch(_){ return null; }
+};
 function opSeek(req, deps){
   if(req.ranked !== undefined && req.ranked !== true) return no("bad-request");
   if(req.cancel !== undefined && req.cancel !== true) return no("bad-request");
@@ -1051,7 +1059,8 @@ function opSeek(req, deps){
         }));
       }
       if(typeof a.table !== "string" || !ID_RE.test(a.table)) throw new Error("seek answered no table");
-      if(a.state === "waiting" || a.state === "taken") return fin({ok: true, state: a.state, table: a.table, beat: SEEK_BEAT});
+      if(a.state === "waiting") return then(typicalWait(ranked, deps), t => fin({ok: true, state: "waiting", table: a.table, beat: SEEK_BEAT, ...(t == null ? {} : {typical: t})}));
+      if(a.state === "taken") return fin({ok: true, state: "taken", table: a.table, beat: SEEK_BEAT});
       /* matched: hand it out only if it is still a table the caller can sit at */
       return then(seekGood(a.table, who, ranked, deps), good => {
         if(good) return fin({ok: true, state: "matched", table: a.table});
