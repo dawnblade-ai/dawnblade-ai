@@ -1,3 +1,23 @@
+## v6.84 — Ranked pairing by rating: a window that widens while you wait
+
+- **Ranked pairing by rating (NEXT 3).** Find a ranked match paired the oldest seeker first, whatever the two ratings.
+  `server/supabase/010_rating_window.sql` replaces `seek_step`. Now a ranked seek pairs only with a ranked seek whose rating
+  is within a window: ±100 at first, +50 for every 20 s waited. The window uses the **longer** of the two waits, so a fresh
+  arrival's narrow window never holds back someone who has waited longer. From **180 s** of waiting it **opens fully**
+  (CEO decision, a default the user may overrule: a small community needs a game more than a perfect pairing). Among
+  seekers inside the window, the oldest goes first, under 009's lock. An unrated player counts as 1200. Friendly seeks are
+  unchanged. The function's calls are unchanged; the rule lives in SQL alone. **Run on the project 2026-11-24, before this
+  function.**
+- **livecheck knows Rematch.** Its queue check now sits the first seeker down and asks for a rematch before any game. The
+  live function answers `rematch-playing` and writes nothing. That proves the deployed referee carries v6.83's op.
+- **Drills:** a self-check inside 010 (the window's numbers, 400 apart not paired at once or at 100 s but paired by 140 s,
+  600 apart paired only once it opens). `tools/sql-sab-010.js`: 15 sabotages, all caught (window ignored, never widens,
+  never opens fully, opens at 300 s, casual windowed, narrower of the two waits, either wait ignored, unrated as 0, newest
+  first, kind ignored, a taken seek re-matched, a 10 s step, base 200, anon may call). `test/serverseek.test.js` drill 9
+  over the mirrored fake queue (`serverfakes.withSeek` with `rate`): 400 apart pair only after enough heartbeats, 50 apart
+  at once, friendly 400 apart at once, 1000 apart not at 160 s but by 180 s. 3 sabotages each fail it. Worker L built it.
+- **Validation:** npm test 4589 / 4584 pass / 0 fail / 5 skipped; both babel blocks compile; PGlite 001..010 ok, sql-sab-010 15/15 caught. Page unchanged but for APP_VER; no engine, rule, wire or AI change.
+
 ## v6.83 — Rematch: both players say yes, and the same two sit down again
 
 - **Rematch (NEXT 1, second half).** A server game's end screen now offers **Rematch** above *Find another match*. One tap
