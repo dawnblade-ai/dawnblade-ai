@@ -1,3 +1,19 @@
+## v6.88 — Practice while waiting: tidy, and measured
+
+- **Tidy (QUEUE item 3, worker O).** While the *Still looking* bar is up, the practice hero grid no longer carries the
+  lobby's format note or *How to play* underneath. serverpage +3 rows: both are out of sight, and the practice screen
+  passes the tap judge at 393 and 320 (44 px floor, no overlap, bar and back button on screen, no sideways scroll).
+  Sabotaged: with the guard removed, the note row and the 320 row fail.
+- **Measured (item 2).** New `tools/perf-practice.js` (not in npm test): 4x CPU throttle, 120 taps of one seeded
+  trainer game with the seek heartbeating. Per-tap main-thread ms, p50/p95/worst:
+  - no search: 27/102/156;
+  - the real 20 s heartbeat: 30/90/209;
+  - a 2 s heartbeat (10x the real rate): 29/80/138.
+
+  All inside run-to-run noise. Every long task came from the game's own moves; none came from a beat. A beat on the idle
+  grid costs about 6 ms/s and causes no DOM mutations. The *match is ready* banner costs about 50 ms, with no long task.
+  Nothing needed fixing.
+
 ## v6.87 — Leaving takes the rematch ask back; a live rematch probe
 
 - **Leave takes the ask back (QUEUE item 4, worker P).** Every *Leave* button on a finished server table now withdraws
