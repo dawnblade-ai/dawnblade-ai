@@ -963,6 +963,7 @@ img{display:block;max-width:100%}
 .seekbanner button{min-height:44px;padding:0 16px;background:var(--ink);color:var(--y);border:1px solid var(--ink);font-weight:800;letter-spacing:.06em;text-transform:uppercase}
 .waitbar{display:flex;align-items:center;gap:10px;margin:8px 0;padding:10px 12px;background:var(--forge);border:1px solid var(--line)}
 .waitbar span{flex:1;line-height:1.3}
+.waitbar .waittyp{display:block;margin-top:4px;color:var(--mute,inherit);opacity:.8}
 .waitbar button{min-height:44px;padding:0 14px}
 .tblin{width:100%;background:var(--ink);border:1px solid var(--line);color:var(--bone);font-family:'Spline Sans Mono',monospace;font-size:34px;letter-spacing:.24em;text-align:center;text-transform:uppercase;padding:12px 6px}
 .tblin:focus{outline:none;border-color:var(--y)}
@@ -7939,7 +7940,9 @@ function HiddenHandsSheet({open, srvOn, onClose}){
     </div>
   );
 }
-function TableScreen({onBack, onSeated, again, away, onPlayAI}){
+/* THE USUAL WAIT, in words — ONE sentence for the seek card and the practice bar (the number itself is App's: TableScreen tells it up through onTyp) */
+const usualWaitLine = sec => "Players usually find a match in about "+(sec<90 ? sec+" seconds" : Math.round(sec/60)+" minutes")+".";
+function TableScreen({onBack, onSeated, again, away, onPlayAI, typ, onTyp}){
   const [mode,setMode] = uS(null);           /* null | "host" | "join" */
   const [handsOpen,setHandsOpen] = uS(false); /* the honest-lines sheet (v6.82) */
   const [code,setCode] = uS("");
@@ -8125,7 +8128,9 @@ function TableScreen({onBack, onSeated, again, away, onPlayAI}){
   const [seekRk,setSeekRk] = uS(false);
   const [seekT0,setSeekT0] = uS(0);
   const [seekNote,setSeekNote] = uS(null);
-  const [seekTyp,setSeekTyp] = uS(null);   /* the usual wait in seconds, told by the waiting answer only when the server had enough seeks to say */
+  /* the usual wait in seconds, told by the waiting answer only when the server had enough seeks to say: held in App (typ / onTyp) so the practice bar reads the same number */
+  const seekTyp = typ==null ? null : typ, setSeekTyp = n => { if(onTyp) onTyp(n); };
+  uE(()=>()=>{ if(onTyp) onTyp(null); },[]);
   const [,setTick] = uS(0);
   uE(()=>{ if(mode!=="srv-seek" || away) return; const h = setInterval(()=>setTick(t=>t+1), 1000); return ()=>clearInterval(h); },[mode, away]);
   uE(()=>()=>{ const k = seekRef.current; seekRef.current = null; if(k && k.timer) clearTimeout(k.timer); },[]);
@@ -8367,7 +8372,7 @@ function TableScreen({onBack, onSeated, again, away, onPlayAI}){
           <div className="seekclock mono" data-testid="seek-clock">{clockOf(Date.now()-seekT0)}</div>
           <div className={"tblstat"+(stat==="srv-seeking"?" live":"")}>{stat==="srv-seeking" && <span className="tbldot"></span>}{err||gone ? "" : (PHRASE[stat]||"…")}</div>
           {seekNote && <p className="note" data-testid="seek-note">{seekNote}</p>}
-          {seekTyp!=null && stat==="srv-seeking" && <p className="note" data-testid="seek-typical">Players usually find a match in about {seekTyp<90 ? seekTyp+" seconds" : Math.round(seekTyp/60)+" minutes"}.</p>}
+          {seekTyp!=null && stat==="srv-seeking" && <p className="note" data-testid="seek-typical">{usualWaitLine(seekTyp)}</p>}
           {Date.now()-seekT0 >= quietMs && stat==="srv-seeking" && onPlayAI && <>
             <p className="note" data-testid="seek-quiet">Nobody has sat down yet. Sometimes it takes a few minutes. Practise while you wait: your search keeps going, and you will be told the moment someone arrives.</p>
             <button className="bigbtn alt" data-testid="seek-play-ai" onClick={onPlayAI}>Play the AI while you wait</button></>}
@@ -10317,6 +10322,7 @@ function App(){
   /* the table: null -> "find" (the code screen) -> {table,host,code} (seated) */
   const [table,setTable]=uS(null);
   const [awayPlay,setAwayPlay]=uS(false);   /* playing the AI while the table screen keeps searching, hidden (SEEK N) */
+  const [waitTyp,setWaitTyp]=uS(null);   /* the usual wait in seconds, from the search that is running (TableScreen tells it up); the practice bar shows it too */
   const [seekAgain,setSeekAgain]=uS(null);   /* {ranked}: the end screen's Find another match opens the table screen already searching (v6.81) */
   const [how,setHow]=uS(false);
   const [howSeen,setHowSeen]=uS(()=>!!store.get("howSeen",false));
@@ -10336,7 +10342,7 @@ function App(){
       </div>}
       <DbBanner db={db} reload={reload}/>
       {tab==="heroes" && (idle || picking) && <>
-        {picking && <div className="waitbar" data-testid="wait-bar"><span>Still looking for a match. Pick a hero to practise; you will be told the moment someone arrives.</span>
+        {picking && <div className="waitbar" data-testid="wait-bar"><span>Still looking for a match. Pick a hero to practise; you will be told the moment someone arrives.{waitTyp!=null && <small className="waittyp" data-testid="wait-typical">{usualWaitLine(waitTyp)}</small>}</span>
           <button className="bigbtn alt" data-testid="wait-back" onClick={()=>setAwayPlay(false)}>Back to the search</button></div>}
         <HeroGrid best={best} onPick={p=>setHero(p&&p.random ? {...HEROES[Math.floor(Math.random()*HEROES.length)], mystery:true} : p)} db={db} selected={hero}/>
         <HeroBanner h={hero} db={db}/>
@@ -10357,7 +10363,7 @@ function App(){
         {hero && !hero.mystery && <HeroSheet h={hero} db={db} best={best} onBack={()=>setHero(null)} onFight={h=>setFighting(h)}/>}
         {hero && hero.mystery && <p className="note" style={{textAlign:"center"}}>Fate holds the card — your fighter is revealed at preparation.</p>}
       </>}
-      {table==="find" && <TableScreen again={seekAgain} away={awayPlay} onPlayAI={()=>setAwayPlay(true)} onBack={()=>{ setSeekAgain(null); setAwayPlay(false); setTable(null); }}
+      {table==="find" && <TableScreen again={seekAgain} away={awayPlay} typ={waitTyp} onTyp={setWaitTyp} onPlayAI={()=>setAwayPlay(true)} onBack={()=>{ setSeekAgain(null); setAwayPlay(false); setTable(null); }}
         onSeated={s=>{ setSeekAgain(null); setAwayPlay(false); setFighting(null); setLoHero(null); setSeating(null); setLocalTable(null); setTable(s); }}/>}
       {/* The card database has to be READY before a table is dealt: both
           phones build the same two decks out of it, so a client that is

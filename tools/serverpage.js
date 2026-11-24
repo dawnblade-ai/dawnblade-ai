@@ -1421,6 +1421,42 @@ async function toServerChooser(page){
     row((await boxes(q.A, '[data-testid="seek-typical"]')).length === 0 && (await boxes(q.A, '[data-testid="seek-card"]')).length === 1, "waiting: with too few completed seeks the card says nothing about the usual wait");
     await q.kA.close(); await q.kB.close();
   }
+  /* K1d: THE USUAL WAIT ON THE PRACTICE BAR. Playing the AI while waiting shows the same sentence (one number, App's, told up by the seek card)
+     under "Still looking", inside the screen at 393 and at 320 wide; with too little to say the bar says nothing extra; the search card's number
+     and the bar's are the same */
+  for(const width of [W, 320]){
+    const k = await seekKit("practice" + width, { w: width });
+    for(const sec of [30, 40, 50, 60, 1000]) k.sk.log.push({ ranked: false, s: sec, at: k.sk.clock });
+    await k.A.evaluate(() => { window.SERVER_TABLE.quietMs = 3500; });
+    await toFirst(k.A);
+    await click(k.A, k.A.locator('[data-testid="seek-open"]'), "A: find a match (" + width + ")");
+    await k.A.waitForSelector('[data-testid="seek-typical"]', { timeout: 8000 }).catch(() => {});
+    const onCard = (await boxes(k.A, '[data-testid="seek-typical"]'))[0];
+    await k.A.waitForSelector('[data-testid="seek-play-ai"]', { timeout: 9000 }).catch(() => {});
+    await click(k.A, k.A.locator('[data-testid="seek-play-ai"]'), "A: play the AI while waiting (" + width + ")");
+    await k.A.waitForSelector('[data-testid="wait-bar"]', { timeout: 6000 }).catch(() => {});
+    const bar = (await boxes(k.A, '[data-testid="wait-bar"]'))[0], ty = await boxes(k.A, '[data-testid="wait-typical"]');
+    row(ty.length === 1 && !!onCard && ty[0].t === onCard.t && ty[0].t === "Players usually find a match in about 50 seconds.", "practice bar " + width + ": the Still looking bar says the same usual wait as the search card", ty[0] && ty[0].t);
+    row(ty.length === 1 && !!bar && ty[0].x >= 0 && ty[0].r <= width && ty[0].r <= bar.r && ty[0].y >= bar.y && ty[0].b <= bar.b && seekJargon(ty[0].t), "practice bar " + width + ": the line sits inside the bar and the screen", JSON.stringify({ ty: ty[0], bar }));
+    const back = (await boxes(k.A, '[data-testid="wait-back"]'))[0];
+    row(!!back && back.h >= 44 && back.x >= 0 && back.r <= width && (await k.A.evaluate(() => document.scrollingElement.scrollWidth)) <= width, "practice bar " + width + ": Back to the search keeps its 44 px tap and nothing overflows sideways", JSON.stringify(back));
+    await click(k.A, k.A.locator('[data-testid="wait-back"]'), "A: back to the search (" + width + ")");
+    await k.A.waitForSelector('[data-testid="seek-card"]', { timeout: 6000 }).catch(() => {});
+    row((await boxes(k.A, '[data-testid="wait-typical"]')).length === 0, "practice bar " + width + ": the bar's line is gone with the bar");
+    await k.kA.close(); await k.kB.close();
+  }
+  {
+    const q = await seekKit("practicenone");
+    for(const sec of [30, 40, 50, 60]) q.sk.log.push({ ranked: false, s: sec, at: q.sk.clock });
+    await q.A.evaluate(() => { window.SERVER_TABLE.quietMs = 3500; });
+    await toFirst(q.A);
+    await click(q.A, q.A.locator('[data-testid="seek-open"]'), "A: find a match, too little to go on");
+    await q.A.waitForSelector('[data-testid="seek-play-ai"]', { timeout: 9000 }).catch(() => {});
+    await click(q.A, q.A.locator('[data-testid="seek-play-ai"]'), "A: play the AI while waiting");
+    await q.A.waitForSelector('[data-testid="wait-bar"]', { timeout: 6000 }).catch(() => {});
+    row((await boxes(q.A, '[data-testid="wait-bar"]')).length === 1 && (await boxes(q.A, '[data-testid="wait-typical"]')).length === 0, "practice bar: with too few completed seeks the bar says nothing about the usual wait");
+    await q.kA.close(); await q.kB.close();
+  }
   /* K2: Stop looking takes A out of the queue and closes the table; a ranked search from the server screen needs a name and meets only a ranked seeker */
   {
     const k = await seekKit("cancel", { names: ["Dawn Smith", "Rival One"] });
