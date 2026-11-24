@@ -951,7 +951,7 @@ img{display:block;max-width:100%}
 .howbtn b{color:var(--y);font-weight:700}
 .howbtn.fresh{border:1px solid var(--y);border-radius:3px;color:var(--bone);background:rgba(232,179,60,.07)}
 .howp{font-size:var(--fs-body);color:var(--bone-dim);line-height:1.5;margin:0}
-.bugrow .bigbtn{flex:1;font-size:var(--fs-lg);padding:11px 6px}
+.bugrow .bigbtn{flex:1;font-size:var(--fs-lg);padding:11px 6px;min-height:44px}
 /* ---- the table: find an opponent, and the networked board ------------ */
 .tblwrap{display:flex;flex-direction:column;gap:12px;padding:4px 0}
 .tblhead{font-family:'Big Shoulders Display';font-weight:800;font-size:var(--fs-big);letter-spacing:.16em;text-transform:uppercase;color:var(--y)}
@@ -1142,7 +1142,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "6.81"; /* v6.81 - Play again: a server game's end screen offers Find another match, the same kind, in one tap; see CHANGELOG.md. */
+window.APP_VER = "6.82"; /* v6.82 - Find an opponent is short: who holds the deck at each table is one sheet, one tap away; see CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -7902,8 +7902,41 @@ const seekFound = () => { try{ if(navigator.vibrate) navigator.vibrate([90,60,90
 const clockOf = ms => { const t = Math.max(0, Math.floor(ms/1000)); return Math.floor(t/60)+":"+String(t%60).padStart(2,"0"); };
 const lookLine = (l, rk) => { const n = rk===true ? l.ranked : rk===false ? l.friendly : l.friendly+l.ranked;
   return n===1 ? "1 player is looking for a match right now." : n+" players are looking for a match right now."; };
+/* HOW EACH TABLE KEEPS HANDS HIDDEN (v6.82, NEXT 4): the honest line for every kind of table, in one sheet (HowToPlay's grammar). The words are the ones
+   that sat under Find an opponent's buttons since HIDDEN HANDS H2/H3 and SERVER S2, unchanged: what each phone cannot see, and who could look. */
+function HiddenHandsSheet({open, srvOn, onClose}){
+  if(!open) return null;
+  return (
+    <div className="bugwrap" data-testid="hands-sheet" onClick={e=>{ if(e.target===e.currentTarget) onClose(); }}>
+      <div className="bugsheet clip howsheet">
+        <div className="bugh"><span className="bugt howt">Hidden hands</span>
+          <span className="bugmeta">who holds the deck at each table</span></div>
+        <p className="bughint">What each phone cannot see, who could look, and how the game is checked when it ends.</p>
+        {srvOn && <><h4 className="howh">At a server table</h4>
+        <p className="howp">A referee on the web holds the deck, so neither phone can look at
+          the other's hand. No email and no password: your phone signs in on its own, so your seat and your player name are yours.
+          The service can be busy or stop answering.
+          Whoever runs the server could look; every shuffle is still checkable when the game ends.</p></>}
+        <h4 className="howh">At a direct table</h4>
+        <p className="howp">The host's phone holds the deck. It deals and runs the game;
+          the guest's phone sees only the guest's own hand, never the host's hand, either
+          deck or the next draw. The host's phone could look, so play people you trust.
+          When the game ends, the guest can verify every shuffle and draw.</p>
+        <h4 className="howh">At a judged table</h4>
+        <p className="howp">The judge's device holds the deck. A third
+          phone or tablet (a store judge's, or a friend's) taps <em>Judge a table</em> and
+          reads out its code; both players join it. Neither player's phone holds the
+          other's hand, either deck or the next draw. The judge's device could look, so
+          both players must trust the judge. When the game ends, both phones can verify
+          every shuffle and draw.</p>
+        <div className="bugrow"><button className="bigbtn" onClick={onClose}>Got it</button></div>
+      </div>
+    </div>
+  );
+}
 function TableScreen({onBack, onSeated, again}){
   const [mode,setMode] = uS(null);           /* null | "host" | "join" */
+  const [handsOpen,setHandsOpen] = uS(false); /* the honest-lines sheet (v6.82) */
   const [code,setCode] = uS("");
   const [stat,setStat] = uS(null);
   const [err,setErr]   = uS(null);
@@ -8265,29 +8298,10 @@ function TableScreen({onBack, onSeated, again}){
           priority, the combat chain, printed costs, and the card text, read by the
           same engine as the trainer.
         </p>
-        {/* THE HONEST LINE (HIDDEN HANDS H2): what the guest's phone cannot see,
-            and what the host's phone could. */}
-        <p className="mnote">
-          <strong>At a direct table, the host's phone holds the deck.</strong> It deals and runs the game;
-          the guest's phone sees only the guest's own hand, never the host's hand, either
-          deck or the next draw. The host's phone could look, so play people you trust.
-          When the game ends, the guest can verify every shuffle and draw.
-        </p>
-        {srvOn && <p className="mnote">
-          <strong>At a server table, a referee on the web holds the deck,</strong> so neither phone can look at
-          the other's hand. No email and no password: your phone signs in on its own, so your seat and your player name are yours.
-          The service can be busy or stop answering.
-          Whoever runs the server could look; every shuffle is still checkable when the game ends.
-        </p>}
-        {/* THE HONEST LINE FOR A JUDGED TABLE (HIDDEN HANDS H3) */}
-        <p className="mnote">
-          <strong>At a judged table, the judge's device holds the deck.</strong> A third
-          phone or tablet (a store judge's, or a friend's) taps <em>Judge a table</em> and
-          reads out its code; both players join it. Neither player's phone holds the
-          other's hand, either deck or the next draw. The judge's device could look, so
-          both players must trust the judge. When the game ends, both phones can verify
-          every shuffle and draw.
-        </p>
+        {/* THE HONEST LINES, ONE TAP AWAY (v6.82, NEXT 4): who holds the deck at each kind of table (HIDDEN HANDS H2/H3, SERVER S2) were four paragraphs
+            under the buttons; they are one sheet now, so the choices fit the first screen and the words are still one tap from every player. */}
+        <button className="howbtn" data-testid="hands-open" onClick={()=>setHandsOpen(true)}>Who can see your hand? <b>How each table keeps hands hidden</b></button>
+        <HiddenHandsSheet open={handsOpen} srvOn={srvOn} onClose={()=>setHandsOpen(false)}/>
       </>}
 
       {mode==="srv" && <>

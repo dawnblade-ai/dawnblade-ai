@@ -323,8 +323,12 @@ if(require.main === module){
        at each stage: waiting, the lobby, the game dealt. */
     if(await click(btn(/^Find an opponent/), "find an opponent (judge)")){
       await page.waitForSelector(".tblwrap");
-      const honest = await page.evaluate(() => /judge's device holds the deck/.test(document.body.innerText));
-      row(honest, "table: the find screen says a judged table's deck is on the judge's device");
+      /* v6.82: the honest lines live in one sheet, opened from the find screen (closed, the screen does not say it; open, it does) */
+      const shut = await page.evaluate(() => /judge's device holds the deck/i.test(document.body.innerText));
+      await click(page.locator('[data-testid="hands-open"]'), "open how each table keeps hands hidden");
+      const honest = await page.evaluate(() => /judge's device holds the deck/i.test(document.body.innerText));
+      row(!shut && honest, "table: the find screen's sheet says a judged table's deck is on the judge's device (one tap, not under the buttons)", "closed " + shut + ", open " + honest);
+      await click(btn(/^Got it/), "close the sheet");
       await page.evaluate(() => { window.Peer = class { constructor(id){ this.h = {}; window.__jpeer = this; setTimeout(() => this.emit("open", id), 10); }
         on(e, f){ (this.h[e] = this.h[e] || []).push(f); } emit(e, ...a){ (this.h[e] || []).forEach(f => f(...a)); } destroy(){} connect(){ return null; } }; });
       if(await click(btn(/^Judge a table/), "judge a table")){

@@ -228,7 +228,9 @@ async function judgeRun(){
   for(const p of [Jp, A, Bp]){ await p.goto(pathToFileURL(INDEX).href); await ready(p); }
   const btn = (p, re) => p.locator("button", {hasText: re}).first();
   for(const p of [Jp, A, Bp]){ await btn(p, /^Find an opponent/).click(); await p.waitForSelector(".tblwrap"); }
-  console.log("honest line on the find screen:", await A.evaluate(() => /judge's device holds the deck/.test(document.body.innerText)));
+  await A.locator('[data-testid="hands-open"]').click();   /* v6.82: the honest lines are one sheet */
+  console.log("honest line on the find screen's sheet:", await A.evaluate(() => /judge's device holds the deck/i.test(document.body.innerText)));
+  await btn(A, /^Got it/).click();
   await btn(Jp, /^Judge a table/).click();
   await Jp.waitForSelector(".judgeroom", {timeout: 8000});
   const code = await Jp.evaluate(() => String(window.__peerId).split("-").pop());

@@ -178,7 +178,16 @@ async function toServerChooser(page){
     await page.getByRole("button", { name: /^Find an opponent/ }).click();
     await page.waitForSelector(".tblwrap");
     const home = await text(page);
-    row(/Join a server table/i.test(home) && /no direct link needed/i.test(home) && /referee on the web holds the deck/i.test(home) && !/early test/i.test(home), "table screen: the server option sits beside the direct ones, in player words (not an early test), with its honest line");
+    /* v6.82 (NEXT 4): the honest lines are one sheet, one tap from the buttons: closed, the screen is the choices; open, every table's line is there */
+    await click(page, page.locator('[data-testid="hands-open"]'), "open how each table keeps hands hidden");
+    await page.waitForSelector('[data-testid="hands-sheet"]', { timeout: 4000 }).catch(() => {});
+    const sheet = await text(page);
+    row(/Join a server table/i.test(home) && /no direct link needed/i.test(home) && !/(referee on the web|host's phone|judge's device) holds the deck/i.test(home) && /How each table keeps hands hidden/i.test(home) && !/early test/i.test(home), "table screen: the server option sits beside the direct ones, in player words (not an early test); the honest lines are behind one button, not under the choices");
+    row(/referee on the web holds the deck/i.test(sheet) && /host's phone holds the deck/i.test(sheet) && /judge's device holds the deck/i.test(sheet), "hands sheet: one tap shows the honest line for the server, direct and judged tables");
+    const sb = await boxes(page, '[data-testid="hands-sheet"] .bugsheet');
+    row(sb.length === 1 && sb[0].x >= 0 && sb[0].r <= W && await overflow(page), "hands sheet: inside 393 wide, no horizontal overflow", JSON.stringify(sb[0])); await thumbs(page, "hands sheet");
+    await click(page, btn(page, /^Got it/), "close the hands sheet");
+    row((await boxes(page, '[data-testid="hands-sheet"]')).length === 0, "hands sheet: Got it closes it");
     /* THREE CHOICES SIDE BY SIDE (v6.28): server, direct, judge's - each a labelled group, stacked in order, all inside 393 wide, their buttons visible on the first screen */
     const grp = await page.evaluate(() => [...document.querySelectorAll(".tblgroup")].map(g => { const r = g.getBoundingClientRect(), n = (g.querySelector(".tblgname") || {}).textContent;
       const bs = [...g.querySelectorAll("button")].map(b => { const q = b.getBoundingClientRect(); return { t: b.textContent.trim(), x: Math.round(q.left), r: Math.round(q.right), y: Math.round(q.top), b: Math.round(q.bottom), h: Math.round(q.height) }; });
@@ -222,8 +231,9 @@ async function toServerChooser(page){
     row(await k0.page.evaluate(() => window.SERVER_TABLE.on === true), "the door: the shipped switch is open");
     let r = await offersServer(k0.page);
     row(r.btn && !r.note, "the door: no query - everyone sees the server option, and it is not called an early test");
-    const txt = await (async () => { await k0.page.getByRole("button", { name: /^Find an opponent/ }).click(); await k0.page.waitForSelector(".tblwrap"); const t = await text(k0.page); await click(k0.page, btn(k0.page, /^Back/), "back"); await k0.page.waitForSelector("button:has-text('Find an opponent')"); return t; })();
-    row(!/sb_publishable|supabase|v6\.\d|seedG|nonce|SERVER_TABLE/i.test(txt.match(/Server table Get matched[\s\S]{0,160}/i)[0] + txt.match(/At a server table[\s\S]{0,330}/i)[0]), "the door: the option reads in player language (no identifiers or version numbers)");
+    const txt = await (async () => { await k0.page.getByRole("button", { name: /^Find an opponent/ }).click(); await k0.page.waitForSelector(".tblwrap");
+      await click(k0.page, k0.page.locator('[data-testid="hands-open"]'), "open the hands sheet"); const t = await text(k0.page); await click(k0.page, btn(k0.page, /^Got it/), "close the hands sheet"); await click(k0.page, btn(k0.page, /^Back/), "back"); await k0.page.waitForSelector("button:has-text('Find an opponent')"); return t; })();
+    row(!/sb_publishable|supabase|v6\.\d|seedG|nonce|SERVER_TABLE/i.test(txt.match(/Server table Get matched[\s\S]{0,160}/i)[0] + (txt.match(/At a server table[\s\S]{0,330}/i) || ["sb_publishable (no server line)"])[0]), "the door: the option reads in player language (no identifiers or version numbers)");
     await reopen(k0.page, k0.href, "?server=0");
     r = await offersServer(k0.page);
     row(!r.btn, "the door: ?server=0 hides it on this phone (kill switch)");

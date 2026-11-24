@@ -1,3 +1,21 @@
+## v6.82 — Find an opponent is short: the honest lines are one sheet
+
+- **How each table keeps hands hidden (NEXT 4).** Four paragraphs sat under *Find an opponent*'s buttons: the "two real hero
+  decks" note and three honest lines saying who holds the deck at a server, direct and judged table. The three honest lines
+  are now one sheet behind a quiet button (*Who can see your hand? How each table keeps hands hidden*), in How to play's
+  style; their words are unchanged. The screen is now the choices, and the honest lines are one tap away for every player.
+  The "two real hero decks" line stays on the screen (`test/tablecopy.test.js` reads it).
+- **Every sheet's button row is thumb-sized.** `.bugrow .bigbtn` (*Got it* on How to play and the new sheet, the JUDGE!!
+  sheet's buttons) was 37 px tall; it now has a 44 px minimum (POLISH.md condition 1). The new sheet's drive found it.
+- **Drills:** `tools/serverpage.js` +3 rows and 1 rewritten (closed, the screen holds none of the three honest lines and
+  offers the button; open, all three are there, inside 393 wide, every button thumb-sized; Got it closes it); the door's
+  jargon row reads the sheet, and now fails if the server line is missing instead of passing on an empty match.
+  `tools/page.js` and `tools/twophone.js` open the sheet before they read the judged table's line. Sabotage: with the sheet
+  never rendered, the sheet rows fail.
+  `test/slicecensus.test.js` repins one slice (phasebar's, +16 characters: the CSS line).
+- **Validation:** npm test 4580 / 4575 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; both babel blocks compile;
+  `tools/page.js` 89/89 screens; `tools/serverpage.js` 330 / 0. No engine, rule, wire or AI change.
+
 ## v6.81 — Play again: one tap from a server game's end screen back into the queue
 
 - **Find another match (NEXT 1, first half).** A server game's end screen now offers **Find another match** (or **Find
