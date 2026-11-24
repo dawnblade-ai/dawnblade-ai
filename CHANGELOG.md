@@ -1,3 +1,24 @@
+## v6.89 — Find a match says how long players usually wait
+
+- **Matchmaking visibility (QUEUE item 5, worker Q).** The *Finding a match* card shows one quiet line under the
+  clock: *Players usually find a match in about 50 seconds* (from 90 s on it says minutes).
+  - **Where the number comes from.** It is the median wait of the last 24 hours' completed seeks of that kind (ranked
+    and friendly counted apart), rounded up to 5 s.
+  - **When it hides.** With fewer than 5 completed seeks it shows nothing rather than a made-up number. It is gone
+    when the search ends.
+  - **No new request.** It rides the existing seek and heartbeat answer (`typical`), and the first screen still makes
+    no request while a player only looks.
+- **`server/supabase/011_seek_wait.sql`** (run on live 2026-11-24): `seek_wait_log` holds only the kind and the
+  seconds (no player, no table; RLS forced). A trigger on `seeks` fills it the first time `taken_at` is set, and
+  `seek_step` is untouched. Rows prune at 7 days. Cancelled and stale seeks are never counted.
+  `seek_wait_stats(p_ranked) -> {n, typical}`.
+  - The referee adds `typical` only for a sane answer. A missing table, an error or nonsense means no key, and the
+    seek never fails because of it.
+  - `tools/sql-sab-011.js`: 15 sabotages, all caught. PGlite runs 001..011. Deno rehearsal passes in both variants.
+    The serverseek drill gains row 10.
+- **Not built, deliberately:** "players looking near your rating". While you wait, anyone inside your window would
+  already have been matched, so that count would always read 0.
+
 ## v6.88 — Practice while waiting: tidy, and measured
 
 - **Tidy (QUEUE item 3, worker O).** While the *Still looking* bar is up, the practice hero grid no longer carries the
