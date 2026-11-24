@@ -1,0 +1,30 @@
+hero        base   mu2   tgt   gw1 | 24-seed: base mu2 tgt gw1   (seeds 12-23 vs a fresh base78.s2; 24-seed = both samples)
+arakni       104    98   104    98 | 209 206 210 201
+azalea        96    93    96    94 | 176 179 182 175
+blaze         79    82    81    84 | 169 166 172 176
+boltyn        58    60    58    63 | 104 109 105 113
+bravo        130   133   136   137 | 249 250 256 253
+briar        156   155   158   156 | 313 316 316 318
+dash         111   107   111   105 | 218 219 219 219
+dorinthea    115   114   117   116 | 230 231 232 237
+enigma        91    93    90    88 | 180 185 180 180
+fai          103    99   103   102 | 201 196 201 194
+gravy         48    48    48    46 | 90 93 89 94
+iyslander    112   116   112   113 | 225 229 227 224
+kayo         139   139   139   141 | 285 281 287 279
+lyath         61    57    60    53 | 119 116 119 108
+prism         81    80    80    82 | 153 156 150 150
+viserai      122   110   122   118 | 234 228 236 232
+viseraibw     49    46    49    42 | 90 89 92 88
+runs with refusals or violations: 0
+
+[exited with code 0]
+azalea     base  80  wtbase  80  +0  (ref/viol 0/0)
+bravo      base 119  wtbase 119  +0  (ref/viol 0/0)
+dash       base 107  wtbase 107  +0  (ref/viol 0/0)
+dorinthea  base 115  wtbase 115  +0  (ref/viol 0/0)
+fai        base  98  wtbase  98  +0  (ref/viol 0/0)
+iyslander  base 113  wtbase 113  +0  (ref/viol 0/0)
+kayo       base 146  wtbase 146  +0  (ref/viol 0/0)
+viserai    base 112  wtbase 112  +0  (ref/viol 0/0)
+TOTAL base 890  wtbase 890  0
