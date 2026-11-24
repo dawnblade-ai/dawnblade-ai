@@ -10347,14 +10347,14 @@ function App(){
         {/* A NEW PHONE SEES IT AS A BUTTON (v6.57): until How to play has been opened once on this
             device (and no game has been recorded), it wears a gold frame; after that it is quiet text,
             out of a regular's way. Storage that throws reads as "not seen", which only frames it. */}
-        <button className={"howbtn"+(howSeen || Object.keys(best).length ? "" : " fresh")}
-          onClick={()=>{ setHow(true); if(!howSeen){ store.set("howSeen", true); setHowSeen(true); } }}>New to Flesh and Blood? <b>How to play</b></button>
+        {!picking && <button data-testid="how-btn" className={"howbtn"+(howSeen || Object.keys(best).length ? "" : " fresh")}
+          onClick={()=>{ setHow(true); if(!howSeen){ store.set("howSeen", true); setHowSeen(true); } }}>New to Flesh and Blood? <b>How to play</b></button>}
         <HowToPlay open={how} onClose={()=>setHow(false)}/>
         {/* THE FORMAT, SAID WHERE A PLAYER LOOKS (v4.76). Dawnblade does not
             follow Silver Age's rolling ban list or its hero bench — see
             data/formats.json — so a player who knows Silver Age is told why
             a card they cannot bring to an event is legal here. */}
-        <p className="note" style={{textAlign:"center",marginTop:10}}>Dawnblade is a fan-made Silver Age format: every precon built here, exactly as printed (the Chapter 1–3 decks and the Usurp the Shadow Throne heroes), and every card in them is legal here — even ones Silver Age has since banned.</p>
+        {!picking && <p data-testid="format-note" className="note" style={{textAlign:"center",marginTop:10}}>Dawnblade is a fan-made Silver Age format: every precon built here, exactly as printed (the Chapter 1–3 decks and the Usurp the Shadow Throne heroes), and every card in them is legal here — even ones Silver Age has since banned.</p>}
         <VsStrip hero={hero} db={db}/>
         {hero && !hero.mystery && <HeroSheet h={hero} db={db} best={best} onBack={()=>setHero(null)} onFight={h=>setFighting(h)}/>}
         {hero && hero.mystery && <p className="note" style={{textAlign:"center"}}>Fate holds the card — your fighter is revealed at preparation.</p>}
