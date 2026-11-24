@@ -1,0 +1,1 @@
+const S=require("/tmp/claude-0/-home-user-dawnblade-ai/af28175c-f618-5e25-85a8-fa3c18c6a4ff/scratchpad/wt/engine/sparring.js");process.on("exit",()=>{const s=S.LA.stats;console.log("ARS "+JSON.stringify({aDec:s.aDec,aS:s.aSearched,aO:s.aOver,aR:s.aOverruled,aSteps:s.aSteps,aMax:s.aMax}))});

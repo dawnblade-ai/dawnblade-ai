@@ -1,0 +1,19 @@
+arakni     base 106  ars 110  +4   ARS {"aDec":449,"aS":449,"aR":19,"aSteps":44875,"aMax":401}
+azalea     base  86  ars  79  -7   ARS {"aDec":571,"aS":571,"aR":63,"aSteps":56022,"aMax":428}
+blaze      base  91  ars  89  -2   ARS {"aDec":458,"aS":458,"aR":43,"aSteps":41896,"aMax":321}
+boltyn     base  47  ars  47  +0   ARS {"aDec":512,"aS":512,"aR":56,"aSteps":58321,"aMax":400}
+bravo      base 120  ars 116  -4   ARS {"aDec":604,"aS":604,"aR":58,"aSteps":54971,"aMax":418}
+briar      base 158  ars 160  +2   ARS {"aDec":444,"aS":444,"aR":26,"aSteps":48633,"aMax":313}
+dash       base 108  ars 104  -4   ARS {"aDec":277,"aS":277,"aR":21,"aSteps":24819,"aMax":339}
+dorinthea  base 115  ars 110  -5   ARS {"aDec":421,"aS":421,"aR":57,"aSteps":44239,"aMax":385}
+enigma     base  90  ars  83  -7   ARS {"aDec":601,"aS":601,"aR":68,"aSteps":60942,"aMax":319}
+fai        base  98  ars  98  +0   ARS {"aDec":351,"aS":351,"aR":25,"aSteps":43630,"aMax":398}
+gravy      base  41  ars  34  -7   ARS {"aDec":573,"aS":573,"aR":106,"aSteps":70194,"aMax":380}
+iyslander  base 115  ars 123  +8   ARS {"aDec":617,"aS":617,"aO":1,"aR":102,"aSteps":58964,"aMax":449}
+kayo       base 148  ars 146  -2   ARS {"aDec":479,"aS":479,"aR":60,"aSteps":53911,"aMax":332}
+lyath      base  59  ars  58  -1   ARS {"aDec":528,"aS":528,"aR":51,"aSteps":53110,"aMax":235}
+prism      base  70  ars  72  +2   ARS {"aDec":591,"aS":591,"aR":63,"aSteps":58411,"aMax":269}
+viserai    base 114  ars 117  +3   ARS {"aDec":499,"aS":499,"aR":42,"aSteps":48701,"aMax":293}
+viseraibw  base  43  ars  37  -6   ARS {"aDec":433,"aS":433,"aR":50,"aSteps":45246,"aMax":352}
+TOTAL base 1609 ars 1583 (-26)
+runs with refusals or violations: 0
