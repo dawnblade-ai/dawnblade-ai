@@ -59,8 +59,8 @@ const tableRun = (page, need, n) => page.evaluate(([need, n]) => {
   const T = window.__dawnTable;
   for (let i = 0; i < n; i++) {
     const g = T.session.state(); if (!g) return { over: 1 };
-    const pq = (g.promptQ || [])[0];
-    if (pq && (pq.side || 0) === 0 && need.includes(pq.tag)) return { tag: pq.tag };
+    const pq = (g.promptQ || [])[0], live = g.prompt;   // the sheet shows `g.prompt`, the live head, not the queue's
+    if (live && (live.side || 0) === 0 && need.includes(live.tag)) return { tag: live.tag };
     if (g.over) return { over: 1, err: "gameover " + JSON.stringify(g.over) + " t" + g.turn + " seq" + T.session.seq() };
     const mine = (pq && (pq.side || 0) === 0) || (!pq && g.priority === 0) || g.sides[0].pending; let a;
     try { a = DawnSparring.act(g, 0); } catch (e) { return { over: 1, err: String(e && e.message) }; } if (!a) return { wait: 1 };
@@ -88,7 +88,8 @@ async function sweep({ page, w, h, heroes, boards, games, steps, row, seen, log,
   const judgeHere = async (hero, board, tag) => {
     await page.waitForSelector(".psheet", { timeout: 3000 }).catch(() => {});
     await page.waitForTimeout(450);   // the sheet's slide-in
-    const f = await page.evaluate(sheetFacts, MINFONT); if (!f) return;
+    const f = await page.evaluate(sheetFacts, MINFONT);
+    if (!f) { if (process.env.PS_DEBUG) log("   NOSHEET " + tag + ": " + JSON.stringify(await page.evaluate(() => { const g = window.__dawnTable.session.state(); const p = (g.promptQ || [])[0]; return { p: p && { tag: p.tag, side: p.side, title: p.title, src: p.src }, pending: !!g.sides[0].pending, gprompt: !!g.prompt, gpt: g.prompt && g.prompt.tag, qlen: (g.promptQ || []).length, txt: (document.querySelector(".board") || {innerText:""}).innerText.replace(/\s+/g," ").slice(-160), body: [...document.querySelectorAll("body *")].filter(e => /fixed|sticky/.test(getComputedStyle(e).position) && e.getBoundingClientRect().height).map(e => e.className).slice(0, 12) }; }))); return; }
     const r = await judgeScreen(page);
     const bad = ["small", "stolen", "clipped", "overlap"].flatMap(k => r[k].map(x => k + ": " + x.m)).concat(f.issues);
     const kind = tag && KINDS.includes(tag) ? tag : (f.shape === "cards" ? "cards" : f.shape);
@@ -99,6 +100,7 @@ async function sweep({ page, w, h, heroes, boards, games, steps, row, seen, log,
   for (const hi of heroes) {
     await home();
     const hero = (await page.locator(".hgrid .hcard").nth(hi).innerText()).replace(/\s+/g, " ").trim().slice(0, 22);
+    seen.set(`${hero}|_|_`, "listed");
     for (const board of boards) {
       for (let gi = 0; gi < games; gi++) {
         if (board === "table" && KINDS.every(k => seen.has(`${hero}|table|${k}`))) break;
@@ -150,7 +152,7 @@ if (require.main === module) {
     for (const [w, h] of sizes) {
       const kit = await open({ w, h }); const seen = new Map();
       await kit.page.waitForSelector(".hcard", { timeout: 20000 });
-      const nH = await kit.page.locator(".hgrid .hcard").count();
+      const nH = (await kit.page.locator(".hgrid .hcard").count()) - 1;   // the last tile is RANDOM
       const heroes = arg("heroes", "") ? arg("heroes").split(",").map(Number) : [...Array(nH).keys()];
       try { await sweep({ page: kit.page, w, h, heroes, boards, games, steps, row, seen, log: console.log }); }
       catch (e) { row(false, `prompt sweep ${w}x${h}: ran to the end`, String(e && e.message || e).split("\n")[0]); }
