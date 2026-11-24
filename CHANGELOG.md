@@ -1,3 +1,27 @@
+## v6.91 — The practice bar says how long players wait; room to grow
+
+- **The typical wait on the practice bar too (worker Q).** While a player practises during a search, the *Still
+  looking* bar carries the same quiet line as the seek card: *Players usually find a match in about N seconds*.
+  - App holds the number and `TableScreen` reports it up, so one source feeds both screens through one sentence helper.
+  - serverpage rows at 393 and 320, sabotaged: removing the line fails exactly those 4 rows.
+- **livecheck's wait-log cleanup is pinned.** `probeWaitQuery(t0)` builds the delete. `test/livecheckwait.test.js` pins
+  its shape: friendly only, 2 s or less, since the probe began, one statement, no OR. 7 sabotages each fail it.
+- **The trainer's babel block is split in three (worker P).** Q's line pushed it past Babel's 500,000-character limit.
+  It is now three consecutive blocks cut at top-level function seams, with no code moved:
+  - **trainer:** about 331k characters;
+  - **server table UI:** about 158k;
+  - **App plus the mount:** about 12k. The mount stays last.
+
+  `test/html-balance.test.js` checks the layout:
+  - exactly 4 blocks, each balanced;
+  - every block at most 450,000 characters;
+  - the mount exactly once, in the last block.
+
+  Both new guards are sabotaged. Load time at 4x throttle did not change beyond noise: a median of 12.1 s and 12.7 s
+  before, 12.8 s and 12.5 s after.
+- **A rule for new page code:** a top-level statement may use only names from earlier blocks. Component references are
+  render-time, so they are fine. Put new components in the smaller blocks.
+
 ## v6.90 — Close a full table right on the rematch screen
 
 - **The cap no longer strands a rematch (worker P, the v6.87 follow-up).** When a rematch is refused because the
