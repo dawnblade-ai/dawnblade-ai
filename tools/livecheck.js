@@ -136,7 +136,7 @@ async function ladderOverHttp(cfg, toks, row){
   return { pub, host };
 }
 /* S6.1 — FIND A MATCH over HTTPS: the public count, then one real match through the queue between two signed-in phones (the first waits at a table the
-   function opens, the second is sent to it, the first's heartbeat hears it was taken), then the table is closed. Leaves one closed table; writes nothing else. */
+   function opens, the second is sent to it, the first's heartbeat hears it was taken), a rematch asked before any game is refused (v6.83), then the table is closed. Leaves one closed table; writes nothing else. */
 async function seekOverHttp(cfg, toks, row){
   const post = functionPost(cfg);
   const lk = await post({ op: "looking" });
@@ -152,6 +152,13 @@ async function seekOverHttp(cfg, toks, row){
   const hb = await post({ op: "seek", identity: { token: toks[0] }, table: a.table });
   row(hb.ok === true && hb.state === "taken" && hb.table === a.table, "seek: the first seeker's heartbeat hears its seek was taken", JSON.stringify(hb));
   const hay = JSON.stringify([a, b, hb]); row(!toks.some(t => hay.indexOf(t) >= 0) && !/"(id|player|subject|token)"/.test(hay), "seek: no id or token rides an answer");
+  /* v6.83 REMATCH: the live function knows the op. The first seeker sits down and asks for a rematch before any game: the honest answer is
+     `rematch-playing` (the game is not over), and nothing is written by it. Proves the deployed referee carries the op without playing a game out. */
+  const claim = "livecheck-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
+  const j0 = await post({ op: "join", table: a.table, claim, identity: { token: toks[0] } });
+  const k0 = j0.ok ? ((j0.frames || []).find(f => f && f.ch === "judge" && typeof f.key === "string") || {}).key : null;
+  const rm = k0 ? await post({ op: "rematch", table: a.table, seat: j0.seat, key: k0, identity: { token: toks[0] } }) : null;
+  row(!!rm && rm.ok === false && rm.refused === "rematch-playing", "rematch: the live function knows the op (asked before a game, it answers that the game is not over)", JSON.stringify(rm || j0).slice(0, 160));
   const cl = await post({ op: "close", table: a.table, identity: { token: toks[0] } });
   row(cl.ok === true, "seek: the matched table is closed afterwards", JSON.stringify(cl));
 }
