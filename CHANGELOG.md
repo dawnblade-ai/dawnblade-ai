@@ -1,3 +1,25 @@
+## v6.92 — Every prompt sheet holds the tap floor, hero by hero
+
+- **The prompt sweep (QUEUE item 6, worker R).** New `tools/promptsweep.js` plays real table games, with seat 0 against
+  AI foes at engine speed, and stops on every prompt the page would show. It also plays trainer games by random taps.
+  It judges each first sheet per hero, board and kind, at 393x852 and 320x568:
+  - the tap judge (44 px floor, stolen taps, overlap);
+  - nothing off-screen and no sideways scroll;
+  - a tall sheet scrolls;
+  - no text under 9 px outside a card face.
+- **Fixes it found:** all CSS, no JSX.
+  - Prompt options drew 42 px; now 44.
+  - The opt reorder arrows were 38x30; now 44x44, in a column widened from 86 to 94.
+  - Prompt tags were 8.5 px; now the xs font size.
+  - The card-zoom modal sat under an open prompt sheet, hiding its CLOSE; it now sits above.
+- **The jump row's 43 px was real, not a probe artifact.** The `::after` inset counts from the padding box, so the 1 px
+  border cost 2 px. It now measures 45 at quarter-pixel steps at both sizes.
+- **Coverage.** All 17 heroes on the table at both sizes.
+  - Reached: pay, pick, modal, opt, soak.
+  - Not reached by any hero in self-play: reveal, target, alloc. They need a state-injection harness; it is in QUEUE.
+  - Trainer sheets were reached for 4 heroes; all clean.
+- Gates: tapsweep 44/44, page.js 133/133, serverpage 401/0.
+
 ## v6.91 — The practice bar says how long players wait; room to grow
 
 - **The typical wait on the practice bar too (worker Q).** While a player practises during a search, the *Still
