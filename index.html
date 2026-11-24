@@ -193,7 +193,7 @@ img{display:block;max-width:100%}
 .blockmode{border:1px solid var(--b);background:rgba(59,111,176,.08);padding:8px 10px;font-size:12.5px}
 
 /* card modal */
-.modal{position:fixed;inset:0;background:rgba(10,8,7,.82);display:flex;align-items:center;justify-content:center;z-index:60;padding:20px}
+.modal{position:fixed;inset:0;background:rgba(10,8,7,.82);display:flex;align-items:center;justify-content:center;z-index:65;padding:20px}
 .modal .inner{max-width:340px;width:100%;max-height:100%;overflow-y:auto}
 .modal img{width:100%;border:1px solid var(--line)}
 .modal .txt{background:var(--forge);border:1px solid var(--line);padding:10px;font-size:var(--fs-xl);margin-top:8px}
@@ -481,7 +481,7 @@ img{display:block;max-width:100%}
 .screennav button{position:relative}
 .screennav .sndbtn{font-size:var(--fs-xl);display:flex;align-items:center;justify-content:center;line-height:0;color:var(--y)}
 .screennav .sndbtn.off{color:var(--bone-dim);opacity:.7}
-.screennav button::after{content:"";position:absolute;inset:-16px 0 -4px}
+.screennav button::after{content:"";position:absolute;inset:-17px 0 -5px}   /* inset is from the PADDING box: with the 1px border, -16/-4 measured 43 (R) */
 .paneflag{text-align:center;font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--bone-dim);padding:0 0 6px;display:flex;justify-content:space-between;align-items:center;gap:6px}
 .modehint{font-size:var(--fs-sm);color:var(--y);text-align:center;padding:3px 0 6px;letter-spacing:.05em;text-transform:uppercase}
 .gyrow{display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start}
@@ -760,7 +760,7 @@ img{display:block;max-width:100%}
 .psheet .pcard .cfw{border:1px solid var(--line);border-radius:3px;overflow:hidden}
 .psheet .pcard.down{opacity:.5;transform:translateY(8px)}
 .psheet .pcard.down .cfw{border-color:var(--r)}
-.psheet .ptag{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);white-space:nowrap;font-family:'Spline Sans Mono';font-size:8.5px;
+.psheet .ptag{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);white-space:nowrap;font-family:'Spline Sans Mono';font-size:var(--fs-xs);
   letter-spacing:.06em;text-transform:uppercase;padding:1px 5px;border-radius:2px;
   background:var(--ok);color:var(--ink)}
 .psheet .pcard.down .ptag{background:var(--r);color:var(--bone)}
@@ -1120,6 +1120,11 @@ button.tag::after{content:"";position:absolute;inset:-16px -8px -16px}
 .statusline button{padding-top:6px;padding-bottom:6px}
 .judgebtn::after{inset:-9px -6px -17px}
 .psheet .pact button{min-height:44px}
+/* the other prompt controls reach the floor too (R, tools/promptsweep.js): a modal / pay option drew 42px, the opt's reorder arrows 38x30 */
+.psheet .popt{min-height:44px}
+.psheet .poptcol{width:94px}
+.psheet .parrows{gap:6px}
+.psheet .parrows button{min-width:44px;min-height:44px}
 /* THE END PANEL SCROLLS WHEN IT MUST (M, QUEUE NEXT 6). A ranked server game's end screen stacks the title, the names card, the
    note, the rating change, Find another match, the Verify paragraph and button, and Leave: 523 of 568px at 320 wide, and one more
    button would push Leave off the bottom of a fixed, centred box with no way back (and the title off the top). Centring with
