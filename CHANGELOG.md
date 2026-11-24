@@ -1,3 +1,22 @@
+## v6.79 — the AI weighs every target for an attack (search shape, measured)
+
+- **AI strength (Sharp): every attack from hand or arsenal is also proposed at the hero and at each of the opponent's
+  allies** (`SPXLATGT`, `laCands`). An attack's target is declared as it is played (CR 1.4.5); the rule policy's
+  `targetFor` names one (the ally the swing can kill, else the hero) and the search proposed only that one, so it never
+  asked whether the face beat a killable ally, or whether chipping an ally beat the face. The rule's pick still comes
+  first, so A0 and its ties are unchanged; each extra declaration is one more rollout inside the same step budget (the
+  phone bound is a step cap, so the v6.78 timing holds by construction). A/B, each hero's own seat against every hero:
+  seeds 0-11 1590 -> 1609, seeds 12-23 1655 -> 1664 (+28 of 6528, both samples positive, no hero down by more than 3;
+  bravo +7, blaze +3, azalea +6). A fresh base from the probe engine reproduced v6.78 game for game (890 = 890), so the
+  first sample is clean. Drill test/latarget.test.js (no ally: one declaration; an ally out: both; sabotaged with the gate off).
+- **Search levers measured and NOT taken** (evidence `experiments/search-shape-v678b/` on findings/queue; a new `laX`
+  probe overrides any `LA` field for one hero's seat): horizon "opp" at the new budget -53 on 9 heroes (Kayo -24) — dead;
+  held-card worth 1.0 -9, 2.25 +29 then -25 (24 seeds +4) — flat; a gear term in the score (standing equipment defence,
+  mine minus theirs) +13 then -17 — flat.
+- **Chaos d12 and d13** (289 games each; 32,559 and 32,627 random legal moves): 0 findings.
+- **Validation:** npm test 4572 / 4567 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; ladder 816 games 0 refusals /
+  violations / stalls (3 draws).
+
 ## v6.78 — the AI thinks twice as far on its own turn (the speed headroom spent on strength)
 
 - **AI strength (Sharp): the own-turn action search gets 600 engine steps per decision, not 300** (`LA.budgetOwn`, env
