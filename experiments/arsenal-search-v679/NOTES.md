@@ -14,3 +14,5 @@ experiments/search-shape-v678b; dash reproduced exactly, 108 = 108).
 0 refusals / violations in every run. Reading: a rollout through the opponent's turn misjudges (same as horizon "opp",
 -53); the rule's "best attack face down" is at least as good. Gravy is hurt in both arms. Do not retry without a
 different scorer. Chaos d14 (289 games, 33,555 random legal moves): 0 findings (experiments/chaos-d14.txt).
+
+Gravy Steady vs Sharp (seat search off, every other seat on): seeds 0-11 10 vs 41, seeds 12-23 13 vs 48 (gravy.steady*.txt).

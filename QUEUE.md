@@ -4,43 +4,43 @@
 answered NEEDS-A-RULING notes are in `QUEUE-ARCHIVE.md` on this branch (grep it, don't read it). History lives in
 CHANGELOG.md (v6.30 on; older in `docs/archive/CHANGELOG-to-v6.29.md`) and LESSONS.md on main.
 
-## HANDOFF — START HERE (CEO session_013xG9x8HgMKuk2aa2wUQPCV, 2026-11-24 night, at v6.79)
+## HANDOFF — START HERE (CEO session_013xG9xCCHmaDbKTPm38cqzb, 2026-11-24 afternoon, at v6.79)
 
-**State:** live = **v6.79** on `main`, livecheck ALL PASS. Function `table` v110 = `v6.79 · sage-v19`, stamped, `--check` OK.
-WIRE_V 49, DATA_VER sage-v19, 17 heroes, approx ledger 0 open, pool 455/455. **WORKERS IN FLIGHT (CEO session_013xG9xCCHmaDbKTPm38cqzb, 2026-11-24 14:28Z, Sonnet):** J `session_013xG9x8wauLXTKFuj1vwrUY` (ship/j-pitchsearch: Sharp searches WHICH card to pitch, item 00a) · K `session_013xG9xBb6BYLKcSfaSMLzkX` (ship/k-handworth: hand composition by printed def in laEval, item 00b). CEO: chaos d14.
+**State:** live = **v6.79** on `main`, unchanged this session (nothing measured positive, so nothing shipped). Function `table` v110 =
+`v6.79 · sage-v19`. WIRE_V 49, DATA_VER sage-v19, 17 heroes, approx ledger 0 open, pool 455/455. **WORKERS: NONE** (J and K reported, archived).
 
-**This CEO:** v6.79 = Sharp also proposes every attack at the hero AND at each ally (`SPXLATGT`, `laCands`; CR 1.4.5). 24 seeds,
-own seat: +19 (s1) and +9 (s2) = +28 of 6528, no hero down > 3. Small but principled and both samples positive. Drill latarget.
-**Measured and DEAD at the 600 budget** (`experiments/search-shape-v678b/`, NOTES.md + tables): horizon "opp" -53 on 9 heroes;
-mu 1.0 -9; mu 2.25 +29 then -25; a gear term in `laEval` (standing equipment defence) +13 then -17. With v6.78's 900/450 results,
-**Sharp's knobs (budget, horizon, mu, dets) are exhausted** — the remaining strength is in WHAT it considers and how it scores.
-**New probe:** `laX` (patch `laX-perhero-probe.patch`): `SPXLA_XH=<hero> SPXLA_XSET="k=v,..."` overrides any `LA` field inside one
-hero's searches — a per-hero A/B of any search setting with no code edit. Run probes from a scratch `git worktree`, never the main
-tree (editing engine/ mid-sweep changes later runs). **v6.78's base78 reproduces exactly from a worktree** (890 = 890): it is a
-valid base for seeds 0-11; a seeds 12-23 base (`*.base78.s2.txt`) is now in the same folder — reuse both, skip re-measuring base.
+**This CEO (all DEAD, 0 refusals / violations in every run; files under `experiments/` on this branch):**
+- **Arsenal search** (CEO, `arsenal-search-v679/`): Sharp picks the face-down card by playing each out through the foe's turn and its
+  own next turn. -26 of 3264 (margin 3: -6, noise). The rule's "best attack face down" holds.
+- **Pitch-choice search** (worker J, `j-pitchsearch/`): 64% of own-turn payments have a real alternative card, but the score cannot tell
+  them apart (flat mu, own horizon ends after the draw-up): +8 of 6528 over 24 seeds, Gravy -21.
+- **Hand worth by printed numbers** (worker K, `handworth/`): def-weighted hand in laEval -19; arsenal card by power -114 (Sharp hoards);
+  the same def term in the block search -40.
+- **Gravy is the canary, not a bug:** it lost in every arm because it leans on Sharp most: rule policy 23 wins of 384 vs Sharp 89.
+- Chaos **d14 and d15 CLEAN** (289 games each, ~33.6k random legal moves). Next salt **d16**.
+- v6.79's base reproduces exactly on main (dash 108, lyath 59, arakni 106): the `tgt` files in `search-shape-v678b/` ARE the v6.79
+  base for seeds 0-11 (`*.tgt.txt`) and 12-23 (`*.tgt.s2.txt`). Reuse them; do not remeasure.
 
 **LESSONS (keep):** (1) a hand card spent on their turn is missing from yours. (2) Blocked damage still costs the foe cards. (3) A lever
 that "fires but changes nothing" → look for a reader blind to it. (4) A rule on one board only is a bug. (5) Making a step cheaper is
 decision-identical by construction (sha256 the action logs). (6) A search drill that holds "A0 stands" can be passing on a budget
-bail-out — assert `LA.stats.over` 0. (7) NEW: `xargs -L1` splits a job line on spaces — pass each ENV=val as its own word ("$@").
-xargs STOPS the whole sweep if any child is killed by a signal; a background Bash task dies at its timeout (default 30 min: pass
-7200000) and the container can restart mid-sweep — write one result file per run and resume only the empty ones.
+bail-out — assert `LA.stats.over` 0. (7) `xargs -L1` splits on spaces: each ENV=val its own word; one result file per run.
+(8) NEW: **Sharp's search is saturated in shape AND score.** Budget, horizon, mu, dets, targets (shipped), arsenal, pitch, hand
+worth and gear have all been measured. Everything that looks past this turn's end or prices specific held cards LOSES. A new choice
+the score cannot tell apart ties to A0 and measures flat. Do not open another search-shape probe without a new instrument.
 
-**How to run the shop:** unchanged (QUEUE-ARCHIVE.md, previous handoff): one worker per item or the CEO alone on 4 cores; one sweep of
-17 runs x 12 seeds ≈ 15 min at 4 parallel. Ship gates and the deploy order are in CLAUDE.md. Next worker letter: J.
+**How to run the shop:** unchanged (QUEUE-ARCHIVE.md). Workers = Sonnet via create_session, self-contained prompt; this session's
+prompt preamble (`experiments/WORKER-PROMPT-PREAMBLE.txt`) worked first time for both (rules + measurement + base files + report-and-stop), at ~$0.80 each. Next letter: **L**.
 
 **NEXT:**
-00. **Strength via search SCORING and BREADTH** (knobs are done). Ideas, each a per-hero `laX`/gate probe, 12 seeds then 12-23:
-   (a) breadth: `laCands` still proposes one pitch plan and one arsenal choice (end of turn is a single `endTurn`) — census how often the
-   arsenal pick differs between the rule and a searched alternative; (b) scoring: `laEval` prices a held card flat (mu) whatever it is —
-   a card's worth by what it does (def for a blocker, power for an attack) through a judge reader, not card text; (c) the defend search
-   pre-sort charges a gear block 0.5 but `laEval` charges it 0 (the gear term above was flat, so this is likely fine — note only).
+00. **Strength now lives in the ROLLOUT POLICY, not the search.** Sharp plays the rule policy (`actBase`) inside every rollout, so
+   a better rule is a better Steady AND a better Sharp. Census the weakest seats (viseraibw 43, boltyn 47, lyath 59, gravy 41 of 192)
+   with `never.js` / `calls.js` for a decision the rule gets wrong, then fix it as a rule (SPX gate, A/B the hero's seat with SPXLA=all).
 1. Gated ops still read only as PRINTED by the policy (census `experiments/census/gated.js`): low volume, take only with a census.
-2. Chaos: d8-d13 CLEAN (289 games each); next **d14**; trainer `node tools/trainchaos.js '' 3 3` after any Battle change.
-3. Weakest seats (viseraibw, lyath, iyslander, boltyn) look like deck ceilings for this policy; gains there need search/scoring.
-4. Compass of Sunken Depths (Gravy), Energy Potion (Dorinthea, Fai) — skip unless a game reaches them.
-5. Phase 4 (Outbreak, 2027-02): when the lists publish, ROADMAP-NEWDECKS.md + docs/OUTBREAK-PROBE.md. Also open: a real-iPhone
-   timing (DESKTOP-TASKS.md); v6.79 adds candidates only when the foe has an ally, inside the same step cap.
+2. Chaos: d8-d15 CLEAN; next **d16**; trainer `node tools/trainchaos.js '' 3 3` after any Battle change.
+3. Compass of Sunken Depths (Gravy), Energy Potion (Dorinthea, Fai) — skip unless a game reaches them.
+4. Phase 4 (Outbreak, 2027-02): when the lists publish, ROADMAP-NEWDECKS.md + docs/OUTBREAK-PROBE.md. Also open: a real-iPhone
+   timing (DESKTOP-TASKS.md).
 
 **ASK THE USER (defaults standing — overrule any):** the cup (all heroes qualify, top 16 bracket); Prism as an AI seat; Spectra resolves at
 once (`spectra-trigger-at-once`); Prism's block named "Usurp the Shadow Throne"; hero select kept 6 across rather than the roadmap's 4;
