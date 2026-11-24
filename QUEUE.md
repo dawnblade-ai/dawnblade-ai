@@ -15,6 +15,8 @@ matchmaking**. Do not open AI-strength probes. A card that plays wrong is still 
 **v6.87 SHIPPED (P, item 4): Leave takes the rematch ask back, cap line, live rematch probe in livecheck — function v126 stamped, livecheck ALL PASS.** Follow-up: inline Close buttons for the cap's open codes in RematchRow.
 **v6.88 SHIPPED (O, items 2+3): practice grid tidy, practice measured at 4x (nothing to fix) — function v128, livecheck ALL PASS.**
 **v6.89 SHIPPED (Q, item 5): "Players usually find a match in about N s" — SQL 011 run on live, function v130, livecheck ALL PASS. livecheck now deletes its own 0 s probe wait from seek_wait_log (Management API; WARN if unreachable) — any OTHER live seek probe must do the same.**
+**v6.90 SHIPPED (P follow-up): Close a full table on the rematch screen, then Ask again — function v132, livecheck ALL PASS. O's feed-voice audit: 0 feed lines speak to "you" (pin stays 19).**
+**!! BABEL LIMIT: the trainer's text/babel block is ~499,000 chars; Babel deoptimises at 500,000 (console.error crashes page drives). P is planning the split (ship/P-babelroom, experiments/babelroom/PLAN.md) — do it after Q and R land.**
 **WORKERS OUT (CEO session_013xG9xBhp1ZDNBkoYpUuM35, 2026-11-24 eve):** O `ship/O-practice` (items 2+3) session_013xG9x91mB8js1JxFxUvTtU · P `ship/P-rematch` (item 4) session_013xG9x9W7FG6U7PY1jZdzei · Q `ship/Q-waitview` (item 5, SQL 011) session_013xG9xADdaJFbcBqyZcCLSp · R `ship/R-promptsweep` (item 6) session_013xG9xB1Bzw2ykQJmN9bTer. Briefs: experiments/WORKER-PROMPT-UI.txt + experiments/ui/TASK-<L>.txt. If this CEO died: read each branch and integrate.
 
 **This CEO (four releases, workers L, M, N):**
