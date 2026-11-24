@@ -71,7 +71,9 @@ function tapJudge({ min, halo, exempt }) {
     v.width = v.right - v.left; v.height = v.bottom - v.top;
     const edge = { x: r.left < -0.5 || r.right > W + 0.5, y: r.top < -0.5 || r.bottom > H + 0.5 };   // the box itself leaves the screen (a scroller's own clip does not count here)
     if (!cut && ((edge.x && !scrollerAbove(el, "x")) || (edge.y && !scrollerAbove(el, "y")))) cut = `leaves the ${W}x${H} screen (${Math.round(r.left)},${Math.round(r.top)}..${Math.round(r.right)},${Math.round(r.bottom)}) with nothing to scroll it back`;
-    ctl.push({ el, r, v, cut, edge });
+    /* a scroller's own clip holds part of it out of view (a list scrolled to its end): a thumb scrolls the rest into reach */
+    const part = { x: full.right - full.left < r.width - 1 && scrollerAbove(el, "x"), y: full.bottom - full.top < r.height - 1 && scrollerAbove(el, "y") };
+    ctl.push({ el, r, v, cut, edge, part });
   }
   const hitOf = c => {
     const { el, v } = c, probe = (x, y) => { const t = document.elementFromPoint(x, y); return !!t && el.contains(t); };
@@ -86,7 +88,7 @@ function tapJudge({ min, halo, exempt }) {
     if (h.lost) put("stolen", k + " " + box(c.r) + " the tap at its centre lands on " + h.on);
     else {
       /* a control a scroller holds half out of view is judged on its drawn size along that axis */
-      const w = c.edge.x ? Math.max(h.w, c.r.width) : h.w, ht = c.edge.y ? Math.max(h.h, c.r.height) : h.h;
+      const w = c.edge.x || c.part.x ? Math.max(h.w, c.r.width) : h.w, ht = c.edge.y || c.part.y ? Math.max(h.h, c.r.height) : h.h;
       if (w < min - 1 || ht < min - 1) put("small", k + " drawn " + box(c.r) + " hit " + Math.round(w) + "x" + Math.round(ht));
     }
     if (c.cut) put("clipped", k + " " + box(c.r) + " " + c.cut);

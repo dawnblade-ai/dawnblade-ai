@@ -139,7 +139,113 @@ async function sweep({ page, w, h, heroes, boards, games, steps, row, seen, log,
   }
 }
 
-module.exports = { sweep, KINDS, MINFONT, sheetFacts };
+/* ============================================================
+   --inject: EVERY KIND, DETERMINISTICALLY (R, follow-up). A game rarely raises reveal / target / alloc, so the board is PUT
+   into the state instead: a real table game (build.js, through the page's own Fight tap), then ONE seat-0 action is answered
+   with a state whose `promptQ` head is a real prompts.js spec (real cards off the real deck), opened by judge.openPrompt =
+   buildPrompt: the sheet the page draws is the one a card would raise. The page's own session carries the state (local.js
+   pushes it to React exactly as a move does); `DawnJudge.reduce` / `legal` are wrapped BEFORE Fight so the session's captured
+   references see the injection. Nothing about a sheet is hand-rolled DOM.
+   VARIANTS carry the LONGEST realistic list per kind (a 7-card reveal, an alloc over 5 permanents, four barriers).
+   ============================================================ */
+function makeSpecs(g) {
+  const sd = g.sides[0], deck = (sd.deck || []).filter(Boolean), hand = (sd.hand || []).filter(Boolean);
+  const pool = [...hand, ...deck].filter((c, i, a) => a.findIndex(d => d.uid === c.uid) === i);
+  const long = pool.slice().sort((a, b) => String(b.name).length - String(a.name).length);   // the longest names first
+  const take = n => pool.slice(0, n), tol = n => long.slice(0, n);
+  const sel = (spec, s) => ({ ...spec, __sel: s });
+  const barrier = (k, nm, am, cost) => ({ kind: k, name: nm, amount: am, cost, uid: "inj" + nm });
+  return [
+    ["opt 4", { tag: "opt", n: 4, src: "Opt" }],
+    ["opt reorder 3", { tag: "opt", n: 3, keepTop: true, src: "Spire Sniping" }],
+    sel(["opt 4, one sent down", { tag: "opt", n: 4, src: "Opt" }], { down: [1] }),
+    ["pick 8 up to 2 (optional)", { tag: "pick", cards: take(8), max: 2, min: 0, src: "Sift", to: "grave" }],
+    sel(["pick 8, two chosen", { tag: "pick", cards: take(8), max: 3, min: 1, src: "Sift", to: "grave" }], { sel: [0, 1] }),
+    ["pick 8 longest names", { tag: "pick", cards: tol(8), max: 1, min: 1, src: "Banish" }],
+    ["modal 3 long modes", { tag: "modal", src: "Long Card Name Goes Here", options: [{ label: "Draw a card, then discard a card at random and gain 1{r}" }, { label: "Create a Runechant token and deal 1 arcane damage to any target hero" }, { label: "Put the top card of your deck into your graveyard and go again" }] }],
+    ["modal optional (3 modes + decline)", { tag: "modal", optional: true, src: "Jittery Bones", options: [{ label: "Discard a card" }, { label: "Destroy the top card of your deck" }, { label: "Banish a card from your graveyard and gain 1{r}" }] }],
+    ["pay 3", { tag: "pay", cost: 3, src: "Beaten Trackers", title: "Pay 3 to keep it?" }],
+    ["pay unaffordable", { tag: "pay", cost: 9, avail: 1, src: "Beaten Trackers" }],
+    ["reveal 7", { tag: "reveal", cards: take(7), src: "Intimidate" }],
+    ["reveal 1", { tag: "reveal", cards: take(1), src: "Intimidate" }],
+    ["target 6", { tag: "target", cards: take(6), src: "Attack" }],
+    ["target 2", { tag: "target", cards: take(2), src: "Attack" }],
+    ["alloc over 5, 4 counters", { tag: "alloc", cards: take(5), n: 4, src: "Sharpen Steel" }],
+    sel(["alloc over 5, three placed", { tag: "alloc", cards: take(5), n: 4, src: "Sharpen Steel" }], { sel: [0, 0, 2] }),
+    ["soak 4 options", { tag: "soak", amount: 6, avail: 7, src: "Runechant", by: 1, options: [barrier("barrier", "Arcane Barrier", 2, 2), barrier("barrier", "Arcane Barrier of Great Strength", 3, 3), barrier("barrier", "Nullrune Gloves", 1, 1), barrier("spellvoid", "Spellbound Bracers", 2, 0)] }],
+    ["soak 1 option", { tag: "soak", amount: 1, avail: 0, src: "Runechant", by: 1, options: [barrier("spellvoid", "Spellbound Bracers", 2, 0)] }],
+  ].map(v => Array.isArray(v) ? v : v);
+}
+
+/* in the page: wrap reduce/legal once (BEFORE the game starts, the session captures them at creation) */
+const installWrap = () => { if (DawnJudge.__inj) return; const r0 = DawnJudge.reduce, l0 = DawnJudge.legal;
+  DawnJudge.reduce = function (s, a, seat) { if (window.__inject) { const x = window.__inject; window.__inject = null; return { state: x, error: null }; } return r0.apply(this, arguments); };
+  DawnJudge.legal = function (s, a, seat) { return window.__inject ? null : l0.apply(this, arguments); };
+  DawnJudge.__inj = 1; };
+
+/* in the page: build the sheet's state from the CURRENT real game and push it through the session */
+const injectOne = ([name, spec, extra]) => {
+  const T = window.__dawnTable, g = T.session.state(); if (!g) return { err: "no state" };
+  const specs = window.__specs || (window.__specs = null);
+  const live = DawnJudge.openPrompt({ ...g, prompt: null, promptQ: [spec] });
+  if (!live.prompt) return { err: "buildPrompt refused " + name };
+  const p = live.prompt;
+  if (extra && extra.sel) p.sel = extra.sel.slice();
+  if (extra && extra.down) p.down = extra.down.slice();
+  window.__inject = live;
+  const why = T.session.submit({ t: "noop" });
+  return why ? { err: "submit refused: " + why } : { tag: p.tag, title: p.title };
+};
+
+async function injectSweep({ page, w, h, heroes, row, seen, log, css = null, only = null }) {
+  const has = sel => page.locator(sel).first().isVisible().catch(() => false);
+  for (const hi of heroes) {
+    await page.reload(); await page.waitForSelector(".hcard", { timeout: 20000 });
+    const hero = (await page.locator(".hgrid .hcard").nth(hi).innerText()).replace(/\s+/g, " ").trim().slice(0, 22);
+    try {
+      await page.evaluate(installWrap);
+      if (css) await page.addStyleTag({ content: css });
+      await page.locator(".hgrid .hcard").nth(hi).click(); await page.waitForSelector(".sheet");
+      await page.getByRole("button", { name: /^Battle$/ }).first().click();
+      await page.waitForSelector(".rps"); await page.waitForSelector(".rseatpick, .actbar", { timeout: 10000 });
+      if (await has(".rseatpick")) await page.locator(".rseatpick .go").click();
+      await page.waitForSelector(".actbar", { timeout: 8000 });
+      await page.locator(".aifoe button").nth((hi + 3) % (await page.locator(".aifoe button").count())).click(); await page.waitForTimeout(200);
+      await page.locator('.lo .actbar [data-start="table"]').click();
+      await page.waitForSelector(".board", { timeout: 15000 });
+      await page.waitForTimeout(600);
+      const specs = await page.evaluate(`(${makeSpecs.toString()})(window.__dawnTable.session.state())`)
+        .catch(e => { throw new Error("specs: " + e.message); });
+      for (const [name, spec, extra] of specs.filter(v => !only || only.some(o => v[0].startsWith(o))).map(v => v.length === 3 ? v : [v[0], v[1], v.__sel])) {
+        const r = await page.evaluate(injectOne, [name, spec, extra]);
+        if (r.err) { row(false, `inject ${w}x${h}: ${hero} / ${name}`, r.err); continue; }
+        await page.waitForSelector(".psheet", { timeout: 4000 }).catch(() => {});
+        await page.waitForTimeout(350);
+        const f = await page.evaluate(sheetFacts, MINFONT);
+        if (!f) { row(false, `inject ${w}x${h}: ${hero} / ${name}`, "no sheet drawn for a live " + r.tag + " prompt"); continue; }
+        const j = await judgeScreen(page);
+        const bad = ["small", "stolen", "clipped", "overlap"].flatMap(k => j[k].map(x => k + ": " + x.m)).concat(f.issues);
+        seen.set(`${hero}|inject|${r.tag}`, bad.length ? "FAIL" : (seen.get(`${hero}|inject|${r.tag}`) || "ok"));
+        row(j.n > 0 && !bad.length, `inject ${w}x${h}: ${hero} / ${name}`, `${j.n} controls` + (bad.length ? "  " + bad.slice(0, 4).join(" | ") + (bad.length > 4 ? ` (+${bad.length - 4} more)` : "") : ""));
+      }
+    } catch (e) { row(false, `inject ${w}x${h}: ${hero}`, String(e.message).split("\n")[0]); }
+  }
+}
+
+/* the drill (page.js runs it): one hero, every kind, one phone size; then the same with the sheet's CSS SABOTAGED (the
+   list stops scrolling, options shrink to 30px): the sweep must find it, or it was not looking. ~35 s. */
+async function injectDrill(page, row, { w, h }) {
+  const seen = new Map(); let bad = 0, n = 0;
+  await injectSweep({ page, w, h, heroes: [0], seen, row: (ok, name, d) => { n++; if (!ok) bad++; row(ok, name, d); }, log: console.log });
+  row(n >= 18 && KINDS.every(k => seen.has(`${[...seen.keys()][0].split("|")[0]}|inject|${k}`)), `inject ${w}x${h}: every prompt kind was put on the board and judged`, `${n} sheets, ${bad} findings`);
+  let caught = 0, ran = 0;
+  await injectSweep({ page, w, h, heroes: [0], seen: new Map(), only: ["soak 4", "modal optional", "opt 4"], log: console.log,
+    css: ".psheet .pmodal{overflow:visible !important;flex:none !important}.psheet .popt{min-height:0 !important;padding:2px 12px !important}.psheet .parrows button{min-height:20px !important}",
+    row: (ok) => { ran++; if (!ok) caught++; } });
+  row(ran >= 3 && caught >= 2, `inject ${w}x${h}: sabotage (sheet list stops scrolling, options shrink) is found`, `${caught} of ${ran} sabotaged sheets failed the judge`);
+}
+
+module.exports = { sweep, injectSweep, injectDrill, makeSpecs, KINDS, MINFONT, sheetFacts };
 
 if (require.main === module) {
   const { open } = require("./page.js");
@@ -154,7 +260,8 @@ if (require.main === module) {
       await kit.page.waitForSelector(".hcard", { timeout: 20000 });
       const nH = (await kit.page.locator(".hgrid .hcard").count()) - 1;   // the last tile is RANDOM
       const heroes = arg("heroes", "") ? arg("heroes").split(",").map(Number) : [...Array(nH).keys()];
-      try { await sweep({ page: kit.page, w, h, heroes, boards, games, steps, row, seen, log: console.log }); }
+      try { if (process.argv.includes("--inject")) await injectSweep({ page: kit.page, w, h, heroes, row, seen, log: console.log });
+        else await sweep({ page: kit.page, w, h, heroes, boards, games, steps, row, seen, log: console.log }); }
       catch (e) { row(false, `prompt sweep ${w}x${h}: ran to the end`, String(e && e.message || e).split("\n")[0]); }
       kit.errors.forEach(e => row(false, `prompt sweep ${w}x${h}: page error`, e));
       results.push({ w, h, seen }); await kit.close();
@@ -162,8 +269,8 @@ if (require.main === module) {
     for (const { w, h, seen } of results) {
       console.log(`\nCOVERAGE ${w}x${h}  (ok / FAIL / . = not reached; trainer kinds are read off the sheet's shape)`);
       const names = [...new Set([...seen.keys()].map(k => k.split("|")[0]))];
-      for (const b of boards) {
-        const cols = b === "table" ? KINDS : ["opt", "cards", "modal", "soak", "other"];
+      for (const b of process.argv.includes("--inject") ? ["inject"] : boards) {
+        const cols = b === "inject" || b === "table" ? KINDS : ["opt", "cards", "modal", "soak", "other"];
         console.log(`  ${b}:  ` + " ".repeat(22) + cols.map(k => k.padEnd(8)).join(""));
         for (const hn of names) console.log("    " + hn.padEnd(24) + cols.map(k => (seen.get(`${hn}|${b}|${k}`) || ".").padEnd(8)).join(""));
       }

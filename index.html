@@ -1125,6 +1125,9 @@ button.tag::after{content:"";position:absolute;inset:-16px -8px -16px}
 .psheet .poptcol{width:94px}
 .psheet .parrows{gap:6px}
 .psheet .parrows button{min-width:44px;min-height:44px}
+/* THE SHEET'S LIST SCROLLS, ITS BUTTONS STAY (R, tools/promptsweep.js --inject): four barriers on a soak sheet at 320x568 pushed Confirm
+   off the screen with nothing to scroll it back. The mode / option list shrinks into the box and scrolls; the header and the action row never move. */
+.psheet .pmodal{flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
 /* THE END PANEL SCROLLS WHEN IT MUST (M, QUEUE NEXT 6). A ranked server game's end screen stacks the title, the names card, the
    note, the rating change, Find another match, the Verify paragraph and button, and Leave: 523 of 568px at 320 wide, and one more
    button would push Leave off the bottom of a fixed, centred box with no way back (and the title off the top). Centring with

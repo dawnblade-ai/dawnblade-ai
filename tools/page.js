@@ -815,6 +815,17 @@ if(require.main === module){
       await tk.close();
     }
 
+    /* EVERY PROMPT KIND, PUT ON THE BOARD (R; tools/promptsweep.js --inject): a real table game, then a real prompts.js spec of each
+       kind (the longest realistic list) opened through judge.openPrompt, judged by tapjudge + the sheet checks at the smallest phone,
+       and the same sheet with its CSS sabotaged, which must be found. All heroes: `node tools/promptsweep.js --inject`. */
+    {
+      const ik = await open({ w: 320, h: 568 });
+      try { await require("./promptsweep.js").injectDrill(ik.page, row, { w: 320, h: 568 }); }
+      catch(e){ row(false, "inject 320x568: the drill ran to the end", String(e && e.message || e).split("\n")[0]); }
+      ik.errors.forEach(e => errors.push(`inject 320x568: ${e}`));
+      await ik.close();
+    }
+
     const sw = errors.slice();
     if(sw.length){ console.log("\nPAGE ERRORS (" + sw.length + "):"); sw.forEach(e => console.log("  " + e)); }
     const bad = rows.filter(r => !r.ok).length;
