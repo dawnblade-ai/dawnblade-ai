@@ -1,3 +1,30 @@
+## v6.86 — The tap is never lost: a 44 px floor on every screen, and an end panel that scrolls
+
+- **POLISH.md condition 1, swept (NEXT 5 and 6).** Every screen was measured at 393x852 and 320x568 by the area a tap
+  actually hits (`elementFromPoint`, so an `::after` hit area counts), not by the drawn box. Hit areas raised to 44 px:
+  - the tab bar: 34 px (its padding moved into the buttons; the bar is still 47 px);
+  - the quiet big buttons and the sheet's CONFIRM: 40–42 px;
+  - the judge quiz's options and *back to roster*;
+  - the hero sheet's keyword chips: 26 px;
+  - the sound button: 33 px wide at 320;
+  - *✕ clear fighter*: 12 px, now an `::after` hit area;
+  - the dummy slot's ✕✕;
+  - the status line's SKIP / ✕ CANCEL: 34 px;
+  - JUDGE!!.
+
+  *✕ LEAVE* no longer spills its box at 320. All of it is one CSS block; no JSX changed.
+- **The end panel scrolls when it has to.** At 320x568 a ranked end panel (rating change, Rematch, Find another match,
+  Verify, Leave) no longer fits. `.reveal` was fixed, centred and unscrollable, so the title went above the screen and
+  *Leave* below it, with no way back. It now scrolls: centred when it fits, top-aligned and scrollable when it does not.
+- **Tools:** `tools/tapjudge.js` measures hit areas, stolen centre taps, clipping and overlap, with scroll passes.
+  `tools/tapsweep.js` walks every screen (~2 min). `tools/page-audit.js` takes AUDIT_W/AUDIT_H. UI-GUIDE.md notes the floor.
+- **Drills:** `tools/page.js` +44 rows (22 screens at two sizes). `tools/serverpage.js` +10 rows: the ranked end panel at
+  320 for the creator and the joiner, plus one injected extra button, so the panel must scroll. Sabotage: with the CSS
+  reverted, 26 tap-floor rows fail; with the panel's scroll removed, both extra-button rows fail. Worker M built it.
+  `test/slicecensus.test.js` is 94,193.
+- **Validation:** npm test 4589 / 4584 pass / 0 fail / 5 skipped; both babel blocks compile; `tools/page.js` 133/133 screens;
+  `tools/serverpage.js` 364 / 0. No engine, rule, wire, AI or SQL change.
+
 ## v6.85 — Waiting is lonely: play the AI while Find a match keeps searching
 
 - **Play the AI while you wait (NEXT 2).** A player who has waited a minute on *Find a match* with nobody around now sees a
