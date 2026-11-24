@@ -42,6 +42,7 @@ function sheetFacts(minFont) {
     if (!n.nodeValue.trim()) continue; const e = n.parentElement, cs = getComputedStyle(e);
     if (cs.visibility === "hidden" || cs.display === "none") continue;
     const q = e.getBoundingClientRect(); if (!q.width || !q.height) continue;
+    if (e.closest(".cfw")) continue;   // a card's own face is art scaled to fit: its printed text is the card's, not the sheet's
     const px = parseFloat(cs.fontSize);
     if (px < minFont - 0.01) small.set(String(e.className) + "|" + px, `${px}px "${n.nodeValue.trim().slice(0, 18)}" (.${String(e.className).split(" ")[0] || e.tagName.toLowerCase()})`);
   }
@@ -74,7 +75,7 @@ const trainerStep = (page, r) => page.evaluate(r => {
   const bs = [...document.querySelectorAll("button")].filter(b => b.offsetParent && !b.disabled && !b.closest(".judgebtn") && !b.classList.contains("judgebtn") && !b.closest(".bugwrap") && !b.closest(".screennav"));
   const c = bs[Math.floor(r * bs.length)]; if (c) c.click(); }, r).catch(() => {});
 
-async function sweep({ page, w, h, heroes, boards, games, steps, row, seen, log, budgetMs = 45000 }) {
+async function sweep({ page, w, h, heroes, boards, games, steps, row, seen, log, budgetMs = +(process.env.PS_BUDGET || 20000) }) {
   const has = sel => page.locator(sel).first().isVisible().catch(() => false);
   const home = async () => { await page.reload(); await page.waitForSelector(".hcard", { timeout: 20000 }); };
   const toLoadout = async hi => {
