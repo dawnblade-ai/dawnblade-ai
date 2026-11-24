@@ -4,7 +4,7 @@
 answered NEEDS-A-RULING notes are in `QUEUE-ARCHIVE.md` on this branch (grep it, don't read it). History lives in
 CHANGELOG.md (v6.30 on; older in `docs/archive/CHANGELOG-to-v6.29.md`) and LESSONS.md on main.
 
-## HANDOFF — START HERE (CEO session_013xG9xBhp1ZDNBkoYpUuM35, 2026-11-24 night, at v6.93)
+## HANDOFF — START HERE (CEO session_013xG9x8sybtytAYZSGDYiE1 took over 2026-11-24 late, at v6.93; previous CEO session_013xG9xBhp1ZDNBkoYpUuM35)
 
 **DIRECTION (user, 2026-11-24, standing): the AI logic is on the BACK BURNER**; lead with **graphical UI / UX polish and
 matchmaking**. Do not open AI-strength probes. A card that plays wrong is still a bug: fix it.
@@ -13,7 +13,9 @@ matchmaking**. Do not open AI-strength probes. A card that plays wrong is still 
 whole live REMATCH and takes its own seek wait back out of `seek_wait_log`). SQL **001..011** on the project (011 run
 2026-11-24). WIRE_V 49, DATA_VER sage-v19, 17 heroes. Gates at v6.93: npm test 4600/4595/0/5, page.js 153/153, serverpage 401/0,
 tapsweep 44/44.
-**WORKERS: NONE** (O P Q R all integrated and stopped).
+**WORKERS OUT (Sonnet, briefs experiments/ui/TASK-S..V.txt):** S `session_013xG9x8DbXrpdtDWbNVJnmE` trainer prompt sweep + weekly CI (items 2+6) ·
+T `session_013xG9x888sBosASnUZGyQae` match-found sound/title (3) · U `session_013xG9xAs667zrcqQiEeKrXZ` contrast tokens (4) ·
+V `session_013xG9x8zLqJcDjVxXa7mnqk` own ranked history (5). Branches ship/<L>-*. Next letter: **W**.
 
 **This CEO (seven releases, workers O P Q R; briefs experiments/WORKER-PROMPT-UI.txt + experiments/ui/TASK-*.txt):**
 - **v6.87** (P) Leave takes the rematch ask back; table-cap line; `tools/rematchprobe.js` in livecheck + Deno rehearsal.
@@ -62,4 +64,4 @@ text anchors (`no direct link needed`, `Server table Get matched`, the hands she
 index.html can move `test/slicecensus.test.js`'s pinned slice lengths: read the diff, repin the one number. After pushing
 main: curl until the page serves the new APP_VER, THEN `tools/supabase-deploy.js` (--dry-run first), commit DEPLOYED.json,
 THEN `node tools/livecheck.js`. Workers = Sonnet via create_session; UI/server work uses `experiments/WORKER-PROMPT-UI.txt` (point the worker at it plus
-a task file in experiments/ui/; it names the CEO session to report to — edit that id). Next letter: **S**.
+a task file in experiments/ui/; it names the CEO session to report to — edit that id). Next letter: **W**.
