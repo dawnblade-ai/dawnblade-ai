@@ -1714,6 +1714,10 @@ test("the second-person debt in the shared semantics does not grow", () => {
      with a reason attached: a refusal returned to the seat that tried, or a prompt addressed to
      `spec.side` — never a line the shared feed carries. `n` is how many literals the anchor covers
      (the scan counts a string twice when two sites use it). */
+  /* AUDITED LINE BY LINE (ship/O-feedvoice, 2026-11-24): the 19 are 14 allow-list entries + 3 CODE entries (some cover two literals). Every PROMPT is a
+     spec addressed to `spec.side` (pick/pay/modal titles and hints); every REFUSAL is a `why` returned to the seat that tried the play (`playTargetWhy` /
+     `pumpTargetWhy`, read at effects.js's play gate and judge.js's legality gates: returned to the actor, never written to the feed). No FEED line (`L(`) carries
+     a second person, so the number stays 19 and nothing was left to rewrite. */
   const ALLOW = [
     ["PROMPT", "Reload \u2014 put a card face-down into your arsenal?", 1],
     ["PROMPT", "Charge your soul", 1],
