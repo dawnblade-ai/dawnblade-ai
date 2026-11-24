@@ -899,6 +899,49 @@ async function toServerChooser(page){
     B.ch.close(); await k.kit.close();
   }
 
+  /* RM2: LEAVING TAKES THE ASK BACK (v6.87) — the page asks, then taps Leave the table: the opponent's phone stops seeing the ask at once */
+  {
+    const k = await rankedKit("rematch-leave", { me: "Dawn Smith" }), pg = k.pg, wd = k.wd, B = k.Bp;
+    await toServerChooser(pg);
+    await click(pg, pg.locator('[data-testid="ranked-switch"]'), "switch to ranked");
+    await toTheBoard(pg, wd, B, { asHost: true, openRe: /^Open a ranked table/ });
+    await playSome(pg, wd, B, 0, 4);
+    B.sess.submit({ t: "concede" }); await wd.settle([B.ch]);
+    await pg.waitForSelector('[data-testid="rematch"]', { timeout: 15000 }).catch(() => {});
+    await click(pg, pg.locator('[data-testid="rematch"]'), "rematch");
+    await pg.waitForSelector('[data-testid="rematch-cancel"]', { timeout: 8000 }).catch(() => {});
+    await wd.settle([B.ch]);
+    row(B.ch.rematch().theirs === true, "rematch leave: the opponent's phone sees the page's ask before it leaves", JSON.stringify(B.ch.rematch()));
+    await click(pg, pg.locator(".endleave"), "Leave the table");
+    for(let i = 0; i < 30 && B.ch.rematch().theirs; i++){ await wd.settle([B.ch]); await new Promise(r => setTimeout(r, 100)); }
+    row(B.ch.rematch().theirs === false && B.ch.rematch().table === null, "rematch leave: tapping Leave the table takes the ask back; the opponent's phone stops showing it at once", JSON.stringify(B.ch.rematch()));
+    B.ch.close(); await k.kit.close();
+  }
+
+  /* RM3: A FULL HOUSE OF OPEN TABLES (v6.87) — the page's player already holds the most open tables; the opponent asked first and the page says yes: the referee
+     refuses the new table, and the page says in one plain sentence what to do. No table is opened; the opponent's ask is untouched. */
+  {
+    const k = await rankedKit("rematch-cap", { me: "Dawn Smith" }), pg = k.pg, wd = k.wd, B = k.Bp;
+    await toServerChooser(pg);
+    await click(pg, pg.locator('[data-testid="ranked-switch"]'), "switch to ranked");
+    await toTheBoard(pg, wd, B, { asHost: true, openRe: /^Open a ranked table/ });
+    await playSome(pg, wd, B, 0, 4);
+    B.sess.submit({ t: "concede" }); await wd.settle([B.ch]);
+    await pg.waitForSelector('[data-testid="rematch"]', { timeout: 15000 }).catch(() => {});
+    const filler = wd.transport("filler"); let made = 0;
+    for(let i = 0; i < wd.server.OPEN_CAP + 1 && made < wd.server.OPEN_CAP; i++){ const c = await filler.post({ op: "create", identity: { token: k.tokMe } }); if(c && c.ok) made++; }
+    const a1 = await B.ch.askRematch(); await wd.settle([B.ch]);
+    await pg.waitForFunction(() => /wants a rematch/.test((document.querySelector('[data-testid="rematch-note"]') || {}).innerText || ""), null, { timeout: 8000 }).catch(() => {});
+    const rows0 = wd.store.rows.size;
+    await click(pg, pg.locator('[data-testid="rematch"]'), "say yes to the rematch");
+    await pg.waitForSelector('[data-testid="rematch-msg"]', { timeout: 8000 }).catch(() => {});
+    const m = await boxes(pg, '[data-testid="rematch-msg"]'), rb = await boxes(pg, '[data-testid="rematch"]');
+    row(a1.state === "waiting" && made === wd.server.OPEN_CAP && m.length === 1 && /^Your open tables are full, and one player can only keep so many\. Close one from Find an opponent, then you and your opponent can ask for a rematch again\.$/.test(m[0].t), "rematch cap: at the open-table cap the page says, in one plain sentence, to close a table", m[0] && m[0].t);
+    row(m.length === 1 && noJargon(m[0].t) && m[0].x >= 0 && m[0].r <= W && m[0].b <= H && await overflow(pg), "rematch cap: the sentence is inside 393x852, no identifier, no horizontal overflow");
+    row(wd.store.rows.size === rows0 && rb.length === 1 && rb[0].h >= 44, "rematch cap: no table was opened, and Rematch is still there to tap again, thumb-sized", JSON.stringify(rb[0])); await thumbs(pg, "rematch cap", ".reveal");
+    B.ch.close(); await k.kit.close();
+  }
+
   /* R2c — THE RANKED END SCREEN AT 320x568 (M, QUEUE NEXT 6; POLISH.md condition 1). The end panel stacks the title, the names card, the life left,
      the note, the rating change, Find another ranked match, (a joiner's) the Verify paragraph and button, and Leave the table. On the smallest phone
      none may be pushed off the screen with no way back, and every button takes a 44px tap (tools/tapjudge.js; its scroll passes put the panel's

@@ -8596,7 +8596,7 @@ function RematchRow({table, seat, name, onGo}){
     table.askRematch(cancel).then(r=>{ setBusy(false); setRm(table.rematch()); setAsked(r.state==="waiting" ? Date.now() : 0); },
       e=>{ setBusy(false); setAsked(0); setRm(table.rematch());
         const why = e && e.why;
-        setMsg(why==="table-cap" ? "You already have the most open tables there may be. Close one from Find an opponent, then try again."
+        setMsg(why==="table-cap" ? "Your open tables are full, and one player can only keep so many. Close one from Find an opponent, then you and your opponent can ask for a rematch again."
           : why==="ranked-name" || why==="ranked-signin" || why==="identity" ? "A ranked rematch needs you signed in with a name."
           : why==="no-table" || why==="auth" ? "This table has closed, so a rematch is not possible here. You can find another match instead."
           : "The server is not answering. Try again in a moment."); });

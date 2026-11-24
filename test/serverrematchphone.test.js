@@ -85,3 +85,25 @@ test("(d) a missed push heals: the next resync carries who asked and the code", 
   assert.deepEqual(await guard(rematchFailures(ST, {salt: "drop", dropPush: true})), []);
   assert.ok((await guard(rematchFailures(stCopy([["if(r && r.ok){ readNames(r.names); readRank(r); readRematch(r.rematch); ingest(r.frames); ok1 = true; }", "if(r && r.ok){ readNames(r.names); readRank(r); ingest(r.frames); ok1 = true; }"]]), {salt: "drop", dropPush: true}))).length > 0, "sabotage (a resync ignores the rematch) must fail");
 });
+
+/* (e) LEAVING TAKES THE ASK BACK (v6.87): a phone that asked and then leaves the table (closes it) cancels its ask, so the other phone stops seeing
+   "wants a rematch" at once; a phone that never asked sends nothing; a phone that closes after the code is agreed does not cancel it. */
+async function leaveFailures(M, o){
+  o = o || {};
+  const bad = [], w = rankedWorld("rmp-leave-" + (o.salt || "a"));
+  const P = w.player("P-rml-zero", "Dawn Smith"), Q = w.player("P-rml-one", "Rival One");
+  const mk = (n, h, pl, extra) => PH.makePhone(w.world, n, {hero: h, rand: T.seeded("rml|" + n + "|" + (o.salt || "")), ST: M, throws: [["rock", "rock"], ["paper", "rock"]], identity: pl.identity, ...(extra || {})});
+  const A = mk("A", "blaze", P, {ranked: true}), B = mk("B", "dorinthea", Q);
+  if(!await seat(w, A, B)) return ["the game did not start"];
+  B.sess.submit({t: "concede"});
+  await w.world.settle([A.ch, B.ch]);
+  await A.ch.askRematch(); await w.world.settle([A.ch, B.ch]);
+  if(!B.ch.rematch().theirs) return ["the other phone did not hear the ask"];
+  A.ch.close(); await w.world.settle([B.ch]);
+  if(B.ch.rematch().theirs) bad.push("the other phone still shows the ask after the asker left");
+  return bad;
+}
+test("(e) leaving the table takes a pending rematch ask back; the other phone stops seeing it", async () => {
+  assert.deepEqual(await guard(leaveFailures(ST)), []);
+  assert.ok((await guard(leaveFailures(stCopy([["      if(!closed && rm.want[seat] === true && !rm.table){", "      if(false){"]]), {salt: "sab"}))).length > 0, "sabotage (close does not cancel) must fail");
+});
