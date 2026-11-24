@@ -66,10 +66,11 @@ serves the repo as authored, it is played on an iPhone, and it must run from
   the bare names the babel blocks call.
 - `index.html` layout: one `<style>` block · a data `<script>` (`APP_VER`,
   `DATA_VER`, `HEROES`, `DECKS`, CDN paths) · engine script tags + bridge · `script0`
-  (`text/babel`: loader, card resolver, UI shell) · `script1` (`text/babel`: trainer —
-  Battle, table board, loadout, App).
-- Both babel blocks compile as *scripts*, not modules: top-level `const` becomes a
-  global, which is how `script1` sees `script0`. Load-bearing — do not "fix" it.
+  (`text/babel`: loader, card resolver, UI shell) · `script1a/1b/1c` (`text/babel`, three
+  blocks: trainer · server table UI · App + the mount, which stays LAST). Babel stops formatting a
+  block over 500,000 chars and page drives crash on the note: `test/html-balance.test.js` caps each at 450,000.
+- The babel blocks compile as *scripts*, not modules: top-level `const` becomes a
+  global, which is how each block sees the ones before it. Load-bearing — do not "fix" it.
 - **The no-mirror rule.** One copy of every shared function, in `engine/`. Never
   re-declare an engine export inside `index.html` (it would silently shadow the
   module). `test/sync.test.js` guards load order, the bridge, and this; it scans raw

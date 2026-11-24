@@ -29,11 +29,13 @@ These are not style preferences. Each one has broken the page in production.
 2. **ONE `<style>` BLOCK, ONE CLOSING TAG.** Lines 13–788. CSS is *appended
    before* `</style>`. `test/html-balance.test.js` fails on a second one.
 
-3. **THE TWO `text/babel` BLOCKS COMPILE AS SCRIPTS, NOT MODULES.**
-   - `script0` — lines **1528–1847**: loader, card resolver, UI shell
-   - `script1` — lines **1849–7245**: the trainer and the table
-   Their top-level `const` becomes a global `var`, which is how `script1` sees
-   names from `script0` and from the bridge. **Do not "fix" this into
+3. **THE `text/babel` BLOCKS COMPILE AS SCRIPTS, NOT MODULES.** Four, in this order (grep `text/babel` for the lines):
+   - `script0`: loader, card resolver, UI shell
+   - `script1a`: the trainer (`Battle`, `Loadout`, `Pregame`); `script1b`: the server table UI (`SrvLadder` .. `TableBoard`);
+     `script1c`: `App` and the `createRoot` mount, which must stay LAST. Each block is capped at 450,000 chars
+     (`test/html-balance.test.js`); put a new component in the block that is smallest, or move a seam.
+   Their top-level `const` becomes a global `var`, which is how each block sees
+   names from the blocks before it and from the bridge. **Do not "fix" this into
    modules** — it is load-bearing. A `<script type="module">` also cannot run
    from `file://`.
 
@@ -58,8 +60,7 @@ These are not style preferences. Each one has broken the page in production.
 | 789–1383 | plain data script — `APP_VER`, `DATA_VER`, `HEROES`, `DECKS` (then `data/pool.js`, the cards) |
 | 1390–1454 | the 21 `engine/*.js` `<script src>` tags |
 | 1455–1527 | the **bridge** (plain JS, not babel) — lifts engine exports to bare names |
-| 1528–1847 | `script0` |
-| 1849–7245 | `script1` |
+| (grep `text/babel`) | `script0`, then `script1a`, `script1b`, `script1c` |
 
 ### The components, in source order
 
