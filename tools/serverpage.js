@@ -889,6 +889,50 @@ async function toServerChooser(page){
     B.ch.close(); await k.kit.close();
   }
 
+  /* RM: REMATCH (v6.83) — after a ranked game, the opponent asks first (the page hears it by push), takes it back (the page hears that too), then the page asks
+     and waits, the opponent says yes, and the page sits down at the NEW ranked table at once (back to the hero pick) */
+  {
+    const k = await rankedKit("rematch", { me: "Dawn Smith" }), pg = k.pg, wd = k.wd, rat = k.rat, B = k.Bp;
+    await toServerChooser(pg);
+    await click(pg, pg.locator('[data-testid="ranked-switch"]'), "switch to ranked");
+    const code = await toTheBoard(pg, wd, B, { asHost: true, openRe: /^Open a ranked table/ });
+    await playSome(pg, wd, B, 0, 4);
+    B.sess.submit({ t: "concede" });
+    await wd.settle([B.ch]);
+    await pg.waitForSelector('[data-testid="rematch"]', { timeout: 15000 }).catch(() => {});
+    const rb0 = await boxes(pg, '[data-testid="rematch"]');
+    row(rb0.length === 1 && /^rematch$/i.test(rb0[0].t) && rb0[0].h >= 44 && rb0[0].x >= 0 && rb0[0].r <= W && rb0[0].b <= H, "rematch: the end screen offers Rematch, thumb-sized, on screen", JSON.stringify(rb0[0]));
+    const ag = await boxes(pg, '[data-testid="seek-again"]');
+    row(ag.length === 1 && rb0.length === 1 && ag[0].y > rb0[0].y && await overflow(pg), "rematch: Find another ranked match is still there, under it; no horizontal overflow"); await thumbs(pg, "rematch end screen", ".reveal");
+    /* the opponent asks first: the page hears it from the push */
+    const a1 = await B.ch.askRematch(); await wd.settle([B.ch]);
+    await pg.waitForFunction(() => /wants a rematch/.test((document.querySelector('[data-testid="rematch-note"]') || {}).innerText || ""), null, { timeout: 8000 }).catch(() => {});
+    const n1 = await boxes(pg, '[data-testid="rematch-note"]'), rb1 = await boxes(pg, '[data-testid="rematch"]');
+    row(a1.state === "waiting" && n1.length === 1 && /^Rival One wants a rematch\.$/.test(n1[0].t) && rb1.length === 1 && /say yes/i.test(rb1[0].t), "rematch: the opponent's ask reaches the page — 'Rival One wants a rematch.' and the button says yes", n1[0] && n1[0].t);
+    await B.ch.askRematch(true); await wd.settle([B.ch]);
+    await pg.waitForFunction(() => !document.querySelector('[data-testid="rematch-note"]'), null, { timeout: 8000 }).catch(() => {});
+    row((await boxes(pg, '[data-testid="rematch-note"]')).length === 0 && /^rematch$/i.test(((await boxes(pg, '[data-testid="rematch"]'))[0] || {}).t || ""), "rematch: when the opponent takes it back, the page stops saying they want one");
+    /* the page asks and waits */
+    const rows0 = wd.store.rows.size;
+    await click(pg, pg.locator('[data-testid="rematch"]'), "rematch");
+    await pg.waitForSelector('[data-testid="rematch-cancel"]', { timeout: 8000 }).catch(() => {});
+    const n2 = await boxes(pg, '[data-testid="rematch-note"]'), cx = await boxes(pg, '[data-testid="rematch-cancel"]');
+    row(n2.length === 1 && /^You asked for a rematch\. Waiting for Rival One to say yes… [12]:\d\d$/.test(n2[0].t) && cx.length === 1 && cx[0].h >= 44 && cx[0].b <= H, "rematch: the page says it is waiting for Rival One, with a calm count and Take it back", n2[0] && n2[0].t);
+    row(B.ch.rematch().theirs === true && wd.store.rows.size === rows0, "rematch: the opponent's phone heard the ask; no table opened on one ask", JSON.stringify(B.ch.rematch()));
+    row(n2.length === 1 && noJargon(n2[0].t) && await overflow(pg), "rematch: the waiting words carry no jargon; no horizontal overflow"); await thumbs(pg, "rematch waiting", ".reveal");
+    /* the opponent says yes: the page sits down at the new table */
+    const b2 = await B.ch.askRematch(); await wd.settle([B.ch]);
+    const nc = b2.table;
+    await pg.waitForFunction(c => document.body.innerText.indexOf(c) >= 0 && !document.querySelector('[data-testid="rematch-row"]'), nc, { timeout: 15000 }).catch(() => {});
+    const nrow = nc ? wd.row(nc) : null;
+    row(b2.state === "ready" && nc !== code && !!nrow && nrow.ranked === true && (nrow.owners || []).indexOf("P-rk-me") >= 0, "rematch: both said yes — a new RANKED table, and the page sat down at it by itself", JSON.stringify(nrow && { ranked: nrow.ranked, owners: nrow.owners }));
+    row((await text(pg)).indexOf(nc) >= 0 && (await boxes(pg, '[data-testid="rank-change"]')).length === 0, "rematch: the page left the old end screen for the new table", nc);
+    row(rat.records === 1, "rematch: the first game was recorded once; the new table records nothing until its own game ends");
+    const bad = k.kit.errors.filter(e => !/404|Failed to load resource/.test(e));
+    row(bad.length === 0 && wd.errors.length === 0, "rematch: no page error and no internal error on the fake server", bad.concat(wd.errors).join(" | ").slice(0, 200));
+    B.ch.close(); await k.kit.close();
+  }
+
   /* R3: the refusals — a nameless player cannot sit at a ranked table (the page says what to do), and cannot open one */
   {
     const k = await rankedKit("nameless", { me: null, bRanked: true }), pg = k.pg, wd = k.wd, rat = k.rat, B = k.Bp;
@@ -1225,6 +1269,44 @@ async function toServerChooser(page){
     await wait(300);
     const bad = k.kA.errors.concat(k.kB.errors).filter(e => !/404|Failed to load resource/.test(e));
     row(bad.length === 0 && k.wd.errors.length === 0, "seek: no page error and no internal error on the fake server", bad.concat(k.wd.errors).join(" | ").slice(0, 200));
+    await k.kA.close(); await k.kB.close();
+  }
+  /* K1b: WAITING IS LONELY (SEEK N). After the quiet minute (shortened here through SERVER_TABLE.quietMs) the card offers Play the AI while you wait;
+     the search keeps running behind the practice screens; a match that lands mid-practice is a banner, taken only by a tap, and ignored it is just an unanswered match */
+  {
+    const k = await seekKit("lonely");
+    await k.A.evaluate(() => { window.SERVER_TABLE.quietMs = 3500; });
+    await toFirst(k.A); await toFirst(k.B);
+    await click(k.A, k.A.locator('[data-testid="seek-open"]'), "A: find a match");
+    await k.A.waitForFunction(() => /Looking for an opponent/.test(document.body.innerText), null, { timeout: 8000 }).catch(() => {});
+    row((await boxes(k.A, '[data-testid="seek-play-ai"]')).length === 0 && (await boxes(k.A, '[data-testid="seek-quiet"]')).length === 0, "waiting: no offer of the AI before the quiet minute has passed");
+    await k.A.waitForSelector('[data-testid="seek-play-ai"]', { timeout: 9000 }).catch(() => {});
+    const ai = await boxes(k.A, '[data-testid="seek-play-ai"]'), qn = await boxes(k.A, '[data-testid="seek-quiet"]');
+    row(ai.length === 1 && /^play the ai while you wait$/i.test(ai[0].t) && ai[0].h >= 40 && ai[0].x >= 0 && ai[0].r <= W && ai[0].b <= H, "waiting: after the quiet minute the card offers Play the AI while you wait, thumb-sized, on screen", JSON.stringify(ai[0]));
+    row(qn.length === 1 && seekJargon(qn[0].t) && /keeps going/.test(qn[0].t), "waiting: the line under the clock is plain and says the search keeps going", qn[0] && qn[0].t);
+    const aTable = [...k.sk.q.values()][0] && [...k.sk.q.values()][0].table;
+    await click(k.A, k.A.locator('[data-testid="seek-play-ai"]'), "A: play the AI while waiting");
+    await k.A.waitForSelector('[data-testid="wait-bar"]', { timeout: 6000 }).catch(() => {});
+    const wb = await boxes(k.A, '[data-testid="wait-bar"]');
+    row(wb.length === 1 && wb[0].r <= W && seekJargon(wb[0].t) && (await boxes(k.A, '[data-testid="seek-card"]')).length === 0, "waiting: tapping it opens the hero grid with a Still looking bar, and the seek card is out of sight", wb[0] && wb[0].t);
+    await wait(400);
+    row(k.sk.q.size === 1 && !!aTable && k.wd.row(aTable) && k.wd.row(aTable).closed !== true, "waiting: the search is NOT cancelled by practising (A still queued, table open)", "queue " + k.sk.q.size);
+    await k.A.locator(".hcard").first().click(); await k.A.locator(".battlebtn").first().click();
+    await k.A.waitForFunction(() => /throw|first|coin|who goes/i.test(document.body.innerText) && !document.querySelector('[data-testid="wait-bar"]'), null, { timeout: 8000 }).catch(() => {});
+    row((await boxes(k.A, '[data-testid="wait-bar"]')).length === 0 && (await boxes(k.A, '[data-testid="match-ready"]')).length === 0, "waiting: a practice game starts, no banner yet");
+    await click(k.B, k.B.locator('[data-testid="seek-open"]'), "B: find a match");
+    await k.A.waitForSelector('[data-testid="match-ready"]', { timeout: 15000 }).catch(() => {});
+    const bn = await boxes(k.A, '[data-testid="match-ready"]'), tk = await boxes(k.A, '[data-testid="match-take"]');
+    row(bn.length === 1 && /^your match is ready/i.test(bn[0].t) && seekJargon(bn[0].t) && bn[0].y <= 2 && bn[0].r <= W, "waiting: a match arriving mid-practice shows Your match is ready over the game", bn[0] && bn[0].t);
+    row(tk.length === 1 && tk[0].h >= 44 && tk[0].r <= W && !/Choose your fighter/i.test(await text(k.A)), "waiting: the practice game is not taken away from the player, and the take button is thumb-sized", JSON.stringify(tk[0]));
+    await wait(1500);
+    const r0 = k.wd.row(aTable);
+    row((await boxes(k.A, '[data-testid="match-ready"]')).length === 1 && !!r0 && r0.owners && r0.owners[1] === "P-sk-b" && r0.closed !== true, "waiting: ignored, the match simply stands as an unanswered match does (banner stays, table open, both chairs held)", JSON.stringify(r0 && r0.owners));
+    await click(k.A, k.A.locator('[data-testid="match-take"]'), "A: join them");
+    const upA = await lobbyUp(k.A), upB = await lobbyUp(k.B);
+    row(upA && upB && (await boxes(k.A, '[data-testid="match-ready"]')).length === 0, "waiting: taking the match leaves the practice game and both reach the lobby", "A " + upA + ", B " + upB);
+    const bad = k.kA.errors.concat(k.kB.errors).filter(e => !/404|Failed to load resource/.test(e));
+    row(bad.length === 0 && k.wd.errors.length === 0, "waiting: no page error and no internal error", bad.concat(k.wd.errors).join(" | ").slice(0, 200));
     await k.kA.close(); await k.kB.close();
   }
   /* K2: Stop looking takes A out of the queue and closes the table; a ranked search from the server screen needs a name and meets only a ranked seeker */

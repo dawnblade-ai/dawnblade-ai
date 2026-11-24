@@ -37,7 +37,7 @@ function makeStub(o){
   const rows = new Map(), broadcasts = [], stats = {gets: 0, puts: 0, conflicts: 0, casts: 0, bad: [], largestPut: 0};
   const KEY = o.key || "stub-service-key";
   const subs = [], users = new Map(), players = new Map(), identities = new Map(), recovery = new Map(), attempts = new Map(), ratings = new Map(), results = new Map();
-  const seekQ = require(require("path").join(__dirname, "..", "test", "helpers", "serverfakes.js")).withSeek();   /* S6.1: 009_seek.sql stands in as the drills' fake queue */
+  const seekQ = require(require("path").join(__dirname, "..", "test", "helpers", "serverfakes.js")).withSeek({rate: p => (ratings.get(p) || {}).rating});   /* S6.1: 009_seek.sql stands in as the drills' fake queue; 010_rating_window.sql's window reads the stub's ratings */
   stats.auths = 0; stats.resolves = 0; let seq = 0, born = 0, authDown = false;
   const handler = (req, res) => {
     const chunks = [];

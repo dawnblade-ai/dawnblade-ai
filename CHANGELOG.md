@@ -1,3 +1,81 @@
+## v6.85 — Waiting is lonely: play the AI while Find a match keeps searching
+
+- **Play the AI while you wait (NEXT 2).** A player who has waited a minute on *Find a match* with nobody around now sees a
+  calm line ("Nobody has sat down yet…") and a button: **Play the AI while you wait**. It opens the hero grid with a *Still
+  looking for a match* bar and a way back to the search. The search keeps running behind the practice game: the same ~20 s
+  heartbeat, no new requests, and the screen's one-second clock pauses while hidden. `TableScreen` stays mounted and hidden;
+  nothing is lifted to App. When a match arrives mid-practice, a banner, **Your match is ready — an opponent is waiting**,
+  sits over the game with **Join them**. The practice game is never taken away on its own. An unanswered match behaves
+  exactly as it does today: 009 has no acceptance timeout, so the table stays open with both chairs held. The waiting clock
+  (m:ss) was already in. The 60 s threshold reads `window.SERVER_TABLE.quietMs`, so the drives can shorten it. Worker N
+  built it.
+- **Drills:** `tools/serverpage.js` K1b, 11 rows: no offer before the quiet minute; the offer is thumb-sized and plain; the
+  search survives practice; the banner lands over the game; an ignored match stands; Join them reaches the lobby on both
+  phones; no errors. Sabotaged twice and seen to fail: the 60 s gate removed, and banner delivery made immediate.
+  `test/tapdoor.test.js`'s plain-arrow count is 20 (the Join them button). `test/slicecensus.test.js` is 92,440 with
+  v6.83's CSS.
+- **Open:** the phone cost of practising while the search heartbeats was reasoned, not measured: one POST per ~20 s plus
+  the channel's existing poll. A 4x-throttle number is still worth taking. The hero grid in practice mode still carries the
+  lobby's format note and How to play below the grid.
+- **Validation:** npm test 4589 / 4584 pass / 0 fail / 5 skipped; both babel blocks compile; `tools/page.js` 89/89 screens;
+  `tools/serverpage.js` 354 / 0. No engine, rule, wire, AI or SQL change.
+
+## v6.84 — Ranked pairing by rating: a window that widens while you wait
+
+- **Ranked pairing by rating (NEXT 3).** Find a ranked match paired the oldest seeker first, whatever the two ratings.
+  `server/supabase/010_rating_window.sql` replaces `seek_step`. Now a ranked seek pairs only with a ranked seek whose rating
+  is within a window: ±100 at first, +50 for every 20 s waited. The window uses the **longer** of the two waits, so a fresh
+  arrival's narrow window never holds back someone who has waited longer. From **180 s** of waiting it **opens fully**
+  (CEO decision, a default the user may overrule: a small community needs a game more than a perfect pairing). Among
+  seekers inside the window, the oldest goes first, under 009's lock. An unrated player counts as 1200. Friendly seeks are
+  unchanged. The function's calls are unchanged; the rule lives in SQL alone. **Run on the project 2026-11-24, before this
+  function.**
+- **livecheck knows Rematch.** Its queue check now sits the first seeker down and asks for a rematch before any game. The
+  live function answers `rematch-playing` and writes nothing. That proves the deployed referee carries v6.83's op.
+- **Drills:** a self-check inside 010 (the window's numbers, 400 apart not paired at once or at 100 s but paired by 140 s,
+  600 apart paired only once it opens). `tools/sql-sab-010.js`: 15 sabotages, all caught (window ignored, never widens,
+  never opens fully, opens at 300 s, casual windowed, narrower of the two waits, either wait ignored, unrated as 0, newest
+  first, kind ignored, a taken seek re-matched, a 10 s step, base 200, anon may call). `test/serverseek.test.js` drill 9
+  over the mirrored fake queue (`serverfakes.withSeek` with `rate`): 400 apart pair only after enough heartbeats, 50 apart
+  at once, friendly 400 apart at once, 1000 apart not at 160 s but by 180 s. 3 sabotages each fail it. Worker L built it.
+- **Validation:** npm test 4589 / 4584 pass / 0 fail / 5 skipped; both babel blocks compile; PGlite 001..010 ok, sql-sab-010 15/15 caught. Page unchanged but for APP_VER; no engine, rule, wire or AI change.
+
+## v6.83 — Rematch: both players say yes, and the same two sit down again
+
+- **Rematch (NEXT 1, second half).** A server game's end screen now offers **Rematch** above *Find another match*. One tap
+  asks. The other player's phone hears it from a sealed push: "*Rival One* wants a rematch." Their button becomes
+  **Rematch — say yes**. While a player waits, the screen says so with a calm two-minute count and offers *Take it back*.
+  When both have said yes, the referee opens a **new table of the same kind** (ranked after ranked, friendly after
+  friendly), hands both phones its code, and both phones sit down there by themselves: back to the hero pick, both seed
+  halves fresh. A ranked rematch is a new ranked game, recorded under its own game id. If the other player does not answer
+  within two minutes, the ask is taken back on both sides and the screen says so plainly.
+- **The referee (`server/referee.js`, `op:"rematch"`).** Who may ask: a seat with its own key, once the game is over (read
+  from the rehydrated hub, so a casual table whose row never says `over` works too) and once both chairs were dealt. The row
+  keeps `rematch:{at:[ms|null, ms|null], table|null}`. An ask older than `REMATCH_MS` (2 min) is forgotten. The player who
+  completes the pair opens the new table: with a sign-in it counts against their open tables (005) like any table they
+  open; a ranked rematch needs that sign-in. A friendly table nobody signed in to rematches as a casual table. A lost
+  version race answers `conflict` and closes the table it had just opened (nobody holds its code). Every join and resync
+  answer carries `rematch:{want, table}` once anybody has asked, so a missed push heals on the next resync. No SQL change.
+  No WIRE_V bump: the game's wire payload is unchanged. The new push rides its own sealed channel (`rematch`), which an
+  older page skips like any channel it does not know.
+- **The phone (`engine/servertable.js`).** `rematch()`, `onRematch(fn)` and `askRematch(cancel)`. The push is read on its own
+  channel, and join and resync answers are read too. A known code is never taken back.
+- **Drills:** `test/serverrematch.test.js` (7 checks over the referee: both ask, one new table of the same kind, the same
+  code for both, both chairs taken there, its own game id; mid-game, wrong key and a ranked rematch with no sign-in are
+  refused and write nothing; asks go stale; cancel; resync carries the state; a casual rematch; a lost race closes its
+  orphan). Each check has a sabotage that fails it. `test/serverrematchphone.test.js` plays two phones over the real
+  referee: the ask arrives by push alone; both phones hold the new code; the rematch is dealt, conceded and recorded as a
+  second ranked game, both ratings moved twice; a dropped push heals on a resync. Sabotaged three ways.
+  `tools/serverpage.js` +10 rows (RM): the button and its place, the opponent's ask and take-back seen on the page, the
+  waiting words and count, no table opened on one ask, the page sitting down at the new ranked table by itself, no jargon,
+  no overflow.
+- **Every secondary big button is thumb-sized.** `.bigbtn.alt` (*Find another match*, *Take it back*, *Verify this game*, and
+  every other quiet big button) was 42 px tall; it now has a 44 px minimum (POLISH.md condition 1). The rematch drive's thumb
+  rows found it: they failed at 42 px and pass at 44. `test/slicecensus.test.js` repins one slice (phasebar's, +73 characters:
+  the CSS).
+- **Validation:** npm test 4588 / 4583 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; both babel blocks compile;
+  `tools/page.js` 89/89 screens; `tools/serverpage.js` 343 / 0. No engine rule, wire, AI or SQL change.
+
 ## v6.82 — Find an opponent is short: the honest lines are one sheet
 
 - **How each table keeps hands hidden (NEXT 4).** Four paragraphs sat under *Find an opponent*'s buttons: the "two real hero
