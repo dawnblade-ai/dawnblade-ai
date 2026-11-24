@@ -12,7 +12,7 @@ matchmaking**. Do not open AI-strength probes. A card that plays wrong is still 
 **State:** live = **v6.86** on `main`. Function `table` v124 = `v6.86 · sage-v19`, stamped, `--check` OK; **livecheck ALL PASS**
 (now also proves the live function knows `op:"rematch"`). SQL **001..010** on the project (010 run 2026-11-24). WIRE_V 49
 (unchanged: Rematch rides its own sealed `rematch` channel, not the game payload), DATA_VER sage-v19, 17 heroes.
-**WORKERS: NONE** (L, M, N all integrated and stopped).
+**WORKERS OUT (CEO session_013xG9xBhp1ZDNBkoYpUuM35, 2026-11-24 eve):** O `ship/O-practice` (items 2+3) session_013xG9x91mB8js1JxFxUvTtU · P `ship/P-rematch` (item 4) session_013xG9x9W7FG6U7PY1jZdzei · Q `ship/Q-waitview` (item 5, SQL 011) session_013xG9xADdaJFbcBqyZcCLSp · R `ship/R-promptsweep` (item 6) session_013xG9xB1Bzw2ykQJmN9bTer. Briefs: experiments/WORKER-PROMPT-UI.txt + experiments/ui/TASK-<L>.txt. If this CEO died: read each branch and integrate.
 
 **This CEO (four releases, workers L, M, N):**
 - **v6.83 Rematch** (CEO): `op:"rematch"` in server/referee.js (seat key; game over; both asks within REMATCH_MS 2 min -> the
@@ -61,4 +61,4 @@ text anchors (`no direct link needed`, `Server table Get matched`, the hands she
 index.html can move `test/slicecensus.test.js`'s pinned slice lengths: read the diff, repin the one number. After pushing
 main: curl until the page serves the new APP_VER, THEN `tools/supabase-deploy.js` (--dry-run first), commit DEPLOYED.json,
 THEN `node tools/livecheck.js`. Workers = Sonnet via create_session with `experiments/WORKER-PROMPT-PREAMBLE.txt` (rewrite
-its middle for UI work). Next letter: **L**.
+its middle for UI work). Next letter: **S**.
