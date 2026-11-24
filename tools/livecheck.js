@@ -143,6 +143,7 @@ async function seekOverHttp(cfg, toks, row){
   row(lk.ok === true && Number.isInteger(lk.friendly) && Number.isInteger(lk.ranked) && Object.keys(lk).sort().join() === "friendly,ok,ranked", "seek: the public count answers numbers only", JSON.stringify(lk));
   if(toks.length < 2 || !toks[0] || !toks[1]){ row(false, "seek: two signed-in phones to match", "have " + toks.filter(Boolean).length); return; }
   /* anyone else waiting on live would take our first seek's place: the check only claims what it can see */
+  const t0 = new Date(Date.now() - 5000).toISOString();
   const a = await post({ op: "seek", identity: { token: toks[0] } });
   if(a.ok && a.state === "matched"){ row(true, "seek: a stranger was already waiting on live, so the host was matched to them (no further claim)"); return; }
   row(a.ok === true && a.state === "waiting" && /^[A-Z0-9]{6}$/.test(a.table || "") && Number.isInteger(a.beat), "seek: the first seeker waits at a table the function opened", JSON.stringify(a));
@@ -151,6 +152,7 @@ async function seekOverHttp(cfg, toks, row){
   row(b.ok === true && b.state === "matched" && b.table === a.table, "seek: the second seeker is sent to the first one's table", JSON.stringify(b));
   const hb = await post({ op: "seek", identity: { token: toks[0] }, table: a.table });
   row(hb.ok === true && hb.state === "taken" && hb.table === a.table, "seek: the first seeker's heartbeat hears its seek was taken", JSON.stringify(hb));
+  await forgetProbeWait(t0);
   const hay = JSON.stringify([a, b, hb]); row(!toks.some(t => hay.indexOf(t) >= 0) && !/"(id|player|subject|token)"/.test(hay), "seek: no id or token rides an answer");
   /* v6.83 REMATCH: the live function knows the op. The first seeker sits down and asks for a rematch before any game: the honest answer is
      `rematch-playing` (the game is not over), and nothing is written by it. Proves the deployed referee carries the op without playing a game out. */
@@ -161,6 +163,19 @@ async function seekOverHttp(cfg, toks, row){
   row(!!rm && rm.ok === false && rm.refused === "rematch-playing", "rematch: the live function knows the op (asked before a game, it answers that the game is not over)", JSON.stringify(rm || j0).slice(0, 160));
   const cl = await post({ op: "close", table: a.table, identity: { token: toks[0] } });
   row(cl.ok === true, "seek: the matched table is closed afterwards", JSON.stringify(cl));
+}
+/* v6.89: 011's seek_wait_log feeds "players usually find a match in about N s". This probe's own match (two scripted phones, ~0 s) is not a
+   player's wait, so it is taken back out: the friendly rows of 2 s or less logged since the probe began (the log holds no player to match
+   on; a real instant friendly match in the same few seconds is the only thing that could share the window). Through the Management API
+   (the session's proxy holds the token); without it the row stays and the run says so — a WARN, not a FAIL. */
+async function forgetProbeWait(t0){
+  const q = "delete from public.seek_wait_log where ranked = false and waited_s <= 2 and at >= '" + t0 + "'::timestamptz returning waited_s";
+  try {
+    const r = await fetchT("https://api.supabase.com/v1/projects/fokcpzplomjsraquaaid/database/query", { method: "POST", headers: { authorization: "Bearer dummy", "content-type": "application/json" }, body: JSON.stringify({ query: q }) });
+    const j = await r.json();
+    if(Array.isArray(j)) console.log("      seek: the probe's own wait taken back out of the wait log (" + j.length + " row" + (j.length === 1 ? "" : "s") + ")");
+    else console.log("WARN  seek: could not take the probe's wait out of the wait log  " + JSON.stringify(j).slice(0, 120));
+  } catch(e){ console.log("WARN  seek: could not take the probe's wait out of the wait log  " + String(e && e.message || e).split("\n")[0]); }
 }
 async function ladderLight(cfg, phones, browser, proxy, query){
   const toks = [];
