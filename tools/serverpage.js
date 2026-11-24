@@ -1289,6 +1289,14 @@ async function toServerChooser(page){
     await k.A.waitForSelector('[data-testid="wait-bar"]', { timeout: 6000 }).catch(() => {});
     const wb = await boxes(k.A, '[data-testid="wait-bar"]');
     row(wb.length === 1 && wb[0].r <= W && seekJargon(wb[0].t) && (await boxes(k.A, '[data-testid="seek-card"]')).length === 0, "waiting: tapping it opens the hero grid with a Still looking bar, and the seek card is out of sight", wb[0] && wb[0].t);
+    /* TIDY (O): practice is the hero grid and the bar, nothing of the lobby's chatter; tap-judged at 393 and 320 */
+    row((await boxes(k.A, '[data-testid="format-note"]')).length === 0 && (await boxes(k.A, '[data-testid="how-btn"]')).length === 0 && !/New to Flesh and Blood|fan-made Silver Age/.test(await text(k.A)), "waiting: in practice the format note and How to play are out of sight");
+    for (const [vw, vh] of [[W, H], [320, 568]]) {
+      await k.A.setViewportSize({ width: vw, height: vh }); await wait(350);
+      const r = await judgeScreen(k.A), bad = ["small", "stolen", "clipped", "overlap"].flatMap(x => r[x].map(f => x + ": " + f.m)), wbx = await boxes(k.A, '[data-testid="wait-bar"]'), bk = await boxes(k.A, '[data-testid="wait-back"]');
+      row(bad.length === 0 && wbx.length === 1 && wbx[0].x >= 0 && wbx[0].r <= vw && bk.length === 1 && bk[0].h >= 44 && bk[0].r <= vw && await k.A.evaluate(w => document.scrollingElement.scrollWidth <= w, vw), "waiting: practice screen at " + vw + " wide: every tap 44 px, no overlap, bar and back button on screen, no sideways scroll", bad.join(" | ").slice(0, 300) + " " + JSON.stringify(bk[0]));
+    }
+    await k.A.setViewportSize({ width: W, height: H }); await wait(300);
     await wait(400);
     row(k.sk.q.size === 1 && !!aTable && k.wd.row(aTable) && k.wd.row(aTable).closed !== true, "waiting: the search is NOT cancelled by practising (A still queued, table open)", "queue " + k.sk.q.size);
     await k.A.locator(".hcard").first().click(); await k.A.locator(".battlebtn").first().click();
