@@ -241,7 +241,9 @@ async function toServerChooser(page){
        server game diverged at the first token the server minted). Seeded Viserai v Dorinthea, played through the page's own judge. */
     const tokens = await k0.page.evaluate(() => {
       const db = loadPool(), heroes = Object.fromEntries(HEROES.map(h => [h.k, h])), decks = Object.fromEntries(HEROES.map(h => [h.k, PARSED[h.k]]));
-      const play = () => { const m = DawnBuild.buildMatch({ heroes: ["viserai", "dorinthea"], seed: "probe", first: 0, boards: [{}, {}] }, { db, heroes, decks });
+      /* THREE SEEDS, SUMMED (v6.81): one seed alone stopped reaching a token made through the database as the AI changed (v6.79 read 0 missing with the sabotage on) */
+      const play = () => ["probe", "probe-1", "probe-2"].map(play1).reduce((a, b) => ({ n: a.n + b.n, missing: a.missing + b.missing, rune: a.rune + b.rune }));
+      const play1 = seed => { const m = DawnBuild.buildMatch({ heroes: ["viserai", "dorinthea"], seed, first: 0, boards: [{}, {}] }, { db, heroes, decks });
         let g = DawnJudge.newMatch({ builds: m.builds, names: m.names, heroKeys: m.heroKeys, first: m.first, seed: m.seed }), n = 0;
         while(!g.over && n++ < 600){ let moved = false; for(const s of [0, 1]){ const a = DawnSparring.act(g, s, { search: false }); if(!a) continue; const r = DawnJudge.reduce(g, a, s); if(r.error) break; g = r.state; moved = true; break; } if(!moved) break; }
         const feed = (g.feed || []).map(f => typeof f === "string" ? f : (f.t || f.text || JSON.stringify(f))).join("\n");
@@ -748,8 +750,8 @@ async function toServerChooser(page){
     const bld = await pg.evaluate(() => TABLE_BUILD);
     const wd = makeWorld({ seedKey: "ranked-" + label, build: bld, deal: dealLikeThePage });
     await wire(pg, wd);
-    const idp = F.memIdentity(), rat = F.withRatings();
-    wd.deps.identify = t => idp.identify(t); wd.deps.rename = (pl, n, f) => idp.rename(pl, n, f); Object.assign(wd.deps, rat.deps());
+    const idp = F.memIdentity(), rat = F.withRatings(), sk = F.withSeek();   /* the queue too: the end screen's Find another match (v6.81) */
+    wd.deps.identify = t => idp.identify(t); wd.deps.rename = (pl, n, f) => idp.rename(pl, n, f); Object.assign(wd.deps, rat.deps(), sk.deps());
     const tokMe = idp.issue("P-rk-me"), tokFoe = idp.issue("P-rk-foe");
     if(o.me) idp.rename("P-rk-me", o.me, wd.server.nameFold(o.me));
     idp.rename("P-rk-foe", "Rival One", wd.server.nameFold("Rival One"));
@@ -758,7 +760,7 @@ async function toServerChooser(page){
     await pg.addInitScript(shim); await pg.evaluate(shim);
     await pg.evaluate(() => { window.SERVER_TABLE.on = true; });
     const Bp = PH.makePhone(wd, "B", { hero: "dorinthea", rand: T.seeded("ranked-b-" + label), build: bld, matchCatalog, throws: o.throws || [["rock", "rock"], ["paper", "rock"]], identity: { token: async () => tokFoe }, ...(o.bRanked ? { ranked: true } : {}) });
-    return { kit, pg, wd, rat, Bp, idp, tokMe, tokFoe };
+    return { kit, pg, wd, rat, Bp, idp, tokMe, tokFoe, sk };
   };
   const leaveBoard = async pg => { await click(pg, pg.locator(".reveal h2"), "tap the end screen to leave"); await pg.waitForSelector(".shell"); };
   const noJargon = t => !/undefined|NaN|\bnull\b|ranked-|refused|bad-request|ratings?:|winner|change|\bv6\.|player id|table-cap/i.test(t);
@@ -800,6 +802,8 @@ async function toServerChooser(page){
     row(rat.results.size === 1 && rat.records === 1 && rat.rating("P-rk-me").rating === 1312 && rat.rating("P-rk-foe").rating === 1188, "ranked: exactly one result was recorded and both ratings moved by the Elo amounts", rat.records + " record call(s)");
     await wait(2500);
     row(rat.records === 1 && (await boxes(pg, '[data-testid="rank-change"]')).length === 1, "ranked: nothing was recorded again while the end screen stayed open");
+    const ag = await boxes(pg, '[data-testid="seek-again"]');
+    row(ag.length === 1 && /^find another ranked match$/i.test(ag[0].t) && ag[0].h >= 44 && ag[0].x >= 0 && ag[0].r <= W && ag[0].b <= H, "play again: a ranked game's end screen offers Find another ranked match, thumb-sized, on screen", JSON.stringify(ag[0]));
     /* the name sheet shows the new rating and record */
     await leaveBoard(pg); await toServerChooser(pg);
     await pg.waitForFunction(() => (document.querySelector('[data-testid="my-rating"]') || {}).innerText === "1312", null, { timeout: 8000 }).catch(() => {});
@@ -827,6 +831,16 @@ async function toServerChooser(page){
     row(rc.length === 1 && /Your rating moved from 1200 → 1184 \(\u221216\)\. Every game teaches something\./.test(rc[0].t), "ranked: the loser's end screen shows 1200 → 1184, kindly", rc[0] && rc[0].t);
     row(rc.length === 1 && rc[0].r <= W && rc[0].b <= H && noJargon(rc[0].t) && await overflow(pg), "ranked: the loss sentence is inside the screen and carries no jargon");
     row(rat.results.size === 1 && [...rat.results.values()][0].winner === 1 && rat.rating("P-rk-me").rating === 1184 && rat.rating("P-rk-foe").rating === 1216, "ranked: the loss was recorded once, for the right player");
+    /* PLAY AGAIN (v6.81): one tap from the end screen and the page is in the queue again, the same kind of match, its waiting card up */
+    row(k.sk.count(60).ranked === 0, "play again: nobody is queued before the tap (sabotage guard)");
+    await click(pg, pg.locator('[data-testid="seek-again"]'), "find another ranked match");
+    await pg.waitForSelector('[data-testid="seek-card"]', { timeout: 8000 }).catch(() => {});
+    const sc = await text(pg);
+    row(/Finding a ranked match/.test(sc) && k.sk.count(60).ranked === 1 && k.sk.count(60).friendly === 0, "play again: one tap puts the page back in the queue for a RANKED match, waiting card on screen", JSON.stringify(k.sk.count(60)));
+    row((await boxes(pg, '[data-testid="seek-cancel"]')).length === 1 && await overflow(pg), "play again: Stop looking is there; no horizontal overflow"); await thumbs(pg, "play again waiting");
+    await click(pg, pg.locator('[data-testid="seek-cancel"]'), "stop looking"); await pg.waitForSelector('[data-testid="seek-go"]', { timeout: 6000 }).catch(() => {});
+    const sg = await boxes(pg, '[data-testid="seek-go"]');
+    row(k.sk.count(60).ranked === 0 && sg.length === 1 && /^find a ranked match$/i.test(sg[0].t), "play again: Stop looking leaves the queue and the server screen keeps the switch on Ranked", sg[0] && sg[0].t);
     B.ch.close(); await k.kit.close();
   }
 

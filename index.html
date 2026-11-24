@@ -1142,7 +1142,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "6.80"; /* v6.80 - Find a match: the server pairs you with the next player looking, friendly or ranked; see CHANGELOG.md. */
+window.APP_VER = "6.81"; /* v6.81 - Play again: a server game's end screen offers Find another match, the same kind, in one tap; see CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -7902,7 +7902,7 @@ const seekFound = () => { try{ if(navigator.vibrate) navigator.vibrate([90,60,90
 const clockOf = ms => { const t = Math.max(0, Math.floor(ms/1000)); return Math.floor(t/60)+":"+String(t%60).padStart(2,"0"); };
 const lookLine = (l, rk) => { const n = rk===true ? l.ranked : rk===false ? l.friendly : l.friendly+l.ranked;
   return n===1 ? "1 player is looking for a match right now." : n+" players are looking for a match right now."; };
-function TableScreen({onBack, onSeated}){
+function TableScreen({onBack, onSeated, again}){
   const [mode,setMode] = uS(null);           /* null | "host" | "join" */
   const [code,setCode] = uS("");
   const [stat,setStat] = uS(null);
@@ -8145,6 +8145,9 @@ function TableScreen({onBack, onSeated}){
     setSeekRk(!!rk); if(!again) setSeekT0(Date.now()); setStat("srv-seeking"); setMode("srv-seek");
     seekAsk(k, null).then(a=>seekGot(k, a)).catch(seekFail);
   };
+  /* sent here by a finished server game's Find another match (v6.81): start the same kind of search once, as if the player had tapped it on this screen */
+  const againRef = uR(false);
+  uE(()=>{ if(!again || againRef.current || !srvOn || !srvWho) return; againRef.current = true; if(again.ranked) setRanked(true); seekGo(!!again.ranked); },[again, srvOn]);
   const seekCancel = () => {
     const k = seekStop(), w = waitRef.current; waitRef.current = null;
     if(w){ try{ w.ch.forget(); w.ch.close(); }catch(_){} }
@@ -8631,7 +8634,7 @@ const CH_LOBBY = "lobby", CH_NET = "net";
    spelled by the lobby module so the two sites cannot disagree. */
 const TABLE_BUILD = DawnLobby.buildId(window.APP_VER, window.DATA_VER);
 
-function TableRoom({table, host, code, db, onExit, resume, judged}){
+function TableRoom({table, host, code, db, onExit, resume, judged, onAgain}){
   /* `mySeat`, NOT `seat`. engine/priority.js exports a `seat` helper
      meaning "seat a game with this first player"; a local `seat` meaning
      "which chair is this client in" is the same-name-different-meaning
@@ -8785,7 +8788,7 @@ function TableRoom({table, host, code, db, onExit, resume, judged}){
   );
 
   if(match) return <TableBoard match={match} mySeat={mySeat} host={host} code={code} db={db}
-    table={table} netRef={netRef} netQ={netQ} onExit={onExit} judged={judged}/>;
+    table={table} netRef={netRef} netQ={netQ} onExit={onExit} judged={judged} onAgain={onAgain}/>;
 
   /* ---- the sideboard: the trainer's own loadout screen ---------------- */
   if(step === "board" && myH){
@@ -9052,7 +9055,7 @@ function TableThrow({lob, mySeat, myH, foeH, onThrow}){
    next-swing prediction — seat 1 is a person, so there is nothing to
    predict.
    ============================================================ */
-function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit, local, heroKey, onRecord, judged}){
+function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit, local, heroKey, onRecord, judged, onAgain}){
   /* AT A TWO-PHONE TABLE THIS PHONE SHOWS ITS OWN SEAT'S VIEW (HIDDEN HANDS
      H2). The host's referee holds the game; until the guest's first snapshot
      lands, the guest shows its blind deal as seen from NEITHER seat: every
@@ -10131,6 +10134,10 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
           {drawText ? drawText.note : over.how==="life" ? "Life to zero." : "The game ended on "+over.how+"."}
         </p>
         {!local && <RankChange table={table} seat={mySeat}/>}
+        {/* PLAY AGAIN (v6.81, NEXT 1): a server game's end screen goes straight back into the queue, the same kind of match (friendly or ranked); the walk
+            back through three screens is gone. The finished table no longer counts toward the open-table cap (005), so the new search is never refused for it. */}
+        {!local && judged && judged.srv && onAgain && <button className="bigbtn" data-testid="seek-again" style={{marginTop:10}}
+          onClick={e=>{e.stopPropagation(); onAgain(!!srvRank.ranked);}}>{srvRank.ranked ? "Find another ranked match" : "Find another match"}</button>}
         {!local && !host && <div onClick={e=>e.stopPropagation()} style={{marginTop:10}}>
           <p className="fs-lg">{judged ? (judged.srv ? "The server" : "The judge's device") : "The host's phone"} held the deck. It has now sent its half of the seed and every move.</p>
           <button className="bigbtn alt" disabled={verdict==="busy"} onClick={verify}>
@@ -10206,6 +10213,7 @@ function App(){
   const [seating,setSeating]=uS(null);
   /* the table: null -> "find" (the code screen) -> {table,host,code} (seated) */
   const [table,setTable]=uS(null);
+  const [seekAgain,setSeekAgain]=uS(null);   /* {ranked}: the end screen's Find another match opens the table screen already searching (v6.81) */
   const [how,setHow]=uS(false);
   const [howSeen,setHowSeen]=uS(()=>!!store.get("howSeen",false));
   const [best,setBest]=uS(()=>store.get("best",{}));
@@ -10242,7 +10250,7 @@ function App(){
         {hero && !hero.mystery && <HeroSheet h={hero} db={db} best={best} onBack={()=>setHero(null)} onFight={h=>setFighting(h)}/>}
         {hero && hero.mystery && <p className="note" style={{textAlign:"center"}}>Fate holds the card — your fighter is revealed at preparation.</p>}
       </>}
-      {table==="find" && <TableScreen onBack={()=>setTable(null)} onSeated={s=>setTable(s)}/>}
+      {table==="find" && <TableScreen again={seekAgain} onBack={()=>{ setSeekAgain(null); setTable(null); }} onSeated={s=>{ setSeekAgain(null); setTable(s); }}/>}
       {/* The card database has to be READY before a table is dealt: both
           phones build the same two decks out of it, so a client that is
           still fetching would deal from a half-built map. The lobby's
@@ -10253,7 +10261,8 @@ function App(){
           ? <JudgeRoom handle={table.handle} conns={table.conns} code={table.code} db={db}
               resume={table.resume} onExit={()=>setTable(null)}/>
           : <TableRoom table={table.table} host={table.host} code={table.code} db={db}
-              judged={table.judged || null} resume={table.resume} onExit={()=>setTable(null)}/>)
+              judged={table.judged || null} resume={table.resume} onExit={()=>setTable(null)}
+              onAgain={rk=>{ setSeekAgain({ranked: !!rk}); setTable("find"); }}/>)
         : <div className="tblwrap">
             <div className="tblhead">Table {table.code}</div>
             <div className="tblstat live"><span className="tbldot"></span>Forging the card pool…</div>

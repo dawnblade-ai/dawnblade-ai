@@ -1,3 +1,21 @@
+## v6.81 — Play again: one tap from a server game's end screen back into the queue
+
+- **Find another match (NEXT 1, first half).** A server game's end screen now offers **Find another match** (or **Find
+  another ranked match** after a ranked game) above *Leave the table*. One tap leaves the finished table and opens the
+  server table screen already searching for the same kind of match; *Stop looking* lands on that screen with the switch
+  still on Ranked. Before this, a player walked back through three screens. Only the page changed: a finished table no longer
+  counts toward the open-table cap (005), so the new search is never refused because of it, and the queue is 009's. The
+  other half of NEXT 1, a *Rematch* at the same table that both players agree to, needs the referee and is still open.
+- **Fixed in the tools (the v6.80 open finding):** `tools/serverpage.js`'s card-database probe now sums three seeded games
+  (`probe`, `probe-1`, `probe-2`). The single seed's game no longer reached a token made through the database, so the
+  sabotage read 0 missing; the three together read 3 missing with the sabotage on and 0 with it off.
+- **Drills:** `tools/serverpage.js` +6 rows in the ranked drives (the button and its words on a ranked end screen; one tap
+  queues a RANKED seek with the waiting card up and nothing queued before; Stop looking leaves the queue and keeps Ranked).
+  The ranked fake world now also carries the queue (`withSeek`).
+- **Validation:** npm test 4580 / 4575 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; both babel blocks compile;
+  `tools/serverpage.js` 326 / 0 (sabotage: with the button not passed to the board, 7 rows fail). No engine, rule, wire or AI
+  change: no ladder, no chaos.
+
 ## v6.80 — Find a match: the server pairs you with the next player looking
 
 - **Matchmaking (SERVER S6.1).** *Find an opponent* now leads with **Find a match**, and the server table screen offers it
