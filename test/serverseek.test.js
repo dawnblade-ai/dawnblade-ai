@@ -248,14 +248,14 @@ test("(8) looking: a public count of the queue, numbers only", () => {
 /* The fake queue stands for 010_rating_window.sql (held to it by that file's self-check and tools/sql-sab-010.js). Ratings come from the ratings fake. */
 function windowFailures(so){
   const bad = [], server = SERVER, rat = F.withRatings();
-  const R = {pa: 1200, pb: 1600, pc: 1250};
+  const R = {pa: 1200, pb: 1600, pc: 1250, pd: 2200};
   for(const [id, v] of Object.entries(R)) rat.rt.set(id, {rating: v, games: 5, wins: 3, losses: 2, draws: 0});
   const store = F.memStore(), idp = F.memIdentity(), sk = F.withSeek({...(so || {}), rate: p => R[p]});
   let clock = 1700000000000, rn = 0;
   const deps = {store, broadcast: () => {}, deal: T.dealSpec, build: T.BUILD, now: () => clock++, rand: () => T.seeded("win|" + (++rn)), identify: t => idp.identify(t), rename: (p, n, f) => idp.rename(p, n, f), log: () => {}, ...rat.deps(), ...sk.deps()};
   const go = req => json(server.handleNow(req, deps)), ids = {};
   const player = (id, name) => { ids[id] = idp.issue(id); idp.rename(id, name, server.nameFold(name)); };
-  player("pa", "Alpha One"); player("pb", "Bravo Two"); player("pc", "Charlie Tre");
+  player("pa", "Alpha One"); player("pb", "Bravo Two"); player("pc", "Charlie Tre"); player("pd", "Delta Four");
   const seek = (id, extra) => go({op: "seek", identity: {token: ids[id]}, ranked: true, ...(extra || {})});
   const a = seek("pa");
   const b = seek("pb");
@@ -269,6 +269,18 @@ function windowFailures(so){
   }
   if(paired <= 100) bad.push("seekers 400 apart were paired after only " + paired + " s (window 350 at 100 s)");
   if(paired === 0 || paired > 120) bad.push("the window did not widen to 400 by 120 s (paired at " + paired + ")");
+  /* THE CAP: 1000 apart (pa 1200, pd 2200) are not paired at 160 s of beats (window 450), paired by 180 s (open fully) */
+  sk.q.clear();
+  const a4 = seek("pa"), d4 = seek("pd");
+  if(d4.state !== "waiting") bad.push("seekers 1000 apart were paired at once: " + JSON.stringify(d4));
+  let capped = 0;
+  for(let t = 20; t <= 200 && !capped; t += 20){
+    sk.clock += 20e3;
+    const x = seek("pd", {table: d4.table}); if(x.state !== "waiting"){ capped = t; break; }
+    const y = seek("pa", {table: a4.table}); if(y.state !== "waiting") capped = t;
+  }
+  if(capped !== 0 && capped < 180) bad.push("seekers 1000 apart were paired after only " + capped + " s (window 450 at 160 s)");
+  if(capped === 0 || capped > 180) bad.push("the window did not open fully by 180 s (paired at " + capped + ")");
   /* 50 apart pair at once (a fresh queue) */
   sk.q.clear();
   const a3 = seek("pa"), c = seek("pc");
@@ -284,4 +296,5 @@ test("(9) ranked pairing by rating: 400 apart wait, 50 apart pair at once, the w
   assert.ok(probe(() => windowFailures({noWindow: true})).length > 0, "sabotage (window ignored) must fail");
   assert.ok(probe(() => windowFailures({noWiden: true})).length > 0, "sabotage (window never widens) must fail");
   assert.ok(probe(() => windowFailures({casualWindow: true})).length > 0, "sabotage (casual windowed) must fail");
+  assert.ok(probe(() => windowFailures({noCap: true})).length > 0, "sabotage (window never opens fully) must fail");
 });

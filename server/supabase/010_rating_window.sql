@@ -5,6 +5,9 @@
 --     window(w) = 100 + 50 * floor(w / 20)      rating points, w = whole seconds a seek has waited (now - created_at)
 -- i.e. +-100 at once, +-150 after 20 s, +-200 after 40 s ... (the phone's heartbeat is 20 s, so each beat can see a wider window). The ladder is
 -- therefore never a wall: anyone is matched in the end, and two players near each other meet at once.
+-- THE CAP (CEO decision, user may overrule): once the wider wait reaches seek_window_open_s() = 180 s the window OPENS FULLY: any ranked seeker
+-- (still oldest-first). A small community needs a game more than a perfect pairing; without it a 1000-point gap would wait over 6 minutes, longer
+-- than a lone seek survives. seek_window returns an unbounded number (1000000, past any rating) from 180 s on. Change 180 here and nowhere else.
 --
 -- WIDER OF THE TWO, not both: the window used for a pair is window(greatest(wait of the caller, wait of the candidate)). Why: the player who has
 -- waited longest is the one the queue owes a game; a fresh arrival 400 points away from a veteran of the queue should take that veteran's table
@@ -17,11 +20,13 @@
 -- Nothing here is callable with the publishable key: service_role alone may execute (as 001..009).
 
 -- the window in one place (the self-check and the function both read it; change a number here and nowhere else)
+create or replace function public.seek_window_open_s() returns integer language sql immutable as 'select 180';
+
 create or replace function public.seek_window(p_waited double precision)
 returns integer
 language sql
 immutable
-as 'select 100 + 50 * floor(greatest(p_waited, 0) / 20)::integer';
+as 'select case when p_waited >= public.seek_window_open_s() then 1000000 else 100 + 50 * floor(greatest(p_waited, 0) / 20)::integer end';
 
 -- seek_step(player, ranked, table, ttl): 009's contract exactly (see 009_seek.sql); only the ranked candidate query changed.
 create or replace function public.seek_step(p_player text, p_ranked boolean, p_table text, p_ttl integer)
@@ -74,6 +79,8 @@ begin
 end;
 $$;
 
+revoke all on function public.seek_window_open_s() from public, anon, authenticated;
+grant execute on function public.seek_window_open_s() to service_role;
 revoke all on function public.seek_window(double precision) from public, anon, authenticated;
 grant execute on function public.seek_window(double precision) to service_role;
 revoke all on function public.seek_step(text, boolean, text, integer) from public, anon, authenticated;
@@ -89,7 +96,8 @@ begin
   insert into public.players (id) values (a), (b), (c), (d), (e), (f);
   insert into public.ratings (player_id, rating) values (a, 1200), (b, 1600), (c, 1250), (d, 1800), (e, 1500), (f, 1550);
   -- the window itself
-  if public.seek_window(0) <> 100 or public.seek_window(19.9) <> 100 or public.seek_window(20) <> 150 or public.seek_window(100) <> 350 then raise exception 'seek_window is not 100 + 50 per 20 s'; end if;
+  if public.seek_window(0) <> 100 or public.seek_window(19.9) <> 100 or public.seek_window(20) <> 150 or public.seek_window(100) <> 350 or public.seek_window(179.9) <> 100 + 50 * 8 then raise exception 'seek_window is not 100 + 50 per 20 s'; end if;
+  if public.seek_window(180) < 100000 or public.seek_window(1000) < 100000 then raise exception 'seek_window does not open fully at 180 s'; end if;
   -- two ranked seekers 400 apart do NOT pair at once
   r := public.seek_step(a, true, 'ZZWNA1', 60);
   r := public.seek_step(b, true, 'ZZWNB1', 60);
@@ -103,6 +111,16 @@ begin
   update public.seeks set created_at = now() - interval '140 seconds' where player_id in (a, b);
   r := public.seek_step(a, true, 'ZZWNA1', 60);
   if r->>'state' is distinct from 'matched' or r->>'table' is distinct from 'ZZWNB1' then raise exception 'the window never widened: %', r; end if;
+  delete from public.seeks where player_id like 'zz-win-%';
+  -- THE CAP: d (1800) and a (1200) are 600 apart: not paired at 160 s (window 450), paired at 180 s (open fully), whoever beats
+  r := public.seek_step(a, true, 'ZZWNA11', 60);
+  insert into public.seeks (player_id, table_id, ranked, created_at) values (d, 'ZZWND11', true, now() - interval '160 seconds');
+  update public.seeks set created_at = now() - interval '160 seconds' where player_id = a;
+  r := public.seek_step(a, true, 'ZZWNA11', 60);
+  if r->>'state' is distinct from 'waiting' then raise exception 'a 160 s wait paired seekers 600 apart: %', r; end if;
+  update public.seeks set created_at = now() - interval '180 seconds' where player_id in (a, d);
+  r := public.seek_step(a, true, 'ZZWNA11', 60);
+  if r->>'state' is distinct from 'matched' or r->>'table' is distinct from 'ZZWND11' then raise exception 'the window did not open fully at 180 s: %', r; end if;
   delete from public.seeks where player_id like 'zz-win-%';
   -- 50 apart pair at once
   r := public.seek_step(a, true, 'ZZWNA2', 60);

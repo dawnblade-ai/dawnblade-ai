@@ -8,7 +8,7 @@ const W=`abs(coalesce((select r.rating from public.ratings r where r.player_id =
           <= public.seek_window(greatest(my_wait, extract(epoch from (now() - o.created_at))))`;
 const S=[
  ["window ignored", s=>s.replace("and (not p_ranked or "+W+")","")],
- ["window never widens", s=>s.replace("as 'select 100 + 50 * floor(greatest(p_waited, 0) / 20)::integer'","as 'select 100 + 0 * floor(greatest(p_waited, 0) / 20)::integer'")],
+ ["window never widens", s=>s.replace("else 100 + 50 * floor(greatest(p_waited, 0) / 20)::integer end","else 100 + 0 * floor(greatest(p_waited, 0) / 20)::integer end")],
  ["casual wrongly windowed", s=>s.replace("(not p_ranked or "+W+")",W)],
  ["narrower of the two", s=>s.replace("greatest(my_wait, extract(epoch from (now() - o.created_at)))","least(my_wait, extract(epoch from (now() - o.created_at)))")],
  ["caller's wait ignored", s=>s.replace("greatest(my_wait, extract(epoch from (now() - o.created_at)))","extract(epoch from (now() - o.created_at))")],
@@ -17,8 +17,10 @@ const S=[
  ["newest first", s=>s.replace('order by o.created_at, o.player_id collate "C" limit 1','order by o.created_at desc, o.player_id collate "C" limit 1')],
  ["ignores kind", s=>s.replace("o.ranked = p_ranked and o.taken_at is null","o.taken_at is null")],
  ["matches a taken seek", s=>s.replace("o.ranked = p_ranked and o.taken_at is null","o.ranked = p_ranked")],
- ["window step 10 s not 20 s", s=>s.replace("/ 20)::integer'","/ 10)::integer'")],
- ["window base 200", s=>s.replace("'select 100 + 50","'select 200 + 50")],
+ ["window step 10 s not 20 s", s=>s.replace("/ 20)::integer end","/ 10)::integer end")],
+ ["window base 200", s=>s.replace("else 100 + 50","else 200 + 50")],
+ ["never opens fully", s=>s.replace("when p_waited >= public.seek_window_open_s() then 1000000 else ","when p_waited >= public.seek_window_open_s() then 100 + 50 * floor(greatest(p_waited, 0) / 20)::integer else ")],
+ ["opens at 300 s not 180 s", s=>s.replace("as 'select 180'","as 'select 300'")],
  ["anon may call", s=>s.replace("revoke all on function public.seek_step(text, boolean, text, integer) from public, anon, authenticated;","grant execute on function public.seek_step(text, boolean, text, integer) to anon;")],
 ];
 (async()=>{let miss=0;
