@@ -1,3 +1,26 @@
+## v6.93 — Every prompt kind, every hero, forced onto a small screen
+
+- **`tools/promptsweep.js --inject` (worker R).** The sweep plays a real table game to seat 0's first move. The answer
+  carries a state whose prompt queue holds a real `prompts.js` spec, built from that hero's own deck cards through
+  `openPrompt`/`buildPrompt`, with the longest realistic lists:
+  - opt 4 (reorder and send down);
+  - pick 8;
+  - modal 3, with decline;
+  - pay 3, unaffordable;
+  - reveal 7 and 1;
+  - target 6 and 2;
+  - alloc over 5;
+  - soak 4 and 1.
+
+  That is 18 sheets per hero, 17 heroes, at 393x852 and 320x568: 612 sheets, all clean after the fix. All 8 prompt kinds
+  are now covered for every hero.
+- **The one real failure: CONFIRM pushed off screen.** A soak with 4 barriers at 320x568 drew 472 px of content in a
+  364 px sheet, and nothing scrolled. The sheet's list now scrolls (`.psheet .pmodal`), and the header and the action
+  row stay put.
+- **tapjudge.** A control half-hidden by a scroller is judged on its drawn size, as its header always said.
+- **A page.js drill:** 18 injected sheets at 320, 0 findings, plus a sabotage (the list stops scrolling and the options
+  shrink) that fails 4 of 4. page.js is now 153 screens.
+
 ## v6.92 — Every prompt sheet holds the tap floor, hero by hero
 
 - **The prompt sweep (QUEUE item 6, worker R).** New `tools/promptsweep.js` plays real table games, with seat 0 against
