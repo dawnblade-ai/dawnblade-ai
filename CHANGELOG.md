@@ -27,6 +27,12 @@
   `tools/serverpage.js` +10 rows (RM): the button and its place, the opponent's ask and take-back seen on the page, the
   waiting words and count, no table opened on one ask, the page sitting down at the new ranked table by itself, no jargon,
   no overflow.
+- **Every secondary big button is thumb-sized.** `.bigbtn.alt` (*Find another match*, *Take it back*, *Verify this game*, and
+  every other quiet big button) was 42 px tall; it now has a 44 px minimum (POLISH.md condition 1). The rematch drive's thumb
+  rows found it: they failed at 42 px and pass at 44. `test/slicecensus.test.js` repins one slice (phasebar's, +73 characters:
+  the CSS).
+- **Validation:** npm test 4588 / 4583 pass / 0 fail / 5 skipped; scenes 107/0; fairness clean; both babel blocks compile;
+  `tools/page.js` 89/89 screens; `tools/serverpage.js` 343 / 0. No engine rule, wire, AI or SQL change.
 
 ## v6.82 — Find an opponent is short: the honest lines are one sheet
 
