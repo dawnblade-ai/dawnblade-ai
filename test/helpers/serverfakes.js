@@ -195,10 +195,13 @@ function withLadder(rat, idp, o){
    009_seek.sql's seek_step / seek_cancel do (held to it by the SQL's own self-check and tools/sql-sab-009.js): one seek per player; a seek not seen for `ttl`
    seconds is forgotten (taken or not); a step first looks for ANOTHER player's untaken seek of the same kind, oldest first, and takes it (the caller's own seek,
    if any, leaves the queue and its table is `drop`); else it refreshes the caller's seek, or inserts it when a table is given; a taken seek answers `taken` to its
-   owner. `clock` is the drill's own time (ms). `count(ttl)` is seek_count. Sabotages: `selfMatch`, `anyKind`, `retake` (a taken seek is matched again), `noAge`. */
+   owner. `clock` is the drill's own time (ms). `count(ttl)` is seek_count. Sabotages: `selfMatch`, `anyKind`, `retake` (a taken seek is matched again), `noAge`.
+   010_rating_window.sql: a RANKED step only takes a seek whose rating (`o.rate(player)`, default 1200) is within 100 + 50 per whole 20 s of the LONGER of the two waits
+   (`clock` - `at`); casual is unwindowed. Sabotages: `noWindow`, `noWiden`, `casualWindow`. */
 function withSeek(o){
   o = o || {};
   const q = new Map(); let born = 0;
+  const rate = p => (o.rate ? o.rate(p) : null) ?? 1200;
   const st = {q, clock: 1700000000000, steps: 0, cancels: 0,
     age(ttl){ if(o.noAge) return; for(const [p, e] of q) if(e.seen < st.clock - ttl * 1000) q.delete(p); },
     seek(x){
@@ -214,7 +217,9 @@ function withSeek(o){
       const out = (state, table) => ({state, ...(table ? {table} : {}), ...(drop ? {drop} : {})});
       if(mine && mine.taken){ if(x.table && x.table !== mine.table) drop = x.table; return out("taken", mine.table); }
       if(mine && mine.ranked !== x.ranked){ q.delete(x.player); drop = mine.table; mine = null; }
-      const other = [...q.entries()].filter(([p, e]) => (o.selfMatch || p !== x.player) && (o.anyKind || e.ranked === x.ranked) && (o.retake || !e.taken))
+      const waited = e => Math.max(0, (st.clock - e.at) / 1000), win = w => 100 + (o.noWiden ? 0 : 50 * Math.floor(w / 20));
+      const inside = (p, e) => o.noWindow || !(x.ranked || o.casualWindow) || Math.abs(rate(p) - rate(x.player)) <= win(Math.max(waited(e), mine ? waited(mine) : 0));
+      const other = [...q.entries()].filter(([p, e]) => (o.selfMatch || p !== x.player) && (o.anyKind || e.ranked === x.ranked) && (o.retake || !e.taken) && inside(p, e))
         .sort((a, b) => a[1].born - b[1].born || (a[0] < b[0] ? -1 : 1))[0];
       if(other){
         other[1].taken = true; other[1].seen = st.clock;
@@ -223,7 +228,7 @@ function withSeek(o){
         return out("matched", other[1].table);
       }
       if(mine){ mine.seen = st.clock; if(x.table && x.table !== mine.table) drop = drop || x.table; return out("waiting", mine.table); }
-      if(x.table){ q.set(x.player, {table: x.table, ranked: x.ranked, born: ++born, seen: st.clock, taken: false}); return out("waiting", x.table); }
+      if(x.table){ q.set(x.player, {table: x.table, ranked: x.ranked, born: ++born, at: st.clock, seen: st.clock, taken: false}); return out("waiting", x.table); }
       return out("none");
     },
     count(ttl){ const live = [...q.values()].filter(e => !e.taken && e.seen >= st.clock - ttl * 1000); return {friendly: live.filter(e => !e.ranked).length, ranked: live.filter(e => e.ranked).length}; },

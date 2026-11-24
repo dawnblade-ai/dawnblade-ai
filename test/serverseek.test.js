@@ -10,6 +10,7 @@
      (4) THE HEARTBEAT'S TABLE — honoured only for the caller's own open, empty table; a stranger's code is ignored (never queued, never closed).
      (5) STALE MATCHES ARE SKIPPED — a queued table that was closed meanwhile is never handed out; the queue is asked again.
      (6) A SEEKER WHO HELD A TABLE AND IS MATCHED ELSEWHERE — their own table is closed (the race of two simultaneous first seekers).
+     (9) THE RATING WINDOW — a ranked seek pairs only inside 100 + 50 per 20 s waited (010_rating_window.sql); casual never windowed.
      (7) THE EDGES — no identity, a forged one, bad fields, no queue wired; the cap of open tables still applies; the answers carry public keys only. */
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -241,4 +242,46 @@ function lookingFailures(server){
 test("(8) looking: a public count of the queue, numbers only", () => {
   assert.deepEqual(lookingFailures(SERVER), []);
   assert.ok(probe(() => lookingFailures(loadServer([["  if(req.op === \"looking\") return opLooking(req, deps);\n", ""]]))).length > 0, "sabotage (no looking op) must fail");
+});
+
+/* ---------------------------------------------------------------------------------------------- (9) */
+/* The fake queue stands for 010_rating_window.sql (held to it by that file's self-check and tools/sql-sab-010.js). Ratings come from the ratings fake. */
+function windowFailures(so){
+  const bad = [], server = SERVER, rat = F.withRatings();
+  const R = {pa: 1200, pb: 1600, pc: 1250};
+  for(const [id, v] of Object.entries(R)) rat.rt.set(id, {rating: v, games: 5, wins: 3, losses: 2, draws: 0});
+  const store = F.memStore(), idp = F.memIdentity(), sk = F.withSeek({...(so || {}), rate: p => R[p]});
+  let clock = 1700000000000, rn = 0;
+  const deps = {store, broadcast: () => {}, deal: T.dealSpec, build: T.BUILD, now: () => clock++, rand: () => T.seeded("win|" + (++rn)), identify: t => idp.identify(t), rename: (p, n, f) => idp.rename(p, n, f), log: () => {}, ...rat.deps(), ...sk.deps()};
+  const go = req => json(server.handleNow(req, deps)), ids = {};
+  const player = (id, name) => { ids[id] = idp.issue(id); idp.rename(id, name, server.nameFold(name)); };
+  player("pa", "Alpha One"); player("pb", "Bravo Two"); player("pc", "Charlie Tre");
+  const seek = (id, extra) => go({op: "seek", identity: {token: ids[id]}, ranked: true, ...(extra || {})});
+  const a = seek("pa");
+  const b = seek("pb");
+  if(b.state !== "waiting") bad.push("a ranked seeker 400 points away was paired at once: " + JSON.stringify(b));
+  /* real phones beat every 20 s, both refreshing their seek (a seek not seen for the ttl is forgotten); whichever beat finds the other pairs them */
+  let paired = 0;
+  for(let t = 20; t <= 200 && !paired; t += 20){
+    sk.clock += 20e3;
+    const x = seek("pb", {table: b.table}); if(x.state !== "waiting"){ paired = t; break; }
+    const y = seek("pa", {table: a.table}); if(y.state !== "waiting") paired = t;
+  }
+  if(paired <= 100) bad.push("seekers 400 apart were paired after only " + paired + " s (window 350 at 100 s)");
+  if(paired === 0 || paired > 120) bad.push("the window did not widen to 400 by 120 s (paired at " + paired + ")");
+  /* 50 apart pair at once (a fresh queue) */
+  sk.q.clear();
+  const a3 = seek("pa"), c = seek("pc");
+  if(c.state !== "matched" || c.table !== a3.table) bad.push("seekers 50 apart were not paired at once: " + JSON.stringify(c));
+  /* casual is never windowed: 400 apart pair at once */
+  sk.q.clear();
+  const pb = go({op: "seek", identity: {token: ids.pb}}), pa = go({op: "seek", identity: {token: ids.pa}});
+  if(pa.state !== "matched" || pa.table !== pb.table) bad.push("a casual seek was windowed: " + JSON.stringify(pa));
+  return bad;
+}
+test("(9) ranked pairing by rating: 400 apart wait, 50 apart pair at once, the window widens with the wait, casual is unwindowed", () => {
+  assert.deepEqual(windowFailures(), []);
+  assert.ok(probe(() => windowFailures({noWindow: true})).length > 0, "sabotage (window ignored) must fail");
+  assert.ok(probe(() => windowFailures({noWiden: true})).length > 0, "sabotage (window never widens) must fail");
+  assert.ok(probe(() => windowFailures({casualWindow: true})).length > 0, "sabotage (casual windowed) must fail");
 });
