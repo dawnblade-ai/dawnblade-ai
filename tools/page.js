@@ -804,6 +804,17 @@ if(require.main === module){
       await k2.close();
     }
 
+    /* THE TAP FLOOR (M; POLISH.md condition 1): every control on every screen takes a 44px tap, nothing stolen,
+       clipped or overlapped, at the phone it is played on (393x852) AND the smallest one (320x568). tools/tapsweep.js
+       walks the screens, tools/tapjudge.js judges each; a fresh page per size so the walk starts at the roster. */
+    for(const [tw, th] of [[W, H], [320, 568]]){
+      const tk = await open({ w: tw, h: th });
+      try { await require("./tapsweep.js").sweepScreens(tk.page, row, { w: tw, h: th }); }
+      catch(e){ row(false, `tap floor ${tw}x${th}: the sweep ran to the end`, String(e && e.message || e).split("\n")[0]); }
+      tk.errors.forEach(e => errors.push(`tap floor ${tw}x${th}: ${e}`));
+      await tk.close();
+    }
+
     const sw = errors.slice();
     if(sw.length){ console.log("\nPAGE ERRORS (" + sw.length + "):"); sw.forEach(e => console.log("  " + e)); }
     const bad = rows.filter(r => !r.ok).length;

@@ -522,7 +522,8 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
     /* 91,491 -> 91,662 (v6.80), READ FIRST: still `<style>` -> `</style>`; the growth is presentation
        only: Find a match's waiting clock (`.seekclock`). */
     /* -> 91,751 (v6.83, Rematch CSS + .bigbtn.alt 44 px) -> 92,440 (v6.85, the practice-while-waiting bar and banner), READ FIRST: presentation only. */
-    "phasebar.test.js index.html 92440",
+    /* -> 94,193 (v6.86, the 44 px tap floor and the scrolling end panel, one CSS block), READ FIRST: presentation only. */
+    "phasebar.test.js index.html 94193",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
        `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
        `abPickBound` in the pick legality it extends. */

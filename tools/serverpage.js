@@ -36,6 +36,7 @@ const R = T.R;
 
 /* THE DEAL, THE PAGE'S WAY (index.html JudgeRoom.deal) — shared with tools/supabase-rehearse.js; sets the page's CDN address */
 const { dealLikeThePage, matchCatalog } = require("../test/helpers/pagedeal.js");
+const { judgeScreen } = require("./tapjudge.js");
 
 const W = 393, H = 852;
 const rows = [];
@@ -756,7 +757,7 @@ async function toServerChooser(page){
   }
   /* ---- S5.1: RANKED TABLES, ON THE PAGE (each phase its own page and world; the ratings backend behaves like 006_ratings.sql) ---- */
   const rankedKit = async (label, o) => {
-    const kit = await open({ w: W, h: H }), pg = kit.page;
+    const kit = await open({ w: o.w || W, h: o.h || H }), pg = kit.page;
     const bld = await pg.evaluate(() => TABLE_BUILD);
     const wd = makeWorld({ seedKey: "ranked-" + label, build: bld, deal: dealLikeThePage });
     await wire(pg, wd);
@@ -895,6 +896,40 @@ async function toServerChooser(page){
     row(rat.records === 1, "rematch: the first game was recorded once; the new table records nothing until its own game ends");
     const bad = k.kit.errors.filter(e => !/404|Failed to load resource/.test(e));
     row(bad.length === 0 && wd.errors.length === 0, "rematch: no page error and no internal error on the fake server", bad.concat(wd.errors).join(" | ").slice(0, 200));
+    B.ch.close(); await k.kit.close();
+  }
+
+  /* R2c — THE RANKED END SCREEN AT 320x568 (M, QUEUE NEXT 6; POLISH.md condition 1). The end panel stacks the title, the names card, the life left,
+     the note, the rating change, Find another ranked match, (a joiner's) the Verify paragraph and button, and Leave the table. On the smallest phone
+     none may be pushed off the screen with no way back, and every button takes a 44px tap (tools/tapjudge.js; its scroll passes put the panel's
+     own scroll at its top and at its end). Both seats: the creator's panel, and a joiner's (which also carries "Verify this game"). */
+  for(const asHost of [true, false]){
+    const L = asHost ? "creator" : "joiner", k = await rankedKit("end320-" + L, { me: "Dawn Smith", meRating: 1300, bRanked: !asHost, w: 320, h: 568, ...(asHost ? {} : { throws: [["rock", "rock"], ["rock", "paper"]] }) }), pg = k.pg, wd = k.wd, rat = k.rat, B = k.Bp;
+    await toServerChooser(pg);
+    if(asHost) await click(pg, pg.locator('[data-testid="ranked-switch"]'), "switch to ranked");
+    await toTheBoard(pg, wd, B, asHost ? { asHost: true, openRe: /^Open a ranked table/ } : { asHost: false });
+    await playSome(pg, wd, B, 0, 4);
+    B.sess.submit({ t: "concede" }); await wd.settle([B.ch]);
+    await pg.waitForFunction(() => /rose from/.test((document.querySelector('[data-testid="rank-change"]') || {}).innerText || ""), null, { timeout: 15000 }).catch(() => {});
+    await pg.waitForSelector("button:has-text('Verify this game')", { timeout: 20000 }).catch(() => {});
+    const ends = await pg.evaluate(() => ({ n: document.querySelectorAll(".reveal").length, again: !!document.querySelector('[data-testid="seek-again"]'), verify: [...document.querySelectorAll(".reveal button")].some(b => /verify this game/i.test(b.innerText)), leave: !!document.querySelector(".reveal .endleave"), rc: !!document.querySelector('[data-testid="rank-change"]') }));
+    row(ends.n === 1 && ends.rc && ends.again && ends.leave && ends.verify, "ranked end 320x568 (" + L + "): the end panel stacks the rating change, Find another ranked match, Verify this game, and Leave", JSON.stringify(ends));
+    const r = await judgeScreen(pg), bad = ["small", "stolen", "clipped", "overlap"].flatMap(x => r[x].map(f => x + ": " + f.m));
+    row(r.n >= 3 && !bad.length, "ranked end 320x568 (" + L + "): every button takes a 44px tap, none is stolen, clipped or pushed off the screen", r.n + " controls" + (bad.length ? "  " + bad.join(" | ").slice(0, 600) : ""));
+    /* where each sits with the panel scrolled to its end: Leave must be reachable, and the title must not be cut off at the top */
+    const geo = await pg.evaluate(() => { const rv = document.querySelector(".reveal"), q = s => { const e = rv.querySelector(s); return e && e.getBoundingClientRect(); };
+      const t = q(".endtitle"), lv = q(".endleave"), sa = q('[data-testid="seek-again"]'), vf = [...rv.querySelectorAll("button")].find(b => /Verify/.test(b.innerText));
+      const sc = rv.scrollHeight > rv.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(rv).overflowY);
+      const top0 = t && Math.round(t.top); rv.scrollTop = rv.scrollHeight; const lv1 = q(".endleave");
+      return { scrolls: sc, titleTop: top0, leaveBottomAtEnd: lv1 && Math.round(lv1.bottom), leaveRight: lv && Math.round(lv.right), again: sa && [Math.round(sa.left), Math.round(sa.right)], verifyW: vf && Math.round(vf.getBoundingClientRect().width) }; });
+    row(geo.titleTop >= 0 && geo.leaveBottomAtEnd <= 568 && geo.leaveRight <= 320 && (!geo.again || (geo.again[0] >= 0 && geo.again[1] <= 320)), "ranked end 320x568 (" + L + "): the title is not cut off at the top, Leave sits inside the screen (at the panel's end), no button leaves the 320 width", JSON.stringify(geo));
+    row(await pg.evaluate(() => document.scrollingElement.scrollWidth <= 320), "ranked end 320x568 (" + L + "): no horizontal overflow");
+    /* ONE MORE BUTTON (a Rematch is coming): inject a thumb-sized one above Leave; the panel must scroll, not push Leave or the title out of reach */
+    await pg.evaluate(() => { const b = document.createElement("button"); b.className = "bigbtn"; b.setAttribute("data-testid", "inject-m"); b.textContent = "Rematch"; const lv = document.querySelector(".reveal .endleave"); lv.parentNode.insertBefore(b, lv); });
+    const r2 = await judgeScreen(pg), bad2 = ["small", "stolen", "clipped", "overlap"].flatMap(x => r2[x].map(f => x + ": " + f.m));
+    const reach = await pg.evaluate(() => { const rv = document.querySelector(".reveal"); rv.scrollTop = 0; const t0 = rv.querySelector(".endtitle").getBoundingClientRect().top; rv.scrollTop = rv.scrollHeight; const l1 = rv.querySelector(".endleave").getBoundingClientRect().bottom;
+      return { scrolls: rv.scrollHeight > rv.clientHeight, titleTopAtStart: Math.round(t0), leaveBottomAtEnd: Math.round(l1) }; });
+    row(r2.n >= 4 && !bad2.length && reach.scrolls && reach.titleTopAtStart >= 0 && reach.leaveBottomAtEnd <= 568, "ranked end 320x568 (" + L + "): with one more button (a Rematch) the panel scrolls: title reachable at the top, Leave at the end, every tap still 44px", r2.n + " controls " + JSON.stringify(reach) + (bad2.length ? "  " + bad2.join(" | ").slice(0, 400) : ""));
     B.ch.close(); await k.kit.close();
   }
 

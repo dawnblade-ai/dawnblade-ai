@@ -1105,6 +1105,28 @@ img{display:block;max-width:100%}
   font-size:var(--fs-md);letter-spacing:.02em;opacity:.85}
 .phasebar b{font-weight:700}
 .phasebar .ph{text-transform:lowercase;opacity:.9}
+/* THE 44px TAP FLOOR (M, tools/tapjudge.js; POLISH.md condition 1). Every control a player meets takes a tap
+   at least 44 CSS px tall AND wide: the page.js rows measure it at 393x852 and 320x568. The jump row, JUDGE!!, the
+   status line's buttons and "clear fighter" keep their small paint and take the tap through an invisible ::after
+   (decision B); the rest grew. The tab bar keeps its 47px: its padding gave way to the buttons. */
+.bigbtn,.qopt,.howbtn,.rps .rback,.kwrow .kw{min-height:44px}
+.tabs{padding-top:1px;padding-bottom:calc(1px + env(safe-area-inset-bottom))}
+.tab{min-height:44px;padding-top:0;padding-bottom:0;display:flex;align-items:center;justify-content:center}
+.vslot .dmybtn{min-width:44px}
+button.tag{position:relative}
+button.tag::after{content:"";position:absolute;inset:-16px -8px -16px}
+.screennav .sndbtn{min-width:44px}   /* its inline flex:.42 would draw 33px at 320 */
+.statusline button{padding-top:6px;padding-bottom:6px}
+.judgebtn::after{inset:-9px -6px -17px}
+.psheet .pact button{min-height:44px}
+/* THE END PANEL SCROLLS WHEN IT MUST (M, QUEUE NEXT 6). A ranked server game's end screen stacks the title, the names card, the
+   note, the rating change, Find another match, the Verify paragraph and button, and Leave: 523 of 568px at 320 wide, and one more
+   button would push Leave off the bottom of a fixed, centred box with no way back (and the title off the top). Centring with
+   auto margins keeps the look when it fits and lets the panel scroll when it does not. */
+.reveal{overflow-y:auto;justify-content:flex-start}
+.reveal>:first-child{margin-top:auto}
+.reveal>:last-child{margin-bottom:auto}
+@media (max-width:340px){.screennav button{letter-spacing:.06em}}   /* "✕ LEAVE" spilled its box at 320 */
 /* PRESS FEEDBACK (UX overhaul, 2026-11-19). Almost no control answered a
    finger: a tap that lands should LOOK like it landed before the game moves.
    Buttons sink a hair and brighten; hand tiles and hero tiles only brighten,
