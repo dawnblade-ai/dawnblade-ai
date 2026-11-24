@@ -135,10 +135,31 @@ async function ladderOverHttp(cfg, toks, row){
   check("a forged token", await post({ op: "ladder", identity: { token: "x".repeat(60) } }), toks);
   return { pub, host };
 }
+/* S6.1 — FIND A MATCH over HTTPS: the public count, then one real match through the queue between two signed-in phones (the first waits at a table the
+   function opens, the second is sent to it, the first's heartbeat hears it was taken), then the table is closed. Leaves one closed table; writes nothing else. */
+async function seekOverHttp(cfg, toks, row){
+  const post = functionPost(cfg);
+  const lk = await post({ op: "looking" });
+  row(lk.ok === true && Number.isInteger(lk.friendly) && Number.isInteger(lk.ranked) && Object.keys(lk).sort().join() === "friendly,ok,ranked", "seek: the public count answers numbers only", JSON.stringify(lk));
+  if(toks.length < 2 || !toks[0] || !toks[1]){ row(false, "seek: two signed-in phones to match", "have " + toks.filter(Boolean).length); return; }
+  /* anyone else waiting on live would take our first seek's place: the check only claims what it can see */
+  const a = await post({ op: "seek", identity: { token: toks[0] } });
+  if(a.ok && a.state === "matched"){ row(true, "seek: a stranger was already waiting on live, so the host was matched to them (no further claim)"); return; }
+  row(a.ok === true && a.state === "waiting" && /^[A-Z0-9]{6}$/.test(a.table || "") && Number.isInteger(a.beat), "seek: the first seeker waits at a table the function opened", JSON.stringify(a));
+  if(!(a.ok && a.state === "waiting")) return;
+  const b = await post({ op: "seek", identity: { token: toks[1] } });
+  row(b.ok === true && b.state === "matched" && b.table === a.table, "seek: the second seeker is sent to the first one's table", JSON.stringify(b));
+  const hb = await post({ op: "seek", identity: { token: toks[0] }, table: a.table });
+  row(hb.ok === true && hb.state === "taken" && hb.table === a.table, "seek: the first seeker's heartbeat hears its seek was taken", JSON.stringify(hb));
+  const hay = JSON.stringify([a, b, hb]); row(!toks.some(t => hay.indexOf(t) >= 0) && !/"(id|player|subject|token)"/.test(hay), "seek: no id or token rides an answer");
+  const cl = await post({ op: "close", table: a.table, identity: { token: toks[0] } });
+  row(cl.ok === true, "seek: the matched table is closed afterwards", JSON.stringify(cl));
+}
 async function ladderLight(cfg, phones, browser, proxy, query){
   const toks = [];
   for(const ph of phones) toks.push(await phoneToken(ph.page));
   await ladderOverHttp(cfg, toks, row);
+  await seekOverHttp(cfg, toks, row).catch(e => row(false, "seek check", String(e && e.message || e).split("\n")[0]));
   const L = await openPhone(browser, "ladder-viewer", { proxy, query });
   try {
     await L.page.getByRole("button", { name: /^Find an opponent/ }).click({ timeout: 60000 }); await L.page.waitForSelector(".tblwrap");
@@ -362,7 +383,7 @@ async function twoPhones(p, cfg){
   await browser.close().catch(() => {});
 }
 
-module.exports = { ladderOverHttp, makeRow, wait, fetchT, RECORD, LOBBY, launchBrowser, openPhone, walkLobby, phoneToken, functionPost, pageAndScripts, health, PAGE_URL };
+module.exports = { ladderOverHttp, seekOverHttp, makeRow, wait, fetchT, RECORD, LOBBY, launchBrowser, openPhone, walkLobby, phoneToken, functionPost, pageAndScripts, health, PAGE_URL };
 if(require.main === module) (async () => {
   const t0 = Date.now();
   console.log("livecheck " + PAGE_URL + "  (" + new Date().toISOString() + ")");

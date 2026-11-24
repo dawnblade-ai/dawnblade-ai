@@ -1045,7 +1045,7 @@ async function toServerChooser(page){
     row(reads === 1 && k.lad.last.player !== null, "ladder " + w + ": opening it was one read of the backend, with the caller's line asked for", reads + " reads");
     await thumbs(pg, "ladder " + w, ".tblwrap");
     await click(pg, btn(pg, /^Back/), "back from the ladder"); await pg.waitForSelector('[data-testid="ladder-open"]');
-    row(/One of you opens a table/.test(await text(pg)), "ladder " + w + ": Back from the ladder returns to the first screen it was opened from");
+    row(/Find a match to play the next player/.test(await text(pg)), "ladder " + w + ": Back from the ladder returns to the first screen it was opened from");
     const bad = k.kit.errors.filter(e => !/404|Failed to load resource/.test(e));
     row(bad.length === 0 && k.wd.errors.length === 0, "ladder " + w + ": no page error and no internal error on the fake server", bad.concat(k.wd.errors).join(" | ").slice(0, 200));
     await k.kit.close();
@@ -1110,6 +1110,106 @@ async function toServerChooser(page){
     const you = await boxes(pg, '[data-testid="ladder-you"]');
     row(you.length === 1 && /You have played 7 ranked games\. Choose a player name and you are on the ladder\./.test(you[0].t) && (await boxes(pg, '[data-testid="ladder-row"]')).length === 0, "nameless: games but no name is told to choose a name, and is not listed", you[0] && you[0].t);
     await k.kit.close();
+  }
+
+  /* ---- S6.1: FIND A MATCH, ON THE PAGE: two real pages meet through the queue (009_seek.sql's behaviour, test/helpers/serverfakes.js withSeek) ---- */
+  const seekKit = async (label, o) => {
+    o = o || {};
+    const kA = await open({ w: o.w || W, h: H }), kB = await open({ w: W, h: H });
+    const bld = await kA.page.evaluate(() => TABLE_BUILD);
+    const wd = makeWorld({ seedKey: "seek-" + label, build: bld, deal: dealLikeThePage });
+    await wire(kA.page, wd); await wire(kB.page, wd);
+    const idp = F.memIdentity(), rat = F.withRatings(), sk = F.withSeek();
+    wd.deps.identify = t => idp.identify(t); wd.deps.rename = (pl, n, f) => idp.rename(pl, n, f); Object.assign(wd.deps, rat.deps(), sk.deps());
+    const toks = [idp.issue("P-sk-a"), idp.issue("P-sk-b")];
+    if(o.names){ idp.rename("P-sk-a", o.names[0], wd.server.nameFold(o.names[0])); idp.rename("P-sk-b", o.names[1], wd.server.nameFold(o.names[1])); }
+    for(const [k, t] of [[kA, toks[0]], [kB, toks[1]]]){ const shim = "window.__dawnServerIdentity = {token: () => Promise.resolve(" + JSON.stringify(t) + ")};"; await k.page.addInitScript(shim); await k.page.evaluate(shim); await k.page.evaluate(() => { window.SERVER_TABLE.on = true; }); }
+    return { kA, kB, A: kA.page, B: kB.page, wd, sk, idp, rat };
+  };
+  const toFirst = async pg => { await click(pg, btn(pg, /^Find an opponent/), "find an opponent"); await pg.waitForSelector(".tblwrap"); };
+  const lobbyUp = pg => pg.waitForFunction(() => /Choose your fighter/i.test(document.body.innerText), null, { timeout: 12000 }).then(() => true, () => false);
+  const seekJargon = t => !/undefined|NaN|\bnull\b|refused|bad-request|unavailable|seek_|\bop\b|\bv6\.|player id|table-cap/i.test(t);
+  /* K1: A taps Find a match (first screen) and waits; B taps it and both reach the lobby at A's table */
+  {
+    const k = await seekKit("meet");
+    await toFirst(k.A); await toFirst(k.B);
+    const fb = await boxes(k.A, '[data-testid="seek-open"]');
+    row(fb.length === 1 && /^find a match$/i.test(fb[0].t) && fb[0].h >= 44 && fb[0].x >= 0 && fb[0].r <= W, "seek: the first screen offers Find a match, thumb-sized, inside the screen", JSON.stringify(fb[0]));
+    row((await boxes(k.A, '[data-testid="looking"]')).length === 0, "seek: with nobody in the queue, no 'players looking' line");
+    await click(k.A, k.A.locator('[data-testid="seek-open"]'), "A: find a match");
+    await k.A.waitForSelector('[data-testid="seek-card"]', { timeout: 8000 }).catch(() => {});
+    await k.A.waitForFunction(() => /Looking for an opponent/.test(document.body.innerText), null, { timeout: 8000 }).catch(() => {});
+    const card = await inside(k.A, '[data-testid="seek-card"]', "seek: the waiting card");
+    const c1 = (await boxes(k.A, '[data-testid="seek-clock"]'))[0];
+    await wait(2100);
+    const c2 = (await boxes(k.A, '[data-testid="seek-clock"]'))[0];
+    row(!!c1 && !!c2 && /^\d+:\d\d$/.test(c1.t) && c1.t !== c2.t, "seek: the waiting clock ticks (m:ss)", (c1 && c1.t) + " -> " + (c2 && c2.t));
+    const at = await text(k.A);
+    row(/Finding a match/.test(at) && /Looking for an opponent/.test(at) && /Keep this screen open/.test(at) && seekJargon(at), "seek: the card says what is happening and what to do, in plain words");
+    const cancelB = await boxes(k.A, '[data-testid="seek-cancel"]');
+    row(cancelB.length === 1 && /^stop looking$/i.test(cancelB[0].t) && cancelB[0].h >= 40 && cancelB[0].b <= H, "seek: Stop looking is on screen", JSON.stringify(cancelB[0]));
+    await thumbs(k.A, "seek waiting"); row(await overflow(k.A), "seek waiting: no horizontal overflow");
+    row(k.sk.q.size === 1 && k.sk.count(60).friendly === 1, "seek: A is in the queue (one friendly seek)");
+    const aTable = [...k.sk.q.values()][0] && [...k.sk.q.values()][0].table;
+    row(!!aTable && k.wd.row(aTable) && k.wd.row(aTable).creator === "P-sk-a", "seek: A waits at a table opened for A");
+    /* B, on the first screen, now sees one player looking (it reads the count when the screen opens: re-open it) */
+    await click(k.B, btn(k.B, /^Back/), "B back"); await toFirst(k.B);
+    await k.B.waitForSelector('[data-testid="looking"]', { timeout: 6000 }).catch(() => {});
+    const lk = await boxes(k.B, '[data-testid="looking"]');
+    row(lk.length === 1 && lk[0].t === "1 player is looking for a match right now." && lk[0].r <= W, "seek: another phone's first screen says one player is looking", lk[0] && lk[0].t);
+    await click(k.B, k.B.locator('[data-testid="seek-open"]'), "B: find a match");
+    const upA = await lobbyUp(k.A), upB = await lobbyUp(k.B);
+    row(upA && upB, "seek: both pages reach the lobby (Choose your fighter) together", "A " + upA + ", B " + upB);
+    const r = k.wd.row(aTable);
+    row(!!r && Array.isArray(r.owners) && r.owners[0] === "P-sk-a" && r.owners[1] === "P-sk-b", "seek: A holds chair one and B chair two at A's table", JSON.stringify(r && r.owners));
+    row(k.sk.count(60).friendly === 0, "seek: the queue is empty after the match");
+    await wait(300);
+    const bad = k.kA.errors.concat(k.kB.errors).filter(e => !/404|Failed to load resource/.test(e));
+    row(bad.length === 0 && k.wd.errors.length === 0, "seek: no page error and no internal error on the fake server", bad.concat(k.wd.errors).join(" | ").slice(0, 200));
+    await k.kA.close(); await k.kB.close();
+  }
+  /* K2: Stop looking takes A out of the queue and closes the table; a ranked search from the server screen needs a name and meets only a ranked seeker */
+  {
+    const k = await seekKit("cancel", { names: ["Dawn Smith", "Rival One"] });
+    await toFirst(k.A); await click(k.A, k.A.locator('[data-testid="seek-open"]'), "A: find a match");
+    await k.A.waitForFunction(() => /Looking for an opponent/.test(document.body.innerText), null, { timeout: 8000 }).catch(() => {});
+    const t0 = [...k.sk.q.values()][0] && [...k.sk.q.values()][0].table;
+    await click(k.A, k.A.locator('[data-testid="seek-cancel"]'), "A: stop looking");
+    await k.A.waitForSelector('[data-testid="seek-go"]', { timeout: 6000 }).catch(() => {});
+    await wait(400);
+    row(k.sk.q.size === 0 && !!t0 && k.wd.row(t0).closed === true, "seek: Stop looking leaves the queue and closes the waiting table", "queue " + k.sk.q.size);
+    row((await boxes(k.A, '[data-testid="seek-go"]')).length === 1, "seek: Stop looking returns to the server table screen (Find a match is there)");
+    /* ranked: B queues FRIENDLY, A queues RANKED: they must not meet */
+    await toFirst(k.B); await click(k.B, k.B.locator('[data-testid="seek-open"]'), "B: find a (friendly) match");
+    await k.B.waitForFunction(() => /Looking for an opponent/.test(document.body.innerText), null, { timeout: 8000 }).catch(() => {});
+    await click(k.A, k.A.locator('[data-testid="ranked-switch"]'), "A: switch to ranked");
+    const rb = await boxes(k.A, '[data-testid="seek-go"]');
+    row(rb.length === 1 && /^find a ranked match$/i.test(rb[0].t), "seek: with the switch on the button reads 'Find a ranked match'", rb[0] && rb[0].t);
+    await click(k.A, k.A.locator('[data-testid="seek-go"]'), "A: find a ranked match");
+    await k.A.waitForFunction(() => /Finding a ranked match/.test(document.body.innerText), null, { timeout: 8000 }).catch(() => {});
+    await wait(500);
+    row(/Finding a ranked match/.test(await text(k.A)) && k.sk.count(60).friendly === 1 && k.sk.count(60).ranked === 1, "seek: a ranked seeker waits beside a friendly one; they do not meet", JSON.stringify(k.sk.count(60)));
+    /* B stops, switches to ranked, finds: they meet at a ranked table */
+    await click(k.B, k.B.locator('[data-testid="seek-cancel"]'), "B: stop looking");
+    await k.B.waitForSelector('[data-testid="ranked-switch"]', { timeout: 6000 }).catch(() => {});
+    await click(k.B, k.B.locator('[data-testid="ranked-switch"]'), "B: switch to ranked");
+    await click(k.B, k.B.locator('[data-testid="seek-go"]'), "B: find a ranked match");
+    const upA = await lobbyUp(k.A), upB = await lobbyUp(k.B);
+    const rt = [...k.wd.store.rows.keys()].map(id => k.wd.row(id)).find(x => x.ranked === true && Array.isArray(x.owners) && x.owners[1] === "P-sk-b");
+    row(upA && upB && !!rt && rt.owners[0] === "P-sk-a", "seek: two ranked seekers meet at a ranked table and both reach the lobby", "A " + upA + ", B " + upB);
+    await k.kA.close(); await k.kB.close();
+  }
+  /* K3: a nameless player's ranked search is refused in words, and the page stays usable */
+  {
+    const k = await seekKit("noname");
+    await toServerChooser(k.A);
+    await click(k.A, k.A.locator('[data-testid="ranked-switch"]'), "switch to ranked");
+    await click(k.A, k.A.locator('[data-testid="seek-go"]'), "find a ranked match (no name)");
+    await k.A.waitForSelector(".tblerr", { timeout: 6000 }).catch(() => {});
+    const er = await boxes(k.A, ".tblerr");
+    row(er.length === 1 && /needs a player name/.test(er[0].t) && seekJargon(er[0].t) && k.sk.q.size === 0, "seek: a nameless ranked search is refused in words, nobody is queued", er[0] && er[0].t);
+    row((await boxes(k.A, '[data-testid="seek-go"]')).length === 1, "seek: after the refusal the server screen is still there");
+    await k.kA.close(); await k.kB.close();
   }
 
   /* ---- S5.3: tools/liveranked.js, PROVED OFFLINE: its `run` drives two real pages through one whole ranked game (names, a ranked table, the lobby, a concession, the end

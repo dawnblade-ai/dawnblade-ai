@@ -869,6 +869,110 @@ function resync(req, got, deps){
     r => r.ok ? {...r, ...pub(got.row, deps)} : r);
 }
 
+/* ---- {op:"seek", identity:{token}, ranked?:true, table?, cancel?:true} (S6.1) — FIND A MATCH -------------------------------------------
+   A QUEUE OF PLAYERS LOOKING FOR AN OPPONENT (009_seek.sql). The phone asks; the answer is one of
+     {ok:true, state:"matched", table}   somebody was waiting: sit down at THEIR table (as the second player)
+     {ok:true, state:"waiting", table}   nobody was: this player now waits at `table` (opened here when they had none) — sit down at it and ask
+                                         again every SEEK_BEAT ms (the heartbeat, with `table` = that code), or the seek is forgotten after SEEK_TTL
+     {ok:true, state:"taken", table}     this player's seek was taken: someone is on their way to `table` — keep waiting there
+     cancel:true -> {ok:true, state:"cancelled"|"none"} (the waiting table is closed: nobody was matched to it) or {state:"taken", table} (too late:
+                                         go and sit there)
+   A signed-in player only (`identity`): the queue is keyed by OUR player id, one seek each. `ranked:true` queues for a ranked table (a chosen
+   name, as at any ranked table) and never meets a friendly seeker. `table` (the heartbeat) is honoured only for a table this player created,
+   still open, with no other player in it; any other code is ignored (it never moves a stranger's table into the queue).
+   A MATCHED table is checked before it is handed out (it exists, is open, has an empty chair, is the right kind, and its creator is not the
+   caller); a stale one is skipped (it stays marked taken and ages out) and the queue is asked again, at most SEEK_TRIES times.
+   Tables the caller leaves behind (`drop`: its own waiting table when it is matched elsewhere, or when it switches kind) are closed here when
+   nobody else sits in them; a close that fails is logged and the table ages out like any idle table.
+   Refusals: bad-request | identity | ranked-name | unavailable (no queue wired, or a ranked seek with no ratings) | table-cap (opening the waiting
+   table met the cap of open tables; `open` names them) | internal. */
+const SEEK_TTL = 60, SEEK_BEAT = 20000, SEEK_TRIES = 3;
+const seekOpen = (row, player) => !!row && row.closed !== true && row.over !== true && rowOk(row.v) && row.wireV === W.WIRE_V && !(row.hub && row.hub.spec);
+function seekMine(code, who, deps){
+  if(code == null) return null;
+  return then(deps.store.get(code), got => {
+    const row = got && got.row;
+    if(!seekOpen(row) || row.creator !== who.player) return null;
+    const o = ownersOf(row);
+    return o.every(x => x == null || x === who.player) ? code : null;
+  });
+}
+function seekDrop(code, who, deps){
+  if(code == null || !ID_RE.test(code)) return null;
+  const soft = e => { try { if(deps.log) deps.log(e); } catch(_){} return null; };
+  try {
+    return then(deps.store.get(code), got => {
+      const row = got && got.row;
+      if(!seekOpen(row) || row.creator !== who.player || !ownersOf(row).every(x => x == null || x === who.player)) return null;
+      row.over = true; row.closed = true;
+      const v = save(code, row, got.version, deps, [[], []], []);
+      return isP(v) ? v.then(() => null, soft) : null;
+    });
+  } catch(e){ return soft(e); }
+}
+function seekGood(code, who, ranked, deps){
+  return then(deps.store.get(code), got => {
+    const row = got && got.row;
+    if(!seekOpen(row) || (row.ranked === true) !== ranked || row.creator === who.player) return false;
+    const o = ownersOf(row);
+    return o.indexOf(who.player) < 0 && o.some(x => x == null);
+  });
+}
+/* {op:"looking"} (S6.1, PUBLIC, never signs anyone in): how many players are in the queue right now, by kind — the first screen's "2 players looking".
+   -> {ok:true, friendly:n, ranked:n}; `unavailable` when no count is wired. Numbers only: no names, no tables. */
+function opLooking(req, deps){
+  if(typeof deps.seekCount !== "function") return no("unavailable");
+  return then(deps.seekCount(SEEK_TTL), c => {
+    if(!c || !intIn(c.friendly, 0, 1e6) || !intIn(c.ranked, 0, 1e6)) throw new Error("seek count answered something that is not a count");
+    return {ok: true, friendly: c.friendly, ranked: c.ranked};
+  });
+}
+function opSeek(req, deps){
+  if(req.ranked !== undefined && req.ranked !== true) return no("bad-request");
+  if(req.cancel !== undefined && req.cancel !== true) return no("bad-request");
+  if(req.table !== undefined && (typeof req.table !== "string" || !ID_RE.test(req.table))) return no("bad-request");
+  const ranked = req.ranked === true;
+  return recoveryWho(req, deps, (who, token) => {
+    if(typeof deps.seek !== "function") return no("unavailable");
+    if(req.cancel === true){
+      return then(deps.seek({player: who.player, cancel: true, ttl: SEEK_TTL}), a => {
+        if(!a || typeof a !== "object") throw new Error("seek answered nothing");
+        if(a.state === "taken" && typeof a.table === "string" && ID_RE.test(a.table)) return {ok: true, state: "taken", table: a.table};
+        if(a.state === "cancelled") return then(seekDrop(a.table, who, deps), () => ({ok: true, state: "cancelled"}));
+        if(a.state === "none") return {ok: true, state: "none"};
+        throw new Error("seek cancel answered something that is neither cancelled, taken nor none");
+      });
+    }
+    if(ranked){
+      if(typeof deps.record !== "function" || typeof deps.rating !== "function") return no("unavailable");
+      const v = who.name != null ? validateName(who.name) : null;
+      if(!v || !v.ok) return no("ranked-name");
+    }
+    const step = (table, tries, made) => then(deps.seek({player: who.player, ranked, table, ttl: SEEK_TTL}), a => {
+      if(!a || typeof a !== "object" || ["matched", "waiting", "taken", "none"].indexOf(a.state) < 0) throw new Error("seek answered something that is not a seek");
+      const dropped = typeof a.drop === "string" ? a.drop : null;
+      const fin = ans => then(seekDrop(dropped, who, deps), () => ans);
+      if(a.state === "none"){
+        if(made) throw new Error("seek forgot the table it was just given");
+        /* nobody waiting: open this player's table (counted against the cap like any table they open) and queue it */
+        return then(seekDrop(dropped, who, deps), () => then(createAs({identity: req.identity, ...(ranked ? {ranked: true} : {})}, newId(deps), false, deps), c => {
+          if(!c.ok) return c.refused === "exists" && tries < SEEK_TRIES ? step(null, tries + 1, false) : c;
+          return step(c.table, tries, true);
+        }));
+      }
+      if(typeof a.table !== "string" || !ID_RE.test(a.table)) throw new Error("seek answered no table");
+      if(a.state === "waiting" || a.state === "taken") return fin({ok: true, state: a.state, table: a.table, beat: SEEK_BEAT});
+      /* matched: hand it out only if it is still a table the caller can sit at */
+      return then(seekGood(a.table, who, ranked, deps), good => {
+        if(good) return fin({ok: true, state: "matched", table: a.table});
+        if(tries >= SEEK_TRIES) return then(seekDrop(dropped, who, deps), () => no("unavailable", {retry: true}));
+        return then(seekDrop(dropped, who, deps), () => step(null, tries + 1, false));
+      });
+    });
+    return then(seekMine(req.table === undefined ? null : req.table, who, deps), mine => step(mine, 1, false));
+  });
+}
+
 /* ---- the entry ------------------------------------------------------- */
 function serve(req, deps){
   if(!req || typeof req !== "object" || !deps || !deps.store) return no("bad-request");
@@ -876,6 +980,8 @@ function serve(req, deps){
   if(req.op === "me") return me(req, deps);
   if(req.op === "ladder") return opLadder(req, deps);
   if(req.op === "close") return opCloseTable(req, deps);
+  if(req.op === "seek") return opSeek(req, deps);
+  if(req.op === "looking") return opLooking(req, deps);
   if(req.op === "recovery-mint") return opMintCode(req, deps);
   if(req.op === "recovery-redeem") return opRedeemCode(req, deps);
   if(typeof req.table !== "string" || !ID_RE.test(req.table)) return no("bad-request");
@@ -905,5 +1011,5 @@ function handleNow(req, deps){
   return v;
 }
 
-return {handle, handleNow, topic, OPEN_CAP, FORFEIT_MS, LADDER_FLOOR, LADDER_CAP, LADDER_RECENT, ROW_V, ROW_V_CASUAL, ROW_V_RANKED, ROW_V_RANKED_4, validateName, nameFold, recoveryNormal, recoveryHash, RECOVERY_DAYS, RECOVERY_CHARS, RECOVERY_LEN};
+return {handle, handleNow, topic, SEEK_TTL, SEEK_BEAT, OPEN_CAP, FORFEIT_MS, LADDER_FLOOR, LADDER_CAP, LADDER_RECENT, ROW_V, ROW_V_CASUAL, ROW_V_RANKED, ROW_V_RANKED_4, validateName, nameFold, recoveryNormal, recoveryHash, RECOVERY_DAYS, RECOVERY_CHARS, RECOVERY_LEN};
 });

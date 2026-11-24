@@ -189,6 +189,15 @@ and it validates the entire rules core before any networking risk is added.
 11. **ELO** over the 15 Silver Age decks, plus the deck-legality checks the
     trainer already has the data for.
 
+### Matchmaking (BUILT v6.80, S6.1)
+
+**Find a match** (the server group of *Find an opponent*, and the server table screen, friendly or ranked by the switch): the referee's
+queue (`op:"seek"`, `009_seek.sql`) pairs a player with the next one who taps it. Nobody waiting: the function opens a table for the
+seeker, who sits in chair one and waits (a heartbeat every 20 s; a seek unseen for 60 s is forgotten). Somebody waiting: the seeker is
+sent to THEIR table and the lobby starts. Ranked never meets friendly. `op:"looking"` is a public count ("2 players are looking").
+Not yet: a rating window for ranked pairing (oldest-first today), and a live count on the home screen (it would break the page's
+lazy no-request-until-asked rule).
+
 ### Ranked Elo ladder (planned, user 2026-11-07)
 
 - **Who goes first: rock-paper-scissors.** RULING (user, 2026-11-07): "Keep the

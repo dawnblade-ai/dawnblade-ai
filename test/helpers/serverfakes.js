@@ -191,6 +191,45 @@ function withLadder(rat, idp, o){
   st.deps = () => ({ladder: x => st.ladder(x)});
   return st;
 }
+/* THE MATCHMAKING QUEUE, FAKED (S6.1): what `deps.seek({player, ranked, table, ttl})` / `deps.seek({player, cancel:true, ttl})` stand on, behaving as
+   009_seek.sql's seek_step / seek_cancel do (held to it by the SQL's own self-check and tools/sql-sab-009.js): one seek per player; a seek not seen for `ttl`
+   seconds is forgotten (taken or not); a step first looks for ANOTHER player's untaken seek of the same kind, oldest first, and takes it (the caller's own seek,
+   if any, leaves the queue and its table is `drop`); else it refreshes the caller's seek, or inserts it when a table is given; a taken seek answers `taken` to its
+   owner. `clock` is the drill's own time (ms). `count(ttl)` is seek_count. Sabotages: `selfMatch`, `anyKind`, `retake` (a taken seek is matched again), `noAge`. */
+function withSeek(o){
+  o = o || {};
+  const q = new Map(); let born = 0;
+  const st = {q, clock: 1700000000000, steps: 0, cancels: 0,
+    age(ttl){ if(o.noAge) return; for(const [p, e] of q) if(e.seen < st.clock - ttl * 1000) q.delete(p); },
+    seek(x){
+      if(x.cancel === true){
+        st.cancels++; st.age(x.ttl);
+        const m = q.get(x.player);
+        if(!m) return {state: "none"};
+        if(m.taken) return {state: "taken", table: m.table};
+        q.delete(x.player); return {state: "cancelled", table: m.table};
+      }
+      st.steps++; st.age(x.ttl);
+      let mine = q.get(x.player) || null, drop = null;
+      const out = (state, table) => ({state, ...(table ? {table} : {}), ...(drop ? {drop} : {})});
+      if(mine && mine.taken){ if(x.table && x.table !== mine.table) drop = x.table; return out("taken", mine.table); }
+      if(mine && mine.ranked !== x.ranked){ q.delete(x.player); drop = mine.table; mine = null; }
+      const other = [...q.entries()].filter(([p, e]) => (o.selfMatch || p !== x.player) && (o.anyKind || e.ranked === x.ranked) && (o.retake || !e.taken))
+        .sort((a, b) => a[1].born - b[1].born || (a[0] < b[0] ? -1 : 1))[0];
+      if(other){
+        other[1].taken = true; other[1].seen = st.clock;
+        if(mine){ if(other[0] !== x.player) q.delete(x.player); drop = mine.table; }
+        if(!drop && x.table) drop = x.table;
+        return out("matched", other[1].table);
+      }
+      if(mine){ mine.seen = st.clock; if(x.table && x.table !== mine.table) drop = drop || x.table; return out("waiting", mine.table); }
+      if(x.table){ q.set(x.player, {table: x.table, ranked: x.ranked, born: ++born, seen: st.clock, taken: false}); return out("waiting", x.table); }
+      return out("none");
+    },
+    count(ttl){ const live = [...q.values()].filter(e => !e.taken && e.seen >= st.clock - ttl * 1000); return {friendly: live.filter(e => !e.ranked).length, ranked: live.filter(e => e.ranked).length}; },
+    deps: () => ({seek: x => st.seek(x), seekCount: ttl => st.count(ttl)})};
+  return st;
+}
 function hash(s){ let h = 7; for(let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return h; }
 
 const tick = n => { let p = Promise.resolve(); for(let i = 0; i < (n || 1); i++) p = p.then(() => null); return p; };
@@ -204,4 +243,4 @@ function laggedBus(bus, ticks){
   return {broadcast: (topic, payload) => tick(t).then(() => bus.broadcast(topic, payload)), inner: bus};
 }
 
-module.exports = {memStore, memBus, memIdentity, withRecovery, withRatings, withLadder, lagged, laggedBus, bytes, tick};
+module.exports = {memStore, memBus, memIdentity, withRecovery, withRatings, withLadder, withSeek, lagged, laggedBus, bytes, tick};

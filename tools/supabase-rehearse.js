@@ -215,7 +215,7 @@ async function forfeitPhase(label, base, stub, log, world, build, uid0){
   row(early.refused === "claim-early" && early.left > 0 && early.left <= 450000 && self.refused === "claim-self" && forged.refused === "auth" && stub.results.size === before && stub.row(code).over !== true, label + ": forfeit: an early claim, a claim by the waited-on player and a forged claim are each refused and change nothing", [early.refused, early.left, self.refused, forged.refused].join());
   const peek = await go({op: "resync", table: code, seat: claimant, key: keyOf(claimant)});
   row(peek.ok === true && peek.clock && peek.clock.on === wait && peek.clock.limit === 450000 && peek.clock.age >= 0, label + ": forfeit: a resync tells the phone who the game waits on, how long (server time) and the limit", JSON.stringify(peek.clock));
-  age(code, 301000);
+  age(code, require(path.join(__dirname, "..", "server", "referee.js")).FORFEIT_MS + 1000);   /* past the limit, whatever it is (it was 300 s when this was written; it is the referee's FORFEIT_MS) */
   const claimed = await go({op: "claim", table: code, seat: claimant, key: keyOf(claimant)});
   const stored = [...stub.results.values()].pop();
   row(claimed.ok === true && claimed.claimed === true && claimed.result && claimed.result.how === "forfeit" && claimed.result.winner === claimant && stub.results.size === before + 1 && stored && stored.p_how === "forfeit" && stored.p_winner === claimant,
@@ -396,6 +396,12 @@ async function ladderPhase(label, base, stub, log){
   R(hostMe.ok === true, "ladder: a player to call with (named through `me`)");
   const calls0 = stub.stats.ladders || 0;
   await LC.ladderOverHttp(cfg, [hostTok], R);
+  {
+    const guestTok = keyed("sub-seek-guest"); await post({op: "me", identity: {token: guestTok}});
+    const seeks0 = stub.stats.seeks || 0;
+    await LC.seekOverHttp(cfg, [hostTok, guestTok], R);
+    R((stub.stats.seeks || 0) - seeks0 >= 4, "seek: the queue was reached through seek_count / seek_step on the stub", String((stub.stats.seeks || 0) - seeks0));
+  }
   R((stub.stats.ladders || 0) - calls0 === 3, "ladder: each of the three requests (public, signed in, forged) was exactly ONE ladder_get call (no call per row)", String((stub.stats.ladders || 0) - calls0));
   /* a ladder of 55 players, and the cases that must not appear */
   const crowd = []; for(let i = 0; i < 55; i++) crowd.push(mkPlayer("crowd" + i, "Crowd " + String(i).padStart(2, "0"), 1300 + i, 3 + (i % 4)));

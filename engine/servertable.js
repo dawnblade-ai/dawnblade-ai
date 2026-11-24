@@ -221,7 +221,7 @@ async function open(o){
   if(!key) for(const f of res.frames || []) if(f && f.ch === CH_JUDGE && typeof f.key === "string") key = f.key;
   if(!key) throw fail("unavailable", "the table dealt no seat key");
   scrub.add(key);
-  kset("srv." + code, {seat: res.seat, key, role: mode === "create" ? "creator" : (rec && rec.role) || "joiner", at: (o.now || Date.now)()});
+  kset("srv." + code, {seat: res.seat, key, role: mode === "create" ? "creator" : (rec && rec.role) || (o.role === "creator" ? "creator" : "joiner"), at: (o.now || Date.now)()});
   return channel(o, T, code, res.seat, key, res.n | 0, res.frames || [], scrub, keep, {owned: res.owned === true, names: res.names, ranked: res.ranked, ratings: res.ratings, result: res.result});
 }
 
@@ -657,6 +657,44 @@ function defaultIdentity(config, keep, root_){
   return supabaseIdentity(config, keep);
 }
 
+/* ---- FIND A MATCH (S6.1): the queue of players looking for an opponent -------------------------------------------------------------------------
+   o: {transport, identity}. `seek(o, {ranked?, table?, cancel?})` asks the referee's queue once and resolves with
+     {state: "matched", table}           somebody was waiting: sit down at `table` (sitAt) — the game starts at once
+     {state: "waiting" | "taken", table, beat}   wait at `table` (this player's own: sitAt it, then call seek again every `beat` ms with {table});
+                                         "taken": somebody is on their way there
+     {state: "cancelled" | "none"}        (cancel) the seek is gone and its table closed
+   `ranked: true` queues for a ranked table (a chosen name). The server decides every match; nothing here judges one. Rejects with `.why`: unavailable (no sign-in,
+   no server, or a function that does not do this yet) | identity | ranked-name | table-cap (`.open`: this player's open tables) | code.
+   `looking(o)` -> {friendly, ranked}: how many players wait in the queue right now (public; never signs in). Rejects `unavailable`. */
+async function seek(o, q){
+  o = o || {}; q = q || {};
+  const T = o.transport;
+  if(!T || typeof T.post !== "function" || !o.identity || typeof o.identity.token !== "function") throw fail("unavailable", "no sign-in");
+  let token = null; try { token = await o.identity.token(); } catch(_){ token = null; }
+  if(typeof token !== "string" || !token) throw fail("unavailable", "no sign-in");
+  const table = q.table == null ? null : normalize(q.table);
+  if(table != null && !isValid(table)) throw fail("code", "a table code is " + CODE_LEN + " characters");
+  const r = await call(T, {op: "seek", identity: {token}, ...(q.ranked === true ? {ranked: true} : {}), ...(q.cancel === true ? {cancel: true} : {}), ...(table ? {table} : {})});
+  if(r.ok){
+    const st = r.state;
+    if((st === "matched" || st === "waiting" || st === "taken") && isValid(normalize(r.table)))
+      return {state: st, table: normalize(r.table), ...(st !== "matched" ? {beat: Number.isInteger(r.beat) && r.beat >= 2000 ? r.beat : 20000} : {})};
+    if(st === "cancelled" || st === "none") return {state: st};
+    throw fail("unavailable", "an answer that is not a seek");
+  }
+  if(r.refused === "table-cap") throw Object.assign(fail("table-cap"), {open: (Array.isArray(r.open) ? r.open : []).map(normalize).filter(isValid).slice(0, 10), cap: Number(r.cap) > 0 ? Number(r.cap) : null});
+  if(["identity", "ranked-name", "ranked-signin"].indexOf(r.refused) >= 0) throw fail(r.refused, "the queue refused: " + r.refused);
+  throw fail("unavailable", "the queue refused: " + r.refused);
+}
+async function looking(o){
+  o = o || {};
+  const T = o.transport;
+  if(!T || typeof T.post !== "function") throw fail("unavailable", "no transport");
+  const r = await call(T, {op: "looking"});
+  if(!r.ok || !isInt(r.friendly) || !isInt(r.ranked)) throw fail("unavailable", "refused: " + r.refused);
+  return {friendly: r.friendly, ranked: r.ranked};
+}
+
 /* ---- CLOSE MY OWN TABLE (S4.4) -------------------------------------------------------------------------------------
    o: {transport, identity, sleep?}. `closeTable(o, code)` -> {closed:true}: the creator ends a table of theirs that nobody will play, which is
    how a player at the cap of open tables gets unstuck (a table nobody sits at counts as open until it has been idle 48 hours). The table is
@@ -808,6 +846,6 @@ function defaultTransport(config, root_){
   return supabaseTransport(config);
 }
 
-return {TABLE_CODE_CHARS: CODE_CHARS, CODE_LEN, STATUS, SUPABASE_JS, normalize, isValid, topicFor, open, startTable, sitAt, reclaim, savedSeats, doorChoice, doorOpen,
+return {TABLE_CODE_CHARS: CODE_CHARS, CODE_LEN, STATUS, SUPABASE_JS, normalize, isValid, topicFor, open, startTable, sitAt, reclaim, savedSeats, seek, looking, doorChoice, doorOpen,
         supabaseTransport, loadSupabase, defaultTransport, whoAmI, setName, ladder, recoveryMint, recoveryRedeem, closeTable, supabaseIdentity, defaultIdentity};
 });

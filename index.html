@@ -957,6 +957,7 @@ img{display:block;max-width:100%}
 .tblhead{font-family:'Big Shoulders Display';font-weight:800;font-size:var(--fs-big);letter-spacing:.16em;text-transform:uppercase;color:var(--y)}
 .tblcard{background:var(--forge);border:1px solid var(--line);padding:14px 12px}
 .tblcode{font-family:'Spline Sans Mono',monospace;font-size:46px;letter-spacing:.28em;text-align:center;color:var(--y);padding:10px 0 4px;text-shadow:0 2px 0 rgba(20,16,14,.5)}
+.seekclock{font-size:40px;letter-spacing:.08em;text-align:center;color:var(--y);padding:8px 0 2px;font-variant-numeric:tabular-nums;text-shadow:0 2px 0 rgba(20,16,14,.5)}
 .tblin{width:100%;background:var(--ink);border:1px solid var(--line);color:var(--bone);font-family:'Spline Sans Mono',monospace;font-size:34px;letter-spacing:.24em;text-align:center;text-transform:uppercase;padding:12px 6px}
 .tblin:focus{outline:none;border-color:var(--y)}
 .tblstat{font-size:12.5px;color:var(--bone-dim);text-align:center;min-height:18px}
@@ -7894,6 +7895,13 @@ function SrvLadder({wire, who}){
   </>;
 }
 
+/* FIND A MATCH's two small words (SERVER S6.1): the waiting clock, and how many players are in the queue */
+/* the match is found: a short buzz where the phone has one, and the tab's title says so for a few seconds (a player who looked away comes back) */
+const seekFound = () => { try{ if(navigator.vibrate) navigator.vibrate([90,60,90]); }catch(_){}
+  try{ const t0 = document.title; if(/Opponent found/.test(t0)) return; document.title = "Opponent found! · "+t0; setTimeout(()=>{ if(/^Opponent found! · /.test(document.title)) document.title = t0; }, 5000); }catch(_){} };
+const clockOf = ms => { const t = Math.max(0, Math.floor(ms/1000)); return Math.floor(t/60)+":"+String(t%60).padStart(2,"0"); };
+const lookLine = (l, rk) => { const n = rk===true ? l.ranked : rk===false ? l.friendly : l.friendly+l.ranked;
+  return n===1 ? "1 player is looking for a match right now." : n+" players are looking for a match right now."; };
 function TableScreen({onBack, onSeated}){
   const [mode,setMode] = uS(null);           /* null | "host" | "join" */
   const [code,setCode] = uS("");
@@ -7910,7 +7918,7 @@ function TableScreen({onBack, onSeated}){
     waiting:"Table open — waiting for your opponent…",
     dialling:"Knocking on the table…", connected:"Seated.", seating:"Taking a seat…",
     "srv-connecting":"Reaching the server…", "srv-waiting":"Table open — waiting for your opponent…",
-    "srv-seated":"Seated.", "srv-reconnecting":"Lost touch — trying again…", "srv-unavailable":"The server is not answering…"
+    "srv-seated":"Seated.", "srv-seeking":"Looking for an opponent…", "srv-seating":"Opponent found — taking your seat…", "srv-reconnecting":"Lost touch — trying again…", "srv-unavailable":"The server is not answering…"
   };
   /* A TABLE ON THE HOSTED REFEREE (SERVER S2). `how`: "create" (open one), "join" (a code), "reclaim" (this
      phone's seat after a reload). The opener waits here, code on screen, until the other player has spoken; the
@@ -8066,6 +8074,84 @@ function TableScreen({onBack, onSeated}){
     if(w){ try{ w.ch.forget(); w.ch.close(); }catch(_){} }
     setMode(null); setErr(null); setGone(false); setBusy(false); setStat(null); };
 
+  /* FIND A MATCH (SERVER S6.1): the referee's queue pairs this phone with the next player who taps it. Nobody waiting: the referee opens a table for this
+     player, who sits at it and waits (asking again every ~20 s, or the queue forgets them within a minute); somebody waiting: this phone is sent to THEIR
+     table and the game starts. Friendly or ranked follows the switch (the first screen's button is always friendly). The server decides every match. */
+  const seekRef = uR(null);                  /* {ranked, table, timer, gen}: the live search, or null */
+  const [seekRk,setSeekRk] = uS(false);
+  const [seekT0,setSeekT0] = uS(0);
+  const [seekNote,setSeekNote] = uS(null);
+  const [,setTick] = uS(0);
+  uE(()=>{ if(mode!=="srv-seek") return; const h = setInterval(()=>setTick(t=>t+1), 1000); return ()=>clearInterval(h); },[mode]);
+  uE(()=>()=>{ const k = seekRef.current; seekRef.current = null; if(k && k.timer) clearTimeout(k.timer); },[]);
+  const [looking,setLooking] = uS(null);
+  uE(()=>{ if(!srvOn || (mode!==null && mode!=="srv")) return; let dead = false;
+    DawnServerTable.looking({transport: srvWire()}).then(r=>{ if(!dead && live.current) setLooking(r); }).catch(()=>{});
+    return ()=>{ dead = true; }; },[mode, srvOn]);
+  const seekStop = () => { const k = seekRef.current; seekRef.current = null; if(k && k.timer) clearTimeout(k.timer); return k; };
+  const seekFail = e => {
+    if(!live.current) return;
+    seekStop(); const w = waitRef.current; waitRef.current = null; if(w){ try{ w.ch.close(); }catch(_){} }
+    setStat(null); setBusy(false); setMode("srv");
+    if(e && e.why==="table-cap") setCapOpen(Array.isArray(e.open) ? e.open : []);
+    if(!e || e.why==="unavailable" || !SRV_WHY[e.why]) setGone(true); else setErr(SRV_WHY[e.why]);
+  };
+  const seekAsk = (k, table) => DawnServerTable.seek({transport: srvWire(), identity: srvWho}, {ranked: k.ranked, ...(table ? {table} : {})});
+  const seekGot = (k, a) => {
+    if(!live.current || seekRef.current!==k) return;
+    if(a.state==="matched"){
+      /* somebody was waiting: their table. A seat of our own that was waiting is let go (the referee closed its table) */
+      const w = waitRef.current; waitRef.current = null; if(w){ try{ w.ch.forget(); w.ch.close(); }catch(_){} }
+      seekStop(); setStat("srv-seating");
+      return DawnServerTable.sitAt({transport: srvWire(), keep: store, code: a.table, identity: srvWho, tune: {pollMs: 20000, fallbackMs: 2000},
+        onStatus: s=>{ if(live.current) setStat("srv-"+s); }
+      }).then(ch=>{
+        if(!live.current){ ch.close(); return; }
+        setCode(ch.code); seekFound(); onSeated({table: ch, host:false, code: ch.code, judged: {seat: ch.seat, key: null, srv: true}});
+      }).catch(e=>{
+        if(!live.current) return;
+        /* the table filled or closed on the way there: look again */
+        if(e && (e.why==="full" || e.why==="no-table")) return seekGo(k.ranked, true);
+        seekFail(e);
+      });
+    }
+    const beat = () => { if(seekRef.current!==k) return; k.timer = setTimeout(()=>{ if(seekRef.current!==k) return;
+      seekAsk(k, k.table).then(a2=>seekGot(k, a2)).catch(()=>beat()); }, a.beat || 20000); };
+    if(a.state==="taken") setSeekNote("A player was matched with you — they are sitting down.");
+    if(k.table===a.table && waitRef.current) return beat();
+    /* waiting at our own table: sit down at it (chair one) and wait for the other player, as a host does */
+    const old = waitRef.current; waitRef.current = null; if(old){ try{ old.ch.forget(); old.ch.close(); }catch(_){} }
+    k.table = a.table;
+    DawnServerTable.sitAt({transport: srvWire(), keep: store, code: a.table, identity: srvWho, role: "creator", tune: {pollMs: 20000, fallbackMs: 2000},
+      onStatus: s=>{ if(!live.current) return;
+        if(s==="seated" && waitRef.current && waitRef.current.seek===k){ const w = waitRef.current; waitRef.current = null; seekStop(); seekFound(); w.go(); } }
+    }).then(ch=>{
+      if(!live.current){ ch.close(); return; }
+      if(seekRef.current!==k){ try{ ch.close(); }catch(_){} return; }
+      setCode(ch.code);
+      const go = () => onSeated({table: ch, host:false, code: ch.code, judged: {seat: ch.seat, key: null, srv: true}});
+      if(ch.peerHeard()){ seekStop(); seekFound(); return go(); }
+      waitRef.current = {ch, go, seek: k};
+      setStat("srv-seeking"); beat();
+    }).catch(seekFail);
+  };
+  const seekGo = (rk, again) => {
+    if(!srvOn || !srvWho) return;
+    seekStop();
+    const k = {ranked: !!rk, table: null, timer: null};
+    seekRef.current = k;
+    setErr(null); setGone(false); setBusy(true); setCapOpen([]); setCapNote(null); setSeekNote(null);
+    setSeekRk(!!rk); if(!again) setSeekT0(Date.now()); setStat("srv-seeking"); setMode("srv-seek");
+    seekAsk(k, null).then(a=>seekGot(k, a)).catch(seekFail);
+  };
+  const seekCancel = () => {
+    const k = seekStop(), w = waitRef.current; waitRef.current = null;
+    if(w){ try{ w.ch.forget(); w.ch.close(); }catch(_){} }
+    setMode("srv"); setErr(null); setBusy(false); setStat(null); setSeekNote(null);
+    if(k && srvWho) DawnServerTable.seek({transport: srvWire(), identity: srvWho}, {cancel: true}).then(r=>{ if(r.table) try{ store.set("srv."+r.table, null); }catch(_){} }).catch(()=>{});
+    if(k && k.table) try{ store.set("srv."+k.table, null); }catch(_){}
+  };
+
   const sit = (host, c, resume) => {
     setErr(null); setBusy(true); setStat("loading");
     DawnRoom.open({
@@ -8133,16 +8219,18 @@ function TableScreen({onBack, onSeated}){
       {!mode && <>
         <div className="tblcard">
           <p className="note" style={{marginTop:0}}>
-            One of you opens a table and reads out the code; the other types it in.
-            No account needed. Pick how the two phones meet.
+            Find a match to play the next player who is looking, or meet a friend:
+            one of you opens a table and reads out the code, the other types it in. No account needed.
           </p>
         </div>
         {/* THREE WAYS TO MEET, side by side, each with its own one-line reason (v6.28). The server table (SERVER S2) is the same
             game with the referee on the web, so the two phones never need to reach each other. */}
         {srvOn && <div className="tblgroup">
           <div className="tblgname">Server table</div>
-          <p className="tblgnote">Share a code and play, no direct link needed. Works across any network.</p>
-          <div className="tblrow"><button className="bigbtn" onClick={()=>{ setErr(null); setGone(false); setMode("srv"); }}>Join a server table</button>
+          <p className="tblgnote">Get matched with the next player looking, or share a code with a friend. Works across any network.</p>
+          {srvWho && <button className="bigbtn" data-testid="seek-open" onClick={()=>seekGo(false)}>Find a match</button>}
+          {looking && looking.friendly+looking.ranked>0 && <p className="tblgnote" data-testid="looking">{lookLine(looking)}</p>}
+          <div className="tblrow"><button className={"bigbtn"+(srvWho?" alt":"")} onClick={()=>{ setErr(null); setGone(false); setMode("srv"); }}>Join a server table</button>
             <button className="bigbtn alt" data-testid="ladder-open" onClick={()=>{ setErr(null); setGone(false); ladFrom.current = null; setMode("srv-ladder"); }}>The ladder</button></div>
         </div>}
         <div className="tblgroup">
@@ -8202,8 +8290,8 @@ function TableScreen({onBack, onSeated}){
       {mode==="srv" && <>
         <div className="tblcard">
           <p className="note" style={{marginTop:0}}>
-            Open a table and read out its code, or type in the code you were given.
-            The referee on the web seats you both and deals the game.
+            Find a match to play the next player who is looking. Or open a table and read out its code,
+            or type in the code you were given. The referee on the web seats you both and deals the game.
           </p>
         </div>
         {srvWho && !gone && <div className="tblcard tblwho">
@@ -8216,7 +8304,9 @@ function TableScreen({onBack, onSeated}){
         </button>}
         {srvWho && !gone && ranked && <p className="note" data-testid="ranked-note">A ranked table needs a player name for both of you. Everyone starts at 1200. The throw still decides who chooses to go first.</p>}
         {gone ? null : <>
-          <button className="bigbtn" disabled={busy} onClick={()=>srvSit("create")}>{busy ? (PHRASE[stat]||"…") : ranked ? "Open a ranked table" : "Open a server table"}</button>
+          {srvWho && <button className="bigbtn" data-testid="seek-go" disabled={busy} onClick={()=>seekGo(ranked)}>{ranked ? "Find a ranked match" : "Find a match"}</button>}
+          {srvWho && looking && (ranked ? looking.ranked : looking.friendly)>0 && <p className="note" data-testid="looking-srv" style={{marginTop:-4}}>{lookLine(looking, ranked)}</p>}
+          <button className={"bigbtn"+(srvWho?" alt":"")} disabled={busy} onClick={()=>srvSit("create")}>{busy ? (PHRASE[stat]||"…") : ranked ? "Open a ranked table" : "Open a server table"}</button>
           <button className="bigbtn alt" disabled={busy} onClick={()=>{ setCode(""); setMode("srv-join"); }}>Enter a table code</button>
           {srvSaved.map(r=><button key={r.code} className="bigbtn alt" disabled={busy} onClick={()=>{ setCode(r.code); srvSit("reclaim", r.code, r.role); }}>Resume table {r.code}</button>)}
           <button className="bigbtn alt" disabled={busy} data-testid="ladder-open" onClick={()=>{ setErr(null); ladFrom.current = "srv"; setMode("srv-ladder"); }}>See the ladder</button>
@@ -8233,6 +8323,16 @@ function TableScreen({onBack, onSeated}){
           </div>}
           <p className="note">Closing a table ends it for both players. A table that nobody plays also closes by itself after two days.</p>
         </div>}
+      </>}
+
+      {mode==="srv-seek" && <>
+        <div className="tblcard seekcard" data-testid="seek-card">
+          <div className="tblstat">{seekRk ? <><span className="tblrk">Ranked</span>Finding a ranked match</> : "Finding a match"}</div>
+          <div className="seekclock mono" data-testid="seek-clock">{clockOf(Date.now()-seekT0)}</div>
+          <div className={"tblstat"+(stat==="srv-seeking"?" live":"")}>{stat==="srv-seeking" && <span className="tbldot"></span>}{err||gone ? "" : (PHRASE[stat]||"…")}</div>
+          {seekNote && <p className="note" data-testid="seek-note">{seekNote}</p>}
+          <p className="note">You are matched with the next player who taps {seekRk ? "Find a ranked match" : "Find a match"}. Keep this screen open — the game starts here the moment they arrive.{seekRk && myRank ? <> Your rating is <strong>{myRank.rating}</strong>.</> : null}</p>
+        </div>
       </>}
 
       {mode==="srv-host" && <>
@@ -8343,7 +8443,8 @@ function TableScreen({onBack, onSeated}){
       </>}
 
       {err && <div className="tblerr" ref={errRef}>{err}</div>}
-      {mode && /^srv/.test(mode) ? <button className="bigbtn alt" onClick={mode==="srv-ladder" ? ()=>{ setMode(ladFrom.current); setErr(null); } : mode==="srv-join" || mode==="srv-name" ? ()=>{ recBack(); setMode("srv"); setErr(null); setGone(false); setBusy(false); setCode(""); } : srvLeave}>{mode==="srv-host" ? "Cancel" : "Back"}</button>
+      {mode==="srv-seek" ? <button className="bigbtn alt" data-testid="seek-cancel" onClick={seekCancel}>Stop looking</button>
+        : mode && /^srv/.test(mode) ? <button className="bigbtn alt" onClick={mode==="srv-ladder" ? ()=>{ setMode(ladFrom.current); setErr(null); } : mode==="srv-join" || mode==="srv-name" ? ()=>{ recBack(); setMode("srv"); setErr(null); setGone(false); setBusy(false); setCode(""); } : srvLeave}>{mode==="srv-host" ? "Cancel" : "Back"}</button>
         : <button className="bigbtn alt" onClick={onBack}>Back</button>}
     </div>
   );

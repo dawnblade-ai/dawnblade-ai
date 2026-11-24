@@ -37,6 +37,7 @@ function makeStub(o){
   const rows = new Map(), broadcasts = [], stats = {gets: 0, puts: 0, conflicts: 0, casts: 0, bad: [], largestPut: 0};
   const KEY = o.key || "stub-service-key";
   const subs = [], users = new Map(), players = new Map(), identities = new Map(), recovery = new Map(), attempts = new Map(), ratings = new Map(), results = new Map();
+  const seekQ = require(require("path").join(__dirname, "..", "test", "helpers", "serverfakes.js")).withSeek();   /* S6.1: 009_seek.sql stands in as the drills' fake queue */
   stats.auths = 0; stats.resolves = 0; let seq = 0, born = 0, authDown = false;
   const handler = (req, res) => {
     const chunks = [];
@@ -125,6 +126,16 @@ function makeStub(o){
             out.you = {name: pl.display_name || null, rating: r.rating, games: r.games, wins: r.wins, losses: r.losses, draws: r.draws, listed: ok, rank: ok ? at + 1 : null};
           }
           return reply(200, out);
+        }
+        if(req.method === "POST" && /^\/rest\/v1\/rpc\/seek_(step|cancel|count)$/.test(url.pathname)){   /* 009_seek.sql: the queue (the drills' fake queue, on this process's clock) */
+          stats.seeks = (stats.seeks || 0) + 1;
+          const a = JSON.parse(body), fn = url.pathname.split("_").pop();
+          seekQ.clock = Date.now();
+          if(!Number.isInteger(a.p_ttl) || a.p_ttl < 5 || a.p_ttl > 3600 || (fn !== "count" && (typeof a.p_player !== "string" || !a.p_player)) || (fn === "step" && (typeof a.p_ranked !== "boolean" || (a.p_table !== null && !/^[A-Za-z0-9_-]{1,32}$/.test(a.p_table))))){
+            stats.bad.push("seek_" + fn + " args"); return reply(400, {message: "bad args"}); }
+          if(fn === "count") return reply(200, seekQ.count(a.p_ttl));
+          if(fn === "cancel") return reply(200, seekQ.seek({player: a.p_player, cancel: true, ttl: a.p_ttl}));
+          return reply(200, seekQ.seek({player: a.p_player, ranked: a.p_ranked, table: a.p_table, ttl: a.p_ttl}));
         }
         if(req.method === "POST" && url.pathname === "/rest/v1/rpc/identity_resolve"){
           stats.resolves++;

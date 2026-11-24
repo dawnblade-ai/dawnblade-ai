@@ -519,7 +519,9 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        (`.modal .inner` max-height / overflow). */
     /* 91,338 -> 91,491 (v6.63), READ FIRST: still `<style>` -> `</style>`; the growth is presentation
        only: the peek's keyword line (`.peekbar .pkkw`). */
-    "phasebar.test.js index.html 91491",
+    /* 91,491 -> 91,662 (v6.80), READ FIRST: still `<style>` -> `</style>`; the growth is presentation
+       only: Find a match's waiting clock (`.seekclock`). */
+    "phasebar.test.js index.html 91662",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
        `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
        `abPickBound` in the pick legality it extends. */

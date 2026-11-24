@@ -17,6 +17,7 @@
                 (005_table_cap.sql), the count of a signed-in player's OPEN tables and the insert in ONE transaction under a per-player lock
                 (S4.4: at most 5 open tables per player).
      ladder     (S5.3) 008_ladder.sql's ladder_get(): the public ladder, the last ranked results and the caller's own line in ONE read-only statement.
+     seek       (S6.1) 009_seek.sql's seek_step() / seek_cancel() / seek_count(): the matchmaking queue (seekCount is public, like the ladder).
      rating / record   (S5.1) 006_ratings.sql's rating_get() and result_record(): a player's rating and record, and the ONE-TIME recording of a
                 finished ranked game with both ratings moved in the same transaction (idempotent on the game id).
      broadcast  Realtime Broadcast over HTTP: POST <project>/realtime/v1/api/broadcast, one message per seat,
@@ -186,6 +187,30 @@ const mkLadder = (c: any) => async (x: any) => {
     return v;
   } finally { c.get += nowMs() - t; }
 };
+/* S6.1 — the matchmaking queue (009_seek.sql). `deps.seek({player, ranked, table, ttl})` is seek_step; `deps.seek({player, cancel:true, ttl})` is seek_cancel;
+   `deps.seekCount(ttl)` is seek_count. Each is ONE statement answering ONE jsonb; the referee checks every answer's shape before it uses it. */
+const mkSeek = (c: any) => async (x: any) => {
+  const t = nowMs();
+  try {
+    const k = conf();
+    const cancel = x.cancel === true;
+    const r = await fetch(k.url + "/rest/v1/rpc/" + (cancel ? "seek_cancel" : "seek_step"), {method: "POST", headers: k.headers,
+      body: JSON.stringify(cancel ? {p_player: x.player, p_ttl: x.ttl} : {p_player: x.player, p_ranked: x.ranked === true, p_table: x.table == null ? null : x.table, p_ttl: x.ttl})});
+    if(!r.ok) throw new Error("seek " + r.status);
+    const v: any = await r.json();
+    if(!v || typeof v !== "object" || typeof v.state !== "string") throw new Error("seek answered no state");
+    return v;
+  } finally { c.put += nowMs() - t; }
+};
+const mkSeekCount = (c: any) => async (ttl: number) => {
+  const t = nowMs();
+  try {
+    const k = conf();
+    const r = await fetch(k.url + "/rest/v1/rpc/seek_count", {method: "POST", headers: k.headers, body: JSON.stringify({p_ttl: ttl})});
+    if(!r.ok) throw new Error("seek count " + r.status);
+    return await r.json();
+  } finally { c.get += nowMs() - t; }
+};
 const mkBroadcast = (c: any) => async (topic: string, payload: any) => {
   const body = JSON.stringify({messages: [{topic, event: "frame", payload, private: false}]});
   if(body.length > MAX_BROADCAST) throw new Error("broadcast too large: " + body.length);
@@ -306,8 +331,8 @@ Deno.serve(async (req: Request) => {
   const tr = nowMs();
   try { r = ready(); } catch(e){ console.error(e); return send(req, {ok: false, refused: "internal"}); }
   c.ready = nowMs() - tr;
-  const answer = await G.DawnServer.handle(request, {store: mkStore(c), broadcast: mkBroadcast(c), deal: r.deal, build: r.build, now: () => Date.now(), ladder: mkLadder(c),
-    ...(Deno.env.get("TABLE_IDENTITY") === "off" ? {} : {identify: mkIdentify(c), rename: mkRename(c), mint: mkMint(c), redeem: mkRedeem(c), rating: mkRating(c), record: mkRecord(c)}),
+  const answer = await G.DawnServer.handle(request, {store: mkStore(c), broadcast: mkBroadcast(c), deal: r.deal, build: r.build, now: () => Date.now(), ladder: mkLadder(c), seekCount: mkSeekCount(c),
+    ...(Deno.env.get("TABLE_IDENTITY") === "off" ? {} : {identify: mkIdentify(c), rename: mkRename(c), mint: mkMint(c), redeem: mkRedeem(c), rating: mkRating(c), record: mkRecord(c), seek: mkSeek(c)}),
     log: (e: any) => console.error(String(e && e.stack || e))});          // operator logs only; an error never rides a response
   return send(req, answer, 200, timingHeaders(c, cold));
 });
