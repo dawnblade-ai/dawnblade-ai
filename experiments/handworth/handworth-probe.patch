@@ -1,0 +1,75 @@
+diff --git a/engine/sparring.js b/engine/sparring.js
+index 7048f6a..a3a9b43 100644
+--- a/engine/sparring.js
++++ b/engine/sparring.js
+@@ -1653,6 +1653,10 @@ const LA = {
+   bH: envOf("SPXLA_BH") || "own",           /* block rollouts: "next" to this seat's next decision; "own" through its next turn */
+   blockN: envOf("SPXLA_BN") !== "" ? +envOf("SPXLA_BN") : 4,      /* block sets kept besides the rules' and taking it */
+   bW: envOf("SPXLA_BW") !== "" ? +envOf("SPXLA_BW") : 1,     /* SPXLABOARD: life-points per board point */
++  handA: 0,    /* PROBE (hand worth): life-points per point of printed defence above 2, summed over my hand (+ arsenal) at the rollout's end */
++  handArs: 1,  /* 1: the arsenal card counts in handA's sum; 0: hand only */
++  arsP: 0,     /* PROBE: the arsenal card's own worth, per point of its printed power (an attack) or pitch (anything else) */
++  bHandA: 0,   /* PROBE: handA's weight inside the block search */
+   stepCap: 400,       /* per rollout */
+   budget: envOf("SPXLA_B") !== "" ? +envOf("SPXLA_B") : 300,  /* engine steps per BLOCK decision, all rollouts together; over it, A0 stands */
+   /* OWN-TURN BUDGET (v6.78, measured): 600 steps for the action search. v6.77 left the page's p95 at
+@@ -1733,12 +1737,20 @@ function boardVal(sd, other, self){
+   const made = other ? (other.board || []).reduce((t, b) => (b && b.card && b.madeBy != null && b.madeBy === self) ? t + permVal(b) : t, 0) : 0;
+   return mine + made;
+ }
+-function laEval(n, seat, root, mu){
++function handQ(sd, a, ars, arsP){
++  let t = 0;
++  if(a) for(const c of (sd.hand || [])) if(c) t += a * (num(c, "def") - 2);
++  const x = sd.arsenal;
++  if(x){ if(a && ars) t += a * (num(x, "def") - 2); if(arsP) t += arsP * (num(x, "power") > 0 ? num(x, "power") : num(x, "pitch")); }
++  return t;
++}
++function laEval(n, seat, root, mu, blk){
+   const me = n.sides[seat], op = n.sides[1 - seat], m0 = root.sides[seat], o0 = root.sides[1 - seat];
+   if(n.over) return {v: n.over.winner === seat ? 1000 : n.over.winner == null ? 0 : -1000, dealt: 0, taken: 0, cards: 0, board: 0, over: true};
+   const dealt = (o0.hp - op.hp), taken = (m0.hp - me.hp), cards = held(me) - held(op);
+   const board = boardOn(root, seat) ? (boardVal(me, op, seat) - boardVal(m0, o0, seat)) - (boardVal(op, me, 1 - seat) - boardVal(o0, m0, 1 - seat)) : 0;
+-  return {v: dealt - taken + (mu != null ? mu : LA.mu) * cards + LA.bW * board, dealt, taken, cards, board};
++  const hq = (LA.handA || LA.bHandA || LA.arsP) ? handQ(me, blk ? LA.bHandA : LA.handA, LA.handArs, blk ? 0 : LA.arsP) : 0;
++  return {v: dealt - taken + (mu != null ? mu : LA.mu) * cards + LA.bW * board + hq, dealt, taken, cards, board};
+ }
+ function laRollout(n, seat, root, spent, until, skip, cap){
+   const stop = root.turn + (LA.horizon === "own" ? 1 : 2);
+@@ -1768,7 +1780,16 @@ function laLucky(root, n, seat){
+   const me = n.sides[seat], kept = new Set((me.deck || []).concat(me.hand || []).map(c => c && c.uid));
+   return (root.sides[seat].deck || []).some(c => c && !kept.has(c.uid));
+ }
+-function laSearch(g, seat, a0){
++/* PROBE: per-hero LA overrides (SPXLA_XH=hero SPXLA_XSET="horizon=opp,mu=2") */
++function laX(g, seat, f){
++  const xh = envOf("SPXLA_XH"), set = envOf("SPXLA_XSET");
++  if(!xh || !set || g.sides[seat].heroKey !== xh) return f();
++  const save = {};
++  set.split(",").forEach(kv => { const [k, v] = kv.split("="); save[k] = LA[k]; LA[k] = isNaN(+v) ? v : +v; });
++  try { return f(); } finally { Object.assign(LA, save); }
++}
++function laSearch(g, seat, a0){ return laX(g, seat, () => laSearch0(g, seat, a0)); }
++function laSearch0(g, seat, a0){
+   LA.stats.decisions++;
+   const t0 = Date.now(), keep = NOTE; NOTE = null; IN_SEARCH = true;
+   let best = null, spent = 0, cands = [];
+@@ -1908,7 +1929,8 @@ function wallOrder(sd, uids){
+   const isG = u => (sd.gear || []).some(x => x && x.uid === u);
+   return uids.slice().sort((a, b) => (isG(b) - isG(a)) || (String(a) < String(b) ? -1 : String(a) > String(b) ? 1 : 0));
+ }
+-function laBlockSearch(g, seat, o){
++function laBlockSearch(g, seat, o){ return laX(g, seat, () => laBlockSearch0(g, seat, o)); }
++function laBlockSearch0(g, seat, o){
+   LA.stats.decisions++;
+   const t0 = Date.now(), keep = NOTE; NOTE = null; IN_SEARCH = true;
+   let best = null, spent = 0, cands = [];
+@@ -1929,7 +1951,7 @@ function laBlockSearch(g, seat, o){
+         if(bad){ tot[i].v = -Infinity; continue; }
+         const r = laRollout(n, seat, root, spent, until, skip); spent += r.steps;
+         if(!r.done){ LA.stats.over++; return null; }
+-        const e = laEval(r.n, seat, root, LA.bMu);
++        const e = laEval(r.n, seat, root, LA.bMu, true);
+         ["v", "dealt", "taken", "cards", "board"].forEach(f => tot[i][f] += e[f]);
+       }
+     }
