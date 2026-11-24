@@ -105,3 +105,19 @@ two-phone table on two real phones over real PeerJS, and the sandbox cannot.
 **Report back:** which step failed (if any), the phones and browsers, and
 whether it was Wi-Fi or mobile data. A failure here is a top-priority
 S-item. The JUDGE!! button files a bug report from either phone.
+
+## The online path on two real iPhones — Find a match, Rematch, practice while waiting (v6.85)
+
+Every server-table check runs headless (`tools/serverpage.js`, `tools/livecheck.js`). Nobody has yet walked the matchmaking
+path on two real phones. **About 15 minutes, two phones, both on the live page (check the version in the corner):**
+1. Both phones: *Find an opponent* → *Find a match*. They should meet within a few seconds and reach the hero pick.
+2. Play a few turns, then concede on one phone. On both end screens, tap **Rematch**. The second tap should send both
+   phones to a NEW table at the hero pick, with no code typed. Try it once with the other phone asking first, and once
+   with **Take it back**.
+3. On the end screen, tap **Find another match** on one phone only. Leave it searching for over a minute: **Play the AI
+   while you wait** appears. Start a practice game, then tap *Find a match* on the other phone. The **Your match is
+   ready** banner should appear over the practice game; **Join them** should seat both.
+4. Open *How each table keeps hands hidden* and close it. Check every button is easy to hit with a thumb.
+
+**Report back:** the step that failed (if any), the phones, and whether it was Wi-Fi or mobile data. JUDGE!! files a
+report from either phone.
