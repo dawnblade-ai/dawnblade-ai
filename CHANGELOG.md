@@ -1,3 +1,25 @@
+## v6.85 — Waiting is lonely: play the AI while Find a match keeps searching
+
+- **Play the AI while you wait (NEXT 2).** A player who has waited a minute on *Find a match* with nobody around now sees a
+  calm line ("Nobody has sat down yet…") and a button: **Play the AI while you wait**. It opens the hero grid with a *Still
+  looking for a match* bar and a way back to the search. The search keeps running behind the practice game: the same ~20 s
+  heartbeat, no new requests, and the screen's one-second clock pauses while hidden. `TableScreen` stays mounted and hidden;
+  nothing is lifted to App. When a match arrives mid-practice, a banner, **Your match is ready — an opponent is waiting**,
+  sits over the game with **Join them**. The practice game is never taken away on its own. An unanswered match behaves
+  exactly as it does today: 009 has no acceptance timeout, so the table stays open with both chairs held. The waiting clock
+  (m:ss) was already in. The 60 s threshold reads `window.SERVER_TABLE.quietMs`, so the drives can shorten it. Worker N
+  built it.
+- **Drills:** `tools/serverpage.js` K1b, 11 rows: no offer before the quiet minute; the offer is thumb-sized and plain; the
+  search survives practice; the banner lands over the game; an ignored match stands; Join them reaches the lobby on both
+  phones; no errors. Sabotaged twice and seen to fail: the 60 s gate removed, and banner delivery made immediate.
+  `test/tapdoor.test.js`'s plain-arrow count is 20 (the Join them button). `test/slicecensus.test.js` is 92,440 with
+  v6.83's CSS.
+- **Open:** the phone cost of practising while the search heartbeats was reasoned, not measured: one POST per ~20 s plus
+  the channel's existing poll. A 4x-throttle number is still worth taking. The hero grid in practice mode still carries the
+  lobby's format note and How to play below the grid.
+- **Validation:** npm test 4589 / 4584 pass / 0 fail / 5 skipped; both babel blocks compile; `tools/page.js` 89/89 screens;
+  `tools/serverpage.js` 354 / 0. No engine, rule, wire, AI or SQL change.
+
 ## v6.84 — Ranked pairing by rating: a window that widens while you wait
 
 - **Ranked pairing by rating (NEXT 3).** Find a ranked match paired the oldest seeker first, whatever the two ratings.
