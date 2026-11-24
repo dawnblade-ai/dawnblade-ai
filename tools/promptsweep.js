@@ -197,13 +197,14 @@ const injectOne = ([name, spec, extra]) => {
   return why ? { err: "submit refused: " + why } : { tag: p.tag, title: p.title };
 };
 
-async function injectSweep({ page, w, h, heroes, row, seen, log }) {
+async function injectSweep({ page, w, h, heroes, row, seen, log, css = null, only = null }) {
   const has = sel => page.locator(sel).first().isVisible().catch(() => false);
   for (const hi of heroes) {
     await page.reload(); await page.waitForSelector(".hcard", { timeout: 20000 });
     const hero = (await page.locator(".hgrid .hcard").nth(hi).innerText()).replace(/\s+/g, " ").trim().slice(0, 22);
     try {
       await page.evaluate(installWrap);
+      if (css) await page.addStyleTag({ content: css });
       await page.locator(".hgrid .hcard").nth(hi).click(); await page.waitForSelector(".sheet");
       await page.getByRole("button", { name: /^Battle$/ }).first().click();
       await page.waitForSelector(".rps"); await page.waitForSelector(".rseatpick, .actbar", { timeout: 10000 });
@@ -215,7 +216,7 @@ async function injectSweep({ page, w, h, heroes, row, seen, log }) {
       await page.waitForTimeout(600);
       const specs = await page.evaluate(`(${makeSpecs.toString()})(window.__dawnTable.session.state())`)
         .catch(e => { throw new Error("specs: " + e.message); });
-      for (const [name, spec, extra] of specs.map(v => v.length === 3 ? v : [v[0], v[1], v.__sel])) {
+      for (const [name, spec, extra] of specs.filter(v => !only || only.some(o => v[0].startsWith(o))).map(v => v.length === 3 ? v : [v[0], v[1], v.__sel])) {
         const r = await page.evaluate(injectOne, [name, spec, extra]);
         if (r.err) { row(false, `inject ${w}x${h}: ${hero} / ${name}`, r.err); continue; }
         await page.waitForSelector(".psheet", { timeout: 4000 }).catch(() => {});
@@ -231,7 +232,20 @@ async function injectSweep({ page, w, h, heroes, row, seen, log }) {
   }
 }
 
-module.exports = { sweep, injectSweep, makeSpecs, KINDS, MINFONT, sheetFacts };
+/* the drill (page.js runs it): one hero, every kind, one phone size; then the same with the sheet's CSS SABOTAGED (the
+   list stops scrolling, options shrink to 30px): the sweep must find it, or it was not looking. ~35 s. */
+async function injectDrill(page, row, { w, h }) {
+  const seen = new Map(); let bad = 0, n = 0;
+  await injectSweep({ page, w, h, heroes: [0], seen, row: (ok, name, d) => { n++; if (!ok) bad++; row(ok, name, d); }, log: console.log });
+  row(n >= 18 && KINDS.every(k => seen.has(`${[...seen.keys()][0].split("|")[0]}|inject|${k}`)), `inject ${w}x${h}: every prompt kind was put on the board and judged`, `${n} sheets, ${bad} findings`);
+  let caught = 0, ran = 0;
+  await injectSweep({ page, w, h, heroes: [0], seen: new Map(), only: ["soak 4", "modal optional", "opt 4"], log: console.log,
+    css: ".psheet .pmodal{overflow:visible !important;flex:none !important}.psheet .popt{min-height:0 !important;padding:2px 12px !important}.psheet .parrows button{min-height:20px !important}",
+    row: (ok) => { ran++; if (!ok) caught++; } });
+  row(ran >= 3 && caught >= 2, `inject ${w}x${h}: sabotage (sheet list stops scrolling, options shrink) is found`, `${caught} of ${ran} sabotaged sheets failed the judge`);
+}
+
+module.exports = { sweep, injectSweep, injectDrill, makeSpecs, KINDS, MINFONT, sheetFacts };
 
 if (require.main === module) {
   const { open } = require("./page.js");
