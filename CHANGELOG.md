@@ -1,3 +1,17 @@
+## v6.90 — Close a full table right on the rematch screen
+
+- **The cap no longer strands a rematch (worker P, the v6.87 follow-up).** When a rematch is refused because the
+  player's open tables are full, the end screen now lists those tables, each with a 44 px *Close* button.
+  - *Close* first warns that it counts as a loss if that table is a ranked game under way, with *Yes* and *Keep*.
+  - *Yes* closes that one table. The main button then reads *Ask again*, and the rematch opens without leaving the screen.
+  - Under the hood it is `servertable` `handle.closeOwn(code)`, the existing close path. No referee change.
+  - serverpage: 16 new rows at 393 and 320; 392 rows pass.
+- **Feed voice audited (worker O).** All 19 second-person literals in `effects.js` are prompt text addressed to that
+  side, refusals returned to the actor, or code. None is a feed line, so the pin stays at 19 and the drill records the audit.
+- **Watch: the trainer's babel block is at 499,004 characters.** Babel deoptimises above 500,000, and that console
+  error crashes the page drives. A retired comment was trimmed to make room (history in LESSONS.md), and
+  slicecensus's dummydefence slice was repinned to 8643. The next page addition must make room first (QUEUE).
+
 ## v6.89 — Find a match says how long players usually wait
 
 - **Matchmaking visibility (QUEUE item 5, worker Q).** The *Finding a match* card shows one quiet line under the
