@@ -7848,6 +7848,8 @@ function Pregame({h, seed, onSeated, onBack}){
 const LAD_END = {life:"won", concession:"conceded", forfeit:"forfeit", stalemate:"draw"};
 const ladHero = k => { const h = HEROES.find(x=>x.k===k); return h ? heroShort(h) : String(k||"").replace(/^./,c=>c.toUpperCase()); };
 const ladAgo = at => { const m = Math.floor(Math.max(0, Date.now()-at)/60000); if(m<1) return "just now"; if(m<60) return m+" min ago"; const h = Math.floor(m/60); if(h<48) return h+(h===1?" hour ago":" hours ago"); return Math.floor(h/24)+" days ago"; };
+</script>
+<script type="text/babel" data-presets="env,react">
 function SrvLadder({wire, who}){
   const [st,setSt] = uS({s:"loading"});
   const tick = uR(0), alive = uR(true);
@@ -10299,6 +10301,8 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
     </div>
   );
 }
+</script>
+<script type="text/babel" data-presets="env,react">
 function App(){
   const [db,reload] = useCardDB();
   const [tab,setTab]=uS("heroes");
