@@ -11,7 +11,7 @@ matchmaking**. Do not open AI-strength probes. A card that plays wrong is still 
 
 **State:** live = **v6.82** on `main`. Function `table` v116 = `v6.82 · sage-v19`, stamped, `--check` OK; **livecheck ALL PASS**
 (2026-11-24, a real match through the queue). SQL 001..009 on the project (nothing new this session). WIRE_V 49, DATA_VER
-sage-v19, 17 heroes. **WORKERS (CEO session_013xG9x9AaVs72uwn8QKys7W, spawned 2026-11-24 18:03): L ship/L-rating-window (NEXT 3, SQL 010) session_013xG9xAVpuhxsYPvo46VCU7 · M ship/M-tap-sweep (NEXT 5+6) session_013xG9x9phS7odKaeNo2rX11 · N ship/N-waiting (NEXT 2) session_013xG9xBJq9Cee5CJBN1WBHt. CEO itself on NEXT 1 Rematch (SQL 011 if needed).**
+sage-v19, 17 heroes. **WORKERS (CEO session_013xG9x9AaVs72uwn8QKys7W, spawned 2026-11-24 18:03): L ship/L-rating-window (NEXT 3, SQL 010) session_013xG9xAVpuhxsYPvo46VCU7 · M ship/M-tap-sweep (NEXT 5+6) session_013xG9x9phS7odKaeNo2rX11 · N ship/N-waiting (NEXT 2) session_013xG9xBJq9Cee5CJBN1WBHt. CEO: **v6.83 Rematch SHIPPED** (live, function v118 stamped, livecheck ALL PASS; no SQL). L reported done, sent back for a 180 s full-open cap.**
 
 **This CEO (two releases, page only — no engine, rule, wire, AI or SQL change):**
 - **v6.81 Play again** (NEXT 1, first half): a server game's end screen offers *Find another match* / *Find another ranked
