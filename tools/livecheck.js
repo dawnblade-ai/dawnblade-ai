@@ -167,6 +167,7 @@ async function ladderLight(cfg, phones, browser, proxy, query){
   for(const ph of phones) toks.push(await phoneToken(ph.page));
   await ladderOverHttp(cfg, toks, row);
   await seekOverHttp(cfg, toks, row).catch(e => row(false, "seek check", String(e && e.message || e).split("\n")[0]));
+  await require("./rematchprobe.js").rematchOverHttp(cfg, toks, row).catch(e => row(false, "rematch probe", String(e && e.message || e).split("\n")[0]));
   const L = await openPhone(browser, "ladder-viewer", { proxy, query });
   try {
     await L.page.getByRole("button", { name: /^Find an opponent/ }).click({ timeout: 60000 }); await L.page.waitForSelector(".tblwrap");

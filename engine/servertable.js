@@ -468,7 +468,14 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep, who){
         (o.setTimeout || setTimeout)(() => { if(!done){ done = true; sink = prev; res(null); } }, ms || 2500);
       });
     },
-    close(){ stop(); },
+    /* v6.87: LEAVING TAKES A PENDING REMATCH ASK BACK — the other player's page stops saying "wants a rematch" at once, not after REMATCH_MS. Best effort,
+       sent before the table shuts; never waited for, never thrown. A code already agreed (rm.table) is not taken back. */
+    close(){
+      if(!closed && rm.want[seat] === true && !rm.table){
+        try { const p = call(T, {op: "rematch", table: code, seat, key, cancel: true}); if(p && p.catch) p.catch(() => {}); } catch(_){}
+      }
+      stop();
+    },
     status: () => st,
     /* beyond room.js's shape */
     peerHeard: () => peerHeard,
