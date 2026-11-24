@@ -75,18 +75,36 @@ function checkBalance(code){
   return stack.length ? {ok:false, at:code.length, ch:"EOF", top:stack[stack.length-1]} : {ok:true};
 }
 
-test("index.html carries exactly two text/babel blocks", () => {
-  assert.equal(babelBlocks(src).length, 2);
+/* The page's babel code is FOUR consecutive blocks: script0 (loader / UI shell) and script1 split in three at top-level function seams (1a trainer, 1b server
+   table UI, 1c App + the mount), because Babel stops formatting a block over 500,000 characters and tools/page.js treats the console note as a crash
+   (v6.88: the trainer block had ~1,000 characters of headroom). Top-level const/function become globals, so the blocks see one another in document order. */
+const BLOCK_CAP = 450000;
+test("index.html carries exactly four text/babel blocks (script0 and script1 in three)", () => {
+  assert.equal(babelBlocks(src).length, 4);
 });
 
-test("bracket balance — script0 (loader / UI shell)", () => {
-  const r = checkBalance(babelBlocks(src)[0]);
-  assert.ok(r.ok, `unbalanced at index ${r.at}: found ${r.ch} against ${r.top}`);
+["script0 (loader / UI shell)", "script1a (trainer)", "script1b (server table UI)", "script1c (App and the mount)"].forEach((name, i) => {
+  test("bracket balance — " + name, () => {
+    const r = checkBalance(babelBlocks(src)[i]);
+    assert.ok(r.ok, `unbalanced at index ${r.at}: found ${r.ch} against ${r.top}`);
+  });
 });
 
-test("bracket balance — script1 (engine)", () => {
-  const r = checkBalance(babelBlocks(src)[1]);
-  assert.ok(r.ok, `unbalanced at index ${r.at}: found ${r.ch} against ${r.top}`);
+/* every block stays under the cap, with room: move a seam or split again BEFORE 500,000 (Babel's deoptimise note is a console.error that fails every page drive) */
+function oversize(s){ return babelBlocks(s).map((b, i) => [i, b.length]).filter(x => x[1] > BLOCK_CAP); }
+test("no text/babel block is longer than 450,000 characters", () => {
+  assert.deepEqual(oversize(src), [], "a block passed the cap: move a seam (see the comment above BLOCK_CAP)");
+  const padded = src.replace('data-presets="env,react">\n', m => m + "/*" + "x".repeat(BLOCK_CAP) + "*/\n");
+  assert.ok(oversize(padded).length > 0, "sabotage (a padded block) must trip the cap");
+});
+
+/* the mount runs last: every component must exist before the first render */
+test("the createRoot mount is in the LAST text/babel block, once", () => {
+  const bl = babelBlocks(src), at = bl.map((b, i) => /ReactDOM\.createRoot\(/.test(b) ? i : -1).filter(i => i >= 0);
+  assert.deepEqual(at, [bl.length - 1]);
+  const moved = src.replace("ReactDOM.createRoot(document.getElementById(\"root\")).render(<App/>);\n", "");
+  const b2 = babelBlocks(moved).map((b, i) => /ReactDOM\.createRoot\(/.test(b) ? i : -1).filter(i => i >= 0);
+  assert.notDeepEqual(b2, [babelBlocks(moved).length - 1], "sabotage (no mount) must trip the guard");
 });
 
 test("single </style> block", () => {

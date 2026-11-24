@@ -168,8 +168,13 @@ async function seekOverHttp(cfg, toks, row){
    player's wait, so it is taken back out: the friendly rows of 2 s or less logged since the probe began (the log holds no player to match
    on; a real instant friendly match in the same few seconds is the only thing that could share the window). Through the Management API
    (the session's proxy holds the token); without it the row stays and the run says so — a WARN, not a FAIL. */
+/* THE ONE SHAPE (held by test/livecheckwait.test.js): friendly only, 2 s or less, since the probe began — it must never widen to a real player's wait. */
+const probeWaitQuery = t0 => {
+  if(typeof t0 !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.test(t0)) throw new Error("probeWaitQuery needs an ISO timestamp");
+  return "delete from public.seek_wait_log where ranked = false and waited_s <= 2 and at >= '" + t0 + "'::timestamptz returning waited_s";
+};
 async function forgetProbeWait(t0){
-  const q = "delete from public.seek_wait_log where ranked = false and waited_s <= 2 and at >= '" + t0 + "'::timestamptz returning waited_s";
+  const q = probeWaitQuery(t0);
   try {
     const r = await fetchT("https://api.supabase.com/v1/projects/fokcpzplomjsraquaaid/database/query", { method: "POST", headers: { authorization: "Bearer dummy", "content-type": "application/json" }, body: JSON.stringify({ query: q }) });
     const j = await r.json();
@@ -406,7 +411,7 @@ async function twoPhones(p, cfg){
   await browser.close().catch(() => {});
 }
 
-module.exports = { ladderOverHttp, seekOverHttp, makeRow, wait, fetchT, RECORD, LOBBY, launchBrowser, openPhone, walkLobby, phoneToken, functionPost, pageAndScripts, health, PAGE_URL };
+module.exports = { probeWaitQuery, ladderOverHttp, seekOverHttp, makeRow, wait, fetchT, RECORD, LOBBY, launchBrowser, openPhone, walkLobby, phoneToken, functionPost, pageAndScripts, health, PAGE_URL };
 if(require.main === module) (async () => {
   const t0 = Date.now();
   console.log("livecheck " + PAGE_URL + "  (" + new Date().toISOString() + ")");
