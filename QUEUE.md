@@ -4,19 +4,18 @@
 answered NEEDS-A-RULING notes are in `QUEUE-ARCHIVE.md` on this branch (grep it, don't read it). History lives in
 CHANGELOG.md (v6.30 on; older in `docs/archive/CHANGELOG-to-v6.29.md`) and LESSONS.md on main.
 
-## HANDOFF — START HERE (CEO session_013xG9xBhp1ZDNBkoYpUuM35, 2026-11-24 night, at v6.92)
+## HANDOFF — START HERE (CEO session_013xG9xBhp1ZDNBkoYpUuM35, 2026-11-24 night, at v6.93)
 
 **DIRECTION (user, 2026-11-24, standing): the AI logic is on the BACK BURNER**; lead with **graphical UI / UX polish and
 matchmaking**. Do not open AI-strength probes. A card that plays wrong is still a bug: fix it.
 
-**State:** live = **v6.92** on `main`. Function `table` v136 = `v6.92 · sage-v19`, stamped; **livecheck ALL PASS** (now plays a
+**State:** live = **v6.93** on `main`. Function `table` v138 = `v6.93 · sage-v19`, stamped; **livecheck ALL PASS** (now plays a
 whole live REMATCH and takes its own seek wait back out of `seek_wait_log`). SQL **001..011** on the project (011 run
-2026-11-24). WIRE_V 49, DATA_VER sage-v19, 17 heroes. Gates at v6.92: npm test 4600/4595/0/5, page.js 133/133, serverpage 401/0,
+2026-11-24). WIRE_V 49, DATA_VER sage-v19, 17 heroes. Gates at v6.93: npm test 4600/4595/0/5, page.js 153/153, serverpage 401/0,
 tapsweep 44/44.
-**WORKER OUT:** R `ship/R-injectsweep` (session_013xG9xB1Bzw2ykQJmN9bTer): a state-injection prompt sweep (`promptsweep --inject`)
-covering reveal/target/alloc (+ every kind) at 393/320. If it reported after this CEO ended: merge, gates, release. O P Q are done.
+**WORKERS: NONE** (O P Q R all integrated and stopped).
 
-**This CEO (six releases, workers O P Q R; briefs experiments/WORKER-PROMPT-UI.txt + experiments/ui/TASK-*.txt):**
+**This CEO (seven releases, workers O P Q R; briefs experiments/WORKER-PROMPT-UI.txt + experiments/ui/TASK-*.txt):**
 - **v6.87** (P) Leave takes the rematch ask back; table-cap line; `tools/rematchprobe.js` in livecheck + Deno rehearsal.
 - **v6.88** (O) practice grid tidy while *Still looking*; `tools/perf-practice.js`: the heartbeat costs nothing measurable at 4x.
 - **v6.89** (Q) *Players usually find a match in about N s*: 011 `seek_wait_log` (kind+seconds only) + `seek_wait_stats`
@@ -28,11 +27,14 @@ covering reveal/target/alloc (+ every kind) at 393/320. If it reported after thi
   only EARLIER blocks' names; new components go in the small blocks.
 - **v6.92** (R) `tools/promptsweep.js` (real games, every hero, 393+320): opt/arrows/tags to 44 px / xs; the zoom modal above
   sheets; the jump row's 43 px was REAL (border), now 45. O's audit: no feed line speaks to "you" (pin 19 is all prompts/refusals).
+- **v6.93** (R) `promptsweep --inject`: all 8 prompt kinds x 17 heroes x 393/320 forced via real specs (612 sheets); a 4-option
+  soak at 320 pushed CONFIRM off screen -> the sheet's list scrolls. page.js drill (153 screens).
 
 **NEXT — UI/UX and matchmaking (each a release of its own):**
 1. **A real-iPhone pass** (DESKTOP-TASKS.md) — now also: Leave withdrawing a rematch ask, the cap's Close + Ask again, the
    typical-wait line on the seek card and the practice bar, the prompt sheets at 320 (iPhone SE).
-2. **Land R's inject sweep** (above), then the **trainer** prompt sheets for the 13 heroes random taps never reached.
+2. The **trainer** prompt sheets: `--inject` covers the TABLE only (the trainer's state is not on window); expose it or inject
+   through Battle, then sweep all 17 heroes.
 3. **Match found while practising:** the banner is silent — a short sound (sound is ON by default) + the tab title flashing,
    so a player in another tab or looking away does not miss the 2-minute window. Measure it does not fire for the AI game.
 4. **Readability sweep:** text contrast (WCAG AA) and minimum sizes on every screen in BOTH themes at 393/320 — tools/page-audit.js
