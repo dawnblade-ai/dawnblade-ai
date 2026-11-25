@@ -1,3 +1,20 @@
+## v6.96 — A found match you can't miss, and your own ranked history
+
+- **Match found while practising (QUEUE item 3, worker T).** A new `found` cue in the sound module (two rising sine notes,
+  660 -> 880 Hz, about half a second; follows the sound toggle, on by default) plays when a match is found, beside the
+  existing short buzz. If the player was practising against the AI, the tab title alternates "Match found! · Dawnblade"
+  with the real title every second while the tab is hidden, and is restored exactly when the tab comes back, the player
+  joins, the screen closes, or the two-minute window ends. Once per match; never for the AI game's own sounds or on the
+  first screen. A match that seats the player at once keeps the old five-second title, now with the chime. serverpage.js
+  gains rows for every stop path, each sabotaged.
+- **Your last ranked games on the Ladder (QUEUE item 5, worker V).** A named player sees "Your last ranked games" under
+  their own line: up to 10, newest first, each from their seat ("Won with Kayo against Dash", the opponent's name, how it
+  ended, how long ago) with a signed rating move (+16 / −14 / ±0, labelled, not colour alone). No games yet: one warm
+  line. Unnamed or signed out: nothing new. The global `recent` list could not give this (it is everyone's and carries no
+  rating move), so **SQL 012** replaces `ladder_get` (same signature; adds `mine` for a named caller; no new table, 006's
+  indexes serve it), proven on PGlite twice and by `tools/sql-sab-012.js` (15 sabotages); `server/referee.js` validates
+  and rebuilds `mine`; the Deno rehearsal passes both variants. The function and the SQL may land in either order.
+
 ## v6.95 — The trainer's prompt sheets, swept like the table's
 
 - **A drill door into the trainer (QUEUE item 2, worker S).** A page opened with `?drill=1` gets `window.__battle`
