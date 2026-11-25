@@ -9,15 +9,18 @@ CHANGELOG.md (v6.30 on; older in `docs/archive/CHANGELOG-to-v6.29.md`) and LESSO
 **DIRECTION (user, 2026-11-24, standing): the AI logic is on the BACK BURNER**; lead with **graphical UI / UX polish and
 matchmaking**. Do not open AI-strength probes. A card that plays wrong is still a bug: fix it.
 
-**State:** live = **v6.93** on `main`. Function `table` v138 = `v6.93 · sage-v19`, stamped; **livecheck ALL PASS** (now plays a
-whole live REMATCH and takes its own seek wait back out of `seek_wait_log`). SQL **001..011** on the project (011 run
-2026-11-24). WIRE_V 49, DATA_VER sage-v19, 17 heroes. Gates at v6.93: npm test 4600/4595/0/5, page.js 153/153, serverpage 401/0,
-tapsweep 44/44.
-**WORKERS OUT (Sonnet, briefs experiments/ui/TASK-S..V.txt):** S `session_013xG9x8DbXrpdtDWbNVJnmE` trainer prompt sweep + weekly CI (items 2+6) ·
-T `session_013xG9x888sBosASnUZGyQae` match-found sound/title (3) · U contrast DONE -> **v6.94 LIVE** (fn v140 stamped, livecheck ALL PASS; follow-up: serverpage screens not yet contrast-measured; sub-10px literal sizes reported only) ·
-V `session_013xG9x8zLqJcDjVxXa7mnqk` own ranked history (5). Branches ship/<L>-*. Next letter: **W**.
+**State:** live = **v6.96** on `main`. Function `table` v144 = `v6.96 · sage-v19`, stamped; **livecheck ALL PASS**. SQL **001..012** on the
+project (012 `ladder_get` + `mine`, run 2026-11-25). WIRE_V 49, DATA_VER sage-v19, 17 heroes. Gates at v6.96: npm test 4608/4603/0/5,
+page.js 219/219, serverpage 437/0. Weekly sweep workflow (`tapsweep-weekly.yml`) dispatched once by hand 2026-11-25 — check its run.
+**WORKERS OUT (Sonnet):** W `session_013xG9xBgBXsAKgcc6Xt2Q5Q` contrast on the server screens (TASK-W) · X `session_013xG9xAY7oyHzHXwYybp97V`
+the found-match window: countdown, *Not now*, expiry, the other side re-seeks (TASK-X; may need SQL 013). Next letter: **Y**.
 
-**This CEO (seven releases, workers O P Q R; briefs experiments/WORKER-PROMPT-UI.txt + experiments/ui/TASK-*.txt):**
+**CEO session_013xG9x8 (v6.94-v6.96, workers S T U V):** v6.94 (U) WCAG AA contrast measure `tools/contrast.js` in the tap sweep,
+fixed in tokens (`--r` darker, new text inks `--rt`/`--bt`, `--fs-xs` 10px) · v6.95 (S) trainer drill door `?drill=1` ->
+`window.__battle`, `promptsweep --trainer` 612/612, weekly CI · v6.96 (T+V) found-match chime + hidden-tab title flash; *Your last
+ranked games* on the Ladder (SQL 012). Merging tip: S/U/V each repin slicecensus's phasebar slice — they ADD (95030 +288 +472).
+
+**Previous CEO (seven releases, workers O P Q R; briefs experiments/WORKER-PROMPT-UI.txt + experiments/ui/TASK-*.txt):**
 - **v6.87** (P) Leave takes the rematch ask back; table-cap line; `tools/rematchprobe.js` in livecheck + Deno rehearsal.
 - **v6.88** (O) practice grid tidy while *Still looking*; `tools/perf-practice.js`: the heartbeat costs nothing measurable at 4x.
 - **v6.89** (Q) *Players usually find a match in about N s*: 011 `seek_wait_log` (kind+seconds only) + `seek_wait_stats`
