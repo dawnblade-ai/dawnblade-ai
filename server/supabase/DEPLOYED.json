@@ -1,5 +1,5 @@
 {
   "note": "Written by `node tools/supabase-bundle.js --stamp` AFTER deploying the function. --check compares the tree to this.",
-  "build": "v7.04 · sage-v19",
-  "digest": "dbaf32fab53c5bbafe8e3bc6ef0986ed8dd934ba9de9cb3e2aa70e62330287e4"
+  "build": "v7.05 · sage-v19",
+  "digest": "a6a151fc75f1ac0e0299fac498bcb0cad7628ed1fcdb72d90a67c67b80b6088e"
 }
