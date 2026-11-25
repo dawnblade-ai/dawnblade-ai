@@ -14,7 +14,7 @@ whole live REMATCH and takes its own seek wait back out of `seek_wait_log`). SQL
 2026-11-24). WIRE_V 49, DATA_VER sage-v19, 17 heroes. Gates at v6.93: npm test 4600/4595/0/5, page.js 153/153, serverpage 401/0,
 tapsweep 44/44.
 **WORKERS OUT (Sonnet, briefs experiments/ui/TASK-S..V.txt):** S `session_013xG9x8DbXrpdtDWbNVJnmE` trainer prompt sweep + weekly CI (items 2+6) ·
-T `session_013xG9x888sBosASnUZGyQae` match-found sound/title (3) · U `session_013xG9xAs667zrcqQiEeKrXZ` contrast tokens (4) ·
+T `session_013xG9x888sBosASnUZGyQae` match-found sound/title (3) · U contrast DONE -> **v6.94 LIVE** (fn v140 stamped, livecheck ALL PASS; follow-up: serverpage screens not yet contrast-measured; sub-10px literal sizes reported only) ·
 V `session_013xG9x8zLqJcDjVxXa7mnqk` own ranked history (5). Branches ship/<L>-*. Next letter: **W**.
 
 **This CEO (seven releases, workers O P Q R; briefs experiments/WORKER-PROMPT-UI.txt + experiments/ui/TASK-*.txt):**
