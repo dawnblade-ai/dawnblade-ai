@@ -374,7 +374,7 @@ if(require.main === module){
       if(!(await click(btn(/^Battle$/), "battle"))) return false;
       await page.waitForSelector(".foestep", { timeout: 8000 });
       if(foe !== null){
-        const tile = typeof foe === "string" ? page.locator(`.aifoe button[aria-label^="${foe}"]`).first() : page.locator(".aifoe button").nth(foe);
+        const tile = typeof foe === "string" ? page.locator(`.aifoe button[aria-label^="${foe}"]`).first() : (foe === 0 ? page.locator('.aifoe button[aria-label="The Dummy"]') : foe === 1 ? page.locator('.aifoe button[aria-label="A random hero"]') : page.locator('.aifoe button:not([aria-label="The Dummy"]):not([aria-label="A random hero"])').nth(foe - 2));
         if(!(await click(tile, prefix + ": pick the opponent"))) return false;
       }
       toLoadout.foe = (await page.locator(".foereveal b").innerText().catch(() => "")).trim();
@@ -630,8 +630,9 @@ if(require.main === module){
     /* ---- the table against an AI-piloted hero ---- */
     let foeName = "", first = "";
     if(await toLoadout("table", 0, 2, async () => {
-      const foeBtn = page.locator(".aifoe button").nth(2);   // 0 = the Dummy, 1 = Random, 2 = first hero
+      const foeBtn = page.locator('.aifoe button:not([aria-label="The Dummy"]):not([aria-label="A random hero"])').first();   // the first hero tile, by label
       foeName = (await foeBtn.getAttribute("aria-label")) || ""; first = foeName.split(",")[0];
+      row((await page.locator('.aifoe button[aria-label="The Dummy"]').count()) === 1, "table: with the title skipped the opponent step still offers the Dummy tile");
       {
         await screen("table: opponent step, AI foe picked", foeName);
         /* SHARP / STEADY (lookahead phase 2): two tiles under the picker, Sharp
@@ -774,7 +775,7 @@ if(require.main === module){
       row(okS, "table: the record on the picker", JSON.stringify(sharp.map(x => [x.foe, x.t, Math.round(x.l), Math.round(x.r), Math.round(x.h), x.inTile, x.fits])));
       await screen("table: the picker with a record");
       const lv = page.locator(".ailevel button");
-      await click(page.locator(".aifoe button").nth(2), "pick an AI hero to show the level");
+      await click(page.locator('.aifoe button:not([aria-label="The Dummy"]):not([aria-label="A random hero"])').first(), "pick an AI hero to show the level");
       const tapped = await click(lv.nth(1), "Steady"); await page.waitForTimeout(150); const steady = await labels();
       const note = await page.locator(".frecnote").count();
       await lv.nth(0).click().catch(() => {});
@@ -856,7 +857,7 @@ if(require.main === module){
         await p2.locator(".hcard").first().click(); await p2.getByRole("button", { name: /^Battle$/ }).click();
         await p2.waitForSelector(".foestep", { timeout: 8000 });
         const tiles = await p2.locator(".aifoe button").count(), recs = await p2.locator(".aifoe .frec").count();
-        await p2.locator(".aifoe button").nth(2).click();
+        await p2.locator('.aifoe button:not([aria-label="The Dummy"]):not([aria-label="A random hero"])').first().click();
         await p2.locator("[data-foe-go]").click();
         await p2.waitForSelector(".rseatpick, .actbar", { timeout: 8000 });
         if(await p2.locator(".rseatpick").isVisible().catch(() => false)) await p2.locator(".rseatpick button").first().click();
@@ -1013,6 +1014,8 @@ if(require.main === module){
       row(await shown(".hcard") && !(await shown(".foestep")), P + ": and Back from that throw returns to the hero grid, not the step");
       await T.page.locator('[data-testid="to-title"]').click().catch(() => {});
       await battleFrom("ai");
+      row(await shown(".foestep") && (await T.page.locator('.aifoe button[aria-label="The Dummy"]').count()) === 0 && (await T.page.locator('.aifoe button[aria-label="A random hero"]').count()) === 1 && (await T.page.locator(".aifoe button").count()) > 2, P + ": the Play the AI door's opponent step offers no Dummy tile");
+      row(await T.page.evaluate(() => { const g = document.querySelector(".aifoe"); const bs = [...g.querySelectorAll("button")].map(b => b.getBoundingClientRect()); return bs.every(r => r.left >= 0 && r.right <= innerWidth + .5) && document.documentElement.scrollWidth <= innerWidth + 1 && bs[0].left === Math.min(...bs.map(r => r.left)); }), P + ": the grid stays tidy without the Dummy tile");
       const rv = await T.page.evaluate(() => { const e = document.querySelector(".foereveal"); return { key: e && e.getAttribute("data-foe"), text: e ? e.innerText : "" }; });
       row(await shown(".foestep") && rv.key && rv.key !== "dummy" && /drawn at random/.test(rv.text), P + ": the Play the AI door's Battle opens the opponent step with a random hero already named", JSON.stringify(rv));
       row(T.errors.length === 0, P + ": no page errors", T.errors.join(" | "));

@@ -82,7 +82,7 @@ async function sweep({ page, w, h, heroes, boards, games, steps, row, seen, log,
     await page.locator(".hgrid .hcard").nth(hi).click(); await page.waitForSelector(".sheet");
     await page.getByRole("button", { name: /^Battle$/ }).first().click();
     await page.waitForSelector(".foestep");
-    if (foeIdx !== null) { await page.locator(".aifoe button").nth(foeIdx % (await page.locator(".aifoe button").count())).click(); await page.waitForTimeout(250); }
+    if (foeIdx !== null) { await page.locator('.aifoe button:not([aria-label="The Dummy"]):not([aria-label="A random hero"])').nth(foeIdx % (await page.locator('.aifoe button:not([aria-label="The Dummy"]):not([aria-label="A random hero"])').count())).click(); await page.waitForTimeout(250); }
     await page.locator("[data-foe-go]").click();
     await page.waitForSelector(".rps"); await page.waitForSelector(".rseatpick, .actbar", { timeout: 10000 });
     if (await has(".rseatpick")) await page.locator(".rseatpick .go").click();
@@ -218,7 +218,7 @@ async function injectSweep({ page, w, h, heroes, row, seen, log, css = null, onl
       await page.locator(".hgrid .hcard").nth(hi).click(); await page.waitForSelector(".sheet");
       await page.getByRole("button", { name: /^Battle$/ }).first().click();
       await page.waitForSelector(".foestep");
-      if (!trainer) { await page.locator(".aifoe button").nth((hi + 3) % (await page.locator(".aifoe button").count())).click(); await page.waitForTimeout(200); }
+      if (!trainer) { await page.locator('.aifoe button:not([aria-label="The Dummy"]):not([aria-label="A random hero"])').nth(hi % (await page.locator('.aifoe button:not([aria-label="The Dummy"]):not([aria-label="A random hero"])').count())).click(); await page.waitForTimeout(200); }
       await page.locator("[data-foe-go]").click();
       await page.waitForSelector(".rps"); await page.waitForSelector(".rseatpick, .actbar", { timeout: 10000 });
       if (await has(".rseatpick")) await page.locator(".rseatpick .go").click();

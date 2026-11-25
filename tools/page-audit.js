@@ -155,7 +155,7 @@ function judgeBoxes({ W, H }) {
     if (!(await click(btn(/^Battle$/), "battle", where))) return null;
     /* the opponent is picked first (Battle -> opponent -> coin -> sideboard) */
     await page.waitForSelector(".foestep");
-    if (foeIdx !== null) { await click(page.locator(".aifoe button").nth(2 + foeIdx), "AI foe", where); await measure(where + " opponent step"); }
+    if (foeIdx !== null) { await click(page.locator('.aifoe button:not([aria-label="The Dummy"]):not([aria-label="A random hero"])').nth(foeIdx), "AI foe", where); await measure(where + " opponent step"); }
     await click(page.locator("[data-foe-go]"), "continue", where);
     await page.waitForSelector(".rps"); await measure(where + " coin");
     await page.waitForSelector(".rseatpick, .actbar", { timeout: 10000 });

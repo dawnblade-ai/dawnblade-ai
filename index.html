@@ -7365,7 +7365,7 @@ function Trophies(){
    silently change a later game); Sharp / Steady IS, as before — it is the
    player's taste. `initial` is the earlier choice when Back lands here.
    ============================================================ */
-function FoePick({h, db, initial, onBack, onDone}){
+function FoePick({h, db, initial, noDummy, onBack, onDone}){
   const [pick,setPick] = uS(()=>initial ? {k:initial.k||null, random:!!initial.random} : {k:null, random:false});
   const [level,setLevelS] = uS(()=>store.get("aiLevel","sharp")==="steady" ? "steady" : "sharp");
   const setLevel = v => { store.set("aiLevel", v); setLevelS(v); };
@@ -7382,8 +7382,8 @@ function FoePick({h, db, initial, onBack, onDone}){
       <div className="foebody">
         <div className="paneflag"><span>Who are you up against?</span><span>you will know before you sideboard</span></div>
         <div className="aifoe">
-          <button className={!pick.k?"on":""} onClick={()=>setPick({k:null,random:false})} aria-label="The Dummy">
-            <div className="fport">✕</div><span className="fname">The Dummy</span></button>
+          {!noDummy && <button className={!pick.k?"on":""} onClick={()=>setPick({k:null,random:false})} aria-label="The Dummy">
+            <div className="fport">✕</div><span className="fname">The Dummy</span></button>}
           <button className={pick.random?"on":""} onClick={()=>setPick({k:HEROES[Math.floor(Math.random()*HEROES.length)].k, random:true})} aria-label="A random hero">
             <div className="fport">?</div><span className="fname">Random</span></button>
           {HEROES.map(x=>{ const r = recOf(x.k);
@@ -10710,7 +10710,7 @@ function App(){
           solo flow ran Loadout → Pregame, which showed you the seating
           only after every choice that could use it. Reversing it is why
           `Loadout` now takes `onPlay` as a prop. */}
-      {foeStep && !fighting && <FoePick h={foeStep} db={db} initial={foeStep.foe}
+      {foeStep && !fighting && <FoePick h={foeStep} db={db} initial={foeStep.foe} noDummy={soloMode==="ai"}
         onBack={()=>setFoeStep(null)}
         onDone={foe=>{setLoHero({...foeStep, foe}); setFoeStep(null);}}/>}
       {loHero && !fighting && <Pregame h={loHero} seed={loHero.seed}

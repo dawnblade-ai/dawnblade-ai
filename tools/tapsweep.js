@@ -51,8 +51,8 @@ async function sweepScreens(page, row, { w, h }) {
   const toLoadout = async (ai = false) => {
     if (!(await click(btn(/^Battle$/), "battle"))) return false;
     await page.waitForSelector(".foestep");
-    if (ai) { await page.locator(".aifoe button").nth(2).click(); await page.waitForTimeout(300); await m("opponent step with an AI hero"); }
-    else { await page.locator(".aifoe button").nth(0).click(); await page.waitForTimeout(300); await m("opponent step"); }
+    if (ai) { await page.locator('.aifoe button:not([aria-label="The Dummy"]):not([aria-label="A random hero"])').first().click(); await page.waitForTimeout(300); await m("opponent step with an AI hero"); }
+    else { await page.locator('.aifoe button[aria-label="The Dummy"]').click(); await page.waitForTimeout(300); await m("opponent step"); }
     if (!(await click(page.locator("[data-foe-go]"), "continue past the opponent step"))) return false;
     await page.waitForSelector(".rps"); await page.waitForSelector(".rseatpick, .actbar", { timeout: 10000 });
     if (await has(".rseatpick")) await click(page.locator(".rseatpick .go"), "I go first");
@@ -79,6 +79,8 @@ async function sweepScreens(page, row, { w, h }) {
     if (await click(page.locator('[data-testid="hands-open"]'), "hands sheet")) { await m("the hands sheet"); await click(btn(/^Got it/), "hands sheet: got it"); }
     await click(page.locator(".tblwrap button", { hasText: /back|leave|cancel/i }).first(), "leave the find screen");
   }
+  /* the Dummy flow below needs the opponent step's Dummy tile, which the Play the AI door withholds: reload past the title (no mode chosen) */
+  await page.reload(); await page.waitForSelector(".hcard", { timeout: 20000 });
   if (await toCoin()) {
     await m("hero sheet");
     if (await toLoadout()) {
