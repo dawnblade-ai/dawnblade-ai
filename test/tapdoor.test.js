@@ -59,7 +59,8 @@ test("CENSUS: no plain-arrow onClick returns a tapTwice handler", () => {
   /* 19 -> 20 AT SEEK N, READ FIRST: the banner's "Join them" button takes the held seat (`setReady`, `onSeated`); a plain arrow, it returns no handler. */
   /* 20 -> 21 AT THE FOUND-MATCH WINDOW, READ FIRST: the gave-back bar's "OK" (clears it) is a plain arrow that sets
      screen state or close a table; neither returns a handler. */
-  assert.equal(bodies.length, 21, "the plain-arrow onClick count moved (" + bodies.length + ") — read the new one, then repin");
+  /* 21 -> 22 AT THE TITLE SCREEN, READ FIRST: the topbar's "Title" button (`setTitle`, `setHero`) is a plain arrow that sets screen state; it returns no handler. */
+  assert.equal(bodies.length, 22, "the plain-arrow onClick count moved (" + bodies.length + ") — read the new one, then repin");
   const dead = bodies.filter(b => /return tapTwice\(/.test(b));
   assert.deepEqual(dead.map(b => b.slice(0, 120)), [], "a tap that builds its handler and throws it away");
 });

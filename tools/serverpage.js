@@ -1363,7 +1363,7 @@ async function toServerChooser(page){
   /* ---- S6.1: FIND A MATCH, ON THE PAGE: two real pages meet through the queue (009_seek.sql's behaviour, test/helpers/serverfakes.js withSeek) ---- */
   const seekKit = async (label, o) => {
     o = o || {};
-    const kA = await open({ w: o.w || W, h: H }), kB = await open({ w: W, h: H });
+    const kA = await open({ w: o.w || W, h: H, title: !!o.title }), kB = await open({ w: W, h: H });
     const bld = await kA.page.evaluate(() => TABLE_BUILD);
     const wd = makeWorld({ seedKey: "seek-" + label, build: bld, deal: dealLikeThePage });
     await wire(kA.page, wd); await wire(kB.page, wd);
@@ -1421,7 +1421,7 @@ async function toServerChooser(page){
   /* K1b: WAITING IS LONELY (SEEK N). After the quiet minute (shortened here through SERVER_TABLE.quietMs) the card offers Play the AI while you wait;
      the search keeps running behind the practice screens; a match that lands mid-practice is a banner, taken only by a tap, and ignored it is just an unanswered match */
   {
-    const k = await seekKit("lonely");
+    const k = await seekKit("lonely", { title: true });   /* A starts on the TITLE screen and takes the Find an opponent door from it */
     await k.A.evaluate(() => { window.SERVER_TABLE.quietMs = 3500; });
     await toFirst(k.A); await toFirst(k.B);
     await click(k.A, k.A.locator('[data-testid="seek-open"]'), "A: find a match");
@@ -1436,6 +1436,7 @@ async function toServerChooser(page){
     await k.A.waitForSelector('[data-testid="wait-bar"]', { timeout: 6000 }).catch(() => {});
     const wb = await boxes(k.A, '[data-testid="wait-bar"]');
     row(wb.length === 1 && wb[0].r <= W && seekJargon(wb[0].t) && (await boxes(k.A, '[data-testid="seek-card"]')).length === 0, "waiting: tapping it opens the hero grid with a Still looking bar, and the seek card is out of sight", wb[0] && wb[0].t);
+    row((await boxes(k.A, '[data-testid="title-screen"]')).length === 0 && (await boxes(k.A, ".hcard")).length > 0, "waiting: practising from the title lands on the hero grid, not the title");
     /* TIDY (O): practice is the hero grid and the bar, nothing of the lobby's chatter; tap-judged at 393 and 320 */
     row((await boxes(k.A, '[data-testid="format-note"]')).length === 0 && (await boxes(k.A, '[data-testid="how-btn"]')).length === 0 && !/New to Flesh and Blood|fan-made Silver Age/.test(await text(k.A)), "waiting: in practice the format note and How to play are out of sight");
     for (const [vw, vh] of [[W, H], [320, 568]]) {

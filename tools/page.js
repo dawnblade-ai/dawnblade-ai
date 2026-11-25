@@ -160,7 +160,9 @@ function needPlaywright(){
    reads "N cards"). Rejects, after closing the browser, if the load itself
    produced a page error or console error. `errors` keeps filling afterwards:
    call check() to throw on anything new. */
-async function open({ w = 393, h = 852, deps = depsDir(), query = "", launch = null } = {}){
+async function open({ w = 393, h = 852, deps = depsDir(), query = "", launch = null, title = false } = {}){
+  /* the title screen shows first on every load; a drive opens past it (`?title=0`) unless it is the title being driven (`title: true`) */
+  if(!title) query = query ? query + "&title=0" : "?title=0";
   const { chromium } = needPlaywright();
   const answer = makeAnswer(deps);
   const browser = await chromium.launch({ ...(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {}), ...(launch || {}) });   /* `launch`: e.g. the egress proxy, for tools/perf-page.js's live drive */
@@ -855,6 +857,48 @@ if(require.main === module){
       catch(e){ row(false, "trainer inject 320x568: the drill ran to the end", String(e && e.message || e).split("\n")[0]); }
       tk.errors.forEach(e => errors.push(`trainer inject 320x568: ${e}`));
       await tk.close();
+    }
+
+    /* THE TITLE SCREEN (user request, 2026-11-25): the first screen on every load. Each mode opens its existing screen, Back returns to the
+       title, nothing is asked of the server while a player only looks, and the choices are thumb-sized with no sideways scroll. */
+    for(const [tw, th] of [[393, 852], [320, 568]]){
+      const T = await open({ w: tw, h: th, title: true }), P = `title ${tw}x${th}`;
+      const tb = (sel) => T.page.evaluate(s => [...document.querySelectorAll(s)].filter(e => e.offsetParent).map(e => { const r = e.getBoundingClientRect(); return { t: e.innerText.trim().split("\n")[0], x: r.left, r: r.right, y: r.top, b: r.bottom, h: r.height }; }), sel);
+      const shown = sel => T.page.locator(sel).first().isVisible().catch(() => false);
+      const toTitle = async () => { await T.page.waitForSelector('[data-testid="title-screen"]', { timeout: 4000 }).catch(() => {}); return shown('[data-testid="title-screen"]'); };
+      row(await shown('[data-testid="title-screen"]') && !(await shown(".hcard")) && !(await shown("nav.tabs")), P + ": the title is the first screen (no hero grid, no tabs yet)");
+      const modes = await tb(".tmode"), more = await tb(".tmore button"), sw = await T.page.evaluate(() => document.scrollingElement.scrollWidth);
+      const overlap = modes.some((m, i) => i && m.y < modes[i - 1].b - 0.5);
+      row(modes.length === 4 && more.length === 3 && [...modes, ...more].every(m => m.h >= 44 && m.x >= 0 && m.r <= tw + 0.5) && !overlap && sw <= tw, P + ": four modes and three more, each thumb-sized, separate, no sideways scroll", JSON.stringify({ n: modes.length, min: Math.min(...[...modes, ...more].map(m => Math.round(m.h))), sw }));
+      row(/Train against the Dummy/i.test(modes[0].t) && /Play the AI/i.test(modes[1].t) && /Find an opponent/i.test(modes[2].t) && /Two phones/i.test(modes[3].t) && (await shown('[data-testid="format-note"]')), P + ": the modes are named plainly and the format note moved here");
+      for (const id of ["dummy", "ai"]) {
+        await T.page.locator('[data-testid="mode-' + id + '"]').click();
+        await T.page.waitForSelector(".hcard", { timeout: 6000 }).catch(() => {});
+        row(await shown(".hcard") && !(await shown('[data-testid="title-screen"]')) && (await T.page.locator("[data-mode]").first().getAttribute("data-mode").catch(() => null)) === id, P + ": " + id + " opens the hero grid in that mode");
+        const tt = (await tb('[data-testid="to-title"]'))[0];
+        row(!!tt && tt.h >= 44, P + ": the hero grid has a thumb-sized way back to the title", tt && Math.round(tt.h) + "px");
+        await T.page.locator('[data-testid="to-title"]').click().catch(() => {});
+        row(await toTitle(), P + ": " + id + " -> Back returns to the title");
+      }
+      for (const [id, want, notWant] of [["online", /Server table/i, /Direct table|Judge's table/i], ["direct", /Direct table[\s\S]*Judge's table/i, /Server table/i]]) {
+        await T.page.locator('[data-testid="mode-' + id + '"]').click();
+        await T.page.waitForSelector(".tblwrap", { timeout: 6000 }).catch(() => {});
+        const body = await T.page.locator(".tblwrap").innerText().catch(() => "");
+        row(want.test(body) && !notWant.test(body), P + ": " + id + " opens its half of the table screen");
+        await T.page.locator(".tblwrap > .bigbtn.alt", { hasText: /^Back$/ }).click().catch(() => {});
+        row(await toTitle(), P + ": " + id + " -> Back returns to the title");
+      }
+      await T.page.locator('[data-testid="more-judge"]').click();
+      await T.page.waitForSelector("nav.tabs", { timeout: 4000 }).catch(() => {});
+      row(await shown("nav.tabs") && !(await shown('[data-testid="title-screen"]')), P + ": Judge's quiz opens the judge tab");
+      await T.page.locator('[data-testid="to-title"]').click().catch(() => {});
+      row(await toTitle(), P + ": the judge tab has a way back to the title");
+      await T.page.locator('[data-testid="how-btn"]').click();
+      await T.page.waitForSelector(".howsheet", { timeout: 4000 }).catch(() => {});
+      row(await shown(".howsheet"), P + ": How to play opens its sheet from the title");
+      row(T.errors.length === 0, P + ": no page errors", T.errors.join(" | "));
+      T.errors.forEach(e => errors.push(P + ": " + e));
+      await T.close();
     }
 
     const sw = errors.slice();
