@@ -9658,7 +9658,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
   const counted = uR(null);
   uE(()=>{ if(!over || !local || !them.heroKey || counted.current === over) return;
            counted.current = over;
-           DawnLocal.recordResult(lsGet, them.heroKey, !!match.sharp, over, mySeat); },[g.over]);
+           DawnLocal.recordResult(lsGet, them.heroKey, !!match.sharp, over, mySeat, me.heroKey); },[g.over]);
 
   const targets = DawnJudge.targets(g, 1-mySeat, them.heroCard);
   const [tgt,setTgt] = uS(null);
@@ -10547,6 +10547,9 @@ function YourRecord(){
   const rows = HEROES.map(h=>{ const f = rec.foes[h.k] || {}; const c = recSum([f.sharp, f.steady].filter(Boolean)); return {h, c, n: c.w+c.l+c.d}; })
     .filter(x=>x.n>0).sort((a,b)=>b.n-a.n || (a.h.k<b.h.k?-1:1));
   const all = recSum(rows.map(x=>x.c));
+  /* the same games by the hero YOU played; the "unknown" bucket (older games) is never a row */
+  const mineRows = HEROES.map(h=>{ const c = rec.mine[h.k]; return c ? {h, c, n:c.w+c.l+c.d} : null; })
+    .filter(x=>x && x.n>0).sort((a,b)=>b.n-a.n || (a.h.k<b.h.k?-1:1));
   const clears = HEROES.filter(h=>best[h.k]!=null);
   return <div data-testid="record-page">
     <div className="sheet clip">
@@ -10557,6 +10560,10 @@ function YourRecord(){
         <p className="fs-lede" data-testid="record-ai-total">{recLine(all)} in all.</p>
         {rows.map(x=><div key={x.h.k} className="statrow" data-testid="record-ai-row" style={{justifyContent:"space-between"}}>
           <span>{x.h.n}</span><b className="mono" aria-label={recLine(x.c)}>{x.c.w}–{x.c.l}{x.c.d ? "–"+x.c.d : ""}</b></div>)}</>}
+      {mineRows.length>0 && <>
+        <h3 className="fs-h2s" style={{marginTop:12}}>Your heroes</h3>
+        {mineRows.map(x=><div key={x.h.k} className="statrow" data-testid="record-mine-row" style={{justifyContent:"space-between"}}>
+          <span>{x.h.n} <span className="mono">×{x.n}</span></span><b className="mono" aria-label={recLine(x.c)}>{x.c.w}–{x.c.l}{x.c.d ? "–"+x.c.d : ""}</b></div>)}</>}
       <h3 className="fs-h2s" style={{marginTop:12}}>The Dummy</h3>
       {clears.length===0 ? <p className="fs-lede">No clears logged yet. Train against the Dummy to set one.</p>
         : <p className="fs-lede" data-testid="record-dummy">{clears.length} {clears.length===1?"hero has":"heroes have"} cleared it; Trophies keeps the best clear for each.</p>}

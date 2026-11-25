@@ -163,13 +163,19 @@ function createLocal(o){
    `window.localStorage` is what throws.
 
    Shape, under RECORD_KEY:
-     {v: 1, foes: {<hero key>: {sharp: {w, l, d}, steady: {w, l, d}}}}
+     {v: 2, foes: {<hero key>: {sharp: {w, l, d}, steady: {w, l, d}}},
+            mine: {<hero key | "unknown">: {w, l, d}}}
+   `foes` is the record by opponent, as ever. `mine` is the same games read by
+   the hero the PLAYER piloted. A v1 record (foes only) migrates on load with
+   nothing lost: every v1 game stays in `foes` and is counted once under the
+   "unknown" bucket of `mine`, which the screen never shows as a hero name.
    Only pairs that were played appear. Anything else found there (another
    version, a hand edit, a half-written value) reads as empty rather than as
    a number nobody counted. */
 const RECORD_KEY = "dawnblade.aiRecord";
 const LEVELS = ["sharp", "steady"];
 const OUTCOMES = ["w", "l", "d"];
+const UNKNOWN_HERO = "unknown";
 const count = n => (Number.isInteger(n) && n >= 0 ? n : 0);
 
 /* what one finished game was, from `mySeat`'s side: "w" | "l" | "d", or null
@@ -180,10 +186,11 @@ function outcomeOf(over, mySeat){
   return over.winner === mySeat ? "w" : "l";
 }
 
-/* a clean copy: known heroes' known levels, non-negative whole counts */
+/* a clean copy (always v:2): known heroes' known levels, non-negative whole
+   counts; a v1 record is migrated, its games filed under "unknown" */
 function cleanRecord(r){
-  const out = {v: 1, foes: {}};
-  if(!r || typeof r !== "object" || r.v !== 1 || !r.foes || typeof r.foes !== "object") return out;
+  const out = {v: 2, foes: {}, mine: {}};
+  if(!r || typeof r !== "object" || (r.v !== 1 && r.v !== 2) || !r.foes || typeof r.foes !== "object") return out;
   for(const k of Object.keys(r.foes)){
     const f = r.foes[k]; if(!f || typeof f !== "object") continue;
     for(const lv of LEVELS){
@@ -191,17 +198,34 @@ function cleanRecord(r){
       (out.foes[k] = out.foes[k] || {})[lv] = {w: count(c.w), l: count(c.l), d: count(c.d)};
     }
   }
+  if(r.v === 1){
+    const sum = {w: 0, l: 0, d: 0};
+    for(const k of Object.keys(out.foes)) for(const lv of LEVELS){
+      const c = out.foes[k][lv]; if(c){ sum.w += c.w; sum.l += c.l; sum.d += c.d; }
+    }
+    if(sum.w + sum.l + sum.d) out.mine[UNKNOWN_HERO] = sum;
+  } else if(r.mine && typeof r.mine === "object"){
+    for(const k of Object.keys(r.mine)){
+      const c = r.mine[k]; if(!c || typeof c !== "object") continue;
+      const n = {w: count(c.w), l: count(c.l), d: count(c.d)};
+      if(n.w + n.l + n.d) out.mine[k] = n;
+    }
+  }
   return out;
 }
 
-/* a NEW record with exactly one counter one higher; the input is untouched.
-   An unknown level or outcome, or no hero, changes nothing. */
-function bumpRecord(r, foeKey, level, outcome){
+/* a NEW record with exactly one counter one higher in `foes` and one in
+   `mine` (filed under "unknown" when the player's hero is not given); the
+   input is untouched. An unknown level or outcome, or no foe, changes nothing. */
+function bumpRecord(r, foeKey, level, outcome, myKey){
   const out = cleanRecord(r);
   if(!foeKey || typeof foeKey !== "string" || !LEVELS.includes(level) || !OUTCOMES.includes(outcome)) return out;
   const f = out.foes[foeKey] = out.foes[foeKey] || {};
   const c = f[level] = f[level] || {w: 0, l: 0, d: 0};
   c[outcome] += 1;
+  const mk = myKey && typeof myKey === "string" ? myKey : UNKNOWN_HERO;
+  const m = out.mine[mk] = out.mine[mk] || {w: 0, l: 0, d: 0};
+  m[outcome] += 1;
   return out;
 }
 
@@ -224,14 +248,14 @@ function saveRecord(getStorage, r){
 /* the board's one call: read, bump, write. Answers the record it now holds
    (the bumped one even when the write failed, so the screen can still show
    it this session), or null when there was nothing to count. */
-function recordResult(getStorage, foeKey, sharp, over, mySeat){
+function recordResult(getStorage, foeKey, sharp, over, mySeat, myKey){
   const o = outcomeOf(over, mySeat);
   if(!o || !foeKey) return null;
-  const r = bumpRecord(loadRecord(getStorage), foeKey, sharp ? "sharp" : "steady", o);
+  const r = bumpRecord(loadRecord(getStorage), foeKey, sharp ? "sharp" : "steady", o, myKey);
   saveRecord(getStorage, r);
   return r;
 }
 
 return {createLocal, STEP_LIMIT,
-        RECORD_KEY, outcomeOf, cleanRecord, bumpRecord, loadRecord, saveRecord, recordResult};
+        RECORD_KEY, UNKNOWN_HERO, outcomeOf, cleanRecord, bumpRecord, loadRecord, saveRecord, recordResult};
 });
