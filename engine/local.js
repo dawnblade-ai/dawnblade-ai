@@ -162,8 +162,18 @@ function createLocal(o){
    handed in as a THUNK, because on some browsers merely reading
    `window.localStorage` is what throws.
 
+   AGAINST PEOPLE (v3, worker AF). A finished FRIENDLY or direct table game
+   against a person is kept apart, under `pvp`: {mine: {<hero key>: {w,l,d}},
+   foes: {<hero key>: {w,l,d}}, seen: [<game id>, ...]}. Opponents are filed by
+   HERO only — never a name or an id of a person. `seen` is the last few game
+   ids this phone already counted (a reconnect, a rejoin or a replayed end state
+   must not count a game twice); ids are table code + the two seed halves, which
+   name a deal, not a person. RANKED games are NOT recorded here: the server
+   keeps them (the Ranked card on the Record tab), so counting them here too
+   would show one game twice. A v2 record migrates on load without a write.
+
    Shape, under RECORD_KEY:
-     {v: 2, foes: {<hero key>: {sharp: {w, l, d}, steady: {w, l, d}}},
+     {v: 3, foes: {<hero key>: {sharp: {w, l, d}, steady: {w, l, d}}},
             mine: {<hero key | "unknown">: {w, l, d}}}
    `foes` is the record by opponent, as ever. `mine` is the same games read by
    the hero the PLAYER piloted. A v1 record (foes only) migrates on load with
@@ -176,6 +186,7 @@ const RECORD_KEY = "dawnblade.aiRecord";
 const LEVELS = ["sharp", "steady"];
 const OUTCOMES = ["w", "l", "d"];
 const UNKNOWN_HERO = "unknown";
+const SEEN_CAP = 40;
 const count = n => (Number.isInteger(n) && n >= 0 ? n : 0);
 
 /* what one finished game was, from `mySeat`'s side: "w" | "l" | "d", or null
@@ -186,11 +197,27 @@ function outcomeOf(over, mySeat){
   return over.winner === mySeat ? "w" : "l";
 }
 
-/* a clean copy (always v:2): known heroes' known levels, non-negative whole
-   counts; a v1 record is migrated, its games filed under "unknown" */
+const cleanPvp = p => {
+  const out = {mine: {}, foes: {}, seen: []};
+  if(!p || typeof p !== "object") return out;
+  for(const side of ["mine", "foes"]){
+    const src = p[side]; if(!src || typeof src !== "object") continue;
+    for(const k of Object.keys(src)){
+      const c = src[k]; if(!c || typeof c !== "object" || k === UNKNOWN_HERO) continue;
+      const n = {w: count(c.w), l: count(c.l), d: count(c.d)};
+      if(n.w + n.l + n.d) out[side][k] = n;
+    }
+  }
+  if(Array.isArray(p.seen)) out.seen = p.seen.filter(x => typeof x === "string" && x && x.length <= 200).slice(-SEEN_CAP);
+  return out;
+};
+
+/* a clean copy (always v:3): known heroes' known levels, non-negative whole
+   counts; a v1 record is migrated, its games filed under "unknown"; v1 and v2
+   have no `pvp`, which reads empty */
 function cleanRecord(r){
-  const out = {v: 2, foes: {}, mine: {}};
-  if(!r || typeof r !== "object" || (r.v !== 1 && r.v !== 2) || !r.foes || typeof r.foes !== "object") return out;
+  const out = {v: 3, foes: {}, mine: {}, pvp: cleanPvp(r && r.v === 3 ? r.pvp : null)};
+  if(!r || typeof r !== "object" || (r.v !== 1 && r.v !== 2 && r.v !== 3) || !r.foes || typeof r.foes !== "object") return out;
   for(const k of Object.keys(r.foes)){
     const f = r.foes[k]; if(!f || typeof f !== "object") continue;
     for(const lv of LEVELS){
@@ -229,6 +256,22 @@ function bumpRecord(r, foeKey, level, outcome, myKey){
   return out;
 }
 
+/* a NEW record with one game against a PERSON counted: `mine` under the hero
+   the player piloted, `foes` under the hero the person did (both by hero only),
+   and the game's id remembered. Answers the same record when the id was
+   already counted, or the game has no result, or no hero on either side. */
+function bumpPvp(r, foeKey, outcome, myKey, gameId){
+  const out = cleanRecord(r);
+  if(!OUTCOMES.includes(outcome) || !foeKey || typeof foeKey !== "string" || foeKey === UNKNOWN_HERO) return out;
+  if(!myKey || typeof myKey !== "string" || myKey === UNKNOWN_HERO) return out;
+  if(!gameId || typeof gameId !== "string" || out.pvp.seen.includes(gameId)) return out;
+  const bump = (m, k, o) => { const c = m[k] = m[k] || {w: 0, l: 0, d: 0}; c[o] += 1; };
+  bump(out.pvp.mine, myKey, outcome);
+  bump(out.pvp.foes, foeKey, outcome);
+  out.pvp.seen = out.pvp.seen.concat(gameId).slice(-SEEN_CAP);
+  return out;
+}
+
 function loadRecord(getStorage){
   try {
     const ls = getStorage && getStorage(); if(!ls) return cleanRecord(null);
@@ -256,6 +299,20 @@ function recordResult(getStorage, foeKey, sharp, over, mySeat, myKey){
   return r;
 }
 
+/* the board's call for a game against a person: read, bump, write. Null when
+   nothing was counted (no result, already counted, a ranked game, missing
+   heroes); else the record now held. The storage write is the one commit of
+   the count AND the id, so a game is never counted without being remembered. */
+function recordPvp(getStorage, foeKey, over, mySeat, myKey, gameId){
+  const o = outcomeOf(over, mySeat);
+  if(!o) return null;
+  const before = loadRecord(getStorage);
+  const after = bumpPvp(before, foeKey, o, myKey, gameId);
+  if(JSON.stringify(after.pvp) === JSON.stringify(before.pvp)) return null;
+  saveRecord(getStorage, after);
+  return after;
+}
+
 return {createLocal, STEP_LIMIT,
-        RECORD_KEY, UNKNOWN_HERO, outcomeOf, cleanRecord, bumpRecord, loadRecord, saveRecord, recordResult};
+        RECORD_KEY, UNKNOWN_HERO, SEEN_CAP, outcomeOf, cleanRecord, bumpRecord, bumpPvp, recordPvp, loadRecord, saveRecord, recordResult};
 });

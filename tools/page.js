@@ -906,6 +906,42 @@ if(require.main === module){
       }
     }
 
+    /* YOUR RECORD, AGAINST PEOPLE (worker AF): friendly and direct table games kept apart from the AI's. A v3 record with a
+       `pvp` section draws one row per hero you played (most games first, draws only when there is one), inside the phone's
+       width; a v2 record (the migration) and an empty one draw NO section (the sabotage: an unseeded phone must not show it);
+       the AI rows are unchanged beside it. */
+    {
+      const ai = { foes: { kayo: { sharp: { w: 2, l: 1, d: 0 } } }, mine: { viserai: { w: 2, l: 1, d: 0 } } };
+      const cases = [
+        ["a v3 record draws one row per hero you played, most games first", { v: 3, ...ai, pvp: { mine: { azalea: { w: 1, l: 1, d: 1 }, viserai: { w: 3, l: 1, d: 0 } }, foes: { kayo: { w: 4, l: 2, d: 1 } }, seen: ["x|a|b"] } }, true],
+        ["a v2 record migrates and draws no people section", { v: 2, ...ai }, false],
+        ["an empty people record draws no section (sabotage)", { v: 3, ...ai, pvp: { mine: {}, foes: {}, seen: [] } }, false]];
+      for (const [label, rec, wantSection] of cases) {
+        const name = "your record, against people: " + label;
+        const kr = await open({ w: W, h: H, title: true });
+        try {
+          await kr.page.evaluate((v) => { localStorage.clear(); localStorage.setItem("dawnblade.aiRecord", JSON.stringify(v)); }, rec);
+          await kr.page.reload(); await kr.page.waitForSelector('[data-testid="title-screen"]', { timeout: 15000 });
+          await kr.page.locator('[data-testid="more-record"]').click();
+          await kr.page.waitForSelector('[data-testid="record-page"]', { timeout: 8000 });
+          const got = await kr.page.evaluate((vw) => {
+            const rows = [...document.querySelectorAll('[data-testid="record-pvp-row"]')];
+            const box = e => { const r = e.getBoundingClientRect(); return r.left >= 0 && r.right <= vw && r.height > 0; };
+            return { rows: rows.map(e => e.innerText.replace(/\s+/g, " ").trim()), fits: rows.every(box),
+              total: (document.querySelector('[data-testid="record-pvp-total"]') || {}).innerText || "",
+              aiRows: document.querySelectorAll('[data-testid="record-ai-row"]').length,
+              mine: document.querySelectorAll('[data-testid="record-mine-row"]').length };
+          }, W);
+          const ok = wantSection
+            ? got.rows.length === 2 && /Viserai/.test(got.rows[0]) && /×4/.test(got.rows[0]) && /3–1$/.test(got.rows[0]) && /Azalea/.test(got.rows[1]) && /1–1–1/.test(got.rows[1]) && got.fits
+              && /4 won, 2 lost, 1 drawn in all/.test(got.total)
+            : got.rows.length === 0 && !got.total;
+          row(ok && got.aiRows === 1 && got.mine === 1 && !kr.errors.length, name, JSON.stringify(got) + (kr.errors.length ? " errors: " + kr.errors.join(" | ") : ", 0 page errors"));
+        } catch (e) { row(false, name, String(e.message).split("\n")[0] + " " + kr.errors.join(" | ")); }
+        await kr.close();
+      }
+    }
+
     /* THE TAP FLOOR (M; POLISH.md condition 1): every control on every screen takes a 44px tap, nothing stolen,
        clipped or overlapped, at the phone it is played on (393x852) AND the smallest one (320x568). tools/tapsweep.js
        walks the screens, tools/tapjudge.js judges each; a fresh page per size so the walk starts at the roster. */
