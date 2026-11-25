@@ -1,3 +1,15 @@
+## v7.08 — Join from the link
+
+- **Join from the link (QUEUE NEXT 1, CEO).** The shared text now carries the table number in the address
+  (`…/?join=CODE`, "Tap <link> to sit down."). Opening it skips the title and lands on the right join screen with the
+  number filled in: a 4-character number is a direct table (*Two phones, one table*), a 6-character one a server table
+  (*Enter a table code*); any other length opens the page as usual. The parameter is read once (`JOIN_ASK`, script0) and
+  taken out of the address at once, so a reload or a home-screen relaunch does not sit down again, and App forgets it as
+  soon as the code screen is left. Nothing is sat at until the player taps *Sit down*. Back returns to the title. Page
+  only. Drill: three page.js join-link rows (lower-case direct number, server number, a junk length); sabotage (the
+  TableScreen effect that reads `join` removed) FAILS the first two.
+- Gates: see the release commit.
+
 ## v7.07 — Share the table number
 
 - **Share the table number (QUEUE NEXT 2, CEO).** A direct host's screen and an unranked server host's screen gain a

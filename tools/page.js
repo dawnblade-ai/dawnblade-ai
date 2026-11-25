@@ -950,6 +950,32 @@ if(require.main === module){
       await kw.close();
     }
 
+    /* JOIN FROM THE LINK (v7.08, QUEUE NEXT 1). A shared link carries `?join=CODE`: a direct table's number (4 characters,
+       typed in lower case here to prove it is read as the table reads it) opens Join a table with it filled in, a server
+       table's (6) opens Enter a table code with it filled in, and a number of neither length opens the page as usual. Each
+       time the parameter is gone from the address after it was read (a reload does not sit down again), and nothing is
+       sat at until the player taps Sit down. Sabotage: drop the TableScreen effect that reads `join`. */
+    for(const [q, want] of [["abcd", "ABCD"], ["ABCDEF", "ABCDEF"], ["XY", null]]){
+      const name = want == null ? "join link: a number of neither length opens the page as usual" : `join link: a ${want.length}-character number opens its table's join screen, filled in`;
+      let got = {}, kj = null;
+      try {
+        /* open() waits for the hero grid's card count, which a join link skips past: open as usual, then follow the link */
+        kj = await open({ w: W, h: H });
+        const P = kj.page;
+        await P.goto(kj.href + "?join=" + q + "&title=0");
+        await P.waitForSelector(".tblwrap, .hgrid", { timeout: 15000 });
+        await P.waitForTimeout(300);
+        got.search = await P.evaluate(() => window.location.search);
+        got.input = await P.locator(".tblwrap input.tblin").inputValue({ timeout: 3000 }).catch(() => null);
+        got.grid = await P.locator(".hgrid").isVisible().catch(() => false);
+        got.sit = await P.locator(".tblwrap button.bigbtn", { hasText: /^Sit down$/ }).isEnabled({ timeout: 2000 }).catch(() => false);
+        got.stat = await P.locator(".tblwrap .tblstat").allInnerTexts().catch(() => []);
+        const ok = !/join=/.test(got.search) && !kj.errors.length && (want == null ? got.input == null && got.grid : got.input === want && got.sit && !got.grid);
+        row(ok, name, JSON.stringify(got) + (kj.errors.length ? " errors: " + kj.errors.join(" | ") : ""));
+      } catch(e){ row(false, name, JSON.stringify(got) + " " + String(e.message).split("\n")[0]); }
+      if(kj) await kj.close();
+    }
+
     /* YOUR RECORD (v7.00, QUEUE NEXT 3): the title's fourth door. A record against two AI heroes seeded in storage must come
        back as one row per hero (most games first) and the right total; the same page with NOTHING seeded must say so (the
        sabotage: an empty record must not draw rows). A phone with no server sign-in shows the ranked card's empty line and
