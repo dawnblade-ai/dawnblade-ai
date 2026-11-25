@@ -1,3 +1,18 @@
+## v7.11 — Equipment that can block is in your hand
+
+- **The board's direction (user, 2026-11-25).** The answer to `docs/GRAPHICS-PLAN.md` §2: the old Stage mockup
+  (`design/stage`: fighting-game health bars, the hand wheel in a thumb lane), with no room for equipment tiles on the
+  main screen — *"make sure the equipment is showing up in the hand wheel when it can be blocked with."* §2 and the G1
+  steps (G1a the HUD bars, G1b the wheel, G1c one screen) are rewritten to it.
+- **At the table, equipment that can block joins the hand rail (CEO).** In the defend step `railPlays` lists, first,
+  every piece `judge.legal` lets you declare, with ⛨ DEF once declared; two taps declare or withdraw it, the same action
+  as its tile on your board, which still works. Before, a piece blocked only from that tile, a flick away from the attack
+  it answers. The trainer's rail has done this since v2, so the coming wheel has a complete source on both boards.
+  A declared rail piece's zone chip steps down under the ⛨ DEF badge (both boards; it covered the badge).
+- Drill: page.js row — the AI goes first, and at the first defend step the rail's pieces are exactly the legal ones
+  (Kayo: four of five; the weapon is not); two taps put one in `blockG` with ⛨ DEF. Sabotage (no loop) FAILS: rail empty.
+- Gates: see the release commit.
+
 ## v7.10 — Your record on the hero tiles
 
 - **Your record on the tiles (QUEUE NEXT 3, CEO).** A roster tile of a hero you have played carries a small chip,

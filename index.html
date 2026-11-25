@@ -684,6 +684,8 @@ img{display:block;max-width:100%}
 .loprev .heromid .hlife2{font-size:20px}
 
 .b-zone{position:absolute;top:2px;left:50%;transform:translateX(-50%);font-size:9px;letter-spacing:.08em;text-transform:uppercase;background:rgba(16,12,10,.92);color:var(--y);padding:1px 4px;border:1px solid var(--y);white-space:nowrap;z-index:2}
+/* a DECLARED rail piece wears ⛨ DEF on its top edge, where the zone chip sits: the chip steps down under it (v7.11) */
+.hc.sel .b-zone{top:13px}
 
 /* v1.09 counters + playables strip */
 .ctr{position:absolute;top:2px;left:2px;display:flex;gap:2px;z-index:3}
@@ -1231,7 +1233,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "7.10"; /* v7.10 - A hero tile you have played carries your won-lost record with that hero; see CHANGELOG.md. */
+window.APP_VER = "7.11"; /* v7.11 - At the table, equipment that can block joins the hand rail in the defend step, as it does in the trainer; see CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -9946,6 +9948,22 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
   const railPlays = () => {
     if(pay || myArsStep || over) return [];
     const out = [];
+    /* EQUIPMENT THAT CAN BLOCK JOINS THE HAND (v7.11; user, 2026-11-25:
+       "make sure the equipment is showing up in the hand wheel when it can
+       be blocked with"). The trainer's `playables()` has offered each
+       declarable piece on the rail since v2; here a piece blocked only from
+       its tile on YOUR BOARD, a flick away from the attack it answers.
+       `judge.legal` decides, as on the tile: a piece is listed while
+       `defend` (or "stop defending", the same action) is legal, first,
+       because in the defend step blocking is the play. */
+    for(const gr of me.gear){
+      if(gr.destroyed) continue;
+      const d = {t:"defend", uid:gr.uid};
+      if(!mine(d)) continue;
+      const on = (me.blockG||[]).indexOf(gr.uid) >= 0;
+      out.push({card:{...gr, def:gearDef(gr)}, a:d, verb:on ? "stop defending" : "defend",
+                zone:slotOf(gr).lab, sel:on});
+    }
     for(const gr of me.gear){
       if(gr.destroyed) continue;
       if(isWeapon(gr)) out.push({card:gr, a:actAct(gr.uid), verb:"swing", zone:slotOf(gr).lab});
@@ -9965,9 +9983,10 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
   const railCell = (p, i) => {
     const ok = mine(p.a);
     return (
-      <button key={"rp-"+p.zone+"-"+p.card.uid+"-"+i}
-        className={"hc clip-sm"+(ok?"":" dis")+(peek&&peek.uid===p.card.uid&&peek.verb===p.verb?" peek":"")}
+      <button key={"rp-"+p.zone+"-"+p.card.uid+"-"+i} data-rail-def={p.a.t==="defend" ? p.card.uid : undefined}
+        className={"hc clip-sm"+(ok?"":" dis")+(p.sel?" sel":"")+(peek&&peek.uid===p.card.uid&&peek.verb===p.verb?" peek":"")}
         onClick={ok ? tapTwice(p.card, p.verb, ()=>fire(p.a)) : ()=>setZoom(p.card)}>
+        {p.sel && <span className="defsel">⛨ DEF</span>}
         <CardFrame card={p.card} zone={p.zone}/>
       </button>);
   };

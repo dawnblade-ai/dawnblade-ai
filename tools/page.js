@@ -799,6 +799,46 @@ if(require.main === module){
     await ending(3, 0, { head: /^they take it$/i, records: false, rec: "l" }, "table: loss to an AI hero");
     await ending(0, 1, { head: /^dummy destroyed$/i, records: true }, "table: win over the Dummy");
 
+    /* ---- EQUIPMENT THAT CAN BLOCK IS ON THE HAND RAIL (v7.11; user, 2026-11-25: "make sure the equipment
+       is showing up in the hand wheel when it can be blocked with"). The AI goes first; at the table's first
+       defend step the rail's gear entries are exactly the pieces `judge.legal` lets seat 0 declare (and there
+       is at least one), and two taps on one declare it: it lands in `blockG` and wears ⛨ DEF on the rail.
+       Sabotage: drop the defend loop from TableBoard's `railPlays` (the set comes back empty). */
+    if(await toLoadout("gear", 1, 2) && await click(page.locator('.lo .actbar [data-start="table"]'), "gear: fight at the table")){
+      await page.waitForSelector(".board", { timeout: 15000 });
+      const reach = await page.evaluate(async () => {
+        const T = window.__dawnTable, s = T.session;
+        for(let k = 0; k < 400; k++){
+          const st = s.state();
+          if(st.over) return { ok: false, why: "over" };
+          if(DawnPriority.canDeclareDefenders(st, 0)) return { ok: true, turn: st.turn };
+          for(const a of [{ t: "pass" }, { t: "endTurn" }, { t: "arsenal", uid: null }]) if(DawnJudge.legal(st, a, 0) == null){ s.submit(a); break; }
+          await new Promise(r => setTimeout(r, 150));
+        }
+        return { ok: false, why: "no defend step" };
+      });
+      if(reach.ok){
+        await nav("gear", ["Chain"]);
+        await page.waitForTimeout(400);
+        const want = await page.evaluate(() => { const st = window.__dawnTable.session.state();
+          return st.sides[0].gear.filter(x => !x.destroyed && DawnJudge.legal(st, { t: "defend", uid: x.uid }, 0) == null).map(x => String(x.uid)).sort(); });
+        const got = await page.evaluate(() => [...document.querySelectorAll(".phand [data-rail-def]")].map(b => b.getAttribute("data-rail-def")).sort());
+        row(want.length > 0 && JSON.stringify(want) === JSON.stringify(got), "table: equipment that can block is on the hand rail at the defend step",
+            `legal ${JSON.stringify(want)}, rail ${JSON.stringify(got)}, turn ${reach.turn}`);
+        if(got.length){
+          const cell = page.locator(`.phand [data-rail-def="${got[0]}"]`);
+          await cell.scrollIntoViewIfNeeded().catch(() => {});
+          await cell.click().catch(() => {}); await page.waitForTimeout(250); await cell.click().catch(() => {}); await page.waitForTimeout(400);
+          const after = await page.evaluate(u => ({ blk: (window.__dawnTable.session.state().sides[0].blockG || []).map(String).includes(u),
+            mark: !!document.querySelector(`.phand [data-rail-def="${u}"] .defsel`) }), got[0]);
+          row(after.blk && after.mark, "table: two taps on a rail piece declare it (⛨ DEF on the rail)", JSON.stringify(after));
+        }
+        await screen("gear: the defend step's rail");
+      } else row(false, "table: equipment that can block is on the hand rail at the defend step", "never reached: " + reach.why);
+      await click(page.locator(".screennav button", { hasText: "leave" }), "leave the gear table");
+      await page.waitForSelector(".hgrid", { timeout: 5000 }).catch(() => {});
+    }
+
     /* THE RECORD ON THE PICKER (v5.84). After the win and the concession
        above, at Sharp: Lyath's tile reads 1–0 and the other foe's 0–1, every
        other tile reads nothing; each label sits inside its tile, inside the
