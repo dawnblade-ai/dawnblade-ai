@@ -15,6 +15,9 @@
   and a phone with no sign-in is told how to get a rating. page.js and serverpage rows drive both, each sabotaged.
 - Not changed, on purpose: *Play the AI*'s opponent step still offers the Dummy tile (harmless; a dozen drives pick
   tiles by position).
+- The page builds the server's transport in one place (`srvTransport`), which the table screen and the ranked card share.
+- Gates: npm test 4609/4604/0/5; page.js 295/295; serverpage 488/0; four babel blocks compile. trainchaos not run
+  (no trainer logic changed; the board change is CSS).
 
 ## v6.99 — A title screen, and you know your opponent before you sideboard
 

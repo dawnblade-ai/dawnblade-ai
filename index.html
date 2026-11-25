@@ -2063,6 +2063,9 @@ const lsGet = () => window.localStorage;
 /* THE TESTER'S DOOR (v6.26): the server table is off for everyone unless this phone was sent the test address (?server=1);
    the choice is remembered here, and ?server=0 forgets it. Read once per page load. */
 const SRV_CHOICE = DawnServerTable.doorChoice(store, window.location.search);
+/* the ONE place the page builds the server's transport (test/servertable.test.js counts it); every caller stops at a shut door first:
+   the table screen (`srvWire`) and Your record's ranked card (only on its button, only with a sign-in) */
+const srvTransport = cfg => DawnServerTable.defaultTransport(cfg);
 /* THE SEED OF A GAME AGAINST THE AI: the clock, so every game deals afresh.
    A page DRIVE (tools/page.js) sets `window.__dawnSeedFix` so the same hands
    are dealt every run and its screen count is stable; a player never sets it. */
@@ -8141,7 +8144,7 @@ function TableScreen({onBack, onSeated, again, away, onPlayAI, onGaveBack, typ, 
      name is saved: then the phone signs in on its own (no email, no password) and the seat belongs to that player. A
      sign-in that fails never blocks a game — the table is then a casual one. The referee judges a name; this screen
      only says what it answered. */
-  const srvWire = () => DawnServerTable.defaultTransport(srvCfg);   /* the one place the page reaches for the server; both callers below stop at a shut door first */
+  const srvWire = () => srvTransport(srvCfg);   /* the one place the page reaches for the server; both callers below stop at a shut door first */
   const srvWho = uM(()=> srvOn ? DawnServerTable.defaultIdentity(srvCfg, store) : null, [srvOn]);
   const [myName,setMyName] = uS(()=>{ const n = store.get("who.name", null); return typeof n==="string" ? n : null; });
   /* RANKED (SERVER S5.1): a table is a friendly one unless the player switches this on for the table they are about to open (never remembered). `myRank` is
@@ -10516,7 +10519,7 @@ function RankedRecord(){
     <h2 className="fs-h2s">Ranked</h2>
     <p className="fs-lede">No ranked games on this phone yet. Find an opponent and open a ranked table: your rating and your last games will show here.</p></div>;
   const load = () => { setSt({s:"loading"});
-    DawnServerTable.ladder({transport: DawnServerTable.defaultTransport(cfg), identity: who})
+    DawnServerTable.ladder({transport: srvTransport(cfg), identity: who})
       .then(r=>{ if(alive.current) setSt({s:"ok", r}); }, ()=>{ if(alive.current) setSt({s:"fail"}); }); };
   const r = st.r, yl = r && r.you, mine = (r && r.mine) || [];
   const fav = {}; mine.forEach(x=>{ fav[x.hero] = (fav[x.hero]||0)+1; });

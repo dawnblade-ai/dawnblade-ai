@@ -1356,14 +1356,14 @@ async function toServerChooser(page){
     await click(pg, pg.locator('[data-testid="record-ranked-load"]'), "show my ranked games");
     await pg.waitForSelector('[data-testid="record-rating"]', { timeout: 8000 }).catch(() => {});
     const moves = [[1, 0], [2, 1], [3, 0], [4, 0]].map(([n, seat]) => { const x = k.rat.results.get("MG" + n); return seat ? x.a1 - x.b1 : x.a0 - x.b0; });
-    const before = 1655 - moves.reduce((a, b) => a + b, 0);
+    const before = 1655, now = before + moves.reduce((a, b) => a + b, 0);   /* the fixture's meRating is the rating BEFORE its games; the fake ladder applies them */
     const got = await pg.evaluate(() => ({ rating: (document.querySelector('[data-testid="record-rating"]') || {}).innerText,
       line: (document.querySelector('[data-testid="record-rating-line"]') || { getAttribute: () => "" }).getAttribute("aria-label"),
       pts: document.querySelectorAll('[data-testid="record-rating-line"] circle').length,
       fav: ((document.querySelector('[data-testid="record-favourites"]') || {}).innerText || "").replace(/\s+/g, " ") }));
     row(reads0 === 0 && k.lad.reads === 1 && k.lad.last.player !== null, "your record: opening the page reads nothing; the button reads the ladder once, signed in", reads0 + " -> " + k.lad.reads);
-    row(got.rating === "1655" && got.pts === 5 && got.line === "Your rating went from " + before + " to 1655 over your last 4 ranked games",
-        "your record: the rating line runs from before the oldest game to today's rating, one point per game", JSON.stringify(got) + " want from " + before);
+    row(now !== before && got.rating === String(now) && got.pts === 5 && got.line === "Your rating went from " + before + " to " + now + " over your last 4 ranked games",
+        "your record: the rating line runs from before the oldest game to today's rating, one point per game", JSON.stringify(got) + " want " + before + " -> " + now);
     row(/^Played most: Viserai ×2, Katsu ×1, Kayo ×1$/.test(got.fav), "your record: the heroes played most, most first", got.fav);
     row(ladJargon(await pg.evaluate(() => document.querySelector('[data-testid="record-page"]').innerText)), "your record: no identifier or field name in the words");
     await k.kit.close();
