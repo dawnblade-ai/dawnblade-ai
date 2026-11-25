@@ -29,6 +29,10 @@ two-iPhone pass (step 6) — fold it into main with the next release (handoff it
 - **Z** session_013xG9xAFgbeR6Da7AgooLV6 -> `ship/Z-title` (title screen).
 - **AA** session_013xG9xBZLmLcUGoJbgwyUAt -> `ship/AA-foundlate` (serverpage row: practising player closes the page
   mid-found-window; one constant for the rematch + found windows if they mean the same 2 min). Independent of Y/Z.
+  **AA REPORTED DONE (12:46):** row K1b4 (5 checks, sabotaged), `TWO_MINUTES_MS` shared; npm test 4608/4603/0/5. It did NOT
+  run page.js, the babel compile, tapsweep or the Deno rehearsal, and its serverpage run had ONE unrelated FAIL ("real
+  loader … supabase-js from the CDN") — likely its scratch installed the latest supabase-js, not the pinned 2.115.0. Rerun
+  all of them on the merged tree before shipping; land AA with Y/Z.
 Check: `mcp__claude-code-remote__get_session` / `list_events`; `git fetch origin 'refs/heads/ship/*:refs/remotes/origin/ship/*'`.
 
 **NEXT after Y/Z/AA (each a release of its own):**
