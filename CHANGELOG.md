@@ -1,3 +1,14 @@
+## v7.07 — Share the table number
+
+- **Share the table number (QUEUE NEXT 2, CEO).** A direct host's screen and an unranked server host's screen gain a
+  button under the number: *Share the table number* hands it to the phone's share sheet (Messages, WhatsApp…) with this
+  page's address and how to join; where there is no share sheet it reads *Copy the table number* and copies the same
+  text (`copyText`, which never claims a copy that did not happen). A cancelled sheet says nothing. The address is left
+  out when the page was opened from a file. Ranked host screens do not show it (ranked is the queue, not friends).
+  Page only (`ShareCode`, script1b). Drill: two page.js rows (a stand-in share sheet and a stand-in clipboard: the number
+  is in what was handed, 44 px, fits 393; the copy path says so).
+- Gates: see the release commit.
+
 ## v7.06 — The screen stays awake
 
 - **Keep the screen awake (QUEUE NEXT 1, CEO).** While a board is up — the trainer, or any table (AI, friend, direct,
