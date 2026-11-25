@@ -1,3 +1,16 @@
+## v7.01 — Nine pixels at the least, and Play the AI means an AI
+
+- **Text floor 9 px (QUEUE NEXT 3; worker AC).** Every font size under 9 px on the page is now 9 px (19 rules: the
+  card-type and zone chips on cards, the hand-rail labels, empty-arsenal text, opponent-step names, loadout pane flags,
+  the deck box, counters, hero life label, card-art fallback, and the rest). Nothing was shrunk to make room; tapsweep's
+  overlap, clip and stolen-tap rows are clean at 393 and 320 wide. The zone chip on hand cards measured at most 66 px
+  ("graveyard") inside an 80 px card. tapsweep's `TEXT_FLOOR` now defaults to 9; `TEXT_FLOOR=10` is its sabotage.
+- **Play the AI no longer offers the Dummy (QUEUE NEXT 2; worker AB).** Coming through the title's *Play the AI* door,
+  the opponent step shows only the random tile and the heroes. The Dummy door still skips the step, and with the title
+  skipped (`?title=0`) the Dummy tile is still offered. Every page drive now picks opponent tiles by their label, not
+  by position (page.js, tapsweep, promptsweep, page-audit); new page.js rows at both widths, sabotaged.
+- Gates: see the release commit.
+
 ## v7.00 — A text floor on the board, and a page of your own record
 
 - **The text floor (QUEUE NEXT 1).** The smallest text a player is asked to read is now 8 px. Measured on the real
