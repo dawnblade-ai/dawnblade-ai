@@ -3740,11 +3740,30 @@ function loopSig(g){
   }).join("||");
 }
 const DRAW_LINE = "Draw \u2014 nothing can change any more, so neither hero can win.";
+/* THE RECAP'S COUNT (v7.09): what the end screen tells about the game, kept from STATE, never from the feed. Life only:
+   `hp` is each seat's life at the last look, `lost`/`gain` add up every fall and rise since the first look (a fall past
+   zero counts down to zero), and `big` is the most life one seat lost in one committed state, with the turn it fell on —
+   one swing, or a whole resolution of the chain where several pieces land at once. Life lost is ANY loss, damage or
+   not (the screen says "life lost", not "damage"). Runs in `stalemateCheck` because both boards pass every committed
+   state through it; before `over`, so the blow that ends the game is counted. */
+function recapStep(g){
+  const sides = g.sides || [];
+  if(sides.length !== 2) return g;
+  const hp = sides.map(sd => Math.max(0, +sd.hp || 0)), was = g.recap;
+  if(!was || !Array.isArray(was.hp)) return {...g, recap: {hp, lost: [0, 0], gain: [0, 0], big: [null, null]}};
+  if(hp[0] === was.hp[0] && hp[1] === was.hp[1]) return g;
+  const lost = was.lost.slice(), gain = was.gain.slice(), big = was.big.slice();
+  hp.forEach((h, i) => { const d = was.hp[i] - h;
+    if(d > 0){ lost[i] += d; if(!big[i] || d > big[i].amt) big[i] = {amt: d, turn: g.turn}; }
+    else if(d < 0) gain[i] -= d; });
+  return {...g, recap: {hp, lost, gain, big}};
+}
 function stalemateCheck(g){
   /* CR 3.0.9 / 1.15.3 — a card that left the arena took its counters with
      it. `game.js resetLeavers` is the one body; it runs here because this
      is the one function both boards pass every committed state through. */
   g = GM.resetLeavers(g);
+  g = recapStep(g);
   if(g.over) return g;
   const was = g.still || {}, sig = stillSig(g);
   let still = was.sig === sig ? was : {...was, sig, since: g.turn};
@@ -5622,7 +5641,7 @@ function moves(g, seat){
   return out;
 }
 
-return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, moves, reduce, settle, strike, closeChain,
+return {STALEMATE_TURNS, LOOP_RING, STILL_ZONES, stillSig, loopSig, recapStep, stalemateCheck, clearKnown, drawText, ACTIONS, newMatch, legal, moves, reduce, settle, strike, closeChain,
         playableWhy, drawTo, winCheck, abTargetAnswer, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf, defActGainNow, keepsActionPoint, traverseOffer, freePick, cyclePick, riderPick, riderLead, arsenalAttack, arsenalUsable, arsenalPayable, arsenalPower, playGate, gateColourWanted, gateReserve, gateRaises, chargePitchWanted, soulCostAnswer, boardCostAnswer, usurpAnswer, usurpWorth, banCostAnswer, banCostWorth, abAmpTakers, ctrPickTakers, condGaNow, arsTurnPays, cloakFor, markFirst, arenaUseful, defendsNow, DEFENDS_OPS, pumpsNow, grantedInstant, oppTurnTrigger, oppTurnTriggerPlay, tokenPiece, grantReserve, abPieceForRes, abPieceResGain, boostShare, grantTakers, grantedSwings, landsNothing, instantNextTakers, weaponPumpOf, gaNextPiece, nonAtkHeld, discardDrawPiece, lifeGainOf, linkGoesAgain, gaAbilityRedundant, payBuysGoAgain, lookChoice, arcaneOf, chargeView, effPowerNow, chargeMore,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf, waitingOn,
         handFree: PR.handFree,

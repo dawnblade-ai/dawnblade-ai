@@ -1,3 +1,17 @@
+## v7.09 — The recap
+
+- **End-of-game recap (QUEUE NEXT 2, CEO).** Every end screen — the trainer's win, loss and draw, and every table's
+  (AI, Dummy, friend, server, ranked) — carries one small card: how many turns, then two columns (*You* first) with
+  *Life lost*, *Most at once* (the biggest single fall and its turn) and, when anyone gained life, *Life gained*. The
+  numbers are kept from STATE, never the feed: `judge.recapStep` keeps `recap` ({hp, lost, gain, big}) on the game, run
+  inside `stalemateCheck`, the one function both boards pass every committed state through, before `over`, so the
+  finishing blow counts. A fall past zero counts down to zero. "Life lost" is any loss, damage or not.
+- **WIRE_V 49 → 50**: `recap` is a new top-level game key (`sides.js` GAME_KEYS); a v49 peer would drop it.
+- Drills: `test/recap.test.js` (the count by hand; the books balance — first life − lost + gained = life now — at every
+  state of two real policy games; sabotage, dropping the `lost` addition, FAILS all four); page.js's three table endings
+  check the card shows the game's own count, "You" first, inside 393.
+- Gates: see the release commit.
+
 ## v7.08 — Join from the link
 
 - **Join from the link (QUEUE NEXT 1, CEO).** The shared text now carries the table number in the address

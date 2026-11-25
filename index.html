@@ -229,6 +229,15 @@ img{display:block;max-width:100%}
 .reveal.end-win .endleave{background:var(--y);color:var(--ink)}
 .reveal.end-draw .endleave{background:var(--forge2);border:1px solid var(--line)}
 .endhint{margin-top:8px;font-size:var(--fs-md);color:var(--bone-dim);letter-spacing:.08em}
+/* THE RECAP (v7.09): one small card on every end screen — two columns, the player's first */
+.recap{width:min(300px,100%);margin-top:14px;border:1px solid var(--line);background:rgba(20,16,13,.85);font-size:var(--fs-xl);color:var(--bone)}
+.recap .rchead{padding:6px 10px;border-bottom:1px solid var(--line);font-size:var(--fs-lg);letter-spacing:.08em;text-transform:uppercase;color:var(--bone-dim)}
+.recap table{width:100%;border-collapse:collapse}
+.recap th,.recap td{padding:5px 8px;text-align:right;font-weight:400}
+.recap th:first-child,.recap td:first-child{text-align:left;color:var(--bone-dim)}
+.recap thead th{font-size:var(--fs-lg);color:var(--bone);font-weight:700;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.recap td b{font-family:'Spline Sans Mono';font-weight:700}
+.recap td small{display:block;font-size:var(--fs-md);color:var(--bone-dim)}
 @keyframes endin{from{opacity:0;transform:scale(1.25)}to{opacity:1;transform:none}}
 .qopt{display:block;width:100%;text-align:left;padding:11px 12px;background:var(--forge);border:1px solid var(--line);margin-top:8px;font-size:14px}
 .qopt.right{border-color:var(--ok);color:var(--ok)}
@@ -1220,7 +1229,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "7.08"; /* v7.08 - A shared link opens straight on the table number, filled in; see CHANGELOG.md. */
+window.APP_VER = "7.09"; /* v7.09 - Every end screen carries a recap of the game: turns, life lost, the biggest fall; see CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -7258,11 +7267,11 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
         </>)}
       </div>
       {g.over && (g.over.win
-        ? <WinPanel score={g.over.score} onExit={onExit}/>
+        ? <WinPanel score={g.over.score} onExit={onExit}><Recap g={g} me={0}/></WinPanel>
         : DawnJudge.drawText(g.over, g.sides)
-        ? <DrawPanel text={DawnJudge.drawText(g.over, g.sides)} turn={g.turn} hp={you(g).hp} onExit={onExit}/>
+        ? <DrawPanel text={DawnJudge.drawText(g.over, g.sides)} turn={g.turn} hp={you(g).hp} onExit={onExit}><Recap g={g} me={0}/></DrawPanel>
         : <EndPanel tone="lose" title="Down — but wiser" kicker={"turn "+g.turn+" · training"} names={opp(g).name.split(",")[0]+" over "+you(g).name.split(",")[0]}
-            onExit={onExit} leave="Back to heroes"><p className="endnote">Fewer wasted pitches and tighter blocks next run.</p></EndPanel>)}
+            onExit={onExit} leave="Back to heroes"><p className="endnote">Fewer wasted pitches and tighter blocks next run.</p><Recap g={g} me={0}/></EndPanel>)}
       <CardModal card={zoom} onClose={()=>setZoom(null)}/>
       {/* JUDGE!! — write down what looked wrong while it is still on
           screen. The board travels with the note, so the note can be one
@@ -7311,15 +7320,37 @@ function EndPanel({tone, title, kicker, names, stat, statLbl, onExit, leave, chi
     </div>
   );
 }
-function DrawPanel({text,turn,hp,onExit}){
+/* THE RECAP (v7.09, QUEUE NEXT 2): what happened, in four numbers, from the count `judge.recapStep` keeps on the game
+   (life only — never the feed). `me` is the seat this phone plays; its column comes first and is named "You". Turns are the
+   game's own count. Nothing shows for a game with no count (an old saved game). */
+function Recap({g, me}){
+  const r = g && g.recap;
+  if(!r || !g.sides || g.sides.length !== 2) return null;
+  const seats = [me, 1 - me], name = i => i === me ? "You" : (g.sides[i].name || "").split(",")[0];
+  const gained = r.gain[0] + r.gain[1] > 0;
+  const big = i => r.big[i] ? <><b>{r.big[i].amt}</b><small>turn {r.big[i].turn}</small></> : <b>—</b>;
+  return (
+    <div className="recap" data-testid="recap" onClick={e=>e.stopPropagation()}>
+      <div className="rchead">{g.turn === 1 ? "1 turn" : g.turn + " turns"}</div>
+      <table><thead><tr><th></th>{seats.map(i=><th key={i}>{name(i)}</th>)}</tr></thead>
+        <tbody>
+          <tr><td>Life lost</td>{seats.map(i=><td key={i}><b>{r.lost[i]}</b></td>)}</tr>
+          <tr><td>Most at once</td>{seats.map(i=><td key={i}>{big(i)}</td>)}</tr>
+          {gained && <tr><td>Life gained</td>{seats.map(i=><td key={i}><b>{r.gain[i]}</b></td>)}</tr>}
+        </tbody></table>
+    </div>
+  );
+}
+function DrawPanel({text,turn,hp,onExit,children}){
   return (
     <EndPanel tone="draw" title={text.title} kicker={"turn "+turn+" · training"} names={text.names}
       stat={hp>0 ? hp : null} statLbl="life left" onExit={onExit} leave="Back to heroes">
       <p className="endnote">{text.note}</p>
+      {children}
     </EndPanel>
   );
 }
-function WinPanel({score,onExit}){
+function WinPanel({score,onExit,children}){
   const [t] = uS(()=>{
     let pool=[]; TROPHIES.forEach(x=>{for(let i=0;i<x.w;i++)pool.push(x);});
     return pool[Math.floor(Math.random()*pool.length)];
@@ -7327,7 +7358,7 @@ function WinPanel({score,onExit}){
   uE(()=>{ const seen = store.get("case",[]); store.set("case",[...seen,{n:t.n,r:t.r,at:Date.now()}]); },[]);
   return (
     <EndPanel tone="win" title="DUMMY DESTROYED" kicker={t.r+" pull"} names={t.n}
-      stat={score} statLbl="efficiency score — lower is cleaner" onExit={onExit} leave="Back to heroes"/>
+      stat={score} statLbl="efficiency score — lower is cleaner" onExit={onExit} leave="Back to heroes">{children}</EndPanel>
   );
 }
 
@@ -10483,7 +10514,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
           and no reward. So the distinction is `local`, and it follows the
           existing rule rather than overriding it. */}
       {beatDummy && onRecord
-        ? <WinPanel score={g.turn + (me.wasted||0)} onExit={onExit}/>
+        ? <WinPanel score={g.turn + (me.wasted||0)} onExit={onExit}><Recap g={g} me={mySeat}/></WinPanel>
         : over && <EndPanel tone={drawText ? "draw" : over.winner===mySeat ? "win" : "lose"}
           title={drawText ? drawText.title : over.winner===mySeat ? "YOU TAKE IT" : "THEY TAKE IT"}
           kicker={"turn "+g.turn+" · table "+code}
@@ -10492,6 +10523,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
         <p className="endnote">
           {drawText ? drawText.note : over.how==="life" ? "Life to zero." : "The game ended on "+over.how+"."}
         </p>
+        <Recap g={g} me={mySeat}/>
         {!local && <RankChange table={table} seat={mySeat}/>}
         {/* PLAY AGAIN (v6.81, NEXT 1): a server game's end screen goes straight back into the queue, the same kind of match (friendly or ranked); the walk
             back through three screens is gone. The finished table no longer counts toward the open-table cap (005), so the new search is never refused for it. */}

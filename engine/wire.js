@@ -369,7 +369,10 @@
    cost takes — Runebleed Robe with a Runechant token and a Runechant of Lust), answered by a new
    action `boardcost {uid}`, and the answer rides on the game as `_destroyUid` (`judge.HELD_DECL`).
    A v48 peer answers no `boardcost` and destroys the token unasked. By hand. */
-const WIRE_V = 49;
+/* 49 -> 50 AT v7.09: the game gains a top-level key, `recap` (`judge.recapStep`: each seat's life lost and gained, and
+   its biggest single fall, for the end screen). A v49 peer keeps no count and drops the key on its next copy, so its end
+   screen and ours would tell different games. A game key ships inside the game object: by hand, behind the handshake. */
+const WIRE_V = 50;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

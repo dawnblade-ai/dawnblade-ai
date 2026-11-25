@@ -247,6 +247,8 @@ const GAME_KEYS = [
      only CYCLES is seen too), which `judge.stalemateCheck` reads to end a dead position
      as a draw. */
   "still",
+  /* THE RECAP'S COUNT (v7.09): {hp, lost, gain, big} per seat index, kept by `judge.recapStep` for the end screen. */
+  "recap",
   /* HYPER INFLATION'S TAX (v4.06). "Cards cost {r} more to play this turn"
      names no seat, so it taxes BOTH players and belongs to the game rather
      than to either side. It is read through `parser.costCtx` and cleared in

@@ -766,6 +766,16 @@ if(require.main === module){
       if(who === 0) await page.evaluate(() => window.__dawnTable.session.submit({ t: "concede" }));
       const shown = await page.waitForSelector(".reveal", { timeout: 15000 }).then(() => page.locator(".reveal").innerText()).catch(() => "");
       await page.evaluate(() => window.__restoreAct && window.__restoreAct());
+      /* THE RECAP (v7.09, QUEUE NEXT 2): every ending carries the recap card, and its numbers are the game's own count
+         (`recap` on the state, kept by judge.recapStep): turns, then "You" first with this seat's life lost. It fits 393.
+         Sabotage: drop <Recap> from the table's end panel (both the WinPanel and the EndPanel branch). */
+      { const rc = await page.evaluate(() => { const el = document.querySelector('.reveal [data-testid="recap"]'), st = window.__dawnTable.session.state();
+          if(!el) return { shown: false };
+          const b = el.getBoundingClientRect(), cells = [...el.querySelectorAll("tbody tr:first-child td b")].map(x => x.innerText.trim());
+          return { shown: true, head: el.querySelector(".rchead").innerText.trim(), you: el.querySelector("thead th:nth-child(2)").innerText.trim(),
+            lost: cells, want: st.recap ? st.recap.lost.map(String) : null, turn: st.turn, fits: b.left >= 0 && b.right <= innerWidth }; });
+        row(rc.shown && rc.fits && /^you$/i.test(rc.you) && new RegExp("^" + rc.turn + " turns?$", "i").test(rc.head) && JSON.stringify(rc.lost) === JSON.stringify(rc.want),
+          label + ": the recap card tells the game's own count", JSON.stringify(rc)); }
       const best1 = await page.evaluate(() => localStorage.getItem("dawnblade.best"));
       const head = shown.split("\n")[0].trim();
       const ok = want.head.test(head) && (want.records ? best1 !== best0 : best1 === best0);
