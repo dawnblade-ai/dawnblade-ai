@@ -1036,6 +1036,15 @@ const typicalWait = (ranked, deps) => {
   const ok = v => v && typeof v === "object" && intIn(v.n, 5, 1e9) && intIn(v.typical, 5, 86400) ? v.typical : null;
   try { const r = deps.seekWait(ranked); return isP(r) ? r.then(ok, () => null) : ok(r); } catch(_){ return null; }
 };
+/* WHO ELSE IS LOOKING (S6.1, approximate on purpose): a WAITING seeker's answer carries `looking`, one of "none" | "one" | "few" | "many": the other live, untaken seeks of the
+   same kind, never a number, a name or an id. The caller's own seek is in the count (it was just refreshed) and is taken out of it. A missing dependency, a nonsense answer or a
+   failing statement leaves the word out: the seek itself never fails over it. */
+const lookingBucket = n => n <= 0 ? "none" : n === 1 ? "one" : n <= 4 ? "few" : "many";
+const crowdWord = (ranked, deps) => {
+  if(typeof deps.seekCount !== "function") return null;
+  const ok = c => c && typeof c === "object" && intIn(c.friendly, 0, 1e6) && intIn(c.ranked, 0, 1e6) ? lookingBucket((ranked ? c.ranked : c.friendly) - 1) : null;
+  try { const r = deps.seekCount(SEEK_TTL); return isP(r) ? r.then(ok, () => null) : ok(r); } catch(_){ return null; }
+};
 function opSeek(req, deps){
   if(req.ranked !== undefined && req.ranked !== true) return no("bad-request");
   if(req.cancel !== undefined && req.cancel !== true) return no("bad-request");
@@ -1070,7 +1079,7 @@ function opSeek(req, deps){
         }));
       }
       if(typeof a.table !== "string" || !ID_RE.test(a.table)) throw new Error("seek answered no table");
-      if(a.state === "waiting") return then(typicalWait(ranked, deps), t => fin({ok: true, state: "waiting", table: a.table, beat: SEEK_BEAT, ...(t == null ? {} : {typical: t})}));
+      if(a.state === "waiting") return then(typicalWait(ranked, deps), t => then(crowdWord(ranked, deps), l => fin({ok: true, state: "waiting", table: a.table, beat: SEEK_BEAT, ...(t == null ? {} : {typical: t}), ...(l == null ? {} : {looking: l})})));
       if(a.state === "taken") return fin({ok: true, state: "taken", table: a.table, beat: SEEK_BEAT});
       /* matched: hand it out only if it is still a table the caller can sit at */
       return then(seekGood(a.table, who, ranked, deps), good => {

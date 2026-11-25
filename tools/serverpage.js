@@ -1457,7 +1457,12 @@ async function toServerChooser(page){
     await toFirst(k.A); await toFirst(k.B);
     await click(k.A, k.A.locator('[data-testid="seek-open"]'), "A: find a match");
     await k.A.waitForFunction(() => /Looking for an opponent/.test(document.body.innerText), null, { timeout: 8000 }).catch(() => {});
-    row((await boxes(k.A, '[data-testid="seek-play-ai"]')).length === 0 && (await boxes(k.A, '[data-testid="seek-quiet"]')).length === 0, "waiting: no offer of the AI before the quiet minute has passed");
+    /* LONELY WAIT: alone in the queue the server's answer says nobody else is looking, and the card says so (approximate words only) and offers the AI at once */
+    await k.A.waitForSelector('[data-testid="seek-crowd"]', { timeout: 8000 }).catch(() => {});
+    const cw = await boxes(k.A, '[data-testid="seek-crowd"]'), cardB = (await boxes(k.A, '[data-testid="seek-card"]'))[0];
+    row(cw.length === 1 && /^Nobody else is looking right now\.$/.test(cw[0].t) && !/\d/.test(cw[0].t) && cardB && cw[0].x >= cardB.x && cw[0].r <= cardB.r && cw[0].b <= cardB.b && cw[0].r <= W, "waiting: alone, the card says nobody else is looking right now, in words with no number, inside the card at 393", JSON.stringify([cw[0], cardB]));
+    row(await k.A.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), "waiting: the lonely card does not overflow sideways");
+    row((await boxes(k.A, '[data-testid="seek-play-ai"]')).length === 1 && (await boxes(k.A, '[data-testid="seek-quiet"]')).length === 1 && /quiet hour/.test((await boxes(k.A, '[data-testid="seek-quiet"]'))[0].t), "waiting: alone, the warm nudge and the one-tap AI practice are there from the start");
     await k.A.waitForSelector('[data-testid="seek-play-ai"]', { timeout: 9000 }).catch(() => {});
     const ai = await boxes(k.A, '[data-testid="seek-play-ai"]'), qn = await boxes(k.A, '[data-testid="seek-quiet"]');
     row(ai.length === 1 && /^play the ai while you wait$/i.test(ai[0].t) && ai[0].h >= 40 && ai[0].x >= 0 && ai[0].r <= W && ai[0].b <= H, "waiting: after the quiet minute the card offers Play the AI while you wait, thumb-sized, on screen", JSON.stringify(ai[0]));

@@ -8078,6 +8078,8 @@ function HiddenHandsSheet({open, srvOn, onClose}){
   );
 }
 /* THE USUAL WAIT, in words — ONE sentence for the seek card and the practice bar (the number itself is App's: TableScreen tells it up through onTyp) */
+/* WHO ELSE IS LOOKING, approximately (the server's `looking` word; never a count, never a name) */
+const crowdLine = w => w==="none" ? "Nobody else is looking right now." : w==="one" ? "Someone else is looking." : w==="few" ? "A few players are looking." : w==="many" ? "Plenty of players are looking." : null;
 const usualWaitLine = sec => "Players usually find a match in about "+(sec<90 ? sec+" seconds" : Math.round(sec/60)+" minutes")+".";
 function TableScreen({onBack, onSeated, again, away, onPlayAI, onGaveBack, typ, onTyp, only}){   /* `only`: "online" | "direct" | undefined — the title screen's two doors into this screen show their half; the hero grid's button shows both */
   const [mode,setMode] = uS(null);           /* null | "host" | "join" */
@@ -8288,6 +8290,7 @@ function TableScreen({onBack, onSeated, again, away, onPlayAI, onGaveBack, typ, 
   uE(()=>{ if(mode!=="srv-seek" || away) return; const h = setInterval(()=>setTick(t=>t+1), 1000); return ()=>clearInterval(h); },[mode, away]);
   uE(()=>()=>{ const k = seekRef.current; seekRef.current = null; if(k && k.timer) clearTimeout(k.timer); },[]);
   const [lookN,setLookN] = uS(null);
+  const [seekCrowd,setSeekCrowd] = uS(null);
   /* read on the server table screen only: the first screen makes no request to the server while a player only looks: the lazy rule */
   uE(()=>{ if(!srvOn || mode!=="srv") return; let dead = false;
     DawnServerTable.looking({transport: srvWire()}).then(r=>{ if(!dead && live.current) setLookN(r); }).catch(()=>{});
@@ -8322,6 +8325,7 @@ function TableScreen({onBack, onSeated, again, away, onPlayAI, onGaveBack, typ, 
     const beat = () => { if(seekRef.current!==k) return; k.timer = setTimeout(()=>{ if(seekRef.current!==k) return;
       seekAsk(k, k.table).then(a2=>seekGot(k, a2)).catch(()=>beat()); }, a.beat || 20000); };
     if(a.state==="waiting") setSeekTyp(Number.isInteger(a.typical) && a.typical>=5 ? a.typical : null);
+    if(a.state==="waiting") setSeekCrowd(crowdLine(a.looking) ? a.looking : null);
     if(a.state==="taken") setSeekNote("A player was matched with you — they are sitting down.");
     if(k.table===a.table && waitRef.current) return beat();
     /* waiting at our own table: sit down at it (chair one) and wait for the other player, as a host does */
@@ -8346,7 +8350,7 @@ function TableScreen({onBack, onSeated, again, away, onPlayAI, onGaveBack, typ, 
     const k = {ranked: !!rk, table: null, timer: null};
     seekRef.current = k;
     setErr(null); setGone(false); setBusy(true); setCapOpen([]); setCapNote(null); setSeekNote(null);
-    setSeekRk(!!rk); if(!again){ t0Ref.current = Date.now(); setSeekT0(t0Ref.current); setSeekTyp(null); } setStat("srv-seeking"); setMode("srv-seek");
+    setSeekRk(!!rk); if(!again){ t0Ref.current = Date.now(); setSeekT0(t0Ref.current); setSeekTyp(null); setSeekCrowd(null); } setStat("srv-seeking"); setMode("srv-seek");
     seekAsk(k, null).then(a=>seekGot(k, a)).catch(seekFail);
   };
   /* sent here by a finished server game's Find another match (v6.81): start the same kind of search once, as if the player had tapped it on this screen */
@@ -8529,8 +8533,9 @@ function TableScreen({onBack, onSeated, again, away, onPlayAI, onGaveBack, typ, 
           <div className={"tblstat"+(stat==="srv-seeking"?" live":"")}>{stat==="srv-seeking" && <span className="tbldot"></span>}{err||gone ? "" : (PHRASE[stat]||"…")}</div>
           {seekNote && <p className="note" data-testid="seek-note">{seekNote}</p>}
           {seekTyp!=null && stat==="srv-seeking" && <p className="note" data-testid="seek-typical">{usualWaitLine(seekTyp)}</p>}
-          {Date.now()-seekT0 >= quietMs && stat==="srv-seeking" && onPlayAI && <>
-            <p className="note" data-testid="seek-quiet">Nobody has sat down yet. Sometimes it takes a few minutes. Practise while you wait: your search keeps going, and you will be told the moment someone arrives.</p>
+          {seekCrowd && stat==="srv-seeking" && <p className="note" data-testid="seek-crowd">{crowdLine(seekCrowd)}</p>}
+          {(Date.now()-seekT0 >= quietMs || seekCrowd==="none") && stat==="srv-seeking" && onPlayAI && <>
+            <p className="note" data-testid="seek-quiet">{seekCrowd==="none" ? "It may be a quiet hour. " : "Nobody has sat down yet. Sometimes it takes a few minutes. "}Practise while you wait: your search keeps going, and you will be told the moment someone arrives.</p>
             <button className="bigbtn alt" data-testid="seek-play-ai" onClick={onPlayAI}>Play the AI while you wait</button></>}
           <p className="note">You are matched with the next player who taps {seekRk ? "Find a ranked match" : "Find a match"}. Keep this screen open — the game starts here the moment they arrive.{seekRk && myRank ? <> Your rating is <strong>{myRank.rating}</strong>.</> : null}</p>
         </div>

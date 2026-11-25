@@ -13,6 +13,8 @@
      (9) THE RATING WINDOW — a ranked seek pairs only inside 100 + 50 per 20 s waited (010_rating_window.sql); casual never windowed.
     (10) THE USUAL WAIT — a waiting answer carries `typical` (the day's median wait, seconds) only when 5+ seeks were completed; none, a failing
          statement or a missing dependency answer without it; kinds are counted apart; a heartbeat after the match never carries it (011_seek_wait.sql).
+    (11) WHO ELSE IS LOOKING — a waiting answer carries `looking` ("none" | "one" | "few" | "many"), the OTHER live untaken seeks of the same kind (never a number);
+         your own seek and stale ones are not counted; a failing or missing count leaves the word out; matched and taken answers never carry it.
      (7) THE EDGES — no identity, a forged one, bad fields, no queue wired; the cap of open tables still applies; the answers carry public keys only. */
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -33,7 +35,7 @@ function loadServer(edits){
   return m.exports;
 }
 const probe = f => { try { return f(); } catch(e){ if(e && /sabotage anchor/.test(e.message)) throw e; return ["the probe threw: " + (e && e.message)]; } };
-const KEYS = ["beat", "ok", "state", "table", "typical"];
+const KEYS = ["beat", "looking", "ok", "state", "table", "typical"];
 
 function world(server, o){
   o = o || {};
@@ -355,4 +357,65 @@ test("(10) the usual wait: told only from 5+ completed seeks of the same kind in
   const w4 = world(SERVER, {salt: "typasync2"}); w4.deps.seekWait = () => Promise.resolve({n: 9, typical: 25});
   const ok4 = await SERVER.handle({op: "seek", identity: {token: w4.player("py").tok}}, w4.deps);
   assert.equal(ok4.typical, 25, "an async wait statement's number must reach the answer");
+});
+
+/* ---------------------------------------------------------------------------------------------- (11) */
+function crowdFailures(server, so, deps){
+  /* A friendly waiter has no other untaken friendly seeker (the step would have matched them), so the word is only ever more than "none" where the queue holds seekers a
+     seat cannot meet: ranked seekers outside the rating window. Those are parked straight in the fake queue at rating 3000 against the waiter's 1200. */
+  const bad = [], w = world(server, {salt: "crowd", seek: {rate: p => p === "pca" || p === "pci" ? 1200 : 3000, ...(so || {})}});
+  if(deps) Object.assign(w.deps, deps(w));
+  const ids = "abcdefghij".split("").map((c, i) => w.player("pc" + c, i === 0 || i === 7 || i === 8 ? "Crowd" + c.toUpperCase() : undefined));
+  const f0 = w.seek(ids[9]);   /* a friendly seeker: its word is none, and it is not in any ranked count */
+  if(f0.state !== "waiting" || f0.looking !== "none") bad.push("a lone friendly seeker was not told nobody else is looking (own seek counted?): " + JSON.stringify(f0));
+  const first = w.seek(ids[0], {ranked: true});
+  if(first.state !== "waiting") return bad.concat(["the first ranked seeker did not wait: " + JSON.stringify(first)]);
+  if(first.looking !== "none") bad.push("a lone ranked seeker was not told nobody else is looking: " + JSON.stringify(first));
+  const park = i => w.sk.q.set(ids[i].id, {table: "ZZCW" + i, ranked: true, born: 100 + i, at: w.sk.clock, seen: w.sk.clock, taken: false});
+  const hb = () => w.seek(ids[0], {ranked: true, table: first.table});
+  park(1);
+  const one = hb();
+  if(one.state !== "waiting" || one.looking !== "one") bad.push("one other ranked seeker was not 'one': " + JSON.stringify(one));
+  park(2); park(3); park(4);   /* 4 others -> few (2..4) */
+  const few = hb();
+  if(few.looking !== "few") bad.push("four others were not 'few': " + JSON.stringify(few));
+  park(5);                      /* 5 others -> many */
+  const many = hb();
+  if(many.looking !== "many") bad.push("five others were not 'many': " + JSON.stringify(many));
+  /* a friendly seeker is another kind: the ranked crowd is not theirs */
+  const f1 = w.seek(ids[9], {table: f0.table});
+  if(f1.looking !== "none") bad.push("a friendly seeker counted ranked seekers: " + JSON.stringify(f1));
+  /* stale seeks (not seen for the ttl) are not counted; the waiter's own heartbeat keeps it live */
+  w.sk.clock += (server.SEEK_TTL + 5) * 1000; w.sk.q.get(ids[0].id).seen = w.sk.clock - 1000;
+  const stale = hb();
+  if(stale.looking !== "none") bad.push("stale seeks were counted: " + JSON.stringify(stale));
+  /* a taken seek is not looking: the matched answer and the owner's 'taken' carry no word */
+  const m = w.seek(ids[8], {ranked: true});
+  if(m.state !== "matched" || "looking" in m) bad.push("a matched answer carried the word: " + JSON.stringify(m));
+  const tk = hb();
+  if(tk.state !== "taken" || "looking" in tk) bad.push("a taken answer carried the word: " + JSON.stringify(tk));
+  /* nonsense, a failure or a missing count leaves the word out and never fails the seek */
+  for(const [what, f] of [["throws", () => { throw new Error("boom"); }], ["nonsense", () => ({friendly: -3, ranked: 0})], ["fractional", () => ({friendly: 1.5, ranked: 0})], ["none", () => null]]){
+    const w2 = world(server, {salt: "crowd2" + what, seek: so}); w2.deps.seekCount = f;
+    const got = w2.seek(w2.player("px"));
+    if(!got.ok || got.state !== "waiting" || "looking" in got) bad.push("a " + what + " count did not leave the word out: " + JSON.stringify(got));
+  }
+  const w3 = world(server, {salt: "crowd3", seek: so}); delete w3.deps.seekCount;
+  const g3 = w3.seek(w3.player("pq"));
+  if(!g3.ok || g3.state !== "waiting" || "looking" in g3) bad.push("no count dependency broke the seek or told a word: " + JSON.stringify(g3));
+  return bad;
+}
+test("(11) who else is looking: an approximate word (none/one/few/many) for other live seeks of the same kind; own and stale excluded; never on match or taken", async () => {
+  assert.deepEqual(crowdFailures(SERVER), []);
+  assert.ok(probe(() => crowdFailures(loadServer([["(ranked ? c.ranked : c.friendly) - 1", "(ranked ? c.ranked : c.friendly)"]]))).length > 0, "sabotage (own seek counted) must fail");
+  assert.ok(probe(() => crowdFailures(loadServer([["(ranked ? c.ranked : c.friendly) - 1", "(ranked ? c.friendly : c.ranked) - 1"]]))).length > 0, "sabotage (kinds mixed) must fail");
+  assert.ok(probe(() => crowdFailures(loadServer([["n <= 4 ? \"few\"", "n <= 3 ? \"few\""]]))).length > 0, "sabotage (few boundary moved) must fail");
+  assert.ok(probe(() => crowdFailures(loadServer([["n === 1 ? \"one\"", "n === 2 ? \"one\""]]))).length > 0, "sabotage (one boundary moved) must fail");
+  assert.ok(probe(() => crowdFailures(loadServer([["try { const r = deps.seekCount(SEEK_TTL); return isP(r) ? r.then(ok, () => null) : ok(r); } catch(_){ return null; }", "const r = deps.seekCount(SEEK_TTL); return isP(r) ? r.then(ok) : ok(r);"]]))).length > 0, "sabotage (a failing count fails the seek) must fail");
+  assert.ok(probe(() => crowdFailures(loadServer([["fin({ok: true, state: \"taken\", table: a.table, beat: SEEK_BEAT})", "fin({ok: true, state: \"taken\", table: a.table, beat: SEEK_BEAT, looking: \"none\"})"]]))).length > 0, "sabotage (told on taken) must fail");
+  assert.ok(probe(() => crowdFailures(SERVER, {}, () => ({seekCount: () => ({friendly: 99, ranked: 99})}))).length > 0, "sabotage (the queue counts everyone) must fail");
+  assert.ok(probe(() => crowdFailures(SERVER, {noAge: true}, w => ({seekCount: () => w.sk.count(1e9)}))).length > 0, "sabotage (stale seeks counted) must fail");
+  const w = world(SERVER, {salt: "crowdasync"}); w.deps.seekCount = () => Promise.reject(new Error("boom"));
+  const out = await SERVER.handle({op: "seek", identity: {token: w.player("pz").tok}}, w.deps);
+  assert.ok(out.ok && out.state === "waiting" && !("looking" in out), "a rejecting count must not fail the seek: " + JSON.stringify(out));
 });
