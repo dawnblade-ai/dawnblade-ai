@@ -2654,13 +2654,17 @@ const Sfx = (() => {
     blocked:   (c, t, o) => { tone(c, t, "triangle", 620, 600, 0.14, 0.45, o); tone(c, t, "square", 1480, 1440, 0.07, 0.12, o); noise(c, t, 0.03, "highpass", 3200, 0.35, o); },
     prevented: (c, t, o) => { tone(c, t, "sawtooth", 640, 130, 0.38, 0.16, o); const f = noise(c, t, 0.42, "bandpass", 2400, 0.3, o); f.frequency.exponentialRampToValueAtTime(500, t + 0.42); }
   };
+  /* a CUE is not a link's outcome (the drill holds VOICE to those three): the match-found chime, two rising notes, bright and short */
+  const CUES = {
+    found: (c, t, o) => { tone(c, t, "sine", 660, 664, 0.16, 0.5, o); tone(c, t + 0.17, "sine", 880, 884, 0.26, 0.5, o); tone(c, t + 0.17, "triangle", 1320, 1326, 0.2, 0.12, o); }
+  };
   return {
     kinds: Object.keys(VOICE),
     get on(){ return on; },
     set(v){ on = !!v; store.set("sound", on); if(on) ensure(); else if(ctx && ctx.suspend) ctx.suspend().catch(()=>{}); },
     play(kind){
-      const c = VOICE[kind] && ensure(); if(!c) return false;
-      try{ const m = c.createGain(); m.gain.value = 0.6; m.connect(c.destination); VOICE[kind](c, c.currentTime + 0.01, m); return true; }catch(e){ return false; }
+      const v = VOICE[kind] || CUES[kind], c = v && ensure(); if(!c) return false;
+      try{ const m = c.createGain(); m.gain.value = 0.6; m.connect(c.destination); v(c, c.currentTime + 0.01, m); return true; }catch(e){ return false; }
     }
   };
 })();
@@ -7910,9 +7914,25 @@ function SrvLadder({wire, who}){
 }
 
 /* FIND A MATCH's two small words (SERVER S6.1): the waiting clock, and how many players are in the queue */
-/* the match is found: a short buzz where the phone has one, and the tab's title says so for a few seconds (a player who looked away comes back) */
-const seekFound = () => { try{ if(navigator.vibrate) navigator.vibrate([90,60,90]); }catch(_){}
-  try{ const t0 = document.title; if(/Opponent found/.test(t0)) return; document.title = "Opponent found! · "+t0; setTimeout(()=>{ if(/^Opponent found! · /.test(document.title)) document.title = t0; }, 5000); }catch(_){} };
+/* THE MATCH IS FOUND (QUEUE 3): a chime (the sound toggle's), a short buzz where the phone has one, and the tab's title says so.
+   Practising when it lands: the title flashes "Match found!" against the real title while the tab is hidden, until the player takes the
+   match or leaves, and gives up when the two-minute window is over. Otherwise (seated at once) the title says it for a few seconds. */
+let seekAlertH = null;
+const seekAlertStop = () => { const a = seekAlertH; seekAlertH = null; if(!a) return; clearInterval(a.h); clearTimeout(a.cap); document.removeEventListener("visibilitychange", a.vis);
+  try{ document.title = a.t0; }catch(_){} };
+const seekFound = (flash) => { try{ if(navigator.vibrate) navigator.vibrate([90,60,90]); }catch(_){}
+  try{ Sfx.play("found"); }catch(_){}
+  try{
+    if(flash){
+      if(seekAlertH) return;                       /* once per found match */
+      const t0 = document.title, win = (window.SERVER_TABLE && window.SERVER_TABLE.alertMs) || 120000; let on = false;
+      const tick = () => { document.title = document.hidden ? ((on = !on) ? "Match found! · Dawnblade" : t0) : (on = false, t0); };
+      const vis = () => { if(document.hidden) tick(); else { on = false; document.title = t0; } };
+      document.addEventListener("visibilitychange", vis);
+      seekAlertH = {t0, vis, h: setInterval(tick, 1000), cap: setTimeout(seekAlertStop, win)}; tick(); return;
+    }
+    const t0 = document.title; if(/Opponent found/.test(t0)) return; document.title = "Opponent found! · "+t0; setTimeout(()=>{ if(/^Opponent found! · /.test(document.title)) document.title = t0; }, 5000);
+  }catch(_){} };
 const clockOf = ms => { const t = Math.max(0, Math.floor(ms/1000)); return Math.floor(t/60)+":"+String(t%60).padStart(2,"0"); };
 const lookLine = (l, rk) => { const n = rk===true ? l.ranked : rk===false ? l.friendly : l.friendly+l.ranked;
   return n===1 ? "1 player is looking for a match right now." : n+" players are looking for a match right now."; };
@@ -7966,6 +7986,8 @@ function TableScreen({onBack, onSeated, again, away, onPlayAI, typ, onTyp}){
   const [ready,setReady] = uS(null);
   const deliver = s => { if(awayRef.current) setReady(s); else onSeated(s); };
   uE(()=>{ if(!away && ready){ const s = ready; setReady(null); onSeated(s); } },[away, ready]);
+  uE(()=>{ if(!ready) seekAlertStop(); },[ready]);
+  uE(()=>()=>seekAlertStop(),[]);
   uE(()=>()=>{ live.current = false; const w = waitRef.current; waitRef.current = null; if(w){ try{ w.ch.close(); }catch(_){} } },[]);
 
   const PHRASE = {
@@ -8166,7 +8188,7 @@ function TableScreen({onBack, onSeated, again, away, onPlayAI, typ, onTyp}){
         onStatus: s=>{ if(live.current) setStat("srv-"+s); }
       }).then(ch=>{
         if(!live.current){ ch.close(); return; }
-        setCode(ch.code); seekFound(); deliver({table: ch, host:false, code: ch.code, judged: {seat: ch.seat, key: null, srv: true}});
+        setCode(ch.code); seekFound(awayRef.current); deliver({table: ch, host:false, code: ch.code, judged: {seat: ch.seat, key: null, srv: true}});
       }).catch(e=>{
         if(!live.current) return;
         /* the table filled or closed on the way there: look again */
@@ -8184,13 +8206,13 @@ function TableScreen({onBack, onSeated, again, away, onPlayAI, typ, onTyp}){
     k.table = a.table;
     DawnServerTable.sitAt({transport: srvWire(), keep: store, code: a.table, identity: srvWho, role: "creator", tune: {pollMs: 20000, fallbackMs: 2000},
       onStatus: s=>{ if(!live.current) return;
-        if(s==="seated" && waitRef.current && waitRef.current.seek===k){ const w = waitRef.current; waitRef.current = null; seekStop(); seekFound(); w.go(); } }
+        if(s==="seated" && waitRef.current && waitRef.current.seek===k){ const w = waitRef.current; waitRef.current = null; seekStop(); seekFound(awayRef.current); w.go(); } }
     }).then(ch=>{
       if(!live.current){ ch.close(); return; }
       if(seekRef.current!==k){ try{ ch.close(); }catch(_){} return; }
       setCode(ch.code);
       const go = () => deliver({table: ch, host:false, code: ch.code, judged: {seat: ch.seat, key: null, srv: true}});
-      if(ch.peerHeard()){ seekStop(); seekFound(); return go(); }
+      if(ch.peerHeard()){ seekStop(); seekFound(awayRef.current); return go(); }
       waitRef.current = {ch, go, seek: k};
       setStat("srv-seeking"); beat();
     }).catch(seekFail);

@@ -1398,6 +1398,53 @@ async function toServerChooser(page){
     row(bad.length === 0 && k.wd.errors.length === 0, "waiting: no page error and no internal error", bad.concat(k.wd.errors).join(" | ").slice(0, 200));
     await k.kA.close(); await k.kB.close();
   }
+  /* K1b2: MATCH FOUND WHILE PRACTISING MUST NOT GO UNNOTICED (QUEUE 3). A hears a short chime and feels a buzz ONCE when the banner lands, and while the tab
+     is hidden its title flashes "Match found!" against the real one; never for the practice game's own events, never while only looking; the flash ends
+     when the window is over or the match is taken, and the real title comes back exactly. The probes wrap Sfx.play and navigator.vibrate in the page. */
+  for (const how of ["expire", "take"]) {
+    const k = await seekKit("alert-" + how), P = how + ": ";
+    await k.A.evaluate(ms => { window.SERVER_TABLE.quietMs = 3500; window.SERVER_TABLE.alertMs = ms;
+      window.__found = 0; window.__plays = []; window.__buzz = 0; const pl = Sfx.play; Sfx.play = kind => { window.__plays.push(kind); if(kind === "found") window.__found++; return pl.call(Sfx, kind); };
+      navigator.vibrate = () => { window.__buzz++; return true; }; }, how === "expire" ? 4000 : 120000);
+    const base = await k.A.title();
+    const hid = h => k.A.evaluate(h => { Object.defineProperty(document, "hidden", { configurable: true, get: () => h }); document.dispatchEvent(new Event("visibilitychange")); }, h);
+    const sample = async (n, gap) => { const t = []; for (let i = 0; i < n; i++) { t.push(await k.A.title()); await wait(gap); } return t; };
+    await toFirst(k.A); await toFirst(k.B);
+    row(await k.A.evaluate(() => window.__found === 0 && window.__buzz === 0), P + "first screen: nothing sounds while a player only looks");
+    await click(k.A, k.A.locator('[data-testid="seek-open"]'), "A: find a match");
+    await k.A.waitForSelector('[data-testid="seek-play-ai"]', { timeout: 12000 }).catch(() => {});
+    row(await k.A.evaluate(() => window.__found === 0 && window.__buzz === 0) && await k.A.title() === base, P + "waiting alone: no chime, no buzz, title untouched");
+    await click(k.A, k.A.locator('[data-testid="seek-play-ai"]'), "A: play the AI while waiting");
+    await k.A.locator(".hcard").first().click(); await k.A.locator(".battlebtn").first().click();
+    await k.A.waitForFunction(() => /throw|first|coin|who goes/i.test(document.body.innerText) && !document.querySelector('[data-testid="wait-bar"]'), null, { timeout: 8000 }).catch(() => {});
+    /* the AI game's own events: let the practice game run a while and play its outcome sounds; the found cue must not be among them */
+    await k.A.evaluate(() => { Sfx.play("hit"); Sfx.play("blocked"); Sfx.play("prevented"); }); await wait(1200);
+    row(await k.A.evaluate(() => window.__found === 0 && window.__buzz === 0 && window.__plays.length >= 3) && await k.A.title() === base, P + "the practice game's own sounds are not the match chime, no buzz, title untouched");
+    await hid(true); await wait(2200);
+    row((await k.A.title()) === base && await k.A.evaluate(() => window.__found === 0), P + "hidden with no match: the title does not flash");
+    await click(k.B, k.B.locator('[data-testid="seek-open"]'), "B: find a match");
+    await k.A.waitForSelector('[data-testid="match-ready"]', { timeout: 15000 }).catch(() => {});
+    const t = await sample(7, 450);
+    row(await k.A.evaluate(() => window.__found === 1 && window.__buzz === 1), P + "the banner brings one chime and one buzz", JSON.stringify(await k.A.evaluate(() => [window.__found, window.__buzz])));
+    row(t.includes("Match found! · Dawnblade") && t.includes(base) && t.every(x => x === base || x === "Match found! · Dawnblade"), P + "hidden: the title flashes Match found! against the real title", JSON.stringify(t));
+    await hid(false); await wait(1600);
+    row(await k.A.title() === base && await k.A.evaluate(() => window.__found === 1), P + "back on the tab: the real title returns and stays, still one chime");
+    await hid(true);
+    if (how === "expire") {
+      await wait(4500);
+      const a = await sample(4, 600);
+      row(a.every(x => x === base) && (await boxes(k.A, '[data-testid="match-ready"]')).length === 1, P + "the window over: the flashing has stopped, the real title is back, the banner stands", JSON.stringify(a));
+      row(await k.A.evaluate(() => window.__found === 1 && window.__buzz === 1), P + "the window over: no second chime or buzz");
+    } else {
+      await wait(1100);
+      await click(k.A, k.A.locator('[data-testid="match-take"]'), "A: join them");
+      const upA = await lobbyUp(k.A), upB = await lobbyUp(k.B);
+      const a = await sample(4, 600);
+      row(upA && upB && a.every(x => x === base), P + "taking the match: the flashing stops at once and the real title is back exactly", JSON.stringify(a));
+      row(await k.A.evaluate(() => window.__found === 1 && window.__buzz === 1), P + "taking the match: still one chime and one buzz");
+    }
+    await k.kA.close(); await k.kB.close();
+  }
   /* K1c: THE USUAL WAIT. A waiting seeker is told how long players usually wait — only when the server had 5+ completed seeks to say (011_seek_wait.sql);
      with none the card says nothing; the line is plain, inside the screen, and goes when the search is over */
   {
