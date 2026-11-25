@@ -274,7 +274,7 @@ test("which SOURCE FILE each slice reads is pinned, or the resolver is unwatched
        `dummyDefence` body (anchored at its declaration, bounded at its own closing `  };`)
        against the table's cap, and source-scans `endPhaseCF` -> `afterArsenal` (its next
        declaration) for CR 4.4.3d's untap. */
-    "index.html": 44,
+    "index.html": 45,
     "engine/build.js": 1,
     /* +2 AT v4.59, READ FIRST: `dichotomy.test.js` pins that `buildPrompt`
        names the new `filters` field (v2.34's rule, ninth field) and that
@@ -562,6 +562,7 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        rows: still the hand door, bounded at the arsenal door. It SHRANK —
        the charge, the resolution and the wall are `effects.playAtSpeed` now. */
     "priority.test.js index.html 8982",
+    "pvprecord.test.js index.html 8969",
     "routeap.test.js index.html 27318",
     "rxability.test.js index.html 27318",
     "rxability.test.js index.html 8982",

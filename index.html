@@ -9664,6 +9664,16 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
   uE(()=>{ if(!over || !local || !them.heroKey || counted.current === over) return;
            counted.current = over;
            DawnLocal.recordResult(lsGet, them.heroKey, !!match.sharp, over, mySeat, me.heroKey); },[g.over]);
+  /* THE RECORD AGAINST A PERSON (worker AF). A finished friendly or direct table game counts once on this phone,
+     filed by hero on both sides (never a name). The ref stops a re-render; the game's id, kept in the record
+     itself, stops a rejoin, a reload or a replayed end state. A ranked game is left to the server's Ranked card, so
+     nothing shows twice; the judge's device runs JudgeRoom, never this board. */
+  const ranked = !!(srvRank.ranked || (judged && judged.seek && judged.seek.ranked));
+  const countedPvp = uR(null);
+  uE(()=>{ if(!over || local || ranked || countedPvp.current === over) return;
+           countedPvp.current = over;
+           const sp = match.spec || {};
+           DawnLocal.recordPvp(lsGet, them.heroKey, over, mySeat, me.heroKey, [code, sp.seedC, sp.seedG].join("|")); },[g.over]);
 
   const targets = DawnJudge.targets(g, 1-mySeat, them.heroCard);
   const [tgt,setTgt] = uS(null);
@@ -10555,6 +10565,10 @@ function YourRecord(){
   /* the same games by the hero YOU played; the "unknown" bucket (older games) is never a row */
   const mineRows = HEROES.map(h=>{ const c = rec.mine[h.k]; return c ? {h, c, n:c.w+c.l+c.d} : null; })
     .filter(x=>x && x.n>0).sort((a,b)=>b.n-a.n || (a.h.k<b.h.k?-1:1));
+  /* games against PEOPLE, by the hero you played (the same reading as Your heroes), kept apart from the AI's */
+  const pvpRows = HEROES.map(h=>{ const c = rec.pvp.mine[h.k]; return c ? {h, c, n:c.w+c.l+c.d} : null; })
+    .filter(x=>x && x.n>0).sort((a,b)=>b.n-a.n || (a.h.k<b.h.k?-1:1));
+  const pvpAll = recSum(pvpRows.map(x=>x.c));
   const clears = HEROES.filter(h=>best[h.k]!=null);
   return <div data-testid="record-page">
     <div className="sheet clip">
@@ -10568,6 +10582,11 @@ function YourRecord(){
       {mineRows.length>0 && <>
         <h3 className="fs-h2s" style={{marginTop:12}}>Your heroes</h3>
         {mineRows.map(x=><div key={x.h.k} className="statrow" data-testid="record-mine-row" style={{justifyContent:"space-between"}}>
+          <span>{x.h.n} <span className="mono">×{x.n}</span></span><b className="mono" aria-label={recLine(x.c)}>{x.c.w}–{x.c.l}{x.c.d ? "–"+x.c.d : ""}</b></div>)}</>}
+      {pvpRows.length>0 && <>
+        <h3 className="fs-h2s" style={{marginTop:12}}>Against people</h3>
+        <p className="fs-lede" data-testid="record-pvp-total">{recLine(pvpAll)} in all. Friendly and direct tables; ranked games are under Ranked.</p>
+        {pvpRows.map(x=><div key={x.h.k} className="statrow" data-testid="record-pvp-row" style={{justifyContent:"space-between"}}>
           <span>{x.h.n} <span className="mono">×{x.n}</span></span><b className="mono" aria-label={recLine(x.c)}>{x.c.w}–{x.c.l}{x.c.d ? "–"+x.c.d : ""}</b></div>)}</>}
       <h3 className="fs-h2s" style={{marginTop:12}}>The Dummy</h3>
       {clears.length===0 ? <p className="fs-lede">No clears logged yet. Train against the Dummy to set one.</p>
