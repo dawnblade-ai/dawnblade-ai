@@ -3332,4 +3332,55 @@ curl the page until it serves the new APP_VER, THEN `livecheck.js`.
 
 ---
 
+## Superseded handoff (archived 2026-11-25 by CEO session_013xG9x8sybtytAYZSGDYiE1)
+
+## HANDOFF — START HERE (CEO session_013xG9x8sybtytAYZSGDYiE1 took over 2026-11-24 late, at v6.93; previous CEO session_013xG9xBhp1ZDNBkoYpUuM35)
+
+**DIRECTION (user, 2026-11-24, standing): the AI logic is on the BACK BURNER**; lead with **graphical UI / UX polish and
+matchmaking**. Do not open AI-strength probes. A card that plays wrong is still a bug: fix it.
+
+**State:** live = **v6.97** on `main`. Function `table` v146 = `v6.97 · sage-v19`, stamped; **livecheck ALL PASS**. SQL **001..012** on the
+project (012 `ladder_get` + `mine`, run 2026-11-25). WIRE_V 49, DATA_VER sage-v19, 17 heroes. Gates at v6.96: npm test 4608/4603/0/5,
+page.js 219/219, serverpage 437/0. Weekly sweep workflow (`tapsweep-weekly.yml`) first run (by hand, 2026-11-25) SUCCESS in 20 min.
+**WORKERS OUT (Sonnet):** (W server-screen contrast DONE -> v6.97) · X `session_013xG9xAY7oyHzHXwYybp97V`
+the found-match window: countdown, *Not now*, expiry, the other side re-seeks (TASK-X; may need SQL 013). Next letter: **Y**.
+
+**CEO session_013xG9x8 (v6.94-v6.96, workers S T U V):** v6.94 (U) WCAG AA contrast measure `tools/contrast.js` in the tap sweep,
+fixed in tokens (`--r` darker, new text inks `--rt`/`--bt`, `--fs-xs` 10px) · v6.95 (S) trainer drill door `?drill=1` ->
+`window.__battle`, `promptsweep --trainer` 612/612, weekly CI · v6.96 (T+V) found-match chime + hidden-tab title flash; *Your last
+ranked games* on the Ladder (SQL 012) · v6.97 (W) contrast rows on the server screens; `--rt` -> #F5817B. Merging tip: S/U/V each repin slicecensus's phasebar slice — they ADD (95030 +288 +472).
+
+**Previous CEO (seven releases, workers O P Q R; briefs experiments/WORKER-PROMPT-UI.txt + experiments/ui/TASK-*.txt):**
+- **v6.87** (P) Leave takes the rematch ask back; table-cap line; `tools/rematchprobe.js` in livecheck + Deno rehearsal.
+- **v6.88** (O) practice grid tidy while *Still looking*; `tools/perf-practice.js`: the heartbeat costs nothing measurable at 4x.
+- **v6.89** (Q) *Players usually find a match in about N s*: 011 `seek_wait_log` (kind+seconds only) + `seek_wait_stats`
+  (median of 24 h, n>=5, else nothing); rides the seek answer. **Any new LIVE seek probe must delete its own row** (livecheck's
+  `probeWaitQuery`, pinned by test/livecheckwait.test.js).
+- **v6.90** (P) Close a full table right on the rematch screen, then *Ask again* (`servertable.closeOwn`).
+- **v6.91** (Q+P) the typical wait on the practice bar; **index.html now has 4 text/babel blocks** (script0 · trainer ·
+  server UI · App+mount LAST); html-balance caps each at 450k (Babel's 500k note crashes the drives). Top-level statements use
+  only EARLIER blocks' names; new components go in the small blocks.
+- **v6.92** (R) `tools/promptsweep.js` (real games, every hero, 393+320): opt/arrows/tags to 44 px / xs; the zoom modal above
+  sheets; the jump row's 43 px was REAL (border), now 45. O's audit: no feed line speaks to "you" (pin 19 is all prompts/refusals).
+- **v6.93** (R) `promptsweep --inject`: all 8 prompt kinds x 17 heroes x 393/320 forced via real specs (612 sheets); a 4-option
+  soak at 320 pushed CONFIRM off screen -> the sheet's list scrolls. page.js drill (153 screens).
+
+**NEXT — UI/UX and matchmaking (each a release of its own):**
+1. **A real-iPhone pass** (DESKTOP-TASKS.md) — now also: Leave withdrawing a rematch ask, the cap's Close + Ask again, the
+   typical-wait line on the seek card and the practice bar, the prompt sheets at 320 (iPhone SE).
+2. The **trainer** prompt sheets: `--inject` covers the TABLE only (the trainer's state is not on window); expose it or inject
+   through Battle, then sweep all 17 heroes.
+3. **Match found while practising:** the banner is silent — a short sound (sound is ON by default) + the tab title flashing,
+   so a player in another tab or looking away does not miss the 2-minute window. Measure it does not fire for the AI game.
+4. **Readability sweep:** text contrast (WCAG AA) and minimum sizes on every screen in BOTH themes at 393/320 — tools/page-audit.js
+   is the base; fix in the CSS tokens, not per element.
+5. **Ladder / profile polish:** a player's own last ranked games (heroes, result, rating change) on the Ladder screen — data
+   already in `recent`/`you`; no new table without a reason.
+6. **Small:** `tools/promptsweep.js` and `tools/tapsweep.js` are by-hand tools — consider a weekly CI job (no live wire).
+
+**ASK THE USER (defaults standing — overrule any):** the cup (all heroes qualify, top 16 bracket); Prism as an AI seat; Spectra
+resolves at once; Prism's block named "Usurp the Shadow Throne"; hero select 6 across; sound ON; Find a match open to every
+phone that can reach the server (ranked needs a name); *Find another match* keeps the kind; the honest lines live in a sheet.
+NEW: a **rematch goes back to hero pick** (heroes are not kept), each player has **2 minutes** to say yes; the ranked window
+**opens fully at 3 minutes**; *Play the AI while you wait* appears after **1 minute**.
 
