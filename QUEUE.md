@@ -4,48 +4,45 @@
 answered NEEDS-A-RULING notes are in `QUEUE-ARCHIVE.md` on this branch (grep it, don't read it). History lives in
 CHANGELOG.md (v6.30 on; older in `docs/archive/CHANGELOG-to-v6.29.md`) and LESSONS.md on main.
 
-## HANDOFF — START HERE (CEO session_013xG9xAX44vpAEVDHqYmyye, 2026-11-25, at v7.04)
+## HANDOFF — START HERE (CEO session_013xG9x9DXLn3m3oYiBkfzrH, 2026-11-25, at v7.05)
 
 **DIRECTION (user, 2026-11-24, standing): the AI logic is on the BACK BURNER**; lead with **graphical UI / UX polish and
 matchmaking**. Do not open AI-strength probes. A card that plays wrong is still a bug: fix it.
 
-**SHIPPED THIS CEO (two Sonnet workers in parallel, joined by the CEO; old NEXT 2, 3):**
-- **v7.03** — *Who else is looking* (worker AE): a waiting seek answer carries `looking` = none|one|few(2-4)|many(5+)
-  (other live untaken seeks of the same kind, from SQL 009's `seek_count` minus your own; server/referee.js
-  `crowdWord`). The seek card says it in words, never a number; on "none" it offers *Play the AI while you wait* at
-  once. No SQL, WIRE_V unchanged. NOTE: a friendly seeker hears "nobody" almost always BY CONSTRUCTION (another untaken
-  friendly seek would have matched); the bigger words show only for ranked seekers outside each other's window.
-- **v7.04** — *Against people* (worker AF): `engine/local.js` record `v:3` = v2 + `pvp:{mine,foes,seen}`; TableBoard
-  records a finished friendly/direct game once per phone (game id = table|seedC|seedG kept in `seen`, last 40); ranked
-  NOT recorded locally (the Ranked card has it). Record tab: *Against people* (total + rows by the hero you played).
-- Gates (CEO side, both): npm test 4614/4609/0/5 (v7.03), 4623/4618/0/5 (v7.04); babel 4/4; page.js 299/299 then
-  302/302; serverpage 490/0 both; Deno rehearsal ALL PASS. Function `table` v158 = v7.03, v160 = `v7.04 · sage-v19`,
-  stamped; livecheck ALL PASS both. CI `drills` on the v7.04 stamp commit was still running at handoff: glance at it.
-  DESKTOP-TASKS two-iPhone pass: step 10 added.
+**SHIPPED THIS CEO (CEO alone, no workers):**
+- **v7.05** — *Against whom?* (old NEXT 3): a button under *Against people* on the Record tab lists the same games by the
+  hero ACROSS the table (`pvp.foes`), "vs <hero> ×n W–L(–D)"; tap again hides. Page only. page.js row extended (hidden
+  before the tap, one row, fits 393, 44 px); sabotage (read `pvp.mine`) FAILS it (301/302), restored.
+- Gates: npm test 4623/4618/0/5; babel 4/4; page.js 302/302; serverpage 490/0 (611 s). Function `table` v162 =
+  `v7.05 · sage-v19`, stamped; livecheck ALL PASS. CI `drills` green on the v7.04 stamp (v7.05's was running at handoff).
+- Housekeeping: CLAUDE.md's doc map now lists `HIDDEN-HANDS.md` (cited by six engine modules, was missing).
+  DESKTOP-TASKS step 10 gains the v7.05 tap. `seek_wait_log` re-queried: still **0 rows** (2026-11-25 evening).
 
-**State:** live = **v7.04** on `main`. WIRE_V 49, DATA_VER sage-v19, 17 heroes. **WORKERS: NONE** (AE, AF idle; their
-ship/ branches are merged — the CEO's delete push was refused, leave them). SQL unchanged (001..012).
-`seek_wait_log` re-queried 19:40 UTC: still **0 rows**. Weekly sweep Mondays 06:17 UTC — glance at Monday's run.
+**State:** live = **v7.05** on `main`. WIRE_V 49, DATA_VER sage-v19, 17 heroes. **WORKERS: NONE.** SQL unchanged
+(001..012). 70 merged `ship/` branches remain on origin (delete pushes are refused; leave them). Weekly sweep Mondays
+06:17 UTC — glance at Monday's run.
 
-**NEXT (each a release of its own):**
-1. **Matchmaking — SQL 013 (keep the queue place on a give-back): STILL NOT YET** (0 rows). Re-query before building:
-   `select ranked, count(*), max(at) from public.seek_wait_log group by ranked`.
-2. **Presence ("phones on the Find screen"), so the friendly wait can ever say more than "nobody"** — AE's finding. A
-   heartbeat needs SQL (a tiny `presence` table or a `seen_at` on players, TTL'd) and a ruling-light default: same
-   approximate buckets, never names. Only worth it if the user wants it — ask; until then the honest "nobody" stands.
-3. **Show the by-opponent-hero pvp counts** (`pvp.foes` is stored, not shown) — e.g. a tap on *Against people* opens
-   "against whom"; tiny UI release.
-4. serverpage's SMALL advisory still lists 9 px texts ("Who are you up against?", `.fname`) — harmless at floor 9.
-5. Ask the user to walk the real-iPhone pass (DESKTOP-TASKS.md two-iPhone section, steps 1–10) when they have two phones.
+**NEXT (each a release of its own; ranked by what a player would notice per hour of work):**
+1. **Keep the screen awake at a table** (`navigator.wakeLock.request("screen")` while a table/trainer game is mounted,
+   released on leave/visibility; iOS Safari 16.4+; silently nothing where unsupported). A phone dimming mid-turn is real.
+2. **Share the table code** with the phone's share sheet (`navigator.share`, falling back to the existing clipboard copy)
+   on the direct-table host screen. Friends are the matchmaking we have while the queue is empty.
+3. **Your record on the hero tiles**: a small "×n · W–L" chip on each hero in the grid from `rec.mine` + `rec.pvp.mine`
+   (nothing when 0). Pure read; watch the tile width at 320.
+4. **End-of-game recap**: turns, damage dealt/taken, biggest hit, cards played — from state/traces, both boards, never
+   feed prose. Medium; the most visible polish left. Design it in a task file first.
+5. **Add to Home Screen**: a static `manifest.webmanifest` + icons (`display: standalone`), no build step; check iOS
+   standalone does not break PeerJS/Supabase or `file://` (manifest is ignored there).
+6. **Matchmaking SQL 013: STILL NOT YET** (0 rows): `select ranked, count(*), max(at) from public.seek_wait_log group by ranked`.
+7. **Presence** for the friendly wait (AE's finding): needs SQL + a user yes. Ask; until then the honest "nobody" stands.
+8. serverpage's SMALL advisory 9 px texts — harmless at floor 9. Real-iPhone pass (DESKTOP-TASKS steps 1–10) when the
+   user has two phones.
 
-**ASK THE USER (defaults standing — overrule any):** all earlier defaults stand (QUEUE-ARCHIVE.md). NEW this CEO: the
-wait word is approximate buckets only (none/one/few/many, "many" at 5+ others); the lonely nudge + AI button shows at
-once when nobody else is looking; ranked games are not kept in the local record (Ranked card shows them); *Against
-people* rows are by the hero YOU played; record v3 is not readable by an older build (matters only on a downgrade).
+**ASK THE USER (defaults standing — overrule any):** all earlier defaults stand (QUEUE-ARCHIVE.md). NEW: *Against whom?* is
+behind a tap (not always shown) to keep the Record page short; rows say "vs <hero>". Presence (NEXT 7) waits on a yes.
 
-**How to run the shop:** unchanged — the v6.99 handoff's "How to run the shop" in QUEUE-ARCHIVE.md. Worked well this
-CEO: two parallel workers on disjoint files; join one at a time onto updated main (merge, bump APP_VER, CHANGELOG, npm
-test, babel, page.js + serverpage chained in ONE background command ~17 min, push, curl until Pages serves the APP_VER,
-`tools/supabase-deploy.js` — DEPLOYED.json lives at `server/supabase/DEPLOYED.json` — commit, push, livecheck).
-`engine/local.js` is in the function bundle: a record change needs a redeploy too. Workers = Sonnet via create_session
-with `experiments/WORKER-PROMPT-UI.txt` (edit the CEO session id in it). Next letter: **AG**.
+**How to run the shop:** unchanged — QUEUE-ARCHIVE.md (the v6.99 and v7.04 handoffs). This CEO: one small release alone
+is cheapest — edit, babel, then npm test → page.js → serverpage chained in ONE background command (~25 min), a sabotage
+page.js run after, push main, curl until Pages serves the APP_VER, `tools/supabase-deploy.js` (--dry-run first; every
+APP_VER bump redeploys, page-only or not), commit DEPLOYED.json, livecheck. For two+ items use parallel Sonnet workers
+(`experiments/WORKER-PROMPT-UI.txt`, edit the CEO session id). Next letter: **AG**.
