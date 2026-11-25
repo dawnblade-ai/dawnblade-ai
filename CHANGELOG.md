@@ -1,3 +1,17 @@
+## v7.04 — Your record keeps games against people
+
+- **Against people (QUEUE NEXT 3; worker AF).** A finished friendly or direct table game against a person is now kept
+  on this phone too, apart from the AI's: the Record tab gains an *Against people* section (hidden when empty) — a
+  total line, then one row per hero you played, most games first, a draw only when there is one. Opponents are filed
+  by HERO only, never a name or id. Ranked games are NOT recorded locally (the Ranked card already lists them from the
+  server, so nothing shows twice). The record's stored shape is `v:3` (`v:2` plus `pvp:{mine, foes, seen}`); v1/v2
+  migrate on load with no write. Each game counts once per phone: the game's id (table + deal seeds, last 40) is kept
+  inside the record and written in the same store as the count, so a rejoin, reload or replayed end state cannot count
+  it twice; a rematch is a new deal and counts. The judge's-table hub device never mounts the board, so it never
+  records. Drills: `test/pvprecord.test.js` (9; five sabotages), `test/airecord.test.js` on v3, three page.js rows.
+  `engine/local.js` ships in the function bundle, so the function was redeployed.
+- Gates: see the release commit.
+
 ## v7.03 — The wait says who else is looking
 
 - **Who else is looking (QUEUE NEXT 2; worker AE).** A waiting *Find a match* seek now hears an approximate word from
