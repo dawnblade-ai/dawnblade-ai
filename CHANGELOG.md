@@ -1,3 +1,19 @@
+## v6.94 — Every word on every screen is readable
+
+- **A contrast measure on the real page (QUEUE item 4, worker U).** New `tools/contrast.js` takes each text element's
+  computed colour (alpha and ancestor opacity folded in) and composites the real background under it (walks up to the
+  first opaque layer; a gradient is judged at its worst stop). WCAG AA: 4.5:1, or 3:1 for large text. The tap sweep
+  runs it on every screen it visits (22 per phone, at 393x852 and 320x568), one `readability` row each; page.js holds a
+  sabotage row (a dimmed roster must be caught). Skipped and counted: disabled controls, text over art, clipped text,
+  glyph-only text.
+- **Before: 12 of 22 screens failed per phone.** Red and blue words on the forge panels read 2.7-3.3:1; bone text on
+  the red buttons 4.18:1. **After: 0 of 22.**
+- **Fixed in the tokens, not per element.** `--r` (fills) #C4302B -> #BA2C27; new text inks `--rt` #EC6560 and `--bt`
+  #6595D2 for red and blue words (every text `color` that read `--r`/`--b` now reads them; fills and borders keep the
+  originals); `--fs-xs` 9px -> 10px. There is one theme, so one pass.
+- **Not yet measured:** the server screens (seek card, practice bar, rematch, ladder) — serverpage.js does not run the
+  sweep. Text under 10 px (literal sizes on mini-card faces and small labels) is reported with `READ_SMALL=1`, not gated.
+
 ## v6.93 — Every prompt kind, every hero, forced onto a small screen
 
 - **`tools/promptsweep.js --inject` (worker R).** The sweep plays a real table game to seat 0's first move. The answer
