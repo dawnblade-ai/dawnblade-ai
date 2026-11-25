@@ -1,3 +1,15 @@
+## v6.97 — The server screens are readable too
+
+- **Contrast on the server screens (worker W).** `tools/serverpage.js` now runs v6.94's contrast judge at 393x852 and
+  320x568 on the hands sheet, the players-looking line, the waiting card and its clock, the usual-wait line, the practice
+  bar while still looking, the match-found banner, the rematch ask / waiting / table-cap Close / Ask again, and the
+  Ladder with and without *Your last ranked games*: 18 `readability` rows and a sabotage row (seek-card text painted the
+  line colour must be caught).
+- **Two fixes.** "Your open tables are full…" read 3.92:1: the red text ink `--rt` #EC6560 -> #F5817B (about 5.1:1;
+  every red word gets a touch lighter). The coin-toss note under the practice game read 4.2:1: its inline opacity .65 -> .8.
+- **Reported, not gated:** text under 10 px on these screens is the board's own small labels showing under the end panel
+  (life, arsenal, card-type badges), not the server screens' copy.
+
 ## v6.96 — A found match you can't miss, and your own ranked history
 
 - **Match found while practising (QUEUE item 3, worker T).** A new `found` cue in the sound module (two rising sine notes,
