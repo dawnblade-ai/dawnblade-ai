@@ -131,6 +131,10 @@ path on two real phones. **About 15 minutes, two phones, both on the live page (
 7. (v6.99) Reload the page: the **title screen** should come first. Try each of its four choices and the *‹ Title* way
    back. *Play the AI* → pick a hero → *Battle*: the next screen should name a random opponent **before** the sideboard,
    and that hero should be the one you then play. *Train against the Dummy* → *Battle* should go straight to the coin.
+8. (v7.00) On the board, the little type word on each card (ATTACK, BLOCK, …) should be readable and sit **above** the
+   power and defense numbers, never over them. On the title, tap *Your record*: your games against the AI should be
+   listed per hero; on a phone that has played a ranked table, *Show my ranked games* should show your rating, a small
+   line of how it moved, and the heroes you played most.
 
 **Report back:** the step that failed (if any), the phones, and whether it was Wi-Fi or mobile data. JUDGE!! files a
 report from either phone.
