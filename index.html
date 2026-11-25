@@ -1220,7 +1220,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "7.04"; /* v7.04 - Your record keeps your friendly and direct games against people too; see CHANGELOG.md. */
+window.APP_VER = "7.05"; /* v7.05 - Your record answers who you played against people, on a tap; see CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -10569,6 +10569,10 @@ function YourRecord(){
   const pvpRows = HEROES.map(h=>{ const c = rec.pvp.mine[h.k]; return c ? {h, c, n:c.w+c.l+c.d} : null; })
     .filter(x=>x && x.n>0).sort((a,b)=>b.n-a.n || (a.h.k<b.h.k?-1:1));
   const pvpAll = recSum(pvpRows.map(x=>x.c));
+  /* the same games by the hero THEY played (pvp.foes); shown on a tap so the page stays short */
+  const whomRows = HEROES.map(h=>{ const c = rec.pvp.foes[h.k]; return c ? {h, c, n:c.w+c.l+c.d} : null; })
+    .filter(x=>x && x.n>0).sort((a,b)=>b.n-a.n || (a.h.k<b.h.k?-1:1));
+  const [whom, setWhom] = useState(false);
   const clears = HEROES.filter(h=>best[h.k]!=null);
   return <div data-testid="record-page">
     <div className="sheet clip">
@@ -10587,7 +10591,12 @@ function YourRecord(){
         <h3 className="fs-h2s" style={{marginTop:12}}>Against people</h3>
         <p className="fs-lede" data-testid="record-pvp-total">{recLine(pvpAll)} in all. Friendly and direct tables; ranked games are under Ranked.</p>
         {pvpRows.map(x=><div key={x.h.k} className="statrow" data-testid="record-pvp-row" style={{justifyContent:"space-between"}}>
-          <span>{x.h.n} <span className="mono">×{x.n}</span></span><b className="mono" aria-label={recLine(x.c)}>{x.c.w}–{x.c.l}{x.c.d ? "–"+x.c.d : ""}</b></div>)}</>}
+          <span>{x.h.n} <span className="mono">×{x.n}</span></span><b className="mono" aria-label={recLine(x.c)}>{x.c.w}–{x.c.l}{x.c.d ? "–"+x.c.d : ""}</b></div>)}
+        {whomRows.length>0 && <button className="bigbtn alt" data-testid="record-whom-btn" aria-expanded={whom} onClick={()=>setWhom(v=>!v)}>{whom ? "Hide who you played" : "Against whom?"}</button>}
+        {whom && whomRows.length>0 && <div data-testid="record-whom">
+          <p className="fs-lede" style={{marginTop:8}}>The same games, by the hero across the table.</p>
+          {whomRows.map(x=><div key={x.h.k} className="statrow" data-testid="record-whom-row" style={{justifyContent:"space-between"}}>
+            <span>vs {x.h.n} <span className="mono">×{x.n}</span></span><b className="mono" aria-label={recLine(x.c)}>{x.c.w}–{x.c.l}{x.c.d ? "–"+x.c.d : ""}</b></div>)}</div>}</>}
       <h3 className="fs-h2s" style={{marginTop:12}}>The Dummy</h3>
       {clears.length===0 ? <p className="fs-lede">No clears logged yet. Train against the Dummy to set one.</p>
         : <p className="fs-lede" data-testid="record-dummy">{clears.length} {clears.length===1?"hero has":"heroes have"} cleared it; Trophies keeps the best clear for each.</p>}

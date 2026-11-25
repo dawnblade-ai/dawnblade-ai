@@ -1,3 +1,12 @@
+## v7.05 — Against whom?
+
+- **Against whom (QUEUE NEXT 3, CEO).** *Against people* on the Record tab gains an *Against whom?* button (shown when a
+  game is kept): a tap lists the same games by the hero ACROSS the table (`pvp.foes`, stored since v7.04, shown now),
+  most games first, "vs <hero> ×n" and W–L(–D); a second tap hides it. Page only: no engine, record shape, wire or SQL
+  change, so the function is not redeployed. Drill: page.js's three *against people* rows tap it (hidden before the tap,
+  one row, fits 393, 44 px tap; the empty records show no button).
+- Gates: see the release commit.
+
 ## v7.04 — Your record keeps games against people
 
 - **Against people (QUEUE NEXT 3; worker AF).** A finished friendly or direct table game against a person is now kept

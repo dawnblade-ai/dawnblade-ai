@@ -930,9 +930,25 @@ if(require.main === module){
             return { rows: rows.map(e => e.innerText.replace(/\s+/g, " ").trim()), fits: rows.every(box),
               total: (document.querySelector('[data-testid="record-pvp-total"]') || {}).innerText || "",
               aiRows: document.querySelectorAll('[data-testid="record-ai-row"]').length,
-              mine: document.querySelectorAll('[data-testid="record-mine-row"]').length };
+              mine: document.querySelectorAll('[data-testid="record-mine-row"]').length,
+              whomBefore: document.querySelectorAll('[data-testid="record-whom-row"]').length,
+              whomBtn: !!document.querySelector('[data-testid="record-whom-btn"]') };
           }, W);
-          const ok = wantSection
+          /* "Against whom?" (v7.05): hidden until tapped, then one row per hero ACROSS the table (pvp.foes) */
+          if (got.whomBtn) {
+            await kr.page.locator('[data-testid="record-whom-btn"]').click();
+            Object.assign(got, await kr.page.evaluate((vw) => {
+              const rows = [...document.querySelectorAll('[data-testid="record-whom-row"]')];
+              const b = document.querySelector('[data-testid="record-whom-btn"]').getBoundingClientRect();
+              return { whom: rows.map(e => e.innerText.replace(/\s+/g, " ").trim()),
+                whomFits: rows.every(e => { const r = e.getBoundingClientRect(); return r.left >= 0 && r.right <= vw && r.height > 0; }),
+                whomTap: b.height >= 44 };
+            }, W));
+          }
+          const whomOk = wantSection
+            ? got.whomBtn && got.whomBefore === 0 && got.whom.length === 1 && /vs Kayo ×7/.test(got.whom[0]) && /4–2–1$/.test(got.whom[0]) && got.whomFits && got.whomTap
+            : !got.whomBtn;
+          const ok = whomOk && wantSection
             ? got.rows.length === 2 && /Viserai/.test(got.rows[0]) && /×4/.test(got.rows[0]) && /3–1$/.test(got.rows[0]) && /Azalea/.test(got.rows[1]) && /1–1–1/.test(got.rows[1]) && got.fits
               && /4 won, 2 lost, 1 drawn in all/.test(got.total)
             : got.rows.length === 0 && !got.total;
