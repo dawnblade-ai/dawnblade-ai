@@ -11,6 +11,7 @@
    ============================================================ */
 "use strict";
 const { judgeScreen } = require("./tapjudge.js");
+const { judgeText, say } = require("./contrast.js");
 
 async function sweepScreens(page, row, { w, h }) {
   const tag = `tap floor ${w}x${h}`;
@@ -19,6 +20,10 @@ async function sweepScreens(page, row, { w, h }) {
     const r = await judgeScreen(page);
     const bad = ["small", "stolen", "clipped", "overlap"].flatMap(k => r[k].map(f => k + ": " + f.m));
     row(r.n > 0 && !bad.length, `${tag}: ${where}`, `${r.n} controls` + (bad.length ? "  " + bad.slice(0, 4).join(" | ") + (bad.length > 4 ? ` (+${bad.length - 4} more)` : "") : ""));
+    /* READABILITY (U; tools/contrast.js): the same screen's text, WCAG AA against the real composited background */
+    const t = await judgeText(page);
+    row(t.n > 0 && !t.fails.length, `readability ${w}x${h}: ${where}`, `${t.n} texts` + (t.fails.length ? "  " + t.fails.slice(0, 3).map(say).join(" | ") + (t.fails.length > 3 ? ` (+${t.fails.length - 3} more)` : "") : ""));
+    if (process.env.READ_SMALL) for (const f of t.small) console.log(`  SMALL ${w}x${h} ${where}: ${say(f)}`);
     return r;
   };
   const has = sel => page.locator(sel).first().isVisible().catch(() => false);

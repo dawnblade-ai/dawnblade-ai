@@ -815,6 +815,21 @@ if(require.main === module){
       await tk.close();
     }
 
+    /* READABILITY (U; tools/contrast.js): the tap sweep above carries one `readability` row per screen (WCAG AA against the
+       real composited background, both phones). This row SABOTAGES the roster's text colour with the line colour and the
+       measure must find it, so a measure gone blind fails here instead of passing every screen. */
+    {
+      const { judgeText } = require("./contrast.js");
+      const rk = await open({ w: 320, h: 568 });
+      try {
+        const clean = await judgeText(rk.page);
+        await rk.page.addStyleTag({ content: ".shell *{color:#4A3B2E !important}" });
+        const sab = await judgeText(rk.page);
+        row(clean.n > 0 && clean.fails.length === 0 && sab.fails.length >= 5, "readability: the measure finds a sabotaged colour (clean roster 0, sabotaged >= 5)", `clean ${clean.fails.length}, sabotaged ${sab.fails.length}`);
+      } catch(e){ row(false, "readability: the measure finds a sabotaged colour", String(e && e.message || e).split("\n")[0]); }
+      await rk.close();
+    }
+
     /* EVERY PROMPT KIND, PUT ON THE BOARD (R; tools/promptsweep.js --inject): a real table game, then a real prompts.js spec of each
        kind (the longest realistic list) opened through judge.openPrompt, judged by tapjudge + the sheet checks at the smallest phone,
        and the same sheet with its CSS sabotaged, which must be found. All heroes: `node tools/promptsweep.js --inject`. */
