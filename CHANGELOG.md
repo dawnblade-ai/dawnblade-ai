@@ -1,3 +1,18 @@
+## v7.03 — The wait says who else is looking
+
+- **Who else is looking (QUEUE NEXT 2; worker AE).** A waiting *Find a match* seek now hears an approximate word from
+  the referee — none / one / few (2–4) / many (5+) other live, untaken seeks of the same kind (the caller's own seek,
+  stale and taken seeks left out) — and the seek card says it in plain words ("Nobody else is looking right now.",
+  "Someone else is looking.", "A few players are looking.", "Plenty of players are looking."): never a number, a name
+  or an id. When nobody else is looking, the card says it may be a quiet hour and offers *Play the AI while you wait*
+  at once (the search keeps going) instead of after the quiet minute. Built on the existing `seek_count` (SQL 009): no
+  new SQL, no new endpoint; WIRE_V unchanged (a seek answer key, not a game payload). An older function simply sends
+  no word and the line is not shown. Note: a FRIENDLY seeker almost always hears "nobody", by construction — another
+  untaken friendly seek would already have matched them; the bigger words appear for ranked seekers outside each
+  other's rating window. Drills: `test/serverseek.test.js` (buckets, boundaries, exclusions, failures; 8 sabotages),
+  three serverpage rows. Function redeployed.
+- Gates: see the release commit.
+
 ## v7.02 — Your record remembers the heroes you played
 
 - **Your heroes (QUEUE NEXT 4; worker AD).** The record kept on this phone now knows the hero YOU piloted, not only
