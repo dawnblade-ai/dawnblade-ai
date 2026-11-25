@@ -1,3 +1,25 @@
+## v6.99 — A title screen, and you know your opponent before you sideboard
+
+- **The title screen (user request; worker Z).** The page now opens on a title: the DAWNBLADE wordmark, one line saying
+  what this is, and four big choices, each with a one-line description: *Train against the Dummy*, *Play the AI*,
+  *Find an opponent* (online, friendly or ranked, and the ladder) and *Two phones, one table* (a direct table, or judging
+  one from a third device). *How to play*, *Judge's quiz* and *Trophies* sit beneath, and the format note moved here.
+  The two table choices open only their half of the table screen; every screen has a *‹ Title* way back. It shows on
+  every load, asks nothing of the server while a player only looks, and practising while a search runs still lands on
+  the hero grid. `?title=0` skips it (the drives use it).
+- **The opponent before the sideboard (user request; worker Y).** The opponent has its own step after *Battle*, before
+  the throw and the sideboard: the Dummy, a hero, or Random — drawn the moment it is tapped and named ("Your opponent:
+  <hero> — drawn at random"), and that same hero is the one dealt, so you board knowing the matchup and the play or draw.
+  The sideboard shows the chosen foe with a quiet *Change opponent*; Sharp / Steady moves to the step and is still
+  remembered; the opponent is still not remembered between matches. The networked sideboard is unchanged.
+- **Joined (CEO):** *Play the AI* opens the step with a random hero already drawn and named; *Train against the Dummy*
+  skips the step and goes straight to the throw (Back returns to the hero grid); with no mode chosen the step opens on
+  the Dummy. page.js rows prove all three at 393x852 and 320x568, each sabotaged.
+- **The found-match window's silence path is driven (worker AA):** serverpage closes the practising player's page
+  mid-window and the waiting player is back looking (same kind, clock carried on) within window + 10 s. The found
+  window and the rematch wait read one 2-minute constant; no behaviour change.
+- Gates: npm test 4609/4604/0/5; page.js 286/286; serverpage 483/0; trainchaos clean; four babel blocks compile.
+
 ## v6.98 — The found-match window is honest on both sides
 
 - **What was wrong (worker X).** A player practising against the AI when a match was found is the table's creator, so

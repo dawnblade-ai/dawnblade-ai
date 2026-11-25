@@ -75,6 +75,7 @@ async function run(mode){
   /* the same seeded trainer game */
   const r = rng(77);
   await page.locator(".hcard").nth(3).click(); await page.locator("button", { hasText: /^Battle$/ }).first().click();
+  await page.waitForSelector(".foestep"); await page.locator("[data-foe-go]").click();
   await page.waitForSelector(".rps", { timeout: 8000 }); await page.waitForSelector(".rseatpick, .actbar", { timeout: 8000 });
   if(await page.locator(".rseatpick").count()) await page.locator(".rseatpick button").nth(Math.floor(r() * 2)).click();
   await page.waitForSelector('.lo .actbar [data-start="trainer"]'); await page.locator('.lo .actbar [data-start="trainer"]').click(); await page.waitForSelector(".board");

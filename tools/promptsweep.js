@@ -78,9 +78,12 @@ const trainerStep = (page, r) => page.evaluate(r => {
 async function sweep({ page, w, h, heroes, boards, games, steps, row, seen, log, budgetMs = +(process.env.PS_BUDGET || 20000) }) {
   const has = sel => page.locator(sel).first().isVisible().catch(() => false);
   const home = async () => { await page.reload(); await page.waitForSelector(".hcard", { timeout: 20000 }); };
-  const toLoadout = async hi => {
+  const toLoadout = async (hi, foeIdx = null) => {
     await page.locator(".hgrid .hcard").nth(hi).click(); await page.waitForSelector(".sheet");
     await page.getByRole("button", { name: /^Battle$/ }).first().click();
+    await page.waitForSelector(".foestep");
+    if (foeIdx !== null) { await page.locator(".aifoe button").nth(foeIdx % (await page.locator(".aifoe button").count())).click(); await page.waitForTimeout(250); }
+    await page.locator("[data-foe-go]").click();
     await page.waitForSelector(".rps"); await page.waitForSelector(".rseatpick, .actbar", { timeout: 10000 });
     if (await has(".rseatpick")) await page.locator(".rseatpick .go").click();
     await page.waitForSelector(".actbar", { timeout: 8000 });
@@ -105,9 +108,8 @@ async function sweep({ page, w, h, heroes, boards, games, steps, row, seen, log,
       for (let gi = 0; gi < games; gi++) {
         if (board === "table" && KINDS.every(k => seen.has(`${hero}|table|${k}`))) break;
         try {
-          await home(); await toLoadout(hi);
+          await home(); await toLoadout(hi, board === "table" ? hi + 1 + gi * 5 : null);
           if (board === "table") {
-            await page.locator(".aifoe button").nth((hi + 1 + gi * 5) % (await page.locator(".aifoe button").count())).click(); await page.waitForTimeout(250);
             await page.locator('.lo .actbar [data-start="table"]').click();
           } else await page.locator('.lo .actbar [data-start="trainer"]').click();
           await page.waitForSelector(".board", { timeout: 15000 });
@@ -215,10 +217,12 @@ async function injectSweep({ page, w, h, heroes, row, seen, log, css = null, onl
       if (css) await page.addStyleTag({ content: css });
       await page.locator(".hgrid .hcard").nth(hi).click(); await page.waitForSelector(".sheet");
       await page.getByRole("button", { name: /^Battle$/ }).first().click();
+      await page.waitForSelector(".foestep");
+      if (!trainer) { await page.locator(".aifoe button").nth((hi + 3) % (await page.locator(".aifoe button").count())).click(); await page.waitForTimeout(200); }
+      await page.locator("[data-foe-go]").click();
       await page.waitForSelector(".rps"); await page.waitForSelector(".rseatpick, .actbar", { timeout: 10000 });
       if (await has(".rseatpick")) await page.locator(".rseatpick .go").click();
       await page.waitForSelector(".actbar", { timeout: 8000 });
-      if (!trainer) { await page.locator(".aifoe button").nth((hi + 3) % (await page.locator(".aifoe button").count())).click(); await page.waitForTimeout(200); }
       await page.locator(`.lo .actbar [data-start="${trainer ? "trainer" : "table"}"]`).click();
       await page.waitForSelector(".board", { timeout: 15000 });
       await page.waitForTimeout(600);
