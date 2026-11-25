@@ -319,6 +319,38 @@ if(require.main === module){
       await click(page.locator(".tblwrap button", { hasText: /back|leave|cancel/i }).first(), "leave the code screen");
     }
 
+    /* SHARE THE TABLE NUMBER (v7.07, QUEUE NEXT 2). A direct host's screen offers the share sheet; a stand-in navigator.share
+       records what it is handed (the number must be in it), and with no share sheet the same button copies instead.
+       PeerJS is stubbed so no relay is reached. Sabotage: drop the <ShareCode> under the direct host's number. */
+    for(const sheet of [true, false]){
+      const name = sheet ? "table: the host shares the table number through the phone's share sheet" : "table: with no share sheet the host copies the table number";
+      if(!(await click(btn(/^Find an opponent/), "find an opponent (share)"))) { row(false, name, "no find button"); continue; }
+      await page.waitForSelector(".tblwrap");
+      await page.evaluate((sheet) => { window.Peer = class { constructor(id){ this.h = {}; setTimeout(() => this.emit("open", id), 10); }
+          on(e, f){ (this.h[e] = this.h[e] || []).push(f); } emit(e, ...a){ (this.h[e] || []).forEach(f => f(...a)); } destroy(){} connect(){ return null; } };
+        window.__shared = null; window.__copied = null;
+        Object.defineProperty(navigator, "share", { configurable: true, value: sheet ? (d => { window.__shared = d; return Promise.resolve(); }) : undefined });
+        Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: t => { window.__copied = t; return Promise.resolve(); } } }); }, sheet);
+      let got = {};
+      if(await click(btn(/^Open a table$/), "open a direct table (share)")){
+        await page.waitForSelector('[data-testid="share-code"]', { timeout: 8000 }).catch(() => {});
+        const b = await page.locator('[data-testid="share-code"]').boundingBox().catch(() => null);
+        got.code = (await page.locator(".tblcode").first().innerText().catch(() => "")).trim();
+        got.label = (await page.locator('[data-testid="share-code"]').innerText().catch(() => "")).trim();
+        got.h = b ? Math.round(b.height) : 0; got.fits = !!b && b.x >= 0 && b.x + b.width <= W;
+        await page.locator('[data-testid="share-code"]').click().catch(() => {});
+        await page.waitForTimeout(150);
+        got.out = await page.evaluate(() => window.__shared ? window.__shared.text : window.__copied);
+        got.said = (await page.locator('[data-testid="share-said"]').innerText().catch(() => "")).trim();
+      }
+      const ok = got.code.length >= 4 && got.h >= 44 && got.fits && typeof got.out === "string" && got.out.includes(got.code)
+        && (sheet ? /^Share/i.test(got.label) && !got.said : /^Copy/i.test(got.label) && /Copied/.test(got.said));
+      row(ok, name, JSON.stringify(got));
+      await page.evaluate(() => { delete window.Peer; delete navigator.share; delete navigator.clipboard; });
+      if(await has(".tblwrap")) await click(page.locator(".tblwrap button", { hasText: /^(Back|Leave|Close the table|Cancel)/i }).first(), "leave the host screen (share)");
+      await page.waitForSelector(".hgrid", { timeout: 5000 }).catch(() => {});
+    }
+
     /* JUDGE MODE (HIDDEN HANDS H3): this page as the judge's device. PeerJS is
        stubbed (no relay is reached); two fake channels sit down and negotiate
        the lobby with the page's own engine, and the judge's screen is checked

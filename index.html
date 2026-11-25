@@ -1220,7 +1220,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "7.06"; /* v7.06 - The screen stays awake while a game is on; see CHANGELOG.md. */
+window.APP_VER = "7.07"; /* v7.07 - The host can share the table number with the share sheet; see CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -8102,6 +8102,23 @@ function HiddenHandsSheet({open, srvOn, onClose}){
 /* WHO ELSE IS LOOKING, approximately (the server's `looking` word; never a count, never a name) */
 const crowdLine = w => w==="none" ? "Nobody else is looking right now." : w==="one" ? "Someone else is looking." : w==="few" ? "A few players are looking." : w==="many" ? "Plenty of players are looking." : null;
 const usualWaitLine = sec => "Players usually find a match in about "+(sec<90 ? sec+" seconds" : Math.round(sec/60)+" minutes")+".";
+/* SHARE THE TABLE NUMBER (v7.07). Friends are the matchmaking while the queue is quiet: one tap hands the number to the
+   phone's share sheet (Messages, WhatsApp…), or copies it where there is no share sheet. A cancelled sheet says nothing;
+   a blocked clipboard says so (copyText never claims a copy that did not happen). The link is this page's own address,
+   left out when the page was opened from a file. */
+function ShareCode({code}){
+  const [said,setSaid] = uS("");
+  const url = /^https?:$/.test(window.location.protocol) ? window.location.origin + window.location.pathname : "";
+  const text = "Join my Dawnblade table — table number " + code + "." + (url ? " Open " + url + ", tap Join a table and type it in." : "");
+  const copy = () => copyText(text).then(r => setSaid(r === "copied" ? "Copied — paste it to a friend." : "This browser blocked the clipboard — read the number out instead."));
+  const go = () => { setSaid("");
+    if(!navigator.share) return copy();
+    navigator.share({title: "Dawnblade table " + code, text}).catch(e => { if(!(e && e.name === "AbortError")) copy(); }); };
+  return <>
+    <button className="bigbtn alt" data-testid="share-code" onClick={go}>{navigator.share ? "Share the table number" : "Copy the table number"}</button>
+    {said && <div className="tblstat" data-testid="share-said">{said}</div>}
+  </>;
+}
 function TableScreen({onBack, onSeated, again, away, onPlayAI, onGaveBack, typ, onTyp, only}){   /* `only`: "online" | "direct" | undefined — the title screen's two doors into this screen show their half; the hero grid's button shows both */
   const [mode,setMode] = uS(null);           /* null | "host" | "join" */
   const [handsOpen,setHandsOpen] = uS(false); /* the honest-lines sheet (v6.82) */
@@ -8566,6 +8583,7 @@ function TableScreen({onBack, onSeated, again, away, onPlayAI, onGaveBack, typ, 
         <div className="tblcard">
           <div className="tblstat">Your table number — read it out</div>
           <div className="tblcode">{code}</div>
+          {!hostRanked && code && <ShareCode code={code}/>}
           {hostRanked && <div className="tblstat" data-testid="host-ranked"><span className="tblrk">Ranked</span>{myRank ? <>your rating <strong>{myRank.rating}</strong></> : null}</div>}
         </div>
         <div className={"tblstat"+(stat==="srv-waiting"?" live":"")}>
@@ -8641,6 +8659,7 @@ function TableScreen({onBack, onSeated, again, away, onPlayAI, onGaveBack, typ, 
         <div className="tblcard">
           <div className="tblstat">Your table number</div>
           <div className="tblcode">{code}</div>
+          {code && <ShareCode code={code}/>}
         </div>
         <div className={"tblstat"+(stat==="waiting"?" live":"")}>
           {stat==="waiting" && <span className="tbldot"></span>}
