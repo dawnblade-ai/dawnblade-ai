@@ -77,6 +77,7 @@ async function oneGame(kit, heroIx, seed, log){
   await page.locator(".hcard").nth(heroIx).click();
   const hero = await page.locator(".sheet .shn, .sheet h2, .sheet .hname").first().innerText().catch(() => "hero " + heroIx);
   await page.locator("button", { hasText: /^Battle$/ }).first().click();
+  await page.waitForSelector(".foestep"); await page.locator("[data-foe-go]").click();
   await page.waitForSelector(".rps", { timeout: 8000 });
   await page.waitForSelector(".rseatpick, .actbar", { timeout: 8000 });
   if(await page.locator(".rseatpick").count()) await page.locator(".rseatpick button").nth(Math.floor(r() * 2)).click();

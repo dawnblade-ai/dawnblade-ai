@@ -142,7 +142,7 @@ function judgeBoxes({ W, H }) {
     (feedLines[key] = feedLines[key] || new Set()); r.feed.forEach(l => feedLines[key].add(l));
     (advLines[key] = advLines[key] || new Set()); r.adv.concat(r.advh).forEach(l => advLines[key].add(l));
   };
-  const toLoadout = async (i, where) => {
+  const toLoadout = async (i, where, foeIdx = null) => {
     await home();
     if (!(await click(page.locator(".hgrid .hcard").nth(i), "hero " + i, where))) {
       const dump = await page.evaluate(() => ({ body: document.body.innerText.replace(/\s+/g, " ").slice(0, 300), modals: [...document.querySelectorAll(".modal,.bugwrap,.reveal,.peekwrap,.psheet,.sheet,.board,.lose")].map(e => e.className) }));
@@ -153,6 +153,10 @@ function judgeBoxes({ W, H }) {
     await page.waitForSelector(".sheet");
     const hero = (await page.locator(".sheet h2, .sheet h1").first().innerText().catch(() => "?")).replace(/\s+/g, " ");
     if (!(await click(btn(/^Battle$/), "battle", where))) return null;
+    /* the opponent is picked first (Battle -> opponent -> coin -> sideboard) */
+    await page.waitForSelector(".foestep");
+    if (foeIdx !== null) { await click(page.locator(".aifoe button").nth(2 + foeIdx), "AI foe", where); await measure(where + " opponent step"); }
+    await click(page.locator("[data-foe-go]"), "continue", where);
     await page.waitForSelector(".rps"); await measure(where + " coin");
     await page.waitForSelector(".rseatpick, .actbar", { timeout: 10000 });
     if (await has(".rseatpick")) { await measure(where + " seat pick"); await click(page.locator(".rseatpick .go"), "I go first", where); }
@@ -213,12 +217,9 @@ function judgeBoxes({ W, H }) {
 
   /* ---------- the table, seat 0 driven by the AI policy through the session ---------- */
   const table = async (i, foeIdx) => {
-    const hero = await toLoadout(i, `table h${i}`); if (!hero) return;
+    const hero = await toLoadout(i, `table h${i}`, foeIdx); if (!hero) return;
     const where = `table ${hero}`;
-    const foeBtn = page.locator(".aifoe button").nth(2 + foeIdx);
-    const foe = await foeBtn.getAttribute("aria-label");
-    await click(foeBtn, "AI foe", where);
-    await measure(where + " loadout vs " + foe);
+    await measure(where + " loadout");
     if (!(await click(page.locator('.lo .actbar [data-start="table"]'), "Fight at the table", where))) return;
     await page.waitForSelector(".board", { timeout: 15000 });
     await measure(where + " board");

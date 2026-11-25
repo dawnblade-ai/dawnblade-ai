@@ -438,7 +438,9 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        APP banner. The growth is the bar's one-primary rule: `vsAI`, the two buttons with
        `data-start` and the foe-decided label, and the two notes folded into `<details className="lowhy">`
        with the comment saying why. Same anchors. */
-    "phasebar.test.js index.html 23068",
+    /* 23,068 -> 20,445 (pick the opponent first, 2026-11-25), READ FIRST: still `function Loadout(` -> the next
+       function; the SHRINK is the foe picker pane leaving for `FoePick`, which now sits before it. */
+    "phasebar.test.js index.html 20445",
     /* 63,730 -> 64,368 AT v5.57, READ FIRST: still the `<style>` block,
        `<style>` -> `</style>`; the growth is the Cloaked card back's three
        rules (`.deckback.gback`, `.gbtag`, `.gbname`).
@@ -523,7 +525,8 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        only: Find a match's waiting clock (`.seekclock`). */
     /* -> 91,751 (v6.83, Rematch CSS + .bigbtn.alt 44 px) -> 92,440 (v6.85, the practice-while-waiting bar and banner), READ FIRST: presentation only. */
     /* -> 94,193 (v6.86, the 44 px tap floor and the scrolling end panel, one CSS block), READ FIRST: presentation only. */
-    "phasebar.test.js index.html 95961",
+    /* -> 96,627 (pick the opponent first, 2026-11-25), READ FIRST: still `<style>` -> `</style>`; the growth is the `.foestep` rules. */
+    "phasebar.test.js index.html 96627",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
        `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
        `abPickBound` in the pick legality it extends. */

@@ -26,14 +26,14 @@ const SP = require("../engine/sparring.js");
 const HTML = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
 const CODE = HTML.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
-test("the loadout offers Sharp and Steady for an AI hero, remembers the pick, and Sharp is the default", () => {
-  assert.match(CODE, /const \[aiLevel,setAiLevelS\] = uS\(\(\)=>store\.get\("aiLevel","sharp"\)==="steady" \? "steady" : "sharp"\)/,
+test("the opponent step offers Sharp and Steady for an AI hero, remembers the pick, and Sharp is the default", () => {
+  assert.match(CODE, /const \[level,setLevelS\] = uS\(\(\)=>store\.get\("aiLevel","sharp"\)==="steady" \? "steady" : "sharp"\)/,
     "the level opens on Sharp unless the player chose Steady before");
-  assert.match(CODE, /const setAiLevel = v => \{ store\.set\("aiLevel", v\); setAiLevelS\(v\); \}/, "a tap is remembered");
-  const ctl = CODE.match(/\{aiFoe!==null && <div className="ailevel"[\s\S]*?<\/div>\}/);
+  assert.match(CODE, /const setLevel = v => \{ store\.set\("aiLevel", v\); setLevelS\(v\); \}/, "a tap is remembered");
+  const ctl = CODE.match(/\{pick\.k && <div className="ailevel"[\s\S]*?<\/div>\}/);
   assert.ok(ctl, "the control sits under the picker and only for an AI hero (the Dummy has no level)");
-  assert.match(ctl[0], /onClick=\{\(\)=>setAiLevel\("sharp"\)\}/);
-  assert.match(ctl[0], /onClick=\{\(\)=>setAiLevel\("steady"\)\}/);
+  assert.match(ctl[0], /onClick=\{\(\)=>setLevel\("sharp"\)\}/);
+  assert.match(ctl[0], /onClick=\{\(\)=>setLevel\("steady"\)\}/);
   assert.equal((ctl[0].match(/<button /g) || []).length, 2, "two tiles, never a select (v2.81)");
   assert.ok(!/<select/.test(ctl[0]));
 });

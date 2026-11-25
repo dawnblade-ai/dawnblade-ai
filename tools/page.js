@@ -363,9 +363,21 @@ if(require.main === module){
     }
 
     /* seat a game: roster -> battle -> coin -> loadout. Returns when the loadout is up. */
-    const toLoadout = async (prefix, seat = 0) => {
+    /* THE OPPONENT IS PICKED FIRST (v7.xx, user 2026-11-25): Battle opens the opponent step, then the
+       coin, then the sideboard. `foe`: null = leave the Dummy; a number = the nth tile of the step
+       (0 Dummy, 1 Random, 2+ heroes); a string = the tile whose label starts with it. `onFoe` runs
+       on the step after the pick, before Continue. `toLoadout.foe` is the name the step revealed. */
+    const toLoadout = async (prefix, seat = 0, foe = null, onFoe = null) => {
       if(!(await has(".sheet")) && !(await click(page.locator(".hcard").first(), "pick a hero"))) return false;
       if(!(await click(btn(/^Battle$/), "battle"))) return false;
+      await page.waitForSelector(".foestep", { timeout: 8000 });
+      if(foe !== null){
+        const tile = typeof foe === "string" ? page.locator(`.aifoe button[aria-label^="${foe}"]`).first() : page.locator(".aifoe button").nth(foe);
+        if(!(await click(tile, prefix + ": pick the opponent"))) return false;
+      }
+      toLoadout.foe = (await page.locator(".foereveal b").innerText().catch(() => "")).trim();
+      if(onFoe) await onFoe();
+      if(!(await click(page.locator("[data-foe-go]"), prefix + ": continue past the opponent step"))) return false;
       await page.waitForSelector(".rps");
       /* THE COIN IS PERMANENT AGAINST THE AI (v6.01, RULING user 2026-11-07):
          the screen says so, and no longer calls itself a testing stopgap. */
@@ -614,11 +626,12 @@ if(require.main === module){
     }
 
     /* ---- the table against an AI-piloted hero ---- */
-    if(await toLoadout("table")){
+    let foeName = "", first = "";
+    if(await toLoadout("table", 0, 2, async () => {
       const foeBtn = page.locator(".aifoe button").nth(2);   // 0 = the Dummy, 1 = Random, 2 = first hero
-      const foeName = (await foeBtn.getAttribute("aria-label")) || "", first = foeName.split(",")[0];
-      if(await click(foeBtn, "pick an AI hero")){
-        await screen("table: loadout, AI foe picked", foeName);
+      foeName = (await foeBtn.getAttribute("aria-label")) || ""; first = foeName.split(",")[0];
+      {
+        await screen("table: opponent step, AI foe picked", foeName);
         /* SHARP / STEADY (lookahead phase 2): two tiles under the picker, Sharp
            on by default, both inside the phone's width and a thumb tall, and a
            tap moves the choice. Left on Sharp, which the board must then report. */
@@ -628,35 +641,30 @@ if(require.main === module){
         row(boxes.length === 2 && /sharp/i.test(boxes[0].t) && /steady/i.test(boxes[1].t) && boxes[0].on && !boxes[1].on
             && boxes.every(x => x.l >= 0 && x.r <= W && x.h >= 44),
             "table: Sharp / Steady", JSON.stringify(boxes.map(x => [x.t, x.on, Math.round(x.l), Math.round(x.r), Math.round(x.h)])));
-        /* THE TILES CAN BE REACHED (v5.83). They sat 647..713 against a bar
-           starting at 683, cut by their own screen's clipped bottom: the picker
-           shared the deck screen and `.hpane`'s 100% basis made it a whole
-           screen tall. Jump to the Foe screen, scroll its pane to the end (what
-           a thumb can do), and every tile must sit inside the screen, above the
-           bar, and take a tap at its centre. The deck screen's trim grid must
-           keep real height (it was crushed to 15px of padding). */
+        /* THE TILES CAN BE REACHED, and the step never scrolls sideways. Scroll the tiles into the
+           middle of the screen (what a thumb can do): each must sit above the Continue bar and take a
+           tap at its centre; the page is no wider than the phone. */
         const reach = await page.evaluate(async () => {
-          const jump = [...document.querySelectorAll(".lo .screennav button")].find(b => /foe/i.test(b.innerText));
-          if(!jump) return {err: "no Foe jump"};
-          jump.click(); await new Promise(r => setTimeout(r, 700));
-          const t0 = document.querySelector(".ailevel"); const pane = t0 && t0.closest(".hpane"), scr = t0 && t0.closest(".vscreen");
-          if(!pane) return {err: "no level tiles"};
-          pane.scrollTop = pane.scrollHeight; await new Promise(r => setTimeout(r, 300));
-          const bar = document.querySelector(".lo .actbar").getBoundingClientRect(), sr = scr.getBoundingClientRect();
+          const t0 = document.querySelector(".ailevel");
+          if(!t0) return {err: "no level tiles"};
+          t0.scrollIntoView({block: "center"}); await new Promise(r => setTimeout(r, 300));
+          const bar = document.querySelector(".foebar").getBoundingClientRect();
           const tiles = [...document.querySelectorAll(".ailevel button")].map(b => { const r = b.getBoundingClientRect();
             const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
             return {t: b.innerText.split("\n")[0].trim(), top: Math.round(r.top), bot: Math.round(r.bottom), hit: !!hit && b.contains(hit)}; });
-          const cut = document.querySelector(".cutgrid").closest(".hpane").getBoundingClientRect().height;
-          return {tiles, bar: Math.round(bar.top), scr: [Math.round(sr.top), Math.round(sr.bottom)], cut: Math.round(cut)};
+          return {tiles, bar: Math.round(bar.top), vh: window.innerHeight, sw: document.documentElement.scrollWidth, bw: document.body.scrollWidth};
         });
-        row(!reach.err && reach.tiles.length === 2 && reach.tiles.every(x => x.hit && x.top >= reach.scr[0] && x.bot <= reach.scr[1] && x.bot <= reach.bar)
-            && reach.cut >= 200, "table: Sharp / Steady clear the bar",
-            reach.err || `tiles ${reach.tiles.map(x => `${x.t} ${x.top}..${x.bot}${x.hit ? "" : " (tap lands elsewhere)"}`).join(", ")}; screen ${reach.scr.join("..")}; bar ${reach.bar}; trim grid ${reach.cut}px`);
+        row(!reach.err && reach.tiles.length === 2 && reach.tiles.every(x => x.hit && x.top >= 0 && x.bot <= reach.bar) && reach.sw <= W && reach.bw <= W,
+            "table: Sharp / Steady clear the Continue bar, no sideways scroll",
+            reach.err || `tiles ${reach.tiles.map(x => `${x.t} ${x.top}..${x.bot}${x.hit ? "" : " (tap lands elsewhere)"}`).join(", ")}; bar ${reach.bar}; scrollWidth ${reach.sw}/${reach.bw} vs ${W}`);
         if(boxes.length === 2){
           await lv.nth(1).click(); const st = await lv.evaluateAll(bs => bs.map(b => b.classList.contains("on")));
           await lv.nth(0).click(); const sh = await lv.evaluateAll(bs => bs.map(b => b.classList.contains("on")));
           row(!st[0] && st[1] && sh[0] && !sh[1], "table: the level follows the tap", `steady ${st} · sharp ${sh}`);
         }
+      }
+    })){
+      {
         if(await click(page.locator('.lo .actbar [data-start="table"]'), "Fight at the table")){
           await page.waitForSelector(".board", { timeout: 15000 });
           /* the top nav names the foe hero only on the table board (the trainer says "Opp") */
@@ -702,10 +710,8 @@ if(require.main === module){
        dummy: it must not read "DUMMY DESTROYED" nor write the dummy's best
        score (v5.74 did both). A win over the Dummy at the table still does. */
     const ending = async (foeIdx, who, want, label) => {
-      if(!(await toLoadout("over"))) return;
-      const foeBtn = typeof foeIdx === "string" ? page.locator(`.aifoe button[aria-label^="${foeIdx}"]`).first() : page.locator(".aifoe button").nth(foeIdx);
-      const foe = ((await foeBtn.getAttribute("aria-label")) || "").split(",")[0];
-      if(!(await click(foeBtn, label + ": pick " + foe))) return;
+      if(!(await toLoadout("over", 0, foeIdx))) return;
+      const foe = toLoadout.foe.split(",")[0];
       const best0 = await page.evaluate(() => { localStorage.removeItem("dawnblade.best"); return null; });
       const rec0 = await page.evaluate(() => JSON.parse(localStorage.getItem("dawnblade.aiRecord") || "null"));
       if(who === 1) await page.evaluate(() => {   // the AI seat's next move is to concede
@@ -752,7 +758,7 @@ if(require.main === module){
        above, at Sharp: Lyath's tile reads 1–0 and the other foe's 0–1, every
        other tile reads nothing; each label sits inside its tile, inside the
        phone, on one line. At Steady (no games played there) no label shows. */
-    if(await toLoadout("record")){
+    if(await toLoadout("record", 0, null, async () => {
       const labels = () => page.evaluate(() => [...document.querySelectorAll(".aifoe button")].map(b => {
         const f = b.querySelector(".frec"); if(!f) return null;
         const r = f.getBoundingClientRect(), t = b.getBoundingClientRect();
@@ -771,9 +777,68 @@ if(require.main === module){
       const note = await page.locator(".frecnote").count();
       await lv.nth(0).click().catch(() => {});
       row(tapped && steady.length === 0 && note === 0, "table: the record follows the level", `at Steady ${steady.length} labels, ${note} notes`);
-      await click(page.locator(".lo .screennav button", { hasText: "back" }), "leave the record loadout");
-      await page.locator(".rps .rback").click().catch(() => {});
+    })){
+      await click(page.locator(".lo .screennav button", { hasText: "back" }), "leave the record loadout (back to the opponent step)");
+      await page.waitForSelector(".foestep", { timeout: 5000 }).catch(() => {});
+      await click(page.locator(".foestep .screennav button", { hasText: "back" }), "leave the opponent step");
       await page.waitForSelector(".hgrid", { timeout: 5000 }).catch(() => {});
+    }
+
+    /* PICK THE OPPONENT BEFORE THE SIDEBOARD (v7.xx, user 2026-11-25). Random is drawn the moment it is
+       tapped and named on the opponent step; the sideboard's strip names that same hero; the match deals
+       that hero; Back from the sideboard lands on the step with the choice kept; the Dummy path still
+       goes to the trainer. Every row below was sabotaged (see the commit message). */
+    {
+      const heroKeys = await page.evaluate(() => HEROES.map(x => x.k));
+      await page.evaluate(() => { window.__dawnTable = null; });
+      let K = "", R = "";
+      const ok1 = await toLoadout("foefirst", 0, 1, async () => {
+        const reveal = await page.evaluate(() => { const e = document.querySelector(".foereveal"); return { key: e && e.getAttribute("data-foe"), text: e ? e.innerText : "", name: e && e.querySelector("b") ? e.querySelector("b").innerText : "" }; });
+        K = reveal.key; R = reveal.name;
+        row(heroKeys.includes(reveal.key) && reveal.name && !/dummy|random hero|^\?+$/i.test(reveal.name) && /^Your opponent:/.test(reveal.text),
+          "foefirst: Random is drawn and NAMED on the opponent step, before the coin and the sideboard", JSON.stringify(reveal.text));
+        const strip = await page.evaluate(() => (document.querySelector(".foestep .vslot.p2 .vname") || {}).innerText || "");
+        row(!!strip && !/\?/.test(strip) && !/random hero/i.test(strip), "foefirst: the step's strip shows the real hero, never the mystery card", JSON.stringify(strip));
+      });
+      if(ok1){
+        const lo = await page.evaluate(k => { const hs = heroShort(HEROES.find(x => x.k === k)); const v = [...document.querySelectorAll(".lo .vslot.p2 .vname")].map(e => e.innerText);
+          return { want: hs, strips: v, picker: document.querySelectorAll(".lo .aifoe").length, mystery: /random hero/i.test(document.querySelector(".lo").innerText) }; }, K);
+        row(lo.strips.length >= 1 && lo.strips.every(t => t.toLowerCase().includes(lo.want.toLowerCase())) && lo.picker === 0 && !lo.mystery,
+          "foefirst: the sideboard's VsStrip names the same hero, carries no picker, and never shows the mystery card", JSON.stringify(lo));
+        const startBtn = await page.locator('.lo .actbar [data-start="table"]').innerText();
+        row(startBtn.toLowerCase().includes(lo.want.toLowerCase()), "foefirst: the sideboard's fight button names the drawn hero", JSON.stringify(startBtn));
+        /* Back walks the steps in order and keeps the choice */
+        await click(page.locator(".lo .screennav button", { hasText: "back" }), "foefirst: back from the sideboard");
+        await page.waitForSelector(".foestep", { timeout: 5000 }).catch(() => {});
+        const back = await page.evaluate(() => { const e = document.querySelector(".foereveal"); const on = document.querySelector(".aifoe button.on"); return { onStep: !!document.querySelector(".foestep"), key: e && e.getAttribute("data-foe"), on: on ? on.getAttribute("aria-label") : "" }; });
+        row(back.onStep && back.key === K && /random/i.test(back.on),
+          "foefirst: Back from the sideboard returns to the opponent step with the choice kept (the same hero, Random still lit)", JSON.stringify(back));
+        await click(page.locator("[data-foe-go]"), "foefirst: continue again");
+        await page.waitForSelector(".rps"); await page.waitForSelector(".rseatpick, .actbar", { timeout: 8000 });
+        if(await has(".rseatpick")) await click(page.locator(".rseatpick button").first(), "I go first");
+        await page.waitForSelector(".lo .actbar", { timeout: 8000 });
+        if(await click(page.locator('.lo .actbar [data-start="table"]'), "foefirst: fight")){
+          await page.waitForSelector(".board", { timeout: 15000 });
+          const dealt = await page.evaluate(() => { const t = window.__dawnTable; return t ? { key: t.session.state().sides[1].heroKey || null } : null; });
+          row(!!dealt && dealt.key === K, "foefirst: the match deals the very hero the step revealed", JSON.stringify({ revealed: K, dealt: dealt && dealt.key }));
+          await click(page.locator(".screennav button", { hasText: "leave" }), "foefirst: leave the table");
+          await page.waitForSelector(".hgrid", { timeout: 5000 }).catch(() => {});
+        }
+      }
+      /* the Dummy stays the default, and its path still lands on the trainer */
+      await page.evaluate(() => { window.__dawnTable = null; });
+      let dummy = "";
+      if(await toLoadout("foefirst-dummy", 0, null, async () => { dummy = await page.evaluate(() => (document.querySelector(".foereveal") || {}).innerText || ""); })){
+        const primary = await page.locator('.lo .actbar [data-start="trainer"]').getAttribute("class");
+        if(await click(page.locator('.lo .actbar [data-start="trainer"]'), "foefirst: fight the dummy")){
+          await page.waitForSelector(".board", { timeout: 8000 });
+          const t = await page.evaluate(() => ({ table: !!window.__dawnTable, board: !!document.querySelector(".board") }));
+          row(/Your opponent: The Dummy/.test(dummy) && /battlebtn/.test(primary) && t.board && !t.table,
+            "foefirst: the Dummy is the default and its path still lands on the trainer", JSON.stringify({ step: dummy, primary, ...t }));
+          await click(page.locator(".screennav button", { hasText: "leave" }), "foefirst: leave the trainer");
+          await page.waitForSelector(".hgrid", { timeout: 5000 }).catch(() => {});
+        }
+      }
     }
 
     /* NO STORAGE AT ALL (v5.84). A private window or blocked site data makes
@@ -787,11 +852,13 @@ if(require.main === module){
       const p2 = k2.page; let got = "";
       try {
         await p2.locator(".hcard").first().click(); await p2.getByRole("button", { name: /^Battle$/ }).click();
+        await p2.waitForSelector(".foestep", { timeout: 8000 });
+        const tiles = await p2.locator(".aifoe button").count(), recs = await p2.locator(".aifoe .frec").count();
+        await p2.locator(".aifoe button").nth(2).click();
+        await p2.locator("[data-foe-go]").click();
         await p2.waitForSelector(".rseatpick, .actbar", { timeout: 8000 });
         if(await p2.locator(".rseatpick").isVisible().catch(() => false)) await p2.locator(".rseatpick button").first().click();
         await p2.waitForSelector(".lo .actbar", { timeout: 8000 });
-        const tiles = await p2.locator(".aifoe button").count(), recs = await p2.locator(".aifoe .frec").count();
-        await p2.locator(".aifoe button").nth(2).click();
         await p2.locator('.lo .actbar [data-start="table"]').click();
         await p2.waitForSelector(".board", { timeout: 15000 });
         await p2.evaluate(() => window.__dawnTable.session.submit({ t: "concede" }));

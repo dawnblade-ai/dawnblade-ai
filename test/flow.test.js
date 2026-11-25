@@ -98,8 +98,8 @@ test("the table seats exactly the chosen key, or null for the Dummy", () => {
     "seat 1 is the chosen hero key or null, which buildMatch reads as the Dummy");
   assert.match(CODE, /cfg\.aiFoe \? DawnBuild\.defaultBoard\(/,
     "and an AI seat wears the self-play default, never `{}` (every printed piece, v2.41)");
-  assert.match(CODE, /const \[aiFoe,setAiFoe\] = uS\(null\)/,
-    "the Dummy is the default the screen opens on");
+  assert.match(CODE, /const \[pick,setPick\] = uS\(\(\)=>initial \? \{k:initial\.k\|\|null, random:!!initial\.random\} : \{k:null, random:false\}\)/,
+    "the Dummy is the default the opponent step opens on");
   assert.match(CODE, /onStart\(\{gearIdx:sel, cuts, table:true, aiFoe: pickedFoe, sharp: [^}]*\}\)/,
     "the choice rides only on the TABLE start");
   assert.ok(!/onStart\(\{gearIdx:sel, cuts\}\)[^;]*aiFoe/.test(CODE),
@@ -107,21 +107,21 @@ test("the table seats exactly the chosen key, or null for the Dummy", () => {
 });
 
 test("the picker is the P1 roster, not a second one", () => {
-  const pick = CODE.match(/<div className="aifoe">[\s\S]*?<\/div>\s*<VsStrip/);
+  const pick = CODE.match(/<div className="aifoe">[\s\S]*?<\/div>\s*<p className="foereveal"/);
   assert.ok(pick, "the picker is gone");
   assert.match(pick[0], /HEROES\.map\(/, "it lists the one roster the hero grid lists");
   assert.match(pick[0], /<HeroArt h=\{x\}/, "with the one portrait component");
   assert.ok(!/k:"(?:kayo|azalea|bravo)"/.test(pick[0]), "and writes no hero list of its own");
-  assert.match(pick[0], /setAiFoe\(null\)/, "the Dummy is offered");
-  assert.match(pick[0], /setAiFoe\("random"\)/, "and so is Random");
+  assert.match(pick[0], /setPick\(\{k:null,random:false\}\)/, "the Dummy is offered");
+  assert.match(pick[0], /random:true/, "and so is Random, drawn the moment it is tapped");
 });
 
 test("the networked lobby offers no AI pick", () => {
   /* v5.83: the picker has its own loadout screen (Foe), gated whole, and so
      is the jump to it. */
-  assert.match(CODE, /\{!netFoe && <div className="vscreen" ref=\{sc4\}>\s*<div className="hpane" style=\{\{flex:1\}\}>\s*<div className="paneflag"><span>New engine opponent/,
-    "at a table the seat across is a person, so the sideboard step shows no picker");
-  assert.match(CODE, /\{!netFoe && <button onClick=\{\(\)=>jumpL\(sc4\)\}>/, "and no jump to one");
+  assert.ok(!/ref=\{sc4\}/.test(CODE) && !/jumpL\(sc4\)/.test(CODE),
+    "the picker left the sideboard: at a table there is no AI pick, and solo it is the step in front of the throw");
+  assert.match(CODE, /\{foeStep && !fighting && <FoePick/, "the solo picker is its own step");
 });
 
 test("the table button is no longer gated on choosing a hero", () => {
@@ -169,8 +169,8 @@ test("the scout panel shows the PERSON across the table, not the dummy", () => {
   const i = CODE.indexOf("Scout the opponent");
   assert.ok(i > 0, "the scout panel moved — re-anchor this drill");
   const feat = CODE.slice(i, i + 1600);
-  assert.match(feat, /netFoe\s*\n?\s*\?/, "netFoe decides the portrait");
-  assert.match(feat, /\{netFoeHP\}/, "and their real life total is shown");
+  assert.match(feat, /\(netFoe \|\| foeHero\)\s*\n?\s*\?/, "netFoe, or the AI hero chosen up front, decides the portrait");
+  assert.match(feat, /\{netFoe \? netFoeHP : foeHP\}/, "and their real life total is shown");
   assert.match(feat, /The Dummy · Life/,
     "with the dummy as the FALLBACK — it is what a solo board still faces");
 });
@@ -202,4 +202,22 @@ test("the table no longer claims card text does not resolve", () => {
     "card text resolves at the table through the same engine/effects.js the trainer uses");
   assert.match(CODE, /printed costs and <strong>card text<\/strong>/,
     "and the blurb says so");
+});
+
+test("the opponent is chosen BEFORE the throw and the sideboard, and Random is settled at the pick", () => {
+  /* user, 2026-11-25: "pick the opponent before the sideboard screen so if you
+     pick random opp you know who you're up against to sideboard." */
+  assert.match(CODE, /onClick=\{\(\)=>setFoeStep\(\{\.\.\.hero, seed:battleSeed\(\)\}\)\}/,
+    "Battle opens the opponent step, not the throw");
+  assert.ok(!/onClick=\{\(\)=>setLoHero\(\{\.\.\.hero/.test(CODE), "and no longer jumps straight to the throw");
+  assert.match(CODE, /onDone=\{foe=>\{setLoHero\(\{\.\.\.foeStep, foe\}\); setFoeStep\(null\);\}\}/,
+    "the step hands its choice to the throw on the hero object, so the one chosen is the one dealt");
+  assert.match(CODE, /soloFoe=\{seating\.h\.foe \|\| \{k:null, level:"sharp"\}\}/, "and the sideboard receives it settled");
+  assert.match(CODE, /onBack=\{\(\)=>\{setFoeStep\(seating\.h\); setSeating\(null\);\}\}/,
+    "Back from the sideboard returns to the step with the choice kept");
+  /* RANDOM IS DRAWN AT THE TAP, never at Start: nothing in Loadout may roll a hero */
+  const lo = (CODE.match(/function Loadout\([\s\S]*?function Pregame\(/) || [""])[0];
+  assert.ok(lo.length > 5000, "the sideboard slice must hold the sideboard");
+  assert.ok(!/Math\.random/.test(lo), "the sideboard rolls no opponent of its own");
+  assert.ok(!/aiFoe === "random"/.test(CODE), "and no 'random' key survives to Start");
 });

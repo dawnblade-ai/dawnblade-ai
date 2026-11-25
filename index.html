@@ -908,6 +908,12 @@ img{display:block;max-width:100%}
   text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 /* SHARP / STEADY (lookahead phase 2) — how the AI hero thinks. Two tiles,
    same idiom as the picker above it; the Dummy has no level. */
+.foestep{display:flex;flex-direction:column;min-height:calc(100vh - 8px);max-width:100%}
+.foebody{padding:5px 6px 12px;box-sizing:border-box;max-width:100%}
+.foereveal{margin:10px 0 2px;text-align:center;font-family:'Big Shoulders Display';font-weight:700;font-size:var(--fs-body);letter-spacing:.04em;color:var(--bone-dim)}
+.foereveal b{color:var(--y);letter-spacing:.06em}
+.foebar{position:sticky;bottom:0;background:var(--ink);padding:8px 0 10px;margin-top:8px}
+.foechange{display:inline-block;margin:2px 0 0;padding:0;min-height:44px;background:none;border:0;color:var(--bone-dim);font-family:'Spline Sans Mono';font-size:var(--fs-md);text-decoration:underline}
 .ailevel{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0 0}
 .ailevel button{background:var(--forge);border:1px solid var(--line);border-radius:3px;
   padding:8px 8px 7px;color:var(--bone);text-align:left;min-width:0;min-height:44px;cursor:pointer}
@@ -7317,6 +7323,71 @@ function Trophies(){
   );
 }
 
+/* ============================================================
+   FOEPICK — who you are up against, BEFORE the throw and the sideboard.
+
+   Asked for by the user (2026-11-25): "pick the opponent before the sideboard
+   screen so if you pick random opp you know who you're up against to
+   sideboard." It lived inside Loadout, and Random was settled only at Start,
+   so a player boarded blind. Now Random is drawn the moment it is tapped and
+   named on this screen, and that same hero is the one dealt (it rides on the
+   hero object as `foe`, through Pregame and Loadout, to the table's build).
+
+   `foe` = {k, random, level}: k is a hero key, or null for the Dummy (the
+   default; the Dummy still goes to the trainer from Loadout). The opponent is
+   deliberately NOT remembered between matches (a remembered one would
+   silently change a later game); Sharp / Steady IS, as before — it is the
+   player's taste. `initial` is the earlier choice when Back lands here.
+   ============================================================ */
+function FoePick({h, db, initial, onBack, onDone}){
+  const [pick,setPick] = uS(()=>initial ? {k:initial.k||null, random:!!initial.random} : {k:null, random:false});
+  const [level,setLevelS] = uS(()=>store.get("aiLevel","sharp")==="steady" ? "steady" : "sharp");
+  const setLevel = v => { store.set("aiLevel", v); setLevelS(v); };
+  const aiRec = uM(()=>DawnLocal.loadRecord(lsGet),[]);
+  const recOf = k => { const c = aiRec.foes[k] && aiRec.foes[k][level]; return c && (c.w + c.l + c.d) ? c : null; };
+  const anyRec = HEROES.some(x=>recOf(x.k));
+  const foeHero = pick.k ? HEROES.find(x=>x.k===pick.k) : null;
+  return (
+    <div className="foestep">
+      <div className="screennav">
+        <button onClick={onBack} style={{flex:.7}}>✕ back</button>
+        <button disabled style={{flex:2}}>Choose your opponent</button>
+      </div>
+      <div className="foebody">
+        <div className="paneflag"><span>Who are you up against?</span><span>you will know before you sideboard</span></div>
+        <div className="aifoe">
+          <button className={!pick.k?"on":""} onClick={()=>setPick({k:null,random:false})} aria-label="The Dummy">
+            <div className="fport">✕</div><span className="fname">The Dummy</span></button>
+          <button className={pick.random?"on":""} onClick={()=>setPick({k:HEROES[Math.floor(Math.random()*HEROES.length)].k, random:true})} aria-label="A random hero">
+            <div className="fport">?</div><span className="fname">Random</span></button>
+          {HEROES.map(x=>{ const r = recOf(x.k);
+            return <button key={x.k} className={!pick.random && pick.k===x.k?"on":""} onClick={()=>setPick({k:x.k,random:false})} aria-label={x.n}>
+            <div className="fport"><HeroArt h={x} db={db} key={db.status}/></div>
+            <span className="fname">{heroShort(x)}</span>
+            {r && <span className="frec" title={`${r.w} won, ${r.l} lost${r.d ? ", "+r.d+" drawn" : ""} at ${level==="sharp"?"Sharp":"Steady"}`}>
+              {r.w}–{r.l}{r.d ? <span className="frecd"> · {r.d}d</span> : null}</span>}</button>; })}
+        </div>
+        <p className="foereveal" role="status" data-foe={pick.k||"dummy"}>Your opponent: <b>{foeHero ? foeHero.n : "The Dummy"}</b>{pick.random ? " — drawn at random. Tap Random to draw again." : ""}</p>
+        <VsStrip hero={{...h, mystery:false}} db={db} foe={foeHero}/>
+        {pick.k && <div className="ailevel" role="group" aria-label="How the AI plays">
+          <button className={level==="sharp"?"on":""} aria-pressed={level==="sharp"} onClick={()=>setLevel("sharp")}>
+            <span className="lvl">Sharp</span>
+            <span className="lsub">Plays out each way to start its turn, then picks the best.</span></button>
+          <button className={level==="steady"?"on":""} aria-pressed={level==="steady"} onClick={()=>setLevel("steady")}>
+            <span className="lvl">Steady</span>
+            <span className="lsub">Plays by its rules of thumb. Quicker to read, easier to beat.</span></button>
+        </div>}
+        {anyRec && <p className="note frecnote">Under a hero: your wins–losses against it at {level==="sharp"?"Sharp":"Steady"}, and draws as "d". Kept on this device.</p>}
+        <div className="foebar">
+          <button className="battlebtn clip" data-foe-go style={{marginTop:0}} onClick={()=>onDone({k:pick.k, random:pick.random, level})}>
+            <span>{foeHero ? "Face "+heroShort(foeHero) : "Face the Dummy"}</span></button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 /* ---------- LOADOUT — the official zones (4 armour slots, 2 hands) live
      in engine/build.js: ARMOR_Z, HAND_Z, applyPick, defaultPicks. One set
      of slot rules governs both seats, or the opponent is quietly stronger
@@ -7347,7 +7418,7 @@ function Trophies(){
 
    `oppH` was the other prop and is gone (v2.81): in the trainer the
    opponent is the vanilla dummy, always. */
-function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
+function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay,soloFoe,onFoe}){
   const d = PARSED[h.k];
   const saSet = (d.hero.code||"").slice(0,3) || null;
   const gearR = uM(()=>d.gear.map((e,i)=>{ const c=resolveEntry(db,e,saSet); return {i, c, s:slotOf(c)}; }),[h,db]);
@@ -7372,19 +7443,19 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
      cards are suitable :)". `aiFoe` is a hero KEY, "random", or null for
      the Dummy, and it reaches only the new engine's table: the trainer
      keeps its tuned pile. */
-  const [aiFoe,setAiFoe] = uS(null);
+  /* v7.xx: THE OPPONENT IS PICKED BEFORE THIS SCREEN (`FoePick`, the step
+     in front of the throw), so a player who drew Random boards knowing who
+     it is. It arrives here already settled as `soloFoe` = {k, level}: k is a
+     real hero key or null (the Dummy), never "random". */
+  const aiFoe = soloFoe && soloFoe.k ? soloFoe.k : null;
   /* SHARP OR STEADY (lookahead phase 2). How an AI hero thinks: Sharp plays
      each way to start its turn, and each way to block, out through the engine before it picks one
      (sparring.js, LOOKAHEAD); Steady is the rule policy alone. Unlike the
      opponent it IS remembered — it is the player's taste, not a property of
      one match — and Sharp is the default. */
-  const [aiLevel,setAiLevelS] = uS(()=>store.get("aiLevel","sharp")==="steady" ? "steady" : "sharp");
-  const setAiLevel = v => { store.set("aiLevel", v); setAiLevelS(v); };
+  const aiLevel = soloFoe && soloFoe.level === "steady" ? "steady" : "sharp";
   /* YOUR RECORD AGAINST EACH AI HERO (v5.84), at the level chosen below. Read
      once per visit; storage that is missing or throws reads as no record. */
-  const aiRec = uM(()=>DawnLocal.loadRecord(lsGet),[]);
-  const recOf = k => { const c = aiRec.foes[k] && aiRec.foes[k][aiLevel]; return c && (c.w + c.l + c.d) ? c : null; };
-  const anyRec = HEROES.some(x=>recOf(x.k));
   const item = i => gearR.find(x=>x.i===i);
   const hands = sel.filter(i=>["1h","2h","off"].includes(item(i).s.z)).reduce((a,i)=>a+item(i).s.h,0);
   const armorN = sel.filter(i=>ARMOR_Z.includes(item(i).s.z)||item(i).s.z==="misc").length;
@@ -7417,14 +7488,14 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
     store.set("loadout."+h.k,{sel,cuts});
     /* RANDOM is settled here, at the tap, so the key the match is built
        from is a real hero and a replay of the spec deals the same game. */
-    const pickedFoe = aiFoe === "random" ? HEROES[Math.floor(Math.random()*HEROES.length)].k : aiFoe;
+    const pickedFoe = aiFoe;
     /* AN AI HERO PLAYS SHARP (lookahead, phase 2): at its own action
        decision it plays each way to start out through the real engine
        and keeps the best (sparring.js, LOOKAHEAD). The Dummy stays on the
        rule policy: it is the regression harness, not a sparring partner. */
     onStart({gearIdx:sel, cuts, table:true, aiFoe: pickedFoe, sharp: !!pickedFoe && aiLevel==="sharp"});
   };
-  const foeHero = aiFoe && aiFoe !== "random" ? HEROES.find(x=>x.k===aiFoe) : null;
+  const foeHero = aiFoe ? HEROES.find(x=>x.k===aiFoe) : null;
   const vsAI = aiFoe !== null;
   const deckRows = d.deck.map((e,ei)=>({ei, e, c:resolveEntry(db,e,saSet)}));
   const PD = {1:"var(--r)",2:"var(--y)",3:"var(--b)"};
@@ -7438,7 +7509,7 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
         {on && <span className="chk">✓</span>}
       </button>);
   };
-  const sc1=uR(null), sc2=uR(null), sc3=uR(null), sc4=uR(null);
+  const sc1=uR(null), sc2=uR(null), sc3=uR(null);
   const bar=uR(null), wrap=uR(null);
   /* --lochrome: EVERYTHING THE THREE FLICK SCREENS DO NOT GET, MEASURED.
      It was the literal 236 in the rule above, written when the action bar
@@ -7495,6 +7566,12 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
     const oc = resolveHero(db, PARSED[netFoe.k].hero);
     return oc && oc.hp!=null ? oc.hp : 20;
   },[netFoe,db]);
+  /* the chosen AI hero's printed life, for the scout panel (the Dummy is 42) */
+  const foeHP = uM(()=>{
+    if(!foeHero) return 42;
+    const oc = resolveHero(db, PARSED[foeHero.k].hero);
+    return oc && oc.hp!=null ? oc.hp : 20;
+  },[foeHero,db]);
   const prevTile = x => (
     <button key={x.i} className="g clip-sm" style={{width:"100%",maxWidth:118}} onClick={()=>setSel(s=>applyPick(gearR,s,x.i))}>
       <CardFrame card={x.c} className="sm"/>
@@ -7506,7 +7583,6 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
         <button onClick={()=>jumpL(sc1)}>▲ Scout</button>
         <button onClick={()=>jumpL(sc2)}>Loadout</button>
         <button onClick={()=>jumpL(sc3)}>{netFoe ? "Deck ▼" : "Deck"}</button>
-        {!netFoe && <button onClick={()=>jumpL(sc4)}>Foe ▼</button>}
       </div>
       <div className="tablewrap" ref={wrap}>
         {/* ---- SCOUT: hero card only ---- */}
@@ -7522,9 +7598,9 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
                     fell through to the prop. `netFoe` is who is actually
                     across the table; the dummy is the fallback, not the
                     default. */}
-                {netFoe
-                  ? <><div className="port clip-sm" style={{width:96}}><HeroArt h={netFoe} db={db}/></div>
-                      <b>{netFoeHP}</b><span>{heroShort(netFoe)} · Life</span></>
+                {(netFoe || foeHero)
+                  ? <><div className="port clip-sm" style={{width:96}}><HeroArt h={netFoe || foeHero} db={db}/></div>
+                      <b>{netFoe ? netFoeHP : foeHP}</b><span>{heroShort(netFoe || foeHero)} · Life</span></>
                   : <><div className="dmy"><div className="dhead"><span>✕</span><span>✕</span></div><div className="dbody"/><div className="dpost"/></div>
                       <b>{"42"}</b><span>The Dummy · Life</span></>}
               </div>
@@ -7540,11 +7616,13 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
               <div className="foefixed mono">
                 {netFoe ? netFoe.n+" — "+netFoe.cls
                         : "The Dummy — 42 life, vanilla pile"
-                          + (aiFoe ? " · new engine: "+(foeHero ? heroShort(foeHero)+", an AI seat" : "a random AI hero") : "")}</div>
+                          + (foeHero ? " · new engine: "+heroShort(foeHero)+", an AI seat" : "")}</div>
+              {!netFoe && onFoe && <button className="foechange" onClick={onFoe}>Change opponent</button>}
               <div className="seatline mono">{(netFoe ? netOnPlay : onPlay)
                 ? "You are ON THE PLAY — first turn, and a card of tempo for it."
                 : "You are ON THE DRAW — they swing first, and you keep the extra card."}</div>
             </div>
+            {!netFoe && foeHero && <VsStrip hero={h} db={db} foe={foeHero}/>}
             <div className="vfillsp"/>
             <p className="note">{netFoe
               ? `${heroShort(netFoe)} is a person, sitting somewhere else, holding a real hand. `
@@ -7613,41 +7691,6 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
             <p className="note">Blitz runs exactly 40 — cut what your plan won't miss. Loadout and cuts saved per hero.</p>
           </div>
         </div>
-        {/* THE OPPONENT GETS ITS OWN SCREEN (v5.83). It shared the deck
-            screen as a second pane, and `.hpane`'s `flex:0 0 100%` (written
-            for the sideways swipe) made it a whole screen tall in a column:
-            the trim grid above it was crushed to its 15px of padding and the
-            picker ran 25px past the screen's clipped bottom, so the Sharp /
-            Steady tiles were cut through the middle just above the fixed bar
-            and no scroll could bring them up. One screen each, and the pane
-            scrolls inside itself if a phone is shorter than the picker. */}
-        {!netFoe && <div className="vscreen" ref={sc4}>
-          <div className="hpane" style={{flex:1}}>
-            <div className="paneflag"><span>New engine opponent</span><span>the trainer always faces the Dummy</span></div>
-            <div className="aifoe">
-              <button className={aiFoe===null?"on":""} onClick={()=>setAiFoe(null)} aria-label="The Dummy">
-                <div className="fport">✕</div><span className="fname">The Dummy</span></button>
-              <button className={aiFoe==="random"?"on":""} onClick={()=>setAiFoe("random")} aria-label="A random hero">
-                <div className="fport">?</div><span className="fname">Random</span></button>
-              {HEROES.map(x=>{ const r = recOf(x.k);
-                  return <button key={x.k} className={aiFoe===x.k?"on":""} onClick={()=>setAiFoe(x.k)} aria-label={x.n}>
-                  <div className="fport"><HeroArt h={x} db={db} key={db.status}/></div>
-                  <span className="fname">{heroShort(x)}</span>
-                  {r && <span className="frec" title={`${r.w} won, ${r.l} lost${r.d ? ", "+r.d+" drawn" : ""} at ${aiLevel==="sharp"?"Sharp":"Steady"}`}>
-                    {r.w}–{r.l}{r.d ? <span className="frecd"> · {r.d}d</span> : null}</span>}</button>; })}
-            </div>
-            <VsStrip hero={h} db={db} foe={aiFoe==="random" ? {mystery:true} : foeHero}/>
-            {aiFoe!==null && <div className="ailevel" role="group" aria-label="How the AI plays">
-              <button className={aiLevel==="sharp"?"on":""} aria-pressed={aiLevel==="sharp"} onClick={()=>setAiLevel("sharp")}>
-                <span className="lvl">Sharp</span>
-                <span className="lsub">Plays out each way to start its turn, then picks the best.</span></button>
-              <button className={aiLevel==="steady"?"on":""} aria-pressed={aiLevel==="steady"} onClick={()=>setAiLevel("steady")}>
-                <span className="lvl">Steady</span>
-                <span className="lsub">Plays by its rules of thumb. Quicker to read, easier to beat.</span></button>
-            </div>}
-            {anyRec && <p className="note frecnote">Under a hero: your wins–losses against it at {aiLevel==="sharp"?"Sharp":"Steady"}, and draws as "d". Kept on this device.</p>}
-          </div>
-        </div>}
       </div>
       <div className="actbar" ref={bar}>
         {/* AT A TABLE THERE IS NOTHING TO START. This screen is the
@@ -7690,7 +7733,7 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
                 {vsAI ? "Train against the dummy instead" : <span>Fight the dummy</span>}</button>
               <button data-start="table" className={vsAI ? "battlebtn clip lovs" : "bigbtn alt lo2"}
                 style={{order:vsAI?1:2}} onClick={startTable}>
-                {vsAI ? <span>Fight {foeHero ? heroShort(foeHero) : "a random hero"} — {aiLevel==="sharp" ? "Sharp" : "Steady"}</span>
+                {vsAI ? <span>Fight {foeHero ? heroShort(foeHero) : "the AI"} — {aiLevel==="sharp" ? "Sharp" : "Steady"}</span>
                       : "The dummy at the table — harder"}</button>
               {/* THE NOTE SAYS ONLY WHAT IS MEASURED (v5.35). No win rate
                   is quoted for a hero seat: none was measured per pair on
@@ -7706,9 +7749,9 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
                   ? <>The same 30-card pile, but played as a real seat: it holds a hand,
                     pays costs and blocks like a person. <b>Untuned and currently
                     winning most games.</b> This is the engine a second player will sit at.</>
-                  : <>An AI pilots {foeHero ? heroShort(foeHero) : "a random hero"}, playing <b>{aiLevel==="sharp"
+                  : <>An AI pilots {foeHero ? heroShort(foeHero) : "a hero"}, playing <b>{aiLevel==="sharp"
                     ? "Sharp: it plays out each way to start its turn, and each way to block, before it commits"
-                    : "Steady: the rules of thumb self-play uses"}</b>. Pick the opponent and how it plays on the Foe screen.</>}
+                    : "Steady: the rules of thumb self-play uses"}</b>. Change the opponent, or how it plays, with Change opponent in the first pane.</>}
                 </p>
               </details>
             </>}
@@ -10424,6 +10467,9 @@ function App(){
      because they are two different boards and only one may be up. */
   const [localTable,setLocalTable]=uS(null);
   const [loHero,setLoHero]=uS(null);
+  /* v7.xx: the opponent step, in front of the throw. Holds the chosen fighter, with its
+     seed and `foe` once chosen, while the player picks who to fight. */
+  const [foeStep,setFoeStep]=uS(null);
   /* seating is decided between the loadout and the first draw */
   const [seating,setSeating]=uS(null);
   /* the table: null -> "find" (the code screen) -> {table,host,code} (seated) */
@@ -10441,8 +10487,8 @@ function App(){
   });
   /* One screen at a time. `idle` is the lobby: no match, no loadout, no
      seating throw and nobody at a table. */
-  const idle = !fighting && !loHero && !seating && !table && !localTable;
-  const picking = awayPlay && table==="find" && !fighting && !loHero && !seating && !localTable;   /* the hero grid again, search still running */
+  const idle = !fighting && !foeStep && !loHero && !seating && !table && !localTable;
+  const picking = awayPlay && table==="find" && !fighting && !foeStep && !loHero && !seating && !localTable;   /* the hero grid again, search still running */
   return (
     <div className="shell">
       {!fighting && !table && !localTable && <div className="topbar">
@@ -10460,7 +10506,7 @@ function App(){
           <button className="bigbtn alt" data-testid="wait-back" onClick={()=>setAwayPlay(false)}>Back to the search</button></div>}
         <HeroGrid best={best} onPick={p=>setHero(p&&p.random ? {...HEROES[Math.floor(Math.random()*HEROES.length)], mystery:true} : p)} db={db} selected={hero}/>
         <HeroBanner h={hero} db={db}/>
-        {hero && <button className="battlebtn clip" disabled={db.status!=="ready"} onClick={()=>setLoHero({...hero, seed:battleSeed()})}><span>{db.status==="ready"?"Battle":"Forging…"}</span></button>}
+        {hero && <button className="battlebtn clip" disabled={db.status!=="ready"} onClick={()=>setFoeStep({...hero, seed:battleSeed()})}><span>{db.status==="ready"?"Battle":"Forging…"}</span></button>}
         {!picking && <button className="bigbtn alt" style={{marginTop:8}} onClick={()=>{ setGaveBack(null); setTable("find"); }}>Find an opponent</button>}
         {/* A NEW PHONE SEES IT AS A BUTTON (v6.57): until How to play has been opened once on this
             device (and no game has been recorded), it wears a gold frame; after that it is quiet text,
@@ -10478,7 +10524,7 @@ function App(){
         {hero && hero.mystery && <p className="note" style={{textAlign:"center"}}>Fate holds the card — your fighter is revealed at preparation.</p>}
       </>}
       {table==="find" && <TableScreen again={seekAgain} away={awayPlay} typ={waitTyp} onTyp={setWaitTyp} onPlayAI={()=>setAwayPlay(true)} onGaveBack={why=>{ setGaveBack(why); setAwayPlay(false); setTable(null); }} onBack={()=>{ setSeekAgain(null); setAwayPlay(false); setTable(null); }}
-        onSeated={s=>{ setSeekAgain(null); setAwayPlay(false); setFighting(null); setLoHero(null); setSeating(null); setLocalTable(null); setTable(s); }}/>}
+        onSeated={s=>{ setSeekAgain(null); setAwayPlay(false); setFighting(null); setFoeStep(null); setLoHero(null); setSeating(null); setLocalTable(null); setTable(s); }}/>}
       {/* The card database has to be READY before a table is dealt: both
           phones build the same two decks out of it, so a client that is
           still fetching would deal from a half-built map. The lobby's
@@ -10511,11 +10557,16 @@ function App(){
           solo flow ran Loadout → Pregame, which showed you the seating
           only after every choice that could use it. Reversing it is why
           `Loadout` now takes `onPlay` as a prop. */}
+      {foeStep && !fighting && <FoePick h={foeStep} db={db} initial={foeStep.foe}
+        onBack={()=>setFoeStep(null)}
+        onDone={foe=>{setLoHero({...foeStep, foe}); setFoeStep(null);}}/>}
       {loHero && !fighting && <Pregame h={loHero} seed={loHero.seed}
-        onBack={()=>setLoHero(null)}
+        onBack={()=>{setFoeStep(loHero); setLoHero(null);}}
         onSeated={first=>{setSeating({h:loHero, first, seed:loHero.seed}); setLoHero(null);}}/>}
       {seating && !fighting && <Loadout h={seating.h} db={db} onPlay={seating.first===0}
-        onBack={()=>{setLoHero(seating.h); setSeating(null);}}
+        soloFoe={seating.h.foe || {k:null, level:"sharp"}}
+        onFoe={()=>{setFoeStep(seating.h); setSeating(null);}}
+        onBack={()=>{setFoeStep(seating.h); setSeating(null);}}
         onStart={cfg=>{
           /* ---- ONE ENGINE, NO NETWORK (v2.79) -----------------------
              The same screen a networked table renders and the same

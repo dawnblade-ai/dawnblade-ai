@@ -39,8 +39,14 @@ async function sweepScreens(page, row, { w, h }) {
     await page.waitForSelector(".sheet");
     return true;
   };
-  const toLoadout = async () => {
+  /* the opponent step comes first now (Battle -> opponent -> coin -> sideboard): judged once with the
+     Dummy and once with an AI hero picked (the level tiles appear), each at this size */
+  const toLoadout = async (ai = false) => {
     if (!(await click(btn(/^Battle$/), "battle"))) return false;
+    await page.waitForSelector(".foestep");
+    if (ai) { await page.locator(".aifoe button").nth(2).click(); await page.waitForTimeout(300); await m("opponent step with an AI hero"); }
+    else await m("opponent step");
+    if (!(await click(page.locator("[data-foe-go]"), "continue past the opponent step"))) return false;
     await page.waitForSelector(".rps"); await page.waitForSelector(".rseatpick, .actbar", { timeout: 10000 });
     if (await has(".rseatpick")) await click(page.locator(".rseatpick .go"), "I go first");
     await page.waitForSelector(".actbar", { timeout: 8000 });
@@ -83,8 +89,8 @@ async function sweepScreens(page, row, { w, h }) {
     }
     /* the table against an AI hero */
     await home();
-    if (await toCoin() && await toLoadout()) {
-      await page.locator(".aifoe button").nth(2).click(); await page.waitForTimeout(300); await m("loadout against an AI hero");
+    if (await toCoin() && await toLoadout(true)) {
+      await m("loadout against an AI hero");
       if (await click(page.locator('.lo .actbar [data-start="table"]'), "fight at the table")) {
         await page.waitForSelector(".board", { timeout: 15000 }); await m("table board");
         let prompts = 0;
