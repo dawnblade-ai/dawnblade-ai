@@ -1,3 +1,13 @@
+## v7.06 — The screen stays awake
+
+- **Keep the screen awake (QUEUE NEXT 1, CEO).** While a board is up — the trainer, or any table (AI, friend, direct,
+  ranked, server) — the page holds a Screen Wake Lock, so the phone does not dim while the other seat thinks. The browser
+  drops the lock when the page is hidden; the page asks again when it comes back, and lets it go when the board is left.
+  Where the API is missing (iOS before 16.4, some `file://` opens) or refuses, nothing happens and nothing is said. One
+  hook (`useWakeLock`, script0), called by `Battle` and `TableBoard`. Page only. Drill: page.js's wake-lock row (a
+  stand-in `navigator.wakeLock` counts asks and holds across grid → trainer → hide/return → leave → AI table).
+- Gates: see the release commit.
+
 ## v7.05 — Against whom?
 
 - **Against whom (QUEUE NEXT 3, CEO).** *Against people* on the Record tab gains an *Against whom?* button (shown when a

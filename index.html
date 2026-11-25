@@ -1220,7 +1220,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "7.05"; /* v7.05 - Your record answers who you played against people, on a tap; see CHANGELOG.md. */
+window.APP_VER = "7.06"; /* v7.06 - The screen stays awake while a game is on; see CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -2050,6 +2050,26 @@ const {useState,useEffect,useMemo,useCallback} = React;
    fifteen heroes and wrong the day two share a first name: Viserai and Viserai, Between Worlds both
    read "VISERAI" on the roster. A HEROES entry may carry `short`; otherwise the old cut. */
 const heroShort = h => h ? (h.short || String(h.n || "").split(",")[0]) : "";
+
+/* THE SCREEN STAYS AWAKE WHILE A GAME IS ON (v7.06). A phone that dims while the other seat
+   thinks loses its turn to a lock screen. Held while a board is mounted; the browser drops the
+   lock when the page is hidden, so it is asked for again on return. Where the Screen Wake Lock
+   API is missing (older iOS, file://) or refuses, nothing happens and nothing is said. */
+function useWakeLock(){
+  useEffect(()=>{
+    const wl = navigator.wakeLock;
+    if(!wl || !wl.request) return;
+    let lock = null, live = true;
+    const ask = () => { if(!live || lock || document.visibilityState !== "visible") return;
+      wl.request("screen").then(l => { if(!live){ l.release().catch(()=>{}); return; }
+        lock = l; l.addEventListener("release", () => { if(lock === l) lock = null; }); }).catch(()=>{}); };
+    const vis = () => ask();
+    document.addEventListener("visibilitychange", vis);
+    ask();
+    return () => { live = false; document.removeEventListener("visibilitychange", vis);
+      if(lock){ lock.release().catch(()=>{}); lock = null; } };
+  }, []);
+}
 
 /* ---------- storage ---------- */
 const store = {
@@ -3643,6 +3663,7 @@ function ZoneStrip({label,none,hand,arsenal,pitch}){
    instead of silently reading as false on a real hero's turn. */
 
 function Battle({h,cfg,first,db,onExit,onRecord}){
+  useWakeLock();   /* the screen stays on while this game is up (v7.06) */
   const foeFirst = first === 1;
   /* Every log line that used to say "the dummy" now says who is actually
      across the table. One name, read from the seat, so a rename cannot
@@ -9344,6 +9365,7 @@ function TableThrow({lob, mySeat, myH, foeH, onThrow}){
    predict.
    ============================================================ */
 function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit, local, heroKey, onRecord, judged, onAgain, onRematch}){
+  useWakeLock();   /* the screen stays on while this game is up (v7.06) */
   /* AT A TWO-PHONE TABLE THIS PHONE SHOWS ITS OWN SEAT'S VIEW (HIDDEN HANDS
      H2). The host's referee holds the game; until the guest's first snapshot
      lands, the guest shows its blind deal as seen from NEITHER seat: every

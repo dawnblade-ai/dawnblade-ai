@@ -874,6 +874,50 @@ if(require.main === module){
       await k2.close();
     }
 
+    /* THE SCREEN STAYS AWAKE (v7.06, QUEUE NEXT 1). A stand-in navigator.wakeLock counts what the page asks for: no lock on
+       the hero grid, one held on the trainer board and on an AI table board, none left once each is left, and a hidden page
+       that comes back asks again (the browser drops the lock on hide). Sabotage: delete either useWakeLock() call. */
+    {
+      const kw = await open({ w: W, h: H });
+      const name = "wake lock: held on the trainer and the table board, released on leave, asked again on return";
+      let got = {};
+      try {
+        await kw.page.context().addInitScript(() => {
+          const w = window.__wake = { asked: 0, held: 0 };
+          Object.defineProperty(navigator, "wakeLock", { configurable: true, value: { request(t){
+            w.asked++; w.held++; const ls = [];
+            const l = { type: t, released: false, addEventListener(e, f){ if(e === "release") ls.push(f); },
+              release(){ if(!l.released){ l.released = true; w.held--; ls.forEach(f => f()); } return Promise.resolve(); } };
+            w.last = l; return Promise.resolve(l); } } }); });
+        await kw.page.reload(); await kw.page.waitForSelector(".hgrid", { timeout: 15000 });
+        const P = kw.page, wake = () => P.evaluate(() => ({ asked: window.__wake.asked, held: window.__wake.held }));
+        got.grid = await wake();
+        const seat = async () => { await P.locator("[data-foe-go]").click(); await P.waitForSelector(".rseatpick, .actbar", { timeout: 8000 });
+          if(await P.locator(".rseatpick").isVisible().catch(() => false)) await P.locator(".rseatpick button").first().click();
+          await P.waitForSelector(".lo .actbar", { timeout: 8000 }); };
+        await P.locator(".hcard").first().click(); await P.getByRole("button", { name: /^Battle$/ }).click();
+        await P.waitForSelector(".foestep", { timeout: 8000 }); await seat();
+        await P.locator('.lo .actbar [data-start="trainer"]').click(); await P.waitForSelector(".board", { timeout: 8000 });
+        await P.waitForTimeout(100); got.trainer = await wake();
+        /* hidden then visible: the browser releases on hide, the page asks again on return */
+        await P.evaluate(() => { window.__wake.last.release(); Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
+          document.dispatchEvent(new Event("visibilitychange")); });
+        await P.waitForTimeout(100); got.back = await wake();
+        await P.locator(".screennav button", { hasText: "leave" }).click(); await P.waitForSelector(".hgrid", { timeout: 5000 }).catch(() => {});
+        await P.waitForTimeout(100); got.left = await wake();
+        await P.locator(".hcard").first().click(); await P.getByRole("button", { name: /^Battle$/ }).click();
+        await P.waitForSelector(".foestep", { timeout: 8000 });
+        await P.locator('.aifoe button:not([aria-label="The Dummy"]):not([aria-label="A random hero"])').first().click();
+        await seat();
+        await P.locator('.lo .actbar [data-start="table"]').click(); await P.waitForSelector(".board", { timeout: 15000 });
+        await P.waitForTimeout(100); got.table = await wake();
+        const ok = got.grid.asked === 0 && got.trainer.held === 1 && got.back.held === 1 && got.back.asked === 2 && got.left.held === 0
+          && got.table.held === 1 && got.table.asked === 3 && !kw.errors.length;
+        row(ok, name, JSON.stringify(got) + (kw.errors.length ? " errors: " + kw.errors.join(" | ") : ""));
+      } catch(e){ row(false, name, JSON.stringify(got) + " " + String(e.message).split("\n")[0]); }
+      await kw.close();
+    }
+
     /* YOUR RECORD (v7.00, QUEUE NEXT 3): the title's fourth door. A record against two AI heroes seeded in storage must come
        back as one row per hero (most games first) and the right total; the same page with NOTHING seeded must say so (the
        sabotage: an empty record must not draw rows). A phone with no server sign-in shows the ranked card's empty line and
