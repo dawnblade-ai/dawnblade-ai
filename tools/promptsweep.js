@@ -16,7 +16,7 @@
    the budget is spent. TRAINER: random taps (tools/trainchaos.js's way) through the dummy game.
    Output: one PASS/FAIL row per (hero, board, kind, size), then the COVERAGE table (ok / FAIL / . = not reached).
 
-   node tools/promptsweep.js [--sizes 393x852,320x568] [--heroes 0,3] [--boards table,trainer] [--games 3] [--steps 400]
+   node tools/promptsweep.js [--trainer (every kind injected on the TRAINER via ?drill=1's window.__battle)] [--inject (every kind on the table)] [--sizes 393x852,320x568] [--heroes 0,3] [--boards table,trainer] [--games 3] [--steps 400]
    Deps and NODE_PATH as tools/page.js's header. Not part of `npm test` (needs a browser).
    ============================================================ */
 "use strict";
@@ -197,36 +197,44 @@ const injectOne = ([name, spec, extra]) => {
   return why ? { err: "submit refused: " + why } : { tag: p.tag, title: p.title };
 };
 
-async function injectSweep({ page, w, h, heroes, row, seen, log, css = null, only = null }) {
+/* in the page, TRAINER: raise the spec through Battle's own openPrompt (window.__battle, present only under ?drill=1) */
+const injectTrainer = ([name, spec, extra]) => {
+  const B = window.__battle; if (!B) return { err: "no window.__battle (open the page with ?drill=1)" };
+  B.raise({ ...spec }, extra || null);
+  return { tag: spec.tag, title: name };
+};
+
+async function injectSweep({ page, w, h, heroes, row, seen, log, css = null, only = null, board = "table" }) {
+  const trainer = board === "trainer", tag0 = trainer ? "trainer inject" : "inject";   // the trainer needs the page opened with ?drill=1 (window.__battle)
   const has = sel => page.locator(sel).first().isVisible().catch(() => false);
   for (const hi of heroes) {
     await page.reload(); await page.waitForSelector(".hcard", { timeout: 20000 });
     const hero = (await page.locator(".hgrid .hcard").nth(hi).innerText()).replace(/\s+/g, " ").trim().slice(0, 22);
     try {
-      await page.evaluate(installWrap);
+      if (!trainer) await page.evaluate(installWrap);
       if (css) await page.addStyleTag({ content: css });
       await page.locator(".hgrid .hcard").nth(hi).click(); await page.waitForSelector(".sheet");
       await page.getByRole("button", { name: /^Battle$/ }).first().click();
       await page.waitForSelector(".rps"); await page.waitForSelector(".rseatpick, .actbar", { timeout: 10000 });
       if (await has(".rseatpick")) await page.locator(".rseatpick .go").click();
       await page.waitForSelector(".actbar", { timeout: 8000 });
-      await page.locator(".aifoe button").nth((hi + 3) % (await page.locator(".aifoe button").count())).click(); await page.waitForTimeout(200);
-      await page.locator('.lo .actbar [data-start="table"]').click();
+      if (!trainer) { await page.locator(".aifoe button").nth((hi + 3) % (await page.locator(".aifoe button").count())).click(); await page.waitForTimeout(200); }
+      await page.locator(`.lo .actbar [data-start="${trainer ? "trainer" : "table"}"]`).click();
       await page.waitForSelector(".board", { timeout: 15000 });
       await page.waitForTimeout(600);
-      const specs = await page.evaluate(`(${makeSpecs.toString()})(window.__dawnTable.session.state())`)
+      const specs = await page.evaluate(`(${makeSpecs.toString()})(${trainer ? "window.__battle.state()" : "window.__dawnTable.session.state()"})`)
         .catch(e => { throw new Error("specs: " + e.message); });
       for (const [name, spec, extra] of specs.filter(v => !only || only.some(o => v[0].startsWith(o))).map(v => v.length === 3 ? v : [v[0], v[1], v.__sel])) {
-        const r = await page.evaluate(injectOne, [name, spec, extra]);
-        if (r.err) { row(false, `inject ${w}x${h}: ${hero} / ${name}`, r.err); continue; }
+        const r = await page.evaluate(trainer ? injectTrainer : injectOne, [name, spec, extra]);
+        if (r.err) { row(false, `${tag0} ${w}x${h}: ${hero} / ${name}`, r.err); continue; }
         await page.waitForSelector(".psheet", { timeout: 4000 }).catch(() => {});
         await page.waitForTimeout(350);
         const f = await page.evaluate(sheetFacts, MINFONT);
-        if (!f) { row(false, `inject ${w}x${h}: ${hero} / ${name}`, "no sheet drawn for a live " + r.tag + " prompt"); continue; }
+        if (!f) { row(false, `${tag0} ${w}x${h}: ${hero} / ${name}`, "no sheet drawn for a live " + r.tag + " prompt"); continue; }
         const j = await judgeScreen(page);
         const bad = ["small", "stolen", "clipped", "overlap"].flatMap(k => j[k].map(x => k + ": " + x.m)).concat(f.issues);
-        seen.set(`${hero}|inject|${r.tag}`, bad.length ? "FAIL" : (seen.get(`${hero}|inject|${r.tag}`) || "ok"));
-        row(j.n > 0 && !bad.length, `inject ${w}x${h}: ${hero} / ${name}`, `${j.n} controls` + (bad.length ? "  " + bad.slice(0, 4).join(" | ") + (bad.length > 4 ? ` (+${bad.length - 4} more)` : "") : ""));
+        seen.set(`${hero}|${board === "trainer" ? "trainer" : "inject"}|${r.tag}`, bad.length ? "FAIL" : (seen.get(`${hero}|${trainer ? "trainer" : "inject"}|${r.tag}`) || "ok"));
+        row(j.n > 0 && !bad.length, `${tag0} ${w}x${h}: ${hero} / ${name}`, `${j.n} controls` + (bad.length ? "  " + bad.slice(0, 4).join(" | ") + (bad.length > 4 ? ` (+${bad.length - 4} more)` : "") : ""));
       }
     } catch (e) { row(false, `inject ${w}x${h}: ${hero}`, String(e.message).split("\n")[0]); }
   }
@@ -234,15 +242,15 @@ async function injectSweep({ page, w, h, heroes, row, seen, log, css = null, onl
 
 /* the drill (page.js runs it): one hero, every kind, one phone size; then the same with the sheet's CSS SABOTAGED (the
    list stops scrolling, options shrink to 30px): the sweep must find it, or it was not looking. ~35 s. */
-async function injectDrill(page, row, { w, h }) {
-  const seen = new Map(); let bad = 0, n = 0;
-  await injectSweep({ page, w, h, heroes: [0], seen, row: (ok, name, d) => { n++; if (!ok) bad++; row(ok, name, d); }, log: console.log });
-  row(n >= 18 && KINDS.every(k => seen.has(`${[...seen.keys()][0].split("|")[0]}|inject|${k}`)), `inject ${w}x${h}: every prompt kind was put on the board and judged`, `${n} sheets, ${bad} findings`);
+async function injectDrill(page, row, { w, h, board = "table" }) {
+  const seen = new Map(); let bad = 0, n = 0; const key = board === "trainer" ? "trainer" : "inject", nm = board === "trainer" ? "trainer inject" : "inject";
+  await injectSweep({ page, w, h, board, heroes: [0], seen, row: (ok, name, d) => { n++; if (!ok) bad++; row(ok, name, d); }, log: console.log });
+  row(n >= 18 && KINDS.every(k => seen.has(`${[...seen.keys()][0].split("|")[0]}|${key}|${k}`)), `${nm} ${w}x${h}: every prompt kind was put on the board and judged`, `${n} sheets, ${bad} findings`);
   let caught = 0, ran = 0;
-  await injectSweep({ page, w, h, heroes: [0], seen: new Map(), only: ["soak 4", "modal optional", "opt 4"], log: console.log,
+  await injectSweep({ page, w, h, board, heroes: [0], seen: new Map(), only: ["soak 4", "modal optional", "opt 4"], log: console.log,
     css: ".psheet .pmodal{overflow:visible !important;flex:none !important}.psheet .popt{min-height:0 !important;padding:2px 12px !important}.psheet .parrows button{min-height:20px !important}",
     row: (ok) => { ran++; if (!ok) caught++; } });
-  row(ran >= 3 && caught >= 2, `inject ${w}x${h}: sabotage (sheet list stops scrolling, options shrink) is found`, `${caught} of ${ran} sabotaged sheets failed the judge`);
+  row(ran >= 3 && caught >= 2, `${nm} ${w}x${h}: sabotage (sheet list stops scrolling, options shrink) is found`, `${caught} of ${ran} sabotaged sheets failed the judge`);
 }
 
 module.exports = { sweep, injectSweep, injectDrill, makeSpecs, KINDS, MINFONT, sheetFacts };
@@ -256,11 +264,12 @@ if (require.main === module) {
     let bad = 0, n = 0; const results = [];
     const row = (ok, name, detail) => { n++; if (!ok) bad++; console.log((ok ? "PASS  " : "FAIL  ") + name + (detail ? "  " + detail : "")); };
     for (const [w, h] of sizes) {
-      const kit = await open({ w, h }); const seen = new Map();
+      const kit = await open({ w, h, query: process.argv.includes("--trainer") ? "?drill=1" : "" }); const seen = new Map();
       await kit.page.waitForSelector(".hcard", { timeout: 20000 });
       const nH = (await kit.page.locator(".hgrid .hcard").count()) - 1;   // the last tile is RANDOM
       const heroes = arg("heroes", "") ? arg("heroes").split(",").map(Number) : [...Array(nH).keys()];
-      try { if (process.argv.includes("--inject")) await injectSweep({ page: kit.page, w, h, heroes, row, seen, log: console.log });
+      try { if (process.argv.includes("--trainer")) await injectSweep({ page: kit.page, w, h, heroes, row, seen, log: console.log, board: "trainer" });
+        else if (process.argv.includes("--inject")) await injectSweep({ page: kit.page, w, h, heroes, row, seen, log: console.log });
         else await sweep({ page: kit.page, w, h, heroes, boards, games, steps, row, seen, log: console.log }); }
       catch (e) { row(false, `prompt sweep ${w}x${h}: ran to the end`, String(e && e.message || e).split("\n")[0]); }
       kit.errors.forEach(e => row(false, `prompt sweep ${w}x${h}: page error`, e));
@@ -269,8 +278,8 @@ if (require.main === module) {
     for (const { w, h, seen } of results) {
       console.log(`\nCOVERAGE ${w}x${h}  (ok / FAIL / . = not reached; trainer kinds are read off the sheet's shape)`);
       const names = [...new Set([...seen.keys()].map(k => k.split("|")[0]))];
-      for (const b of process.argv.includes("--inject") ? ["inject"] : boards) {
-        const cols = b === "inject" || b === "table" ? KINDS : ["opt", "cards", "modal", "soak", "other"];
+      for (const b of process.argv.includes("--trainer") ? ["trainer"] : process.argv.includes("--inject") ? ["inject"] : boards) {
+        const cols = b === "inject" || b === "table" || process.argv.includes("--trainer") ? KINDS : ["opt", "cards", "modal", "soak", "other"];
         console.log(`  ${b}:  ` + " ".repeat(22) + cols.map(k => k.padEnd(8)).join(""));
         for (const hn of names) console.log("    " + hn.padEnd(24) + cols.map(k => (seen.get(`${hn}|${b}|${k}`) || ".").padEnd(8)).join(""));
       }

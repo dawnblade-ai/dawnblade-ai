@@ -1,0 +1,42 @@
+# THE WEEKLY PHONE-SCREEN SWEEP. Separate from ci.yml (that one gates every push in ~30 s; this needs a browser and
+# minutes). Once a week it drives the real page at phone sizes and runs the two judges that have no drill in `npm test`:
+#   tools/tapsweep.js          every screen, 44 px hit floor / overlap / clipped (tools/tapjudge.js)
+#   tools/promptsweep.js       every prompt-sheet kind on the table (--inject) and on the trainer (--trainer, ?drill=1)
+# Page dependencies go into a TEMP dir (tools/page.js's header): the repo keeps ZERO dependencies and no package.json.
+# No live wire, no secrets: the page's CDNs are served locally by tools/page.js from those packages.
+name: weekly tap sweep
+
+on:
+  schedule:
+    - cron: '17 6 * * 1'   # Mondays, 06:17 UTC
+  workflow_dispatch:
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: page dependencies, outside the repo
+        run: |
+          export PAGE_DEPS="$RUNNER_TEMP/pagedeps" PW="$RUNNER_TEMP/pw"
+          mkdir -p "$PAGE_DEPS" "$PW"
+          npm install --prefix "$PAGE_DEPS" --save-exact react@18.2.0 react-dom@18.2.0 @babel/standalone@7.23.5 \
+            peerjs@1.5.4 @supabase/supabase-js@2.115.0 @fontsource/big-shoulders-display @fontsource/spline-sans @fontsource/spline-sans-mono
+          npm install --prefix "$PW" playwright
+          "$PW/node_modules/.bin/playwright" install --with-deps chromium
+          echo "PAGE_DEPS=$PAGE_DEPS" >> "$GITHUB_ENV"
+          echo "NODE_PATH=$PW/node_modules" >> "$GITHUB_ENV"
+
+      - name: every screen at phone size
+        run: node tools/tapsweep.js
+
+      - name: every prompt kind on the table
+        run: node tools/promptsweep.js --inject
+
+      - name: every prompt kind on the trainer
+        run: node tools/promptsweep.js --trainer
