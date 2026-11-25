@@ -1018,6 +1018,35 @@ if(require.main === module){
       }
     }
 
+    /* YOUR RECORD ON THE HERO TILES (v7.10, QUEUE NEXT 3). The roster tile of a hero you played carries won–lost (–drawn) with
+       it, the AI's games (`mine`) and people's (`pvp.mine`) added together; a hero never played carries nothing. At 393 and at
+       320 the chip sits inside its tile and clear of the best-score star. An empty record draws no chip (the sabotage case). */
+    for (const [w, h] of [[393, 852], [320, 568]]) for (const seeded of [true, false]) {
+      const name = `hero tiles ${w}: ` + (seeded ? "a played hero's tile carries your record (AI and people added)" : "no games, no chip (sabotage)");
+      const kt = await open({ w, h });
+      try {
+        await kt.page.evaluate((sd) => { localStorage.clear();
+          if (sd){ localStorage.setItem("dawnblade.aiRecord", JSON.stringify({ v: 3, foes: { kayo: { sharp: { w: 2, l: 1, d: 0 } } }, mine: { viserai: { w: 2, l: 1, d: 0 } },
+            pvp: { mine: { viserai: { w: 3, l: 1, d: 0 }, azalea: { w: 1, l: 1, d: 1 } }, foes: {}, seen: [] } }));
+            localStorage.setItem("dawnblade.best", JSON.stringify({ viserai: 12 })); } }, seeded);
+        await kt.page.reload(); await kt.page.waitForSelector(".hgrid", { timeout: 15000 });
+        const got = await kt.page.evaluate((vw) => {
+          const tiles = [...document.querySelectorAll(".hgrid .hcard")], out = {};
+          HEROES.forEach((hh, i) => { const c = tiles[i] && tiles[i].querySelector('[data-testid="tile-rec"]'); if (!c) return;
+            const t = tiles[i].getBoundingClientRect(), b = c.getBoundingClientRect(), st = tiles[i].querySelector(".best");
+            const sb = st && st.getBoundingClientRect();
+            out[hh.k] = { text: c.innerText.trim(), inside: b.left >= t.left && b.right <= t.right && b.top >= t.top && b.bottom <= t.bottom && b.right <= vw,
+              clear: !sb || b.right <= sb.left || b.left >= sb.right || b.bottom <= sb.top || b.top >= sb.bottom, label: c.getAttribute("aria-label") }; });
+          return out; }, w);
+        const ks = Object.keys(got).sort();
+        const ok = seeded ? JSON.stringify(ks) === '["azalea","viserai"]' && got.viserai.text === "5–2" && got.azalea.text === "1–1–1"
+            && ks.every(k => got[k].inside && got[k].clear) && /5 won, 2 lost/.test(got.viserai.label) && !kt.errors.length
+          : ks.length === 0 && !kt.errors.length;
+        row(ok, name, JSON.stringify(got) + (kt.errors.length ? " errors: " + kt.errors.join(" | ") : ""));
+      } catch(e){ row(false, name, String(e.message).split("\n")[0]); }
+      await kt.close();
+    }
+
     /* YOUR RECORD, AGAINST PEOPLE (worker AF): friendly and direct table games kept apart from the AI's. A v3 record with a
        `pvp` section draws one row per hero you played (most games first, draws only when there is one), inside the phone's
        width; a v2 record (the migration) and an empty one draw NO section (the sabotage: an unseeded phone must not show it);

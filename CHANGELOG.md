@@ -1,3 +1,14 @@
+## v7.10 — Your record on the hero tiles
+
+- **Your record on the tiles (QUEUE NEXT 3, CEO).** A roster tile of a hero you have played carries a small chip,
+  bottom-left of the art: won–lost with that hero (–drawn when there are draws), your games against the AI (`mine`)
+  and against people (`pvp.mine`) added together, read once per visit to the grid. A hero never played carries nothing.
+  The chip has a spoken label ("Your record with Viserai: 5 won, 2 lost"). Placed under the art, not at the top, because
+  at 320 a top-left chip ran into the best-score star. Page only (`HeroGrid`, script0; it reads `recSum`, script1c, at
+  render). Drill: four page.js rows (393 and 320; a seeded record shows exactly the two heroes played, added up, inside
+  the tile and clear of the star; an empty record shows no chip).
+- Gates: see the release commit.
+
 ## v7.09 — The recap
 
 - **End-of-game recap (QUEUE NEXT 2, CEO).** Every end screen — the trainer's win, loss and draw, and every table's
