@@ -4,64 +4,48 @@
 answered NEEDS-A-RULING notes are in `QUEUE-ARCHIVE.md` on this branch (grep it, don't read it). History lives in
 CHANGELOG.md (v6.30 on; older in `docs/archive/CHANGELOG-to-v6.29.md`) and LESSONS.md on main.
 
-## HANDOFF — START HERE (CEO session_013xG9xAFGZ4AhbF5jwTxmNc, 2026-11-25, at v6.99)
+## HANDOFF — START HERE (CEO session_013xG9xAuThfeKyJFDbK32Gd, 2026-11-25, at v7.00)
 
 **DIRECTION (user, 2026-11-24, standing): the AI logic is on the BACK BURNER**; lead with **graphical UI / UX polish and
 matchmaking**. Do not open AI-strength probes. A card that plays wrong is still a bug: fix it.
 
-**SHIPPED THIS CEO: v6.99** — both user asks (2026-11-25) are live:
-- **Title screen** (worker Z): first screen on EVERY load; four modes (Train against the Dummy · Play the AI · Find an
-  opponent · Two phones, one table) + How to play / Judge's quiz / Trophies; *‹ Title* back everywhere; format note moved
-  there. `?title=0` skips it (page.js `open()` default; CLAUDE.md says so).
-- **Opponent before the sideboard** (worker Y): `FoePick` step after Battle, before the throw; Random drawn at the tap and
-  named; Loadout shows the foe + *Change opponent*. **Joined (CEO):** `goBattle` in App reads `soloMode` — "ai" opens the step
-  with a random hero drawn; "dummy" skips it (Back -> hero grid); null (title skipped) opens it on the Dummy.
-- **AA:** serverpage row K1b4 (practising page closed mid-window); `TWO_MINUTES_MS` shared by found + rematch windows.
-- Gates at v6.99: npm test 4609/4604/0/5; page.js 286/286 (6 join rows, both sabotages caught); serverpage 483/0 (it now
-  takes ~600 s — give it a longer timeout than 595 s); trainchaos CLEAN 18 games (816 s — background it, 30 min limit);
-  babel 4/4. Function `table` v150 = `v6.99 · sage-v19`, stamped; livecheck ALL PASS. SQL unchanged (001..012).
-- DESKTOP-TASKS.md two-iPhone pass now has steps 6 (v6.94–v6.98) and 7 (title + opponent step).
+**SHIPPED THIS CEO: v7.00** (page only; no engine, rule, wire, AI or SQL change) — old NEXT 1 and NEXT 3:
+- **Text floor = 8 px**, measured on the board at 393 and 320: only the card-type chip `.b-typ` was under it (7 / 6 px). At
+  8 px it is wider than the gap between the power/defense badges, so on a card that prints either it sits above them
+  (`.cfw:has(.b-atk,.b-def)`; 0 overlaps both widths). Gate: tapsweep's `text floor WxH` row (page.js, both sizes);
+  sabotage `TEXT_FLOOR=9 node tools/tapsweep.js 393x852` fails on 48 texts (these are the 8–9.5 px list if you raise it).
+- **Your record**: a fourth button under the title's modes (the four "more" buttons are now 2x2) and a *Record* tab: AI
+  record per foe from `DawnLocal.loadRecord` (Sharp+Steady summed), Dummy clears, and for a signed-in phone *Show my ranked
+  games* (rating, place, W–L, an SVG rating line from `mine` read backwards from today's rating, heroes played most). Reads
+  the ladder only on that button. `srvTransport` (script0) is now the ONE builder of the server transport (servertable drill).
+- Gates: npm test 4609/4604/0/5; page.js 295/295; serverpage 488/0 (~700 s); babel 4/4; trainchaos not run (CSS only on the
+  trainer). Function `table` v152 = `v7.00 · sage-v19`, stamped; livecheck ALL PASS. DESKTOP-TASKS two-iPhone pass: step 8.
+- **GitHub Pages hiccup:** the first v7.00 Pages deploy failed with a GitHub 500 and the rerun API 500'd too; a fresh push to
+  main rebuilt it. If the page does not serve the new APP_VER within ~3 min, check the "pages build and deployment" run.
 
-**State:** live = **v6.99** on `main`. WIRE_V 49, DATA_VER sage-v19, 17 heroes. **WORKERS: NONE** (Y, Z, AA integrated;
-their sessions are idle). Weekly sweep `.github/workflows/tapsweep-weekly.yml` (Mondays 06:17 UTC) — glance at Monday's run.
-
-**Polish noticed while joining (small, unassigned):** in *Play the AI* mode the opponent step still offers the Dummy tile
-(harmless, but the mode says AI); serverpage's SMALL list shows the step's `.fname`/header at 8.5 px under the found
-banner — fold into the text-size floor (NEXT 1).
+**State:** live = **v7.00** on `main`. WIRE_V 49, DATA_VER sage-v19, 17 heroes. **WORKERS: NONE.** SQL unchanged (001..012).
+Weekly sweep `.github/workflows/tapsweep-weekly.yml` (Mondays 06:17 UTC) — glance at Monday's run.
 
 **NEXT (each a release of its own):**
-1. **Text-size floor:** board chrome is 6–9.5 px (`.b-typ` 6, `.hlbl`/`.wempty` 8, `fname` 8.5, `taunt` 9) — `READ_SMALL=1 node
-   tools/tapsweep.js 393x852` lists them. Decide a floor (8?) with board-width measurements; gate it once chosen.
-2. **Matchmaking:** a give-back costs the waiting player their queue place (only the clock carries). If live `seek_wait_log`
-   shows give-backs matter, keep the place (SQL 013).
-3. **Ladder/profile:** a player's own page (rating over their last games, favourite heroes) from `mine` — no new table.
-   It is a natural fourth door on the new title screen.
-4. The real-iPhone pass is written up (DESKTOP-TASKS.md, two-iPhone section, steps 1–7, title + opponent step included);
-   ask the user to walk it when they have two phones to hand.
+1. **Matchmaking — keep the queue place on a give-back (SQL 013): NOT YET.** Live `seek_wait_log` held 0 rows for the last
+   7 days (queried 2026-11-25): no one has been matched through the queue, so there is no evidence give-backs matter.
+   Re-query (`select ranked, count(*) from public.seek_wait_log group by ranked`) before building it.
+2. **Play the AI still offers the Dummy tile** on the opponent step. Harmless, left on purpose: ~10 drives pick `.aifoe button`
+   by POSITION (page.js 633/777/859, tapsweep 54-55, promptsweep 85/221, page-audit 158). First move them to aria-label
+   pickers (page.js:377 already has the pattern), then hide the tile when `soloMode==="ai"`.
+3. **Text floor 9?** The 48 texts at 8–9.5 px (`.hlbl` hand-rail labels 8, `.wempty` 8, `.fname` 8.5, opponent-step / loadout
+   pane flags 8.5, `.bugmeta`, prompt `.sub` 9.5) — raise per class with board-width checks, then set TEXT_FLOOR=9.
+4. **Your record, deeper:** the AI record is keyed by FOE only; "favourite heroes" vs the AI needs the player's own hero in
+   `recordResult` (engine/local.js — a record shape change: `v:2`, migrate v1). Friendly/direct games are not kept anywhere.
+5. Ask the user to walk the real-iPhone pass (DESKTOP-TASKS.md two-iPhone section, steps 1–8) when they have two phones.
 
-**ASK THE USER (defaults standing — overrule any):** the cup (all heroes qualify, top 16 bracket); Prism as an AI seat; Spectra
-resolves at once; Prism's block named "Usurp the Shadow Throne"; hero select 6 across; sound ON; Find a match open to every
-phone that can reach the server (ranked needs a name); *Find another match* keeps the kind; the honest lines live in a sheet; a
-rematch goes back to hero pick, 2 minutes to say yes; the ranked window opens fully at 3 min; *Play the AI while you wait* after
-1 min. NEW (this CEO): `--fs-xs` 9->10 px; red words coral #F5817B, fills #BA2C27; the found chime = two rising notes, title
-flashes every 1 s only while the tab is hidden; Ladder shows your last 10; the found window is 2 min, *Not now* has no confirm,
-the waiting player gives up after window+10 s of silence, the gave-back bar hides after 12 s.
+**ASK THE USER (defaults standing — overrule any):** all earlier defaults (see the v6.99 handoff in QUEUE-ARCHIVE.md) stand.
+NEW this CEO: the floor is 8 px; the type chip moves above the badges rather than shrinking; *Your record* is a title button
+AND a fourth bottom tab (*Record*); the ranked card loads only on a tap; the rating line covers the last 10 ranked games.
 
-NEW defaults this CEO (overrule any): the title shows on EVERY load; a random opponent is revealed on its own step before
-the throw and the sideboard; the Dummy door skips that step; Back from the sideboard returns to the step (not the throw);
-bottom tabs kept once past the title.
-
-**How to run the shop / cheap habits (server work):** PGlite: `npm install --prefix <scratch>/pg @electric-sql/pglite`, then
-`PGLITE_DIR=<scratch>/pg node tools/sql-pglite.js` and `tools/sql-sab-00N.js`. Deno rehearsal: `npm install --prefix
-<scratch>/deno deno`, `DENO=<scratch>/deno/node_modules/.bin/deno node tools/supabase-rehearse.js --variant single|folder`.
-Page drives: deps per tools/page.js's header into `<scratch>/pagedeps`, `NODE_PATH=/opt/node22/lib/node_modules`
-(playwright), `PAGE_DEPS=<scratch>/pagedeps node tools/serverpage.js` (~5 min; page.js ~2.5 min). Babel check: require
-`<scratch>/pagedeps/node_modules/@babel/standalone` and transform EVERY `text/babel` block (4). Run the two drives one after the
-other, not at once (CPU). SQL on live: `POST https://api.supabase.com/v1/projects/fokcpzplomjsraquaaid/database/query`
-`{"query": <file>}` (the proxy injects the token; send `Authorization: Bearer dummy`). **The first screen makes NO request to
-the server while a player only looks** (serverpage's door rows). A copy change on *Find an opponent* moves serverpage's
-text anchors (`no direct link needed`, `Server table Get matched`, the hands sheet's three lines). A CSS edit early in
-index.html can move `test/slicecensus.test.js`'s pinned slice lengths: read the diff, repin the one number. After pushing
-main: curl until the page serves the new APP_VER, THEN `tools/supabase-deploy.js` (--dry-run first), commit DEPLOYED.json,
-THEN `node tools/livecheck.js`. Workers = Sonnet via create_session; UI/server work uses `experiments/WORKER-PROMPT-UI.txt` (point the worker at it plus
-a task file in experiments/ui/; it names the CEO session to report to — edit that id). Next letter: **AB**.
+**How to run the shop:** unchanged — see the v6.99 handoff's "How to run the shop" in QUEUE-ARCHIVE.md (PGlite, Deno rehearsal,
+page drives with `PAGE_DEPS`, babel on all 4 blocks, SQL on live through the proxy with `Authorization: Bearer dummy`, after
+pushing main: curl until the page serves the new APP_VER, THEN `tools/supabase-deploy.js` (--dry-run first), commit
+DEPLOYED.json, THEN `node tools/livecheck.js`). A CSS edit early in index.html moves `test/slicecensus.test.js`'s phasebar pin
+(read the diff, repin the one number). Workers = Sonnet via create_session with `experiments/WORKER-PROMPT-UI.txt` (edit the CEO
+session id in it). Next letter: **AB**.
