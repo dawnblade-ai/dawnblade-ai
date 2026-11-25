@@ -106,7 +106,7 @@ two-phone table on two real phones over real PeerJS, and the sandbox cannot.
 whether it was Wi-Fi or mobile data. A failure here is a top-priority
 S-item. The JUDGE!! button files a bug report from either phone.
 
-## The online path on two real iPhones — Find a match, Rematch, practice while waiting (v6.85–v6.92)
+## The online path on two real iPhones — Find a match, Rematch, practice while waiting (v6.85–v6.98)
 
 Every server-table check runs headless (`tools/serverpage.js`, `tools/livecheck.js`). Nobody has yet walked the matchmaking
 path on two real phones. **About 15 minutes, two phones, both on the live page (check the version in the corner):**
@@ -123,6 +123,11 @@ path on two real phones. **About 15 minutes, two phones, both on the live page (
    seconds*. It is blank until enough matches have been played that day. If you have five open tables, a rematch offers
    **Close** beside each one, then **Ask again**. On the smallest phone you have, open a few in-game choice sheets
    (pay, pick, order): every option should be thumb-sized and nothing should run off the side.
+6. (v6.94–v6.98) Red words are now a coral red: do they still read as *red* (an attack, a loss) on a real screen?
+   In step 3, does the **match found** sound play on the iPhone (iOS only allows sound after a tap — you will have tapped
+   while practising), and does the banner count down (*join within 1:42*)? Tap **Not now** on it: the other phone
+   should say it was given back and go back to looking. Then let a second one run out on its own. Finally, after a
+   ranked game, open **The ladder**: *Your last ranked games* should list it.
 
 **Report back:** the step that failed (if any), the phones, and whether it was Wi-Fi or mobile data. JUDGE!! files a
 report from either phone.
