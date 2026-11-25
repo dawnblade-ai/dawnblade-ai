@@ -161,6 +161,8 @@ npm run fairness      # is any card STRONGER than printed (exits non-zero on a f
 - UI changes: drive the real page at phone size (393×852) and assert on element boxes,
   not screenshots. `node tools/page.js` does it offline (CDNs and the card DB served
   locally; deps in a scratch dir, see its header) and exports `open()` for drives.
+  The page opens on the title screen; `?title=0` skips it (`open()`'s default), and with no
+  mode chosen *Battle* opens the opponent step on the Dummy.
 
 ## Engine map (`engine/`)
 

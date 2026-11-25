@@ -106,7 +106,7 @@ two-phone table on two real phones over real PeerJS, and the sandbox cannot.
 whether it was Wi-Fi or mobile data. A failure here is a top-priority
 S-item. The JUDGE!! button files a bug report from either phone.
 
-## The online path on two real iPhones — Find a match, Rematch, practice while waiting (v6.85–v6.98)
+## The online path on two real iPhones — Find a match, Rematch, practice while waiting (v6.85–v6.99)
 
 Every server-table check runs headless (`tools/serverpage.js`, `tools/livecheck.js`). Nobody has yet walked the matchmaking
 path on two real phones. **About 15 minutes, two phones, both on the live page (check the version in the corner):**
@@ -128,6 +128,9 @@ path on two real phones. **About 15 minutes, two phones, both on the live page (
    while practising), and does the banner count down (*join within 1:42*)? Tap **Not now** on it: the other phone
    should say it was given back and go back to looking. Then let a second one run out on its own. Finally, after a
    ranked game, open **The ladder**: *Your last ranked games* should list it.
+7. (v6.99) Reload the page: the **title screen** should come first. Try each of its four choices and the *‹ Title* way
+   back. *Play the AI* → pick a hero → *Battle*: the next screen should name a random opponent **before** the sideboard,
+   and that hero should be the one you then play. *Train against the Dummy* → *Battle* should go straight to the coin.
 
 **Report back:** the step that failed (if any), the phones, and whether it was Wi-Fi or mobile data. JUDGE!! files a
 report from either phone.
