@@ -1,3 +1,20 @@
+## v6.98 — The found-match window is honest on both sides
+
+- **What was wrong (worker X).** A player practising against the AI when a match was found is the table's creator, so
+  the matched player sat alone in an empty lobby with nothing but "may have dropped" after 45 s; if the seat was ever
+  given back they read "This phone's seat at the table is gone" with no way back to looking. The banner itself never
+  expired and had no way to say no.
+- **The practising player:** "Your match is ready — join within 1:42" counts down live beside *Join them* and a quiet
+  *Not now* (both 44 px). *Not now*, or the clock reaching 0:00, closes their table through the existing close (a ranked
+  table not yet dealt closes with no result) and a short bar says the match was given back and the opponent has gone
+  back to looking (hides after 12 s). One constant drives the window, the title flash and the expiry (2 minutes).
+- **The waiting player:** the lobby says their opponent was practising and has up to 2 minutes to take the seat. When
+  the table closes — or the window plus 10 s passes with nobody heard, as when the other page was closed — they go
+  straight back to the search card, same kind (ranked or friendly), and their waiting clock carries on. The table channel
+  gains `refresh()` so the close is noticed within about 3 s. No SQL: the server queue position is not kept (the waiting
+  player was matched on arrival, so there was little to keep).
+- serverpage.js: a new block drives *Not now*, the expiry and the other side re-seeking, each sabotaged.
+
 ## v6.97 — The server screens are readable too
 
 - **Contrast on the server screens (worker W).** `tools/serverpage.js` now runs v6.94's contrast judge at 393x852 and
