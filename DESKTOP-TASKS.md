@@ -138,6 +138,9 @@ path on two real phones. **About 15 minutes, two phones, both on the live page (
 9. (v7.01–v7.02) The smallest words on the board (hand-rail labels, chips on cards, the empty-arsenal word) should read
    comfortably and nothing should overlap. *Play the AI* → *Battle*: the opponent step should offer **no Dummy** tile.
    Finish a game against the AI, then open *Your record*: *Your heroes* should list the hero you piloted, with its W–L.
+10. (v7.03–v7.04) On ONE phone alone, *Find a match*: the wait card should say *Nobody else is looking right now* and offer
+   *Play the AI while you wait* at once. Then finish a friendly game between the two phones and open *Your record* on
+   each: *Against people* should show one game, under the hero that phone piloted — once, even after a reload.
 
 **Report back:** the step that failed (if any), the phones, and whether it was Wi-Fi or mobile data. JUDGE!! files a
 report from either phone.
