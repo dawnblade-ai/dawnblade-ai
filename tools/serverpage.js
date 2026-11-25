@@ -1363,7 +1363,7 @@ async function toServerChooser(page){
   /* ---- S6.1: FIND A MATCH, ON THE PAGE: two real pages meet through the queue (009_seek.sql's behaviour, test/helpers/serverfakes.js withSeek) ---- */
   const seekKit = async (label, o) => {
     o = o || {};
-    const kA = await open({ w: o.w || W, h: H }), kB = await open({ w: W, h: H });
+    const kA = await open({ w: o.w || W, h: H, title: !!o.title }), kB = await open({ w: W, h: H });
     const bld = await kA.page.evaluate(() => TABLE_BUILD);
     const wd = makeWorld({ seedKey: "seek-" + label, build: bld, deal: dealLikeThePage });
     await wire(kA.page, wd); await wire(kB.page, wd);
@@ -1421,7 +1421,7 @@ async function toServerChooser(page){
   /* K1b: WAITING IS LONELY (SEEK N). After the quiet minute (shortened here through SERVER_TABLE.quietMs) the card offers Play the AI while you wait;
      the search keeps running behind the practice screens; a match that lands mid-practice is a banner, taken only by a tap, and ignored it is just an unanswered match */
   {
-    const k = await seekKit("lonely");
+    const k = await seekKit("lonely", { title: true });   /* A starts on the TITLE screen and takes the Find an opponent door from it */
     await k.A.evaluate(() => { window.SERVER_TABLE.quietMs = 3500; });
     await toFirst(k.A); await toFirst(k.B);
     await click(k.A, k.A.locator('[data-testid="seek-open"]'), "A: find a match");
@@ -1436,6 +1436,7 @@ async function toServerChooser(page){
     await k.A.waitForSelector('[data-testid="wait-bar"]', { timeout: 6000 }).catch(() => {});
     const wb = await boxes(k.A, '[data-testid="wait-bar"]');
     row(wb.length === 1 && wb[0].r <= W && seekJargon(wb[0].t) && (await boxes(k.A, '[data-testid="seek-card"]')).length === 0, "waiting: tapping it opens the hero grid with a Still looking bar, and the seek card is out of sight", wb[0] && wb[0].t);
+    row((await boxes(k.A, '[data-testid="title-screen"]')).length === 0 && (await boxes(k.A, ".hcard")).length > 0, "waiting: practising from the title lands on the hero grid, not the title");
     /* TIDY (O): practice is the hero grid and the bar, nothing of the lobby's chatter; tap-judged at 393 and 320 */
     row((await boxes(k.A, '[data-testid="format-note"]')).length === 0 && (await boxes(k.A, '[data-testid="how-btn"]')).length === 0 && !/New to Flesh and Blood|fan-made Silver Age/.test(await text(k.A)), "waiting: in practice the format note and How to play are out of sight");
     for (const [vw, vh] of [[W, H], [320, 568]]) {
@@ -1554,6 +1555,37 @@ async function toServerChooser(page){
     const bad = k.kA.errors.concat(k.kB.errors).filter(e => !/404|Failed to load resource/.test(e));
     row(bad.length === 0 && k.wd.errors.length === 0, P + "no page error and no internal error", bad.concat(k.wd.errors).join(" | ").slice(0, 200));
     await k.kA.close(); await k.kB.close();
+  }
+  /* K1b4: THE PRACTISING PLAYER CLOSED THE PAGE MID-WINDOW. A has the found banner up and then A's page is CLOSED (page.close(), not a tap): nobody gives the
+     seat back. B, waiting at A's table, must not wait for ever: within the window + 10 s of silence B is told plainly and goes back to looking (same kind,
+     the clock carried on). The window is shortened the way the rows above do it (SERVER_TABLE.alertMs, on BOTH pages: B's give-up reads its own copy). */
+  {
+    const k = await seekKit("window-closed"), P = "window, page closed: ", WIN = 5000;
+    await k.A.evaluate(ms => { window.SERVER_TABLE.quietMs = 3500; window.SERVER_TABLE.alertMs = ms; }, WIN);
+    await k.B.evaluate(ms => { window.SERVER_TABLE.alertMs = ms; }, WIN);
+    await toFirst(k.A); await toFirst(k.B);
+    await click(k.A, k.A.locator('[data-testid="seek-open"]'), "A: find a match");
+    await k.A.waitForSelector('[data-testid="seek-play-ai"]', { timeout: 12000 }).catch(() => {});
+    const aTable = [...k.sk.q.values()][0] && [...k.sk.q.values()][0].table;
+    await click(k.A, k.A.locator('[data-testid="seek-play-ai"]'), "A: play the AI while waiting");
+    await k.A.locator(".hcard").first().click(); await k.A.locator(".battlebtn").first().click();
+    await k.A.waitForFunction(() => /throw|first|coin|who goes/i.test(document.body.innerText) && !document.querySelector('[data-testid="wait-bar"]'), null, { timeout: 8000 }).catch(() => {});
+    await click(k.B, k.B.locator('[data-testid="seek-open"]'), "B: find a match");
+    await k.A.waitForSelector('[data-testid="match-ready"]', { timeout: 15000 }).catch(() => {});
+    row((await boxes(k.A, '[data-testid="match-ready"]')).length === 1, P + "A has the found banner up before the page goes");
+    const t0 = Date.now();
+    await k.A.close();
+    await k.B.waitForSelector('[data-testid="seek-card"]', { timeout: WIN + 10000 + 8000 }).catch(() => {});
+    const took = Date.now() - t0, note = await boxes(k.B, '[data-testid="seek-note"]');
+    row((await boxes(k.B, '[data-testid="seek-card"]')).length === 1 && took <= WIN + 10000 + 3000, P + "B is back on the search card within the window + 10 s of silence", took + " ms");
+    row(note.length === 1 && /did not make it to the table/.test(note[0].t) && seekJargon(note[0].t) && note[0].r <= W, P + "B is told plainly why", note[0] && note[0].t);
+    await wait(1500);
+    const bT = [...k.sk.q.values()].find(x => x.taken !== true && x.table !== aTable);
+    row(!!bT && k.wd.row(bT.table) && k.wd.row(bT.table).closed !== true && !bT.ranked, P + "B is queued again at a table of its own, the same kind (friendly)", JSON.stringify(bT));
+    const clk = (await boxes(k.B, '[data-testid="seek-clock"]'))[0];
+    const clkS = clk && /^(\d+):(\d\d)$/.test(clk.t) ? +clk.t.split(":")[0] * 60 + +clk.t.split(":")[1] : -1;
+    row(clkS >= 3, P + "B's looking clock carried on", clk && clk.t);
+    await k.kB.close(); try { await k.kA.close(); } catch (_) {}
   }
   /* K1c: THE USUAL WAIT. A waiting seeker is told how long players usually wait — only when the server had 5+ completed seeks to say (011_seek_wait.sql);
      with none the card says nothing; the line is plain, inside the screen, and goes when the search is over */

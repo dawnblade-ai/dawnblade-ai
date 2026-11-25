@@ -48,6 +48,15 @@ async function sweepScreens(page, row, { w, h }) {
   };
 
   await m("home roster");
+  /* THE TITLE SCREEN: the roster's way back to it, swept like every other screen, then the Dummy door returns to the roster; the table screen's two halves from it */
+  if (await click(page.locator('[data-testid="to-title"]'), "to the title")) {
+    await page.waitForSelector('[data-testid="title-screen"]'); await m("title screen");
+    for (const [id, l] of [["online", "find an opponent (from the title)"], ["direct", "two phones, one table (from the title)"]]) {
+      if (await click(page.locator('[data-testid="mode-' + id + '"]'), l)) { await page.waitForSelector(".tblwrap"); await m(l);
+        await click(page.locator(".tblwrap button", { hasText: /^back$/i }).first(), l + ": back"); await page.waitForSelector('[data-testid="title-screen"]'); }
+    }
+    await click(page.locator('[data-testid="mode-dummy"]'), "the Dummy door"); await page.waitForSelector(".hgrid");
+  }
   if (await click(page.locator(".howbtn"), "how to play")) { await page.waitForSelector(".howsheet"); await m("how to play sheet"); await click(page.locator(".howsheet .bigbtn"), "how to play: got it"); }
   for (const [t, l] of [["Judge", "judge tab"], ["Trophies", "trophies tab"]]) if (await click(page.locator("nav.tabs .tab", { hasText: t }), l)) await m(l);
   await click(page.locator("nav.tabs .tab", { hasText: "Heroes" }), "back to heroes");

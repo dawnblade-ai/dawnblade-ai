@@ -88,7 +88,7 @@ const STUB = `(() => {
     await p.exposeFunction("__relayClose", () => other(p).evaluate(() => window.__closed()));
   }
   for(const p of pages){
-    await p.goto(pathToFileURL(INDEX).href);
+    await p.goto(pathToFileURL(INDEX).href + "?title=0");
     await p.waitForFunction(() => /\d+ cards/.test((document.querySelector(".topbar .tag") || {}).textContent || ""), null, {timeout: 30000});
   }
   const btn = (p, re) => p.locator("button", {hasText: re}).first();
@@ -225,7 +225,7 @@ async function judgeRun(){
       else { const kk = cur.get(p); cur.delete(p); if(kk != null) Jp.evaluate(q => window.__closed(q), kk).catch(()=>{}); } });
   }
   const ready = p => p.waitForFunction(() => /\d+ cards/.test((document.querySelector(".topbar .tag") || {}).textContent || ""), null, {timeout: 30000});
-  for(const p of [Jp, A, Bp]){ await p.goto(pathToFileURL(INDEX).href); await ready(p); }
+  for(const p of [Jp, A, Bp]){ await p.goto(pathToFileURL(INDEX).href + "?title=0"); await ready(p); }
   const btn = (p, re) => p.locator("button", {hasText: re}).first();
   for(const p of [Jp, A, Bp]){ await btn(p, /^Find an opponent/).click(); await p.waitForSelector(".tblwrap"); }
   await A.locator('[data-testid="hands-open"]').click();   /* v6.82: the honest lines are one sheet */
