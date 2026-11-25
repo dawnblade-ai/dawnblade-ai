@@ -1,3 +1,15 @@
+## v6.95 — The trainer's prompt sheets, swept like the table's
+
+- **A drill door into the trainer (QUEUE item 2, worker S).** A page opened with `?drill=1` gets `window.__battle`
+  (read the live state; raise a real `prompts.js` spec through Battle's own `openPrompt`). Without the flag the effect
+  returns before touching anything; a page.js row proves the normal page carries no handle.
+- **`tools/promptsweep.js --trainer`:** all 8 prompt kinds, longest realistic lists, 17 heroes, 393x852 and 320x568 —
+  612 sheets, 0 findings. No CSS was needed: v6.93's scrolling-list rule already reaches the trainer's sheet. page.js
+  gains 3 rows (no handle without the flag; 18 injected trainer sheets at 320 clean; a sabotage fails 4 of 4).
+- **A weekly sweep (QUEUE item 6).** `.github/workflows/tapsweep-weekly.yml` (Mondays, plus a manual dispatch; no
+  secrets, no live wire; page deps into the runner's temp dir) runs the tap sweep and both prompt sweeps. Its first run
+  proves the install step.
+
 ## v6.94 — Every word on every screen is readable
 
 - **A contrast measure on the real page (QUEUE item 4, worker U).** New `tools/contrast.js` takes each text element's
