@@ -1,3 +1,15 @@
+## v7.02 — Your record remembers the heroes you played
+
+- **Your heroes (QUEUE NEXT 4; worker AD).** The record kept on this phone now knows the hero YOU piloted, not only
+  the AI hero you faced. The Record tab gains a *Your heroes* list under the AI record: hero, games, won–lost (a draw
+  shows only when there is one), most played first. The record's stored shape is now `v:2` (`foes` as before, plus
+  `mine` by your hero); a v1 record migrates on load with nothing lost — its games stay in the per-foe totals and are
+  counted under an "unknown" bucket that is never shown as a hero. Nothing is rewritten on load; the next finished
+  game writes v2. Local only: no wire or server change, though `engine/local.js` ships in the function bundle, so the
+  function was redeployed. Drills in `test/airecord.test.js` (bump, migrate, clean, call site; each sabotaged) and
+  page.js's record rows.
+- Gates: see the release commit.
+
 ## v7.01 — Nine pixels at the least, and Play the AI means an AI
 
 - **Text floor 9 px (QUEUE NEXT 3; worker AC).** Every font size under 9 px on the page is now 9 px (19 rules: the
