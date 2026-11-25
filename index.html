@@ -7953,7 +7953,9 @@ function SrvLadder({wire, who}){
    Practising when it lands: the title flashes "Match found!" against the real title while the tab is hidden, until the player takes the
    match or leaves, and gives up when the two-minute window is over. Otherwise (seated at once) the title says it for a few seconds. */
 /* THE FOUND-MATCH WINDOW: how long a match that lands while a player practises is held for them, read from ONE place (a drive may set SERVER_TABLE.alertMs) */
-const FOUND_MS = () => (window.SERVER_TABLE && window.SERVER_TABLE.alertMs) || 120000;
+/* the one two-minute wait: the found-match window and a rematch ask both last this long */
+const TWO_MINUTES_MS = 120000;
+const FOUND_MS = () => (window.SERVER_TABLE && window.SERVER_TABLE.alertMs) || TWO_MINUTES_MS;
 const foundWords = () => { const m = Math.max(1, Math.round(FOUND_MS()/60000)); return FOUND_MS() < 60000 ? Math.round(FOUND_MS()/1000)+" seconds" : m+(m===1?" minute":" minutes"); };
 let seekAlertH = null;
 const seekAlertStop = () => { const a = seekAlertH; seekAlertH = null; if(!a) return; clearInterval(a.h); clearTimeout(a.cap); document.removeEventListener("visibilitychange", a.vis);
@@ -8641,7 +8643,7 @@ function RankChange({table, seat}){
 /* REMATCH (v6.83): the same two players again. Each taps Rematch on the end screen; the referee opens a NEW table of the same kind once both have (a ranked
    rematch is a new ranked game) and hands both phones its code (engine/servertable.js `askRematch` / `onRematch`), and this phone sits down there at once: back to
    the hero pick. An ask the other player does not answer within two minutes is taken back (the referee forgets it too), and the screen says so plainly. */
-const REMATCH_WAIT = 120000;
+const REMATCH_WAIT = TWO_MINUTES_MS;
 function RematchRow({table, seat, name, onGo}){
   const [rm,setRm] = uS(()=>table && table.rematch ? table.rematch() : null);
   const [busy,setBusy] = uS(false);
