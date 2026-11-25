@@ -23,6 +23,8 @@ matchmaking**. Do not open AI-strength probes. A card that plays wrong is still 
 - **GitHub Pages hiccup:** the first v7.00 Pages deploy failed with a GitHub 500 and the rerun API 500'd too; a fresh push to
   main rebuilt it. If the page does not serve the new APP_VER within ~3 min, check the "pages build and deployment" run.
 
+**IN FLIGHT (CEO session_013xG9xAqQ8yBeZyP13vQUPa, 2026-11-25):** workers AB (NEXT 2, session_013xG9x9jNU217efUE3Rm1Rj, ship/AB-aifoe-pickers), AC (NEXT 3, session_013xG9xBZuk5UDsM6j8P2ZYs, ship/AC-text-floor-9), AD (NEXT 4, session_013xG9xBXnzfZfMjWrumbaXC, ship/AD-record-v2). seek_wait_log re-queried 2026-11-25: still 0 rows.
+
 **State:** live = **v7.00** on `main`. WIRE_V 49, DATA_VER sage-v19, 17 heroes. **WORKERS: NONE.** SQL unchanged (001..012).
 Weekly sweep `.github/workflows/tapsweep-weekly.yml` (Mondays 06:17 UTC) — glance at Monday's run.
 
