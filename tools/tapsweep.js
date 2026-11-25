@@ -13,10 +13,10 @@
 const { judgeScreen } = require("./tapjudge.js");
 const { judgeText, say } = require("./contrast.js");
 /* THE TEXT FLOOR (v7.00, CEO): the smallest text a player is asked to read. Measured on the board at 393 and 320
-   wide: the card-type chip at 8 px fits every card (46 px small at 320) once it sits above the power/defense
+   wide: the card-type chip at 9 px fits every card (46 px small at 320) once it sits above the power/defense
    badges. contrast.js reports text under 10 px as `small`; this gate fails anything under the floor.
-   TEXT_FLOOR=9 in the environment is the sabotage (the board's 8 px labels must then fail the row). */
-const TEXT_FLOOR = Number(process.env.TEXT_FLOOR) || 8;
+   TEXT_FLOOR=10 in the environment is the sabotage (the 9 px labels must then fail the row). */
+const TEXT_FLOOR = Number(process.env.TEXT_FLOOR) || 9;
 
 async function sweepScreens(page, row, { w, h }) {
   const tag = `tap floor ${w}x${h}`;

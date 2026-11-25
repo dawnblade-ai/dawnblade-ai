@@ -526,7 +526,7 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
     /* -> 91,751 (v6.83, Rematch CSS + .bigbtn.alt 44 px) -> 92,440 (v6.85, the practice-while-waiting bar and banner), READ FIRST: presentation only. */
     /* -> 94,193 (v6.86, the 44 px tap floor and the scrolling end panel, one CSS block), READ FIRST: presentation only. */
     /* -> 97,538 (the title screen, 2026-11-25) -> 98,204 (+ the opponent step's `.foestep` rules, 2026-11-25), READ FIRST: still `<style>` -> `</style>`; presentation only. */
-    "phasebar.test.js index.html 98928",
+    "phasebar.test.js index.html 98918",
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
        `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
        `abPickBound` in the pick legality it extends. */
