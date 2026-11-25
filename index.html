@@ -1011,6 +1011,11 @@ img{display:block;max-width:100%}
 .ladgame{padding:8px 0;border-top:1px solid var(--line);font-size:13.5px;line-height:1.4;color:var(--bone);overflow-wrap:anywhere}
 .ladgame:first-child{border-top:0}
 .ladgame small{display:block;font-size:11.5px;color:var(--bone-dim)}
+.mygame{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;padding:8px 0;min-height:44px;border-top:1px solid var(--line);font-size:13.5px;line-height:1.4;color:var(--bone);overflow-wrap:anywhere}
+.mygame:first-child{border-top:0}
+.mygame small{display:block;font-size:11.5px;color:var(--bone-dim)}
+.mychg{font-family:'Spline Sans Mono',monospace;font-size:15px;text-align:right;min-width:3em;color:var(--bone-dim)}
+.mychg.up{color:var(--y)}
 .heromid .pname .prate{color:var(--y);font-family:'Spline Sans Mono',monospace}
 .heromid{min-width:0}
 .heromid .pname{max-width:100%;font-size:var(--fs-sm);line-height:1.15;letter-spacing:.02em;color:var(--bone-dim);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -7874,6 +7879,9 @@ function Pregame({h, seed, onSeated, onBack}){
    line is asked for only when `who` says this phone already has a sign-in). The rows are plain text: nothing here is tappable because nothing here does anything. */
 const LAD_END = {life:"won", concession:"conceded", forfeit:"forfeit", stalemate:"draw"};
 const ladHero = k => { const h = HEROES.find(x=>x.k===k); return h ? heroShort(h) : String(k||"").replace(/^./,c=>c.toUpperCase()); };
+/* A PLAYER'S OWN LINE ABOUT ONE RANKED GAME (V): how it ended, from their side of the table; the rating move with a sign (never colour alone) */
+const myHow = (r, how) => how==="life" ? "on life" : how==="stalemate" ? "a dead position" : how==="concession" ? (r==="won" ? "they conceded" : "you conceded") : (r==="won" ? "they left the table" : "the clock ran out");
+const myChange = c => c>0 ? "+"+c : c<0 ? "\u2212"+(-c) : "\u00b10";
 const ladAgo = at => { const m = Math.floor(Math.max(0, Date.now()-at)/60000); if(m<1) return "just now"; if(m<60) return m+" min ago"; const h = Math.floor(m/60); if(h<48) return h+(h===1?" hour ago":" hours ago"); return Math.floor(h/24)+" days ago"; };
 </script>
 <script type="text/babel" data-presets="env,react">
@@ -7903,6 +7911,16 @@ function SrvLadder({wire, who}){
       {yl.listed ? <>You are number <strong>{yl.rank}</strong> on the ladder with a rating of <strong>{yl.rating}</strong>: {yl.wins} won, {yl.losses} lost, {yl.draws} drawn.</>
         : yl.toGo>0 ? <>{yl.games===0 ? <>Your rating is <strong>{yl.rating}</strong>. </> : <>Your rating is <strong>{yl.rating}</strong> after {games(yl.games)}. </>}<strong>{yl.toGo}</strong> more ranked {yl.toGo===1?"game":"games"} and you are on the ladder.</>
         : <>You have played {games(yl.games)}. Choose a player name and you are on the ladder.</>}
+    </div>}
+    {yl && r.mine && <div className="tblcard" data-testid="ladder-mine">
+      <div className="tblgname">Your last ranked games</div>
+      {r.mine.length===0
+        ? <p className="ladnote" data-testid="ladder-mine-none" style={{marginTop:8}}>No ranked games yet. Open a ranked table and your games will gather here, with how your rating moved.</p>
+        : <div style={{marginTop:6}}>{r.mine.map((x,i)=><div key={i} className="mygame" data-testid="ladder-mine-row">
+            <span><strong>{x.result==="won" ? "Won" : x.result==="lost" ? "Lost" : "Drew"}</strong> with {ladHero(x.hero)} against {ladHero(x.foeHero)}
+              <small>{x.foe ? x.foe+" · " : ""}{myHow(x.result, x.how)} · {ladAgo(x.at)}</small></span>
+            <span className={"mychg"+(x.change>0 ? " up" : "")} data-testid="ladder-mine-change" aria-label={"rating "+(x.change>0 ? "up "+x.change : x.change<0 ? "down "+(-x.change) : "unchanged")}>{myChange(x.change)}</span>
+          </div>)}</div>}
     </div>}
     {!yl && <p className="ladnote" data-testid="ladder-anon">Open a ranked table to get a place here: a player name, then {r.floor} ranked games.</p>}
     <div className="tblcard" data-testid="ladder-board">

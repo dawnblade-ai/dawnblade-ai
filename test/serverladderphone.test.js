@@ -58,9 +58,9 @@ test("(a) THE ANSWER, AS THE SCREEN READS IT — rows, recent results and the ca
   assert.deepEqual(await guard(answerFailures(ST)), []);
 });
 test("SABOTAGE (a): a phone that drops the caller's line, or the recent list, or passes an unknown key through is seen", async () => {
-  for(const [what, edits] of [["the line dropped", [["  return {floor: r.floor, cap: r.cap, ladder: rows, recent, you};", "  return {floor: r.floor, cap: r.cap, ladder: rows, recent, you: null};"]]],
-      ["the recent list dropped", [["  return {floor: r.floor, cap: r.cap, ladder: rows, recent, you};", "  return {floor: r.floor, cap: r.cap, ladder: rows, recent: [], you};"]]],
-      ["the raw answer passed through", [["  return {floor: r.floor, cap: r.cap, ladder: rows, recent, you};", "  return r;"]]]])
+  for(const [what, edits] of [["the line dropped", [["  return {floor: r.floor, cap: r.cap, ladder: rows, recent, you, ...(mine ? {mine} : {})};", "  return {floor: r.floor, cap: r.cap, ladder: rows, recent, you: null};"]]],
+      ["the recent list dropped", [["  return {floor: r.floor, cap: r.cap, ladder: rows, recent, you, ...(mine ? {mine} : {})};", "  return {floor: r.floor, cap: r.cap, ladder: rows, recent: [], you};"]]],
+      ["the raw answer passed through", [["  return {floor: r.floor, cap: r.cap, ladder: rows, recent, you, ...(mine ? {mine} : {})};", "  return r;"]]]])
     assert.ok((await guard(answerFailures(stCopy(edits)))).length >= 1, "the sabotage must be seen: " + what);
 });
 

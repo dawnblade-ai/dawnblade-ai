@@ -134,7 +134,7 @@
 
    ---- the ladder (S5.3: PUBLIC, read without signing in) ---------------------------------------------------------------------------
      {op:"ladder", identity?:{token}}
-        -> {ok:true, floor, cap, ladder:[{rank, name, rating, games, wins, losses, draws}], recent:[{names:[a,b], heroes:[a,b], winner:0|1|null, how, at}], you?}
+        -> {ok:true, floor, cap, ladder:[{rank, name, rating, games, wins, losses, draws}], recent:[{names:[a,b], heroes:[a,b], winner:0|1|null, how, at}], you?, mine?}
         WHO IS LISTED: a player with a chosen name, at least `floor` (3) recorded ranked games and a sign-in that points at them (an orphan kept by 007's recovery
         rule, a nameless player and a provisional player (fewer games) never appear). ORDER: rating, then more games, then name: a total order; `rank` is the
         position. The top `cap` (50). `recent`: the last LADDER_RECENT (10) recorded ranked results, newest first: both names, both heroes, the winner (null: a draw),
@@ -514,6 +514,7 @@ function createAs(req, id, given, deps){
 
 /* ---- {op:"ladder", identity?:{token}} (S5.3) — the public ladder -------------------------------------------------------------------- */
 const LADDER_FLOOR = 3, LADDER_CAP = 50, LADDER_RECENT = 10;
+const LADDER_MINE = 10;   /* a named caller's own last games (012_my_games.sql) */
 const ladderStr = v => typeof v === "string" && v.length >= 1 && v.length <= 64;
 const ladderCmp = (x, y) => y.rating - x.rating || y.games - x.games;
 /* the caller, if they can be told: never a reason to fail the public read */
@@ -542,6 +543,16 @@ function ladderShape(a){
        || !(x.winner === null || x.winner === 0 || x.winner === 1) || RANKED_HOW.indexOf(x.how) < 0 || (x.winner === null) !== (x.how === "stalemate") || !intIn(x.at, 0, 1e15)) bad("a recent result");
     return {names: x.names.slice(), heroes: x.heroes.slice(), winner: x.winner, how: x.how, at: x.at};
   });
+  /* 012: a named caller's own last games, newest first: {hero, foeHero, foe, result, how, change, at}. Absent on a function that does not know 012 yet, and for a nameless caller. */
+  let mine;
+  if(a.mine !== undefined){
+    if(!Array.isArray(a.mine) || a.mine.length > LADDER_MINE) bad("the caller's games");
+    mine = a.mine.map(x => {
+      if(!x || typeof x !== "object" || !ladderStr(x.hero) || !ladderStr(x.foeHero) || !(x.foe === null || ladderStr(x.foe)) || ["won", "lost", "drew"].indexOf(x.result) < 0 || RANKED_HOW.indexOf(x.how) < 0
+         || (x.result === "drew") !== (x.how === "stalemate") || !intIn(x.change, -1000, 1000) || !intIn(x.at, 0, 1e15)) bad("one of the caller's games");
+      return {hero: x.hero, foeHero: x.foeHero, foe: x.foe, result: x.result, how: x.how, change: x.change, at: x.at};
+    });
+  }
   let you = null;
   if(a.you != null){
     const y = a.you;
@@ -549,13 +560,13 @@ function ladderShape(a){
        || (y.listed ? !intIn(y.rank, 1, 1e9) : y.rank !== null)) bad("the caller's line");
     you = {name: y.name, rating: y.rating, games: y.games, wins: y.wins, losses: y.losses, draws: y.draws, listed: y.listed, rank: y.listed ? y.rank : null, toGo: y.listed ? 0 : Math.max(0, LADDER_FLOOR - y.games)};
   }
-  return {ladder, recent, you};
+  return {ladder, recent, you, mine};
 }
 function opLadder(req, deps){
   if(typeof deps.ladder !== "function") return no("unavailable");
   return then(ladderWho(req, deps), player => then(deps.ladder({player, floor: LADDER_FLOOR, limit: LADDER_CAP, recent: LADDER_RECENT}), a => {
     const s = ladderShape(a);
-    return {ok: true, floor: LADDER_FLOOR, cap: LADDER_CAP, ladder: s.ladder, recent: s.recent, ...(s.you ? {you: s.you} : {})};
+    return {ok: true, floor: LADDER_FLOOR, cap: LADDER_CAP, ladder: s.ladder, recent: s.recent, ...(s.you ? {you: s.you} : {}), ...(s.you && s.mine ? {mine: s.mine} : {})};
   }));
 }
 

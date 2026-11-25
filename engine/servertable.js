@@ -595,7 +595,7 @@ const setName = (o, name) => me(o, name);
 
 /* ---- THE LADDER (S5.3): who stands where, and the last games — PUBLIC, read with no sign-in --------------------------------------------
    o: {transport, identity?}. `ladder(o)` -> {floor, cap, ladder: [{rank, name, rating, games, wins, losses, draws}], recent: [{names: [a, b], heroes: [a, b],
-   winner: 0 | 1 | null, how: "life" | "concession" | "stalemate" | "forfeit", at}], you: {name | null, rating, games, wins, losses, draws, listed, rank | null, toGo} | null}.
+   winner: 0 | 1 | null, how: "life" | "concession" | "stalemate" | "forfeit", at}], mine?: [{hero, foeHero, foe | null, result: "won" | "lost" | "drew", how, change, at}] (a named player's own last games, newest first), you: {name | null, rating, games, wins, losses, draws, listed, rank | null, toGo} | null}.
    `you` is the caller's own line and exists only when `o.identity` yields a token the server knows: pass an identity ONLY for a phone that already has a sign-in
    (looking at the ladder must never sign anyone in; the page asks `known()` first). A token the server refuses is not an error: the list still answers, without `you`.
    One copy: the page and the drills call this and nothing else. Rejects with `.why`: unavailable (no server, a function that does not do this yet, or an answer that is
@@ -622,7 +622,11 @@ async function ladder(o){
   const y = r.you;
   if(y && typeof y === "object" && ["rating", "games", "wins", "losses", "draws", "toGo"].every(k => isInt(y[k])) && typeof y.listed === "boolean")
     you = {name: typeof y.name === "string" ? y.name : null, rating: y.rating, games: y.games, wins: y.wins, losses: y.losses, draws: y.draws, listed: y.listed, rank: y.listed && isInt(y.rank) ? y.rank : null, toGo: y.toGo};
-  return {floor: r.floor, cap: r.cap, ladder: rows, recent, you};
+  /* 012: a named player's own last games (newest first), or no `mine` key when this server does not send them (an older function, a nameless or signed-out player): the page then shows nothing new */
+  const OUTCOME = ["won", "lost", "drew"];
+  const mine = Array.isArray(r.mine) && you ? r.mine.filter(x => x && typeof x.hero === "string" && typeof x.foeHero === "string" && (x.foe === null || typeof x.foe === "string") && OUTCOME.indexOf(x.result) >= 0
+    && LADDER_HOW.indexOf(x.how) >= 0 && Number.isInteger(x.change) && isInt(x.at)).slice(0, 10).map(x => ({hero: x.hero, foeHero: x.foeHero, foe: x.foe, result: x.result, how: x.how, change: x.change, at: x.at})) : null;
+  return {floor: r.floor, cap: r.cap, ladder: rows, recent, you, ...(mine ? {mine} : {})};
 }
 
 /* ---- RECOVERY CODE (S4.3): a lost phone is not a lost player ---------------------------------------------------

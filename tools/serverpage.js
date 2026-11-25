@@ -1167,7 +1167,7 @@ async function toServerChooser(page){
     const kit = await open({ w: o.w || W, h: o.h || H }), pg = kit.page;
     const wd = makeWorld({ seedKey: "ladder-" + label });
     await wire(pg, wd);
-    const idp = F.memIdentity(), rat = F.withRatings(), lad = F.withLadder(rat, idp);
+    const idp = F.memIdentity(), rat = F.withRatings(), lad = F.withLadder(rat, idp, o.mine ? { mine: true, ...(o.mine === "flip" ? { mineFlip: true } : {}) } : undefined);   /* o.mine: the server knows 012 (a player's own games) */
     wd.deps.identify = t => idp.identify(t); wd.deps.rename = (pl, n, f) => idp.rename(pl, n, f); Object.assign(wd.deps, rat.deps(), lad.deps());
     const seed = (id, name, rating, games) => { const tok = idp.issue(id); if(name) idp.rename(id, name, wd.server.nameFold(name)); if(rating !== undefined) rat.rt.set(id, { rating, games, wins: games, losses: 0, draws: 0 }); return tok; };
     const tokMe = seed("P-lad-me", o.me === undefined ? "Dawn Smith" : o.me, o.meRating, o.meGames);
@@ -1175,6 +1175,11 @@ async function toServerChooser(page){
     if(o.games){ for(const [id, nm] of [["r1", "Rec One"], ["r2", "Rec Two"], ["r3", "Rec Three"], ["r4", "Rec Four"], ["r5", "Rec Five"], ["r6", "Rec Six"]]) seed(id, nm);     /* three games between three pairs: nobody reaches the floor */
       const g = (n, a, b, winner, how, heroes, ago) => rat.record({ game: "LG" + n, table: "LT" + n, players: ["r" + a, "r" + b], names: ["Rec " + ["", "One", "Two", "Three", "Four", "Five", "Six"][a], "Rec " + ["", "One", "Two", "Three", "Four", "Five", "Six"][b]], heroes, winner, how, turns: 5, build: null, started: 0, ended: Date.now() - ago });
       g(1, 1, 2, 0, "life", ["kayo", "dash"], 2 * 86400000); g(2, 3, 4, null, "stalemate", ["bravo", "katsu"], 3 * 3600000); g(3, 5, 6, 1, "concession", ["viserai", "dorinthea"], 5 * 60000); }
+    if(o.myGames){ const now = Date.now(), g = (n, me, foe, foeName, winner, how, heroes, ago) => rat.record({ game: "MG" + n, table: "MT" + n, players: me === 0 ? ["P-lad-me", foe] : [foe, "P-lad-me"], names: me === 0 ? [o.me === undefined ? "Dawn Smith" : o.me, foeName] : [foeName, o.me === undefined ? "Dawn Smith" : o.me], heroes, winner, how, turns: 5, build: null, started: 0, ended: now - ago });
+      g(1, 0, "m1", "Foe One", 0, "life", ["kayo", "dash"], 5 * 60000);                         /* a win as seat 0 */
+      g(2, 1, "m2", "Foe Two", 0, "concession", ["bravo", "katsu"], 3 * 3600000);               /* a loss as seat 1: the heroes sit the other way round */
+      g(3, 0, "m3", "Foe Three", null, "stalemate", ["viserai", "dorinthea"], 2 * 86400000);    /* a draw */
+      g(4, 0, "m4", "Foe Four", 1, "forfeit", ["viserai", "dorinthea"], 5 * 86400000); }        /* a loss by the clock */
     const shim = "window.__dawnServerIdentity = {token: () => Promise.resolve(" + JSON.stringify(tokMe) + ")" + (o.known === false ? ", known: () => false" : "") + "};";
     await pg.addInitScript(shim); await pg.evaluate(shim);
     await pg.evaluate(() => { window.SERVER_TABLE.on = true; });
@@ -1200,6 +1205,7 @@ async function toServerChooser(page){
     row(m.rows.length > 0 && m.rows.every(r => r.x >= 0 && r.r <= w && !r.nameCut && r.nr <= r.tl && r.tr <= r.r), name + ": every row is inside the screen, no name is cut, and the name never runs under the rating", m.rows.map(r => r.txt + " " + r.rt).join(" | "));
     row(m.games.every(g => g.x >= 0 && g.r <= w) && m.cards.every(c => c.x >= 0 && c.r <= w), name + ": the latest games and every card are inside the screen");
   };
+  const overflow2 = (pg, w) => pg.evaluate(w => document.scrollingElement.scrollWidth <= w, w);
   const ladText = async pg => (await boxes(pg, ".tblwrap")).map(b => b.t).join(" ");
   const ladJargon = t => !/undefined|NaN|\bnull\b|refused|bad-request|unavailable|identity|ladder_get|\bop\b|\bv6\.|player id|toGo|\bwinner\b|stalemate|concession/i.test(t);
 
@@ -1293,6 +1299,41 @@ async function toServerChooser(page){
     await ladderOpen(pg, "srv");
     const you = await boxes(pg, '[data-testid="ladder-you"]');
     row(you.length === 1 && /You have played 7 ranked games\. Choose a player name and you are on the ladder\./.test(you[0].t) && (await boxes(pg, '[data-testid="ladder-row"]')).length === 0, "nameless: games but no name is told to choose a name, and is not listed", you[0] && you[0].t);
+    await k.kit.close();
+  }
+
+  /* L7 (V): A PLAYER'S OWN LAST RANKED GAMES — heroes (theirs against the opponent's), the result, the rating move and when, read from the caller's own seat; a warm line when there are none; nothing for an unnamed or signed-out phone or an older server */
+  for(const [w, h] of [[W, H], [320, 568]]) {
+    const k = await ladderKit("mine" + w, { w, h, mine: true, myGames: true, crowd: true, meRating: 1655, meGames: 5 }), pg = k.pg;
+    await ladderOpen(pg, "first");
+    const card = await boxes(pg, '[data-testid="ladder-mine"]'), rws = await boxes(pg, '[data-testid="ladder-mine-row"]');
+    row(card.length === 1 && /^Your last ranked games/i.test(card[0].t) && rws.length === 4 && card[0].r <= w, "my games " + w + ": the card shows the caller's four games", rws.length + " rows");
+    row(/^Won with Kayo against Dash Foe One \u00b7 on life \u00b7 5 min ago/.test(rws[0] && rws[0].t) && /^Lost with Katsu against Bravo Foe Two \u00b7 you conceded \u00b7 3 hours ago/.test(rws[1] && rws[1].t)
+        && /^Drew with Viserai against Dorinthea Foe Three \u00b7 a dead position \u00b7 2 days ago/.test(rws[2] && rws[2].t) && /^Lost with Viserai against Dorinthea Foe Four \u00b7 the clock ran out \u00b7 5 days ago/.test(rws[3] && rws[3].t),
+        "my games " + w + ": newest first, each from the caller's side (own hero first, then the opponent's), how it ended and when", rws.map(r => r.t).join(" | ").slice(0, 400));
+    const fmt = c => c > 0 ? "+" + c : c < 0 ? "\u2212" + (-c) : "\u00b10";
+    const want = [[1, 0], [2, 1], [3, 0], [4, 0]].map(([n, seat]) => { const x = k.rat.results.get("MG" + n); return fmt(seat ? x.a1 - x.b1 : x.a0 - x.b0); });
+    const got = (await boxes(pg, '[data-testid="ladder-mine-change"]')).map(b => b.t);
+    row(JSON.stringify(got) === JSON.stringify(want) && want[0].startsWith("+") && want[1].startsWith("\u2212"), "my games " + w + ": the rating move is the caller's own, with its sign (win up, loss down)", got.join(" ") + " / " + want.join(" "));
+    row(rws.every(r => r.h >= 44 && r.x >= 0 && r.r <= w) && (await overflow2(pg, w)), "my games " + w + ": every row is at least 44 px tall, inside the screen, and nothing scrolls sideways");
+    const full = await ladText(pg);
+    row(ladJargon(full) && !/MG\d|MT\d|P-lad|"result"|foeHero/.test(full), "my games " + w + ": no identifier or field name in the words");
+    row((await boxes(pg, '[data-testid="ladder-mine"] button, [data-testid="ladder-mine"] a')).length === 0 && (await boxes(pg, '[data-testid="ladder-you"]')).length === 1, "my games " + w + ": the rows are not controls, and the caller's own line is still there");
+    await thumbs(pg, "my games " + w, ".tblwrap");
+    await k.kit.close();
+  }
+  /* a named player with no games yet: one warm line, not an empty box; an unnamed player, a signed-out phone and an older server see nothing new */
+  {
+    const k = await ladderKit("minenone", { mine: true, crowd: true }), pg = k.pg;
+    await ladderOpen(pg, "srv");
+    const none = await boxes(pg, '[data-testid="ladder-mine-none"]');
+    row(none.length === 1 && none[0].t === "No ranked games yet. Open a ranked table and your games will gather here, with how your rating moved." && (await boxes(pg, '[data-testid="ladder-mine-row"]')).length === 0 && ladJargon(none[0].t), "my games: a named player with no ranked games sees one warm line", none[0] && none[0].t);
+    await k.kit.close();
+  }
+  for(const [what, o] of [["an unnamed player", { me: null, meRating: 1500, meGames: 7 }], ["a signed-out phone", { known: false }], ["a server that does not know it yet", { mine: false }]]) {
+    const k = await ladderKit("minehide", { mine: true, myGames: true, crowd: true, meRating: 1655, meGames: 5, ...o }), pg = k.pg;
+    await ladderOpen(pg, "first");
+    row((await boxes(pg, '[data-testid="ladder-mine"]')).length === 0 && (await boxes(pg, '[data-testid="ladder-row"]')).length >= 5, "my games: " + what + " sees no 'your games' card, and the ladder still shows");
     await k.kit.close();
   }
 
