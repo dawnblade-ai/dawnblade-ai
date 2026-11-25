@@ -141,6 +141,7 @@ path on two real phones. **About 15 minutes, two phones, both on the live page (
 10. (v7.03–v7.04) On ONE phone alone, *Find a match*: the wait card should say *Nobody else is looking right now* and offer
    *Play the AI while you wait* at once. Then finish a friendly game between the two phones and open *Your record* on
    each: *Against people* should show one game, under the hero that phone piloted — once, even after a reload.
+   (v7.05) Tap *Against whom?* under it: one row, "vs" the hero the OTHER phone played; tap again to hide it.
 
 **Report back:** the step that failed (if any), the phones, and whether it was Wi-Fi or mobile data. JUDGE!! files a
 report from either phone.
