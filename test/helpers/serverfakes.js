@@ -185,6 +185,13 @@ function withLadder(rat, idp, o){
     if(player != null && (rat.rt.has(player) || nameOf(player) || signed.has(player))){
       const r = rat.rt.get(player) || {rating: 1200, games: 0, wins: 0, losses: 0, draws: 0}, n = nameOf(player), ok = listed(player), at = all.findIndex(x => x.id === player);
       out.you = {name: n ? n.name : null, rating: r.rating, games: r.games, wins: r.wins, losses: r.losses, draws: r.draws, listed: ok, rank: ok ? at + 1 + (o.badRank ? 1 : 0) : null, ...(o.leakId ? {id: player} : {})};
+      /* 012_my_games.sql: a NAMED caller's own last games, newest first, at most 10, read from the caller's own seat */
+      if(o.mine && (n || o.mineForAll)){
+        out.mine = [...rat.results.values()].filter(x => x.players.indexOf(player) >= 0).sort((x, y) => y.ended - x.ended || byte(y.game, x.game)).slice(0, o.mineCap || 10).map(x => {
+          const s = x.players.indexOf(player), f = 1 - s;
+          return {hero: x.heroes[s], foeHero: x.heroes[f], foe: x.names[f], result: x.winner === null ? "drew" : x.winner === s ? "won" : "lost", how: x.how, change: (s ? x.a1 - x.b1 : x.a0 - x.b0) * (o.mineFlip ? -1 : 1), at: x.ended};
+        });
+      }
     }
     return JSON.parse(JSON.stringify(out));
   };

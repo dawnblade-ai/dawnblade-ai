@@ -114,7 +114,7 @@ const LOBBY = ({ role, done }) => {
 };
 
 /* ---------------- (h) S5.3: the public ladder, read-only ---------------- */
-const LADDER_ROW = "draws,games,losses,name,rank,rating,wins", LADDER_GAME = "at,heroes,how,names,winner", LADDER_YOU = "draws,games,listed,losses,name,rank,rating,toGo,wins";
+const LADDER_ROW = "draws,games,losses,name,rank,rating,wins", LADDER_GAME = "at,heroes,how,names,winner", LADDER_YOU = "draws,games,listed,losses,name,rank,rating,toGo,wins", LADDER_MINE = "at,change,foe,foeHero,hero,how,result";
 /* the HTTP half, also run offline by tools/supabase-rehearse.js against the Deno-run function (one copy of the checks). `toks`: sign-ins to scan for and to use as "the host". */
 async function ladderOverHttp(cfg, toks, row){
   const post = functionPost(cfg);
@@ -124,7 +124,8 @@ async function ladderOverHttp(cfg, toks, row){
       && a.ladder.every((x, i) => keys(x) === LADDER_ROW && x.rank === i + 1 && x.games >= 3 && typeof x.name === "string" && Number.isInteger(x.rating))
       && a.ladder.every((x, i) => i === 0 || a.ladder[i - 1].rating > x.rating || (a.ladder[i - 1].rating === x.rating && a.ladder[i - 1].games >= x.games))
       && a.recent.every(x => keys(x) === LADDER_GAME && Array.isArray(x.names) && Array.isArray(x.heroes) && ["life", "concession", "stalemate", "forfeit"].includes(x.how))
-      && (a.you === undefined || keys(a.you) === LADDER_YOU) && Object.keys(a).every(k => ["ok", "floor", "cap", "ladder", "recent", "you"].includes(k));
+      && (a.you === undefined || keys(a.you) === LADDER_YOU)
+      && (a.mine === undefined || (!!a.you && Array.isArray(a.mine) && a.mine.length <= 10 && a.mine.every(x => keys(x) === LADDER_MINE))) && Object.keys(a).every(k => ["ok", "floor", "cap", "ladder", "recent", "you", "mine"].includes(k));
     row(okShape, "ladder: " + what + " answers a well-formed list (floor 3, cap 50, public fields only, in order)", okShape ? a.ladder.length + " ranked player(s), " + a.recent.length + " recent game(s)" + (a.you ? ", with its own line" : "") : JSON.stringify(a).slice(0, 160));
     const hay = JSON.stringify(a); row(!tokens.filter(Boolean).some(t => hay.indexOf(t) >= 0) && !/"(id|player|subject|token|table|game)"/.test(hay), "ladder: " + what + " carries no id, token or table code");
   };

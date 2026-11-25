@@ -124,6 +124,12 @@ function makeStub(o){
           if(p_player !== null && players.has(p_player)){
             const pl = players.get(p_player), r = ratings.get(p_player) || {rating: 1200, games: 0, wins: 0, losses: 0, draws: 0}, ok = listed(p_player), at = all.findIndex(x => x.id === p_player);
             out.you = {name: pl.display_name || null, rating: r.rating, games: r.games, wins: r.wins, losses: r.losses, draws: r.draws, listed: ok, rank: ok ? at + 1 : null};
+            if(pl.display_name){      /* 012_my_games.sql: the caller's own last games, from the caller's seat, newest first, at most 10 */
+              out.mine = [...results.values()].filter(x => x.p_p0 === p_player || x.p_p1 === p_player).sort((x, y) => y.ended - x.ended || byC(y.p_game, x.p_game)).slice(0, 10).map(x => {
+                const s = x.p_p0 === p_player ? 0 : 1, f = 1 - s;
+                return {hero: s ? x.p_h1 : x.p_h0, foeHero: s ? x.p_h0 : x.p_h1, foe: (s ? x.p_n0 : x.p_n1) || null, result: x.p_winner === null ? "drew" : x.p_winner === s ? "won" : "lost", how: x.p_how, change: s ? x.a1 - x.b1 : x.a0 - x.b0, at: x.ended};
+              });
+            }
           }
           return reply(200, out);
         }
