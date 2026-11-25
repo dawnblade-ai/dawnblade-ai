@@ -425,9 +425,12 @@ img{display:block;max-width:100%}
 .b-cost{top:2px;right:2px;border-color:#E8DFD0}
 .b-atk{bottom:2px;left:2px;border-color:var(--r)}
 .b-def{bottom:2px;right:2px;border-color:var(--b)}
-.b-typ{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);font-size:7px;letter-spacing:.07em;text-transform:uppercase;background:rgba(16,12,10,.9);color:var(--bone-dim);padding:1px 4px;border:1px solid var(--line);white-space:nowrap;pointer-events:none}
+.b-typ{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);font-size:8px;letter-spacing:.07em;text-transform:uppercase;background:rgba(16,12,10,.9);color:var(--bone-dim);padding:1px 4px;border:1px solid var(--line);white-space:nowrap;pointer-events:none}
 .cfw.sm .b-pit,.cfw.sm .b-cost,.cfw.sm .b-atk,.cfw.sm .b-def{font-size:var(--fs-xs);padding:1px 3px}
-.cfw.sm .b-typ{font-size:6px;padding:0 3px}
+.cfw.sm .b-typ{padding:0 3px}
+/* TEXT FLOOR (v7.00): 8 px is the smallest text on the board; at 8 px the type chip is wider than the gap between the power and defense badges, so on a card that prints either it sits just above them (badge height + 3) instead of covering a number */
+.cfw:has(.b-atk,.b-def) .b-typ{bottom:21px}
+.cfw.sm:has(.b-atk,.b-def) .b-typ{bottom:17px}
 /* A SPLIT CARD IS PRINTED SIDEWAYS, so it is TURNED to be read (v3.35).
    The database ships the art portrait with its content rotated; upright
    needs -90deg, which was checked by rendering both directions rather
@@ -969,7 +972,12 @@ img{display:block;max-width:100%}
 .tmode b{display:block;font-family:'Big Shoulders Display';font-weight:800;font-size:22px;letter-spacing:.08em;text-transform:uppercase}
 .tmode span{display:block;font-size:var(--fs-body);line-height:1.35;margin-top:2px}
 .tmode:not(.lead) span{color:var(--bone-dim)}
-.tmore{display:flex;gap:8px;margin-top:2px}
+.tmore{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px}
+/* YOUR RECORD (v7.00): the rating over the last ranked games, and the heroes played most */
+.recline{margin:10px 0 0}
+.recline figcaption{display:flex;justify-content:space-between;gap:8px;font-family:'Spline Sans Mono';font-size:var(--fs-xs);color:var(--bone-dim)}
+.recfav{margin:8px 0 0;font-size:var(--fs-md);color:var(--bone-dim)}
+.recfav b{color:var(--bone)}
 .tmore button{flex:1;min-height:44px;padding:8px 4px;border:1px solid var(--line);background:var(--forge);font-family:'Big Shoulders Display';font-weight:700;font-size:var(--fs-xl);letter-spacing:.08em;text-transform:uppercase;color:var(--bone)}
 .tmore button.fresh{border-color:var(--y)}
 .totitle{min-height:44px;padding:0 10px;color:var(--bone-dim);font-size:var(--fs-xl);letter-spacing:.06em;text-transform:uppercase;margin-right:auto;margin-left:10px}
@@ -1212,7 +1220,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "6.99"; /* v6.99 - A title screen lays out the modes, and the opponent is picked (Random named) before the sideboard; see CHANGELOG.md. */
+window.APP_VER = "7.00"; /* v7.00 - Nothing on the board is smaller than 8 px, and a Your record page joins the title; see CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -10475,6 +10483,85 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
 }
 </script>
 <script type="text/babel" data-presets="env,react">
+/* ---------- YOUR RECORD (v7.00, QUEUE NEXT 3) — a player's own page, a door on the title screen.
+   Built from what is already kept, no new table: the record against the AI (DawnLocal's, on this device), the Dummy's best
+   clears (`best`), and, only when this phone already has a server sign-in AND the player taps for it, the ranked games the
+   ladder already sends (`mine`, the last ten): the rating over those games, read backwards from today's rating, and the heroes
+   played most. Opening the page makes NO request to the server (the title's rule); the ranked card asks only on its button. ---------- */
+const recSum = cs => cs.reduce((a,c)=>({w:a.w+c.w, l:a.l+c.l, d:a.d+c.d}), {w:0,l:0,d:0});
+const recLine = c => c.w+" won, "+c.l+" lost"+(c.d ? ", "+c.d+" drawn" : "");
+/* the rating BEFORE each of the last games and after the newest, oldest first: today's rating with each change taken back */
+const ratingPath = (now, mine) => { const out = [now]; let r = now; for(const x of mine){ r -= (x.change||0); out.push(r); } return out.reverse(); };
+function RatingLine({pts}){
+  if(pts.length<2) return null;
+  const W = 280, H = 56, lo = Math.min(...pts), hi = Math.max(...pts), span = Math.max(1, hi-lo);
+  const xy = pts.map((p,i)=>[Math.round(i*(W-8)/(pts.length-1))+4, Math.round(H-6-(p-lo)*(H-12)/span)]);
+  const first = pts[0], last = pts[pts.length-1];
+  return <figure className="recline" data-testid="record-rating-line" aria-label={"Your rating went from "+first+" to "+last+" over your last "+(pts.length-1)+" ranked games"}>
+    <svg viewBox={"0 0 "+W+" "+H} width="100%" height={H} role="img" aria-hidden="true">
+      <polyline points={xy.map(p=>p.join(",")).join(" ")} fill="none" stroke="var(--y)" strokeWidth="2" strokeLinejoin="round"/>
+      {xy.map((p,i)=><circle key={i} cx={p[0]} cy={p[1]} r={i===xy.length-1?3.5:2} fill={i===xy.length-1?"var(--y)":"var(--bone-dim)"}/>)}
+    </svg>
+    <figcaption><span>{first}</span><span>{last>first ? "up "+(last-first) : last<first ? "down "+(first-last) : "level"} over {pts.length-1} {pts.length-1===1?"game":"games"}</span><span>{last}</span></figcaption>
+  </figure>;
+}
+function RankedRecord(){
+  const srvOn = !!(window.SERVER_TABLE && DawnServerTable.doorOpen(SRV_CHOICE, window.SERVER_TABLE.on));
+  const cfg = srvOn ? {...window.SERVER_TABLE, on: true} : null;
+  const who = uM(()=> cfg ? DawnServerTable.defaultIdentity(cfg, store) : null, [srvOn]);
+  const signedIn = !!who && (typeof who.known!=="function" || who.known());
+  const [st,setSt] = uS({s:"idle"});
+  const alive = uR(true); uE(()=>()=>{ alive.current = false; },[]);
+  if(!signedIn) return <div className="sheet clip" data-testid="record-ranked-none" style={{marginTop:10}}>
+    <h2 className="fs-h2s">Ranked</h2>
+    <p className="fs-lede">No ranked games on this phone yet. Find an opponent and open a ranked table: your rating and your last games will show here.</p></div>;
+  const load = () => { setSt({s:"loading"});
+    DawnServerTable.ladder({transport: DawnServerTable.defaultTransport(cfg), identity: who})
+      .then(r=>{ if(alive.current) setSt({s:"ok", r}); }, ()=>{ if(alive.current) setSt({s:"fail"}); }); };
+  const r = st.r, yl = r && r.you, mine = (r && r.mine) || [];
+  const fav = {}; mine.forEach(x=>{ fav[x.hero] = (fav[x.hero]||0)+1; });
+  const favs = Object.keys(fav).sort((a,b)=>fav[b]-fav[a] || (a<b?-1:1)).slice(0,3);
+  return <div className="sheet clip" data-testid="record-ranked" style={{marginTop:10}}>
+    <h2 className="fs-h2s">Ranked</h2>
+    {st.s==="idle" && <><p className="fs-lede">Your rating and your last ranked games are kept by the server.</p>
+      <button className="bigbtn" data-testid="record-ranked-load" onClick={load}>Show my ranked games</button></>}
+    {st.s==="loading" && <div className="tblstat live"><span className="tbldot"></span>Reading your games…</div>}
+    {st.s==="fail" && <><p className="fs-lede">The server is not answering right now. Check your connection, then try again.</p>
+      <button className="bigbtn" onClick={load}>Try again</button></>}
+    {st.s==="ok" && !yl && <p className="fs-lede">The server did not know this phone just now. Open a ranked table and try again.</p>}
+    {st.s==="ok" && yl && <>
+      <div className="statrow" style={{justifyContent:"space-between"}}><span>Rating</span><b className="mono" data-testid="record-rating">{yl.rating}</b></div>
+      <div className="statrow" style={{justifyContent:"space-between"}}><span>{yl.listed ? "On the ladder" : "Ranked games"}</span><b className="mono">{yl.listed ? "#"+yl.rank : yl.games}</b></div>
+      <div className="statrow" style={{justifyContent:"space-between"}}><span>Record</span><b className="mono">{yl.wins}–{yl.losses}{yl.draws ? "–"+yl.draws : ""}</b></div>
+      {mine.length>0 ? <RatingLine pts={ratingPath(yl.rating, mine)}/> : <p className="fs-lede" style={{marginTop:6}}>No ranked games yet.</p>}
+      {favs.length>0 && <p className="recfav" data-testid="record-favourites">Played most: {favs.map((k,i)=><span key={k}>{i ? ", " : ""}<b>{ladHero(k)}</b> ×{fav[k]}</span>)}</p>}
+    </>}
+  </div>;
+}
+function YourRecord(){
+  const rec = uM(()=>DawnLocal.loadRecord(lsGet),[]);
+  const best = store.get("best",{});
+  const rows = HEROES.map(h=>{ const f = rec.foes[h.k] || {}; const c = recSum([f.sharp, f.steady].filter(Boolean)); return {h, c, n: c.w+c.l+c.d}; })
+    .filter(x=>x.n>0).sort((a,b)=>b.n-a.n || (a.h.k<b.h.k?-1:1));
+  const all = recSum(rows.map(x=>x.c));
+  const clears = HEROES.filter(h=>best[h.k]!=null);
+  return <div data-testid="record-page">
+    <div className="sheet clip">
+      <h2>Your record</h2>
+      <p className="tag" style={{margin:"4px 0 10px"}}>Kept on this phone</p>
+      <h3 className="fs-h2s">Against the AI</h3>
+      {rows.length===0 ? <p className="fs-lede" data-testid="record-ai-none">No games against an AI hero yet. Play the AI from the title screen.</p> : <>
+        <p className="fs-lede" data-testid="record-ai-total">{recLine(all)} in all.</p>
+        {rows.map(x=><div key={x.h.k} className="statrow" data-testid="record-ai-row" style={{justifyContent:"space-between"}}>
+          <span>{x.h.n}</span><b className="mono" aria-label={recLine(x.c)}>{x.c.w}–{x.c.l}{x.c.d ? "–"+x.c.d : ""}</b></div>)}</>}
+      <h3 className="fs-h2s" style={{marginTop:12}}>The Dummy</h3>
+      {clears.length===0 ? <p className="fs-lede">No clears logged yet. Train against the Dummy to set one.</p>
+        : <p className="fs-lede" data-testid="record-dummy">{clears.length} {clears.length===1?"hero has":"heroes have"} cleared it; Trophies keeps the best clear for each.</p>}
+    </div>
+    <RankedRecord/>
+  </div>;
+}
+
 /* THE TITLE SCREEN (user request, 2026-11-25): the first screen on every load, laying out the modes before a hero is chosen.
    Looking makes no request to the server: the choices only set App's state. Each one routes into an existing screen. */
 function TitleScreen({onMode, onMore, how, onHow, fresh}){
@@ -10491,6 +10578,7 @@ function TitleScreen({onMode, onMore, how, onHow, fresh}){
       <button data-testid="how-btn" className={fresh?"fresh":""} onClick={onHow}>How to play</button>
       <button data-testid="more-judge" onClick={()=>onMore("judge")}>Judge's quiz</button>
       <button data-testid="more-trophies" onClick={()=>onMore("trophies")}>Trophies</button>
+      <button data-testid="more-record" onClick={()=>onMore("record")}>Your record</button>
     </div>
     <p data-testid="format-note" className="note" style={{textAlign:"center",marginTop:6}}>Dawnblade is a fan-made Silver Age format: every precon built here, exactly as printed (the Chapter 1–3 decks and the Usurp the Shadow Throne heroes), and every card in them is legal here — even ones Silver Age has since banned.</p>
   </div>);
@@ -10684,10 +10772,12 @@ function App(){
       {fighting && <Battle h={fighting.h} cfg={fighting.cfg} first={fighting.first} db={db} onExit={()=>setFighting(null)} onRecord={record}/>}
       {tab==="judge" && idle && !title && <Judge/>}
       {tab==="trophies" && idle && !title && <Trophies/>}
+      {tab==="record" && idle && !title && <YourRecord/>}
       {idle && !title && <nav className="tabs">
         <button className={"tab"+(tab==="heroes"?" on":"")} onClick={()=>{setTab("heroes");}}>Heroes</button>
         <button className={"tab"+(tab==="judge"?" on":"")} onClick={()=>setTab("judge")}>Judge</button>
         <button className={"tab"+(tab==="trophies"?" on":"")} onClick={()=>setTab("trophies")}>Trophies</button>
+        <button className={"tab"+(tab==="record"?" on":"")} data-testid="tab-record" onClick={()=>setTab("record")}>Record</button>
       </nav>}
     </div>
   );

@@ -873,6 +873,35 @@ if(require.main === module){
       await k2.close();
     }
 
+    /* YOUR RECORD (v7.00, QUEUE NEXT 3): the title's fourth door. A record against two AI heroes seeded in storage must come
+       back as one row per hero (most games first) and the right total; the same page with NOTHING seeded must say so (the
+       sabotage: an empty record must not draw rows). A phone with no server sign-in shows the ranked card's empty line and
+       makes no request (any request off the routed list is a page error, counted below). */
+    {
+      const seedRec = { v: 1, foes: { kayo: { sharp: { w: 2, l: 1, d: 0 } }, dorinthea: { sharp: { w: 0, l: 1, d: 0 }, steady: { w: 1, l: 0, d: 1 } } } };
+      for (const seeded of [true, false]) {
+        const name = seeded ? "your record: a seeded record reads back per hero, most games first" : "your record: nothing seeded says so and draws no rows (sabotage)";
+        const kr = await open({ w: W, h: H, title: true });
+        try {
+          await kr.page.evaluate((v) => { localStorage.clear(); if (v) localStorage.setItem("dawnblade.aiRecord", JSON.stringify(v)); }, seeded ? seedRec : null);
+          await kr.page.reload(); await kr.page.waitForSelector('[data-testid="title-screen"]', { timeout: 15000 });
+          await kr.page.locator('[data-testid="more-record"]').click();
+          await kr.page.waitForSelector('[data-testid="record-page"]', { timeout: 8000 });
+          const got = await kr.page.evaluate(() => ({
+            rows: [...document.querySelectorAll('[data-testid="record-ai-row"]')].map(e => e.innerText.replace(/\s+/g, " ").trim()),
+            total: (document.querySelector('[data-testid="record-ai-total"]') || {}).innerText || "",
+            none: !!document.querySelector('[data-testid="record-ai-none"]'),
+            ranked: !!document.querySelector('[data-testid="record-ranked-none"]'),
+            tab: !!document.querySelector('[data-testid="tab-record"].on') }));
+          const ok = seeded
+            ? got.rows.length === 2 && /Dorinthea/.test(got.rows[0]) && /1–1–1/.test(got.rows[0]) && /Kayo/.test(got.rows[1]) && /2–1/.test(got.rows[1]) && /3 won, 2 lost, 1 drawn/.test(got.total) && !got.none
+            : got.rows.length === 0 && got.none && !got.total;
+          row(ok && got.ranked && got.tab && !kr.errors.length, name, JSON.stringify(got) + (kr.errors.length ? " errors: " + kr.errors.join(" | ") : ", 0 page errors"));
+        } catch (e) { row(false, name, String(e.message).split("\n")[0] + " " + kr.errors.join(" | ")); }
+        await kr.close();
+      }
+    }
+
     /* THE TAP FLOOR (M; POLISH.md condition 1): every control on every screen takes a 44px tap, nothing stolen,
        clipped or overlapped, at the phone it is played on (393x852) AND the smallest one (320x568). tools/tapsweep.js
        walks the screens, tools/tapjudge.js judges each; a fresh page per size so the walk starts at the roster. */
@@ -936,7 +965,7 @@ if(require.main === module){
       row(await shown('[data-testid="title-screen"]') && !(await shown(".hcard")) && !(await shown("nav.tabs")), P + ": the title is the first screen (no hero grid, no tabs yet)");
       const modes = await tb(".tmode"), more = await tb(".tmore button"), sw = await T.page.evaluate(() => document.scrollingElement.scrollWidth);
       const overlap = modes.some((m, i) => i && m.y < modes[i - 1].b - 0.5);
-      row(modes.length === 4 && more.length === 3 && [...modes, ...more].every(m => m.h >= 44 && m.x >= 0 && m.r <= tw + 0.5) && !overlap && sw <= tw, P + ": four modes and three more, each thumb-sized, separate, no sideways scroll", JSON.stringify({ n: modes.length, min: Math.min(...[...modes, ...more].map(m => Math.round(m.h))), sw }));
+      row(modes.length === 4 && more.length === 4 && [...modes, ...more].every(m => m.h >= 44 && m.x >= 0 && m.r <= tw + 0.5) && !overlap && sw <= tw, P + ": four modes and four more (Your record, v7.00), each thumb-sized, separate, no sideways scroll", JSON.stringify({ n: modes.length, more: more.length, min: Math.min(...[...modes, ...more].map(m => Math.round(m.h))), sw }));
       row(/Train against the Dummy/i.test(modes[0].t) && /Play the AI/i.test(modes[1].t) && /Find an opponent/i.test(modes[2].t) && /Two phones/i.test(modes[3].t) && (await shown('[data-testid="format-note"]')), P + ": the modes are named plainly and the format note moved here");
       for (const id of ["dummy", "ai"]) {
         await T.page.locator('[data-testid="mode-' + id + '"]').click();

@@ -12,9 +12,15 @@
 "use strict";
 const { judgeScreen } = require("./tapjudge.js");
 const { judgeText, say } = require("./contrast.js");
+/* THE TEXT FLOOR (v7.00, CEO): the smallest text a player is asked to read. Measured on the board at 393 and 320
+   wide: the card-type chip at 8 px fits every card (46 px small at 320) once it sits above the power/defense
+   badges. contrast.js reports text under 10 px as `small`; this gate fails anything under the floor.
+   TEXT_FLOOR=9 in the environment is the sabotage (the board's 8 px labels must then fail the row). */
+const TEXT_FLOOR = Number(process.env.TEXT_FLOOR) || 8;
 
 async function sweepScreens(page, row, { w, h }) {
   const tag = `tap floor ${w}x${h}`;
+  const under = [];   /* the TEXT FLOOR (v7.00): no text on any swept screen under TEXT_FLOOR px; one row at the end */
   const m = async (where) => {
     await page.waitForTimeout(350);
     const r = await judgeScreen(page);
@@ -24,6 +30,7 @@ async function sweepScreens(page, row, { w, h }) {
     const t = await judgeText(page);
     row(t.n > 0 && !t.fails.length, `readability ${w}x${h}: ${where}`, `${t.n} texts` + (t.fails.length ? "  " + t.fails.slice(0, 3).map(say).join(" | ") + (t.fails.length > 3 ? ` (+${t.fails.length - 3} more)` : "") : ""));
     if (process.env.READ_SMALL) for (const f of t.small) console.log(`  SMALL ${w}x${h} ${where}: ${say(f)}`);
+    for (const f of t.small) if (f.px < TEXT_FLOOR) under.push(`${where}: ${say(f)}`);
     return r;
   };
   const has = sel => page.locator(sel).first().isVisible().catch(() => false);
@@ -65,7 +72,7 @@ async function sweepScreens(page, row, { w, h }) {
     await click(page.locator('[data-testid="mode-ai"]'), "the Play the AI door"); await page.waitForSelector(".hgrid");
   }
   if (await click(page.locator(".howbtn"), "how to play")) { await page.waitForSelector(".howsheet"); await m("how to play sheet"); await click(page.locator(".howsheet .bigbtn"), "how to play: got it"); }
-  for (const [t, l] of [["Judge", "judge tab"], ["Trophies", "trophies tab"]]) if (await click(page.locator("nav.tabs .tab", { hasText: t }), l)) await m(l);
+  for (const [t, l] of [["Judge", "judge tab"], ["Trophies", "trophies tab"], ["Record", "record tab"]]) if (await click(page.locator("nav.tabs .tab", { hasText: t }), l)) await m(l);
   await click(page.locator("nav.tabs .tab", { hasText: "Heroes" }), "back to heroes");
   if (await click(btn(/^Find an opponent/), "find an opponent")) {
     await page.waitForSelector(".tblwrap"); await m("find an opponent");
@@ -117,6 +124,7 @@ async function sweepScreens(page, row, { w, h }) {
     }
   }
   await home();
+  row(!under.length, `text floor ${w}x${h}: no text under ${TEXT_FLOOR} px on any swept screen`, under.length ? under.length + " under: " + under.slice(0, 3).join(" | ") : "clean");
 }
 
 module.exports = { sweepScreens };

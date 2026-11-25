@@ -1345,6 +1345,37 @@ async function toServerChooser(page){
     await readable(pg, "the Ladder with Your last ranked games (" + w + ")", [[w, h]]);
     await k.kit.close();
   }
+  /* YOUR RECORD (v7.00, QUEUE NEXT 3): the title's fourth door reads the SAME ladder answer, and only on its button. Opening the page
+     reads nothing; the button reads once, with this phone's sign-in; the rating line runs from today's rating with each game's move
+     taken back (so its first point is the rating before the oldest of the games) to today's; the heroes played most, most first.
+     A signed-out phone gets the empty line and NO request (the sabotage of the read count). */
+  {
+    const k = await ladderKit("record", { mine: true, myGames: true, crowd: true, meRating: 1655, meGames: 5 }), pg = k.pg;
+    await click(pg, pg.locator('[data-testid="tab-record"]'), "the Record tab"); await pg.waitForSelector('[data-testid="record-page"]');
+    const reads0 = k.lad.reads;
+    await click(pg, pg.locator('[data-testid="record-ranked-load"]'), "show my ranked games");
+    await pg.waitForSelector('[data-testid="record-rating"]', { timeout: 8000 }).catch(() => {});
+    const moves = [[1, 0], [2, 1], [3, 0], [4, 0]].map(([n, seat]) => { const x = k.rat.results.get("MG" + n); return seat ? x.a1 - x.b1 : x.a0 - x.b0; });
+    const before = 1655 - moves.reduce((a, b) => a + b, 0);
+    const got = await pg.evaluate(() => ({ rating: (document.querySelector('[data-testid="record-rating"]') || {}).innerText,
+      line: (document.querySelector('[data-testid="record-rating-line"]') || { getAttribute: () => "" }).getAttribute("aria-label"),
+      pts: document.querySelectorAll('[data-testid="record-rating-line"] circle').length,
+      fav: ((document.querySelector('[data-testid="record-favourites"]') || {}).innerText || "").replace(/\s+/g, " ") }));
+    row(reads0 === 0 && k.lad.reads === 1 && k.lad.last.player !== null, "your record: opening the page reads nothing; the button reads the ladder once, signed in", reads0 + " -> " + k.lad.reads);
+    row(got.rating === "1655" && got.pts === 5 && got.line === "Your rating went from " + before + " to 1655 over your last 4 ranked games",
+        "your record: the rating line runs from before the oldest game to today's rating, one point per game", JSON.stringify(got) + " want from " + before);
+    row(/^Played most: Viserai ×2, Katsu ×1, Kayo ×1$/.test(got.fav), "your record: the heroes played most, most first", got.fav);
+    row(ladJargon(await pg.evaluate(() => document.querySelector('[data-testid="record-page"]').innerText)), "your record: no identifier or field name in the words");
+    await k.kit.close();
+  }
+  {
+    const k = await ladderKit("recordanon", { mine: true, myGames: true, crowd: true, known: false }), pg = k.pg;
+    await click(pg, pg.locator('[data-testid="tab-record"]'), "the Record tab"); await pg.waitForSelector('[data-testid="record-page"]');
+    await pg.waitForTimeout(500);
+    row((await boxes(pg, '[data-testid="record-ranked-none"]')).length === 1 && (await boxes(pg, '[data-testid="record-ranked-load"]')).length === 0 && k.lad.reads === 0,
+        "your record: a signed-out phone is told how to get a rating, and nothing is asked of the server", "reads " + k.lad.reads);
+    await k.kit.close();
+  }
   /* a named player with no games yet: one warm line, not an empty box; an unnamed player, a signed-out phone and an older server see nothing new */
   {
     const k = await ladderKit("minenone", { mine: true, crowd: true }), pg = k.pg;

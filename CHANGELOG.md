@@ -1,3 +1,21 @@
+## v7.00 — A text floor on the board, and a page of your own record
+
+- **The text floor (QUEUE NEXT 1).** The smallest text a player is asked to read is now 8 px. Measured on the real
+  board at 393 and 320 wide: only the card-type chip was under it (7 px on hand cards, 6 px on small ones). At 8 px
+  it is wider than the gap between a card's power and defense badges (it already covered their edges at 6–7 px), so
+  on a card that prints either it now sits just above them; a card with neither keeps it at the bottom. Zero
+  overlaps at both widths. Gated: tapsweep's new `text floor` row fails any text under 8 px on every swept screen
+  (both sizes); `TEXT_FLOOR=9` is its sabotage and fails on 48 texts.
+- **Your record (QUEUE NEXT 3).** A fourth door under the title's modes (the four now sit two by two) and a *Record*
+  tab: the record against each AI hero kept on this phone (Sharp and Steady together, most games first, with a
+  total), how many heroes have cleared the Dummy, and, for a phone with a server sign-in, *Show my ranked games*:
+  rating, ladder place or game count, won–lost, a line of the rating over the last ranked games (read backwards from
+  today's rating, one point per game) and the heroes played most. No new table and no new request shape — it reads
+  the ladder answer the Ladder already reads, and only on the button; opening the page asks nothing of the server,
+  and a phone with no sign-in is told how to get a rating. page.js and serverpage rows drive both, each sabotaged.
+- Not changed, on purpose: *Play the AI*'s opponent step still offers the Dummy tile (harmless; a dozen drives pick
+  tiles by position).
+
 ## v6.99 — A title screen, and you know your opponent before you sideboard
 
 - **The title screen (user request; worker Z).** The page now opens on a title: the DAWNBLADE wordmark, one line saying
