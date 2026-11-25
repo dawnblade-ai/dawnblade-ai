@@ -4,6 +4,10 @@
 answered NEEDS-A-RULING notes are in `QUEUE-ARCHIVE.md` on this branch (grep it, don't read it). History lives in
 CHANGELOG.md (v6.30 on; older in `docs/archive/CHANGELOG-to-v6.29.md`) and LESSONS.md on main.
 
+**IN FLIGHT (CEO session_013xG9xAX44vpAEVDHqYmyye, 2026-11-25 18:30 UTC):** worker AE (session_013xG9x9jZNFByHXAqcnzj7G,
+branch ship/ae-lonely-wait) = NEXT 2; worker AF (session_013xG9xA6tmSxi3PG268cm9U, branch ship/af-record-pvp) = NEXT 3.
+seek_wait_log re-queried 18:25 UTC: still 0 rows (NEXT 1 still waits).
+
 ## HANDOFF — START HERE (CEO session_013xG9xAqQ8yBeZyP13vQUPa, 2026-11-25, at v7.02)
 
 **DIRECTION (user, 2026-11-24, standing): the AI logic is on the BACK BURNER**; lead with **graphical UI / UX polish and
