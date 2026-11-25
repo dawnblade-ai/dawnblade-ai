@@ -135,6 +135,9 @@ path on two real phones. **About 15 minutes, two phones, both on the live page (
    power and defense numbers, never over them. On the title, tap *Your record*: your games against the AI should be
    listed per hero; on a phone that has played a ranked table, *Show my ranked games* should show your rating, a small
    line of how it moved, and the heroes you played most.
+9. (v7.01–v7.02) The smallest words on the board (hand-rail labels, chips on cards, the empty-arsenal word) should read
+   comfortably and nothing should overlap. *Play the AI* → *Battle*: the opponent step should offer **no Dummy** tile.
+   Finish a game against the AI, then open *Your record*: *Your heroes* should list the hero you piloted, with its W–L.
 
 **Report back:** the step that failed (if any), the phones, and whether it was Wi-Fi or mobile data. JUDGE!! files a
 report from either phone.
