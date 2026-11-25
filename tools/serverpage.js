@@ -37,11 +37,27 @@ const R = T.R;
 /* THE DEAL, THE PAGE'S WAY (index.html JudgeRoom.deal) — shared with tools/supabase-rehearse.js; sets the page's CDN address */
 const { dealLikeThePage, matchCatalog } = require("../test/helpers/pagedeal.js");
 const { judgeScreen } = require("./tapjudge.js");
+const { judgeText, say: sayText } = require("./contrast.js");
 
 const W = 393, H = 852;
 const rows = [];
 const row = (ok, name, detail) => { rows.push({ ok, name }); console.log((ok ? "PASS  " : "FAIL  ") + name + (detail ? "  " + detail : "")); };
 const wait = ms => new Promise(r => setTimeout(r, ms));
+/* READABILITY (W; tools/contrast.js, the measure the tap sweep uses): one row per server screen, WCAG AA on the real composited background at the phone
+   (393x852) and the smallest (320x568) unless `sizes` narrows it; the viewport goes back where it was. Text under 10 px is REPORTED (SMALL lines), not a failure. */
+const smallText = new Map();
+async function readable(page, name, sizes){
+  const was = page.viewportSize(), fails = []; let n = 0;
+  try {
+    for(const [w, h] of sizes || [[W, H], [320, 568]]){
+      await page.setViewportSize({ width: w, height: h }); await wait(300);
+      const r = await judgeText(page); n += r.n;
+      r.fails.forEach(f => fails.push(`${w}: ${sayText(f)}`));
+      r.small.forEach(f => smallText.set(`${name} | ${f.sel} "${f.text}" ${f.px}px`, 1));
+    }
+  } finally { await page.setViewportSize(was); await wait(200); }
+  row(n > 0 && fails.length === 0, "readability: " + name + " — every text clears WCAG AA", fails.slice(0, 4).join(" | ") + (fails.length > 4 ? ` (+${fails.length - 4} more)` : "") || (n + " texts"));
+}
 
 /* the page's end of the fake wire: post() and subscribe() forwarded to the world in this process */
 const SHIM = `
@@ -187,6 +203,7 @@ async function toServerChooser(page){
     row(/referee on the web holds the deck/i.test(sheet) && /host's phone holds the deck/i.test(sheet) && /judge's device holds the deck/i.test(sheet), "hands sheet: one tap shows the honest line for the server, direct and judged tables");
     const sb = await boxes(page, '[data-testid="hands-sheet"] .bugsheet');
     row(sb.length === 1 && sb[0].x >= 0 && sb[0].r <= W && await overflow(page), "hands sheet: inside 393 wide, no horizontal overflow", JSON.stringify(sb[0])); await thumbs(page, "hands sheet");
+    await readable(page, "the hands sheet");
     await click(page, btn(page, /^Got it/), "close the hands sheet");
     row((await boxes(page, '[data-testid="hands-sheet"]')).length === 0, "hands sheet: Got it closes it");
     /* THREE CHOICES SIDE BY SIDE (v6.28): server, direct, judge's - each a labelled group, stacked in order, all inside 393 wide, their buttons visible on the first screen */
@@ -874,6 +891,7 @@ async function toServerChooser(page){
     const a1 = await B.ch.askRematch(); await wd.settle([B.ch]);
     await pg.waitForFunction(() => /wants a rematch/.test((document.querySelector('[data-testid="rematch-note"]') || {}).innerText || ""), null, { timeout: 8000 }).catch(() => {});
     const n1 = await boxes(pg, '[data-testid="rematch-note"]'), rb1 = await boxes(pg, '[data-testid="rematch"]');
+    await readable(pg, "the rematch screen, the opponent's ask");
     row(a1.state === "waiting" && n1.length === 1 && /^Rival One wants a rematch\.$/.test(n1[0].t) && rb1.length === 1 && /say yes/i.test(rb1[0].t), "rematch: the opponent's ask reaches the page — 'Rival One wants a rematch.' and the button says yes", n1[0] && n1[0].t);
     await B.ch.askRematch(true); await wd.settle([B.ch]);
     await pg.waitForFunction(() => !document.querySelector('[data-testid="rematch-note"]'), null, { timeout: 8000 }).catch(() => {});
@@ -886,6 +904,7 @@ async function toServerChooser(page){
     row(n2.length === 1 && /^You asked for a rematch\. Waiting for Rival One to say yes… [12]:\d\d$/.test(n2[0].t) && cx.length === 1 && cx[0].h >= 44 && cx[0].b <= H, "rematch: the page says it is waiting for Rival One, with a calm count and Take it back", n2[0] && n2[0].t);
     row(B.ch.rematch().theirs === true && wd.store.rows.size === rows0, "rematch: the opponent's phone heard the ask; no table opened on one ask", JSON.stringify(B.ch.rematch()));
     row(n2.length === 1 && noJargon(n2[0].t) && await overflow(pg), "rematch: the waiting words carry no jargon; no horizontal overflow"); await thumbs(pg, "rematch waiting", ".reveal");
+    await readable(pg, "the rematch screen, waiting for the opponent");
     /* the opponent says yes: the page sits down at the new table */
     const b2 = await B.ch.askRematch(); await wd.settle([B.ch]);
     const nc = b2.table;
@@ -962,6 +981,7 @@ async function toServerChooser(page){
     row(codes.length === wd.server.OPEN_CAP && lst.length === codes.length && lst.every(x => codes.indexOf(x.t) >= 0), L + "rematch cap: the page lists the open tables that fill the cap", JSON.stringify(lst.map(x => x.t)));
     row(cl.length === codes.length && cl.every(b => b.h >= 44 && b.r - b.x >= 44 && b.x >= 0 && b.r <= w), L + "rematch cap: every table has a Close button, 44px or more, on screen", JSON.stringify(cl.map(b => [b.r - b.x, b.h])));
     row(await pg.evaluate(x => document.scrollingElement.scrollWidth <= x, w) && noJargon(await pg.evaluate(() => document.querySelector('[data-testid="rematch-row"]').innerText)), L + "rematch cap: no horizontal overflow, no identifier in the words"); await thumbs(pg, "rematch cap close " + w, ".reveal");
+    await readable(pg, "the rematch screen at the table cap, with Close (" + w + ")", [[w, h]]);
     const rows0 = wd.store.rows.size;
     await click(pg, pg.locator('[data-testid="rematch-cap-open"] .tblopen > button').first(), "Close the first table");
     await pg.waitForSelector('[data-testid="rematch-close-yes"]', { timeout: 5000 }).catch(() => {});
@@ -973,6 +993,7 @@ async function toServerChooser(page){
     const ag = await boxes(pg, '[data-testid="rematch"]'), cn = await boxes(pg, '[data-testid="rematch-capnote"]'), lst2 = await boxes(pg, '[data-testid="rematch-cap-open"] .mono');
     row(wd.row(first).closed === true && wd.store.rows.size === rows0 && lst2.length === codes.length - 1 && lst2.every(x => x.t !== first), L + "rematch cap: Yes closes that table (and only it) and the list loses it", JSON.stringify(lst2.map(x => x.t)));
     row(ag.length === 1 && /^ask again$/i.test(ag[0].t) && ag[0].h >= 44 && ag[0].r <= w && cn.length === 1 && /You can ask again now/.test(cn[0].t), L + "rematch cap: the button now says Ask again, with a plain note", ag[0] && ag[0].t);
+    await readable(pg, "the rematch screen, Ask again (" + w + ")", [[w, h]]);
     await click(pg, pg.locator('[data-testid="rematch"]'), "Ask again");
     await pg.waitForFunction(() => !document.querySelector('[data-testid="rematch-row"]'), null, { timeout: 15000 }).catch(() => {});
     const nt = [...wd.store.rows.keys()].filter(c => codes.indexOf(c) < 0 && wd.row(c) && wd.row(c).ranked === true && wd.row(c).creator === "P-rk-me" && c !== B.code);
@@ -1222,6 +1243,7 @@ async function toServerChooser(page){
     const you = await boxes(pg, '[data-testid="ladder-you"]');
     row(you.length === 1 && /You are number 3 on the ladder with a rating of 1655: 5 won, 0 lost, 0 drawn\./.test(you[0].t) && you[0].r <= w, "ladder " + w + ": the caller's own line says where they stand", you[0] && you[0].t);
     await ladFits(pg, w, "ladder " + w);
+    await readable(pg, "the Ladder (" + w + ")", [[w, h]]);
     const rec = await boxes(pg, '[data-testid="ladder-game"]');
     row(rec.length === 3 && /^Rec Six \(Dorinthea\) beat Rec Five \(Viserai\) conceded · 5 min ago$/.test(rec[0].t) && /^Rec Three \(Bravo\) and Rec Four \(Katsu\) drew draw · 3 hours ago$/.test(rec[1].t) && /^Rec One \(Kayo\) beat Rec Two \(Dash\) won · 2 days ago$/.test(rec[2].t),
         "ladder " + w + ": the latest games read in plain words (who beat whom with which hero, how it ended, when), newest first", rec.map(r => r.t).join(" | ").slice(0, 400));
@@ -1320,6 +1342,7 @@ async function toServerChooser(page){
     row(ladJargon(full) && !/MG\d|MT\d|P-lad|"result"|foeHero/.test(full), "my games " + w + ": no identifier or field name in the words");
     row((await boxes(pg, '[data-testid="ladder-mine"] button, [data-testid="ladder-mine"] a')).length === 0 && (await boxes(pg, '[data-testid="ladder-you"]')).length === 1, "my games " + w + ": the rows are not controls, and the caller's own line is still there");
     await thumbs(pg, "my games " + w, ".tblwrap");
+    await readable(pg, "the Ladder with Your last ranked games (" + w + ")", [[w, h]]);
     await k.kit.close();
   }
   /* a named player with no games yet: one warm line, not an empty box; an unnamed player, a signed-out phone and an older server see nothing new */
@@ -1373,6 +1396,7 @@ async function toServerChooser(page){
     const cancelB = await boxes(k.A, '[data-testid="seek-cancel"]');
     row(cancelB.length === 1 && /^stop looking$/i.test(cancelB[0].t) && cancelB[0].h >= 40 && cancelB[0].b <= H, "seek: Stop looking is on screen", JSON.stringify(cancelB[0]));
     await thumbs(k.A, "seek waiting"); row(await overflow(k.A), "seek waiting: no horizontal overflow");
+    await readable(k.A, "the find-a-match card, waiting clock ticking");
     row(k.sk.q.size === 1 && k.sk.count(60).friendly === 1, "seek: A is in the queue (one friendly seek)");
     const aTable = [...k.sk.q.values()][0] && [...k.sk.q.values()][0].table;
     row(!!aTable && k.wd.row(aTable) && k.wd.row(aTable).creator === "P-sk-a", "seek: A waits at a table opened for A");
@@ -1382,6 +1406,7 @@ async function toServerChooser(page){
     await k.B.waitForSelector('[data-testid="looking-srv"]', { timeout: 6000 }).catch(() => {});
     const lk = await boxes(k.B, '[data-testid="looking-srv"]');
     row(lk.length === 1 && lk[0].t === "1 player is looking for a match right now." && lk[0].r <= W, "seek: another phone's server table screen says one player is looking", lk[0] && lk[0].t);
+    await readable(k.B, "the server screen with the players-looking line");
     await click(k.B, k.B.locator('[data-testid="seek-go"]'), "B: find a match");
     const upA = await lobbyUp(k.A), upB = await lobbyUp(k.B);
     row(upA && upB, "seek: both pages reach the lobby (Choose your fighter) together", "A " + upA + ", B " + upB);
@@ -1429,6 +1454,7 @@ async function toServerChooser(page){
     const bn = await boxes(k.A, '[data-testid="match-ready"]'), tk = await boxes(k.A, '[data-testid="match-take"]');
     row(bn.length === 1 && /^your match is ready/i.test(bn[0].t) && seekJargon(bn[0].t) && bn[0].y <= 2 && bn[0].r <= W, "waiting: a match arriving mid-practice shows Your match is ready over the game", bn[0] && bn[0].t);
     row(tk.length === 1 && tk[0].h >= 44 && tk[0].r <= W && !/Choose your fighter/i.test(await text(k.A)), "waiting: the practice game is not taken away from the player, and the take button is thumb-sized", JSON.stringify(tk[0]));
+    await readable(k.A, "the match-found banner over the practice game");
     await wait(1500);
     const r0 = k.wd.row(aTable);
     row((await boxes(k.A, '[data-testid="match-ready"]')).length === 1 && !!r0 && r0.owners && r0.owners[1] === "P-sk-b" && r0.closed !== true, "waiting: ignored, the match simply stands as an unanswered match does (banner stays, table open, both chairs held)", JSON.stringify(r0 && r0.owners));
@@ -1496,6 +1522,7 @@ async function toServerChooser(page){
     await k.A.waitForSelector('[data-testid="seek-typical"]', { timeout: 8000 }).catch(() => {});
     const ty = await boxes(k.A, '[data-testid="seek-typical"]');
     row(ty.length === 1 && ty[0].t === "Players usually find a match in about 50 seconds." && ty[0].x >= 0 && ty[0].r <= W && ty[0].b <= H && seekJargon(ty[0].t), "waiting: the card says how long players usually wait, from the day's completed seeks", ty[0] && ty[0].t);
+    await readable(k.A, "the find-a-match card with the usual-wait line");
     await click(k.B, k.B.locator('[data-testid="seek-open"]'), "B: find a match");
     await lobbyUp(k.A);
     row((await boxes(k.A, '[data-testid="seek-typical"]')).length === 0, "waiting: the line is gone once the match is made");
@@ -1528,6 +1555,7 @@ async function toServerChooser(page){
     row(ty.length === 1 && !!bar && ty[0].x >= 0 && ty[0].r <= width && ty[0].r <= bar.r && ty[0].y >= bar.y && ty[0].b <= bar.b && seekJargon(ty[0].t), "practice bar " + width + ": the line sits inside the bar and the screen", JSON.stringify({ ty: ty[0], bar }));
     const back = (await boxes(k.A, '[data-testid="wait-back"]'))[0];
     row(!!back && back.h >= 44 && back.x >= 0 && back.r <= width && (await k.A.evaluate(() => document.scrollingElement.scrollWidth)) <= width, "practice bar " + width + ": Back to the search keeps its 44 px tap and nothing overflows sideways", JSON.stringify(back));
+    await readable(k.A, "the practice bar while still looking (" + width + ")", [[width, width === W ? H : 568]]);
     await click(k.A, k.A.locator('[data-testid="wait-back"]'), "A: back to the search (" + width + ")");
     await k.A.waitForSelector('[data-testid="seek-card"]', { timeout: 6000 }).catch(() => {});
     row((await boxes(k.A, '[data-testid="wait-typical"]')).length === 0, "practice bar " + width + ": the bar's line is gone with the bar");
@@ -1618,6 +1646,21 @@ async function toServerChooser(page){
     const r = await lrRun("sab", ro, lo, false);
     row(r.got.some(x => !x.ok), "liveranked: its sabotage is SEEN: " + what, r.got.filter(x => !x.ok).map(x => x.name).join(" | ").slice(0, 160));
   }
+
+  /* READABILITY SABOTAGE (W): the Still-looking card's text painted with the page's own background must be FOUND by the same measure */
+  {
+    const k = await seekKit("readsab");
+    await toFirst(k.A);
+    await click(k.A, k.A.locator('[data-testid="seek-open"]'), "A: find a match");
+    await k.A.waitForFunction(() => /Looking for an opponent/.test(document.body.innerText), null, { timeout: 8000 }).catch(() => {});
+    const clean = await judgeText(k.A);
+    await k.A.addStyleTag({ content: '[data-testid="seek-card"] *{color:#4A3B2E !important}' });
+    const sab = await judgeText(k.A);
+    row(clean.n > 0 && clean.fails.length === 0 && sab.fails.length >= 2, "readability: the measure finds a sabotaged seek card (clean 0, sabotaged >= 2)", `clean ${clean.fails.length}, sabotaged ${sab.fails.length}`);
+    await k.kA.close(); await k.kB.close();
+  }
+  console.log(`\nTEXT UNDER 10 PX on the server screens (reported, not failed): ${smallText.size ? "" : "none"}`);
+  for(const m of smallText.keys()) console.log("  SMALL  " + m);
 
   const fail = rows.filter(r => !r.ok).length;
   console.log(`\n${rows.length - fail} passed, ${fail} failed in ${((Date.now() - t0) / 1000).toFixed(0)}s`);
