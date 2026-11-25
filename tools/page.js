@@ -841,6 +841,22 @@ if(require.main === module){
       await ik.close();
     }
 
+    /* THE TRAINER'S PROMPT SHEETS (S; tools/promptsweep.js --trainer): the same sweep through window.__battle, which exists ONLY under
+       ?drill=1. The first row proves the normal page has no such handle; the rest raise every kind through Battle's own openPrompt. */
+    {
+      const nk = await open({ w: 393, h: 852 });
+      try { await nk.page.waitForSelector(".hcard", { timeout: 20000 });
+        const has = await nk.page.evaluate(() => typeof window.__battle);
+        row(has === "undefined", "trainer inject: the normal page carries no window.__battle", has); }
+      catch(e){ row(false, "trainer inject: the normal page carries no window.__battle", String(e && e.message || e).split("\n")[0]); }
+      await nk.close();
+      const tk = await open({ w: 320, h: 568, query: "?drill=1" });
+      try { await require("./promptsweep.js").injectDrill(tk.page, row, { w: 320, h: 568, board: "trainer" }); }
+      catch(e){ row(false, "trainer inject 320x568: the drill ran to the end", String(e && e.message || e).split("\n")[0]); }
+      tk.errors.forEach(e => errors.push(`trainer inject 320x568: ${e}`));
+      await tk.close();
+    }
+
     const sw = errors.slice();
     if(sw.length){ console.log("\nPAGE ERRORS (" + sw.length + "):"); sw.forEach(e => console.log("  " + e)); }
     const bad = rows.filter(r => !r.ok).length;

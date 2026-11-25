@@ -3889,6 +3889,18 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     } catch(e){ /* the judge must never be the thing that breaks play */ }
     return n;
   });
+  /* THE TRAINER'S DRILL DOOR (tools/promptsweep.js --trainer). Only a page opened with ?drill=1 gets a handle on this game
+     (window.__battle): it reads the live state and raises a prompt spec through the game's OWN openPrompt, exactly as a card's
+     queued spec would be. Without the flag the effect does nothing, so play and the normal page are untouched. */
+  const gLive = uR(g); gLive.current = g;
+  uE(()=>{
+    if(!/[?&]drill=1(&|$)/.test(window.location.search)) return;
+    window.__battle = {state: () => gLive.current, raise: (spec, pre) => setG(s => {
+      const n = openPrompt({...s, prompt:null, promptQ:[spec]});
+      return pre && n.prompt ? {...n, prompt:{...n.prompt, ...(pre.sel ? {sel:pre.sel.slice()} : {}), ...(pre.down ? {down:pre.down.slice()} : {})}} : n;
+    })};
+    return () => { delete window.__battle; };
+  }, []);
   const [zoom,setZoom]=uS(null);
   /* the JUDGE!! bug-report sheet: null when closed */
   const [bug,setBug]=uS(null);
