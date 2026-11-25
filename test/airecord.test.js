@@ -46,7 +46,7 @@ test("the outcome is read from `over` and the seat asking", () => {
 
 test("a bump changes exactly one counter, keyed by hero and level", () => {
   const r0 = L.bumpRecord(null, "kayo", "sharp", "w");
-  assert.deepStrictEqual(r0, {v: 1, foes: {kayo: {sharp: {w: 1, l: 0, d: 0}}}});
+  assert.deepStrictEqual(r0, {v: 2, foes: {kayo: {sharp: {w: 1, l: 0, d: 0}}}, mine: {unknown: {w: 1, l: 0, d: 0}}});
   const r1 = L.bumpRecord(r0, "kayo", "steady", "l");
   assert.deepStrictEqual(r1.foes.kayo, {sharp: {w: 1, l: 0, d: 0}, steady: {w: 0, l: 1, d: 0}},
     "the other level is its own counter");
@@ -54,7 +54,7 @@ test("a bump changes exactly one counter, keyed by hero and level", () => {
   assert.deepStrictEqual(r2.foes.azalea, {sharp: {w: 0, l: 0, d: 1}}, "and the other hero its own");
   assert.deepStrictEqual(r2.foes.kayo, r1.foes.kayo, "touching nobody else");
   assert.equal(total(r2), 3);
-  assert.deepStrictEqual(r0, {v: 1, foes: {kayo: {sharp: {w: 1, l: 0, d: 0}}}}, "the input is never mutated");
+  assert.deepStrictEqual(r0, {v: 2, foes: {kayo: {sharp: {w: 1, l: 0, d: 0}}}, mine: {unknown: {w: 1, l: 0, d: 0}}}, "the input is never mutated");
   /* ask for the refusal, not only the match */
   for(const [k, lv, o] of [[null, "sharp", "w"], ["kayo", "hard", "w"], ["kayo", "sharp", "x"], ["", "steady", "l"]])
     assert.equal(total(L.bumpRecord(r2, k, lv, o)), 3, `nothing counted for ${k}/${lv}/${o}`);
@@ -70,7 +70,7 @@ test("a finished game is one write; an unfinished one is none", () => {
   L.recordResult(get, null, true, {winner: 0, how: "life"}, 0);   // the Dummy: no hero key
   assert.equal(ls.writes, 2, "a game against the Dummy is not counted");
   const back = JSON.parse(ls.raw(L.RECORD_KEY));
-  assert.deepStrictEqual(back, {v: 1, foes: {kayo: {sharp: {w: 1, l: 0, d: 0}, steady: {w: 0, l: 1, d: 0}}}});
+  assert.deepStrictEqual(back, {v: 2, foes: {kayo: {sharp: {w: 1, l: 0, d: 0}, steady: {w: 0, l: 1, d: 0}}}, mine: {unknown: {w: 1, l: 1, d: 0}}});
   assert.deepStrictEqual(L.loadRecord(get), back, "and it reads back as written");
   assert.equal(L.RECORD_KEY, "dawnblade.aiRecord", "the key the page's other settings share a prefix with");
 });
@@ -84,12 +84,12 @@ test("storage that is missing or throws never reaches the game", () => {
     ["write throws (quota)", () => ({getItem: () => null, setItem: boom})],
   ];
   for(const [why, get] of throwing){
-    assert.deepStrictEqual(L.loadRecord(get), {v: 1, foes: {}}, why + ": reads as empty");
+    assert.deepStrictEqual(L.loadRecord(get), {v: 2, foes: {}, mine: {}}, why + ": reads as empty");
     assert.equal(L.saveRecord(get, L.bumpRecord(null, "kayo", "sharp", "w")), false, why + ": the write says it failed");
     const r = L.recordResult(get, "kayo", true, {winner: 0, how: "life"}, 0);
     assert.deepStrictEqual(r && r.foes.kayo, {sharp: {w: 1, l: 0, d: 0}}, why + ": the game still gets its answer");
   }
-  for(const raw of ["{not json", "[]", "7", JSON.stringify({v: 2, foes: {kayo: {sharp: {w: 9}}}}),
+  for(const raw of ["{not json", "[]", "7", JSON.stringify({v: 3, foes: {kayo: {sharp: {w: 9}}}}),
                     JSON.stringify({v: 1, foes: {kayo: {sharp: {w: -3, l: 1.5, d: "x"}}}})]){
     const r = L.loadRecord(() => mem({[L.RECORD_KEY]: raw}));
     assert.equal(total(r), 0, "garbage reads as no games, never as a number nobody counted: " + raw);
@@ -139,9 +139,50 @@ test("the board counts only a finished local game against a hero, once", () => {
   assert.match(eff, /if\(!over \|\| !local \|\| !them\.heroKey \|\| counted\.current === over\) return;/,
     "gated on a result, a local game, a hero seat, and not already counted");
   assert.match(eff, /counted\.current = over;/, "and it remembers what it counted");
-  assert.match(eff, /recordResult\(lsGet, them\.heroKey, !!match\.sharp, over, mySeat\)/, "keyed by the AI's hero and level");
+  assert.match(eff, /recordResult\(lsGet, them\.heroKey, !!match\.sharp, over, mySeat, me\.heroKey\)/, "keyed by the AI's hero and level");
   assert.ok(eff.endsWith("},[g.over]);"), "and runs when the result arrives");
   /* the trainer never counts */
   const bi = HTML.indexOf("function Battle(");
   assert.ok(!/recordResult/.test(HTML.slice(bi, HTML.indexOf("\nfunction ", bi + 10))), "the trainer is untouched");
+});
+
+/* ---- RECORD v2: THE PLAYER'S OWN HERO ------------------------------------ */
+test("v2: a bump with the player's hero files it under `mine` as well as `foes`", () => {
+  let r = L.bumpRecord(null, "kayo", "sharp", "w", "dorinthea");
+  r = L.bumpRecord(r, "azalea", "steady", "l", "dorinthea");
+  r = L.bumpRecord(r, "kayo", "sharp", "d", "viserai");
+  assert.deepStrictEqual(r.mine, {dorinthea: {w: 1, l: 1, d: 0}, viserai: {w: 0, l: 0, d: 1}});
+  assert.equal(total(r), 3, "foes still sum to every game");
+  const r2 = L.bumpRecord(r, "kayo", "sharp", "w");
+  assert.deepStrictEqual(r2.mine.unknown, {w: 1, l: 0, d: 0}, "no hero given: the unknown bucket");
+  assert.deepStrictEqual(r.mine.unknown, undefined, "the input is never mutated");
+  assert.equal(L.recordResult(() => mem(), "kayo", true, {winner: 0, how: "life"}, 0, "viserai").mine.viserai.w, 1,
+    "recordResult passes the hero through");
+});
+
+test("v2: a v1 record migrates losslessly, its games under unknown", () => {
+  const v1 = {v: 1, foes: {kayo: {sharp: {w: 2, l: 1, d: 0}}, dorinthea: {sharp: {w: 0, l: 1, d: 0}, steady: {w: 1, l: 0, d: 1}}}};
+  const ls = mem({[L.RECORD_KEY]: JSON.stringify(v1)});
+  const r = L.loadRecord(() => ls);
+  assert.equal(r.v, 2);
+  assert.deepStrictEqual(r.foes, v1.foes, "every per-foe counter survives");
+  assert.deepStrictEqual(r.mine, {unknown: {w: 3, l: 2, d: 1}}, "all six games, once, under unknown");
+  assert.equal(ls.writes, 0, "loading alone does not rewrite storage");
+  const r2 = L.recordResult(() => ls, "kayo", true, {winner: 0, how: "life"}, 0, "viserai");
+  assert.deepStrictEqual(r2.mine, {unknown: {w: 3, l: 2, d: 1}, viserai: {w: 1, l: 0, d: 0}});
+  assert.equal(JSON.parse(ls.raw(L.RECORD_KEY)).v, 2, "the next write is v2");
+  assert.equal(total(r2), 7);
+  assert.deepStrictEqual(L.loadRecord(() => mem({[L.RECORD_KEY]: JSON.stringify({v: 1, foes: {}})})).mine, {}, "an empty v1 adds no bucket");
+});
+
+test("v2: clean drops junk in `mine` and keeps good counts", () => {
+  const r = L.loadRecord(() => mem({[L.RECORD_KEY]: JSON.stringify({v: 2, foes: {},
+    mine: {viserai: {w: 2, l: -1, d: "x"}, bad: 5, nil: {w: 0, l: 0, d: 0}}})}));
+  assert.deepStrictEqual(r.mine, {viserai: {w: 2, l: 0, d: 0}}, "bad counts to 0, non-objects and empty buckets dropped");
+  assert.deepStrictEqual(L.loadRecord(() => mem({[L.RECORD_KEY]: JSON.stringify({v: 2, foes: {}, mine: 7})})).mine, {});
+});
+
+test("v2: the board passes the player's hero to the record", () => {
+  const HTML = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+  assert.match(HTML, /DawnLocal\.recordResult\(lsGet, them\.heroKey, !!match\.sharp, over, mySeat, me\.heroKey\)/);
 });

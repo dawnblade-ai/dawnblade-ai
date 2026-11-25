@@ -879,7 +879,8 @@ if(require.main === module){
        sabotage: an empty record must not draw rows). A phone with no server sign-in shows the ranked card's empty line and
        makes no request (any request off the routed list is a page error, counted below). */
     {
-      const seedRec = { v: 1, foes: { kayo: { sharp: { w: 2, l: 1, d: 0 } }, dorinthea: { sharp: { w: 0, l: 1, d: 0 }, steady: { w: 1, l: 0, d: 1 } } } };
+      const seedRec = { v: 2, foes: { kayo: { sharp: { w: 2, l: 1, d: 0 } }, dorinthea: { sharp: { w: 0, l: 1, d: 0 }, steady: { w: 1, l: 0, d: 1 } } },
+        mine: { viserai: { w: 3, l: 1, d: 0 }, azalea: { w: 1, l: 1, d: 1 }, unknown: { w: 0, l: 0, d: 0 } } };
       for (const seeded of [true, false]) {
         const name = seeded ? "your record: a seeded record reads back per hero, most games first" : "your record: nothing seeded says so and draws no rows (sabotage)";
         const kr = await open({ w: W, h: H, title: true });
@@ -892,11 +893,13 @@ if(require.main === module){
             rows: [...document.querySelectorAll('[data-testid="record-ai-row"]')].map(e => e.innerText.replace(/\s+/g, " ").trim()),
             total: (document.querySelector('[data-testid="record-ai-total"]') || {}).innerText || "",
             none: !!document.querySelector('[data-testid="record-ai-none"]'),
+            mine: [...document.querySelectorAll('[data-testid="record-mine-row"]')].map(e => e.innerText.replace(/\s+/g, " ").trim()),
             ranked: !!document.querySelector('[data-testid="record-ranked-none"]'),
             tab: !!document.querySelector('[data-testid="tab-record"].on') }));
           const ok = seeded
             ? got.rows.length === 2 && /Dorinthea/.test(got.rows[0]) && /1–1–1/.test(got.rows[0]) && /Kayo/.test(got.rows[1]) && /2–1/.test(got.rows[1]) && /3 won, 2 lost, 1 drawn/.test(got.total) && !got.none
-            : got.rows.length === 0 && got.none && !got.total;
+              && got.mine.length === 2 && /Viserai/.test(got.mine[0]) && /×4/.test(got.mine[0]) && /3–1/.test(got.mine[0]) && /1–1–1/.test(got.mine[1]) && !got.mine.some(t => /unknown/i.test(t))
+            : got.rows.length === 0 && got.none && !got.total && got.mine.length === 0;
           row(ok && got.ranked && got.tab && !kr.errors.length, name, JSON.stringify(got) + (kr.errors.length ? " errors: " + kr.errors.join(" | ") : ", 0 page errors"));
         } catch (e) { row(false, name, String(e.message).split("\n")[0] + " " + kr.errors.join(" | ")); }
         await kr.close();
