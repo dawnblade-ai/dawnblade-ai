@@ -38,7 +38,7 @@
 :root{
   --r:#BA2C27; --y:#E8B33C; --b:#3B6FB0;
   /* TEXT inks for the two fills (readability sweep): --r and --b stay the FILLS (bone text sits on --r at 4.5:1); red or blue WORDS on the forge panels use these, lifted until they clear WCAG AA (4.5:1) on --forge2 */
-  --rt:#EC6560; --bt:#6595D2;
+  --rt:#F5817B; --bt:#6595D2;
   --ink:#14100E; --forge:#241B16; --forge2:#2E241D;
   --bone:#E8DFD0; --bone-dim:#B8AC98; --line:#4A3B2E;
   --ok:#7BA05B; --hold:#6B4BA3;
@@ -7814,7 +7814,7 @@ function Pregame({h, seed, onSeated, onBack}){
     <div className="rps">
       <div className="rtitle">{coinMode ? "The Coin" : "The Throw"}</div>
       <p className="rsub">Winner decides who takes the first turn.<br/>Going first buys initiative; going second keeps a card.
-        {coinMode && <><br/><span style={{opacity:.65}}>Against the AI a coin decides it. Rock-paper-scissors is saved for the ranked ladder.</span></>}</p>
+        {coinMode && <><br/><span style={{opacity:.8}}>Against the AI a coin decides it. Rock-paper-scissors is saved for the ranked ladder.</span></>}</p>
       <div className="rtable">
         <div className={"rseat"+(winner===0?" win":"")}>
           <span className="rwho">You · {h.n}</span>
