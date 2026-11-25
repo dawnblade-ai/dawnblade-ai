@@ -1500,7 +1500,7 @@ async function toServerChooser(page){
     if (how === "expire") {
       await wait(4500);
       const a = await sample(4, 600);
-      row(a.every(x => x === base) && (await boxes(k.A, '[data-testid="match-ready"]')).length === 1, P + "the window over: the flashing has stopped, the real title is back, the banner stands", JSON.stringify(a));
+      row(a.every(x => x === base) && (await boxes(k.A, '[data-testid="match-ready"]')).length === 0, P + "the window over: the flashing has stopped, the real title is back, the seat has been given back (no banner)", JSON.stringify(a));
       row(await k.A.evaluate(() => window.__found === 1 && window.__buzz === 1), P + "the window over: no second chime or buzz");
     } else {
       await wait(1100);
@@ -1510,6 +1510,49 @@ async function toServerChooser(page){
       row(upA && upB && a.every(x => x === base), P + "taking the match: the flashing stops at once and the real title is back exactly", JSON.stringify(a));
       row(await k.A.evaluate(() => window.__found === 1 && window.__buzz === 1), P + "taking the match: still one chime and one buzz");
     }
+    await k.kA.close(); await k.kB.close();
+  }
+  /* K1b3: THE FOUND-MATCH WINDOW IS HONEST ON BOTH SIDES. A practises, B is matched to A's table. A's banner counts down from the window and has a quiet
+     Not now; Not now, or the countdown reaching 0, gives the seat back (A's table closes, A stays in the practice game and is told). B, left in an empty lobby,
+     is told plainly, then goes back to looking by itself: the same kind, the clock carried on, and a third player can still meet B. */
+  for (const how of ["notnow", "expire"]) {
+    const k = await seekKit("window-" + how), P = "window " + how + ": ";
+    await k.A.evaluate(ms => { window.SERVER_TABLE.quietMs = 3500; window.SERVER_TABLE.alertMs = ms; }, how === "expire" ? 6000 : 120000);
+    await toFirst(k.A); await toFirst(k.B);
+    await click(k.A, k.A.locator('[data-testid="seek-open"]'), "A: find a match");
+    await k.A.waitForSelector('[data-testid="seek-play-ai"]', { timeout: 12000 }).catch(() => {});
+    const aTable = [...k.sk.q.values()][0] && [...k.sk.q.values()][0].table;
+    await click(k.A, k.A.locator('[data-testid="seek-play-ai"]'), "A: play the AI while waiting");
+    await k.A.locator(".hcard").first().click(); await k.A.locator(".battlebtn").first().click();
+    await k.A.waitForFunction(() => /throw|first|coin|who goes/i.test(document.body.innerText) && !document.querySelector('[data-testid="wait-bar"]'), null, { timeout: 8000 }).catch(() => {});
+    await click(k.B, k.B.locator('[data-testid="seek-open"]'), "B: find a match");
+    await k.A.waitForSelector('[data-testid="match-ready"]', { timeout: 15000 }).catch(() => {});
+    const bn = await boxes(k.A, '[data-testid="match-ready"]'), left = await boxes(k.A, '[data-testid="match-left"]'), nn = await boxes(k.A, '[data-testid="match-notnow"]'), tk = await boxes(k.A, '[data-testid="match-take"]');
+    row(bn.length === 1 && /join within \d:\d\d/i.test(bn[0].t) && (how === "expire" ? /join within 0:0[0-6]/i.test(bn[0].t) : /join within [0-2]:\d\d/i.test(bn[0].t)), P + "the banner says how long is left", bn[0] && bn[0].t);
+    row(nn.length === 1 && /^not now$/i.test(nn[0].t) && nn[0].h >= 44 && nn[0].r <= W && nn[0].x >= 0 && tk.length === 1 && tk[0].h >= 44 && tk[0].r <= W && bn[0].r <= W && bn[0].b <= 200, P + "Join them and Not now are both thumb-sized, on screen, inside the banner", JSON.stringify([nn[0], tk[0]]));
+    const t1 = left.length === 1 ? (await boxes(k.A, '[data-testid="match-left"]'))[0].t : "";
+    await wait(2300);
+    const t2 = (await boxes(k.A, '[data-testid="match-left"]'))[0];
+    row(!!t2 && t2.t !== t1, P + "the countdown moves", t1 + " -> " + (t2 && t2.t));
+    row(await k.B.evaluate(() => /Your opponent was practising/.test(document.body.innerText)) && (await boxes(k.B, '[data-testid="found-wait"]')).length === 1 && seekJargon(await text(k.B)), P + "while A decides, B is told plainly why the table is quiet and what happens next");
+    if (how === "notnow") await click(k.A, k.A.locator('[data-testid="match-notnow"]'), "A: Not now");
+    else await k.A.waitForFunction(() => !document.querySelector('[data-testid="match-ready"]'), null, { timeout: 9000 }).catch(() => {});
+    await wait(500);
+    row((await boxes(k.A, '[data-testid="match-ready"]')).length === 0 && k.wd.row(aTable).closed === true, P + "the seat is given back: banner gone, A's table closed on the server", "closed=" + (k.wd.row(aTable) && k.wd.row(aTable).closed));
+    const gb = await boxes(k.A, '[data-testid="gave-back"]');
+    row(gb.length === 1 && /(gave your match back|given back)/.test(gb[0].t) && /gone back to looking/.test(gb[0].t) && seekJargon(gb[0].t) && gb[0].r <= W && (how === "expire" ? /within 6 seconds/.test(gb[0].t) : true), P + "A is told, plainly, that the match was given back", gb[0] && gb[0].t);
+    row(!(await k.A.evaluate(() => /Choose your fighter/i.test(document.body.innerText))), P + "A is never dragged into the lobby (still in the practice game)");
+    await k.B.waitForSelector('[data-testid="seek-card"]', { timeout: 15000 }).catch(() => {});
+    const note = await boxes(k.B, '[data-testid="seek-note"]');
+    row((await boxes(k.B, '[data-testid="seek-card"]')).length === 1 && note.length === 1 && /did not make it to the table/.test(note[0].t) && seekJargon(note[0].t) && note[0].r <= W, P + "B is back on the search card with a plain line saying why", note[0] && note[0].t);
+    await wait(1500);
+    const bT = [...k.sk.q.values()].find(x => x.taken !== true);
+    row(!!bT && k.wd.row(bT.table) && k.wd.row(bT.table).closed !== true && bT.table !== aTable, P + "B is queued again at a table of its own, friendly like before", JSON.stringify(bT));
+    const clk = (await boxes(k.B, '[data-testid="seek-clock"]'))[0];
+    const clkS = clk && /^(\d+):(\d\d)$/.test(clk.t) ? +clk.t.split(":")[0] * 60 + +clk.t.split(":")[1] : -1;
+    row(clkS >= 3, P + "B's looking clock carried on (the wait on A counts; it did not start again from nothing)", clk && clk.t);
+    const bad = k.kA.errors.concat(k.kB.errors).filter(e => !/404|Failed to load resource/.test(e));
+    row(bad.length === 0 && k.wd.errors.length === 0, P + "no page error and no internal error", bad.concat(k.wd.errors).join(" | ").slice(0, 200));
     await k.kA.close(); await k.kB.close();
   }
   /* K1c: THE USUAL WAIT. A waiting seeker is told how long players usually wait — only when the server had 5+ completed seeks to say (011_seek_wait.sql);

@@ -479,6 +479,8 @@ function channel(o, T, code, seat, key, n0, firstFrames, scrub, keep, who){
     status: () => st,
     /* beyond room.js's shape */
     peerHeard: () => peerHeard,
+    /* ask the referee for anything this phone missed, now (the found-match window asks every few seconds whether the table it waits at was given back) */
+    refresh: () => { try { const p = heal(); if(p && p.catch) p.catch(() => {}); } catch(_){} },
     closedWhy: () => closedWhy,
     names: () => names.slice(),          /* [seat 0's display name | null, seat 1's] */
     /* S5.1: {ranked, ratings: [seat 0's rating | null, seat 1's], result: null | {winner, how, turns, change: [{from, to}, {from, to}]}} (index = seat) */
