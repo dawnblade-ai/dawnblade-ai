@@ -14521,3 +14521,23 @@ needs the verbatim quote IN THE REPO (source comment, `tools/approx.js` record, 
   it; a sweep of trainer LOGIC found the dummy counting only hand cards against Confidence's non-block cap. Sweep both.
 - A prediction must equal what the engine does: Mocking Blow was ranked at 1 while the engine resolved it at 4 (its own
   on-attack boo). Drill a reader by comparing its prediction with the chain link's real total, in both gate states.
+
+## v7.17–v7.18 — the phone's real height, the glance, and Table Talk (2026-11-26)
+
+- **Drive at the phone's REAL height.** Safari on a 393-wide iPhone shows ~660 px; the drives ran at 393x852 and 320x568
+  for months. v7.15 hid the peek card under 700 px tall (the wheel's top card was magnified) and v7.16 retired the wheel
+  but kept the hide, so on the user's phone a tapped card showed its NAME ONLY while every row passed. 393x660 is now a
+  drive size (`peekJudge`, `tools/talk.js`). A rule written for a layout must die with the layout: grep for its reason.
+- **Never size an image box by its image.** The first Table Talk glimpse sized itself from `<img>` and measured 43 px
+  offline (the stand-in is 50x70) while it looked right with real art. Size the box from its container
+  (`height:min(100%, …)` + `aspect-ratio`), so the offline drive and the phone agree.
+- **A slice drill bounded by two function anchors breaks when code lands between them.** The Table Talk components first
+  went just above `function TableBoard(`, inside `pvprecord`'s JudgeRoom→TableBoard slice (8,969 → 29,960). The census
+  caught it; the fix was to MOVE the code (after the function it serves), not to repin. Read a moved slice before repinning.
+- **What a player may know is written down — use it.** TRP 5.1 sorts game information into Visible, Public, Unverified,
+  Assisted (a player may know these) and Historical, Private (they may not); TRP 5.8 lets a player write only life, its
+  changes and their source; PPG 3.2's first example of an illegal note is a record of pitched cards. That is the ranked
+  screen's specification (docs/TABLE-TALK.md §1): no log, a pad, the public zones looked through where they lie.
+- **A layout is not a board.** The new table reuses TableBoard's controls (`askEl` … `overlaysEl`, built once) instead of
+  a second board with its own taps — the v2.52 mirror lesson one layer up. With the switch off the classic board renders
+  identical DOM; drills that read a cell inline must follow it when it is named (tabletarget, v7.18).

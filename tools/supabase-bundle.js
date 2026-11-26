@@ -41,9 +41,9 @@ const TEMPLATE = path.join(ROOT, "server", "supabase", "entry.template.ts");
 const STAMP_DEFAULT = path.join(ROOT, "server", "supabase", "DEPLOYED.json");
 const DEFAULT_OUT = path.join(ROOT, "server", "supabase", "dist");
 const FN = "table";
-/* the page's scripts the referee does NOT need: the AI seat, the local table, the PeerJS room, the phone's own channel
-   to this function, the bug-report builder */
-const NOT_NEEDED = new Set(["engine/sparring.js", "engine/local.js", "engine/room.js", "engine/servertable.js", "engine/report.js"]);
+/* the page's scripts the referee does NOT need: the AI seat, the local table, Table Talk's announcer, the PeerJS room,
+   the phone's own channel to this function, the bug-report builder */
+const NOT_NEEDED = new Set(["engine/sparring.js", "engine/local.js", "engine/announce.js", "engine/room.js", "engine/servertable.js", "engine/report.js"]);
 
 const sha = b => crypto.createHash("sha256").update(b).digest("hex");
 const read = f => fs.readFileSync(path.join(ROOT, f), "utf8");

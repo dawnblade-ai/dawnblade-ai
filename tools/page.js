@@ -35,7 +35,7 @@
      npm install --prefix "$PAGE_DEPS" --save-exact react@18.2.0 \
        react-dom@18.2.0 @babel/standalone@7.23.5 peerjs@1.5.4 @supabase/supabase-js@2.115.0 \
        @fontsource/big-shoulders-display @fontsource/spline-sans \
-       @fontsource/spline-sans-mono
+       @fontsource/spline-sans-mono @fontsource/caveat
    The fonts are optional for loading, NOT for the width rows: without them the CSS is empty and the
    page falls back to system fonts, so the jump-row and action-bar rows can FAIL for the sandbox's
    reason (the run now warns and tags those FAILs). The
@@ -92,6 +92,7 @@ const FONT_FAMILIES = {   // Google family -> [npm package, file slug]
   "Big Shoulders Display": ["@fontsource/big-shoulders-display", "big-shoulders-display"],
   "Spline Sans":           ["@fontsource/spline-sans", "spline-sans"],
   "Spline Sans Mono":      ["@fontsource/spline-sans-mono", "spline-sans-mono"],
+  "Caveat":                ["@fontsource/caveat", "caveat"],   /* Table Talk's pad (v7.18) */
 };
 const CDN_PKG = { "react": "react", "react-dom": "react-dom", "babel-standalone": "@babel/standalone" };
 
@@ -1501,6 +1502,20 @@ if(require.main === module){
       } catch(e){ row(false, lbl + ": the glance", String(e && e.message || e).split("\n")[0]); }
       gk.errors.forEach(e => errors.push(`glance ${lbl}: ${e}`));
       await gk.close();
+    }
+
+    /* TABLE TALK (TT0, v7.18; docs/TABLE-TALK.md): the new table behind its switch (`?talk=1`), at the iPhone's real
+       height, the drives' phone and the smallest — tools/talk.js's judge: one screen in order, the pad agreeing with the
+       engine, nothing private named, the tap floor, the opponent's play said and shown, a tap moving the call on. */
+    for(const [tw, th] of [[393, 660], [393, 852], [320, 568]]){
+      const tk = await open({ w: tw, h: th, query: "?talk=1" });
+      try {
+        const T = require("./talk.js");
+        await T.talkTo(tk.page);
+        for(const [ok, name, d] of await T.talkJudge(tk.page, `talk ${tw}x${th}`)) row(ok, name, d);
+      } catch(e){ row(false, `talk ${tw}x${th}: the drive ran to the end`, String(e && e.message || e).split("\n")[0]); }
+      tk.errors.forEach(e => errors.push(`talk ${tw}x${th}: ${e}`));
+      await tk.close();
     }
 
     /* READABILITY (U; tools/contrast.js): the tap sweep above carries one `readability` row per screen (WCAG AA against the

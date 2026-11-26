@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Table Talk — The Flow</title>
+<meta name="description" content="A mockup of Dawnblade's reimagined flow (docs/TABLE-TALK.md §8): one button to play, sit down, the pad as the result."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800&family=Spline+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500&family=Caveat:wght@600;700&display=swap" rel="stylesheet"/>
+<style>
+/* A STATIC MOCKUP (no script, no build): the flow Table Talk's TT3 builds (docs/TABLE-TALK.md §8). The table itself
+   is live behind the title's switch; this page shows what comes before and after it. Palette and faces are the game's. */
+:root{--r:#C4302B;--y:#E8B33C;--b:#3B6FB0;--ink:#14100E;--forge:#241B16;--forge2:#2E241D;--bone:#E8DFD0;--bone-dim:#B8AC98;--line:#4A3B2E;--ok:#7BA05B;
+  --paper:#F2E8CF;--pink:#B3261E;--graphite:#2A2522;--rule:rgba(84,116,170,.28);
+  --art:"https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/"}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--ink);color:var(--bone);font-family:'Spline Sans',system-ui,sans-serif}
+header{max-width:1240px;margin:0 auto;padding:max(18px,env(safe-area-inset-top)) 16px 6px}
+header h1{font:800 clamp(30px,8vw,46px)/1 'Big Shoulders Display';letter-spacing:.04em;text-transform:uppercase;margin:0}
+header h1 em{font-style:normal;color:var(--y)}
+header p{max-width:760px;color:var(--bone-dim);line-height:1.5;margin:10px 0 0}
+header a{color:var(--y)}
+.frames{max-width:1240px;margin:0 auto;padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:22px}
+figure{margin:0}
+figcaption{font:600 11px 'Spline Sans Mono';letter-spacing:.14em;text-transform:uppercase;color:var(--bone-dim);margin:0 0 8px}
+figcaption b{color:var(--y);font-weight:600}
+.phone{position:relative;width:100%;max-width:393px;aspect-ratio:393/660;margin:0 auto;border-radius:26px;overflow:hidden;border:1px solid var(--line);background:#130e0c;box-shadow:0 18px 50px rgba(0,0,0,.6)}
+.note{max-width:393px;margin:10px auto 0;font-size:13.5px;line-height:1.5;color:var(--bone-dim)}
+/* ---- 1. the title: one button ---- */
+/* a hero image is the whole printed CARD: the art is its top band (~12%..58% of its height), so the frame shows that
+   band, scaled to the frame's height (the card 2.17x the frame; y offset 0.26/1.17 = 22%) */
+.t-art{position:absolute;inset:0;background-repeat:no-repeat;background-size:auto 217%;background-position:50% 22%;filter:saturate(.95)}
+.t-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(19,14,12,.92) 0%,rgba(19,14,12,.15) 30%,rgba(19,14,12,.25) 52%,rgba(19,14,12,.96) 76%)}
+.t-mark{position:absolute;top:6%;left:0;right:0;text-align:center;font:800 clamp(40px,13vw,54px)/1 'Big Shoulders Display';letter-spacing:.06em}
+.t-mark em{font-style:normal;color:var(--y)}
+.t-who{position:absolute;left:0;right:0;bottom:33%;text-align:center}
+.t-who b{display:block;font:800 30px 'Big Shoulders Display';letter-spacing:.08em;text-transform:uppercase}
+.t-who span{font:600 11px 'Spline Sans Mono';letter-spacing:.16em;text-transform:uppercase;color:var(--bone-dim)}
+.t-play{position:absolute;left:50%;transform:translateX(-50%);bottom:15.5%;width:62%;height:64px;border-radius:32px;background:var(--r);display:flex;align-items:center;justify-content:center;
+  font:800 30px 'Big Shoulders Display';letter-spacing:.12em;box-shadow:0 10px 26px rgba(196,48,43,.45),inset 0 -3px 0 rgba(0,0,0,.25)}
+.t-doors{position:absolute;left:6%;right:6%;bottom:6.5%;display:flex;gap:8px}
+.t-doors span{flex:1;height:44px;border:1px solid var(--line);border-radius:10px;background:rgba(36,27,22,.85);display:flex;align-items:center;justify-content:center;font:700 15px 'Big Shoulders Display';letter-spacing:.1em;text-transform:uppercase}
+.t-doors span.rk{border-color:var(--y);color:var(--y)}
+.t-more{position:absolute;left:0;right:0;bottom:2%;text-align:center;font:500 11px 'Spline Sans Mono';letter-spacing:.08em;color:var(--bone-dim)}
+/* ---- 2. sit down: art on art ---- */
+.s-them,.s-you{position:absolute;inset:0}
+.s-them{clip-path:polygon(0 0,100% 0,100% 40%,0 58%)}
+.s-you{clip-path:polygon(0 60%,100% 42%,100% 100%,0 100%)}
+/* each half shows its hero's art band (the card's top ~12%..58%) across the half's own box */
+.s-them i,.s-you i{position:absolute;left:0;right:0;height:58%;background-repeat:no-repeat;background-size:auto 217%;background-position:50% 22%}
+.s-them i{top:0}
+.s-you i{top:42%}
+.s-seam{position:absolute;left:-10%;right:-10%;top:49%;height:3px;background:var(--y);transform:rotate(-12.6deg);box-shadow:0 0 18px rgba(232,179,60,.7)}
+.s-name{position:absolute;font:800 26px 'Big Shoulders Display';letter-spacing:.08em;text-transform:uppercase;text-shadow:0 2px 10px rgba(0,0,0,.9)}
+.s-name small{display:block;font:600 10px 'Spline Sans Mono';letter-spacing:.16em;color:var(--bone)}
+.s-name.them{top:4%;right:6%;text-align:right}
+.s-name.you{bottom:24%;left:6%}
+.s-coin{position:absolute;left:50%;top:49%;transform:translate(-50%,-50%);width:86px;height:86px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#f8dc8c,#c4922a 70%,#8d6413);border:3px solid #f9e6ab;box-shadow:0 10px 26px rgba(0,0,0,.7);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;color:#2b1d07;text-align:center}
+.s-coin b{font:800 15px/1 'Big Shoulders Display';letter-spacing:.06em}
+.s-coin span{font:600 9px 'Spline Sans Mono';letter-spacing:.1em;text-transform:uppercase}
+.s-bar{position:absolute;left:0;right:0;bottom:0;padding:12px 16px 16px;background:linear-gradient(180deg,transparent,rgba(19,14,12,.96) 35%)}
+.s-gear{display:flex;justify-content:space-between;align-items:center;font:500 13px 'Spline Sans';color:var(--bone-dim);margin-bottom:10px}
+.s-gear b{color:var(--bone);font-weight:600}
+.s-gear u{color:var(--y);text-decoration:none;font-weight:600}
+.s-go{height:60px;border-radius:30px;background:var(--r);display:flex;align-items:center;justify-content:center;font:800 26px 'Big Shoulders Display';letter-spacing:.12em;box-shadow:0 10px 26px rgba(196,48,43,.45)}
+/* ---- 3. the result is the pad ---- */
+.p-paper{position:absolute;inset:0;background:repeating-linear-gradient(180deg,transparent 0 31px,var(--rule) 31px 32px),var(--paper);color:var(--graphite)}
+.p-paper::before{content:"";position:absolute;top:0;bottom:0;left:38px;width:2px;background:rgba(196,48,43,.5)}
+.p-head,.p-cols,.p-win,.p-gg{color:var(--graphite)}
+.p-head{position:absolute;top:18px;left:52px;right:16px;font:700 11px 'Spline Sans Mono';letter-spacing:.12em;text-transform:uppercase;color:#6d6257}
+.p-cols{position:absolute;top:58px;left:52px;right:18px;display:grid;grid-template-columns:1fr 1fr;column-gap:14px}
+.p-th{font:800 22px 'Big Shoulders Display';letter-spacing:.06em;text-transform:uppercase;border-bottom:2px solid var(--graphite);padding-bottom:2px;margin-bottom:0;line-height:30px}
+.p-v{height:32px;display:flex;align-items:center;justify-content:space-between;gap:6px;font:700 27px 'Caveat',cursive}
+.p-v s{color:#7c7068;text-decoration-color:var(--pink);text-decoration-thickness:2px}
+.p-v em{font:600 16px 'Caveat',cursive;font-style:normal;color:var(--pink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p-v.blank{visibility:hidden}
+.p-v .ring{position:relative;padding:0 6px}
+.p-v .ring::after{content:"";position:absolute;inset:-4px -2px;border:2.5px solid var(--pink);border-radius:50%;transform:rotate(-6deg)}
+.p-gg{position:absolute;right:26px;bottom:182px;font:700 64px 'Caveat',cursive;color:var(--pink);transform:rotate(-9deg)}
+.p-win{position:absolute;left:52px;bottom:196px;font:700 26px 'Caveat',cursive;color:var(--graphite)}
+.p-btns{position:absolute;left:14px;right:14px;bottom:16px;display:flex;flex-direction:column;gap:8px}
+.p-btns span{height:48px;border-radius:24px;display:flex;align-items:center;justify-content:center;font:800 19px 'Big Shoulders Display';letter-spacing:.1em;text-transform:uppercase}
+.p-btns .go{background:var(--r);color:var(--bone)}
+.p-btns .alt{background:var(--forge);color:var(--bone);border:1px solid var(--line)}
+footer{max-width:1240px;margin:0 auto;padding:6px 16px calc(28px + env(safe-area-inset-bottom));color:var(--bone-dim);font-size:13px;line-height:1.5}
+</style>
+</head>
+<body>
+<header>
+  <h1>TABLE <em>TALK</em> · the flow</h1>
+  <p>A mockup of what comes before and after the new table (docs/TABLE-TALK.md §8; phase TT3). Today: six screens and about nine taps before a card is played. This: <b>three screens, three taps</b>. The table itself is already playable: <a href="../../?talk=1">open the game with the new table on</a>.</p>
+</header>
+<div class="frames">
+  <figure>
+    <figcaption><b>1 · Title</b> — one button to play</figcaption>
+    <div class="phone" aria-label="the title screen, mocked">
+      <div class="t-art" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SKA001.webp)"></div>
+      <div class="t-shade"></div>
+      <div class="t-mark">DAWN<em>BLADE</em></div>
+      <div class="t-who"><b>Kayo</b><span>your last hero · against fate</span></div>
+      <div class="t-play">PLAY</div>
+      <div class="t-doors"><span class="rk">Ranked</span><span>Friends</span><span>Train</span></div>
+      <div class="t-more">record · how to play · judge's quiz</div>
+    </div>
+    <p class="note">Your last hero stands large; <b>Play</b> sits you down against the AI with a hero fate draws. The four mode cards, their paragraphs and the format note go; the format note moves to How to play.</p>
+  </figure>
+  <figure>
+    <figcaption><b>2 · Sit down</b> — art on art, the coin, shuffle up</figcaption>
+    <div class="phone" aria-label="the sit-down screen, mocked">
+      <div class="s-them"><i style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SDO001.webp)"></i></div>
+      <div class="s-you"><i style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SKA001.webp)"></i></div>
+      <div class="s-seam"></div>
+      <div class="s-name them"><small>your opponent · tap to change</small>Dorinthea</div>
+      <div class="s-name you"><small>you · tap to change</small>Kayo</div>
+      <div class="s-coin"><b>YOU GO<br/>FIRST</b><span>the coin</span></div>
+      <div class="s-bar">
+        <div class="s-gear"><span>Gear: <b>last time's</b></span><u>Change gear</u></div>
+        <div class="s-go">SHUFFLE UP</div>
+      </div>
+    </div>
+    <p class="note">The opponent step, the coin, the seat and the loadout become one screen. Tap a hero to swap it (a carousel of hero art); the coin flips on its own; your gear is last game's until you change it.</p>
+  </figure>
+  <figure>
+    <figcaption><b>3 · GG</b> — the result is the pad you kept</figcaption>
+    <div class="phone" aria-label="the result as the pad, mocked">
+      <div class="p-paper"></div>
+      <div class="p-head">vs Dorinthea · you went first · 9 turns</div>
+      <div class="p-cols">
+        <span class="p-th">you</span><span class="p-th">Dorinthea</span>
+        <span class="p-v"><s>20</s></span><span class="p-v"><s>20</s></span>
+        <span class="p-v blank"></span><span class="p-v"><em>−3 Pulping</em><s>17</s></span>
+        <span class="p-v"><em>−4 Dawnblade</em><s>16</s></span><span class="p-v blank"></span>
+        <span class="p-v blank"></span><span class="p-v"><em>−6 Wild Ride</em><s>11</s></span>
+        <span class="p-v"><em>−3 Wreck Havoc</em><s>13</s></span><span class="p-v blank"></span>
+        <span class="p-v blank"></span><span class="p-v"><em>−8 Buckwild</em><s>3</s></span>
+        <span class="p-v"><em>−3 Dawnblade</em><span class="ring">10</span></span><span class="p-v blank"></span>
+        <span class="p-v blank"></span><span class="p-v"><em>−3 Pulping</em><span class="ring">0</span></span>
+      </div>
+      <div class="p-win">Kayo wins</div>
+      <div class="p-gg">GG</div>
+      <div class="p-btns"><span class="go">Rematch</span><span class="alt">New opponent</span><span class="alt">Leave the table</span></div>
+    </div>
+    <p class="note">No recap table: the record of the game is the one thing a player may keep (TRP 5.8), so it is the end screen, finals circled. Share it as the receipt of the match.</p>
+  </figure>
+</div>
+<footer>Fan-made, non-profit, no ads. Card and hero art © Legend Story Studios, shown as the game shows it. This page is a design mockup and plays nothing; the vision and its build order are in <code>docs/TABLE-TALK.md</code>.</footer>
+</body>
+</html>

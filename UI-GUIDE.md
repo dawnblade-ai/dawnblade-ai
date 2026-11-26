@@ -166,6 +166,15 @@ with a touch swipe). The tap judge (tools/tapjudge.js) exempts nothing: the row 
 
 `.screennav` is the ▲ Opp / Chain / You ▼ jump row; since v7.15 it opens and closes the sheets, and the lit button (`.on`) says which is shown.
 
+**The new table (Table Talk, v7.18; `docs/TABLE-TALK.md`).** Behind a switch (the title's "Try the new table", or
+`?talk=1`), `TableBoard` renders `TalkTable` instead of the layout above: their side, the middle (the chain, the stack,
+the turn token), the PAD (life, TRP 5.8), your side, the hand row, the hub — no jump row, no strips, no log on the
+table. It is a LAYOUT over the same controls: `TableBoard` builds `askEl`, `pipsEl`, `targetEl`, `handRowEl`,
+`adviceEl`, `myBoardCell`, `hubEl` and `overlaysEl` once and both layouts render them, so a tap means the same thing
+in either. The opponent's actions are said by `TalkCall`, read off `engine/announce.js` (`local.js`'s `onStep`, or a
+net commit's action); the AI seat is paced (`local.js` `pace`). Drill: `tools/talk.js` (`talkJudge`), run by page.js
+at 393x660, 393x852 and 320x568.
+
 ### The rest of the flow
 
 `App` (7118) → tabs → `HeroGrid` (roster, smash-style, 6 across) →

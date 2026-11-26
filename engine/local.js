@@ -44,6 +44,26 @@
       or a policy that proposes the same refused action forever is a real
       failure mode — it turned seven drills red in v2.78 — and it must
       look like one.
+
+   PACED, AND HEARD (Table Talk TT0, v7.18; docs/TABLE-TALK.md §4.4). A
+   person across a real table plays one card at a time and says it. Two
+   options, both OFF unless passed, so nothing that already calls
+   `createLocal` moves:
+     `pace`   — a number of ms, or `(prev, action, next) => ms`. The other
+                seat's actions are applied ONE PER TICK and the board is
+                pushed after each, so a board can show and announce each
+                play before the next. The first tick after a push is asked
+                as `pace(null, null, state)`. A tick re-asks the policy of
+                the state as it then stands, so a tick that finds nothing to
+                do (the player acted, the game ended) simply stops. The same
+                states are reached as unpaced, one push at a time
+                (test/local.test.js proves it on real games).
+     `onStep` — `({seat, action, prev, next})`, for EVERY accepted action,
+                either seat's, paced or not: what a board needs to say what
+                just happened (engine/announce.js reads exactly this).
+   `later`/`cancel` replace setTimeout/clearTimeout (drills drive the ticks
+   by hand). `nudge()` runs a waiting tick now; `dispose()` drops it (the board
+   unmounting).
    ============================================================ */
 (function(root, factory){
   if(typeof module==="object" && module.exports) module.exports = factory();
@@ -70,30 +90,66 @@ function createLocal(o){
 
   const emit = e => { if(o.onEvent) o.onEvent(e); };
   const push = () => { if(o.onState) o.onState(state); };
+  /* every accepted action, either seat's: the states either side of it (Table Talk's announcer) */
+  const heard = (who, a, prev) => { if(o.onStep) o.onStep({seat: who, action: a, prev, next: state}); };
+
+  /* PACED (v7.18): one policy action per tick, `pace` ms apart; `run` counts this run's actions for the bound */
+  const paced = !!o.pace;
+  const later = o.later || ((fn, ms) => setTimeout(fn, ms));
+  const cancel = o.cancel || (h => clearTimeout(h));
+  let tick = null, run = 0;
+  const paceOf = (prev, a, next) => {
+    const ms = typeof o.pace === "function" ? o.pace(prev, a, next) : +o.pace;
+    return ms > 0 ? ms : 0;
+  };
+  const schedule = ms => {
+    if(tick != null) cancel(tick);
+    tick = later(() => { tick = null; policyTick(); }, ms);
+  };
+
+  /* ONE ACTION OF THE OTHER SEAT'S: false when it had nothing to do or was
+     stopped (a refusal, the bound), true when an action was applied. Shared
+     by the unpaced loop and the paced tick, so the two cannot drift. */
+  function policyStep(){
+    if(!state || state.over) return false;
+    if(run >= STEP_LIMIT){
+      stats.stalls++;
+      emit({t: "stalled", reason: "the other seat took " + STEP_LIMIT + " actions without stopping"});
+      return false;
+    }
+    const a = o.policy(state, other);
+    if(!a) return false;
+    const prev = state;
+    const out = reduce(state, a, other);
+    if(out.error){
+      /* A REFUSAL IS ALWAYS A BUG IN THE POLICY (sparring.js's own
+         contract), so it is surfaced rather than retried — retrying the
+         same refused action is how a loop becomes a spin. */
+      stats.policyRefused++;
+      emit({t: "policy-refused", action: a, reason: out.error});
+      return false;
+    }
+    state = out.state; seq++; stats.policy++; run++;
+    heard(other, a, prev);
+    return {a, prev};
+  }
+  function policyTick(){
+    const did = policyStep();
+    if(!did) return;
+    push();
+    schedule(paceOf(did.prev, did.a, state));
+  }
 
   /* THE OTHER SEAT TAKES ITS TURN. Called after every accepted action —
      including the very first push — because whether it has anything to do
      depends entirely on where the rules just left the game, and that is a
-     question only `reduce` can answer. */
+     question only `reduce` can answer. Paced, it only schedules the first
+     tick; unpaced, it runs to the end now. */
   function runPolicy(){
     if(!o.policy) return;
-    for(let i = 0; i < STEP_LIMIT; i++){
-      if(!state || state.over) return;
-      const a = o.policy(state, other);
-      if(!a) return;
-      const out = reduce(state, a, other);
-      if(out.error){
-        /* A REFUSAL IS ALWAYS A BUG IN THE POLICY (sparring.js's own
-           contract), so it is surfaced rather than retried — retrying the
-           same refused action is how a loop becomes a spin. */
-        stats.policyRefused++;
-        emit({t: "policy-refused", action: a, reason: out.error});
-        return;
-      }
-      state = out.state; seq++; stats.policy++;
-    }
-    stats.stalls++;
-    emit({t: "stalled", reason: "the other seat took " + STEP_LIMIT + " actions without stopping"});
+    run = 0;
+    if(paced){ schedule(paceOf(null, null, state)); return; }
+    while(policyStep());
   }
 
   /* One action from the local player. Returns null when it was accepted,
@@ -105,9 +161,12 @@ function createLocal(o){
     if(why){ stats.refused++; emit({t: "refused", reason: why}); return why; }
     const out = reduce(state, a, seat);
     if(out.error){ stats.refused++; emit({t: "refused", reason: out.error}); return out.error; }
+    const prev = state;
     state = out.state; seq++; stats.sent++;
-    runPolicy();
-    push();
+    heard(seat, a, prev);
+    /* paced, the player's own move shows at once and the other seat answers tick by tick */
+    if(paced){ push(); runPolicy(); }
+    else { runPolicy(); push(); }
     return null;
   }
 
@@ -118,8 +177,8 @@ function createLocal(o){
   function start(){
     if(!state) return;
     status = "ready";
-    runPolicy();
-    push();
+    if(paced){ push(); runPolicy(); }
+    else { runPolicy(); push(); }
   }
 
   return {
@@ -136,6 +195,12 @@ function createLocal(o){
        desync check — supplied by the caller, because hashing is wire.js's
        job and this module has no business importing it for a report. */
     hash:   () => o.hash ? o.hash(state) : null,
+    /* PACED (v7.18): whether the other seat has a tick waiting; NUDGE runs it now (a tap that
+       dismisses the announcement brings the next play forward: nobody waits on an animation);
+       DISPOSE drops it (the board unmounting) */
+    busy:    () => tick != null,
+    nudge:   () => { if(tick != null){ cancel(tick); tick = null; policyTick(); } },
+    dispose: () => { if(tick != null){ cancel(tick); tick = null; } },
     /* A local session has no channel, so these exist to keep the surface
        identical rather than to do anything. A board that has to ask which
        kind of session it holds is a board with two ways to play a game. */

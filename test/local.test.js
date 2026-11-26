@@ -199,3 +199,131 @@ test("a local session plays a complete, legal game", {skip}, () => {
   assert.equal(s.stats().stalls, 0, "the session stalled");
   assert.ok(end.turn > 3, "the game ended suspiciously fast — turn " + end.turn);
 });
+
+/* ---- PACED, AND HEARD (Table Talk TT0, v7.18) --------------------------
+   docs/TABLE-TALK.md §4.4: a person across a table plays one card at a
+   time and says it. `pace` applies the other seat's actions ONE PER TICK
+   and pushes the board after each; `onStep` hears every accepted action.
+   The ticks are driven by hand here (`later` queues them) so the drills
+   are exact and need no clock. */
+const manual = () => {
+  const q = [], log = [];
+  return {q, log,
+    later: (fn, ms) => { const h = {fn, ms, live: true}; q.push(h); log.push(ms); return h; },
+    cancel: h => { h.live = false; },
+    /* run waiting ticks until none is left (each tick may schedule the next) */
+    drain(limit){ let n = 0; while(q.length && n < (limit || 100000)){ const h = q.shift(); if(h.live){ h.fn(); n++; } } return n; }};
+};
+
+test("paced, the other seat reaches EXACTLY the states it reaches unpaced, one action per tick", {skip}, () => {
+  /* The pace changes WHEN the board hears each state, never WHICH states:
+     the same game, driven by the same player actions, hashes the same
+     after every answer. Several turns, both seats acting. */
+  const A = session(match({seed: "paced", first: 0}));
+  const T = manual();
+  let pushes = 0;
+  const B = session(match({seed: "paced", first: 0}), {pace: 300, later: T.later, cancel: T.cancel, onState: () => pushes++});
+  A.start(); B.start(); T.drain();
+  assert.equal(W.hash(B.state()), W.hash(A.state()), "the paced session left its start somewhere else");
+  let turns = 0;
+  for(let i = 0; i < 600 && !A.state().over && A.state().turn < 7; i++){
+    const a = SP.act(A.state(), 0);
+    if(!a) break;
+    const p0 = pushes, pol0 = B.stats().policy;
+    assert.equal(A.submit(a), null, "the unpaced session refused the player's " + a.t);
+    assert.equal(B.submit(a), null, "the paced session refused the player's " + a.t);
+    assert.equal(pushes - p0, 1, "paced, the player's own move must be pushed at once, alone");
+    assert.equal(B.stats().policy, pol0, "paced, the other seat acted INSIDE submit — it must wait for its tick");
+    /* every run ends in one tick that finds nothing to do (it is the policy's turn to say so) */
+    const ticks = T.drain(), did = B.stats().policy - pol0;
+    assert.equal(ticks, did + 1, "each tick applies exactly one action of the other seat's, and one last tick finds none");
+    assert.equal(pushes - p0, 1 + did, "and the board is pushed once per action");
+    assert.equal(W.hash(B.state()), W.hash(A.state()), "after the answer the two sessions disagree (" + a.t + ", turn " + A.state().turn + ")");
+    turns = A.state().turn;
+  }
+  assert.ok(turns >= 5, "the drill never got past turn " + turns + " — it proves nothing about the other seat's turns");
+  assert.ok(B.stats().policy > 10, "the other seat barely acted (" + B.stats().policy + ")");
+});
+
+test("onStep hears every accepted action of both seats, with the states either side of it", {skip}, () => {
+  for(const pace of [0, 200]){
+    const T = manual(), heard = [];
+    const s = session(match({seed: "heard", first: 1}), {pace, later: T.later, cancel: T.cancel, onStep: e => heard.push(e)});
+    s.start(); T.drain();
+    for(let i = 0; i < 200 && !s.state().over && s.state().turn < 4; i++){
+      const a = SP.act(s.state(), 0); if(!a) break;
+      assert.equal(s.submit(a), null); T.drain();
+    }
+    const st = s.stats();
+    assert.equal(heard.length, st.sent + st.policy, "pace " + pace + ": heard " + heard.length + " of " + (st.sent + st.policy) + " actions");
+    assert.ok(heard.some(e => e.seat === 0) && heard.some(e => e.seat === 1), "pace " + pace + ": one seat was never heard");
+    for(let i = 1; i < heard.length; i++)
+      assert.strictEqual(heard[i].prev, heard[i - 1].next, "pace " + pace + ": step " + i + "'s `prev` is not the state the step before left");
+    assert.strictEqual(heard[heard.length - 1].next, s.state(), "the last step heard is not where the game stands");
+    assert.ok(heard.every(e => e.action && typeof e.action.t === "string"), "a step without its action");
+  }
+});
+
+test("the pace is asked of each action, and its answer is the wait before the next", {skip}, () => {
+  const T = manual(), asked = [];
+  const s = session(match({seed: "paceask", first: 1}), {later: T.later, cancel: T.cancel,
+    pace: (prev, a, next) => { asked.push(a ? a.t : null); return !a ? 7 : a.t === "pass" ? 40 : 900; }});
+  s.start();
+  assert.deepEqual(asked, [null], "the first tick is asked as pace(null, null, state)");
+  T.drain();
+  /* the other seat's turn interleaves with the player's priority: answer it until the turn has moved on */
+  for(let i = 0; i < 200 && !s.state().over && s.state().turn < 3; i++){
+    const a = SP.act(s.state(), 0); if(!a) break;
+    assert.equal(s.submit(a), null); T.drain();
+  }
+  const acts = asked.filter(Boolean);
+  assert.ok(acts.length > 3, "the other seat should have taken several actions (" + acts.length + ")");
+  assert.equal(acts.length, s.stats().policy, "the pace is asked once per action of the other seat's");
+  /* each tick's wait is the answer for the action before it: 40 after a pass, 900 after anything else (7: a run's first tick) */
+  assert.equal(T.log.filter(ms => ms === 7).length, asked.filter(x => x === null).length, "each run's first tick waits pace(null, null, state)");
+  const waits = T.log.filter(ms => ms !== 7);
+  assert.equal(waits.length, acts.length, "a wait went missing: " + T.log.join(","));
+  assert.deepEqual(waits, acts.map(t => t === "pass" ? 40 : 900), "the waits did not follow the pace's answers");
+});
+
+test("paced: dispose drops the waiting tick, and nothing moves after it", {skip}, () => {
+  const T = manual();
+  const s = session(match({seed: "dispose", first: 1}), {pace: 500, later: T.later, cancel: T.cancel});
+  s.start();
+  assert.equal(s.busy(), true, "the other seat is on the play, so a tick must be waiting");
+  const seq = s.seq();
+  s.dispose();
+  assert.equal(s.busy(), false);
+  T.drain();
+  assert.equal(s.seq(), seq, "a disposed session acted");
+});
+
+test("paced: nudge runs the waiting tick at once — the same action, no sooner state skipped", {skip}, () => {
+  const T = manual();
+  const s = session(match({seed: "nudge", first: 1}), {pace: 5000, later: T.later, cancel: T.cancel});
+  s.start();
+  const seq = s.seq(), pol = s.stats().policy;
+  assert.equal(s.busy(), true);
+  s.nudge();
+  assert.equal(s.stats().policy, pol + 1, "a nudge applies exactly the one waiting action");
+  assert.equal(s.seq(), seq + 1);
+  const live = T.q.filter(h => h.live).length;
+  assert.equal(live, 1, "the nudged tick's own wait was cancelled and exactly one next tick is waiting (" + live + ")");
+  const idle = session(match({seed: "nudge", first: 0}), {pace: 5000, later: T.later, cancel: T.cancel});
+  idle.start(); T.drain();
+  const q0 = idle.seq(); idle.nudge();
+  assert.equal(idle.seq(), q0, "a nudge with nothing waiting moves nothing");
+});
+
+test("paced, a policy that never stops is still a stall at the bound", () => {
+  const T = manual(), seen = [];
+  const s = L.createLocal({
+    seat: 0, state: {turn: 1}, legal: () => null, pace: 10, later: T.later, cancel: T.cancel,
+    reduce: g => ({state: {turn: g.turn + 1}, error: null}),
+    policy: () => ({t: "pass"}), onEvent: e => seen.push(e.t)
+  });
+  s.start(); T.drain(L.STEP_LIMIT * 2);
+  assert.equal(s.stats().stalls, 1, "the bound was not reported");
+  assert.equal(s.state().turn, 1 + L.STEP_LIMIT, "it stopped somewhere other than the bound");
+  assert.equal(s.busy(), false, "a stalled session keeps ticking");
+});

@@ -30,7 +30,7 @@
 <link rel="icon" type="image/svg+xml" href="icons/icon.svg"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800&family=Spline+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800&family=Spline+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500&family=Caveat:wght@600;700&display=swap" rel="stylesheet"/>
 <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
@@ -1313,6 +1313,211 @@ button.tag::after{content:"";position:absolute;inset:-16px -8px -16px}
 @keyframes shup{0%{color:var(--ok);text-shadow:0 0 14px rgba(123,160,91,.85)}}
 @keyframes lfdown{0%{transform:scale(1.4);color:#FF7A6E;text-shadow:0 0 14px rgba(196,48,43,.9)}100%{transform:none}}
 @keyframes lfup{0%{transform:scale(1.3);color:var(--ok);text-shadow:0 0 14px rgba(123,160,91,.85)}100%{transform:none}}
+/* ================= TABLE TALK (TT0, v7.18; docs/TABLE-TALK.md §3) =================
+   The board as a table seen from your seat: the mat, their side across the top, the middle where cards
+   meet, the pad (life) on the right edge, your side, your hand, your line. Nothing here is chrome except
+   the one menu button. Laid out for 393x660 first (an iPhone's real Safari view), then 393x852 and 320x568. */
+.board.talk{position:fixed;top:0;bottom:0;left:0;right:0;max-width:560px;margin:0 auto;z-index:20;display:flex;flex-direction:column;gap:0;
+  padding-top:env(safe-area-inset-top);overflow:hidden;--tk-paper:#F2E8CF;--tk-ink:#2A2522;--tk-pencil:#B3261E;--tk-rule:rgba(84,116,170,.28);
+  background:radial-gradient(85% 48% at 50% 42%,rgba(232,179,60,.07),transparent 72%),
+             radial-gradient(70% 34% at 50% 0%,#2b2019,transparent 78%),
+             radial-gradient(70% 34% at 50% 100%,#2b2019,transparent 78%),#130e0c}
+.board.talk::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+  background:repeating-linear-gradient(115deg,rgba(255,255,255,.012) 0 2px,transparent 2px 5px)}
+.tk-upper{position:relative;flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+.tk-side{position:relative;flex:none;display:flex;flex-direction:column;gap:2px;padding:4px 8px}
+.tk-side.them{padding-top:6px}
+.tk-row{display:flex;align-items:center;gap:6px;min-height:44px;min-width:0}
+.tk-sp{flex:1 1 auto;min-width:0}
+.tk-menubtn{flex:none;width:44px;height:44px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;background:transparent;border:1px solid var(--line);border-radius:8px;padding:0}
+.tk-menubtn i{display:block;width:16px;height:2px;background:var(--bone-dim);border-radius:1px}
+.tk-hero{display:flex;align-items:center;gap:7px;min-width:0;flex:0 1 auto}
+.tk-port{width:36px;height:36px;border-radius:50%;overflow:hidden;flex:none;border:1px solid var(--line);background:var(--forge);box-shadow:0 2px 8px rgba(0,0,0,.5)}
+.tk-port img{width:100%;height:100%;object-fit:cover;object-position:50% 16%;aspect-ratio:auto}
+.tk-name{font-family:'Big Shoulders Display';font-weight:800;font-size:19px;letter-spacing:.04em;text-transform:uppercase;color:var(--bone);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1}
+.tk-rate{font-style:normal;font-family:'Spline Sans Mono';font-weight:500;font-size:var(--fs-sm);color:var(--bone-dim);margin-left:6px;letter-spacing:0}
+.tk-think{display:inline-flex;gap:3px;align-items:center}
+.tk-think i{width:5px;height:5px;border-radius:50%;background:var(--y);opacity:.25;animation:tkthink 1s infinite}
+.tk-think i:nth-child(2){animation-delay:.15s}.tk-think i:nth-child(3){animation-delay:.3s}
+@keyframes tkthink{0%,100%{opacity:.18}50%{opacity:1}}
+/* the markers: the action point a gold gem, resources blue coins (TRP 5.8) */
+.tk-marks{display:inline-flex;gap:7px;align-items:center;flex:none}
+.tk-apw{display:inline-flex;align-items:center;gap:3px;font:700 12px 'Spline Sans Mono';color:var(--y)}
+.tk-ap{display:inline-block;width:15px;height:15px;transform:rotate(45deg);background:linear-gradient(135deg,#f6d77a,#b8861d);border:1px solid #f9e6ab;box-shadow:0 0 10px rgba(232,179,60,.55)}
+.tk-res{min-width:24px;height:24px;padding:0 6px;border-radius:12px;background:radial-gradient(circle at 35% 30%,#86acdf,#2b5895);border:1px solid #b2cdf0;font:700 12.5px 'Spline Sans Mono';color:#fff;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.5)}
+/* card backs: their hand, their arsenal, a deck */
+.tk-cback{display:inline-block;flex:none;width:19px;height:27px;border-radius:3px;border:1px solid #9a4a2e;
+  background:radial-gradient(circle at 50% 50%,rgba(232,179,60,.35) 0 3px,transparent 4px),repeating-linear-gradient(45deg,#561911 0 3px,#6b2216 3px 6px);box-shadow:0 1px 3px rgba(0,0,0,.6)}
+.tk-cback.big{width:100%;height:auto;aspect-ratio:5/7}
+.tk-backs{display:inline-flex;align-items:center;flex:none}
+.tk-backs .tk-cback+.tk-cback{margin-left:-11px}
+.tk-backs .tk-n{margin-left:6px}
+.tk-n{font:700 12px 'Spline Sans Mono';color:var(--bone);line-height:1}
+.tk-ars{display:inline-flex;align-items:center;flex:none;margin-left:2px}
+.tk-ars .tk-cback{width:23px;height:32px;transform:rotate(-5deg);border-color:var(--y)}
+/* gear at a glance: defence chips in slot order, a weapon's power */
+.tk-geargrp{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:3px;min-height:44px;min-width:44px;padding:0 6px;background:rgba(36,27,22,.7);border:1px solid var(--line);border-radius:8px}
+.tk-gchip{display:inline-flex;align-items:center;gap:1px;font:700 12.5px 'Spline Sans Mono';color:var(--bone);line-height:1}
+.tk-gchip i{font-style:normal;color:var(--b);font-size:11px;margin-right:1px}
+.tk-gchip.w i{color:var(--r)}
+.tk-gchip.worn{opacity:.45}
+.tk-gchip.on b{color:#9cc2ff;text-decoration:underline}
+/* piles: this turn's pitch, graveyard, banished face up; the deck a back */
+.tk-pilegrp{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;min-width:44px;padding:0 6px;background:rgba(36,27,22,.7);border:1px solid var(--line);border-radius:8px}
+.tk-mpile{position:relative;display:inline-block;width:23px;height:32px;flex:none}
+.tk-mpile img,.tk-mpile .ccfall{width:100%;height:100%;object-fit:cover;border-radius:2px;display:block}
+.tk-mpile .ccfall{font-size:0;padding:0}
+.tk-mpile .tk-cback{width:100%;height:100%}
+.tk-mpile.pitch{box-shadow:0 0 0 1px var(--y)}
+.tk-mpile .tk-n{position:absolute;right:-5px;bottom:-4px;background:var(--ink);border:1px solid var(--line);border-radius:7px;padding:1px 3px;font-size:9.5px}
+/* permanents: auras, items, allies, tokens */
+.tk-perms{display:flex;gap:5px;align-items:center;overflow-x:auto;overflow-y:hidden;min-width:0;scrollbar-width:none;padding:2px 0}
+.tk-perms::-webkit-scrollbar{display:none}
+.board.talk .tk-perms>button,.tk-perm{flex:none;width:44px !important;padding:0;background:none;border:0;position:relative}
+.board.talk .tk-perms .cfw .b-pit,.board.talk .tk-perms .cfw .b-cost,.board.talk .tk-perms .cfw .b-typ{display:none}
+/* the middle: the chain on the mat */
+.tk-mid{position:relative;flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;padding:4px 78px 4px 10px}
+.tk-mid::before{content:"";position:absolute;left:8%;right:8%;top:50%;height:1px;background:linear-gradient(90deg,transparent,rgba(232,223,208,.09),transparent);pointer-events:none}
+.tk-chain{position:relative;display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:100%;min-height:0}
+.tk-fight{display:flex;align-items:center;justify-content:center;gap:12px;height:100%;max-height:100%;min-height:0}
+.tk-atk,.tk-stackc{position:relative;flex:none;padding:0;background:none;border:0;height:min(100%,250px);aspect-ratio:5/7;max-width:46vw;
+  border-radius:7px;box-shadow:0 10px 28px rgba(0,0,0,.7),0 0 0 1px rgba(196,48,43,.55);animation:tkland .28s cubic-bezier(.2,1.4,.4,1)}
+.tk-atk.mine{box-shadow:0 10px 28px rgba(0,0,0,.7),0 0 0 1px rgba(232,179,60,.6)}
+.tk-atk img,.tk-stackc img,.tk-atk .ccfall,.tk-stackc .ccfall{width:100%;height:100%;object-fit:cover;border-radius:7px;display:block}
+@keyframes tkland{from{transform:translateY(-14px) scale(1.06);opacity:.2}to{transform:none;opacity:1}}
+.tk-pow{position:absolute;left:-10px;top:-10px;min-width:40px;height:40px;padding:0 6px;border-radius:20px;background:var(--r);border:2px solid #f3c1bd;color:#fff;
+  font:800 25px 'Big Shoulders Display';display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.6)}
+.tk-ga{position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);white-space:nowrap;background:var(--ok);color:#10200a;font:700 10px 'Spline Sans Mono';letter-spacing:.08em;text-transform:uppercase;padding:2px 6px;border-radius:3px}
+.tk-onstack{position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);white-space:nowrap;background:var(--forge2);border:1px solid var(--y);color:var(--y);font:600 10px 'Spline Sans Mono';letter-spacing:.08em;text-transform:uppercase;padding:2px 6px;border-radius:3px}
+.tk-stackc{height:min(78%,190px);animation:tkland .28s ease-out, tkglow 1.6s ease-in-out infinite}
+@keyframes tkglow{0%,100%{box-shadow:0 10px 28px rgba(0,0,0,.7),0 0 0 1px rgba(232,179,60,.4)}50%{box-shadow:0 10px 28px rgba(0,0,0,.7),0 0 0 2px rgba(232,179,60,.9),0 0 18px rgba(232,179,60,.35)}}
+.tk-walls{display:flex;flex-direction:column;align-items:center;gap:6px;max-height:100%}
+.tk-wall{display:inline-flex;align-items:center;gap:3px;font:800 22px 'Big Shoulders Display';color:#cfe0ff}
+.tk-wall i{font-style:normal;font-size:16px;color:var(--b)}
+.tk-blks{display:flex;flex-direction:column;gap:5px;align-items:center;overflow-y:auto;max-height:100%;scrollbar-width:none}
+.tk-blk{flex:none;width:min(62px,15vw);padding:0;background:none;border:0;border-radius:4px;box-shadow:0 6px 16px rgba(0,0,0,.65),0 0 0 1px rgba(59,111,176,.7);animation:tkland .24s ease-out}
+.tk-blk .cfw .b-pit,.tk-blk .cfw .b-cost,.tk-blk .cfw .b-atk{display:none}
+.tk-links{position:absolute;left:0;top:50%;transform:translateY(-50%);width:44px;padding:0;background:none;border:0;opacity:.75}
+.tk-links img,.tk-links .ccfall{width:100%;aspect-ratio:5/7;object-fit:cover;border-radius:3px;display:block;box-shadow:3px 3px 0 #2a201a,6px 6px 0 #221a15}
+.tk-links .tk-n{position:absolute;right:-6px;bottom:-6px;background:var(--ink);border:1px solid var(--line);border-radius:8px;padding:1px 4px}
+/* the turn token: a coin on the mat on the turn player's side */
+.tk-token{display:flex;flex-direction:column;align-items:center;gap:6px;transition:transform .45s cubic-bezier(.3,1.3,.5,1)}
+.tk-token.them{transform:translateY(-34%)}
+.tk-token.you{transform:translateY(34%)}
+.tk-token b{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:800 26px 'Big Shoulders Display';color:#2b1d07;
+  background:radial-gradient(circle at 35% 30%,#f8dc8c,#c4922a 70%,#8d6413);border:2px solid #f9e6ab;box-shadow:0 6px 18px rgba(0,0,0,.6),inset 0 -3px 6px rgba(0,0,0,.25)}
+.tk-token span{font:600 11px 'Spline Sans Mono';letter-spacing:.14em;text-transform:uppercase;color:var(--bone-dim)}
+/* THE PAD: paper on the mat, life in a handwritten face */
+.paper{background:linear-gradient(transparent 0 0),repeating-linear-gradient(180deg,transparent 0 17px,var(--tk-rule) 17px 18px),var(--tk-paper);color:var(--tk-ink)}
+.tk-pad{position:absolute;right:8px;top:50%;transform:translateY(-50%) rotate(1.2deg);width:64px;display:flex;flex-direction:column;align-items:stretch;gap:0;padding:6px 4px 6px 10px;
+  border:0;border-radius:2px;box-shadow:0 8px 22px rgba(0,0,0,.6),inset 6px 0 0 -4px rgba(196,48,43,.55);z-index:2}
+.tk-padcol{display:flex;flex-direction:column;align-items:center;line-height:1;min-height:76px;justify-content:center}
+.tk-padcol .tk-who{font:700 10px 'Spline Sans Mono';letter-spacing:.06em;text-transform:uppercase;color:#6d6257;max-width:52px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tk-padcol s{font:600 17px 'Caveat',cursive;color:#7c7068;text-decoration-color:var(--tk-pencil);text-decoration-thickness:2px;min-height:15px}
+.tk-padcol s.none{visibility:hidden}
+.tk-padcol b{font:700 34px 'Caveat',cursive;color:var(--tk-ink);line-height:.95}
+.tk-padcol b.fresh{animation:tkwrite .6s ease-out}
+@keyframes tkwrite{from{clip-path:inset(0 100% 0 0);opacity:.4}to{clip-path:inset(0 0 0 0);opacity:1}}
+.tk-padcol i{font:600 13px 'Caveat',cursive;font-style:normal;color:var(--tk-pencil);max-width:54px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-height:14px}
+.tk-padcol i.up{color:#2f6d2a}
+.tk-padrule{height:2px;margin:3px 2px;background:var(--tk-ink);opacity:.55;border-radius:1px}
+/* the ask: only when something is asked of you (paying, arsenal, defending, a card on the stack) */
+.board.talk .statusline{flex:none;margin:0 8px 4px;border-radius:8px;min-height:34px;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px}
+.board.talk>.rail{margin:0 8px 4px}
+/* your hand: the v7.16 row, the printed face, no type label across the art */
+.board.talk .phand.hrow{--hcw:clamp(80px,22vw,96px);background:transparent;border-top:1px solid rgba(74,59,46,.55)}
+@media (max-height:700px){.board.talk .phand.hrow{--hcw:clamp(76px,21vw,86px)}}
+.board.talk .phand .b-typ,.board.talk .phand .hlbl{display:none}
+.tk-hubspace{flex:none;height:calc(64px + env(safe-area-inset-bottom))}
+/* WHAT IS SAID: a slab of bold type slammed onto the table from the speaker's side, and the glimpse */
+.tk-call{position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:10px 12px;
+  background:rgba(10,7,6,.62);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);animation:tkfade .16s ease-out}
+.tk-call.you{background:transparent;justify-content:flex-end;padding-bottom:14px;pointer-events:none}
+.tk-call.you .tk-say{padding:5px 14px 6px;pointer-events:auto}
+.tk-call.you .tk-head{font-size:clamp(20px,6.4vw,26px)}
+.tk-call.you .tk-sub{font-size:13px}
+.tk-call.you .tk-sayer{font-size:10px}
+.tk-call.k-turn{background:rgba(10,7,6,.35)}
+.tk-call.again{background:transparent}
+.tk-call.k-pitch .tk-blockc{box-shadow:0 8px 18px rgba(0,0,0,.7),0 0 0 2px rgba(232,179,60,.8)}
+.tk-call.k-pitch .tk-say{background:#8a5a14}
+.tk-look .cfw .b-typ,.tk-padsheet .cfw .b-typ{display:none}
+@keyframes tkfade{from{opacity:0}to{opacity:1}}
+.tk-say{display:flex;flex-direction:column;align-items:center;gap:1px;padding:8px 18px 9px;transform:skewX(-8deg);background:var(--r);box-shadow:0 10px 26px rgba(0,0,0,.6);
+  animation:tkslam .2s cubic-bezier(.2,1.5,.4,1);max-width:94%}
+.tk-say>*{transform:skewX(8deg)}
+.tk-call.you .tk-say{background:var(--y);animation:tkslamup .2s cubic-bezier(.2,1.5,.4,1)}
+.tk-call.you .tk-say *{color:#241808}
+.tk-call.k-hit .tk-say{background:#e2412f}
+.tk-call.k-blocked .tk-say,.tk-call.k-block .tk-say,.tk-call.k-noblock .tk-say{background:var(--b)}
+.tk-call.k-turn .tk-say{background:var(--forge2);border:1px solid var(--y)}
+.tk-call.k-turn .tk-head{color:var(--y)}
+.tk-call.k-over .tk-say{background:var(--y)}
+.tk-call.k-over .tk-say *{color:#241808}
+.tk-sayer{font:700 11px 'Spline Sans Mono';letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.82)}
+.tk-head{font:800 clamp(28px,9.2vw,40px) 'Big Shoulders Display';letter-spacing:.03em;text-transform:uppercase;color:#fff;line-height:.98;text-align:center;
+  text-shadow:0 2px 0 rgba(0,0,0,.25);max-width:100%;overflow-wrap:anywhere}
+.tk-sub{font:600 15px 'Spline Sans';color:#fff;letter-spacing:.02em}
+@keyframes tkslam{0%{transform:skewX(-8deg) translateY(-26px) scale(1.18);opacity:0}70%{transform:skewX(-8deg) translateY(2px) scale(.98);opacity:1}100%{transform:skewX(-8deg)}}
+@keyframes tkslamup{0%{transform:skewX(-8deg) translateY(22px) scale(1.1);opacity:0}100%{transform:skewX(-8deg)}}
+/* THE GLIMPSE IS SIZED BY THE TABLE, NEVER BY ITS IMAGE (an offline stand-in is 50 px; a real face is 450): the row takes
+   the call's height left under the slab, and the card the largest 5:7 box that fits it, the phone's width and 330 px */
+.tk-call.big{justify-content:flex-start}
+.tk-glimpse-row{display:flex;align-items:center;justify-content:center;gap:10px;min-height:0;flex:1 1 0;width:100%}
+.tk-glimpse{flex:none;height:min(100%,330px,calc(62vw * 1.4));aspect-ratio:5/7;border-radius:9px;overflow:hidden;box-shadow:0 18px 46px rgba(0,0,0,.8),0 0 0 2px rgba(255,255,255,.12);
+  animation:tkglimpse .26s cubic-bezier(.2,1.25,.4,1)}
+.tk-glimpse img,.tk-glimpse .ccfall{width:100%;height:100%;object-fit:cover;display:block}
+@keyframes tkglimpse{from{transform:translateY(-30px) scale(.86);opacity:0}to{transform:none;opacity:1}}
+.tk-pitched{display:flex;flex-direction:column;gap:8px}
+.tk-pitchc{position:relative;width:min(70px,17vw);border-radius:5px;overflow:hidden;box-shadow:0 6px 14px rgba(0,0,0,.7);animation:tkglimpse .3s .06s both}
+.tk-pitchc img,.tk-pitchc .ccfall{width:100%;aspect-ratio:5/7;object-fit:cover;display:block}
+.tk-pitchc i{position:absolute;left:0;right:0;bottom:0;font:700 9.5px 'Spline Sans Mono';font-style:normal;letter-spacing:.12em;text-transform:uppercase;text-align:center;color:#fff;padding:2px 0;background:rgba(0,0,0,.7)}
+.tk-pitchc.p1{box-shadow:0 0 0 2px var(--r),0 6px 14px rgba(0,0,0,.7)}
+.tk-pitchc.p2{box-shadow:0 0 0 2px var(--y),0 6px 14px rgba(0,0,0,.7)}
+.tk-pitchc.p3{box-shadow:0 0 0 2px var(--b),0 6px 14px rgba(0,0,0,.7)}
+.tk-blockrow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;max-width:100%}
+.tk-blockc{width:min(86px,22vw);border-radius:6px;overflow:hidden;box-shadow:0 8px 18px rgba(0,0,0,.7),0 0 0 2px rgba(59,111,176,.8);animation:tkglimpse .24s both}
+.tk-blockc img,.tk-blockc .ccfall{width:100%;aspect-ratio:5/7;object-fit:cover;display:block}
+.tk-holdnote{font:600 10px 'Spline Sans Mono';letter-spacing:.14em;text-transform:uppercase;color:var(--bone-dim)}
+.tk-call.held{background:rgba(10,7,6,.8)}
+/* sheets: the pad opened, a side looked through, the menu */
+.tk-sheetwrap{position:fixed;inset:0;z-index:72;background:rgba(8,6,5,.72);display:flex;align-items:flex-end;justify-content:center;animation:tkfade .15s ease-out}
+.tk-padsheet,.tk-look,.tk-menu{width:min(560px,100%);max-height:86vh;overflow-y:auto;padding:14px 14px calc(14px + env(safe-area-inset-bottom));border-radius:14px 14px 0 0;animation:sheetin .18s ease-out}
+.tk-look,.tk-menu{background:var(--forge);border:1px solid var(--line);border-bottom:0}
+.tk-padhead{font:700 12px 'Spline Sans Mono';letter-spacing:.1em;text-transform:uppercase;color:inherit;opacity:.8;margin-bottom:8px}
+.tk-padgrid{display:grid;grid-template-columns:1fr 1fr;column-gap:16px;row-gap:0}
+.tk-padth{font:800 18px 'Big Shoulders Display';letter-spacing:.06em;text-transform:uppercase;border-bottom:2px solid var(--tk-ink);padding-bottom:2px;margin-bottom:2px}
+.tk-padv{display:flex;align-items:baseline;justify-content:space-between;gap:6px;min-height:18px;font:700 26px 'Caveat',cursive;line-height:1.05}
+.tk-padv.old>span,.tk-padv.old:not(:has(span)){text-decoration:line-through;text-decoration-color:var(--tk-pencil);text-decoration-thickness:2px;color:#7c7068}
+.tk-padv em{font:600 16px 'Caveat',cursive;font-style:normal;color:var(--tk-pencil);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.tk-padv.blank{min-height:0}
+.tk-padnote{font:500 12px 'Spline Sans';opacity:.75;margin:12px 0}
+.tk-looksec{margin-bottom:12px}
+.tk-lookh{font:700 11px 'Spline Sans Mono';letter-spacing:.12em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:6px}
+.tk-lookgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:7px}
+.tk-lookgrid>button{padding:0;background:none;border:0}
+.tk-menu{display:flex;flex-direction:column;gap:6px}
+.tk-mi{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:50px;padding:9px 12px;background:var(--forge2);border:1px solid var(--line);border-radius:8px;text-align:left;color:var(--bone)}
+.tk-mi b{font:800 17px 'Big Shoulders Display';letter-spacing:.05em;text-transform:uppercase}
+.tk-mi span{font:500 12.5px 'Spline Sans';color:var(--bone-dim)}
+.tk-mi.plain{flex-direction:row;align-items:center;justify-content:space-between}
+.tk-log{max-height:60vh;overflow-y:auto}
+/* a refusal or a paused-table note is in flow on the classic board; on the new table it floats over the middle, so a
+   refused tap still names its reason (POLISH condition 1) without pushing the hand off the phone */
+.board.talk>.tblerr{position:fixed;left:12px;right:12px;top:38%;z-index:66;max-width:536px;margin:0 auto;background:#2a0f0d;box-shadow:0 8px 24px rgba(0,0,0,.6);border-radius:8px}
+.tk-log .gl{padding:6px 0;border-bottom:1px solid var(--line);font:500 13px 'Spline Sans';color:var(--bone)}
+/* the title's switch */
+.tswitch{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:52px;margin:10px 0 2px;padding:8px 12px;background:var(--forge);border:1px solid var(--y);border-radius:8px;color:var(--bone);text-align:left}
+.tswitch b{display:block;font:800 17px 'Big Shoulders Display';letter-spacing:.05em;text-transform:uppercase;color:var(--y)}
+.tswitch span{font:500 12.5px 'Spline Sans';color:var(--bone-dim)}
+.tswitch i{flex:none;width:46px;height:26px;border-radius:13px;background:var(--line);position:relative;transition:background .15s}
+.tswitch i::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--bone);transition:transform .15s}
+.tswitch.on i{background:var(--y)}
+.tswitch.on i::after{transform:translateX(20px)}
+@media (prefers-reduced-motion:reduce){
+  .tk-call,.tk-say,.tk-glimpse,.tk-pitchc,.tk-blockc,.tk-atk,.tk-stackc,.tk-blk,.tk-padcol b.fresh,.tk-sheetwrap,.tk-think i{animation:none !important}
+  .tk-token{transition:none}
+}
 </style>
 </head>
 <body>
@@ -1340,7 +1545,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "7.17"; /* v7.17 - A tapped card shows the card again on an iPhone-height screen, not only its name; see CHANGELOG.md. */
+window.APP_VER = "7.18"; /* v7.18 - Table Talk, a preview: the new table behind a switch, the opponent's plays announced and shown, life on a pad; see CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -2073,6 +2278,7 @@ window.TROPHIES = [
      it for every legality question, and local.js drives it. -->
 <script src="engine/sparring.js"></script>
 <script src="engine/local.js"></script>
+<script src="engine/announce.js"></script>
 <script src="engine/lobby.js"></script>
 <script src="engine/room.js"></script>
 <!-- THE JUDGE'S TABLE (HIDDEN HANDS H3): a third device holds the deck and
@@ -9720,6 +9926,25 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
   const [inspect,setInspect] = uS(false);
   const [bug,setBug] = uS(false);
   const sess = uR(null);
+  /* TABLE TALK (TT0, v7.18; docs/TABLE-TALK.md) — the new table, behind a switch (`talkOn`). What each
+     accepted action SAID (engine/announce.js) queues in `calls`, its head on the table; the PAD keeps every
+     change to a hero's life with its source (TRP 5.8). Both fill at every table, so the switch can be
+     thrown mid-game with nothing missing; only the new table shows them. */
+  const [talk,setTalk] = uS(()=>talkOn());
+  const talkAtMount = uR(talk);
+  const [calls,setCalls] = uS([]);
+  const [pad,setPad] = uS(()=>({start: g.sides.map(sd => sd ? sd.hp : null), marks: []}));
+  const [talkLog,setTalkLog] = uS(false), [talkCoach,setTalkCoach] = uS(false), [, setVoiceTick] = uS(0);
+  const lastSeen = uR(null);
+  const hearRef = uR(null);
+  hearRef.current = st => {
+    try {
+      const ms = DawnAnnounce.marks(st);
+      if(ms.length) setPad(p => ({...p, marks: [...p.marks, ...ms.map(m => ({...m, turn: st.next.turn | 0}))]}));
+      const ls = DawnAnnounce.say(st, mySeat).filter(l => talkShows(l, mySeat));
+      if(ls.length) setCalls(q => talkMerge(q.concat(ls)).slice(-12));
+    } catch(e){ console.warn("[table talk] the announcer could not read a step:", e); }
+  };
   const savedAt = uR(-1);   /* host: the sequence last kept on the phone */
   /* THE HOST KEEPS ITS GAME ON THE PHONE after EVERY commit (not on the
      1.2s watch alone: tools/twophone.js measured a reload resuming 29
@@ -9811,6 +10036,10 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
            its blocks (sparring.js, LOOKAHEAD); false is the rule policy, byte for byte. */
         policy: (st, i) => DawnSparring.act(st, i, {search: !!match.sharp}),
         hash:   st => st ? DawnWire.hash(st) : null,
+        /* TABLE TALK: the AI seat plays at a person's pace, one action a tick, each said before the next
+           (local.js `pace`); every accepted action, either seat's, is heard (`onStep`) */
+        ...(talkAtMount.current ? {pace: (prev, a, next) => talkPace(prev, a, next, 1 - mySeat, mySeat)} : {}),
+        onStep: st => hearRef.current && hearRef.current(st),
         onState: st => { setG(st); setNote(null); audit(st); },
         onEvent: e => {
           if(e.t==="refused") setNote(e.reason);
@@ -9831,7 +10060,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                         priority: (s.state()||{}).priority})};
       setLink("connected");
       s.start();
-      return ()=>{};
+      return ()=>{ if(s.dispose) s.dispose(); };
     }
     const s = DawnNet.createSession({
       seat: mySeat, host,
@@ -9850,7 +10079,10 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
       /* a reloaded host takes back the game it saved (TableScreen's resume) */
       restore: host ? (match.restore || null) : null,
       send:   m => tableRef.current && tableRef.current.send({ch:CH_NET, m}),
-      onState: st => { setG(st); setNote(null);
+      onState: (st, info) => { setG(st); setNote(null);
+        /* TABLE TALK: a commit carries its action and seat; heard against the last state this phone saw */
+        if(info && info.action && lastSeen.current && hearRef.current) hearRef.current({seat: info.seat, action: info.action, prev: lastSeen.current, next: st});
+        lastSeen.current = st;
         /* the invariant judge runs on the FULL game, which only the host holds;
            the guest checks its view's own shape (referee.viewCensus) */
         if(host && sess.current){ audit(sess.current.full()); keepHost(sess.current); }
@@ -10274,88 +10506,82 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
 
   const featured = g.featured;
 
-  return (
-    <div className="board">
-      <div className="screennav">
-        <button onClick={onExit} style={{flex:.7}}>✕ leave</button>
-        <button className={sheet==="opp"?"on":""} onClick={()=>flip("opp")}><span className="navtx">▲ {foeH?heroShort(foeH):"Opp"}</span></button>
-        <button className={sheet?"":"on"} onClick={()=>setSheet(null)}>Chain</button>
-        <button className={sheet==="you"?"on":""} onClick={()=>flip("you")}>You ▼</button>
-        <SoundBtn/>
-      </div>
-      <StageHud me={me} them={them} turn={g.turn} myTurn={g.turnPlayer === mySeat}/>
+  /* ---- THE PIECES BOTH LAYOUTS DRAW (Table Talk TT0, v7.18). Built ONCE, here, so the classic board and the
+     new table render the very same controls (the no-mirror rule one layer up): the ask (the status line), the
+     pips, the attack-target rail, the hand row, the call, your arena's cell, the hub, and everything laid over
+     the board. The classic layout below draws them exactly where it always did. ---- */
+  const askEl = <>
+              {/* The status line says what the CR machine is asking of
+                  THIS seat, in the trainer's voice. */}
+              {over ? <div className="statusline">{drawText
+                  ? drawText.status
+                  : <>{over.winner===mySeat?"You win":"You lose"} — {g.sides[over.winner].name} takes it on {over.how}.</>}</div>
+                : boost ? <div className="statusline">Boost <b>{boost.card.name}</b>? Banish the top card of your deck as an additional cost — a <b>Mechanologist</b> card grants go again.</div>
+                : fuse ? <div className="statusline">Fuse <b>{fuse.card.name}</b>? Reveal a {(fuse.types||[]).join("/")} card from your hand as an additional cost — <b>{them.name} sees it</b>.</div>
+                : charge ? <div className="statusline">Charge for <b>{charge.card.name}</b>? A card from your hand goes to your <b>soul</b> as an additional cost — you may decline.</div>
+                : usurp ? <div className="statusline">Usurp for <b>{usurp.card.name}</b> — which Runechant is destroyed to pay for it?</div>
+                : bancost ? <div className="statusline"><b>{bancost.card.name}</b> has an additional cost — banish a card from your graveyard, or decline.</div>
+                : pay ? <div className="statusline">Paying <b>{pay.card.name}</b> — tap cards below to pitch · {(()=>{const short=Math.max(0,pay.need-me.res-DawnJudge.paySum(me)); /* COVERED IS NOT CONFIRMABLE when a second question refuses the pitch
+     (v4.91 — Savage Feast's additional discard): say `legal`'s reason
+     rather than "covered ✓" over a dead button (v2.83, v4.59). */
+  const why=short>0?null:DawnJudge.legal(g,{t:"payConfirm"},mySeat); return short>0?<span>need <b>{short}</b> more</span>:why?<span>{why}</span>:<span>covered ✓</span>;})()}
+                    <button onClick={()=>fire({t:"payCancel"})}>✕ cancel</button></div>
+                : theirPay ? <div className="statusline">{them.name} is paying for something…</div>
+                : myArsStep ? <div className="statusline">Tap a card below for <b>arsenal</b>
+                    <button onClick={()=>fire({t:"arsenal",uid:null})}>skip</button></div>
+                : g.phase==="end" ? <div className="statusline">End phase — {them.name} is finishing their turn.</div>
+                : defending ? <div className="statusline">Defend step — tap hand &amp; equipment to declare · incoming <b>{g.pend?g.pend.total:0}</b></div>
+                /* A CARD WAITING ON THE STACK (v4.66) — CR 7.1.2 / 4.2.2. It
+                   resolves when both seats pass, and the one thing either may
+                   do first is answer at instant speed. Said so, or the pause
+                   reads as a stuck game. */
+                : (g.stack||[]).some(l=>l&&l.k==="play") ? <div className="statusline"><b>{(g.stack||[]).filter(l=>l&&l.k==="play").slice(-1)[0].label}</b> — {mine({t:"pass"}) ? "answer at instant speed, or pass to let it resolve" : "waiting on "+them.name.split(",")[0]}</div>
+                : myTurn ? <div className="statusline">{g.step==="layer" ? <span>Your window — play, or pass</span>
+                    : <span>{g.step} step — react from floating <b>{me.res}</b> or pass</span>}</div>
+                : <div className="statusline">Waiting on {them.name} — {g.phase} / {g.step}</div>}
+  </>;
+  const pipsEl = <>
+              {pips.length ? <div className="rail">{pips.map(([t,cl],i)=>
+                <span key={i} className={"rp"+(cl?" "+cl:"")}>{t}</span>)}</div> : null}
+  </>;
+  const targetEl = <>
+              {/* CR 1.4.5 — the declaration is MANDATORY, so the rail is the
+                  one place the choice is made and every attack route reads
+                  it (`tgtSpec`). An attack on an ally cannot be blocked
+                  (CR 7.3.2a) and ally life resets at end of turn
+                  (CR 4.4.3a), so it is a real decision rather than a worse
+                  way to hit the hero.
 
-      <div className="tablewrap">
-        {/* ---- SHEET: their board (v7.15; a flick screen until then) ---- */}
-        <div className={"vscreen side"+(sheet==="opp"?" open":"")} data-sheet="opp" ref={oppRef}>
-          <div className="hscroll">
-            <div className="hpane vfill">
-              <div className="paneflag"><span>{them.name} · seat {1-mySeat}{srvRank.ranked ? " · ranked" : ""}</span><span>swipe → graveyard</span></div>
-              <div className="midrow">
-                <ArmorGrid gear={armorOf(them)} own={false} cell={gearTile(false)}/>
-                <div className="arscol">
-                  <div className="slot clip-sm" style={{width:"100%"}}>{them.arsenal
-                    ? ((DawnView.isPh(them.arsenal) || !them.arsenal._faceUp)
-                        /* face down: a two-phone view holds a placeholder, never the card;
-                           the AI table holds the card and does not show it */
-                        ? <div className="dcardph" title="face-down arsenal"/>
-                        : <button style={{padding:0,width:"100%"}} onClick={()=>setZoom(them.arsenal)}>
-                            <CardFrame card={them.arsenal} className="sm"/></button>)
-                    : "arsenal —"}</div>
-                  <span className="zlbl">holds {them.hand.length} · blocks from hand</span>
-                </div>
-                <DeckPitchCol deck={them.deck} pitch={them.pitch} title="Pitch"/>
-              </div>
-              <div className="heror">
-                <div className={"wslot clip-sm"+(foeHands[0]?" filled":"")}>
-                  {foeHands[0] ? gearTile(false)(foeHands[0]) : <span className="wempty">weapon —</span>}
-                </div>
-                <div className="heromid clip-sm">
-                  {foeH ? <div className="hport2"><HeroArt h={foeH} db={db}/></div> : null}
-                  <span className="hname">{them.name}</span>
-                  {srvNames[1-mySeat] && <span className="pname" data-pname="foe" title={srvNames[1-mySeat]}>{srvNames[1-mySeat]}{srvRank.ranked && srvRank.ratings[1-mySeat]!=null && <span className="prate"> {srvRank.ratings[1-mySeat]}</span>}</span>}
-                  <LifeNum n={them.hp} className="hlife2"/>
-                  <span className="hlbl">{g.turnPlayer===1-mySeat ? "their turn" : "life"}</span>
-                </div>
-                <div className={"wslot clip-sm"+(foeHands[1]?" filled":"")}>
-                  {foeHands[1] ? gearTile(false)(foeHands[1]) : <span className="wempty">weapon —</span>}
-                </div>
-              </div>
-              <div className="vfillsp"/>
-              <div style={{marginTop:8}}>
-                <InPlayRow entries={them.board||[]} empty={"nothing yet — "+them.name+"'s auras, items and allies land here"}
-                  cell={b=>(
-                    <button key={b.uid} className="b clip-sm" style={{width:52,flex:"none"}} onClick={()=>setZoom(b.card)}>
-                      <CardFrame card={b.card} className="sm" noType={b.kind==="ally"&&b.card.power>0}/>
-                      {b.kind==="ally" && b.life!=null && <span className="sw">♥ {b.life}</span>}
-                    </button>)}/>
-              </div>
-            </div>
-            <GravePane sd={them} who={them.name+"'s"} mine={false}/>
-          </div>
-        </div>
-
-        {/* ---- SCREEN 2: the chain ---- */}
-        <div className="vscreen" ref={chainRef}>
-          <div className="hscroll" ref={midStart}>
-            <div className="hpane logpane">
-              <div className="paneflag">
-                <span>log</span>
-                {/* Same button, same sheet, same report shape as the
-                    trainer — and here it carries the seat, the table code
-                    and net.js's counters, because the first question
-                    about a two-phone bug is which phone saw it. */}
-                <button className="judgebtn" onClick={()=>setBug(true)}>
-                  JUDGE!!{judgeN>0?` ⚠${judgeN}`:""}
-                </button>
-                <span>play →</span></div>
-              {/* the turn and the phase — see stepLabel, which reads the CR
-                  machine because `mode` is frozen on this board */}
-              <div className="phasebar clip-sm">
-                <span>turn <b>{g.turn}</b></span>
-                <span className="ph">{stepLabel(g, mySeat)}</span>
-              </div>
-              <div style={{marginTop:6}}><Ticker feed={feedShown}/></div>
+                  THE LABEL READ `t.kind` AND AN ENTRY KEEPS IT AT
+                  `t._target.kind` (v4.45), so it was undefined and BOTH
+                  buttons read "ally" — the hero included. The same
+                  two-shapes-for-one-fact defect the action carried, in the
+                  one place a player looks to tell them apart. And an ally
+                  is NAMED: an entry IS the card, so two Swabbies were
+                  otherwise two identical buttons. */}
+              {needTarget && <div className="rail">
+                <span className="rp">attack:</span>
+                {targets.map((t,i)=>(
+                  <button key={i} className={"rp"+((tgt||targets[0])===t?" on":"")}
+                    onClick={()=>setTgt(t)}>{t._target.kind==="hero"
+                      ? them.name.split(",")[0]
+                      : t.name + (t._life!=null ? " ♥"+t._life : "")}</button>))}
+              </div>}
+  </>;
+  const handRowEl = (
+              <HandRow>
+                {me.hand.map(handCell)}
+                {railPlays().map(railCell)}
+                {me.arsenal && (()=>{
+                  const a = playAct(me.arsenal, "arsenal");
+                  const ok = mine(a);
+                  return <button key={me.arsenal.uid}
+                    className={"hc clip-sm"+(ok?"":" dis")+(peek&&peek.uid===me.arsenal.uid?" peek":"")}
+                    onClick={ok ? tapTwice(me.arsenal,"play from arsenal",()=>fire(a)) : ()=>setZoom(me.arsenal)}>
+                    <CardFrame card={me.arsenal} zone="arsenal"/></button>;
+                })()}
+              </HandRow>);
+  const adviceEl = <>
               {/* ---- THE CALL, AT THE TABLE (v2.83) -----------------------
                   This board had no advisor, and the stated reason — that it
                   "would coach card text that does not resolve here" — has
@@ -10399,146 +10625,8 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                   return {line: other ? them.name.split(",")[0] + " is deciding." : "Nothing to decide yet."};
                 }}
                 read={myBuild.read}/>}
-              <div className="gamelog" style={{marginTop:8}}>{[...feedShown].reverse().map((l,i)=><div key={i} className="gl"><PipLine s={l}/></div>)}</div>
-            </div>
-
-            <div className="hpane playpane">
-              <BoardStrip sd={them} who={them.name.split(",")[0]} open={sheet==="opp"} onOpen={()=>flip("opp")}/>
-              <div className="playmid">
-                <div className="sidecol stack">
-                  <div className="scol-lbl">Chain</div>
-                  <div className="scol-cards">
-                    {g.chainOpen && g.pend
-                      ? <div className="stackcard"><CardImg card={g.pend.card}/></div>
-                      : <div className="dash">—</div>}
-                  </div>
-                </div>
-                <div className="centerslot">
-                  {featured
-                    ? <FeatCard card={featured.card}/>
-                    : <div className="featempty">Most recently played lands here</div>}
-                  <LinkStamp l={featOutcome(featured, g.chain)} seq={g.chain.length}/>
-                  <LinkSfx chain={g.chain}/>
-                </div>
-                <div className="sidecol defend">
-                  <div className="scol-lbl">Defend</div>
-                  <div className="scol-cards">
-                    {(()=>{ const cs = [...declared(me), ...declared(them)];
-                      return cs.length ? cs.map((c,i)=><div key={i} className="stackcard"><CardImg card={c}/></div>)
-                                       : <div className="dash">—</div>; })()}
-                  </div>
-                </div>
-              </div>
-
-              {/* The status line says what the CR machine is asking of
-                  THIS seat, in the trainer's voice. */}
-              {over ? <div className="statusline">{drawText
-                  ? drawText.status
-                  : <>{over.winner===mySeat?"You win":"You lose"} — {g.sides[over.winner].name} takes it on {over.how}.</>}</div>
-                : boost ? <div className="statusline">Boost <b>{boost.card.name}</b>? Banish the top card of your deck as an additional cost — a <b>Mechanologist</b> card grants go again.</div>
-                : fuse ? <div className="statusline">Fuse <b>{fuse.card.name}</b>? Reveal a {(fuse.types||[]).join("/")} card from your hand as an additional cost — <b>{them.name} sees it</b>.</div>
-                : charge ? <div className="statusline">Charge for <b>{charge.card.name}</b>? A card from your hand goes to your <b>soul</b> as an additional cost — you may decline.</div>
-                : usurp ? <div className="statusline">Usurp for <b>{usurp.card.name}</b> — which Runechant is destroyed to pay for it?</div>
-                : bancost ? <div className="statusline"><b>{bancost.card.name}</b> has an additional cost — banish a card from your graveyard, or decline.</div>
-                : pay ? <div className="statusline">Paying <b>{pay.card.name}</b> — tap cards below to pitch · {(()=>{const short=Math.max(0,pay.need-me.res-DawnJudge.paySum(me)); /* COVERED IS NOT CONFIRMABLE when a second question refuses the pitch
-     (v4.91 — Savage Feast's additional discard): say `legal`'s reason
-     rather than "covered ✓" over a dead button (v2.83, v4.59). */
-  const why=short>0?null:DawnJudge.legal(g,{t:"payConfirm"},mySeat); return short>0?<span>need <b>{short}</b> more</span>:why?<span>{why}</span>:<span>covered ✓</span>;})()}
-                    <button onClick={()=>fire({t:"payCancel"})}>✕ cancel</button></div>
-                : theirPay ? <div className="statusline">{them.name} is paying for something…</div>
-                : myArsStep ? <div className="statusline">Tap a card below for <b>arsenal</b>
-                    <button onClick={()=>fire({t:"arsenal",uid:null})}>skip</button></div>
-                : g.phase==="end" ? <div className="statusline">End phase — {them.name} is finishing their turn.</div>
-                : defending ? <div className="statusline">Defend step — tap hand &amp; equipment to declare · incoming <b>{g.pend?g.pend.total:0}</b></div>
-                /* A CARD WAITING ON THE STACK (v4.66) — CR 7.1.2 / 4.2.2. It
-                   resolves when both seats pass, and the one thing either may
-                   do first is answer at instant speed. Said so, or the pause
-                   reads as a stuck game. */
-                : (g.stack||[]).some(l=>l&&l.k==="play") ? <div className="statusline"><b>{(g.stack||[]).filter(l=>l&&l.k==="play").slice(-1)[0].label}</b> — {mine({t:"pass"}) ? "answer at instant speed, or pass to let it resolve" : "waiting on "+them.name.split(",")[0]}</div>
-                : myTurn ? <div className="statusline">{g.step==="layer" ? <span>Your window — play, or pass</span>
-                    : <span>{g.step} step — react from floating <b>{me.res}</b> or pass</span>}</div>
-                : <div className="statusline">Waiting on {them.name} — {g.phase} / {g.step}</div>}
-
-              {pips.length ? <div className="rail">{pips.map(([t,cl],i)=>
-                <span key={i} className={"rp"+(cl?" "+cl:"")}>{t}</span>)}</div> : null}
-
-              {/* CR 1.4.5 — the declaration is MANDATORY, so the rail is the
-                  one place the choice is made and every attack route reads
-                  it (`tgtSpec`). An attack on an ally cannot be blocked
-                  (CR 7.3.2a) and ally life resets at end of turn
-                  (CR 4.4.3a), so it is a real decision rather than a worse
-                  way to hit the hero.
-
-                  THE LABEL READ `t.kind` AND AN ENTRY KEEPS IT AT
-                  `t._target.kind` (v4.45), so it was undefined and BOTH
-                  buttons read "ally" — the hero included. The same
-                  two-shapes-for-one-fact defect the action carried, in the
-                  one place a player looks to tell them apart. And an ally
-                  is NAMED: an entry IS the card, so two Swabbies were
-                  otherwise two identical buttons. */}
-              {needTarget && <div className="rail">
-                <span className="rp">attack:</span>
-                {targets.map((t,i)=>(
-                  <button key={i} className={"rp"+((tgt||targets[0])===t?" on":"")}
-                    onClick={()=>setTgt(t)}>{t._target.kind==="hero"
-                      ? them.name.split(",")[0]
-                      : t.name + (t._life!=null ? " ♥"+t._life : "")}</button>))}
-              </div>}
-
-              <BoardStrip sd={me} who="You" mine open={sheet==="you"} onOpen={()=>flip("you")}/>
-              <HandRow>
-                {me.hand.map(handCell)}
-                {railPlays().map(railCell)}
-                {me.arsenal && (()=>{
-                  const a = playAct(me.arsenal, "arsenal");
-                  const ok = mine(a);
-                  return <button key={me.arsenal.uid}
-                    className={"hc clip-sm"+(ok?"":" dis")+(peek&&peek.uid===me.arsenal.uid?" peek":"")}
-                    onClick={ok ? tapTwice(me.arsenal,"play from arsenal",()=>fire(a)) : ()=>setZoom(me.arsenal)}>
-                    <CardFrame card={me.arsenal} zone="arsenal"/></button>;
-                })()}
-              </HandRow>
-            </div>
-
-            <div className="hpane">
-              <div className="paneflag"><span>← play</span><span>the chain</span></div>
-              {!g.chain.length && <p className="note">No links yet — play an attack to start the chain.</p>}
-              {!!g.chain.length && <div className="histturn"><div className="htlabel">This chain</div>
-                <div className="chain">{g.chain.map((l,j)=><ChainLink key={j} l={l}/>)}</div></div>}
-            </div>
-          </div>
-        </div>
-
-        {/* ---- SCREEN 3: your board ---- */}
-        <div className={"vscreen side"+(sheet==="you"?" open":"")} data-sheet="you" ref={youRef}>
-          <div className="hscroll">
-            <div className="hpane vfill">
-              <div className="paneflag"><span>Your board · seat {mySeat}</span><span>swipe → graveyard</span></div>
-              {!myTurn && !defending && !myArsStep && !over &&
-                <button className="modehint" onClick={()=>setSheet(null)}>Waiting on {them.name} — back to the table ✕</button>}
-              {/* THE ARENA COULD ONLY ZOOM (v4.45). `judge.doActivate` has had
-                  the board-attack route since v3.44 and `legal`'s arena
-                  branch since v3.84 — and this row's only handler opened the
-                  card, so at the table NOTHING could attack out of the
-                  arena: measured, 10 attacking allies in the pool and the
-                  four ward-bearing auras Cosmo turns into weapons, which is
-                  Enigma's whole engine. v3.50's sentence at the UI: a
-                  feature with no caller looks exactly like a feature that
-                  works, until you count.
-
-                  `judge.boardAttackOf` IS HOW IT ASKS (v3.84's own reader),
-                  so there is still one place that knows an aura's power is
-                  its printed ward — the tile reads no card text. */}
-              {/* AND AN ARENA PERMANENT'S ABILITY IS THE OTHER HALF OF THAT
-                  SENTENCE (v4.47). With only the attack asked, the seven
-                  pool records that print an ACTIVATED ABILITY in the arena
-                  still had no caller here — v3.50's sentence for the sixth
-                  time, in the row v4.45 had just given a handler.
-
-                  `judge.boardAbilityOf` is how it asks, `boardAttackOf`'s
-                  sibling: one action (`activate`) covers both, `legal`
-                  decides which, and the tile reads no card text. */}
-              <InPlayRow entries={me.board} cell={(b,i)=>{
+  </>;
+  const myBoardCell = (b,i)=>{
                 const bp = DawnJudge.boardAttackOf(g, mySeat, b.uid);
                 const bab = bp ? null : DawnJudge.boardAbilityOf(g, mySeat, b.uid);
                 /* AN ABILITY CARRIES NO ATTACK-TARGET, so it sends the bare
@@ -10560,69 +10648,8 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                     <CardFrame card={b.card} className="sm" noType={b.kind==="ally"&&b.card.power>0}/></span>
                   {b.kind==="ally" && b.life!=null && <span className="sw">♥ {b.life}</span>}
                 </button>);
-              }}/>
-              <div className="heror">
-                <div className={"wslot clip-sm"+(myHands[0]?" filled":"")}>
-                  {myHands[0] ? gearTile(true)(myHands[0]) : <span className="wempty">weapon 1</span>}
-                </div>
-                <div className="heromid clip-sm">
-                  <button className="hport2" onClick={()=>setZoom(myBuild.HZOOM)}>
-                    {myH ? <HeroArt h={myH} db={db}/> : null}</button>
-                  <span className="hname">{me.name.split(",")[0]}</span>
-                  {srvNames[mySeat] && <span className="pname" data-pname="me" title={srvNames[mySeat]}>{srvNames[mySeat]}{srvRank.ranked && srvRank.ratings[mySeat]!=null && <span className="prate"> {srvRank.ratings[mySeat]}</span>}</span>}
-                  <LifeNum n={me.hp} className="hlife2"/>
-                  <span className="hlbl">life</span>
-                  {/* THE SAME CHIP THE TRAINER DRAWS (v3.39) — a counter
-                      the ability spends has to be visible on the board the
-                      ability is played on. */}
-                  {(()=>{ const ct=(me.counters||{}).hero||{};
-                    const ks=Object.keys(ct).filter(k=>ct[k]>0);
-                    if(!ks.length) return null;
-                    return <span className="ctr">{ks.map(k=>
-                      <span key={k} className="cc steam" title={k}>{k[0].toUpperCase()}{ct[k]}</span>)}</span>; })()}
-                  {/* AND THE HERO POWER ITSELF, which this board never
-                      offered: `doActivate` had no "hero" route until v3.39,
-                      so an ACTIVATED hero ability was unreachable here.
-                      Dimmed off `legal`, like every other tap at this
-                      table, so the button and the rule cannot disagree. */}
-                  {myBuild.heroPow && (()=>{ const A={t:"activate",from:"hero",uid:"hpow"};
-                    const ok=mine(A);
-                    return <button className="hact clip-sm fs-md" style={{padding:"5px 8px"}}
-                      disabled={!ok} title={ok?"":String(DawnJudge.legal(g,A,mySeat)||"")}
-                      onClick={()=>fire(A)}>{(me.weaponUsed||{})["hpow"]?"USED":"⚡ USE"}</button>; })()}
-                </div>
-                <div className={"wslot clip-sm"+(myHands[1]?" filled":"")}>
-                  {myHands[1] ? gearTile(true)(myHands[1])
-                    : <span className="wempty">{myHands[0]&&slotOf(myHands[0]).z==="2h" ? "2H occupies both hands" : "weapon 2 / off-hand"}</span>}
-                </div>
-              </div>
-              <div className="midrow">
-                <ArmorGrid gear={armorOf(me)} own cell={gearTile(true)}/>
-                <div className="arscol">
-                  <div className="slot clip-sm" style={{width:"100%"}}>{me.arsenal
-                    ? <button style={{padding:0,width:"100%"}} onClick={()=>setZoom(me.arsenal)}>
-                        <CardFrame card={me.arsenal} className="sm"/></button>
-                    : "empty"}</div>
-                  <span className="zlbl">Arsenal</span>
-                </div>
-                <DeckPitchCol deck={me.deck} pitch={me.pitch}/>
-              </div>
-              <div className="vfillsp"/>
-              <div className="mystat" style={{marginTop:8}}>
-                <span className="pill">TURN <b>{g.turn}</b></span>
-                <span className="pill">SEAT <b>{mySeat}</b></span>
-                <span className="pill">{host?"HOST":"GUEST"}</span>
-                <button className={"pill"+(inspect?" hp":"")} onClick={()=>setInspect(v=>!v)}>ℹ {inspect?"inspecting":"inspect"}</button>
-              </div>
-            </div>
-            <GravePane sd={me} who="Your"/>
-          </div>
-        </div>
-      </div>
-
-      {/* The action bar speaks the CR machine, not the trainer's modes.
-          CR 4.3.4: ending a turn is a PASS carrying intent, so it takes
-          one from each seat — which is what a table does. */}
+              };
+  const hubEl = (
       <HubBar>
         {over ? <button className="a go hubp" onClick={onExit}>Leave the table</button>
           /* BOOST'S ADDITIONAL COST (v2.84) — asked before the payment
@@ -10775,7 +10802,10 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
              rather than as the rule it is. Say which it is. */
           : defending ? <>
               {mine({t:"pass"})
-                ? <button className={"a hubp "+(passTone==="free"?"free":"go")} data-pass={passTone} onClick={()=>fire({t:"pass"})}>Done defending</button>
+                ? <button className={"a hubp "+(passTone==="free"?"free":"go")} data-pass={passTone} onClick={()=>fire({t:"pass"})}>{talk
+                    /* TABLE TALK: your line, as you would say it across the table (docs/TABLE-TALK.md §4.2) */
+                    ? ((me.blockH||[]).length + (me.blockG||[]).length ? "Block with " + ((me.blockH||[]).length + (me.blockG||[]).length) : "No block")
+                    : "Done defending"}</button>
                 : <span className="a dis hubp">declare your blockers — {them.name.split(",")[0]} still holds priority</span>}
               {/* RULING (user, 2026-11-15): no Concede button here. One tap with no
                   confirmation was a ranked loss. Closing a started ranked table is
@@ -10791,8 +10821,8 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                 : <span className={"a dis"+(mine({t:"endTurn"})?"":" hubp")}>waiting on {them.name.split(",")[0]}</span>}
               <button className={"a "+(mine({t:"endTurn"}) && passTone ? passTone : "go")+(mine({t:"endTurn"})?" hubp":"")} data-pass={mine({t:"endTurn"}) ? passTone : ""} data-testid="end-turn" disabled={!mine({t:"endTurn"})} onClick={()=>fire({t:"endTurn"})}>End turn</button>
             </>}
-      </HubBar>
-
+      </HubBar>);
+  const overlaysEl = <>
       {/* WHO YOU BEAT DECIDES WHETHER IT IS A TROPHY (v2.83).
 
           The rule here has not changed — "a trophy handed out for a real
@@ -10882,9 +10912,601 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
         onMove={(i,dir)=>fire({t:"promptMove", i, dir})}
         onDecline={()=>fire({t:"promptDecline"})}
         onConfirm={()=>fire({t:"promptConfirm"})}/>
+  </>;
+
+  /* ---- TABLE TALK: the new table (docs/TABLE-TALK.md §3). The ask shows only when something is asked of
+     you; the log and the coach live in the menu, and neither exists at a ranked table (TRP 5.1, 5.9). ---- */
+  const stackMine = !over && (g.stack||[]).some(l=>l&&l.k==="play") && mine({t:"pass"});
+  const askOn = !over && !!(boost || fuse || charge || usurp || bancost || pay || myArsStep || defending || stackMine);
+  if(talk){
+    const voiceOn = !!store.get(TALK_VOICE, false);
+    const menuItems = [
+      ["Leave the table", onExit, local ? "This game against the AI is not kept." : ranked ? "Leaving a ranked game counts as a loss." : "Your opponent is told you left."],
+      ["Voice: " + (voiceOn ? "on" : "off"), ()=>{ store.set(TALK_VOICE, !voiceOn); setVoiceTick(t=>t+1);
+        /* iOS lets a page speak only from inside a tap: say "Voice on" in THIS tap, and later lines may follow */
+        try { if(!window.speechSynthesis) return; window.speechSynthesis.cancel(); if(!voiceOn) window.speechSynthesis.speak(new SpeechSynthesisUtterance("Voice on")); } catch(_){} },
+        voiceOn ? "The opponent's plays are read aloud." : "Hear the opponent's plays read aloud, as if they said them."],
+      !ranked && ["The log", ()=>setTalkLog(true), "Every line of the game so far. A ranked table has none: at a real table nobody keeps one."],
+      local && mySeat === 0 && [String((myH && myH.n) || me.name).split(",")[0] + "'s call", ()=>setTalkCoach(true), "What the AI would play in your seat, and why. Practice only."],
+      ["Classic table", ()=>setTalk(false), "The board as it was, for this game."],
+      ["JUDGE!!", ()=>setBug(true), "Something wrong? Send the game as it stands."],
+      ["Sound", <SoundBtn/>]];
+    const extra = <>
+      {talkLog && <div className="tk-sheetwrap" onClick={()=>setTalkLog(false)}><div className="tk-look" onClick={e=>e.stopPropagation()} data-talk-log>
+        <div className="tk-padhead">The log · turn {g.turn}</div>
+        <div className="tk-log">{[...feedShown].reverse().map((l,i)=><div key={i} className="gl"><PipLine s={l}/></div>)}</div>
+        <button className="bigbtn alt" onClick={()=>setTalkLog(false)}>Back to the table</button></div></div>}
+      {talkCoach && <div className="tk-sheetwrap" onClick={()=>setTalkCoach(false)}><div className="tk-look" onClick={e=>e.stopPropagation()} data-talk-coach>
+        {adviceEl}
+        <button className="bigbtn alt" onClick={()=>setTalkCoach(false)}>Back to the table</button></div></div>}
+    </>;
+    return (
+      <div className="board talk" data-talk>
+        <TalkTable g={g} mySeat={mySeat} db={db} myH={myH} foeH={foeH} names={g.sides.map(sd=>sd.name)}
+          rating={srvRank.ranked && srvRank.ratings ? srvRank.ratings : {}} first={match.first != null ? match.first : null}
+          calls={calls} onCallDone={()=>setCalls(q=>q.slice(1))}
+          onCallSkip={()=>{ setCalls(q=>q.slice(1)); if(sess.current && sess.current.nudge) sess.current.nudge(); }}
+          pad={pad} hand={handRowEl} ask={askOn ? askEl : null} target={targetEl} boardCell={myBoardCell}
+          onZoom={setZoom} menuItems={menuItems} extra={extra}
+          thinking={!over && (g.priority === 1 - mySeat || !!(g.prompt && g.prompt.side === 1 - mySeat) || !!theirPay)}/>
+        {hubEl}
+        {overlaysEl}
+      </div>);
+  }
+
+  return (
+    <div className="board">
+      <div className="screennav">
+        <button onClick={onExit} style={{flex:.7}}>✕ leave</button>
+        <button className={sheet==="opp"?"on":""} onClick={()=>flip("opp")}><span className="navtx">▲ {foeH?heroShort(foeH):"Opp"}</span></button>
+        <button className={sheet?"":"on"} onClick={()=>setSheet(null)}>Chain</button>
+        <button className={sheet==="you"?"on":""} onClick={()=>flip("you")}>You ▼</button>
+        <SoundBtn/>
+      </div>
+      <StageHud me={me} them={them} turn={g.turn} myTurn={g.turnPlayer === mySeat}/>
+
+      <div className="tablewrap">
+        {/* ---- SHEET: their board (v7.15; a flick screen until then) ---- */}
+        <div className={"vscreen side"+(sheet==="opp"?" open":"")} data-sheet="opp" ref={oppRef}>
+          <div className="hscroll">
+            <div className="hpane vfill">
+              <div className="paneflag"><span>{them.name} · seat {1-mySeat}{srvRank.ranked ? " · ranked" : ""}</span><span>swipe → graveyard</span></div>
+              <div className="midrow">
+                <ArmorGrid gear={armorOf(them)} own={false} cell={gearTile(false)}/>
+                <div className="arscol">
+                  <div className="slot clip-sm" style={{width:"100%"}}>{them.arsenal
+                    ? ((DawnView.isPh(them.arsenal) || !them.arsenal._faceUp)
+                        /* face down: a two-phone view holds a placeholder, never the card;
+                           the AI table holds the card and does not show it */
+                        ? <div className="dcardph" title="face-down arsenal"/>
+                        : <button style={{padding:0,width:"100%"}} onClick={()=>setZoom(them.arsenal)}>
+                            <CardFrame card={them.arsenal} className="sm"/></button>)
+                    : "arsenal —"}</div>
+                  <span className="zlbl">holds {them.hand.length} · blocks from hand</span>
+                </div>
+                <DeckPitchCol deck={them.deck} pitch={them.pitch} title="Pitch"/>
+              </div>
+              <div className="heror">
+                <div className={"wslot clip-sm"+(foeHands[0]?" filled":"")}>
+                  {foeHands[0] ? gearTile(false)(foeHands[0]) : <span className="wempty">weapon —</span>}
+                </div>
+                <div className="heromid clip-sm">
+                  {foeH ? <div className="hport2"><HeroArt h={foeH} db={db}/></div> : null}
+                  <span className="hname">{them.name}</span>
+                  {srvNames[1-mySeat] && <span className="pname" data-pname="foe" title={srvNames[1-mySeat]}>{srvNames[1-mySeat]}{srvRank.ranked && srvRank.ratings[1-mySeat]!=null && <span className="prate"> {srvRank.ratings[1-mySeat]}</span>}</span>}
+                  <LifeNum n={them.hp} className="hlife2"/>
+                  <span className="hlbl">{g.turnPlayer===1-mySeat ? "their turn" : "life"}</span>
+                </div>
+                <div className={"wslot clip-sm"+(foeHands[1]?" filled":"")}>
+                  {foeHands[1] ? gearTile(false)(foeHands[1]) : <span className="wempty">weapon —</span>}
+                </div>
+              </div>
+              <div className="vfillsp"/>
+              <div style={{marginTop:8}}>
+                <InPlayRow entries={them.board||[]} empty={"nothing yet — "+them.name+"'s auras, items and allies land here"}
+                  cell={b=>(
+                    <button key={b.uid} className="b clip-sm" style={{width:52,flex:"none"}} onClick={()=>setZoom(b.card)}>
+                      <CardFrame card={b.card} className="sm" noType={b.kind==="ally"&&b.card.power>0}/>
+                      {b.kind==="ally" && b.life!=null && <span className="sw">♥ {b.life}</span>}
+                    </button>)}/>
+              </div>
+            </div>
+            <GravePane sd={them} who={them.name+"'s"} mine={false}/>
+          </div>
+        </div>
+
+        {/* ---- SCREEN 2: the chain ---- */}
+        <div className="vscreen" ref={chainRef}>
+          <div className="hscroll" ref={midStart}>
+            <div className="hpane logpane">
+              <div className="paneflag">
+                <span>log</span>
+                {/* Same button, same sheet, same report shape as the
+                    trainer — and here it carries the seat, the table code
+                    and net.js's counters, because the first question
+                    about a two-phone bug is which phone saw it. */}
+                <button className="judgebtn" onClick={()=>setBug(true)}>
+                  JUDGE!!{judgeN>0?` ⚠${judgeN}`:""}
+                </button>
+                <span>play →</span></div>
+              {/* the turn and the phase — see stepLabel, which reads the CR
+                  machine because `mode` is frozen on this board */}
+              <div className="phasebar clip-sm">
+                <span>turn <b>{g.turn}</b></span>
+                <span className="ph">{stepLabel(g, mySeat)}</span>
+              </div>
+              <div style={{marginTop:6}}><Ticker feed={feedShown}/></div>
+              {adviceEl}
+              <div className="gamelog" style={{marginTop:8}}>{[...feedShown].reverse().map((l,i)=><div key={i} className="gl"><PipLine s={l}/></div>)}</div>
+            </div>
+
+            <div className="hpane playpane">
+              <BoardStrip sd={them} who={them.name.split(",")[0]} open={sheet==="opp"} onOpen={()=>flip("opp")}/>
+              <div className="playmid">
+                <div className="sidecol stack">
+                  <div className="scol-lbl">Chain</div>
+                  <div className="scol-cards">
+                    {g.chainOpen && g.pend
+                      ? <div className="stackcard"><CardImg card={g.pend.card}/></div>
+                      : <div className="dash">—</div>}
+                  </div>
+                </div>
+                <div className="centerslot">
+                  {featured
+                    ? <FeatCard card={featured.card}/>
+                    : <div className="featempty">Most recently played lands here</div>}
+                  <LinkStamp l={featOutcome(featured, g.chain)} seq={g.chain.length}/>
+                  <LinkSfx chain={g.chain}/>
+                </div>
+                <div className="sidecol defend">
+                  <div className="scol-lbl">Defend</div>
+                  <div className="scol-cards">
+                    {(()=>{ const cs = [...declared(me), ...declared(them)];
+                      return cs.length ? cs.map((c,i)=><div key={i} className="stackcard"><CardImg card={c}/></div>)
+                                       : <div className="dash">—</div>; })()}
+                  </div>
+                </div>
+              </div>
+
+              {askEl}
+
+              {pipsEl}
+
+              {targetEl}
+
+              <BoardStrip sd={me} who="You" mine open={sheet==="you"} onOpen={()=>flip("you")}/>
+              {handRowEl}
+            </div>
+
+            <div className="hpane">
+              <div className="paneflag"><span>← play</span><span>the chain</span></div>
+              {!g.chain.length && <p className="note">No links yet — play an attack to start the chain.</p>}
+              {!!g.chain.length && <div className="histturn"><div className="htlabel">This chain</div>
+                <div className="chain">{g.chain.map((l,j)=><ChainLink key={j} l={l}/>)}</div></div>}
+            </div>
+          </div>
+        </div>
+
+        {/* ---- SCREEN 3: your board ---- */}
+        <div className={"vscreen side"+(sheet==="you"?" open":"")} data-sheet="you" ref={youRef}>
+          <div className="hscroll">
+            <div className="hpane vfill">
+              <div className="paneflag"><span>Your board · seat {mySeat}</span><span>swipe → graveyard</span></div>
+              {!myTurn && !defending && !myArsStep && !over &&
+                <button className="modehint" onClick={()=>setSheet(null)}>Waiting on {them.name} — back to the table ✕</button>}
+              {/* THE ARENA COULD ONLY ZOOM (v4.45). `judge.doActivate` has had
+                  the board-attack route since v3.44 and `legal`'s arena
+                  branch since v3.84 — and this row's only handler opened the
+                  card, so at the table NOTHING could attack out of the
+                  arena: measured, 10 attacking allies in the pool and the
+                  four ward-bearing auras Cosmo turns into weapons, which is
+                  Enigma's whole engine. v3.50's sentence at the UI: a
+                  feature with no caller looks exactly like a feature that
+                  works, until you count.
+
+                  `judge.boardAttackOf` IS HOW IT ASKS (v3.84's own reader),
+                  so there is still one place that knows an aura's power is
+                  its printed ward — the tile reads no card text. */}
+              {/* AND AN ARENA PERMANENT'S ABILITY IS THE OTHER HALF OF THAT
+                  SENTENCE (v4.47). With only the attack asked, the seven
+                  pool records that print an ACTIVATED ABILITY in the arena
+                  still had no caller here — v3.50's sentence for the sixth
+                  time, in the row v4.45 had just given a handler.
+
+                  `judge.boardAbilityOf` is how it asks, `boardAttackOf`'s
+                  sibling: one action (`activate`) covers both, `legal`
+                  decides which, and the tile reads no card text. */}
+              <InPlayRow entries={me.board} cell={myBoardCell}/>
+              <div className="heror">
+                <div className={"wslot clip-sm"+(myHands[0]?" filled":"")}>
+                  {myHands[0] ? gearTile(true)(myHands[0]) : <span className="wempty">weapon 1</span>}
+                </div>
+                <div className="heromid clip-sm">
+                  <button className="hport2" onClick={()=>setZoom(myBuild.HZOOM)}>
+                    {myH ? <HeroArt h={myH} db={db}/> : null}</button>
+                  <span className="hname">{me.name.split(",")[0]}</span>
+                  {srvNames[mySeat] && <span className="pname" data-pname="me" title={srvNames[mySeat]}>{srvNames[mySeat]}{srvRank.ranked && srvRank.ratings[mySeat]!=null && <span className="prate"> {srvRank.ratings[mySeat]}</span>}</span>}
+                  <LifeNum n={me.hp} className="hlife2"/>
+                  <span className="hlbl">life</span>
+                  {/* THE SAME CHIP THE TRAINER DRAWS (v3.39) — a counter
+                      the ability spends has to be visible on the board the
+                      ability is played on. */}
+                  {(()=>{ const ct=(me.counters||{}).hero||{};
+                    const ks=Object.keys(ct).filter(k=>ct[k]>0);
+                    if(!ks.length) return null;
+                    return <span className="ctr">{ks.map(k=>
+                      <span key={k} className="cc steam" title={k}>{k[0].toUpperCase()}{ct[k]}</span>)}</span>; })()}
+                  {/* AND THE HERO POWER ITSELF, which this board never
+                      offered: `doActivate` had no "hero" route until v3.39,
+                      so an ACTIVATED hero ability was unreachable here.
+                      Dimmed off `legal`, like every other tap at this
+                      table, so the button and the rule cannot disagree. */}
+                  {myBuild.heroPow && (()=>{ const A={t:"activate",from:"hero",uid:"hpow"};
+                    const ok=mine(A);
+                    return <button className="hact clip-sm fs-md" style={{padding:"5px 8px"}}
+                      disabled={!ok} title={ok?"":String(DawnJudge.legal(g,A,mySeat)||"")}
+                      onClick={()=>fire(A)}>{(me.weaponUsed||{})["hpow"]?"USED":"⚡ USE"}</button>; })()}
+                </div>
+                <div className={"wslot clip-sm"+(myHands[1]?" filled":"")}>
+                  {myHands[1] ? gearTile(true)(myHands[1])
+                    : <span className="wempty">{myHands[0]&&slotOf(myHands[0]).z==="2h" ? "2H occupies both hands" : "weapon 2 / off-hand"}</span>}
+                </div>
+              </div>
+              <div className="midrow">
+                <ArmorGrid gear={armorOf(me)} own cell={gearTile(true)}/>
+                <div className="arscol">
+                  <div className="slot clip-sm" style={{width:"100%"}}>{me.arsenal
+                    ? <button style={{padding:0,width:"100%"}} onClick={()=>setZoom(me.arsenal)}>
+                        <CardFrame card={me.arsenal} className="sm"/></button>
+                    : "empty"}</div>
+                  <span className="zlbl">Arsenal</span>
+                </div>
+                <DeckPitchCol deck={me.deck} pitch={me.pitch}/>
+              </div>
+              <div className="vfillsp"/>
+              <div className="mystat" style={{marginTop:8}}>
+                <span className="pill">TURN <b>{g.turn}</b></span>
+                <span className="pill">SEAT <b>{mySeat}</b></span>
+                <span className="pill">{host?"HOST":"GUEST"}</span>
+                <button className={"pill"+(inspect?" hp":"")} onClick={()=>setInspect(v=>!v)}>ℹ {inspect?"inspecting":"inspect"}</button>
+              </div>
+            </div>
+            <GravePane sd={me} who="Your"/>
+          </div>
+        </div>
+      </div>
+
+      {/* The action bar speaks the CR machine, not the trainer's modes.
+          CR 4.3.4: ending a turn is a PASS carrying intent, so it takes
+          one from each seat — which is what a table does. */}
+      {hubEl}
+
+      {overlaysEl}
     </div>
   );
 }
+
+/* ============================================================
+   TABLE TALK (TT0, v7.18) — the new table. docs/TABLE-TALK.md is the vision; §3 is this layout.
+
+   THE TABLE, NOT THE APP: their side across the top (their hero, the backs of the cards they hold, a
+   face-down arsenal, their gear as defence chips, their permanents, their piles), the middle where
+   cards meet (the chain, the stack, the turn token), the PAD on the right edge (life, as a player
+   writes it: TRP 5.8), your side, your hand, your line (the hub). No log: TRP 5.1 gives a player
+   Visible, Public and Assisted information, never Historical. What the opponent does is SAID
+   (`TalkCall`, read off engine/announce.js) and SHOWN once, large (the glimpse); then it lands where
+   it lives and can be read again only where it lies (a tap on the chain, a pile, a gear chip).
+
+   EVERY CONTROL THAT ACTS IS TableBoard's OWN. The hand row (which carries every play: hand, arsenal,
+   gear swings and abilities, the hero power, blocks), the ask line, the hub, the prompt sheet, the peek
+   dock, the end panel and your arena's cells are built once in TableBoard and handed in, so the two
+   layouts cannot disagree about what a tap does (the no-mirror rule, one layer up). These components
+   only LAY OUT and DRAW: they read the game and never write it.
+   ============================================================ */
+const TALK_KEY = "talk", TALK_VOICE = "talkVoice";
+/* the switch: `?talk=1` / `?talk=0` wins (a link to try it), else the title screen's choice, kept on this phone */
+const talkOn = () => {
+  try { const m = String(window.location.search || "").match(/[?&]talk=([01])(?:&|$)/); if(m) return m[1] === "1"; } catch(_){}
+  return !!store.get(TALK_KEY, false);
+};
+const talkShort = s => String((s && s.name) || s || "").split(",")[0];
+/* WHAT THE TABLE SHOWS OF A LINE (docs/TABLE-TALK.md §4.1). Life goes to the pad, not the stage. Your own
+   plays get a short echo; your own blocks, arsenal and "no block" are not repeated back to you. */
+const talkShows = (l, me) => {
+  if(!l || l.k === "life") return false;
+  if(l.seat !== me) return true;
+  if(l.k === "attack") return l.n != null;   /* your attack once, with the power it lands with */
+  return ["play", "ability", "hero", "hit", "blocked", "turn", "over"].includes(l.k);
+};
+/* consecutive blocks by one seat are ONE call ("blocking with 3"), as a player says it */
+const talkMerge = q => q.reduce((out, l) => {
+  const p = out[out.length - 1];
+  if(p && p.k === "block" && l.k === "block" && p.seat === l.seat && !p._on){
+    const cards = [...(p.cards || []), ...(l.cards || [])];
+    out[out.length - 1] = {...p, cards, sub: "with " + cards.length};
+  } else out.push(l.k === "block" ? {...l, sub: "with 1"} : l);
+  return out;
+}, []);
+/* HOW LONG A CALL HOLDS (ms); the AI's pace waits about as long, so play and talk stay together */
+const talkHold = (l, me) => !l ? 0
+  : l.k === "over" ? 2600
+  : l.seat === me ? (l.k === "hit" || l.k === "blocked" ? 900 : 700)
+  : l.again ? 900
+  : ["attack", "play", "ability", "hero"].includes(l.k) ? 1500
+  : l.k === "block" ? 1200 : 850;
+/* THE OTHER SEAT'S PACE (engine/local.js `pace`): an action waits for everything it said to be shown in turn (a hit
+   and then the turn passing are two calls, one after the other), so the talk never falls behind the table; a quiet
+   pass hardly waits at all. A tap on a call brings the next action forward (local.js `nudge`). */
+const talkPace = (prev, a, next, seat, me) => {
+  if(!a) return 450;
+  let ls = [];
+  try { ls = talkMerge(DawnAnnounce.say({seat, action: a, prev, next}, me).filter(l => talkShows(l, me))); } catch(_){}
+  return ls.length ? ls.reduce((t, l) => t + talkHold(l, me), 0) + 150 : 110;
+};
+/* THE VOICE (optional, off by default: §4.3) — the opponent's line read aloud */
+const talkSay = l => {
+  if(!l || !store.get(TALK_VOICE, false)) return;
+  try {
+    const t = l.k === "block" ? "blocking " + (l.sub || "") : l.k === "turn" ? "" : DawnAnnounce.spoken(l);
+    if(!t || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(t); u.rate = 1.08; u.pitch = 0.95;
+    window.speechSynthesis.speak(u);
+  } catch(_){}
+};
+
+/* THE BACKS OF THE CARDS THEY HOLD — how many, never which */
+function TalkBacks({n}){
+  return <span className="tk-backs" aria-label={"cards in hand: " + n}>
+    {Array.from({length: Math.min(n, 7)}, (_, i) => <span key={i} className="tk-cback"/>)}
+    <b className="tk-n">{n}</b></span>;
+}
+/* THE MARKERS (TRP 5.8: "markers or dice, to represent remaining resource and action points") */
+function TalkMarks({sd}){
+  const ap = sd.ap | 0, res = sd.res | 0;
+  if(!ap && !res) return null;
+  return <span className="tk-marks">
+    {ap > 0 && <span className="tk-apw" title="action points"><span className="tk-ap"/>{ap > 1 && <b>×{ap}</b>}</span>}
+    {res > 0 && <span className="tk-res" title="resources">{res}</span>}</span>;
+}
+/* A SIDE'S GEAR AT A GLANCE: each piece's defence (a weapon's power), in slot order, as one button that
+   opens the pieces. A broken piece reads 0 and dims; a face-down piece is "?" to the other seat. */
+function TalkGear({sd, mine, onOpen}){
+  const gear = (sd.gear || []).filter(x => x && !x.destroyed);
+  if(!gear.length) return null;
+  const arms = gear.filter(x => !isWeapon(x)), weps = gear.filter(x => isWeapon(x));
+  const chip = gr => { const hid = gr._faceDown && !mine, d = gr.def != null || gr.curDef != null ? gearDef(gr) : null;
+    return <span key={gr.uid} className={"tk-gchip" + (d === 0 && gr.def != null ? " worn" : "") + ((sd.blockG || []).indexOf(gr.uid) >= 0 ? " on" : "")}>
+      <i>⛨</i><b>{hid ? "?" : d == null ? "–" : d}</b></span>; };
+  return <button className="tk-geargrp" onClick={onOpen} aria-label={(mine ? "your" : "their") + " gear"} data-talk-gear>
+    {arms.map(chip)}
+    {weps.map(w => <span key={w.uid} className="tk-gchip w"><i>⚔</i><b>{w.power != null ? w.power : "–"}</b></span>)}
+  </button>;
+}
+/* A SIDE'S PILES, as they lie: this turn's pitch, the graveyard and the banished face up (their top card),
+   the deck face down; one button that shows them all (the public zones; docs/TABLE-TALK.md §1.2 quotes the rules). */
+function TalkPiles({sd, onOpen}){
+  const pile = (cards, cls) => { const n = (cards || []).length; if(!n) return null;
+    return <span className={"tk-mpile " + cls}><CardImg card={cards[n - 1]}/><b className="tk-n">{n}</b></span>; };
+  return <button className="tk-pilegrp" onClick={onOpen} aria-label="piles: pitch, graveyard, banished, deck" data-talk-piles>
+    {pile(sd.pitch, "pitch")}{pile(sd.grave, "grave")}{pile(sd.banish, "ban")}
+    <span className="tk-mpile deck"><span className="tk-cback"/><b className="tk-n">{(sd.deck || []).length}</b></span>
+  </button>;
+}
+
+/* ONE SIDE OF THE TABLE. `boardCell` is TableBoard's own arena cell (yours act); theirs open the card. */
+function TalkSide({sd, mine, h, db, label, rating, boardCell, onZoom, onSheet, thinking, menu}){
+  const perms = (sd.board || []).length > 0 && <span className="tk-perms">
+    {(sd.board || []).map((b, i) => mine && boardCell ? boardCell(b, i)
+      : <button key={b.uid} className="tk-perm" onClick={()=>onZoom(b.card)}>
+          <CardFrame card={b.card} className="sm" noType/>{b.kind === "ally" && b.life != null && <span className="sw">♥ {b.life}</span>}</button>)}
+  </span>;
+  const hero = <span className="tk-hero">
+    {h ? <span className="tk-port"><HeroArt h={h} db={db}/></span> : <span className="tk-port none"/>}
+    <span className="tk-name">{label}{rating != null && <i className="tk-rate">{rating}</i>}</span>
+    {thinking && <span className="tk-think" aria-label="deciding"><i/><i/><i/></span>}
+  </span>;
+  return mine
+    ? <div className="tk-side you" data-talk-side="you">
+        <div className="tk-row">{hero}<TalkMarks sd={sd}/><span className="tk-sp"/>
+          <TalkGear sd={sd} mine onOpen={()=>onSheet("gear")}/><TalkPiles sd={sd} onOpen={()=>onSheet("piles")}/></div>
+        {perms && <div className="tk-row">{perms}</div>}
+      </div>
+    : <div className="tk-side them" data-talk-side="them">
+        <div className="tk-row">{menu}{hero}<TalkMarks sd={sd}/><span className="tk-sp"/>
+          <TalkBacks n={(sd.hand || []).length}/>
+          {sd.arsenal && <span className="tk-ars" aria-label="arsenal: a card, face down"><span className="tk-cback"/></span>}
+        </div>
+        <div className="tk-row"><TalkGear sd={sd} onOpen={()=>onSheet("gear")}/>{perms}<span className="tk-sp"/>
+          <TalkPiles sd={sd} onOpen={()=>onSheet("piles")}/></div>
+      </div>;
+}
+
+/* THE MIDDLE: the chain as it lies on the mat — the attack with its power, the blockers beside it with
+   their total, the links before it stacked small; a card on the stack; between attacks, the turn token. */
+function TalkChain({g, mySeat, them, onZoom, onLinks}){
+  const p = g.chainOpen && g.pend ? g.pend : null;
+  const featured = p ? {card: p.card} : null;   /* the attack, as both other boards feature it (LinkStamp's reader) */
+  const top = (g.stack || []).filter(l => l && l.k === "play" && l.card).slice(-1)[0] || null;
+  const declared = sd => [...(sd.blockH || []).map(u => (sd.hand || []).find(c => c.uid === u)),
+                          ...(sd.blockG || []).map(u => (sd.gear || []).find(c => c.uid === u))].filter(Boolean);
+  const walls = p ? declared(g.sides[1 - p.by]) : [];
+  /* THE WALL'S TOTAL IS THE ENGINE'S (`pend.wall`, set when the link strikes), never a sum of printed
+     numbers that a reaction or a buff would make wrong; until then each blocker shows its own corner */
+  const wall = p && p.wall != null ? p.wall : null;
+  const earlier = (g.chainCards || []).map(e => e && (e.card || e)).filter(c => c && (!p || !p.card || String(c.uid) !== String(p.card.uid)));
+  const yourTurn = g.turnPlayer === mySeat;
+  return (
+    <div className="tk-chain">
+      {earlier.length > 0 && <button className="tk-links" onClick={onLinks} aria-label={"earlier links: " + earlier.length}>
+        <CardImg card={earlier[earlier.length - 1]}/><b className="tk-n">{earlier.length}</b></button>}
+      {p ? <div className="tk-fight">
+          <button className={"tk-atk" + (p.by === mySeat ? " mine" : "")} onClick={()=>onZoom(p.card)} data-talk-attack>
+            <CardImg card={p.card}/>
+            <span className="tk-pow">{p.total | 0}</span>
+            {p.ga && <span className="tk-ga">go again</span>}
+            <LinkStamp l={featOutcome(featured, g.chain)} seq={(g.chain || []).length}/>
+          </button>
+          {walls.length > 0 && <div className="tk-walls">
+            {wall != null && <span className="tk-wall"><i>⛨</i>{wall}</span>}
+            <span className="tk-blks">{walls.map(c => <button key={c.uid} className="tk-blk" onClick={()=>onZoom(c)}><CardFrame card={c} className="sm" noType/></button>)}</span>
+          </div>}
+        </div>
+        : top ? <div className="tk-fight"><button className="tk-stackc" onClick={()=>onZoom(top.card)}>
+            <CardImg card={top.card}/><span className="tk-onstack">on the stack</span></button></div>
+        : <div className={"tk-token" + (yourTurn ? " you" : " them")} aria-label={"turn " + (g.turn | 0) + (yourTurn ? ", yours" : ", " + talkShort(them) + "'s")}>
+            <b>{g.turn | 0}</b><span>{yourTurn ? "your turn" : talkShort(them) + "'s turn"}</span></div>}
+      <LinkSfx chain={g.chain}/>
+    </div>);
+}
+
+/* THE PAD (TRP 5.8): their life on top, yours below, as you sit — the total before it struck through,
+   the last change written small with its source. A tap opens the whole sheet. */
+function TalkPad({pad, mySeat, them, onOpen}){
+  const col = seat => {
+    const ms = pad.marks.filter(m => m.seat === seat);
+    const last = ms[ms.length - 1], before = ms.length > 1 ? ms[ms.length - 2].total : pad.start[seat];
+    const now = last ? last.total : pad.start[seat];
+    return <span className="tk-padcol" key={seat + ":" + ms.length} data-talk-life={seat === mySeat ? "you" : "them"}>
+      <span className="tk-who">{seat === mySeat ? "you" : talkShort(them)}</span>
+      {last ? <s>{before}</s> : <s className="none"/>}
+      <b className={last ? "fresh" : ""}>{now}</b>
+      <i className={last && last.delta > 0 ? "up" : ""}>{last ? (last.delta > 0 ? "+" : "") + last.delta + (last.source ? " " + last.source : "") : ""}</i>
+    </span>;
+  };
+  return <button className="tk-pad paper" onClick={onOpen} aria-label="the pad: life totals" data-talk-pad>
+    {col(1 - mySeat)}<span className="tk-padrule"/>{col(mySeat)}</button>;
+}
+function TalkPadSheet({open, pad, mySeat, them, first, turn, onClose}){
+  if(!open) return null;
+  const cols = [mySeat, 1 - mySeat];
+  return <div className="tk-sheetwrap" onClick={onClose}>
+    <div className="tk-padsheet paper" onClick={e=>e.stopPropagation()} data-talk-padsheet>
+      <div className="tk-padhead">vs {talkShort(them)}{first != null ? " · " + (first === mySeat ? "you went first" : talkShort(them) + " went first") : ""} · turn {turn | 0}</div>
+      <div className="tk-padgrid">
+        {cols.map(s => <span key={"h" + s} className="tk-padth">{s === mySeat ? "you" : talkShort(them)}</span>)}
+        {cols.map(s => <span key={"s" + s} className={"tk-padv" + (pad.marks.some(m => m.seat === s) ? " old" : " now")}>{pad.start[s]}</span>)}
+        {pad.marks.map((m, i) => { const superseded = pad.marks.slice(i + 1).some(x => x.seat === m.seat);
+          return cols.map(s => s === m.seat
+            ? <span key={i + ":" + s} className={"tk-padv" + (superseded ? " old" : " now")}>
+                <em>{(m.delta > 0 ? "+" : "") + m.delta}{m.source ? " " + m.source : ""}</em><span>{m.total}</span></span>
+            : <span key={i + ":" + s} className="tk-padv blank"/>); })}
+      </div>
+      <p className="tk-padnote">Life, each change, and its source: all a player may write down during a game (TRP 5.8).</p>
+      <button className="bigbtn alt" onClick={onClose}>Close the pad</button>
+    </div></div>;
+}
+
+/* A SIDE, PICKED UP AND LOOKED THROUGH: its gear (each piece large), or its piles — this turn's pitch,
+   the graveyard, the banished (public zones), and the deck by count alone. Face-down cards stay backs. */
+function TalkLook({look, onZoom, onClose}){
+  if(!look) return null;
+  const face = c => c && (c._faceDown && !look.mine || DawnView.isPh(c))
+    ? <span className="tk-cback big"/>
+    : <button key={c.uid} onClick={()=>onZoom(c)}><CardFrame card={c} className="sm"/></button>;
+  const sec = (title, cards) => (cards || []).length > 0 && <div className="tk-looksec" key={title}>
+    <div className="tk-lookh">{title} · {cards.length}</div>
+    <div className="tk-lookgrid">{[...cards].reverse().map((c, i) => <React.Fragment key={(c && c.uid) + ":" + i}>{face(c)}</React.Fragment>)}</div></div>;
+  return <div className="tk-sheetwrap" onClick={onClose}>
+    <div className="tk-look" onClick={e=>e.stopPropagation()} data-talk-look={look.kind}>
+      <div className="tk-padhead">{look.title}</div>
+      {look.kind === "gear" ? sec("gear", (look.sd.gear || []).filter(x => x && !x.destroyed))
+        : look.kind === "links" ? sec("earlier links on this chain", look.cards)
+        : <>{sec("pitched this turn", look.sd.pitch)}{sec("graveyard", look.sd.grave)}{sec("banished", look.sd.banish)}
+            <p className="tk-padnote">Deck: {(look.sd.deck || []).length} cards, face down.{(look.sd.pitch || []).length ? " What was pitched goes to the bottom of the deck at the end of the turn, in an order nobody else sees (CR 4.4.3c)." : ""}</p></>}
+      <button className="bigbtn alt" onClick={onClose}>Done</button>
+    </div></div>;
+}
+
+/* WHAT IS SAID, AND THE GLIMPSE (docs/TABLE-TALK.md §4, §6). The head of the queue, held for its time;
+   a tap moves on and brings the next play forward (`onSkip`); a press holds it while you read. */
+function TalkCall({line, me, names, onDone, onSkip}){
+  const [held, setHeld] = uS(false);
+  const timer = uR(null), pressT = uR(null), heldRef = uR(false);
+  uE(()=>{ if(!line) return;
+    talkSay(line.seat !== me ? line : null);
+    if(timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(()=>{ if(!heldRef.current) onDone(); }, talkHold(line, me));
+    return ()=>{ if(timer.current) clearTimeout(timer.current); }; }, [line]);
+  if(!line) return null;
+  const theirs = line.seat !== me;
+  const big = theirs && !line.again && ["attack", "play", "ability", "hero"].includes(line.k) && !!line.card;
+  const blockCards = theirs && (line.k === "block" || line.k === "pitch") ? (line.k === "pitch" ? line.pitched : line.cards || []).filter(Boolean) : [];
+  const who = line.k === "turn" || line.k === "over" ? null : theirs ? names[line.seat] : "You";
+  const head = line.k === "turn" ? (line.seat === me ? "YOUR TURN" : talkShort(names[line.seat]).toUpperCase() + "'S TURN")
+    : line.k === "over" ? (line.seat === me ? "YOU WIN" : line.seat == null ? "DRAW" : talkShort(names[line.seat]).toUpperCase() + " WINS")
+    : line.k === "hit" ? "HIT " + (line.n | 0) : line.head;
+  const sub = line.k === "turn" ? "turn " + (line.n | 0) : line.k === "over" ? "" : line.sub;
+  const down = () => { pressT.current = setTimeout(()=>{ heldRef.current = true; setHeld(true); }, 320); };
+  const up = () => { if(pressT.current) clearTimeout(pressT.current);
+    if(heldRef.current){ heldRef.current = false; setHeld(false); onDone(); } };
+  const tap = () => { if(heldRef.current) return; if(timer.current) clearTimeout(timer.current); onSkip(); };
+  return (
+    <div className={"tk-call " + (theirs ? "foe" : "you") + " k-" + line.k + (big ? " big" : "") + (line.again ? " again" : "") + (held ? " held" : "")}
+      onClick={tap} onPointerDown={down} onPointerUp={up} onPointerCancel={up} onPointerLeave={up}
+      role="status" aria-live="polite" data-talk-call={line.k}>
+      <div className="tk-say">
+        {who && <span className="tk-sayer">{talkShort(who)}</span>}
+        <b className="tk-head">{head}</b>
+        {sub ? <span className="tk-sub">{sub}{line.ga ? " · go again" : ""}</span> : null}
+      </div>
+      {big && <div className="tk-glimpse-row">
+        <div className="tk-glimpse"><CardImg card={line.card}/></div>
+        {(line.pitched || []).length > 0 && <div className="tk-pitched">
+          {line.pitched.map(c => <span key={c.uid} className={"tk-pitchc p" + (c.pitch || 0)}><CardImg card={c}/><i>pitch</i></span>)}</div>}
+      </div>}
+      {blockCards.length > 0 && <div className="tk-blockrow">
+        {blockCards.map(c => <span key={c.uid} className="tk-blockc"><CardImg card={c}/></span>)}</div>}
+      {held && <span className="tk-holdnote">holding · let go to continue</span>}
+    </div>);
+}
+
+/* THE MENU — the only chrome on the table (docs/TABLE-TALK.md §7) */
+function TalkMenu({open, onClose, items}){
+  if(!open) return null;
+  return <div className="tk-sheetwrap" onClick={onClose}>
+    <div className="tk-menu" onClick={e=>e.stopPropagation()} data-talk-menu>
+      {items.filter(Boolean).map(([label, fn, sub], i) => typeof fn === "function"
+        ? <button key={i} className="tk-mi" onClick={()=>{ onClose(); fn(); }}><b>{label}</b>{sub && <span>{sub}</span>}</button>
+        : <div key={i} className="tk-mi plain"><b>{label}</b>{fn}</div>)}
+      <button className="bigbtn alt" onClick={onClose}>Back to the table</button>
+    </div></div>;
+}
+
+/* THE TABLE. Everything that acts is handed in by TableBoard. */
+function TalkTable({g, mySeat, db, myH, foeH, names, rating, first, calls, onCallDone, onCallSkip, pad,
+                    hand, ask, target, boardCell, onZoom, menuItems, thinking, extra}){
+  const me = g.sides[mySeat], them = g.sides[1 - mySeat];
+  const [padOpen, setPadOpen] = uS(false);
+  const [menuOpen, setMenuOpen] = uS(false);
+  const [look, setLook] = uS(null);
+  const lookAt = (sd, kind, mine) => setLook({sd, kind, mine,
+    title: (mine ? "Your " : talkShort(sd) + "'s ") + (kind === "gear" ? "gear" : "piles")});
+  const menuBtn = <button className="tk-menubtn" onClick={()=>setMenuOpen(true)} aria-label="menu" data-talk-menubtn><i/><i/><i/></button>;
+  return (<>
+    <div className="tk-upper">
+      <TalkSide sd={them} h={foeH} db={db} label={talkShort(them)} rating={rating[1 - mySeat]}
+        onZoom={onZoom} onSheet={k=>lookAt(them, k, false)} thinking={thinking} menu={menuBtn}/>
+      <div className="tk-mid">
+        <TalkChain g={g} mySeat={mySeat} them={them} onZoom={onZoom}
+          onLinks={()=>setLook({kind: "links", title: "The chain", cards: (g.chainCards || []).map(e => e && (e.card || e)).filter(Boolean)})}/>
+        <TalkPad pad={pad} mySeat={mySeat} them={them} onOpen={()=>setPadOpen(true)}/>
+      </div>
+      <TalkCall line={calls[0] || null} me={mySeat} names={names} onDone={onCallDone} onSkip={onCallSkip}/>
+    </div>
+    <TalkSide sd={me} mine h={myH} db={db} label="You" rating={rating[mySeat]} boardCell={boardCell}
+      onZoom={onZoom} onSheet={k=>lookAt(me, k, true)}/>
+    {ask}
+    {target}
+    {hand}
+    <div className="tk-hubspace"/>
+    {extra}
+    <TalkPadSheet open={padOpen} pad={pad} mySeat={mySeat} them={them} first={first} turn={g.turn} onClose={()=>setPadOpen(false)}/>
+    <TalkLook look={look} onZoom={c=>{ setLook(null); onZoom(c); }} onClose={()=>setLook(null)}/>
+    <TalkMenu open={menuOpen} onClose={()=>setMenuOpen(false)} items={menuItems}/>
+  </>);
+}
+
 </script>
 <script type="text/babel" data-presets="env,react">
 /* ---------- YOUR RECORD (v7.00, QUEUE NEXT 3) — a player's own page, a door on the title screen.
@@ -10993,6 +11615,14 @@ function YourRecord(){
 
 /* THE TITLE SCREEN (user request, 2026-11-25): the first screen on every load, laying out the modes before a hero is chosen.
    Looking makes no request to the server: the choices only set App's state. Each one routes into an existing screen. */
+/* THE NEW TABLE'S SWITCH (Table Talk TT0, v7.18): every table this phone sits at — the AI, a friend, the server */
+function TalkSwitch(){
+  const [on,setOn] = uS(()=>talkOn());
+  return <button role="switch" aria-checked={on} data-testid="talk-switch" className={"tswitch"+(on?" on":"")}
+    onClick={()=>{ store.set(TALK_KEY, !on); setOn(!on); }}>
+    <span><b>Try the new table</b><span>{on ? "On: the table as it sits in front of you, the opponent's plays announced, life on a pad." : "A preview: the table as it sits in front of you, no log, the opponent's plays announced."}</span></span>
+    <i/></button>;
+}
 function TitleScreen({onMode, onMore, how, onHow, fresh}){
   const modes = [
     ["dummy","Train against the Dummy","Learn your deck against an iron-armored dummy. Coach's call reads the board for you.", true],
@@ -11003,6 +11633,8 @@ function TitleScreen({onMode, onMore, how, onHow, fresh}){
     <h1 className="tbrand">DAWN<em>BLADE</em></h1>
     <p className="tline">A fan-made Flesh and Blood Silver Age sparring simulator. Pick a hero and play for fun.</p>
     <div className="tmodes">{modes.map(m=><button key={m[0]} data-testid={"mode-"+m[0]} className={"tmode clip"+(m[3]?" lead":"")} onClick={()=>onMode(m[0])}><b>{m[1]}</b><span>{m[2]}</span></button>)}</div>
+    {/* TABLE TALK (TT0, v7.18): the new table, tried from here; the choice is kept on this phone (docs/TABLE-TALK.md) */}
+    <TalkSwitch/>
     <div className="tmore">
       <button data-testid="how-btn" className={fresh?"fresh":""} onClick={onHow}>How to play</button>
       <button data-testid="more-judge" onClick={()=>onMore("judge")}>Judge's quiz</button>

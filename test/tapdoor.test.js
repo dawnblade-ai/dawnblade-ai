@@ -60,7 +60,10 @@ test("CENSUS: no plain-arrow onClick returns a tapTwice handler", () => {
   /* 20 -> 21 AT THE FOUND-MATCH WINDOW, READ FIRST: the gave-back bar's "OK" (clears it) is a plain arrow that sets
      screen state or close a table; neither returns a handler. */
   /* 21 -> 22 AT THE TITLE SCREEN, READ FIRST: the topbar's "Title" button (`setTitle`, `setHero`) is a plain arrow that sets screen state; it returns no handler. */
-  assert.equal(bodies.length, 22, "the plain-arrow onClick count moved (" + bodies.length + ") — read the new one, then repin");
+  /* 22 -> 24 AT v7.18 (Table Talk), READ FIRST: the new table's menu item (`onClose(); fn();` — closes the menu, then runs the
+     item's own function) and the title's "Try the new table" switch (`store.set`, `setOn`) are plain arrows that set state;
+     neither returns a handler. */
+  assert.equal(bodies.length, 24, "the plain-arrow onClick count moved (" + bodies.length + ") — read the new one, then repin");
   const dead = bodies.filter(b => /return tapTwice\(/.test(b));
   assert.deepEqual(dead.map(b => b.slice(0, 120)), [], "a tap that builds its handler and throws it away");
 });

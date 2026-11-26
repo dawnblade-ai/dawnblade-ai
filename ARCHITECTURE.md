@@ -121,7 +121,8 @@ grep -o '<script src="engine/[a-z]*\.js"' index.html | sed 's/.*src="//;s/"//' |
 | module | what |
 |---|---|
 | `sparring.js` | a seat as a policy: `act(game, seat) -> action`. Reads **no** card text — it proposes and `judge.legal` disposes |
-| `local.js` | a session with no network: the merged engine, played alone |
+| `local.js` | a session with no network: the merged engine, played alone; `pace` / `onStep` (v7.18) let a board show the other seat's actions one at a time |
+| `announce.js` | Table Talk (v7.18, `docs/TABLE-TALK.md`): one accepted action and the states either side, as what is said across the table (`say`, never naming a card the viewer may not see) and the pad's life marks (`marks`) |
 | `lobby.js` | the pre-game negotiation — hero, throw, sideboard. Write-once, so it needs no sequencer |
 | `rps.js` | the pregame throw |
 | `rng.js` | a seeded, pure, serializable random source. One seed per match |

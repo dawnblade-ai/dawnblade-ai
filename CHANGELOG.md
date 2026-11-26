@@ -1,3 +1,46 @@
+## v7.18 — Table Talk: the new table, a preview
+
+- **The design mission starts (user, 2026-11-26: "reimagine the entire interface … imagine the actual experience of
+  playing a game in real life — for ranked mode we want to mimic this as close as possible — no log of game actions
+  just a simple scratch sheet of life total changes. A quick opportunity to see each card played and pitched. Bold
+  announcements of game actions as if the opp is dictating their plays").** The vision, its research (TRP 5.1's six
+  kinds of game information, TRP 5.8 note-taking, PPG 3.2, the CR's zone rules, CR 4.4.3c, CR 5.1.2, all quoted) and its own
+  handoff are `docs/TABLE-TALK.md`, a track apart from QUEUE.md.
+- **The new table, behind a switch** (the title screen's "Try the new table", kept on the phone; or `?talk=1`). At every
+  table this phone opens, `TableBoard` lays the same controls out as a table seen from your seat: their side across the
+  top (their hero, the BACKS of the cards they hold, a face-down arsenal, their gear as defence chips, their
+  permanents, their piles), the middle where cards meet (the attack with its power, the blockers beside it, the links
+  before it stacked small, a card on the stack, or the turn token between attacks), the PAD on the right edge, your
+  side (the action-point gem and resource coins: TRP 5.8's markers), the hand row and the hub. No jump row, no strips
+  of counts, no status line at rest, no type label across the art, no log on the table.
+- **Table talk.** Each action the opponent takes is SAID: a slab of bold type slammed onto the middle from their side
+  ("DASH · UNDER LOOP · attack", "BLOCKING · with 2", "NO BLOCK", "HIT 4", "DORINTHEA'S TURN"), and the card SHOWN
+  large once with what was pitched beside it (the glimpse); an attack that waited on the stack has its power called
+  when it lands. A tap moves on and brings the next play forward; a press holds it to read. Your own plays echo small.
+  Passes are not announced. An optional voice (the menu) reads the opponent's line aloud.
+- **The pad.** Life lives where a real player writes it: a ruled pad in a handwritten face, their total on top and
+  yours below, the old total struck through, the last change and its source ("−3 Pulping"). A tap opens the whole
+  sheet. Only what TRP 5.8 allows is ever written. The fighting-game bars are not on this table.
+- **The privilege line.** Nothing the viewer may not know is ever named (the announcer asks `view.hiddenUids`); the
+  piles are the public zones (this turn's pitch, the graveyard, the banished; the deck by count); the log and the
+  coach's call are in the menu at practice and friendly tables and do not exist at a ranked one (TRP 5.1, 5.9).
+- **Engine seams.** `engine/announce.js` (new, pure): one accepted action and the states either side → what is said
+  (`say`) and the pad's marks (`marks`). `engine/local.js` gains `pace` (the AI seat applies one action a tick, the
+  board pushed after each) and `onStep` (every accepted action heard), both off unless passed, plus `nudge` and
+  `dispose`. A two-phone or server table's commits already carry their action (net.js `onState`), so they are heard too.
+- **No mirror.** `TableBoard` builds the ask, the rails, the hand row, the coach, your arena's cell, the hub and the
+  overlays ONCE (`askEl` … `overlaysEl`); the classic layout renders them exactly where it did, and the new table lays
+  the same elements out. With the switch off nothing on the board moves (page.js and serverpage.js, switch off).
+- Drills: `test/announce.test.js` (whole self-play games from both seats: never names a hidden card; an attack's number
+  is the engine's; the pad is exact and ends where the game ended; a pass never announces a play; both seats hear the
+  same table; most actions are quiet. Sabotages: no privacy, the printed power, the pad skipping gains: each FAILS).
+  `test/local.test.js` (paced reaches EXACTLY the unpaced states, one action and one push a tick; onStep hears every
+  action with linked states; the pace's answer is the wait; nudge; dispose; the stall bound. Sabotages each FAIL).
+  `tools/talk.js` (`talkJudge`, page.js runs it at 393x660, 393x852 and 320x568): one screen in order; the pad
+  agrees with the engine; nothing the opponent holds face down is named on the table; the 44 px tap floor; the
+  opponent's play said and shown (the glimpse is the card on the stack or chain, on screen, >= 150 px where there is
+  room); a tap moves the call on. Sabotages (the pad, a leaked hand card, a tiny glimpse): each FAILS its row.
+
 ## v7.17 — The glance is back
 
 - **A tapped card shows the card again on an iPhone (user, 2026-11-26: "the card previews broke").** v7.15 hid the peek

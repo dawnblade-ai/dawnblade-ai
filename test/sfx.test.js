@@ -34,7 +34,9 @@ test("the voices are the three outcomes, no more and no fewer", () => {
 test("both boards hear the link: every stamp has its listener", () => {
   const stamps = src.split("<LinkStamp l={featOutcome(featured, g.chain)}").length - 1;
   const ears = src.split("<LinkSfx chain={g.chain}/>").length - 1;
-  assert.equal(stamps, 2, "the trainer and the table each stamp the featured slot");
+  /* 2 -> 3 AT v7.18 (Table Talk): the new table's chain (`TalkChain`) stamps the attack and listens, beside the trainer's
+     and the classic table's. A board renders one layout at a time, so one LinkSfx is ever mounted per board. */
+  assert.equal(stamps, 3, "the trainer, the table and the new table each stamp the featured slot");
   assert.equal(ears, stamps, "each stamp has a LinkSfx beside it");
   const navs = src.split('<div className="screennav">').length - 1;
   assert.ok(src.split("<SoundBtn/>").length - 1 >= 2, "both boards carry the mute toggle (" + navs + " nav rows)");

@@ -45,6 +45,8 @@ every session on every step, so **it stays short (budget: under 30 KB)**.
   `ARCHITECTURE.md`, `UI-GUIDE.md` (any screen work), `POLISH.md` (the user's quality
   bar), `TORCH.md` (FaB rules and lore), `HIDDEN-HANDS.md` (what each seat may see; cited across `engine/`), `DESKTOP-TASKS.md` (jobs the sandbox cannot
   reach). Future plans: `ROADMAP-MULTIPLAYER.md`, `ROADMAP-NEWDECKS.md`, `SUPABASE.md`, `GEMMY.md`.
+- **The design mission (Table Talk)** — the reimagined interface, its vision AND its own handoff — is
+  `docs/TABLE-TALK.md`, a track apart from QUEUE.md's busy work: work it only when the user asks for it.
   **`docs/archive/`** holds finished plans and old handoffs (`HANDOFF.md`, `WEEK.md`,
   `FINISH.md`, …) — frozen history; code comments that cite them mean that folder.
   Do not start a new root handoff file: update `QUEUE.md`'s HANDOFF section.
@@ -183,7 +185,8 @@ npm run fairness      # is any card STRONGER than printed (exits non-zero on a f
 | `advisor.js` | the trainer's Coach's call (`advise`) |
 | `invariants.js` | state judge (`check`), wired into every state change and self-play |
 | `report.js` | JUDGE!! bug reports, both boards |
-| `local.js` `lobby.js` `room.js` `net.js` `wire.js` `hub.js` | play alone / two-phone table (PeerJS), negotiation, sync, serialization; `hub.js` = the judge's table (H3: a third device holds the deck) |
+| `local.js` `lobby.js` `room.js` `net.js` `wire.js` `hub.js` | play alone / two-phone table (PeerJS), negotiation, sync, serialization; `hub.js` = the judge's table (H3: a third device holds the deck); `local.js` `pace`/`onStep` = the AI seat one action a tick, each heard |
+| `announce.js` | Table Talk's announcer: one action + the states either side → what is said (`say`, never naming what the viewer may not see) and the pad's life marks (`marks`) |
 | `cards.js` · `actions.js` | card resolver (printings) · blank reference reducer (headless, not on the page) |
 
 **Two boards.** The TABLE (`judge.js`) is the CR-exact engine and seats a person or the

@@ -121,9 +121,12 @@ test("crindex — the verdict counts are pinned", () => {
      price calculated as it was played (judge.holdPlay, test/heldprice.test.js names them). */
   /* 121 -> 122 and 111 -> 112 guarded AT v6.71: CR 1.0.2, a restriction beats an allowance (Out
      Pace's "can't be defended by equipment", parser.noEquipDefendWhy, test/outpace.test.js names it). */
-  assert.equal(rs.length, 122, "the number of distinct CR rules this project cites moved");
+  /* 122 -> 125 and 112 -> 115 guarded AT v7.18 (Table Talk): CR 5.1.1 and 5.1.2 (a play is announced) and CR 3.14.1 (the
+     pitch zone is public), cited where the announcer is built (engine/announce.js) and driven over whole games from
+     both seats (test/announce.test.js names them). */
+  assert.equal(rs.length, 125, "the number of distinct CR rules this project cites moved");
   /* 50 -> 51 guarded and 6 -> 5 drill-only AT v4.66: CR 7.1.2, built. */
-  assert.equal(by(rs, "guarded").length,  112, "guarded count moved");
+  assert.equal(by(rs, "guarded").length,  115, "guarded count moved");
   assert.equal(by(rs, "UNGUARDED").length,  3, "UNGUARDED count moved");
   assert.equal(by(rs, "drill-only").length, 5, "drill-only count moved");
   assert.equal(by(rs, "prose").length,      2, "prose count moved");

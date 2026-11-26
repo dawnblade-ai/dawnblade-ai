@@ -245,7 +245,18 @@ test("every attack-declaring route at the table carries one", () => {
   /* AND THE ARENA ROW HAS AN ACTIVATION AT ALL (defect 4). Its only
      handler was `setZoom`. */
   const row = TABLE.slice(TABLE.indexOf("InPlayRow entries={me.board}"));
-  const cell = row.slice(0, row.indexOf("/>"));
+  let cell = row.slice(0, row.indexOf("/>"));
+  /* THE CELL MAY BE NAMED (Table Talk TT0, v7.18): TableBoard builds your arena's cell ONCE (`myBoardCell`) so the
+     classic row and the new table use the same taps — follow the name to its body and ask the same of it. */
+  const named = cell.match(/cell=\{(\w+)\}/);
+  if(named){
+    const at = TABLE.indexOf("const " + named[1] + " = ");
+    assert.ok(at > 0, "the arena row's cell `" + named[1] + "` is not built at the table");
+    const body = TABLE.slice(at + 1);
+    cell = body.slice(0, (body.match(/\n  const /) || {index: body.length}).index);
+    assert.ok(/boardCell=\{myBoardCell\}/.test(TABLE) || named[1] !== "myBoardCell",
+      "the new table must lay out the very cell the classic row uses, or its arena taps drift (no mirror)");
+  }
   assert.ok(/boardAttackOf/.test(cell) && /actAct\(/.test(cell),
     "your own arena row cannot activate anything — the ally and aura attack routes " +
     "have no caller at the table, which is what v4.45 fixed");
