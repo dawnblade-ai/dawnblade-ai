@@ -937,9 +937,12 @@ button.modehint{display:block;width:100%;min-height:44px;background:none;border:
   animation:pkin .14s ease-out}
 .peekwrap>*{pointer-events:auto}
 @keyframes pkin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-/* the card also fits the height left above the wheel, less the jump row, the HUD and the dock's bar (170): on a
-   568-tall phone a 52vw card stood 292 px and covered the jump row and the HUD (v7.15, one screen's tap sweep) */
-.peekcard{width:min(172px,52vw,calc((100vh - var(--peekbot,112px) - 170px) * .714));filter:drop-shadow(0 10px 26px rgba(0,0,0,.75))}
+/* the card also fits the height left above the wheel, less the jump row, the HUD, their strip and the dock's bar
+   (215): on a 568-tall phone a 52vw card stood 292 px and covered the jump row and the HUD (v7.15, one screen's tap
+   sweep). Under 700 px tall the dock is its bar alone: the wheel's top card is already the magnified card, and the
+   stage has no room for a second one. */
+.peekcard{width:min(172px,52vw,calc((100vh - var(--peekbot,112px) - 215px) * .714));filter:drop-shadow(0 10px 26px rgba(0,0,0,.75))}
+@media (max-height:700px){.peekwrap .peekcard{display:none}}
 .peekcard .cfw{border:1px solid var(--y);border-radius:4px;overflow:hidden}
 .peekbar{display:flex;flex-direction:column;align-items:center;gap:1px;margin-top:5px;
   background:var(--forge);border:1px solid var(--y);border-radius:3px;padding:4px 10px;
@@ -3184,7 +3187,8 @@ function PeekDock({card, verb, onClose}){
          their tap closed the preview instead. Any `.statusline` / pip `.rail`
          stacked directly on the rail is part of what the dock must clear. */
       let el = r && railEl;
-      while(el && el.previousElementSibling && el.previousElementSibling.matches(".statusline, .rail")){
+      /* and YOUR STRIP (v7.15), which sits between the wheel and the status line now */
+      while(el && el.previousElementSibling && el.previousElementSibling.matches(".statusline, .rail, .bstrip.mine")){
         el = el.previousElementSibling;
         const t = el.getBoundingClientRect();
         if(t.height && t.top < r.top) r = {top: t.top};
@@ -9774,8 +9778,9 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
 
   const oppRef = uR(null), chainRef = uR(null), youRef = uR(null), midRef = uR(null);
   /* the middle screen opens on the PLAY pane, the log on its left, as on the trainer (v7.15: with one
-     screen this is the whole board, and it opened on the log) */
-  uE(()=>{ if(midRef.current) midRef.current.scrollLeft = midRef.current.clientWidth; },[]);
+     screen this is the whole board, and it opened on the log). A callback ref, not an effect: the table's
+     board mounts after its first render, when an effect's ref is still empty */
+  const midStart = el => { midRef.current = el; if(el && !el.dataset.started && el.clientWidth){ el.dataset.started = "1"; el.scrollLeft = el.clientWidth; } };
   /* ONE SCREEN (v7.15): their board and yours are SHEETS over the stage, as on the trainer */
   const [sheet, setSheet] = uS(null);
   const flip = k => setSheet(s => s === k ? null : k);
@@ -10350,7 +10355,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
 
         {/* ---- SCREEN 2: the chain ---- */}
         <div className="vscreen" ref={chainRef}>
-          <div className="hscroll" ref={midRef}>
+          <div className="hscroll" ref={midStart}>
             <div className="hpane logpane">
               <div className="paneflag">
                 <span>log</span>

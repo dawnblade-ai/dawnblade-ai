@@ -16,7 +16,9 @@
   chain screen" hints are now buttons that close the sheet. The table's middle screen opened on its LOG pane (it never
   had the trainer's start-on-play line; a flick layout hid it) — it opens on the play pane now. With the stage always in
   view the tap sweep measures it on every board screen, which found three older faults: on a 568-tall phone the peek
-  dock's card (52vw) stood over the jump row and the HUD (now also capped by the height above the wheel); the table's
+  dock's card (52vw) stood over the jump row and the HUD (now capped by the height above the wheel, and under 700 px
+  tall the dock is its bar alone: the wheel's top card is already the magnified card); the dock now also clears your
+  strip, which sits between the wheel and the status line; the table's
   JUDGE!! hit area was cut to 42 px at the top of its pane (it reaches 21 px below now); and the wheel's turned cards
   read as clipped and stolen — by design, so tools/tapjudge.js EXEMPTS them by selector (reported, never dropped;
   UI-GUIDE.md "The board"): they are reached by spinning them to the top, which `wheelJudge` drives.
