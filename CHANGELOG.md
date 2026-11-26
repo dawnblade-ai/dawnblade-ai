@@ -22,6 +22,10 @@
   JUDGE!! hit area was cut to 42 px at the top of its pane (it reaches 21 px below now); and the wheel's turned cards
   read as clipped and stolen — by design, so tools/tapjudge.js EXEMPTS them by selector (reported, never dropped;
   UI-GUIDE.md "The board"): they are reached by spinning them to the top, which `wheelJudge` drives.
+- **Drives follow the board.** tools/page.js gains `toStage` (close any sheet, bring the middle screen's play pane into
+  view, where a drive that read the log pane left it); `playOn`, the keyword-peek row and `screenJudge` start there.
+  tools/serverpage.js's player-name rows read each hero box with its sheet open: read closed, every box measured 0x0
+  and the "inside its box" rows passed on zeros until the 320 row's "some name is cut" caught it.
 - Drill: `screenJudge` (tools/page.js, exported): the board box does not scroll and one screen is in flow; both strips
   on the phone, ≥ 44 px drawn (the tap floor: a hit area beyond the box would be cut by the pane), uncovered, theirs above the stage and yours above the wheel; a tap on their strip opens their
   board over the stage's centre and hides the dock, with the strip's deck count equal to the sheet's; You ▼ swaps in
