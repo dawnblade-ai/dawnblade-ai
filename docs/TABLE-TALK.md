@@ -12,6 +12,10 @@ the vision follows it.
 
 *(Rewritten by each design session. Keep it under ~60 lines; history goes in the session log at the bottom.)*
 
+**To continue the mission:** the user starts a session and asks for the design mission (or "Table Talk"). That session
+reads this file top to bottom, checks §13 for the user's answers, and works the next unchecked phase of §11 — shipping
+behind the switch, release by release, with the usual CLAUDE.md gates.
+
 **State (2026-11-26, end of the first design session, v7.18):** TT0 is built and live behind a switch. The new table
 plays every game the classic board plays (it is a layout over TableBoard's own controls, not a second board), against
 the AI, a friend or the server. **Try it:** the live site's title screen → "Try the new table" (kept on the phone), or
