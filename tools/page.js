@@ -281,7 +281,7 @@ async function hubJudge(page){
 }
 /* THE ONE-SCREEN JUDGE (G1c part two, v7.15; design/STAGE.md §2.1). The board is one screen: the board box does not
    scroll vertically and exactly one screen is in flow; their strip sits above the stage and yours above the wheel, both
-   wholly on the phone, at least 34 px drawn, nothing over their centres; each strip's deck count equals the one its
+   wholly on the phone, at least 44 px drawn (the tap floor), nothing over their centres; each strip's deck count equals the one its
    sheet shows (the strip is a reading of the side, not a second copy). Then the drive: a tap on their strip opens their
    board as a sheet that covers the stage's centre and hides the peek dock; You ▼ swaps it for yours; Chain closes it.
    Returns rows as [ok, name, detail]. */
@@ -302,7 +302,7 @@ async function screenJudge(page, prefix){
       if(!s){ bad.push(`no ${k} strip`); continue; }
       const b = box(s); st[k] = b;
       if(b.left < -0.5 || b.right > W + 0.5 || b.top < 0 || b.bottom > H) bad.push(`${k} strip off the phone`);
-      if(b.height < 33.5) bad.push(`${k} strip ${Math.round(b.height)} px`);
+      if(b.height < 43.5) bad.push(`${k} strip ${Math.round(b.height)} px`);
       const o = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
       if(!o || !s.contains(o)) bad.push(`over the ${k} strip: ${o ? o.className || o.tagName : "-"}`);
     }
@@ -762,6 +762,9 @@ if(require.main === module){
        cards until one carries a keyword; its line must sit inside the screen, above the
        rail, and a tap ON it must close the preview (the dock is one tap-to-close surface). */
     const peekKw = async prefix => {
+      /* one screen (v7.15): the wheel is on the stage, under any board sheet the drive left open */
+      await page.locator(".screennav button", { hasText: "Chain" }).first().click().catch(() => {});
+      await page.waitForTimeout(250);
       const cards = page.locator(".board .phand .hc:visible");
       const n = await cards.count(), seen = [];
       let got = null;

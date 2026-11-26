@@ -151,7 +151,9 @@ time (`.open`), opened from the jump row or a strip (`BoardStrip`, one tap) and
 closed by Chain. Each pane has a horizontal `.hscroll` swipe to its graveyard
 (the middle one: the log pane on its left). The action bar is the hub
 (`HubBar`, v7.14): the primary in the thumb lane, secondaries in the corners.
-Drills: `hudJudge`, `wheelJudge`, `hubJudge`, `screenJudge` in tools/page.js.
+Drills: `hudJudge`, `wheelJudge`, `hubJudge`, `screenJudge` in tools/page.js. The tap judge (tools/tapjudge.js) EXEMPTS
+the wheel's turned cards (clipped and tilted by design; reached by spinning them to the top, which `wheelJudge`
+drives); the top card is judged like any control.
 
 | pane | `Battle` | `TableBoard` |
 |---|---|---|

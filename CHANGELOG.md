@@ -13,9 +13,15 @@
 - **Fixes on the way.** The middle screen was its box's own height, 2 px taller than the box inside its border, so the
   wheel's foot was clipped (found by the new judge). The wheel's z-indexed cards drew over an open sheet (the stage now
   isolates its stacking), and the peek dock floated over a sheet (it hides while one is open). The "flick up to the
-  chain screen" hints are now buttons that close the sheet.
+  chain screen" hints are now buttons that close the sheet. The table's middle screen opened on its LOG pane (it never
+  had the trainer's start-on-play line; a flick layout hid it) — it opens on the play pane now. With the stage always in
+  view the tap sweep measures it on every board screen, which found three older faults: on a 568-tall phone the peek
+  dock's card (52vw) stood over the jump row and the HUD (now also capped by the height above the wheel); the table's
+  JUDGE!! hit area was cut to 42 px at the top of its pane (it reaches 21 px below now); and the wheel's turned cards
+  read as clipped and stolen — by design, so tools/tapjudge.js EXEMPTS them by selector (reported, never dropped;
+  UI-GUIDE.md "The board"): they are reached by spinning them to the top, which `wheelJudge` drives.
 - Drill: `screenJudge` (tools/page.js, exported): the board box does not scroll and one screen is in flow; both strips
-  on the phone, ≥ 34 px, uncovered, theirs above the stage and yours above the wheel; a tap on their strip opens their
+  on the phone, ≥ 44 px drawn (the tap floor: a hit area beyond the box would be cut by the pane), uncovered, theirs above the stage and yours above the wheel; a tap on their strip opens their
   board over the stage's centre and hides the dock, with the strip's deck count equal to the sheet's; You ▼ swaps in
   yours (deck count again); Chain closes it. Rows: trainer 393, table, trainer 320x568. `playOn` closes any sheet
   first. Sabotages, each FAILS: the flick screens restored, their strip hidden, the sheet under the stage, the strip

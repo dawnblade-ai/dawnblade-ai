@@ -751,17 +751,18 @@ button.modehint{display:block;width:100%;min-height:44px;background:none;border:
 @keyframes sheetin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.board .vscreen.side.open{animation:none}}
 .screennav button.on{border-color:var(--y);color:var(--y)}
-.bstrip{flex:none;display:flex;align-items:center;gap:6px;width:100%;min-height:34px;padding:4px 8px;overflow:hidden;white-space:nowrap;
+/* 44 px DRAWN, the tap floor: a hit area outside the box would be cut by the clipping pane it sits at the edge of */
+.bstrip{flex:none;display:block;width:100%;min-height:44px;padding:4px 8px;white-space:nowrap;
   background:var(--forge2);border:none;border-bottom:1px solid var(--line);color:var(--bone);font-family:'Spline Sans Mono';font-size:11px;text-align:left;position:relative}
+.bstrip .bsin{display:flex;align-items:center;gap:6px;min-height:36px;overflow:hidden}
 .bstrip.mine{border-bottom:none;border-top:1px solid var(--line)}
 .bstrip.on{box-shadow:inset 0 0 0 1px var(--y)}
-.bstrip::after{content:"";position:absolute;left:0;right:0;top:-5px;bottom:-5px}
 .bstrip .bsw{flex:none;font-family:'Big Shoulders Display';font-weight:800;font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:var(--y);max-width:30%;overflow:hidden;text-overflow:ellipsis}
 .bstrip .bsc{flex:none;color:var(--bone-dim);text-transform:uppercase;letter-spacing:.04em}
 .bstrip .bsc b{color:var(--bone);margin-left:2px}
 .bstrip .bsc i{font-style:normal}
 .bstrip .bsc .s{display:none}
-@media (max-width:374px){.bstrip .bsc .l{display:none}.bstrip .bsc .s{display:inline}.bstrip{gap:5px}}
+@media (max-width:374px){.bstrip .bsc .l{display:none}.bstrip .bsc .s{display:inline}.bstrip .bsin{gap:5px}}
 .bstrip .bsc.nil b{color:var(--bone-dim)}
 .bstrip .bsa{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;border:1px solid var(--line);padding:1px 5px;color:var(--bone)}
 .bstrip .bsa b{color:var(--y);margin-left:3px}
@@ -936,7 +937,9 @@ button.modehint{display:block;width:100%;min-height:44px;background:none;border:
   animation:pkin .14s ease-out}
 .peekwrap>*{pointer-events:auto}
 @keyframes pkin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-.peekcard{width:172px;max-width:52vw;filter:drop-shadow(0 10px 26px rgba(0,0,0,.75))}
+/* the card also fits the height left above the wheel, less the jump row, the HUD and the dock's bar (170): on a
+   568-tall phone a 52vw card stood 292 px and covered the jump row and the HUD (v7.15, one screen's tap sweep) */
+.peekcard{width:min(172px,52vw,calc((100vh - var(--peekbot,112px) - 170px) * .714));filter:drop-shadow(0 10px 26px rgba(0,0,0,.75))}
 .peekcard .cfw{border:1px solid var(--y);border-radius:4px;overflow:hidden}
 .peekbar{display:flex;flex-direction:column;align-items:center;gap:1px;margin-top:5px;
   background:var(--forge);border:1px solid var(--y);border-radius:3px;padding:4px 10px;
@@ -1259,7 +1262,7 @@ button.tag{position:relative}
 button.tag::after{content:"";position:absolute;inset:-16px -8px -16px}
 .screennav .sndbtn{min-width:44px}   /* its inline flex:.42 would draw 33px at 320 */
 .statusline button{padding-top:6px;padding-bottom:6px}
-.judgebtn::after{inset:-9px -6px -17px}
+.judgebtn::after{inset:-9px -6px -21px}   /* v7.15: at the top of the table's log pane the -9 is cut to -6 (42 px); 21 below keeps 44 */
 .psheet .pact button{min-height:44px}
 /* the other prompt controls reach the floor too (R, tools/promptsweep.js): a modal / pay option drew 42px, the opt's reorder arrows 38x30 */
 .psheet .popt{min-height:44px}
@@ -3874,13 +3877,13 @@ function BoardStrip({sd, who, mine, open, onOpen}){
              ["grave", n(sd.grave)], n(sd.banish) > 0 && ["ban", n(sd.banish)], n(sd.soul) > 0 && ["soul", n(sd.soul)]].filter(Boolean);
   return (
     <button className={"bstrip" + (mine ? " mine" : "") + (open ? " on" : "")} data-strip={mine ? "you" : "them"} onClick={onOpen}
-      aria-label={(open ? "close " : "open ") + (mine ? "your board" : who + "'s board")}>
+      aria-label={(open ? "close " : "open ") + (mine ? "your board" : who + "'s board")}><span className="bsin">
       <span className="bsw">{who}</span>
       {z.map(([k, v]) => <span key={k} className={"bsc" + (v ? "" : " nil")}><i className="l">{k}</i><i className="s">{k[0]}</i><b>{v}</b></span>)}
       {shown.map(g => <span key={g.nm} className="bsa">{g.nm}{g.k > 1 && <b>×{g.k}</b>}</span>)}
       {more > 0 && <span className="bsa">+{more}</span>}
       <span className="bsgo">{open ? "✕" : mine ? "▼" : "▲"}</span>
-    </button>
+    </span></button>
   );
 }
 function Ticker({feed}){
@@ -9769,7 +9772,10 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
     } catch(e){ /* the judge must never be the thing that breaks play */ }
   };
 
-  const oppRef = uR(null), chainRef = uR(null), youRef = uR(null);
+  const oppRef = uR(null), chainRef = uR(null), youRef = uR(null), midRef = uR(null);
+  /* the middle screen opens on the PLAY pane, the log on its left, as on the trainer (v7.15: with one
+     screen this is the whole board, and it opened on the log) */
+  uE(()=>{ if(midRef.current) midRef.current.scrollLeft = midRef.current.clientWidth; },[]);
   /* ONE SCREEN (v7.15): their board and yours are SHEETS over the stage, as on the trainer */
   const [sheet, setSheet] = uS(null);
   const flip = k => setSheet(s => s === k ? null : k);
@@ -10344,7 +10350,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
 
         {/* ---- SCREEN 2: the chain ---- */}
         <div className="vscreen" ref={chainRef}>
-          <div className="hscroll">
+          <div className="hscroll" ref={midRef}>
             <div className="hpane logpane">
               <div className="paneflag">
                 <span>log</span>
