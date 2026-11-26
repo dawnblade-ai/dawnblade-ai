@@ -160,6 +160,93 @@ function needPlaywright(){
    reads "N cards"). Rejects, after closing the browser, if the load itself
    produced a page error or console error. `errors` keeps filling afterwards:
    call check() to throw on anything new. */
+/* THE HAND WHEEL SHOWS FIVE CARDS (v7.13): a card further round is hidden until the wheel turns.
+   A drive reaches it the way a thumb does: a short sideways swipe (real CDP touch events) toward it,
+   about one card a swipe, until it is in view. Not a tap on the edge card: a card that cannot be
+   played opens large on a tap, and that sheet takes every click after it. Returns whether it got there. */
+async function wheelTo(page, css){
+  const cdp = await page.context().newCDPSession(page);
+  const T = (type, x, y) => cdp.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y }] });
+  try {
+    for(let i = 0; i < 14; i++){
+      const st = await page.evaluate(sel => {
+        const t = document.querySelector(sel); if(!t) return { gone: true };
+        if(getComputedStyle(t).visibility !== "hidden") return { ok: true };
+        const w = t.closest(".phand.wheel"); w.scrollIntoView({ block: "nearest" });
+        const b = w.getBoundingClientRect();
+        return { dir: +t.getAttribute("data-wslot") > 0 ? -1 : 1, x: b.left + b.width / 2, y: b.top + b.height * 0.75 };
+      }, css);
+      if(st.ok) return true;
+      if(st.gone) return false;
+      await T("touchStart", st.x, st.y);
+      for(let k = 1; k <= 8; k++){ await T("touchMove", st.x + st.dir * k * 12, st.y + 1); await page.waitForTimeout(30); }
+      await T("touchEnd"); await page.waitForTimeout(450);
+    }
+    return false;
+  } finally { await cdp.detach().catch(() => {}); }
+}
+/* THE HAND WHEEL JUDGE (G1b, docs/GRAPHICS-PLAN.md §3; design/STAGE.md App. C.1). On the screen showing
+   `.phand.wheel`: exactly one top card (`.wtop`) among the shown cells, centred in the thumb lane (the middle 51%
+   of the phone), the largest card shown, inside the wheel's box, and nothing over its centre; every shown card's
+   centre inside the phone; the index chip reads "k / n" for the top's place and the cell count. Then the drive:
+   a tap on a neighbour spins it up and peeks it; a touch swipe turns the wheel, peeks the new top and commits
+   nothing; and with `commit`, a tap on the peeked top card changes the board. Returns rows as [ok, name, detail]. */
+async function wheelJudge(page, prefix, { commit = false } = {}){
+  const out = [];
+  const geo = () => page.evaluate(() => {
+    const w = [...document.querySelectorAll(".board .phand.wheel")].find(e => { const b = e.getBoundingClientRect(); return b.bottom > 0 && b.top < innerHeight; });
+    if(!w) return { bad: ["no wheel on screen"] };
+    const bad = [], W = innerWidth, wb = w.getBoundingClientRect();
+    const cells = [...w.querySelectorAll(".hc")], shown = cells.filter(c => getComputedStyle(c).visibility !== "hidden");
+    const tops = shown.filter(c => c.classList.contains("wtop"));
+    if(tops.length !== 1) return { bad: [`${tops.length} top cards`], n: cells.length };
+    const t = tops[0], tb = t.getBoundingClientRect(), cx = tb.left + tb.width / 2, cy = tb.top + tb.height / 2;
+    if(cx < W * 0.244 || cx > W * 0.756) bad.push(`top centre x ${Math.round(cx)} outside the thumb lane`);
+    if(tb.top < wb.top - 1 || tb.bottom > wb.bottom + 1) bad.push(`top card [${Math.round(tb.top)}..${Math.round(tb.bottom)}] outside the wheel [${Math.round(wb.top)}..${Math.round(wb.bottom)}]`);
+    const over = document.elementFromPoint(cx, cy);
+    if(!over || !t.contains(over)) bad.push(`over the top card: ${over ? over.className || over.tagName : "-"}`);
+    shown.forEach(c => { if(c === t) return; const b = c.getBoundingClientRect();
+      if(b.height * 1.12 > tb.height) bad.push(`a neighbour (${Math.round(b.height)}px) as tall as the top (${Math.round(tb.height)}px)`);
+      const x = b.left + b.width / 2; if(x < 0 || x > W) bad.push(`a shown card's centre at x ${Math.round(x)}`); });
+    const k = cells.indexOf(t) + 1, meta = (w.querySelector(".wmeta") || {}).innerText || "";
+    if(meta.replace(/\s+/g, "") !== `${k}/${cells.length}`) bad.push(`index "${meta}" for card ${k} of ${cells.length}`);
+    return { bad, n: cells.length, k, shown: shown.length, peek: t.classList.contains("peek"), dock: !!document.querySelector(".peekwrap"),
+             wb: [Math.round(wb.top), Math.round(wb.height)], board: document.querySelector(".board").innerText.length };
+  });
+  const g0 = await geo();
+  out.push([!g0.bad.length, prefix + ": the hand wheel (one magnified top card in the thumb lane, the index true)",
+            g0.bad.length ? g0.bad.join("; ") : `card ${g0.k} of ${g0.n} on top, ${g0.shown} shown, wheel at y ${g0.wb[0]} h ${g0.wb[1]}`]);
+  if(g0.bad.length || g0.n < 2) return out;
+  const nb = g0.k < g0.n ? 1 : -1;
+  await page.locator(`.board .phand.wheel [data-wslot="${nb}"]`).first().click().catch(() => {});
+  await page.waitForTimeout(450);
+  const g1 = await geo();
+  out.push([!g1.bad.length && g1.k === g0.k + nb && g1.peek && g1.dock, prefix + ": a tap on a neighbour spins it to the top and peeks it",
+            `top ${g0.k} -> ${g1.k} (want ${g0.k + nb}), peeked ${g1.peek}, dock ${g1.dock}` + (g1.bad.length ? "; " + g1.bad.join("; ") : "")]);
+  const wb = await page.locator(".board .phand.wheel").first().boundingBox();
+  const dir = g1.k < g1.n ? -1 : 1, cdp = await page.context().newCDPSession(page);
+  const T = (type, x, y) => cdp.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y }] });
+  const x0 = wb.x + wb.width / 2, y0 = wb.y + wb.height * 0.75;
+  const before = await page.evaluate(() => document.querySelectorAll(".board .phand.wheel .hc").length);
+  await T("touchStart", x0, y0);
+  for(let i = 1; i <= 8; i++){ await T("touchMove", x0 + dir * i * 9, y0 + 1); await page.waitForTimeout(30); }
+  await T("touchEnd"); await page.waitForTimeout(600);
+  const g2 = await geo();
+  out.push([!g2.bad.length && g2.k !== g1.k && g2.n === before && g2.peek, prefix + ": a swipe turns the wheel, peeks the new top and plays nothing",
+            `top ${g1.k} -> ${g2.k}, cards ${before} -> ${g2.n}, peeked ${g2.peek}` + (g2.bad.length ? "; " + g2.bad.join("; ") : "")]);
+  await cdp.detach().catch(() => {});
+  if(commit){
+    /* the hand's size or the action bar, never the board's text: the ticker changes that on its own */
+    const sig = () => page.evaluate(() => [document.querySelectorAll(".board .phand.wheel .hc").length,
+      (document.querySelector(".board .actbar") || {}).innerText || ""].join(" | ").replace(/\s+/g, " "));
+    const b0 = await sig();
+    await page.locator(".board .phand.wheel .hc.wtop").click().catch(() => {});
+    await page.waitForTimeout(700);
+    const b1 = await sig();
+    out.push([b1 !== b0, prefix + ": a tap on the peeked top card commits it", `${b0} -> ${b1}`]);
+  }
+  return out;
+}
 async function open({ w = 393, h = 852, deps = depsDir(), query = "", launch = null, title = false } = {}){
   /* the title screen shows first on every load; a drive opens past it (`?title=0`) unless it is the title being driven (`title: true`) */
   if(!title) query = query ? query + "&title=0" : "?title=0";
@@ -241,7 +328,7 @@ async function hudJudge(page, truth){
   return { ok: !m.bad.length, detail: m.bad.length ? m.bad.join("; ") : `life ${JSON.stringify(m.life)}, ${m.texts} text nodes flat, at y ${m.h[0]} h ${m.h[1]}` };
 }
 
-module.exports = { open, makeAnswer, depsDir, hudJudge };
+module.exports = { open, makeAnswer, depsDir, hudJudge, wheelTo, wheelJudge };
 
 /* ============================================================
    THE SMOKE CHECK
@@ -654,6 +741,8 @@ if(require.main === module){
             return {w: Math.round(r.width), h: Math.round(r.height), inside: r.left >= q.left && r.right <= q.right, sw: n.scrollWidth <= n.clientWidth}; });
           row(!!nb && nb.inside && nb.sw && nb.w <= W && nb.h > 0, "trainer: a new phone's first game says what the call is for",
             nb ? `${nb.w}x${nb.h}px, inside its box ${nb.inside}` : "no line"); }
+        for(const [ok, name, d] of await wheelJudge(page, "trainer")) row(ok, name, d);
+        await page.evaluate(() => { const w = document.querySelector(".peekwrap"); if(w) w.click(); });
         await hitCheck("trainer", ".board .judgebtn", 40); await advHits("trainer");
         await nav("trainer", ["You", "Opp"]);
         await peekKw("trainer");
@@ -867,7 +956,7 @@ if(require.main === module){
             `legal ${JSON.stringify(want)}, rail ${JSON.stringify(got)}, turn ${reach.turn}`);
         if(got.length){
           const cell = page.locator(`.phand [data-rail-def="${got[0]}"]`);
-          await cell.scrollIntoViewIfNeeded().catch(() => {});
+          await wheelTo(page, `.phand [data-rail-def="${got[0]}"]`);
           await cell.click().catch(() => {}); await page.waitForTimeout(250); await cell.click().catch(() => {}); await page.waitForTimeout(400);
           const after = await page.evaluate(u => ({ blk: (window.__dawnTable.session.state().sides[0].blockG || []).map(String).includes(u),
             mark: !!document.querySelector(`.phand [data-rail-def="${u}"] .defsel`) }), got[0]);
@@ -1206,6 +1295,8 @@ if(require.main === module){
         await p.locator('.lo .actbar [data-start="trainer"]').click(); await p.waitForSelector(".board", { timeout: 8000 });
         await p.waitForTimeout(700);
         const j = await hudJudge(p); row(j.ok, "trainer 320x568: the life HUD", j.detail);
+        await p.locator(".screennav button", { hasText: "Chain" }).click(); await p.waitForTimeout(700);
+        for(const [ok, name, d] of await wheelJudge(p, "trainer 320x568", { commit: true })) row(ok, name, d);
       } catch(e){ row(false, "trainer 320x568: the life HUD", String(e && e.message || e).split("\n")[0]); }
       sk.errors.forEach(e => errors.push(`hud 320x568: ${e}`));
       await sk.close();

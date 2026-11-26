@@ -1,3 +1,34 @@
+## v7.13 — The hand wheel
+
+- **G1b, the hand wheel (docs/GRAPHICS-PLAN.md §3; design/STAGE.md App. C.1 on `design/stage`).** On both boards the
+  sideways hand rail is now one shared `HandWheel`: the same cells (hand, the rail's other plays — weapon swings,
+  equipment abilities, the hero power, graveyard and banish plays, equipment that can block in the defend step — and
+  the arsenal) laid on an arc of radius 260 whose centre sits 348 px below the wheel's top, 24° apart. The top card is
+  centred in the thumb lane, magnified 1.45x and outlined; its neighbours tilt away (no fade: a faded card's numbers fall under the AA
+  floor; a card that cannot be played keeps the rail's 0.4); cards further round leave
+  the phone (two each side at 393 wide, one at 320, measured off the wheel). A chip reads `3 / 7`; an unpeeked top
+  card says `TAP · LOOK`. A declared defender is outlined in steel and keeps ⛨ DEF, now inside the card's top edge (at the rail's
+  -7 px the card's own clip-path cut the badge's top off, on the old rail too).
+- **The two-tap rule, as motion.** The wheel is a layout, not a second rail: each board still builds its own cells with
+  their own dims, verbs and taps. A tap on another card spins it to the top and peeks it; a tap on the peeked top card
+  commits it. A sideways drag turns the wheel 1:1 along the arc, coasts a little on release, snaps to a card in 220 ms
+  and peeks it, so the card under the thumb is the one a tap commits; a drag never taps the card it started on, and
+  `pan-y` keeps the screens' vertical flick. The top stays put across a state change while it is still in the wheel;
+  when it leaves, its neighbour takes the slot. Reduced motion drops the spin's easing. The wheel is `overflow: clip`, not `hidden`: a
+  hidden box is still a scroller, and a drive's scroll-into-view slid the whole wheel sideways off its centre. `RailMore` (the rail's "+3")
+  is gone: the index chip says it.
+- **The hub is not in this release.** The primary button stays on the action bar; it moves into the thumb lane with
+  G1c (one screen), where the bottom of the board is rebuilt anyway.
+- Drill: `wheelJudge` (tools/page.js, exported): one top card among the shown cells, centred in the thumb lane, the
+  tallest shown, inside the wheel and uncovered; every shown card's centre on the phone; the index chip true; a tap on
+  a neighbour spins it up and peeks it; a real touch swipe (CDP touch events) turns the wheel, peeks the new top and
+  plays nothing; and at 320x568 a tap on the peeked top commits (the hand's size or the action bar changes). Rows at
+  393 (trainer) and 320x568 (trainer, with the commit). `wheelTo` reaches a card hidden round the wheel the way a thumb
+  does; the table's gear-on-the-rail row uses it. Sabotages, each FAILS: the top not magnified, the index off by one,
+  the swipe not peeking, a tap not spinning, the top card's tap swallowed (the commit row compared the whole board's
+  text at first, which the ticker changes on its own: now the hand's size and the action bar).
+- Gates: see the release commit.
+
 ## v7.12 — Life bars, always on
 
 - **G1a, the HUD (docs/GRAPHICS-PLAN.md §3; design/STAGE.md §3.1 on `design/stage`).** Both boards now draw one shared
