@@ -791,6 +791,13 @@ img{display:block;max-width:100%}
 .phand .hc{flex:none;width:80px;position:relative;padding:0;background:var(--forge);border:1px solid var(--line);scroll-snap-align:start;transition:transform .12s}
 .phand .hc.sel{transform:translateY(-6px);border-color:var(--y);box-shadow:0 0 0 2px var(--y)}
 .phand .hc.dis{opacity:.4}
+/* ON THE WHEEL A CARD YOU CANNOT PLAY DIMS ITS ART, NOT ITS NUMBERS (v7.14). The rail's 0.4 on the whole cell put the
+   magnified top card's cost, power and defence under AA (3.8:1, "Attack" 2.3:1) in the reaction step, where most of a
+   hand cannot be played; the read is the point of the magnified card. The art (or its stand-in's fill) darkens, the
+   frame goes dashed, and the badges and the stand-in's words stay at full contrast. */
+.board .phand.wheel .hc.dis{opacity:1;border-style:dashed}
+.phand.wheel .hc.dis .cfw>img{filter:brightness(.4) grayscale(.6)}
+.phand.wheel .hc.dis .ccfall{background:var(--ink)!important}
 .phand .hlbl{scroll-snap-align:start}
 /* THE HAND WHEEL (v7.13, GRAPHICS-PLAN G1b, STAGE App. C.1): the rail's cells laid on an
    arc of radius 260 whose centre sits 348px below the wheel's top, 24 degrees apart. Every
@@ -3776,9 +3783,10 @@ function HandWheel({children, spinPeeks}){
       {cells.map((c, i) => {
         const sl = i - top + drag, a = Math.abs(sl);
         const sc = 1 + 0.45 * Math.max(0, 1 - a);
-        /* no fade with distance: a faded card's numbers fall under the AA floor; a card that cannot
-           be played keeps the rail's .4, and the arc carries the rest off the phone */
-        const fade = has(c, "dis") ? 0.4 : 1;
+        /* no fade at all: a faded card's numbers fall under the AA floor, so the arc carries the far
+           cards off the phone, and a card that cannot be played dims its ART in CSS (v7.14,
+           `.phand.wheel .hc.dis`): the rail's .4 on the whole cell was 3.8:1 on the top card */
+        const fade = 1;
         const hidden = a > reach;
         return React.cloneElement(c, {
           className: (c.props.className || "") + (i === top && !drag ? " wtop" : ""),
