@@ -20,7 +20,8 @@ behind the switch, release by release, with the usual CLAUDE.md gates.
 plays every game the classic board plays (it is a layout over TableBoard's own controls, not a second board), against
 the AI, a friend or the server. **Try it:** the live site's title screen → "Try the new table" (kept on the phone), or
 `https://dawnblade-ai.github.io/dawnblade-ai/?talk=1`. Screens: `docs/ux/talk-*.jpg` (393x660 is the iPhone's
-real Safari height; design there first).
+real Safari height; design there first); `talk-live-glimpse-pitch.jpg` is the LIVE site (real fonts and art). Note: the
+switch sits under the four mode cards on the title, below the fold at 660 — the `?talk=1` link is the quick way in.
 
 **What exists:** §12 is the code map; `docs/design/flow.html` mocks up the flow around the table (title → sit down →
 the pad as the result, §8). `engine/announce.js` says what an action said and writes the pad;
@@ -416,6 +417,9 @@ at 393x660). Wrote this vision. Built **TT0 (v7.18)**:
 - `tools/talk.js`, run by page.js at 393x660 / 393x852 / 320x568. Its first run found two real defects (a 37-px
   piles button; a glimpse sized by its image, 43 px with the offline stand-in), both fixed before release.
 - Played whole games on it at all three sizes with real art: no page errors, the end screen over it as before.
+- Shipped v7.18 through every gate (page.js 372/372 with the 18 talk rows, serverpage 490/0 with the switch off,
+  trainchaos CLEAN 18, function v188, livecheck ALL PASS), then drove the new table ON THE LIVE SITE through the proxy:
+  real fonts (Caveat included), real art, six glimpses with their pitch, no errors.
 Lessons: (1) design and drive at 393x660 — every earlier drive missed the iPhone's real height; (2) never size an
 image box by its image (offline stand-ins are 50 px); (3) a slice drill bounded by two function anchors breaks when
 code is inserted between them: put new components AFTER the function they serve, not before it.
