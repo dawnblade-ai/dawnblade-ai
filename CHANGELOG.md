@@ -1,3 +1,25 @@
+## v7.12 — Life bars, always on
+
+- **G1a, the HUD (docs/GRAPHICS-PLAN.md §3; design/STAGE.md §3.1 on `design/stage`).** Both boards now draw one shared
+  `StageHud` between the nav row and the three screens, so it never scrolls away: two skewed fighting-game bars (yours
+  left, theirs mirrored right, ±10°, a bone border, a tick every point up to 25 life and every 5 above), each life
+  NUMERAL a flat sibling beside the bar's inner end, the turn between them with a marker pointing at the turn player,
+  and under each bar the hand as pips (five, then xN), your action points and floating resources, and the trainer's
+  Frostbite count. A loss snaps the fill and leaves a red trail that holds 350 ms and drains over 500 ms; a gain grows
+  the fill over 400 ms; at a quarter of life or less the bar's rim glows red and the numeral turns red. The numeral's
+  up/down flash is colour-only here so no HUD text is ever under a transform. Reduced motion turns the trail, the
+  growth and the glow pulse off.
+- It replaced `LifeHud`, which lived inside the log pane (a flick away from the hand). The screens below lose its
+  height (`--hudh`, 52 px: `.board .tablewrap/.vscreen` subtract it), so at 393x852 a screen is 648 px (was 700) and
+  at 320x568 it is 364.
+- Drill: `hudJudge` (tools/page.js, exported) — inside the phone, below the nav, above the screens; no text node under a
+  transformed ancestor; each numeral beside, never over, a bar and unclipped; no row's children overlap; each numeral
+  equals its bar's `data-hp`, each fill is hp/max, and at the table both equal the engine's life totals and the turn
+  marker names the turn player. Four rows (trainer 393, after a block, the table at its first defend step, trainer
+  320x568). Sabotages, each FAILS: the skew on the row (11 text nodes under a transform), a numeral pulled over its bar,
+  a half fill at full life, the HUD pulled over the nav, a wrong truth.
+- Gates: see the release commit.
+
 ## v7.11 — Equipment that can block is in your hand
 
 - **The board's direction (user, 2026-11-25).** The answer to `docs/GRAPHICS-PLAN.md` §2: the old Stage mockup

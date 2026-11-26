@@ -203,7 +203,45 @@ async function open({ w = 393, h = 852, deps = depsDir(), query = "", launch = n
   return { page, browser, context, errors, routed, check, close, href: pathToFileURL(INDEX).href };
 }
 
-module.exports = { open, makeAnswer, depsDir };
+/* THE STAGE HUD JUDGE (G1a, docs/GRAPHICS-PLAN.md §3). Both boards draw `.stagehud` between the nav and the
+   three screens. It must: sit inside the phone, below the nav and above the screens; carry NO text node under a
+   transformed ancestor (the bars are skewed; their numerals are flat siblings, design/STAGE.md §3.1); draw each
+   life numeral BESIDE its bar, never over it; keep each row's children from overlapping and every numeral
+   unclipped; and say the truth: each numeral equals its bar's `data-hp`, each fill is hp/max of its bar, and
+   when `truth` ([your life, theirs]) is given, the numerals equal it. Returns {ok, detail}. */
+async function hudJudge(page, truth){
+  const m = await page.evaluate(() => {
+    const hud = document.querySelector(".board .stagehud");
+    if(!hud) return { bad: ["no HUD"] };
+    const bad = [], box = e => e.getBoundingClientRect(), W = window.innerWidth;
+    const hit = (a, b) => a.left < b.right - 0.5 && b.left < a.right - 0.5 && a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5;
+    const h = box(hud), nav = document.querySelector(".board .screennav"), tw = document.querySelector(".board .tablewrap");
+    if(h.left < -0.5 || h.right > W + 0.5) bad.push(`outside the phone [${Math.round(h.left)}..${Math.round(h.right)}]`);
+    if(nav && h.top < box(nav).bottom - 0.5) bad.push("over the nav");
+    if(tw && h.bottom > box(tw).top + 0.5) bad.push("over the screens");
+    const walk = document.createTreeWalker(hud, NodeFilter.SHOW_TEXT); let n, texts = 0;
+    while((n = walk.nextNode())){ if(!n.nodeValue.trim()) continue; texts++;
+      for(let p = n.parentElement; p && p !== document.body; p = p.parentElement){ const t = getComputedStyle(p).transform;
+        if(t && t !== "none"){ bad.push(`"${n.nodeValue.trim()}" under a transform (${p.className})`); break; } } }
+    const bars = [...hud.querySelectorAll(".shbar")], nums = [...hud.querySelectorAll(".shnum")];
+    if(bars.length !== 2 || nums.length !== 2) bad.push(`${bars.length} bars, ${nums.length} numerals`);
+    nums.forEach(x => { bars.forEach(b => { if(hit(box(x), box(b))) bad.push(`numeral ${x.innerText} over a bar`); });
+      if(x.scrollWidth > x.clientWidth + 1) bad.push(`numeral ${x.innerText} clipped`); });
+    hud.querySelectorAll(".shrow, .shside").forEach(r => { const k = [...r.children].filter(c => box(c).width > 0);
+      for(let i = 0; i < k.length; i++) for(let j = i + 1; j < k.length; j++)
+        if(!k[i].contains(k[j]) && !k[j].contains(k[i]) && hit(box(k[i]), box(k[j]))) bad.push(`${k[i].className} overlaps ${k[j].className}`); });
+    const life = nums.map(x => +x.innerText.trim());
+    bars.forEach((b, i) => { const hp = +b.dataset.hp, mx = +b.dataset.max, f = b.querySelector(".fill");
+      if(life[i] !== hp) bad.push(`numeral ${life[i]} != bar ${hp}`);
+      const want = Math.min(1, hp / mx), got = box(f).width / b.clientWidth;
+      if(Math.abs(want - got) > 0.03) bad.push(`fill ${got.toFixed(2)} != ${want.toFixed(2)}`); });
+    return { bad, life, texts, h: [Math.round(h.top), Math.round(h.height)] };
+  });
+  if(truth && m.life && JSON.stringify(m.life) !== JSON.stringify(truth)) m.bad.push(`life ${JSON.stringify(m.life)} != game ${JSON.stringify(truth)}`);
+  return { ok: !m.bad.length, detail: m.bad.length ? m.bad.join("; ") : `life ${JSON.stringify(m.life)}, ${m.texts} text nodes flat, at y ${m.h[0]} h ${m.h[1]}` };
+}
+
+module.exports = { open, makeAnswer, depsDir, hudJudge };
 
 /* ============================================================
    THE SMOKE CHECK
@@ -606,6 +644,7 @@ if(require.main === module){
         await page.waitForSelector(".board", { timeout: 8000 });
         await screen("trainer: board", "actions: " + names(await handBar()));
         await jumpHits("trainer", ".board");
+        { const j = await hudJudge(page); row(j.ok, "trainer: the life HUD (bars, numerals beside them, nothing under a skew)", j.detail); }
         await nav("trainer", ["Chain"]);
         /* the first game points at the call (v6.59): a phone that has never seen it reads one
            line saying what the box is for, inside the screen, until both seats have had a turn */
@@ -654,6 +693,7 @@ if(require.main === module){
         row(alive && steps.some(t => /resolve/i.test(t)) && hp0 !== "", "trainer: the player blocks and the damage resolves",
           `incoming bar ${JSON.stringify(bar)}; tapped ${steps.join(" > ") || "(nothing)"}; board ${alive ? "still up" : "GONE"}`);
         await screen("trainer: after a block");
+        { const j = await hudJudge(page); row(j.ok, "trainer: the life HUD after the damage resolves", j.detail); }
         await click(page.locator(".screennav button", { hasText: "leave" }), "leave the trainer");
         await page.waitForSelector(".hgrid", { timeout: 5000 }).catch(() => {});
       }
@@ -833,6 +873,10 @@ if(require.main === module){
             mark: !!document.querySelector(`.phand [data-rail-def="${u}"] .defsel`) }), got[0]);
           row(after.blk && after.mark, "table: two taps on a rail piece declare it (⛨ DEF on the rail)", JSON.stringify(after));
         }
+        { const st = await page.evaluate(() => { const g = window.__dawnTable.session.state(); return [g.sides[0].hp, g.sides[1].hp, g.turnPlayer]; });
+          const j = await hudJudge(page, st.slice(0, 2));
+          const mark = await page.locator(".board .stagehud .shturn").getAttribute("aria-label").catch(() => "");
+          row(j.ok && /theirs$/.test(mark || "") === (st[2] !== 0), "table: the life HUD says each seat's life and whose turn it is", j.detail + "; " + mark); }
         await screen("gear: the defend step's rail");
       } else row(false, "table: equipment that can block is on the hand rail at the defend step", "never reached: " + reach.why);
       await click(page.locator(".screennav button", { hasText: "leave" }), "leave the gear table");
@@ -1148,6 +1192,23 @@ if(require.main === module){
       catch(e){ row(false, `tap floor ${tw}x${th}: the sweep ran to the end`, String(e && e.message || e).split("\n")[0]); }
       tk.errors.forEach(e => errors.push(`tap floor ${tw}x${th}: ${e}`));
       await tk.close();
+    }
+
+    /* THE LIFE HUD AT THE SMALLEST PHONE (G1a): the same judge as the trainer row above, at 320x568. */
+    {
+      const sk = await open({ w: 320, h: 568 });
+      try {
+        const p = sk.page;
+        await p.locator(".hcard").first().click(); await p.getByRole("button", { name: /^Battle$/ }).click();
+        await p.waitForSelector(".foestep"); await p.locator("[data-foe-go]").click();
+        await p.waitForSelector(".rseatpick, .actbar", { timeout: 8000 });
+        if(await p.locator(".rseatpick").isVisible().catch(() => false)) await p.locator(".rseatpick button").first().click();
+        await p.locator('.lo .actbar [data-start="trainer"]').click(); await p.waitForSelector(".board", { timeout: 8000 });
+        await p.waitForTimeout(700);
+        const j = await hudJudge(p); row(j.ok, "trainer 320x568: the life HUD", j.detail);
+      } catch(e){ row(false, "trainer 320x568: the life HUD", String(e && e.message || e).split("\n")[0]); }
+      sk.errors.forEach(e => errors.push(`hud 320x568: ${e}`));
+      await sk.close();
     }
 
     /* READABILITY (U; tools/contrast.js): the tap sweep above carries one `readability` row per screen (WCAG AA against the

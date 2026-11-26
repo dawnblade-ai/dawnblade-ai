@@ -1,6 +1,6 @@
 # GRAPHICS PLAN — the next phase (drafted 2026-11-25, at v7.10)
 
-**Status: DIRECTION GIVEN (user, 2026-11-25), G1 not started.** The user's answer to §2: *"I don't
+**Status: DIRECTION GIVEN (user, 2026-11-25). G1a SHIPPED v7.12** (the always-on life-bar HUD, both boards; `docs/ux/before-hud.jpg` / `after-hud.jpg` / `after-hud-320.jpg`). **Next: G1b the wheel.** The user's answer to §2: *"I don't
 think there is enough room to show the equipment on the main screen with the hand. Reference our old
 mockup with the health bars and the hand wheel - make sure the equipment is showing up in the hand
 wheel when it can be blocked with."* The old mockup is `design/STAGE.md` + `design/prototype/` on the

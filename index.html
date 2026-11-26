@@ -547,16 +547,44 @@ img{display:block;max-width:100%}
 .pitchlist{max-height:118px;overflow-y:auto;display:flex;flex-direction:column;gap:3px}
 .pitchlist .pc{display:flex;align-items:center;gap:5px;font-size:10.5px}
 .pitchlist .pc i{width:7px;height:7px;flex:none;font-style:normal}
-.lifehud{display:flex;align-items:center;gap:8px;background:linear-gradient(180deg,var(--forge2),var(--forge));border:1px solid var(--line);padding:6px 10px}
-.lifehud .lhside{display:flex;align-items:baseline;gap:6px;min-width:0;flex:none}
-.lifehud .lhside.r{margin-left:auto}
-.lifehud .lhhp{font-family:'Big Shoulders Display';font-weight:800;font-size:30px;line-height:1;color:var(--rt);animation:lhhit .5s ease-out}
-.lifehud .lhwho{font-family:'Spline Sans Mono';font-size:var(--fs-sm);letter-spacing:.1em;text-transform:uppercase;color:var(--bone-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:92px}
-.lifehud .lhmid{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;flex:1;min-width:0}
-.lifehud .lhchip{font-family:'Spline Sans Mono';font-size:var(--fs-sm);color:var(--bone-dim);border:1px solid var(--line);background:var(--ink);padding:2px 6px;white-space:nowrap}
-.lifehud .lhchip b{color:var(--bone);font-size:var(--fs-lg)}
-.lifehud .lhchip.on{border-color:var(--y)}
-.lifehud .lhchip.on b{color:var(--y)}
+/* THE STAGE HUD (G1a, docs/GRAPHICS-PLAN.md §3; design/STAGE.md §3.1 on design/stage). Always on, both
+   boards, between the nav and the three screens. Two skewed fighting-game bars (±10°, 2px bone border); the
+   life NUMERAL is a flat sibling BESIDE each bar's inner end, never over it (the fill, the trail and the
+   ticks all move at the bar's ends), and no text node sits under a transformed ancestor (a page.js row
+   walks it). The fill snaps on a loss; the red trail holds 350ms, then drains over 500ms; a gain grows
+   the fill over 400ms. Height is fixed (--hudh) so the screens below can subtract it. */
+:root{--hudh:52px}
+.board .tablewrap,.board .vscreen{height:calc(var(--tv) - var(--hudh));min-height:calc(var(--tv) - var(--hudh))}
+.stagehud{height:calc(var(--hudh) - 8px);display:flex;flex-direction:column;justify-content:center;gap:3px;padding:3px 8px;background:linear-gradient(180deg,var(--forge2),var(--forge));border:1px solid var(--line)}
+.stagehud .shrow{display:flex;align-items:center;gap:4px;min-width:0}
+.stagehud .shbar{position:relative;flex:1;min-width:0;height:14px;transform:skewX(-10deg);border:2px solid var(--bone);background:var(--ink);overflow:hidden}
+.stagehud .shbar.r{transform:skewX(10deg)}
+.stagehud .shbar i{position:absolute;top:0;bottom:0;left:0;display:block}
+.stagehud .shbar.r i{left:auto;right:0}
+.stagehud .shbar .trail{background:#C4302B;transition:width .5s ease-in .35s}
+.stagehud .shbar .fill{background:linear-gradient(90deg,#B4441E,var(--y))}
+.stagehud .shbar.r .fill{background:linear-gradient(270deg,#B4441E,var(--y))}
+.stagehud .shbar .fill.up{transition:width .4s ease-out}
+.stagehud .shbar .tick{width:100%;background-image:linear-gradient(90deg,rgba(20,16,14,.55) 1px,transparent 1px);background-size:var(--tk) 100%;opacity:.7}
+.stagehud .shbar.danger{border-color:#FF7A6E;box-shadow:0 0 6px rgba(196,48,43,.8);animation:shdanger 1s ease-in-out 2}
+@keyframes shdanger{50%{box-shadow:0 0 12px rgba(255,122,110,1)}}
+.stagehud .shnum{flex:none;width:26px;text-align:center;font-family:'Big Shoulders Display';font-weight:800;font-size:20px;line-height:1;color:var(--bone)}
+.stagehud .shnum.low{color:var(--rt)}
+.stagehud .shover{flex:none;font-family:'Spline Sans Mono';font-size:var(--fs-sm);color:var(--ok)}
+.stagehud .shturn{flex:none;min-width:44px;display:flex;align-items:center;justify-content:center;gap:2px;font-family:'Spline Sans Mono';font-size:var(--fs-md);color:var(--bone-dim);border:1px solid var(--line);background:var(--ink);padding:1px 3px;white-space:nowrap}
+.stagehud .shturn b{color:var(--bone);font-size:var(--fs-lg)}
+.stagehud .shturn .tk{color:var(--y)}
+.stagehud .shside{flex:1;display:flex;align-items:center;gap:5px;min-width:0}
+.stagehud .shside.r{justify-content:flex-end}
+.stagehud .shwho{font-family:'Spline Sans Mono';font-size:var(--fs-sm);letter-spacing:.08em;text-transform:uppercase;color:var(--bone-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.stagehud .shside.on .shwho{color:var(--y)}
+.stagehud .pips{flex:none;display:flex;align-items:center;gap:2px}
+.stagehud .pips i{width:7px;height:7px;border-radius:50%;background:var(--bone-dim);display:block}
+.stagehud .pips .xn{font-family:'Spline Sans Mono';font-size:var(--fs-sm);color:var(--bone-dim);margin-left:2px}
+.stagehud .shchip{flex:none;font-family:'Spline Sans Mono';font-size:var(--fs-sm);color:var(--bone-dim);white-space:nowrap}
+.stagehud .shchip b{color:var(--bone);font-size:var(--fs-lg)}
+.stagehud .shchip.on b{color:var(--y)}
+@media (prefers-reduced-motion:reduce){.stagehud .shbar .trail,.stagehud .shbar .fill.up{transition:none}.stagehud .shbar.danger{animation:none}}
 @keyframes lhhit{0%{transform:scale(1.35);color:var(--bone)}100%{transform:none}}
 .scorebar{display:flex;align-items:center;gap:8px;background:var(--forge);border:1px solid var(--line);padding:6px 9px;font-family:'Spline Sans Mono';font-size:var(--fs-md)}
 .scorebar .sside{flex:1}
@@ -1197,13 +1225,16 @@ button.tag::after{content:"";position:absolute;inset:-16px -8px -16px}
 .screennav button:active,.hcard:active,.hc:active,.reveal .endleave:active{filter:brightness(1.3)}
 @media (prefers-reduced-motion:reduce){
   .bigbtn:active,.battlebtn:active,.actbar button.a:active,.tab:active,.qopt:active,.statusline button:active{transform:none}
-  .reveal .endtitle,.lifehud .lhhp{animation:none}
-  .hlife2.lfdown,.hlife2.lfup,.lifehud .lhhp.lfdown,.lifehud .lhhp.lfup{animation:none}
+  .reveal .endtitle{animation:none}
+  .hlife2.lfdown,.hlife2.lfup,.stagehud .shnum.lfdown,.stagehud .shnum.lfup{animation:none}
 }
 /* WHICH WAY A LIFE TOTAL MOVED (`LifeNum`, UX roadmap §3.5): a drop flashes red,
    a gain green, on the hero plates and the life HUD alike, once per change */
-.hlife2.lfdown,.hlife2.lfup,.lifehud .lhhp.lfdown,.lifehud .lhhp.lfup{display:inline-block;animation:lfdown .6s ease-out}
-.hlife2.lfup,.lifehud .lhhp.lfup{animation-name:lfup}
+.hlife2.lfdown,.hlife2.lfup,.stagehud .shnum.lfdown,.stagehud .shnum.lfup{display:inline-block;animation:lfdown .6s ease-out}
+.hlife2.lfup,.stagehud .shnum.lfup{animation-name:lfup}
+.stagehud .shnum.lfdown{animation-name:shdown}.stagehud .shnum.lfup{animation-name:shup}   /* colour only: HUD text is never under a transform, even for 0.6s */
+@keyframes shdown{0%{color:#FF7A6E;text-shadow:0 0 14px rgba(196,48,43,.9)}}
+@keyframes shup{0%{color:var(--ok);text-shadow:0 0 14px rgba(123,160,91,.85)}}
 @keyframes lfdown{0%{transform:scale(1.4);color:#FF7A6E;text-shadow:0 0 14px rgba(196,48,43,.9)}100%{transform:none}}
 @keyframes lfup{0%{transform:scale(1.3);color:var(--ok);text-shadow:0 0 14px rgba(123,160,91,.85)}100%{transform:none}}
 </style>
@@ -1233,7 +1264,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "7.11"; /* v7.11 - At the table, equipment that can block joins the hand rail in the defend step, as it does in the trainer; see CHANGELOG.md. */
+window.APP_VER = "7.12"; /* v7.12 - Both life totals sit above the board at all times, as two fighting-game bars; see CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -3547,13 +3578,6 @@ function stepLabel(g, seat){
 function PipLine({s}){
   return <>{pipParts(s).map(([t,k],i)=> k ? <span key={i} className={"pip pip-"+k}>{t}</span> : t)}</>;
 }
-/* THE LIFE HUD — both boards (UX overhaul, 2026-11-19). It was a hand-copied
-   one-line mono strip on each board ("20 you · R0 A1   kayo 20"); the two
-   numbers a player checks most were 15px and the resources and action points
-   were letters. Now: both life totals large, the actor's action points and
-   floating resources as labelled chips. A life total that changes re-keys its
-   number, so the drop pulses once (`lhhit`). `frost` is the trainer's count
-   of Frostbites on the opponent; the table passes none. Display only. */
 /* A LIFE TOTAL THAT SAYS WHICH WAY IT MOVED — both boards (UX roadmap §3.5).
    The HUD re-keyed its number so a change pulsed, but a pulse cannot say
    whether it was damage or a gain. This remembers the last value it drew:
@@ -3565,20 +3589,61 @@ function LifeNum({n, className}){
   if(last.current !== v){ dir.current = v < last.current ? "lfdown" : "lfup"; seq.current++; last.current = v; }
   return <b key={seq.current} className={className + (dir.current ? " " + dir.current : "")}>{v}</b>;
 }
-function LifeHud({me, them, frost}){
+/* THE STAGE HUD — both boards, always on (G1a, docs/GRAPHICS-PLAN.md §3; design/STAGE.md §3.1).
+   It replaced the old life strip, a one-line HUD that lived inside the log pane, so a player had to
+   flick to the chain to read either life total. Now both totals sit above the three screens at all
+   times: two skewed fighting-game bars, yours on the left and theirs mirrored on the right, each with
+   its numeral BESIDE the inner end (the number is the truth; the bar is the feel), the turn between
+   them with a marker pointing at the turn player, and under each bar the hand as pips (up to five,
+   then xN), your action points and floating resources as chips, and the trainer's Frostbite count.
+   `myTurn` is passed in: the trainer reads its mode, the table its turn player. Display only. */
+function LifeBar({hp, max, right}){
+  const m = Math.max(1, max|0), v = Math.max(0, hp|0);
+  const pct = Math.min(100, v / m * 100);
+  const last = uR(v), up = uR(false);
+  if(last.current !== v){ up.current = v > last.current; last.current = v; }
+  const step = m <= 25 ? 1 : 5;
+  const danger = v > 0 && v <= Math.ceil(m / 4);
   return (
-    <div className="lifehud clip-sm">
-      <div className="lhside">
-        <LifeNum n={me.hp} className="lhhp"/>
-        <span className="lhwho">you</span>
+    <div className={"shbar" + (right ? " r" : "") + (danger ? " danger" : "")} data-hp={v} data-max={m}>
+      <i className="trail" style={{width: pct + "%"}}/>
+      <i className={"fill" + (up.current ? " up" : "")} style={{width: pct + "%"}}/>
+      <i className="tick" style={{"--tk": (100 * step / m) + "%"}}/>
+    </div>
+  );
+}
+function HandPips({n}){
+  const k = Math.max(0, n|0);
+  return <span className="pips" aria-label={k + " in hand"}>{Array.from({length: Math.min(k, 5)}, (_, i) => <i key={i}/>)}{k > 5 && <span className="xn">x{k}</span>}</span>;
+}
+function StageHud({me, them, turn, myTurn, frost}){
+  const over = s => Math.max(0, (s.hp|0) - (s.maxHp|0));
+  const low = s => (s.hp|0) > 0 && (s.hp|0) <= Math.ceil(Math.max(1, s.maxHp|0) / 4);
+  return (
+    <div className="stagehud clip-sm" data-hud>
+      <div className="shrow">
+        <LifeBar hp={me.hp} max={me.maxHp || me.hp}/>
+        {over(me) > 0 && <span className="shover">+{over(me)}</span>}
+        <LifeNum n={me.hp} className={"shnum" + (low(me) ? " low" : "")}/>
+        <span className="shturn" aria-label={"turn " + (turn|0) + (myTurn ? ", yours" : ", theirs")}>
+          {myTurn && <span className="tk">◂</span>}T<b>{turn|0}</b>{!myTurn && <span className="tk">▸</span>}
+        </span>
+        <LifeNum n={them.hp} className={"shnum" + (low(them) ? " low" : "")}/>
+        {over(them) > 0 && <span className="shover">+{over(them)}</span>}
+        <LifeBar hp={them.hp} max={them.maxHp || them.hp} right/>
       </div>
-      <div className="lhmid">
-        <span className={"lhchip"+(me.ap>0?" on":"")}><b>{me.ap|0}</b> action{(me.ap|0)===1?"":"s"}</span>
-        <span className={"lhchip"+(me.res>0?" on":"")}><b>{me.res|0}</b> resource{(me.res|0)===1?"":"s"}</span>
-      </div>
-      <div className="lhside r">
-        <span className="lhwho">{them.name.split(",")[0].toLowerCase()}{frost>0?` · ❄${frost}`:""}</span>
-        <LifeNum n={them.hp} className="lhhp"/>
+      <div className="shrow">
+        <div className={"shside" + (myTurn ? " on" : "")}>
+          <HandPips n={(me.hand || []).length}/>
+          <span className="shwho">you</span>
+          <span className={"shchip" + (me.ap > 0 ? " on" : "")}><b>{me.ap|0}</b> AP</span>
+          <span className={"shchip" + (me.res > 0 ? " on" : "")}><b>{me.res|0}</b> res</span>
+        </div>
+        <div className={"shside r" + (myTurn ? "" : " on")}>
+          {frost > 0 && <span className="shchip">❄<b>{frost}</b></span>}
+          <span className="shwho">{String(them.name || "").split(",")[0]}</span>
+          <HandPips n={(them.hand || []).length}/>
+        </div>
       </div>
     </div>
   );
@@ -6846,6 +6911,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
         <button onClick={()=>jump(youRef)}>You ▼</button>
         <SoundBtn/>
       </div>
+      <StageHud me={you(g)} them={opp(g)} turn={g.turn} myTurn={!(g.mode==="block" || g.mode==="foeturn")} frost={frostCount(opp(g))}/>
 
       <div className="tablewrap">
         {/* ---- SCREEN 1: opponent board (mirror: active rows nearest the chain) ---- */}
@@ -6917,7 +6983,6 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                 </button>
                 <span>play →</span>
               </div>
-              <LifeHud me={you(g)} them={opp(g)} frost={frostCount(opp(g))}/>
               {/* the turn and the phase — see phaseLabel */}
               <div className="phasebar clip-sm">
                 <span>turn <b>{g.turn}</b></span>
@@ -10016,6 +10081,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
         <button onClick={()=>jump(youRef)}>You ▼</button>
         <SoundBtn/>
       </div>
+      <StageHud me={me} them={them} turn={g.turn} myTurn={g.turnPlayer === mySeat}/>
 
       <div className="tablewrap">
         {/* ---- SCREEN 1: their board ---- */}
@@ -10081,7 +10147,6 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                   JUDGE!!{judgeN>0?` ⚠${judgeN}`:""}
                 </button>
                 <span>play →</span></div>
-              <LifeHud me={me} them={them}/>
               {/* the turn and the phase — see stepLabel, which reads the CR
                   machine because `mode` is frozen on this board */}
               <div className="phasebar clip-sm">
