@@ -247,6 +247,38 @@ async function wheelJudge(page, prefix, { commit = false } = {}){
   }
   return out;
 }
+/* THE HUB JUDGE (G1c, v7.14; design/STAGE.md App. C.1). When the action bar is a hub (`.actbar.hub`): exactly one
+   primary, inside the thumb lane (the middle 51% of the phone), its flat edge on the bottom of the screen, at least
+   54 px tall and nothing over its centre; each secondary in a corner, wholly outside the lane, at least 44 px tall
+   and inside the phone; no two of them overlapping; no label clipped and none under the 9-px floor. Returns
+   {hub, ok, detail}: `hub` false is a row of equals (the per-card pickers), which this does not judge. */
+async function hubJudge(page){
+  return page.evaluate(() => {
+    const bar = document.querySelector(".board .actbar");
+    if(!bar || !bar.classList.contains("hub")) return { hub: false, ok: true, detail: "a row of equals" };
+    const bad = [], W = innerWidth, H = innerHeight, L = W * 0.244, R = W * 0.756;
+    const hit = (a, b) => a.left < b.right - 0.5 && b.left < a.right - 0.5 && a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5;
+    const prim = [...bar.querySelectorAll(".hubm > *")], sec = [...bar.querySelectorAll(".hubl > *, .hubr > *")];
+    if(prim.length !== 1) return { hub: true, ok: false, detail: `${prim.length} primaries` };
+    const p = prim[0], pb = p.getBoundingClientRect(), lab = e => (e.innerText || "").replace(/\s+/g, " ").trim();
+    if(pb.left < L - 1 || pb.right > R + 1) bad.push(`primary [${Math.round(pb.left)}..${Math.round(pb.right)}] outside the lane [${Math.round(L)}..${Math.round(R)}]`);
+    if(pb.bottom < H - 1 || pb.bottom > H + 1) bad.push(`primary bottom ${Math.round(pb.bottom)} off the screen's edge ${H}`);
+    if(pb.height < 53.5) bad.push(`primary ${Math.round(pb.height)} px tall`);
+    const over = document.elementFromPoint(pb.left + pb.width / 2, pb.top + pb.height / 2);
+    if(!over || !p.contains(over)) bad.push(`over the primary: ${over ? over.className || over.tagName : "-"}`);
+    sec.forEach(s => { const b = s.getBoundingClientRect();
+      if(!(b.right <= L + 1 || b.left >= R - 1)) bad.push(`"${lab(s)}" [${Math.round(b.left)}..${Math.round(b.right)}] inside the lane`);
+      if(b.height < 43.5) bad.push(`"${lab(s)}" ${Math.round(b.height)} px tall`);
+      if(b.left < -0.5 || b.right > W + 0.5 || b.bottom > H + 0.5) bad.push(`"${lab(s)}" outside the phone`);
+      if(hit(b, pb)) bad.push(`"${lab(s)}" over the primary`); });
+    if(sec.length === 2 && hit(sec[0].getBoundingClientRect(), sec[1].getBoundingClientRect())) bad.push("the corners overlap");
+    [p, ...sec].forEach(e => {
+      if(e.scrollWidth > e.clientWidth + 1 || e.scrollHeight > e.clientHeight + 1) bad.push(`"${lab(e)}" clipped`);
+      if(parseFloat(getComputedStyle(e).fontSize) < 9) bad.push(`"${lab(e)}" under 9 px`); });
+    return { hub: true, ok: !bad.length, detail: bad.length ? bad.join("; ")
+      : `"${lab(p)}" at x ${Math.round(pb.left)}..${Math.round(pb.right)}` + (sec.length ? ", corners: " + sec.map(lab).join(" / ") : "") };
+  });
+}
 async function open({ w = 393, h = 852, deps = depsDir(), query = "", launch = null, title = false } = {}){
   /* the title screen shows first on every load; a drive opens past it (`?title=0`) unless it is the title being driven (`title: true`) */
   if(!title) query = query ? query + "&title=0" : "?title=0";
@@ -328,7 +360,7 @@ async function hudJudge(page, truth){
   return { ok: !m.bad.length, detail: m.bad.length ? m.bad.join("; ") : `life ${JSON.stringify(m.life)}, ${m.texts} text nodes flat, at y ${m.h[0]} h ${m.h[1]}` };
 }
 
-module.exports = { open, makeAnswer, depsDir, hudJudge, wheelTo, wheelJudge };
+module.exports = { open, makeAnswer, depsDir, hudJudge, hubJudge, wheelTo, wheelJudge };
 
 /* ============================================================
    THE SMOKE CHECK
@@ -700,6 +732,7 @@ if(require.main === module){
     const playOn = async prefix => {
       const sigs = new Set(), board = () => page.locator(".board").innerText();
       let moved = 0, taps = 0;
+      const hubs = [], hubBad = [];   /* every bar state this drive reaches, judged as a hub (v7.14) */
       for(let i = 0; i < 14; i++){
         await hitCheck(prefix, ".board .statusline button", 30);
         await peekClear(prefix);
@@ -712,7 +745,8 @@ if(require.main === module){
           await page.waitForTimeout(300);
         }
         const sig = names(bar);
-        if(!sigs.has(sig)){ sigs.add(sig); await screen(prefix + ": " + (sig || "(no actions)")); }
+        if(!sigs.has(sig)){ sigs.add(sig); await screen(prefix + ": " + (sig || "(no actions)"));
+          const hj = await hubJudge(page); if(hj.hub){ hubs.push(sig); if(!hj.ok) hubBad.push(`[${sig}] ${hj.detail}`); } }
         if(!pick) break;
         const before = await board();
         const label = new RegExp("^\\s*" + pick.t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\s*$", "i");
@@ -721,6 +755,8 @@ if(require.main === module){
         if((await board()) !== before) moved++;
       }
       row(moved > 0, prefix + ": plays on", `${moved}/${taps} taps changed the board`);
+      row(hubs.length > 0 && !hubBad.length, prefix + ": the hub (the primary in the thumb lane on the bottom edge, secondaries in the corners)",
+          hubBad.length ? hubBad.join(" | ") : `${hubs.length} bar state(s): ${hubs.join(" / ")}`);
     };
 
     /* ---- the trainer ---- */
@@ -1296,6 +1332,7 @@ if(require.main === module){
         await p.waitForTimeout(700);
         const j = await hudJudge(p); row(j.ok, "trainer 320x568: the life HUD", j.detail);
         await p.locator(".screennav button", { hasText: "Chain" }).click(); await p.waitForTimeout(700);
+        { const hj = await hubJudge(p); row(hj.hub && hj.ok, "trainer 320x568: the hub", hj.detail); }
         for(const [ok, name, d] of await wheelJudge(p, "trainer 320x568", { commit: true })) row(ok, name, d);
       } catch(e){ row(false, "trainer 320x568: the life HUD", String(e && e.message || e).split("\n")[0]); }
       sk.errors.forEach(e => errors.push(`hud 320x568: ${e}`));

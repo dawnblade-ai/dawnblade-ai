@@ -1,3 +1,24 @@
+## v7.14 — The hub
+
+- **G1c, part one: the hub (docs/GRAPHICS-PLAN.md §3; design/STAGE.md App. C.1 on `design/stage`).** On both boards the
+  action bar's primary button moves into the thumb lane — the middle 51% of the bottom edge (x 96..297 at 393), which a
+  left or a right thumb reaches equally — as a 54-px plate whose flat edge sits on the bottom of the screen. A secondary
+  sits in a corner, where a thumb does not hit it by accident: the first beside the right thumb, a second on the left,
+  in smaller type that may wrap ("Defend — no reactions"). One shared `HubBar` lays the bar out; it is a LAYOUT only:
+  every button keeps its class, label, tap and test id.
+- **Each board names its primary, per mode**, with the class `hubp`: End turn, Pass — resolve, Defend → reactions,
+  Resolve damage, Pitch & play, Boost, Pay N more, Pass — let them end (trainer); End turn when it is legal, else the
+  Pass (or the "waiting on" note), Done defending, Pitch & play, Boost, Pay N more, Leave it empty, Leave the table
+  (table). The bar does not guess from colour: the table's Pass and End turn can both wear `go`. A mode that names no
+  primary, or offers more than three controls — the cost pickers, one button per card, where WHICH card is the
+  decision — keeps the old row of equals.
+- **The rest of G1c (one screen: strips, the panes as sheets, the wheel fixed above the hub) is the next release.**
+- Drill: `hubJudge` (tools/page.js, exported): exactly one primary, inside the lane, flush with the bottom edge, ≥ 54 px
+  and uncovered; each secondary wholly outside the lane, ≥ 44 px, on the phone, overlapping nothing; no label clipped or
+  under 9 px. Judged on every bar state the trainer and table drives reach (one row each, listing the states) and at
+  320x568. Sabotages, each FAILS: see the release commit.
+- Gates: see the release commit.
+
 ## v7.13 — The hand wheel
 
 - **G1b, the hand wheel (docs/GRAPHICS-PLAN.md §3; design/STAGE.md App. C.1 on `design/stage`).** On both boards the

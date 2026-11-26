@@ -131,7 +131,7 @@ test("a finished game stops every guarded door — `sheetFirst` asks `s.over` FI
   assert.ok(over > 0, "sheetFirst no longer stops a finished game");
   assert.ok(over < sheet, "…and it must be asked before the sheet test");
   /* and the bar says so rather than staying lit */
-  const bar = src.slice(src.indexOf('<div className="actbar">'));
+  const bar = src.slice(src.indexOf('<HubBar>'));   /* v7.14: the bar is the hub's layout */
   assert.match(bar.slice(0, 200), /\{g\.over \? \(\s*<button className="a dis" disabled>The game is over<\/button>/,
     "the action bar stays live under the loss panel");
 });

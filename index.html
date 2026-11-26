@@ -674,6 +674,15 @@ img{display:block;max-width:100%}
    fixed bar upward. */
 .actbar{flex-wrap:wrap}
 .actbar>.a{min-width:calc(25% - 7px)}
+/* THE HUB (v7.14, `HubBar`): the primary in the thumb lane (x 96..297 at 393, STAGE App. C.1),
+   a 54-px plate whose flat edge sits on the bottom of the screen; secondaries in the corners,
+   lifted 10 px like the old bar, small type that may wrap ("Defend — no reactions"). */
+.actbar.hub{display:grid;grid-template-columns:minmax(0,1fr) min(212px,51vw) minmax(0,1fr);gap:8px;align-items:end;bottom:env(safe-area-inset-bottom)}
+.actbar.hub .hubm>.a{display:flex;align-items:center;justify-content:center;width:100%;height:54px;padding:4px 10px;border-radius:30px 30px 0 0;font-size:17px;line-height:1.05;text-align:center;box-shadow:0 -4px 14px rgba(0,0,0,.45)}
+.actbar.hub .hubm>.a.dis{font-size:12px}
+.actbar.hub .hubl,.actbar.hub .hubr{display:flex;padding-bottom:10px}
+.actbar.hub .hubl>.a,.actbar.hub .hubr>.a{width:100%;min-height:48px;padding:4px 5px;font-size:12.5px;letter-spacing:.05em;line-height:1.1;text-align:center}
+.actbar.hub .hubl>.a.dis,.actbar.hub .hubr>.a.dis{font-size:10.5px;letter-spacing:.01em}
 /* AND THE PRIMARY IS WEARING THE HOME SCREEN'S TYPE. `.battlebtn` is the
    30px striped BATTLE plate, which is right where it is the only thing on
    the screen and oversized here, where it is one of two options with a
@@ -3782,6 +3791,34 @@ function HandWheel({children, spinPeeks}){
       })}
       {topCell && !has(topCell, "peek") && <span className="wverb">tap · look</span>}
       <span className="wmeta">{top + 1} / {n}</span>
+    </div>
+  );
+}
+/* THE HUB — both boards' action bar (v7.14, GRAPHICS-PLAN G1c; design/STAGE.md App. C.1 on
+   branch design/stage). The primary button moves into the THUMB LANE, the middle of the bottom
+   edge, which a left or a right thumb reaches equally; a secondary sits in a corner, where a
+   thumb does not hit it by accident (the first beside the right thumb, a second on the left).
+   EACH BOARD NAMES ITS PRIMARY, per mode, with the class `hubp` on the button (or the waiting
+   note) that is the turn's next move: the bar does not guess from colour, because the table's
+   Pass and End turn can both wear `go`. A mode that names none, or offers more than three
+   controls — the cost pickers, one button per card, where WHICH card is the decision — keeps
+   the old row of equals. It is a LAYOUT only: every button keeps its own class, label, tap and
+   test id, so a drill that clicks `.actbar` by its text still finds it. */
+function HubBar({children}){
+  const flat = [];
+  const walk = k => React.Children.forEach(k, c => {
+    if(!c || typeof c !== "object") return;
+    if(c.type === React.Fragment) walk(c.props.children); else flat.push(c);
+  });
+  walk(children);
+  const pi = flat.findIndex(c => (" " + (c.props.className || "") + " ").includes(" hubp "));
+  if(pi < 0 || flat.length > 3) return <div className="actbar">{children}</div>;
+  const rest = flat.filter((_, i) => i !== pi);
+  return (
+    <div className="actbar hub" data-hub>
+      <div className="hubl">{rest[1] || null}</div>
+      <div className="hubm">{flat[pi]}</div>
+      <div className="hubr">{rest[0] || null}</div>
     </div>
   );
 }
@@ -7324,21 +7361,21 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
         </div>
       </div>
 
-      <div className="actbar">
+      <HubBar>
         {g.over ? (
           <button className="a dis" disabled>The game is over</button>
         ) : g.mode==="pay" ? <>
           <button className="a" onClick={cancelPay}>Cancel</button>
-          <button className="a pay" onClick={confirmPay}>Pitch & play</button>
+          <button className="a pay hubp" onClick={confirmPay}>Pitch & play</button>
         </> : g.mode==="stack" ? (
-          <button className="a go" onClick={resolveStack}>Pass — resolve</button>
+          <button className="a go hubp" onClick={resolveStack}>Pass — resolve</button>
         ) : g.mode==="block" ? ( g.bphase==="defend" ? <>
           <button className="a" onClick={takeIt}>{you(g).blockH.length||you(g).blockG.length ? "Defend — no reactions" : "Take it"}</button>
-          <button className="a go" onClick={moveToReact}>Defend → reactions</button>
+          <button className="a go hubp" onClick={moveToReact}>Defend → reactions</button>
         </> : (
-          <button className="a go" onClick={takeIt}>Resolve damage</button>
+          <button className="a go hubp" onClick={takeIt}>Resolve damage</button>
         )) : g.mode==="boostpick" ? (<>
-          <button className="a go" onClick={()=>confirmBoost(true)}>⚡ Boost</button>
+          <button className="a go hubp" onClick={()=>confirmBoost(true)}>⚡ Boost</button>
           <button className="a" onClick={()=>confirmBoost(false)}>No boost</button>
         </>) : g.mode==="fusepick" ? (<>
           {/* ONE BUTTON PER ELIGIBLE CARD, because WHICH card is the
@@ -7435,18 +7472,18 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
               {c ? c.name : "card"}{twin ? " ("+(["","red","yellow","blue"][c.pitch]||"pitch "+c.pitch)+")" : ""}{c && g.targetPick.x ? " · X = "+(c.cost||0) : ""}</button>;
           })}
         </>) : g.mode==="rxaddpay" ? (<>
-          <button className="a go" onClick={()=>confirmRxAdd(true)}>Pay {g.rxAdd?g.rxAdd.cost:0} more</button>
+          <button className="a go hubp" onClick={()=>confirmRxAdd(true)}>Pay {g.rxAdd?g.rxAdd.cost:0} more</button>
           <button className="a" onClick={()=>confirmRxAdd(false)}>Decline</button>
         </>) : g.mode==="foeturn" ? (<>
           {/* NAME WHOSE WINDOW THIS IS. The board looks like your turn and
               it is not — CR 4.3.4 gives you a window before their action
               phase can end, and a bar that still said "End turn" would be
               telling you the wrong thing about whose clock is running. */}
-          <button className="a go" onClick={foePassWindow}>Pass — let {opp(g).name.split(",")[0]} end</button>
+          <button className="a go hubp" onClick={foePassWindow}>Pass — let {opp(g).name.split(",")[0]} end</button>
         </>) : (<>
-          <button className="a go" disabled={g.mode!=="act"||!!g.over} onClick={endTurn}>End turn</button>
+          <button className="a go hubp" disabled={g.mode!=="act"||!!g.over} onClick={endTurn}>End turn</button>
         </>)}
-      </div>
+      </HubBar>
       {g.over && (g.over.win
         ? <WinPanel score={g.over.score} onExit={onExit}><Recap g={g} me={0}/></WinPanel>
         : DawnJudge.drawText(g.over, g.sides)
@@ -10527,8 +10564,8 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
       {/* The action bar speaks the CR machine, not the trainer's modes.
           CR 4.3.4: ending a turn is a PASS carrying intent, so it takes
           one from each seat — which is what a table does. */}
-      <div className="actbar">
-        {over ? <button className="a go" onClick={onExit}>Leave the table</button>
+      <HubBar>
+        {over ? <button className="a go hubp" onClick={onExit}>Leave the table</button>
           /* BOOST'S ADDITIONAL COST (v2.84) — asked before the payment
              branch because a boost pending and a pay pending are the same
              field, and this one has no Cancel: by the time it is asked the
@@ -10536,7 +10573,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
              The two buttons say what they do, in the trainer's own words,
              so a player who learns one board is not relearning the other. */
           : boost ? <>
-              <button className="a go" onClick={()=>fire({t:"boost",yes:true})}>⚡ Boost</button>
+              <button className="a go hubp" onClick={()=>fire({t:"boost",yes:true})}>⚡ Boost</button>
               <button className="a" onClick={()=>fire({t:"boost",yes:false})}>No boost</button>
             </>
           /* WHICH HALF OF A SPLIT CARD (v3.35). Asked before the payment,
@@ -10631,7 +10668,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
           /* AN OPTIONAL ADDITIONAL COST. No Cancel, for boost's reason:
              the play is committed and "no" is a complete answer. */
           : addPay ? <>
-              <button className="a go" onClick={()=>fire({t:"addPay",yes:true})}>Pay {addPay.cost} more</button>
+              <button className="a go hubp" onClick={()=>fire({t:"addPay",yes:true})}>Pay {addPay.cost} more</button>
               <button className="a" onClick={()=>fire({t:"addPay",yes:false})}>Decline</button>
             </>
           /* FUSION'S REVEAL (v4.27). ONE BUTTON PER ELIGIBLE CARD, because
@@ -10666,10 +10703,10 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
             </>
           : pay ? <>
               <button className="a" onClick={()=>fire({t:"payCancel"})}>Cancel</button>
-              <button className="a pay" disabled={!mine({t:"payConfirm"})} onClick={()=>fire({t:"payConfirm"})}>Pitch &amp; play</button>
+              <button className="a pay hubp" disabled={!mine({t:"payConfirm"})} onClick={()=>fire({t:"payConfirm"})}>Pitch &amp; play</button>
             </>
           : myArsStep ? <>
-              <button className="a" onClick={()=>fire({t:"arsenal",uid:null})}>Leave it empty</button>
+              <button className="a hubp" onClick={()=>fire({t:"arsenal",uid:null})}>Leave it empty</button>
               <span className="a dis">tap a card to set it</span>
             </>
           /* CR 7.3.3 — IN THE DEFEND STEP THE TURN-PLAYER HOLDS PRIORITY
@@ -10679,8 +10716,8 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
              rather than as the rule it is. Say which it is. */
           : defending ? <>
               {mine({t:"pass"})
-                ? <button className={"a "+(passTone==="free"?"free":"go")} data-pass={passTone} onClick={()=>fire({t:"pass"})}>Done defending</button>
-                : <span className="a dis">declare your blockers — {them.name.split(",")[0]} still holds priority</span>}
+                ? <button className={"a hubp "+(passTone==="free"?"free":"go")} data-pass={passTone} onClick={()=>fire({t:"pass"})}>Done defending</button>
+                : <span className="a dis hubp">declare your blockers — {them.name.split(",")[0]} still holds priority</span>}
               {/* RULING (user, 2026-11-15): no Concede button here. One tap with no
                   confirmation was a ranked loss. Closing a started ranked table is
                   still a concession, and the engine still knows CR 4.5.3c. */}
@@ -10690,12 +10727,12 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                 ? (g.step === "defend" && targetCanBeDefended(g.pend && g.pend.target)
                     /* CR 7.3.3 - the turn-player holds priority in the defend step, so the game (and a ranked table's clock) waits on the ATTACKER until it
                        passes; only then is the wait on the defender. RULING (user, 2026-11-15): the clock sits on whoever must decide - so say what this tap does. */
-                    ? <button className={"a "+(passTone==="free"?"free":"go")} data-pass={passTone} data-testid="pass-to-blocks" onClick={()=>fire({t:"pass"})}>Pass — let {them.name.split(",")[0]} block</button>
-                    : <button className={"a"+(passTone?" "+passTone:"")} data-pass={passTone} data-testid="pass" onClick={()=>fire({t:"pass"})}>Pass</button>)
-                : <span className="a dis">waiting on {them.name.split(",")[0]}</span>}
-              <button className={"a "+(mine({t:"endTurn"}) && passTone ? passTone : "go")} data-pass={mine({t:"endTurn"}) ? passTone : ""} data-testid="end-turn" disabled={!mine({t:"endTurn"})} onClick={()=>fire({t:"endTurn"})}>End turn</button>
+                    ? <button className={"a "+(passTone==="free"?"free":"go")+(mine({t:"endTurn"})?"":" hubp")} data-pass={passTone} data-testid="pass-to-blocks" onClick={()=>fire({t:"pass"})}>Pass — let {them.name.split(",")[0]} block</button>
+                    : <button className={"a"+(passTone?" "+passTone:"")+(mine({t:"endTurn"})?"":" hubp")} data-pass={passTone} data-testid="pass" onClick={()=>fire({t:"pass"})}>Pass</button>)
+                : <span className={"a dis"+(mine({t:"endTurn"})?"":" hubp")}>waiting on {them.name.split(",")[0]}</span>}
+              <button className={"a "+(mine({t:"endTurn"}) && passTone ? passTone : "go")+(mine({t:"endTurn"})?" hubp":"")} data-pass={mine({t:"endTurn"}) ? passTone : ""} data-testid="end-turn" disabled={!mine({t:"endTurn"})} onClick={()=>fire({t:"endTurn"})}>End turn</button>
             </>}
-      </div>
+      </HubBar>
 
       {/* WHO YOU BEAT DECIDES WHETHER IT IS A TROPHY (v2.83).
 
