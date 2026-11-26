@@ -1,3 +1,20 @@
+## v7.17 — The glance is back
+
+- **A tapped card shows the card again on an iPhone (user, 2026-11-26: "the card previews broke").** v7.15 hid the peek
+  dock's card under 700 px tall, because the hand wheel's top card was already magnified; v7.16 retired the wheel and the
+  hide stayed. Safari's view on a 393-wide iPhone is about 660 px tall, so on the phone the game is played on, a tapped
+  card showed its name bar alone while every drive (393x852, 320x568) passed. The card shows at every height now, and
+  never under 150 px wide where the screen has room (the old three-screen board's glance): 150 px at 393x660 where it
+  was 0, 172 px at 852 as before. Its top stays under the jump row. On a short phone the glance lies over THEIR strip and
+  the HUD while it is open; any tap closes it.
+- **The tap judge knows the glance.** tools/tapjudge.js reports a control whose centre lies under the open preview card as
+  EXEMPT ("under the open preview card, a glance any tap closes"), never as stolen and never silently; anything under the
+  dock's bar, and the hand and status line `--peekbot` keeps it above, is judged as before.
+- Drill: `peekJudge` (tools/page.js, exported), run at **393x660** (the iPhone's real height, new to the drives) and
+  320x568, on the trainer and the AI table: the dock opens with its card drawn, at least 88 px and wider than the hand
+  card, inside the phone, under the jump row, above its bar, the bar above the hand. Sabotage (the v7.15 hide put back):
+  FAILS at 660 and 568 ("the dock shows no card"), passes at 852, where it was never hidden.
+
 ## v7.16 — The hand row
 
 - **The hand wheel is retired; the hand is flat again and scrolls the phone's own way (user, 2026-11-26: "the current

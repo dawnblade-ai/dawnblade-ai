@@ -945,10 +945,13 @@ button.modehint{display:block;width:100%;min-height:44px;background:none;border:
 @keyframes pkin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 /* the card also fits the height left above the hand, less the jump row, the HUD, their strip and the dock's bar
    (215): on a 568-tall phone a 52vw card stood 292 px and covered the jump row and the HUD (v7.15, one screen's tap
-   sweep). Under 700 px tall the dock is its bar alone: the peeked card is lifted and ringed in the hand row, and the
-   stage has no room for a second one. */
-.peekcard{width:min(172px,52vw,calc((100vh - var(--peekbot,112px) - 215px) * .714));filter:drop-shadow(0 10px 26px rgba(0,0,0,.75))}
-@media (max-height:700px){.peekwrap .peekcard{display:none}}
+   sweep). v7.15 also hid the card under 700 px tall, because the hand wheel's top card was already magnified; v7.16
+   retired the wheel and the hide stayed, so on an iPhone (Safari's view is ~660 px tall) a tapped card showed its
+   name bar alone: "the card previews broke" (user, 2026-11-26). v7.17: the card shows at every height, and never
+   smaller than 150 px wide (the old three-screen board's glance) where the screen has room for it; on a short phone
+   that glance may lie over THEIR strip and the HUD while it is open (a tap anywhere closes it; tools/tapjudge.js
+   reports what it covers as exempt). The last term keeps its top under the jump row (bar 46 + jump row 44 + gaps). */
+.peekcard{width:min(172px,52vw,max(150px,calc((100vh - var(--peekbot,112px) - 215px) * .714)),calc((100vh - var(--peekbot,112px) - 104px) * .714));filter:drop-shadow(0 10px 26px rgba(0,0,0,.75))}
 .peekcard .cfw{border:1px solid var(--y);border-radius:4px;overflow:hidden}
 .peekbar{display:flex;flex-direction:column;align-items:center;gap:1px;margin-top:5px;
   background:var(--forge);border:1px solid var(--y);border-radius:3px;padding:4px 10px;
@@ -1337,7 +1340,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "7.16"; /* v7.16 - The hand is a flat row again that scrolls the phone's own way, the wheel retired; see CHANGELOG.md. */
+window.APP_VER = "7.17"; /* v7.17 - A tapped card shows the card again on an iPhone-height screen, not only its name; see CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the

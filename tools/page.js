@@ -454,7 +454,43 @@ async function hudJudge(page, truth){
   return { ok: !m.bad.length, detail: m.bad.length ? m.bad.join("; ") : `life ${JSON.stringify(m.life)}, ${m.texts} text nodes flat, at y ${m.h[0]} h ${m.h[1]}` };
 }
 
-module.exports = { open, makeAnswer, depsDir, hudJudge, hubJudge, screenJudge, toStage, handTo, handJudge };
+/* THE GLANCE (v7.17): a tap on a playable hand card opens the peek dock WITH THE CARD in it, at every height. v7.15 hid the
+   card under 700 px tall (the hand wheel's top card was already magnified) and v7.16 retired the wheel, so on an iPhone,
+   whose Safari view is ~660 px tall, a tapped card showed its name bar alone ("the card previews broke", user 2026-11-26).
+   Asserted: the dock opens; its card is drawn, wider than the hand card it shows (or it tells nothing) and at least 88 px;
+   inside the phone; its top under the jump row (whose taps stay reachable); the card above the dock's bar and the bar
+   above the hand row (`--peekbot`). The dock is closed after. Returns rows as [ok, name, detail]. */
+async function peekJudge(page, prefix){
+  await toStage(page);
+  const card = page.locator(".board .phand .hc:not(.dis):visible").first();
+  if(!(await card.count())) return [[false, prefix + ": the glance (a peeked card shows the card)", "no playable hand card"]];
+  await card.click({ timeout: 3000 }).catch(() => {});
+  await page.waitForTimeout(400);
+  const r = await page.evaluate(() => {
+    const B = e => { if(!e) return null; const b = e.getBoundingClientRect(); return { t: b.top, b: b.bottom, l: b.left, r: b.right, w: b.width, h: b.height }; };
+    const dock = document.querySelector(".peekwrap"), c = dock && dock.querySelector(".peekcard"), bar = dock && dock.querySelector(".peekbar");
+    const nav = B(document.querySelector(".board .screennav")), hand = B(document.querySelector(".board .phand"));
+    const hc = B(document.querySelector(".board .phand .hc")), cb = B(c), bb = B(bar), bad = [];
+    const shown = !!c && getComputedStyle(c).display !== "none" && cb && cb.w > 0 && cb.h > 0;
+    if(!dock) bad.push("no dock");
+    else if(!shown) bad.push("the dock shows no card");
+    else {
+      if(cb.w < 88) bad.push(`card ${Math.round(cb.w)} px wide`);
+      if(hc && cb.w <= hc.w + 1) bad.push(`card ${Math.round(cb.w)} px, no wider than the hand card (${Math.round(hc.w)})`);
+      if(cb.l < -0.5 || cb.r > innerWidth + 0.5 || cb.t < -0.5) bad.push("card outside the phone");
+      if(nav && cb.t < nav.b - 0.5) bad.push(`card top ${Math.round(cb.t)} over the jump row (bottom ${Math.round(nav.b)})`);
+      if(bb && cb.b > bb.t + 0.5) bad.push("card under its bar");
+      if(bb && hand && bb.b > hand.t + 0.5) bad.push(`bar bottom ${Math.round(bb.b)} over the hand (top ${Math.round(hand.t)})`);
+    }
+    return { bad, w: cb ? Math.round(cb.w) : 0, hw: hc ? Math.round(hc.w) : 0, top: cb ? Math.round(cb.t) : null };
+  });
+  await page.evaluate(() => { const w = document.querySelector(".peekwrap"); if(w) w.click(); });
+  await page.waitForTimeout(250);
+  return [[!r.bad.length, prefix + ": the glance (a peeked card shows the card, wider than the hand's, clear of the jump row and the hand)",
+           r.bad.length ? r.bad.join("; ") : `card ${r.w} px (hand ${r.hw}), top ${r.top}`]];
+}
+
+module.exports = { open, makeAnswer, depsDir, hudJudge, hubJudge, screenJudge, toStage, handTo, handJudge, peekJudge };
 
 /* ============================================================
    THE SMOKE CHECK
@@ -1441,6 +1477,30 @@ if(require.main === module){
       } catch(e){ row(false, "trainer 320x568: the life HUD", String(e && e.message || e).split("\n")[0]); }
       sk.errors.forEach(e => errors.push(`hud 320x568: ${e}`));
       await sk.close();
+    }
+
+    /* THE GLANCE AT AN IPHONE'S REAL HEIGHT (v7.17): Safari's view on a 393-wide iPhone is ~660 px tall, and the drives
+       ran only at 852 and 568, so the hidden preview card (v7.15..v7.16) reached the player without a row failing. The
+       trainer and the AI table, at 393x660 and at 320x568; a fresh page each. */
+    for(const [pw, ph] of [[393, 660], [320, 568]]) for(const tbl of [false, true]){
+      const lbl = `${tbl ? "table" : "trainer"} ${pw}x${ph}`;
+      const gk = await open({ w: pw, h: ph });
+      try {
+        const p = gk.page;
+        await p.locator(".hcard").first().click(); await p.getByRole("button", { name: /^Battle$/ }).click();
+        await p.waitForSelector(".foestep");
+        if(tbl) await p.locator('.aifoe button:not([aria-label="The Dummy"]):not([aria-label="A random hero"])').nth(2).click();
+        else await p.locator('.aifoe button[aria-label="The Dummy"]').click();
+        await p.waitForTimeout(200); await p.locator("[data-foe-go]").click();
+        await p.waitForSelector(".rseatpick, .lo", { timeout: 15000 });
+        if(await p.locator(".rseatpick").isVisible().catch(() => false)) await p.locator(".rseatpick .go").click();
+        await p.waitForSelector(".lo", { timeout: 10000 });
+        await p.locator(tbl ? '.lo .actbar [data-start="table"]' : '.lo .actbar [data-start="trainer"]').click();
+        await p.waitForSelector(".board .phand .hc", { timeout: 15000 }); await p.waitForTimeout(600);
+        for(const [ok, name, d] of await peekJudge(p, lbl)) row(ok, name, d);
+      } catch(e){ row(false, lbl + ": the glance", String(e && e.message || e).split("\n")[0]); }
+      gk.errors.forEach(e => errors.push(`glance ${lbl}: ${e}`));
+      await gk.close();
     }
 
     /* READABILITY (U; tools/contrast.js): the tap sweep above carries one `readability` row per screen (WCAG AA against the

@@ -20,6 +20,8 @@
    is under it everywhere is lost). `small` does not depend on scroll and comes from both passes. (A 1px slack: the probe reads fractional boxes.)
    A modal (.bugwrap, .reveal, .modal, .zoomwrap, .psheet) hides what is behind it: only its controls are judged.
 
+   UNDER THE OPEN PREVIEW (v7.17): a control whose centre lies under the peeked card's glance (`.peekwrap .peekcard`) is
+   reported as exempt with that reason, not as stolen: on a short phone the glance covers their strip and the HUD while open.
    EXEMPT: [name pattern, why] for a control UI-GUIDE.md documents as smaller on purpose. A finding for one
    comes back in `exempt`, never silently dropped. None is listed since v7.16 (the hand wheel's turned cards were the
    one; an entry may name a CSS selector instead). The jump row, JUDGE!! and the advisor header get invisible hit areas
@@ -79,14 +81,17 @@ function tapJudge({ min, halo, exempt }) {
   const hitOf = c => {
     const { el, v } = c, probe = (x, y) => { const t = document.elementFromPoint(x, y); return !!t && el.contains(t); };
     const cx = v.left + v.width / 2, cy = v.top + v.height / 2, S = 0.5;   // half-pixel steps: a 42px box reads 42, not 43
-    if (!probe(cx, cy)) { const t = document.elementFromPoint(cx, cy); return { lost: true, on: t ? key(t) : "nothing" }; }
+    if (!probe(cx, cy)) { const t = document.elementFromPoint(cx, cy); return { lost: true, on: t ? key(t) : "nothing", glance: !!t && !!t.closest(".peekwrap .peekcard") }; }
     const run = (x, y, dx, dy, lim) => { let n = 0; while (n * S < lim) { const nx = x + dx * (n + 1) * S, ny = y + dy * (n + 1) * S; if (nx < 0 || ny < 0 || nx >= W || ny >= H || !probe(nx, ny)) break; n++; } return n * S; };
     return { w: run(cx, cy, -1, 0, v.width / 2 + halo) + run(cx, cy, 1, 0, v.width / 2 + halo), h: run(cx, cy, 0, -1, v.height / 2 + halo) + run(cx, cy, 0, 1, v.height / 2 + halo) };
   };
   for (const c of ctl) {
     out.n++; const h = hitOf(c), k = key(c.el), why = exOf(c.el);
-    const put = (kind, m) => (why ? out.exempt : out[kind]).push({ k, m: (why ? kind + " (" + why + "): " : "") + m });
-    if (h.lost) put("stolen", k + " " + box(c.r) + " the tap at its centre lands on " + h.on);
+    const put = (kind, m, w = why) => (w ? out.exempt : out[kind]).push({ k, m: (w ? kind + " (" + w + "): " : "") + m });
+    /* UNDER THE OPEN PREVIEW (v7.17): on a short phone the peeked card's glance lies over their strip and the HUD while it
+       is open, and a tap there closes it first. Reported, as exempt, never dropped; anything the dock's BAR covers, and
+       the hand and status line under it (`--peekbot` keeps the dock above them), is still stolen. */
+    if (h.lost) put("stolen", k + " " + box(c.r) + " the tap at its centre lands on " + h.on, why || (h.glance ? "under the open preview card, a glance any tap closes" : null));
     else {
       /* a control a scroller holds half out of view is judged on its drawn size along that axis */
       const w = c.edge.x || c.part.x ? Math.max(h.w, c.r.width) : h.w, ht = c.edge.y || c.part.y ? Math.max(h.h, c.r.height) : h.h;
