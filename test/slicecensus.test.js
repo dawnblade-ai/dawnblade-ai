@@ -440,7 +440,7 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        with the comment saying why. Same anchors. */
     /* 23,068 -> 20,445 (pick the opponent first, 2026-11-25), READ FIRST: still `function Loadout(` -> the next
        function; the SHRINK is the foe picker pane leaving for `FoePick`, which now sits before it. */
-    "phasebar.test.js index.html 109376",   /* the `<style>` block — its history is below */
+    "phasebar.test.js index.html 109918",   /* the `<style>` block — its history is below */
     "phasebar.test.js index.html 20445",
     /* 63,730 -> 64,368 AT v5.57, READ FIRST: still the `<style>` block,
        `<style>` -> `</style>`; the growth is the Cloaked card back's three
@@ -527,8 +527,8 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
     /* -> 91,751 (v6.83, Rematch CSS + .bigbtn.alt 44 px) -> 92,440 (v6.85, the practice-while-waiting bar and banner), READ FIRST: presentation only. */
     /* -> 94,193 (v6.86, the 44 px tap floor and the scrolling end panel, one CSS block), READ FIRST: presentation only. */
     /* -> 97,538 (the title screen, 2026-11-25) -> 98,204 (+ the opponent step's `.foestep` rules, 2026-11-25), READ FIRST: still `<style>` -> `</style>`; presentation only. */
-    /* -> 99,804 (v7.09, the recap card's `.recap` rules) -> 100,125 (v7.10, the tile record chip `.hcard .myrec`) -> 100,271 (v7.11, the declared rail piece's zone chip steps under ⛨ DEF) -> 103,205 (v7.12, the life HUD `.stagehud` replaced `.lifehud`: the skewed bars, numerals, turn box, pips, chips, `--hudh` and the screens' height less it) -> 104,653 (v7.13, the hand wheel `.phand.wheel` and its parts replaced the rail's hidden-count `.railmore`) -> 106,307 (v7.14, the hub `.actbar.hub`: the primary in the thumb lane, secondaries in the corners; the wheel dims an unplayable card's art, not its numbers) -> 109,376 (v7.15, one screen: the board sheets `.vscreen.side`, the strips `.bstrip`, the jump row's lit button; the peek card capped by height), READ FIRST: still `<style>` -> `</style>`; presentation only. */
-    /* the `<style>` slice's history (63,730 -> 109,376) stood here; its pin moved above the 20,445 line at v7.10, where the sorted list now puts a six-digit length */
+    /* -> 99,804 (v7.09, the recap card's `.recap` rules) -> 100,125 (v7.10, the tile record chip `.hcard .myrec`) -> 100,271 (v7.11, the declared rail piece's zone chip steps under ⛨ DEF) -> 103,205 (v7.12, the life HUD `.stagehud` replaced `.lifehud`: the skewed bars, numerals, turn box, pips, chips, `--hudh` and the screens' height less it) -> 104,653 (v7.13, the hand wheel `.phand.wheel` and its parts replaced the rail's hidden-count `.railmore`) -> 106,307 (v7.14, the hub `.actbar.hub`: the primary in the thumb lane, secondaries in the corners; the wheel dims an unplayable card's art, not its numbers) -> 109,376 (v7.15, one screen: the board sheets `.vscreen.side`, the strips `.bstrip`, the jump row's lit button; the peek card capped by height), READ FIRST: still `<style>` -> `</style>`; presentation only. -> 109,918 (v7.16, the hand row `.phand.hrow` replaced the wheel's `.phand.wheel` rules; the art-dim rule now every hand row), READ FIRST: presentation only. */
+    /* the `<style>` slice's history (63,730 -> 109,918) stood here; its pin moved above the 20,445 line at v7.10, where the sorted list now puts a six-digit length */
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
        `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
        `abPickBound` in the pick legality it extends. */

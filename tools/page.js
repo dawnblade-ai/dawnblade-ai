@@ -160,90 +160,114 @@ function needPlaywright(){
    reads "N cards"). Rejects, after closing the browser, if the load itself
    produced a page error or console error. `errors` keeps filling afterwards:
    call check() to throw on anything new. */
-/* THE HAND WHEEL SHOWS FIVE CARDS (v7.13): a card further round is hidden until the wheel turns.
-   A drive reaches it the way a thumb does: a short sideways swipe (real CDP touch events) toward it,
-   about one card a swipe, until it is in view. Not a tap on the edge card: a card that cannot be
-   played opens large on a tap, and that sheet takes every click after it. Returns whether it got there. */
-async function wheelTo(page, css){
+/* THE HAND ROW SCROLLS (v7.16): a card past the edge is reached the way a thumb does, a sideways touch swipe
+   (a real CDP scroll gesture, so the phone's native scroller moves it) toward it, until it is whole in view.
+   Not a tap on the edge card: a card that cannot be played opens large on a tap, and that sheet takes every
+   click after it. Returns whether it got there. */
+async function handTo(page, css){
   const cdp = await page.context().newCDPSession(page);
   const T = (type, x, y) => cdp.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y }] });
   try {
-    for(let i = 0; i < 14; i++){
+    for(let i = 0; i < 10; i++){
       const st = await page.evaluate(sel => {
         const t = document.querySelector(sel); if(!t) return { gone: true };
-        if(getComputedStyle(t).visibility !== "hidden") return { ok: true };
-        const w = t.closest(".phand.wheel"); w.scrollIntoView({ block: "nearest" });
-        const b = w.getBoundingClientRect();
-        return { dir: +t.getAttribute("data-wslot") > 0 ? -1 : 1, x: b.left + b.width / 2, y: b.top + b.height * 0.75 };
+        const w = t.closest(".phand"); if(!w) return { gone: true };
+        w.scrollIntoView({ block: "nearest" });
+        const b = w.getBoundingClientRect(), q = t.getBoundingClientRect();
+        if(q.left >= b.left - 1 && q.right <= b.right + 1) return { ok: true };
+        return { dx: q.left < b.left ? -1 : 1, x: b.left + b.width / 2, y: b.top + b.height / 2 };
       }, css);
       if(st.ok) return true;
       if(st.gone) return false;
+      /* the finger moves against the content: to bring a card in from the right, swipe left (CDP touch events; headless
+         Chromium scrolls natively on them, where Input.synthesizeScrollGesture moved nothing) */
       await T("touchStart", st.x, st.y);
-      for(let k = 1; k <= 8; k++){ await T("touchMove", st.x + st.dir * k * 12, st.y + 1); await page.waitForTimeout(30); }
-      await T("touchEnd"); await page.waitForTimeout(450);
+      for(let k = 1; k <= 8; k++){ await T("touchMove", st.x - st.dx * k * 12, st.y); await page.waitForTimeout(16); }
+      await T("touchEnd"); await page.waitForTimeout(600);
     }
     return false;
   } finally { await cdp.detach().catch(() => {}); }
 }
-/* THE HAND WHEEL JUDGE (G1b, docs/GRAPHICS-PLAN.md §3; design/STAGE.md App. C.1). On the screen showing
-   `.phand.wheel`: exactly one top card (`.wtop`) among the shown cells, centred in the thumb lane (the middle 51%
-   of the phone), the largest card shown, inside the wheel's box, and nothing over its centre; every shown card's
-   centre inside the phone; the index chip reads "k / n" for the top's place and the cell count. Then the drive:
-   a tap on a neighbour spins it up and peeks it; a touch swipe turns the wheel, peeks the new top and commits
-   nothing; and with `commit`, a tap on the peeked top card changes the board. Returns rows as [ok, name, detail]. */
-async function wheelJudge(page, prefix, { commit = false } = {}){
+/* THE HAND ROW JUDGE (v7.16; it replaces v7.13's wheelJudge). On the screen showing `.phand.hrow`: every card upright
+   (no rotation), the same width and at least 76 px wide, in one line (the peek's 7-px lift allowed), wholly inside the
+   row's height, no two overlapping; the row inside the phone; when the row is wider than its box it is a native
+   x-scroller, and each edge's `+N` counts exactly the cards whose middle lies past that edge. Then the drive: a touch
+   swipe scrolls the row and peeks and plays nothing; a tap on a playable card cut by the right edge peeks it, opens
+   the dock and glides the card whole into view; and with `commit`, a second tap on the peeked card changes the board.
+   Returns rows as [ok, name, detail]. */
+async function handJudge(page, prefix, { commit = false } = {}){
   const out = [];
   const geo = () => page.evaluate(() => {
-    const w = [...document.querySelectorAll(".board .phand.wheel")].find(e => { const b = e.getBoundingClientRect(); return b.bottom > 0 && b.top < innerHeight; });
-    if(!w) return { bad: ["no wheel on screen"] };
+    const w = [...document.querySelectorAll(".board .phand.hrow")].find(e => { const b = e.getBoundingClientRect(); return b.height && b.bottom > 0 && b.top < innerHeight; });
+    if(!w) return { bad: ["no hand row on screen"] };
     const bad = [], W = innerWidth, wb = w.getBoundingClientRect();
-    const cells = [...w.querySelectorAll(".hc")], shown = cells.filter(c => getComputedStyle(c).visibility !== "hidden");
-    const tops = shown.filter(c => c.classList.contains("wtop"));
-    if(tops.length !== 1) return { bad: [`${tops.length} top cards`], n: cells.length };
-    const t = tops[0], tb = t.getBoundingClientRect(), cx = tb.left + tb.width / 2, cy = tb.top + tb.height / 2;
-    if(cx < W * 0.244 || cx > W * 0.756) bad.push(`top centre x ${Math.round(cx)} outside the thumb lane`);
-    if(tb.top < wb.top - 1 || tb.bottom > wb.bottom + 1) bad.push(`top card [${Math.round(tb.top)}..${Math.round(tb.bottom)}] outside the wheel [${Math.round(wb.top)}..${Math.round(wb.bottom)}]`);
-    const over = document.elementFromPoint(cx, cy);
-    if(!over || !t.contains(over)) bad.push(`over the top card: ${over ? over.className || over.tagName : "-"}`);
-    shown.forEach(c => { if(c === t) return; const b = c.getBoundingClientRect();
-      if(b.height * 1.12 > tb.height) bad.push(`a neighbour (${Math.round(b.height)}px) as tall as the top (${Math.round(tb.height)}px)`);
-      const x = b.left + b.width / 2; if(x < 0 || x > W) bad.push(`a shown card's centre at x ${Math.round(x)}`); });
-    const k = cells.indexOf(t) + 1, meta = (w.querySelector(".wmeta") || {}).innerText || "";
-    if(meta.replace(/\s+/g, "") !== `${k}/${cells.length}`) bad.push(`index "${meta}" for card ${k} of ${cells.length}`);
-    return { bad, n: cells.length, k, shown: shown.length, peek: t.classList.contains("peek"), dock: !!document.querySelector(".peekwrap"),
-             wb: [Math.round(wb.top), Math.round(wb.height)], board: document.querySelector(".board").innerText.length };
+    if(wb.left < -1 || wb.right > W + 1) bad.push(`the row [${Math.round(wb.left)}..${Math.round(wb.right)}] leaves the phone`);
+    const cells = [...w.querySelectorAll(".hrin > .hc")], bx = cells.map(c => c.getBoundingClientRect());
+    const w0 = bx.length ? bx[0].width : 0, tops = bx.map(q => q.top);
+    cells.forEach((c, i) => { const q = bx[i], tf = getComputedStyle(c).transform;
+      if(tf && tf !== "none"){ const m = tf.match(/matrix\(([^)]+)\)/); const v = m ? m[1].split(",").map(Number) : null;
+        if(!v || Math.abs(v[1]) > 0.001 || Math.abs(v[2]) > 0.001 || Math.abs(v[0] - 1) > 0.001) bad.push(`card ${i + 1} is turned or scaled (${tf})`); }
+      if(Math.abs(q.width - w0) > 1) bad.push(`card ${i + 1} is ${Math.round(q.width)} px wide, card 1 ${Math.round(w0)}`);
+      if(q.width < 75.5) bad.push(`card ${i + 1} is ${Math.round(q.width)} px wide (< 76)`);
+      if(q.top < wb.top - 1 || q.bottom > wb.bottom + 1) bad.push(`card ${i + 1} [${Math.round(q.top)}..${Math.round(q.bottom)}] outside the row [${Math.round(wb.top)}..${Math.round(wb.bottom)}]`);
+      if(i && q.left < bx[i - 1].right - 0.5) bad.push(`cards ${i} and ${i + 1} overlap`); });
+    if(tops.length && Math.max(...tops) - Math.min(...tops) > 8) bad.push(`not one line: tops ${Math.round(Math.min(...tops))}..${Math.round(Math.max(...tops))}`);
+    const over = w.scrollWidth > w.clientWidth + 1, ox = getComputedStyle(w).overflowX;
+    if(over && !/auto|scroll/.test(ox)) bad.push(`the row is ${w.scrollWidth} wide in a ${w.clientWidth} box and does not scroll (overflow-x ${ox})`);
+    let l = 0, r = 0; bx.forEach(q => { const m = (q.left + q.right) / 2; if(m < wb.left) l++; else if(m > wb.right) r++; });
+    const chip = side => { const b = w.querySelector(".hrmore." + side + " b"); return b && b.getClientRects().length ? +b.innerText.replace(/\D/g, "") : 0; };   /* drawn, not merely present */
+    if(chip("l") !== l || chip("r") !== r) bad.push(`the edges say +${chip("l")} / +${chip("r")}, the cards past them are ${l} / ${r}`);
+    const pk = cells.findIndex(c => c.classList.contains("peek"));
+    return { bad, n: cells.length, w: Math.round(w0), over, sl: Math.round(w.scrollLeft), l, r, peek: pk, dock: !!document.querySelector(".peekwrap"),
+             wb: [Math.round(wb.top), Math.round(wb.height)] };
   });
+  /* the hand's size or the action bar, never the board's text: the ticker changes that on its own */
+  const sig = () => page.evaluate(() => [document.querySelectorAll(".board .phand .hc").length,
+    (document.querySelector(".board .actbar") || {}).innerText || ""].join(" | ").replace(/\s+/g, " "));
   const g0 = await geo();
-  out.push([!g0.bad.length, prefix + ": the hand wheel (one magnified top card in the thumb lane, the index true)",
-            g0.bad.length ? g0.bad.join("; ") : `card ${g0.k} of ${g0.n} on top, ${g0.shown} shown, wheel at y ${g0.wb[0]} h ${g0.wb[1]}`]);
+  out.push([!g0.bad.length, prefix + ": the hand row (upright, one size, one line, the edge counts true)",
+            g0.bad.length ? g0.bad.join("; ") : `${g0.n} cards ${g0.w} px wide, row at y ${g0.wb[0]} h ${g0.wb[1]}, ${g0.over ? "scrolls" : "fits"}, past the edges ${g0.l} / ${g0.r}`]);
   if(g0.bad.length || g0.n < 2) return out;
-  const nb = g0.k < g0.n ? 1 : -1;
-  await page.locator(`.board .phand.wheel [data-wslot="${nb}"]`).first().click().catch(() => {});
-  await page.waitForTimeout(450);
-  const g1 = await geo();
-  out.push([!g1.bad.length && g1.k === g0.k + nb && g1.peek && g1.dock, prefix + ": a tap on a neighbour spins it to the top and peeks it",
-            `top ${g0.k} -> ${g1.k} (want ${g0.k + nb}), peeked ${g1.peek}, dock ${g1.dock}` + (g1.bad.length ? "; " + g1.bad.join("; ") : "")]);
-  const wb = await page.locator(".board .phand.wheel").first().boundingBox();
-  const dir = g1.k < g1.n ? -1 : 1, cdp = await page.context().newCDPSession(page);
-  const T = (type, x, y) => cdp.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y }] });
-  const x0 = wb.x + wb.width / 2, y0 = wb.y + wb.height * 0.75;
-  const before = await page.evaluate(() => document.querySelectorAll(".board .phand.wheel .hc").length);
-  await T("touchStart", x0, y0);
-  for(let i = 1; i <= 8; i++){ await T("touchMove", x0 + dir * i * 9, y0 + 1); await page.waitForTimeout(30); }
-  await T("touchEnd"); await page.waitForTimeout(600);
+  if(g0.over){
+    const wb = await page.locator(".board .phand.hrow").first().boundingBox();
+    const b0 = await sig(), cdp = await page.context().newCDPSession(page);
+    const T = (type, x, y) => cdp.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y }] });
+    const x0 = wb.x + wb.width / 2, y0 = wb.y + wb.height / 2;
+    await T("touchStart", x0, y0);
+    for(let k = 1; k <= 10; k++){ await T("touchMove", x0 - k * 15, y0); await page.waitForTimeout(16); }
+    await T("touchEnd");
+    await cdp.detach().catch(() => {});
+    await page.waitForTimeout(800);
+    const g1 = await geo(), b1 = await sig();
+    out.push([!g1.bad.length && g1.sl > g0.sl && g1.peek === g0.peek && b1 === b0, prefix + ": a swipe scrolls the row and peeks and plays nothing",
+              `scroll ${g0.sl} -> ${g1.sl}, peek ${g0.peek} -> ${g1.peek}, ${b0 === b1 ? "board unchanged" : b0 + " -> " + b1}` + (g1.bad.length ? "; " + g1.bad.join("; ") : "")]);
+    await page.evaluate(() => { const w = document.querySelector(".board .phand.hrow"); if(w) w.scrollLeft = 0; });
+    await page.waitForTimeout(250);
+  }
+  /* a playable card the right edge cuts (or, when the row fits, the last playable card) */
+  const pick = await page.evaluate(() => {
+    const w = document.querySelector(".board .phand.hrow"), wb = w.getBoundingClientRect();
+    const cells = [...w.querySelectorAll(".hrin > .hc")];
+    let i = cells.findIndex(c => { const q = c.getBoundingClientRect(); return !c.classList.contains("dis") && q.left < wb.right - 20 && q.right > wb.right + 1; });
+    if(i < 0) for(let k = cells.length - 1; k >= 0; k--) if(!cells[k].classList.contains("dis") && !cells[k].classList.contains("peek")){ i = k; break; }
+    if(i < 0) return null;
+    const q = cells[i].getBoundingClientRect();
+    return { i, x: Math.round(Math.max(q.left, wb.left) + Math.min(q.right, wb.right)) / 2, y: Math.round(q.top + q.height / 2), cut: q.right > wb.right + 1 };
+  });
+  if(!pick){ out.push([true, prefix + ": a tap peeks a card and brings it whole into view", "no playable card in the hand to tap"]); return out; }
+  await page.mouse.click(pick.x, pick.y);
+  await page.waitForTimeout(700);
   const g2 = await geo();
-  out.push([!g2.bad.length && g2.k !== g1.k && g2.n === before && g2.peek, prefix + ": a swipe turns the wheel, peeks the new top and plays nothing",
-            `top ${g1.k} -> ${g2.k}, cards ${before} -> ${g2.n}, peeked ${g2.peek}` + (g2.bad.length ? "; " + g2.bad.join("; ") : "")]);
-  await cdp.detach().catch(() => {});
+  const whole = await page.evaluate(i => { const w = document.querySelector(".board .phand.hrow"), b = w.getBoundingClientRect();
+    const q = w.querySelectorAll(".hrin > .hc")[i].getBoundingClientRect(); return q.left >= b.left - 1 && q.right <= b.right + 1; }, pick.i);
+  out.push([!g2.bad.length && g2.peek === pick.i && g2.dock && whole, prefix + ": a tap peeks a card and brings it whole into view",
+            `tapped card ${pick.i + 1}${pick.cut ? " (cut by the edge)" : ""}: peek ${g2.peek + 1}, dock ${g2.dock}, whole ${whole}` + (g2.bad.length ? "; " + g2.bad.join("; ") : "")]);
   if(commit){
-    /* the hand's size or the action bar, never the board's text: the ticker changes that on its own */
-    const sig = () => page.evaluate(() => [document.querySelectorAll(".board .phand.wheel .hc").length,
-      (document.querySelector(".board .actbar") || {}).innerText || ""].join(" | ").replace(/\s+/g, " "));
     const b0 = await sig();
-    await page.locator(".board .phand.wheel .hc.wtop").click().catch(() => {});
+    await page.locator(".board .phand.hrow .hc.peek").click().catch(() => {});
     await page.waitForTimeout(700);
     const b1 = await sig();
-    out.push([b1 !== b0, prefix + ": a tap on the peeked top card commits it", `${b0} -> ${b1}`]);
+    out.push([b1 !== b0, prefix + ": a second tap on the peeked card commits it", `${b0} -> ${b1}`]);
   }
   return out;
 }
@@ -280,7 +304,7 @@ async function hubJudge(page){
   });
 }
 /* THE ONE-SCREEN JUDGE (G1c part two, v7.15; design/STAGE.md §2.1). The board is one screen: the board box does not
-   scroll vertically and exactly one screen is in flow; their strip sits above the stage and yours above the wheel, both
+   scroll vertically and exactly one screen is in flow; their strip sits above the stage and yours above the hand, both
    wholly on the phone, at least 44 px drawn (the tap floor), nothing over their centres; each strip's deck count equals the one its
    sheet shows (the strip is a reading of the side, not a second copy). Then the drive: a tap on their strip opens their
    board as a sheet that covers the stage's centre and hides the peek dock; You ▼ swaps it for yours; Chain closes it.
@@ -315,12 +339,12 @@ async function screenJudge(page, prefix){
       const o = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
       if(!o || !s.contains(o)) bad.push(`over the ${k} strip: ${o ? o.className || o.tagName : "-"}`);
     }
-    const mid = document.querySelector(".board .playmid"), wheel = document.querySelector(".board .phand");
+    const mid = document.querySelector(".board .playmid"), hand = document.querySelector(".board .phand");
     if(st.them && mid && st.them.bottom > box(mid).top + 1) bad.push("their strip is not above the stage");
-    if(st.you && wheel && st.you.bottom > box(wheel).top + 1) bad.push("your strip is not above the wheel");
+    if(st.you && hand && st.you.bottom > box(hand).top + 1) bad.push("your strip is not above the hand");
     return { bad, mid: mid ? [box(mid).left + box(mid).width / 2, box(mid).top + box(mid).height / 2] : null };
   });
-  out.push([!g.bad.length, prefix + ": one screen (no vertical scroll; their strip over the stage, yours over the wheel)", g.bad.length ? g.bad.join("; ") : "ok"]);
+  out.push([!g.bad.length, prefix + ": one screen (no vertical scroll; their strip over the stage, yours over the hand)", g.bad.length ? g.bad.join("; ") : "ok"]);
   if(g.bad.length) return out;
   const deckOf = k => page.evaluate(k => { const b = [...document.querySelectorAll(`.board [data-strip="${k}"] .bsc`)].find(e => /deck/i.test(e.textContent));
     return b ? +b.querySelector("b").textContent : null; }, k);
@@ -430,7 +454,7 @@ async function hudJudge(page, truth){
   return { ok: !m.bad.length, detail: m.bad.length ? m.bad.join("; ") : `life ${JSON.stringify(m.life)}, ${m.texts} text nodes flat, at y ${m.h[0]} h ${m.h[1]}` };
 }
 
-module.exports = { open, makeAnswer, depsDir, hudJudge, hubJudge, screenJudge, toStage, wheelTo, wheelJudge };
+module.exports = { open, makeAnswer, depsDir, hudJudge, hubJudge, screenJudge, toStage, handTo, handJudge };
 
 /* ============================================================
    THE SMOKE CHECK
@@ -771,7 +795,7 @@ if(require.main === module){
        cards until one carries a keyword; its line must sit inside the screen, above the
        rail, and a tap ON it must close the preview (the dock is one tap-to-close surface). */
     const peekKw = async prefix => {
-      /* one screen (v7.15): the wheel is on the stage, under any board sheet the drive left open */
+      /* one screen (v7.15): the hand is on the stage, under any board sheet the drive left open */
       await toStage(page);
       const cards = page.locator(".board .phand .hc:visible");
       const n = await cards.count(), seen = [];
@@ -851,7 +875,7 @@ if(require.main === module){
             return {w: Math.round(r.width), h: Math.round(r.height), inside: r.left >= q.left && r.right <= q.right, sw: n.scrollWidth <= n.clientWidth}; });
           row(!!nb && nb.inside && nb.sw && nb.w <= W && nb.h > 0, "trainer: a new phone's first game says what the call is for",
             nb ? `${nb.w}x${nb.h}px, inside its box ${nb.inside}` : "no line"); }
-        for(const [ok, name, d] of await wheelJudge(page, "trainer")) row(ok, name, d);
+        for(const [ok, name, d] of await handJudge(page, "trainer")) row(ok, name, d);
         for(const [ok, name, d] of await screenJudge(page, "trainer")) row(ok, name, d);
         await page.evaluate(() => { const w = document.querySelector(".peekwrap"); if(w) w.click(); });
         await hitCheck("trainer", ".board .judgebtn", 40); await advHits("trainer");
@@ -973,6 +997,9 @@ if(require.main === module){
             row(seen === "true" ? !shown : true, "table: the call's newcomer line is gone once seen", `seen ${seen}, shown ${shown}`); }
           await hitCheck("table", ".board .judgebtn", 40); await advHits("table");
           for(const [ok, name, d] of await screenJudge(page, "table")) row(ok, name, d);
+          /* the hand row at the table too (v7.16): the same judge, no commit; the peek it opens is closed after */
+          for(const [ok, name, d] of await handJudge(page, "table")) row(ok, name, d);
+          await page.evaluate(() => { const w = document.querySelector(".peekwrap"); if(w) w.click(); }); await page.waitForTimeout(250);
           await nav("table", ["You", first]);
           await playOn("table");
           await click(page.locator(".screennav button", { hasText: "leave" }), "leave the table");
@@ -1068,7 +1095,7 @@ if(require.main === module){
             `legal ${JSON.stringify(want)}, rail ${JSON.stringify(got)}, turn ${reach.turn}`);
         if(got.length){
           const cell = page.locator(`.phand [data-rail-def="${got[0]}"]`);
-          await wheelTo(page, `.phand [data-rail-def="${got[0]}"]`);
+          await handTo(page, `.phand [data-rail-def="${got[0]}"]`);
           await cell.click().catch(() => {}); await page.waitForTimeout(250); await cell.click().catch(() => {}); await page.waitForTimeout(400);
           const after = await page.evaluate(u => ({ blk: (window.__dawnTable.session.state().sides[0].blockG || []).map(String).includes(u),
             mark: !!document.querySelector(`.phand [data-rail-def="${u}"] .defsel`) }), got[0]);
@@ -1409,7 +1436,7 @@ if(require.main === module){
         const j = await hudJudge(p); row(j.ok, "trainer 320x568: the life HUD", j.detail);
         await p.locator(".screennav button", { hasText: "Chain" }).click(); await p.waitForTimeout(700);
         { const hj = await hubJudge(p); row(hj.hub && hj.ok, "trainer 320x568: the hub", hj.detail); }
-        for(const [ok, name, d] of await wheelJudge(p, "trainer 320x568", { commit: true })) row(ok, name, d);
+        for(const [ok, name, d] of await handJudge(p, "trainer 320x568", { commit: true })) row(ok, name, d);
         for(const [ok, name, d] of await screenJudge(p, "trainer 320x568")) row(ok, name, d);
       } catch(e){ row(false, "trainer 320x568: the life HUD", String(e && e.message || e).split("\n")[0]); }
       sk.errors.forEach(e => errors.push(`hud 320x568: ${e}`));

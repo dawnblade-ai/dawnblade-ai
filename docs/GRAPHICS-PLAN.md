@@ -1,6 +1,6 @@
 # GRAPHICS PLAN — the next phase (drafted 2026-11-25, at v7.10)
 
-**Status: DIRECTION GIVEN (user, 2026-11-25). G1a SHIPPED v7.12** (the always-on life-bar HUD, both boards; `docs/ux/before-hud.jpg` / `after-hud.jpg` / `after-hud-320.jpg`). **G1b the wheel SHIPPED v7.13; G1c part one, the hub, SHIPPED v7.14** (`HubBar`, `hubJudge`; `docs/ux/after-hub.jpg`). **G1c part two, one screen, SHIPPED v7.15** (`BoardStrip`, the board sheets, `screenJudge`; `docs/ux/after-onescreen.jpg`). **Next: G2–G5** (parallel workers allowed), and the wheel follow-ups (prompts as a wheel source). The user's answer to §2: *"I don't
+**Status: DIRECTION GIVEN (user, 2026-11-25). G1a SHIPPED v7.12** (the always-on life-bar HUD, both boards; `docs/ux/before-hud.jpg` / `after-hud.jpg` / `after-hud-320.jpg`). **G1b the wheel SHIPPED v7.13 and was RETIRED v7.16** (user, 2026-11-26: "the current hand 'wheel' really doesn't work well, we need a better more fluid system" — the hand is the old flat rail again, a native scroller, `HandRow`, `handJudge`; `docs/ux/after-handrow.jpg`); ** G1c part one, the hub, SHIPPED v7.14** (`HubBar`, `hubJudge`; `docs/ux/after-hub.jpg`). **G1c part two, one screen, SHIPPED v7.15** (`BoardStrip`, the board sheets, `screenJudge`; `docs/ux/after-onescreen.jpg`). **Next: G2–G5** (parallel workers allowed), and the wheel follow-ups (prompts as a wheel source). The user's answer to §2: *"I don't
 think there is enough room to show the equipment on the main screen with the hand. Reference our old
 mockup with the health bars and the hand wheel - make sure the equipment is showing up in the hand
 wheel when it can be blocked with."* The old mockup is `design/STAGE.md` + `design/prototype/` on the
@@ -43,20 +43,20 @@ One screen, the old mockup's bands (`design/STAGE.md` §2.1, Appendix C.1 on `de
 │  caption lane (feed headline) │  the status line's hint
 ├───────────────────────────────┤
 │ your strip: counts · chips    │  NO equipment tiles here either
-│     ╭──── HAND WHEEL ────╮     │  the hand AND every other play: the top card magnified,
-│   ▭  ▭  [ TOP ]  ▭  ▭        │  spin to choose, tap the top card to commit
+│ ▭ ▭ [▭] ▭ ▭ ▸ HAND ROW +N     │  the hand AND every other play, flat, one flick end to end
+│                               │  (v7.16; the arc wheel until then): tap peeks, tap again plays
 │ res·AP   [ HUB: PASS ]  ⋯    │  the primary button in the thumb lane (x 96..297)
 └───────────────────────────────┘
 ```
 
-**Equipment lives in the wheel, not on the screen.** The strips do not draw gear tiles. A piece
-joins the wheel whenever it has a legal play: a weapon to swing, an ability to activate, and —
+**Equipment lives in the hand row, not on the screen.** The strips do not draw gear tiles. A piece
+joins the hand row whenever it has a legal play: a weapon to swing, an ability to activate, and —
 the user's rule — **a piece that can block, in the defend step**, outlined ⛨ DEF once declared.
 The whole loadout (worn, broken, counters) is one tap away in the board sheet. Gear in the
 defending wall shows in the stage's wall row, where the block is read.
 - Already true on the trainer (`playables()` lists declarable pieces in the defend step since v2).
 - **v7.11** made it true at the table (`railPlays` lists every piece `judge.legal` lets you declare,
-  first; page.js row, sabotaged), so the wheel inherits a complete source on both boards.
+  first; page.js row, sabotaged), so the hand row inherits a complete source on both boards.
 
 The three panes become sheets (opponent board, the chain history + log + call, your board), so
 nothing a pane shows today is lost. Both boards get it through shared components.
@@ -66,7 +66,7 @@ nothing a pane shows today is lost. Both boards get it through shared components
 | # | step | touches | parallel with |
 |---|---|---|---|
 | G1a | **The HUD**: two skewed life bars with the numeral beside each, chip trail, hand pips, turn; replaces `LifeHud` on both boards (STAGE §3.1; no text under a transformed ancestor) | `LifeHud`, both boards' top band | nothing |
-| G1b | **The hand wheel** (SHIPPED v7.13; the hub moved to G1c): one shared `HandWheel` fed by the rail's entries (hand + `playables()` / `railPlays()` + arsenal), top card magnified, spin + snap, tap top = commit, tap other = spin to top; the hub holds the primary button (STAGE App. C.1) | `.phand` on both boards, `.actbar` primary, `PeekDock` | nothing |
+| G1b | **The hand wheel** (SHIPPED v7.13; RETIRED v7.16 for the flat, natively scrolling `HandRow` — the user found the arc not fluid; the hub moved to G1c): one shared `HandWheel` fed by the rail's entries (hand + `playables()` / `railPlays()` + arsenal), top card magnified, spin + snap, tap top = commit, tap other = spin to top; the hub holds the primary button (STAGE App. C.1) | `.phand` on both boards, `.actbar` primary, `PeekDock` | nothing |
 | G1c | **One screen** (the hub SHIPPED v7.14 as part one; the primary button in the thumb lane x 96..297, from G1b): strips (counts and chips, no gear tiles) + the stage; the three panes become sheets; equipment only in the wheel and the wall row | `Battle`, `TableBoard`, page.js/serverpage rows | nothing |
 | G2 | **Cards in the hand**: a fanned, overlapping hand; pitch colour, cost, power, defence legible at the 9 px floor; the peek grows from the fan | hand rail components, `PeekDock` | G4, G5 |
 | G3 | **Motion that means something**: an attack lunges to the chain, a hit shakes the target strip, a block clanks onto it, prevention glows blue — each paired with the existing `Sfx` sound; off under reduced motion; no frame over 16 ms at 4x throttle | CSS + `Glide`/`LifeNum` | G4, G5 |
@@ -75,8 +75,8 @@ nothing a pane shows today is lost. Both boards get it through shared components
 
 Workers: `experiments/WORKER-PROMPT-UI.txt` on `findings/queue` (update its CEO session id), one
 `ship/AG-…` branch each; the CEO merges, gates and ships. G1a–G1c run in order and alone, because
-every other step sits on the board they build. G2's fan is superseded by the wheel (G1b); G2 is now
-the card face legible at wheel size.
+every other step sits on the board they build. G2's fan was superseded by the wheel (G1b), and the wheel by the flat hand row (v7.16); G2 is now
+the card face legible at hand-row size (76..104 px).
 
 ## 4. What does not change
 

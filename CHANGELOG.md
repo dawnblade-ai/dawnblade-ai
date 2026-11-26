@@ -1,3 +1,34 @@
+## v7.16 — The hand row
+
+- **The hand wheel is retired; the hand is flat again and scrolls the phone's own way (user, 2026-11-26: "the current
+  hand 'wheel' really doesn't work well, we need a better more fluid system — maybe ... we just need to make the hand
+  endlessly scrollable in the old flat layout").** One shared `HandRow` replaces `HandWheel` on both boards. It is a
+  native horizontal scroller: the phone's own momentum and rubber band, no snap (a snap fights a flick), every card
+  upright and the same size, nothing hidden behind a spin — a seven-card hand is one flick end to end, and three and a
+  half cards read at once on a 393-wide phone where the wheel showed one magnified card and two tilted ones.
+- **Bigger than the old rail.** Cards are a quarter of the phone wide (`--hcw`: 96 px at 393, up to 104; the old rail's
+  80), and 76 px under 700 px tall, where the stage needs the height: at 320x568 the stage grows from ~96 to 146 px.
+  The row is 154 px tall at 393x852 (the wheel was 176), so the stage gains there too. A hand that fits is centred.
+- **What the wheel taught stays.** It is a layout, not a second rail: each board builds its own cells, dims, verbs and
+  taps. The two-tap rule is untouched — the first tap peeks (the card lifts, ringed in yellow, and the dock names it),
+  the second plays it; a scroll never taps. The peeked card GLIDES WHOLE INTO VIEW when an edge cuts it (a tap on a
+  half-shown card, or a peek set elsewhere), clear of the edge's fade. A card you cannot play dims its art, not its
+  numbers (v7.14's rule, now every hand row). A declared defender is ringed in steel and stays down.
+- **The edges count.** A `+N` sits on each edge for the cards whose middle lies past it (the old rail's `RailMore`,
+  both sides now), over a short fade. On a desktop a mouse wheel scrolls the row sideways and a mouse drag pulls it
+  (a drag never also taps the card it started on) — the wheel's mouse drag got `pointercancel`.
+- Drill: `handJudge` (tools/page.js, exported; it replaces `wheelJudge`): every card upright, one width, at least 76 px,
+  one line, inside the row's height, no two overlapping; the row inside the phone and a native x-scroller when it
+  overflows; each edge's `+N` equal to the cards past it (drawn, not merely present); a touch swipe scrolls the row
+  and peeks and plays nothing; a tap on a playable card cut by the edge peeks it, opens the dock and brings it whole
+  into view; with `commit`, a second tap plays it. Rows: trainer 393 and 320x568 (with the commit). `handTo` (it
+  replaces `wheelTo`) reaches a card past the edge with CDP touch swipes — headless Chromium scrolls natively on
+  them, where `Input.synthesizeScrollGesture` moved nothing. Sabotages, each FAILS: the cards overlapping, the row
+  not scrolling, a card turned, the `+N` hidden, a card narrower, the peek never gliding. tools/tapjudge.js's EXEMPT
+  list is empty: the wheel's turned cards were its one entry.
+- Gates: npm test 4627/4622/0/5 · babel 4/4 · page.js 350/350 (the table's three hand rows new) · serverpage 490/0 ·
+  trainchaos CLEAN 18. Shots: `docs/ux/after-handrow.jpg`, `after-handrow-320.jpg`.
+
 ## v7.15 — One screen
 
 - **G1c, part two: one screen (docs/GRAPHICS-PLAN.md §3; design/STAGE.md §2.1 on `design/stage`).** The board no longer

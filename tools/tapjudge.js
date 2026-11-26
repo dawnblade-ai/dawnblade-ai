@@ -21,8 +21,8 @@
    A modal (.bugwrap, .reveal, .modal, .zoomwrap, .psheet) hides what is behind it: only its controls are judged.
 
    EXEMPT: [name pattern, why] for a control UI-GUIDE.md documents as smaller on purpose. A finding for one
-   comes back in `exempt`, never silently dropped. UI-GUIDE.md documents one: the hand wheel's turned cards (v7.15;
-   an entry may name a CSS selector instead). The jump row, JUDGE!! and the advisor header get invisible hit areas
+   comes back in `exempt`, never silently dropped. None is listed since v7.16 (the hand wheel's turned cards were the
+   one; an entry may name a CSS selector instead). The jump row, JUDGE!! and the advisor header get invisible hit areas
    instead (DECISION B 2026-11-02).
    ============================================================ */
 "use strict";
@@ -114,11 +114,10 @@ function scrollAll(to) {
   }
 }
 
-/* [name pattern, why] or [null, why, css selector]. The wheel's TURNED cards (v7.15, UI-GUIDE.md "The board"): with one
-   screen the wheel is always in view, and a card tilted round the arc is clipped by the wheel and its box's centre is
-   off the card by design. It is reached by spinning it to the top, the only card a tap commits, and tools/page.js's
-   wheelJudge drives exactly that. The top card (.wtop) is judged like any control. */
-const EXEMPT = [[null, "a turned wheel card: spin it to the top (wheelJudge)", ".phand.wheel .hc:not(.wtop)"]];
+/* [name pattern, why] or [null, why, css selector]. Empty since v7.16: the hand wheel's turned cards (v7.15) were the
+   one entry, and the flat hand row that replaced the wheel is an ordinary x-scroller, judged like any other (a card
+   it holds half out of view is judged on its drawn width; a thumb scrolls the rest into reach). */
+const EXEMPT = [];
 const MIN = 44, HALO = 24;
 
 /* Judge the screen as it stands: {n, small, stolen, clipped, overlap, exempt}, each a list of {k, m}. */

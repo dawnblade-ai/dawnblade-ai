@@ -145,15 +145,18 @@ board renders and the other hand-copies.
 
 Both boards use the same structure — `.tablewrap` (no vertical scroll since
 v7.15) holding three `.vscreen` panes. Only the middle one (the stage: their
-strip `.bstrip`, the play pane, your strip, the hand wheel) is in flow; the
+strip `.bstrip`, the play pane, your strip, the hand row) is in flow; the
 opponent's board and yours are `.vscreen.side` SHEETS laid over it, one at a
 time (`.open`), opened from the jump row or a strip (`BoardStrip`, one tap) and
 closed by Chain. Each pane has a horizontal `.hscroll` swipe to its graveyard
 (the middle one: the log pane on its left). The action bar is the hub
 (`HubBar`, v7.14): the primary in the thumb lane, secondaries in the corners.
-Drills: `hudJudge`, `wheelJudge`, `hubJudge`, `screenJudge` in tools/page.js. The tap judge (tools/tapjudge.js) EXEMPTS
-the wheel's turned cards (clipped and tilted by design; reached by spinning them to the top, which `wheelJudge`
-drives); the top card is judged like any control.
+The hand is `HandRow` (v7.16; the v7.13 hand wheel until then): the old flat rail as a native horizontal
+scroller — the phone's momentum, no snap, every card upright and one size (`--hcw`, a quarter of the phone,
+76..104 px; 76 under 700 px tall), centred while it fits, a `+N` on each edge for the cards past it; the
+peeked card lifts and glides whole into view; a mouse wheel or drag scrolls it on a desktop.
+Drills: `hudJudge`, `handJudge`, `hubJudge`, `screenJudge` in tools/page.js (`handTo` reaches a card past the edge
+with a touch swipe). The tap judge (tools/tapjudge.js) exempts nothing: the row is an ordinary x-scroller.
 
 | pane | `Battle` | `TableBoard` |
 |---|---|---|

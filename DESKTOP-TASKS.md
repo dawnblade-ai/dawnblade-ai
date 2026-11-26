@@ -142,6 +142,9 @@ path on two real phones. **About 15 minutes, two phones, both on the live page (
    *Play the AI while you wait* at once. Then finish a friendly game between the two phones and open *Your record* on
    each: *Against people* should show one game, under the hero that phone piloted — once, even after a reload.
    (v7.05) Tap *Against whom?* under it: one row, "vs" the hero the OTHER phone played; tap again to hide it.
+11. (v7.16) The hand is a flat row again. Flick it sideways: it should glide and coast like any iPhone list, stop at
+   either end with a small bounce, and **never** swipe Safari back a page. Tap a card half off the edge: it lifts and
+   slides fully into view; tap it again to play it. The **+N** on each edge should count the cards hidden past it.
 
 **Report back:** the step that failed (if any), the phones, and whether it was Wi-Fi or mobile data. JUDGE!! files a
 report from either phone.

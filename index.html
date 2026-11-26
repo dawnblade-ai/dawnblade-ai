@@ -743,8 +743,8 @@ button.modehint{display:block;width:100%;min-height:44px;background:none;border:
 /* ONE SCREEN (v7.15): the board's middle screen is the only one in flow; the other two are sheets laid over it,
    shown one at a time from the jump row or a strip. Nothing scrolls the board vertically any more. */
 .board .tablewrap{position:relative;overflow:hidden;scroll-snap-type:none}
-/* the screen in flow fills the box INSIDE its border (it was the box's own height, 2 px over, clipped off the wheel's
-   foot); the wheel's z-indexed cards stay under a sheet */
+/* the screen in flow fills the box INSIDE its border (it was the box's own height, 2 px over, clipped off the hand's
+   foot); the board's z-indexed cards stay under a sheet */
 .board .tablewrap>.vscreen:not(.side){isolation:isolate;height:100%;min-height:0}
 .board .vscreen.side{position:absolute;inset:0;z-index:6;display:none;box-shadow:0 0 0 1px var(--y)}
 .board .vscreen.side.open{display:flex;animation:sheetin .16s ease-out}
@@ -818,40 +818,46 @@ button.modehint{display:block;width:100%;min-height:44px;background:none;border:
 .phand .hlbl{align-self:center}
 .phand .hc{flex:none;width:80px;position:relative;padding:0;background:var(--forge);border:1px solid var(--line);scroll-snap-align:start;transition:transform .12s}
 .phand .hc.sel{transform:translateY(-6px);border-color:var(--y);box-shadow:0 0 0 2px var(--y)}
-.phand .hc.dis{opacity:.4}
-/* ON THE WHEEL A CARD YOU CANNOT PLAY DIMS ITS ART, NOT ITS NUMBERS (v7.14). The rail's 0.4 on the whole cell put the
-   magnified top card's cost, power and defence under AA (3.8:1, "Attack" 2.3:1) in the reaction step, where most of a
-   hand cannot be played; the read is the point of the magnified card. The art (or its stand-in's fill) darkens, the
-   frame goes dashed, and the badges and the stand-in's words stay at full contrast. */
-.board .phand.wheel .hc.dis{opacity:1;border-style:dashed}
-.phand.wheel .hc.dis .cfw>img{filter:brightness(.4) grayscale(.6)}
-.phand.wheel .hc.dis .ccfall{background:var(--ink)!important}
+/* A CARD YOU CANNOT PLAY DIMS ITS ART, NOT ITS NUMBERS (v7.14, on the wheel; every hand row since v7.16). The rail's
+   0.4 on the whole cell put a card's cost, power and defence under AA (3.8:1, "Attack" 2.3:1) in the reaction step,
+   where most of a hand cannot be played. The art (or its stand-in's fill) darkens, the frame goes dashed, and the
+   badges and the stand-in's words stay at full contrast. */
+.board .phand .hc.dis,.board .phand .hc.peek.dis{opacity:1;border-style:dashed}
+.phand .hc.dis .cfw>img{filter:brightness(.4) grayscale(.6)}
+.phand .hc.dis .ccfall{background:var(--ink)!important}
 .phand .hlbl{scroll-snap-align:start}
-/* THE HAND WHEEL (v7.13, GRAPHICS-PLAN G1b, STAGE App. C.1): the rail's cells laid on an
-   arc of radius 260 whose centre sits 348px below the wheel's top, 24 degrees apart. Every
-   cell is centred ON the wheel's centre and its inline transform rotates it out along the
-   arc, so the geometry is one number per card (`HandWheel`). `pan-y` keeps the screen's
-   vertical flick while a sideways drag spins; the top card is magnified and outlined. */
-/* `clip`, not `hidden`: a hidden box is still a scroller, and a scrollIntoView (a drive's click, a focus) slid
-   the whole wheel sideways and off its centre; `hidden` stays as the fallback for an engine without `clip` */
-.phand.wheel{display:block;position:relative;height:176px;overflow:hidden;overflow:clip;padding:0;touch-action:pan-y;
-  scroll-snap-type:none;user-select:none;-webkit-user-select:none}
-.phand.wheel.wempty{height:40px}
-.phand.wheel>.hlbl{position:absolute;left:4px;top:10px}
-.phand.wheel .hc{position:absolute;left:50%;top:348px;width:80px;transform-origin:50% 50%;
-  transition:transform .22s cubic-bezier(.2,.8,.3,1),opacity .22s}
-.phand.wheel.drag .hc{transition:none}
-/* the border, not an outline: the card's clip-path cuts anything drawn outside its box */
-.phand.wheel .hc.wtop{border-color:var(--y);border-width:2px}
-/* the ⛨ DEF badge sits inside the card here: at the rail's -7px the card's own clip-path cut its top off */
-.phand.wheel .defsel{top:3px}
-.phand.wheel .hc.sel .b-zone{top:23px}
-.phand.wheel .hc.sel{border-color:#9fb3c8;box-shadow:0 0 0 2px #9fb3c8}
-.phand.wheel .wmeta{position:absolute;z-index:30;right:4px;bottom:4px;padding:2px 5px;background:var(--ink);border:1px solid var(--line);font-family:'Spline Sans Mono';font-size:var(--fs-sm);
-  color:var(--bone-dim);pointer-events:none;letter-spacing:.06em}
-.phand.wheel .wverb{position:absolute;z-index:30;left:4px;bottom:4px;padding:2px 5px;background:var(--ink);border:1px solid var(--y);font-family:'Spline Sans Mono';font-size:var(--fs-sm);
-  font-weight:700;letter-spacing:.08em;color:var(--y);pointer-events:none;text-transform:uppercase}
-@media (prefers-reduced-motion: reduce){.phand.wheel .hc{transition:none}}
+/* THE HAND ROW (v7.16; `HandRow`): the old flat rail, scrolled the phone's own way. The box is a native horizontal
+   scroller (momentum, rubber band, no snap: a snap fights a flick); its one child `.hrin` is the row at its own
+   width, centred while it fits (margin auto; a wider row overflows to the right and scrolls). The top padding is the
+   peek's lift room: an x-scroller clips y as well. Card width `--hcw`: a quarter of the phone, 78..104 px; 76 px under
+   700 px tall, where the stage needs the height. `overscroll-behavior-x` keeps a flick at the end from swiping the
+   browser back a page. */
+.phand.hrow{display:block;padding:0;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scroll-snap-type:none;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none;--hcw:clamp(78px,24.5vw,104px)}
+.phand.hrow::-webkit-scrollbar{display:none}
+@media (max-height:700px){.phand.hrow{--hcw:76px}}
+.phand.hrow>.hrin{display:flex;gap:6px;align-items:flex-end;width:max-content;margin:0 auto;padding:11px 10px 8px}
+.phand.hrow .hc{width:var(--hcw);scroll-snap-align:none;transition:transform .14s ease-out}
+.phand.hrow.wempty>.hrin{align-items:center;padding:8px 10px}
+.phand.hrow .hrnone{font-family:'Spline Sans Mono';font-size:var(--fs-sm);color:var(--bone-dim);letter-spacing:.06em;padding:6px 0}
+/* the ⛨ DEF badge sits inside the card: at the rail's old -7px the card's own clip-path cut its top off */
+.phand.hrow .defsel{top:3px}
+.phand.hrow .hc.sel .b-zone{top:23px}
+/* a declared defender is ringed in steel and stays down; the yellow ring and the lift are the peek's alone */
+.phand.hrow .hc.sel{transform:none;border-color:#9fb3c8;box-shadow:0 0 0 2px #9fb3c8}
+.phand.hrow .hc.peek{border-color:var(--y)}
+/* the +N on each edge: zero-width and sticky to that edge of the scroller (the old rail's `RailMore`, both sides) */
+.phand.hrow .hrmore{flex:none;width:0;align-self:stretch;position:sticky;pointer-events:none;z-index:3}
+.phand.hrow .hrmore.l{left:0;margin-right:-6px}
+.phand.hrow .hrmore.r{right:0;margin-left:-6px}
+.phand.hrow .hrmore.on::before{content:"";position:absolute;top:-11px;bottom:-8px;width:34px}
+.phand.hrow .hrmore.l.on::before{left:-10px;background:linear-gradient(90deg,var(--forge2) 20%,rgba(0,0,0,0))}
+.phand.hrow .hrmore.r.on::before{right:-10px;background:linear-gradient(270deg,var(--forge2) 20%,rgba(0,0,0,0))}
+.phand.hrow .hrmore b{position:absolute;top:50%;transform:translateY(-50%);font-family:'Spline Sans Mono';font-size:var(--fs-sm);
+  font-weight:700;color:var(--y);background:var(--ink);border:1px solid var(--y);padding:1px 4px;letter-spacing:.04em}
+.phand.hrow .hrmore.l b{left:3px}
+.phand.hrow .hrmore.r b{right:3px}
+@media (prefers-reduced-motion: reduce){.phand.hrow .hc{transition:none}}
 
 /* v2.07 prompt sheet — the rulings ask for a popup that leaves the hand
    visible, so it docks above the action bar instead of covering the screen. */
@@ -937,9 +943,9 @@ button.modehint{display:block;width:100%;min-height:44px;background:none;border:
   animation:pkin .14s ease-out}
 .peekwrap>*{pointer-events:auto}
 @keyframes pkin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-/* the card also fits the height left above the wheel, less the jump row, the HUD, their strip and the dock's bar
+/* the card also fits the height left above the hand, less the jump row, the HUD, their strip and the dock's bar
    (215): on a 568-tall phone a 52vw card stood 292 px and covered the jump row and the HUD (v7.15, one screen's tap
-   sweep). Under 700 px tall the dock is its bar alone: the wheel's top card is already the magnified card, and the
+   sweep). Under 700 px tall the dock is its bar alone: the peeked card is lifted and ringed in the hand row, and the
    stage has no room for a second one. */
 .peekcard{width:min(172px,52vw,calc((100vh - var(--peekbot,112px) - 215px) * .714));filter:drop-shadow(0 10px 26px rgba(0,0,0,.75))}
 @media (max-height:700px){.peekwrap .peekcard{display:none}}
@@ -1331,7 +1337,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "7.15"; /* v7.15 - The whole fight on one screen: strips for each side, the boards open as sheets; see CHANGELOG.md. */
+window.APP_VER = "7.16"; /* v7.16 - The hand is a flat row again that scrolls the phone's own way, the wheel retired; see CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -3187,7 +3193,7 @@ function PeekDock({card, verb, onClose}){
          their tap closed the preview instead. Any `.statusline` / pip `.rail`
          stacked directly on the rail is part of what the dock must clear. */
       let el = r && railEl;
-      /* and YOUR STRIP (v7.15), which sits between the wheel and the status line now */
+      /* and YOUR STRIP (v7.15), which sits between the hand and the status line now */
       while(el && el.previousElementSibling && el.previousElementSibling.matches(".statusline, .rail, .bstrip.mine")){
         el = el.previousElementSibling;
         const t = el.getBoundingClientRect();
@@ -3716,123 +3722,96 @@ function StageHud({me, them, turn, myTurn, frost}){
     </div>
   );
 }
-/* THE HAND WHEEL — both boards (v7.13, GRAPHICS-PLAN G1b; design/STAGE.md App. C.1 on
-   branch design/stage). The user's brief: "display the playables rail as a wheel that goes off
-   the bottom of the screen, the 'top' card is the target", magnified, and something to fidget-
-   spin while you think.
+/* THE HAND ROW — both boards (v7.16; it replaces v7.13's hand wheel). The user, 2026-11-26: "the
+   current hand 'wheel' really doesn't work well, we need a better more fluid system — maybe ... we just
+   need to make the hand endlessly scrollable in the old flat layout." So the hand is flat again, and it
+   SCROLLS THE WAY THE PHONE SCROLLS: a native horizontal scroller, with the phone's own momentum and
+   rubber band, no snap (a snap fights a flick), every card the same size and upright, and nothing
+   hidden behind a spin — a long hand is one flick away end to end. What the wheel taught stays:
 
-   IT IS A LAYOUT, NOT A SECOND RAIL. Each board still builds its own cells (the trainer's
-   `handCell` + `playables`, the table's `handCell` + `railPlays` + the arsenal) with their own
-   dims, verbs and taps, and passes them in as children; this only places them on the arc. So
-   the two-tap rule is untouched: a tap on any card is its board's `tapTwice` — the first tap
-   peeks it, the second commits — and the wheel FOLLOWS THE PEEK: whichever cell carries
-   `peek` spins to the top. "Tap another card = spin it up, tap the top = commit" is that rule
-   said with motion. A drag spins the wheel 1:1 along the arc, coasts a little, snaps to a card,
-   and (when `spinPeeks`) peeks it, so the card under your thumb is the one a tap commits.
-
-   THE TOP STAYS PUT. It moves only when the peek moves or a finger moves it; across any other
-   state change the same card stays on top while it is in the wheel (a thinking thumb must not
-   have the card jump under it), and when it leaves, its neighbour takes the slot. */
-const WHEEL_R = 260, WHEEL_STEP = 24, WHEEL_ARC = WHEEL_R * WHEEL_STEP * Math.PI / 180;
-function HandWheel({children, spinPeeks}){
+   IT IS A LAYOUT, NOT A SECOND RAIL. Each board still builds its own cells (the trainer's `handCell` +
+   `playables`, the table's `handCell` + `railPlays` + the arsenal) with their own dims, verbs and taps,
+   and passes them in as children. The two-tap rule is untouched: the first tap peeks (the card lifts,
+   the dock names it), the second commits. Scrolling never taps: a native scroll swallows the click.
+   THE PEEK IS ALWAYS IN VIEW: when the peeked card changes and it is cut by an edge, the row glides
+   until it is whole. Otherwise the row stays where the thumb left it.
+   Cards are bigger than the old rail's 80 px (a quarter of the phone's width, 76..104 px; 76 under
+   700 px tall, where the stage needs the room). A card cut off at either edge is counted on that edge
+   (`+N`), so the row says how much more there is. On a desktop a mouse wheel scrolls it sideways and
+   a mouse drag pulls it. */
+function HandRow({children}){
   const cells = React.Children.toArray(children).filter(c => c && c.props);
   const n = cells.length;
-  const keys = cells.map(c => String(c.key));
   const has = (c, k) => (" " + (c.props.className || "") + " ").includes(" " + k + " ");
-  const mem = uR({key:null, idx:0, peekSeen:undefined});
-  const pt = uR(null);
-  const [drag, setDrag] = uS(0);
-  const [, bump] = uS(0);
-  /* how far round a card may sit and still have its centre on the phone: two slots at 393
-     wide (sin 48 x 260 = 193), one at 320 — measured off the wheel, which is the pane's width */
+  const peekIdx = cells.findIndex(c => has(c, "peek"));
+  const peekKey = peekIdx >= 0 ? String(cells[peekIdx].key) : null;
   const box = uR(null);
-  const [ww, setWw] = uS(393);
+  const drag = uR(null);
+  const [more, setMore] = uS([0, 0]);
+  /* the +N on each edge: cells whose middle is out of view; measured on scroll (once a frame), resize and render */
+  const count = useCallback(() => {
+    const el = box.current; if(!el) return;
+    const b = el.getBoundingClientRect();
+    let l = 0, r = 0;
+    for(const c of el.querySelectorAll(".hrin > .hc")){
+      const q = c.getBoundingClientRect(), m = (q.left + q.right) / 2;
+      if(m < b.left) l++; else if(m > b.right) r++;
+    }
+    setMore(o => (o[0] === l && o[1] === r) ? o : [l, r]);
+  }, []);
+  uE(() => { count(); });
   uE(() => {
     const el = box.current; if(!el) return;
-    const m = () => { const w = el.clientWidth; if(w) setWw(w); };
-    m();
-    const ro = typeof ResizeObserver === "function" ? new ResizeObserver(m) : null;
+    let raf = 0;
+    const onScroll = () => { if(!raf) raf = requestAnimationFrame(() => { raf = 0; count(); }); };
+    /* a mouse wheel's vertical turn scrolls the row sideways (the board itself never scrolls vertically) */
+    const onWheel = e => {
+      if(el.scrollWidth <= el.clientWidth + 1 || Math.abs(e.deltaX) >= Math.abs(e.deltaY)) return;
+      el.scrollLeft += e.deltaY; e.preventDefault();
+    };
+    el.addEventListener("scroll", onScroll, {passive:true});
+    el.addEventListener("wheel", onWheel, {passive:false});
+    const ro = typeof ResizeObserver === "function" ? new ResizeObserver(onScroll) : null;
     if(ro) ro.observe(el);
-    return () => { if(ro) ro.disconnect(); };
-  }, [!!cells.length]);
-  const reach = Math.max(1, Math.floor(Math.asin(Math.min(1, (ww / 2 + 6) / WHEEL_R)) * 180 / Math.PI / WHEEL_STEP)) + 0.5;
-  const peekIdx = cells.findIndex(c => has(c, "peek"));
-  const peekKey = peekIdx >= 0 ? keys[peekIdx] : null;
-  let top = -1;
-  if(peekKey !== mem.current.peekSeen && peekIdx >= 0) top = peekIdx;
-  if(top < 0) top = keys.indexOf(mem.current.key);
-  if(top < 0 && mem.current.key == null){ top = cells.findIndex(c => !has(c, "dis")); }
-  if(top < 0) top = Math.max(0, Math.min(mem.current.idx, n - 1));
-  mem.current = {key: n ? keys[top] : null, idx: top, peekSeen: peekKey};
-  const settle = t => {
-    t = Math.max(0, Math.min(n - 1, t));
-    const was = top;
-    mem.current = {...mem.current, key: keys[t], idx: t};
-    bump(x => x + 1);
-    const c = cells[t];
-    if(spinPeeks && t !== was && c && !has(c, "dis") && !has(c, "peek") && c.props.onClick) c.props.onClick({});
-  };
+    return () => { el.removeEventListener("scroll", onScroll); el.removeEventListener("wheel", onWheel); if(ro) ro.disconnect(); if(raf) cancelAnimationFrame(raf); };
+  }, [n > 0]);
+  /* the peek glides into view when it is cut by an edge (a tap on a half-shown card, or a peek set elsewhere) */
+  uE(() => {
+    const el = box.current; if(!el || !peekKey) return;
+    const c = el.querySelector(".hrin > .hc.peek"); if(!c) return;
+    /* 28: clear of the edge's fade and its +N, which sit over the last 24 px */
+    const b = el.getBoundingClientRect(), q = c.getBoundingClientRect(), pad = 28;
+    let dx = 0;
+    if(q.left < b.left + pad) dx = q.left - b.left - pad;
+    else if(q.right > b.right - pad) dx = q.right - b.right + pad;
+    if(!dx) return;
+    const calm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    try { el.scrollBy({left: dx, behavior: calm ? "auto" : "smooth"}); } catch(err) { el.scrollLeft += dx; }
+  }, [peekKey]);
+  /* a mouse drag pulls the row (touch and pen scroll natively); a drag never also taps the card it started on */
   const down = e => {
-    if(e.pointerType === "mouse" && e.button !== 0) return;
-    pt.current = {x:e.clientX, y:e.clientY, moved:false, t:performance.now(), v:0, last:e.clientX};
+    if(e.pointerType !== "mouse" || e.button !== 0 || !box.current) return;
+    drag.current = {x: e.clientX, left: box.current.scrollLeft, moved: false};
   };
   const move = e => {
-    const p = pt.current; if(!p) return;
-    const dx = e.clientX - p.x;
-    if(!p.moved){
-      if(Math.abs(dx) < 8 || Math.abs(dx) < Math.abs(e.clientY - p.y)) return;
-      p.moved = true;
-      try { e.currentTarget.setPointerCapture(e.pointerId); } catch(err) {}
-    }
-    const now = performance.now(), dt = Math.max(1, now - p.t);
-    p.v = 0.7 * p.v + 0.3 * ((e.clientX - p.last) / dt); p.t = now; p.last = e.clientX;
-    setDrag(dx / WHEEL_ARC);
+    const d = drag.current; if(!d || !box.current) return;
+    const dx = e.clientX - d.x;
+    if(!d.moved && Math.abs(dx) < 6) return;
+    d.moved = true;
+    box.current.scrollLeft = d.left - dx;
   };
-  const up = e => {
-    const p = pt.current; if(!p) return;
-    if(!p.moved){ pt.current = null; return; }
-    /* the coast: the release speed carries on for ~140ms of travel, then the snap */
-    const coast = Math.max(-2, Math.min(2, (p.v * 140) / WHEEL_ARC));
-    const t = Math.round(top - (e.clientX - p.x) / WHEEL_ARC - coast);
-    setDrag(0);
-    p.swallow = true;
-    setTimeout(() => { if(pt.current === p) pt.current = null; }, 0);
-    settle(t);
-  };
-  const cancel = () => { pt.current = null; setDrag(0); };
-  /* a drag must not also tap the card it started on; a tap on another card spins it up
-     (its own onClick then peeks it, or for a card that cannot be played, opens it large) */
-  const clickCap = e => {
-    if(pt.current && pt.current.swallow){ e.stopPropagation(); e.preventDefault(); pt.current = null; return; }
-    const cell = e.target.closest && e.target.closest("[data-wslot]");
-    if(cell){ const i = keys.indexOf(cell.getAttribute("data-wkey")); if(i >= 0 && i !== top){ mem.current = {...mem.current, key: keys[i], idx: i}; bump(x => x + 1); } }
-  };
-  if(!n) return <div ref={box} className="phand wheel wempty"><span className="hlbl">Hand</span><span className="wmeta">empty</span></div>;
-  const topCell = cells[top];
+  const up = () => { const d = drag.current; if(d && !d.moved) drag.current = null; else if(d) setTimeout(() => { if(drag.current === d) drag.current = null; }, 0); };
+  const clickCap = e => { const d = drag.current; if(d && d.moved){ e.stopPropagation(); e.preventDefault(); drag.current = null; } };
+  if(!n) return <div ref={box} className="phand hrow wempty"><div className="hrin"><span className="hlbl">Hand</span><span className="hrnone">no cards</span></div></div>;
   return (
-    <div ref={box} className={"phand wheel" + (drag ? " drag" : "")}
-      onScroll={e => { e.currentTarget.scrollLeft = 0; e.currentTarget.scrollTop = 0; }} onPointerDown={down} onPointerMove={move}
-      onPointerUp={up} onPointerCancel={cancel} onClickCapture={clickCap}>
-      <span className="hlbl">Hand</span>
-      {cells.map((c, i) => {
-        const sl = i - top + drag, a = Math.abs(sl);
-        const sc = 1 + 0.45 * Math.max(0, 1 - a);
-        /* no fade at all: a faded card's numbers fall under the AA floor, so the arc carries the far
-           cards off the phone, and a card that cannot be played dims its ART in CSS (v7.14,
-           `.phand.wheel .hc.dis`): the rail's .4 on the whole cell was 3.8:1 on the top card */
-        const fade = 1;
-        const hidden = a > reach;
-        return React.cloneElement(c, {
-          className: (c.props.className || "") + (i === top && !drag ? " wtop" : ""),
-          "data-wslot": Math.round(i - top), "data-wkey": keys[i],
-          "aria-hidden": hidden ? "true" : undefined, tabIndex: hidden ? -1 : undefined,
-          style: {...(c.props.style || {}),
-            transform: `translate(-50%,-50%) rotate(${sl * WHEEL_STEP}deg) translateY(-${WHEEL_R}px) scale(${sc})`,
-            opacity: fade, zIndex: 20 - Math.round(a * 4),
-            visibility: hidden ? "hidden" : undefined, pointerEvents: hidden ? "none" : undefined}});
-      })}
-      {topCell && !has(topCell, "peek") && <span className="wverb">tap · look</span>}
-      <span className="wmeta">{top + 1} / {n}</span>
+    <div ref={box} className="phand hrow" onPointerDown={down} onPointerMove={move} onPointerUp={up}
+      onPointerLeave={up} onClickCapture={clickCap}>
+      <div className="hrin">
+        <span className={"hrmore l" + (more[0] ? " on" : "")} aria-hidden="true">{more[0] ? <b>+{more[0]}</b> : null}</span>
+        <span className="hlbl">Hand</span>
+        {cells}
+        <span className={"hrmore r" + (more[1] ? " on" : "")} aria-hidden="true">{more[1] ? <b>+{more[1]}</b> : null}</span>
+      </div>
     </div>
   );
 }
@@ -3866,8 +3845,8 @@ function HubBar({children}){
 }
 /* THE STRIPS — one screen (v7.15, GRAPHICS-PLAN G1c part two; design/STAGE.md §2.1 on branch
    design/stage). The board is the stage now: a side's zones read as COUNTS and its arena as
-   chips grouped by name, in one row above the stage (theirs) and one above the wheel (yours).
-   NO equipment tiles: gear you can use is in the wheel, gear that blocks is in the wall row,
+   chips grouped by name, in one row above the stage (theirs) and one above the hand (yours).
+   NO equipment tiles: gear you can use is in the hand row, gear that blocks is in the wall row,
    and the whole loadout is one tap away — the strip IS the button that opens that side's
    board as a sheet over the stage (the panes that were flick screens). Counts only from the
    side's own zones, so a hidden hand stays a number. */
@@ -7300,7 +7279,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                   <span key={i} className={"rp"+(cl?" "+cl:"")}>{t}</span>)}</div> : null;
               })()}
               <BoardStrip sd={you(g)} who="You" mine open={sheet==="you"} onOpen={()=>flip("you")}/>
-              <HandWheel spinPeeks={!g.inspect}>
+              <HandRow>
                 {you(g).hand.flatMap(handCell)}
                 {playables.map((p,i)=>(
                   <button key={p.zone+"-"+(p.card.uid||p.card.name)+"-"+i}
@@ -7309,7 +7288,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                     {p.sel && <span className="defsel">⛨ DEF</span>}
                     <CardFrame card={p.card} zone={p.zone}/>
                   </button>))}
-              </HandWheel>
+              </HandRow>
             </div>
             {/* PANE 3 — CHAIN: the links */}
             <div className="hpane">
@@ -10504,7 +10483,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
               </div>}
 
               <BoardStrip sd={me} who="You" mine open={sheet==="you"} onOpen={()=>flip("you")}/>
-              <HandWheel spinPeeks={!inspect}>
+              <HandRow>
                 {me.hand.map(handCell)}
                 {railPlays().map(railCell)}
                 {me.arsenal && (()=>{
@@ -10515,7 +10494,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                     onClick={ok ? tapTwice(me.arsenal,"play from arsenal",()=>fire(a)) : ()=>setZoom(me.arsenal)}>
                     <CardFrame card={me.arsenal} zone="arsenal"/></button>;
                 })()}
-              </HandWheel>
+              </HandRow>
             </div>
 
             <div className="hpane">
