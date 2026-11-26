@@ -32,7 +32,8 @@
   yours (deck count again); Chain closes it. Rows: trainer 393, table, trainer 320x568. `playOn` closes any sheet
   first. Sabotages, each FAILS: the flick screens restored, their strip hidden, the sheet under the stage, the strip
   20 px tall, the strip's deck count lying, the sheets never closing.
-- Gates: see the release commit.
+- Gates: npm test 4627/4622/0/5 · babel 4/4 · page.js 347/347 · serverpage 490/0 · trainchaos CLEAN 18. Shots:
+  `docs/ux/after-onescreen.jpg` (the stage), `after-onescreen-sheet.jpg` (their board as a sheet), `after-onescreen-320.jpg`.
 
 ## v7.14 — The hub
 
