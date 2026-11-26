@@ -141,12 +141,17 @@ board renders and the other hand-copies.
 `padding: max(10px, env(safe-area-inset-top)) 12px calc(64px + env(safe-area-inset-bottom))`.
 `.tabs` is a fixed bottom nav (`z-index:40`).
 
-### The board: three vertical flick screens
+### The board: one screen and two sheets (v7.15; three flick screens until v7.14)
 
-Both boards use the same structure — `.tablewrap` with
-`scroll-snap-type: y mandatory`, holding three `.vscreen` panes of height
-`var(--tv)` = `calc(100vh - 152px)`. Each pane has a horizontal `.hscroll`
-swipe to its graveyard.
+Both boards use the same structure — `.tablewrap` (no vertical scroll since
+v7.15) holding three `.vscreen` panes. Only the middle one (the stage: their
+strip `.bstrip`, the play pane, your strip, the hand wheel) is in flow; the
+opponent's board and yours are `.vscreen.side` SHEETS laid over it, one at a
+time (`.open`), opened from the jump row or a strip (`BoardStrip`, one tap) and
+closed by Chain. Each pane has a horizontal `.hscroll` swipe to its graveyard
+(the middle one: the log pane on its left). The action bar is the hub
+(`HubBar`, v7.14): the primary in the thumb lane, secondaries in the corners.
+Drills: `hudJudge`, `wheelJudge`, `hubJudge`, `screenJudge` in tools/page.js.
 
 | pane | `Battle` | `TableBoard` |
 |---|---|---|
@@ -154,7 +159,7 @@ swipe to its graveyard.
 | 2 — chain / command centre | 5036 | 6704 |
 | 3 — your board | 5166 | 6858 |
 
-`.screennav` is the ▲ Opp / Chain / You ▼ jump row.
+`.screennav` is the ▲ Opp / Chain / You ▼ jump row; since v7.15 it opens and closes the sheets, and the lit button (`.on`) says which is shown.
 
 ### The rest of the flow
 

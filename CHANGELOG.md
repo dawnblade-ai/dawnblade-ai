@@ -1,3 +1,27 @@
+## v7.15 — One screen
+
+- **G1c, part two: one screen (docs/GRAPHICS-PLAN.md §3; design/STAGE.md §2.1 on `design/stage`).** The board no longer
+  flicks between three screens. The stage is the screen: the HUD, THEIR STRIP, the play pane (stack · featured card ·
+  defend), the status line, YOUR STRIP, the hand wheel and the hub, all at once. The opponent's board and yours are
+  SHEETS laid over the stage, one at a time, from the jump row (▲ Opp / You ▼, now lit for the one shown) or a tap on a
+  strip; Chain, or the strip again, closes it. Nothing a screen showed is lost: the sheets are those screens.
+- **The strips** (`BoardStrip`, shared): a side's name, its zones as COUNTS (their hand, arsenal, deck, pitch,
+  graveyard; banish and soul once they hold a card) and its arena as chips grouped by name (`Runechant ×3`, two then
+  `+N`). No equipment tiles: gear you can use is in the wheel, gear that blocks is in the wall row, the loadout is a tap
+  away. Below 375 px wide the labels shorten to a letter. Counts come from the side's own zones, so a hidden hand stays
+  a number. Their strip replaces the row of face-down hand backs.
+- **Fixes on the way.** The middle screen was its box's own height, 2 px taller than the box inside its border, so the
+  wheel's foot was clipped (found by the new judge). The wheel's z-indexed cards drew over an open sheet (the stage now
+  isolates its stacking), and the peek dock floated over a sheet (it hides while one is open). The "flick up to the
+  chain screen" hints are now buttons that close the sheet.
+- Drill: `screenJudge` (tools/page.js, exported): the board box does not scroll and one screen is in flow; both strips
+  on the phone, ≥ 34 px, uncovered, theirs above the stage and yours above the wheel; a tap on their strip opens their
+  board over the stage's centre and hides the dock, with the strip's deck count equal to the sheet's; You ▼ swaps in
+  yours (deck count again); Chain closes it. Rows: trainer 393, table, trainer 320x568. `playOn` closes any sheet
+  first. Sabotages, each FAILS: the flick screens restored, their strip hidden, the sheet under the stage, the strip
+  20 px tall, the strip's deck count lying, the sheets never closing.
+- Gates: see the release commit.
+
 ## v7.14 — The hub
 
 - **G1c, part one: the hub (docs/GRAPHICS-PLAN.md §3; design/STAGE.md App. C.1 on `design/stage`).** On both boards the

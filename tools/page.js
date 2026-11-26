@@ -279,6 +279,67 @@ async function hubJudge(page){
       : `"${lab(p)}" at x ${Math.round(pb.left)}..${Math.round(pb.right)}` + (sec.length ? ", corners: " + sec.map(lab).join(" / ") : "") };
   });
 }
+/* THE ONE-SCREEN JUDGE (G1c part two, v7.15; design/STAGE.md §2.1). The board is one screen: the board box does not
+   scroll vertically and exactly one screen is in flow; their strip sits above the stage and yours above the wheel, both
+   wholly on the phone, at least 34 px drawn, nothing over their centres; each strip's deck count equals the one its
+   sheet shows (the strip is a reading of the side, not a second copy). Then the drive: a tap on their strip opens their
+   board as a sheet that covers the stage's centre and hides the peek dock; You ▼ swaps it for yours; Chain closes it.
+   Returns rows as [ok, name, detail]. */
+async function screenJudge(page, prefix){
+  const out = [];
+  await page.evaluate(() => { const w = document.querySelector(".peekwrap"); if(w) w.click(); });
+  await page.waitForTimeout(250);
+  const g = await page.evaluate(() => {
+    const bad = [], W = innerWidth, H = innerHeight, box = e => e.getBoundingClientRect();
+    const tw = document.querySelector(".board .tablewrap");
+    if(!tw) return { bad: ["no board"] };
+    if(tw.scrollHeight > tw.clientHeight + 1) bad.push(`the board scrolls (${tw.scrollHeight} > ${tw.clientHeight})`);
+    const flow = [...tw.children].filter(e => e.classList.contains("vscreen") && !e.classList.contains("side"));
+    if(flow.length !== 1) bad.push(`${flow.length} screens in flow`);
+    const st = {};
+    for(const k of ["them", "you"]){
+      const s = document.querySelector(`.board [data-strip="${k}"]`);
+      if(!s){ bad.push(`no ${k} strip`); continue; }
+      const b = box(s); st[k] = b;
+      if(b.left < -0.5 || b.right > W + 0.5 || b.top < 0 || b.bottom > H) bad.push(`${k} strip off the phone`);
+      if(b.height < 33.5) bad.push(`${k} strip ${Math.round(b.height)} px`);
+      const o = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+      if(!o || !s.contains(o)) bad.push(`over the ${k} strip: ${o ? o.className || o.tagName : "-"}`);
+    }
+    const mid = document.querySelector(".board .playmid"), wheel = document.querySelector(".board .phand");
+    if(st.them && mid && st.them.bottom > box(mid).top + 1) bad.push("their strip is not above the stage");
+    if(st.you && wheel && st.you.bottom > box(wheel).top + 1) bad.push("your strip is not above the wheel");
+    return { bad, mid: mid ? [box(mid).left + box(mid).width / 2, box(mid).top + box(mid).height / 2] : null };
+  });
+  out.push([!g.bad.length, prefix + ": one screen (no vertical scroll; their strip over the stage, yours over the wheel)", g.bad.length ? g.bad.join("; ") : "ok"]);
+  if(g.bad.length) return out;
+  const deckOf = k => page.evaluate(k => { const b = [...document.querySelectorAll(`.board [data-strip="${k}"] .bsc`)].find(e => /deck/i.test(e.textContent));
+    return b ? +b.querySelector("b").textContent : null; }, k);
+  const sheetState = k => page.evaluate(([k, mid]) => {
+    const s = document.querySelector(`.board [data-sheet="${k}"]`), open = !!s && s.classList.contains("open");
+    const o = mid && document.elementFromPoint(mid[0], mid[1]);
+    const d = s && s.querySelector(".dcnt");
+    return { open, covers: !!o && !!s && s.contains(o), dock: !!document.querySelector(".peekwrap"),
+             deck: d ? +d.textContent.trim() : null, others: document.querySelectorAll(".board .vscreen.side.open").length };
+  }, [k, g.mid]);
+  const tDeck = await deckOf("them");
+  await page.locator('.board [data-strip="them"]').click();
+  await page.waitForTimeout(400);
+  const a = await sheetState("opp");
+  out.push([a.open && a.covers && !a.dock && a.others === 1 && a.deck === tDeck, prefix + ": their strip opens their board as a sheet over the stage (deck count agrees)",
+            `open ${a.open}, covers the stage ${a.covers}, dock ${a.dock}, sheets ${a.others}, deck: strip ${tDeck} sheet ${a.deck}`]);
+  const yDeck = await deckOf("you");
+  await page.locator(".screennav button", { hasText: "You" }).first().click();
+  await page.waitForTimeout(400);
+  const b = await sheetState("you"), bo = await sheetState("opp");
+  out.push([b.open && b.covers && !bo.open && b.others === 1 && b.deck === yDeck, prefix + ": You ▼ swaps in your board (deck count agrees)",
+            `yours open ${b.open}, covers ${b.covers}, theirs open ${bo.open}, deck: strip ${yDeck} sheet ${b.deck}`]);
+  await page.locator(".screennav button", { hasText: "Chain" }).first().click();
+  await page.waitForTimeout(300);
+  const c = await sheetState("you");
+  out.push([!c.open && c.others === 0 && !c.covers, prefix + ": Chain closes the sheet", `open ${c.open}, sheets ${c.others}`]);
+  return out;
+}
 async function open({ w = 393, h = 852, deps = depsDir(), query = "", launch = null, title = false } = {}){
   /* the title screen shows first on every load; a drive opens past it (`?title=0`) unless it is the title being driven (`title: true`) */
   if(!title) query = query ? query + "&title=0" : "?title=0";
@@ -360,7 +421,7 @@ async function hudJudge(page, truth){
   return { ok: !m.bad.length, detail: m.bad.length ? m.bad.join("; ") : `life ${JSON.stringify(m.life)}, ${m.texts} text nodes flat, at y ${m.h[0]} h ${m.h[1]}` };
 }
 
-module.exports = { open, makeAnswer, depsDir, hudJudge, hubJudge, wheelTo, wheelJudge };
+module.exports = { open, makeAnswer, depsDir, hudJudge, hubJudge, screenJudge, wheelTo, wheelJudge };
 
 /* ============================================================
    THE SMOKE CHECK
@@ -733,6 +794,9 @@ if(require.main === module){
       const sigs = new Set(), board = () => page.locator(".board").innerText();
       let moved = 0, taps = 0;
       const hubs = [], hubBad = [];   /* every bar state this drive reaches, judged as a hub (v7.14) */
+      /* one screen (v7.15): the plays are on the stage, so close any board sheet the drive left open */
+      await page.locator(".screennav button", { hasText: "Chain" }).first().click().catch(() => {});
+      await page.waitForTimeout(250);
       for(let i = 0; i < 14; i++){
         await hitCheck(prefix, ".board .statusline button", 30);
         await peekClear(prefix);
@@ -778,6 +842,7 @@ if(require.main === module){
           row(!!nb && nb.inside && nb.sw && nb.w <= W && nb.h > 0, "trainer: a new phone's first game says what the call is for",
             nb ? `${nb.w}x${nb.h}px, inside its box ${nb.inside}` : "no line"); }
         for(const [ok, name, d] of await wheelJudge(page, "trainer")) row(ok, name, d);
+        for(const [ok, name, d] of await screenJudge(page, "trainer")) row(ok, name, d);
         await page.evaluate(() => { const w = document.querySelector(".peekwrap"); if(w) w.click(); });
         await hitCheck("trainer", ".board .judgebtn", 40); await advHits("trainer");
         await nav("trainer", ["You", "Opp"]);
@@ -897,6 +962,7 @@ if(require.main === module){
             const shown = await has(".advnew");
             row(seen === "true" ? !shown : true, "table: the call's newcomer line is gone once seen", `seen ${seen}, shown ${shown}`); }
           await hitCheck("table", ".board .judgebtn", 40); await advHits("table");
+          for(const [ok, name, d] of await screenJudge(page, "table")) row(ok, name, d);
           await nav("table", ["You", first]);
           await playOn("table");
           await click(page.locator(".screennav button", { hasText: "leave" }), "leave the table");
@@ -1334,6 +1400,7 @@ if(require.main === module){
         await p.locator(".screennav button", { hasText: "Chain" }).click(); await p.waitForTimeout(700);
         { const hj = await hubJudge(p); row(hj.hub && hj.ok, "trainer 320x568: the hub", hj.detail); }
         for(const [ok, name, d] of await wheelJudge(p, "trainer 320x568", { commit: true })) row(ok, name, d);
+        for(const [ok, name, d] of await screenJudge(p, "trainer 320x568")) row(ok, name, d);
       } catch(e){ row(false, "trainer 320x568: the life HUD", String(e && e.message || e).split("\n")[0]); }
       sk.errors.forEach(e => errors.push(`hud 320x568: ${e}`));
       await sk.close();
