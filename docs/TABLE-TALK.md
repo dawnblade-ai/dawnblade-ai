@@ -450,4 +450,9 @@ pad removed from the mat; the heroes moved out of both side rows; the call start
 in view under it; "Any blocks?" / "No response"; the stack's ask line dropped and the defend ask shortened (talk only).
 `tools/talk.js` follows the bout. Looked at with real art at 393x660 through a full turn cycle (attack, defend, hit,
 pop): no page errors.
+Gates: npm test 4642/4637/0/5 · babel 4/4 · page.js 370/372 on the first cut — the two FAILs were the glimpse at
+145 px (393x660) / 99 px (320x568) once the call started below the bout; fixed by laying the slab over the glimpse's top
+border (163 / 203 / 116 px, talk.js clean at all three) · `SAB=pad` fails 3 rows · serverpage 490/0 (switch off) ·
+livecheck ALL PASS · function v190. Not run (no engine, rules, AI or trainer change): scenes, fairness, play, chaos,
+trainchaos. The LIVE new table was not driven this time (the first session's proxy pattern does it).
 
