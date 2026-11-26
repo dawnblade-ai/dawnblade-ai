@@ -285,8 +285,17 @@ async function hubJudge(page){
    sheet shows (the strip is a reading of the side, not a second copy). Then the drive: a tap on their strip opens their
    board as a sheet that covers the stage's centre and hides the peek dock; You ▼ swaps it for yours; Chain closes it.
    Returns rows as [ok, name, detail]. */
+/* BACK TO THE STAGE (v7.15): close any board sheet and bring the middle screen's PLAY pane into view, where a drive
+   that read the log pane (JUDGE!!, the advisor header) left it scrolled. What a player does coming back from the log. */
+async function toStage(page){
+  await page.locator(".board .screennav button", { hasText: "Chain" }).first().click().catch(() => {});
+  await page.evaluate(() => { const pp = document.querySelector(".board .tablewrap > .vscreen:not(.side) .playpane");
+    const h = pp && pp.closest(".hscroll"); if(h) h.scrollLeft = pp.offsetLeft - h.offsetLeft; });
+  await page.waitForTimeout(250);
+}
 async function screenJudge(page, prefix){
   const out = [];
+  await toStage(page);
   await page.evaluate(() => { const w = document.querySelector(".peekwrap"); if(w) w.click(); });
   await page.waitForTimeout(250);
   const g = await page.evaluate(() => {
@@ -421,7 +430,7 @@ async function hudJudge(page, truth){
   return { ok: !m.bad.length, detail: m.bad.length ? m.bad.join("; ") : `life ${JSON.stringify(m.life)}, ${m.texts} text nodes flat, at y ${m.h[0]} h ${m.h[1]}` };
 }
 
-module.exports = { open, makeAnswer, depsDir, hudJudge, hubJudge, screenJudge, wheelTo, wheelJudge };
+module.exports = { open, makeAnswer, depsDir, hudJudge, hubJudge, screenJudge, toStage, wheelTo, wheelJudge };
 
 /* ============================================================
    THE SMOKE CHECK
@@ -763,8 +772,7 @@ if(require.main === module){
        rail, and a tap ON it must close the preview (the dock is one tap-to-close surface). */
     const peekKw = async prefix => {
       /* one screen (v7.15): the wheel is on the stage, under any board sheet the drive left open */
-      await page.locator(".screennav button", { hasText: "Chain" }).first().click().catch(() => {});
-      await page.waitForTimeout(250);
+      await toStage(page);
       const cards = page.locator(".board .phand .hc:visible");
       const n = await cards.count(), seen = [];
       let got = null;
@@ -798,8 +806,7 @@ if(require.main === module){
       let moved = 0, taps = 0;
       const hubs = [], hubBad = [];   /* every bar state this drive reaches, judged as a hub (v7.14) */
       /* one screen (v7.15): the plays are on the stage, so close any board sheet the drive left open */
-      await page.locator(".screennav button", { hasText: "Chain" }).first().click().catch(() => {});
-      await page.waitForTimeout(250);
+      await toStage(page);
       for(let i = 0; i < 14; i++){
         await hitCheck(prefix, ".board .statusline button", 30);
         await peekClear(prefix);
