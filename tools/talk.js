@@ -3,10 +3,10 @@
    TABLE TALK, DRIVEN (TT0, v7.18) — the new table on the real page (docs/TABLE-TALK.md).
 
    `talkJudge(page, prefix)` asks of an AI table opened with the switch on (`?talk=1`):
-     order     one screen, top to bottom: their side, the middle, your side, the hand, the hub;
+     order     one screen, top to bottom: the bout, their side, the middle, your side, the hand, the hub;
                inside the phone; the board does not scroll
-     pad       the pad shows each hero's life EXACTLY as the engine holds it (the pad is the only
-               life display on this table, so a stale pad is a wrong game)
+     pad       the bout (the fighting-game life bars, read off the pad) shows each hero's life EXACTLY as
+               the engine holds it (the only life display on this table, so a stale bout is a wrong game)
      private   no card the opponent holds face down (hand, arsenal) is named anywhere on the table
                (text or image alt) unless a card of that name is public or yours (TRP 5.1)
      taps      every control takes a 44 px tap, nothing stolen, clipped or overlapping
@@ -45,29 +45,29 @@ async function talkJudge(page, prefix){
   /* ---- order ---- */
   const o = await page.evaluate(() => {
     const B = s => { const e = document.querySelector(s); if(!e) return null; const b = e.getBoundingClientRect(); return { t: b.top, b: b.bottom, l: b.left, r: b.right, h: b.height }; };
-    const them = B('[data-talk-side="them"]'), mid = B(".board.talk .tk-mid"), you = B('[data-talk-side="you"]'),
+    const bout = B("[data-talk-bout]"), them = B('[data-talk-side="them"]'), mid = B(".board.talk .tk-mid"), you = B('[data-talk-side="you"]'),
           hand = B(".board.talk .phand"), hub = B(".actbar"), pad = B("[data-talk-pad]"), bad = [];
     const W = innerWidth, H = innerHeight, board = document.querySelector(".board.talk");
-    for(const [k, v] of Object.entries({them, mid, you, hand, hub, pad})) if(!v) bad.push("no " + k);
+    for(const [k, v] of Object.entries({bout, them, mid, you, hand, hub, pad})) if(!v) bad.push("no " + k);
     if(!bad.length){
-      const chain = [["their side", them], ["the middle", mid], ["your side", you], ["the hand", hand], ["the hub", hub]];
+      const chain = [["the bout", bout], ["their side", them], ["the middle", mid], ["your side", you], ["the hand", hand], ["the hub", hub]];
       for(let i = 1; i < chain.length; i++) if(chain[i][1].t < chain[i - 1][1].b - 1) bad.push(`${chain[i][0]} (top ${Math.round(chain[i][1].t)}) is not below ${chain[i - 1][0]} (bottom ${Math.round(chain[i - 1][1].b)})`);
       if(mid.h < 120) bad.push(`the middle is ${Math.round(mid.h)} px tall`);
-      if(pad.t < mid.t - 1 || pad.b > mid.b + 1 || pad.r > W + 0.5) bad.push("the pad leaves the middle");
+      if(bout.t > 12 || pad.t < bout.t - 1 || pad.b > bout.b + 1 || pad.r > W + 0.5) bad.push("the bout is not across the top");
       if(hub.b > H + 1) bad.push("the hub is off the screen");
       if(document.scrollingElement.scrollWidth > W + 1) bad.push("the page scrolls sideways");
       if(board.scrollHeight > board.clientHeight + 1) bad.push("the board scrolls");
     }
     return { bad, mid: mid ? Math.round(mid.h) : 0 };
   });
-  out.push([!o.bad.length, prefix + ": the new table is one screen, in order (their side, the middle, yours, the hand, the hub)", o.bad.length ? o.bad.join("; ") : "middle " + o.mid + " px"]);
+  out.push([!o.bad.length, prefix + ": the new table is one screen, in order (the bout, their side, the middle, yours, the hand, the hub)", o.bad.length ? o.bad.join("; ") : "middle " + o.mid + " px"]);
   /* ---- pad ---- */
   const p = await page.evaluate(() => {
     const T = window.__dawnTable, g = T && T.session.state(), me = T ? T.seat : 0;
-    const read = k => { const e = document.querySelector(`[data-talk-life="${k}"] b`); return e ? +e.textContent.trim() : null; };
+    const read = k => { const e = document.querySelector(`[data-talk-life="${k}"] .tk-hp`); return e ? +e.textContent.trim() : null; };
     return { you: read("you"), them: read("them"), hp: g ? [g.sides[me].hp, g.sides[1 - me].hp] : null };
   });
-  out.push([!!p.hp && p.you === p.hp[0] && p.them === p.hp[1], prefix + ": the pad shows each hero's life exactly as the engine holds it",
+  out.push([!!p.hp && p.you === p.hp[0] && p.them === p.hp[1], prefix + ": the bout shows each hero's life exactly as the engine holds it",
             `pad you ${p.you} them ${p.them}; engine ${p.hp && p.hp.join(" / ")}`]);
   /* ---- private ---- */
   const pv = await page.evaluate(() => {
@@ -132,13 +132,13 @@ async function talkJudge(page, prefix){
 
 /* a sabotage, for the drill's own proof (SAB=pad|private|glimpse): each must FAIL its row */
 const SABOTAGE = {
-  pad: `[data-talk-life] b{font-size:0} [data-talk-life] b::after{content:"99";font-size:20px}`,
+  pad: `[data-talk-life] .tk-hp{font-size:0} [data-talk-life] .tk-hp::after{content:"99";font-size:20px}`,
   glimpse: `.tk-glimpse{width:60px !important;height:84px !important}`,
 };
 async function sabotage(page, kind){
   if(SABOTAGE[kind]){
     await page.addStyleTag({ content: SABOTAGE[kind] });
-    if(kind === "pad") await page.evaluate(() => document.querySelectorAll("[data-talk-life] b").forEach(b => { b.textContent = "99"; }));
+    if(kind === "pad") await page.evaluate(() => document.querySelectorAll("[data-talk-life] .tk-hp").forEach(b => { b.textContent = "99"; }));
   }
   if(kind === "private") await page.evaluate(() => { const T = window.__dawnTable, g = T.session.state(), foe = g.sides[1 - T.seat];
     const c = (foe.hand || [])[0]; const d = document.createElement("span"); d.textContent = c ? c.name : ""; document.querySelector(".board.talk .tk-mid").appendChild(d); });

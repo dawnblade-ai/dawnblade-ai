@@ -1314,8 +1314,8 @@ button.tag::after{content:"";position:absolute;inset:-16px -8px -16px}
 @keyframes lfdown{0%{transform:scale(1.4);color:#FF7A6E;text-shadow:0 0 14px rgba(196,48,43,.9)}100%{transform:none}}
 @keyframes lfup{0%{transform:scale(1.3);color:var(--ok);text-shadow:0 0 14px rgba(123,160,91,.85)}100%{transform:none}}
 /* ================= TABLE TALK (TT0, v7.18; docs/TABLE-TALK.md §3) =================
-   The board as a table seen from your seat: the mat, their side across the top, the middle where cards
-   meet, the pad (life) on the right edge, your side, your hand, your line. Nothing here is chrome except
+   The board as a table seen from your seat: the bout (both lives as fighting-game bars) across the top, the mat, their side, the middle where cards
+   meet, your side, your hand, your line. Nothing here is chrome except
    the one menu button. Laid out for 393x660 first (an iPhone's real Safari view), then 393x852 and 320x568. */
 .board.talk{position:fixed;top:0;bottom:0;left:0;right:0;max-width:560px;margin:0 auto;z-index:20;display:flex;flex-direction:column;gap:0;
   padding-top:env(safe-area-inset-top);overflow:hidden;--tk-paper:#F2E8CF;--tk-ink:#2A2522;--tk-pencil:#B3261E;--tk-rule:rgba(84,116,170,.28);
@@ -1376,7 +1376,7 @@ button.tag::after{content:"";position:absolute;inset:-16px -8px -16px}
 .board.talk .tk-perms>button,.tk-perm{flex:none;width:44px !important;padding:0;background:none;border:0;position:relative}
 .board.talk .tk-perms .cfw .b-pit,.board.talk .tk-perms .cfw .b-cost,.board.talk .tk-perms .cfw .b-typ{display:none}
 /* the middle: the chain on the mat */
-.tk-mid{position:relative;flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;padding:4px 78px 4px 10px}
+.tk-mid{position:relative;flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;padding:4px 10px}
 .tk-mid::before{content:"";position:absolute;left:8%;right:8%;top:50%;height:1px;background:linear-gradient(90deg,transparent,rgba(232,223,208,.09),transparent);pointer-events:none}
 .tk-chain{position:relative;display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:100%;min-height:0}
 .tk-fight{display:flex;align-items:center;justify-content:center;gap:12px;height:100%;max-height:100%;min-height:0}
@@ -1409,18 +1409,41 @@ button.tag::after{content:"";position:absolute;inset:-16px -8px -16px}
 .tk-token span{font:600 11px 'Spline Sans Mono';letter-spacing:.14em;text-transform:uppercase;color:var(--bone-dim)}
 /* THE PAD: paper on the mat, life in a handwritten face */
 .paper{background:linear-gradient(transparent 0 0),repeating-linear-gradient(180deg,transparent 0 17px,var(--tk-rule) 17px 18px),var(--tk-paper);color:var(--tk-ink)}
-.tk-pad{position:absolute;right:8px;top:50%;transform:translateY(-50%) rotate(1.2deg);width:64px;display:flex;flex-direction:column;align-items:stretch;gap:0;padding:6px 4px 6px 10px;
-  border:0;border-radius:2px;box-shadow:0 8px 22px rgba(0,0,0,.6),inset 6px 0 0 -4px rgba(196,48,43,.55);z-index:2}
-.tk-padcol{display:flex;flex-direction:column;align-items:center;line-height:1;min-height:76px;justify-content:center}
-.tk-padcol .tk-who{font:700 10px 'Spline Sans Mono';letter-spacing:.06em;text-transform:uppercase;color:#6d6257;max-width:52px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tk-padcol s{font:600 17px 'Caveat',cursive;color:#7c7068;text-decoration-color:var(--tk-pencil);text-decoration-thickness:2px;min-height:15px}
-.tk-padcol s.none{visibility:hidden}
-.tk-padcol b{font:700 34px 'Caveat',cursive;color:var(--tk-ink);line-height:.95}
-.tk-padcol b.fresh{animation:tkwrite .6s ease-out}
-@keyframes tkwrite{from{clip-path:inset(0 100% 0 0);opacity:.4}to{clip-path:inset(0 0 0 0);opacity:1}}
-.tk-padcol i{font:600 13px 'Caveat',cursive;font-style:normal;color:var(--tk-pencil);max-width:54px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-height:14px}
-.tk-padcol i.up{color:#2f6d2a}
-.tk-padrule{height:2px;margin:3px 2px;background:var(--tk-ink);opacity:.55;border-radius:1px}
+/* THE BOUT: the fighting-game strip across the top — you left, them right, bars draining to the middle */
+.tk-bout{flex:none;display:flex;align-items:center;gap:6px;padding:6px 8px 2px;position:relative;z-index:3}
+.tk-fight-hud{flex:1 1 auto;min-width:0;min-height:48px;display:flex;align-items:center;gap:4px;padding:0;background:none;border:0;color:inherit;text-align:left}
+.tk-ftr{position:relative;flex:1 1 0;min-width:0;display:flex;align-items:center;gap:5px}
+.tk-ftr.r{flex-direction:row-reverse;text-align:right}
+.tk-ftr .tk-port{width:34px;height:34px}
+.tk-ftr.turn .tk-port{border-color:var(--y);box-shadow:0 0 0 1px var(--y),0 0 12px rgba(232,179,60,.55)}
+.tk-fcol{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:3px}
+.tk-fname{display:flex;align-items:center;gap:5px;min-width:0;font-family:'Big Shoulders Display';font-weight:800;font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:var(--bone);line-height:1}
+.tk-fname>span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.tk-ftr.r .tk-fname{flex-direction:row-reverse}
+.tk-fname .tk-rate{margin-left:0}
+.tk-ftr .shbar{position:relative;width:100%;height:13px;transform:skewX(-14deg);border:2px solid var(--bone);background:var(--ink);overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.6)}
+.tk-ftr .shbar.r{transform:skewX(14deg)}
+.tk-ftr .shbar i{position:absolute;top:0;bottom:0;left:0;display:block}
+.tk-ftr .shbar.r i{left:auto;right:0}
+.tk-ftr .shbar .trail{background:#C4302B;transition:width .5s ease-in .35s}
+.tk-ftr .shbar .fill{background:linear-gradient(90deg,#B4441E,var(--y))}
+.tk-ftr .shbar.r .fill{background:linear-gradient(270deg,#B4441E,var(--y))}
+.tk-ftr .shbar .fill.up{transition:width .4s ease-out}
+.tk-ftr .shbar .tick{width:100%;background-image:linear-gradient(90deg,rgba(20,16,14,.55) 1px,transparent 1px);background-size:var(--tk) 100%;opacity:.7}
+.tk-ftr .shbar.danger{border-color:#FF7A6E;box-shadow:0 0 8px rgba(196,48,43,.85);animation:shdanger 1s ease-in-out 2}
+.tk-hp{flex:none;min-width:30px;text-align:center;font-family:'Big Shoulders Display';font-weight:900;font-size:27px;line-height:1;color:var(--bone);text-shadow:0 2px 0 rgba(0,0,0,.6)}
+.tk-hp.low{color:var(--rt)}
+.tk-hp.lfdown{animation:shdown .6s ease-out}.tk-hp.lfup{animation:shup .6s ease-out}
+.tk-pop{position:absolute;top:-2px;font:900 22px 'Big Shoulders Display';font-style:normal;color:#FF7A6E;text-shadow:0 2px 0 #000,0 0 10px rgba(196,48,43,.9);pointer-events:none;
+  animation:tkpop 1.1s ease-out forwards;opacity:0}
+.tk-ftr.you .tk-pop{right:2px}.tk-ftr.r .tk-pop{left:2px}
+.tk-pop.up{color:#9be08a;text-shadow:0 2px 0 #000,0 0 10px rgba(123,160,91,.9)}
+@keyframes tkpop{0%{opacity:0;transform:translateY(8px) scale(1.5)}15%{opacity:1;transform:translateY(0) scale(1.1)}70%{opacity:1;transform:translateY(-10px)}100%{opacity:0;transform:translateY(-18px)}}
+.tk-round{flex:none;width:34px;height:40px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid var(--bone);background:var(--ink);
+  clip-path:polygon(18% 0,82% 0,100% 50%,82% 100%,18% 100%,0 50%);line-height:1}
+.tk-round b{font:900 19px 'Big Shoulders Display';color:var(--y)}
+.tk-round i{font:600 7.5px 'Spline Sans Mono';font-style:normal;letter-spacing:.12em;text-transform:uppercase;color:var(--bone-dim)}
+@media (max-width:360px){.tk-ftr .tk-port{width:28px;height:28px}.tk-hp{font-size:23px;min-width:24px}.tk-fname{font-size:13px}.tk-round{width:28px}}
 /* the ask: only when something is asked of you (paying, arsenal, defending, a card on the stack) */
 .board.talk .statusline{flex:none;margin:0 8px 4px;border-radius:8px;min-height:34px;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px}
 .board.talk>.rail{margin:0 8px 4px}
@@ -1430,7 +1453,7 @@ button.tag::after{content:"";position:absolute;inset:-16px -8px -16px}
 .board.talk .phand .b-typ,.board.talk .phand .hlbl{display:none}
 .tk-hubspace{flex:none;height:calc(64px + env(safe-area-inset-bottom))}
 /* WHAT IS SAID: a slab of bold type slammed onto the table from the speaker's side, and the glimpse */
-.tk-call{position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:10px 12px;
+.tk-call{position:absolute;inset:56px 0 0 0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:10px 12px;
   background:rgba(10,7,6,.62);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);animation:tkfade .16s ease-out}
 .tk-call.you{background:transparent;justify-content:flex-end;padding-bottom:14px;pointer-events:none}
 .tk-call.you .tk-say{padding:5px 14px 6px;pointer-events:auto}
@@ -1515,7 +1538,8 @@ button.tag::after{content:"";position:absolute;inset:-16px -8px -16px}
 .tswitch.on i{background:var(--y)}
 .tswitch.on i::after{transform:translateX(20px)}
 @media (prefers-reduced-motion:reduce){
-  .tk-call,.tk-say,.tk-glimpse,.tk-pitchc,.tk-blockc,.tk-atk,.tk-stackc,.tk-blk,.tk-padcol b.fresh,.tk-sheetwrap,.tk-think i{animation:none !important}
+  .tk-call,.tk-say,.tk-glimpse,.tk-pitchc,.tk-blockc,.tk-atk,.tk-stackc,.tk-blk,.tk-pop,.tk-hp,.tk-sheetwrap,.tk-think i{animation:none !important}
+  .tk-pop{opacity:0}.tk-ftr .shbar .trail,.tk-ftr .shbar .fill.up{transition:none}
   .tk-token{transition:none}
 }
 </style>
@@ -1545,7 +1569,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "7.18"; /* v7.18 - Table Talk, a preview: the new table behind a switch, the opponent's plays announced and shown, life on a pad; see CHANGELOG.md. */
+window.APP_VER = "7.19"; /* v7.19 - Table Talk: the fighting-game bout across the top of the new table, the mat left to the cards, your line spoken; see CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -10530,7 +10554,9 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                 : myArsStep ? <div className="statusline">Tap a card below for <b>arsenal</b>
                     <button onClick={()=>fire({t:"arsenal",uid:null})}>skip</button></div>
                 : g.phase==="end" ? <div className="statusline">End phase — {them.name} is finishing their turn.</div>
-                : defending ? <div className="statusline">Defend step — tap hand &amp; equipment to declare · incoming <b>{g.pend?g.pend.total:0}</b></div>
+                : defending ? (talk
+                    ? <div className="statusline"><b>{g.pend?g.pend.total:0}</b> coming at you — tap cards to block</div>
+                    : <div className="statusline">Defend step — tap hand &amp; equipment to declare · incoming <b>{g.pend?g.pend.total:0}</b></div>)
                 /* A CARD WAITING ON THE STACK (v4.66) — CR 7.1.2 / 4.2.2. It
                    resolves when both seats pass, and the one thing either may
                    do first is answer at instant speed. Said so, or the pause
@@ -10649,6 +10675,8 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                   {b.kind==="ally" && b.life!=null && <span className="sw">♥ {b.life}</span>}
                 </button>);
               };
+  /* TABLE TALK (TT1): a pass that answers the other seat's card on the stack is said as "No response" */
+  const theirTop = (()=>{ const st = (g.stack||[]).filter(l=>l&&l.k==="play"); const t = st[st.length-1]; return !!t && t.seat !== mySeat; })();
   const hubEl = (
       <HubBar>
         {over ? <button className="a go hubp" onClick={onExit}>Leave the table</button>
@@ -10816,8 +10844,8 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                 ? (g.step === "defend" && targetCanBeDefended(g.pend && g.pend.target)
                     /* CR 7.3.3 - the turn-player holds priority in the defend step, so the game (and a ranked table's clock) waits on the ATTACKER until it
                        passes; only then is the wait on the defender. RULING (user, 2026-11-15): the clock sits on whoever must decide - so say what this tap does. */
-                    ? <button className={"a "+(passTone==="free"?"free":"go")+(mine({t:"endTurn"})?"":" hubp")} data-pass={passTone} data-testid="pass-to-blocks" onClick={()=>fire({t:"pass"})}>Pass — let {them.name.split(",")[0]} block</button>
-                    : <button className={"a"+(passTone?" "+passTone:"")+(mine({t:"endTurn"})?"":" hubp")} data-pass={passTone} data-testid="pass" onClick={()=>fire({t:"pass"})}>Pass</button>)
+                    ? <button className={"a "+(passTone==="free"?"free":"go")+(mine({t:"endTurn"})?"":" hubp")} data-pass={passTone} data-testid="pass-to-blocks" onClick={()=>fire({t:"pass"})}>{talk ? "Any blocks?" : <>Pass — let {them.name.split(",")[0]} block</>}</button>
+                    : <button className={"a"+(passTone?" "+passTone:"")+(mine({t:"endTurn"})?"":" hubp")} data-pass={passTone} data-testid="pass" onClick={()=>fire({t:"pass"})}>{talk && theirTop ? "No response" : "Pass"}</button>)
                 : <span className={"a dis"+(mine({t:"endTurn"})?"":" hubp")}>waiting on {them.name.split(",")[0]}</span>}
               <button className={"a "+(mine({t:"endTurn"}) && passTone ? passTone : "go")+(mine({t:"endTurn"})?" hubp":"")} data-pass={mine({t:"endTurn"}) ? passTone : ""} data-testid="end-turn" disabled={!mine({t:"endTurn"})} onClick={()=>fire({t:"endTurn"})}>End turn</button>
             </>}
@@ -10916,8 +10944,8 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
 
   /* ---- TABLE TALK: the new table (docs/TABLE-TALK.md §3). The ask shows only when something is asked of
      you; the log and the coach live in the menu, and neither exists at a ranked table (TRP 5.1, 5.9). ---- */
-  const stackMine = !over && (g.stack||[]).some(l=>l&&l.k==="play") && mine({t:"pass"});
-  const askOn = !over && !!(boost || fuse || charge || usurp || bancost || pay || myArsStep || defending || stackMine);
+  /* TT1: a card on the stack needs no ask line here — it lies on the mat marked "on the stack" and the hub says "No response" */
+  const askOn = !over && !!(boost || fuse || charge || usurp || bancost || pay || myArsStep || defending);
   if(talk){
     const voiceOn = !!store.get(TALK_VOICE, false);
     const menuItems = [
@@ -11189,10 +11217,11 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
 /* ============================================================
    TABLE TALK (TT0, v7.18) — the new table. docs/TABLE-TALK.md is the vision; §3 is this layout.
 
-   THE TABLE, NOT THE APP: their side across the top (their hero, the backs of the cards they hold, a
-   face-down arsenal, their gear as defence chips, their permanents, their piles), the middle where
-   cards meet (the chain, the stack, the turn token), the PAD on the right edge (life, as a player
-   writes it: TRP 5.8), your side, your hand, your line (the hub). No log: TRP 5.1 gives a player
+   THE TABLE, NOT THE APP: the BOUT across the top (both heroes and both lives as fighting-game bars,
+   the turn between them; v7.19, the user's "health bar callout"; a tap opens the pad, TRP 5.8), their
+   side (the backs of the cards they hold, a face-down arsenal, their gear as defence chips, their
+   permanents, their piles), the middle where cards meet (the chain, the stack, the turn token), your
+   side, your hand, your line (the hub). No log: TRP 5.1 gives a player
    Visible, Public and Assisted information, never Historical. What the opponent does is SAID
    (`TalkCall`, read off engine/announce.js) and SHOWN once, large (the glimpse); then it lands where
    it lives and can be read again only where it lies (a tap on the chain, a pile, a gear chip).
@@ -11257,6 +11286,7 @@ const talkSay = l => {
 
 /* THE BACKS OF THE CARDS THEY HOLD — how many, never which */
 function TalkBacks({n}){
+  if(!(n > 0)) return null;   /* empty is empty (§2 principle 5) */
   return <span className="tk-backs" aria-label={"cards in hand: " + n}>
     {Array.from({length: Math.min(n, 7)}, (_, i) => <span key={i} className="tk-cback"/>)}
     <b className="tk-n">{n}</b></span>;
@@ -11295,31 +11325,63 @@ function TalkPiles({sd, onOpen}){
 }
 
 /* ONE SIDE OF THE TABLE. `boardCell` is TableBoard's own arena cell (yours act); theirs open the card. */
-function TalkSide({sd, mine, h, db, label, rating, boardCell, onZoom, onSheet, thinking, menu}){
+function TalkSide({sd, mine, boardCell, onZoom, onSheet}){
   const perms = (sd.board || []).length > 0 && <span className="tk-perms">
     {(sd.board || []).map((b, i) => mine && boardCell ? boardCell(b, i)
       : <button key={b.uid} className="tk-perm" onClick={()=>onZoom(b.card)}>
           <CardFrame card={b.card} className="sm" noType/>{b.kind === "ally" && b.life != null && <span className="sw">♥ {b.life}</span>}</button>)}
   </span>;
-  const hero = <span className="tk-hero">
-    {h ? <span className="tk-port"><HeroArt h={h} db={db}/></span> : <span className="tk-port none"/>}
-    <span className="tk-name">{label}{rating != null && <i className="tk-rate">{rating}</i>}</span>
-    {thinking && <span className="tk-think" aria-label="deciding"><i/><i/><i/></span>}
-  </span>;
+  /* who they are and their life sit in the bout above; a side is only what lies on the table */
   return mine
     ? <div className="tk-side you" data-talk-side="you">
-        <div className="tk-row">{hero}<TalkMarks sd={sd}/><span className="tk-sp"/>
-          <TalkGear sd={sd} mine onOpen={()=>onSheet("gear")}/><TalkPiles sd={sd} onOpen={()=>onSheet("piles")}/></div>
         {perms && <div className="tk-row">{perms}</div>}
+        <div className="tk-row"><TalkMarks sd={sd}/><span className="tk-sp"/>
+          <TalkGear sd={sd} mine onOpen={()=>onSheet("gear")}/><TalkPiles sd={sd} onOpen={()=>onSheet("piles")}/></div>
       </div>
     : <div className="tk-side them" data-talk-side="them">
-        <div className="tk-row">{menu}{hero}<TalkMarks sd={sd}/><span className="tk-sp"/>
+        <div className="tk-row"><TalkGear sd={sd} onOpen={()=>onSheet("gear")}/><TalkMarks sd={sd}/><span className="tk-sp"/>
           <TalkBacks n={(sd.hand || []).length}/>
           {sd.arsenal && <span className="tk-ars" aria-label="arsenal: a card, face down"><span className="tk-cback"/></span>}
-        </div>
-        <div className="tk-row"><TalkGear sd={sd} onOpen={()=>onSheet("gear")}/>{perms}<span className="tk-sp"/>
           <TalkPiles sd={sd} onOpen={()=>onSheet("piles")}/></div>
+        {perms && <div className="tk-row">{perms}</div>}
       </div>;
+}
+
+/* THE BOUT — the fighting-game callout (user, 2026-11-26: "still with the health bar callout to a fighting
+   game"). One strip across the top, as a fighting game draws it: you on the left, them on the right, each
+   bar draining toward the middle with the red trail catching up, the numeral at the inner end (the number
+   is the truth; the bar is the feel), the turn between you like a round timer, and each hit popping off
+   its bar. Life is READ FROM THE PAD's marks (engine/announce.js `lifeMarks`), the one record a player
+   keeps (TRP 5.8); a tap opens the pad itself, the whole scratch sheet. Display only. */
+function TalkBout({g, mySeat, pad, myH, foeH, db, names, rating, thinking, menu, onPad}){
+  const fighter = seat => {
+    const mine = seat === mySeat, sd = g.sides[seat], h = mine ? myH : foeH;
+    const ms = pad.marks.filter(m => m.seat === seat), last = ms[ms.length - 1];
+    const hp = last ? last.total : pad.start[seat];
+    const max = Math.max(1, sd.maxHp | 0 || pad.start[seat] | 0 || hp);
+    const low = hp > 0 && hp <= Math.ceil(max / 4);
+    const turn = g.turnPlayer === seat;
+    return <span className={"tk-ftr " + (mine ? "you" : "them r") + (turn ? " turn" : "")} data-talk-life={mine ? "you" : "them"}>
+      {h ? <span className="tk-port"><HeroArt h={h} db={db}/></span> : <span className="tk-port none"/>}
+      <span className="tk-fcol">
+        <span className="tk-fname"><span>{mine ? "You" : talkShort(names[seat])}</span>
+          {rating[seat] != null && <i className="tk-rate">{rating[seat]}</i>}
+          {!mine && thinking && <span className="tk-think" aria-label="deciding"><i/><i/><i/></span>}</span>
+        <LifeBar hp={hp} max={max} right={!mine}/>
+      </span>
+      <LifeNum n={hp} className={"tk-hp" + (low ? " low" : "")}/>
+      {last && <i key={ms.length} className={"tk-pop" + (last.delta > 0 ? " up" : "")} aria-hidden="true">{(last.delta > 0 ? "+" : "") + last.delta}</i>}
+    </span>;
+  };
+  return <div className="tk-bout" data-talk-bout>
+    {menu}
+    <button className="tk-fight-hud" onClick={onPad} data-talk-pad
+      aria-label={"life: you " + (g.sides[mySeat].hp | 0) + ", " + talkShort(names[1 - mySeat]) + " " + (g.sides[1 - mySeat].hp | 0) + ". Open the pad"}>
+      {fighter(mySeat)}
+      <span className={"tk-round" + (g.turnPlayer === mySeat ? " you" : " them")} aria-hidden="true"><b>{g.turn | 0}</b><i>turn</i></span>
+      {fighter(1 - mySeat)}
+    </button>
+  </div>;
 }
 
 /* THE MIDDLE: the chain as it lies on the mat — the attack with its power, the blockers beside it with
@@ -11360,23 +11422,8 @@ function TalkChain({g, mySeat, them, onZoom, onLinks}){
     </div>);
 }
 
-/* THE PAD (TRP 5.8): their life on top, yours below, as you sit — the total before it struck through,
-   the last change written small with its source. A tap opens the whole sheet. */
-function TalkPad({pad, mySeat, them, onOpen}){
-  const col = seat => {
-    const ms = pad.marks.filter(m => m.seat === seat);
-    const last = ms[ms.length - 1], before = ms.length > 1 ? ms[ms.length - 2].total : pad.start[seat];
-    const now = last ? last.total : pad.start[seat];
-    return <span className="tk-padcol" key={seat + ":" + ms.length} data-talk-life={seat === mySeat ? "you" : "them"}>
-      <span className="tk-who">{seat === mySeat ? "you" : talkShort(them)}</span>
-      {last ? <s>{before}</s> : <s className="none"/>}
-      <b className={last ? "fresh" : ""}>{now}</b>
-      <i className={last && last.delta > 0 ? "up" : ""}>{last ? (last.delta > 0 ? "+" : "") + last.delta + (last.source ? " " + last.source : "") : ""}</i>
-    </span>;
-  };
-  return <button className="tk-pad paper" onClick={onOpen} aria-label="the pad: life totals" data-talk-pad>
-    {col(1 - mySeat)}<span className="tk-padrule"/>{col(mySeat)}</button>;
-}
+/* THE PAD, OPENED (TRP 5.8): the whole scratch sheet — every change since the start, with its source. The bout above
+   is its summary; this is where the history lives, as at a real table. */
 function TalkPadSheet({open, pad, mySeat, them, first, turn, onClose}){
   if(!open) return null;
   const cols = [mySeat, 1 - mySeat];
@@ -11485,17 +11532,16 @@ function TalkTable({g, mySeat, db, myH, foeH, names, rating, first, calls, onCal
   const menuBtn = <button className="tk-menubtn" onClick={()=>setMenuOpen(true)} aria-label="menu" data-talk-menubtn><i/><i/><i/></button>;
   return (<>
     <div className="tk-upper">
-      <TalkSide sd={them} h={foeH} db={db} label={talkShort(them)} rating={rating[1 - mySeat]}
-        onZoom={onZoom} onSheet={k=>lookAt(them, k, false)} thinking={thinking} menu={menuBtn}/>
+      <TalkBout g={g} mySeat={mySeat} pad={pad} myH={myH} foeH={foeH} db={db} names={names} rating={rating}
+        thinking={thinking} menu={menuBtn} onPad={()=>setPadOpen(true)}/>
+      <TalkSide sd={them} onZoom={onZoom} onSheet={k=>lookAt(them, k, false)}/>
       <div className="tk-mid">
         <TalkChain g={g} mySeat={mySeat} them={them} onZoom={onZoom}
           onLinks={()=>setLook({kind: "links", title: "The chain", cards: (g.chainCards || []).map(e => e && (e.card || e)).filter(Boolean)})}/>
-        <TalkPad pad={pad} mySeat={mySeat} them={them} onOpen={()=>setPadOpen(true)}/>
       </div>
       <TalkCall line={calls[0] || null} me={mySeat} names={names} onDone={onCallDone} onSkip={onCallSkip}/>
     </div>
-    <TalkSide sd={me} mine h={myH} db={db} label="You" rating={rating[mySeat]} boardCell={boardCell}
-      onZoom={onZoom} onSheet={k=>lookAt(me, k, true)}/>
+    <TalkSide sd={me} mine boardCell={boardCell} onZoom={onZoom} onSheet={k=>lookAt(me, k, true)}/>
     {ask}
     {target}
     {hand}

@@ -1,3 +1,21 @@
+## v7.19 — Table Talk: the bout
+
+- **The health bars come back, as a fighting game draws them (user, 2026-11-26: "as simple as possible — focus on the
+  cards and the experience of playing in real life — but still with the health bar callout to a fighting game").** The
+  new table opens with ONE strip across the top, the bout: you on the left, them on the right, each hero's portrait and
+  a skewed bar draining toward the middle with the red trail catching up, the life numeral at the inner end, the turn
+  number between you like a round timer, and the turn player's portrait lit. Every change pops off its bar ("−4" in
+  red, "+1" in green) and fades. The bars read the pad's marks, so the bout and the pad cannot disagree; a tap on the
+  bout opens the pad (the whole scratch sheet, TRP 5.8). The bout stays in view while the opponent's play is announced,
+  so a hit drains the bar under the call.
+- **The mat is left to the cards.** The pad no longer sits on the right edge of the middle (the chain gets the full
+  width); the heroes and names left both sides' rows (they are in the bout), so each side is only what lies on the
+  table: gear, markers, the backs of their hand (none when empty, not a lone "0"), the arsenal, the piles, permanents.
+- **Your line, spoken (TT1, part).** After you attack, the hub says "Any blocks?"; when their card is on the stack,
+  "No response". The ask line no longer repeats a card on the stack (the mat marks it), and the defend ask is
+  "4 coming at you — tap cards to block". The classic board is unchanged.
+- Drill: `tools/talk.js` reads the bout (the order row now starts with it; the life row reads `.tk-hp`; `SAB=pad` fails it).
+
 ## v7.18 — Table Talk: the new table, a preview
 
 - **The design mission starts (user, 2026-11-26: "reimagine the entire interface … imagine the actual experience of
