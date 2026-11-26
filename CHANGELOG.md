@@ -22,8 +22,11 @@
 - Drill: `hubJudge` (tools/page.js, exported): exactly one primary, inside the lane, flush with the bottom edge, ≥ 54 px
   and uncovered; each secondary wholly outside the lane, ≥ 44 px, on the phone, overlapping nothing; no label clipped or
   under 9 px. Judged on every bar state the trainer and table drives reach (one row each, listing the states) and at
-  320x568. Sabotages, each FAILS: see the release commit.
-- Gates: see the release commit.
+  320x568. Sabotages, each FAILS (driven in the defend step, "Defend → reactions" with "Take it" in the corner): the bar
+  laid as a row, the bar lifted 20 px off the edge, the primary 40 px tall, the corner 30 px tall, the corner slid into
+  the lane, the primary's type at 8 px, a box over the primary, the corner's label clipped.
+- Gates: npm test 4627/4622/0/5 · babel 4/4 · page.js 335/335 · serverpage 490/0 · trainchaos CLEAN 18. Shots:
+  `docs/ux/after-hub.jpg` (the defend step), `after-hub-react.jpg` (the reaction step, the dimmed card).
 
 ## v7.13 — The hand wheel
 
