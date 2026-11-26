@@ -500,6 +500,7 @@ img{display:block;max-width:100%}
 .screennav button::after{content:"";position:absolute;inset:-17px 0 -5px}   /* inset is from the PADDING box: with the 1px border, -16/-4 measured 43 (R) */
 .paneflag{text-align:center;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--bone-dim);padding:0 0 6px;display:flex;justify-content:space-between;align-items:center;gap:6px}
 .modehint{font-size:var(--fs-sm);color:var(--y);text-align:center;padding:3px 0 6px;letter-spacing:.05em;text-transform:uppercase}
+button.modehint{display:block;width:100%;min-height:44px;background:none;border:none;font-family:inherit}
 .gyrow{display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start}
 .gyrow .gyc{width:46px;flex:none}
 .gyempty{font-size:var(--fs-lg);color:var(--bone-dim);font-style:italic;padding:10px 4px}
@@ -739,6 +740,33 @@ img{display:block;max-width:100%}
 /* v1.14 — the play-screen sketch: hands top/bottom, stack|card|defend center */
 .playpane{display:flex;flex-direction:column;height:100%;padding:0!important;overflow:hidden}
 .logpane{padding:6px 8px}
+/* ONE SCREEN (v7.15): the board's middle screen is the only one in flow; the other two are sheets laid over it,
+   shown one at a time from the jump row or a strip. Nothing scrolls the board vertically any more. */
+.board .tablewrap{position:relative;overflow:hidden;scroll-snap-type:none}
+/* the screen in flow fills the box INSIDE its border (it was the box's own height, 2 px over, clipped off the wheel's
+   foot); the wheel's z-indexed cards stay under a sheet */
+.board .tablewrap>.vscreen:not(.side){isolation:isolate;height:100%;min-height:0}
+.board .vscreen.side{position:absolute;inset:0;z-index:6;display:none;box-shadow:0 0 0 1px var(--y)}
+.board .vscreen.side.open{display:flex;animation:sheetin .16s ease-out}
+@keyframes sheetin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.board .vscreen.side.open{animation:none}}
+.screennav button.on{border-color:var(--y);color:var(--y)}
+/* 44 px DRAWN, the tap floor: a hit area outside the box would be cut by the clipping pane it sits at the edge of */
+.bstrip{flex:none;display:block;width:100%;min-height:44px;padding:4px 8px;white-space:nowrap;
+  background:var(--forge2);border:none;border-bottom:1px solid var(--line);color:var(--bone);font-family:'Spline Sans Mono';font-size:11px;text-align:left;position:relative}
+.bstrip .bsin{display:flex;align-items:center;gap:6px;min-height:36px;overflow:hidden}
+.bstrip.mine{border-bottom:none;border-top:1px solid var(--line)}
+.bstrip.on{box-shadow:inset 0 0 0 1px var(--y)}
+.bstrip .bsw{flex:none;font-family:'Big Shoulders Display';font-weight:800;font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:var(--y);max-width:30%;overflow:hidden;text-overflow:ellipsis}
+.bstrip .bsc{flex:none;color:var(--bone-dim);text-transform:uppercase;letter-spacing:.04em}
+.bstrip .bsc b{color:var(--bone);margin-left:2px}
+.bstrip .bsc i{font-style:normal}
+.bstrip .bsc .s{display:none}
+@media (max-width:374px){.bstrip .bsc .l{display:none}.bstrip .bsc .s{display:inline}.bstrip .bsin{gap:5px}}
+.bstrip .bsc.nil b{color:var(--bone-dim)}
+.bstrip .bsa{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;border:1px solid var(--line);padding:1px 5px;color:var(--bone)}
+.bstrip .bsa b{color:var(--y);margin-left:3px}
+.bstrip .bsgo{flex:none;margin-left:auto;color:var(--y);padding-left:4px}
 .dhand{flex:none;display:flex;gap:5px;align-items:center;overflow-x:auto;padding:6px 8px;border-bottom:1px solid var(--line);background:var(--forge2)}
 .dhand .hlbl,.phand .hlbl{flex:none;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--bone-dim);writing-mode:vertical-rl;transform:rotate(180deg);opacity:.85}
 .dcardph{flex:none;width:40px;aspect-ratio:5/7;border:1px solid #7A2A1E;background:linear-gradient(150deg,#5A1310,#2A0908 55%,#1A0605);position:relative;opacity:.7}
@@ -909,7 +937,12 @@ img{display:block;max-width:100%}
   animation:pkin .14s ease-out}
 .peekwrap>*{pointer-events:auto}
 @keyframes pkin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-.peekcard{width:172px;max-width:52vw;filter:drop-shadow(0 10px 26px rgba(0,0,0,.75))}
+/* the card also fits the height left above the wheel, less the jump row, the HUD, their strip and the dock's bar
+   (215): on a 568-tall phone a 52vw card stood 292 px and covered the jump row and the HUD (v7.15, one screen's tap
+   sweep). Under 700 px tall the dock is its bar alone: the wheel's top card is already the magnified card, and the
+   stage has no room for a second one. */
+.peekcard{width:min(172px,52vw,calc((100vh - var(--peekbot,112px) - 215px) * .714));filter:drop-shadow(0 10px 26px rgba(0,0,0,.75))}
+@media (max-height:700px){.peekwrap .peekcard{display:none}}
 .peekcard .cfw{border:1px solid var(--y);border-radius:4px;overflow:hidden}
 .peekbar{display:flex;flex-direction:column;align-items:center;gap:1px;margin-top:5px;
   background:var(--forge);border:1px solid var(--y);border-radius:3px;padding:4px 10px;
@@ -1232,7 +1265,7 @@ button.tag{position:relative}
 button.tag::after{content:"";position:absolute;inset:-16px -8px -16px}
 .screennav .sndbtn{min-width:44px}   /* its inline flex:.42 would draw 33px at 320 */
 .statusline button{padding-top:6px;padding-bottom:6px}
-.judgebtn::after{inset:-9px -6px -17px}
+.judgebtn::after{inset:-9px -6px -21px}   /* v7.15: at the top of the table's log pane the -9 is cut to -6 (42 px); 21 below keeps 44 */
 .psheet .pact button{min-height:44px}
 /* the other prompt controls reach the floor too (R, tools/promptsweep.js): a modal / pay option drew 42px, the opt's reorder arrows 38x30 */
 .psheet .popt{min-height:44px}
@@ -1298,7 +1331,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "7.14"; /* v7.14 - The main button sits under your thumb at the bottom centre, the others in the corners; see CHANGELOG.md. */
+window.APP_VER = "7.15"; /* v7.15 - The whole fight on one screen: strips for each side, the boards open as sheets; see CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -3154,7 +3187,8 @@ function PeekDock({card, verb, onClose}){
          their tap closed the preview instead. Any `.statusline` / pip `.rail`
          stacked directly on the rail is part of what the dock must clear. */
       let el = r && railEl;
-      while(el && el.previousElementSibling && el.previousElementSibling.matches(".statusline, .rail")){
+      /* and YOUR STRIP (v7.15), which sits between the wheel and the status line now */
+      while(el && el.previousElementSibling && el.previousElementSibling.matches(".statusline, .rail, .bstrip.mine")){
         el = el.previousElementSibling;
         const t = el.getBoundingClientRect();
         if(t.height && t.top < r.top) r = {top: t.top};
@@ -3830,6 +3864,32 @@ function HubBar({children}){
     </div>
   );
 }
+/* THE STRIPS — one screen (v7.15, GRAPHICS-PLAN G1c part two; design/STAGE.md §2.1 on branch
+   design/stage). The board is the stage now: a side's zones read as COUNTS and its arena as
+   chips grouped by name, in one row above the stage (theirs) and one above the wheel (yours).
+   NO equipment tiles: gear you can use is in the wheel, gear that blocks is in the wall row,
+   and the whole loadout is one tap away — the strip IS the button that opens that side's
+   board as a sheet over the stage (the panes that were flick screens). Counts only from the
+   side's own zones, so a hidden hand stays a number. */
+function BoardStrip({sd, who, mine, open, onOpen}){
+  const n = a => (a || []).length;
+  const groups = [];
+  (sd.board || []).forEach(b => { const nm = (b && b.card && b.card.name) || "card", g = groups.find(x => x.nm === nm);
+    if(g) g.k++; else groups.push({nm, k: 1}); });
+  const shown = groups.slice(0, 2), more = groups.length - shown.length;
+  const z = [!mine && ["hand", n(sd.hand)], ["ars", sd.arsenal ? 1 : 0], ["deck", n(sd.deck)], ["pitch", n(sd.pitch)],
+             ["grave", n(sd.grave)], n(sd.banish) > 0 && ["ban", n(sd.banish)], n(sd.soul) > 0 && ["soul", n(sd.soul)]].filter(Boolean);
+  return (
+    <button className={"bstrip" + (mine ? " mine" : "") + (open ? " on" : "")} data-strip={mine ? "you" : "them"} onClick={onOpen}
+      aria-label={(open ? "close " : "open ") + (mine ? "your board" : who + "'s board")}><span className="bsin">
+      <span className="bsw">{who}</span>
+      {z.map(([k, v]) => <span key={k} className={"bsc" + (v ? "" : " nil")}><i className="l">{k}</i><i className="s">{k[0]}</i><b>{v}</b></span>)}
+      {shown.map(g => <span key={g.nm} className="bsa">{g.nm}{g.k > 1 && <b>×{g.k}</b>}</span>)}
+      {more > 0 && <span className="bsa">+{more}</span>}
+      <span className="bsgo">{open ? "✕" : mine ? "▼" : "▲"}</span>
+    </span></button>
+  );
+}
 function Ticker({feed}){
   const [idx,setIdx]=uS(0);
   uE(()=>{
@@ -3924,7 +3984,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
   const tokRef = uR(0);
   const tokSeq = () => ++tokRef.current;
   const oppRef=uR(null), chainRef=uR(null), youRef=uR(null), midRef=uR(null);
-  const jump = r => r.current && r.current.scrollIntoView({behavior:"smooth",block:"start"});
+  /* ONE SCREEN (v7.15): the opponent's and your board are SHEETS over the stage, not flick screens */
+  const [sheet, setSheet] = uS(null);
+  const flip = k => setSheet(s => s === k ? null : k);
   uE(()=>{ if(midRef.current) midRef.current.scrollLeft = midRef.current.clientWidth; },[]);
   const built = uM(()=>{
     /* ONE COUNTER AND ONE STREAM, SHARED BY BOTH SEATS.
@@ -7058,16 +7120,16 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     <div className="board">
       <div className="screennav">
         <button onClick={onExit} style={{flex:.7}}>✕ leave</button>
-        <button onClick={()=>jump(oppRef)}>▲ Opp</button>
-        <button onClick={()=>jump(chainRef)}>Chain</button>
-        <button onClick={()=>jump(youRef)}>You ▼</button>
+        <button className={sheet==="opp"?"on":""} onClick={()=>flip("opp")}>▲ Opp</button>
+        <button className={sheet?"":"on"} onClick={()=>setSheet(null)}>Chain</button>
+        <button className={sheet==="you"?"on":""} onClick={()=>flip("you")}>You ▼</button>
         <SoundBtn/>
       </div>
       <StageHud me={you(g)} them={opp(g)} turn={g.turn} myTurn={!(g.mode==="block" || g.mode==="foeturn")} frost={frostCount(opp(g))}/>
 
       <div className="tablewrap">
         {/* ---- SCREEN 1: opponent board (mirror: active rows nearest the chain) ---- */}
-        <div className="vscreen" ref={oppRef}>
+        <div className={"vscreen side"+(sheet==="opp"?" open":"")} data-sheet="opp" ref={oppRef}>
           <div className="hscroll">
             <div className="hpane vfill">
               <div className="paneflag"><span>Opponent board</span><span>swipe → graveyard</span></div>
@@ -7153,7 +7215,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
             </div>
             {/* PANE 2 — PLAY: dummy hand · stack|card|defend · your hand+extras */}
             <div className="hpane playpane">
-              <div className="dhand"><span className="hlbl">Foe</span>{[0,1,2,3].map(i=><div key={i} className="dcardph"/>)}</div>
+              <BoardStrip sd={opp(g)} who={opp(g).name.split(",")[0]} open={sheet==="opp"} onOpen={()=>flip("opp")}/>
               <div className="playmid">
                 <div className="sidecol stack">
                   <div className="scol-lbl">Stack</div>
@@ -7237,6 +7299,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                 return pips.length ? <div className="rail">{pips.map(([t,cl],i)=>
                   <span key={i} className={"rp"+(cl?" "+cl:"")}>{t}</span>)}</div> : null;
               })()}
+              <BoardStrip sd={you(g)} who="You" mine open={sheet==="you"} onOpen={()=>flip("you")}/>
               <HandWheel spinPeeks={!g.inspect}>
                 {you(g).hand.flatMap(handCell)}
                 {playables.map((p,i)=>(
@@ -7263,11 +7326,11 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
         </div>
 
         {/* ---- SCREEN 3: your board (the sketch) ---- */}
-        <div className="vscreen" ref={youRef}>
+        <div className={"vscreen side"+(sheet==="you"?" open":"")} data-sheet="you" ref={youRef}>
           <div className="hscroll">
             <div className="hpane vfill">
               <div className="paneflag"><span>Your board</span><span>swipe → graveyard</span></div>
-              {g.mode!=="act" && <div className="modehint">Action needed — flick up to the chain screen</div>}
+              {g.mode!=="act" && <button className="modehint" onClick={()=>setSheet(null)}>Action needed — back to the table ✕</button>}
               <InPlayRow entries={you(g).board} chips={toks} cell={(b,i)=>(
                 <button key={b.uid} className={"b clip-sm"+(b.spent?" spent":"")} style={{width:52,flex:"none"}}
                   onClick={(()=>{
@@ -7511,7 +7574,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
           the `--peekbot` measurement that keeps the preview off the rail.
           Hidden while a prompt sheet is open, because `.psheet` docks in
           exactly this spot. */}
-      {!g.over && !g.prompt &&
+      {!g.over && !g.prompt && !sheet &&
         <PeekDock card={peek && peekables().find(c=>c.uid===peek.uid)}
           verb={peek && peek.verb} onClose={()=>setPeek(null)}/>}
       {/* THE SHEET IS ONE BODY, SHARED WITH THE TABLE (v4.44). It was 90
@@ -9713,8 +9776,14 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
     } catch(e){ /* the judge must never be the thing that breaks play */ }
   };
 
-  const oppRef = uR(null), chainRef = uR(null), youRef = uR(null);
-  const jump = r => r.current && r.current.scrollIntoView({behavior:"smooth", block:"start"});
+  const oppRef = uR(null), chainRef = uR(null), youRef = uR(null), midRef = uR(null);
+  /* the middle screen opens on the PLAY pane, the log on its left, as on the trainer (v7.15: with one
+     screen this is the whole board, and it opened on the log). A callback ref, not an effect: the table's
+     board mounts after its first render, when an effect's ref is still empty */
+  const midStart = el => { midRef.current = el; if(el && !el.dataset.started && el.clientWidth){ el.dataset.started = "1"; el.scrollLeft = el.clientWidth; } };
+  /* ONE SCREEN (v7.15): their board and yours are SHEETS over the stage, as on the trainer */
+  const [sheet, setSheet] = uS(null);
+  const flip = k => setSheet(s => s === k ? null : k);
 
   /* THE CATALOG IS NOT AN OPTIMISATION HERE, IT IS WHAT MAKES THE
      HANDSHAKE FIT DOWN THE PIPE. Without it the opening snapshot ships
@@ -10227,16 +10296,16 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
     <div className="board">
       <div className="screennav">
         <button onClick={onExit} style={{flex:.7}}>✕ leave</button>
-        <button onClick={()=>jump(oppRef)}><span className="navtx">▲ {foeH?heroShort(foeH):"Opp"}</span></button>
-        <button onClick={()=>jump(chainRef)}>Chain</button>
-        <button onClick={()=>jump(youRef)}>You ▼</button>
+        <button className={sheet==="opp"?"on":""} onClick={()=>flip("opp")}><span className="navtx">▲ {foeH?heroShort(foeH):"Opp"}</span></button>
+        <button className={sheet?"":"on"} onClick={()=>setSheet(null)}>Chain</button>
+        <button className={sheet==="you"?"on":""} onClick={()=>flip("you")}>You ▼</button>
         <SoundBtn/>
       </div>
       <StageHud me={me} them={them} turn={g.turn} myTurn={g.turnPlayer === mySeat}/>
 
       <div className="tablewrap">
-        {/* ---- SCREEN 1: their board ---- */}
-        <div className="vscreen" ref={oppRef}>
+        {/* ---- SHEET: their board (v7.15; a flick screen until then) ---- */}
+        <div className={"vscreen side"+(sheet==="opp"?" open":"")} data-sheet="opp" ref={oppRef}>
           <div className="hscroll">
             <div className="hpane vfill">
               <div className="paneflag"><span>{them.name} · seat {1-mySeat}{srvRank.ranked ? " · ranked" : ""}</span><span>swipe → graveyard</span></div>
@@ -10286,7 +10355,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
 
         {/* ---- SCREEN 2: the chain ---- */}
         <div className="vscreen" ref={chainRef}>
-          <div className="hscroll">
+          <div className="hscroll" ref={midStart}>
             <div className="hpane logpane">
               <div className="paneflag">
                 <span>log</span>
@@ -10352,8 +10421,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
             </div>
 
             <div className="hpane playpane">
-              <div className="dhand"><span className="hlbl">{them.name.split(",")[0]}</span>
-                {them.hand.map(c=><div key={c.uid} className="dcardph"/>)}</div>
+              <BoardStrip sd={them} who={them.name.split(",")[0]} open={sheet==="opp"} onOpen={()=>flip("opp")}/>
               <div className="playmid">
                 <div className="sidecol stack">
                   <div className="scol-lbl">Chain</div>
@@ -10435,6 +10503,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                       : t.name + (t._life!=null ? " ♥"+t._life : "")}</button>))}
               </div>}
 
+              <BoardStrip sd={me} who="You" mine open={sheet==="you"} onOpen={()=>flip("you")}/>
               <HandWheel spinPeeks={!inspect}>
                 {me.hand.map(handCell)}
                 {railPlays().map(railCell)}
@@ -10459,12 +10528,12 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
         </div>
 
         {/* ---- SCREEN 3: your board ---- */}
-        <div className="vscreen" ref={youRef}>
+        <div className={"vscreen side"+(sheet==="you"?" open":"")} data-sheet="you" ref={youRef}>
           <div className="hscroll">
             <div className="hpane vfill">
               <div className="paneflag"><span>Your board · seat {mySeat}</span><span>swipe → graveyard</span></div>
               {!myTurn && !defending && !myArsStep && !over &&
-                <div className="modehint">Waiting on {them.name} — flick up to the chain screen</div>}
+                <button className="modehint" onClick={()=>setSheet(null)}>Waiting on {them.name} — back to the table ✕</button>}
               {/* THE ARENA COULD ONLY ZOOM (v4.45). `judge.doActivate` has had
                   the board-attack route since v3.44 and `legal`'s arena
                   branch since v3.84 — and this row's only handler opened the
@@ -10811,7 +10880,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
             seq:sess.current.seq(), hash:sess.current.hash(),
             link, ...sess.current.stats()} : null
         }]}/>
-      {!over && !g.prompt && <PeekDock card={peek && peekables().find(c=>c.uid===peek.uid)}
+      {!over && !g.prompt && !sheet && <PeekDock card={peek && peekables().find(c=>c.uid===peek.uid)}
         verb={peek && peek.verb} onClose={()=>setPeek(null)}/>}
       {/* THE SHEET THIS BOARD NEVER HAD (v4.44). `judge.legal` stops the
           game for BOTH seats while a prompt is live and refuses every

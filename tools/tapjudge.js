@@ -21,8 +21,9 @@
    A modal (.bugwrap, .reveal, .modal, .zoomwrap, .psheet) hides what is behind it: only its controls are judged.
 
    EXEMPT: [name pattern, why] for a control UI-GUIDE.md documents as smaller on purpose. A finding for one
-   comes back in `exempt`, never silently dropped. Empty: UI-GUIDE.md documents none (the jump row,
-   JUDGE!! and the advisor header get invisible hit areas instead, DECISION B 2026-11-02).
+   comes back in `exempt`, never silently dropped. UI-GUIDE.md documents one: the hand wheel's turned cards (v7.15;
+   an entry may name a CSS selector instead). The jump row, JUDGE!! and the advisor header get invisible hit areas
+   instead (DECISION B 2026-11-02).
    ============================================================ */
 "use strict";
 
@@ -41,7 +42,7 @@ function tapJudge({ min, halo, exempt }) {
     " \"" + (el.innerText || el.getAttribute("aria-label") || el.value || "").replace(/\s+/g, " ").trim().slice(0, 32) + "\"";
   const box = r => `[${Math.round(r.left)},${Math.round(r.top)} ${Math.round(r.width)}x${Math.round(r.height)}]`;
   const modal = [...document.querySelectorAll(".bugwrap, .reveal, .modal, .zoomwrap, .psheet")].find(m => m.getBoundingClientRect().height > 0);
-  const exOf = el => { const n = key(el), e = exempt.find(([re]) => new RegExp(re, "i").test(n)); return e ? e[1] : null; };
+  const exOf = el => { const n = key(el), e = exempt.find(([re, , css]) => css ? el.matches(css) : new RegExp(re, "i").test(n)); return e ? e[1] : null; };
   const ctl = [];
   for (const el of (modal || document).querySelectorAll("button, a[href], input:not([type=hidden]), textarea, select, [role=button]")) {
     if (el.disabled) continue;
@@ -113,7 +114,11 @@ function scrollAll(to) {
   }
 }
 
-const EXEMPT = [];
+/* [name pattern, why] or [null, why, css selector]. The wheel's TURNED cards (v7.15, UI-GUIDE.md "The board"): with one
+   screen the wheel is always in view, and a card tilted round the arc is clipped by the wheel and its box's centre is
+   off the card by design. It is reached by spinning it to the top, the only card a tap commits, and tools/page.js's
+   wheelJudge drives exactly that. The top card (.wtop) is judged like any control. */
+const EXEMPT = [[null, "a turned wheel card: spin it to the top (wheelJudge)", ".phand.wheel .hc:not(.wtop)"]];
 const MIN = 44, HALO = 24;
 
 /* Judge the screen as it stands: {n, small, stolen, clipped, overlap, exempt}, each a list of {k, m}. */

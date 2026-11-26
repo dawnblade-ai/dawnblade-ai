@@ -1,3 +1,40 @@
+## v7.15 — One screen
+
+- **G1c, part two: one screen (docs/GRAPHICS-PLAN.md §3; design/STAGE.md §2.1 on `design/stage`).** The board no longer
+  flicks between three screens. The stage is the screen: the HUD, THEIR STRIP, the play pane (stack · featured card ·
+  defend), the status line, YOUR STRIP, the hand wheel and the hub, all at once. The opponent's board and yours are
+  SHEETS laid over the stage, one at a time, from the jump row (▲ Opp / You ▼, now lit for the one shown) or a tap on a
+  strip; Chain, or the strip again, closes it. Nothing a screen showed is lost: the sheets are those screens.
+- **The strips** (`BoardStrip`, shared): a side's name, its zones as COUNTS (their hand, arsenal, deck, pitch,
+  graveyard; banish and soul once they hold a card) and its arena as chips grouped by name (`Runechant ×3`, two then
+  `+N`). No equipment tiles: gear you can use is in the wheel, gear that blocks is in the wall row, the loadout is a tap
+  away. Below 375 px wide the labels shorten to a letter. Counts come from the side's own zones, so a hidden hand stays
+  a number. Their strip replaces the row of face-down hand backs.
+- **Fixes on the way.** The middle screen was its box's own height, 2 px taller than the box inside its border, so the
+  wheel's foot was clipped (found by the new judge). The wheel's z-indexed cards drew over an open sheet (the stage now
+  isolates its stacking), and the peek dock floated over a sheet (it hides while one is open). The "flick up to the
+  chain screen" hints are now buttons that close the sheet. The table's middle screen opened on its LOG pane (it never
+  had the trainer's start-on-play line; a flick layout hid it) — it opens on the play pane now. With the stage always in
+  view the tap sweep measures it on every board screen, which found three older faults: on a 568-tall phone the peek
+  dock's card (52vw) stood over the jump row and the HUD (now capped by the height above the wheel, and under 700 px
+  tall the dock is its bar alone: the wheel's top card is already the magnified card); the dock now also clears your
+  strip, which sits between the wheel and the status line; the table's
+  JUDGE!! hit area was cut to 42 px at the top of its pane (it reaches 21 px below now); and the wheel's turned cards
+  read as clipped and stolen — by design, so tools/tapjudge.js EXEMPTS them by selector (reported, never dropped;
+  UI-GUIDE.md "The board"): they are reached by spinning them to the top, which `wheelJudge` drives.
+- **Drives follow the board.** tools/page.js gains `toStage` (close any sheet, bring the middle screen's play pane into
+  view, where a drive that read the log pane left it); `playOn`, the keyword-peek row and `screenJudge` start there.
+  tools/serverpage.js's player-name rows read each hero box with its sheet open: read closed, every box measured 0x0
+  and the "inside its box" rows passed on zeros until the 320 row's "some name is cut" caught it.
+- Drill: `screenJudge` (tools/page.js, exported): the board box does not scroll and one screen is in flow; both strips
+  on the phone, ≥ 44 px drawn (the tap floor: a hit area beyond the box would be cut by the pane), uncovered, theirs above the stage and yours above the wheel; a tap on their strip opens their
+  board over the stage's centre and hides the dock, with the strip's deck count equal to the sheet's; You ▼ swaps in
+  yours (deck count again); Chain closes it. Rows: trainer 393, table, trainer 320x568. `playOn` closes any sheet
+  first. Sabotages, each FAILS: the flick screens restored, their strip hidden, the sheet under the stage, the strip
+  20 px tall, the strip's deck count lying, the sheets never closing.
+- Gates: npm test 4627/4622/0/5 · babel 4/4 · page.js 347/347 · serverpage 490/0 · trainchaos CLEAN 18. Shots:
+  `docs/ux/after-onescreen.jpg` (the stage), `after-onescreen-sheet.jpg` (their board as a sheet), `after-onescreen-320.jpg`.
+
 ## v7.14 — The hub
 
 - **G1c, part one: the hub (docs/GRAPHICS-PLAN.md §3; design/STAGE.md App. C.1 on `design/stage`).** On both boards the

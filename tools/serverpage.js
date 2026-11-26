@@ -103,11 +103,24 @@ const click = async (page, loc, what) => { try { await loc.click({ timeout: 4000
 const btn = (page, re) => page.getByRole("button", { name: re });
 
 /* S4.4 — the board's player names, measured. `.pname` is drawn inside its seat's `.heromid`; a seat with no name draws nothing. */
-const pnames = page => page.evaluate(() => { const o = {};
-  for(const k of ["me", "foe"]){ const e = document.querySelector('[data-pname="' + k + '"]'), m = e && e.closest(".heromid"), r = e && e.getBoundingClientRect(), q = m && m.getBoundingClientRect(), rr = m && m.closest(".heror").getBoundingClientRect();
-    o[k] = e ? { t: e.textContent, x: Math.round(r.left), r: Math.round(r.right), h: Math.round(r.height), cut: e.scrollWidth > e.clientWidth, ell: getComputedStyle(e).textOverflow, mx: Math.round(q.left), mr: Math.round(q.right), mw: Math.round(q.width), mh: Math.round(q.height), rx: Math.round(rr.left), rr: Math.round(rr.right) } : null; }
-  o.scrollW = document.scrollingElement.scrollWidth; o.n = document.querySelectorAll("[data-pname]").length;
-  const hm = [...document.querySelectorAll(".heromid")].map(m => Math.round(m.getBoundingClientRect().width)); o.hm = hm; return o; });
+/* ONE SCREEN (v7.15): the names sit in the hero boxes, which live in the board SHEETS now, so each is read with its
+   sheet open (me: yours, foe: theirs), then the sheet is closed. Read closed, every box was 0x0 and the
+   inside-the-box rows passed on zeros. */
+const pname1 = (page, k) => page.evaluate(k => {
+  const e = document.querySelector('[data-pname="' + k + '"]'), m = e && e.closest(".heromid"), r = e && e.getBoundingClientRect(), q = m && m.getBoundingClientRect(), rr = m && m.closest(".heror").getBoundingClientRect();
+  return e ? { t: e.textContent, x: Math.round(r.left), r: Math.round(r.right), h: Math.round(r.height), cut: e.scrollWidth > e.clientWidth, ell: getComputedStyle(e).textOverflow, mx: Math.round(q.left), mr: Math.round(q.right), mw: Math.round(q.width), mh: Math.round(q.height), rx: Math.round(rr.left), rr: Math.round(rr.right) } : null; }, k);
+const pnames = async page => { const o = {}, hm = [];
+  for(const k of ["me", "foe"]){
+    await page.evaluate(s => { const b = document.querySelector('.board [data-strip="' + s + '"]'); if(b && !b.classList.contains("on")) b.click(); }, k === "me" ? "you" : "them");
+    await page.waitForTimeout(250);
+    o[k] = await pname1(page, k);
+    hm.push(...await page.evaluate(() => [...document.querySelectorAll(".heromid")].map(m => Math.round(m.getBoundingClientRect().width)).filter(Boolean)));
+    if(k === "foe") Object.assign(o, await page.evaluate(() => ({ scrollW: document.scrollingElement.scrollWidth, n: document.querySelectorAll("[data-pname]").length })));
+  }
+  o.hm = hm;
+  await page.locator(".board .screennav button", { hasText: "Chain" }).first().click().catch(() => {});
+  await page.waitForTimeout(200);
+  return o; };
 
 /* drive a page (open at the server table chooser) to the board: the page either opens a table (asHost) or types the code of the scripted phone's */
 async function toTheBoard(page, world, B, o){

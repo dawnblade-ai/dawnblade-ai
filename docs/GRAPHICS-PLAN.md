@@ -1,6 +1,6 @@
 # GRAPHICS PLAN — the next phase (drafted 2026-11-25, at v7.10)
 
-**Status: DIRECTION GIVEN (user, 2026-11-25). G1a SHIPPED v7.12** (the always-on life-bar HUD, both boards; `docs/ux/before-hud.jpg` / `after-hud.jpg` / `after-hud-320.jpg`). **G1b the wheel SHIPPED v7.13; G1c part one, the hub, SHIPPED v7.14** (`HubBar`, `hubJudge`; `docs/ux/after-hub.jpg`). **Next: G1c part two, one screen.** The user's answer to §2: *"I don't
+**Status: DIRECTION GIVEN (user, 2026-11-25). G1a SHIPPED v7.12** (the always-on life-bar HUD, both boards; `docs/ux/before-hud.jpg` / `after-hud.jpg` / `after-hud-320.jpg`). **G1b the wheel SHIPPED v7.13; G1c part one, the hub, SHIPPED v7.14** (`HubBar`, `hubJudge`; `docs/ux/after-hub.jpg`). **G1c part two, one screen, SHIPPED v7.15** (`BoardStrip`, the board sheets, `screenJudge`; `docs/ux/after-onescreen.jpg`). **Next: G2–G5** (parallel workers allowed), and the wheel follow-ups (prompts as a wheel source). The user's answer to §2: *"I don't
 think there is enough room to show the equipment on the main screen with the hand. Reference our old
 mockup with the health bars and the hand wheel - make sure the equipment is showing up in the hand
 wheel when it can be blocked with."* The old mockup is `design/STAGE.md` + `design/prototype/` on the
