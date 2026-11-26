@@ -4,43 +4,49 @@
 answered NEEDS-A-RULING notes are in `QUEUE-ARCHIVE.md` on this branch (grep it, don't read it). History lives in
 CHANGELOG.md (v6.30 on; older in `docs/archive/CHANGELOG-to-v6.29.md`) and LESSONS.md on main.
 
-## HANDOFF — START HERE (CEO session_013xG9xAqb3T374RaTVq2m2q, 2026-11-26, at v7.15)
+## HANDOFF — START HERE (CEO session_013xG9xAN4aifuqFXPZjRZsD, 2026-11-26, at v7.16)
 
 **DIRECTION (user, 2026-11-25, standing):** gameplay first, keep it simple; the **major graphical interface changes**
-are GO. The board's shape is DECIDED: the Stage mockup (`design/STAGE.md` + `design/prototype/` on **`design/stage`**).
-`docs/GRAPHICS-PLAN.md` (main) §2/§3 — READ IT FIRST. **G1 (a, b, c) IS DONE**: the board is now the Stage table.
+are GO. The board is the Stage table (`docs/GRAPHICS-PLAN.md` §2/§3 on main — READ IT FIRST; the old mockup is
+`design/STAGE.md` + `design/prototype/` on `design/stage`). **G1 is done**, with one reversal:
+
+**THE WHEEL IS RETIRED (user, 2026-11-26):** *"the current hand 'wheel' really doesn't work well, we need a better more
+fluid system — maybe ... we just need to make the hand endlessly scrollable in the old flat layout."* Do NOT bring an
+arc, a spin or a magnified-top-card hand back. The hand is `HandRow` (index.html, shared by both boards).
 
 **SHIPPED THIS CEO (alone, no workers):**
-- **v7.14 the hub** (G1c part 1): one shared `HubBar` lays out both boards' `.actbar`: the primary (class `hubp`, named
-  per mode by each board) in the thumb lane (x 96..297 at 393, a 54-px plate flush with the bottom edge), secondaries in
-  the corners (right first). >3 controls or no `hubp` = the old row of equals (the per-card cost pickers). Drill
-  `hubJudge` (judged on every bar state `playOn` reaches + 320 row; 8 sabotages). Also: on the wheel an unplayable card
-  dims its ART (CSS `.phand.wheel .hc.dis`), not its numbers — the 0.4 cell opacity failed AA in the reaction step.
-- **v7.15 one screen** (G1c part 2): `.tablewrap` no longer scrolls; the middle screen (the stage) is the only one in
-  flow; the opponent's and your board are `.vscreen.side` SHEETS over it (state `sheet`, jump row opens/closes, lit `.on`).
-  `BoardStrip` (shared): their strip replaces the hand backs, yours sits above the wheel — counts (hand/ars/deck/pitch/
-  grave, ban/soul if any) + arena chips by name, 44 px drawn, one tap opens that sheet; letters under 375 wide. The
-  table now opens on its PLAY pane (it opened on the log — callback ref `midStart`). Peek dock: clears your strip;
-  card capped by height; under 700 px tall the dock is its bar alone. Drill `screenJudge` + `toStage` (page.js); tapjudge
-  EXEMPTS the wheel's turned cards by selector; serverpage's name rows read with the sheet open (they passed on 0x0).
-- Gates (v7.15): npm test 4627/4622/0/5 · babel 4/4 · page.js 347/347 · serverpage 490/0 · trainchaos CLEAN 18 ·
-  livecheck ALL PASS. Function v182. slicecensus `<style>` pin 104,653 → 109,376. Shots `docs/ux/after-hub*.jpg`,
-  `after-onescreen*.jpg`.
+- **v7.16 the hand row**: `HandRow` replaces `HandWheel`. A native horizontal scroller (the phone's own momentum and
+  rubber band, NO snap, `overscroll-behavior-x: contain` so a flick at the end never swipes Safari back), every card
+  upright and one size (`--hcw`: 96 px at 393, 76..104; 76 under 700 px tall — the 320x568 stage grew ~96 → 146 px),
+  centred while it fits, `+N` on each edge (sticky, cards whose middle is past it). Two-tap rule untouched; the peeked
+  card glides whole into view (clear of the edge fade, pad 28). Desktop: mouse wheel → sideways, mouse drag pulls.
+  The v7.14 "dim the art, not the numbers" rule now covers every hand row. Drill `handJudge` (+ `handTo`, both
+  exported from tools/page.js, replacing `wheelJudge`/`wheelTo`): rows trainer 393, trainer 320x568 (commit), TABLE
+  (new; the wheel had no table row). 6 sabotages each FAIL. tapjudge's EXEMPT list is now empty. NOTE for drives:
+  headless Chromium scrolls natively on CDP `Input.dispatchTouchEvent`, NOT on `Input.synthesizeScrollGesture`.
+- Gates (v7.16): npm test 4627/4622/0/5 · babel 4/4 · page.js 350/350 · serverpage 490/0 · trainchaos CLEAN 18 ·
+  livecheck ALL PASS. Function v184.
+  Shots `docs/ux/after-handrow.jpg`, `after-handrow-320.jpg`. slicecensus `<style>` pin 109,376 → 109,918.
 
-**State:** live = **v7.15** on `main`. **WIRE_V 50**, DATA_VER sage-v19, 17 heroes. **WORKERS: NONE.** SQL unchanged
+**State:** live = **v7.16** on `main`. **WIRE_V 50**, DATA_VER sage-v19, 17 heroes. **WORKERS: NONE.** SQL unchanged
 (001..012). Weekly sweep Mondays 06:17 UTC — glance at Monday's run.
 
 **NEXT (any order; G2–G5 may go to parallel Sonnet workers, `experiments/WORKER-PROMPT-UI.txt` — UPDATE its CEO session id
 to yours first; branches `ship/AG-…`, next letter **AG**):**
-- **G2 the card face legible at wheel size** (the wheel's top card is the main read now; offline it's a grey stand-in —
-  judge type offline, art on a phone). **G3 motion** · **G4 menus one grammar** · **G5 the end screen** (GRAPHICS-PLAN §3).
-- **Wheel follow-ups (CEO, touches both boards):** prompts as a wheel source (STAGE C.1: pick/target/modal/opt/alloc/
-  reveal → wheel + hub confirms; opt ORDER = QUEUE S12); mouse drag on desktop gets `pointercancel`.
-- **Small board debts seen this run:** at 320x568 the stage is ~96 px tall (two strips + wheel 176 + hub) — the featured
-  card is tiny; consider a compact wheel under ~650 px tall. The table's JUDGE!! now reaches 21 px below (`::after`).
-  Player names (`[data-pname]`) only show inside the sheets now — consider them on the strips. `.dhand` CSS is dead.
+- **Ask the user how the hand row feels on the phone** before building more on it (DESKTOP-TASKS item 11). Ideas if they
+  want more: a long-press to open a card large (today a tap on an unplayable card does it); hold the row's scroll
+  position per turn; sort (playable first) as an option. "Endlessly" was read as "one free flick end to end", not a
+  looping carousel (a loop duplicates cells and confuses a 7-card hand) — offer the loop only if they ask again.
+- **G2 the card face legible at hand-row size** (76..104 px now; offline it's a grey stand-in — judge type offline, art
+  on a phone). **G3 motion** · **G4 menus one grammar** · **G5 the end screen** (GRAPHICS-PLAN §3).
+- **Prompts as a hand source** (was "wheel follow-ups": STAGE C.1 pick/target/modal/opt/alloc/reveal → the row + hub
+  confirms; opt ORDER = QUEUE S12). The wheel's mouse `pointercancel` debt is gone with the wheel.
+- **Small board debts:** the table's JUDGE!! reaches 21 px below (`::after`). Player names (`[data-pname]`) only show
+  inside the sheets — consider them on the strips. `.dhand` CSS is dead. Under 700 px tall the peek dock is its bar
+  alone (no room for the card): fine with 76-px cards, revisit if G2 changes the face.
 - Parked (unchanged): matchmaking SQL 013; presence (SQL + a yes); serverpage 9 px advisories; real-iPhone pass
-  (DESKTOP-TASKS 1–10 + v7.06–v7.15 items; v7.14: the hub under either thumb; v7.15: tap a strip, read a sheet, close it).
+  (DESKTOP-TASKS 1–11 + v7.06–v7.16 items; v7.14: the hub under either thumb; v7.15: tap a strip, read a sheet, close
+  it; v7.16: flick the hand row, tap a half-shown card).
 
 **NEEDS A RULING (defaults standing):** Add to Home Screen stays decision C (no standalone mode) unless the user says yes
 to the storage split; share text as v7.08; presence waits on a yes. See QUEUE-ARCHIVE.md for the full wording.
