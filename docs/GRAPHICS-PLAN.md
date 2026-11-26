@@ -1,6 +1,6 @@
 # GRAPHICS PLAN — the next phase (drafted 2026-11-25, at v7.10)
 
-**Status: DIRECTION GIVEN (user, 2026-11-25). G1a SHIPPED v7.12** (the always-on life-bar HUD, both boards; `docs/ux/before-hud.jpg` / `after-hud.jpg` / `after-hud-320.jpg`). **Next: G1b the wheel.** The user's answer to §2: *"I don't
+**Status: DIRECTION GIVEN (user, 2026-11-25). G1a SHIPPED v7.12** (the always-on life-bar HUD, both boards; `docs/ux/before-hud.jpg` / `after-hud.jpg` / `after-hud-320.jpg`). **G1b the wheel SHIPPED v7.13; G1c part one, the hub, SHIPPED v7.14** (`HubBar`, `hubJudge`; `docs/ux/after-hub.jpg`). **Next: G1c part two, one screen.** The user's answer to §2: *"I don't
 think there is enough room to show the equipment on the main screen with the hand. Reference our old
 mockup with the health bars and the hand wheel - make sure the equipment is showing up in the hand
 wheel when it can be blocked with."* The old mockup is `design/STAGE.md` + `design/prototype/` on the
@@ -67,7 +67,7 @@ nothing a pane shows today is lost. Both boards get it through shared components
 |---|---|---|---|
 | G1a | **The HUD**: two skewed life bars with the numeral beside each, chip trail, hand pips, turn; replaces `LifeHud` on both boards (STAGE §3.1; no text under a transformed ancestor) | `LifeHud`, both boards' top band | nothing |
 | G1b | **The hand wheel** (SHIPPED v7.13; the hub moved to G1c): one shared `HandWheel` fed by the rail's entries (hand + `playables()` / `railPlays()` + arsenal), top card magnified, spin + snap, tap top = commit, tap other = spin to top; the hub holds the primary button (STAGE App. C.1) | `.phand` on both boards, `.actbar` primary, `PeekDock` | nothing |
-| G1c | **One screen** (and the hub: the primary button in the thumb lane x 96..297, from G1b): strips (counts and chips, no gear tiles) + the stage; the three panes become sheets; equipment only in the wheel and the wall row | `Battle`, `TableBoard`, page.js/serverpage rows | nothing |
+| G1c | **One screen** (the hub SHIPPED v7.14 as part one; the primary button in the thumb lane x 96..297, from G1b): strips (counts and chips, no gear tiles) + the stage; the three panes become sheets; equipment only in the wheel and the wall row | `Battle`, `TableBoard`, page.js/serverpage rows | nothing |
 | G2 | **Cards in the hand**: a fanned, overlapping hand; pitch colour, cost, power, defence legible at the 9 px floor; the peek grows from the fan | hand rail components, `PeekDock` | G4, G5 |
 | G3 | **Motion that means something**: an attack lunges to the chain, a hit shakes the target strip, a block clanks onto it, prevention glows blue — each paired with the existing `Sfx` sound; off under reduced motion; no frame over 16 ms at 4x throttle | CSS + `Glide`/`LifeNum` | G4, G5 |
 | G4 | **Menus, one grammar**: title, hero sheet, loadout, table lobby, record — same header, panel and button rhythm; the hero sheet shows the deck's art large | off-board screens | G2, G3 |

@@ -1,3 +1,33 @@
+## v7.14 — The hub
+
+- **G1c, part one: the hub (docs/GRAPHICS-PLAN.md §3; design/STAGE.md App. C.1 on `design/stage`).** On both boards the
+  action bar's primary button moves into the thumb lane — the middle 51% of the bottom edge (x 96..297 at 393), which a
+  left or a right thumb reaches equally — as a 54-px plate whose flat edge sits on the bottom of the screen. A secondary
+  sits in a corner, where a thumb does not hit it by accident: the first beside the right thumb, a second on the left,
+  in smaller type that may wrap ("Defend — no reactions"). One shared `HubBar` lays the bar out; it is a LAYOUT only:
+  every button keeps its class, label, tap and test id.
+- **Each board names its primary, per mode**, with the class `hubp`: End turn, Pass — resolve, Defend → reactions,
+  Resolve damage, Pitch & play, Boost, Pay N more, Pass — let them end (trainer); End turn when it is legal, else the
+  Pass (or the "waiting on" note), Done defending, Pitch & play, Boost, Pay N more, Leave it empty, Leave the table
+  (table). The bar does not guess from colour: the table's Pass and End turn can both wear `go`. A mode that names no
+  primary, or offers more than three controls — the cost pickers, one button per card, where WHICH card is the
+  decision — keeps the old row of equals.
+- **On the wheel, a card you cannot play dims its ART, not its numbers.** The rail's 0.4 opacity on the whole cell
+  (kept by v7.13) put the magnified top card's cost, power and defence under AA — 3.8:1, its "Attack" 2.3:1 — in the
+  reaction step, where most of a hand cannot be played. Now the art darkens (or the stand-in's fill goes to ink), the
+  frame goes dashed, and the badges stay at full contrast. Found by the readability sweep once the hub put "Defend →
+  reactions" first in the bar's DOM order, so tools/tapsweep.js's first-match tap walked into the reaction step it
+  had never reached.
+- **The rest of G1c (one screen: strips, the panes as sheets, the wheel fixed above the hub) is the next release.**
+- Drill: `hubJudge` (tools/page.js, exported): exactly one primary, inside the lane, flush with the bottom edge, ≥ 54 px
+  and uncovered; each secondary wholly outside the lane, ≥ 44 px, on the phone, overlapping nothing; no label clipped or
+  under 9 px. Judged on every bar state the trainer and table drives reach (one row each, listing the states) and at
+  320x568. Sabotages, each FAILS (driven in the defend step, "Defend → reactions" with "Take it" in the corner): the bar
+  laid as a row, the bar lifted 20 px off the edge, the primary 40 px tall, the corner 30 px tall, the corner slid into
+  the lane, the primary's type at 8 px, a box over the primary, the corner's label clipped.
+- Gates: npm test 4627/4622/0/5 · babel 4/4 · page.js 335/335 · serverpage 490/0 · trainchaos CLEAN 18. Shots:
+  `docs/ux/after-hub.jpg` (the defend step), `after-hub-react.jpg` (the reaction step, the dimmed card).
+
 ## v7.13 — The hand wheel
 
 - **G1b, the hand wheel (docs/GRAPHICS-PLAN.md §3; design/STAGE.md App. C.1 on `design/stage`).** On both boards the
