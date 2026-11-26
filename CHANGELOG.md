@@ -12,6 +12,12 @@
   (table). The bar does not guess from colour: the table's Pass and End turn can both wear `go`. A mode that names no
   primary, or offers more than three controls — the cost pickers, one button per card, where WHICH card is the
   decision — keeps the old row of equals.
+- **On the wheel, a card you cannot play dims its ART, not its numbers.** The rail's 0.4 opacity on the whole cell
+  (kept by v7.13) put the magnified top card's cost, power and defence under AA — 3.8:1, its "Attack" 2.3:1 — in the
+  reaction step, where most of a hand cannot be played. Now the art darkens (or the stand-in's fill goes to ink), the
+  frame goes dashed, and the badges stay at full contrast. Found by the readability sweep once the hub put "Defend →
+  reactions" first in the bar's DOM order, so tools/tapsweep.js's first-match tap walked into the reaction step it
+  had never reached.
 - **The rest of G1c (one screen: strips, the panes as sheets, the wheel fixed above the hub) is the next release.**
 - Drill: `hubJudge` (tools/page.js, exported): exactly one primary, inside the lane, flush with the bottom edge, ≥ 54 px
   and uncovered; each secondary wholly outside the lane, ≥ 44 px, on the phone, overlapping nothing; no label clipped or
