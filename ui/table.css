@@ -205,3 +205,6 @@ html[data-band="compact"] .an-slab{height:48px}
 html[data-band="compact"] .stage .sh-sheet{padding-bottom:10px}
 /* the result (DAWNBREAK, who won) is the flow's (ui/flow.js, on the director's ko beat): the table's announcer layer draws none */
 .stage[data-state] .an-result{display:none}
+
+/* while an announcement holds (the scrim is live) nothing may sit above it: the "is thinking" chip (the flow's overlay) steps aside */
+html:has(.an-scrim.live) [data-b="thinking"]{visibility:hidden}

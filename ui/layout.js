@@ -14,8 +14,6 @@
   else root.DawnUILayout = factory(root);
 })(typeof self !== "undefined" ? self : this, function(root){
 
-const GLIMPSE = {s: [190, 265], m: [232, 324], l: [262, 366]};    /* SCREENS-TABLE 14 */
-const SMALL = {s: [80, 112], m: [92, 128], l: [104, 145]};
 
 /* stage: () -> the .stage element; me: the viewer's seat; remembered: Map uid -> rect, kept by the table after each render */
 function create(stage, me, remembered){
@@ -27,19 +25,24 @@ function create(stage, me, remembered){
   const q = sel => { const s = st(); return s ? s.querySelector(sel) : null; };
   const who = seat => seat === me ? "you" : "opp";
   const W = () => { const s = st(); return s ? s.clientWidth : 393; };
+  /* the glimpse's sizes are tokens (--cw-glimpse, --ch-glimpse, --cw-glimpse-pitch, --ch-glimpse-pitch): read from the computed style,
+     so tokens.css is the ONE source (no second table here to drift) */
+  const tok = name => { const s = st(); return s ? parseFloat(root.getComputedStyle(s).getPropertyValue(name)) || 0 : 0; };
   const band = () => W() >= 414 ? "l" : W() < 380 ? "s" : "m";
   const fallback = {x: 0, y: 0, w: 64, h: 90};
   /* the glimpse is centred; with pitched cards beside it the PAIR is (SCREENS-TABLE T5: 30.5 at 393). `L.extras` is how many the
      descriptor being built has: the table sets it just before it hands the announcer that descriptor. */
   const glimpse = () => {
-    const w = GLIMPSE[band()][0], h = GLIMPSE[band()][1], bout = box(q(".bout")), slab = band() === "s" ? 48 : 60;
-    const pw = L.extras > 0 ? 8 + SMALL[band()][0] : 0;
-    return {x: (W() - w - pw) / 2, y: (bout ? bout.y + bout.h : 56) + slab + 10, w, h};
+    const w = tok("--cw-glimpse") || 232, h = tok("--ch-glimpse") || 324, bout = box(q(".bout")), slab = band() === "s" ? 48 : 60;
+    const pw = L.extras > 0 ? 8 + (tok("--cw-glimpse-pitch") || 92) : 0;
+    /* below the slab, and never lower than the tray's top edge allows: at compact the glimpse must clear the hand (SCREENS-TABLE 14) */
+    const tray = box(q(".tray")), y0 = (bout ? bout.y + bout.h : 56) + slab + 10;
+    return {x: (W() - w - pw) / 2, y: tray ? Math.min(y0, tray.y - h) : y0, w, h};
   };
   const rect = (place, a, b) => {
     switch(place){
       case "glimpse": return glimpse();
-      case "small": { const g = glimpse(), s = SMALL[band()]; return {x: g.x + g.w + 8, y: g.y + (a || 0) * (s[1] + 16), w: s[0], h: s[1]}; }
+      case "small": { const g = glimpse(), w = tok("--cw-glimpse-pitch") || 92, h = tok("--ch-glimpse-pitch") || 128; return {x: g.x + g.w + 8, y: g.y + (a || 0) * (h + 16), w, h}; }
       case "hand": {
         const uid = a && a.uid;
         const live = uid != null ? q(`[data-uid="${uid}"]`) : null, r = live && box(live);
@@ -84,5 +87,5 @@ function remember(stage, map){
   });
 }
 
-return {create, remember, GLIMPSE, SMALL};
+return {create, remember};
 });

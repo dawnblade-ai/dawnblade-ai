@@ -607,9 +607,18 @@ async function runStates3(pw, browser, engine, vp, opts){
       if(!got) res.diffs.push("T5: no opponent play was caught mid-hold in this deal");
       else {
         ask(await P.locator(".an-slab[data-b=slab]").innerText().then(t => t.trim().length > 3), "T5: the slab says nothing");
+        /* while the glimpse holds, the "is thinking" chip must not show across it (it sits above the scrim otherwise) */
+        const overlap = await P.evaluate(() => { const t = document.querySelector('[data-b="think"]'); if(!t) return { chip: false };
+          const cs = getComputedStyle(t), vis = cs.visibility !== "hidden" && cs.display !== "none" && +cs.opacity > 0.05; if(!vis) return { chip: true, shown: false };
+          const g = [...document.querySelectorAll(".an-card")].filter(c => +getComputedStyle(c).opacity > 0.05).map(c => c.getBoundingClientRect()), r = t.getBoundingClientRect();
+          const hit = g.filter(b => Math.min(b.right, r.right) - Math.max(b.left, r.left) > 1 && Math.min(b.bottom, r.bottom) - Math.max(b.top, r.top) > 1).length;
+          return { chip: true, shown: true, overlaps: hit }; });
+        ask(!overlap.shown || !overlap.overlaps, "T5: the \"is thinking\" chip is drawn across the glimpse");
+        const clear = await P.evaluate(() => { const t = document.querySelector(".tray").getBoundingClientRect().top, g = [...document.querySelectorAll(".an-card")].filter(c => +getComputedStyle(c).opacity > 0.9).map(c => c.getBoundingClientRect().bottom); return Math.max(...g) <= t + 0.5; });
+        ask(clear, "T5: the glimpse runs down over the hand tray");
+        res.notes.push(overlap.chip ? (overlap.shown ? "chip shown (clear)" : "chip hidden while it holds") : "no chip in this deal");
         await cmp("T5", "table-5-announce.html", { only: ["slab", "scrim", "glimpse", "glimpse-pitch", "hub", "primary", "bout", "handrow", "tray"],
-          skip: vp[0] < 380 ? { glimpse: "CONFLICT in the design: SCREENS-TABLE 14 sets the compact glimpse at 190x265 (it must fit above the tray), tokens.css and table-5 at 210x293, which covers the hand; built as 14 says",
-            "glimpse-pitch": "same (the compact column follows the glimpse)" } : {}, part: { glimpse: "xywh", "glimpse-pitch": "xyw" } }, true);
+          part: vp[0] < 380 ? { glimpse: "xwh", "glimpse-pitch": "xw" } : { glimpse: "xywh", "glimpse-pitch": "xyw" } }, true);   /* compact: the glimpse is raised to clear the tray (SCREENS-TABLE 14), so y is not the mockup's 122 */
         await P.evaluate(() => DawnUIApp.director().hold(false));
       }
     }
@@ -651,14 +660,6 @@ async function judgeSheet(pw, browser, engine, vp, page, errors, art){
   await page.waitForFunction(() => { const e = document.querySelector(".sh-sheet:not(.waiting)"); return e && Math.abs(e.getBoundingClientRect().bottom - document.querySelector(".stage").getBoundingClientRect().bottom) < 0.6; }, null, { timeout: 20000 }).catch(() => {});   /* the rise is a queued beat: it waits for the announcements before it */
   const live = await page.evaluate(SHEET_GEOM, { sheet: ".sh-sheet:not(.waiting)", primary: ".sh-btn.primary" });
   if(!live) return ["F5: no prompt sheet to measure"];
-  /* KNOWN ISSUE (ui/director.js, not this file's): in WebKit the rise beat ends a hair early and its commit writes the computed mid-flight
-     transform (translateY of a few px) onto the sheet for good. The geometry below would then fail for that reason alone, so it is not run
-     there, and the issue is printed at the end: a drill that did not run is not a pass. */
-  const tf = await page.evaluate(() => getComputedStyle(document.querySelector(".sh-sheet:not(.waiting)")).transform);
-  if(engine === "webkit" && tf !== "none" && !/^matrix\(1, 0, 0, 1, 0, 0\)$/.test(tf)){
-    KNOWN.add(`F5 (WebKit ${vp[0]}x${vp[1]}): the prompt sheet's geometry was NOT compared: the director's rise commit leaves "${tf}" on it`);
-    return [];
-  }
   const b = await openPage(pw, browser, engine, vp, pathToFileURL(path.join(MOCKDIR, "flow-5-prompts.html")).href + "?noframe", errors, art);
   await settle(b.page);
   const mock = await b.page.evaluate(SHEET_GEOM, { sheet: ".sheet.pr", primary: ".foot .btn:not(.sec)" });
@@ -666,6 +667,63 @@ async function judgeSheet(pw, browser, engine, vp, page, errors, art){
   if(!mock) return ["F5: the mockup's sheet was not found"];
   for(const k of ["x", "w", "bottom", "btnH", "btnBottom"]) if(Math.abs(live[k] - mock[k]) > TOL) bad.push(`F5: sheet ${k} ${live[k].toFixed(1)} vs the mockup's ${mock[k].toFixed(1)}`);
   return bad;
+}
+
+
+/* ---------- reactions (T7's stack rail), both ways ---------- */
+
+/* R2: THEIR reaction on the stack, priority yours (kayo vs dorinthea, seed 2: the foe activates Blossom of Spring at its own attack's resolution; attack reactions leave no stack item, an instant ability does); the rail is held to table-7.
+   R1: YOUR reaction by taps (dorinthea vs kayo, seed 2, you on the play: your attack, a reaction card ready at the reaction step). */
+async function runStates4(pw, browser, engine, vp, opts){
+  const errors = [], res = { engine, vp, bad: [], notes: [], diffs: [] };
+  const ask = (ok, msg) => { if(!ok) res.bad.push(msg); };
+  let a;
+  const open = async q => { if(a) await a.context.close(); a = await openPage(pw, browser, engine, vp, pathToFileURL(PLAY).href + q, errors, opts.art);
+    await a.page.waitForSelector(".stage[data-state] .bout", { timeout: 15000 }); return a.page; };
+  try {
+    {
+      const P = await open(`?hero=kayo&foe=dorinthea&seed=2&first=0&pace=0`);
+      const how = await P.evaluate(advanceTo(`(st, v, J) => !!v.pend && v.stack.length > 0 && !!(v.stack[v.stack.length - 1] || {}).card && v.stack[v.stack.length - 1].seat === 1 && J.waitingOn(st) === 0`));
+      if(how !== "ok") res.diffs.push("R2: their reaction on the stack was not reached (" + how + ")");
+      else {
+        await P.waitForTimeout(200);
+        const want = await P.evaluate(() => { const v = DawnView.view(DawnUIApp.session().state(), 0); return v.stack[v.stack.length - 1].card.name; });
+        ask(await P.locator(".stackrail").count() === 1, "R2: no stack rail while their card is on the stack");
+        ask((await P.locator('.stackrail [data-b="stack-card"]').getAttribute("aria-label").catch(() => "")) === want, "R2: the rail does not show " + want);
+        ask(/^pass$/i.test(await primaryText(P)) || /^play /i.test(await primaryText(P)), "R2: the primary is not Pass (" + await primaryText(P) + ")");
+        await settle(P);
+        const live = await P.evaluate(MEASURE), b = await openPage(pw, browser, engine, vp, pathToFileURL(path.join(MOCKDIR, "table-7-reaction.html")).href + "?noframe", errors, opts.art);
+        await b.page.waitForSelector(".stage .bout"); await settle(b.page); const mock = await b.page.evaluate(MEASURE); await b.context.close();
+        const j = judgeBoxes(live, mock, { only: ["stack", "stack-card", "bout", "world", "stage", "tray", "handrow", "hub", "hub-left", "hub-right", "primary"], part: { stack: "xy", "stack-card": "xywh" } });
+        j.bad.forEach(m => res.bad.push("R2: " + m)); res.notes.push(`R2 rail ${j.n} boxes ${j.worst.toFixed(2)}px (${want})`);
+        const ph = judgePhone(live); ph.bad.forEach(m => res.bad.push("R2: " + m));
+      }
+    }
+    {
+      const P = await open(`?hero=dorinthea&foe=kayo&seed=2&first=0&pace=0`);
+      const how = await P.evaluate(advanceTo(`(st, v, J) => st.step === "reaction" && !!v.pend && J.waitingOn(st) === 0 && v.sides[0].hand.some(c => J.legal(st, {t: "play", uid: c.uid, from: "hand"}, 0) === null)`));
+      if(how !== "ok") res.diffs.push("R1: no reaction card ready at a reaction step (" + how + ")");
+      else {
+        await P.waitForTimeout(200);
+        const card0 = P.locator(".handrow .cd.ready").first(), name = await card0.getAttribute("aria-label");
+        await card0.click(); await P.waitForTimeout(80);
+        ask(/^play /i.test(await primaryText(P)), "R1: tapping a ready reaction did not name the play (" + await primaryText(P) + ")");
+        await P.locator('.hub [data-b="primary"]').click(); await P.waitForTimeout(200);
+        const seen = await P.evaluate(n => { const v = DawnView.view(DawnUIApp.session().state(), 0); return { stack: v.stack.map(e => e.card && e.card.name), pend: (v.pending || {}).kind, chainHas: (v.chainCards || []).some(e => e.card && e.card.name === n) }; }, name);
+        ask(seen.stack.includes(name) || seen.pend === "pay" || seen.chainHas, `R1: ${name} did not reach the stack`);
+        for(let k = 0; k < 40 && /pay|pitch/i.test(await P.locator(".stage[data-state]").getAttribute("data-state") || "t3") && await P.locator(".stage[data-state]").getAttribute("data-state") === "t3"; k++){
+          const r = P.locator(".handrow .cd.ready").first(); if(await r.count()) await r.click().catch(() => {}); await P.waitForTimeout(60);
+          if(!(await P.locator('.hub [data-b="primary"]').isDisabled().catch(() => true))) await P.locator('.hub [data-b="primary"]').click().catch(() => {}); }
+        await P.waitForTimeout(200);
+        const rail = await P.locator(".stackrail").count();
+        res.notes.push(`R1 played ${name}${rail ? ", on the rail" : ""}`);
+        ask(!(await P.evaluate(() => DawnUIApp.session().events().some(e => e.t === "policy-refused" || e.t === "stalled"))), "R1: policy refused / stalled");
+      }
+    }
+    if(a) await a.context.close();
+  } catch(e){ res.bad.push("drive error: " + String(e && e.message || e).split("\n")[0]); }
+  errors.forEach(e => res.bad.push(e));
+  return res;
 }
 
 /* ---------- step 3: a whole game by taps ---------- */
@@ -805,6 +863,7 @@ async function main(){
       }
       if(want("states")) for(const vp of VIEWPORTS) report(await runStates(pw, browser, engine, vp, o), "states");
       if(want("states2")) for(const vp of VIEWPORTS) report(await runStates2(pw, browser, engine, vp, o), "states2");
+      if(want("states4")) for(const vp of VIEWPORTS) report(await runStates4(pw, browser, engine, vp, o), "states4");
       if(want("states3")) for(const vp of VIEWPORTS) report(await runStates3(pw, browser, engine, vp, o), "states3");
       if(want("play")) report(await runPlay(pw, browser, engine, { ...o, turns: +arg("--turns") || 5, needs: true, pace: arg("--pace") }), "play");
       if(want("frames") && engine === "chromium") report(await runPlay(pw, browser, engine, { ...o, turns: +arg("--turns") || 5, needs: true, throttle: 4, pace: arg("--pace"), search: arg("--search") || "0" }), "frames");

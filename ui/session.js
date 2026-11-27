@@ -84,6 +84,63 @@ function deal(pick, env){
   return {state, names: m.names, heroKeys: m.heroKeys, art};
 }
 
+/* THE AI'S THINKING OFF THE FRAME PATH (ui/worker/ai.js). Sharp is one long task; the pace already leaves ~1.7 s between the AI's
+   plays, so the answer is asked for the moment a state is reached (a Worker thinks while the slab and the glimpse play) and the
+   policy hands the engine THAT answer: DawnSparring.act's own, computed from a structured clone of the same state, so no decision
+   changes (test/ui-ai-worker.test.js). `local.js` takes the policy synchronously, so the brain also supplies `later`, the tick
+   timer: a tick whose answer is still being thought waits for it (up to WAIT_MS), then the page computes it itself.
+   EVERY failure is the old path: no Worker (file:// in Chromium throws or errors), an error, a timeout -> act on the main thread. */
+const WAIT_MS = 5000;
+function makeBrain(env, pick, getState){
+  const W = env.Worker;
+  if(!pick.search || typeof W !== "function") return null;
+  let w = null;
+  try { w = new W(env.AI_WORKER_URL || "ui/worker/ai.js"); } catch(e){ return null; }
+  let broken = false, id = 0, flight = null, queued = null, cur = null;
+  const waiters = new Set();
+  const fail = () => { broken = true; flight = queued = cur = null; try { w.terminate(); } catch(e){} [...waiters].forEach(x => x.go()); };
+  const post = j => { flight = j; w.postMessage({t: "act", id: j.id, state: j.state, seat: j.seat, search: true}); };
+  w.onmessage = ev => {
+    const m = ev.data || {};
+    if(m.t === "ready") return;
+    if(m.t === "error" && m.id == null){ fail(); return; }
+    if(!flight || m.id !== flight.id) return;
+    const j = flight; flight = null;
+    if(m.t === "act"){ j.done = true; j.action = m.action; } else j.failed = true;   /* an error: this state is the page's to compute */
+    if(queued){ const q = queued; queued = null; try { post(q); } catch(e){ fail(); } }
+    [...waiters].forEach(x => { if(x.j === j) x.go(); });
+  };
+  w.onerror = fail; w.onmessageerror = fail;
+  try { w.postMessage({t: "init", cdn: env.CDN}); } catch(e){ fail(); return null; }
+  return {
+    /* a state was reached: think about the AI seat's answer to it (the latest wins; one job at a time) */
+    request(st, seat){
+      if(broken || !st || st.over) return;
+      if(cur && cur.state === st && cur.seat === seat) return;
+      const j = cur = {id: ++id, state: st, seat, done: false, failed: false, action: null};
+      try { if(flight) queued = j; else post(j); } catch(e){ fail(); }
+    },
+    /* the policy: the worker's answer for exactly this state and seat, else the page's own */
+    policy(st, seat, think){
+      if(cur && cur.state === st && cur.seat === seat && cur.done) return cur.action;
+      return think(st, seat);
+    },
+    later(fn, ms){
+      const h = {t: null, x: null};
+      h.t = setTimeout(() => {
+        h.t = null;
+        const st = getState(), j = cur;
+        if(broken || !j || j.state !== st || j.done || j.failed){ fn(); return; }
+        const x = h.x = {j, to: null, go: () => { if(h.x === x){ h.x = null; clearTimeout(x.to); waiters.delete(x); fn(); } }};
+        x.to = setTimeout(x.go, WAIT_MS); waiters.add(x);
+      }, ms);
+      return h;
+    },
+    cancel(h){ if(!h) return; clearTimeout(h.t); if(h.x){ clearTimeout(h.x.to); waiters.delete(h.x); h.x = null; } },
+    dispose(){ broken = true; waiters.forEach(x => clearTimeout(x.to)); waiters.clear(); try { w.terminate(); } catch(e){} }
+  };
+}
+
 /* a LOCAL game: seat 0 is the person, seat 1 the AI hero (Sharp) */
 function openLocal(opts, env){
   env = env || root;
@@ -91,18 +148,23 @@ function openLocal(opts, env){
   const dealt = deal(pick, env);
   writeLast({hero: pick.hero, foe: pick.foe});
   const subs = new Set(), steps = new Set(), evs = new Set(), events = [];
-  const local = env.DawnLocal.createLocal({
-    seat: 0,
+  const think = (st, i) => env.DawnSparring.act(st, i, {search: pick.search});
+  let local = null;
+  const seat = 0;
+  /* only a PACED table has a beat to think behind; unpaced (pace=0) the loop runs to the end now, as it always did */
+  const brain = pick.pace !== 0 ? makeBrain(env, pick, () => local && local.state()) : null;
+  local = env.DawnLocal.createLocal({
+    seat,
     state: dealt.state,
     reduce: env.DawnJudge.reduce,
     legal: env.DawnJudge.legal,
-    policy: (st, i) => env.DawnSparring.act(st, i, {search: pick.search}),
+    policy: brain ? (st, i) => brain.policy(st, i, think) : think,
+    ...(brain ? {later: (fn, ms) => brain.later(fn, ms), cancel: h => brain.cancel(h)} : {}),
     ...(pick.pace < 0 ? {pace: aiPace} : pick.pace > 0 ? {pace: pick.pace} : {}),
-    onStep: e => steps.forEach(fn => fn(e)),
+    onStep: e => { if(brain) brain.request(e.next, 1 - seat); steps.forEach(fn => fn(e)); },
     onEvent: e => { events.push(e); evs.forEach(fn => fn(e)); },
     onState: st => subs.forEach(fn => fn(st))
   });
-  const seat = 0;
   return {
     seat, pick,
     names: dealt.names, heroKeys: dealt.heroKeys,
@@ -119,11 +181,11 @@ function openLocal(opts, env){
     events: () => events.slice(),
     onEvent: fn => { evs.add(fn); return () => evs.delete(fn); },
     heroArt: i => dealt.art[i],
-    start: () => local.start(),
-    dispose: () => local.dispose(),
+    start: () => { if(brain) brain.request(local.state(), 1 - seat); local.start(); },
+    dispose: () => { if(brain) brain.dispose(); local.dispose(); },
     local
   };
 }
 
-return {openLocal, choose, parseQuery, deal, aiPace, LAST_KEY};
+return {openLocal, makeBrain, choose, parseQuery, deal, aiPace, LAST_KEY};
 });

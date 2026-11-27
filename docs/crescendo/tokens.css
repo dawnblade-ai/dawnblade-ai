@@ -190,7 +190,7 @@
     --cw-block: 52px; --ch-block: 73px;
     --cw-link: 34px;  --ch-link: 47px;
     --cw-hand-back: 24px; --ch-hand-back: 34px;
-    --cw-glimpse: 210px; --ch-glimpse: 293px;
+    --cw-glimpse: 190px; --ch-glimpse: 265px;   /* SCREENS-TABLE 14 (CEO ruling 2026-11-27): it must clear the tray */
     --cw-glimpse-pitch: 80px; --ch-glimpse-pitch: 112px;
     --stamp: 18px;
     --bout-portrait: 32px; --bout-bar-w: 90px; --bout-bar-h: 12px;
