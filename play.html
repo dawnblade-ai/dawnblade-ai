@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dawnblade</title>
+<meta name="theme-color" content="#11171A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800;900&family=Spline+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500;600&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ui/tokens.css">
+<link rel="stylesheet" href="ui/shell.css">
+<link rel="stylesheet" href="ui/table.css">
+</head>
+<body>
+<!-- CRESCENDO, the release UI (docs/crescendo/README.md). No Babel, no modules: classic scripts, in order.
+     The data and engine scripts below are the SAME list, in the SAME order, as index.html's (test/ui-sync.test.js
+     holds it); ui/data.js is index.html's data script, generated (tools/ui-data.js). -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-ap" viewBox="0 0 24 24"><path d="M12 2.5 21 12l-9 9.5L3 12z" fill="#D8A23E"/><path d="M12 2.5 21 12H3z" fill="#F2C66E"/><path d="M12 2.5 21 12l-9 9.5L3 12z" fill="none" stroke="#0A0E10" stroke-opacity=".55" stroke-width="1.2"/><path d="M12 6 17.5 12 12 18 6.5 12z" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="1"/></symbol>
+  <symbol id="i-go" viewBox="0 0 24 24"><path d="M5 12a7 7 0 0 1 12-4.9M19 12a7 7 0 0 1-12 4.9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M18.6 3.4v4.8h-4.8M5.4 20.6v-4.8h4.8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2.5 20 5.5v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10v-6z" fill="currentColor"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2" fill="currentColor"/><circle cx="12" cy="12" r="2" fill="currentColor"/><circle cx="19" cy="12" r="2" fill="currentColor"/></symbol>
+  <symbol id="i-pad" viewBox="0 0 24 24"><path d="M6 3h12a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" fill="none"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" fill="none"/></symbol>
+</defs></svg>
+<div id="app"></div>
+<script src="data/pool.js"></script>
+<script src="data/crkw.js"></script>
+<script src="ui/data.js"></script>
+<script src="engine/rng.js"></script>
+<script src="engine/parser.js"></script>
+<script src="engine/game.js"></script>
+<script src="engine/types.js"></script>
+<script src="engine/rps.js"></script>
+<script src="engine/sides.js"></script>
+<script src="engine/priority.js"></script>
+<script src="engine/prompts.js"></script>
+<script src="engine/invariants.js"></script>
+<script src="engine/cards.js"></script>
+<script src="engine/advisor.js"></script>
+<script src="engine/build.js"></script>
+<script src="engine/effects.js"></script>
+<script src="engine/report.js"></script>
+<script src="engine/wire.js"></script>
+<script src="engine/view.js"></script>
+<script src="engine/sha256.js"></script>
+<script src="engine/referee.js"></script>
+<script src="engine/net.js"></script>
+<script src="engine/judge.js"></script>
+<script src="engine/sparring.js"></script>
+<script src="engine/local.js"></script>
+<script src="engine/announce.js"></script>
+<script src="engine/lobby.js"></script>
+<script src="engine/room.js"></script>
+<script src="engine/hub.js"></script>
+<script src="engine/servertable.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/htm@3.1.1/preact/standalone.umd.js"></script>
+<script src="ui/card.js"></script>
+<script src="ui/table.js"></script>
+<script src="ui/session.js"></script>
+<script src="ui/app.js"></script>
+<script src="ui/boot.js"></script>
+</body>
+</html>

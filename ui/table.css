@@ -1,0 +1,161 @@
+/* ==========================================================================
+   CRESCENDO table — the resting table's component sheet: the world, the bout, the halves and the lane,
+   the stage band, the tray and the hub. Copied from docs/crescendo/mockups/table.css (table-screens
+   designer, 2026-11-27); every deviation from DESIGN-SYSTEM.md is marked [DEV-n], argued in SCREENS-TABLE.md §1.
+   One change from the mockup: the hub does not pad the safe area (the stage already does, PHONE rule 6).
+   ========================================================================== */
+.world{flex:1;min-height:0;display:flex;flex-direction:column;position:relative;z-index:var(--z-cards)}
+.world.shake{transform:translate(-6px,4px)}
+/* =============================== THE BOUT =============================== */
+.bout{height:var(--h-bout);flex:none;position:relative;display:flex;align-items:center;justify-content:center;padding:0 var(--gut);z-index:var(--z-bout);background:linear-gradient(to bottom,rgba(0,0,0,.55),rgba(0,0,0,0))}
+.side{display:flex;align-items:center;position:relative}
+.side.opp{flex-direction:row-reverse}
+.por{width:var(--bout-portrait);height:var(--bout-portrait);border-radius:50%;flex:none;position:relative;z-index:2;background-size:310%;background-position:50% 18%;box-shadow:0 0 0 2px var(--c),0 0 0 3.5px var(--mat-0),var(--e2);opacity:.78;--c:var(--you)}
+.side.opp .por{--c:var(--opp)}
+.por.turn{opacity:1;box-shadow:0 0 0 2px var(--c),0 0 0 3.5px var(--mat-0),0 0 14px color-mix(in srgb,var(--c) 65%,transparent),var(--e2)}
+.col{display:flex;flex-direction:column;gap:3px;margin-left:calc(var(--bout-overlap)*-1);margin-right:0}
+.side.opp .col{margin-left:0;margin-right:calc(var(--bout-overlap)*-1);align-items:flex-end}
+.nm{font:var(--t-label);letter-spacing:var(--track-caps);text-transform:uppercase;color:var(--ink-1);padding:0 10px 0 calc(var(--bout-overlap) + 6px)}
+.side.opp .nm{padding:0 calc(var(--bout-overlap) + 6px) 0 10px}
+.bar{--c:var(--you);--c-lo:var(--you-lo);position:relative;width:var(--bout-bar-w);height:var(--bout-bar-h);background:var(--mat-0);border-radius:3px;box-shadow:inset 0 1px 3px rgba(0,0,0,.9),0 0 0 1px rgba(255,255,255,.10);transform:skewX(-14deg);overflow:hidden}
+.side.opp .bar{--c:var(--opp);--c-lo:var(--opp-lo);transform:skewX(14deg)}
+.bar i{position:absolute;inset:0;display:block;width:100%;transform-origin:0 50%}
+.side.opp .bar i{transform-origin:100% 50%}
+.bar .ghost{background:var(--damage)}
+.bar .fill{background:linear-gradient(to bottom,color-mix(in srgb,var(--c) 70%,#fff) 0 22%,var(--c) 22% 62%,var(--c-lo) 100%)}
+.bar .flash{background:#fff;opacity:.55}
+.bar::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 calc(25% - 1px),rgba(0,0,0,.45) calc(25% - 1px) 25%);pointer-events:none}
+.life{position:relative;font:var(--t-life);letter-spacing:0;width:var(--bout-life-w);text-align:center;font-variant-numeric:tabular-nums;text-shadow:0 2px 0 rgba(0,0,0,.6);margin-left:2px}
+.side.opp .life{margin-left:0;margin-right:2px}
+.life.low{color:var(--damage)}
+.bar.low{box-shadow:inset 0 1px 3px rgba(0,0,0,.9),0 0 0 1px var(--damage),0 0 10px rgba(255,79,109,.5)}
+.pop{position:absolute;z-index:9;left:50%;top:40px;transform:translateX(-50%) scale(1.34);transform-origin:50% 0;font:800 26px/26px var(--f-display);color:var(--damage);text-shadow:0 2px 0 #000,0 0 12px rgba(255,79,109,.8);white-space:nowrap;pointer-events:none}
+.medal{width:var(--bout-medal-w);height:var(--bout-medal-h);flex:none;margin:0 2px;position:relative;display:grid;place-items:center;--c:var(--you);filter:drop-shadow(0 2px 4px rgba(0,0,0,.7))}
+.medal.o{--c:var(--opp)}
+.medal::before{content:"";position:absolute;inset:0;background:var(--c);clip-path:polygon(28% 0,72% 0,100% 26%,100% 74%,72% 100%,28% 100%,0 74%,0 26%)}
+.medal::after{content:"";position:absolute;inset:3px;background:linear-gradient(to bottom,#1d272c,#0c1114);clip-path:polygon(28% 0,72% 0,100% 26%,100% 74%,72% 100%,28% 100%,0 74%,0 26%)}
+.medal b,.medal span{position:relative;z-index:2;text-align:center}
+.medal b{font:900 24px/22px var(--f-display);margin-top:-12px;display:block}
+.medal span{font:600 11px/10px var(--f-mono);letter-spacing:.06em;color:var(--ink-1);position:absolute;bottom:8px;left:0;right:0}
+.medal em{position:absolute;z-index:3;top:50%;width:0;height:0;border:5px solid transparent;font-style:normal}
+.medal em.l{left:-9px;border-right-color:var(--you);transform:translateY(-50%)}
+.medal em.r{right:-9px;border-left-color:var(--opp);transform:translateY(-50%)}
+
+/* =============================== THE HALVES =============================== */
+.half{height:var(--h-half);flex:none;position:relative;display:flex;flex-direction:column}
+.half.opp .lane{margin-bottom:var(--seam-gap)}
+.half.you .lane{margin-top:var(--seam-gap)}
+.mkrow{position:relative;flex:1;min-height:0}
+/* [DEV-1] the lane: ONE row of eight fixed columns, identical for both seats (same fact, same place):
+   1 weapon · 2 head · 3 chest · 4 arms · 5 legs · 6 graveyard · 7 deck (+ this turn's pitch fanned over it) · 8 arsenal */
+.lane{display:grid;grid-template-columns:repeat(8,var(--cw-mat));justify-content:space-between;align-items:start;height:var(--ch-mat);padding:0 var(--gut);flex:none;box-sizing:content-box;width:calc(100% - var(--gut)*2);margin-left:0}
+.lane>div{position:relative;width:var(--cw-mat);height:var(--ch-mat)}
+.lane .cd{position:absolute;left:0;top:0}
+.lane .pile{position:absolute;inset:0}
+.lane .pf{position:absolute;left:0;top:0;z-index:7}
+.slot-arsenal{border:1.5px dashed var(--brass);border-radius:var(--r-card-mat);display:grid;place-items:center;color:var(--brass-hi)}
+.slot-arsenal svg{width:20px;height:20px}
+.mk{position:absolute;left:var(--gut);top:0;bottom:0;display:flex;align-items:center;gap:8px}
+.ap{display:flex;gap:3px;align-items:center}
+.ap svg{width:var(--ap);height:var(--ap)}
+.coins{display:flex;gap:3px;align-items:center}
+.coin{width:var(--coin);height:var(--coin);border-radius:50%;background:radial-gradient(circle at 35% 30%,#EEF3F6,#9AA8B1 70%);box-shadow:0 0 0 1.5px #55646D,0 1px 3px #000;display:grid;place-items:center;font:var(--t-stamp);font-size:max(11px,calc(var(--coin)*.6));line-height:1;color:var(--ink-inv)}
+.coin.off{background:none;box-shadow:inset 0 0 0 1.5px var(--rail)}
+.hf{position:absolute;left:50%;top:0;bottom:0;display:flex;align-items:center;transform:translateX(-50%)}
+.hf .cd{margin-left:calc(var(--hbstep) - var(--hbw))}
+.hf .cd:first-child{margin-left:0}
+.hf .cd{height:var(--hbh);--w:var(--hbw);border-radius:2px;box-shadow:0 1px 2px rgba(0,0,0,.6)}
+.centre{flex:1;min-height:0;position:relative;border-top:var(--seam);border-bottom:var(--seam);--atk-x:calc(var(--gut) + var(--cw-link) + 36px + 10px);--atk-top:calc((100% - var(--ch-chain))/2 + 3px);--ov1:14px;--ov2:26px}
+@media (min-width:414px){.centre{--ov1:18px;--ov2:30px}}
+/* the step marker / the question the table asks: one line, top-left of the stage */
+.pill{position:absolute;left:var(--gut);top:5px;height:18px;display:flex;align-items:center;padding:0 8px;border-radius:9px;background:rgba(0,0,0,.45);box-shadow:inset 0 0 0 1px rgba(255,255,255,.09);font:var(--t-label);letter-spacing:var(--track-caps);text-transform:uppercase;color:var(--ink-1);white-space:nowrap}
+.pill.hot{color:var(--brass-hi);box-shadow:inset 0 0 0 1px rgba(242,198,110,.45)}
+.ask{position:absolute;left:var(--gut);top:2px;font:800 20px/22px var(--f-display);letter-spacing:.04em;text-transform:uppercase;color:var(--ink-0);text-shadow:0 2px 0 rgba(0,0,0,.6);white-space:nowrap}
+.ask small{display:block;font:var(--t-small);letter-spacing:0;text-transform:none;color:var(--ink-1);text-shadow:none;margin-top:1px}
+/* the chain */
+.atk{position:absolute;left:var(--atk-x);top:var(--atk-top)}
+.atk .cd{transform:rotate(1.5deg)}
+.atk.mine .cd{transform:rotate(-1.5deg)}
+.wall{position:absolute;left:calc(var(--atk-x) + var(--cw-chain) - var(--ov1));top:calc(var(--atk-top) + (var(--ch-chain) - var(--ch-block))/2);display:flex}
+.wall .cd+.cd{margin-left:calc(var(--ov2)*-1)}
+.wall .cd:nth-child(1){z-index:2;transform:translateY(8px)}
+.wall .cd:nth-child(2){z-index:1;transform:translateY(-6px)}
+.links{position:absolute;left:var(--gut);top:calc(var(--atk-top) + var(--ch-chain) - var(--ch-link))}
+.stackrail{position:absolute;left:var(--gut);top:calc(var(--atk-top) + 18px)}
+.stackrail .lab{margin-bottom:5px;display:block;white-space:nowrap}
+.stackrail .cd{box-shadow:var(--e2),0 0 0 2px var(--brass)}
+.stackrail .who{margin-top:7px;white-space:nowrap;line-height:13px;font:var(--t-label);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-1)}
+.hit{position:absolute;right:var(--gut);width:82px;top:var(--atk-top);height:var(--ch-chain);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.hit .n{font:900 44px/40px var(--f-display);color:var(--damage);text-shadow:0 2px 0 #000;margin:1px 0 6px}
+.hit .n.zero{color:var(--prevent)}
+.hit .eq{display:flex;align-items:center;gap:5px;font:var(--t-stamp);color:var(--ink-1)}
+.hit .eq .p{min-width:20px;height:20px;border-radius:5px;background:var(--ink-0);color:var(--ink-inv);display:grid;place-items:center;padding:0 3px}
+.hit .eq .d{width:20px;height:20px;background:var(--prevent);color:var(--ink-inv);display:grid;place-items:center;padding-bottom:3px;clip-path:polygon(0 0,100% 0,100% 62%,50% 100%,0 62%)}
+.hit .cost-coins{display:flex;gap:3px;margin:4px 0 6px}
+.hit .paid{font:var(--t-label);letter-spacing:var(--track-caps);text-transform:uppercase;color:var(--gain)}
+.hit .paid.short{color:var(--refused)}
+.goagain{position:absolute;color:var(--goagain)}
+.costring{position:absolute;z-index:6;left:-8px;top:-8px;width:34px;height:34px;border-radius:50%;background:var(--mat-0);box-shadow:0 0 0 2.5px var(--brass),0 2px 6px rgba(0,0,0,.7);display:grid;place-items:center;font:900 20px/20px var(--f-display);color:var(--ink-0)}
+.atk .cd.staged{box-shadow:var(--e3),0 0 0 2px var(--brass)}
+
+/* =============================== THE HAND =============================== */
+.tray{height:var(--h-hand);flex:none;background:var(--tray-bg);position:relative;z-index:var(--z-tray);box-shadow:0 -10px 24px rgba(0,0,0,.45)}
+.handrow{display:flex;gap:var(--gap-card);padding:0 var(--gut) 6px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;height:100%;align-items:flex-end;scroll-snap-type:x proximity;scroll-padding-left:var(--gut);touch-action:pan-x}
+.handrow::-webkit-scrollbar{display:none}
+.handrow .cd{scroll-snap-align:start}
+.hub{height:var(--h-hub);flex:none;background:var(--tray);display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 var(--gut);position:relative;z-index:var(--z-hub)}
+
+/* =============================== ANNOUNCER + GLIMPSE =============================== */
+.scrim{position:absolute;left:0;right:0;top:var(--h-bout);bottom:calc(var(--h-hand) + var(--h-hub));background:rgba(5,8,10,.66);z-index:var(--z-scrim)}
+/* [DEV-3] the slab sits just under the bout (not at the stage top) because the 324 px glimpse needs the room below it, and rides above the scrim */
+.slab{position:absolute;left:0;right:0;top:calc(var(--h-bout) + 4px);height:60px;z-index:72;padding:8px 12px 0 16px;background:linear-gradient(90deg,rgba(0,0,0,.9),rgba(0,0,0,.66) 72%,rgba(0,0,0,0));border-left:4px solid var(--opp)}
+.slab .who{font:var(--t-label);letter-spacing:var(--track-caps);color:var(--opp);text-transform:uppercase;white-space:nowrap;line-height:13px}
+.slab .who i{font-style:normal;color:var(--ink-1)}
+.slab .say{font:var(--t-announce);letter-spacing:var(--track-display);text-transform:uppercase;white-space:nowrap;margin-top:3px;text-shadow:0 2px 0 rgba(0,0,0,.6)}
+.slab.me{border-left-color:var(--you)} .slab.me .who{color:var(--you)}
+.gl{position:absolute;z-index:75}
+.gl .tagchip{position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);height:18px;padding:0 7px;border-radius:9px;font:var(--t-label);letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.7);color:#fff;z-index:5}
+.gl .tagchip.red{background:var(--pitch-red)} .gl .tagchip.yellow{background:var(--pitch-yellow);color:var(--ink-inv)} .gl .tagchip.blue{background:var(--pitch-blue)}
+
+/* =============================== INSPECT SHEET (T10) =============================== */
+.veil{position:absolute;left:0;right:0;top:0;bottom:var(--h-hub);background:rgba(5,8,10,.82);z-index:80}
+.insp-card{position:absolute;z-index:81}
+.sheet{position:absolute;z-index:82;left:var(--gut);right:var(--gut);border-radius:var(--r-sheet);background:var(--mat-3);box-shadow:var(--e4),inset 0 1px 0 rgba(255,255,255,.08);padding:14px 16px 14px}
+.sheet .grab{position:absolute;left:50%;top:6px;width:36px;height:4px;border-radius:2px;background:var(--rail);transform:translateX(-50%)}
+.sheet h2{font:var(--t-title);letter-spacing:.04em;text-transform:uppercase;margin-top:4px}
+.sheet .ty{font:var(--t-label);letter-spacing:var(--track-caps);text-transform:uppercase;color:var(--ink-2);margin-top:3px}
+.sheet .tx{font:var(--t-body);color:var(--ink-0);margin-top:10px}
+.sheet .tx p+p{margin-top:6px}
+.sheet .tx .gaico{display:inline-block;width:16px;height:16px;vertical-align:-3px;color:var(--goagain);margin-right:4px}
+.sheet .rn{margin-top:12px;padding-top:10px;border-top:1px solid var(--rail);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chip{height:26px;padding:0 9px;border-radius:var(--r-chip);display:inline-flex;align-items:center;gap:6px;font:var(--t-stamp);background:var(--mat-0);color:var(--ink-0);box-shadow:inset 0 0 0 1px var(--rail)}
+.chip small{font:var(--t-label);letter-spacing:.06em;color:var(--ink-2);text-transform:uppercase}
+.chip.red{background:var(--pitch-red);color:#fff;box-shadow:none} .chip.yellow{background:var(--pitch-yellow);color:var(--ink-inv);box-shadow:none} .chip.blue{background:var(--pitch-blue);color:#fff;box-shadow:none}
+.chip.red small,.chip.blue small{color:rgba(255,255,255,.8)} .chip.yellow small{color:rgba(10,14,16,.7)}
+.sheet .src{font:var(--t-small);color:var(--ink-1);margin-top:10px}
+
+/* =============================== COMPACT (375 x 548) — what changes is in SCREENS-TABLE.md §14 =============================== */
+html[data-band="compact"] .centre{--atk-x:calc(var(--gut) + var(--cw-link) + 36px + 26px)}
+/* [DEV-5] at 548 the attack card leaves 22 px of free height, so the step marker moves to the top-right corner there */
+html[data-band="compact"] .pill{top:3px;left:auto;right:var(--gut)}
+html[data-band="compact"] .ask{font-size:18px;line-height:20px}
+html[data-band="compact"] .hit .n{font-size:38px;line-height:34px}
+html[data-band="compact"] .hit{width:70px}
+html[data-band="compact"] .slab{height:48px;padding-top:5px}
+html[data-band="compact"] .slab .say{font-size:26px;line-height:28px;margin-top:2px}
+
+/* =============================== CRESCENDO additions (not in the mockups) =============================== */
+/* a card whose art failed shows its real name on the same box (PHONE rule 14) */
+.cd .cname{display:none}
+.cd.noimg .cname{display:grid;place-items:center;position:absolute;inset:0;padding:3px;text-align:center;font:var(--t-label);letter-spacing:0;text-transform:none;color:var(--ink-1);background:var(--mat-2);border-radius:inherit}
+/* a card under a finger: raised a little, the frame it is pressed (transform only) */
+.cd.hand.pressed{transform:translateY(-9px) scale(1.03)}
+.cd.mat.pressed{transform:scale(.96)}
+/* extra gear stacked onto the legs column: a brass hexagon with the count (DESIGN-SYSTEM 6.4) */
+.badge.xn{left:50%;bottom:-9px;transform:translateX(-50%);min-width:20px;height:20px;padding:0 4px;border-radius:0;background:var(--brass);color:var(--ink-inv);clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)}
+/* the way back to the classic board: a quiet corner link with a 44 x 44 hit area, bottom-right of the stage */
+.classic{position:absolute;right:var(--gut);bottom:0;width:56px;height:44px;display:grid;place-items:end end;padding:0 2px 6px 0;font:var(--t-label);letter-spacing:var(--track-caps);text-transform:uppercase;color:var(--ink-2);text-decoration:none;opacity:.7}
+.fail{display:grid;place-items:center;padding:24px}
+.failbox{max-width:320px;text-align:center}
+.failbox p{font:var(--t-body);color:var(--ink-1);margin:8px 0 16px}
+.failbox .classic{position:static;display:inline-grid;place-items:center;width:auto;padding:0 16px}

@@ -1,0 +1,105 @@
+/* ==========================================================================
+   CRESCENDO shell — the stage, the phone contract, the card object, the buttons.
+   The table-specific rules (bout, halves, lane, chain, tray, hub, overlays) are ui/table.css.
+   Source of the values: docs/crescendo/mockups/table.css (the design team's sheet), box for box;
+   the phone rules are docs/crescendo/PHONE.md. Only the stage rule below reads env(): it pads the safe
+   areas ONCE (PHONE rule 6); nothing else pads for them. --vh is set by ui/boot.js and nowhere else.
+   ========================================================================== */
+:root{--vh:100svh}
+html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;background:var(--mat-0);
+  -webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#app{position:fixed;inset:0}
+.stage{position:fixed;inset:0;height:var(--vh);overflow:hidden;box-sizing:border-box;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+html[data-framed]{background:#0b0d10}
+html[data-framed] .stage{inset:0;margin:auto;width:var(--vw);border-radius:18px;box-shadow:0 0 0 10px #1a1d22,0 30px 80px rgba(0,0,0,.6)}
+*{box-sizing:border-box;margin:0;padding:0}
+.stage{display:flex;flex-direction:column;background:var(--mat-bg);color:var(--ink-0);font:var(--t-body);font-variant-numeric:tabular-nums;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;font-synthesis:none}
+.stage img{display:block;-webkit-user-drag:none}
+.stage svg{display:block}
+:where(.stage button){font:inherit;color:inherit;background:none;border:0;cursor:pointer;-webkit-appearance:none;appearance:none;text-align:inherit}
+.ico{width:24px;height:24px;flex:none}
+.lab{font:var(--t-label);letter-spacing:var(--track-caps);text-transform:uppercase;color:var(--ink-2)}
+
+/* ---- [DEV-1] the mat card: 8 zones must share one lane, so the mat card is 44 x 61 (48 x 67 at 430); see §1 ---- */
+:root{--cw-mat:44px;--ch-mat:61px;--seam-gap:6px;--ap:20px;--coin:22px;--hbw:22px;--hbh:31px;--hbstep:11px;--lane-stamp:15px}
+@media (min-width:414px){:root{--cw-mat:48px;--ch-mat:67px}}
+html[data-band="compact"]{--ap:15px;--coin:16px;--hbw:13px;--hbh:18px;--hbstep:7px;--seam-gap:5px;--lane-stamp:14px}
+html[data-band="tall"]{--ap:24px;--coin:26px;--hbw:28px;--hbh:39px;--hbstep:13px}
+/* =============================== THE CARD OBJECT =============================== */
+.cd{--w:80px;position:relative;width:var(--w);height:calc(var(--w)*1.3966);border-radius:calc(var(--w)*.05);flex:none;background:#000 center/cover;box-shadow:var(--e1),inset 0 0 0 1px var(--card-edge);transform:translateZ(0)}
+.cd>img{width:100%;height:100%;border-radius:inherit;object-fit:cover}
+.cd::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 1px 0 var(--card-hilite),inset 0 0 0 1px rgba(255,255,255,.04);pointer-events:none}
+.cd.hand{--w:var(--cw-hand);border-radius:var(--r-card-hand)}
+.cd.mat{--w:var(--cw-mat);border-radius:var(--r-card-mat);box-shadow:var(--e1),inset 0 0 0 1px var(--card-edge)}
+.cd.chain{--w:var(--cw-chain);border-radius:var(--r-card-chain);box-shadow:var(--e2)}
+.cd.block{--w:var(--cw-block);border-radius:var(--r-card-hand);box-shadow:var(--e2)}
+.cd.link{--w:var(--cw-link)}
+.cd.hb{--w:var(--hbw)}
+.cd.glimpse{--w:var(--cw-glimpse);border-radius:var(--r-card-glimpse);box-shadow:var(--e4)}
+.cd.gp{--w:var(--cw-glimpse-pitch);border-radius:8px;box-shadow:var(--e3)}
+.cd.back{background:var(--card-back) center/cover,#0B1019}
+.cd.back>img{display:none}
+.cd.back::before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(160deg,rgba(255,255,255,.08),transparent 40%)}
+.strip{position:absolute;left:0;right:0;top:0;height:4px;border-radius:inherit;border-bottom-left-radius:0;border-bottom-right-radius:0;z-index:2}
+.red .strip{background:var(--pitch-red-hi)} .yellow .strip{background:var(--pitch-yellow)} .blue .strip{background:var(--pitch-blue-hi)}
+.st{position:absolute;z-index:3;font:var(--t-stamp);text-align:center;display:grid;place-items:center;width:var(--stamp);height:var(--stamp);color:var(--ink-inv);box-shadow:0 1px 2px rgba(0,0,0,.6)}
+.st.cost{left:2px;top:6px;border-radius:50%;background:var(--mat-0);color:var(--ink-0);box-shadow:0 0 0 1.5px var(--brass),0 1px 3px rgba(0,0,0,.7)}
+.st.pitch{right:2px;top:6px;border-radius:5px;color:#fff}
+.red .st.pitch{background:var(--pitch-red)} .yellow .st.pitch{background:var(--pitch-yellow);color:var(--ink-inv)} .blue .st.pitch{background:var(--pitch-blue)}
+.st.pow{left:2px;bottom:2px;border-radius:5px;background:var(--ink-0)}
+.st.def{right:2px;bottom:2px;background:var(--prevent);clip-path:polygon(0 0,100% 0,100% 62%,50% 100%,0 62%);padding-bottom:3px;box-shadow:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.7))}
+/* on the mat and in blocks only power + defence are stamped (DS 6.3), 15 px */
+.mat .st,.block .st{--stamp:var(--lane-stamp);font-size:12px;line-height:13px}
+.mat .st.cost,.mat .st.pitch,.block .st.cost,.block .st.pitch{display:none}
+.mat .st.pow{left:1px;bottom:1px;border-radius:4px} .mat .st.def{right:1px;bottom:1px}
+.chain .st.pow{--stamp:30px;font-size:22px;line-height:24px;left:4px;bottom:4px;border-radius:7px}
+.block .st.def{--stamp:20px;font-size:14px}
+/* states */
+.cd.ready{transform:translateY(-4px)}
+.cd.ready::before{content:"";position:absolute;left:8%;right:8%;bottom:-6px;height:3px;border-radius:3px;background:var(--you);box-shadow:0 0 8px rgba(79,216,164,.7)}
+.cd.mat.ready{transform:none}
+.cd.mat.ready::before{bottom:-5px}
+.half.opp .cd.mat.ready::before{background:var(--opp);box-shadow:0 0 8px rgba(183,148,255,.6)}
+.cd.sel{transform:translateY(-12px) scale(1.04);box-shadow:var(--e3),0 0 0 2px var(--ink-0);z-index:4}
+.cd.dim>img{filter:var(--card-dim)}
+.cd.dim .st{filter:brightness(.75)}
+.cd.spent>img{filter:var(--card-spent)}
+.cd.tap{transform:rotate(90deg) scale(.72)}   /* [DEV-2] a used weapon lies sideways at 72% so it keeps its 44 px column */
+.cd.tap>img{filter:brightness(.8)}
+.cd.tap .st{transform:rotate(-90deg)}
+.cd.blk{box-shadow:var(--e2),0 0 0 2px var(--prevent)}
+.cd.hand.blk{transform:translateY(-12px) scale(1.04);box-shadow:var(--e3),0 0 0 2px var(--prevent);z-index:4}
+.cd.mat.blk{transform:translateY(6px);box-shadow:var(--e2),0 0 0 2px var(--prevent);z-index:4}
+.half.you .cd.mat.blk{transform:translateY(-6px)}
+.badge{position:absolute;z-index:5;font:var(--t-stamp);display:flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:11px;box-shadow:0 1px 3px rgba(0,0,0,.7)}
+.badge.sh{left:50%;bottom:-9px;transform:translateX(-50%);background:var(--prevent);color:var(--ink-inv)}
+.badge.sh svg{width:12px;height:12px;margin-right:3px}
+.cd.mat .badge.sh{bottom:-9px;min-width:20px;height:20px;padding:0 5px}
+.half.opp .cd.mat .badge.sh{bottom:auto;top:-9px}
+.count{position:absolute;right:-5px;bottom:-5px;z-index:6;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:var(--mat-0);color:var(--ink-0);font:var(--t-stamp);display:grid;place-items:center;box-shadow:0 0 0 1.5px var(--rail),0 1px 3px #000}
+.count.you{background:var(--you);color:var(--ink-inv);box-shadow:0 1px 3px #000}
+.pile{position:relative}
+.pile.s::before{content:"";position:absolute;inset:0;transform:translate(2px,2px);border-radius:var(--r-card-mat);background:#0b1019;box-shadow:0 0 0 1px #000}
+/* the name-plate is hoisted out of the hand scroller (a scroller clips) into .peek, on the stage */
+.peek{position:absolute;z-index:78;pointer-events:none}
+.name{position:absolute;left:0;bottom:0;transform:translateX(-50%);white-space:nowrap;font:var(--t-label);letter-spacing:.06em;text-transform:uppercase;background:var(--ink-0);color:var(--ink-inv);padding:5px 9px;border-radius:6px;box-shadow:var(--e2)}
+.name.l{transform:none}
+.name.l::after{left:calc(var(--cw-hand)/2);}
+.name::after{content:"";position:absolute;left:50%;bottom:-3px;width:8px;height:8px;background:var(--ink-0);transform:translateX(-50%) rotate(45deg)}
+.reason{position:absolute;white-space:nowrap;font:var(--t-label);letter-spacing:.06em;text-transform:uppercase;background:var(--refused);color:var(--ink-inv);padding:5px 8px;border-radius:6px;box-shadow:var(--e2)}
+
+/* =============================== BUTTONS =============================== */
+.btn{font:var(--t-btn);letter-spacing:var(--track-btn);text-transform:uppercase;border:0;color:var(--ink-inv);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;height:var(--btn-h);min-width:var(--btn-min-w);padding:0 24px;border-radius:var(--r-btn);background:linear-gradient(to bottom,#FBF7EC,#E8E0CC);box-shadow:0 1px 0 rgba(255,255,255,.7) inset,0 -3px 0 rgba(0,0,0,.18) inset,0 4px 0 #8f8671,0 8px 16px rgba(0,0,0,.5);position:relative;top:0;flex:none;-webkit-appearance:none;transition:none;touch-action:manipulation;white-space:nowrap}
+.btn.primary{flex:1;min-width:0;padding:0 14px}
+.btn:active,.btn.pressed{top:3px;background:linear-gradient(to bottom,#E3DBC6,#D3CBB5);box-shadow:0 1px 0 rgba(255,255,255,.4) inset,0 -2px 0 rgba(0,0,0,.2) inset,0 1px 0 #8f8671,0 2px 6px rgba(0,0,0,.5)}
+.btn.sec{height:var(--btn-sec-h);min-width:var(--btn-sec-h);padding:0 14px;font-size:16px;letter-spacing:.06em;color:var(--ink-0);background:var(--mat-3);box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 3px 0 #0b1013,0 6px 12px rgba(0,0,0,.4);border-radius:22px}
+.btn.sec.sq{padding:0;width:var(--btn-sec-h)}
+.btn.sec:active,.btn.sec.pressed{top:2px;background:#2a373d;box-shadow:0 1px 0 #0b1013}
+.btn.dis{background:transparent;color:var(--ink-2);box-shadow:inset 0 0 0 1.5px var(--rail);pointer-events:none}
+.btn.ref{box-shadow:0 1px 0 rgba(255,255,255,.7) inset,0 -3px 0 rgba(0,0,0,.18) inset,0 4px 0 #8f8671,0 0 0 2px var(--refused),0 8px 16px rgba(0,0,0,.5)}
+.btn svg{width:20px;height:20px}
+.btn.fit17{font-size:17px;letter-spacing:.05em}
+.btn.sec.cancel{width:auto;padding:0 16px;gap:6px}
+
