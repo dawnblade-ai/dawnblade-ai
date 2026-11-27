@@ -123,6 +123,22 @@ test("select: opt toggles bottom rather than selecting", () => {
   assert.deepEqual(p.down, [1]);
 });
 
+/* AN INDEX THE SHEET DOES NOT HOLD IS NO SELECTION (CRESCENDO, 2026-11-27). `promptSel` comes off a wire on a
+   server table; alloc and soak already ignored an index with no card behind it, opt and pick did not — pick counted
+   a phantom toward its minimum (Confirm lit, the card chose nothing it must) and opt sent one "to the bottom". */
+test("select: opt and pick ignore an index the sheet does not hold", () => {
+  const g = game({hand:[card({name:"oob-h"})], deck:[card({name:"oob-d1"}), card({name:"oob-d2"})]});
+  let p = Q.buildPrompt(g, {tag:"pick", min:1, max:1});
+  for(const i of [1, 99, -1, 0.5, "0", null]) p = Q.promptToggleSel(p, i);
+  assert.deepEqual(p.sel, [], "no phantom selection");
+  assert.equal(Q.promptReady(p), false, "a phantom does not satisfy the minimum");
+  assert.deepEqual(Q.promptToggleSel(p, 0).sel, [0], "the real card still selects");
+  let o = Q.buildPrompt(g, {tag:"opt", n:2});
+  for(const i of [2, 99, -1, 0.5, "1", null]) o = Q.promptToggleSel(o, i);
+  assert.deepEqual(o.down, [], "nothing phantom goes to the bottom");
+  assert.deepEqual(Q.promptToggleSel(o, 1).down, [1], "a real card still goes");
+});
+
 test("ready: pick needs its minimum, modal and pay need a choice", () => {
   const g = game({hand:[card({name:"r-1"})]});
   let p = Q.buildPrompt(g, {tag:"pick", min:1, max:1});

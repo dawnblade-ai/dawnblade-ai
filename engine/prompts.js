@@ -821,6 +821,11 @@ function promptMove(prompt, i, dir){
 /* Selection, honouring max. `opt` keeps its own bottom/top toggle. */
 function promptToggleSel(prompt, i){
   if(!prompt) return prompt;
+  /* AN INDEX THE SHEET DOES NOT HOLD IS NO SELECTION (CRESCENDO, 2026-11-27): `i` comes off a wire on a server
+     table. alloc and soak below already ignored one; opt and pick took it, so a phantom counted toward pick's
+     minimum (Confirm lit with nothing chosen) and opt sent "a card" to the bottom. */
+  if((prompt.tag === "opt" || prompt.tag === "pick") && !(Number.isInteger(i) && i >= 0 && prompt.cards && prompt.cards[i]))
+    return prompt;
   if(prompt.tag === "opt"){
     const down = prompt.down.includes(i) ? prompt.down.filter(x=>x!==i) : [...prompt.down, i];
     return {...prompt, down};
