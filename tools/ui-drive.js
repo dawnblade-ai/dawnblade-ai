@@ -14,7 +14,13 @@
                pair by position (the mockup names them by card). DIFFERENCES lists what is deliberately not compared.
    Viewports (visible CSS px): 375x548 (SE with toolbars), 393x660 (iPhone with toolbars), 430x932 (Pro Max), 393x852.
 
-   RUN       node tools/ui-drive.js [--chromium-only] [--verbose] [--find-seed [max]] [--shots <dir>]
+   STATES    (step 3) a fresh local game is PLAYED by taps and held to the mockups it can reach: T2 select, T3 / T3b paying,
+             T4 your attack on the chain, T10 inspect (hold 400 ms). Names a live state cannot reach are listed with the reason.
+   PLAY      from the deal, tap through whole turns at 393x660 (play, pay, pass, END TURN, the AI answering paced, defend, the
+             arsenal, whatever sheet the engine asks): zero page errors, zero policy-refused / stalled events, life totals move.
+   --art     card images come from the real host (fetched with curl through the sandbox proxy, cached), not grey stand-ins,
+             so --shots shows the real faces. Everything else stays routed locally.
+   RUN       node tools/ui-drive.js [--chromium-only] [--verbose] [--find-seed [max]] [--shots <dir>] [--art] [--only t1|states|play]
    DEPS      outside the repo, which keeps ZERO dependencies. PAGE_DEPS names the directory (see tools/page.js):
                npm install --prefix "$PAGE_DEPS" --save-exact htm@3.1.1 @fontsource/big-shoulders-display \
                  @fontsource/spline-sans @fontsource/spline-sans-mono @fontsource/caveat
@@ -33,7 +39,8 @@ const { makeAnswer, depsDir } = require("./page");
 
 const ROOT = path.join(__dirname, "..");
 const PLAY = path.join(ROOT, "play.html");
-const MOCKUP = path.join(ROOT, "docs", "crescendo", "mockups", "table-1-rest.html");
+const MOCKDIR = path.join(ROOT, "docs", "crescendo", "mockups");
+const MOCKUP = path.join(MOCKDIR, "table-1-rest.html");
 const VIEWPORTS = [[375, 548], [393, 660], [430, 932], [393, 852]];
 const TOL = 2;                                   /* px, the brief's box tolerance */
 const MATCH = { hero: "iyslander", foe: "viserai", seed: "2", pace: 0 };   /* mockup 1's cast; the seed is what --find-seed picks (the first deal whose turn-3 table shows every zone the mockup does) */
@@ -117,7 +124,19 @@ async function launch(pw, engine){
 }
 
 /* one page at a viewport; every external request answered locally (tools/page.js), anything unrouted is an error */
-async function openPage(pw, browser, engine, vp, url, errors){
+const ART_HOST = "legendstory-production-s3-public.s3.amazonaws.com";
+function artFile(url){
+  const dir = process.env.UI_ART_CACHE || path.join(require("os").tmpdir(), "dawnblade-art");
+  fs.mkdirSync(dir, { recursive: true });
+  const f = path.join(dir, Buffer.from(url).toString("hex").slice(-80) + ".img");
+  if(!fs.existsSync(f)){
+    const r = require("child_process").spawnSync("curl", ["-sS", "--fail", "-m", "20", "-o", f, url], { encoding: "utf8" });
+    if(r.status !== 0){ try { fs.unlinkSync(f); } catch(e){} return null; }
+  }
+  return f;
+}
+
+async function openPage(pw, browser, engine, vp, url, errors, art){
   const ctxOpts = engine === "webkit"
     ? { ...pw.devices["iPhone 15"], viewport: { width: vp[0], height: vp[1] }, screen: { width: vp[0], height: vp[1] } }
     : { viewport: { width: vp[0], height: vp[1] }, deviceScaleFactor: 2, isMobile: true, hasTouch: true };
@@ -129,7 +148,12 @@ async function openPage(pw, browser, engine, vp, url, errors){
   page.on("pageerror", e => fail("pageerror: " + String(e && e.stack || e).split("\n").slice(0, 2).join(" | ")));
   page.on("console", m => { if(m.type() === "error") fail("console.error: " + m.text()); });
   await context.route(/^https?:/, route => {
-    const req = route.request(), r = answer(req.url(), req.resourceType());
+    const req = route.request();
+    if(art && new URL(req.url()).hostname === ART_HOST){
+      const f = artFile(req.url());
+      if(f) return route.fulfill({ status: 200, contentType: /\.webp/.test(req.url()) ? "image/webp" : "image/png", body: fs.readFileSync(f), headers: { "access-control-allow-origin": "*" } });
+    }
+    const r = answer(req.url(), req.resourceType());
     if(r.error) fail(r.error);
     route.fulfill({ status: r.status || 200, contentType: r.contentType, body: r.body, headers: { "access-control-allow-origin": "*" } });
   });
@@ -189,7 +213,9 @@ function judgePhone(m){
     if(t.w < 43.5 || t.h < 43.5) bad.push(`tap target "${t.n}" is ${t.w.toFixed(1)}x${t.h.toFixed(1)} (< 44)`);
     if(!t.inside) bad.push(`tap target "${t.n}" is outside the viewport`);
   });
-  const life = m.text.filter(t => /\blife\b/.test(t.cls)), mx = Math.max(...m.text.map(t => t.px));
+  /* DESIGN CONFLICT, flagged to the CEO: SCREENS-TABLE T4/T6/T8 set the HIT FOR figure at 44 px (BSD 900), larger than the 34 px life
+     numerals PHONE rule 13 says are the biggest type. Built as designed; that one figure is exempt here until the CEO rules. */
+  const life = m.text.filter(t => /\blife\b/.test(t.cls)), mx = Math.max(...m.text.filter(t => !/^n$/.test(t.cls)).map(t => t.px));
   if(life.length !== 2) bad.push(`${life.length} life totals on screen`);
   life.forEach(t => { if(t.px < mx - 0.01) bad.push(`life "${t.s}" ${t.px}px is not the largest type (${mx}px)`); });
   m.text.filter(t => t.px < 11).forEach(t => bad.push(`text "${t.s}" is ${t.px}px (< 11)`));
@@ -199,21 +225,26 @@ function judgePhone(m){
 /* the mockup names its hand cards by card; live names are by position */
 const norm = (boxes, hand) => boxes.map(b => /^hand-/.test(b.n) ? { ...b, n: "hand-#" + (hand.i = (hand.i == null ? -1 : hand.i) + 1), k: 0 } : b);
 
-function judgeBoxes(live, mock){
+/* opts: only (names to hold, default all of the mockup's), skip {name: reason} (listed, not compared), part {name: "xw"} (fields compared) */
+function judgeBoxes(live, mock, opts){
+  opts = opts || {};
   const L = norm(live.boxes, {}), Mk = norm(mock.boxes, {});
   const key = b => b.n + "#" + b.k, byKey = new Map(L.map(b => [key(b), b]));
   const liveHand = L.filter(b => /^hand-#/.test(b.n)).length;
   const bad = [], diffs = [];
   let worst = 0, worstName = "", n = 0;
   Mk.forEach(m => {
+    if(opts.only && !opts.only.includes(m.n)) return;
+    if(opts.skip && opts.skip[m.n]){ diffs.push(`${m.n}: ${opts.skip[m.n]}`); return; }
     const l = byKey.get(key(m));
     if(!l){
       const hi = /^hand-#(\d+)$/.exec(m.n);
-      if(hi && +hi[1] >= liveHand){ diffs.push(`${m.n}: the mockup deals six cards, this deal holds ${liveHand} (a hero's intellect is 4; the 5th card cut at the edge is the scroll cue and needs a hand of five or more)`); return; }
+      if(hi && +hi[1] >= liveHand){ diffs.push(`${m.n}: the mockup's hand is longer than this deal's (${liveHand} cards; a hero's intellect is 4, and cards leave the hand as they are played and pitched)`); return; }
       bad.push(`${key(m)} missing live`); return;
     }
     n++;
-    const d = Math.max(Math.abs(l.x - m.x), Math.abs(l.y - m.y), Math.abs(l.w - m.w), Math.abs(l.h - m.h));
+    const f = (opts.part && opts.part[m.n]) || "xywh", pick = b => ({ x: b.x, y: b.y, w: b.w, h: b.h });
+    const d = Math.max(...[...f].map(c => Math.abs(pick(l)[c] - pick(m)[c])));
     if(d > worst){ worst = d; worstName = key(m); }
     if(d > TOL) bad.push(`${key(m)} off by ${d.toFixed(1)} px  live [${[l.x, l.y, l.w, l.h].map(v => v.toFixed(1))}] mock [${[m.x, m.y, m.w, m.h].map(v => v.toFixed(1))}]`);
   });
@@ -228,7 +259,7 @@ async function runCase(pw, browser, engine, vp, seed, opts){
   let live, mock;
   try {
     const q = `?hero=${MATCH.hero}&foe=${MATCH.foe}&seed=${seed}&pace=0`;
-    const a = await openPage(pw, browser, engine, vp, pathToFileURL(PLAY).href + q, errors);
+    const a = await openPage(pw, browser, engine, vp, pathToFileURL(PLAY).href + q, errors, opts.art);
     await a.page.waitForSelector(".stage .bout", { timeout: 15000 });
     const how = await a.page.evaluate(`(${ADVANCE_SRC})(window, window.DawnUIApp.session())`);
     if(how !== "rest") res.bad.push("the deal did not reach the resting table: " + how);
@@ -239,7 +270,7 @@ async function runCase(pw, browser, engine, vp, seed, opts){
     res.state = await a.page.evaluate(() => { const s = DawnUIApp.session(), v = DawnView.view(s.state(), 0); return { turn: v.turn, hand: v.sides[0].hand.length, foeHand: v.sides[1].hand.length,
       gy: v.sides.map(x => x.grave.length), ars: v.sides.map(x => !!x.arsenal), gear: v.sides.map(x => x.gear.length) }; });
     await a.context.close();
-    const b = await openPage(pw, browser, engine, vp, pathToFileURL(MOCKUP).href + "?noframe", errors);
+    const b = await openPage(pw, browser, engine, vp, pathToFileURL(MOCKUP).href + "?noframe", errors, opts.art);
     await b.page.waitForSelector(".stage .bout", { timeout: 15000 });
     await settle(b.page);
     mock = await b.page.evaluate(MEASURE);
@@ -257,6 +288,203 @@ async function runCase(pw, browser, engine, vp, seed, opts){
   return res;
 }
 
+
+/* ---------- step 3: the states a live game reaches, held to their mockups ---------- */
+
+const FRESH = {   /* a fresh deal has not had two turns: no graveyard, no arsenal yet */
+  "opp-gy": "a fresh deal has an empty graveyard (bare mat)", "you-gy": "a fresh deal has an empty graveyard (bare mat)",
+  "opp-arsenal": "a fresh deal has no arsenal yet", "you-arsenal": "a fresh deal has no arsenal yet"
+};
+const SECOND = ms => new Promise(r => setTimeout(r, ms));
+const handOf = page => page.evaluate(() => { const s = DawnUIApp.session(), v = DawnView.view(s.state(), 0);
+  return v.sides[0].hand.map(c => ({ uid: c.uid, name: c.name, cost: c.cost, pitch: c.pitch, power: c.power })); });
+const card = (page, name) => page.locator(`.handrow .cd[aria-label="${name.replace(/"/g, '\\"')}"]`).first();
+const primaryText = page => page.locator('[data-b="primary"]').innerText().then(t => t.replace(/\s+/g, " ").trim());   /* the button upcases its label: compare lower-cased */
+
+async function runStates(pw, browser, engine, vp, opts){
+  const errors = [], res = { engine, vp, bad: [], notes: [], diffs: [] };
+  const q = `?hero=${MATCH.hero}&foe=${MATCH.foe}&seed=${MATCH.seed}&pace=900`;
+  let a;
+  const ask = (ok, msg) => { if(!ok) res.bad.push(msg); };
+  const cmp = async (label, file, o) => {
+    await settle(a.page);
+    const live = await a.page.evaluate(MEASURE);
+    if(opts.shots) await a.page.screenshot({ path: path.join(opts.shots, `${label}-${engine}-${vp[0]}x${vp[1]}.png`) });
+    const b = await openPage(pw, browser, engine, vp, pathToFileURL(path.join(MOCKDIR, file)).href + "?noframe", errors, opts.art);
+    await b.page.waitForSelector(".stage .bout", { timeout: 15000 }); await settle(b.page);
+    const mock = await b.page.evaluate(MEASURE);
+    if(opts.shots) await b.page.screenshot({ path: path.join(opts.shots, `${label}-mock-${engine}-${vp[0]}x${vp[1]}.png`) });
+    await b.context.close();
+    const j = judgeBoxes(live, mock, o);
+    j.bad.forEach(m => res.bad.push(label + ": " + m)); j.diffs.forEach(d => res.diffs.push(label + " " + d));
+    const ph = judgePhone(live); ph.bad.forEach(m => res.bad.push(label + ": " + m));
+    res.notes.push(`${label} ${j.n} boxes ${j.worst.toFixed(2)}px`);
+  };
+  try {
+    a = await openPage(pw, browser, engine, vp, pathToFileURL(PLAY).href + q, errors, opts.art);
+    await a.page.waitForSelector(".stage .bout", { timeout: 15000 });
+    const P = a.page, hand = await handOf(P);
+    const ready = await P.evaluate(() => [...document.querySelectorAll(".handrow .cd")].map(e => e.classList.contains("ready")));
+    /* T2: select a hand card (the mockup lifts the second one) */
+    let i = ready[1] ? 1 : ready.indexOf(true);
+    if(i < 0){ res.diffs.push("T2: no ready card in this deal"); }
+    else {
+      const c = hand[i];
+      await card(P, c.name).click(); await P.waitForTimeout(120);
+      ask(await P.locator('.handrow .cd.sel').count() === 1, "T2: the tapped card did not lift (.sel)");
+      ask((await primaryText(P)).toLowerCase() === ("play " + c.name).toLowerCase(), "T2: the primary does not name the play: " + await primaryText(P));
+      ask((await P.locator(".peek .name").innerText().catch(() => "")).toLowerCase() === c.name.toLowerCase(), "T2: no name-plate");
+      await cmp("T2", "table-2-select.html", { skip: FRESH, ...(i !== 1 ? { only: ["bout", "primary", "world", "tray", "handrow", "hub"] } : {}) });
+      /* a second tap puts it down */
+      await card(P, c.name).click(); await P.waitForTimeout(120);
+      ask(await P.locator(".handrow .cd.sel").count() === 0, "T2: a second tap did not put the card down");
+    }
+    /* T10: hold a card 400 ms */
+    {
+      const box = await P.locator('[data-b="hand-0"]').boundingBox();
+      await P.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await P.mouse.down(); await P.waitForTimeout(520); await P.mouse.up();
+      await P.waitForSelector(".inspect .sheet", { timeout: 2000 }).catch(() => {});
+      const t = await P.locator(".inspect .sheet h2").innerText().catch(() => null);
+      ask(t && t.toLowerCase() === hand[0].name.toLowerCase(), "T10: holding a card did not open it (" + t + ")");
+      ask(/^close$/i.test(await primaryText(P)), "T10: the primary is not Close");
+      await cmp("T10", "table-10-inspect.html", { only: ["veil", "inspect-card", "sheet", "primary", "hub", "bout"], part: { sheet: "xw" }, skip: {} });
+      await P.locator('[data-b="primary"]').click(); await P.waitForTimeout(100);
+      ask(await P.locator(".inspect").count() === 0, "T10: Close did not close it");
+    }
+    /* T3b / T3: pay for a costed card */
+    const cur = await handOf(P);
+    const costed = cur.filter(c => c.cost > 0);
+    const pitcher = (c, short) => cur.find(x => x.uid !== c.uid && (short ? x.pitch < c.cost : x.pitch >= c.cost));
+    const shortPair = costed.map(c => [c, pitcher(c, true)]).find(x => x[1]);
+    if(shortPair){
+      const [c, pi] = shortPair;
+      await card(P, c.name).click(); await P.locator('[data-b="primary"]').click(); await P.waitForTimeout(150);
+      ask((await P.locator('.stage').getAttribute("data-state")) === "t3", "T3b: playing a costed card did not open the payment");
+      await card(P, pi.name).click(); await P.waitForTimeout(150);
+      const pt = await primaryText(P);
+      ask(/^pitch \d+ more$/i.test(pt), "T3b: the primary is not 'Pitch N more' (" + pt + ")");
+      ask(await P.locator('[data-b="primary"]').isDisabled(), "T3b: the primary is enabled while short");
+      await cmp("T3b", "table-3b-pay-short.html", { skip: { ...FRESH, coins: "this pitch pays " + pi.pitch + " of " + c.cost + " (the mockup's 2 of 3)", "you-pitch-0": "the mockup pitches a different card (box compared as T3)" },
+        part: {}, only: ["staged", "hit", "pill", "primary", "hub-left", "hub-right", "bout", "world", "stage", "tray", "handrow"] });
+      await P.locator('[data-b="hub-left"]').click(); await P.waitForTimeout(150);   /* cancel */
+      ask((await P.locator('.stage').getAttribute("data-state")) !== "t3", "T3b: the cross did not cancel the play");
+    } else res.diffs.push("T3b: no costed card with a pitch too small to pay it in this deal");
+    const fullPair = costed.map(c => [c, pitcher(c, false)]).find(x => x[1] && x[0].power != null) || costed.map(c => [c, pitcher(c, false)]).find(x => x[1]);
+    if(fullPair){
+      const [c, pi] = fullPair;
+      await card(P, c.name).click(); await P.locator('[data-b="primary"]').click(); await P.waitForTimeout(150);
+      await card(P, pi.name).click(); await P.waitForTimeout(150);
+      ask((await primaryText(P)).toLowerCase() === ("play " + c.name).toLowerCase(), "T3: paid, the primary should read Play " + c.name + " (" + await primaryText(P) + ")");
+      ask(await P.locator(".hit .paid:not(.short)").count() === 1, "T3: the cost meter does not say paid");
+      await cmp("T3", "table-3-pay.html", { skip: { ...FRESH, ...(pi.pitch === 3 ? {} : { coins: "this payment holds " + pi.pitch + " coin(s), the mockup 3" }) },
+        only: ["staged", "hit", "coins", "you-pitch-0", "pill", "primary", "hub-left", "hub-right", "bout", "world", "stage", "tray", "handrow"] });
+      await P.locator('[data-b="primary"]').click(); await P.waitForTimeout(200);
+      /* T4: the attack stands on the chain; the AI answers, paced. Pass priority until the defend step shows. */
+      let seen = false;
+      for(let k = 0; k < 80 && !seen; k++){
+        const pill = await P.locator('[data-b="pill"]').innerText().catch(() => ""), dis = await P.locator('[data-b="primary"]').isDisabled().catch(() => true);
+        if(/defend step/i.test(pill) && dis && await P.locator(".atk.mine").count()){ seen = true; break; }
+        if(await P.locator(".options .opt.coach").count()) await P.locator(".options .opt.coach").click().catch(() => {});
+        else if(!dis) await P.locator('[data-b="primary"]').click().catch(() => {});
+        await P.waitForTimeout(100);
+      }
+      if(seen){
+        const pt = await primaryText(P);
+        ask(/^waiting for /i.test(pt), "T4: the primary should say it is waiting on them (" + pt + ")");
+        await cmp("T4", "table-4-attack.html", { skip: { ...FRESH, "you-weapon": "the live weapon keeps its ready underline until the engine spends the action point at resolution" },
+          only: ["attack", "hit", "pill", "primary", "hub-left", "hub-right", "bout", "world", "stage", "tray", "handrow"], part: { hit: "xywh" } });
+      } else res.diffs.push("T4: the defend step with your attack on the chain was not on screen within the AI's pace window in this deal");
+    } else res.diffs.push("T3: no costed card that one pitch can pay in this deal");
+    /* a refused tap says why, by name: on their turn a hand card cannot be played, and the engine's own reason lands on a chip */
+    {
+      const gone = await P.evaluate(() => DawnUIApp.session().state().over);
+      let tp = await P.evaluate(() => DawnUIApp.session().state().turnPlayer);
+      for(let k = 0; k < 300 && tp === 0 && !gone; k++){
+        if(await P.locator(".options .opt.coach").count()) await P.locator(".options .opt.coach").click().catch(() => {});
+        else if(!(await P.locator('[data-b="primary"]').isDisabled().catch(() => true))) await P.locator('[data-b="primary"]').click().catch(() => {});
+        await P.waitForTimeout(80);
+        tp = await P.evaluate(() => DawnUIApp.session().state().turnPlayer);
+      }
+      if(tp === 1 && await P.locator(".handrow .cd").count()){
+        await P.locator('[data-b="hand-0"]').click({ timeout: 1500 }).catch(() => {});
+        await P.waitForTimeout(60);
+        const why = await P.locator(".peek .reason").innerText().catch(() => "");
+        ask(why.trim().length > 3, "refusal: tapping a card on their turn showed no reason");
+        ask(await P.locator(".handrow .cd.refused").count() === 1, "refusal: the card has no refused ring");
+        res.notes.push("refusal \"" + why.trim().slice(0, 40) + "\"");
+      } else res.diffs.push("refusal: their turn was not reached to test a refused tap");
+    }
+    await a.context.close();
+  } catch(e){ res.bad.push("drive error: " + String(e && e.message || e).split("\n")[0]); }
+  errors.forEach(e => res.bad.push(e));
+  return res;
+}
+
+/* ---------- step 3: a whole game by taps ---------- */
+
+/* From the deal, play turns by tapping only what is on screen. One decision a loop; the AI seat answers paced (one action a tick).
+   Pass when the board's turns reach `turns` of the player's own, or give up on a stall. */
+async function runPlay(pw, browser, engine, opts){
+  const vp = [393, 660], errors = [], res = { engine, vp, bad: [], notes: [], diffs: [] };
+  const turns = opts.turns || 3;
+  try {
+    const a = await openPage(pw, browser, engine, vp, pathToFileURL(PLAY).href + `?hero=${MATCH.hero}&foe=${MATCH.foe}&seed=${opts.seed || MATCH.seed}&pace=40`, errors, opts.art);
+    const P = a.page;
+    await P.waitForSelector(".stage .bout", { timeout: 15000 });
+    const lives = []; let refusals = 0, taps = 0, lastTurn = 0, idle = 0, started = Date.now();
+    const snap = () => P.evaluate(() => { const s = DawnUIApp.session(), st = s.state(); return { turn: st.turn, over: !!st.over, hp: [st.sides[0].hp, st.sides[1].hp], busy: s.local.busy(), tp: st.turnPlayer }; });
+    const click = async loc => { try { await loc.click({ timeout: 1500 }); taps++; return true; } catch(e){ return false; } };
+    let s0 = await snap(); lives.push(s0.hp);
+    for(let step = 0; step < 900; step++){
+      const s = await snap();
+      if(s.hp[0] !== lives[lives.length - 1][0] || s.hp[1] !== lives[lives.length - 1][1]) lives.push(s.hp);
+      lastTurn = s.turn;
+      if(s.over || s.turn > turns * 2) break;
+      if(Date.now() - started > 150000){ res.bad.push("play: gave up after 150 s at turn " + s.turn); break; }
+      if(s.busy || s.tp === 1 && !(await P.locator(".options").count())){
+        /* the AI seat's turn: wait a tick, unless something is asked of us (a defend step / sheet) */
+        const ask = await P.locator(".stage .ask").count(), can = !(await P.locator('[data-b="primary"]').isDisabled());
+        if(!ask && !can && !(await P.locator(".options").count())){ await P.waitForTimeout(40); continue; }
+      }
+      if(await P.locator(".options").count()){
+        const coach = P.locator(".options .opt.coach"); if(await click(coach)) { await P.waitForTimeout(30); continue; }
+      }
+      if(await P.locator("[data-b=sheet]").count() && await P.locator(".inspect").count()){ await click(P.locator('[data-b="primary"]')); continue; }
+      const st = await P.locator(".stage").getAttribute("data-state");
+      const label = await primaryText(P), dis = await P.locator('[data-b="primary"]').isDisabled();
+      const ready = P.locator(".handrow .cd.ready").first();
+      if(st === "t3"){                                   /* paying: pitch until paid, else cancel */
+        if(!dis){ await click(P.locator('[data-b="primary"]')); continue; }
+        if(await ready.count()){ await click(ready); continue; }
+        await click(P.locator('[data-b="hub-left"]')); continue;
+      }
+      if(await P.locator(".stage .ask").count()){        /* defend step / arsenal: block with one card if any, then commit */
+        const ask = (await P.locator(".stage .ask").innerText()).trim();
+        if(/blocks/i.test(ask) && /^no block$/i.test(label) && await ready.count()) { await click(ready); await P.waitForTimeout(20); continue; }
+        if(/arsenal/i.test(ask) && /^no arsenal$/i.test(label) && await ready.count()){ await click(ready); await P.waitForTimeout(20); continue; }
+        if(!dis){ await click(P.locator('[data-b="primary"]')); await P.waitForTimeout(30); continue; }
+      }
+      if(dis){ await P.waitForTimeout(40); idle++; if(idle > 400){ res.bad.push("play: stuck, primary disabled at turn " + s.turn + " (" + label + ")"); break; } continue; }
+      idle = 0;
+      if(/^play |^attack with /i.test(label)){ await click(P.locator('[data-b="primary"]')); continue; }   /* a selection is made: commit it */
+      if(/^end turn$/i.test(label) && await ready.count() && s.tp === 0){ const before = label; if(await click(ready)){ await P.waitForTimeout(20); if(/^play /i.test(await primaryText(P))) continue; } }
+      if(await P.locator('[data-b="primary"]').isEnabled()){ if(!(await click(P.locator('[data-b="primary"]')))) await P.waitForTimeout(30); }
+    }
+    const events = await P.evaluate(() => DawnUIApp.session().events());
+    const bad = events.filter(e => e.t === "policy-refused" || e.t === "stalled");
+    bad.forEach(e => res.bad.push("play: session event " + JSON.stringify(e)));
+    refusals = events.filter(e => e.t === "refused").length;
+    const fin = await snap();
+    if(fin.turn < turns * 2) res.bad.push(`play: only reached turn ${fin.turn} (wanted ${turns * 2})` + (fin.over ? " — the game ended" : ""));
+    if(lives.length < 2) res.bad.push("play: life totals never changed");
+    res.notes.push(`turn ${fin.turn}, ${taps} taps, ${refusals} refused taps, life ${lives.map(l => l.join("/")).join(" > ")}`);
+    if(opts.shots) await P.screenshot({ path: path.join(opts.shots, `play-${engine}.png`) });
+    await a.context.close();
+  } catch(e){ res.bad.push("play drive error: " + String(e && e.message || e).split("\n")[0]); }
+  errors.forEach(e => res.bad.push(e));
+  return res;
+}
+
 async function main(){
   const argv = process.argv.slice(2);
   if(argv.includes("--find-seed")){
@@ -266,6 +494,10 @@ async function main(){
   }
   let pw;
   try { pw = require("playwright"); } catch(e){ console.error("tools/ui-drive.js needs `playwright` (set NODE_PATH, or run where require('playwright') resolves)"); return process.exit(1); }
+  const arg = n => argv.includes(n) ? argv[argv.indexOf(n) + 1] : null;
+  if(arg("--hero")) MATCH.hero = arg("--hero");
+  if(arg("--foe")) MATCH.foe = arg("--foe");
+  if(arg("--seed")) MATCH.seed = arg("--seed");
   const seed = MATCH.seed;
   const engines = ["chromium"];
   let failed = false;
@@ -278,18 +510,28 @@ async function main(){
   }
   console.log(`play.html, seed ${seed}, ${MATCH.hero} vs ${MATCH.foe}; mockup ${path.relative(ROOT, MOCKUP)}`);
   const diffsSeen = new Set(), rows = [];
+  const want = n => !argv.includes("--only") || argv[argv.indexOf("--only") + 1] === n;
+  const o = { shots: argv.includes("--shots") ? argv[argv.indexOf("--shots") + 1] : null, art: argv.includes("--art") };
+  if(o.shots) fs.mkdirSync(o.shots, { recursive: true });
+  const report = (r, tag) => {
+    if(r.bad.length) failed = true;
+    console.log(`${r.bad.length ? "FAIL" : "PASS"}  ${engine_.padEnd(8)} ${tag.padEnd(8)} ${r.vp[0]}x${r.vp[1]}  ${r.notes.join(" · ")}`);
+    r.bad.slice(0, argv.includes("--verbose") ? 999 : 12).forEach(b => console.log("        " + b));
+    r.diffs.forEach(d => diffsSeen.add(d));
+    if(argv.includes("--verbose") && r.state) console.log("        state " + JSON.stringify(r.state) + " · " + r.ua);
+  };
+  let engine_ = "";
   for(const engine of engines){
+    engine_ = engine;
     const browser = await launch(pw, engine);
     try {
-      for(const vp of VIEWPORTS){
-        const r = await runCase(pw, browser, engine, vp, seed, { shots: argv.includes("--shots") ? argv[argv.indexOf("--shots") + 1] : null });
-        rows.push(r);
-        if(r.bad.length) failed = true;
-        console.log(`${r.bad.length ? "FAIL" : "PASS"}  ${engine.padEnd(8)} ${vp[0]}x${vp[1]}  ${r.notes.join(" · ")}`);
-        r.bad.slice(0, argv.includes("--verbose") ? 999 : 12).forEach(b => console.log("        " + b));
-        r.diffs.forEach(d => { if(!diffsSeen.has(d)){ diffsSeen.add(d); } });
-        if(argv.includes("--verbose") && r.state) console.log("        state " + JSON.stringify(r.state) + " · " + r.ua);
+      if(want("t1")) for(const vp of VIEWPORTS){
+        const r = await runCase(pw, browser, engine, vp, seed, o);
+        r.notes.unshift("T1");
+        report(r, "t1");
       }
+      if(want("states")) for(const vp of VIEWPORTS) report(await runStates(pw, browser, engine, vp, o), "states");
+      if(want("play")) report(await runPlay(pw, browser, engine, { ...o, turns: +arg("--turns") || 3 }), "play");
     } finally { await browser.close(); }
   }
   if(diffsSeen.size){ console.log("\nDIFFERENCES (deliberately not compared):"); [...diffsSeen].forEach(d => console.log("  - " + d)); }

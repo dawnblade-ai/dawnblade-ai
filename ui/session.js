@@ -88,7 +88,7 @@ function openLocal(opts, env){
   const pick = choose(opts && opts.query ? opts.query : parseQuery(env.location && env.location.search), env.HEROES, readLast());
   const dealt = deal(pick, env);
   writeLast({hero: pick.hero, foe: pick.foe});
-  const subs = new Set(), steps = new Set();
+  const subs = new Set(), steps = new Set(), evs = new Set(), events = [];
   const local = env.DawnLocal.createLocal({
     seat: 0,
     state: dealt.state,
@@ -97,6 +97,7 @@ function openLocal(opts, env){
     policy: (st, i) => env.DawnSparring.act(st, i, {search: true}),
     ...(pick.pace > 0 ? {pace: pick.pace} : {}),
     onStep: e => steps.forEach(fn => fn(e)),
+    onEvent: e => { events.push(e); evs.forEach(fn => fn(e)); },
     onState: st => subs.forEach(fn => fn(st))
   });
   const seat = 0;
@@ -110,6 +111,11 @@ function openLocal(opts, env){
     submit: a => local.submit(a),
     subscribe: fn => { subs.add(fn); return () => subs.delete(fn); },
     onStep: fn => { steps.add(fn); return () => steps.delete(fn); },
+    /* the coach: the AI policy's answer for this seat in this state (it can answer anything the judge asks) */
+    suggest: () => env.DawnSparring.act(local.state(), seat, {search: true}),
+    /* refusals, policy refusals and stalls the local session reported (a drill reads these) */
+    events: () => events.slice(),
+    onEvent: fn => { evs.add(fn); return () => evs.delete(fn); },
     heroArt: i => dealt.art[i],
     start: () => local.start(),
     dispose: () => local.dispose(),

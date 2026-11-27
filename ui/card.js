@@ -24,8 +24,9 @@ const has = n => n != null && n !== "" && !isNaN(+n);
 /* which stamps a card carries at a place: "hand" all four, "mat" power + defence. `def` is passed in (equipment
    reads its CURRENT defence through DawnGame.gearDef, a battleworn piece is not its printed number). */
 function stamps(c, place, def){
-  if(!c || c.hidden) return [];
+  if(!c || c.hidden || place === "perm") return [];
   const out = [];
+  if(place === "chain"){ if(has(c.power)) out.push(["pow", c.power]); return out; }
   if(place === "hand"){
     if(has(c.cost)) out.push(["cost", c.cost]);
     if(has(c.pitch) && +c.pitch > 0) out.push(["pitch", c.pitch]);
@@ -48,10 +49,10 @@ function artFailed(e, c){
 function Face(p){
   const c = p.card, st = stamps(c, p.place, p.def), colour = pitchClass(c);
   return html`<div class=${"cd " + p.cls + (colour ? " " + colour : "")} data-tap=${p.tap ? "" : undefined} data-b=${p.b}
-      aria-label=${c.name}>
+      aria-label=${c.name} style=${p.style} ...${p.on || {}}>
     ${c.img ? html`<img alt=${c.name} src=${c.img} width=${p.w} height=${p.h} decoding="async" onError=${e => artFailed(e, c)}/>` : null}
     <span class="cname">${c.name}</span>
-    ${p.place === "hand" && colour ? html`<span class="strip"></span>` : null}
+    ${(p.place === "hand" || p.place === "chain") && colour ? html`<span class="strip"></span>` : null}
     ${st.map(s => html`<span class=${"st " + s[0]}>${s[1]}</span>`)}
     ${p.children}
   </div>`;
@@ -59,7 +60,7 @@ function Face(p){
 
 /* a face-down card (their hand, a deck, an arsenal): the original card back */
 function Back(p){
-  return html`<div class=${"cd back " + (p.cls || "")} data-b=${p.b} data-tap=${p.tap ? "" : undefined} aria-label=${p.label || "Face down"}>${p.children}</div>`;
+  return html`<div class=${"cd back " + (p.cls || "")} data-b=${p.b} data-tap=${p.tap ? "" : undefined} aria-label=${p.label || "Face down"} ...${p.on || {}}>${p.children}</div>`;
 }
 
 return {PITCH_CLASS, pitchClass, stamps, Face, Back};

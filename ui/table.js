@@ -1,15 +1,23 @@
 /* ============================================================
-   ui/table.js — DawnUITable: THE TABLE (docs/crescendo/SCREENS-TABLE.md; mockups/table-1-rest.html is the
-   reference this is held to, box for box, by tools/ui-drive.js).
+   ui/table.js — DawnUITable: THE TABLE (docs/crescendo/SCREENS-TABLE.md; mockups/table-*.html are the references
+   this is held to, box for box, by tools/ui-drive.js).
 
-   Rendered ONLY from `DawnView.view(state, seat)` (what this seat may know: HIDDEN-HANDS.md) and `DawnJudge.legal`
-   (what this seat may do now). A hidden card is a back whose COUNT is public and nothing more; this file never
-   reads a zone the view withheld. `model()` is the pure half (view + legal -> plain data, testable in node);
-   `Table` is the Preact half. The band structure, top to bottom: bout (HUD) · world (their half, the stage,
-   your half, the tray with the hand) · hub (HUD).
+   Rendered ONLY from `DawnView.view(state, seat)` (what this seat may know: HIDDEN-HANDS.md) and what
+   `DawnJudge.legal` says this seat may do now. A hidden card is a back whose COUNT is public and nothing more.
+   `model()` is the pure half (view + legal -> plain data, testable in node); `Table` and `Live` are the Preact half.
+   Band structure, top to bottom: bout (HUD) · world (their half, the stage, your half, the tray with the hand) · hub (HUD).
 
-   T1, the resting table, is what is drawn today. The chain, the glimpse, the announcer, the prompts and the taps
-   that play cards come in the next steps (README "Next" 3-9); a tap here only shows its press state.
+   PLAYABLE (step 3). A tap is an engine ACTION or it is refused BY NAME (the engine's own reason, on a chip over the card):
+     T1 rest      hand card ready (a play is legal) / dim; weapon ready; one primary: END TURN / PASS / WAITING
+     T2 select    tap a ready card: it lifts, the primary names the play ("Play X"); tap it again to put it down
+     T3 pay       the engine opened a payment: tap hand cards to pitch (they fly to the pitch fan, the cost meter fills),
+                  the primary plays when paid ("Pitch N more" while short), the cross cancels
+     T4 attack    the attack sits on the chain; the AI seat answers through the session, one action per tick
+     T6/T9 (placeholders in place) defend: tap a card to block it, the primary is "No block" / "Block with N";
+                  the arsenal step: tap a card, "Set in arsenal" / "No arsenal"
+     T10 inspect  hold a card 400 ms (or tap a mat card): the card large with its printed text from the pool
+   Whatever the engine asks that this table cannot draw yet (a prompt sheet, a boost / split / X question) is a plain
+   OPTIONS sheet of the legal answers (ui/sheet.js), so the game never dead-ends.
    ============================================================ */
 (function(root, factory){
   if(typeof module === "object" && module.exports) module.exports = factory(root);
@@ -19,6 +27,7 @@
 const P = root.htmPreact || {};
 const html = P.html, useState = P.useState, useEffect = P.useEffect;
 const K = root.DawnUICard || {};
+const SH = root.DawnUISheet || {};
 
 /* ---------- the pure half ---------- */
 
@@ -31,7 +40,7 @@ function laneOf(side, game){
   const cols = {weapon: null, head: null, chest: null, arms: null, legs: null};
   let extra = 0;
   (side.gear || []).forEach(g => {
-    let col = g.hidden ? COLS.find(k => !cols[k]) : ZONE_COL[game.slotOf(g).z] || "weapon";
+    const col = g.hidden ? COLS.find(k => !cols[k]) : ZONE_COL[game.slotOf(g).z] || "weapon";
     if(!col || cols[col]){ extra++; return; }
     cols[col] = g;
   });
@@ -39,55 +48,132 @@ function laneOf(side, game){
 }
 
 const firstName = n => String(n || "").split(",")[0];
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
-/* the line the primary button says, and whether it can be pressed (one primary per screen) */
-function primaryOf(v, ctx){
-  if(v.over) return {label: "Game over", disabled: true};
-  const mine = ctx.holder === ctx.seat;
-  const foe = firstName(v.sides[1 - ctx.seat].name);
-  if(mine){
-    if(ctx.legal({t: "endTurn"}) == null) return {label: "End turn", disabled: false};
-    if(ctx.legal({t: "pass"}) == null) return {label: "Pass", disabled: false};
-    return {label: "Resolving…", disabled: true};
-  }
-  return {label: v.turnPlayer === ctx.seat ? "Waiting for " + foe : foe + "’s turn", disabled: true};
-}
-
-/* the phase / step marker, top of the stage */
+/* the phase / step marker */
 function pillOf(v){
   if(v.over) return "Game over";
-  if(v.step && v.step !== "layer") return v.step.charAt(0).toUpperCase() + v.step.slice(1) + " step";
+  if(v.step && v.step !== "layer") return cap(v.step) + " step";
   return {start: "Start phase", action: "Action phase", end: "End phase"}[v.phase] || "";
 }
 
-/* view + what is legal -> everything the table draws. ctx: {seat, holder, legal(a), game: {slotOf, gearDef}, art[2], name(seat)} */
+/* the permanents a side holds (auras, tokens, allies, items): one little card per kind with a count */
+function permsOf(sd){
+  const by = new Map();
+  (sd.board || []).forEach(b => { const c = b && (b.card || b); if(!c || !c.name) return; const k = c.name; by.has(k) ? by.get(k).n++ : by.set(k, {card: c, n: 1}); });
+  return [...by.values()];
+}
+
+const lenClass = s => s.length > 30 ? " fit15" : s.length > 17 ? " fit17" : "";
+
+/* view + what is legal -> everything the table draws.
+   ctx: {seat, holder, legal(a), game: {slotOf, gearDef}, paySum(sideView), defending, art[2], name(seat), ui: {sel, insp, ref, sl}} */
 function model(v, ctx){
-  const me = ctx.seat, you = v.sides[me], opp = v.sides[1 - me];
-  const mine = ctx.holder === me;
+  const me = ctx.seat, you = v.sides[me], opp = v.sides[1 - me], L = ctx.legal, ui = ctx.ui || {};
+  const mine = ctx.holder === me && !v.over;
+  const pend = v.pending && v.pending.seat === me ? v.pending : null;
+  const pay = pend && pend.kind === "pay" ? pend : null;
+  const prompt = v.prompt && (v.prompt.side || 0) === me ? v.prompt : null;
+  const asked = !!prompt || !!(pend && !pay);
+  const arsStep = mine && v.phase === "end" && v.arsenalFor === me && !asked && !pay;
+  const defending = !!ctx.defending && !asked && !pay;
+  const blockH = new Set(you.blockH || []), blockG = new Set(you.blockG || []);
+  const paySel = new Set(you.paySel || []);
+  const foe = firstName(opp.name);
+
+  /* the selection is only real while it can still be acted on */
+  const own = (z, uid) => (z || []).find(c => c && c.uid === uid);
+  const sel = ui.sel && mine && !asked && !pay && !defending && !arsStep
+    ? (ui.sel.from === "hand" ? own(you.hand, ui.sel.uid) : ui.sel.from === "arsenal" ? (you.arsenal && you.arsenal.uid === ui.sel.uid ? you.arsenal : null) : own(you.gear, ui.sel.uid))
+      && ui.sel : null;
+  const selArs = arsStep && ui.sel && ui.sel.from === "hand" && own(you.hand, ui.sel.uid) ? ui.sel : null;
+
   const bout = (sd, seatIdx) => {
     const frac = sd.maxHp > 0 ? Math.max(0, Math.min(1, sd.hp / sd.maxHp)) : 0;
     return {life: sd.hp, frac, low: frac <= 0.25, turn: v.turnPlayer === seatIdx, art: ctx.art[seatIdx], name: ctx.name(seatIdx)};
   };
+
   const half = (sd, isYou) => {
     const lane = laneOf(sd, ctx.game), top = sd.grave && sd.grave.length ? sd.grave[sd.grave.length - 1] : null;
-    const ready = g => isYou && mine && g && !g.hidden && ctx.legal({t: "activate", uid: g.uid}) == null;
+    const gearState = g => {
+      if(!isYou || !g || g.hidden) return {};
+      if(defending) return blockG.has(g.uid) ? {blk: true} : L({t: "defend", uid: g.uid}) == null ? {ready: true, defend: true} : {};
+      if(!mine || asked || pay || arsStep) return {};
+      return L({t: "activate", uid: g.uid}) == null && /weapon/i.test(g.tt || "") ? {ready: true} : {};
+    };
+    const pitched = (sd.pitch || []).slice();
+    if(isYou) (sd.hand || []).forEach(c => { if(paySel.has(c.uid)) pitched.push(c); });
+    const have = isYou && pay ? (sd.res || 0) + ctx.paySum(sd) : (sd.res || 0);
     return {
-      ap: sd.ap || 0, res: sd.res || 0, handN: (sd.hand || []).length, deckN: (sd.deck || []).length,
+      ap: sd.ap || 0, coins: have, handN: (sd.hand || []).length, deckN: (sd.deck || []).length,
       cols: COLS.map(k => { const g = lane.cols[k]; return g && {card: g, def: g.hidden || k === "weapon" ? null : ctx.game.gearDef(g),
-        tap: !!g.used && k === "weapon", spent: !!g.destroyed, ready: k === "weapon" && ready(g)}; }),
+        tap: !!g.used && k === "weapon", spent: !!g.destroyed, sel: !!sel && sel.from === "gear" && sel.uid === g.uid, ...gearState(g)}; }),
       extra: lane.extra,
       gy: top && {card: top, n: sd.grave.length},
-      arsenal: sd.arsenal ? {card: sd.arsenal, n: 1} : null
+      arsenal: sd.arsenal ? {card: sd.arsenal, n: 1, face: isYou, sel: !!sel && sel.from === "arsenal"} : null,
+      fan: pitched.slice(-3).map(c => ({card: c, tap: isYou && paySel.has(c.uid)})), fanN: pitched.length,
+      perms: permsOf(sd)
     };
   };
+
+  const handState = c => {
+    if(pay) return L({t: "paySel", uid: c.uid}) == null ? "ready" : "dim";
+    if(asked || !mine && !defending) return "idle";
+    if(arsStep) return selArs && selArs.uid === c.uid ? "sel" : L({t: "arsenal", uid: c.uid}) == null ? "ready" : "dim";
+    if(defending) return blockH.has(c.uid) ? "blk" : L({t: "defend", uid: c.uid}) == null ? "ready" : "dim";
+    if(sel && sel.from === "hand" && sel.uid === c.uid) return "sel";
+    return L({t: "play", uid: c.uid, from: "hand"}) == null ? "ready" : "dim";
+  };
+  const hand = (you.hand || []).filter(c => !(pay && (c.uid === pay.card.uid || paySel.has(c.uid))))
+    .map(c => ({card: c, state: handState(c), def: blockH.has(c.uid) ? c.def : null}));
+
+  /* the stage: the card being paid for, or the link on the chain, or the top of the stack */
+  const feat = v.featured && v.featured.card ? v.featured : null;
+  const stackTop = (v.stack || []).length ? (v.stack[v.stack.length - 1] || {}).card : null;
+  let staged = null, chain = null, hit = null;
+  const have = pay ? (you.res || 0) + ctx.paySum(you) : 0;
+  if(pay){
+    staged = {card: pay.card, need: pay.need};
+    hit = {kind: "cost", need: pay.need, have};
+  } else if(feat){
+    chain = {card: feat.card, mine: v.attacker === me};
+    hit = feat.card.power != null && feat.card.power !== "" ? {kind: "hit", n: feat.card.power} : null;
+  } else if(stackTop){
+    chain = {card: stackTop, mine: false};
+  }
+
+  /* the one primary */
+  let primary;
+  const nm = sel ? sel.name || (sel.from === "gear" ? own(you.gear, sel.uid) : sel.from === "arsenal" ? you.arsenal : own(you.hand, sel.uid)).name : "";
+  if(v.over) primary = {label: "Game over", disabled: true};
+  else if(ui.insp) primary = {label: "Close", close: true};
+  else if(asked) primary = {label: "Your call", disabled: true};
+  else if(pay){
+    primary = L({t: "payConfirm"}) == null ? {label: "Play " + pay.card.name, act: {t: "payConfirm"}}
+      : {label: "Pitch " + Math.max(1, pay.need - have) + " more", disabled: true};
+  } else if(arsStep) primary = selArs ? {label: "Set in arsenal", act: {t: "arsenal", uid: selArs.uid}} : {label: "No arsenal", act: {t: "arsenal", uid: null}};
+  else if(defending){
+    const n = blockH.size + blockG.size;
+    primary = L({t: "pass"}) == null ? {label: n ? "Block with " + n : "No block", act: {t: "pass"}} : {label: "Resolving…", disabled: true};
+  } else if(mine){
+    if(sel) primary = {label: (sel.from === "gear" ? "Attack with " : "Play ") + nm, play: sel};
+    else if(L({t: "endTurn"}) == null) primary = {label: "End turn", act: {t: "endTurn"}};
+    else if(L({t: "pass"}) == null) primary = {label: "Pass", act: {t: "pass"}};
+    else primary = {label: "Resolving…", disabled: true, stuck: true};
+  } else primary = {label: v.turnPlayer === me ? "Waiting for " + foe : foe + "’s turn", disabled: true};
+  primary.cls = lenClass(primary.label);
+
+  const stage = defending ? {ask: "Any blocks?"} : arsStep ? {ask: "Arsenal?"} : {pill: pay ? "Paying" : pillOf(v), hot: !!pay};
+
   return {
-    seat: me, over: !!v.over,
+    seat: me, over: !!v.over, mine, pay: !!pay, defending, arsStep,
     bout: [bout(you, me), bout(opp, 1 - me)],
     medal: {n: v.turn, mine: v.turnPlayer === me},
-    pill: pillOf(v), primary: primaryOf(v, ctx),
-    opp: half(opp, false), you: half(you, true),
-    hand: (you.hand || []).map(c => ({card: c, state: !mine ? "idle"
-      : ctx.legal({t: "play", uid: c.uid, from: "hand"}) == null ? "ready" : "dim"}))
+    stage, primary, staged, chain, hit,
+    opp: half(opp, false), you: half(you, true), hand,
+    selUid: sel ? sel.uid : selArs ? selArs.uid : null,
+    where: chain ? "On the chain · played by " + (chain.mine ? "you" : foe) : "",
+    insp: ui.insp || null, ref: ui.ref || null, sl: ui.sl || 0
   };
 }
 
@@ -95,6 +181,22 @@ function model(v, ctx){
 
 const CELL = ["weapon", "head", "chest", "arms", "legs"];
 const W_HAND = [80, 112], W_MAT = [44, 61];
+const HOLD_MS = 400;
+
+/* TAP vs HOLD (PHONE rule 9, SCREENS-TABLE 2): a press paints at once (boot.js); the tap commits on pointer-up, a hold of
+   400 ms opens the card instead, a drag past 8 px (a scroll) is neither */
+function press(tap, hold){
+  const of = e => e.currentTarget.__press;
+  const end = e => { const s = of(e); if(s){ clearTimeout(s.t); s.live = false; } };
+  return {
+    onPointerDown: e => { const s = {x: e.clientX, y: e.clientY, live: true, held: false, t: null};
+      if(hold) s.t = setTimeout(() => { if(s.live){ s.held = true; hold(); } }, HOLD_MS); e.currentTarget.__press = s; },
+    onPointerMove: e => { const s = of(e); if(s && s.live && (Math.abs(e.clientX - s.x) > 8 || Math.abs(e.clientY - s.y) > 8)){ clearTimeout(s.t); s.live = false; } },
+    onPointerUp: e => { const s = of(e); if(!s) return; clearTimeout(s.t); const go = s.live && !s.held; e.currentTarget.__press = null; if(go && tap) tap(); },
+    onPointerCancel: end, onPointerLeave: end,
+    onContextMenu: e => e.preventDefault()
+  };
+}
 
 function Bout(p){
   const [a, b] = p.m.bout, medal = p.m.medal;
@@ -112,79 +214,171 @@ function Bout(p){
 }
 
 function Lane(p){
-  const {h, who} = p, F = K.Face, B = K.Back;
+  const {h, who, on} = p, F = K.Face, B = K.Back, you = who === "you";
   const slot = (k, inner, tap) => html`<div data-b=${who + "-slot-" + k} data-tap=${tap ? "" : undefined}>${inner}</div>`;
   const cell = (k, i) => {
     const c = h.cols[i];
     if(!c) return slot(k, null, false);
-    const cls = "mat" + (c.tap ? " tap" : "") + (c.spent ? " spent" : "") + (c.ready ? " ready" : "");
+    const cls = "mat" + (c.tap ? " tap" : "") + (c.spent ? " spent" : "") + (c.ready ? " ready" : "") + (c.sel ? " sel" : "") + (c.blk ? " blk" : "");
     const badge = k === "legs" && h.extra ? html`<span class="badge xn">×${h.extra + 1}</span>` : null;
+    const shield = c.blk && c.def != null ? html`<span class="badge sh"><svg><use href="#i-shield"/></svg>${c.def}</span>` : null;
     return slot(k, c.card.hidden
       ? html`<${B} cls="mat" b=${who + "-" + k} label="Face-down equipment"/>`
-      : html`<${F} card=${c.card} cls=${cls} place="mat" def=${c.def} b=${who + "-" + k} w=${W_MAT[0]} h=${W_MAT[1]}>${badge}<//>`, true);
+      : html`<${F} card=${c.card} cls=${cls} place="mat" def=${c.def} b=${who + "-" + k} w=${W_MAT[0]} h=${W_MAT[1]} on=${on.gear(who, c)}>${badge}${shield}<//>`, true);
   };
   return html`<div class="lane" data-b=${who + "-lane"}>
     ${CELL.map(cell)}
     ${h.gy
-      ? html`<div data-b=${who + "-slot-gy"} data-tap><div class="pile s"><${F} card=${h.gy.card} cls="mat" place="mat" b=${who + "-gy"} w=${W_MAT[0]} h=${W_MAT[1]}><span class="count">${h.gy.n}</span><//></div></div>`
+      ? html`<div data-b=${who + "-slot-gy"} data-tap><div class="pile s"><${F} card=${h.gy.card} cls="mat" place="mat" b=${who + "-gy"} w=${W_MAT[0]} h=${W_MAT[1]} on=${on.gy(who, h.gy.card)}><span class="count">${h.gy.n}</span><//></div></div>`
       : html`<div data-b=${who + "-slot-gy"}></div>`}
-    <div data-b=${who + "-slot-deck"}>${h.deckN ? html`<div class="pile s"><${B} cls="mat" b=${who + "-deck"} label="Deck"><span class="count">${h.deckN}</span><//></div>` : null}</div>
-    <div data-b=${who + "-slot-arsenal"} data-tap=${who === "you" && h.arsenal ? "" : undefined}>${h.arsenal
-      ? html`<${B} cls="mat" b=${who + "-arsenal"} label=${who === "you" ? "Your arsenal" : "Their arsenal"}>${who === "you" ? html`<span class="count you">${h.arsenal.n}</span>` : null}<//>`
+    <div data-b=${who + "-slot-deck"}>${h.deckN ? html`<div class="pile s"><${B} cls="mat" b=${who + "-deck"} label="Deck"><span class="count">${h.deckN}</span><//></div>` : null}
+      ${h.fan.map((f, i) => html`<${F} key=${f.card.uid} card=${f.card} cls=${"mat pf" + (f.tap ? " tapfan" : "")} place="mat" b=${who + "-pitch-" + i} w=${W_MAT[0]} h=${W_MAT[1]}
+        tap=${f.tap} on=${f.tap ? on.unpitch(f.card) : null} style=${"transform:translateY(" + ((you ? 1 : -1) * (16 + 8 * i)) + "px)"}/>`)}</div>
+    <div data-b=${who + "-slot-arsenal"} data-tap=${you && h.arsenal ? "" : undefined}>${h.arsenal
+      ? (h.arsenal.face && you
+        ? html`<${B} cls=${"mat" + (h.arsenal.sel ? " sel" : "")} b=${who + "-arsenal"} label="Your arsenal" on=${on.arsenal(h.arsenal.card)}><span class="count you">${h.arsenal.n}</span><//>`
+        : html`<${B} cls="mat" b=${who + "-arsenal"} label="Their arsenal"/>`)
       : null}</div>
   </div>`;
 }
 
-/* AP gems then resource coins, only when non-zero (SCREENS-TABLE 1 DEV-1) */
+/* AP gems then resource coins, only when non-zero (SCREENS-TABLE 1 DEV-1); permanents sit at the right of the row */
 function Marks(p){
   const h = p.h;
-  if(!h.ap && !h.res) return null;
-  return html`<div class="mk">
+  return html`${h.ap || h.coins ? html`<div class="mk">
     ${h.ap ? html`<div class="ap" data-b=${p.b}>${Array.from({length: h.ap}, () => html`<svg class="ico"><use href="#i-ap"/></svg>`)}</div>` : null}
-    ${h.res ? html`<div class="coins">${Array.from({length: h.res}, () => html`<div class="coin"></div>`)}</div>` : null}
-  </div>`;
+    ${h.coins ? html`<div class="coins" data-b=${p.cb}>${Array.from({length: h.coins}, () => html`<span class="coin">1</span>`)}</div>` : null}
+  </div>` : null}
+  ${h.perms.length ? html`<div class="perm" data-b=${p.pb}>${h.perms.map(x => html`<${K.Face} card=${x.card} cls="hb" place="perm" b=${p.pb + "-" + x.card.name}>${x.n > 1 ? html`<span class="xn2">×${x.n}</span>` : null}<//>`)}</div>` : null}`;
+}
+
+/* the left of the stage: the card being paid for, or the link on the chain; the right: what it costs / hits for */
+function Stage(p){
+  const m = p.m, F = K.Face;
+  return html`<section class="centre" data-b="stage">
+    ${m.stage.ask ? html`<div class="ask" data-b="ask">${m.stage.ask}</div>` : html`<div class=${"pill" + (m.stage.hot ? " hot" : "")} data-b="pill">${m.stage.pill}</div>`}
+    ${m.staged ? html`<div class="atk" data-b="staged"><${F} card=${m.staged.card} cls="chain staged" place="chain" tap b="staged-card" on=${p.on.inspect(m.staged.card, "Being played")}><span class="costring">${m.staged.need}</span><//></div>` : null}
+    ${m.chain ? html`<div class=${"atk" + (m.chain.mine ? " mine" : "")} data-b="attack"><${F} card=${m.chain.card} cls="chain" place="chain" tap b="attack-card" on=${p.on.inspect(m.chain.card, m.where)}/></div>` : null}
+    ${m.hit && m.hit.kind === "cost" ? html`<div class="hit" data-b="hit"><div class="lab">Cost</div>
+      <div class="cost-coins">${Array.from({length: m.hit.need}, (_, i) => i < m.hit.have ? html`<span class="coin">1</span>` : html`<span class="coin off"></span>`)}</div>
+      <div class=${"paid" + (m.hit.have < m.hit.need ? " short" : "")}>Paid ${Math.min(m.hit.have, m.hit.need)}/${m.hit.need}</div></div>` : null}
+    ${m.hit && m.hit.kind === "hit" ? html`<div class="hit" data-b="hit"><div class="lab">Hit for</div><div class="n">${m.hit.n}</div></div>` : null}
+    <a class="classic" href="index.html" data-b="classic">Classic</a>
+  </section>`;
 }
 
 function Table(p){
-  const m = p.m, F = K.Face, B = K.Back;
-  const primary = m.primary;
-  return html`<div class="stage" data-state="t1">
+  const m = p.m, F = K.Face, B = K.Back, on = p.on, primary = m.primary, pay = m.pay;
+  const handX = i => "calc(var(--gut) + " + i + " * (var(--cw-hand) + var(--gap-card)) + var(--cw-hand) / 2 - " + m.sl + "px)";
+  const at = m.ref && m.ref.at && m.ref.at.k === "hand" ? m.ref.at.i : null;
+  const selI = m.selUid != null ? m.hand.findIndex(x => x.card.uid === m.selUid) : -1;
+  const plate = (i, inner) => html`<div class="peek" data-b="peek" style=${"left:min(calc(100% - 66px), max(66px, " + handX(i) + "));bottom:calc(var(--h-hub) + var(--ch-hand) + 26px)"}>${inner}</div>`;
+  return html`<div class="stage" data-state=${m.insp ? "t10" : m.pay ? "t3" : "t1"}>
     <${Bout} m=${m}/>
     <main class="world" data-b="world">
       <section class="half opp" data-b="opp-half">
-        <div class="mkrow"><${Marks} h=${m.opp} b="opp-ap"/><div class="hf" data-b="their-hand">${Array.from({length: m.opp.handN}, () => html`<${B} cls="hb"/>`)}</div></div>
-        <${Lane} h=${m.opp} who="opp"/>
+        <div class="mkrow"><${Marks} h=${m.opp} b="opp-ap" cb="opp-coins" pb="opp-perm"/><div class="hf" data-b="their-hand">${Array.from({length: m.opp.handN}, () => html`<${B} cls="hb"/>`)}</div></div>
+        <${Lane} h=${m.opp} who="opp" on=${on}/>
       </section>
-      <section class="centre" data-b="stage"><div class="pill" data-b="pill">${m.pill}</div>
-        <a class="classic" href="index.html" data-b="classic">Classic</a></section>
+      <${Stage} m=${m} on=${on}/>
       <section class="half you" data-b="you-half">
-        <${Lane} h=${m.you} who="you"/>
-        <div class="mkrow"><${Marks} h=${m.you} b="ap"/></div>
+        <${Lane} h=${m.you} who="you" on=${on}/>
+        <div class="mkrow"><${Marks} h=${m.you} b="ap" cb="coins" pb="you-perm"/></div>
       </section>
-      <section class="tray" data-b="tray"><div class="handrow" data-b="handrow">
-        ${m.hand.map((x, i) => html`<${F} key=${x.card.uid} card=${x.card} cls=${"hand " + x.state} place="hand" tap b=${"hand-" + i} w=${W_HAND[0]} h=${W_HAND[1]}/>`)}
+      <section class="tray" data-b="tray"><div class="handrow" data-b="handrow" onScroll=${on.scroll}>
+        ${m.hand.map((x, i) => html`<${F} key=${x.card.uid} card=${x.card} cls=${"hand " + x.state + (at === i ? " refused" : "")} place="hand" tap b=${"hand-" + i} w=${W_HAND[0]} h=${W_HAND[1]} on=${on.hand(x.card, i)}>
+          ${x.state === "blk" && x.card.def != null ? html`<span class="badge sh"><svg><use href="#i-shield"/></svg>${x.card.def}</span>` : null}<//>`)}
       </div></section>
     </main>
+    ${selI >= 0 && !m.ref ? plate(selI, html`<span class="name">${m.hand[selI].card.name}</span>`) : null}
+    ${m.ref ? (at != null ? plate(at, html`<span class="reason">${m.ref.text}</span>`)
+      : html`<div class="peek" data-b="peek" style="left:50%;bottom:calc(var(--h-hub) + 12px)"><span class="reason">${m.ref.text}</span></div>`) : null}
+    ${m.insp ? html`<${SH.Inspect} card=${m.insp.card} where=${m.insp.where} onClose=${on.close}/>` : null}
+    ${m.sheet ? html`<${SH.Options} sheet=${m.sheet} onAct=${on.act}/>` : null}
     <footer class="hub" data-b="hub">
-      <button class="btn sec sq" data-tap data-b="hub-left" aria-label="Menu"><svg class="ico"><use href="#i-menu"/></svg></button>
-      <button class=${"btn primary" + (primary.disabled ? " dis" : "")} data-tap data-b="primary" disabled=${primary.disabled}>${primary.label}</button>
-      <button class="btn sec sq" data-tap data-b="hub-right" aria-label="Pad"><svg class="ico"><use href="#i-pad"/></svg></button>
+      ${m.insp ? html`<span style="width:44px;flex:none"></span>` : html`<button class="btn sec sq" data-tap data-b="hub-left" aria-label=${pay ? "Cancel the play" : "Menu"} onClick=${pay ? on.cancel : on.menu}><svg class="ico"><use href=${pay ? "#i-x" : "#i-menu"}/></svg></button>`}
+      <button class=${"btn primary" + primary.cls + (primary.disabled ? " dis" : "")} data-tap data-b="primary" disabled=${primary.disabled} onClick=${on.primary}>${primary.label}</button>
+      ${m.insp ? html`<span style="width:44px;flex:none"></span>` : html`<button class="btn sec sq" data-tap data-b="hub-right" aria-label="Pad"><svg class="ico"><use href="#i-pad"/></svg></button>`}
     </footer>
   </div>`;
 }
 
 /* the live table: the session's state in, one render per board push; the view is rebuilt from it each time */
 function Live(p){
-  const s = p.session, st = useState(s.state()), state = st[0], setState = st[1];
+  const s = p.session, J = root.DawnJudge, me = s.seat;
+  const st = useState(s.state()), state = st[0], setState = st[1];
+  const us = useState({sel: null, insp: null, ref: null, sl: 0}), ui = us[0], setUi = us[1];
   useEffect(() => s.subscribe(setState), [s]);
+  useEffect(() => { if(!ui.ref) return; const t = setTimeout(() => setUi(u => u.ref === ui.ref ? {...u, ref: null} : u), 2400); return () => clearTimeout(t); }, [ui.ref]);
   const game = root.DawnGame;
-  const m = model(root.DawnView.view(state, s.seat), {
-    seat: s.seat, holder: root.DawnJudge.waitingOn(state), legal: a => root.DawnJudge.legal(state, a, s.seat),
-    game: {slotOf: game.slotOf, gearDef: game.gearDef}, art: [s.heroArt(0), s.heroArt(1)],
-    name: i => i === s.seat ? "You" : firstName(s.names[i])
-  });
-  return html`<${Table} m=${m}/>`;
+  const L = a => J.legal(state, a, me);
+  const ctx = {
+    seat: me, holder: J.waitingOn(state), legal: L, ui,
+    defending: root.DawnPriority.canDeclareDefenders(state, me),
+    game: {slotOf: game.slotOf, gearDef: game.gearDef}, paySum: J.paySum, art: [s.heroArt(0), s.heroArt(1)],
+    name: i => i === me ? "You" : firstName(s.names[i])
+  };
+  const v = root.DawnView.view(state, me);
+  const m = model(v, ctx);
+  /* what this seat was asked that the table cannot draw yet, or a holder with no drawable button: plain options */
+  const asked = SH.sheetOf(v, {seat: me, legal: L});
+  m.sheet = asked || (m.primary.stuck ? SH.stuckSheet(v, {seat: me, legal: L, moves: J.moves(state, me)}) : null);
+  if(m.sheet) m.primary = {...m.primary, disabled: true};
+
+  const refuse = (text, at) => setUi(u => ({...u, ref: {text, at: at || {k: "stage"}}, sel: null}));
+  const submit = (a, at) => { const why = a.suggest ? (() => { const x = s.suggest(); return x ? s.submit(x) : "nothing to suggest"; })() : s.submit(a);
+    if(why) refuse(why, at); else setUi(u => ({...u, sel: null, ref: null})); return !why; };
+  const open = (card, where) => setUi(u => ({...u, insp: {card, where}, sel: null, ref: null}));
+  const mat = (who, card) => who === "you" ? "Your equipment" : "Their equipment";
+  /* an attack that can go at more than one target needs the target said (CR 1.4.5): the hero unless the engine offers others */
+  const withTarget = (a, card) => {
+    const T = J.targets(state, 1 - me, null);
+    return T.length > 1 && root.DawnParser.isAttack(card) ? {...a, target: J.targetSpec(T[0])} : a;
+  };
+
+  const on = {
+    scroll: e => { const x = e.currentTarget.scrollLeft; setUi(u => Math.abs(u.sl - x) < 1 ? u : {...u, sl: x}); },
+    hand: (card, i) => press(() => {
+      if(m.pay) return submit({t: "paySel", uid: card.uid}, {k: "hand", i});
+      if(m.arsStep){ const a = {t: "arsenal", uid: card.uid}; const why = L(a);
+        return why ? refuse(why, {k: "hand", i}) : setUi(u => ({...u, sel: u.sel && u.sel.uid === card.uid ? null : {uid: card.uid, from: "hand"}, ref: null})); }
+      if(m.defending) return submit({t: "defend", uid: card.uid}, {k: "hand", i});
+      if(m.selUid === card.uid) return setUi(u => ({...u, sel: null, ref: null}));
+      const a = withTarget({t: "play", uid: card.uid, from: "hand"}, card), why = L(a);
+      if(why) return refuse(why, {k: "hand", i});
+      setUi(u => ({...u, sel: {uid: card.uid, from: "hand"}, ref: null}));
+    }, () => open(card, m.defending ? "In your hand" : "In your hand")),
+    gear: (who, c) => press(() => {
+      if(who === "you" && c.ready && !c.defend) return m.selUid === c.card.uid ? setUi(u => ({...u, sel: null})) : setUi(u => ({...u, sel: {uid: c.card.uid, from: "gear"}, ref: null}));
+      if(who === "you" && (c.ready || c.blk) && m.defending) return submit({t: "defend", uid: c.card.uid});
+      open(c.card, mat(who));
+    }, () => open(c.card, mat(who))),
+    gy: (who, card) => press(() => open(card, who === "you" ? "Top of your graveyard" : "Top of their graveyard"), null),
+    arsenal: card => press(() => {
+      const a = {t: "play", uid: card.uid, from: "arsenal"}, why = L(withTarget(a, card));
+      if(why) return refuse(why);
+      setUi(u => ({...u, sel: {uid: card.uid, from: "arsenal"}, ref: null}));
+    }, () => open(card, "Your arsenal, face down to them")),
+    unpitch: card => press(() => submit({t: "paySel", uid: card.uid}), null),
+    inspect: (card, where) => press(() => open(card, where), null),
+    close: () => setUi(u => ({...u, insp: null})),
+    cancel: () => submit({t: "payCancel"}),
+    menu: () => {},
+    act: a => submit(a),
+    primary: () => {
+      const pr = m.primary;
+      if(pr.close) return setUi(u => ({...u, insp: null}));
+      if(pr.disabled) return;
+      if(pr.act) return submit(pr.act);
+      if(pr.play){
+        const sel = pr.play, c = sel.from === "gear" ? v.sides[me].gear.find(x => x.uid === sel.uid) : sel.from === "arsenal" ? v.sides[me].arsenal : v.sides[me].hand.find(x => x.uid === sel.uid);
+        const base = sel.from === "gear" ? {t: "activate", uid: sel.uid} : {t: "play", uid: sel.uid, from: sel.from};
+        return submit(withTarget(base, c), sel.from === "hand" ? {k: "hand", i: m.hand.findIndex(x => x.card.uid === sel.uid)} : null);
+      }
+    }
+  };
+  return html`<${Table} m=${m} on=${on}/>`;
 }
 
-return {model, laneOf, primaryOf, pillOf, Table, Live, Bout, Lane};
+return {model, laneOf, pillOf, permsOf, press, Table, Live, Bout, Lane};
 });
