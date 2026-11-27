@@ -1334,6 +1334,7 @@ button.tag::after{content:"";position:absolute;inset:-16px -8px -16px}
 .tk-hero{display:flex;align-items:center;gap:7px;min-width:0;flex:0 1 auto}
 .tk-port{width:36px;height:36px;border-radius:50%;overflow:hidden;flex:none;border:1px solid var(--line);background:var(--forge);box-shadow:0 2px 8px rgba(0,0,0,.5)}
 .tk-port img{width:100%;height:100%;object-fit:cover;object-position:50% 16%;aspect-ratio:auto}
+.tk-ftr .tk-port img{object-position:50% 3%;transform:scale(1.8)}
 .tk-name{font-family:'Big Shoulders Display';font-weight:800;font-size:19px;letter-spacing:.04em;text-transform:uppercase;color:var(--bone);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1}
 .tk-rate{font-style:normal;font-family:'Spline Sans Mono';font-weight:500;font-size:var(--fs-sm);color:var(--bone-dim);margin-left:6px;letter-spacing:0}
 .tk-think{display:inline-flex;gap:3px;align-items:center}
@@ -1355,15 +1356,27 @@ button.tag::after{content:"";position:absolute;inset:-16px -8px -16px}
 .tk-n{font:700 12px 'Spline Sans Mono';color:var(--bone);line-height:1}
 .tk-ars{display:inline-flex;align-items:center;flex:none;margin-left:2px}
 .tk-ars .tk-cback{width:23px;height:32px;transform:rotate(-5deg);border-color:var(--y)}
-/* gear at a glance: defence chips in slot order, a weapon's power */
-.tk-geargrp{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:3px;min-height:44px;min-width:44px;padding:0 6px;background:rgba(36,27,22,.7);border:1px solid var(--line);border-radius:8px}
-.tk-gchip{display:inline-flex;align-items:center;gap:1px;font:700 12.5px 'Spline Sans Mono';color:var(--bone);line-height:1}
-.tk-gchip i{font-style:normal;color:var(--b);font-size:11px;margin-right:1px}
-.tk-gchip.w i{color:var(--r)}
-.tk-gchip.worn{opacity:.45}
-.tk-gchip.on b{color:#9cc2ff;text-decoration:underline}
+/* gear as it lies on the mat (v7.20): small real cards in slot order, a die on each; they close up and overlap
+   (the left edge and its die showing) only when the row is narrow. The zone is a printed outline, as on a playmat. */
+.tk-geargrp{flex:0 1 auto;min-width:44px;display:inline-flex;align-items:center;gap:3px;min-height:44px;padding:2px 6px 2px 8px;background:transparent;border:1px solid rgba(232,223,208,.09);border-radius:7px}
+.tk-gcard{position:relative;flex:0 1 auto;width:28px;min-width:12px;height:39px;transition:transform .2s ease-out}
+.tk-gcard:last-child{flex-shrink:0}
+.tk-gface{position:absolute;left:0;top:0;width:28px;height:39px;border-radius:3px;overflow:hidden;box-shadow:0 2px 5px rgba(0,0,0,.65),0 0 0 1px rgba(0,0,0,.5)}
+.tk-gface img,.tk-gface .ccfall{width:100%;height:100%;object-fit:cover;display:block}
+.tk-gface .ccfall{font-size:0;padding:0}
+.tk-gface .tk-cback{width:100%;height:100%}
+.tk-gdie{position:absolute;left:-4px;bottom:-3px;min-width:15px;height:15px;padding:0 2px;border-radius:3px;display:flex;align-items:center;justify-content:center;
+  background:#2b5895;border:1px solid #b2cdf0;color:#fff;font:700 10.5px 'Spline Sans Mono';line-height:1;box-shadow:0 1px 3px rgba(0,0,0,.7);z-index:1}
+.tk-gcard.w .tk-gdie{background:#8f231f;border-color:#f3c1bd}
+.tk-gcard.worn .tk-gface{opacity:.4;filter:grayscale(.7)}
+.tk-gcard.worn .tk-gdie{background:#3a332e;border-color:var(--line);color:var(--bone-dim)}
+.tk-gcard.on{transform:translateY(-4px)}
+.tk-gcard.on .tk-gface{box-shadow:0 6px 10px rgba(0,0,0,.7),0 0 0 2px #6fa0e0,0 0 10px rgba(111,160,224,.6)}
+.tk-gcard.spent{flex:0 0 auto;width:39px}
+.tk-gcard.spent .tk-gface{left:5.5px;transform:rotate(90deg);filter:brightness(.8)}
+.tk-gcard.spent .tk-gdie{left:0;bottom:3px}
 /* piles: this turn's pitch, graveyard, banished face up; the deck a back */
-.tk-pilegrp{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;min-width:44px;padding:0 6px;background:rgba(36,27,22,.7);border:1px solid var(--line);border-radius:8px}
+.tk-pilegrp{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;min-width:44px;padding:0 6px;background:transparent;border:1px solid rgba(232,223,208,.09);border-radius:7px}
 .tk-mpile{position:relative;display:inline-block;width:23px;height:32px;flex:none}
 .tk-mpile img,.tk-mpile .ccfall{width:100%;height:100%;object-fit:cover;border-radius:2px;display:block}
 .tk-mpile .ccfall{font-size:0;padding:0}
@@ -1400,13 +1413,23 @@ button.tag::after{content:"";position:absolute;inset:-16px -8px -16px}
 .tk-links{position:absolute;left:0;top:50%;transform:translateY(-50%);width:44px;padding:0;background:none;border:0;opacity:.75}
 .tk-links img,.tk-links .ccfall{width:100%;aspect-ratio:5/7;object-fit:cover;border-radius:3px;display:block;box-shadow:3px 3px 0 #2a201a,6px 6px 0 #221a15}
 .tk-links .tk-n{position:absolute;right:-6px;bottom:-6px;background:var(--ink);border:1px solid var(--line);border-radius:8px;padding:1px 4px}
-/* the turn token: a coin on the mat on the turn player's side */
-.tk-token{display:flex;flex-direction:column;align-items:center;gap:6px;transition:transform .45s cubic-bezier(.3,1.3,.5,1)}
-.tk-token.them{transform:translateY(-34%)}
-.tk-token.you{transform:translateY(34%)}
-.tk-token b{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:800 26px 'Big Shoulders Display';color:#2b1d07;
-  background:radial-gradient(circle at 35% 30%,#f8dc8c,#c4922a 70%,#8d6413);border:2px solid #f9e6ab;box-shadow:0 6px 18px rgba(0,0,0,.6),inset 0 -3px 6px rgba(0,0,0,.25)}
-.tk-token span{font:600 11px 'Spline Sans Mono';letter-spacing:.14em;text-transform:uppercase;color:var(--bone-dim)}
+/* the turn token: the turn player's medallion, lying on their half of the mat; it slides across when the turn passes
+   (`top`, once a turn: a layout change nobody pays for) and settles in with a small bounce when the chain clears */
+.tk-token{position:absolute;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:6px;
+  transition:top .6s cubic-bezier(.3,1.25,.5,1);animation:tktok .3s ease-out}
+.tk-token.them{top:30%}
+.tk-token.you{top:70%}
+@keyframes tktok{from{opacity:0;transform:translate(-50%,-50%) scale(.8)}to{opacity:1;transform:translate(-50%,-50%)}}
+.tk-token b{position:relative;width:58px;height:58px;border-radius:50%;overflow:hidden;display:block;padding:3px;
+  background:radial-gradient(circle at 35% 30%,#f8dc8c,#c4922a 70%,#8d6413);box-shadow:0 6px 18px rgba(0,0,0,.6),0 0 0 1px #f9e6ab,0 0 22px rgba(232,179,60,.25)}
+/* a hero CARD in a round frame: scaled onto its art band (~15%..55% of the card's height), the face, not the frame */
+.tk-token b img{width:100%;height:100%;object-fit:cover;object-position:50% 3%;transform:scale(1.8);display:block}
+.tk-token b{isolation:isolate}
+.tk-token b::after{content:"";position:absolute;inset:3px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.45),inset 0 -6px 10px rgba(0,0,0,.35);pointer-events:none}
+.tk-token b>*{border-radius:50%;overflow:hidden}
+.tk-token b .fallbackart{width:100%;height:100%;border-radius:50%}
+.tk-token b .fallbackart{display:flex;align-items:center;justify-content:center;font:800 11px 'Big Shoulders Display';background:var(--forge);color:var(--bone)}
+.tk-token span{font:600 11px 'Spline Sans Mono';letter-spacing:.14em;text-transform:uppercase;color:var(--bone-dim);white-space:nowrap}
 /* THE PAD: paper on the mat, life in a handwritten face */
 .paper{background:linear-gradient(transparent 0 0),repeating-linear-gradient(180deg,transparent 0 17px,var(--tk-rule) 17px 18px),var(--tk-paper);color:var(--tk-ink)}
 /* THE BOUT: the fighting-game strip across the top — you left, them right, bars draining to the middle */
@@ -1518,6 +1541,22 @@ button.tag::after{content:"";position:absolute;inset:-16px -8px -16px}
 .tk-padv em{font:600 16px 'Caveat',cursive;font-style:normal;color:var(--tk-pencil);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .tk-padv.blank{min-height:0}
 .tk-padnote{font:500 12px 'Spline Sans';opacity:.75;margin:12px 0}
+/* THE RESULT (v7.20): the pad on the end panel — a sheet laid a little askew, the winner's total ringed in red pencil, GG */
+.reveal.tk-end{justify-content:flex-start;padding-top:max(28px,env(safe-area-inset-top));overflow-y:auto}
+.reveal.tk-end .endtitle{margin-bottom:12px}
+.tk-result{position:relative;width:min(330px,94%);flex:none;padding:12px 14px 18px 30px;border-radius:2px;text-align:left;transform:rotate(-1.2deg);
+  box-shadow:0 14px 34px rgba(0,0,0,.65),0 2px 0 rgba(0,0,0,.25);animation:tkresin .45s .15s cubic-bezier(.2,1.2,.4,1) both;
+  background:linear-gradient(90deg,transparent 21px,rgba(179,38,30,.45) 21px 22px,transparent 22px),repeating-linear-gradient(180deg,transparent 0 17px,var(--tk-rule) 17px 18px),var(--tk-paper)}
+@keyframes tkresin{from{opacity:0;transform:translateY(24px) rotate(-4deg)}to{opacity:1;transform:rotate(-1.2deg)}}
+.tk-resscroll{max-height:min(36vh,300px);overflow-y:auto;scrollbar-width:none;padding:4px 10px 4px 0}
+.tk-resscroll::-webkit-scrollbar{display:none}
+.tk-padv.ring>span{position:relative}
+.tk-padv.ring>span::after{content:"";position:absolute;left:-10px;right:-10px;top:-3px;bottom:-4px;border:2.5px solid var(--tk-pencil);border-radius:50%;
+  transform:rotate(-7deg);border-left-color:transparent;animation:tkring .5s .75s ease-out both}
+@keyframes tkring{from{opacity:0;transform:rotate(-40deg) scale(.6)}to{opacity:1;transform:rotate(-7deg)}}
+.tk-gg{position:absolute;right:14px;bottom:-6px;font:700 46px 'Caveat',cursive;color:var(--tk-pencil);transform:rotate(-10deg);line-height:1;
+  text-shadow:0 1px 0 rgba(255,255,255,.4);animation:tkgg .4s 1.1s ease-out both;pointer-events:none}
+@keyframes tkgg{from{opacity:0;transform:rotate(-10deg) scale(1.6)}to{opacity:1;transform:rotate(-10deg)}}
 .tk-looksec{margin-bottom:12px}
 .tk-lookh{font:700 11px 'Spline Sans Mono';letter-spacing:.12em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:6px}
 .tk-lookgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:7px}
@@ -1543,7 +1582,8 @@ button.tag::after{content:"";position:absolute;inset:-16px -8px -16px}
 @media (prefers-reduced-motion:reduce){
   .tk-call,.tk-say,.tk-glimpse,.tk-pitchc,.tk-blockc,.tk-atk,.tk-stackc,.tk-blk,.tk-pop,.tk-hp,.tk-sheetwrap,.tk-think i{animation:none !important}
   .tk-pop{opacity:0}.tk-ftr .shbar .trail,.tk-ftr .shbar .fill.up{transition:none}
-  .tk-token{transition:none}
+  .tk-token{transition:none;animation:none}.tk-gcard{transition:none}
+  .tk-result,.tk-padv.ring>span::after,.tk-gg{animation:none}
 }
 </style>
 </head>
@@ -1572,7 +1612,7 @@ window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/ca
    service-role key lives only in the function's own environment and is never in this repo. Flip `on` in the same
    release that deploys the function (DEPLOY.md under the supabase folder). */
 window.SERVER_TABLE = {on: true, url: "https://fokcpzplomjsraquaaid.supabase.co", key: "sb_publishable_E-p8S8CA_F2C-RD25nLiuw_xPZttEAu", fn: "table"};
-window.APP_VER = "7.19"; /* v7.19 - Table Talk: the fighting-game bout across the top of the new table, the mat left to the cards, your line spoken; see CHANGELOG.md. */
+window.APP_VER = "7.20"; /* v7.20 - Table Talk: gear as cards on the mat, the turn medallion, your play flying in, and the pad as the result; see CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. RULING (user, 2026-11-07): "Keep the coin flip for
    now I like the speed of it. Let's plan for the ranked Elo ladder we will
    use rock paper scissors but for vs ai use coin flip." So against the AI the
@@ -3127,40 +3167,54 @@ function SoundBtn(){
    opponent's play or a stale mark never does; a mark is used once and goes stale
    after 2.5 s; off under reduced motion. */
 const Glide = (() => {
-  let last = null;
+  /* ONE MARK PER CARD (v7.20): a single slot lost the played card's mark to the first pitch tap after it, so a play that
+     had to be paid for never flew. `keep` holds a card's mark fresh while it is being paid for (TableBoard, each render
+     of a pending payment), so the flight still starts where the card left the hand. */
+  const marks = new Map();
   const reduced = () => { try{ return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; }catch(e){ return false; } };
   return {
     mark(card, e){
       const el = e && e.currentTarget;
       if(!card || card.uid == null || !el || !el.getBoundingClientRect) return;
-      last = {uid: card.uid, r: el.getBoundingClientRect(), t: Date.now()};
+      const now = Date.now();
+      for(const [k, m] of marks) if(now - m.t > 2500) marks.delete(k);
+      marks.set(card.uid, {r: el.getBoundingClientRect(), t: now});
     },
+    keep(uid){ const m = marks.get(uid); if(m) m.t = Date.now(); },
     take(uid){
-      const m = last;
-      if(!m || m.uid !== uid || Date.now() - m.t > 2500) return null;
-      last = null;
+      const m = marks.get(uid);
+      if(!m) return null;
+      marks.delete(uid);
+      if(Date.now() - m.t > 2500) return null;
       return reduced() ? null : m.r;
     }
   };
 })();
-function FeatCard({card}){
-  const ref = uR(null);
+/* THE FLIGHT IN, for whichever element shows the card the tap committed (the classic board's featured card, the new
+   table's card on the stack or chain). `ms` and `ease` tune it; `land` (Table Talk) adds a small settle at the end, a card
+   slapped onto the mat. A script animation composites over a CSS one, so the element's own entrance runs unseen beneath. */
+function useGlideIn(ref, uid, ms, land){
   uE(() => {
-    const el = ref.current, from = card && Glide.take(card.uid);
+    const el = ref.current, from = uid != null && Glide.take(uid);
     if(!el || !from || !el.animate) return;
     const to = el.getBoundingClientRect();
     if(!to.width || !from.width) return;
     const dx = (from.left + from.width / 2) - (to.left + to.width / 2), dy = (from.top + from.height / 2) - (to.top + to.height / 2);
-    /* the slot scrolls (overflow-y:auto), which would clip the flight: lift it for 240 ms */
+    /* the slot scrolls (overflow-y:auto), which would clip the flight: lift it for the flight */
     const slot = el.parentNode, was = slot ? slot.style.overflow : "";
     try{
       if(slot) slot.style.overflow = "visible";
-      const an = el.animate([{transform: "translate(" + dx + "px," + dy + "px) scale(" + (from.width / to.width) + ")", opacity: .75},
-                             {transform: "none", opacity: 1}], {duration: 240, easing: "cubic-bezier(.2,.8,.2,1)"});
+      const k0 = {transform: "translate(" + dx + "px," + dy + "px) scale(" + (from.width / to.width) + ")", opacity: .75};
+      const an = el.animate(land ? [k0, {transform: "scale(1.05)", opacity: 1, offset: .78}, {transform: "none", opacity: 1}]
+                                 : [k0, {transform: "none", opacity: 1}], {duration: ms || 240, easing: "cubic-bezier(.2,.8,.2,1)"});
       const done = () => { if(slot) slot.style.overflow = was; };
       an.onfinish = done; an.oncancel = done;
     }catch(e){ if(slot) slot.style.overflow = was; }
-  }, [card && card.uid]);
+  }, [uid]);
+}
+function FeatCard({card}){
+  const ref = uR(null);
+  useGlideIn(ref, card && card.uid);
   return <div className="featured" ref={ref}><CardFrame card={card}/></div>;
 }
 function ChainLink({l}){
@@ -7812,12 +7866,13 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
    `tone` is win / lose / draw and only colours the screen. The heading stays
    the FIRST line of what the overlay reads out, which tools/page.js checks, the whole
    overlay still leaves on a tap, and the button is the visible way out. */
-function EndPanel({tone, title, kicker, names, stat, statLbl, onExit, leave, children}){
+function EndPanel({tone, title, kicker, names, stat, statLbl, onExit, leave, pad, children}){
+  /* `pad` (Table Talk's result, the scratch sheet) stands where the names card and the stat stand */
   return (
-    <div className={"reveal end-"+tone} onClick={onExit} role="dialog" aria-label={title}>
+    <div className={"reveal end-"+tone+(pad?" tk-end":"")} onClick={onExit} role="dialog" aria-label={title}>
       <h2 className="disp endtitle">{title}</h2>
-      <div className="card clip"><div className="rar">{kicker}</div><h3>{names}</h3></div>
-      {stat!=null && <div className="endstat"><b className="mono">{stat}</b><span>{statLbl}</span></div>}
+      {pad || <div className="card clip"><div className="rar">{kicker}</div><h3>{names}</h3></div>}
+      {!pad && stat!=null && <div className="endstat"><b className="mono">{stat}</b><span>{statLbl}</span></div>}
       {children}
       <button className="bigbtn endleave" onClick={e=>{e.stopPropagation(); onExit();}}>{leave||"Continue"}</button>
       <div className="endhint">or tap anywhere</div>
@@ -10532,6 +10587,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
   if(link!=="connected")   pips.push([link, "warn"]);
 
   const featured = g.featured;
+  if(pay && pay.card) Glide.keep(pay.card.uid);   /* the card being paid for keeps its flight from the hand (Glide) */
 
   /* ---- THE PIECES BOTH LAYOUTS DRAW (Table Talk TT0, v7.18). Built ONCE, here, so the classic board and the
      new table render the very same controls (the no-mirror rule one layer up): the ask (the status line), the
@@ -10548,12 +10604,19 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                 : charge ? <div className="statusline">Charge for <b>{charge.card.name}</b>? A card from your hand goes to your <b>soul</b> as an additional cost — you may decline.</div>
                 : usurp ? <div className="statusline">Usurp for <b>{usurp.card.name}</b> — which Runechant is destroyed to pay for it?</div>
                 : bancost ? <div className="statusline"><b>{bancost.card.name}</b> has an additional cost — banish a card from your graveyard, or decline.</div>
+                /* TABLE TALK (TT1): the ask in a player's words, short; the hub carries Cancel and "Pitch & play", so the line
+                   carries no button of its own (the classic line below is unchanged) */
+                : pay && talk ? <div className="statusline">{(()=>{const short=Math.max(0,pay.need-me.res-DawnJudge.paySum(me));
+                    const why=short>0?null:DawnJudge.legal(g,{t:"payConfirm"},mySeat);
+                    return short>0 ? <span>Pitch for <b>{talkShort(pay.card)}</b> · <b>{short}</b> to go</span>
+                      : why ? <span>{why}</span> : <span><b>{talkShort(pay.card)}</b> is paid for</span>;})()}</div>
                 : pay ? <div className="statusline">Paying <b>{pay.card.name}</b> — tap cards below to pitch · {(()=>{const short=Math.max(0,pay.need-me.res-DawnJudge.paySum(me)); /* COVERED IS NOT CONFIRMABLE when a second question refuses the pitch
      (v4.91 — Savage Feast's additional discard): say `legal`'s reason
      rather than "covered ✓" over a dead button (v2.83, v4.59). */
   const why=short>0?null:DawnJudge.legal(g,{t:"payConfirm"},mySeat); return short>0?<span>need <b>{short}</b> more</span>:why?<span>{why}</span>:<span>covered ✓</span>;})()}
                     <button onClick={()=>fire({t:"payCancel"})}>✕ cancel</button></div>
                 : theirPay ? <div className="statusline">{them.name} is paying for something…</div>
+                : myArsStep && talk ? <div className="statusline">Tap a card to put in your <b>arsenal</b></div>
                 : myArsStep ? <div className="statusline">Tap a card below for <b>arsenal</b>
                     <button onClick={()=>fire({t:"arsenal",uid:null})}>skip</button></div>
                 : g.phase==="end" ? <div className="statusline">End phase — {them.name} is finishing their turn.</div>
@@ -10869,15 +10932,18 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
           existing rule rather than overriding it. */}
       {beatDummy && onRecord
         ? <WinPanel score={g.turn + (me.wasted||0)} onExit={onExit}><Recap g={g} me={mySeat}/></WinPanel>
-        : over && <EndPanel tone={drawText ? "draw" : over.winner===mySeat ? "win" : "lose"}
+        /* TABLE TALK: the game's last call ("DASH WINS") is said first; the result comes when it is done (or tapped on) */
+        : over && !(talk && calls.some(l => l && l.k === "over")) && <EndPanel tone={drawText ? "draw" : over.winner===mySeat ? "win" : "lose"}
           title={drawText ? drawText.title : over.winner===mySeat ? "YOU TAKE IT" : "THEY TAKE IT"}
           kicker={"turn "+g.turn+" · table "+code}
           names={drawText ? drawText.names : g.sides[over.winner].name+" over "+g.sides[1-over.winner].name}
-          stat={me.hp>0 ? me.hp : null} statLbl="life left" onExit={onExit} leave="Leave the table">
+          stat={me.hp>0 ? me.hp : null} statLbl="life left" onExit={onExit} leave="Leave the table"
+          pad={talk ? <TalkResult pad={pad} mySeat={mySeat} them={them} first={match.first != null ? match.first : null} turn={g.turn}
+                        winner={drawText ? null : over.winner}/> : null}>
         <p className="endnote">
           {drawText ? drawText.note : over.how==="life" ? "Life to zero." : "The game ended on "+over.how+"."}
         </p>
-        <Recap g={g} me={mySeat}/>
+        {!talk && <Recap g={g} me={mySeat}/>}
         {!local && <RankChange table={table} seat={mySeat}/>}
         {/* PLAY AGAIN (v6.81, NEXT 1): a server game's end screen goes straight back into the queue, the same kind of match (friendly or ranked); the walk
             back through three screens is gone. The finished table no longer counts toward the open-table cap (005), so the new search is never refused for it. */}
@@ -11302,18 +11368,27 @@ function TalkMarks({sd}){
     {ap > 0 && <span className="tk-apw" title="action points"><span className="tk-ap"/>{ap > 1 && <b>×{ap}</b>}</span>}
     {res > 0 && <span className="tk-res" title="resources">{res}</span>}</span>;
 }
-/* A SIDE'S GEAR AT A GLANCE: each piece's defence (a weapon's power), in slot order, as one button that
-   opens the pieces. A broken piece reads 0 and dims; a face-down piece is "?" to the other seat. */
+/* A SIDE'S GEAR, AS IT LIES ON THE MAT (TT1, v7.20: "cards over chips"): each piece a small real card in slot
+   order, its weapon last, with a die on it for the number that matters at the table — the defence the piece
+   blocks for now (`gearDef`: counters and breaks counted; the engine's number, never the printed one), a
+   weapon's power. A piece declared as a blocker lifts off the mat; a broken one (0) lies dim; a weapon that has
+   swung (`swingSpentWhy`) is turned sideways, as players turn a permanent to show it was used (TRP 5.8); a
+   face-down piece is a back to the other seat. The pieces close up and overlap when the row is narrow, the
+   left edge (and its die) always showing, as cards fanned on a mat. One button opens them, large. */
 function TalkGear({sd, mine, onOpen}){
   const gear = (sd.gear || []).filter(x => x && !x.destroyed);
   if(!gear.length) return null;
   const arms = gear.filter(x => !isWeapon(x)), weps = gear.filter(x => isWeapon(x));
-  const chip = gr => { const hid = gr._faceDown && !mine, d = gr.def != null || gr.curDef != null ? gearDef(gr) : null;
-    return <span key={gr.uid} className={"tk-gchip" + (d === 0 && gr.def != null ? " worn" : "") + ((sd.blockG || []).indexOf(gr.uid) >= 0 ? " on" : "")}>
-      <i>⛨</i><b>{hid ? "?" : d == null ? "–" : d}</b></span>; };
+  const piece = gr => {
+    const w = isWeapon(gr), hid = gr._faceDown && !mine;
+    const d = w ? (gr.power != null ? gr.power : null) : gr.def != null || gr.curDef != null ? gearDef(gr) : null;
+    const on = (sd.blockG || []).indexOf(gr.uid) >= 0, spent = w && !!DawnParser.swingSpentWhy(sd, gr);
+    return <span key={gr.uid} className={"tk-gcard" + (w ? " w" : "") + (!w && d === 0 && gr.def > 0 ? " worn" : "") + (on ? " on" : "") + (spent ? " spent" : "")}>
+      <span className="tk-gface">{hid ? <span className="tk-cback"/> : <CardImg card={gr}/>}</span>
+      {!hid && d != null && <b className="tk-gdie">{d}</b>}</span>;
+  };
   return <button className="tk-geargrp" onClick={onOpen} aria-label={(mine ? "your" : "their") + " gear"} data-talk-gear>
-    {arms.map(chip)}
-    {weps.map(w => <span key={w.uid} className="tk-gchip w"><i>⚔</i><b>{w.power != null ? w.power : "–"}</b></span>)}
+    {arms.map(piece)}{weps.map(piece)}
   </button>;
 }
 /* A SIDE'S PILES, as they lie: this turn's pitch, the graveyard and the banished face up (their top card),
@@ -11357,6 +11432,15 @@ function TalkSide({sd, mine, boardCell, onZoom, onSheet}){
    its bar. Life is READ FROM THE PAD, mark by mark (engine/announce.js `lifeMarks`), the one record a player
    keeps (TRP 5.8); a tap opens the pad itself, the whole scratch sheet. Display only. */
 function TalkBout({g, mySeat, pad, myH, foeH, db, names, rating, thinking, menu, onPad}){
+  /* EACH CHANGE POPS ON ITS OWN: a mark gets the moment it was first seen here, and every mark younger than its pop
+     is drawn with its own key, so two quick hits are two pops, the older already rising (a mark the table opened
+     with, a rejoin's history, never pops) */
+  const seen = uR(null);
+  if(!seen.current) seen.current = {n: pad.marks.length, at: {}};
+  for(let i = seen.current.n; i < pad.marks.length; i++) seen.current.at[i] = Date.now();
+  if(pad.marks.length < seen.current.n) seen.current.at = {};
+  seen.current.n = pad.marks.length;
+  const fresh = (m, i) => seen.current.at[i] != null && Date.now() - seen.current.at[i] < 1100;
   const fighter = seat => {
     const mine = seat === mySeat, sd = g.sides[seat], h = mine ? myH : foeH;
     const ms = pad.marks.filter(m => m.seat === seat), last = ms[ms.length - 1];
@@ -11373,7 +11457,8 @@ function TalkBout({g, mySeat, pad, myH, foeH, db, names, rating, thinking, menu,
         <LifeBar hp={hp} max={max} right={!mine}/>
       </span>
       <LifeNum n={hp} className={"tk-hp" + (low ? " low" : "")}/>
-      {last && <i key={ms.length} className={"tk-pop" + (last.delta > 0 ? " up" : "")} aria-hidden="true">{(last.delta > 0 ? "+" : "") + last.delta}</i>}
+      {pad.marks.map((m, i) => m.seat === seat && fresh(m, i)
+        ? <i key={i} className={"tk-pop" + (m.delta > 0 ? " up" : "")} aria-hidden="true">{(m.delta > 0 ? "+" : "") + m.delta}</i> : null)}
     </span>;
   };
   return <div className="tk-bout" data-talk-bout>
@@ -11389,7 +11474,7 @@ function TalkBout({g, mySeat, pad, myH, foeH, db, names, rating, thinking, menu,
 
 /* THE MIDDLE: the chain as it lies on the mat — the attack with its power, the blockers beside it with
    their total, the links before it stacked small; a card on the stack; between attacks, the turn token. */
-function TalkChain({g, mySeat, them, onZoom, onLinks}){
+function TalkChain({g, mySeat, them, myH, foeH, db, onZoom, onLinks}){
   const p = g.chainOpen && g.pend ? g.pend : null;
   const featured = p ? {card: p.card} : null;   /* the attack, as both other boards feature it (LinkStamp's reader) */
   const top = (g.stack || []).filter(l => l && l.k === "play" && l.card).slice(-1)[0] || null;
@@ -11401,12 +11486,19 @@ function TalkChain({g, mySeat, them, onZoom, onLinks}){
   const wall = p && p.wall != null ? p.wall : null;
   const earlier = (g.chainCards || []).map(e => e && (e.card || e)).filter(c => c && (!p || !p.card || String(c.uid) !== String(p.card.uid)));
   const yourTurn = g.turnPlayer === mySeat;
+  /* THE TURN TOKEN is the turn player's medallion (their hero's art in a gold rim), lying on their half of the mat
+     and sliding across when the turn passes; the turn's NUMBER is the bout's alone (one number, one place) */
+  const tokH = yourTurn ? myH : foeH;
+  /* YOUR PLAY FLIES from the hand to where it lands (the stack, then the chain), as the classic board's does */
+  const atkRef = uR(null), stackRef = uR(null);
+  useGlideIn(atkRef, p && p.card ? p.card.uid : null, 320, true);
+  useGlideIn(stackRef, top ? top.card.uid : null, 320, true);
   return (
     <div className="tk-chain">
       {earlier.length > 0 && <button className="tk-links" onClick={onLinks} aria-label={"earlier links: " + earlier.length}>
         <CardImg card={earlier[earlier.length - 1]}/><b className="tk-n">{earlier.length}</b></button>}
       {p ? <div className="tk-fight">
-          <button className={"tk-atk" + (p.by === mySeat ? " mine" : "")} onClick={()=>onZoom(p.card)} data-talk-attack>
+          <button ref={atkRef} className={"tk-atk" + (p.by === mySeat ? " mine" : "")} onClick={()=>onZoom(p.card)} data-talk-attack>
             <CardImg card={p.card}/>
             <span className="tk-pow">{p.total | 0}</span>
             {p.ga && <span className="tk-ga">go again</span>}
@@ -11417,34 +11509,57 @@ function TalkChain({g, mySeat, them, onZoom, onLinks}){
             <span className="tk-blks">{walls.map(c => <button key={c.uid} className="tk-blk" onClick={()=>onZoom(c)}><CardFrame card={c} className="sm" noType/></button>)}</span>
           </div>}
         </div>
-        : top ? <div className="tk-fight"><button className="tk-stackc" onClick={()=>onZoom(top.card)}>
+        : top ? <div className="tk-fight"><button ref={stackRef} className="tk-stackc" onClick={()=>onZoom(top.card)}>
             <CardImg card={top.card}/><span className="tk-onstack">on the stack</span></button></div>
-        : <div className={"tk-token" + (yourTurn ? " you" : " them")} aria-label={"turn " + (g.turn | 0) + (yourTurn ? ", yours" : ", " + talkShort(them) + "'s")}>
-            <b>{g.turn | 0}</b><span>{yourTurn ? "your turn" : talkShort(them) + "'s turn"}</span></div>}
+        : <div className={"tk-token" + (yourTurn ? " you" : " them")} aria-label={"turn " + (g.turn | 0) + (yourTurn ? ", yours" : ", " + talkShort(them) + "'s")} data-talk-token>
+            <b>{tokH ? <HeroArt h={tokH} db={db}/> : null}</b><span>{yourTurn ? "your turn" : talkShort(them) + "'s turn"}</span></div>}
       <LinkSfx chain={g.chain}/>
     </div>);
 }
 
 /* THE PAD, OPENED (TRP 5.8): the whole scratch sheet — every change since the start, with its source. The bout above
    is its summary; this is where the history lives, as at a real table. */
+/* the sheet's columns, as written: you, then them; each change below the last, the superseded total struck through.
+   `won` (the result) circles the winner's last total in red pencil, as a player rings it at the end. */
+function TalkPadGrid({pad, mySeat, them, won}){
+  const cols = [mySeat, 1 - mySeat];
+  const lastOf = s => { for(let i = pad.marks.length - 1; i >= 0; i--) if(pad.marks[i].seat === s) return i; return -1; };
+  const ring = (s, i) => won === s && lastOf(s) === i ? " ring" : "";
+  return <div className="tk-padgrid">
+    {cols.map(s => <span key={"h" + s} className="tk-padth">{s === mySeat ? "you" : talkShort(them)}</span>)}
+    {cols.map(s => <span key={"s" + s} data-col={s === mySeat ? "you" : "them"} className={"tk-padv" + (pad.marks.some(m => m.seat === s) ? " old" : " now") + ring(s, -1)}><span>{pad.start[s]}</span></span>)}
+    {pad.marks.map((m, i) => { const superseded = pad.marks.slice(i + 1).some(x => x.seat === m.seat);
+      return cols.map(s => s === m.seat
+        ? <span key={i + ":" + s} data-col={s === mySeat ? "you" : "them"} className={"tk-padv" + (superseded ? " old" : " now") + ring(s, i)}>
+            <em>{(m.delta > 0 ? "+" : "") + m.delta}{m.source ? " " + m.source : ""}</em><span>{m.total}</span></span>
+        : <span key={i + ":" + s} className="tk-padv blank"/>); })}
+  </div>;
+}
+const talkPadHead = (them, first, mySeat, turn) =>
+  "vs " + talkShort(them) + (first != null ? " · " + (first === mySeat ? "you went first" : talkShort(them) + " went first") : "") + " · turn " + (turn | 0);
 function TalkPadSheet({open, pad, mySeat, them, first, turn, onClose}){
   if(!open) return null;
-  const cols = [mySeat, 1 - mySeat];
   return <div className="tk-sheetwrap" onClick={onClose}>
     <div className="tk-padsheet paper" onClick={e=>e.stopPropagation()} data-talk-padsheet>
-      <div className="tk-padhead">vs {talkShort(them)}{first != null ? " · " + (first === mySeat ? "you went first" : talkShort(them) + " went first") : ""} · turn {turn | 0}</div>
-      <div className="tk-padgrid">
-        {cols.map(s => <span key={"h" + s} className="tk-padth">{s === mySeat ? "you" : talkShort(them)}</span>)}
-        {cols.map(s => <span key={"s" + s} className={"tk-padv" + (pad.marks.some(m => m.seat === s) ? " old" : " now")}>{pad.start[s]}</span>)}
-        {pad.marks.map((m, i) => { const superseded = pad.marks.slice(i + 1).some(x => x.seat === m.seat);
-          return cols.map(s => s === m.seat
-            ? <span key={i + ":" + s} className={"tk-padv" + (superseded ? " old" : " now")}>
-                <em>{(m.delta > 0 ? "+" : "") + m.delta}{m.source ? " " + m.source : ""}</em><span>{m.total}</span></span>
-            : <span key={i + ":" + s} className="tk-padv blank"/>); })}
-      </div>
+      <div className="tk-padhead">{talkPadHead(them, first, mySeat, turn)}</div>
+      <TalkPadGrid pad={pad} mySeat={mySeat} them={them}/>
       <p className="tk-padnote">Life, each change, and its source: all a player may write down during a game (TRP 5.8).</p>
       <button className="bigbtn alt" onClick={onClose}>Close the pad</button>
     </div></div>;
+}
+/* THE RESULT IS THE PAD (docs/TABLE-TALK.md §8, TT3's first piece, v7.20): at the end of a game the sheet is what a player
+   holds — both columns as they were written, the winner's last total ringed in red pencil, the turn count and who went
+   first at the top (TRP 5.8's meta-game facts), and "GG" in the corner. It stands in the end panel where the classic
+   board shows the names and the recap (the pad already IS the recap: every change and its source); the panel's own
+   buttons — leave, rematch, verify, the rating — are unchanged around it. The sheet scrolls to its last line. */
+function TalkResult({pad, mySeat, them, first, turn, winner}){
+  const ref = uR(null);
+  uE(()=>{ const el = ref.current; if(el) el.scrollTop = el.scrollHeight; }, []);
+  return <div className="tk-result paper" onClick={e=>e.stopPropagation()} data-talk-result>
+    <div className="tk-padhead">{talkPadHead(them, first, mySeat, turn)}</div>
+    <div className="tk-resscroll" ref={ref}><TalkPadGrid pad={pad} mySeat={mySeat} them={them} won={winner}/></div>
+    <span className="tk-gg" aria-label="good game">GG</span>
+  </div>;
 }
 
 /* A SIDE, PICKED UP AND LOOKED THROUGH: its gear (each piece large), or its piles — this turn's pitch,
@@ -11539,7 +11654,7 @@ function TalkTable({g, mySeat, db, myH, foeH, names, rating, first, calls, onCal
         thinking={thinking} menu={menuBtn} onPad={()=>setPadOpen(true)}/>
       <TalkSide sd={them} onZoom={onZoom} onSheet={k=>lookAt(them, k, false)}/>
       <div className="tk-mid">
-        <TalkChain g={g} mySeat={mySeat} them={them} onZoom={onZoom}
+        <TalkChain g={g} mySeat={mySeat} them={them} myH={myH} foeH={foeH} db={db} onZoom={onZoom}
           onLinks={()=>setLook({kind: "links", title: "The chain", cards: (g.chainCards || []).map(e => e && (e.card || e)).filter(Boolean)})}/>
       </div>
       <TalkCall line={calls[0] || null} me={mySeat} names={names} onDone={onCallDone} onSkip={onCallSkip}/>

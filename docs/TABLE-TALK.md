@@ -16,17 +16,22 @@ the vision follows it.
 reads this file top to bottom, checks §13 for the user's answers, and works the next unchecked phase of §11 — shipping
 behind the switch, release by release, with the usual CLAUDE.md gates.
 
-**The user's latest direction (2026-11-26, second design session):** "We are currently focused on polishing the design.
-Things need to be as simple as possible — focus on the cards and the experience of playing in real life — but still
-with the health bar callout to a fighting game." Every next step answers to that: fewer things, bigger cards, the
-bout as the one piece of fighting-game chrome.
+**The user's direction (2026-11-26, second design session), still standing:** "We are currently focused on polishing the
+design. Things need to be as simple as possible — focus on the cards and the experience of playing in real life — but
+still with the health bar callout to a fighting game." And at the third (2026-11-26): "This is the most artistic phase —
+we need to bring the experience of playing a game in the flesh and blood to the screen and the little details are
+everything!" Every next step answers to both: fewer things, bigger cards, real-table details, the bout as the one piece
+of fighting-game chrome.
 
-**State (2026-11-26, end of the second design session, v7.19):** TT0 + TT1a are built, behind the switch. The table
-now opens with **the bout** (§5): both heroes and both lives as fighting-game bars in one strip across the top, the
-turn between them, each change popping off its bar; a tap opens the pad. The pad left the mat, so the middle is all
-cards. The hub says "Any blocks?" / "No response". **Try it:** `https://dawnblade-ai.github.io/dawnblade-ai/?talk=1`
-(or the title's "Try the new table", below the fold at 660). Screens: `docs/ux/talk-bout-*.jpg` (v7.19, real art);
-the older `talk-*.jpg` are TT0.
+**State (end of the third design session, v7.20):** TT0 + TT1a + most of TT1 are built, behind the switch, plus TT3's
+first piece. The table: the bout across the top; each side's **gear as small real cards** with a die for the defence it
+blocks for now (a blocker lifts, a broken piece greys, a swung weapon turns sideways); the zones as faint printed
+outlines; the **turn token is the turn player's medallion**, sliding to their half (the number is the bout's alone);
+**your play flies** from the hand to the stack/chain (and a paid-for play now does, on both boards); each hit pops on
+its own; the pay and arsenal asks are short. **The result is the pad**: "DASH WINS" is said, then the end panel holds the
+scratch sheet with the winner ringed in red pencil and GG. **Try it:** `https://dawnblade-ai.github.io/dawnblade-ai/?talk=1`.
+Screens: `docs/ux/talk-gear-*.jpg`, `talk-gear-blocked-*`, `talk-chain-mine-*`, `talk-result-*` (v7.20, real art);
+`talk-bout-*` v7.19; the rest TT0.
 
 **What exists:** §12 is the code map; `docs/design/flow.html` mocks up the flow around the table (title → sit down →
 the pad as the result, §8). `engine/announce.js` says what an action said and writes the pad;
@@ -35,26 +40,32 @@ below `TableBoard` in index.html; `tools/talk.js` is the drill (page.js runs it 
 
 **How to run the shop for this mission** (deps as tools/page.js's header, incl. `@fontsource/caveat`; `PAGE_DEPS=<scratch>/pagedeps
 NODE_PATH=/opt/node22/lib/node_modules`; `open({query:"?talk=1"})` — the leading `?` matters):
-- `node tools/talk.js` — the new table's drill, three phones (~3 min); `SAB=pad|private|glimpse` must FAIL a row.
-- `node --test test/announce.test.js test/local.test.js` — the announcer and the pace (~1 min).
+- `node tools/talk.js` — the new table's drill, three phones (~4 min); `SAB=pad|private|glimpse|result` must FAIL a row.
+- `node --test test/announce.test.js test/local.test.js test/glide.test.js` — the announcer, the pace, the flight.
 - To LOOK at it with real card art: `page.route(/amazonaws\.com/, …)` fetching each URL with `curl` into a scratch
-  cache and fulfilling it, then `page.reload()` and wait for `.hgrid .hcard` (hero art is otherwise cached as
-  stand-ins); then `talkTo(page)`. A loop that clicks the hub's buttons by label (/no response|any blocks|no block|
-  end turn|leave it empty/) while no `[data-talk-call]` is up walks a whole turn cycle. Shots at 393x660 first.
+  cache and fulfilling it, then `page.reload()` and wait for `.hgrid .hcard`; then `talkTo(page)`. A loop that clicks the
+  hub's buttons by label (/no response|any blocks|no block|end turn|leave it empty|pass/) while no `[data-talk-call]` is
+  up walks a whole turn cycle; to PLAY, tap a `.phand .hc:not(.dis)` twice, then tap unselected hand cards until
+  "Pitch & play" enables. To see the end, `window.__dawnTable.session.submit({t:"concede"})` and wait for
+  `[data-talk-result]` plus ~2 s (the ring and GG draw in late). To check a flight, wrap `Element.prototype.animate`
+  and record `this.className`. Shots at 393x660 first. (The third session's tour script was `tour.js` in its scratchpad:
+  rebuild it from these lines in ~40.)
 - A release is the usual CLAUDE.md gate set; with the switch OFF the classic board must not move (page.js,
   serverpage.js), and with it ON `tools/talk.js` must be clean.
 
 **Next, in order (simplicity first):**
-1. **Ask the user** how the bout feels on the phone, and §13 Q2–Q7 (still open).
-2. **Cards over chips:** their side's gear as the defence chips box is the last "UI-looking" thing on the mat; try the
-   equipment as small real cards with the defence stamped (watch the 320-px row: gear + backs + piles must fit).
-3. **TT1 rest:** the remaining ask lines in the coach's voice; the combat-step marker; your play flying to the middle.
-4. Then TT2 (every table; ranked manners), TT3 (the flow; the pad as the result screen).
+1. **Ask the user** how it feels on the phone (the gear cards, the medallion, the flight, the result pad), and §13
+   Q2–Q7 (still open).
+2. **TT1 rest:** the combat-step marker (TRP 5.8 allows one; keep it tiny or make the hub's words carry it); the
+   remaining classic-voice asks (boost, fuse, charge, usurp, the additional costs) in a player's words, talk only.
+3. **TT3, the flow:** title → sit down (both heroes art-on-art, the coin) → table → the pad (built). `docs/design/flow.html`.
+4. TT2 (announcements at two-phone and server tables; ranked manners in both layouts), TT4 (sound and motion pass).
 
-**Known rough edges:** the glimpse at 320x568 is 108 px (the drill wants >= 100) since the call now starts below the
-bout — watch it; the turn number shows twice (the bout's round and the mat's coin); the damage pop is fixed-length and
-does not stack two quick hits; the pitch made apart from a play shows as its own call; the end screen is still the
-classic EndPanel; voice untested on a real iPhone; an ally attack-target rail is drawn as the classic rail.
+**Known rough edges:** a hand-to-stack flight needs the payment to finish within 2.5 s of the last pitch tap
+(`Glide.keep` refreshes the mark each render while paying; a long idle pay can still land without the flight); the
+weapon flies only if it was tapped from the hand row's gear tile; the pitch made apart from a play shows as its own call;
+the hand row opens scrolled at 320 px (the first card cut, pre-existing); voice untested on a real iPhone; an ally
+attack-target rail is drawn as the classic rail; the WinPanel (beating the Dummy at a table) is still classic.
 
 ## 0. The brief, in the user's words
 
@@ -168,7 +179,7 @@ the preview card outright — "the card previews broke".)
 ┌───────────────────────────────────────┐ 0
 │ ≡ (◐)YOU ▰▰▰▰▰▱ 18 ⬡2 20 ▱▰▰▰▰▰ DASH(◑)│  THE BOUT (v7.19): menu · you, bar, life · the turn · their life, bar, them
 ├───────────────────────────────────────┤ ~56
-│ ⛨1 ⛨1 ⛨1 ⛨0 ⚔4  ◆        ▮▮▮▮ ▯ars ▣42│  THEIR SIDE: gear · their markers · hand backs · arsenal · piles
+│ ▯1▯1▯1▯0▯4  ◆        ▮▮▮▮ ▯ars ▣42   │  THEIR SIDE: gear (cards, a die each) · markers · backs · arsenal · piles
 │ ✦Fealty                               │  their permanents (only when there are any)
 ├───────────────────────────────────────┤ ~150
 │                                       │
@@ -177,9 +188,9 @@ the preview card outright — "the card previews broke".)
 │   │ATTACK│  │blk││blk│                │  stacked small to the left. The STAGE for announcements
 │   │  7   │  └───┘└───┘                │  and the glimpse (it starts below the bout: the bars
 │   └──────┘   wall 3                   │  stay in view, as in a fighting game).
-│                    ( turn 4 )         │  The turn token lies on the mat on the turn player's side.
+│                   (◉ medallion)       │  The turn token (the turn player's hero) lies on their half.
 ├───────────────────────────────────────┤ ~376
-│ ⛨1 ⛨1 ⛨0 ⛨0  ⚔  ✦Runechant×3  ▣38 ▤4  │  YOUR SIDE: gear · weapon · permanents · piles
+│ ▯1▯1▯0▯0▯⚔  ✦Runechant×3  ▣38 ▤4      │  YOUR SIDE: gear (cards) · weapon · permanents · piles
 │ (you) ● AP  ◉◉ 2 res                  │  your markers: the action point gem, resource coins
 ├───────────────────────────────────────┤ ~444
 │ ▭  ▭  ▭  ▭  ▭ ▸   (hand, flat row)    │  YOUR HAND: the v7.16 HandRow, unchanged in behaviour
@@ -188,12 +199,15 @@ the preview card outright — "the card previews broke".)
 └───────────────────────────────────────┘ 660
 ```
 
-- **Their side** is what you see across the table: their hero, how many cards they hold (backs, not a number
-  in caps), a face-down arsenal card if there is one, their gear with each piece's defence, their weapon,
+- **Their side** is what you see across the table: how many cards they hold (backs, not a number
+  in caps), a face-down arsenal card if there is one, their gear as small cards with a die for each piece's defence
+  (v7.20: a blocker lifts, a broken piece greys, a swung weapon lies sideways — TRP 5.8's "turning permanents
+  sideways"), their weapon,
   their permanents, and their piles. Their markers (action points, floating resources) show only when
   non-zero.
 - **The middle** is the combat chain laid out as on a mat, and the stage where announcements and glimpses
-  happen. When the chain is closed it is bare mat with the turn token on it.
+  happen. When the chain is closed it is bare mat with the turn token on it: the turn player's medallion, on their
+  half, sliding across when the turn passes (v7.20). Your own play flies here from your hand.
 - **The bout** is life at a glance, as a fighting game draws it; **the pad** (a tap on the bout) is the only record (§5).
 - **Your side** mirrors theirs, plus your markers — the action-point gem and the resource coins (TRP 5.8:
   "Using markers or dice, to represent remaining resource and action points").
@@ -322,7 +336,8 @@ beside the game: `https://dawnblade-ai.github.io/dawnblade-ai/docs/design/flow.h
    time's; "Change gear" opens the loadout. One button: **Shuffle up**.
 3. **The table.**
 4. **The result** is the pad: both columns as they were written, the winner circled, the turn count, GG.
-   Rematch / New opponent / Leave.
+   Rematch / New opponent / Leave. **Built (v7.20)** inside the end panel (its buttons unchanged), after the game's last
+   call is said.
 
 ---
 
@@ -365,6 +380,9 @@ board unchanged), and the Table Talk drives (§12) at 393×660, 393×852 and 320
   no log); the switch on the title and `?talk=1`; "Block with 2" / "No block" on the hub. See the session log.
 - [x] **TT1a — the bout** (v7.19): the fighting-game bars across the top (§5); the mat left to the cards; "Any
   blocks?" / "No response" on the hub; the stack's ask line gone; the defend ask shortened.
+- [x] **TT1b — the little details** (v7.20): gear as cards with dice (blocker lifts, broken greys, swung weapon
+  sideways); zones as printed outlines; the turn medallion (one turn number); your play flying in (and the per-card
+  glide marks, both boards); each hit its own pop; the pay and arsenal asks in a player's words.
 - [ ] **TT1 — your line and the ask (the rest):** the hub's remaining labels as speech ("Take 4" only from the engine's own
   projection); the other ask lines' words (shorter, in the coach's voice); the combat-step marker (TRP 5.8 allows one); the turn token's travel; your own play flying from the hand
   to the middle (FLIP; `Glide` exists); the pad's write animation tuned on a phone.
@@ -372,7 +390,8 @@ board unchanged), and the Table Talk drives (§12) at 393×660, 393×852 and 320
   per commit; the announcer is already a pure function of action + states); **Tournament manners enforced on
   ranked tables in BOTH layouts** (the classic board hides its log in ranked too — the user's brief applies to
   ranked, not to a layout).
-- [ ] **TT3 — the flow:** title → sit down → table → the pad as result (§8). The loadout behind "Change gear".
+- [ ] **TT3 — the flow:** title → sit down → table → the pad as result (§8; the result BUILT in v7.20, `TalkResult`).
+  The loadout behind "Change gear".
 - [ ] **TT4 — motion, sound, voice** (§10); perf at 4× CPU throttle (`tools/perf-page.js`), no frame over 16 ms.
 - [ ] **TT5 — default:** Table Talk is the table; the classic layout stays one menu item away for a season; the
   trainer adopts the table (the Dummy as an opponent like any other).
@@ -390,8 +409,12 @@ board unchanged), and the Table Talk drives (§12) at 393×660, 393×852 and 320
   `talkShows` / `talkMerge` / `talkHold` / `talkPace` (what the table shows of a line, how long, and the AI's pace),
   `talkSay` (the optional voice), and the components `TalkTable` (the layout), `TalkBout` (v7.19: the fighting-game
   strip, reusing the classic HUD's `LifeBar` and `LifeNum`; carries `data-talk-pad` and `data-talk-life`), `TalkSide`,
-  `TalkBacks`, `TalkMarks`, `TalkGear`, `TalkPiles`, `TalkChain`, `TalkPadSheet`, `TalkLook` (a side's gear or piles, looked
-  through), `TalkCall` (what is said + the glimpse), `TalkMenu`. `TableBoard` builds `askEl`, `pipsEl`, `targetEl`,
+  `TalkBacks`, `TalkMarks`, `TalkGear` (v7.20: the pieces as cards, `.tk-gcard` + `.tk-gdie`), `TalkPiles`, `TalkChain`
+  (the medallion `[data-talk-token]`; `useGlideIn` on the stack card and the attack), `TalkPadGrid` (the sheet's columns,
+  shared), `TalkPadSheet`, `TalkResult` (v7.20: the pad on the end panel, `[data-talk-result]`, `data-col`, `.ring`,
+  `.tk-gg`; `EndPanel`'s `pad` prop), `TalkLook` (a side's gear or piles, looked through), `TalkCall` (what is said + the
+  glimpse), `TalkMenu`. The flight: `Glide` (one mark per card; `keep` while paying) and `useGlideIn(ref, uid, ms, land)`
+  just above `FeatCard` (script0). `TableBoard` builds `askEl`, `pipsEl`, `targetEl`,
   `handRowEl`, `adviceEl`, `myBoardCell`, `hubEl`, `overlaysEl` once; `if(talk) return <TalkTable …/>` sits right
   above the classic return. Its state: `talk`, `calls` (the queue), `pad` ({start, marks}), `hearRef` (fed by
   local.js `onStep` and by net.js `onState(st, info)`). `TalkSwitch` (script1c) is the title's switch. CSS: the block
@@ -455,4 +478,21 @@ Gates: npm test 4642/4637/0/5 · babel 4/4 · page.js 370/372 on the first cut �
 border (163 / 203 / 116 px, talk.js clean at all three) · `SAB=pad` fails 3 rows · serverpage 490/0 (switch off) ·
 livecheck ALL PASS · function v190. Not run (no engine, rules, AI or trainer change): scenes, fairness, play, chaos,
 trainchaos. The LIVE new table was not driven this time (the first session's proxy pattern does it).
+
+### 2026-11-26/27 — CEO thread, the little details (session_013xG9xBYWuEHp34d66jY8vF)
+
+The user: "the most artistic phase — we need to bring the experience of playing a game in the flesh and blood to the
+screen and the little details are everything." Toured v7.19 with real art at 393x660 first: the gear's chip box was
+the last app-looking thing and the mat was bare. Built **v7.20**: the gear as small cards with dice (and the real-table
+cues: a blocker lifts, a broken piece greys, a swung weapon lies sideways); printed zone outlines; the turn medallion
+(the hero's face, sliding between halves; the number left to the bout) and the bout's portraits cropped to the art; your
+play flying in — which found an old defect on both boards (one glide mark, overwritten by the first pitch tap, so no
+paid-for play ever flew; now per card + `Glide.keep`); stacked pops; short pay/arsenal asks; and the result as the pad,
+after the last call ("DASH WINS") is said.
+Lessons: (1) a flex item whose content is absolutely positioned has a max-content of ~0 in Chrome, so `flex-basis`
+alone collapses the row (the first gear cut was squeezed at 393 px with room to spare): give it a `width`; (2) a UI
+effect that "never fired" may be a single-slot memo overwritten by the next tap — record `Element.prototype.animate`
+calls to know; (3) a result screen that waits on the call queue appears late: shoot it after its selector, not a timer.
+Gates: npm test 4644/4639/0/5 · babel 4/4 · talk.js clean ×3 (the new result row; `SAB=result` fails it ×3) ·
+page.js 375/375 · serverpage SERVERPAGE.
 

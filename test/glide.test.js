@@ -27,8 +27,25 @@ test("both boards' featured slot is FeatCard", () => {
 });
 
 test("the glide is off under reduced motion and uses one mark once", () => {
-  const g = src.slice(src.indexOf("const Glide = "), src.indexOf("function FeatCard"));
+  const g = src.slice(src.indexOf("const Glide = "), src.indexOf("function useGlideIn"));
   assert.match(g, /prefers-reduced-motion: reduce/);
-  assert.match(g, /last = null;/, "a mark is consumed");
-  assert.match(g, /m\.uid !== uid/, "only the card the tap committed glides");
+  assert.match(g, /marks\.delete\(uid\);/, "a mark is consumed");
+  assert.match(g, /marks\.get\(uid\)/, "only the card the tap committed glides (one mark per card, v7.20)");
+  assert.match(g, /now - m\.t > 2500\) marks\.delete/, "stale marks are dropped");
+});
+
+/* v7.20: a play that had to be paid for never flew — the first pitch tap overwrote the one mark. Marks are now kept
+   per card, and the card being paid for keeps its own fresh (`Glide.keep`) while the payment is pending. The new
+   table (Table Talk) flies your play onto the stack and the chain through the same hook FeatCard uses. Sabotage
+   checked: dropping the `Glide.keep` line fails the first row; a TalkChain without `useGlideIn` fails the second. */
+test("the card being paid for keeps its flight from the hand", () => {
+  assert.match(src, /if\(pay && pay\.card\) Glide\.keep\(pay\.card\.uid\);/);
+});
+test("the new table's stack and chain fly in through the one hook", () => {
+  const chain = src.slice(src.indexOf("function TalkChain("), src.indexOf("function TalkPadGrid("));
+  assert.match(chain, /useGlideIn\(atkRef, /);
+  assert.match(chain, /useGlideIn\(stackRef, /);
+  assert.match(chain, /ref=\{atkRef\}/); assert.match(chain, /ref=\{stackRef\}/);
+  const feat = src.slice(src.indexOf("function FeatCard("), src.indexOf("function ChainLink("));
+  assert.match(feat, /useGlideIn\(ref, /, "FeatCard and the new table share the hook (no copy)");
 });

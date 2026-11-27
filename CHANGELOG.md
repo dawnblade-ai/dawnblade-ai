@@ -1,3 +1,33 @@
+## v7.20 — Table Talk: the little details
+
+- **Gear lies on the mat as cards ("cards over chips").** Each side's equipment and weapon are small real cards in slot
+  order, with a die on each for the number that matters: the defence the piece blocks for NOW (the engine's
+  `gearDef`, counters and breaks counted) or a weapon's power. A piece declared as a blocker lifts off the mat with a
+  blue edge; a broken piece lies dim and grey; a weapon that has swung (or is tapped) turns SIDEWAYS, as players turn
+  a permanent to show it was used (TRP 5.8); a face-down piece is a back to the other seat. When a row is narrow the
+  cards close up and overlap, their left edge and die always showing. The gear and the piles sit in faint printed
+  outlines, as zones on a playmat, instead of boxed buttons.
+- **One turn number; the token travels.** The middle's coin no longer repeats the turn number (the bout has it). It is
+  the turn player's MEDALLION — their hero's face in a gold rim — lying on their half of the mat, sliding across when
+  the turn passes. The bout's portraits show the hero's art too, not a shrunken card.
+- **Your play flies to the middle.** The card you tap leaves the hand and lands on the stack (then the chain) with a
+  small settle. It also fixes an old defect on BOTH boards: the glide kept one mark, so the first pitch tap overwrote the
+  played card's and a play that had to be paid for never flew; marks are now per card, and the card being paid for
+  keeps its own (`Glide.keep`). The flight is one hook (`useGlideIn`) shared with the classic board's FeatCard.
+- **Two quick hits are two pops.** Each life change pops off the bout on its own, the older already rising; a table
+  opened mid-game pops nothing.
+- **The asks, said shorter (TT1).** Paying: "Pitch for Snatch · 3 to go" / "Snatch is paid for" (the hub carries Cancel
+  and "Pitch & play", so the line carries no second Cancel). The arsenal: "Tap a card to put in your arsenal". The
+  classic board's lines are unchanged.
+- **The result is the pad (TT3's first piece).** At the end of a game on the new table, the opponent's last plays and
+  "DASH WINS" are said first, then the end panel holds the scratch sheet in place of the names card and the recap:
+  both columns as they were written, the winner's last total ringed in red pencil, "vs Dash · you went first · turn
+  9" across the top (TRP 5.8's meta-game facts), "GG" in the corner. Leave, rematch, verify and the rating are
+  unchanged around it.
+- Drills: `tools/talk.js` adds the result (you concede; each column's total is the engine's life, only the winner's
+  ringed; `SAB=result` fails it); `test/glide.test.js` holds the per-card marks, `Glide.keep` and the shared hook
+  (each sabotage checked).
+
 ## v7.19 — Table Talk: the bout
 
 - **The health bars come back, as a fighting game draws them (user, 2026-11-26: "as simple as possible — focus on the

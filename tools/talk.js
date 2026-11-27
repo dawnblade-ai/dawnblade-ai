@@ -16,8 +16,10 @@
                where the phone has the room, wholly on screen; a tap moves the call on
    Returns rows as [ok, name, detail]. `talkTo(page)` goes from the roster to such a table.
 
+     result    (v7.20, last: it ends the game) you concede; once the last call is said the end panel holds the pad,
+               each column's current total the engine's life, the winner's ringed and no other, GG
    USE   node tools/talk.js            the three phones (393x660, 393x852, 320x568); deps as tools/page.js
-         SAB=pad|private|glimpse node tools/talk.js    a sabotage, which must FAIL its row
+         SAB=pad|private|glimpse|result node tools/talk.js    a sabotage, which must FAIL its row
    ============================================================ */
 "use strict";
 const { open } = require("./page.js");
@@ -127,19 +129,36 @@ async function talkJudge(page, prefix){
     const after = await page.evaluate(() => { const c = document.querySelector("[data-talk-call]"); return c ? c.textContent : null; });
     out.push([after !== before, prefix + ": a tap moves the call on", `before "${before}", after "${after}"`]);
   }
+  /* ---- the result (v7.20): the game ends (you concede) and, once its last call is said, the end panel holds THE PAD —
+     each column's current total is the engine's life, and the winner's (theirs) is ringed, nobody else's ---- */
+  await page.evaluate(() => window.__dawnTable.session.submit({t: "concede"}));
+  const res = await page.waitForSelector("[data-talk-result]", {timeout: 15000}).then(() => page.evaluate(() => {
+    const T = window.__dawnTable, g = T.session.state(), me = T.seat, r = document.querySelector("[data-talk-result]");
+    const now = k => [...r.querySelectorAll(`.tk-padv.now[data-col="${k}"] > span`)].map(e => +e.textContent.trim());
+    const rings = [...r.querySelectorAll(".tk-padv.ring")].map(e => e.getAttribute("data-col"));
+    return { you: now("you"), them: now("them"), hp: [g.sides[me].hp, g.sides[1 - me].hp], rings, gg: !!r.querySelector(".tk-gg") };
+  })).catch(e => ({ err: String(e.message || e).split("\n")[0] }));
+  const okRes = !res.err && res.you.length === 1 && res.them.length === 1 && res.you[0] === res.hp[0] && res.them[0] === res.hp[1]
+    && res.rings.length === 1 && res.rings[0] === "them" && res.gg;
+  out.push([okRes, prefix + ": the result is the pad (each column's total is the engine's life, the winner's ringed, GG)",
+            res.err ? res.err : `you ${res.you} them ${res.them}; engine ${res.hp.join(" / ")}; ringed ${res.rings.join(",") || "-"}`]);
   return out;
 }
 
-/* a sabotage, for the drill's own proof (SAB=pad|private|glimpse): each must FAIL its row */
+/* a sabotage, for the drill's own proof (SAB=pad|private|glimpse|result): each must FAIL its row */
 const SABOTAGE = {
   pad: `[data-talk-life] .tk-hp{font-size:0} [data-talk-life] .tk-hp::after{content:"99";font-size:20px}`,
   glimpse: `.tk-glimpse{width:60px !important;height:84px !important}`,
 };
+/* SAB=result rings your column as well, the moment the result appears */
 async function sabotage(page, kind){
   if(SABOTAGE[kind]){
     await page.addStyleTag({ content: SABOTAGE[kind] });
     if(kind === "pad") await page.evaluate(() => document.querySelectorAll("[data-talk-life] .tk-hp").forEach(b => { b.textContent = "99"; }));
   }
+  if(kind === "result") await page.evaluate(() => { new MutationObserver(() => { const r = document.querySelector("[data-talk-result]"); if(!r) return;
+    const y = r.querySelector('.tk-padv.now[data-col="you"]'); if(y && !y.classList.contains("ring")) y.classList.add("ring"); })
+    .observe(document.body, {subtree: true, childList: true}); });
   if(kind === "private") await page.evaluate(() => { const T = window.__dawnTable, g = T.session.state(), foe = g.sides[1 - T.seat];
     const c = (foe.hand || [])[0]; const d = document.createElement("span"); d.textContent = c ? c.name : ""; document.querySelector(".board.talk .tk-mid").appendChild(d); });
 }
