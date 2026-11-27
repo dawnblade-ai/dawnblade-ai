@@ -143,7 +143,9 @@ async function oneGame(D, pw, browser, engine, game, o, log){
         const c = hc[Math.floor(r() * hc.length)];
         holds++;
         await page.evaluate(HOLD_DOWN, [c.i, c.b]); await page.waitForTimeout(470);
-        const open = await page.evaluate(INSPECT);
+        let open = await page.evaluate(INSPECT);
+        /* the hold is a 400 ms TIMER: on a loaded machine it may fire late; the finding is "never opens", not "opens late" */
+        if(!open && mustInspect(c)) open = await page.waitForFunction(INSPECT, null, { timeout: 1500 }).then(() => true, () => false);
         await page.evaluate(HOLD_UP); await page.waitForTimeout(60);
         if(mustInspect(c) && !open) finds.push(`INSPECT: a 400 ms hold on ${c.b} did not open the panel (step ${steps})`);
         if(open){ opened++; await page.evaluate(CLOSE_INSPECT); await page.waitForTimeout(80); if(await page.evaluate(INSPECT)) finds.push(`INSPECT: the panel opened from ${c.b} did not close (step ${steps})`); }
