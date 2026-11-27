@@ -494,5 +494,5 @@ alone collapses the row (the first gear cut was squeezed at 393 px with room to 
 effect that "never fired" may be a single-slot memo overwritten by the next tap — record `Element.prototype.animate`
 calls to know; (3) a result screen that waits on the call queue appears late: shoot it after its selector, not a timer.
 Gates: npm test 4644/4639/0/5 · babel 4/4 · talk.js clean ×3 (the new result row; `SAB=result` fails it ×3) ·
-page.js 375/375 · serverpage SERVERPAGE.
+page.js 375/375 · serverpage 490/0 (switch off). Not run (no engine, rules, AI or trainer change): scenes, fairness, play, chaos, trainchaos.
 
