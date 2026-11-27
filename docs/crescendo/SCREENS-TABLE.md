@@ -67,7 +67,7 @@ Motion: pitch flight 210 ms to the pile, pip pop (`--m-ease-slam`), then the pla
 
 ## T4 · Your attack on the chain, waiting for their defence (`table-4-attack.html`)
 
-Pill `DEFEND STEP`; your Wounding Blow (red strip, power stamp 4) at (96,182,112,156), tilted −1.5° (toward the defender); right column `HIT FOR` / **4** (BSD 900 44, `--damage`); AP gem gone (spent); Talishar no longer underlined; hand **idle** (5 cards, nothing lifts); primary **WAITING FOR VISERAI**, disabled outline.
+Pill `DEFEND STEP`; your Wounding Blow (red strip, power stamp 4) at (96,182,112,156), tilted −1.5° (toward the defender); right column `HIT FOR` / **4** (BSD 900 30, `--damage`; under the life numerals, CEO 2026-11-27); AP gem gone (spent); Talishar no longer underlined; hand **idle** (5 cards, nothing lifts); primary **WAITING FOR VISERAI**, disabled outline.
 Taps: attack = inspect; hand = hold to inspect only. Hidden: nothing new. Motion in: your own glimpse (T3) then the flight to the slot (`--m-std`), the power badge pops 1→1.25→1; the defender's window opens at t=0 (§3.6).
 
 CEO 2026-11-27: HIT FOR < life numerals, BRIEF §2 (30 px at 393 where life is 34; 26 at compact, 34 at 430+), in T4, T6, T7 alike.
@@ -146,7 +146,7 @@ A comparison sheet of four live iframes (it is the one page that scrolls; each f
 | life numeral | 30 | 34 | 38 |
 | announcer | slab 48 h, line 26 px | 60 h, 30 px | 60 h, 30 px |
 | glimpse | 190×265 (deviation: 52+48+265 must fit above the tray) | 232×324 | 262×366 |
-| hit-for | 38 px numeral, 70 wide | 44 px, 82 wide | 44 px, 82 wide |
+| hit-for | 26 px numeral (life 30), 82 wide | 30 px (life 34), 82 wide | 34 px (life 38), 82 wide — CEO 2026-11-27: always under the life numerals |
 | primary | 48 tall, fit rule starts at 20 px | 52 | 54 |
 Nothing is removed at any band; the stage takes the slack (tall adds mat, not chrome).
 
