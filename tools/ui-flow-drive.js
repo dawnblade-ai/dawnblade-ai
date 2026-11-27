@@ -19,7 +19,6 @@
 const fs = require("fs");
 const path = require("path");
 const { pathToFileURL } = require("url");
-const PG = require("./page.js");
 
 const ROOT = path.join(__dirname, "..");
 const PLAY = pathToFileURL(path.join(ROOT, "play.html")).href;
@@ -55,40 +54,12 @@ const SCREENS = [
   { id: "F7 result pad", mock: "flow-7-result.html?v=pad", app: TABLE, root: ".f7", steps: ["menu", "concede", "continue"], settle: 700, sel: S(".paper.res", ".paper .ph h3", ".gg", ".acts2 .btn") }
 ];
 
-/* ---------- the browsers ---------- */
-function webkitBinary(){
-  if(process.env.PW_WEBKIT) return fs.existsSync(process.env.PW_WEBKIT) ? process.env.PW_WEBKIT : null;
-  try {
-    const dir = fs.readdirSync("/opt/pw-webkit").filter(d => /^webkit-/.test(d)).sort().reverse();
-    for(const d of dir){ const f = path.join("/opt/pw-webkit", d, "pw_run.sh"); if(fs.existsSync(f)) return f; }
-  } catch(e){}
-  return null;
-}
-const launch = (pw, engine) => engine === "chromium"
-  ? pw.chromium.launch(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {})
-  : pw.webkit.launch({ executablePath: webkitBinary() });
-
-async function openPage(pw, browser, engine, vp, url, errors){
-  const ctxOpts = engine === "webkit"
-    ? { ...pw.devices["iPhone 15"], viewport: { width: vp[0], height: vp[1] }, screen: { width: vp[0], height: vp[1] } }
-    : { viewport: { width: vp[0], height: vp[1] }, deviceScaleFactor: 2, isMobile: true, hasTouch: true };
-  const context = await browser.newContext(ctxOpts);
-  /* the mockups play Iyslander against Viserai: the app's "last choices" are the same */
-  await context.addInitScript(() => { try { if(!localStorage.getItem("dawnblade.crescendo.last")) localStorage.setItem("dawnblade.crescendo.last", JSON.stringify({ hero: "iyslander", foe: "viserai" })); } catch(e){} });
-  const page = await context.newPage();
-  const answer = PG.makeAnswer(PG.depsDir());
-  const seen = new Set();
-  const fail = m => { if(!seen.has(m)){ seen.add(m); errors.push(m); } };
-  page.on("pageerror", e => fail("pageerror: " + String(e && e.stack || e).split("\n").slice(0, 2).join(" | ")));
-  page.on("console", m => { if(m.type() === "error") fail("console.error: " + m.text()); });
-  await context.route(/^https?:/, route => {
-    const req = route.request(), r = answer(req.url(), req.resourceType());
-    if(r.error) fail(r.error);
-    route.fulfill({ status: r.status || 200, contentType: r.contentType, body: r.body, headers: { "access-control-allow-origin": "*" } });
-  });
-  await page.goto(url);
-  return { page, context };
-}
+/* ---------- the browsers: tools/ui-drive.js's own launch and openPage (one setup for every CRESCENDO drive) ---------- */
+const D = require("./ui-drive.js");
+const { webkitBinary, launch } = D;
+/* the mockups play Iyslander against Viserai: the app's "last choices" are the same */
+const INIT = () => { try { if(!localStorage.getItem("dawnblade.crescendo.last")) localStorage.setItem("dawnblade.crescendo.last", JSON.stringify({ hero: "iyslander", foe: "viserai" })); } catch(e){} };
+const openPage = (pw, browser, engine, vp, url, errors) => D.openPage(pw, browser, engine, vp, url, errors, false, INIT);
 const settle = (page, ms) => page.evaluate(async ms => {
   await document.fonts.ready;
   await Promise.all([...document.images].map(i => i.complete ? 0 : new Promise(r => { i.onload = i.onerror = r; })));

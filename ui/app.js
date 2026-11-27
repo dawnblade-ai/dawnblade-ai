@@ -10,8 +10,7 @@
                 (&v= for f9, &peek=<hero> for f3); nothing in the URL opens the title.
    A failed deal is said on screen, in words. `DawnUIApp.session()` is the live session (drives reach it there);
    `DawnUIApp.director()` is the ONE animation director the flow screens use (the speed setting reaches it).
-   The table's hub buttons are read through their data-b names (hub-left "Menu", hub-right, bout): when DawnUITable.Live takes
-   onMenu / onPad props the interception below can go.
+   The table's hub dots and pad button (and a tap on the bout) reach this router through DawnUITable.Live's onMenu / onPad props.
    ============================================================ */
 (function(root, factory){
   if(typeof module === "object" && module.exports) module.exports = factory(root);
@@ -91,19 +90,12 @@ function TableScreen(p){
   const first = s.pick ? s.pick.first : 0;
   const turn = s.state().turn | 0;
   const shut = () => setOver({menu: false, pad: false});
-  /* the table's hub buttons and the bout, read by their names (capture phase: before the table's own handlers) */
-  const grab = e => {
-    const t = e.target && e.target.closest ? e.target.closest('[data-b="hub-left"],[data-b="hub-right"],[data-b="bout"]') : null;
-    if(!t || live.over) return;
-    const b = t.getAttribute("data-b");
-    if(b === "hub-left" && t.getAttribute("aria-label") !== "Menu") return;
-    e.stopPropagation(); e.preventDefault();
-    setOver(b === "hub-left" ? {menu: true, pad: false} : {menu: false, pad: true});
-  };
+  const openMenu = () => { if(!live.over) setOver({menu: true, pad: false}); };
+  const openPad = () => { if(!live.over) setOver({menu: false, pad: true}); };
   const concede = () => { conceded.current = true; shut(); s.submit({t: "concede"}); };
   const exit = to => { p.onExit(to); };
-  return html`<div class="tablewrap" style="display:contents" onClickCapture=${grab}>
-    <${root.DawnUITable.Live} session=${s}/>
+  return html`<div class="tablewrap" style="display:contents">
+    <${root.DawnUITable.Live} session=${s} director=${dir()} onMenu=${openMenu} onPad=${openPad}/>
     <div class="stage fl ov" data-b="overlay">
       ${over.menu && !live.over ? html`<${K.Menu} session=${s} director=${dir()} log=${log.current} onClose=${shut} onConcede=${concede}/>` : null}
       ${over.pad && !live.over ? html`<${Pad.PadSheet} pad=${pad.current} names=${names} first=${first} turn=${turn} onClose=${shut}/>` : null}

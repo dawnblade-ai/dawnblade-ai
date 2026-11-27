@@ -449,17 +449,23 @@ test("a ready promise holds a flight until the art is decoded (but never past 25
   r2.clock.advance(250); assert.ok(r2.calls.length > 0, "the cap starts it");
 });
 
-test("keep: the final pose is READ from the computed style and written after cancel (WebKit's commitStyles wrote the first keyframe)", () => {
+test("keep: the end pose is the item's own last keyframe, EXACTLY, whatever the engine sampled (WebKit left translateY 3.36 on the prompt sheet)", () => {
   const g = globalThis, prev = g.getComputedStyle;
-  const el = { style: {} };
-  g.getComputedStyle = (e) => ({ transform: e === el ? "matrix(1, 0, 0, 1, 0, 0)" : "none", opacity: "0.72" });
+  /* a compositor that is a hair short of the end when the beat's timer fires: the computed style reads a residual */
+  g.getComputedStyle = () => ({ transform: "matrix(1, 0, 0, 1, 0, 3.36)", opacity: "0.98" });
   try {
-    const r = rig({ resolve: () => el });
-    r.d.enqueue({ kind: "sheet", els: {} });
+    const el = { style: {} }, scrim = { style: {} };
+    const r = rig({ resolve: (role) => role === "sheet" ? el : scrim });
+    r.d.enqueue({ kind: "rise", els: {} });
     r.clock.advance(380);
-    assert.strictEqual(el.style.transform, "matrix(1, 0, 0, 1, 0, 0)", "the transform the animation ended on, as inline style");
+    assert.strictEqual(el.style.transform, "translate3d(0,0,0)", "the sheet rests exactly where its last keyframe says");
+    assert.strictEqual(scrim.style.opacity, 1, "and the scrim at full opacity");
     assert.strictEqual(el.style.opacity, undefined, "only the properties the keyframes touch are written");
-    assert.ok(r.calls.every(a => a.cancelled && !a.committed), "committed by reading, not by commitStyles");
+    assert.ok(r.calls.every(a => a.cancelled && !a.committed), "written, not committed from a sample");
+    /* a drop ends at the opposite pose */
+    const el2 = { style: {} }, sc2 = { style: {} }, r2 = rig({ resolve: (role) => role === "sheet" ? el2 : sc2 });
+    r2.d.enqueue({ kind: "drop", els: {} }); r2.clock.advance(220);
+    assert.strictEqual(el2.style.transform, "translate3d(0,100%,0)"); assert.strictEqual(sc2.style.opacity, 0);
   } finally { g.getComputedStyle = prev; }
   /* with no DOM the animation's own commitStyles is the fallback */
   const r2 = rig(); r2.d.enqueue({ kind: "sheet", els: { sheet: "s" } }); r2.clock.advance(380);

@@ -708,7 +708,6 @@ function create(opts) {
     return run;
   }
 
-  function propsOf(kf) { var p = {}; kf.forEach(function (f) { if ("transform" in f) p.transform = 1; if ("opacity" in f) p.opacity = 1; }); return p; }
   function ctxFor(run) {
     return makeCtx({ T: T, E: E, rm: rm(), sp: sp, accel: run.accel, skipping: run.skipping, cap: run.def.skipCap || T.fast,
       el: function (role) { return resolveRole(role, run.beat); }, measure: measure });
@@ -730,7 +729,7 @@ function create(opts) {
       var el = resolveRole(item.role, run.beat);
       if (!el) return;
       var a = animate(el, item.kf, { duration: item.dur, delay: item.at, easing: item.ease, fill: "both" });
-      if (a) run.anims.push({ a: a, el: el, keep: !!item.keep, props: propsOf(item.kf) });
+      if (a) run.anims.push({ a: a, el: el, keep: !!item.keep, end: endPose(item.kf) });
     });
     ph_.cues.forEach(function (q) {
       if (q.at <= 0) playCue(q);
@@ -752,30 +751,32 @@ function create(opts) {
     try { a.cue(q.name, { gain: q.gain, pitch: q.pitch }); } catch (e) { /* sound is best-effort, never blocks a beat */ }
   }
 
-  /* `keep` items leave their final pose behind as inline style. WebKit's Animation.commitStyles writes the FIRST keyframe for
-     some multi-keyframe effects (seen: the KO word, scale(1.6) opacity 0, on a finished animation), so the final value is READ from the
-     computed style while the animation still applies, then written after cancel. commitStyles stays the fallback (node, no DOM). */
-  function readKeep(x) {
-    try {
-      var el = x.el, g = typeof globalThis !== "undefined" ? globalThis : {};
-      if (!el || !el.style || !g.getComputedStyle || el.isConnected === false) return null;
-      var cs = g.getComputedStyle(el), o = { el: el };
-      if (x.props.transform) o.transform = cs.transform;
-      if (x.props.opacity) o.opacity = cs.opacity;
-      return o;
-    } catch (e) { return null; }
+  /* `keep` items leave their END POSE behind as inline style, written from the item's own last keyframe: exact by construction.
+     (WebKit's Animation.commitStyles wrote the FIRST keyframe for some multi-keyframe effects, and reading the computed style at
+     the beat's last tick left a residual translateY on the prompt sheet — the compositor's sample is not always the final one.)
+     commitStyles stays the fallback for an element with no `style` (node). */
+  function endPose(kf) {
+    var o = {}, i, f;
+    for (i = kf.length - 1; i >= 0; i--) {
+      f = kf[i];
+      if (o.transform === undefined && "transform" in f) o.transform = f.transform;
+      if (o.opacity === undefined && "opacity" in f) o.opacity = f.opacity;
+    }
+    return o;
   }
   function dropAnims(run) {
     var caps = [];
     run.anims.forEach(function (x) {
       if (!x.keep) return;
-      var c = readKeep(x);
-      if (c) caps.push(c);
+      if (x.el && x.el.style) caps.push({ el: x.el, pose: x.end });
       else { try { if (x.a.commitStyles) x.a.commitStyles(); } catch (e) { /* element removed */ } }
     });
     run.anims.forEach(function (x) { try { x.a.cancel(); } catch (e) { /* already gone */ } });
     caps.forEach(function (c) {
-      try { if (c.transform !== undefined) c.el.style.transform = c.transform === "none" ? "" : c.transform; if (c.opacity !== undefined) c.el.style.opacity = c.opacity; } catch (e) { /* gone */ }
+      try {
+        if (c.pose.transform !== undefined) c.el.style.transform = c.pose.transform;
+        if (c.pose.opacity !== undefined) c.el.style.opacity = c.pose.opacity;
+      } catch (e) { /* gone */ }
     });
     run.anims = [];
   }
