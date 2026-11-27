@@ -50,7 +50,7 @@ function artFailed(e, c){
 function Face(p){
   const c = p.card, st = stamps(c, p.place, p.def), colour = pitchClass(c);
   return html`<div class=${"cd " + p.cls + (colour ? " " + colour : "")} data-tap=${p.tap ? "" : undefined} data-b=${p.b}
-      aria-label=${c.name} style=${p.style} ...${p.on || {}}>
+      aria-label=${c.name} data-uid=${c.uid} style=${p.style} ...${p.on || {}}>
     ${c.img ? html`<img alt=${c.name} src=${c.img} width=${p.w} height=${p.h} decoding="async" onError=${e => artFailed(e, c)}/>` : null}
     <span class="cname">${c.name}</span>
     ${p.place !== "mat" && p.place !== "perm" && colour ? html`<span class="strip"></span>` : null}

@@ -1,16 +1,16 @@
 /* ============================================================
-   ui/sheet.js — DawnUISheet: the two bottom sheets the table opens, and the words on them.
+   ui/panels.js — DawnUIPanels: the panels the table opens that are NOT engine prompts (those are ui/sheets.js), and the words on them.
      INSPECT (SCREENS-TABLE T10): a face-up card large, and below it its printed rules text exactly as the pinned
        pool prints it (never reworded), its type line and the numbers it has. Public cards only: a back never opens.
-     OPTIONS (a PLACEHOLDER until step 6 gives each prompt kind its real sheet): whenever the engine asks THIS seat
-       something the table cannot yet draw (a prompt sheet, a boost / split / X / discard question ...), it lists what is
-       legal as plain buttons so the game never dead-ends. Every button is an action `DawnJudge.legal` already
-       accepted; the last one hands the decision to the coach (the AI policy), which can answer anything.
-   `sheetOf` is the pure half (view + legal -> descriptor); it reads the seat's own view only.
+     OPTIONS: the pending questions that are not prompts (a boost / split / X / discard cost ...) and a seat with no
+       drawable button: what is legal, as plain buttons, so the game never dead-ends. Every button is an action
+       `DawnJudge.legal` already accepted; the last one hands the decision to the coach (the AI policy).
+     MENU: the hub's "...": the classic board, sound, a new game.
+   Engine PROMPTS (opt pick modal pay soak reveal target alloc) are ui/sheets.js, not here.
    ============================================================ */
 (function(root, factory){
   if(typeof module === "object" && module.exports) module.exports = factory(root);
-  else root.DawnUISheet = factory(root);
+  else root.DawnUIPanels = factory(root);
 })(typeof self !== "undefined" ? self : this, function(root){
 
 const P = root.htmPreact || {};
@@ -94,22 +94,6 @@ function sheetOf(v, ctx){
   const me = ctx.seat, nm = named(v, me), L = ctx.legal;
   const item = (act, label, extra) => { const why = act.suggest ? null : L(act); return {label: label || labelOf(act, nm), act, why, on: false, ...(extra || {})}; };
   const coach = {label: "Let the coach choose", act: {suggest: true}, why: null, coach: true};
-  const p = v.prompt && (v.prompt.side || 0) === me ? v.prompt : null;
-  if(p){
-    const items = [];
-    const cardsAs = (mk, on) => (p.cards || []).forEach((c, i) => items.push(item(mk(i), c.name, {on: on(i)})));
-    if(p.tag === "opt" || p.tag === "pick" || p.tag === "alloc") cardsAs(i => ({t: "promptSel", i}), i => (p.sel || []).includes(i));
-    else if(p.tag === "target") cardsAs(i => ({t: "promptChoose", choice: i}), i => p.choice === i);
-    else if(p.tag === "modal") (p.options || []).forEach((o, i) => items.push(item({t: "promptChoose", choice: i}, plain(o.label || String(o)), {on: p.choice === i})));
-    else if(p.tag === "pay"){
-      items.push(item({t: "promptChoose", choice: "pay"}, p.destroyUid != null && !p.cost ? "Destroy it" : "Pay " + p.cost, {on: p.choice === "pay"}));
-      items.push(item({t: "promptChoose", choice: "decline"}, "Decline", {on: p.choice === "decline"}));
-    } else if(p.tag === "soak") (p.options || []).forEach((o, i) => items.push(item({t: "promptSel", i}, o.name + " — stops " + o.amount, {on: (p.sel || []).includes(i)})));
-    if(p.optional && p.tag !== "pay" && p.tag !== "modal") items.push(item({t: "promptDecline"}, p.tag === "pick" ? "Choose none" : "Decline"));
-    items.push(item({t: "promptTakeBack"}, "Take back"));
-    items.push(item({t: "promptConfirm"}, "Confirm", {primary: true}));
-    return {title: plain(p.title || "Your call"), src: p.src, hint: plain(p.hint || ""), items: items.filter(x => x.label !== "Take back" || !x.why).concat([coach])};
-  }
   const pend = v.pending && v.pending.seat === me ? v.pending : null;
   if(pend && pend.kind !== "pay"){
     const items = candidates(pend.kind, v, me).map(a => item(a)).filter(x => !x.why);

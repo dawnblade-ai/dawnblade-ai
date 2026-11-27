@@ -136,7 +136,7 @@ function artFile(url){
   return f;
 }
 
-async function openPage(pw, browser, engine, vp, url, errors, art){
+async function openPage(pw, browser, engine, vp, url, errors, art, init){
   const ctxOpts = engine === "webkit"
     ? { ...pw.devices["iPhone 15"], viewport: { width: vp[0], height: vp[1] }, screen: { width: vp[0], height: vp[1] } }
     : { viewport: { width: vp[0], height: vp[1] }, deviceScaleFactor: 2, isMobile: true, hasTouch: true };
@@ -157,6 +157,7 @@ async function openPage(pw, browser, engine, vp, url, errors, art){
     if(r.error) fail(r.error);
     route.fulfill({ status: r.status || 200, contentType: r.contentType, body: r.body, headers: { "access-control-allow-origin": "*" } });
   });
+  if(init) await page.addInitScript(init);
   await page.goto(url);
   return { page, context };
 }
@@ -177,7 +178,9 @@ const MEASURE = () => {
     const k = (seenName[n] = (seenName[n] || 0) + 1) - 1;
     out.boxes.push({ n, k, x: r.left, y: r.top, w: r.width, h: r.height, cls: String(e.className && e.className.baseVal === undefined ? e.className : "") });
   });
-  const vis = e => { const cs = getComputedStyle(e); return cs.display !== "none" && cs.visibility !== "hidden" && e.getClientRects().length > 0; };
+  const vis = e => { const cs = getComputedStyle(e); if(cs.display === "none" || cs.visibility === "hidden" || !e.getClientRects().length) return false;
+    for(let p = e; p && p.nodeType === 1; p = p.parentElement) if(getComputedStyle(p).opacity === "0") return false;   /* an announcement waiting off-stage is not on screen */
+    return true; };
   const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   for(let t = walk.nextNode(); t; t = walk.nextNode()){
     const s = t.nodeValue.trim(), p = t.parentElement;
@@ -246,7 +249,7 @@ function judgeBoxes(live, mock, opts){
     /* a card whose state differs (a card with no defence stays down where the mockup's lifts) is a different box on purpose */
     if(opts.sameClass && /^(hand-#|you-(weapon|head|chest|arms|legs))/.test(m.n) && st(l.cls) !== st(m.cls)){ diffs.push(`${m.n}: state "${st(l.cls) || "rest"}" live vs "${st(m.cls) || "rest"}" in the mockup (it depends on what this deal's cards can do)`); return; }
     n++;
-    const f = (opts.part && opts.part[m.n]) || "xywh", pick = b => ({ x: b.x, y: b.y, w: b.w, h: b.h });
+    const f = (opts.part && opts.part[m.n]) || "xywh", pick = b => ({ x: b.x, y: b.y, w: b.w, h: b.h, c: b.x + b.w / 2 });
     const d = Math.max(...[...f].map(c => Math.abs(pick(l)[c] - pick(m)[c])));
     if(d > worst){ worst = d; worstName = key(m); }
     if(d > TOL) bad.push(`${key(m)} off by ${d.toFixed(1)} px  live [${[l.x, l.y, l.w, l.h].map(v => v.toFixed(1))}] mock [${[m.x, m.y, m.w, m.h].map(v => v.toFixed(1))}]`);
@@ -302,7 +305,23 @@ const SECOND = ms => new Promise(r => setTimeout(r, ms));
 const handOf = page => page.evaluate(() => { const s = DawnUIApp.session(), v = DawnView.view(s.state(), 0);
   return v.sides[0].hand.map(c => ({ uid: c.uid, name: c.name, cost: c.cost, pitch: c.pitch, power: c.power })); });
 const card = (page, name) => page.locator(`.handrow .cd[aria-label="${name.replace(/"/g, '\\"')}"]`).first();
-const primaryText = page => page.locator('[data-b="primary"]').innerText().then(t => t.replace(/\s+/g, " ").trim());   /* the button upcases its label: compare lower-cased */
+/* answer whatever the engine asked, through what is on screen: a real prompt sheet (ui/sheets.js: an item, then its primary, else a
+   secondary) or, for a pending question that is not a prompt, the plain options sheet's coach. True when it tapped something. */
+async function answerSheet(P, count){
+  const tap = async loc => { try { await loc.first().click({ timeout: 1500 }); return true; } catch(e){ return false; } };
+  if(await P.locator(".sh-sheet:not(.waiting)").count()){
+    const prim = P.locator(".sh-btn.primary:not(.dis)");
+    if(await prim.count()){ if(await tap(prim)){ if(count) count.sheets++; return true; } }
+    const item = P.locator(".sh-body button:not(.dis):not(.on):not([disabled])");
+    if(await item.count() && await tap(item)) return true;
+    const sec = P.locator(".sh-btn.sec:not(.dis)");
+    if(await sec.count() && await tap(sec)) return true;
+    return false;
+  }
+  if(await P.locator(".options .opt.coach").count()) return tap(P.locator(".options .opt.coach"));
+  return false;
+}
+const primaryText = page => page.locator('.hub [data-b="primary"]').innerText().then(t => t.replace(/\s+/g, " ").trim());   /* the button upcases its label: compare lower-cased */
 
 async function runStates(pw, browser, engine, vp, opts){
   const errors = [], res = { engine, vp, bad: [], notes: [], diffs: [] };
@@ -351,7 +370,7 @@ async function runStates(pw, browser, engine, vp, opts){
       ask(t && t.toLowerCase() === hand[0].name.toLowerCase(), "T10: holding a card did not open it (" + t + ")");
       ask(/^close$/i.test(await primaryText(P)), "T10: the primary is not Close");
       await cmp("T10", "table-10-inspect.html", { only: ["veil", "inspect-card", "sheet", "primary", "hub", "bout"], part: { sheet: "xw" }, skip: {} });
-      await P.locator('[data-b="primary"]').click(); await P.waitForTimeout(100);
+      await P.locator('.hub [data-b="primary"]').click(); await P.waitForTimeout(100);
       ask(await P.locator(".inspect").count() === 0, "T10: Close did not close it");
     }
     /* T3b / T3: pay for a costed card */
@@ -361,34 +380,36 @@ async function runStates(pw, browser, engine, vp, opts){
     const shortPair = costed.map(c => [c, pitcher(c, true)]).find(x => x[1]);
     if(shortPair){
       const [c, pi] = shortPair;
-      await card(P, c.name).click(); await P.locator('[data-b="primary"]').click(); await P.waitForTimeout(150);
-      ask((await P.locator('.stage').getAttribute("data-state")) === "t3", "T3b: playing a costed card did not open the payment");
+      await card(P, c.name).click(); await P.locator('.hub [data-b="primary"]').click(); await P.waitForTimeout(150);
+      ask((await P.locator('.stage[data-state]').getAttribute("data-state")) === "t3", "T3b: playing a costed card did not open the payment");
       await card(P, pi.name).click(); await P.waitForTimeout(150);
       const pt = await primaryText(P);
       ask(/^pitch \d+ more$/i.test(pt), "T3b: the primary is not 'Pitch N more' (" + pt + ")");
-      ask(await P.locator('[data-b="primary"]').isDisabled(), "T3b: the primary is enabled while short");
+      ask(await P.locator('.hub [data-b="primary"]').isDisabled(), "T3b: the primary is enabled while short");
       await cmp("T3b", "table-3b-pay-short.html", { skip: { ...FRESH, coins: "this pitch pays " + pi.pitch + " of " + c.cost + " (the mockup's 2 of 3)", "you-pitch-0": "the mockup pitches a different card (box compared as T3)" },
         part: {}, only: ["staged", "hit", "pill", "primary", "hub-left", "hub-right", "bout", "world", "stage", "tray", "handrow"] });
       await P.locator('[data-b="hub-left"]').click(); await P.waitForTimeout(150);   /* cancel */
-      ask((await P.locator('.stage').getAttribute("data-state")) !== "t3", "T3b: the cross did not cancel the play");
+      ask((await P.locator('.stage[data-state]').getAttribute("data-state")) !== "t3", "T3b: the cross did not cancel the play");
     } else res.diffs.push("T3b: no costed card with a pitch too small to pay it in this deal");
     const fullPair = costed.map(c => [c, pitcher(c, false)]).find(x => x[1] && x[0].power != null) || costed.map(c => [c, pitcher(c, false)]).find(x => x[1]);
     if(fullPair){
       const [c, pi] = fullPair;
-      await card(P, c.name).click(); await P.locator('[data-b="primary"]').click(); await P.waitForTimeout(150);
+      await card(P, c.name).click(); await P.locator('.hub [data-b="primary"]').click(); await P.waitForTimeout(150);
       await card(P, pi.name).click(); await P.waitForTimeout(150);
       ask((await primaryText(P)).toLowerCase() === ("play " + c.name).toLowerCase(), "T3: paid, the primary should read Play " + c.name + " (" + await primaryText(P) + ")");
       ask(await P.locator(".hit .paid:not(.short)").count() === 1, "T3: the cost meter does not say paid");
       await cmp("T3", "table-3-pay.html", { skip: { ...FRESH, ...(pi.pitch === 3 ? {} : { coins: "this payment holds " + pi.pitch + " coin(s), the mockup 3" }) },
         only: ["staged", "hit", "coins", "you-pitch-0", "pill", "primary", "hub-left", "hub-right", "bout", "world", "stage", "tray", "handrow"] });
-      await P.locator('[data-b="primary"]').click(); await P.waitForTimeout(200);
+      await P.locator('.hub [data-b="primary"]').click(); await P.waitForTimeout(200);
       /* T4: the attack stands on the chain; the AI answers, paced. Pass priority until the defend step shows. */
-      let seen = false;
+      let seen = false, sheetChecked = false;
       for(let k = 0; k < 80 && !seen; k++){
-        const pill = await P.locator('[data-b="pill"]').innerText().catch(() => ""), dis = await P.locator('[data-b="primary"]').isDisabled().catch(() => true);
+        const pill = await P.locator('[data-b="pill"]').innerText().catch(() => ""), dis = await P.locator('.hub [data-b="primary"]').isDisabled().catch(() => true);
         if(/defend step/i.test(pill) && dis && await P.locator(".atk.mine").count()){ seen = true; break; }
-        if(await P.locator(".options .opt.coach").count()) await P.locator(".options .opt.coach").click().catch(() => {});
-        else if(!dis) await P.locator('[data-b="primary"]').click().catch(() => {});
+        if(!sheetChecked && await P.locator(".sh-sheet:not(.waiting)").count()){ sheetChecked = true; await P.waitForTimeout(700);
+          (await judgeSheet(pw, browser, engine, vp, P, errors, opts.art)).forEach(m => res.bad.push(m)); res.notes.push("F5 sheet"); }
+        if(await answerSheet(P)){}
+        else if(!dis) await P.locator('.hub [data-b="primary"]').click().catch(() => {});
         await P.waitForTimeout(100);
       }
       if(seen){
@@ -404,7 +425,7 @@ async function runStates(pw, browser, engine, vp, opts){
       let tp = await P.evaluate(() => DawnUIApp.session().state().turnPlayer);
       for(let k = 0; k < 300 && tp === 0 && !gone; k++){
         if(await P.locator(".options .opt.coach").count()) await P.locator(".options .opt.coach").click().catch(() => {});
-        else if(!(await P.locator('[data-b="primary"]').isDisabled().catch(() => true))) await P.locator('[data-b="primary"]').click().catch(() => {});
+        else if(!(await P.locator('.hub [data-b="primary"]').isDisabled().catch(() => true))) await P.locator('.hub [data-b="primary"]').click().catch(() => {});
         await P.waitForTimeout(80);
         tp = await P.evaluate(() => DawnUIApp.session().state().turnPlayer);
       }
@@ -505,7 +526,7 @@ async function runStates2(pw, browser, engine, vp, opts){
     /* T9: end your turn; the arsenal question; select a card; the slot */
     {
       const P = await open(`?hero=${MATCH.hero}&foe=${MATCH.foe}&seed=${MATCH.seed}&pace=0`);
-      await P.locator('[data-b="primary"]').click(); await P.waitForTimeout(150);
+      await P.locator('.hub [data-b="primary"]').click(); await P.waitForTimeout(150);
       const askT = await P.locator(".stage .ask").innerText().catch(() => "");
       if(!/arsenal/i.test(askT)) res.diffs.push("T9: the arsenal question did not open (" + askT + ")");
       else {
@@ -543,6 +564,98 @@ async function runStates2(pw, browser, engine, vp, opts){
   return res;
 }
 
+
+/* ---------- step 4/6: the announcer's held frames (T5, T8) and a prompt sheet (F5) ---------- */
+
+/* boxes the announcer and the sheet draw without data-b names the mockups use */
+const EXTRAS = () => {
+  const out = [], st = document.querySelector(".stage"), b = st.getBoundingClientRect();
+  const add = (n, e) => { if(!e) return; const r = e.getBoundingClientRect(); out.push({ n, k: 0, x: r.left - b.left, y: r.top - b.top, w: r.width, h: r.height, cls: "" }); };
+  add("scrim", st.querySelector(".an-scrim"));
+  const cards = [...st.querySelectorAll(".an-card")].filter(e => getComputedStyle(e).opacity > 0.05).sort((x, y) => y.getBoundingClientRect().width - x.getBoundingClientRect().width);
+  add("glimpse", cards[0]); add("glimpse-pitch", cards[1]);
+  return out;
+};
+
+async function runStates3(pw, browser, engine, vp, opts){
+  const errors = [], res = { engine, vp, bad: [], notes: [], diffs: [] };
+  const ask = (ok, msg) => { if(!ok) res.bad.push(msg); };
+  let a;
+  const open = async q => { if(a) await a.context.close(); a = await openPage(pw, browser, engine, vp, pathToFileURL(PLAY).href + q, errors, opts.art);
+    await a.page.waitForSelector(".stage[data-state] .bout", { timeout: 15000 }); return a.page; };
+  const cmp = async (label, file, o, extra) => {
+    const live = await a.page.evaluate(MEASURE); if(extra) live.boxes.push(...await a.page.evaluate(EXTRAS));
+    if(opts.shots) await a.page.screenshot({ path: path.join(opts.shots, `${label}-${engine}-${vp[0]}x${vp[1]}.png`) });
+    const b = await openPage(pw, browser, engine, vp, pathToFileURL(path.join(MOCKDIR, file)).href + "?noframe", errors, opts.art);
+    await b.page.waitForSelector(".stage .bout", { timeout: 15000 }); await settle(b.page);
+    const mock = await b.page.evaluate(MEASURE);
+    await b.context.close();
+    const j = judgeBoxes(live, mock, { sameClass: true, ...o });
+    j.bad.forEach(m => res.bad.push(label + ": " + m)); j.diffs.forEach(d => res.diffs.push(label + " " + d));
+    res.notes.push(`${label} ${j.n} boxes ${j.worst.toFixed(2)}px`);
+  };
+  try {
+    /* T5: their first play is announced: the slab, the scrim, the glimpse (and the cards they pitched beside it), frozen mid-hold */
+    {
+      const P = await open(`?hero=iyslander&foe=viserai&seed=1&first=1`);
+      /* caught the way a player keeps it: press-and-hold on the glimpse (director.hold), so it stays at its pose while the boxes are read */
+      const got = await P.waitForFunction(() => { const sl = document.querySelector(".an-slab"), sc = document.querySelector(".an-scrim.live"); if(!sl || !sc || +getComputedStyle(sl).opacity < 0.99) return false;
+        DawnUIApp.director().hold(true); window.__heldAt = performance.now(); return true; }, null, { timeout: 25000, polling: 5 }).then(() => true).catch(() => false);
+      if(got) await P.waitForTimeout(700);
+      if(!got) res.diffs.push("T5: no opponent play was caught mid-hold in this deal");
+      else {
+        ask(await P.locator(".an-slab[data-b=slab]").innerText().then(t => t.trim().length > 3), "T5: the slab says nothing");
+        await cmp("T5", "table-5-announce.html", { only: ["slab", "scrim", "glimpse", "glimpse-pitch", "hub", "primary", "bout", "handrow", "tray"],
+          skip: vp[0] < 380 ? { glimpse: "CONFLICT in the design: SCREENS-TABLE 14 sets the compact glimpse at 190x265 (it must fit above the tray), tokens.css and table-5 at 210x293, which covers the hand; built as 14 says",
+            "glimpse-pitch": "same (the compact column follows the glimpse)" } : {}, part: { glimpse: "xywh", "glimpse-pitch": "xyw" } }, true);
+        await P.evaluate(() => DawnUIApp.director().hold(false));
+      }
+    }
+    /* T8: a hit lands on you (no block): the pop under the numeral, caught as it spawns */
+    {
+      const P = await open(`?hero=iyslander&foe=viserai&seed=1&first=1&pace=0`);
+      const how = await P.evaluate(advanceTo(`(st, v) => DawnPriority.canDeclareDefenders(st, 0) && !!v.pend`));
+      if(how !== "ok") res.diffs.push("T8: no defend step in this deal (" + how + ")");
+      else {
+        await P.waitForTimeout(200);
+        await P.evaluate(() => { window.__lifeBefore = +document.querySelector('[data-b="bout-you"] .life').firstChild.nodeValue; });
+        await P.locator('.hub [data-b="primary"]').click();
+        for(let k = 0; k < 60; k++){
+          if(await P.waitForFunction(() => { const e = document.querySelector('[data-b="bout-you"] .pop'); return e && +getComputedStyle(e).opacity > 0.05; }, null, { timeout: 500, polling: 5 }).then(() => true).catch(() => false)) break;
+          if(await answerSheet(P)){} else if(await P.locator('.hub [data-b="primary"]').isEnabled().catch(() => false) && /^(pass|no block)$/i.test(await primaryText(P))) await P.locator('.hub [data-b="primary"]').click().catch(() => {});
+        }
+        const popO = await P.evaluate(() => +getComputedStyle(document.querySelector('[data-b="bout-you"] .pop')).opacity);
+        if(popO <= 0.05) res.diffs.push("T8: the hit's pop was not caught in this deal");
+        else {
+          const t = await P.evaluate(() => ({ pop: document.querySelector('[data-b="bout-you"] .pop').textContent, life: +document.querySelector('[data-b="bout-you"] .life').firstChild.nodeValue, before: window.__lifeBefore }));
+          ask(/^[-−]\d+$/.test(t.pop.trim()), "T8: the pop reads \"" + t.pop + "\"");
+          ask(t.life < t.before, `T8: at contact the numeral (${t.life}) has not dropped from ${t.before}`);
+          await cmp("T8", "table-8-hit.html", { only: ["pop", "life", "bout", "bout-you", "bout-opp", "medal", "hub", "primary"], part: { pop: "c", life: "xywh" }, skip: { world: "the world's shake offset is a function of time; the director's drill holds its numbers" } });
+        }
+      }
+    }
+    if(a) await a.context.close();
+  } catch(e){ res.bad.push("drive error: " + String(e && e.message || e).split("\n")[0]); }
+  errors.forEach(e => res.bad.push(e));
+  return res;
+}
+
+/* a prompt sheet against flow-5-prompts (which names nothing, so by class): the sheet's width, left and bottom edge, the primary button's height and bottom edge */
+const SHEET_GEOM = sel => { const e = document.querySelector(sel.sheet), p = e && e.querySelector(sel.primary); if(!e || !p) return null;
+  const r = e.getBoundingClientRect(), q = p.getBoundingClientRect(); return { x: r.left, w: r.width, bottom: r.bottom, btnH: q.height, btnBottom: q.bottom, btnX: q.left, btnW: q.width }; };
+async function judgeSheet(pw, browser, engine, vp, page, errors, art){
+  const bad = [];
+  const live = await page.evaluate(SHEET_GEOM, { sheet: ".sh-sheet:not(.waiting)", primary: ".sh-btn.primary" });
+  if(!live) return ["F5: no prompt sheet to measure"];
+  const b = await openPage(pw, browser, engine, vp, pathToFileURL(path.join(MOCKDIR, "flow-5-prompts.html")).href + "?noframe", errors, art);
+  await settle(b.page);
+  const mock = await b.page.evaluate(SHEET_GEOM, { sheet: ".sheet.pr", primary: ".foot .btn:not(.sec)" });
+  await b.context.close();
+  if(!mock) return ["F5: the mockup's sheet was not found"];
+  for(const k of ["x", "w", "bottom", "btnH", "btnBottom"]) if(Math.abs(live[k] - mock[k]) > TOL) bad.push(`F5: sheet ${k} ${live[k].toFixed(1)} vs the mockup's ${mock[k].toFixed(1)}`);
+  return bad;
+}
+
 /* ---------- step 3: a whole game by taps ---------- */
 
 /* From the deal, play turns by tapping only what is on screen. One decision a loop; the AI seat answers paced (one action a tick).
@@ -551,33 +664,37 @@ async function runPlay(pw, browser, engine, opts){
   const vp = [393, 660], errors = [], res = { engine, vp, bad: [], notes: [], diffs: [] };
   const turns = opts.turns || 3;
   try {
-    const a = await openPage(pw, browser, engine, vp, pathToFileURL(PLAY).href + `?hero=${MATCH.hero}&foe=${MATCH.foe}&seed=${opts.seed || MATCH.seed}&pace=40`, errors, opts.art);
+    /* announcements ON: the AI seat at its human pace (no ?pace), the director's beats, the slab and the glimpse */
+    const frames = () => { window.__fr = { d: [], on: false }; let last = 0; requestAnimationFrame(function f(t){ if(window.__fr.on){ if(last) window.__fr.d.push(t - last); last = t; } else last = 0; requestAnimationFrame(f); }); };
+    const a = await openPage(pw, browser, engine, vp, pathToFileURL(PLAY).href + `?hero=${MATCH.hero}&foe=${MATCH.foe}&seed=${opts.seed || MATCH.seed}` + (opts.pace != null ? `&pace=${opts.pace}` : ""), errors, opts.art, frames);
     const P = a.page;
+    if(opts.throttle){ const cdp = await a.context.newCDPSession(P); await cdp.send("Emulation.setCPUThrottlingRate", { rate: opts.throttle }); }
+    await P.waitForSelector(".stage[data-state] .bout", { timeout: 15000 }); await P.evaluate(() => { window.__fr.on = true; });
     await P.waitForSelector(".stage .bout", { timeout: 15000 });
-    const lives = [], did = { defended: 0, arsenal: 0, reaction: 0 }; let refusals = 0, taps = 0, lastTurn = 0, idle = 0, started = Date.now();
+    const lives = [], did = { defended: 0, arsenal: 0, reaction: 0, sheets: 0 }; let refusals = 0, taps = 0, lastTurn = 0, idle = 0, started = Date.now();
     const snap = () => P.evaluate(() => { const s = DawnUIApp.session(), st = s.state(); return { turn: st.turn, step: st.step, phase: st.phase, over: !!st.over, hp: [st.sides[0].hp, st.sides[1].hp], busy: s.local.busy(), tp: st.turnPlayer }; });
     const click = async loc => { try { await loc.click({ timeout: 1500 }); taps++; return true; } catch(e){ return false; } };
     let s0 = await snap(); lives.push(s0.hp);
-    for(let step = 0; step < 900; step++){
+    for(let step = 0; step < 12000; step++){
       const s = await snap();
       if(s.hp[0] !== lives[lives.length - 1][0] || s.hp[1] !== lives[lives.length - 1][1]) lives.push(s.hp);
       lastTurn = s.turn;
       if(s.over || s.turn > turns * 2) break;
-      if(Date.now() - started > 150000){ res.bad.push("play: gave up after 150 s at turn " + s.turn); break; }
-      if(s.busy || s.tp === 1 && !(await P.locator(".options").count())){
+      if(Date.now() - started > 420000){ res.bad.push("play: gave up after 420 s at turn " + s.turn); break; }
+      if(s.busy || s.tp === 1 && !(await P.locator(".options, .sh-sheet:not(.waiting)").count())){
         /* the AI seat's turn: wait a tick, unless something is asked of us (a defend step / sheet) */
-        const ask = await P.locator(".stage .ask").count(), can = !(await P.locator('[data-b="primary"]').isDisabled());
-        if(!ask && !can && !(await P.locator(".options").count())){ await P.waitForTimeout(40); continue; }
+        const ask = await P.locator(".stage .ask").count(), can = !(await P.locator('.hub [data-b="primary"]').isDisabled());
+        if(!ask && !can && !(await P.locator(".options, .sh-sheet:not(.waiting)").count())){ await P.waitForTimeout(40); continue; }
       }
-      if(await P.locator(".options").count()){
-        const coach = P.locator(".options .opt.coach"); if(await click(coach)) { await P.waitForTimeout(30); continue; }
+      if(await P.locator(".options, .sh-sheet:not(.waiting)").count()){
+        if(await answerSheet(P, did)) { await P.waitForTimeout(30); continue; }
       }
-      if(await P.locator("[data-b=sheet]").count() && await P.locator(".inspect").count()){ await click(P.locator('[data-b="primary"]')); continue; }
-      const st = await P.locator(".stage").getAttribute("data-state");
-      const label = await primaryText(P), dis = await P.locator('[data-b="primary"]').isDisabled();
+      if(await P.locator("[data-b=sheet]").count() && await P.locator(".inspect").count()){ await click(P.locator('.hub [data-b="primary"]')); continue; }
+      const st = await P.locator(".stage[data-state]").getAttribute("data-state");
+      const label = await primaryText(P), dis = await P.locator('.hub [data-b="primary"]').isDisabled();
       const ready = P.locator(".handrow .cd.ready").first();
       if(st === "t3"){                                   /* paying: pitch until paid, else cancel */
-        if(!dis){ await click(P.locator('[data-b="primary"]')); continue; }
+        if(!dis){ await click(P.locator('.hub [data-b="primary"]')); continue; }
         if(await ready.count()){ await click(ready); continue; }
         await click(P.locator('[data-b="hub-left"]')); continue;
       }
@@ -588,14 +705,22 @@ async function runPlay(pw, browser, engine, opts){
         if(/blocks/i.test(ask) && /^block with/i.test(label)) did.defended++;
         if(/arsenal/i.test(ask) && /^no arsenal$/i.test(label) && await ready.count()){ await click(ready); await P.waitForTimeout(20); continue; }
         if(/arsenal/i.test(ask) && /^set in arsenal$/i.test(label)) did.arsenal++;
-        if(!dis){ await click(P.locator('[data-b="primary"]')); await P.waitForTimeout(30); continue; }
+        if(!dis){ await click(P.locator('.hub [data-b="primary"]')); await P.waitForTimeout(30); continue; }
       }
       if(dis){ await P.waitForTimeout(40); idle++; if(idle > 400){ res.bad.push("play: stuck, primary disabled at turn " + s.turn + " (" + label + ")"); break; } continue; }
       idle = 0;
-      if(/^play |^attack with /i.test(label)){ if(s.step !== "layer" || s.phase !== "action") did.reaction++; await click(P.locator('[data-b="primary"]')); continue; }   /* a selection is made: commit it */
+      if(/^play |^attack with /i.test(label)){ if(s.step !== "layer" || s.phase !== "action") did.reaction++; await click(P.locator('.hub [data-b="primary"]')); continue; }   /* a selection is made: commit it */
       if(/^pass$/i.test(label) && s.tp === 1 && await ready.count()){ if(await click(ready)){ await P.waitForTimeout(20); if(/^play /i.test(await primaryText(P))) continue; } }   /* their turn, priority ours: a card that can answer */
       if(/^end turn$/i.test(label) && await ready.count() && s.tp === 0){ const before = label; if(await click(ready)){ await P.waitForTimeout(20); if(/^play /i.test(await primaryText(P))) continue; } }
-      if(await P.locator('[data-b="primary"]').isEnabled()){ if(!(await click(P.locator('[data-b="primary"]')))) await P.waitForTimeout(30); }
+      if(await P.locator('.hub [data-b="primary"]').isEnabled()){ if(!(await click(P.locator('.hub [data-b="primary"]')))) await P.waitForTimeout(30); }
+    }
+    const fr = await P.evaluate(() => { window.__fr.on = false; return window.__fr.d; });
+    if(opts.throttle && fr.length){
+      const so = fr.slice().sort((x, y) => x - y), p95 = so[Math.min(so.length - 1, Math.floor(.95 * so.length))], mx = so[so.length - 1], over = fr.filter(x => x > 34).length;
+      res.frames = { n: fr.length, p95, max: mx, over34: over };
+      res.notes.push(`frames@${opts.throttle}x n=${fr.length} p95 ${p95.toFixed(1)} ms max ${mx.toFixed(1)} ms >34ms: ${over}`);
+      if(p95 > 20) res.bad.push(`frames: p95 ${p95.toFixed(1)} ms > 20`);
+      if(mx > 34) res.bad.push(`frames: worst ${mx.toFixed(1)} ms > 34 (${over} frame(s) over)`);
     }
     const events = await P.evaluate(() => DawnUIApp.session().events());
     const bad = events.filter(e => e.t === "policy-refused" || e.t === "stalled");
@@ -608,7 +733,7 @@ async function runPlay(pw, browser, engine, opts){
       if(!did.defended) res.bad.push("play: you never defended");
       if(!did.arsenal && !did.reaction) res.bad.push("play: you never set an arsenal card or played a reaction");
     }
-    res.notes.push(`defended ${did.defended}, arsenal ${did.arsenal}, reactions ${did.reaction}`);
+    res.notes.push(`defended ${did.defended}, arsenal ${did.arsenal}, reactions ${did.reaction}, sheets ${did.sheets}`);
     res.notes.push(`turn ${fin.turn}, ${taps} taps, ${refusals} refused taps, life ${lives.map(l => l.join("/")).join(" > ")}`);
     if(opts.shots) await P.screenshot({ path: path.join(opts.shots, `play-${engine}.png`) });
     await a.context.close();
@@ -664,7 +789,9 @@ async function main(){
       }
       if(want("states")) for(const vp of VIEWPORTS) report(await runStates(pw, browser, engine, vp, o), "states");
       if(want("states2")) for(const vp of VIEWPORTS) report(await runStates2(pw, browser, engine, vp, o), "states2");
-      if(want("play")) report(await runPlay(pw, browser, engine, { ...o, turns: +arg("--turns") || 5, needs: true }), "play");
+      if(want("states3")) for(const vp of VIEWPORTS) report(await runStates3(pw, browser, engine, vp, o), "states3");
+      if(want("play")) report(await runPlay(pw, browser, engine, { ...o, turns: +arg("--turns") || 5, needs: true, pace: arg("--pace") }), "play");
+      if(want("frames") && engine === "chromium") report(await runPlay(pw, browser, engine, { ...o, turns: +arg("--turns") || 5, needs: true, throttle: 4, pace: arg("--pace") }), "frames");
     } finally { await browser.close(); }
   }
   if(diffsSeen.size){ console.log("\nDIFFERENCES (deliberately not compared):"); [...diffsSeen].forEach(d => console.log("  - " + d)); }

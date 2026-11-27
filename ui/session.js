@@ -21,7 +21,9 @@
 })(typeof self !== "undefined" ? self : this, function(root){
 
 const LAST_KEY = "dawnblade.crescendo.last";
-const AI_PACE_MS = 600;   /* one AI action a tick, each one seen (the director takes this over with its beats) */
+/* THE AI SEAT AT A HUMAN PACE (MOTION.md 4.2): one action a tick; a pass is quick, anything announced waits out its beat
+   (the slab and the glimpse, ~1.7 s) plus the next think. A function of the action's kind only, never of a clock or a search. */
+const aiPace = (prev, a) => !a ? 500 : a.t === "pass" ? 110 : a.t === "defend" ? 900 : 2000;
 
 function parseQuery(search){
   const q = {};
@@ -47,7 +49,7 @@ function choose(q, heroes, last){
   const foe  = pick(q.foe,  pick(last && last.foe,  dflt[1]));
   const seed = q.seed != null && q.seed !== "" ? String(q.seed) : String(Math.floor(Math.random() * 1e9));
   const first = q.first === "1" ? 1 : 0;
-  const pace = q.pace != null && q.pace !== "" && !isNaN(+q.pace) ? Math.max(0, +q.pace) : AI_PACE_MS;
+  const pace = q.pace != null && q.pace !== "" && !isNaN(+q.pace) ? Math.max(0, +q.pace) : -1;   /* -1: the human pace; 0: unpaced; N: N ms a tick */
   return {hero, foe, seed, first, pace};
 }
 
@@ -95,7 +97,7 @@ function openLocal(opts, env){
     reduce: env.DawnJudge.reduce,
     legal: env.DawnJudge.legal,
     policy: (st, i) => env.DawnSparring.act(st, i, {search: true}),
-    ...(pick.pace > 0 ? {pace: pick.pace} : {}),
+    ...(pick.pace < 0 ? {pace: aiPace} : pick.pace > 0 ? {pace: pick.pace} : {}),
     onStep: e => steps.forEach(fn => fn(e)),
     onEvent: e => { events.push(e); evs.forEach(fn => fn(e)); },
     onState: st => subs.forEach(fn => fn(st))
@@ -123,5 +125,5 @@ function openLocal(opts, env){
   };
 }
 
-return {openLocal, choose, parseQuery, deal, LAST_KEY, AI_PACE_MS};
+return {openLocal, choose, parseQuery, deal, aiPace, LAST_KEY};
 });

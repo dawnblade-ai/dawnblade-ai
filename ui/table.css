@@ -184,6 +184,21 @@ html[data-band="compact"] .slab .say{font-size:26px;line-height:28px;margin-top:
 
 @media (min-width:414px){.hit .n{font-size:34px;line-height:40px}}
 a.opt{text-decoration:none;justify-content:center}
-/* a permanent's mini card: a 44 x 44 hit area around it (the pad is invisible) */
-.permhit::before{content:"";position:absolute;inset:-12px -11px}
-.permhit{cursor:pointer}
+/* a permanent's mini card sits in a 44 x 44 hit box at every band (a tap floor never scales down); the lane above it wins an overlap */
+.permhit{position:relative;min-width:44px;height:44px;display:grid;place-items:center;cursor:pointer}
+.half .lane{position:relative;z-index:1}
+
+/* step 4/6: the announcer and the sheets live on the stage; the director animates, nothing here transitions */
+.stage{--an-top:var(--h-bout);--an-bot:calc(var(--h-hand) + var(--h-hub));--sh-top:var(--h-bout)}
+.anchor{visibility:hidden;pointer-events:none}
+.bar .flash{opacity:0}
+/* SCREENS-TABLE 14: the announcer slab is 48 high at compact (the glimpse must fit between the slab and the tray) */
+html[data-band="compact"] .an-slab{height:48px}
+
+/* the director's pop keyframes own `transform`, so the pop is centred over the numeral without one */
+.life .pop{left:0;width:100%;text-align:center;transform:none;transform-origin:50% 0;opacity:0}
+/* the prompt sheets (ui/sheets.css) follow the band's button height and flow-5's 14 px foot; the stage already pads the safe area */
+.stage .sh-btn{min-height:var(--btn-h)}
+.stage .sh-btn.sec{min-height:var(--btn-sec-h)}
+.stage .sh-btn.sh-step{min-height:44px}
+.stage .sh-sheet{padding-bottom:14px}

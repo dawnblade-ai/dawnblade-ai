@@ -25,9 +25,9 @@
 })(typeof self !== "undefined" ? self : this, function(root){
 
 const P = root.htmPreact || {};
-const html = P.html, useState = P.useState, useEffect = P.useEffect;
+const html = P.html, useState = P.useState, useEffect = P.useEffect, useRef = P.useRef;
 const K = root.DawnUICard || {};
-const SH = root.DawnUISheet || {};
+const SH = root.DawnUIPanels || {};
 
 /* ---------- the pure half ---------- */
 
@@ -218,10 +218,10 @@ function Bout(p){
   const side = (s, cls) => html`
     <div class=${"side " + cls} data-b=${"bout-" + cls}>
       <div class=${"por" + (s.turn ? " turn" : "")} style=${s.art ? "background-image:url(" + s.art + ")" + (cls === "opp" ? ";background-position:50% 14%" : "") : ""}></div>
-      <div class="col"><div class=${"bar" + (s.low ? " low" : "")}><i class="ghost" style="transform:scaleX(0)"></i><i class="fill" style=${"transform:scaleX(" + s.frac.toFixed(3) + ")"}></i></div><div class="nm">${s.name}</div></div>
-      <div class=${"life" + (s.low ? " low" : "")} data-b="life">${s.life}</div>
+      <div class="col"><div class=${"bar" + (s.low ? " low" : "")}><i class="ghost" style=${"transform:scaleX(" + s.frac.toFixed(3) + ")"}></i><i class="fill" style=${"transform:scaleX(" + s.frac.toFixed(3) + ")"}></i><i class="flash" style="opacity:0"></i></div><div class="nm">${s.name}</div></div>
+      <div class=${"life" + (s.low ? " low" : "")} data-b="life">${s.life}<div class="pop" data-b="pop" style="opacity:0"></div></div>
     </div>`;
-  return html`<header class="bout" data-b="bout" data-tap role="button" aria-label="Open the pad">
+  return html`<header class="bout" data-b="bout" data-tap role="button" aria-label="Open the pad" onClick=${p.onPad}>
     ${side(a, "you")}
     <div class=${"medal" + (medal.mine ? "" : " o")} data-b="medal"><em class=${medal.mine ? "l" : "r"}></em><b>${medal.n}</b><span>TURN</span></div>
     ${side(b, "opp")}
@@ -264,13 +264,15 @@ function Marks(p){
     ${h.ap ? html`<div class="ap" data-b=${p.b}>${Array.from({length: h.ap}, () => html`<svg class="ico"><use href="#i-ap"/></svg>`)}</div>` : null}
     ${h.coins ? html`<div class="coins" data-b=${p.cb}>${Array.from({length: h.coins}, () => html`<span class="coin">1</span>`)}</div>` : null}
   </div>` : null}
-  ${h.perms.length ? html`<div class="perm" data-b=${p.pb}>${h.perms.map(x => html`<${K.Face} card=${x.card} cls="hb permhit" place="perm" b=${p.pb + "-" + x.card.name} on=${p.on.perm(x.card)}>${x.n > 1 ? html`<span class="xn2">×${x.n}</span>` : null}<//>`)}</div>` : null}`;
+  ${h.perms.length ? html`<div class="perm" data-b=${p.pb}>${h.perms.map(x => html`<div class="permhit" data-tap data-b=${p.pb + "-" + x.card.name} aria-label=${x.card.name} ...${p.on.perm(x.card)}><${K.Face} card=${x.card} cls="hb" place="perm">${x.n > 1 ? html`<span class="xn2">×${x.n}</span>` : null}<//></div>`)}</div>` : null}`;
 }
 
 /* the stage: the card being paid for, or the link on the chain with its wall, the stack rail, earlier links; what it costs / hits for */
 function Stage(p){
   const m = p.m, F = K.Face;
   return html`<section class="centre" data-b="stage">
+    <div class="atk anchor" data-anchor="chain" aria-hidden="true"><div class="cd chain" style="transform:none"></div></div>
+    <div class="wall anchor" data-anchor="wall" aria-hidden="true"><div class="cd block" style="transform:none"></div></div>
     ${m.stage.ask ? html`<div class="ask" data-b="ask">${m.stage.ask}</div>` : html`<div class=${"pill" + (m.stage.hot ? " hot" : "")} data-b="pill">${m.stage.pill}</div>`}
     ${m.links.length ? html`<div class="links" data-b="links">${m.links.map((c, i) => html`<${F} key=${c.uid || i} card=${c} cls="link" place="none" b=${"link-" + i} style=${i ? "margin-left:-22px" : undefined} on=${p.on.inspect(c, "An earlier link on the chain")}/>`)}</div>` : null}
     ${m.rail ? html`<div class="stackrail" data-b="stack"><span class="lab">Stack</span><${F} card=${m.rail.card} cls="block" place="none" tap b="stack-card" on=${p.on.inspect(m.rail.card, "On the stack · played by " + m.rail.who)}/><div class="who">${m.rail.who}<br/>${m.rail.kind}</div></div>` : null}
@@ -293,7 +295,7 @@ function Table(p){
   const left = i => "calc(var(--gut) + " + i + " * (var(--cw-hand) + var(--gap-card)) - " + m.sl + "px)";
   const plate = (i, inner, l) => html`<div class=${"peek" + (l ? " l" : "")} data-b="peek" style=${"left:" + (l ? left(i) : "min(calc(100% - 66px), max(66px, " + handX(i) + "))") + ";bottom:calc(var(--h-hub) + var(--ch-hand) + 26px)"}>${inner}</div>`;
   return html`<div class="stage" data-state=${m.insp ? "t10" : m.pay ? "t3" : "t1"}>
-    <${Bout} m=${m}/>
+    <${Bout} m=${m} onPad=${on.pad}/>
     <main class="world" data-b="world">
       <section class="half opp" data-b="opp-half">
         <div class="mkrow"><${Marks} h=${m.opp} b="opp-ap" cb="opp-coins" pb="opp-perm" on=${on}/><div class="hf" data-b="their-hand">${Array.from({length: m.opp.handN}, () => html`<${B} cls="hb"/>`)}</div></div>
@@ -314,11 +316,13 @@ function Table(p){
       : html`<div class="peek" data-b="peek" style="left:50%;bottom:calc(var(--h-hub) + 12px)"><span class="reason">${m.ref.text}</span></div>`) : null}
     ${m.insp ? html`<${SH.Inspect} card=${m.insp.card} where=${m.insp.where} onClose=${on.close}/>` : null}
     ${m.menu ? html`<${SH.Menu} onClose=${on.close} onNew=${on.newGame}/>` : null}
+    ${on.anc && root.DawnUIAnnounce ? html`<${root.DawnUIAnnounce.Announcer} ...${on.anc}/>` : null}
+    ${on.prompt && root.DawnUISheets ? html`<${root.DawnUISheets.Sheet} key=${on.prompt.key} prompt=${on.prompt.p} view=${on.prompt.view} onAnswer=${on.answer} director=${on.anc && on.anc.director}/>` : null}
     ${m.sheet ? html`<${SH.Options} sheet=${m.sheet} onAct=${on.act}/>` : null}
     <footer class="hub" data-b="hub">
       ${m.insp || m.menu ? html`<span style="width:44px;flex:none"></span>` : html`<button class="btn sec sq" data-tap data-b="hub-left" aria-label=${pay ? "Cancel the play" : "Menu"} onClick=${pay ? on.cancel : on.menu}><svg class="ico"><use href=${pay ? "#i-x" : "#i-menu"}/></svg></button>`}
       <button class=${"btn primary" + primary.cls + (primary.disabled ? " dis" : "")} data-tap data-b="primary" disabled=${primary.disabled} onClick=${on.primary}>${primary.label}</button>
-      ${m.insp || m.menu ? html`<span style="width:44px;flex:none"></span>` : html`<button class="btn sec sq" data-tap data-b="hub-right" aria-label="Pad"><svg class="ico"><use href="#i-pad"/></svg></button>`}
+      ${m.insp || m.menu ? html`<span style="width:44px;flex:none"></span>` : html`<button class="btn sec sq" data-tap data-b="hub-right" aria-label="Pad" onClick=${on.pad}><svg class="ico"><use href="#i-pad"/></svg></button>`}
     </footer>
   </div>`;
 }
@@ -329,6 +333,34 @@ function Live(p){
   const st = useState(s.state()), state = st[0], setState = st[1];
   const us = useState({sel: null, insp: null, ref: null, sl: 0}), ui = us[0], setUi = us[1];
   useEffect(() => s.subscribe(setState), [s]);
+  /* THE DIRECTOR AND THE ANNOUNCER (ui/director.js, ui/announce-view.js). State is true at t=0; beats only dress it: the
+     life number and bar stay at the pre-hit value until the hit's contact frame (`holds`), a real hand node is hidden
+     while its card flies and shown when it lands. Nothing here gates an input. */
+  const bump = (st2 => () => st2[1](n => n + 1))(useState(0));
+  const ref = useRef(null);
+  if(!ref.current){
+    const r = ref.current = {holds: [[], []], rects: new Map(), api: {current: null}, buffer: [], hear: null, dir: null, layout: null, sub: null};
+    /* ONE director for the whole app when the router has made one (its speed setting then reaches the table's beats) */
+    r.dir = p.director || (root.DawnUIApp && root.DawnUIApp.director && root.DawnUIApp.director()) || null;
+    if(!r.dir && root.DawnUIDirector){ r.dir = root.DawnUIDirector.create({root: root.document}); r.own = true; }
+    if(root.DawnUIAudio && root.DawnUIAudio.init) root.DawnUIAudio.init();
+    if(root.DawnUILayout) r.layout = root.DawnUILayout.create(() => root.document.querySelector(".stage"), me, r.rects);
+    const names = s.names.map(firstName);
+    r.hear = step => {
+      const AV = root.DawnUIAnnounce; if(!AV || !r.api.current) return;
+      const ds = AV.beatsFor(step, me, {names});
+      ds.forEach(d => { if(d.kind === "hit" || d.kind === "ko" || d.kind === "lifegain") r.holds[d.side].push({from: d.from, d}); });
+      ds.forEach(d => { if(r.layout) r.layout.extras = (d.extras || []).length; r.api.current.play([d]); });
+      if(r.layout) r.layout.extras = 0;
+    };
+    /* subscribed at once, so a step heard before the announcer has mounted waits instead of being lost */
+    r.sub = s.onStep(step => { if(r.api.current) r.hear(step); else r.buffer.push(step); });
+  }
+  const RT = ref.current;
+  useEffect(() => { const b = RT.buffer.splice(0); b.forEach(RT.hear); return () => { if(RT.sub) RT.sub(); RT.sub = null; if(RT.own && RT.dir && RT.dir.dispose) RT.dir.dispose(); }; }, [s]);
+  useEffect(() => { /* where the hand cards are, remembered for a flight from a card that has already left the row */
+    const st0 = root.document.querySelector(".stage"); if(st0 && root.DawnUILayout) root.DawnUILayout.remember(st0, RT.rects);
+  });
   useEffect(() => { if(!ui.ref) return; const t = setTimeout(() => setUi(u => u.ref === ui.ref ? {...u, ref: null} : u), 2400); return () => clearTimeout(t); }, [ui.ref]);
   const game = root.DawnGame;
   const L = a => J.legal(state, a, me);
@@ -346,13 +378,14 @@ function Live(p){
   };
   const v = root.DawnView.view(state, me);
   const m = model(v, ctx);
+  [0, 1].forEach(si => { const h = RT.holds[si][0]; if(h){ const b = m.bout[si === me ? 0 : 1], max = v.sides[si].maxHp; b.frac = Math.max(0, Math.min(1, h.from)); b.life = Math.round(b.frac * max); b.low = b.frac <= 0.25; } });
   /* what this seat was asked that the table cannot draw yet, or a holder with no drawable button: plain options */
   const asked = SH.sheetOf(v, {seat: me, legal: L});
   m.sheet = asked || (m.primary.stuck ? SH.stuckSheet(v, {seat: me, legal: L, moves: J.moves(state, me)}) : null);
   if(m.sheet) m.primary = {...m.primary, disabled: true};
 
   const refuse = (text, at) => setUi(u => ({...u, ref: {text, at: at || {k: "stage"}}, sel: null}));
-  const submit = (a, at) => { const why = a.suggest ? (() => { const x = s.suggest(); return x ? s.submit(x) : "nothing to suggest"; })() : s.submit(a);
+  const submit = (a, at) => { if(RT.dir && RT.dir.skip) RT.dir.skip(); const why = a.suggest ? (() => { const x = s.suggest(); return x ? s.submit(x) : "nothing to suggest"; })() : s.submit(a);
     if(why) refuse(why, at); else setUi(u => ({...u, sel: null, ref: null})); return !why; };
   const open = (card, where) => setUi(u => ({...u, insp: {card, where}, sel: null, ref: null}));
   const mat = (who, card) => who === "you" ? "Your equipment" : "Their equipment";
@@ -390,7 +423,8 @@ function Live(p){
     perm: card => press(() => open(card, "A permanent on the board"), () => open(card, "A permanent on the board")),
     close: () => setUi(u => ({...u, insp: null, menu: false})),
     cancel: () => submit({t: "payCancel"}),
-    menu: () => setUi(u => ({...u, menu: !u.menu, sel: null, ref: null})),
+    menu: () => p.onMenu ? p.onMenu() : setUi(u => ({...u, menu: !u.menu, sel: null, ref: null})),
+    pad: () => { if(p.onPad) p.onPad(); },
     slot: press(() => { const sl = ui.sel; if(sl && sl.from === "hand") submit({t: "arsenal", uid: sl.uid}); else refuse("Tap the card you want face down first"); }, null),
     newGame: () => { try { root.location.href = root.location.pathname; } catch(e){} },
     act: a => submit(a),
@@ -406,6 +440,19 @@ function Live(p){
       }
     }
   };
+  const release = d => { const q = RT.holds[d.side]; const i = q.findIndex(h => h.d === d); if(i >= 0){ q.splice(i, 1); bump(); } };
+  const dom = root.document;
+  on.anc = RT.dir && root.DawnUIAnnounce && RT.layout ? {
+    director: RT.dir, viewer: me, view: {names: s.names.map(firstName)}, layout: RT.layout, api: RT.api, size: {w: 393, h: 660},
+    onHide: (uid, hide) => { const st0 = dom.querySelector(".stage"), e = st0 && st0.querySelector('[data-uid="' + uid + '"]'); if(e) e.style.visibility = hide ? "hidden" : ""; },
+    onContact: d => { if(d.kind === "hit" || d.kind === "ko") release(d); },
+    onLand: d => { if(d.kind === "lifegain" || d.kind === "hit" || d.kind === "ko") release(d); }
+  } : null;
+  /* every engine prompt is a real sheet (ui/sheets.js); it sends each engine action through the session, in order */
+  const pr = v.prompt && ((v.prompt.side || 0) === me || v.prompt.tag === "reveal") ? v.prompt : null;
+  const cardNamed = name => { const nm = SH.named(v, me); for(const c of nm.values()) if(c.name === name) return c; return null; };
+  on.prompt = pr ? {p: pr, key: [pr.src, pr.tag, pr.title].join("|"), view: {seat: me, names: s.names.map(firstName), cardOf: cardNamed}} : null;
+  on.answer = a => submit(a);
   return html`<${Table} m=${m} on=${on}/>`;
 }
 
