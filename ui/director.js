@@ -249,6 +249,19 @@ KINDS.fade = { lane: "now", hooks: [], phases: [function (b, c) {
   return ph("fade", [it("target", 0, c.rm ? 0 : c.f(c.T.fast), fadeKf(from, to), "linear", { keep: true })], []);
 }] };
 
+/* F5 prompt sheets: the sheet rises over a fading scrim (--m-emph / --m-fast) and drops (--m-std). Lane now: a question
+   to answer is never queued behind an announcement (§4.5.3). */
+KINDS.rise = { lane: "now", hooks: ["commit"], phases: [function (b, c) {
+  return ph("rise", [
+    it("sheet", 0, c.d(c.T.emph), [{ transform: "translate3d(0,100%,0)" }, { transform: "translate3d(0,0,0)" }], c.E.out, { keep: true }),
+    it("scrim", 0, c.d(c.T.fast), fadeKf(0, 1), "linear", { keep: true })], []);
+}] };
+KINDS.drop = { lane: "now", hooks: ["commit"], phases: [function (b, c) {
+  return ph("drop", [
+    it("sheet", 0, c.d(c.T.std), [{ transform: "translate3d(0,0,0)" }, { transform: "translate3d(0,100%,0)" }], c.E["in"], { keep: true }),
+    it("scrim", 0, c.d(c.T.fast), fadeKf(1, 0), "linear", { keep: true })], []);
+}] };
+
 /* §3.3 / §3.6: your own play — hand -> glimpse -> zone. 1190 ms. An attack adds the badge pop and the tilt. */
 KINDS.play = { lane: "q", hooks: ["commit"], phases: [
   function (b, c) {
@@ -294,6 +307,7 @@ KINDS.announce = { lane: "q", hooks: ["commit"], phases: [
       items.push(it("card", 0, fd, [{ transform: tf(g), opacity: 0 }, { transform: tf(g), opacity: 1 }], "linear"));
       if (b.reveal !== false) items.push(it("back", 0, 0, fadeKf(1, 0), "linear", { keep: true }));
       (b.extras || []).forEach(function (x, i) { items.push(it("x" + i, 0, fd, [{ transform: tf(x.glimpse), opacity: 0 }, { transform: tf(x.glimpse), opacity: 1 }], "linear")); });
+      items.push(it("scrim", 0, fd, fadeKf(0, 1), "linear"));
       cues.push(cue(0, "thud"), cue(fd, "slap", b.reaction ? { gain: .7 } : null));
       return ph("enter", items, cues);
     }
@@ -306,6 +320,7 @@ KINDS.announce = { lane: "q", hooks: ["commit"], phases: [
     (b.extras || []).forEach(function (x, i) {
       items.push(it("x" + i, at + c.d(STAGGER) * (i + 1), fl, [{ transform: tf(x.from || P.back || x.glimpse), opacity: 0 }, { transform: tf(x.glimpse), opacity: 1 }], E.out));
     });
+    items.push(it("scrim", 0, c.d(T.fast), fadeKf(0, 1), "linear"));
     cues.push(cue(0, "thud"), cue(at + fl, "slap", b.reaction ? { gain: .7 } : null));
     return ph("enter", items, cues);
   },
@@ -317,9 +332,11 @@ KINDS.announce = { lane: "q", hooks: ["commit"], phases: [
       items.push(it("slab", 0, fd, fadeKf(1, 0), "linear"));
       items.push(it("card", 0, fd, fadeKf(1, 0), "linear"));
       (b.extras || []).forEach(function (x, i) { items.push(it("x" + i, 0, fd, fadeKf(1, 0), "linear")); });
+      items.push(it("scrim", 0, fd, fadeKf(1, 0), "linear"));
       return ph("leave", items, []);
     }
     items.push(it("slab", 0, c.d(T.fast + 40), [{ transform: "translate3d(0,0,0)", opacity: 1 }, { transform: "translate3d(" + (-s * 100) + "%,0,0)", opacity: 0 }], E["in"]));
+    items.push(it("scrim", 0, c.d(T.fast), fadeKf(1, 0), "linear"));
     items.push(it("card", 0, c.d(T.std), [{ transform: tf(P.glimpse), opacity: 1 }, { transform: tf(P.dest), opacity: 1 }], E.inout));
     (b.extras || []).forEach(function (x, i) { items.push(it("x" + i, 0, c.d(T.std), [{ transform: tf(x.glimpse), opacity: 1 }, { transform: tf(x.to), opacity: 1 }], E.inout)); });
     return ph("leave", items, []);
@@ -691,6 +708,7 @@ function create(opts) {
     return run;
   }
 
+  function propsOf(kf) { var p = {}; kf.forEach(function (f) { if ("transform" in f) p.transform = 1; if ("opacity" in f) p.opacity = 1; }); return p; }
   function ctxFor(run) {
     return makeCtx({ T: T, E: E, rm: rm(), sp: sp, accel: run.accel, skipping: run.skipping, cap: run.def.skipCap || T.fast,
       el: function (role) { return resolveRole(role, run.beat); }, measure: measure });
@@ -712,7 +730,7 @@ function create(opts) {
       var el = resolveRole(item.role, run.beat);
       if (!el) return;
       var a = animate(el, item.kf, { duration: item.dur, delay: item.at, easing: item.ease, fill: "both" });
-      if (a) run.anims.push({ a: a, el: el, keep: !!item.keep });
+      if (a) run.anims.push({ a: a, el: el, keep: !!item.keep, props: propsOf(item.kf) });
     });
     ph_.cues.forEach(function (q) {
       if (q.at <= 0) playCue(q);
@@ -734,10 +752,30 @@ function create(opts) {
     try { a.cue(q.name, { gain: q.gain, pitch: q.pitch }); } catch (e) { /* sound is best-effort, never blocks a beat */ }
   }
 
+  /* `keep` items leave their final pose behind as inline style. WebKit's Animation.commitStyles writes the FIRST keyframe for
+     some multi-keyframe effects (seen: the KO word, scale(1.6) opacity 0, on a finished animation), so the final value is READ from the
+     computed style while the animation still applies, then written after cancel. commitStyles stays the fallback (node, no DOM). */
+  function readKeep(x) {
+    try {
+      var el = x.el, g = typeof globalThis !== "undefined" ? globalThis : {};
+      if (!el || !el.style || !g.getComputedStyle || el.isConnected === false) return null;
+      var cs = g.getComputedStyle(el), o = { el: el };
+      if (x.props.transform) o.transform = cs.transform;
+      if (x.props.opacity) o.opacity = cs.opacity;
+      return o;
+    } catch (e) { return null; }
+  }
   function dropAnims(run) {
+    var caps = [];
     run.anims.forEach(function (x) {
-      try { if (x.keep && x.a.commitStyles) x.a.commitStyles(); } catch (e) { /* element removed */ }
-      try { x.a.cancel(); } catch (e) { /* already gone */ }
+      if (!x.keep) return;
+      var c = readKeep(x);
+      if (c) caps.push(c);
+      else { try { if (x.a.commitStyles) x.a.commitStyles(); } catch (e) { /* element removed */ } }
+    });
+    run.anims.forEach(function (x) { try { x.a.cancel(); } catch (e) { /* already gone */ } });
+    caps.forEach(function (c) {
+      try { if (c.transform !== undefined) c.el.style.transform = c.transform === "none" ? "" : c.transform; if (c.opacity !== undefined) c.el.style.opacity = c.opacity; } catch (e) { /* gone */ }
     });
     run.anims = [];
   }

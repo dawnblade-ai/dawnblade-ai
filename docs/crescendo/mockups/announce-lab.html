@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Dawnblade Announce Lab</title>
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../../../ui/announce.css">
+<!-- ANNOUNCE LAB: a RECORDED self-played game (announce-tape.js, written by tools/ui-fixtures.js) replayed through
+     ui/announce-view.js and the real director: the slab, the glimpse, the pitch, the block, the hit-stop, the KO.
+     The tape is `beatsFor(step, viewer=0)`'s output, so every name on screen is one engine/announce.js already said. -->
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:#0e1116;color:var(--ink-0);font-family:var(--f-text);-webkit-text-size-adjust:100%}
+body{width:393px;margin:0 auto;padding-bottom:24px;touch-action:manipulation;--vh:660px}
+.stage{position:relative;width:393px;height:660px;overflow:hidden;background:radial-gradient(120% 80% at 50% 45%,var(--mat-2),var(--mat-0));border-block:1px solid var(--rail);user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;--an-top:56px;--an-bot:202px}
+.world{position:absolute;left:0;right:0;top:56px;bottom:0;transform:translate3d(0,0,0)}
+.bout{position:absolute;left:0;right:0;top:0;height:56px;background:var(--mat-0);z-index:5}
+.bt{position:absolute;top:8px;width:170px;height:40px}.bt.s0{left:10px}.bt.s1{right:10px}
+.bt .nm{font:var(--t-label);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.bt .life{position:absolute;right:0;top:-2px;font:var(--t-life);font-variant-numeric:tabular-nums}
+.bt.s0 .life{color:var(--you)}.bt.s1 .life{color:var(--opp)}
+.bar{position:absolute;left:0;top:20px;width:120px;height:12px;border-radius:3px;background:#0a0d12;overflow:hidden;border:1px solid var(--rail)}
+.bar i{position:absolute;inset:0;transform-origin:0 50%}.ghost{background:var(--damage-lo)}.fill{background:var(--you)}.s1 .fill{background:var(--opp)}.flash{background:#fff;opacity:0}
+.pop{position:absolute;right:30px;top:30px;font:800 26px/26px var(--f-display);color:var(--damage);text-shadow:0 2px 0 #000;opacity:0;pointer-events:none}
+.word{position:absolute;right:6px;top:34px;font:800 16px/16px var(--f-display);color:var(--prevent);opacity:0}
+.zone{position:absolute;border:1px dashed var(--rail);border-radius:6px;font:var(--t-label);color:var(--ink-2);padding:2px 4px;letter-spacing:.06em}
+.medal{position:absolute;left:176px;top:96px;width:40px;height:40px;transform-style:preserve-3d;will-change:transform;z-index:6}
+.medal div{position:absolute;inset:0;border-radius:50%;display:grid;place-items:center;font:800 11px var(--f-display);backface-visibility:hidden;-webkit-backface-visibility:hidden;border:2px solid var(--brass);background:var(--mat-0)}
+.medal .f2{transform:rotateY(180deg);background:var(--brass);color:var(--ink-inv)}
+.glow{position:absolute;left:0;right:0;height:36px;opacity:0}.glow.g0{bottom:0;background:linear-gradient(0deg,rgba(79,216,164,.5),transparent)}.glow.g1{top:56px;background:linear-gradient(180deg,rgba(183,148,255,.5),transparent)}
+.tray{position:absolute;left:0;right:0;bottom:68px;height:134px;background:var(--tray);z-index:4;display:flex;gap:4px;padding:10px 8px}
+.hc{width:80px;height:112px;border-radius:8px;background:var(--mat-3);display:grid;place-items:center;font:var(--t-label);color:var(--ink-2)}
+.hub{position:absolute;left:0;right:0;bottom:0;height:68px;background:var(--mat-0);z-index:4;display:grid;place-items:center;font:var(--t-btn);color:var(--ink-2);letter-spacing:.06em}
+.an-layer{z-index:7}
+.panel{padding:10px 12px 0}.row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+button,select{min-height:44px;padding:0 12px;border-radius:10px;border:1px solid var(--rail);background:var(--mat-3);color:var(--ink-0);font:700 13px var(--f-text)}
+button:active{transform:scale(.96)}button.gold{background:var(--brass);color:var(--ink-inv);border-color:var(--brass)}
+label.sw{display:flex;align-items:center;gap:8px;font:700 13px var(--f-text);min-height:44px}
+.hud{margin:6px 12px;font:600 12px/1.55 ui-monospace,Menlo,monospace;color:var(--ink-2)}.hud b{color:var(--ink-0)}.hud .bad{color:var(--damage)}
+#log{max-height:130px;overflow:auto;white-space:pre}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="bout">
+    <div class="bt s0"><span class="nm" id="n0">You</span><span class="life" id="life0">20</span><div class="bar"><i class="ghost" id="ghost0"></i><i class="fill" id="fill0"></i><i class="flash" id="flash0"></i></div><div class="pop" id="pop0">-0</div><div class="word" id="word0">PREVENTED</div></div>
+    <div class="bt s1"><span class="nm" id="n1">Them</span><span class="life" id="life1">20</span><div class="bar"><i class="ghost" id="ghost1"></i><i class="fill" id="fill1"></i><i class="flash" id="flash1"></i></div><div class="pop" id="pop1">-0</div><div class="word" id="word1">PREVENTED</div></div>
+  </div>
+  <div class="world" id="world">
+    <div class="zone" style="left:96px;top:126px;width:112px;height:156px">CHAIN</div>
+    <div class="medal" id="medal"><div class="f1">YOU</div><div class="f2">THEM</div></div>
+  </div>
+  <div class="glow g0" id="glow0"></div><div class="glow g1" id="glow1"></div>
+  <div class="tray"><div class="hc">HAND</div><div class="hc">HAND</div><div class="hc">HAND</div><div class="hc">HAND</div></div>
+  <div class="hub" id="hub">TAP THE TABLE TO SKIP</div>
+  <div id="mount"></div>
+</div>
+<div class="hud" id="meter">frames <b id="hN">0</b> &middot; p95 <b id="hP95">-</b> ms &middot; worst <b id="hMax">-</b> ms &middot; &gt;17.5ms <b id="hOver">0</b><br>step <b id="hStep">0</b> / <b id="hTot">0</b> &middot; beats played <b id="hBeats">0</b></div>
+<div class="panel">
+  <div class="row"><button class="gold" id="next">Next step</button><button id="auto">Auto-play</button><button id="reset">Reset</button></div>
+  <div class="row"><button id="skip">Skip</button><button id="thru">Tap through</button>
+    <label class="sw"><input type="checkbox" id="snd" checked> Sound</label><label class="sw"><input type="checkbox" id="rm"> Reduce motion</label>
+    <select id="spd" aria-label="Speed"><option value="standard">Standard</option><option value="quick">Quick</option><option value="instant">Instant</option></select></div>
+  <div class="hud" id="log"></div>
+</div>
+
+<script src="../../../engine/rng.js"></script><script src="../../../engine/parser.js"></script><script src="../../../engine/game.js"></script>
+<script src="../../../engine/types.js"></script><script src="../../../engine/view.js"></script><script src="../../../engine/announce.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/htm@3.1.1/preact/standalone.umd.js"></script>
+<script src="announce-tape.js"></script>
+<script src="../../../ui/audio.js"></script><script src="../../../ui/director.js"></script><script src="../../../ui/announce-view.js"></script>
+<script>
+(function(){
+"use strict";
+var $=function(i){return document.getElementById(i)}, P=window.htmPreact, html=P.html, Dir=window.DawnUIDirector, AV=window.DawnUIAnnounce, Aud=window.DawnUIAudio, TAPE=window.ANNOUNCE_TAPE;
+Aud.init();
+var meter={busy:false,last:0,d:[],all:[]};
+function pct(a,p){if(!a.length)return 0;var s=a.slice().sort(function(x,y){return x-y});return s[Math.min(s.length-1,Math.floor(p*s.length))]}
+function show(){var d=meter.d,mx=0,over=0;d.forEach(function(x){if(x>mx)mx=x;if(x>17.5)over++});$("hN").textContent=d.length;$("hP95").textContent=pct(d,.95).toFixed(1);$("hMax").textContent=mx.toFixed(1);var o=$("hOver");o.textContent=over;o.className=over?"bad":""}
+requestAnimationFrame(function f(t){if(meter.busy){if(meter.last){meter.d.push(t-meter.last);meter.all.push(t-meter.last)}meter.last=t}requestAnimationFrame(f)});
+var beats=0, results=[];
+var director=Dir.create({root:document,onEvent:function(e){
+  if(e.type==="beatstart"){beats++;$("hBeats").textContent=beats;log("+ "+e.beat.kind);if(!meter.busy){meter.busy=true;meter.last=0;meter.d=[]}}
+  if(e.type==="idle"&&meter.busy){meter.busy=false;show();var d=meter.d,mx=0,ov=0;d.forEach(function(x){if(x>mx)mx=x;if(x>17.5)ov++});results.push({frames:d.length,p95:pct(d,.95),max:mx,over:ov})}
+}});
+function log(s){var l=$("log");l.textContent=(s+"\n"+l.textContent).split("\n").slice(0,40).join("\n")}
+
+/* the lab table: where things are, in the announcer layer's 393x660 pixels */
+var MAX=TAPE.maxLife, life=[MAX[0],MAX[1]];
+$("n0").textContent="You";$("n1").textContent=TAPE.names[1];
+function R(x,y,w,h){return {x:x,y:y,w:w,h:h}}
+var layout={
+  rect:function(place,a,b){
+    switch(place){
+      case "glimpse": return R(30.5,126,232,324);
+      case "small": return R(270,126+(a||0)*144,92,128);
+      case "hand": return R(8+((typeof b==="number"?b:(a&&a.uid!=null?(a.uid%4):0))%4)*84,470,80,112);
+      case "oppHand": return R(156,-120,80,112);
+      case "deck": return a===0?R(300,478,64,90):R(300,70,44,61);
+      case "chain": return R(96,182,112,156);
+      case "pile": return a===0?R(250,364,44,61):R(250,100,44,61);
+      case "grave": return a===0?R(196,364,44,61):R(196,100,44,61);
+      case "arsenal": return a===0?R(339,364,44,61):R(339,100,44,61);
+      case "wall": return R(194+(b||0)*68,a===0?250:190,64,89);
+      case "bout": return a===0?R(40,4,60,84):R(300,4,60,84);
+      case "loser": return R(a===0?8:330,4,60,84);
+    }
+    return R(30,126,232,324);
+  },
+  el:function(name,seat){
+    switch(name){
+      case "world": return $("world");
+      case "flash": return $("flash"+seat); case "ghost": return $("ghost"+seat); case "fill": return $("fill"+seat);
+      case "pop": return $("pop"+seat); case "word": return $("word"+seat);
+      case "medal": return $("medal"); case "glow": return $("glow"+seat);
+    }
+    return null;
+  }
+};
+function setLife(side,frac){life[side]=Math.round(frac*MAX[side]);$("life"+side).textContent=life[side];$("fill"+side).style.transform="scaleX("+frac+")"}
+function showAll(){setLife(0,1);setLife(1,1);["ghost0","ghost1"].forEach(function(i){$(i).style.transform="scaleX(1)"})}
+var api={current:null}, step=0, timer=null;
+var landed={n:0};
+function onContact(d,bb){setLife(d.side,d.to)}   /* the number and the fill jump at contact; the ghost is the director's */
+function onLand(d){landed.n++;if(d.kind==="lifegain")setLife(d.side,d.to);if(d.kind==="hit"||d.kind==="ko"){$("ghost"+d.side).style.transform="scaleX("+d.to+")"}}
+function mount(){
+  P.render(html`<${AV.Announcer} director=${director} viewer=${0} view=${{names:TAPE.names}} layout=${layout} api=${api} size=${{w:393,h:660}} onContact=${onContact} onLand=${onLand}/>`,$("mount"));
+}
+function nextStep(){
+  if(step>=TAPE.steps.length)return false;
+  var ds=TAPE.steps[step++];$("hStep").textContent=step;
+  api.current.play(ds);
+  return true;
+}
+$("hTot").textContent=TAPE.steps.length;
+$("next").onclick=nextStep;
+$("auto").onclick=function(){
+  if(timer){clearInterval(timer);timer=null;this.textContent="Auto-play";return}
+  var b=this;b.textContent="Stop";
+  timer=setInterval(function(){if(!nextStep()){clearInterval(timer);timer=null;b.textContent="Auto-play"}},700);
+};
+$("reset").onclick=function(){if(timer){clearInterval(timer);timer=null;$("auto").textContent="Auto-play"}director.tapThrough();step=0;$("hStep").textContent=0;showAll();["slab","dim","sweep","result"].forEach(function(c){var e=document.querySelector(".an-"+c);if(e){e.style.opacity="";e.style.transform=""}});beats=0;$("hBeats").textContent=0;meter.all=[];results=[]};
+$("skip").onclick=function(){director.skip()};$("thru").onclick=function(){director.tapThrough()};
+$("rm").onchange=function(){director.reduce(this.checked)};$("spd").onchange=function(){director.speed(this.value)};
+$("snd").onchange=function(){Aud.setMuted(!this.checked);if(this.checked){Aud.unlock();Aud.cue("tap")}};$("snd").checked=!Aud.muted();
+try{if(matchMedia("(prefers-reduced-motion: reduce)").matches){$("rm").checked=true;director.reduce(true)}}catch(e){}
+mount();showAll();
+window.announceLab={next:nextStep,director:director,results:function(){return results},steps:TAPE.steps.length,step:function(){return step},landed:landed,reset:function(){$("reset").onclick()},api:api};
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Dawnblade Sheets Lab</title>
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../../../ui/sheets.css">
+<!-- SHEETS LAB: every prompt sheet (F5) of ui/sheets.js, rendered from REAL prompts (prompts-fixture.js is written by
+     tools/ui-fixtures.js from self-played games). The lab is a live toy engine: a tap sends the real engine action
+     (promptSel / promptChoose / ...) through engine/prompts.js's own reducers, so what you see is what the table would. -->
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:#0e1116;color:var(--ink-0);font-family:var(--f-text);-webkit-text-size-adjust:100%}
+body{width:393px;margin:0 auto;--vh:660px;touch-action:manipulation}
+.bar{display:flex;gap:6px;flex-wrap:wrap;padding:8px 10px;font:var(--t-small)}
+.bar select,.bar button{min-height:44px;border-radius:10px;border:1px solid var(--rail);background:var(--mat-3);color:var(--ink-0);font:700 14px var(--f-text);padding:0 10px}
+.stage{position:relative;width:393px;height:660px;overflow:hidden;background:radial-gradient(120% 80% at 50% 45%,var(--mat-2),var(--mat-0));border-block:1px solid var(--rail)}
+.fakebout{position:absolute;left:0;right:0;top:0;height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font:var(--t-life);color:var(--ink-1)}
+.fakebout i{font:var(--t-label);font-style:normal;letter-spacing:.08em}
+.hud{padding:6px 10px;font:600 12px/1.5 ui-monospace,Menlo,monospace;color:var(--ink-2);white-space:pre-wrap}
+#log{max-height:120px;overflow:auto}
+</style>
+</head>
+<body>
+<div class="bar"><select id="pick" aria-label="Prompt"></select><button id="seat">Seen by: asked seat</button><button id="again">Reset</button></div>
+<div class="stage" id="stage"><div class="fakebout"><i>YOU</i><span>40</span><i>THEM</i></div><div id="mount"></div></div>
+<div class="hud" id="info"></div><div class="hud" id="log"></div>
+
+<script src="../../../engine/rng.js"></script>
+<script src="../../../engine/parser.js"></script>
+<script src="../../../engine/game.js"></script>
+<script src="../../../engine/types.js"></script>
+<script src="../../../engine/rps.js"></script>
+<script src="../../../engine/sides.js"></script>
+<script src="../../../engine/priority.js"></script>
+<script src="../../../engine/prompts.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/htm@3.1.1/preact/standalone.umd.js"></script>
+<script src="prompts-fixture.js"></script>
+<script src="../../../ui/director.js"></script>
+<script src="../../../ui/sheets.js"></script>
+<script>
+(function(){
+"use strict";
+var PM=window.DawnPrompts, S=window.DawnUISheets, P=window.htmPreact, html=P.html, F=window.PROMPT_FIXTURES;
+var director=window.DawnUIDirector.create({root:document});
+var $=function(i){return document.getElementById(i)};
+var idx=0, prompt=null, asked=true, key=0;
+function label(p,i){return (i+1)+". "+p.tag+" · "+(p.title||"").slice(0,34)+(p.side?" (seat 1)":"")}
+F.forEach(function(p,i){var o=document.createElement("option");o.value=i;o.textContent=label(p,i);$("pick").appendChild(o)});
+function apply(p,a){
+  switch(a.t){
+    case "promptSel": return PM.promptToggleSel(p,a.i);
+    case "promptChoose": return PM.promptChoose(p,a.choice);
+    case "promptDecline": return PM.promptDecline(p);
+    case "promptTakeBack": return PM.promptTakeBack(p);
+    case "promptMove": return PM.promptMove(p,a.i,a.dir);
+    case "promptConfirm": return p;
+  }
+  return p;
+}
+function log(s){$("log").textContent=(s+"\n"+$("log").textContent).split("\n").slice(0,30).join("\n")}
+function onAnswer(a){
+  log(JSON.stringify(a));
+  if(a.t==="promptConfirm"){
+    if(PM.promptReady(prompt)){log("CONFIRMED: sel="+JSON.stringify(prompt.sel)+" choice="+JSON.stringify(prompt.choice)+" down="+JSON.stringify(prompt.down));setTimeout(load,900)}
+    else log("(refused: not ready)");
+    return;
+  }
+  prompt=apply(prompt,a);draw();
+}
+function draw(){
+  var seat=asked?prompt.side:1-prompt.side;
+  P.render(html`<${S.Sheet} key=${key} prompt=${prompt} view=${{seat:seat,names:["You","Fai"]}} onAnswer=${onAnswer} director=${director}/>`,$("mount"));
+  var m=S.model(prompt,{seat:seat});
+  $("info").textContent="tag "+prompt.tag+" · side "+prompt.side+" · "+(m.waiting?"WAITING (other seat sees no cards)":"controls: "+S.answersOf(m).length)+(m.reason?" · "+m.reason:"");
+}
+function load(){prompt=JSON.parse(JSON.stringify(F[idx]));key++;draw()}
+$("pick").onchange=function(){idx=+this.value;load()};
+$("seat").onclick=function(){asked=!asked;this.textContent="Seen by: "+(asked?"asked seat":"the other seat");draw()};
+$("again").onclick=load;
+window.sheetsLab={load:function(i){idx=i;$("pick").value=i;load()},count:F.length,answer:onAnswer,prompt:function(){return prompt},setSeen:function(a){asked=a;draw()}};
+load();
+})();
+</script>
+</body>
+</html>

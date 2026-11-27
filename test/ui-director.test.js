@@ -84,7 +84,7 @@ function sample(kind, extra) {
     gearBreak: { pose: { from: P(100, 300, .27), to: P(300, 200, .27) } },
     turn: {}, start: { pose: { heroA: { from: P(-200, 20), to: P(150, 20) }, heroB: { from: P(500, 300), to: P(150, 300) }, coin: P(176, 200), medal: [0, 180] } },
     ko: { dmg: 7, side: "M", from: .35, to: 0, pose: { home: P(98, 60, .55), hit: P(98, 210, .58), loser: P(150, 300, .5) } },
-    sheet: {}, move: { uids: ["a", "b"] }
+    sheet: {}, rise: {}, drop: {}, move: { uids: ["a", "b"] }
   }[kind];
   return Object.assign({ kind, els }, base, extra || {});
 }
@@ -124,7 +124,7 @@ const STD = {   /* the totals MOTION.md §3 gives, ms from t=0 */
   select: 120, deselect: 120, refuse: 140, fade: 120,
   play: 1190, reaction: 740, announce: 2160, pitch: 500, block: 510,
   hit: 210 + 90 + 800, lifegain: 720, prevent: 700, goagain: 600, turn: 900, gearBreak: 340,
-  ko: 210 + 1020 + 1180, sheet: 380, arsenal: 300
+  ko: 210 + 1020 + 1180, sheet: 380, rise: 380, drop: 220, arsenal: 300
 };
 test("every beat kind has its MOTION.md duration (standard speed)", () => {
   for (const k of Object.keys(STD)) {
@@ -447,6 +447,23 @@ test("a ready promise holds a flight until the art is decoded (but never past 25
   assert.ok(r.calls.length > 0, "started on decode");
   const r2 = rig(); r2.d.enqueue(sample("play", { ready: new Promise(() => {}) }));
   r2.clock.advance(250); assert.ok(r2.calls.length > 0, "the cap starts it");
+});
+
+test("keep: the final pose is READ from the computed style and written after cancel (WebKit's commitStyles wrote the first keyframe)", () => {
+  const g = globalThis, prev = g.getComputedStyle;
+  const el = { style: {} };
+  g.getComputedStyle = (e) => ({ transform: e === el ? "matrix(1, 0, 0, 1, 0, 0)" : "none", opacity: "0.72" });
+  try {
+    const r = rig({ resolve: () => el });
+    r.d.enqueue({ kind: "sheet", els: {} });
+    r.clock.advance(380);
+    assert.strictEqual(el.style.transform, "matrix(1, 0, 0, 1, 0, 0)", "the transform the animation ended on, as inline style");
+    assert.strictEqual(el.style.opacity, undefined, "only the properties the keyframes touch are written");
+    assert.ok(r.calls.every(a => a.cancelled && !a.committed), "committed by reading, not by commitStyles");
+  } finally { g.getComputedStyle = prev; }
+  /* with no DOM the animation's own commitStyles is the fallback */
+  const r2 = rig(); r2.d.enqueue({ kind: "sheet", els: { sheet: "s" } }); r2.clock.advance(380);
+  assert.ok(r2.calls.some(a => a.committed));
 });
 
 test("dispose cancels everything and resolves idle", async () => {
