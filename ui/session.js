@@ -21,6 +21,8 @@
 })(typeof self !== "undefined" ? self : this, function(root){
 
 const LAST_KEY = "dawnblade.crescendo.last";
+/* the foe key that seats THE DUMMY (a null hero key in buildMatch, the vanilla pile index.html deals); never a hero's own key */
+const DUMMY = "dummy";
 /* THE AI SEAT AT A HUMAN PACE (MOTION.md 4.2): one action a tick; a pass is quick, anything announced waits out its beat
    (the slab and the glimpse, ~1.7 s) plus the next think. A function of the action's kind only, never of a clock or a search. */
 const aiPace = (prev, a) => !a ? 500 : a.t === "pass" ? 110 : a.t === "defend" ? 900 : 2000;
@@ -43,14 +45,15 @@ function writeLast(o){
 /* which match: URL beats the last choice beats the first two heroes; an unknown key falls back to the default */
 function choose(q, heroes, last){
   const has = k => heroes.some(h => h.k === k);
+  const hasFoe = k => k === DUMMY || has(k);
   const dflt = [heroes[0].k, (heroes[1] || heroes[0]).k];
   const pick = (want, fallback) => has(want) ? want : fallback;
   const hero = pick(q.hero, pick(last && last.hero, dflt[0]));
-  const foe  = pick(q.foe,  pick(last && last.foe,  dflt[1]));
+  const foe  = hasFoe(q.foe) ? q.foe : hasFoe(last && last.foe) ? last.foe : dflt[1];
   const seed = q.seed != null && q.seed !== "" ? String(q.seed) : String(Math.floor(Math.random() * 1e9));
   const first = q.first === "1" ? 1 : 0;
   const pace = q.pace != null && q.pace !== "" && !isNaN(+q.pace) ? Math.max(0, +q.pace) : -1;   /* -1: the human pace; 0: unpaced; N: N ms a tick */
-  return {hero, foe, seed, first, pace, search: q.search !== "0"};   /* ?search=0: the Steady rule policy (a drive's way to tell the AI's own thinking from the shell's) */
+  return {hero, foe, seed, first, pace, search: q.search !== "0" && foe !== DUMMY};   /* the Dummy is a vanilla pile: the rule policy (index.html's table seats it unsharpened unless asked) */   /* ?search=0: the Steady rule policy (a drive's way to tell the AI's own thinking from the shell's) */
 }
 
 /* the card pool as the page's own loader builds it (mapDbCard -> buildMaps), registered with the judge */
@@ -70,14 +73,17 @@ function deal(pick, env){
   const db = openDb(env);
   const heroes = Object.fromEntries(env.HEROES.map(h => [h.k, h]));
   const decks = Object.fromEntries(env.HEROES.filter(h => env.DECKS[h.k]).map(h => [h.k, env.DawnGame.parseDeck(env.DECKS[h.k])]));
+  const dummy = pick.foe === DUMMY;
+  /* A SEAT THE DUMMY FILLS IS ALWAYS THE VANILLA PILE (ruling 2026-08-16): a null hero key, dealt by buildMatch from the page's own pile */
   const m = env.DawnBuild.buildMatch({
-    heroes: [pick.hero, pick.foe],
+    heroes: [pick.hero, dummy ? null : pick.foe],
     boards: [env.DawnBuild.defaultBoard(heroes[pick.hero], decks[pick.hero], db),
-             env.DawnBuild.defaultBoard(heroes[pick.foe],  decks[pick.foe],  db)],
+             dummy ? {} : env.DawnBuild.defaultBoard(heroes[pick.foe], decks[pick.foe], db)],
     first: pick.first, seed: pick.seed
-  }, {db, heroes, decks});
+  }, {db, heroes, decks, ...(dummy ? {vanilla: {deck: env.DUMMY_DECK, gear: env.DUMMY_GEAR, hp: 42, int: env.DUMMY_INT, name: "The Dummy"}} : {})});
   const state = env.DawnJudge.newMatch({builds: m.builds, names: m.names, heroKeys: m.heroKeys, first: m.first, seed: m.seed});
   const art = [pick.hero, pick.foe].map(k => {
+    if(k === DUMMY) return null;
     const h = heroes[k], r = env.DawnCards.resolveEntry(db, decks[k].hero, (h.code || "").slice(0, 3) || null);
     return r && r.img ? r.img : null;
   });
@@ -141,6 +147,175 @@ function makeBrain(env, pick, getState){
   };
 }
 
+
+/* ============================================================
+   NETWORKED TABLES — a server table (engine/servertable.js) and two phones (engine/room.js) behind the SAME surface.
+   Both hand back a CHANNEL ({send, listen, first, close, status, code}), so ONE adapter drives either: it runs the lobby the
+   way index.html's TableRoom does (hello, hero, a SEALED throw, the seating, a sideboard, the answers to the seed commitment),
+   deals the page's own way (buildMatch), and seats net.js's referee session. NO NEW RULES: every step is the engine's.
+   The person's choices are made FOR them until the lobby screens exist: their hero (?hero=), a random throw, "first" if they
+   win it, the self-play default loadout (the same stand-in openLocal wears).
+
+   Before the game the surface answers state() === null; phase() says where it is:
+     connecting | lobby | playing | ended | closed | fault        onPhase(fn) -> unsubscribe
+   (lobby() is the lobby's state, for a screen that wants to say who it waits on.)
+   ============================================================ */
+const FRAME = {JUDGE: "judge", LOBBY: "lobby", NET: "net"};
+const THROWS = ["rock", "paper", "scissors"];
+
+/* o: {how: "server-create"|"server-join"|"server-reclaim"|"room-host"|"room-guest", code, hero, transport?, keep?, Peer?, tune?, sleep?,
+       rand?, now?, build?, throwPick?(round) -> "rock"|"paper"|"scissors", chooser?: "first"|"second", onStatus?} */
+function openNetworked(o, env){
+  env = env || root;
+  const L = env.DawnLobby, N = env.DawnNet;
+  const server = /^server/.test(o.how), host = o.how === "room-host";
+  const build = o.build || L.buildId(env.APP_VER, env.DATA_VER);
+  const heroes = Object.fromEntries(env.HEROES.map(h => [h.k, h]));
+  const decks = Object.fromEntries(env.HEROES.filter(h => env.DECKS[h.k]).map(h => [h.k, env.DawnGame.parseDeck(env.DECKS[h.k])]));
+  const subs = new Set(), steps = new Set(), phs = new Set(), evs = new Set(), events = [];
+  let ch = null, seat = host ? 0 : o.how === "room-guest" ? 1 : null, lob = null, spec = null, sess = null, db = null;
+  let phase = "connecting", seedH = null, openK = null, sentSeed = false, reclaimed = o.how === "server-reclaim", lastState = null, dead = false;
+  const rand = o.rand;
+  const queue = [];   /* net frames that beat the session */
+  const setPhase = p => { if(phase === p) return; phase = p; phs.forEach(fn => fn(p)); };
+  const emit = e => { events.push(e); evs.forEach(fn => fn(e)); };
+  const fault = why => { emit({t: "fault", reason: why}); setPhase("fault"); };
+
+  const say = m => {
+    const r = L.reduce(lob, m);
+    if(r.error && !r.error.dup) emit({t: "refused", reason: r.error.why});
+    if(!r.error) lob = r.state;
+    try { ch.send({ch: FRAME.LOBBY, m}); } catch(e){ emit({t: "refused", reason: String(e && e.message || e)}); }
+    step();
+  };
+  const hear = m => {
+    const r = L.reduce(lob, m);
+    if(r.error && !r.error.dup) emit({t: "refused", reason: r.error.why});
+    if(!r.error) lob = r.state;
+    step();
+  };
+
+  function step(){
+    if(dead || !lob || seat == null) return;
+    const st = L.stepOf(lob), me = seat;
+    if(st === "fault"){ fault(lob.fault); return; }
+    if(sess) return;
+    if(phase === "connecting") setPhase("lobby");
+    if(reclaimed && st !== "ready") return;   /* a reloaded seat already answered every step; the table replays them */
+    if(st === "hero" && lob.heroes[me] == null) return say(L.hero(me, o.hero));
+    if(st === "throw"){
+      if(lob.seals[me] == null){
+        const pick = o.throwPick ? o.throwPick(lob.round) : THROWS[Math.floor((rand ? rand() : Math.random()) * 3) % 3];
+        const k = L.throwSeal(me, lob.round, pick, rand); openK = k.open; return say(k.seal);
+      }
+      if(openK && openK.round === lob.round && L.canOpen(lob, me)){ const k = openK; openK = null; return say(k); }
+    }
+    if(st === "seat" && lob.winner === me && lob.first == null) return say(L.seating(me, o.chooser || "first"));
+    if(st === "board" && lob.boards[me] == null){
+      const b = env.DawnBuild.defaultBoard(heroes[o.hero], decks[o.hero], db);
+      return say(L.sideboard(me, b.gearIdx, b.cuts || {}));
+    }
+    /* the guest (a room's) answers the host's commitment; at a server table each player answers the referee's */
+    if(lob.seedC && !sentSeed && (server ? lob.seedGs && lob.seedGs[me] == null : !host && lob.seedG == null)){ sentSeed = true; return say(L.seedAnswer(rand, me)); }
+    if(st === "ready") begin();
+  }
+
+  function begin(){
+    const spec0 = host ? L.matchSpec(lob, seedH) : L.matchSpec(lob);
+    if(!spec0) return fault("The seed did not open its commitment — leave and open a new table.");
+    spec = spec0;
+    let m, g = null;
+    try {
+      /* ONLY A ROOM'S HOST DEALS; everybody else builds a BLIND match from the spec (the cards, never the game) for the catalog */
+      m = env.DawnBuild.buildMatch(host ? spec0 : {...spec0, seed: "blind|" + spec0.seedC}, {db, heroes, decks});
+      if(host) g = env.DawnJudge.newMatch({builds: m.builds, names: m.names, heroKeys: m.heroKeys, first: m.first, seed: m.seed});
+    } catch(e){ return fault("Could not deal the match: " + (e.message || e)); }
+    const catalog = env.DawnWire.makeCatalog(m.builds.flatMap(b => [...(b.deck || []), ...(b.gear || []), ...(b.startItem ? [b.startItem.card] : [])]));
+    const names = m.names, heroKeys = m.heroKeys;
+    sess = N.createSession({
+      seat, host, referee: true, check: env.DawnInvariants.errors, reduce: env.DawnJudge.reduce, legal: env.DawnJudge.legal,
+      catalog, build, state: host ? g : null,
+      send: f => ch && ch.send({ch: FRAME.NET, m: f}),
+      onState: (st, info) => {
+        if(info && info.action && lastState) steps.forEach(fn => fn({seat: info.seat, action: info.action, prev: lastState, next: st}));
+        lastState = st;
+        if(st && st.over) setPhase("ended"); else if(phase === "lobby") setPhase("playing");
+        subs.forEach(fn => fn(st));
+      },
+      onEvent: e => emit(e)
+    });
+    surface.names = names; surface.heroKeys = heroKeys;
+    if(ch.setHave) ch.setHave(() => sess.seq());
+    queue.splice(0).forEach(f => sess.receive(f));
+    if(!host) sess.join();
+    lastState = sess.state();
+    setPhase("playing");
+    subs.forEach(fn => fn(sess.state()));
+  }
+
+  function onFrame(f){
+    if(!f || typeof f !== "object" || dead) return;
+    if(f.ch === FRAME.JUDGE){
+      if(f.seat != null && seat == null){ seat = f.seat; surface.seat = seat; lob = L.newLobby({code: f.code || (ch && ch.code), judge: true}); say(L.hello(seat, build)); }
+      return;
+    }
+    if(f.ch === FRAME.LOBBY){ if(lob) hear(f.m); return; }
+    if(f.ch === FRAME.NET){ if(sess) sess.receive(f.m); else queue.push(f.m); }
+  }
+
+  const surface = {
+    seat: seat == null ? 0 : seat, pick: {hero: o.hero, how: o.how}, names: [null, null], heroKeys: [o.hero, null], networked: true, server,
+    phase: () => phase, onPhase: fn => { phs.add(fn); return () => phs.delete(fn); },
+    lobby: () => lob, code: () => ch && ch.code,
+    channel: () => ch,
+    state: () => sess ? sess.state() : null,
+    view: () => sess && sess.state(),   /* the referee session's state IS this seat's view */
+    legal: a => sess ? env.DawnJudge.legal(sess.state(), a, seat) : "the game has not begun",
+    holder: () => sess ? env.DawnJudge.waitingOn(sess.state()) : null,
+    submit: a => sess ? sess.submit(a) : "the game has not begun",
+    subscribe: fn => { subs.add(fn); return () => subs.delete(fn); },
+    onStep: fn => { steps.add(fn); return () => steps.delete(fn); },
+    suggest: () => sess ? env.DawnSparring.act(sess.state(), seat, {search: true}) : null,
+    events: () => events.slice(), onEvent: fn => { evs.add(fn); return () => evs.delete(fn); },
+    heroArt: i => null,
+    status: () => sess ? sess.status() : phase,
+    session: () => sess,
+    /* open the channel and begin; resolves with the surface (rejects with the channel's own error: .why) */
+    async start(){
+      env.DawnCards.setCDN(env.CDN);
+      db = openDb(env);
+      const common = {onStatus: o.onStatus, ...(o.transport ? {transport: o.transport} : {}), ...(o.keep ? {keep: o.keep} : {}), ...(o.tune ? {tune: o.tune} : {}),
+        ...(o.sleep ? {sleep: o.sleep} : {}), ...(o.rand ? {rand: () => 0.5} : {}), ...(o.now ? {now: o.now} : {}), have: () => sess ? sess.seq() : undefined, code: o.code};
+      if(server){
+        const ST = env.DawnServerTable, f = o.how === "server-create" ? ST.startTable : o.how === "server-reclaim" ? ST.reclaim : ST.sitAt;
+        ch = await f(common);
+        ch.listen(onFrame);
+      } else {
+        ch = await env.DawnRoom.open({code: o.code, host, ...(o.Peer ? {Peer: o.Peer} : {}), onStatus: o.onStatus});
+        ch.listen(onFrame);
+        lob = L.newLobby({code: ch.code, judge: false});
+        if(host){ say(L.hello(0, build)); const sc = L.seedCommitMsg(rand); seedH = sc.seedH; say(sc.msg); }
+        else say(L.hello(1, build));
+      }
+      return surface;
+    },
+    dispose(){ dead = true; try { ch && ch.close(); } catch(e){} setPhase("closed"); }
+  };
+  return surface;
+}
+
+/* what the flow may light: each mode reports whether THIS page can run it (a server table needs the door open: index.html's switch) */
+function modes(env){
+  env = env || root;
+  const has = n => !!env[n];
+  return {
+    local: has("DawnLocal") && has("DawnSparring"),
+    dummy: has("DawnLocal") && has("DawnSparring") && !!env.DUMMY_DECK && !!env.DUMMY_GEAR,
+    server: has("DawnServerTable") && has("DawnLobby") && has("DawnNet") && !!(env.SERVER_TABLE && env.SERVER_TABLE.on === true),
+    room: has("DawnRoom") && has("DawnLobby") && has("DawnNet")
+  };
+}
+
 /* a LOCAL game: seat 0 is the person, seat 1 the AI hero (Sharp) */
 function openLocal(opts, env){
   env = env || root;
@@ -166,7 +341,7 @@ function openLocal(opts, env){
     onState: st => subs.forEach(fn => fn(st))
   });
   return {
-    seat, pick,
+    seat, pick, dummy: pick.foe === DUMMY,
     names: dealt.names, heroKeys: dealt.heroKeys,
     state: () => local.state(),
     view: () => env.DawnView.view(local.state(), seat),
@@ -187,5 +362,5 @@ function openLocal(opts, env){
   };
 }
 
-return {openLocal, makeBrain, choose, parseQuery, deal, aiPace, LAST_KEY};
+return {openLocal, openNetworked, modes, DUMMY, makeBrain, choose, parseQuery, deal, aiPace, LAST_KEY};
 });
