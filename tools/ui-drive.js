@@ -175,7 +175,7 @@ const MEASURE = () => {
   document.querySelectorAll("[data-b]").forEach(e => {
     const r = e.getBoundingClientRect(), n = e.getAttribute("data-b");
     const k = (seenName[n] = (seenName[n] || 0) + 1) - 1;
-    out.boxes.push({ n, k, x: r.left, y: r.top, w: r.width, h: r.height });
+    out.boxes.push({ n, k, x: r.left, y: r.top, w: r.width, h: r.height, cls: String(e.className && e.className.baseVal === undefined ? e.className : "") });
   });
   const vis = e => { const cs = getComputedStyle(e); return cs.display !== "none" && cs.visibility !== "hidden" && e.getClientRects().length > 0; };
   const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
@@ -213,9 +213,7 @@ function judgePhone(m){
     if(t.w < 43.5 || t.h < 43.5) bad.push(`tap target "${t.n}" is ${t.w.toFixed(1)}x${t.h.toFixed(1)} (< 44)`);
     if(!t.inside) bad.push(`tap target "${t.n}" is outside the viewport`);
   });
-  /* DESIGN CONFLICT, flagged to the CEO: SCREENS-TABLE T4/T6/T8 set the HIT FOR figure at 44 px (BSD 900), larger than the 34 px life
-     numerals PHONE rule 13 says are the biggest type. Built as designed; that one figure is exempt here until the CEO rules. */
-  const life = m.text.filter(t => /\blife\b/.test(t.cls)), mx = Math.max(...m.text.filter(t => !/^n$/.test(t.cls)).map(t => t.px));
+  const life = m.text.filter(t => /\blife\b/.test(t.cls)), mx = Math.max(...m.text.map(t => t.px));
   if(life.length !== 2) bad.push(`${life.length} life totals on screen`);
   life.forEach(t => { if(t.px < mx - 0.01) bad.push(`life "${t.s}" ${t.px}px is not the largest type (${mx}px)`); });
   m.text.filter(t => t.px < 11).forEach(t => bad.push(`text "${t.s}" is ${t.px}px (< 11)`));
@@ -225,7 +223,8 @@ function judgePhone(m){
 /* the mockup names its hand cards by card; live names are by position */
 const norm = (boxes, hand) => boxes.map(b => /^hand-/.test(b.n) ? { ...b, n: "hand-#" + (hand.i = (hand.i == null ? -1 : hand.i) + 1), k: 0 } : b);
 
-/* opts: only (names to hold, default all of the mockup's), skip {name: reason} (listed, not compared), part {name: "xw"} (fields compared) */
+/* opts: only (names to hold, default all of the mockup's), skip {name: reason} (listed, not compared), part {name: "xw"} (fields compared),
+   alias {mockName: liveName}, sameClass (cards in a different state than the mockup's are listed, not compared) */
 function judgeBoxes(live, mock, opts){
   opts = opts || {};
   const L = norm(live.boxes, {}), Mk = norm(mock.boxes, {});
@@ -233,8 +232,10 @@ function judgeBoxes(live, mock, opts){
   const liveHand = L.filter(b => /^hand-#/.test(b.n)).length;
   const bad = [], diffs = [];
   let worst = 0, worstName = "", n = 0;
+  const STATE = /\b(ready|dim|blk|sel|tap|idle|spent|refused)\b/g, st = c => (String(c).match(STATE) || []).sort().join("+");
   Mk.forEach(m => {
     if(opts.only && !opts.only.includes(m.n)) return;
+    if(opts.alias && opts.alias[m.n]) m = { ...m, n: opts.alias[m.n] };
     if(opts.skip && opts.skip[m.n]){ diffs.push(`${m.n}: ${opts.skip[m.n]}`); return; }
     const l = byKey.get(key(m));
     if(!l){
@@ -242,6 +243,8 @@ function judgeBoxes(live, mock, opts){
       if(hi && +hi[1] >= liveHand){ diffs.push(`${m.n}: the mockup's hand is longer than this deal's (${liveHand} cards; a hero's intellect is 4, and cards leave the hand as they are played and pitched)`); return; }
       bad.push(`${key(m)} missing live`); return;
     }
+    /* a card whose state differs (a card with no defence stays down where the mockup's lifts) is a different box on purpose */
+    if(opts.sameClass && /^(hand-#|you-(weapon|head|chest|arms|legs))/.test(m.n) && st(l.cls) !== st(m.cls)){ diffs.push(`${m.n}: state "${st(l.cls) || "rest"}" live vs "${st(m.cls) || "rest"}" in the mockup (it depends on what this deal's cards can do)`); return; }
     n++;
     const f = (opts.part && opts.part[m.n]) || "xywh", pick = b => ({ x: b.x, y: b.y, w: b.w, h: b.h });
     const d = Math.max(...[...f].map(c => Math.abs(pick(l)[c] - pick(m)[c])));
@@ -420,6 +423,126 @@ async function runStates(pw, browser, engine, vp, opts){
   return res;
 }
 
+
+/* ---------- step 5: T6 defend, T7 reaction step, T9 arsenal ---------- */
+
+/* Both seats play the AI policy in the page until `pred(state, view, J)` holds (a state a live game reaches by itself) */
+const advanceTo = pred => `(function(env, s){
+  const J = env.DawnJudge, S = env.DawnSparring, V = env.DawnView, pred = ${pred};
+  for(let i = 0; i < 900; i++){
+    const st = s.state(); if(st.over) return "over";
+    if(pred(st, V.view(st, 0), J)) return "ok";
+    const seat = J.waitingOn(st); if(seat !== 0) return "waiting on seat " + seat;
+    const a = S.act(st, 0, {search: true}); if(!a) return "no action";
+    const why = s.submit(a); if(why) return "refused: " + why;
+  }
+  return "not reached";
+})(window, window.DawnUIApp.session())`;
+
+async function runStates2(pw, browser, engine, vp, opts){
+  const errors = [], res = { engine, vp, bad: [], notes: [], diffs: [] };
+  const ask = (ok, msg) => { if(!ok) res.bad.push(msg); };
+  let a;
+  const open = async q => { if(a) await a.context.close(); a = await openPage(pw, browser, engine, vp, pathToFileURL(PLAY).href + q, errors, opts.art);
+    await a.page.waitForSelector(".stage .bout", { timeout: 15000 }); return a.page; };
+  const cmp = async (label, file, o) => {
+    await settle(a.page);
+    const live = await a.page.evaluate(MEASURE);
+    if(opts.shots) await a.page.screenshot({ path: path.join(opts.shots, `${label}-${engine}-${vp[0]}x${vp[1]}.png`) });
+    const b = await openPage(pw, browser, engine, vp, pathToFileURL(path.join(MOCKDIR, file)).href + "?noframe", errors, opts.art);
+    await b.page.waitForSelector(".stage .bout", { timeout: 15000 }); await settle(b.page);
+    const mock = await b.page.evaluate(MEASURE);
+    if(opts.shots) await b.page.screenshot({ path: path.join(opts.shots, `${label}-mock-${engine}-${vp[0]}x${vp[1]}.png`) });
+    await b.context.close();
+    const j = judgeBoxes(live, mock, { sameClass: true, ...o });
+    j.bad.forEach(m => res.bad.push(label + ": " + m)); j.diffs.forEach(d => res.diffs.push(label + " " + d));
+    const ph = judgePhone(live); ph.bad.forEach(m => res.bad.push(label + ": " + m));
+    res.notes.push(`${label} ${j.n} boxes ${j.worst.toFixed(2)}px`);
+  };
+  const BASE = ["bout", "world", "stage", "tray", "handrow", "hub", "hub-left", "hub-right", "primary", "bout-you", "bout-opp", "medal", "life"];
+  try {
+    /* T6: the opponent attacks first; you defend. Tap a hand card and a piece of armour to block with. */
+    {
+      const P = await open(`?hero=iyslander&foe=viserai&seed=1&first=1&pace=0`);
+      const how6 = await P.evaluate(advanceTo(`(st, v) => DawnPriority.canDeclareDefenders(st, 0) && !!v.pend`));
+      if(how6 !== "ok") res.diffs.push("T6: not reached in this deal (" + how6 + ")");
+      await P.waitForTimeout(150);
+      ask(await P.locator(".stage .ask").count() === 1 && /any blocks/i.test(await P.locator(".stage .ask").innerText()), "T6: no 'Any blocks?' question");
+      ask(/^no block$/i.test(await primaryText(P)), "T6: the primary should read No block (" + await primaryText(P) + ")");
+      const hit0 = await P.evaluate(() => { const s = DawnUIApp.session(), v = DawnView.view(s.state(), 0); return { total: v.pend && v.pend.total, printed: v.pend && v.pend.card.power, shown: +(document.querySelector(".hit .n") || {}).textContent }; });
+      ask(hit0.shown === hit0.total, `T6: HIT FOR shows ${hit0.shown}, the engine's figure is ${hit0.total} (printed ${hit0.printed})`);
+      const rh = P.locator(".handrow .cd.ready").first(), rg = P.locator(".lane .cd.mat.ready").last();
+      if(await rh.count()) await rh.click(); await P.waitForTimeout(80);
+      if(await P.locator('[data-b="you-slot-chest"] .cd.ready, [data-b="you-slot-head"] .cd.ready, [data-b="you-slot-arms"] .cd.ready, [data-b="you-slot-legs"] .cd.ready').count()) await P.locator('[data-b="you-slot-chest"] .cd.ready, [data-b="you-slot-head"] .cd.ready, [data-b="you-slot-arms"] .cd.ready, [data-b="you-slot-legs"] .cd.ready').first().click();
+      await P.waitForTimeout(100);
+      const n = await P.locator(".handrow .cd.blk, .lane .you .cd.blk, [data-b=you-lane] .cd.blk").count();
+      ask(n >= 1, "T6: tapping a card did not mark it as a blocker (.blk)");
+      ask(/^block with \d+$/i.test(await primaryText(P)), "T6: the primary should read Block with N (" + await primaryText(P) + ")");
+      ask(await P.locator(".hit .eq").count() === 1, "T6: no incoming-vs-defence ledger");
+      const wallEq = await P.evaluate(() => { const s = DawnUIApp.session(), v = DawnView.view(s.state(), 0), me = v.sides[0];
+        return { shown: +(document.querySelector(".hit .n") || {}).textContent, want: Math.max(0, v.pend.total - DawnSparring.wallOf(me)) }; });
+      ask(wallEq.shown === wallEq.want, `T6: HIT FOR ${wallEq.shown} != power - wall ${wallEq.want}`);
+      await cmp("T6", "table-6-defend.html", { only: [...BASE, "ask", "attack", "hit", "eq", "ap", "you-weapon", "you-head", "you-chest", "you-arms", "you-legs", "hand-#0", "hand-#1", "hand-#2", "hand-#3"],
+        alias: { ap: "opp-ap" }, skip: { "you-arsenal": "" } });
+    }
+    /* T7: your attack, their blocker in the wall, the reaction step with priority yours */
+    {
+      const P = await open(`?hero=iyslander&foe=viserai&seed=3&first=1&pace=0`);
+      const how = await P.evaluate(advanceTo(`(st, v, J) => st.step === "reaction" && v.pend && v.attacker === 0 && v.sides[1].blockH.length > 0 && J.waitingOn(st) === 0`));
+      if(how !== "ok") res.diffs.push("T7: not reached in this deal (" + how + ")");
+      else {
+        await P.waitForTimeout(150);
+        ask(/reaction step/i.test(await P.locator('[data-b="pill"]').innerText()), "T7: the pill does not say Reaction step");
+        ask(await P.locator(".wall .cd").count() >= 1, "T7: their blocker is not in the wall");
+        ask(/^pass$/i.test(await primaryText(P)), "T7: the primary should read Pass (" + await primaryText(P) + ")");
+        const eq = await P.evaluate(() => { const s = DawnUIApp.session(), v = DawnView.view(s.state(), 0); return { shown: +(document.querySelector(".hit .n") || {}).textContent,
+          want: Math.max(0, v.pend.total + DawnEffects.rxPumpTotal(v) - (DawnSparring.wallOf(v.sides[1]) + (v.sides[1].blockRx || []).reduce((t, l) => t + ((l && l.def) || 0), 0))) }; });
+        ask(eq.shown === eq.want, `T7: HIT FOR ${eq.shown} != ${eq.want}`);
+        await cmp("T7", "table-7-reaction.html", { only: [...BASE, "pill", "attack", "wall", "blocker", "hit", "eq", "hand-#0", "hand-#1", "hand-#2", "hand-#3"],
+          skip: { stack: "no opponent instant is on the stack in this deal's reaction step (the rail renders when one is)", "stack-card": "same" } });
+      }
+    }
+    /* T9: end your turn; the arsenal question; select a card; the slot */
+    {
+      const P = await open(`?hero=${MATCH.hero}&foe=${MATCH.foe}&seed=${MATCH.seed}&pace=0`);
+      await P.locator('[data-b="primary"]').click(); await P.waitForTimeout(150);
+      const askT = await P.locator(".stage .ask").innerText().catch(() => "");
+      if(!/arsenal/i.test(askT)) res.diffs.push("T9: the arsenal question did not open (" + askT + ")");
+      else {
+        ask(/^no arsenal$/i.test(await primaryText(P)), "T9: nothing selected should read No arsenal");
+        ask(await P.locator('[data-b="you-arsenal-slot"]').count() === 1, "T9: no drop slot");
+        await P.locator('[data-b="hand-0"]').click(); await P.waitForTimeout(100);
+        ask(/^set in arsenal$/i.test(await primaryText(P)), "T9: a selected card should read Set in arsenal (" + await primaryText(P) + ")");
+        await cmp("T9", "table-9-arsenal.html", { only: [...BASE, "ask", "you-arsenal-slot", "peek", "hand-#0", "hand-#1", "hand-#2", "hand-#3"],
+          skip: {} });
+        await P.locator('[data-b="you-arsenal-slot"]').click(); await P.waitForTimeout(250);
+        const ars = await P.evaluate(() => !!DawnView.view(DawnUIApp.session().state(), 0).sides[0].arsenal);
+        ask(ars, "T9: tapping the slot did not set the arsenal");
+      }
+    }
+    /* a permanent is inspectable: hold it (Viserai's runechants and sigils live on the board) */
+    {
+      const P = await open(`?hero=viserai&foe=briar&seed=3&pace=0`);
+      const how = await P.evaluate(advanceTo(`(st, v, J) => v.sides[0].board.length > 0 && J.waitingOn(st) === 0`));
+      if(how !== "ok") res.diffs.push("permanents: no permanent reached in this deal (" + how + ")");
+      else {
+        await P.waitForTimeout(150);
+        const perm = P.locator('[data-b="you-perm"] .cd').first();
+        if(!(await perm.count())) res.bad.push("permanents: the board holds one but none is drawn");
+        else {
+          const box = await perm.boundingBox();
+          await P.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await P.mouse.down(); await P.waitForTimeout(520); await P.mouse.up();
+          await P.waitForSelector(".inspect .sheet", { timeout: 2000 }).catch(() => {});
+          ask(await P.locator(".inspect .sheet").count() === 1, "permanents: holding one did not open it");
+        }
+      }
+    }
+    if(a) await a.context.close();
+  } catch(e){ res.bad.push("drive error: " + String(e && e.message || e).split("\n")[0]); }
+  errors.forEach(e => res.bad.push(e));
+  return res;
+}
+
 /* ---------- step 3: a whole game by taps ---------- */
 
 /* From the deal, play turns by tapping only what is on screen. One decision a loop; the AI seat answers paced (one action a tick).
@@ -431,8 +554,8 @@ async function runPlay(pw, browser, engine, opts){
     const a = await openPage(pw, browser, engine, vp, pathToFileURL(PLAY).href + `?hero=${MATCH.hero}&foe=${MATCH.foe}&seed=${opts.seed || MATCH.seed}&pace=40`, errors, opts.art);
     const P = a.page;
     await P.waitForSelector(".stage .bout", { timeout: 15000 });
-    const lives = []; let refusals = 0, taps = 0, lastTurn = 0, idle = 0, started = Date.now();
-    const snap = () => P.evaluate(() => { const s = DawnUIApp.session(), st = s.state(); return { turn: st.turn, over: !!st.over, hp: [st.sides[0].hp, st.sides[1].hp], busy: s.local.busy(), tp: st.turnPlayer }; });
+    const lives = [], did = { defended: 0, arsenal: 0, reaction: 0 }; let refusals = 0, taps = 0, lastTurn = 0, idle = 0, started = Date.now();
+    const snap = () => P.evaluate(() => { const s = DawnUIApp.session(), st = s.state(); return { turn: st.turn, step: st.step, phase: st.phase, over: !!st.over, hp: [st.sides[0].hp, st.sides[1].hp], busy: s.local.busy(), tp: st.turnPlayer }; });
     const click = async loc => { try { await loc.click({ timeout: 1500 }); taps++; return true; } catch(e){ return false; } };
     let s0 = await snap(); lives.push(s0.hp);
     for(let step = 0; step < 900; step++){
@@ -460,13 +583,17 @@ async function runPlay(pw, browser, engine, opts){
       }
       if(await P.locator(".stage .ask").count()){        /* defend step / arsenal: block with one card if any, then commit */
         const ask = (await P.locator(".stage .ask").innerText()).trim();
-        if(/blocks/i.test(ask) && /^no block$/i.test(label) && await ready.count()) { await click(ready); await P.waitForTimeout(20); continue; }
+        const hitN = +(await P.locator(".hit .n").innerText().catch(() => "0"));
+        if(/blocks/i.test(ask) && hitN > 0 && await ready.count()) { await click(ready); await P.waitForTimeout(20); continue; }
+        if(/blocks/i.test(ask) && /^block with/i.test(label)) did.defended++;
         if(/arsenal/i.test(ask) && /^no arsenal$/i.test(label) && await ready.count()){ await click(ready); await P.waitForTimeout(20); continue; }
+        if(/arsenal/i.test(ask) && /^set in arsenal$/i.test(label)) did.arsenal++;
         if(!dis){ await click(P.locator('[data-b="primary"]')); await P.waitForTimeout(30); continue; }
       }
       if(dis){ await P.waitForTimeout(40); idle++; if(idle > 400){ res.bad.push("play: stuck, primary disabled at turn " + s.turn + " (" + label + ")"); break; } continue; }
       idle = 0;
-      if(/^play |^attack with /i.test(label)){ await click(P.locator('[data-b="primary"]')); continue; }   /* a selection is made: commit it */
+      if(/^play |^attack with /i.test(label)){ if(s.step !== "layer" || s.phase !== "action") did.reaction++; await click(P.locator('[data-b="primary"]')); continue; }   /* a selection is made: commit it */
+      if(/^pass$/i.test(label) && s.tp === 1 && await ready.count()){ if(await click(ready)){ await P.waitForTimeout(20); if(/^play /i.test(await primaryText(P))) continue; } }   /* their turn, priority ours: a card that can answer */
       if(/^end turn$/i.test(label) && await ready.count() && s.tp === 0){ const before = label; if(await click(ready)){ await P.waitForTimeout(20); if(/^play /i.test(await primaryText(P))) continue; } }
       if(await P.locator('[data-b="primary"]').isEnabled()){ if(!(await click(P.locator('[data-b="primary"]')))) await P.waitForTimeout(30); }
     }
@@ -477,6 +604,11 @@ async function runPlay(pw, browser, engine, opts){
     const fin = await snap();
     if(fin.turn < turns * 2) res.bad.push(`play: only reached turn ${fin.turn} (wanted ${turns * 2})` + (fin.over ? " — the game ended" : ""));
     if(lives.length < 2) res.bad.push("play: life totals never changed");
+    if(opts.needs && !fin.over){
+      if(!did.defended) res.bad.push("play: you never defended");
+      if(!did.arsenal && !did.reaction) res.bad.push("play: you never set an arsenal card or played a reaction");
+    }
+    res.notes.push(`defended ${did.defended}, arsenal ${did.arsenal}, reactions ${did.reaction}`);
     res.notes.push(`turn ${fin.turn}, ${taps} taps, ${refusals} refused taps, life ${lives.map(l => l.join("/")).join(" > ")}`);
     if(opts.shots) await P.screenshot({ path: path.join(opts.shots, `play-${engine}.png`) });
     await a.context.close();
@@ -531,7 +663,8 @@ async function main(){
         report(r, "t1");
       }
       if(want("states")) for(const vp of VIEWPORTS) report(await runStates(pw, browser, engine, vp, o), "states");
-      if(want("play")) report(await runPlay(pw, browser, engine, { ...o, turns: +arg("--turns") || 3 }), "play");
+      if(want("states2")) for(const vp of VIEWPORTS) report(await runStates2(pw, browser, engine, vp, o), "states2");
+      if(want("play")) report(await runPlay(pw, browser, engine, { ...o, turns: +arg("--turns") || 5, needs: true }), "play");
     } finally { await browser.close(); }
   }
   if(diffsSeen.size){ console.log("\nDIFFERENCES (deliberately not compared):"); [...diffsSeen].forEach(d => console.log("  - " + d)); }

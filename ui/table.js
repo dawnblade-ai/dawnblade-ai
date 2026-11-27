@@ -66,8 +66,10 @@ function permsOf(sd){
 
 const lenClass = s => s.length > 30 ? " fit15" : s.length > 17 ? " fit17" : "";
 
+const selI0 = (sel, selArs, hand) => { const u = selArs ? selArs.uid : sel && sel.from === "hand" ? sel.uid : null; return u == null ? -1 : hand.findIndex(x => x.card.uid === u); };
+
 /* view + what is legal -> everything the table draws.
-   ctx: {seat, holder, legal(a), game: {slotOf, gearDef}, paySum(sideView), defending, art[2], name(seat), ui: {sel, insp, ref, sl}} */
+   ctx: {seat, holder, legal(a), game: {slotOf, gearDef}, paySum(sideView), hitOf(view), wallOf(sideView), defending, art[2], name(seat), ui: {sel, insp, ref, sl, menu}} */
 function model(v, ctx){
   const me = ctx.seat, you = v.sides[me], opp = v.sides[1 - me], L = ctx.legal, ui = ctx.ui || {};
   const mine = ctx.holder === me && !v.over;
@@ -124,29 +126,40 @@ function model(v, ctx){
     if(sel && sel.from === "hand" && sel.uid === c.uid) return "sel";
     return L({t: "play", uid: c.uid, from: "hand"}) == null ? "ready" : "dim";
   };
-  const hand = (you.hand || []).filter(c => !(pay && (c.uid === pay.card.uid || paySel.has(c.uid))))
-    .map(c => ({card: c, state: handState(c), def: blockH.has(c.uid) ? c.def : null}));
 
-  /* the stage: the card being paid for, or the link on the chain, or the top of the stack */
+  /* the stage: the card being paid for, or the link on the chain (with its wall, the stack rail and earlier links), or the top of the stack */
   const feat = v.featured && v.featured.card ? v.featured : null;
-  const stackTop = (v.stack || []).length ? (v.stack[v.stack.length - 1] || {}).card : null;
-  let staged = null, chain = null, hit = null;
+  const stackE = (v.stack || []).length ? (v.stack[v.stack.length - 1] || {}) : null, stackTop = stackE && stackE.card;
+  let staged = null, chain = null, hit = null, wall = [], rail = null, links = [];
   const have = pay ? (you.res || 0) + ctx.paySum(you) : 0;
   if(pay){
     staged = {card: pay.card, need: pay.need};
     hit = {kind: "cost", need: pay.need, have};
   } else if(feat){
-    chain = {card: feat.card, mine: v.attacker === me};
-    hit = feat.card.power != null && feat.card.power !== "" ? {kind: "hit", n: feat.card.power} : null;
+    const atkSeat = v.attacker != null ? v.attacker : v.turnPlayer, defSd = v.sides[1 - atkSeat];
+    chain = {card: feat.card, mine: atkSeat === me};
+    /* the engine's CURRENT figure for the link in flight (what the AI reads as incoming), never the printed power */
+    const power = ctx.hitOf(v), wallN = defSd ? ctx.wallOf(defSd) : 0;
+    if(power != null){
+      const eq = defending || wallN > 0 || v.step === "reaction" || v.step === "damage";
+      hit = {kind: "hit", n: Math.max(0, power - wallN), ...(eq ? {eq: {p: power, d: wallN}} : {})};
+    }
+    /* the declared blockers from a hand stand in the wall once the declaration is closed (gear never leaves its column) */
+    if(v.step !== "defend" && defSd){ const bh = new Set(defSd.blockH || []); wall = (defSd.hand || []).filter(c => bh.has(c.uid) && !c.hidden); }
+    if(stackTop && stackE.k !== "rx") rail = {card: stackTop, who: firstName(v.sides[stackE.seat != null ? stackE.seat : 1 - me].name), kind: cap(String(stackE.window || "instant"))};
+    if(!rail) links = (v.chainCards || []).slice(0, -1).map(e => (e && e.card) || e).filter(c => c && c.name).slice(-4);
   } else if(stackTop){
     chain = {card: stackTop, mine: false};
   }
+  const walled = new Set(wall.map(c => c.uid));
+  const hand = (you.hand || []).filter(c => !(pay && (c.uid === pay.card.uid || paySel.has(c.uid))) && !walled.has(c.uid))
+    .map(c => ({card: c, state: handState(c), def: blockH.has(c.uid) ? c.def : null}));
 
   /* the one primary */
   let primary;
   const nm = sel ? sel.name || (sel.from === "gear" ? own(you.gear, sel.uid) : sel.from === "arsenal" ? you.arsenal : own(you.hand, sel.uid)).name : "";
   if(v.over) primary = {label: "Game over", disabled: true};
-  else if(ui.insp) primary = {label: "Close", close: true};
+  else if(ui.insp || ui.menu) primary = {label: "Close", close: true};
   else if(asked) primary = {label: "Your call", disabled: true};
   else if(pay){
     primary = L({t: "payConfirm"}) == null ? {label: "Play " + pay.card.name, act: {t: "payConfirm"}}
@@ -163,16 +176,18 @@ function model(v, ctx){
   } else primary = {label: v.turnPlayer === me ? "Waiting for " + foe : foe + "’s turn", disabled: true};
   primary.cls = lenClass(primary.label);
 
-  const stage = defending ? {ask: "Any blocks?"} : arsStep ? {ask: "Arsenal?"} : {pill: pay ? "Paying" : pillOf(v), hot: !!pay};
+  const stage = defending ? {ask: "Any blocks?"} : arsStep ? {ask: "Arsenal?"} : {pill: pay ? "Paying" : pillOf(v), hot: !!pay || v.step === "reaction"};
 
   return {
     seat: me, over: !!v.over, mine, pay: !!pay, defending, arsStep,
     bout: [bout(you, me), bout(opp, 1 - me)],
     medal: {n: v.turn, mine: v.turnPlayer === me},
-    stage, primary, staged, chain, hit,
+    stage, primary, staged, chain, hit, wall, rail, links,
+    arsSlot: arsStep && !you.arsenal, menu: !!ui.menu,
     opp: half(opp, false), you: half(you, true), hand,
     selUid: sel ? sel.uid : selArs ? selArs.uid : null,
     where: chain ? "On the chain · played by " + (chain.mine ? "you" : foe) : "",
+    plateL: selI0(sel, selArs, hand) === 0 && !(ui.sl > 8),
     insp: ui.insp || null, ref: ui.ref || null, sl: ui.sl || 0
   };
 }
@@ -234,7 +249,7 @@ function Lane(p){
     <div data-b=${who + "-slot-deck"}>${h.deckN ? html`<div class="pile s"><${B} cls="mat" b=${who + "-deck"} label="Deck"><span class="count">${h.deckN}</span><//></div>` : null}
       ${h.fan.map((f, i) => html`<${F} key=${f.card.uid} card=${f.card} cls=${"mat pf" + (f.tap ? " tapfan" : "")} place="mat" b=${who + "-pitch-" + i} w=${W_MAT[0]} h=${W_MAT[1]}
         tap=${f.tap} on=${f.tap ? on.unpitch(f.card) : null} style=${"transform:translateY(" + ((you ? 1 : -1) * (16 + 8 * i)) + "px)"}/>`)}</div>
-    <div data-b=${who + "-slot-arsenal"} data-tap=${you && h.arsenal ? "" : undefined}>${h.arsenal
+    <div data-b=${who + "-slot-arsenal"} data-tap=${you && (h.arsenal || p.slot) ? "" : undefined}>${p.slot && !h.arsenal ? html`<div class="cd mat slot-arsenal" style="background:rgba(216,162,62,.08);box-shadow:none" data-b="you-arsenal-slot" aria-label="Set arsenal" ...${on.slot}><svg class="ico"><use href="#i-plus"/></svg></div>` : null}${h.arsenal
       ? (h.arsenal.face && you
         ? html`<${B} cls=${"mat" + (h.arsenal.sel ? " sel" : "")} b=${who + "-arsenal"} label="Your arsenal" on=${on.arsenal(h.arsenal.card)}><span class="count you">${h.arsenal.n}</span><//>`
         : html`<${B} cls="mat" b=${who + "-arsenal"} label="Their arsenal"/>`)
@@ -249,21 +264,24 @@ function Marks(p){
     ${h.ap ? html`<div class="ap" data-b=${p.b}>${Array.from({length: h.ap}, () => html`<svg class="ico"><use href="#i-ap"/></svg>`)}</div>` : null}
     ${h.coins ? html`<div class="coins" data-b=${p.cb}>${Array.from({length: h.coins}, () => html`<span class="coin">1</span>`)}</div>` : null}
   </div>` : null}
-  ${h.perms.length ? html`<div class="perm" data-b=${p.pb}>${h.perms.map(x => html`<${K.Face} card=${x.card} cls="hb" place="perm" b=${p.pb + "-" + x.card.name}>${x.n > 1 ? html`<span class="xn2">×${x.n}</span>` : null}<//>`)}</div>` : null}`;
+  ${h.perms.length ? html`<div class="perm" data-b=${p.pb}>${h.perms.map(x => html`<${K.Face} card=${x.card} cls="hb permhit" place="perm" b=${p.pb + "-" + x.card.name} on=${p.on.perm(x.card)}>${x.n > 1 ? html`<span class="xn2">×${x.n}</span>` : null}<//>`)}</div>` : null}`;
 }
 
-/* the left of the stage: the card being paid for, or the link on the chain; the right: what it costs / hits for */
+/* the stage: the card being paid for, or the link on the chain with its wall, the stack rail, earlier links; what it costs / hits for */
 function Stage(p){
   const m = p.m, F = K.Face;
   return html`<section class="centre" data-b="stage">
     ${m.stage.ask ? html`<div class="ask" data-b="ask">${m.stage.ask}</div>` : html`<div class=${"pill" + (m.stage.hot ? " hot" : "")} data-b="pill">${m.stage.pill}</div>`}
+    ${m.links.length ? html`<div class="links" data-b="links">${m.links.map((c, i) => html`<${F} key=${c.uid || i} card=${c} cls="link" place="none" b=${"link-" + i} style=${i ? "margin-left:-22px" : undefined} on=${p.on.inspect(c, "An earlier link on the chain")}/>`)}</div>` : null}
+    ${m.rail ? html`<div class="stackrail" data-b="stack"><span class="lab">Stack</span><${F} card=${m.rail.card} cls="block" place="none" tap b="stack-card" on=${p.on.inspect(m.rail.card, "On the stack · played by " + m.rail.who)}/><div class="who">${m.rail.who}<br/>${m.rail.kind}</div></div>` : null}
     ${m.staged ? html`<div class="atk" data-b="staged"><${F} card=${m.staged.card} cls="chain staged" place="chain" tap b="staged-card" on=${p.on.inspect(m.staged.card, "Being played")}><span class="costring">${m.staged.need}</span><//></div>` : null}
     ${m.chain ? html`<div class=${"atk" + (m.chain.mine ? " mine" : "")} data-b="attack"><${F} card=${m.chain.card} cls="chain" place="chain" tap b="attack-card" on=${p.on.inspect(m.chain.card, m.where)}/></div>` : null}
+    ${m.wall.length ? html`<div class="wall" data-b="wall">${m.wall.map((c, i) => html`<${F} key=${c.uid} card=${c} cls="block blk" place="block" tap b=${i ? "blocker-" + i : "blocker"} on=${p.on.inspect(c, "Blocking")}>${c.def != null ? html`<span class="badge sh"><svg><use href="#i-shield"/></svg>${c.def}</span>` : null}<//>`)}</div>` : null}
     ${m.hit && m.hit.kind === "cost" ? html`<div class="hit" data-b="hit"><div class="lab">Cost</div>
       <div class="cost-coins">${Array.from({length: m.hit.need}, (_, i) => i < m.hit.have ? html`<span class="coin">1</span>` : html`<span class="coin off"></span>`)}</div>
       <div class=${"paid" + (m.hit.have < m.hit.need ? " short" : "")}>Paid ${Math.min(m.hit.have, m.hit.need)}/${m.hit.need}</div></div>` : null}
-    ${m.hit && m.hit.kind === "hit" ? html`<div class="hit" data-b="hit"><div class="lab">Hit for</div><div class="n">${m.hit.n}</div></div>` : null}
-    <a class="classic" href="index.html" data-b="classic">Classic</a>
+    ${m.hit && m.hit.kind === "hit" ? html`<div class="hit" data-b="hit"><div class="lab">Hit for</div><div class=${"n" + (m.hit.n === 0 ? " zero" : "")}>${m.hit.n}</div>
+      ${m.hit.eq ? html`<div class="eq" data-b="eq"><span class="p">${m.hit.eq.p}</span>−<span class="d">${m.hit.eq.d}</span></div>` : null}</div>` : null}
   </section>`;
 }
 
@@ -272,33 +290,35 @@ function Table(p){
   const handX = i => "calc(var(--gut) + " + i + " * (var(--cw-hand) + var(--gap-card)) + var(--cw-hand) / 2 - " + m.sl + "px)";
   const at = m.ref && m.ref.at && m.ref.at.k === "hand" ? m.ref.at.i : null;
   const selI = m.selUid != null ? m.hand.findIndex(x => x.card.uid === m.selUid) : -1;
-  const plate = (i, inner) => html`<div class="peek" data-b="peek" style=${"left:min(calc(100% - 66px), max(66px, " + handX(i) + "));bottom:calc(var(--h-hub) + var(--ch-hand) + 26px)"}>${inner}</div>`;
+  const left = i => "calc(var(--gut) + " + i + " * (var(--cw-hand) + var(--gap-card)) - " + m.sl + "px)";
+  const plate = (i, inner, l) => html`<div class=${"peek" + (l ? " l" : "")} data-b="peek" style=${"left:" + (l ? left(i) : "min(calc(100% - 66px), max(66px, " + handX(i) + "))") + ";bottom:calc(var(--h-hub) + var(--ch-hand) + 26px)"}>${inner}</div>`;
   return html`<div class="stage" data-state=${m.insp ? "t10" : m.pay ? "t3" : "t1"}>
     <${Bout} m=${m}/>
     <main class="world" data-b="world">
       <section class="half opp" data-b="opp-half">
-        <div class="mkrow"><${Marks} h=${m.opp} b="opp-ap" cb="opp-coins" pb="opp-perm"/><div class="hf" data-b="their-hand">${Array.from({length: m.opp.handN}, () => html`<${B} cls="hb"/>`)}</div></div>
+        <div class="mkrow"><${Marks} h=${m.opp} b="opp-ap" cb="opp-coins" pb="opp-perm" on=${on}/><div class="hf" data-b="their-hand">${Array.from({length: m.opp.handN}, () => html`<${B} cls="hb"/>`)}</div></div>
         <${Lane} h=${m.opp} who="opp" on=${on}/>
       </section>
       <${Stage} m=${m} on=${on}/>
       <section class="half you" data-b="you-half">
-        <${Lane} h=${m.you} who="you" on=${on}/>
-        <div class="mkrow"><${Marks} h=${m.you} b="ap" cb="coins" pb="you-perm"/></div>
+        <${Lane} h=${m.you} who="you" on=${on} slot=${m.arsSlot}/>
+        <div class="mkrow"><${Marks} h=${m.you} b="ap" cb="coins" pb="you-perm" on=${on}/></div>
       </section>
       <section class="tray" data-b="tray"><div class="handrow" data-b="handrow" onScroll=${on.scroll}>
         ${m.hand.map((x, i) => html`<${F} key=${x.card.uid} card=${x.card} cls=${"hand " + x.state + (at === i ? " refused" : "")} place="hand" tap b=${"hand-" + i} w=${W_HAND[0]} h=${W_HAND[1]} on=${on.hand(x.card, i)}>
           ${x.state === "blk" && x.card.def != null ? html`<span class="badge sh"><svg><use href="#i-shield"/></svg>${x.card.def}</span>` : null}<//>`)}
       </div></section>
     </main>
-    ${selI >= 0 && !m.ref ? plate(selI, html`<span class="name">${m.hand[selI].card.name}</span>`) : null}
+    ${selI >= 0 && !m.ref ? plate(selI, html`<span class=${"name" + (m.plateL ? " l" : "")}>${m.hand[selI].card.name}</span>`, m.plateL) : null}
     ${m.ref ? (at != null ? plate(at, html`<span class="reason">${m.ref.text}</span>`)
       : html`<div class="peek" data-b="peek" style="left:50%;bottom:calc(var(--h-hub) + 12px)"><span class="reason">${m.ref.text}</span></div>`) : null}
     ${m.insp ? html`<${SH.Inspect} card=${m.insp.card} where=${m.insp.where} onClose=${on.close}/>` : null}
+    ${m.menu ? html`<${SH.Menu} onClose=${on.close} onNew=${on.newGame}/>` : null}
     ${m.sheet ? html`<${SH.Options} sheet=${m.sheet} onAct=${on.act}/>` : null}
     <footer class="hub" data-b="hub">
-      ${m.insp ? html`<span style="width:44px;flex:none"></span>` : html`<button class="btn sec sq" data-tap data-b="hub-left" aria-label=${pay ? "Cancel the play" : "Menu"} onClick=${pay ? on.cancel : on.menu}><svg class="ico"><use href=${pay ? "#i-x" : "#i-menu"}/></svg></button>`}
+      ${m.insp || m.menu ? html`<span style="width:44px;flex:none"></span>` : html`<button class="btn sec sq" data-tap data-b="hub-left" aria-label=${pay ? "Cancel the play" : "Menu"} onClick=${pay ? on.cancel : on.menu}><svg class="ico"><use href=${pay ? "#i-x" : "#i-menu"}/></svg></button>`}
       <button class=${"btn primary" + primary.cls + (primary.disabled ? " dis" : "")} data-tap data-b="primary" disabled=${primary.disabled} onClick=${on.primary}>${primary.label}</button>
-      ${m.insp ? html`<span style="width:44px;flex:none"></span>` : html`<button class="btn sec sq" data-tap data-b="hub-right" aria-label="Pad"><svg class="ico"><use href="#i-pad"/></svg></button>`}
+      ${m.insp || m.menu ? html`<span style="width:44px;flex:none"></span>` : html`<button class="btn sec sq" data-tap data-b="hub-right" aria-label="Pad"><svg class="ico"><use href="#i-pad"/></svg></button>`}
     </footer>
   </div>`;
 }
@@ -316,6 +336,12 @@ function Live(p){
     seat: me, holder: J.waitingOn(state), legal: L, ui,
     defending: root.DawnPriority.canDeclareDefenders(state, me),
     game: {slotOf: game.slotOf, gearDef: game.gearDef}, paySum: J.paySum, art: [s.heroArt(0), s.heroArt(1)],
+    /* HIT FOR is the engine's figure for the link in flight: what the AI itself reads as incoming (`pend.total`, which
+       holds the printed power AS THE PLAY CHANGED IT) plus the reaction pumps (`effects.rxPumpTotal`, the one reader).
+       The wall is the AI's own reader, `sparring.wallOf` (declared defenders), plus the defence reactions the engine
+       has recorded on `blockRx` (sparring's `wallNow`, which is not exported; an export would replace this line). */
+    hitOf: vw => vw.pend && vw.pend.total != null ? vw.pend.total + root.DawnEffects.rxPumpTotal(vw) : null,
+    wallOf: sd => root.DawnSparring.wallOf(sd) + (sd.blockRx || []).reduce((t, l) => t + ((l && l.def) || 0), 0),
     name: i => i === me ? "You" : firstName(s.names[i])
   };
   const v = root.DawnView.view(state, me);
@@ -361,13 +387,16 @@ function Live(p){
     }, () => open(card, "Your arsenal, face down to them")),
     unpitch: card => press(() => submit({t: "paySel", uid: card.uid}), null),
     inspect: (card, where) => press(() => open(card, where), null),
-    close: () => setUi(u => ({...u, insp: null})),
+    perm: card => press(() => open(card, "A permanent on the board"), () => open(card, "A permanent on the board")),
+    close: () => setUi(u => ({...u, insp: null, menu: false})),
     cancel: () => submit({t: "payCancel"}),
-    menu: () => {},
+    menu: () => setUi(u => ({...u, menu: !u.menu, sel: null, ref: null})),
+    slot: press(() => { const sl = ui.sel; if(sl && sl.from === "hand") submit({t: "arsenal", uid: sl.uid}); else refuse("Tap the card you want face down first"); }, null),
+    newGame: () => { try { root.location.href = root.location.pathname; } catch(e){} },
     act: a => submit(a),
     primary: () => {
       const pr = m.primary;
-      if(pr.close) return setUi(u => ({...u, insp: null}));
+      if(pr.close) return setUi(u => ({...u, insp: null, menu: false}));
       if(pr.disabled) return;
       if(pr.act) return submit(pr.act);
       if(pr.play){

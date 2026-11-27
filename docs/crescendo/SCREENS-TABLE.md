@@ -70,6 +70,8 @@ Motion: pitch flight 210 ms to the pile, pip pop (`--m-ease-slam`), then the pla
 Pill `DEFEND STEP`; your Wounding Blow (red strip, power stamp 4) at (96,182,112,156), tilted −1.5° (toward the defender); right column `HIT FOR` / **4** (BSD 900 44, `--damage`); AP gem gone (spent); Talishar no longer underlined; hand **idle** (5 cards, nothing lifts); primary **WAITING FOR VISERAI**, disabled outline.
 Taps: attack = inspect; hand = hold to inspect only. Hidden: nothing new. Motion in: your own glimpse (T3) then the flight to the slot (`--m-std`), the power badge pops 1→1.25→1; the defender's window opens at t=0 (§3.6).
 
+CEO 2026-11-27: HIT FOR < life numerals, BRIEF §2 (30 px at 393 where life is 34; 26 at compact, 34 at 430+), in T4, T6, T7 alike.
+
 ## T5 · The opponent's attack announced with its glimpse (`table-5-announce.html`)
 
 Frozen at ≈ t = 1000 ms of the 1500 ms hold. Scrim `rgba(5,8,10,.66)` (0,56,393,402) — covers halves and stage, **never bout, tray or hub** (the hand stays live: no response window is eaten). **Slab** (0,60,393,60): 4 px orchid left bar, label `VISERAI · ATTACKS FOR 4 · GO AGAIN` (Mono 11, orchid + ink-1), line **PLAYS RUNE FLASH** (BSD 800 30, one line; steps down to 22 for long names). **Glimpse** card 232×324 at (30.5,126), shown as printed (no stamps). **Pitched cards** 92×128 at (270,126) and below, 16 px apart, each with a pitch-colour chip `PITCH +1` / `PITCH +2`. Behind: their AP gem 1 (go again), 3 backs in their hand, the medallion 4 orchid; primary **VISERAI'S TURN**, disabled.

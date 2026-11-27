@@ -86,7 +86,7 @@
 .stackrail .cd{box-shadow:var(--e2),0 0 0 2px var(--brass)}
 .stackrail .who{margin-top:7px;white-space:nowrap;line-height:13px;font:var(--t-label);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-1)}
 .hit{position:absolute;right:var(--gut);width:82px;top:var(--atk-top);height:var(--ch-chain);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
-.hit .n{font:900 44px/40px var(--f-display);color:var(--damage);text-shadow:0 2px 0 #000;margin:1px 0 6px}
+.hit .n{font:900 30px/40px var(--f-display);color:var(--damage);text-shadow:0 2px 0 #000;margin:1px 0 6px}   /* CEO 2026-11-27: HIT FOR < the life numerals (34), BRIEF 2 */
 .hit .n.zero{color:var(--prevent)}
 .hit .eq{display:flex;align-items:center;gap:5px;font:var(--t-stamp);color:var(--ink-1)}
 .hit .eq .p{min-width:20px;height:20px;border-radius:5px;background:var(--ink-0);color:var(--ink-inv);display:grid;place-items:center;padding:0 3px}
@@ -139,7 +139,7 @@ html[data-band="compact"] .centre{--atk-x:calc(var(--gut) + var(--cw-link) + 36p
 /* [DEV-5] at 548 the attack card leaves 22 px of free height, so the step marker moves to the top-right corner there */
 html[data-band="compact"] .pill{top:3px;left:auto;right:var(--gut)}
 html[data-band="compact"] .ask{font-size:18px;line-height:20px}
-html[data-band="compact"] .hit .n{font-size:38px;line-height:34px}
+html[data-band="compact"] .hit .n{font-size:26px;line-height:34px}
 html[data-band="compact"] .hit{width:70px}
 html[data-band="compact"] .slab{height:48px;padding-top:5px}
 html[data-band="compact"] .slab .say{font-size:26px;line-height:28px;margin-top:2px}
@@ -181,3 +181,9 @@ html[data-band="compact"] .slab .say{font-size:26px;line-height:28px;margin-top:
 .perm{position:absolute;right:var(--gut);top:0;bottom:0;display:flex;align-items:center;gap:6px}
 .perm .cd{position:relative}
 .perm .xn2{position:absolute;right:-4px;bottom:-4px;min-width:14px;height:14px;padding:0 3px;border-radius:7px;background:var(--brass);color:var(--ink-inv);font:800 11px/14px var(--f-display);text-align:center}
+
+@media (min-width:414px){.hit .n{font-size:34px;line-height:40px}}
+a.opt{text-decoration:none;justify-content:center}
+/* a permanent's mini card: a 44 x 44 hit area around it (the pad is invisible) */
+.permhit::before{content:"";position:absolute;inset:-12px -11px}
+.permhit{cursor:pointer}

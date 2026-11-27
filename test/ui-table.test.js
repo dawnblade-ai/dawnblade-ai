@@ -8,7 +8,7 @@ const path = require("path");
 const W = require("./helpers/extract").loadData();
 const ROOT = path.join(__dirname, "..");
 const env = { ...W, DAWN_POOL: require("../data/pool.js") };
-Object.entries({ DawnCards: "cards", DawnGame: "game", DawnBuild: "build", DawnJudge: "judge", DawnSparring: "sparring", DawnView: "view", DawnPriority: "priority" })
+Object.entries({ DawnCards: "cards", DawnGame: "game", DawnBuild: "build", DawnJudge: "judge", DawnSparring: "sparring", DawnView: "view", DawnPriority: "priority", DawnEffects: "effects" })
   .forEach(([k, f]) => { env[k] = require(path.join(ROOT, "engine", f + ".js")); });
 const S = require("../ui/session.js"), T = require("../ui/table.js");
 const J = env.DawnJudge;
@@ -19,7 +19,9 @@ const modelOf = (st, ui) => {
   return T.model(env.DawnView.view(st, me), {
     seat: me, holder: J.waitingOn(st), legal: a => J.legal(st, a, me), ui: ui || {},
     defending: env.DawnPriority.canDeclareDefenders(st, me), game: { slotOf: env.DawnGame.slotOf, gearDef: env.DawnGame.gearDef },
-    paySum: J.paySum, art: [null, null], name: i => i === me ? "You" : "Foe"
+    paySum: J.paySum, art: [null, null], name: i => i === me ? "You" : "Foe",
+    hitOf: vw => vw.pend && vw.pend.total != null ? vw.pend.total + env.DawnEffects.rxPumpTotal(vw) : null,
+    wallOf: sd => env.DawnSparring.wallOf(sd) + (sd.blockRx || []).reduce((t, l) => t + ((l && l.def) || 0), 0)
   });
 };
 const step = (st, a, seat) => { const o = J.reduce(st, a, seat || 0); assert.strictEqual(o.error, null, JSON.stringify(a) + ": " + o.error); return o.state; };
@@ -70,4 +72,46 @@ test("the opponent's turn: the primary waits and nothing is ready; their hand is
 test("permanents group by kind with a count", () => {
   const g = T.permsOf({ board: [{ card: { name: "Runechant" } }, { card: { name: "Runechant" } }, { card: { name: "Sigil" } }] });
   assert.deepStrictEqual(g.map(x => [x.card.name, x.n]), [["Runechant", 2], ["Sigil", 1]]);
+});
+
+/* a defend step whose attack's CURRENT power is not its printed power: HIT FOR is the engine's figure, and a blocker moves it */
+test("T6: HIT FOR is the engine's current figure (not the printed power), and blocking lowers it by the wall", () => {
+  let st = deal("kayo", "dash", "1"), seen = null;
+  for(let i = 0; i < 400 && !st.over && !seen; i++){
+    const w = J.waitingOn(st);
+    if(w === 0 && env.DawnPriority.canDeclareDefenders(st, 0) && st.pend && st.pend.total !== st.pend.card.power) seen = st;
+    else { const a = env.DawnSparring.act(st, w, {}); if(!a) break; st = step(st, a, w); }
+  }
+  assert.ok(seen, "no attack with a changed power reached the defend step (the fixture moved)");
+  st = seen;
+  const printed = st.pend.card.power, now = st.pend.total;
+  assert.notStrictEqual(now, printed);
+  let m = modelOf(st);
+  assert.ok(m.defending && m.stage.ask === "Any blocks?");
+  assert.strictEqual(m.hit.eq.p, now, "the ledger's power is the engine's figure, not the printed " + printed);
+  assert.strictEqual(m.hit.n, now);
+  assert.strictEqual(m.primary.label, "No block");
+  const blocker = m.hand.find(h => h.state === "ready");
+  assert.ok(blocker, "a card that can block");
+  st = step(st, { t: "defend", uid: blocker.card.uid });
+  assert.strictEqual(modelOf(st).primary.label, "Resolving…", "a declaration hands priority to the turn player: the primary waits");
+  st = step(st, { t: "pass" }, 1);                  /* the AI seat passes it back */
+  m = modelOf(st);
+  assert.strictEqual(m.hit.eq.d, blocker.card.def);
+  assert.strictEqual(m.hit.n, Math.max(0, now - blocker.card.def));
+  assert.strictEqual(m.primary.label, "Block with 1");
+  assert.strictEqual(m.hand.filter(h => h.state === "blk").length, 1);
+});
+
+test("T9: the arsenal step offers every card, the drop slot, and NO ARSENAL until one is selected", () => {
+  let st = deal("iyslander", "viserai", "2");
+  st = step(st, { t: "endTurn" });
+  if(J.waitingOn(st) === 1) st = step(st, { t: "pass" }, 1);
+  let m = modelOf(st);
+  assert.ok(m.arsStep && m.arsSlot && m.stage.ask === "Arsenal?");
+  assert.strictEqual(m.primary.label, "No arsenal"); assert.deepStrictEqual(m.primary.act, { t: "arsenal", uid: null });
+  const c = m.hand[0].card;
+  m = modelOf(st, { sel: { uid: c.uid, from: "hand" } });
+  assert.strictEqual(m.primary.label, "Set in arsenal"); assert.deepStrictEqual(m.primary.act, { t: "arsenal", uid: c.uid });
+  assert.strictEqual(m.hand[0].state, "sel"); assert.ok(m.plateL, "card 0's name-plate is left-aligned");
 });

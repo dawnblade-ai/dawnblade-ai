@@ -141,5 +141,22 @@ function Options(p){
   </div>`;
 }
 
-return {Inspect, Options, Glyphs, sheetOf, stuckSheet, labelOf, candidates, named, plain};
+/* the menu (the hub's ...): the way back to the classic board, sound, a new game. A minimal sheet for now. */
+function Menu(p){
+  const A = root.DawnUIAudio, muted = A && A.muted ? A.muted() : null;
+  return html`<div class="options menu" data-b="menu">
+    <div class="veil" data-b="veil" data-tap onClick=${p.onClose}></div>
+    <div class="sheet opts" data-b="sheet" style="bottom:calc(var(--h-hub) + 10px)">
+      <div class="grab"></div>
+      <h2>Menu</h2>
+      <div class="optl">
+        <a class="opt" data-tap href="index.html">Classic board</a>
+        ${A && A.toggleMute ? html`<button class="opt" data-tap onClick=${() => { A.toggleMute(); p.onClose(); }}>Sound: ${muted ? "off — turn on" : "on — turn off"}</button>` : null}
+        <button class="opt" data-tap onClick=${p.onNew}>New game</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+return {Inspect, Options, Menu, Glyphs, sheetOf, stuckSheet, labelOf, candidates, named, plain};
 });

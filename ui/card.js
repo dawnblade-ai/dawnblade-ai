@@ -24,9 +24,10 @@ const has = n => n != null && n !== "" && !isNaN(+n);
 /* which stamps a card carries at a place: "hand" all four, "mat" power + defence. `def` is passed in (equipment
    reads its CURRENT defence through DawnGame.gearDef, a battleworn piece is not its printed number). */
 function stamps(c, place, def){
-  if(!c || c.hidden || place === "perm") return [];
+  if(!c || c.hidden || place === "perm" || place === "none") return [];
   const out = [];
   if(place === "chain"){ if(has(c.power)) out.push(["pow", c.power]); return out; }
+  if(place === "block"){ const d = def != null ? def : c.def; if(has(d)) out.push(["def", d]); return out; }
   if(place === "hand"){
     if(has(c.cost)) out.push(["cost", c.cost]);
     if(has(c.pitch) && +c.pitch > 0) out.push(["pitch", c.pitch]);
@@ -52,7 +53,7 @@ function Face(p){
       aria-label=${c.name} style=${p.style} ...${p.on || {}}>
     ${c.img ? html`<img alt=${c.name} src=${c.img} width=${p.w} height=${p.h} decoding="async" onError=${e => artFailed(e, c)}/>` : null}
     <span class="cname">${c.name}</span>
-    ${(p.place === "hand" || p.place === "chain") && colour ? html`<span class="strip"></span>` : null}
+    ${p.place !== "mat" && p.place !== "perm" && colour ? html`<span class="strip"></span>` : null}
     ${st.map(s => html`<span class=${"st " + s[0]}>${s[1]}</span>`)}
     ${p.children}
   </div>`;
