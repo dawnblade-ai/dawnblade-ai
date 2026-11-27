@@ -37,7 +37,7 @@ function create(stage, me, remembered){
     const pw = L.extras > 0 ? 8 + (tok("--cw-glimpse-pitch") || 92) : 0;
     /* below the slab, and never lower than the tray's top edge allows: at compact the glimpse must clear the hand (SCREENS-TABLE 14) */
     const tray = box(q(".tray")), y0 = (bout ? bout.y + bout.h : 56) + slab + 10;
-    return {x: (W() - w - pw) / 2, y: tray ? Math.min(y0, tray.y - h) : y0, w, h};
+    return {x: (W() - w - pw) / 2, y: tray ? Math.min(y0, tray.y - h - 2) : y0, w, h};
   };
   const rect = (place, a, b) => {
     switch(place){
