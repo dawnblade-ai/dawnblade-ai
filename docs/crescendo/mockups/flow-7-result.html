@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dawnblade — F7 The result</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800;900&family=Spline+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500;600&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="flow.css">
+<script src="stage.js"></script>
+</head>
+<body>
+<!-- ?v=ko  the climax frame (MOTION 3.18 at ~850 ms): you win.  ?v=lose  the same frame when you lose: the word is the same word.
+     ?v=pad the pad becomes the result sheet: winner ringed in red pencil, GG, then Rematch / New opponent / Leave. -->
+<div class="stage f7" data-variants="ko|lose|pad" data-default="ko">
+  <div class="bg">
+    <div data-vs="ko" data-tbl='{"yl":7,"ol":0,"ym":18,"om":20,"turn":6,"mine":false,"nohub":1}'></div>
+    <div data-vs="lose" data-tbl='{"yl":0,"ol":6,"ym":18,"om":20,"turn":6,"mine":false,"nohub":1}'></div>
+    <div data-vs="pad" data-tbl='{"yl":7,"ol":0,"ym":18,"om":20,"turn":6,"mine":false,"nohub":1}'></div>
+  </div>
+  <div class="frame">
+    <div class="veil"></div>
+    <!-- KO + lose: the world is dimmed to .72 below the bout; the bout stays lit (both final totals, same size, same place) -->
+    <div data-vs="ko lose">
+      <div class="word"><b>Dawn</b><b>break</b><span data-vs="ko">You win</span><span data-vs="lose">Viserai wins</span><i data-vs="ko"></i><i class="o" data-vs="lose"></i></div>
+      <div class="blade"></div>
+      <span class="tapon">Tap to continue</span>
+      <button class="tapfull" aria-label="Continue" data-href="flow-7-result.html?v=pad"></button>
+    </div>
+
+    <!-- PAD: the result sheet -->
+    <div data-vs="pad">
+      <div class="paper res" style="top:66px;height:470px">
+        <i class="tape a"></i><i class="tape b"></i>
+        <div class="ph"><h3>Iyslander vs Viserai</h3><p data-vs="pad">You won · turn 6</p></div>
+        <div class="cols">
+          <div><h4>You</h4>
+            <div class="r t x">18</div><div class="r a"><em>T2</em>Runerager Swarm<b>−3</b></div>
+            <div class="r t x">15</div><div class="r a"><em>T4</em>Shrill of Skullform<b>−4</b></div>
+            <div class="r t x">11</div><div class="r a"><em>T6</em>Hit the High Notes<b>−4</b></div>
+            <div class="r t cur" style="margin-left:14px">7<svg class="ring" viewBox="0 0 70 62" style="left:-26px;top:-12px;width:74px;height:64px"><path d="M14 44C3 26 20 6 40 6c20 0 31 20 18 38-9 12-32 13-42-2" fill="none" stroke="#B3261E" stroke-width="3.2" stroke-linecap="round"/></svg></div></div>
+          <div><h4>Viserai</h4>
+            <div class="r t x">20</div><div class="r a"><em>T1</em>Polar Cap<b>−4</b></div>
+            <div class="r t x">16</div><div class="r a"><em>T3</em>Voltic Bolt<b>−5</b></div>
+            <div class="r t x">11</div><div class="r a"><em>T5</em>Ice Bolt<b>−5</b></div>
+            <div class="r t x">6</div><div class="r a"><em>T6</em>Emeritus Scolding<b>−6</b></div>
+            <div class="r t cur">0</div></div>
+        </div>
+        <span class="gg" style="top:26px;right:14px">GG</span>
+      </div>
+      <div class="acts2">
+        <div class="row"><button class="btn sec" data-href="flow-3-hero.html">New opponent</button><button class="btn sec dng" data-href="flow-1-title.html">Leave</button></div>
+        <button class="btn" data-href="flow-4-sitdown.html">Rematch</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="flow.js"></script>
+<script>
+  /* the lose frame: your portrait fell, theirs stays; the pad variant: the loser's portrait is greyed too */
+  (function(){var v=FLOW.v;var s=document.querySelectorAll('[data-vs~="'+v+'"] .tbl .side');if(v==='lose'&&s[0])s[0].classList.add('fell');else if(s[1])s[1].classList.add('fell');})();
+  (function(){var c=document.querySelector('.cols');if(c)c.scrollTop=c.scrollHeight;})();
+</script>
+</body>
+</html>

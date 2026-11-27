@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dawnblade — F9 Waiting</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800;900&family=Spline+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500;600&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="flow.css">
+<script src="stage.js"></script>
+</head>
+<body>
+<!-- ?v=ai (on the table) · phone (host waits for a friend) · quiet (the other phone dropped) · server (finding a table) · fail (could not reach it).
+     Every state is a horizon and a few words. Motion is opacity/transform only and stops under reduced motion. -->
+<div class="stage f9" data-variants="ai|phone|quiet|server|fail" data-default="ai">
+  <div class="bg">
+    <div data-vs="ai" data-tbl='{"yl":15,"ol":16,"ym":18,"om":20,"turn":4,"mine":false,"btn":"Their turn","btnDis":1}'></div>
+    <div data-vs="quiet" data-tbl='{"yl":15,"ol":16,"ym":18,"om":20,"turn":4,"mine":false,"btn":"Their turn","btnDis":1}'></div>
+    <div data-vs="phone server fail" style="position:absolute;inset:0;background:var(--mat-bg)"></div>
+  </div>
+  <div class="frame">
+
+    <!-- ===== AI thinking: a quiet chip under the bout, only after a beat of silence ===== -->
+    <div class="think" data-vs="ai">Viserai is thinking<span class="dots"><i></i><i></i><i></i></span></div>
+
+    <!-- ===== the other phone went quiet ===== -->
+    <div data-vs="quiet"><div class="scrim"></div>
+      <div class="panel"><h2>Waiting for Viserai's phone</h2><p>Their connection dropped. The table keeps your place and carries on the moment they are back.</p>
+        <p style="margin-top:12px"><span class="lab" style="color:var(--brass-hi)">Waiting</span><span class="dots"><i></i><i></i><i></i></span></p>
+        <button class="btn sec" data-href="flow-1-title.html">Leave the table</button></div></div>
+
+    <!-- ===== phone: host opened a table ===== -->
+    <div class="wr" data-vs="phone">
+      <button class="ib dk" aria-label="Cancel" style="position:absolute;left:var(--gut);top:8px;z-index:3" data-href="flow-2-ways.html"><svg class="ico"><use href="#i-back"/></svg></button>
+      <div class="stack">
+        <div class="sunrise"><div class="halo"></div><div class="disc"></div><div class="horizon"><i></i></div></div>
+        <div class="h"><h1>Waiting for your friend</h1><p>Tell them this code, or send it from your phone.</p></div>
+        <div class="codes"><b>K</b><b>7</b><b>Q</b><b>M</b></div>
+        <div class="seats" style="margin-top:12px">
+          <div class="seat"><div class="c me hero" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY001.webp)"></div><span class="lab">You · Iyslander</span></div>
+          <div class="thread"></div>
+          <div class="seat"><div class="c em">?</div><span class="lab">Waiting<span class="dots"><i></i><i></i><i></i></span></span></div>
+        </div>
+      </div>
+      <div class="btns"><button class="btn"><svg class="ico" style="width:22px;height:22px"><use href="#i-share"/></svg>Share the code</button></div>
+    </div>
+
+    <!-- ===== server: finding a table ===== -->
+    <div class="wr" data-vs="server" style="--btnh:138px">
+      <button class="ib dk" aria-label="Cancel" style="position:absolute;left:var(--gut);top:8px;z-index:3" data-href="flow-2-ways.html"><svg class="ico"><use href="#i-back"/></svg></button>
+      <div class="stack">
+        <div class="sunrise"><div class="halo"></div><div class="disc"></div><div class="horizon"><i></i></div></div>
+        <div class="h"><h1>Finding you a table</h1><p>The usual wait is about 20 seconds.</p></div>
+        <div class="seats" style="margin-top:12px">
+          <div class="seat"><div class="c me hero" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY001.webp)"></div><span class="lab">You · Iyslander</span></div>
+          <div class="thread"></div>
+          <div class="seat"><div class="c em">?</div><span class="lab">Looking<span class="dots"><i></i><i></i><i></i></span></span></div>
+        </div>
+      </div>
+      <div class="btns"><button class="btn" data-href="flow-4-sitdown.html">Play the AI while you wait</button><button class="btn sec" data-href="flow-2-ways.html">Stop looking</button></div>
+    </div>
+
+    <!-- ===== fail ===== -->
+    <div class="wr" data-vs="fail" style="--btnh:138px">
+      <button class="ib dk" aria-label="Back" style="position:absolute;left:var(--gut);top:8px;z-index:3" data-href="flow-2-ways.html"><svg class="ico"><use href="#i-back"/></svg></button>
+      <div class="stack">
+        <div class="sunrise dim"><div class="halo" style="animation:none;opacity:.5"></div><div class="disc" style="transform:translateY(30px)"></div><div class="horizon"></div></div>
+        <div class="h"><h1>We could not reach the server</h1><p>Check your connection. Nothing is lost, and the AI is always at the table.</p></div>
+      </div>
+      <div class="btns"><button class="btn">Try again</button><button class="btn sec" data-href="flow-4-sitdown.html">Play the AI instead</button></div>
+    </div>
+  </div>
+</div>
+<script src="flow.js"></script>
+</body>
+</html>

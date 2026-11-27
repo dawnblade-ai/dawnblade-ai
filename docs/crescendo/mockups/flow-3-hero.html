@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dawnblade — F3 Choose your hero</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800;900&family=Spline+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500;600&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="flow.css">
+<script src="stage.js"></script>
+</head>
+<body>
+<!-- ?v=grid (default): the 17 heroes.  ?v=peek: one tap on a hero opens the deck sheet; the second tap, SIT DOWN, goes to F4. -->
+<div class="stage f3" data-variants="grid|peek" data-default="grid">
+  <div class="frame">
+    <div class="hdr">
+      <button class="ib" aria-label="Back" data-href="flow-2-ways.html"><svg class="ico"><use href="#i-back"/></svg></button>
+      <h1><span class="sub">Step 2 of 3</span>Choose your hero</h1>
+    </div>
+    <div class="grid sc">
+      <button class="tile hero" data-vs="grid peek"  aria-label="Kayo" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SKA001.webp)"><span class="tn">Kayo</span></button>
+      <button class="tile hero last" data-vs="grid peek" data-peek="1" aria-label="Iyslander" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY001.webp)"><span class="tn">Iyslander</span><span class="lastdot">Last</span></button>
+      <button class="tile hero" data-vs="grid peek"  aria-label="Viserai" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SVI001.webp)"><span class="tn">Viserai</span></button>
+      <button class="tile hero" data-vs="grid peek"  aria-label="Dash" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SDA001.webp)"><span class="tn">Dash</span></button>
+      <button class="tile hero" data-vs="grid peek"  aria-label="Bravo, Flattering Showman" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SBR001.webp)"><span class="tn">Bravo</span></button>
+      <button class="tile hero" data-vs="grid peek"  aria-label="Azalea" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SAZ001.webp)"><span class="tn">Azalea</span></button>
+      <button class="tile hero" data-vs="grid peek"  aria-label="Dorinthea" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SDO001.webp)"><span class="tn">Dorinthea</span></button>
+      <button class="tile hero" data-vs="grid peek"  aria-label="Fai" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SFA001.webp)"><span class="tn">Fai</span></button>
+      <button class="tile hero" data-vs="grid peek"  aria-label="Enigma" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SEN001.webp)"><span class="tn">Enigma</span></button>
+      <button class="tile hero" data-vs="grid peek"  aria-label="Arakni, Web of Deceit" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SAR001.webp)"><span class="tn">Arakni</span></button>
+      <button class="tile hero" data-vs="grid peek"  aria-label="Blaze, Firemind" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SBZ001.webp)"><span class="tn">Blaze</span></button>
+      <button class="tile hero" data-vs="grid peek"  aria-label="Boltyn" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SBL001.webp)"><span class="tn">Boltyn</span></button>
+      <button class="tile hero" data-vs="grid peek"  aria-label="Briar" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SBA001.webp)"><span class="tn">Briar</span></button>
+      <button class="tile hero" data-vs="grid peek"  aria-label="Gravy Bones" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SGB001.webp)"><span class="tn">Gravy Bones</span></button>
+      <button class="tile hero" data-vs="grid peek"  aria-label="Lyath Goldmane" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SLY001.webp)"><span class="tn">Lyath Goldmane</span></button>
+      <button class="tile hero" data-vs="grid peek"  aria-label="Viserai, Between Worlds" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SBW001.webp)"><span class="tn">Viserai BW</span></button>
+      <button class="tile hero" data-vs="grid peek"  aria-label="Prism, Advent of Thrones" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SAT001.webp)"><span class="tn">Prism</span></button>
+      <i class="pad"></i>
+    </div>
+    <div class="scrim full" data-vs="peek"></div>
+    <div class="sheet pk" data-vs="peek">
+      <div class="ban hero" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY001.webp)">
+        <i class="bshade"></i>
+        <button class="ib dk" aria-label="Close" data-href="flow-3-hero.html"><svg class="ico"><use href="#i-x"/></svg></button>
+        <div class="bn"><span class="lab" style="color:var(--ink-1)">Elemental Wizard · Chapter 1</span><b>Iyslander</b></div>
+      </div>
+      <p class="bl">Frostbite arcane pressure. Chip, freeze, and let the ice do the arguing.</p>
+      <div class="stats"><span class="chip"><svg class="ico" style="width:14px;height:14px;color:var(--damage)"><use href="#i-heart"/></svg>Life 18</span><span class="chip"><svg class="ico" style="width:14px;height:14px"><use href="#i-hand"/></svg>Hand 4</span><span class="chip"><svg class="ico" style="width:14px;height:14px"><use href="#i-deck"/></svg>47 cards</span></div>
+      <div class="dk-l"><span class="lab">The deck, as printed</span><span class="lab">Tap a card to read it</span></div>
+      <div class="dstrip sc" style="overflow-x:auto;overflow-y:hidden;touch-action:pan-x">
+        <div class="dc cd t56 red"><img alt="Absorb in Aether" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY013.webp"><span class="strip"></span><span class="x">×2</span></div>
+        <div class="dc cd t56 red"><img alt="Aether Icevein" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY014.webp"><span class="strip"></span><span class="x">×6</span></div>
+        <div class="dc cd t56 red"><img alt="Fyendal's Fighting Spirit" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY010.webp"><span class="strip"></span><span class="x">×2</span></div>
+        <div class="dc cd t56 red"><img alt="Ice Bolt" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY016.webp"><span class="strip"></span><span class="x">×4</span></div>
+        <div class="dc cd t56 red"><img alt="Look Tuff" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY011.webp"><span class="strip"></span><span class="x">×1</span></div>
+        <div class="dc cd t56 red"><img alt="On the Horizon" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY017.webp"><span class="strip"></span><span class="x">×2</span></div>
+        <div class="dc cd t56 red"><img alt="Polar Cap" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY015.webp"><span class="strip"></span><span class="x">×2</span></div>
+        <div class="dc cd t56 red"><img alt="Wounded Bull" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY012.webp"><span class="strip"></span><span class="x">×2</span></div>
+        <div class="dc cd t56 blue"><img alt="Aether Hail" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY020.webp"><span class="strip"></span><span class="x">×2</span></div>
+        <div class="dc cd t56 blue"><img alt="Arcane Twining" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY022.webp"><span class="strip"></span><span class="x">×2</span></div>
+        <div class="dc cd t56 blue"><img alt="Brain Freeze" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY023.webp"><span class="strip"></span><span class="x">×2</span></div>
+        <div class="dc cd t56 blue"><img alt="Brothers in Arms" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY019.webp"><span class="strip"></span><span class="x">×2</span></div>
+        <div class="dc cd t56 blue"><img alt="Cold Snap" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY024.webp"><span class="strip"></span><span class="x">×2</span></div>
+        <div class="dc cd t56 blue"><img alt="Emeritus Scolding" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY025.webp"><span class="strip"></span><span class="x">×2</span></div>
+        <div class="dc cd t56 blue"><img alt="Frosting" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY026.webp"><span class="strip"></span><span class="x">×2</span></div>
+        <div class="dc cd t56 blue"><img alt="Frost Spike" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY034.webp"><span class="strip"></span><span class="x">×2</span></div>
+        <div class="dc cd t56 blue"><img alt="Ice Eternal" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY028.webp"><span class="strip"></span><span class="x">×2</span></div>
+        <div class="dc cd t56 blue"><img alt="Photon Splicing" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY029.webp"><span class="strip"></span><span class="x">×2</span></div>
+        <div class="dc cd t56 blue"><img alt="Pyroglyphic Protection" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY030.webp"><span class="strip"></span><span class="x">×1</span></div>
+        <div class="dc cd t56 blue"><img alt="Stir the Aetherwinds" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY031.webp"><span class="strip"></span><span class="x">×1</span></div>
+        <div class="dc cd t56 blue"><img alt="Voltic Bolt" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY032.webp"><span class="strip"></span><span class="x">×2</span></div>
+        <div class="dc cd t56 blue"><img alt="Winter's Bite" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY033.webp"><span class="strip"></span><span class="x">×2</span></div>
+      </div>
+      <div class="sitbar"><button class="btn" data-href="flow-4-sitdown.html">Sit down as Iyslander</button></div>
+    </div>
+  </div>
+</div>
+<script src="flow.js"></script>
+<script>
+  /* the one tap that matters in this mockup: a tile opens its peek (the real build keeps the same two-tap rhythm) */
+  document.querySelectorAll('[data-peek]').forEach(function(t){t.addEventListener('click',function(){ if(FLOW.v==='grid') location.search=location.search?location.search.replace(/[?&]v=[^&]*/,'')+(location.search.indexOf('?')<0?'?':'&')+'v=peek':'?v=peek'; });});
+</script>
+</body>
+</html>

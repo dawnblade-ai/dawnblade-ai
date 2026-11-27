@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dawnblade — F5 Prompt sheets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800;900&family=Spline+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500;600&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="flow.css">
+<script src="stage.js"></script>
+</head>
+<body>
+<!-- ONE sheet, four bodies:  ?v=mode (modal) · target · order (opt) · reveal.  Each borrows the real card from the precon that prints it,
+     so the bout above is that table's matchup. The bout is NEVER dimmed: the scrim starts below it. -->
+<div class="stage f5" data-variants="mode|target|order|reveal" data-default="mode">
+  <div class="bg">
+    <div data-vs="mode" data-tbl='{"you":"SBR001","opp":"SVI001","yl":20,"ol":20,"ym":20,"om":20,"turn":3,"btn":"PASS","g1":"SBR010","g2":0,"hand":[["SBR020","red"],["SBR014","red"],["SBR023","blue"],["SBR016","red"],["SBR024","blue"]]}'></div>
+    <div data-vs="target" data-tbl='{"yl":11,"ol":11,"turn":5,"btn":"PASS"}'></div>
+    <div data-vs="order" data-tbl='{"you":"SBZ001","yl":17,"ym":17,"ol":20,"turn":3,"btn":"PASS","g1":"SBZ004","g2":"SBZ002","hand":[["SBZ013","red"],["SBZ009","red"],["SBZ024","blue"],["SBZ018","red"],["SBZ026","blue"]]}'></div>
+    <div data-vs="reveal" data-tbl='{"yl":15,"ol":16,"turn":3,"btn":"PASS"}'></div>
+  </div>
+  <div class="frame">
+    <div class="scrim"></div>
+    <button class="tring" data-vs="target" aria-label="Viserai, tap to target"></button>
+
+    <!-- ===== A  CHOOSE A MODE (modal) ===== -->
+    <div class="sheet pr" data-vs="mode">
+      <div class="ask">
+        <div class="th"><div class="cd red"><img alt="Pummel" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SBR020.webp"><span class="strip"></span></div></div>
+        <div class="tx"><div class="by"><span class="lab">Asked by</span><span class="chip br">Your choice</span></div><h2>Pummel</h2><p>Choose one.</p></div>
+      </div>
+      <div class="body"><div class="opts">
+        <button class="opt on"><span class="rad"><svg><use href="#i-check"/></svg></span><p>Target club or hammer weapon attack gets +4<svg class="pw"><use href="#i-power"/></svg>.</p></button>
+        <button class="opt"><span class="rad"><svg><use href="#i-check"/></svg></span><p>Target attack action card with cost 2 or more gets +4<svg class="pw"><use href="#i-power"/></svg> and “When this hits a hero, they discard a card.”</p></button>
+      </div></div>
+      <div class="foot"><button class="btn">Choose</button></div>
+    </div>
+
+    <!-- ===== B  CHOOSE A TARGET ===== -->
+    <div class="sheet pr" data-vs="target">
+      <div class="ask">
+        <div class="th"><div class="cd red"><img alt="Ice Bolt" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY016.webp"><span class="strip"></span></div></div>
+        <div class="tx"><div class="by"><span class="lab">Asked by</span><span class="chip br">Your choice</span></div><h2>Ice Bolt</h2><p>Deal <b>5 arcane damage</b> to any target.</p></div>
+      </div>
+      <div class="body"><div class="tgts">
+        <button class="tgt hero on" aria-label="Viserai" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SVI001.webp)"><span class="tc o"><svg><use href="#i-check"/></svg></span><span class="tn">Viserai</span><span class="tl">Hero · life 11</span></button>
+        <button class="tgt hero" aria-label="Yourself" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY001.webp)"><span class="tc"><svg><use href="#i-check"/></svg></span><span class="tn">Yourself</span><span class="tl">Hero · life 11</span></button>
+      </div><p class="note">You can also tap Viserai's portrait above.</p></div>
+      <div class="foot"><button class="btn">Target Viserai</button></div>
+    </div>
+
+    <!-- ===== C  ORDER CARDS, TOP OR BOTTOM (opt) ===== -->
+    <div class="sheet pr" data-vs="order">
+      <div class="ask">
+        <div class="th"><div class="cd red"><img alt="Whisper of the Oracle" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SBZ019.webp"><span class="strip"></span></div></div>
+        <div class="tx"><div class="by"><span class="lab">Asked by</span><span class="chip br">Your choice</span></div><h2>Opt 4</h2><p>Look at the top 4 cards. Put any on the top or bottom, in any order.</p></div>
+      </div>
+      <div class="body" style="padding-top:12px">
+        <div class="lane top"><span class="lab">Top of your deck</span><span class="lab r">Drawn in this order →</span>
+          <div class="cards">
+            <div class="cc"><span class="num">1</span><div class="cd blue"><img alt="Voltic Bolt" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SBZ031.webp"><span class="strip"></span></div></div>
+            <div class="cc"><span class="num">2</span><div class="cd red sel"><img alt="Arcane Polarity" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SBZ020.webp"><span class="strip"></span></div></div>
+            <div class="cc"><span class="num">3</span><div class="cd yellow"><img alt="Whisper of the Oracle" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SBZ023.webp"><span class="strip"></span></div></div>
+          </div></div>
+        <div class="lane bot" style="margin-top:8px"><span class="lab">Bottom of your deck</span>
+          <div class="cards"><div class="cc"><div class="cd blue block"><img alt="Arcane Twining" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SBZ026.webp"><span class="strip"></span></div></div></div></div>
+      </div>
+      <div class="acts" style="flex:none"><button class="btn sec"><svg class="ico"><use href="#i-left"/></svg>Sooner</button><button class="btn sec">Later<svg class="ico"><use href="#i-right"/></svg></button><button class="btn sec"><svg class="ico"><use href="#i-down"/></svg>Bottom</button></div>
+      <div class="foot"><button class="btn">Done</button></div>
+    </div>
+
+    <!-- ===== D  A REVEAL (look only) ===== -->
+    <div class="sheet pr" data-vs="reveal">
+      <div class="ask">
+        <div class="th"><div class="cd blue"><img alt="Brain Freeze" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY023.webp"><span class="strip"></span></div></div>
+        <div class="tx"><div class="by"><span class="lab">Asked by</span><span class="chip">Look only</span></div><h2>Brain Freeze</h2><p>Viserai reveals their hand.</p></div>
+      </div>
+      <div class="body"><div class="revrow">
+        <div class="cd red"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SVI022.webp"><span class="strip"></span></div>
+        <div class="cd yellow"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SVI024.webp"><span class="strip"></span></div>
+        <div class="cd blue"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SVI030.webp"><span class="strip"></span></div>
+        <div class="cd blue"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SVI033.webp"><span class="strip"></span></div>
+      </div><p class="note"><svg class="ico"><use href="#i-check"/></svg>Everyone at the table sees this.</p></div>
+      <div class="foot"><button class="btn">Got it</button></div>
+    </div>
+  </div>
+</div>
+<script src="flow.js"></script>
+</body>
+</html>

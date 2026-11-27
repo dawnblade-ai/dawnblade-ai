@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dawnblade — F4 Sit down</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800;900&family=Spline+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500;600&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="flow.css">
+<script src="stage.js"></script>
+</head>
+<body>
+<div class="stage f4">
+  <div class="bg">
+    <div class="half o hero" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SVI001.webp)"></div>
+    <div class="half y hero" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY001.webp)"></div>
+    <div class="tint o"></div><div class="tint y"></div>
+    <svg class="seam" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><line x1="0" y1="54" x2="100" y2="46" stroke="#F2C66E" stroke-width="2.4" vector-effect="non-scaling-stroke"/></svg>
+  </div>
+  <div class="frame">
+    <!-- hit areas: two plain rectangles that never overlap; the art behind them is the diagonal -->
+    <button class="hit" aria-label="Change your opponent" data-href="flow-3-hero.html" style="top:52px;height:calc(46% - 52px)"></button>
+    <button class="hit" aria-label="Change your hero" data-href="flow-3-hero.html" style="top:54%;height:calc(46% - 76px)"></button>
+
+    <button class="ib dk" aria-label="Back" style="position:absolute;left:var(--gut);top:8px;z-index:6" data-href="flow-3-hero.html"><svg class="ico"><use href="#i-back"/></svg></button>
+    <div class="nameo" style="pointer-events:none">
+      <span class="lab">Them · drawn by fate</span>
+      <b>Viserai</b><i class="bar3"></i>
+      <span class="lab">Runeblade · life 20</span>
+    </div>
+    <span class="swap" style="right:var(--gut);top:calc(46% - 56px)">Tap to swap ›</span>
+
+    <div class="coin"><div class="face hero" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY001.webp)"></div></div>
+    <div class="slab"><span class="lab">The coin</span><b>You go first</b></div>
+
+    <div class="namey" style="pointer-events:none">
+      <span class="lab">You</span>
+      <b>Iyslander</b><i class="bar3"></i>
+      <span class="lab">Elemental Wizard · life 18</span>
+    </div>
+    <span class="swap" style="right:var(--gut);bottom:84px">Tap to change ›</span>
+
+    <div class="hub">
+      <button class="btn sec" aria-label="Change gear"><svg class="ico"><use href="#i-gear"/></svg>Gear</button>
+      <button class="btn" data-href="flow-5-prompts.html">Shuffle up</button>
+    </div>
+  </div>
+</div>
+<script src="flow.js"></script>
+</body>
+</html>

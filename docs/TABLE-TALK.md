@@ -12,6 +12,9 @@ the vision follows it.
 
 *(Rewritten by each design session. Keep it under ~60 lines; history goes in the session log at the bottom.)*
 
+**2026-11-27: CRESCENDO (`docs/crescendo/README.md`) supersedes this table's LOOK and framework for the release
+version; this file's vision (§0–§10) stands and binds it.**
+
 **To continue the mission:** the user starts a session and asks for the design mission (or "Table Talk"). That session
 reads this file top to bottom, checks §13 for the user's answers, and works the next unchecked phase of §11 — shipping
 behind the switch, release by release, with the usual CLAUDE.md gates.

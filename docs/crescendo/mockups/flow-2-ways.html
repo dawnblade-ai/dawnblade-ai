@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dawnblade — F2 Ways to play</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800;900&family=Spline+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500;600&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="flow.css">
+<script src="stage.js"></script>
+</head>
+<body>
+<div class="stage f2">
+  <div class="frame">
+    <div class="hdr" style="height:76px">
+      <button class="ib" aria-label="Back" data-href="flow-1-title.html"><svg class="ico"><use href="#i-back"/></svg></button>
+      <h1><span class="sub">Step 1 of 3</span>How do you want to play?</h1>
+    </div>
+    <div class="modes">
+      <button class="mode lead" data-href="flow-3-hero.html">
+        <span class="pic"><svg><use href="#m-dummy"/></svg></span>
+        <span style="flex:1;min-width:0"><h3>Train on the Dummy</h3><p>Learn your deck against an iron-armored dummy.</p>
+          <span class="tg"><span class="lab" style="color:var(--brass)">Start here · Coach's call on</span></span></span>
+        <svg class="ico go"><use href="#i-next"/></svg>
+      </button>
+      <button class="mode" data-href="flow-3-hero.html">
+        <span class="pic art hero" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SVI001.webp);background-size:300%;background-position:50% 17%;box-shadow:0 0 0 2px var(--opp)"></span>
+        <span style="flex:1;min-width:0"><h3>Play an AI hero</h3><p>A real precon, piloted by the computer.</p>
+          <span class="tg"><span class="lab">Practice · Hero's call on</span></span></span>
+        <svg class="ico go"><use href="#i-next"/></svg>
+      </button>
+      <button class="mode" data-href="flow-9-waiting.html?v=phone">
+        <span class="pic"><svg><use href="#m-phones"/></svg></span>
+        <span style="flex:1;min-width:0"><h3>Two phones, one table</h3><p>Share a four-letter code and play a friend.</p>
+          <span class="tg"><span class="lab">Friendly</span></span></span>
+        <svg class="ico go"><use href="#i-next"/></svg>
+      </button>
+      <button class="mode" data-href="flow-9-waiting.html?v=server">
+        <span class="pic"><svg><use href="#m-online"/></svg></span>
+        <span style="flex:1;min-width:0"><h3>Find an opponent</h3><p>Sit at the server table and climb the ladder.</p>
+          <span class="tg"><span class="lab">Friendly or ranked</span></span></span>
+        <svg class="ico go"><use href="#i-next"/></svg>
+      </button>
+    </div>
+    <div class="foot"><button class="link"><svg class="ico" style="width:20px;height:20px;margin-right:8px"><use href="#i-book"/></svg>New here? Learn the rules in two minutes</button></div>
+  </div>
+</div>
+<script src="flow.js"></script>
+</body>
+</html>

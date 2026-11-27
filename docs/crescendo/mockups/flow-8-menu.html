@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dawnblade — F8 Menu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800;900&family=Spline+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500;600&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="flow.css">
+<script src="stage.js"></script>
+</head>
+<body>
+<!-- ?v=menu (default, a practice table) · ?v=report (JUDGE!!) · ?v=concede. The menu is the ONLY chrome on the table besides the pad. -->
+<div class="stage f8" data-variants="menu|report|concede" data-default="menu">
+  <div class="bg"><div data-tbl='{"yl":11,"ol":11,"ym":18,"om":20,"turn":5,"btn":"PASS"}'></div></div>
+  <div class="frame">
+    <div class="scrim"></div>
+
+    <!-- ===== the menu ===== -->
+    <div class="sheet mn" data-vs="menu">
+      <div class="mh"><h2>Menu</h2><span class="chip">Practice table</span><button class="ib dk" aria-label="Close" data-href="flow-5-prompts.html?v=target"><svg class="ico"><use href="#i-x"/></svg></button></div>
+      <div class="mb">
+        <button class="mrow"><svg class="ico"><use href="#i-sound"/></svg><span class="t">Sound</span><i class="sw on"></i></button>
+        <div class="mrow sp"><div class="lh"><svg class="ico"><use href="#i-gear"/></svg><span class="t">Speed<small>Both players, the same speed</small></span></div>
+          <div class="seg"><button class="on">Standard</button><button>Quick</button><button>Instant</button></div></div>
+        <button class="mrow"><svg class="ico"><use href="#i-log"/></svg><span class="t">Game log<small>Practice tables only</small></span><svg class="ico go"><use href="#i-next"/></svg></button>
+        <button class="mrow"><svg class="ico"><use href="#i-coach"/></svg><span class="t">Coach's call<small>Says the play it would make, and why</small></span><i class="sw on"></i></button>
+        <button class="mrow"><svg class="ico"><use href="#i-board"/></svg><span class="t">Classic board<small>The older layout, from the next game</small></span><svg class="ico go"><use href="#i-next"/></svg></button>
+        <button class="mrow jd" data-href="flow-8-menu.html?v=report"><svg class="ico"><use href="#i-judge"/></svg><span class="t">JUDGE!! Report a problem</span><svg class="ico go"><use href="#i-next"/></svg></button>
+        <button class="mrow dg" data-href="flow-8-menu.html?v=concede"><svg class="ico"><use href="#i-flag"/></svg><span class="t">Concede and leave</span></button>
+      </div>
+    </div>
+
+    <!-- ===== JUDGE!! ===== -->
+    <div class="sheet mn" data-vs="report">
+      <div class="mh"><h2>Report a problem</h2><span class="chip br">JUDGE!!</span><button class="ib dk" aria-label="Back" data-href="flow-8-menu.html"><svg class="ico"><use href="#i-back"/></svg></button></div>
+      <div class="rp">
+        <p>Tell the judge what looked wrong. We save the whole board with your note.</p>
+        <div class="ta">Ice Bolt dealt 4, not 5.<i></i></div>
+        <div class="meta"><span class="lab">The board is attached</span></div>
+      </div>
+      <div class="foot" style="display:flex;gap:10px;padding:14px 10px 14px"><button class="btn sec" data-href="flow-8-menu.html">Cancel</button><button class="btn" style="flex:1" data-href="flow-8-menu.html">Send to the judge</button></div>
+    </div>
+
+    <!-- ===== concede ===== -->
+    <div class="sheet mn" data-vs="concede">
+      <div class="mh"><h2>Concede this game?</h2></div>
+      <div class="cf"><p>Your opponent wins and you leave the table. At a ranked table this counts as a loss.</p></div>
+      <div class="foot" style="display:flex;flex-direction:column;gap:12px;padding:18px 10px 14px"><button class="btn" data-href="flow-8-menu.html">Keep playing</button><button class="btn sec dng" style="width:100%" data-href="flow-7-result.html?v=lose">Concede</button></div>
+    </div>
+  </div>
+</div>
+<script src="flow.js"></script>
+</body>
+</html>

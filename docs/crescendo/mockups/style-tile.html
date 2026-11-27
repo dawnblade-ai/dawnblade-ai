@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dawnblade — Crescendo style tile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800;900&family=Spline+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500;600&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%;background:var(--mat-0)}
+body{background:var(--mat-bg);background-attachment:scroll;color:var(--ink-0);font:var(--t-body);font-variant-numeric:tabular-nums;overflow-x:hidden;min-height:100vh}
+img{display:block;-webkit-user-drag:none}
+svg{display:block}
+.u{text-transform:uppercase}
+.sec{padding:28px var(--gut) 8px}
+.sec>h2{font:var(--t-title);letter-spacing:.04em;text-transform:uppercase;display:flex;align-items:center;gap:10px}
+.sec>h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--rail),transparent)}
+.sec>h2 i{font:var(--t-label);letter-spacing:var(--track-caps);color:var(--brass);font-style:normal}
+.note{font:var(--t-small);color:var(--ink-2);margin:6px 0 12px}
+.lab{font:var(--t-label);letter-spacing:var(--track-caps);text-transform:uppercase;color:var(--ink-2)}
+
+/* ============ COVER ============ */
+.cover{padding:calc(22px + var(--safe-t)) var(--gut) 18px;position:relative;text-align:left}
+.cover .logo{position:absolute;right:var(--gut);top:calc(26px + var(--safe-t));transform:rotate(7deg);--w:58px}
+.cover h1{font:900 44px/40px var(--f-display);letter-spacing:.03em;text-transform:uppercase}
+.cover h1 b{color:var(--brass-hi);font-weight:900}
+.cover p{font:var(--t-small);color:var(--ink-1);margin-top:8px;max-width:268px}
+.cover .tag{font:var(--t-label);letter-spacing:var(--track-caps);color:var(--brass);text-transform:uppercase;margin-bottom:6px}
+
+/* ============ CARD OBJECT ============ */
+.cd{--w:80px;position:relative;width:var(--w);height:calc(var(--w)*1.3966);border-radius:calc(var(--w)*.05);flex:none;background:#000 center/cover;box-shadow:var(--e1),inset 0 0 0 1px var(--card-edge);transform:translateZ(0)}
+.cd>img{width:100%;height:100%;border-radius:inherit;object-fit:cover}
+.cd::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 1px 0 var(--card-hilite),inset 0 0 0 1px rgba(255,255,255,.04);pointer-events:none}
+.cd.hand{--w:var(--cw-hand)} .cd.mat{--w:var(--cw-mat);box-shadow:var(--e1)} .cd.chain{--w:var(--cw-chain);border-radius:var(--r-card-chain);box-shadow:var(--e2)}
+.cd.block{--w:var(--cw-block);box-shadow:var(--e2)} .cd.link{--w:var(--cw-link)} .cd.hb{--w:var(--cw-hand-back)}
+.cd.glimpse{--w:var(--cw-glimpse);border-radius:var(--r-card-glimpse);box-shadow:var(--e4)} .cd.gp{--w:var(--cw-glimpse-pitch);border-radius:8px;box-shadow:var(--e3)}
+.cd.back{background:var(--card-back) center/cover,#0B1019}
+.cd.back>img{display:none}
+.cd.back::before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(160deg,rgba(255,255,255,.08),transparent 40%)}
+.strip{position:absolute;left:0;right:0;top:0;height:4px;border-radius:inherit;border-bottom-left-radius:0;border-bottom-right-radius:0;z-index:2}
+.red .strip{background:var(--pitch-red-hi)} .yellow .strip{background:var(--pitch-yellow)} .blue .strip{background:var(--pitch-blue-hi)}
+/* stamps: cost / pitch / power / defence at the printed corners */
+.st{position:absolute;z-index:3;font:var(--t-stamp);text-align:center;display:grid;place-items:center;width:var(--stamp);height:var(--stamp);color:var(--ink-inv);box-shadow:0 1px 2px rgba(0,0,0,.6)}
+.st.cost{left:2px;top:6px;border-radius:50%;background:var(--mat-0);color:var(--ink-0);box-shadow:0 0 0 1.5px var(--brass),0 1px 3px rgba(0,0,0,.7)}
+.st.pitch{right:2px;top:6px;border-radius:5px;color:#fff}
+.red .st.pitch{background:var(--pitch-red)} .yellow .st.pitch{background:var(--pitch-yellow);color:var(--ink-inv)} .blue .st.pitch{background:var(--pitch-blue)}
+.st.pow{left:2px;bottom:2px;border-radius:5px;background:var(--ink-0)}
+.st.def{right:2px;bottom:2px;background:var(--prevent);clip-path:polygon(0 0,100% 0,100% 62%,50% 100%,0 62%);padding-bottom:3px;box-shadow:none}
+.st.def{filter:drop-shadow(0 1px 1px rgba(0,0,0,.7))}
+.mat .st,.block .st{--stamp:16px;font-size:12px;line-height:14px}
+.mat .st.cost,.mat .st.pitch,.block .st.cost,.block .st.pitch{display:none}
+/* states */
+.cd.ready{transform:translateY(-4px)}
+.cd.ready::before{content:"";position:absolute;left:8%;right:8%;bottom:-6px;height:3px;border-radius:3px;background:var(--you);box-shadow:0 0 8px rgba(79,216,164,.7)}
+.cd.sel{transform:translateY(-12px) scale(1.04);box-shadow:var(--e3),0 0 0 2px var(--ink-0);z-index:4}
+.cd.dim>img{filter:var(--card-dim)}
+.cd.refused{box-shadow:var(--e1),0 0 0 2px var(--refused);animation:none}
+.cd.tap{transform:rotate(90deg)}
+.cd.spent>img{filter:var(--card-spent)}
+.cd.spent::before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(115deg,transparent 46%,rgba(0,0,0,.8) 47% 49%,transparent 50%),linear-gradient(60deg,transparent 60%,rgba(0,0,0,.7) 61% 62%,transparent 63%);z-index:2}
+.cd.blk{box-shadow:var(--e2),0 0 0 2px var(--prevent)}
+.badge{position:absolute;z-index:5;font:var(--t-stamp);display:flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:11px;box-shadow:0 1px 3px rgba(0,0,0,.7)}
+.badge.sh{left:50%;bottom:-9px;transform:translateX(-50%);background:var(--prevent);color:var(--ink-inv)}
+.badge.n{left:50%;bottom:-9px;transform:translateX(-50%);background:var(--mat-3);color:var(--ink-0);box-shadow:0 0 0 1.5px var(--brass),0 1px 3px rgba(0,0,0,.7)}
+.name{position:absolute;z-index:6;left:50%;top:-26px;transform:translateX(-50%);white-space:nowrap;font:var(--t-label);letter-spacing:.06em;text-transform:uppercase;background:var(--ink-0);color:var(--ink-inv);padding:4px 8px;border-radius:6px;box-shadow:var(--e2)}
+.reason{position:absolute;z-index:6;left:50%;top:-30px;transform:translateX(-50%);white-space:nowrap;font:var(--t-label);letter-spacing:.06em;text-transform:uppercase;background:var(--refused);color:var(--ink-inv);padding:5px 8px;border-radius:6px;box-shadow:var(--e2)}
+.reason::after{content:"";position:absolute;left:50%;bottom:-4px;width:8px;height:8px;background:var(--refused);transform:translateX(-50%) rotate(45deg)}
+.count{position:absolute;right:-5px;bottom:-5px;z-index:5;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:var(--mat-0);color:var(--ink-0);font:var(--t-stamp);display:grid;place-items:center;box-shadow:0 0 0 1.5px var(--rail),0 1px 3px #000}
+.slot{width:var(--cw-mat);height:var(--ch-mat);border-radius:var(--r-card-mat);border:1px dashed rgba(255,255,255,.12);flex:none}
+
+.cardlab{font:var(--t-label);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);margin-top:14px;text-align:center;white-space:nowrap}
+.cell{display:flex;flex-direction:column;align-items:center;justify-content:flex-start}
+.wrap{display:grid;grid-template-columns:repeat(3,1fr);justify-items:center;align-items:end;gap:34px 8px;padding:18px 4px 6px}
+.sizes{display:flex;flex-wrap:wrap;gap:20px 12px;align-items:flex-end;padding:10px 4px 8px}
+.sizes::-webkit-scrollbar{display:none}
+
+/* ============ TABLE COMPOSITE ============ */
+.phone{--vis:660px;--h-centre:calc(var(--vis) - var(--h-bout) - var(--h-half)*2 - var(--h-hand) - var(--h-hub));position:relative;width:100%;height:var(--vis);background:var(--mat-bg);overflow:hidden;display:flex;flex-direction:column}
+.bout{height:var(--h-bout);flex:none;position:relative;display:flex;align-items:center;justify-content:center;padding:0 var(--gut);z-index:var(--z-bout);background:linear-gradient(to bottom,rgba(0,0,0,.55),rgba(0,0,0,0))}
+.side{display:flex;align-items:center;position:relative}
+.side.opp{flex-direction:row-reverse}
+.por{width:var(--bout-portrait);height:var(--bout-portrait);border-radius:50%;flex:none;position:relative;z-index:2;background-size:310%;background-position:50% 18%;box-shadow:0 0 0 2px var(--c),0 0 0 3.5px var(--mat-0),var(--e2);opacity:.78;--c:var(--you)}
+.side.opp .por{--c:var(--opp)}
+.por.turn{opacity:1;box-shadow:0 0 0 2px var(--c),0 0 0 3.5px var(--mat-0),0 0 14px color-mix(in srgb,var(--c) 65%,transparent),var(--e2)}
+.col{display:flex;flex-direction:column;gap:3px;margin-left:calc(var(--bout-overlap)*-1);margin-right:0}
+.side.opp .col{margin-left:0;margin-right:calc(var(--bout-overlap)*-1);align-items:flex-end}
+.nm{font:var(--t-label);letter-spacing:var(--track-caps);text-transform:uppercase;color:var(--ink-1);padding:0 10px 0 calc(var(--bout-overlap) + 6px)}
+.side.opp .nm{padding:0 calc(var(--bout-overlap) + 6px) 0 10px}
+.bar{--c:var(--you);--c-lo:var(--you-lo);position:relative;width:var(--bout-bar-w);height:var(--bout-bar-h);margin-left:0;background:var(--mat-0);border-radius:3px;box-shadow:inset 0 1px 3px rgba(0,0,0,.9),0 0 0 1px rgba(255,255,255,.10);transform:skewX(-14deg);overflow:hidden}
+.side.opp .bar{--c:var(--opp);--c-lo:var(--opp-lo);margin-left:0;margin-right:0;transform:skewX(14deg)}
+.bar i{position:absolute;top:0;bottom:0;left:0;display:block}
+.bar .ghost{background:var(--damage);opacity:.95}
+.bar .fill{background:linear-gradient(to bottom,color-mix(in srgb,var(--c) 70%,#fff) 0 22%,var(--c) 22% 62%,var(--c-lo) 100%)}
+.side.opp .bar i{left:auto;right:0}
+.bar::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 calc(25% - 1px),rgba(0,0,0,.45) calc(25% - 1px) 25%);pointer-events:none}
+.life{font:var(--t-life);letter-spacing:0;width:var(--bout-life-w);text-align:center;font-variant-numeric:tabular-nums;text-shadow:0 2px 0 rgba(0,0,0,.6);margin-left:2px}
+.side.opp .life{margin-left:0;margin-right:2px}
+.life.low{color:var(--damage)}
+.bar.low{box-shadow:inset 0 1px 3px rgba(0,0,0,.9),0 0 0 1px var(--damage),0 0 10px rgba(255,79,109,.5)}
+.pop{position:absolute;z-index:9;font:800 26px/26px var(--f-display);color:var(--damage);text-shadow:0 2px 0 #000,0 0 12px rgba(255,79,109,.8);top:-2px;pointer-events:none}
+.medal{width:var(--bout-medal-w);height:var(--bout-medal-h);flex:none;margin:0 2px;position:relative;display:grid;place-items:center;--c:var(--you);filter:drop-shadow(0 2px 4px rgba(0,0,0,.7))}
+.medal.o{--c:var(--opp)}
+.medal::before{content:"";position:absolute;inset:0;background:var(--c);clip-path:polygon(28% 0,72% 0,100% 26%,100% 74%,72% 100%,28% 100%,0 74%,0 26%)}
+.medal::after{content:"";position:absolute;inset:3px;background:linear-gradient(to bottom,#1d272c,#0c1114);clip-path:polygon(28% 0,72% 0,100% 26%,100% 74%,72% 100%,28% 100%,0 74%,0 26%)}
+.medal b,.medal span{position:relative;z-index:2;text-align:center}
+.medal b{font:900 24px/22px var(--f-display);margin-top:-12px;display:block}
+.medal span{font:600 11px/10px var(--f-mono);letter-spacing:.06em;color:var(--ink-1);position:absolute;bottom:8px;left:0;right:0}
+.medal em{position:absolute;z-index:3;top:50%;width:0;height:0;border:5px solid transparent;font-style:normal}
+.medal em.l{left:-9px;border-right-color:var(--you);transform:translateY(-50%)}
+.medal em.r{right:-9px;border-left-color:var(--opp);transform:translateY(-50%)}
+
+.half{height:var(--h-half);flex:none;position:relative;display:flex;align-items:center;gap:8px;padding:0 var(--gut)}
+.half.you{border-top:var(--seam)}
+.centre{flex:1;position:relative;display:flex;align-items:center;justify-content:center;border-top:var(--seam);border-bottom:var(--seam)}
+.zone{display:flex;gap:6px;align-items:center}
+.sp{flex:1}
+.pile{position:relative;flex:none}
+.pile.s::before{content:"";position:absolute;inset:0;transform:translate(2px,2px);border-radius:inherit;background:#0b1019;box-shadow:0 0 0 1px #000}
+.tray{height:var(--h-hand);flex:none;background:var(--tray-bg);position:relative;z-index:var(--z-tray);box-shadow:0 -10px 24px rgba(0,0,0,.45)}
+.handrow{display:flex;gap:var(--gap-card);padding:calc(var(--h-hand) - var(--ch-hand) - 12px) var(--gut) 0;overflow-x:auto;scrollbar-width:none;height:100%;align-items:flex-end;padding-bottom:12px;scroll-snap-type:x proximity;scroll-padding-left:var(--gut)}
+.handrow::-webkit-scrollbar{display:none}
+.handrow .cd{scroll-snap-align:start}
+.hub{height:var(--h-hub);flex:none;background:var(--tray);display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 var(--gut) var(--safe-b);position:relative;z-index:var(--z-hub)}
+
+/* ============ BUTTONS ============ */
+.btn{font:var(--t-btn);letter-spacing:var(--track-btn);text-transform:uppercase;border:0;color:var(--ink-inv);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;height:var(--btn-h);min-width:var(--btn-min-w);padding:0 24px;border-radius:var(--r-btn);background:linear-gradient(to bottom,#FBF7EC,#E8E0CC);box-shadow:0 1px 0 rgba(255,255,255,.7) inset,0 -3px 0 rgba(0,0,0,.18) inset,0 4px 0 #8f8671,0 8px 16px rgba(0,0,0,.5);position:relative;top:0;flex:none;-webkit-appearance:none;transition:none;touch-action:manipulation}
+.btn:active,.btn.pressed{top:3px;background:linear-gradient(to bottom,#E3DBC6,#D3CBB5);box-shadow:0 1px 0 rgba(255,255,255,.4) inset,0 -2px 0 rgba(0,0,0,.2) inset,0 1px 0 #8f8671,0 2px 6px rgba(0,0,0,.5)}
+.btn.sec{height:var(--btn-sec-h);min-width:var(--btn-sec-h);padding:0 14px;font-size:16px;letter-spacing:.06em;color:var(--ink-0);background:var(--mat-3);box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 3px 0 #0b1013,0 6px 12px rgba(0,0,0,.4);border-radius:22px}
+.btn.sec:active,.btn.sec.pressed{top:2px;background:#2a373d;box-shadow:0 1px 0 #0b1013}
+.btn.dis{background:transparent;color:var(--ink-2);box-shadow:inset 0 0 0 1.5px var(--rail);pointer-events:none}
+.btn.ref{box-shadow:0 1px 0 rgba(255,255,255,.7) inset,0 -3px 0 rgba(0,0,0,.18) inset,0 4px 0 #8f8671,0 0 0 2px var(--refused),0 8px 16px rgba(0,0,0,.5)}
+.btn.go{background:linear-gradient(to bottom,#6BE8B8,#3DBE8C);box-shadow:0 1px 0 rgba(255,255,255,.5) inset,0 4px 0 #1D7A5A,0 8px 16px rgba(0,0,0,.5)}
+.btn svg{width:20px;height:20px}
+.ico{width:24px;height:24px;flex:none}
+.btnrow{display:grid;grid-template-columns:1fr 1fr;gap:22px 14px;align-items:start;padding:8px 0 20px}
+.btnrow .cell{align-items:center}
+
+/* ============ SWATCHES ============ */
+.sw{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.sw div{border-radius:10px;padding:8px 8px 7px;min-height:62px;display:flex;flex-direction:column;justify-content:flex-end;font:var(--t-label);letter-spacing:.04em;box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)}
+.sw b{font:700 13px/14px var(--f-display);letter-spacing:.06em;text-transform:uppercase;display:block}
+.sw span{opacity:.85;font-size:11px}
+.sw .w2{grid-column:span 2}
+.light{border-radius:var(--r-sheet);overflow:hidden;height:190px;position:relative;background:var(--mat-bg);box-shadow:0 0 0 1px var(--rail) inset}
+.light .edge{position:absolute;left:0;right:0;bottom:0;height:44px;background:var(--tray-bg)}
+.light .lbl{position:absolute;left:12px;top:10px}
+.light .cd{position:absolute}
+.tscale>div{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--rail)}
+.tscale .s{font:var(--t-label);color:var(--ink-2);text-align:right;white-space:nowrap;letter-spacing:.04em;flex:none}
+.announce{background:linear-gradient(90deg,rgba(0,0,0,.85),rgba(0,0,0,.55) 70%,rgba(0,0,0,0));border-left:4px solid var(--opp);padding:8px 12px;margin:10px 0}
+.announce .who{font:var(--t-label);letter-spacing:var(--track-caps);color:var(--opp);text-transform:uppercase}
+.announce .say{font:var(--t-announce);letter-spacing:var(--track-display);text-transform:uppercase}
+.padsheet{width:150px;background:#F2E9D0;color:#2A1A12;border-radius:3px;padding:8px 12px 10px;box-shadow:var(--e3);background-image:repeating-linear-gradient(to bottom,transparent 0 23px,rgba(60,100,170,.35) 23px 24px);border-left:3px solid #C0453D;transform:rotate(1.5deg)}
+.padsheet .h{font:var(--t-label);letter-spacing:.08em;color:#6a5a48}
+.padsheet .n{font:var(--t-pad);line-height:24px}
+.padsheet s{text-decoration-color:#C0453D;color:#7a6a58}
+.row2{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.iconset{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.iconset .cell{background:var(--mat-2);border-radius:12px;padding:14px 4px 10px;box-shadow:inset 0 0 0 1px var(--rail)}
+.iconset .cardlab{margin-top:8px;font-size:11px}
+.ap{display:flex;gap:4px;align-items:center}
+.coin{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#EEF3F6,#9AA8B1 70%);box-shadow:0 0 0 1.5px #55646D,0 1px 3px #000;display:grid;place-items:center;font:var(--t-stamp);color:var(--ink-inv)}
+.foot{padding:30px var(--gut) calc(30px + var(--safe-b));font:var(--t-small);color:var(--ink-2)}
+.mk{display:flex;gap:6px;align-items:center}
+@media (max-width:379px){.phone{--vis:548px}}
+@media (min-width:414px){.phone{--vis:740px}}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-ap" viewBox="0 0 24 24"><path d="M12 2.5 21 12l-9 9.5L3 12z" fill="#D8A23E"/><path d="M12 2.5 21 12H3z" fill="#F2C66E"/><path d="M12 2.5 21 12l-9 9.5L3 12z" fill="none" stroke="#0A0E10" stroke-opacity=".55" stroke-width="1.2"/><path d="M12 6 17.5 12 12 18 6.5 12z" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="1"/></symbol>
+    <symbol id="i-res" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#9AA8B1"/><circle cx="12" cy="12" r="10" fill="none" stroke="#55646D" stroke-width="1.6"/><circle cx="12" cy="12" r="6.4" fill="none" stroke="#55646D" stroke-width="1.4"/><path d="M12 8v8M9.2 12H14.8" stroke="#0A0E10" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-go" viewBox="0 0 24 24"><path d="M5 12a7 7 0 0 1 12-4.9M19 12a7 7 0 0 1-12 4.9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M18.6 3.4v4.8h-4.8M5.4 20.6v-4.8h4.8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2.5 20 5.5v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10v-6z" fill="currentColor"/></symbol>
+    <symbol id="i-sword" viewBox="0 0 24 24"><path d="M19.5 2.5 21.5 4.5 11 15l-2-2zM8 14l2 2-3.5 3.5-1.5 .5.5-1.5zM5 17l2 2-2.7 2.7-1.8-1.8z" fill="currentColor"/></symbol>
+    <symbol id="i-counter" viewBox="0 0 24 24"><path d="M12 2.5 20 7v10l-8 4.5L4 17V7z" fill="#202B30" stroke="#D8A23E" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 8v8M8 12h8" stroke="#F5F0E4" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-hand" viewBox="0 0 24 24"><rect x="3" y="7" width="10" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2" transform="rotate(-12 8 14)"/><rect x="10" y="4" width="10" height="14" rx="2" fill="#11171A" stroke="currentColor" stroke-width="2" transform="rotate(10 15 11)"/></symbol>
+    <symbol id="i-deck" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 2.5h10a2 2 0 0 1 2 2V17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2" fill="currentColor"/><circle cx="12" cy="12" r="2" fill="currentColor"/><circle cx="19" cy="12" r="2" fill="currentColor"/></symbol>
+    <symbol id="i-pad" viewBox="0 0 24 24"><path d="M6 3h12a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-pip" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="currentColor"/></symbol>
+  </defs>
+</svg>
+
+<header class="cover">
+  <div class="cd back logo"></div>
+  <div class="tag">Crescendo · style tile · 393 × 660</div>
+  <h1>Daw<b>n</b>blade</h1>
+  <p>Slate felt under one warm lamp. The cards are the only things that glow. Everything else is bone, brass and two seat colours.</p>
+</header>
+
+<!-- ===================== THE TABLE (hero composite) ===================== -->
+<div class="phone" id="table">
+  <div class="bout">
+    <div class="side you">
+      <div class="por turn" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/EVR120.webp)"></div>
+      <div class="col"><div class="bar"><i class="ghost" style="width:81%"></i><i class="fill" style="width:72%"></i></div><div class="nm">You</div></div>
+      <div class="life">29</div>
+    </div>
+    <div class="medal"><em class="l"></em><b>3</b><span>TURN</span></div>
+    <div class="side opp">
+      <div class="por" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/1HP259.webp);background-position:50% 14%"></div>
+      <div class="col"><div class="bar"><i class="fill" style="width:50%"></i></div><div class="nm">Viserai</div></div>
+      <div class="life">20</div>
+    </div>
+  </div>
+
+  <div class="half opp">
+    <div class="zone">
+      <div class="cd mat red"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/1HP367.webp"><span class="st def">3</span></div>
+      <div class="cd mat"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/ROS229.webp" style="filter:var(--card-spent)"></div>
+    </div>
+    <div class="sp"></div>
+    <div class="mk" style="flex-direction:column;align-items:flex-end;gap:5px">
+      <div style="display:flex;position:relative;height:var(--ch-hand-back);width:calc(var(--cw-hand-back) + 3*14px)">
+        <div class="cd back hb" style="position:absolute;left:0"></div><div class="cd back hb" style="position:absolute;left:14px"></div><div class="cd back hb" style="position:absolute;left:28px"></div><div class="cd back hb" style="position:absolute;left:42px"></div>
+      </div>
+    </div>
+    <div class="cd back mat" style="--w:var(--cw-mat)"></div>
+    <div class="pile s"><div class="cd back mat"><span class="count">36</span></div></div>
+  </div>
+
+  <div class="centre">
+    <div style="position:absolute;left:var(--gut);top:12px" class="zone">
+      <div class="cd link" style="margin-right:-18px;opacity:.9"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/ROS227.webp"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:0">
+      <div class="cd chain red" style="margin-right:-14px;z-index:3"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/DRO022.webp"><span class="strip" style="border-radius:6px 6px 0 0"></span><span class="st pow" style="--stamp:30px;font-size:22px;line-height:24px;left:4px;bottom:4px;border-radius:7px">4</span></div>
+      <div class="cd block blk" style="z-index:2;margin-right:-26px;transform:translateY(8px)"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/WTR204.webp"><span class="badge sh"><svg class="ico" style="width:12px;height:12px;margin-right:3px"><use href="#i-shield"/></svg>3</span></div>
+      <div class="cd block blk" style="z-index:1;transform:translateY(-6px)"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/1HP373.webp"><span class="badge sh"><svg class="ico" style="width:12px;height:12px;margin-right:3px"><use href="#i-shield"/></svg>2</span></div>
+    </div>
+    <div style="position:absolute;right:var(--gut);top:50%;transform:translateY(-50%);text-align:center">
+      <div class="lab" style="margin-bottom:2px">hit for</div>
+      <div style="font:900 44px/40px var(--f-display);color:var(--damage);text-shadow:0 2px 0 #000">0</div>
+    </div>
+  </div>
+
+  <div class="half you">
+    <div class="zone">
+      <div class="cd mat"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/1HP367.webp"><span class="st pow">4</span></div>
+      <div class="cd mat spent"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/ROS229.webp"></div>
+    </div>
+    <div class="sp"></div>
+    <div style="display:flex;flex-direction:column;gap:7px;align-items:flex-end">
+      <div class="ap"><svg class="ico" style="width:20px;height:20px"><use href="#i-ap"/></svg><svg class="ico" style="width:20px;height:20px"><use href="#i-ap"/></svg></div>
+      <div class="ap"><span class="coin">1</span><span class="coin">1</span><span class="coin">1</span></div>
+    </div>
+    <div class="cd back mat"><span class="count" style="background:var(--you);color:var(--ink-inv);box-shadow:0 1px 3px #000">1</span></div>
+    <div class="pile s"><div class="cd back mat"><span class="count">31</span></div></div>
+  </div>
+
+  <div class="tray">
+    <div class="handrow">
+      <div class="cd hand red ready"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/ROS227.webp"><span class="strip"></span><span class="st cost">3</span><span class="st pitch">1</span><span class="st pow">7</span><span class="st def">2</span></div>
+      <div class="cd hand yellow ready"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/WTR204.webp"><span class="strip"></span><span class="st cost">0</span><span class="st pitch">2</span><span class="st pow">3</span><span class="st def">3</span></div>
+      <div class="cd hand blue dim"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY028.webp"><span class="strip"></span><span class="st cost">X</span><span class="st pitch">3</span><span class="st def">3</span></div>
+      <div class="cd hand blue ready"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/1HP373.webp"><span class="strip"></span><span class="st cost">0</span><span class="st pitch">3</span><span class="st pow">2</span><span class="st def">2</span></div>
+      <div class="cd hand yellow dim"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/UPR117.webp"><span class="strip"></span><span class="st cost">0</span><span class="st pitch">2</span><span class="st def">3</span></div>
+    </div>
+  </div>
+  <div class="hub">
+    <button class="btn sec" aria-label="Menu" style="min-width:44px;padding:0"><svg class="ico"><use href="#i-menu"/></svg></button>
+    <button class="btn">End turn</button>
+    <button class="btn sec" aria-label="Pad" style="min-width:44px;padding:0"><svg class="ico"><use href="#i-pad"/></svg></button>
+  </div>
+</div>
+
+<!-- ===================== LIGHT & MATERIALS ===================== -->
+<section class="sec"><h2>Mat &amp; light <i>01</i></h2>
+  <p class="note">One lamp, top-centre. Slate felt with a 6% grain. The hand and hub sit on a darker table-edge ledge with a 1&nbsp;px lip. Shadows always fall down.</p>
+  <div class="light">
+    <span class="lbl lab">mat · lamp · ledge</span>
+    <div class="cd mat" style="left:30px;top:44px"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/ROS227.webp"></div>
+    <div class="cd mat" style="left:104px;top:36px;box-shadow:var(--e2)"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/WTR204.webp"></div>
+    <div class="cd mat" style="left:178px;top:28px;box-shadow:var(--e3)"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/1HP373.webp"></div>
+    <div class="lab" style="position:absolute;right:14px;top:44px;text-align:right;line-height:20px">e1 · e2 · e3<br>cards lift<br>toward the lamp</div>
+    <div class="edge"></div>
+  </div>
+</section>
+
+<!-- ===================== PALETTE ===================== -->
+<section class="sec"><h2>Palette <i>02</i></h2>
+  <div class="sw">
+    <div style="background:var(--mat-0)"><b>Mat 0</b><span>#0A0E10</span></div>
+    <div style="background:var(--mat-1)"><b>Mat 1</b><span>#11171A</span></div>
+    <div style="background:var(--mat-2)"><b>Mat 2</b><span>#172024</span></div>
+    <div style="background:var(--mat-3)"><b>Mat 3</b><span>#202B30</span></div>
+    <div style="background:var(--ink-0);color:var(--ink-inv)"><b>Bone</b><span>#F5F0E4 · 15.9</span></div>
+    <div style="background:var(--ink-1);color:var(--ink-inv)"><b>Ink 1</b><span>#CFCABD · 11.1</span></div>
+    <div style="background:var(--ink-2);color:var(--ink-inv)"><b>Ink 2</b><span>#97A2A6 · 6.9</span></div>
+    <div style="background:var(--brass);color:var(--ink-inv)"><b>Brass</b><span>#D8A23E · 7.9</span></div>
+    <div class="w2" style="background:var(--you);color:var(--ink-inv)"><b>You · Jade</b><span>#4FD8A4 · 10.1</span></div>
+    <div class="w2" style="background:var(--opp);color:var(--ink-inv)"><b>Opponent · Orchid</b><span>#B794FF · 7.5</span></div>
+    <div style="background:var(--pitch-red);color:#fff"><b>Red</b><span>#C9302A</span></div>
+    <div style="background:var(--pitch-yellow);color:var(--ink-inv)"><b>Yellow</b><span>#FFD12E</span></div>
+    <div style="background:var(--pitch-blue);color:#fff"><b>Blue</b><span>#2A6FD0</span></div>
+    <div style="background:var(--pitch-none);color:var(--ink-inv)"><b>None</b><span>#6F7C82</span></div>
+    <div style="background:var(--damage);color:var(--ink-inv)"><b>Damage</b><span>#FF4F6D</span></div>
+    <div style="background:var(--prevent);color:var(--ink-inv)"><b>Prevent</b><span>#BFD0DB</span></div>
+    <div style="background:var(--gain);color:var(--ink-inv)"><b>Gain</b><span>#9DF2C8</span></div>
+    <div style="background:var(--refused);color:var(--ink-inv)"><b>Refused</b><span>#FF8A99</span></div>
+  </div>
+</section>
+
+<!-- ===================== TYPE ===================== -->
+<section class="sec"><h2>Type <i>03</i></h2>
+  <div class="tscale">
+    <div><span style="font:var(--t-life)">29 · 40 · 08</span><span class="s">Life · BSD 800 34/34</span></div>
+    <div><span style="font:var(--t-announce);letter-spacing:.02em;text-transform:uppercase">Hyper Driver, 4</span><span class="s">Announce · 800 30/32 +.02</span></div>
+    <div><span style="font:var(--t-btn);letter-spacing:.06em;text-transform:uppercase">End turn</span><span class="s">Button · 800 20/24 +.06</span></div>
+    <div><span style="font:var(--t-title);letter-spacing:.04em;text-transform:uppercase">Defend step</span><span class="s">Title · 800 22/26 +.04</span></div>
+    <div><span style="font:var(--t-body)">Target attack gets −1{p}.</span><span class="s">Body · Spline 500 15/21</span></div>
+    <div><span style="font:var(--t-small)">Needs 2 more resources</span><span class="s">Small · 500 13/17</span></div>
+    <div><span style="font:var(--t-label);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)">Their arsenal</span><span class="s">Label · Mono 600 11/13 +.08</span></div>
+    <div><span style="font:var(--t-pad);color:var(--ink-0)">−2 Zero to Fifty</span><span class="s">Pad · Caveat 700 22/24</span></div>
+  </div>
+  <div class="announce"><div class="who">Viserai</div><div class="say">Plays Wounding Blow</div></div>
+  <div class="announce" style="border-left-color:var(--you)"><div class="who" style="color:var(--you)">You</div><div class="say">Attack with Talishar, 4</div></div>
+</section>
+
+<!-- ===================== BOUT ===================== -->
+<section class="sec"><h2>The bout <i>04</i></h2>
+  <p class="note">Both life bars, one strip. Bars anchor at the portrait and drain toward the middle. The ghost is the damage just taken.</p>
+</section>
+<div class="phone" style="height:auto;background:var(--mat-bg)">
+  <div class="bout" style="margin-top:6px"><div class="side you"><div class="por turn" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/EVR120.webp)"></div><div class="col"><div class="bar"><i class="fill" style="width:100%"></i></div><div class="nm">You</div></div><div class="life">40</div></div><div class="medal"><em class="l"></em><b>1</b><span>TURN</span></div><div class="side opp"><div class="por" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/1HP259.webp);background-position:50% 14%"></div><div class="col"><div class="bar"><i class="fill" style="width:100%"></i></div><div class="nm">Viserai</div></div><div class="life">40</div></div></div>
+  <div class="bout"><div class="side you"><div class="por" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/EVR120.webp)"></div><div class="col"><div class="bar"><i class="ghost" style="width:46%"></i><i class="fill" style="width:36%"></i></div><div class="nm">You</div></div><div class="life" style="position:relative">14<span class="pop" style="left:-4px;top:-20px">−4</span></div></div><div class="medal o"><em class="r"></em><b>7</b><span>TURN</span></div><div class="side opp"><div class="por turn" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/1HP259.webp);background-position:50% 14%"></div><div class="col"><div class="bar"><i class="fill" style="width:62%"></i></div><div class="nm">Viserai</div></div><div class="life">25</div></div></div>
+  <div class="bout" style="margin-bottom:6px"><div class="side you"><div class="por" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/EVR120.webp)"></div><div class="col"><div class="bar low"><i class="fill" style="width:17%"></i></div><div class="nm">You</div></div><div class="life low">7</div></div><div class="medal o"><em class="r"></em><b>12</b><span>TURN</span></div><div class="side opp"><div class="por turn" style="background-image:url(https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/1HP259.webp);background-position:50% 14%"></div><div class="col"><div class="bar"><i class="fill" style="width:30%"></i></div><div class="nm">Viserai</div></div><div class="life">12</div></div></div>
+</div>
+<p class="note" style="padding:0 var(--gut)">Full · mid with damage pop + ghost · low (≤ 25%: numeral and bar rim turn damage).</p>
+
+<!-- ===================== CARD OBJECT ===================== -->
+<section class="sec"><h2>The card <i>05</i></h2>
+  <p class="note">The art is the face. At hand size four stamps re-set the printed numbers at the printed corners, big enough to read at arm's length; the top strip and the pitch numeral carry colour twice.</p>
+  <div class="sizes">
+    <div class="cell"><div class="cd hand red"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/ROS227.webp"><span class="strip"></span><span class="st cost">3</span><span class="st pitch">1</span><span class="st pow">7</span><span class="st def">2</span></div><div class="cardlab">hand 80×112</div></div>
+    <div class="cell"><div class="cd mat"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/WTR204.webp"><span class="st pow">3</span><span class="st def">3</span></div><div class="cardlab">mat 56×78</div></div>
+    <div class="cell"><div class="cd block"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/1HP373.webp"><span class="st pow">2</span><span class="st def">2</span></div><div class="cardlab">block 64×89</div></div>
+    <div class="cell"><div class="cd link"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/UPR117.webp"></div><div class="cardlab">link 40×56</div></div>
+    <div class="cell"><div class="cd hb back"></div><div class="cardlab">back 28×39</div></div>
+    <div class="cell"><div class="cd mat back"></div><div class="cardlab">back 56×78</div></div>
+  </div>
+  <div class="sizes" style="margin-top:6px">
+    <div class="cell"><div class="cd chain red"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/DRO022.webp"><span class="strip" style="border-radius:6px 6px 0 0"></span><span class="st pow" style="--stamp:30px;font-size:22px;line-height:24px;left:4px;bottom:4px;border-radius:7px">4</span></div><div class="cardlab">chain 112×156</div></div>
+    <div class="cell"><div class="cd gp"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/SIY028.webp"></div><div class="cardlab">glimpse pitch 92×128</div></div>
+    <div class="cell"><div class="cd chain back"></div><div class="cardlab">back 112×156</div></div>
+  </div>
+  <div class="cell" style="margin-top:26px"><div class="cd glimpse"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/ROS227.webp"></div><div class="cardlab">the glimpse · 232×324 · e4</div></div>
+</section>
+
+<section class="sec"><h2>Card states <i>06</i></h2>
+  <div class="wrap" style="padding-top:36px">
+    <div class="cell"><div class="cd hand red ready"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/ROS227.webp"><span class="strip"></span><span class="st cost">3</span><span class="st pitch">1</span><span class="st pow">7</span><span class="st def">2</span></div><div class="cardlab">playable</div></div>
+    <div class="cell"><div class="cd hand yellow sel"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/WTR204.webp"><span class="strip"></span><span class="st cost">0</span><span class="st pitch">2</span><span class="st pow">3</span><span class="st def">3</span><span class="name">Wounding Blow</span></div><div class="cardlab" style="margin-top:22px">selected</div></div>
+    <div class="cell"><div class="cd hand blue dim"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/1HP373.webp"><span class="strip"></span><span class="st cost">0</span><span class="st pitch">3</span><span class="st pow">2</span><span class="st def">2</span></div><div class="cardlab">unplayable</div></div>
+    <div class="cell"><div class="cd hand red refused"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/ROS227.webp"><span class="strip"></span><span class="st cost">3</span><span class="st pitch">1</span><span class="st pow">7</span><span class="st def">2</span><span class="reason">Needs 2 more</span></div><div class="cardlab">refused</div></div>
+    <div class="cell"><div style="height:80px;width:90px;display:grid;place-items:center"><div class="cd mat tap"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/1HP367.webp"></div></div><div class="cardlab">exhausted</div></div>
+    <div class="cell"><div class="cd mat spent"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/ROS229.webp"></div><div class="cardlab">destroyed</div></div>
+    <div class="cell"><div class="cd block blk"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/WTR204.webp"><span class="badge sh"><svg class="ico" style="width:12px;height:12px;margin-right:3px"><use href="#i-shield"/></svg>3</span></div><div class="cardlab" style="margin-top:20px">blocking</div></div>
+    <div class="cell"><div class="cd mat"><img alt="" src="https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/large/1HP367.webp"><span class="badge n"><svg class="ico" style="width:13px;height:13px;margin-right:3px"><use href="#i-counter"/></svg>2</span></div><div class="cardlab" style="margin-top:20px">counters</div></div>
+  </div>
+</section>
+
+<!-- ===================== BUTTONS ===================== -->
+<section class="sec"><h2>Buttons <i>07</i></h2>
+  <p class="note">One primary. It says the line you'd say. Press sinks 3&nbsp;px the same frame. Disabled is a ghost; refused keeps its face and wears the rose ring.</p>
+  <div class="btnrow">
+    <div class="cell"><button class="btn" style="min-width:0;width:100%">End turn</button><div class="cardlab">primary</div></div>
+    <div class="cell"><button class="btn pressed" style="min-width:0;width:100%">End turn</button><div class="cardlab">pressed</div></div>
+    <div class="cell"><div style="display:flex;gap:10px"><button class="btn sec">Pass</button><button class="btn sec" style="padding:0"><svg class="ico"><use href="#i-menu"/></svg></button></div><div class="cardlab">secondary · hub</div></div>
+    <div class="cell"><button class="btn dis" style="min-width:0;width:100%">Waiting</button><div class="cardlab">disabled</div></div>
+    <div class="cell"><button class="btn ref" style="min-width:0;width:100%">Defend</button><div class="cardlab">refused</div></div>
+  </div>
+</section>
+
+<!-- ===================== ICONS ===================== -->
+<section class="sec"><h2>Icons &amp; markers <i>08</i></h2>
+  <div class="iconset">
+    <div class="cell"><svg class="ico" style="width:32px;height:32px"><use href="#i-ap"/></svg><div class="cardlab">action point</div></div>
+    <div class="cell"><svg class="ico" style="width:32px;height:32px"><use href="#i-res"/></svg><div class="cardlab">resource</div></div>
+    <div class="cell"><svg class="ico" style="width:32px;height:32px;color:var(--goagain)"><use href="#i-go"/></svg><div class="cardlab">go again</div></div>
+    <div class="cell"><svg class="ico" style="width:32px;height:32px"><use href="#i-counter"/></svg><div class="cardlab">counter</div></div>
+    <div class="cell"><svg class="ico" style="width:32px;height:32px;color:var(--prevent)"><use href="#i-shield"/></svg><div class="cardlab">defence</div></div>
+    <div class="cell"><svg class="ico" style="width:32px;height:32px;color:var(--ink-0)"><use href="#i-sword"/></svg><div class="cardlab">power</div></div>
+    <div class="cell"><svg class="ico" style="width:32px;height:32px;color:var(--ink-1)"><use href="#i-hand"/></svg><div class="cardlab">hand size</div></div>
+    <div class="cell"><svg class="ico" style="width:32px;height:32px;color:var(--ink-1)"><use href="#i-deck"/></svg><div class="cardlab">deck</div></div>
+  </div>
+  <div class="row2" style="margin-top:16px;align-items:center">
+    <div class="medal" style="--bout-medal-w:60px;--bout-medal-h:66px;width:60px;height:66px"><em class="l"></em><b style="font-size:28px;line-height:26px">3</b><span style="bottom:13px">TURN</span></div>
+    <div class="medal o" style="width:60px;height:66px"><em class="r"></em><b style="font-size:28px;line-height:26px">4</b><span style="bottom:13px">TURN</span></div>
+    <div class="padsheet"><div class="h">THE PAD</div><div class="n"><s>20</s> 19</div><div class="n" style="color:#C0453D;font-size:19px">−1 Fyendal's</div></div>
+  </div>
+</section>
+
+<div class="foot">Fan-made, non-profit, for fun and glory. Card art © Legend Story Studios, shown as the public card database serves it. Card back, marks and chrome are original.</div>
+</body>
+</html>

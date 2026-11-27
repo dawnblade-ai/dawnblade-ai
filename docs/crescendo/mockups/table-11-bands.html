@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dawnblade — Table 11 · bands</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800;900&family=Spline+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<style>
+/* T11 is a comparison SHEET, not a table: it is the one page in this set that scrolls. Each frame is an iframe, so each
+   frame has its own viewport, its own media queries and its own stage.js band: what you see is what the phone does. */
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#0b0d10;color:var(--ink-0);font:var(--t-body)}
+header{padding:24px 20px 4px}
+h1{font:900 34px/34px var(--f-display);letter-spacing:.03em;text-transform:uppercase}
+header p{font:var(--t-small);color:var(--ink-2);margin-top:8px;max-width:620px}
+.row{display:flex;gap:36px;padding:20px;align-items:flex-start;flex-wrap:wrap}
+figure{flex:none}
+figcaption{font:var(--t-label);letter-spacing:var(--track-caps);text-transform:uppercase;color:var(--brass);margin:0 0 10px}
+figcaption i{font-style:normal;color:var(--ink-2)}
+iframe{display:block;border:0;border-radius:18px;box-shadow:0 0 0 10px #1a1d22,0 20px 60px rgba(0,0,0,.6);background:#000}
+</style>
+</head>
+<body>
+<header><h1>Bands — compact · regular · tall</h1>
+<p>T1 (the resting table) and T6 (you defend) at the two bands either side of the design size. Regular, 393×660, is T1/T6 themselves. Frames are live pages: resize your own window to see the same rules.</p></header>
+<div class="row">
+  <figure><figcaption>T1 · compact <i>375 × 548 · SE</i></figcaption><iframe src="table-1-rest.html?noframe" width="375" height="548" title="T1 compact"></iframe></figure>
+  <figure><figcaption>T6 · compact <i>375 × 548</i></figcaption><iframe src="table-6-defend.html?noframe" width="375" height="548" title="T6 compact"></iframe></figure>
+</div>
+<div class="row">
+  <figure><figcaption>T1 · tall <i>430 × 932 · Pro Max standalone</i></figcaption><iframe src="table-1-rest.html?noframe" width="430" height="932" title="T1 tall"></iframe></figure>
+  <figure><figcaption>T6 · tall <i>430 × 932</i></figcaption><iframe src="table-6-defend.html?noframe" width="430" height="932" title="T6 tall"></iframe></figure>
+</div>
+</body>
+</html>

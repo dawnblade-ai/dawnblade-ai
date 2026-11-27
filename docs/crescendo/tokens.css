@@ -1,0 +1,235 @@
+/* ==========================================================================
+   DAWNBLADE / CRESCENDO — design tokens (design team, 2026-11-27)
+   The values here are the single source for DESIGN-SYSTEM.md. Design size is the
+   VISIBLE Safari area 393x660; overrides below hold 375x548 (SE) and 430 wide
+   (Pro Max), and the standalone (home-screen) heights. Cards are sized by WIDTH;
+   the middle band takes whatever height is left (flex:1) — that is what grows.
+   MOTION: every --m-* below comes from docs/crescendo/MOTION.md (the motion director owns them)
+   (docs/crescendo/MOTION.md); change them there, never here by feel.
+   ========================================================================== */
+
+:root {
+  color-scheme: dark;
+
+  /* ---- Mat, rail, tray: the one dark world (slate felt under one warm lamp) ---- */
+  --mat-0: #0A0E10;   /* deepest: vignette corners, tray shadow          */
+  --mat-1: #11171A;   /* the mat itself (all text contrast is measured here) */
+  --mat-2: #172024;   /* raised: zone wells, chips                         */
+  --mat-3: #202B30;   /* highest flat surface: sheets, menus, secondary btn */
+  --rail:  #2C3940;   /* hairlines, seams, stitch                          */
+  --tray:  #080B0D;   /* the table-edge ledge the hand + hub sit on        */
+  --lamp:  255, 226, 176;  /* rgb triplet of the single warm light (use in rgba()) */
+
+  /* ---- Ink ---- */
+  --ink-0: #F5F0E4;   /* bone: primary text, numerals          15.9:1 on mat-1 */
+  --ink-1: #CFCABD;   /* secondary text                        11.1:1 */
+  --ink-2: #97A2A6;   /* muted labels (never below 11px)        6.9:1 */
+  --ink-inv: #0A0E10; /* text on bone / yellow / jade / orchid chips */
+
+  /* ---- Brass: chrome accent (turn medallion, AP gem, focus ring). Not a pitch colour. ---- */
+  --brass:    #D8A23E;
+  --brass-hi: #F2C66E;
+  --brass-lo: #8A6420;
+
+  /* ---- The two seats ---- */
+  --you:     #4FD8A4;  /* jade   — the player at the bottom, bar fills from the LEFT  */
+  --you-lo:  #1D7A5A;
+  --you-ink: #0A0E10;
+  --opp:     #B794FF;  /* orchid — the player at the top, bar fills from the RIGHT    */
+  --opp-lo:  #5E3FB3;
+  --opp-ink: #0A0E10;
+
+  /* ---- Pitch colours (game-defining; each also has a pip count 1/2/3 — never colour alone) ---- */
+  --pitch-red:        #C9302A;  /* chip fill, white text 5.3:1 */
+  --pitch-red-hi:     #F0493D;  /* strips, rings, glows        */
+  --pitch-yellow:     #FFD12E;  /* chip fill, dark text 13.3:1 */
+  --pitch-yellow-hi:  #FFD12E;
+  --pitch-blue:       #2A6FD0;  /* chip fill, white text 4.9:1 */
+  --pitch-blue-hi:    #4A9BFF;
+  --pitch-none:       #6F7C82;  /* no colour (weapons, equipment, heroes) */
+
+  /* ---- State colours ---- */
+  --damage:      #FF4F6D;   /* damage pop, hit flash, life lost        5.7:1 */
+  --damage-lo:   #7A1F33;   /* the draining ghost segment               */
+  --prevent:     #BFD0DB;   /* prevention / defence / shield (silver)  11.4:1 */
+  --gain:        #9DF2C8;   /* life gained (+N)                                  */
+  --goagain:     #F2C66E;   /* go again glyph (= brass-hi)                       */
+  --refused:     #FF8A99;   /* a refused play: outline + reason chip   8.1:1 */
+  --focus:       #F2C66E;   /* keyboard / selection ring                         */
+
+  /* ---- Cards on the mat ---- */
+  --card-ink: #0A0E10;
+  --card-edge: rgba(0,0,0,.65);
+  --card-hilite: rgba(255,255,255,.10);
+  --card-dim: brightness(.58) saturate(.7);    /* unplayable (still readable)  */
+  --card-spent: brightness(.45) saturate(.2);  /* destroyed / broken / blocked-out */
+
+  /* ---- Typography ---- */
+  --f-display: 'Big Shoulders Display', 'Arial Narrow', 'Helvetica Neue', sans-serif;
+  --f-text:    'Spline Sans', -apple-system, 'Helvetica Neue', sans-serif;
+  --f-mono:    'Spline Sans Mono', ui-monospace, 'SF Mono', monospace;
+  --f-hand:    'Caveat', 'Bradley Hand', cursive;   /* the pad ONLY */
+
+  --t-life:    800 34px/34px var(--f-display);   /* bout numerals, tabular */
+  --t-announce:800 30px/32px var(--f-display);   /* uppercase, +0.02em      */
+  --t-btn:     800 20px/24px var(--f-display);   /* uppercase, +0.06em      */
+  --t-title:   800 22px/26px var(--f-display);   /* uppercase, +0.04em      */
+  --t-stamp:   800 14px/16px var(--f-display);   /* card stamps, counts     */
+  --t-body:    500 15px/21px var(--f-text);
+  --t-small:   500 13px/17px var(--f-text);
+  --t-label:   600 11px/13px var(--f-mono);      /* uppercase, +0.08em; the minimum size */
+  --t-pad:     700 22px/24px var(--f-hand);
+  --track-caps: .08em;
+  --track-display: .02em;
+  --track-btn: .06em;
+  --min-type: 11px;
+
+  /* ---- Spacing: 4 px grid ---- */
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 24px; --s-6: 32px;
+  --gut: 10px;               /* side gutter, 393; 8 @375; 12 @430 */
+  --gap-card: 8px;           /* between hand cards                */
+  --tap: 44px;               /* minimum touch target              */
+
+  /* ---- Radii ---- */
+  --r-card-hand: 4px;  --r-card-mat: 3px;  --r-card-chain: 6px;  --r-card-glimpse: 11px;
+  --r-chip: 6px;  --r-btn: 26px;  --r-sheet: 16px;  --r-pill: 999px;
+
+  /* ---- Borders ---- */
+  --bd-hair: 1px solid var(--rail);
+  --bd-ring: 2px;           /* portrait / medallion rings, selection */
+
+  /* ---- Elevation: one lamp at top-centre, shadows fall DOWN (+y), cool black ---- */
+  --e0: none;                                                              /* on the mat   */
+  --e1: 0 1px 1px rgba(0,0,0,.55), 0 2px 4px rgba(0,0,0,.35);              /* cards at rest */
+  --e2: 0 2px 2px rgba(0,0,0,.5), 0 6px 12px rgba(0,0,0,.4);               /* chain, lifted */
+  --e3: 0 4px 4px rgba(0,0,0,.45), 0 12px 24px rgba(0,0,0,.5);             /* selected      */
+  --e4: 0 8px 12px rgba(0,0,0,.5), 0 28px 56px rgba(0,0,0,.65);            /* glimpse, sheets */
+  --glow-turn: 0 0 0 2px var(--brass), 0 0 14px rgba(216,162,62,.55);
+
+  /* ---- Mat materials (CSS-only; the grain is a ~400-byte inline SVG tile, painted once) ---- */
+  --mat-grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .55 0'/></filter><rect width='120' height='120' filter='url(%23n)' opacity='.06'/></svg>");
+  --mat-bg:
+      radial-gradient(120% 70% at 50% 38%, rgba(var(--lamp), .085), transparent 62%),   /* the lamp   */
+      radial-gradient(140% 100% at 50% 50%, transparent 55%, rgba(0,0,0,.55) 100%),     /* vignette   */
+      var(--mat-grain),
+      var(--mat-1);
+  --tray-bg:
+      linear-gradient(to bottom, rgba(255,255,255,.07) 0 1px, transparent 1px),         /* ledge lip  */
+      linear-gradient(to bottom, #0C1012, var(--tray));
+  --seam: 1px dashed rgba(255,255,255,.07);   /* the stitched centre seam */
+
+  /* ---- Card back (original: a dawn disc, rays and a blade on indigo, brass keyline) ---- */
+  --card-back: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 140'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%231A2338'/><stop offset='1' stop-color='%230B1019'/></linearGradient><pattern id='p' width='10' height='10' patternUnits='userSpaceOnUse' patternTransform='rotate(45)'><path d='M5 0V10M0 5H10' stroke='%23D8A23E' stroke-opacity='.10' stroke-width='.6'/></pattern></defs><rect width='100' height='140' fill='url(%23g)'/><rect width='100' height='140' fill='url(%23p)'/><rect x='4' y='4' width='92' height='132' rx='4' fill='none' stroke='%23D8A23E' stroke-width='1.2'/><rect x='7' y='7' width='86' height='126' rx='2.5' fill='none' stroke='%23D8A23E' stroke-opacity='.45' stroke-width='.6'/><g stroke='%23F2C66E' stroke-width='1.4' stroke-linecap='round' opacity='.85'><path d='M50 70V38M50 70V102M50 70H18M50 70H82M50 70L27 47M50 70L73 47M50 70L27 93M50 70L73 93'/></g><circle cx='50' cy='70' r='15' fill='%230B1019' stroke='%23D8A23E' stroke-width='1.6'/><circle cx='50' cy='70' r='9' fill='%23F2C66E'/><path d='M14 70L24 66.5H76L86 70L76 73.5H24Z' fill='%23CFCABD' opacity='.92'/><path d='M14 70L24 66.5H76L86 70' fill='none' stroke='%230A0E10' stroke-width='.5'/></svg>");
+
+  /* ---- Z-order ---- */
+  --z-mat: 0; --z-cards: 10; --z-chain: 20; --z-tray: 30; --z-hub: 40; --z-bout: 50;
+  --z-announce: 60; --z-scrim: 70; --z-glimpse: 75; --z-sheet: 80; --z-menu: 90; --z-toast: 100;
+
+  /* ---- Safe areas (0 in Safari-with-toolbars; real in standalone) ---- */
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+
+  /* ==== LAYOUT BANDS (px) — 393 x 660 visible Safari ==== */
+  --h-bout: 56px;
+  --h-half: 100px;     /* each player half (their side, your side) */
+  --h-hand: 134px;     /* hand row (card + 6 top lift room + 16)   */
+  --h-hub:  68px;      /* the hub (primary button lane)            */
+  /* centre = 100dvh - safe-t - bout - half*2 - hand - hub - safe-b  = 202 at 393x660 */
+
+  /* ==== THE CARD OBJECT: width x height at every place it appears (w/h = 0.716) ==== */
+  --cw-hand: 80px;     --ch-hand: 112px;
+  --cw-mat: 56px;      --ch-mat: 78px;       /* gear, weapon, arsenal, piles on a half */
+  --cw-chain: 112px;   --ch-chain: 156px;    /* the attack on the chain                */
+  --cw-block: 64px;    --ch-block: 89px;     /* blockers, stack items                  */
+  --cw-link: 40px;     --ch-link: 56px;      /* earlier chain links, pitch fan         */
+  --cw-hand-back: 28px;--ch-hand-back: 39px; /* their hand, face down                  */
+  --cw-glimpse: 232px; --ch-glimpse: 324px;  /* the glimpse                            */
+  --cw-glimpse-pitch: 92px; --ch-glimpse-pitch: 128px;
+  --stamp: 20px;       /* cost/pitch/power/defense stamp at hand size */
+
+  /* ==== THE BOUT ==== */
+  --bout-portrait: 36px;  --bout-bar-w: 90px;  --bout-bar-h: 14px;
+  --bout-life-w: 38px;    --bout-medal-w: 46px; --bout-medal-h: 50px;
+  --bout-overlap: 8px;    /* the portrait overlaps the bar's outer end */
+
+  /* ==== THE HUB ==== */
+  --btn-h: 52px;  --btn-min-w: 176px;  --btn-sec-h: 44px;
+
+  /* ---- Motion: the motion director's values (docs/crescendo/MOTION.md is the authority; reconciled by the CEO). ----
+     The PRESS STATE itself appears within one frame (no transition on the pressed look); --m-press is the
+     short settle that follows it. */
+  --m-press: 70ms;
+  --m-fast: 120ms;
+  --m-std: 220ms;
+  --m-emph: 380ms;
+  --m-slam: 260ms;
+  --m-glimpse-own: 560ms;
+  --m-hold-announce: 1500ms;
+  --m-ghost-delay: 420ms;
+  --m-ghost-drain: 380ms;
+  --m-hitstop-light: 50ms;
+  --m-hitstop-mid: 90ms;
+  --m-hitstop-heavy: 150ms;
+  --m-hitstop-ko: 260ms;
+  --m-ease-out: cubic-bezier(.16,.84,.24,1);
+  --m-ease-in: cubic-bezier(.55,0,.85,.35);
+  --m-ease-inout: cubic-bezier(.45,0,.2,1);
+  --m-ease-slam: cubic-bezier(.3,1.45,.5,1);
+}
+
+/* ---- 375 wide (iPhone SE), 375x548 visible ---- */
+@media (max-width: 379px) {
+  :root {
+    --gut: 8px;
+    --h-bout: 52px; --h-half: 84px; --h-hand: 116px; --h-hub: 62px;   /* centre = 150 */
+    --cw-hand: 70px;  --ch-hand: 98px;
+    --cw-mat: 48px;   --ch-mat: 67px;
+    --cw-chain: 92px; --ch-chain: 128px;
+    --cw-block: 52px; --ch-block: 73px;
+    --cw-link: 34px;  --ch-link: 47px;
+    --cw-hand-back: 24px; --ch-hand-back: 34px;
+    --cw-glimpse: 210px; --ch-glimpse: 293px;
+    --cw-glimpse-pitch: 80px; --ch-glimpse-pitch: 112px;
+    --stamp: 18px;
+    --bout-portrait: 32px; --bout-bar-w: 90px; --bout-bar-h: 12px;
+    --bout-life-w: 36px; --bout-medal-w: 42px; --bout-medal-h: 46px;
+    --btn-h: 48px; --btn-min-w: 156px;
+    --t-life: 800 30px/30px var(--f-display);
+    --t-announce: 800 26px/28px var(--f-display);
+  }
+}
+
+/* ---- 414-430 wide (Plus / Pro Max), 430x740 visible ---- */
+@media (min-width: 414px) {
+  :root {
+    --gut: 12px;
+    --h-bout: 60px; --h-half: 112px; --h-hand: 148px; --h-hub: 72px;  /* centre = 236 at 740 */
+    --cw-hand: 92px;  --ch-hand: 128px;
+    --cw-mat: 64px;   --ch-mat: 89px;
+    --cw-chain: 130px; --ch-chain: 182px;
+    --cw-block: 74px; --ch-block: 103px;
+    --cw-link: 46px;  --ch-link: 64px;
+    --cw-hand-back: 32px; --ch-hand-back: 45px;
+    --cw-glimpse: 262px; --ch-glimpse: 366px;
+    --cw-glimpse-pitch: 104px; --ch-glimpse-pitch: 145px;
+    --stamp: 22px;
+    --bout-portrait: 40px; --bout-bar-w: 98px; --bout-bar-h: 16px;
+    --bout-life-w: 42px; --bout-medal-w: 50px; --bout-medal-h: 54px;
+    --btn-h: 54px; --btn-min-w: 192px;
+    --t-life: 800 38px/38px var(--f-display);
+  }
+}
+
+/* ---- Standalone / tall: height >= 760 css px. The MIDDLE grows; halves and hand gain 8 px. ---- */
+@media (min-height: 760px) {
+  :root {
+    --h-half: calc(var(--h-half-base, 100px) + 8px);
+    --h-hand: calc(var(--h-hand-base, 134px) + 8px);
+    --cw-chain: 128px; --ch-chain: 179px;   /* 393 wide, stage >= 260 px */
+  }
+}
+@media (min-height: 760px) and (max-width: 379px) { :root { --h-half-base: 84px;  --h-hand-base: 116px; } }
+@media (min-height: 760px) and (min-width: 380px) and (max-width: 413px) { :root { --h-half-base: 100px; --h-hand-base: 134px; } }
+@media (min-height: 760px) and (min-width: 414px) { :root { --h-half-base: 112px; --h-hand-base: 148px; --cw-chain: 150px; --ch-chain: 209px; } }

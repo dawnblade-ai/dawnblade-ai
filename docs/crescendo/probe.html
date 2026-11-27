@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- Same viewport meta as the game (index.html line 5), so the numbers are the game's numbers. -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#14100E">
+<meta name="apple-mobile-web-app-title" content="Probe">
+<title>Phone Probe</title>
+<!-- Same font request as the game (index.html line 33), so "loaded?" answers for the game. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800&family=Spline+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#14100E;--bone:#E8DFD0;--dim:#B8AC98;--y:#E8B33C;--ok:#7BA05B;--bad:#F5817B;--line:#4A3B2E;--forge:#241B16}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{background:var(--ink);color:var(--bone);font:16px/1.35 'Spline Sans',system-ui,sans-serif;
+  padding:max(12px,env(safe-area-inset-top)) 14px calc(24px + env(safe-area-inset-bottom));
+  -webkit-touch-callout:none;touch-action:manipulation}
+h1{font:800 26px/1 'Big Shoulders Display',system-ui,sans-serif;letter-spacing:.06em;color:var(--y)}
+.sub{color:var(--dim);font-size:14px;margin:4px 0 12px}
+.sec{font:500 12px/1 'Spline Sans Mono',ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--y);margin:18px 0 6px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.cell{background:var(--forge);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+.cell.wide{grid-column:1/-1}
+.k{font-size:12px;color:var(--dim)}
+.v{font:500 26px/1.1 'Spline Sans Mono',ui-monospace,monospace;overflow-wrap:anywhere}
+.v.sm{font-size:16px}
+.good{color:var(--ok)}.bad{color:var(--bad)}
+button{font:600 18px 'Spline Sans',system-ui,sans-serif;color:var(--ink);background:var(--y);border:0;border-radius:10px;min-height:56px;width:100%;margin-top:6px}
+button:active{filter:brightness(.8)}
+#pad{height:120px;border:2px dashed var(--line);border-radius:12px;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--dim);margin-top:6px;user-select:none;-webkit-user-select:none}
+/* 100vh family, measured by real boxes */
+.u{position:fixed;left:-1px;top:0;width:1px;visibility:hidden;pointer-events:none}
+#u1{height:100vh}#u2{height:100dvh}#u3{height:100svh}#u4{height:100lvh}
+#sa{position:fixed;left:-9px;top:0;width:1px;height:1px;visibility:hidden;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+.meter{height:10px;background:var(--forge);border-radius:5px;overflow:hidden;margin-top:6px}
+.meter i{display:block;height:100%;width:0;background:var(--y)}
+#sheet{display:none;margin-top:12px}
+#cal{margin-top:6px;font:500 13px/1.4 'Spline Sans Mono',ui-monospace,monospace;white-space:pre-wrap;background:var(--forge);border:1px solid var(--line);border-radius:8px;padding:8px 10px;user-select:all;-webkit-user-select:all}
+</style>
+</head>
+<body>
+<h1>PHONE PROBE</h1>
+<p class="sub">Open in Safari (toolbars showing), then again from the Home Screen. Screenshot each. Tap the buttons for the live tests.</p>
+
+<div id="u1" class="u"></div><div id="u2" class="u"></div><div id="u3" class="u"></div><div id="u4" class="u"></div><div id="sa"></div>
+
+<div class="sec">Viewport</div>
+<div class="grid">
+  <div class="cell"><div class="k">innerWidth × innerHeight</div><div class="v" id="inner"></div></div>
+  <div class="cell"><div class="k">visualViewport w × h</div><div class="v" id="vv"></div></div>
+  <div class="cell"><div class="k">visualViewport scale</div><div class="v" id="vvs"></div></div>
+  <div class="cell"><div class="k">screen w × h</div><div class="v" id="scr"></div></div>
+  <div class="cell"><div class="k">devicePixelRatio</div><div class="v" id="dpr"></div></div>
+  <div class="cell"><div class="k">documentElement client w × h</div><div class="v" id="cl"></div></div>
+</div>
+
+<div class="sec">Height units (px)</div>
+<div class="grid">
+  <div class="cell"><div class="k">100vh</div><div class="v" id="h_vh"></div></div>
+  <div class="cell"><div class="k">100dvh (live)</div><div class="v" id="h_dvh"></div></div>
+  <div class="cell"><div class="k">100svh (toolbars out)</div><div class="v" id="h_svh"></div></div>
+  <div class="cell"><div class="k">100lvh (toolbars in)</div><div class="v" id="h_lvh"></div></div>
+  <div class="cell wide"><div class="k">100vh minus innerHeight (the overshoot the game's layout must not trust)</div><div class="v" id="h_gap"></div></div>
+</div>
+
+<div class="sec">Safe areas (env, px)</div>
+<div class="grid">
+  <div class="cell"><div class="k">top</div><div class="v" id="sat"></div></div>
+  <div class="cell"><div class="k">bottom</div><div class="v" id="sab"></div></div>
+  <div class="cell"><div class="k">left</div><div class="v" id="sal"></div></div>
+  <div class="cell"><div class="k">right</div><div class="v" id="sar"></div></div>
+</div>
+
+<div class="sec">Mode and preferences</div>
+<div class="grid">
+  <div class="cell"><div class="k">standalone (Home Screen)</div><div class="v" id="sta"></div></div>
+  <div class="cell"><div class="k">orientation</div><div class="v" id="ori"></div></div>
+  <div class="cell"><div class="k">prefers-reduced-motion</div><div class="v" id="rm"></div></div>
+  <div class="cell"><div class="k">color scheme</div><div class="v" id="cs"></div></div>
+  <div class="cell"><div class="k">pointer / hover</div><div class="v sm" id="ptr"></div></div>
+  <div class="cell"><div class="k">touch points / cores / memory</div><div class="v sm" id="hw"></div></div>
+  <div class="cell wide"><div class="k">user agent</div><div class="v sm" id="ua"></div></div>
+</div>
+
+<div class="sec">Fonts the game asks for</div>
+<div class="grid" id="fonts"></div>
+
+<div class="sec">Frame meter (2 s)</div>
+<div class="grid">
+  <div class="cell"><div class="k">fps</div><div class="v" id="fps">—</div></div>
+  <div class="cell"><div class="k">worst frame (ms)</div><div class="v" id="worst">—</div></div>
+  <div class="cell"><div class="k">frames over 20 ms</div><div class="v" id="jank">—</div></div>
+  <div class="cell"><div class="k">refresh guess (Hz)</div><div class="v" id="hz">—</div></div>
+</div>
+<div class="meter"><i id="mbar"></i></div>
+<button id="bfps">Run the 2-second frame meter</button>
+
+<div class="sec">Tap latency (pointerdown → next frame)</div>
+<div id="pad">Tap here, about ten times, one finger</div>
+<div class="grid" style="margin-top:6px">
+  <div class="cell"><div class="k">taps / median (ms)</div><div class="v" id="tl">—</div></div>
+  <div class="cell"><div class="k">worst (ms)</div><div class="v" id="tw">—</div></div>
+</div>
+
+<button id="bcopy">Show a copy-able summary</button>
+<div id="cal" style="display:none"></div>
+
+<script>
+(function(){
+  "use strict";
+  var $ = function(id){ return document.getElementById(id); };
+  var px = function(n){ return Math.round(n * 100) / 100; };
+  var h = function(id){ return $(id).getBoundingClientRect().height; };
+  var mq = function(q){ try { return window.matchMedia(q).matches; } catch(e){ return false; } };
+
+  function read(){
+    var vv = window.visualViewport;
+    $("inner").textContent = innerWidth + " × " + innerHeight;
+    $("vv").textContent = vv ? px(vv.width) + " × " + px(vv.height) : "n/a";
+    $("vvs").textContent = vv ? String(px(vv.scale)) : "n/a";
+    $("scr").textContent = screen.width + " × " + screen.height;
+    $("dpr").textContent = String(devicePixelRatio);
+    $("cl").textContent = document.documentElement.clientWidth + " × " + document.documentElement.clientHeight;
+    var vh = h("u1"), dvh = h("u2"), svh = h("u3"), lvh = h("u4");
+    $("h_vh").textContent = px(vh);
+    $("h_dvh").textContent = px(dvh) || "unsupported";
+    $("h_svh").textContent = px(svh) || "unsupported";
+    $("h_lvh").textContent = px(lvh) || "unsupported";
+    var gap = vh - innerHeight;
+    $("h_gap").textContent = (gap > 0 ? "+" : "") + px(gap);
+    $("h_gap").className = "v " + (gap > 1 ? "bad" : "good");
+    var sa = getComputedStyle($("sa"));
+    $("sat").textContent = sa.paddingTop; $("sab").textContent = sa.paddingBottom;
+    $("sal").textContent = sa.paddingLeft; $("sar").textContent = sa.paddingRight;
+    var standalone = (navigator.standalone === true) || mq("(display-mode: standalone)");
+    $("sta").textContent = standalone ? "YES" : "no (browser)";
+    $("ori").textContent = innerWidth > innerHeight ? "landscape" : "portrait";
+    $("rm").textContent = mq("(prefers-reduced-motion: reduce)") ? "reduce" : "no preference";
+    $("cs").textContent = mq("(prefers-color-scheme: dark)") ? "dark" : (mq("(prefers-color-scheme: light)") ? "light" : "n/a");
+    $("ptr").textContent = (mq("(pointer: coarse)") ? "coarse" : mq("(pointer: fine)") ? "fine" : "none") + " / " + (mq("(hover: hover)") ? "hover" : "no hover");
+    $("hw").textContent = (navigator.maxTouchPoints || 0) + " / " + (navigator.hardwareConcurrency || "?") + " / " + (navigator.deviceMemory || "?");
+    $("ua").textContent = navigator.userAgent;
+  }
+  read();
+  addEventListener("resize", read);
+  addEventListener("orientationchange", function(){ setTimeout(read, 250); });
+  if (window.visualViewport) { visualViewport.addEventListener("resize", read); visualViewport.addEventListener("scroll", read); }
+  addEventListener("scroll", read, { passive: true });
+
+  /* fonts: the game's families, as document.fonts.check answers (true only when a face is LOADED or none is needed) */
+  var FAMS = ["800 20px 'Big Shoulders Display'", "400 16px 'Spline Sans'", "500 16px 'Spline Sans Mono'", "700 20px 'Caveat'"];
+  /* document.fonts.check() says TRUE when no @font-face exists at all (blocked CSS), so count the real FontFace objects per family too. */
+  function readFonts(){
+    var box = $("fonts"); box.innerHTML = "";
+    var faces = []; try { document.fonts.forEach(function(f){ faces.push(f); }); } catch(e){}
+    FAMS.forEach(function(f){
+      var fam = f.replace(/^\d+ \d+px /, ""), bare = fam.replace(/'/g, "");
+      var mine = faces.filter(function(x){ return x.family.replace(/["']/g, "") === bare; });
+      var loaded = mine.filter(function(x){ return x.status === "loaded"; }).length;
+      var ok = mine.length > 0 && loaded > 0, ck = false; try { ck = document.fonts.check(f); } catch(e){}
+      var c = document.createElement("div"); c.className = "cell";
+      c.innerHTML = '<div class="k"></div><div class="v sm ' + (ok ? "good" : "bad") + '"></div>';
+      c.firstChild.textContent = bare;
+      c.lastChild.textContent = mine.length ? loaded + "/" + mine.length + " faces loaded" : "NO @font-face (CSS blocked?) check=" + ck;
+      box.appendChild(c);
+    });
+    var c2 = document.createElement("div"); c2.className = "cell wide";
+    c2.innerHTML = '<div class="k">FontFace objects / document.fonts.status</div><div class="v sm"></div>';
+    c2.lastChild.textContent = faces.length + " / " + (document.fonts && document.fonts.status);
+    box.appendChild(c2);
+  }
+  readFonts();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(readFonts);
+  setTimeout(readFonts, 3000);
+
+  /* frame meter */
+  var running = false;
+  $("bfps").onclick = function(){
+    if (running) return; running = true;
+    var t0 = performance.now(), last = t0, n = 0, worst = 0, over = 0, dts = [];
+    $("mbar").style.width = "0";
+    (function tick(t){
+      var dt = t - last; last = t;
+      if (n > 0) { dts.push(dt); if (dt > worst) worst = dt; if (dt > 20) over++; }
+      n++;
+      $("mbar").style.width = Math.min(100, (t - t0) / 20) + "%";
+      if (t - t0 < 2000) return requestAnimationFrame(tick);
+      var secs = (t - t0) / 1000, fps = (n - 1) / secs;
+      dts.sort(function(a, b){ return a - b; });
+      var med = dts[dts.length >> 1] || 16.7;
+      $("fps").textContent = px(fps); $("fps").className = "v " + (fps >= 55 ? "good" : "bad");
+      $("worst").textContent = px(worst); $("worst").className = "v " + (worst <= 20 ? "good" : "bad");
+      $("jank").textContent = String(over); $("jank").className = "v " + (over === 0 ? "good" : "bad");
+      $("hz").textContent = String(Math.round(1000 / med));
+      running = false;
+    })(t0);
+  };
+
+  /* tap latency: pointerdown timestamp (event.timeStamp, the hardware time when the browser gives it) to the NEXT frame callback */
+  var taps = [];
+  $("pad").addEventListener("pointerdown", function(e){
+    var t = performance.now();
+    requestAnimationFrame(function(f){
+      var ms = f - t; taps.push(ms < 0 ? 0 : ms);
+      var s = taps.slice().sort(function(a, b){ return a - b; });
+      $("tl").textContent = taps.length + " / " + px(s[s.length >> 1]);
+      $("tw").textContent = px(s[s.length - 1]);
+      $("tw").className = "v " + (s[s.length - 1] <= 34 ? "good" : "bad");
+    });
+  });
+
+  $("bcopy").onclick = function(){
+    var ids = ["inner","vv","vvs","scr","dpr","h_vh","h_dvh","h_svh","h_lvh","h_gap","sat","sab","sal","sar","sta","rm","cs","fps","worst","jank","hz","tl","tw"];
+    var out = ids.map(function(i){ return i + ": " + $(i).textContent; });
+    out.push("fonts: " + [].map.call($("fonts").querySelectorAll(".cell:not(.wide)"), function(c){ return c.textContent; }).join(" | "));
+    out.push("ua: " + navigator.userAgent);
+    var box = $("cal"); box.style.display = "block"; box.textContent = out.join("\n");
+    try { var r = document.createRange(); r.selectNodeContents(box); var s = getSelection(); s.removeAllRanges(); s.addRange(r); } catch(e){}
+  };
+})();
+</script>
+</body>
+</html>
