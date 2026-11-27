@@ -129,6 +129,7 @@ async function oneGame(D, pw, browser, engine, game, o, log){
   let steps = 0, since = 0, lastN = -1, over = null, coach = 0, taps = 0, coachBad = 0, holds = 0, opened = 0;
   try {
     await page.waitForSelector('[data-b="bout"]', { timeout: 15000 });
+    await page.waitForFunction(() => window.DawnUIApp && window.DawnUIApp.session(), null, { timeout: 8000 });
     if(!(await page.evaluate(HOOK))) throw new Error("no session to hook");
     for(; steps < o.taps; steps++){
       const st = await page.evaluate(STATE);
@@ -224,4 +225,4 @@ async function main(){
 }
 
 if(require.main === module) main().catch(e => { console.error(e); process.exit(2); });
-module.exports = { rng, plan, urlOf, replayLine, allowed, choose, stuck };
+module.exports = { rng, plan, urlOf, replayLine, allowed, choose, stuck, holdable, mustInspect };

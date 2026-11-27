@@ -46,3 +46,11 @@ test("candidates: only visible, enabled controls; never concede, the report, a l
   for(let i = 0; i < 50; i++){ const c = X.choose(X.rng(i), cs, 0); assert.ok(c.tap && c.tap.b !== "row-concede"); }
   assert.equal(X.stuck(60, 60), true); assert.equal(X.stuck(59, 60), false);
 });
+
+test("holds: a hand card must open the inspect panel; mat and chain cards may; buttons are never held", () => {
+  const c = b => ({vis: true, disabled: false, b, t: ""});
+  for(const b of ["hand-0", "hand-3"]){ assert.equal(X.holdable(c(b)), true, b); assert.equal(X.mustInspect(c(b)), true, b); }
+  for(const b of ["you-slot-head", "opp-slot-weapon", "attack"]){ assert.equal(X.holdable(c(b)), true, b); assert.equal(X.mustInspect(c(b)), false, b); }
+  for(const b of ["primary", "hub-left", "hub-right", "bout", "you-slot-gy", "row-concede"]) assert.equal(X.holdable(c(b)), false, b);
+  assert.equal(X.holdable({...c("hand-0"), disabled: true}), false);
+});

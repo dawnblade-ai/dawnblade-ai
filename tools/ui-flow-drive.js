@@ -174,6 +174,7 @@ async function coachWin(page, app, bad, diffs, seeds){
   for(const seed of seeds || [1, 2, 3, 4, 5, 6, 7, 8]){
     await page.goto(PLAY + app + "&seed=" + seed);
     await page.waitForSelector('[data-b="bout"]', { timeout: 15000 });
+    await page.waitForFunction(() => window.DawnUIApp && window.DawnUIApp.session(), null, { timeout: 8000 });
     const over = await page.evaluate(COACH_LOOP);
     tried.push(seed + (over.winner === 0 ? " WON" : over.stuck ? " (" + over.stuck + ")" : " lost/drew"));
     if(over.winner === 0){ diffs.push("F7 KO win: the coach won on seed " + seed + "; tried " + tried.join(", ")); return true; }

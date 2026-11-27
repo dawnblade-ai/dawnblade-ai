@@ -736,7 +736,7 @@ async function runPlay(pw, browser, engine, opts){
   try {
     /* announcements ON: the AI seat at its human pace (no ?pace), the director's beats, the slab and the glimpse */
     const frames = () => { window.__fr = { d: [], on: false, long: [], marks: [] }; let last = 0; requestAnimationFrame(function f(t){ if(window.__fr.on){ if(last){ window.__fr.d.push(t - last); if(t - last > 34) window.__fr.long.push([Math.round(t), Math.round(t - last)]); } last = t; } else last = 0; requestAnimationFrame(f); }); };
-    const a = await openPage(pw, browser, engine, vp, pathToFileURL(PLAY).href + `?hero=${MATCH.hero}&foe=${MATCH.foe}&seed=${opts.seed || MATCH.seed}` + (opts.pace != null ? `&pace=${opts.pace}` : "") + (opts.search === "0" ? "&search=0" : ""), errors, opts.art, frames);
+    const a = await openPage(pw, browser, engine, vp, pathToFileURL(PLAY).href + `?hero=${opts.hero || MATCH.hero}&foe=${opts.foe || MATCH.foe}&seed=${opts.seed || MATCH.seed}` + (opts.pace != null ? `&pace=${opts.pace}` : "") + (opts.search === "0" ? "&search=0" : ""), errors, opts.art, frames);
     const P = a.page;
     if(opts.throttle){ const cdp = await a.context.newCDPSession(P); await cdp.send("Emulation.setCPUThrottlingRate", { rate: opts.throttle }); }
     await P.waitForSelector(".stage[data-state] .bout", { timeout: 15000 }); await P.evaluate(() => { window.__fr.on = true; try { DawnUIApp.session().onStep(e => window.__fr.marks.push([Math.round(performance.now()), "step s" + e.seat + " " + e.action.t])); new MutationObserver(m => window.__fr.marks.push([Math.round(performance.now()), "dom " + m.map(x => [...x.addedNodes].map(n => n.className).join("|")).join(",").slice(0, 60)])).observe(document.querySelector(".stage[data-state]"), { childList: true }); } catch(e){} });
@@ -789,7 +789,7 @@ async function runPlay(pw, browser, engine, opts){
       }
       if(dis){ await P.waitForTimeout(40); idle++; if(idle > 400){ res.bad.push("play: stuck, primary disabled at turn " + s.turn + " (" + label + ")"); break; } continue; }
       idle = 0;
-      if(/^play |^attack with /i.test(label)){ if(s.step !== "layer" || s.phase !== "action") did.reaction++; await click(P.locator('.hub [data-b="primary"]')); continue; }   /* a selection is made: commit it */
+      if(/^play |^attack with /i.test(label)){ if(s.step !== "layer" || s.phase !== "action" || s.tp === 1) did.reaction++; await click(P.locator('.hub [data-b="primary"]')); continue; }   /* a selection is made: commit it */
       if(/^pass$/i.test(label) && s.tp === 1 && await ready.count()){ if(await click(ready)){ await P.waitForTimeout(20); if(/^play /i.test(await primaryText(P))) continue; } }   /* their turn, priority ours: a card that can answer */
       if(/^end turn$/i.test(label) && await ready.count() && s.tp === 0){ const before = label; if(await click(ready)){ await P.waitForTimeout(20); if(/^play /i.test(await primaryText(P))) continue; } }
       if(await P.locator('.hub [data-b="primary"]').isEnabled()){ if(!(await click(P.locator('.hub [data-b="primary"]')))) await P.waitForTimeout(30); }
@@ -816,6 +816,7 @@ async function runPlay(pw, browser, engine, opts){
     if(opts.needs && !fin.over){
       if(!did.defended) res.bad.push("play: you never defended");
       if(!did.arsenal && !did.reaction) res.bad.push("play: you never set an arsenal card or played a reaction");
+      if(opts.reactions && !did.reaction) res.bad.push("play: no reaction was played in this pairing");
     }
     res.notes.push(`defended ${did.defended}, arsenal ${did.arsenal}, reactions ${did.reaction}, sheets ${did.sheets}`);
     res.notes.push(`turn ${fin.turn}, ${taps} taps, ${refusals} refused taps, life ${lives.map(l => l.join("/")).join(" > ")}`);
@@ -876,6 +877,7 @@ async function main(){
       if(want("states4")) for(const vp of VIEWPORTS) report(await runStates4(pw, browser, engine, vp, o), "states4");
       if(want("states3")) for(const vp of VIEWPORTS) report(await runStates3(pw, browser, engine, vp, o), "states3");
       if(want("play")) report(await runPlay(pw, browser, engine, { ...o, turns: +arg("--turns") || 5, needs: true, pace: arg("--pace") }), "play");
+      if(want("play")) report(await runPlay(pw, browser, engine, { ...o, turns: 5, needs: true, hero: "dorinthea", foe: "kayo", seed: "2", reactions: true, pace: arg("--pace") }), "play+rx");
       if(want("frames") && engine === "chromium") report(await runPlay(pw, browser, engine, { ...o, turns: +arg("--turns") || 5, needs: true, throttle: 4, pace: arg("--pace"), search: arg("--search") || "0" }), "frames");
       if(want("frames") && engine === "chromium" && arg("--search") == null) report(await runPlay(pw, browser, engine, { ...o, turns: +arg("--turns") || 5, needs: true, throttle: 4, pace: arg("--pace"), informational: true }), "frames+AI");
     } finally { await browser.close(); }
