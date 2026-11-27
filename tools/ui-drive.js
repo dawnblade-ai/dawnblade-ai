@@ -750,7 +750,10 @@ async function runPlay(pw, browser, engine, opts){
       if(s.hp[0] !== lives[lives.length - 1][0] || s.hp[1] !== lives[lives.length - 1][1]) lives.push(s.hp);
       lastTurn = s.turn;
       if(s.over || s.turn > turns * 2) break;
-      if(Date.now() - started > 420000){ res.bad.push("play: gave up after 420 s at turn " + s.turn); break; }
+      if(Date.now() - started > 420000){
+        const why = await P.evaluate(() => { const ss = DawnUIApp.session(), st = ss.state(), J = DawnJudge; return JSON.stringify({ turn: st.turn, step: st.step, phase: st.phase, holder: J.waitingOn(st), prompt: !!st.prompt && st.prompt.tag, pending: st.pending && st.pending.kind, busy: ss.local.busy(),
+          primary: (document.querySelector('.hub [data-b="primary"]') || {}).textContent, dis: (document.querySelector('.hub [data-b="primary"]') || {}).disabled, ask: (document.querySelector(".centre .ask") || {}).textContent, sheet: !!document.querySelector(".sh-sheet"), options: !!document.querySelector(".options"), events: ss.events().slice(-3) }); });
+        res.bad.push("play: gave up after 420 s at turn " + s.turn + " " + why); break; }
       if(s.busy || s.tp === 1 && !(await P.locator(".options, .sh-sheet:not(.waiting)").count())){
         /* the AI seat's turn: wait a tick, unless something is asked of us (a defend step / sheet) */
         const ask = await P.locator(".stage .ask").count(), can = !(await P.locator('.hub [data-b="primary"]').isDisabled());
