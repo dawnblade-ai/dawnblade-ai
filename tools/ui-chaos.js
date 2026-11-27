@@ -23,7 +23,7 @@
    USE   (deps as tools/page.js's header: PAGE_DEPS; `playwright` must resolve)
      node tools/ui-chaos.js                       every hero as "you" once (foe rotated), Chromium, then 3 games on WebKit
      node tools/ui-chaos.js --hero fai --foe dash --seed 7 [--games 2]     one hero
-     node tools/ui-chaos.js --engine chromium|webkit  --budget 600 (seconds, default 600)  --taps 1200  --stall 60  --pause 12
+     node tools/ui-chaos.js --engine chromium|webkit  --coach 1 [--tries 4] --hold 0.05  --budget 600 (seconds, default 600)  --taps 1200  --stall 60  --pause 12
      node tools/ui-chaos.js --replay "<url>" --rseed N                    play one game again with its chaos seed
    Exit 0 = clean. Not part of `npm test` (it needs a browser). Pure helpers (rng, candidate filter, plan, replay) are exported.
    ============================================================ */
@@ -71,6 +71,9 @@ function choose(r, cands, pCoach){
 }
 /* the game's step cap and stall rule */
 const stuck = (since, limit) => since >= limit;
+/* a card in the player's own hand is face up: a hold on it MUST open the inspect panel; others (a mat card, the chain) may */
+const holdable = c => allowed(c) && /^(hand-\d+|you-slot-(weapon|head|chest|arms|legs)|opp-slot-(weapon|head|chest|arms|legs)|attack)$/.test(c.b || "");
+const mustInspect = c => /^hand-\d+$/.test(c.b || "");
 
 /* ---------- in the page ---------- */
 const HOOK = () => {
@@ -106,16 +109,24 @@ const TAP = ([i, b, t]) => {
   if(!e || (e.getAttribute("data-b") || "") !== b) return false;
   e.click(); return true;
 };
+/* a HOLD (400 ms, SCREENS-TABLE 2) is pointerdown ... pointerup on the element: the inspect panel opens on a card that is face up */
+const HOLD_DOWN = ([i, b]) => { const e = [...document.querySelectorAll("button, [data-tap], [role=button], a[href]")][i];
+  if(!e || (e.getAttribute("data-b") || "") !== b) return false;
+  const r = e.getBoundingClientRect(), o = { bubbles: true, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, pointerType: "touch", isPrimary: true, button: 0 };
+  window.__held = { e, o }; e.dispatchEvent(new PointerEvent("pointerdown", o)); return true; };
+const HOLD_UP = () => { const h = window.__held; if(h){ h.e.dispatchEvent(new PointerEvent("pointerup", h.o)); window.__held = null; } };
+const INSPECT = () => !!document.querySelector('[data-b="inspect-card"]');
+const CLOSE_INSPECT = () => { const v = document.querySelector('[data-b="veil"]'); if(v) v.click(); };
 const COACH = () => { const s = window.DawnUIApp.session(), a = s.suggest(); if(!a) return "none"; const why = s.submit(a); return why ? "refused: " + why : "ok"; };
 const STATE = () => { const s = window.DawnUIApp.session(); if(!s) return null; const st = s.state(); return { over: st.over || null, turn: st.turn, hp: st.sides.map(x => x.hp), n: window.__chaos ? window.__chaos.n : 0 }; };
 
 /* ---------- one game ---------- */
 async function oneGame(D, pw, browser, engine, game, o, log){
   const errors = [], r = rng(game.rseed);
-  const url = pathToFileURL(D.PLAY).href + urlOf(game, "");
+  const url = pathToFileURL(D.PLAY).href + urlOf(game, "") + (o.coach ? "&search=0" : "");
   const a = await D.openPage(pw, browser, engine, [393, 660], url, errors);
   const page = a.page, finds = [];
-  let steps = 0, since = 0, lastN = -1, over = null, coach = 0, taps = 0, coachBad = 0;
+  let steps = 0, since = 0, lastN = -1, over = null, coach = 0, taps = 0, coachBad = 0, holds = 0, opened = 0;
   try {
     await page.waitForSelector('[data-b="bout"]', { timeout: 15000 });
     if(!(await page.evaluate(HOOK))) throw new Error("no session to hook");
@@ -126,7 +137,19 @@ async function oneGame(D, pw, browser, engine, game, o, log){
       if(st.n !== lastN){ lastN = st.n; since = 0; } else since++;
       if(stuck(since, o.stall)){ finds.push(`STUCK: the state did not change for ${o.stall} steps (turn ${st.turn})`); break; }
       const cands = await page.evaluate(CANDS);
-      const pick = choose(r, cands, since > 8 ? 0.7 : 0.22);
+      const hc = !o.coach && r() < o.hold ? cands.filter(holdable) : [];
+      if(hc.length){
+        const c = hc[Math.floor(r() * hc.length)];
+        holds++;
+        await page.evaluate(HOLD_DOWN, [c.i, c.b]); await page.waitForTimeout(470);
+        const open = await page.evaluate(INSPECT);
+        await page.evaluate(HOLD_UP); await page.waitForTimeout(60);
+        if(mustInspect(c) && !open) finds.push(`INSPECT: a 400 ms hold on ${c.b} did not open the panel (step ${steps})`);
+        if(open){ opened++; await page.evaluate(CLOSE_INSPECT); await page.waitForTimeout(80); if(await page.evaluate(INSPECT)) finds.push(`INSPECT: the panel opened from ${c.b} did not close (step ${steps})`); }
+        if(finds.length) break;
+        continue;
+      }
+      const pick = o.coach ? { coach: true } : choose(r, cands, since > 8 ? 0.7 : 0.22);
       if(pick.coach){ coach++; const res = await page.evaluate(COACH); if(res !== "ok") coachBad++; }
       else { taps++; await page.evaluate(TAP, [pick.tap.i, pick.tap.b, pick.tap.t]); }
       await page.waitForTimeout(o.pause);
@@ -139,14 +162,19 @@ async function oneGame(D, pw, browser, engine, game, o, log){
     if(over && !finds.length){
       try { await page.waitForSelector('[data-b="result-ko"], [data-b="result-pad"], [data-b="word"]', { timeout: 6000 }); }
       catch(e){ finds.push("the game is over (" + JSON.stringify(over) + ") but no result screen appeared"); }
+      if(over.winner === 0){   /* the player won: the KO word, DAWN above BREAK, and "You win" (Q11) */
+        const w = await page.evaluate(() => { const e = document.querySelector('[data-b="word"]'); return e ? { b: [...e.querySelectorAll("b")].map(x => x.textContent.trim().toUpperCase()).join("|"), s: (e.querySelector("span") || {}).textContent } : null; });
+        if(!w) finds.push("you won but the KO word never showed"); else if(w.b !== "DAWN|BREAK" || !/^you win$/i.test(w.s || "")) finds.push("the win frame reads " + JSON.stringify(w));
+      }
     }
   } catch(e){ finds.push("drive threw: " + String(e.message).split("\n")[0]); }
   errors.forEach(e => finds.push(e));
   await a.context.close();
   const res = over ? (over.winner === null ? "draw" : "seat " + over.winner + " won (" + over.how + ")") : "no result";
-  log(`${finds.length ? "FIND" : "ok  "}  ${engine.padEnd(8)} ${(game.hero + " v " + game.foe).padEnd(26)} seed ${String(game.seed).padEnd(6)} ${String(steps).padStart(4)} steps (${taps} taps, ${coach} coach${coachBad ? ", " + coachBad + " coach no-ops" : ""}, ${game.refused || 0} refused taps)  ${res}`);
+  log(`${finds.length ? "FIND" : "ok  "}  ${engine.padEnd(8)} ${(game.hero + " v " + game.foe).padEnd(26)} seed ${String(game.seed).padEnd(6)} ${String(steps).padStart(4)} steps (${taps} taps, ${coach} coach${coachBad ? ", " + coachBad + " coach no-ops" : ""}, ${holds} holds/${opened} inspects, ${game.refused || 0} refused taps)  ${res}`);
   finds.forEach(f => log("      " + f));
   if(finds.length) log("      replay: " + replayLine(game, steps));
+  game.over = over;
   return finds.length;
 }
 
@@ -156,7 +184,7 @@ async function main(){
   try { pw = require("playwright"); } catch(e){ console.error("tools/ui-chaos.js needs `playwright` (set NODE_PATH)"); return process.exit(2); }
   const D = require("./ui-drive.js");
   const t0 = Date.now(), budget = (+arg("--budget") || 600) * 1000;
-  const o = { taps: +arg("--taps") || 1200, stall: +arg("--stall") || 60, pause: arg("--pause") != null ? +arg("--pause") : 12 };
+  const o = { coach: arg("--coach") === "1", tries: +arg("--tries") || 4, hold: arg("--hold") != null ? +arg("--hold") : 0.05, taps: +arg("--taps") || 1200, stall: +arg("--stall") || 60, pause: arg("--pause") != null ? +arg("--pause") : 12 };
   const engines = arg("--engine") ? [arg("--engine")] : ["chromium", "webkit"];
   /* the hero keys come from the page's own data, so the list is never a copy */
   const keys = require("../test/helpers/extract").loadData().HEROES.map(h => h.k);
@@ -176,7 +204,17 @@ async function main(){
     if(Date.now() - t0 > budget){ skipped++; continue; }
     if(j.engine === "webkit" && !D.webkitBinary()) continue;
     const browser = browsers[j.engine] || (browsers[j.engine] = await D.launch(pw, j.engine));
-    try { finds += await oneGame(D, pw, browser, j.engine, j.game, o, s => console.log(s)); }
+    try {
+      if(o.coach){   /* the coach plays every step against the Steady foe; a seed that does not let it win is tried again (reported) */
+        let won = false; const tried = [];
+        for(let t = 0; t < o.tries && !won; t++){
+          const g = {...j.game, seed: +j.game.seed + t * 7};
+          const f = await oneGame(D, pw, browser, j.engine, g, o, s => { if(g.over === undefined) console.log(s); });
+          tried.push(g.seed); finds += f; won = !!(g.over && g.over.winner === 0); if(f) break;
+        }
+        if(!won && !finds){ finds++; console.log(`FIND  ${j.engine} ${j.game.hero}: the coach did not win on seeds ${tried.join(", ")}`); }
+      } else finds += await oneGame(D, pw, browser, j.engine, j.game, o, s => console.log(s));
+    }
     catch(e){ finds++; console.log(`FIND  ${j.engine} ${j.game.hero}: ${String(e.message).split("\n")[0]}`); }
     games++;
   }

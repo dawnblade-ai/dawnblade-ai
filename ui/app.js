@@ -46,7 +46,7 @@ function fromQuery(search){
   const hero = has(q.get("hero")) ? q.get("hero") : has(last.hero) ? last.hero : cat.list()[0].k;
   const foe = has(q.get("foe")) && q.get("foe") !== hero ? q.get("foe") : has(last.foe) && last.foe !== hero ? last.foe : cat.draw(hero);
   const first = q.get("first") === "1" ? 1 : q.get("first") === "0" ? 0 : (Math.random() < .5 ? 0 : 1);
-  const base = {screen: "f1", hero, foe, first, mode: "hero", game: 0, v: q.get("v") || "phone", peek: q.get("peek") || null, query: null, menu: false};
+  const base = {screen: "f1", hero, foe, first, mode: "hero", game: 0, v: q.get("v") || "phone", peek: q.get("peek") || null, query: null, menu: false, rules: false};
   const sc = q.get("screen");
   if(/^f[1-4]$|^f9$/.test(sc || "")) return {...base, screen: sc};
   if(q.has("hero") || q.has("foe") || q.has("seed") || sc === "table")
@@ -116,18 +116,19 @@ function App(){
   let body;
   switch(s.screen){
     case "table": body = html`<${TableScreen} key=${s.game} query=${s.query} onExit=${to => nav({...to, query: null, menu: false})}/>`; break;
-    case "f2": body = html`<${K.Ways} onBack=${() => go("f1")} onAI=${() => go("f3", {mode: "hero"})}/>`; break;
+    case "f2": body = html`<${K.Ways} onBack=${() => go("f1")} onAI=${() => go("f3", {mode: "hero"})} onRules=${() => nav({rules: true})}/>`; break;
     case "f3": body = html`<${K.Heroes} key=${s.mode + (s.peek || "")} mode=${s.mode} current=${s.mode === "foe" ? s.foe : s.hero} peek=${s.peek}
         onBack=${() => go(s.mode === "foe" ? "f4" : "f2")}
         onPick=${k => s.mode === "foe" ? sit({foe: k, peek: null}) : sit({hero: k, foe: s.foe === k ? cat.draw(k) : s.foe, peek: null})}/>`; break;
     case "f4": body = html`<${K.SitDown} key=${s.hero + s.foe + s.first} hero=${s.hero} foe=${s.foe} first=${s.first} director=${D}
         onBack=${() => go("f1")} onHero=${() => go("f3", {mode: "hero"})} onFoe=${() => go("f3", {mode: "foe"})} onShuffle=${play}/>`; break;
-    case "f9": body = html`<${K.Waiting} v=${s.v} hero=${s.hero} onBack=${() => go("f2")} onLeave=${() => go("f1")} onPlayAI=${() => sit({foe: cat.draw(s.hero)})}/>`; break;
-    default: body = html`<${K.Title} onPlay=${() => sit({foe: cat.draw(s.hero), first: Math.random() < .5 ? 0 : 1})} onHero=${() => go("f3", {mode: "hero"})} onWays=${() => go("f2")}
+    case "f9": body = html`<${K.Waiting} v=${s.v} hero=${s.hero} onBack=${() => go("f2")} onAgain=${() => nav({v: "server"})} onLeave=${() => go("f1")} onPlayAI=${() => sit({foe: cat.draw(s.hero)})}/>`; break;
+    default: body = html`<${K.Title} onPlay=${() => sit({foe: cat.draw(s.hero), first: Math.random() < .5 ? 0 : 1})} onHero=${() => go("f3", {mode: "hero"})} onWays=${() => go("f2")} onRules=${() => nav({rules: true})}
         onGear=${() => nav({menu: true})}/>`;
   }
   if(s.screen === "table") return body;
   return html`<div class="stage fl" data-screen=${s.screen}><${K.Sprite}/>${body}
+    ${s.rules ? html`<${K.Rules} onClose=${() => nav({rules: false})}/>` : null}
     ${s.menu ? html`<${K.Menu} variant="title" director=${D} onClose=${() => nav({menu: false})}/>` : null}</div>`;
 }
 

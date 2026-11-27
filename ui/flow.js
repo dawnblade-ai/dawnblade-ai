@@ -102,7 +102,7 @@ function Title(p){
       </div>
       <div class="cta"><button class="btn" data-tap data-b="play" onClick=${p.onPlay}>Play</button><small>Against an AI hero, drawn by fate</small></div>
       <div class="row3"><button class="link" data-tap data-b="ways" onClick=${p.onWays}>Ways to play</button>
-        <button class="link" aria-disabled="true" style="opacity:.45">Your record</button><button class="link" aria-disabled="true" style="opacity:.45">Learn the rules</button></div>
+        <button class="link" disabled aria-disabled="true" aria-label="Your record, coming soon" data-b="record" style="opacity:.45">Record \u00b7 soon</button><button class="link" data-tap data-b="rules" onClick=${p.onRules}>Learn the rules</button></div>
       <div class="foot">Fan-made · non-profit · no ads, ever</div>
     </div></div>`;
 }
@@ -120,14 +120,14 @@ function Ways(p){
         <span class="pic art hero" style=${"background-size:300%;background-position:50% 17%;box-shadow:0 0 0 2px var(--opp);" + bg(foe && catalog.art(foe.k))}></span>
         <span style="flex:1;min-width:0"><h3>Play an AI hero</h3><p>A real precon, piloted by the computer.</p><span class="tg"><span class="lab" style="color:var(--brass)">Start here · Hero's call on</span></span></span>
         <${Ico} n="next"/></button>
-      <button class="mode" aria-disabled="true" style="opacity:.5" data-b="mode-dummy"><span class="pic"><svg><use href="#fl-m-dummy"/></svg></span>
+      <button class="mode" disabled aria-disabled="true" style="opacity:.5" data-b="mode-dummy"><span class="pic"><svg><use href="#fl-m-dummy"/></svg></span>
         <span style="flex:1;min-width:0"><h3>Train on the Dummy</h3><p>Learn your deck against an iron-armored dummy.</p>${soon("Not at this table yet")}</span></button>
-      <button class="mode" aria-disabled="true" style="opacity:.5" data-b="mode-phones"><span class="pic"><svg><use href="#fl-m-phones"/></svg></span>
+      <button class="mode" disabled aria-disabled="true" style="opacity:.5" data-b="mode-phones"><span class="pic"><svg><use href="#fl-m-phones"/></svg></span>
         <span style="flex:1;min-width:0"><h3>Two phones, one table</h3><p>Share a four-letter code and play a friend.</p>${soon("Not at this table yet")}</span></button>
-      <button class="mode" aria-disabled="true" style="opacity:.5" data-b="mode-online"><span class="pic"><svg><use href="#fl-m-online"/></svg></span>
+      <button class="mode" disabled aria-disabled="true" style="opacity:.5" data-b="mode-online"><span class="pic"><svg><use href="#fl-m-online"/></svg></span>
         <span style="flex:1;min-width:0"><h3>Find an opponent</h3><p>Sit at the server table and climb the ladder.</p>${soon("Not at this table yet")}</span></button>
     </div>
-    <div class="foot"><button class="link" aria-disabled="true" style="opacity:.45"><${Ico} n="book" style="width:20px;height:20px;margin-right:8px"/>New here? Learn the rules in two minutes</button></div>
+    <div class="foot"><button class="link" data-tap data-b="rules" onClick=${p.onRules}><${Ico} n="book" style="width:20px;height:20px;margin-right:8px"/>New here? Learn the rules in two minutes</button></div>
   </div></div>`;
 }
 
@@ -198,7 +198,7 @@ function SitDown(p){
       <div class="slab" ref=${win} data-b="slab"><span class="lab">The coin</span><b>${who}</b></div>
       <div class="namey" style="pointer-events:none"><span class="lab">You</span><b>${firstName(me.hero.n)}</b><i class="bar3"></i><span class="lab">${role(me)}</span></div>
       <span class="swap" style="right:var(--gut);bottom:84px">Tap to change ›</span>
-      <div class="hub"><button class="btn sec dis" aria-disabled="true" aria-label="Change gear" data-b="gear"><${Ico} n="gear"/>Gear</button>
+      <div class="hub"><button class="btn sec dis" disabled aria-disabled="true" aria-label="Change gear, coming soon" data-b="gear"><${Ico} n="gear"/>Soon</button>
         <button class="btn" data-tap data-b="shuffle" onClick=${p.onShuffle}>Shuffle up</button></div>
     </div></div>`;
 }
@@ -272,8 +272,13 @@ function Result(p){
   useEffect(function(){
     var d = p.director, t = null;
     if(phase === "ko" && d){
-      d.enqueue({kind: "ko", side: loser, dmg: 0, from: 0, to: 0, els: {dim: dim.current, sweep: blade.current, result: word.current}});
-      t = setTimeout(function(){ setReady(true); }, 260 + 1020 + 600);
+      /* the game is over and its state is true: whatever the table's announcements still have queued lands now (no motion),
+         so the KO is never told behind a long queue (an unpaced AI finishes a game in one tick) */
+      var cancelled = false;
+      d.tapThrough();
+      d.idle().then(function(){ if(!cancelled) d.enqueue({kind: "ko", side: loser, dmg: 0, from: 0, to: 0, els: {dim: dim.current, sweep: blade.current, result: word.current}}); });
+      t = setTimeout(function(){ setReady(true); }, 400 + 260 + 1020 + 600);
+      return function(){ cancelled = true; clearTimeout(t); };
     } else t = setTimeout(function(){ setReady(true); }, 600);
     return function(){ clearTimeout(t); };
   }, [phase]);
@@ -285,10 +290,26 @@ function Result(p){
         <button class="btn" data-tap data-b="rematch" onClick=${p.onRematch}>Rematch</button></div></div></div>`;
   return html`<div class="scr f7" data-b="result-ko"><div class="frame">
     ${phase === "ko" ? html`<div class="veil" ref=${dim} style="background:#000;opacity:0"></div>` : html`<div class="veil" ref=${veil}></div>`}
-    <div class="word" ref=${word} data-b="word"><b>Dawn</b><b>break</b><span>${wname}</span><i class=${me ? "" : "o"}></i></div>
+    <div class="word" ref=${word} data-b="word" style=${phase === "ko" && p.director ? "opacity:0" : ""}><b>Dawn</b><b>break</b><span>${wname}</span><i class=${me ? "" : "o"}></i></div>
     <div class="blade" ref=${blade} data-b="blade" style=${phase === "ko" ? "opacity:0" : ""}></div>
     ${tapReady ? html`<span class="tapon">Tap to continue</span><button class="tapfull" aria-label="Continue" data-tap data-b="continue" onClick=${function(){ setPhase("pad"); }}></button>` : null}
   </div></div>`;
+}
+
+/* ============================================================
+   Learn the rules: the keywords you will meet, as the Comprehensive Rules write them (data/crkw.js, pinned verbatim by
+   tools/pin-crkw.js). Nothing of ours but the heading: each row is the CR number, the keyword and its defining sentence.
+   ============================================================ */
+function Rules(p){
+  var rows = (root.DAWN_CRKW && root.DAWN_CRKW.rows) || [];
+  return html`<div class="scr f8" data-b="rules"><div class="frame"><div class="scrim" onClick=${p.onClose}></div>
+    <div class="sheet mn" data-b="rules-sheet">
+      <div class="mh"><h2>The rules</h2><span class="chip br">Keywords</span><button class="ib dk" aria-label="Close" data-tap data-b="rules-close" onClick=${p.onClose}><${Ico} n="x"/></button></div>
+      <div class="mb rl-list" data-b="rules-list">
+        <p class="rl-intro">The keywords you will meet, as the Comprehensive Rules write them.</p>
+        ${rows.map(function(r){ return html`<div class="rl"><b>${r.n}</b><i>CR ${r.r}</i><p>${r.t}</p></div>`; })}
+        ${rows.length ? null : html`<p class="rl-intro">The rules are not loaded.</p>`}
+      </div></div></div></div>`;
 }
 
 /* ============================================================
@@ -307,7 +328,7 @@ function Waiting(p){
   var body = null;
   if(v === "phone") body = html`<div class="wr" data-b="waiting-phone">${back}<div class="stack">${sun()}<div class="h"><h1>Waiting for your friend</h1><p>Tell them this code, or send it from your phone.</p></div>
       <div class="codes">${code.split("").map(function(c){ return html`<b>${c}</b>`; })}</div>${seats("Waiting")}</div>
-      <div class="btns"><button class="btn" data-tap data-b="share"><${Ico} n="share" style="width:22px;height:22px"/>Share the code</button></div></div>`;
+      <div class="btns"><button class="btn" data-tap data-b="share" onClick=${function(){ var t = "Join my Dawnblade table: " + code; try { if(root.navigator.share) root.navigator.share({text: t}); else root.navigator.clipboard.writeText(t); } catch(e){} }}><${Ico} n="share" style="width:22px;height:22px"/>Share the code</button></div></div>`;
   else if(v === "server") body = html`<div class="wr" style="--btnh:138px" data-b="waiting-server">${back}<div class="stack">${sun()}<div class="h"><h1>Finding you a table</h1><p>The usual wait is about 20 seconds.</p></div>${seats("Looking")}</div>
       <div class="btns"><button class="btn" data-tap data-b="play-ai" onClick=${p.onPlayAI}>Play the AI while you wait</button><button class="btn sec" data-tap data-b="stop" onClick=${p.onBack}>Stop looking</button></div></div>`;
   else if(v === "fail") body = html`<div class="wr" style="--btnh:138px" data-b="waiting-fail">${back}<div class="stack">${sun(true)}<div class="h"><h1>We could not reach the server</h1><p>Check your connection. Nothing is lost, and the AI is always at the table.</p></div></div>
@@ -317,6 +338,6 @@ function Waiting(p){
   return html`<div class="scr f9" data-b="waiting">${v === "quiet" ? body : html`<div class="bg" style="position:absolute;inset:0;background:var(--mat-bg)"></div><div class="frame">${body}</div>`}</div>`;
 }
 
-return {Sprite: Sprite, Title: Title, Ways: Ways, Heroes: Heroes, SitDown: SitDown, Menu: Menu, Result: Result, Waiting: Waiting, Thinking: Thinking,
+return {Sprite: Sprite, Title: Title, Ways: Ways, Heroes: Heroes, SitDown: SitDown, Menu: Menu, Result: Result, Rules: Rules, Waiting: Waiting, Thinking: Thinking,
         catalog: catalog, store: store, readLast: readLast, firstName: firstName, K_SPEED: K_SPEED, K_COACH: K_COACH};
 });

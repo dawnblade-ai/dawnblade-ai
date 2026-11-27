@@ -741,8 +741,8 @@ async function runPlay(pw, browser, engine, opts){
     if(opts.throttle){ const cdp = await a.context.newCDPSession(P); await cdp.send("Emulation.setCPUThrottlingRate", { rate: opts.throttle }); }
     await P.waitForSelector(".stage[data-state] .bout", { timeout: 15000 }); await P.evaluate(() => { window.__fr.on = true; try { DawnUIApp.session().onStep(e => window.__fr.marks.push([Math.round(performance.now()), "step s" + e.seat + " " + e.action.t])); new MutationObserver(m => window.__fr.marks.push([Math.round(performance.now()), "dom " + m.map(x => [...x.addedNodes].map(n => n.className).join("|")).join(",").slice(0, 60)])).observe(document.querySelector(".stage[data-state]"), { childList: true }); } catch(e){} });
     await P.waitForSelector(".stage .bout", { timeout: 15000 });
-    const lives = [], did = { defended: 0, arsenal: 0, reaction: 0, sheets: 0 }; let refusals = 0, taps = 0, lastTurn = 0, idle = 0, started = Date.now();
-    const snap = () => P.evaluate(() => { const s = DawnUIApp.session(), st = s.state(); return { turn: st.turn, step: st.step, phase: st.phase, over: !!st.over, hp: [st.sides[0].hp, st.sides[1].hp], busy: s.local.busy(), tp: st.turnPlayer }; });
+    const lives = [], did = { defended: 0, arsenal: 0, reaction: 0, sheets: 0 }; const trace = []; let refusals = 0, taps = 0, lastTurn = 0, idle = 0, same = 0, lastSeq = -1, started = Date.now();
+    const snap = () => P.evaluate(() => { const s = DawnUIApp.session(), st = s.state(); return { turn: st.turn, step: st.step, phase: st.phase, over: !!st.over, hp: [st.sides[0].hp, st.sides[1].hp], busy: s.local.busy(), tp: st.turnPlayer, seq: s.local.seq() }; });
     const click = async loc => { try { await loc.click({ timeout: 1500 }); taps++; return true; } catch(e){ return false; } };
     let s0 = await snap(); lives.push(s0.hp);
     for(let step = 0; step < 12000; step++){
@@ -750,11 +750,17 @@ async function runPlay(pw, browser, engine, opts){
       if(s.hp[0] !== lives[lives.length - 1][0] || s.hp[1] !== lives[lives.length - 1][1]) lives.push(s.hp);
       lastTurn = s.turn;
       if(s.over || s.turn > turns * 2) break;
-      if(Date.now() - started > 420000){
+      same = s.seq === lastSeq && !s.busy ? same + 1 : 0; lastSeq = s.seq;
+      if(same > 250 || Date.now() - started > 420000){
         const why = await P.evaluate(() => { const ss = DawnUIApp.session(), st = ss.state(), J = DawnJudge; return JSON.stringify({ turn: st.turn, step: st.step, phase: st.phase, holder: J.waitingOn(st), prompt: !!st.prompt && st.prompt.tag, pending: st.pending && st.pending.kind, busy: ss.local.busy(),
-          primary: (document.querySelector('.hub [data-b="primary"]') || {}).textContent, dis: (document.querySelector('.hub [data-b="primary"]') || {}).disabled, ask: (document.querySelector(".centre .ask") || {}).textContent, sheet: !!document.querySelector(".sh-sheet"), options: !!document.querySelector(".options"), events: ss.events().slice(-3) }); });
-        res.bad.push("play: gave up after 420 s at turn " + s.turn + " " + why); break; }
-      if(s.busy || s.tp === 1 && !(await P.locator(".options, .sh-sheet:not(.waiting)").count())){
+          primary: (document.querySelector('.hub [data-b="primary"]') || {}).textContent, dis: (document.querySelector('.hub [data-b="primary"]') || {}).disabled, ask: (document.querySelector(".centre .ask") || {}).textContent, sheet: !!document.querySelector(".sh-sheet"), options: !!document.querySelector(".options"), events: ss.events().slice(-3), state: (document.querySelector(".stage[data-state]") || {}).dataset && document.querySelector(".stage[data-state]").dataset.state,
+          hand: [...document.querySelectorAll(".handrow .cd")].map(e => e.getAttribute("aria-label") + ":" + e.className.replace(/cd hand ?/, "")), pend: st.pending && { need: st.pending.need, card: st.pending.card && st.pending.card.name }, side: { res: st.sides[0].res, paySel: st.sides[0].paySel, hand: st.sides[0].hand.map(c => c.name + "/" + c.pitch) } }); });
+        let probe = "";
+        try { await P.locator(".handrow .cd.ready").first().click({ timeout: 2000 }); await P.waitForTimeout(150);
+          probe = JSON.stringify(await P.evaluate(() => ({ paySel: DawnUIApp.session().state().sides[0].paySel, reason: (document.querySelector(".peek .reason") || {}).textContent, label: (document.querySelector('.hub [data-b="primary"]') || {}).textContent, ev: DawnUIApp.session().events().slice(-2) }))); } catch(e){ probe = "click failed: " + String(e.message).split("\n")[0]; }
+        res.bad.push((same > 250 ? "play: STUCK (no engine step for 250 taps/polls) at turn " : "play: gave up after 420 s at turn ") + s.turn + " " + why + " PROBE " + probe + " TRACE " + trace.join(" ; ")); break; }
+      const paying = (await P.locator(".stage[data-state]").getAttribute("data-state")) === "t3";   /* paying for a reaction on THEIR turn is ours to finish */
+      if(!paying && (s.busy || s.tp === 1 && !(await P.locator(".options, .sh-sheet:not(.waiting)").count()))){
         /* the AI seat's turn: wait a tick, unless something is asked of us (a defend step / sheet) */
         const ask = await P.locator(".stage .ask").count(), can = !(await P.locator('.hub [data-b="primary"]').isDisabled());
         if(!ask && !can && !(await P.locator(".options, .sh-sheet:not(.waiting)").count())){ await P.waitForTimeout(40); continue; }
@@ -765,6 +771,7 @@ async function runPlay(pw, browser, engine, opts){
       if(await P.locator("[data-b=sheet]").count() && await P.locator(".inspect").count()){ await click(P.locator('.hub [data-b="primary"]')); continue; }
       const st = await P.locator(".stage[data-state]").getAttribute("data-state");
       const label = await primaryText(P), dis = await P.locator('.hub [data-b="primary"]').isDisabled();
+      trace.push([s.seq, st, label, dis].join("|")); if(trace.length > 8) trace.shift();
       const ready = P.locator(".handrow .cd.ready").first();
       if(st === "t3"){                                   /* paying: pitch until paid, else cancel */
         if(!dis){ await click(P.locator('.hub [data-b="primary"]')); continue; }

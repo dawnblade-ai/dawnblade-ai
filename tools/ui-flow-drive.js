@@ -51,6 +51,9 @@ const SCREENS = [
   { id: "F6 pad", mock: "flow-6-pad.html", app: TABLE, root: ".f6", steps: ["pad"], sel: S(".scrim", ".paper", ".ph h3", ".ph p", ".ib.pen", ".cols", ".pnote") },
   { id: "F7 KO frame", mock: "flow-7-result.html?v=lose", app: TABLE, root: ".f7", steps: ["menu", "concede"], settle: 800, sel: S(".veil", ".word", ".word b", ".word span", ".tapon", ".tapfull"),
     skip: { ".word": "the KO word's slam (scale) has settled", ".blade": "" } },
+  /* the player WINS: seat 0 plays the coach's move every step against the Steady foe (?search=0) until a seed lets it win */
+  { id: "F7 KO win", mock: "flow-7-result.html?v=ko", app: "?hero=iyslander&foe=viserai&first=0&pace=0&search=0", root: ".f7", coachwin: true, settle: 400,
+    sel: S(".veil", ".word", ".word b", ".word span", ".word i", ".tapon", ".tapfull"), skip: { ".blade": "" } },
   { id: "F7 result pad", mock: "flow-7-result.html?v=pad", app: TABLE, root: ".f7", steps: ["menu", "concede", "continue"], settle: 700, sel: S(".paper.res", ".paper .ph h3", ".gg", ".acts2 .btn") }
 ];
 
@@ -126,7 +129,20 @@ async function boxesFor(pw, browser, engine, vp, S_, o){
   const M = await mock.page.evaluate(MEASURE, { root: S_.root, sel });
   await mock.context.close();
   const a = await openPage(pw, browser, engine, vp, PLAY + S_.app, errors);
-  try { await settle(a.page, 200); await drive(a.page, S_.steps); await settle(a.page, S_.settle || 700); } catch(e){ bad.push("could not reach the screen: " + e.message.split("\n")[0]); }
+  try {
+    if(S_.coachwin){
+      const won = await coachWin(a.page, S_.app, bad, diffs);
+      if(!won) throw new Error("no seed let the coach win");
+      /* the blade of dawn crosses (MOTION 3.18): its opacity is seen above 0 while the beat plays */
+      const blade = await a.page.evaluate(() => new Promise(res => { let max = 0, n = 0; const t = setInterval(() => { const b = document.querySelector('[data-b="blade"]'); if(b){ max = Math.max(max, +getComputedStyle(b).opacity || 0); if(b.getAnimations && b.getAnimations().length) max = Math.max(max, .5); } if(++n > 60){ clearInterval(t); res(max); } }, 40); }));
+      if(!(blade > 0)) bad.push("the blade of dawn never showed (opacity " + blade + ")");
+      await a.page.waitForSelector('[data-b="continue"]', { timeout: 6000 });
+      const words = await a.page.evaluate(() => ({ b: [...document.querySelectorAll('[data-b="word"] b')].map(e => e.textContent.trim().toUpperCase()), span: (document.querySelector('[data-b="word"] span') || {}).textContent }));
+      if(words.b.join("|") !== "DAWN|BREAK") bad.push("the KO word is " + words.b.join("|") + ", not DAWN|BREAK (Q11)");
+      if(!/^you win$/i.test(words.span || "")) bad.push('the win slab says "' + words.span + '"');
+    } else { await settle(a.page, 200); await drive(a.page, S_.steps); }
+    await settle(a.page, S_.settle || 700);
+  } catch(e){ bad.push("could not reach the screen: " + e.message.split("\n")[0]); }
   const L = await a.page.evaluate(MEASURE, { root: S_.root, sel });
   if(o.shots){ fs.mkdirSync(o.shots, { recursive: true }); await a.page.screenshot({ path: path.join(o.shots, `${S_.id.replace(/\W+/g, "-")}-${engine}-${vp[0]}.png`) }); }
   const phone = await a.page.evaluate(PHONE, S_.root);
@@ -150,6 +166,50 @@ async function boxesFor(pw, browser, engine, vp, S_, o){
   return { bad, diffs, worst, worstName, n };
 }
 
+
+/* the coach plays seat 0 to the end, in the page, against the Steady foe; the first seed that WINS is kept (the page stays on it) */
+const COACH_LOOP = () => { const s = window.DawnUIApp.session(); for(let i = 0; i < 4000; i++){ const st = s.state(); if(st.over) return st.over; const a = s.suggest(); if(!a) return { stuck: "no action" }; const why = s.submit(a); if(why) return { stuck: "refused: " + why }; } return { stuck: "cap" }; };
+async function coachWin(page, app, bad, diffs, seeds){
+  const tried = [];
+  for(const seed of seeds || [1, 2, 3, 4, 5, 6, 7, 8]){
+    await page.goto(PLAY + app + "&seed=" + seed);
+    await page.waitForSelector('[data-b="bout"]', { timeout: 15000 });
+    const over = await page.evaluate(COACH_LOOP);
+    tried.push(seed + (over.winner === 0 ? " WON" : over.stuck ? " (" + over.stuck + ")" : " lost/drew"));
+    if(over.winner === 0){ diffs.push("F7 KO win: the coach won on seed " + seed + "; tried " + tried.join(", ")); return true; }
+  }
+  bad.push("the coach did not win on any seed: " + tried.join(", "));
+  return false;
+}
+
+/* DEAD TAPS: every enabled control on the flow screens must DO something (the app's markup or the address changes) */
+const FLOW_URLS = ["?screen=f1", "?screen=f2", "?screen=f3", "?screen=f3&peek=iyslander", "?screen=f4", "?screen=f9&v=server", "?screen=f9&v=fail"];
+const CONTROLS = () => [...document.querySelectorAll("button, a[href], [data-tap]")].filter(e => !e.disabled && e.getAttribute("aria-disabled") !== "true" && !e.closest(".fl-sprite") && e.getClientRects().length && getComputedStyle(e).pointerEvents !== "none")
+  .map(e => e.getAttribute("data-b") || e.textContent.trim().slice(0, 20));
+const SIG = () => location.href + "|" + document.getElementById("app").innerHTML.length + "|" + document.querySelectorAll("#app *").length;
+async function deadTaps(pw, browser, engine, vp){
+  const bad = [], errors = []; let n = 0;
+  for(const q of FLOW_URLS){
+    const probe = await openPage(pw, browser, engine, vp, PLAY + q, errors); await settle(probe.page, 300);
+    const names = await probe.page.evaluate(CONTROLS); await probe.context.close();
+    const take = q === "?screen=f3" ? names.filter((_, i) => i < 3 || i === names.length - 1) : names;   /* a sample of the 17 tiles */
+    for(const name of take){
+      if(name === "share") continue;   /* shares through the OS: nothing on the page changes */
+      const a = await openPage(pw, browser, engine, vp, PLAY + q, errors); await settle(a.page, 300);
+      const idx = (await a.page.evaluate(CONTROLS)).indexOf(name);
+      const before = await a.page.evaluate(SIG);
+      await a.page.evaluate(i => { const all = [...document.querySelectorAll("button, a[href], [data-tap]")].filter(e => !e.disabled && e.getAttribute("aria-disabled") !== "true" && !e.closest(".fl-sprite") && e.getClientRects().length && getComputedStyle(e).pointerEvents !== "none"); all[i].click(); }, idx);
+      await a.page.waitForTimeout(250);
+      const after = await a.page.evaluate(SIG).catch(() => "navigated");
+      n++;
+      if(before === after) bad.push(`${q} "${name}" is enabled and does nothing`);
+      await a.context.close();
+    }
+  }
+  errors.forEach(e => bad.push(e));
+  return { bad, n };
+}
+
 /* ---------- the journey: title -> table -> result -> title, on one page ---------- */
 async function journey(pw, browser, engine, vp, o){
   const errors = [], bad = [], steps = [];
@@ -161,6 +221,9 @@ async function journey(pw, browser, engine, vp, o){
     await settle(page, 300);
     await need(".f1", "the title opens"); await sh("1-title");
     await tapB(page, "gear"); await need('[data-b="menu-sheet"]', "the gear opens the menu"); await tapB(page, "menu-close");
+    await tapB(page, "rules"); await need('[data-b="rules-list"]', "Learn the rules opens the CR's keywords");
+    if(!(await page.evaluate(() => document.querySelectorAll(".rl").length > 10))) bad.push("the rules sheet lists too few keywords");
+    await tapB(page, "rules-close");
     await tapB(page, "play"); await need(".f4", "PLAY goes to the sit-down (Q12)"); await settle(page, 2600); await sh("2-sitdown");
     await tapB(page, "shuffle"); await need('[data-b="bout"]', "SHUFFLE UP mounts a table"); await settle(page, 600); await sh("3-table");
     await tapB(page, "hub-right"); await need('[data-b="pad"]', "the pad button opens the pad"); await tapB(page, "pad-close");
@@ -201,6 +264,12 @@ async function main(){
         table.push({ engine, id: sc.id, vp, ...r });
         console.log(`${r.bad.length ? "FAIL" : "PASS"}  ${engine.padEnd(8)} ${sc.id.padEnd(14)} ${vp[0]}x${vp[1]}  ${r.n} boxes, worst ${r.worst.toFixed(1)}px${r.worstName ? " (" + r.worstName + ")" : ""}`);
         r.bad.slice(0, verbose ? 999 : 6).forEach(b => console.log("        " + b));
+      }
+      if(!only || only === "dead") {
+        const r = await deadTaps(pw, browser, engine, [393, 660]);
+        if(r.bad.length) failed = true;
+        console.log(`${r.bad.length ? "FAIL" : "PASS"}  ${engine.padEnd(8)} ${"dead taps".padEnd(14)} 393x660  ${r.n} controls tapped, each one does something`);
+        r.bad.slice(0, 12).forEach(b => console.log("        " + b));
       }
       if(!only || only === "journey") for(const vp of VIEWPORTS){
         const r = await journey(pw, browser, engine, vp, o);

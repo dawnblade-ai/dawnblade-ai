@@ -415,3 +415,12 @@ html[data-band=compact] .stage.fl .f1 .tag{display:none}
 .stage.fl .failbox{margin:auto;max-width:300px;text-align:center}
 /* the table's own `.hit` (the HIT FOR column) shares a class name with F4's hit areas: this screen's rules win */
 .stage.fl .f4 .hit{left:0;right:auto;width:100%;display:block;padding:0;border:0;background:none}
+
+/* Learn the rules (a list of the CR's own keyword rows) */
+.stage.fl .rl-list{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:0 16px 24px;max-height:calc(100% - 64px)}
+.stage.fl .rl-intro{font:var(--t-small);color:var(--ink-1);margin:4px 0 10px}
+.stage.fl .rl{padding:10px 0;border-top:1px solid var(--rail)}
+.stage.fl .rl b{font:var(--t-title);letter-spacing:.04em;text-transform:uppercase;margin-right:8px}
+.stage.fl .rl i{font:var(--t-label);font-style:normal;letter-spacing:var(--track-caps);color:var(--brass-hi)}
+.stage.fl .rl p{margin-top:4px;font:var(--t-small);color:var(--ink-0)}
+.stage.fl button:disabled{cursor:default}
