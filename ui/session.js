@@ -13,6 +13,21 @@
    AI seat is DawnLocal.createLocal with DawnSparring.act(search:true). Namespaced engine access only.
 
    URL (reproducible drives):  ?hero=<k>&foe=<k>&seed=<s>&first=0|1&pace=<ms>  (pace=0: the AI seat runs unpaced).
+   THE SEATING SEAM (F4, the coin) AND REMATCH (F7) — for the flow:
+     DawnUISession.coinCall(seed, env, choice?) -> {winner: 0|1, first: 0|1|null, needsChoice}
+         The local table's own rule (index.html Pregame): a COIN off the match seed (DawnRNG sub-stream seed+":rps") picks the winner
+         (0 = the person); the WINNER CHOOSES who goes first (DawnRPS.rpsSeat); the AI as winner always goes first (stated, not a coin).
+         needsChoice: the person won and gave no `choice` ("first"|"second"); show the choice, then call it again with it.
+         openLocal({query, first: 0|1}) takes the result's `first` (default, unchanged: ?first=1 or seat 0).
+     local / Dummy:  s.rematch({seed?, choice?, first?}) -> a NEW surface (same heroes, a fresh seed, first by the coin; `choice`
+         defaults to "first" when the person wins it); it disposes s. The result carries .seating (the call). Not started: call start().
+     server / room:  openNetworked option `manual: {throw: true, seat: true}` pauses the lobby at the person's own throw / seating
+         call (default: automatic, as before). Then  s.awaiting() -> null|"throw"|"seat",  s.onAwait(fn) -> unsub,
+         s.throwNow("rock"|"paper"|"scissors"), s.callSeating("first"|"second") (each returns null or a reason), and s.coin() ->
+         {winner: seat|null, first: seat|null, throws} read from the lobby (winner/first are null until decided).
+     server only:  s.rematch() -> {want, table, mine, theirs}|null, s.onRematch(fn), s.askRematch(cancel) (the referee decides; both
+         must ask; rejects with .why), s.again() -> Promise of a NEW started surface sat at the rematch table (rejects without one).
+         A two-phone ROOM has no rematch protocol: rematch() is null and again() rejects (open a new table).
    With no hero/foe in the URL the last choice (localStorage, try/catch) is used, else the first two heroes.
    ============================================================ */
 (function(root, factory){
@@ -26,6 +41,23 @@ const DUMMY = "dummy";
 /* THE AI SEAT AT A HUMAN PACE (MOTION.md 4.2): one action a tick; a pass is quick, anything announced waits out its beat
    (the slab and the glimpse, ~1.7 s) plus the next think. A function of the action's kind only, never of a clock or a search. */
 const aiPace = (prev, a) => !a ? 500 : a.t === "pass" ? 110 : a.t === "defend" ? 900 : 2000;
+
+/* the page's own storage seam (index.html `store`): the same "dawnblade." keys, so the ?server= door's remembered choice is shared */
+function pageStore(env){
+  return {
+    get(k, f){ try { const v = env.localStorage.getItem("dawnblade." + k); return v == null ? f : JSON.parse(v); } catch(e){ return f; } },
+    set(k, v){ try { env.localStorage.setItem("dawnblade." + k, JSON.stringify(v)); } catch(e){} }
+  };
+}
+
+/* THE COIN, THEN THE WINNER'S CALL (index.html's Pregame, one rule): see the header */
+function coinCall(seed, env, choice){
+  env = env || root;
+  const winner = env.DawnRNG.int(env.DawnRNG.make(env.DawnRNG.seedFrom(String(seed == null ? 0 : seed) + ":rps")), 2).v;
+  if(winner === 1) return {winner, first: 1, needsChoice: false};
+  const first = choice ? env.DawnRPS.rpsSeat(0, choice) : null;
+  return {winner, first, needsChoice: first == null};
+}
 
 function parseQuery(search){
   const q = {};
@@ -177,6 +209,11 @@ function openNetworked(o, env){
   let phase = "connecting", seedH = null, openK = null, sentSeed = false, reclaimed = o.how === "server-reclaim", lastState = null, dead = false;
   const rand = o.rand;
   const queue = [];   /* net frames that beat the session */
+  /* THE COIN'S SEAM (header): `manual` pauses the lobby at the person's own throw / seating call */
+  const manual = o.manual || {}, awaits = new Set(), rmFns = [];
+  let waiting = null;
+  const holdFor = x => { if(waiting === x) return; waiting = x; awaits.forEach(fn => fn(x)); };
+  const done = () => { if(waiting != null){ waiting = null; awaits.forEach(fn => fn(null)); } };
   const setPhase = p => { if(phase === p) return; phase = p; phs.forEach(fn => fn(p)); };
   const emit = e => { events.push(e); evs.forEach(fn => fn(e)); };
   const fault = why => { emit({t: "fault", reason: why}); setPhase("fault"); };
@@ -205,12 +242,16 @@ function openNetworked(o, env){
     if(st === "hero" && lob.heroes[me] == null) return say(L.hero(me, o.hero));
     if(st === "throw"){
       if(lob.seals[me] == null){
+        if(manual.throw){ holdFor("throw"); return; }
         const pick = o.throwPick ? o.throwPick(lob.round) : THROWS[Math.floor((rand ? rand() : Math.random()) * 3) % 3];
         const k = L.throwSeal(me, lob.round, pick, rand); openK = k.open; return say(k.seal);
       }
       if(openK && openK.round === lob.round && L.canOpen(lob, me)){ const k = openK; openK = null; return say(k); }
     }
-    if(st === "seat" && lob.winner === me && lob.first == null) return say(L.seating(me, o.chooser || "first"));
+    if(st === "seat" && lob.winner === me && lob.first == null){
+      if(manual.seat){ holdFor("seat"); return; }
+      return say(L.seating(me, o.chooser || "first"));
+    }
     if(st === "board" && lob.boards[me] == null){
       const b = env.DawnBuild.defaultBoard(heroes[o.hero], decks[o.hero], db);
       return say(L.sideboard(me, b.gearIdx, b.cuts || {}));
@@ -278,6 +319,28 @@ function openNetworked(o, env){
     suggest: () => sess ? env.DawnSparring.act(sess.state(), seat, {search: true}) : null,
     events: () => events.slice(), onEvent: fn => { evs.add(fn); return () => evs.delete(fn); },
     heroArt: i => null,
+    awaiting: () => waiting, onAwait: fn => { awaits.add(fn); return () => awaits.delete(fn); },
+    throwNow(pick){
+      if(waiting !== "throw") return "not waiting on a throw";
+      if(THROWS.indexOf(pick) < 0) return "a throw is rock, paper or scissors";
+      done(); const k = L.throwSeal(seat, lob.round, pick, rand); openK = k.open; say(k.seal); return null;
+    },
+    callSeating(choice){
+      if(waiting !== "seat") return "not waiting on the seating call";
+      if(choice !== "first" && choice !== "second") return "first or second";
+      done(); say(L.seating(seat, choice)); return null;
+    },
+    coin: () => lob ? {winner: lob.winner == null ? null : lob.winner, first: lob.first == null ? null : lob.first, throws: lob.throws ? lob.throws.slice() : []} : null,
+    /* REMATCH — a server table only (the referee opens a new table once both ask); a room has no protocol for it */
+    rematch: () => ch && ch.rematch ? ch.rematch() : null,
+    onRematch(fn){ if(ch && ch.onRematch) return ch.onRematch(fn); rmFns.push(fn); return () => { const i = rmFns.indexOf(fn); if(i >= 0) rmFns.splice(i, 1); }; },
+    askRematch(cancel){ return ch && ch.askRematch ? ch.askRematch(cancel) : Promise.reject(Object.assign(new Error("no rematch here"), {why: "no-rematch"})); },
+    async again(){
+      const r = surface.rematch();
+      if(!server || !r || !r.table) throw Object.assign(new Error("no rematch table"), {why: "no-rematch"});
+      surface.dispose();
+      return openNetworked({...o, how: "server-join", code: r.table}, env).start();
+    },
     status: () => sess ? sess.status() : phase,
     session: () => sess,
     /* open the channel and begin; resolves with the surface (rejects with the channel's own error: .why) */
@@ -289,6 +352,7 @@ function openNetworked(o, env){
       if(server){
         const ST = env.DawnServerTable, f = o.how === "server-create" ? ST.startTable : o.how === "server-reclaim" ? ST.reclaim : ST.sitAt;
         ch = await f(common);
+        rmFns.splice(0).forEach(fn => ch.onRematch && ch.onRematch(fn));
         ch.listen(onFrame);
       } else {
         ch = await env.DawnRoom.open({code: o.code, host, ...(o.Peer ? {Peer: o.Peer} : {}), onStatus: o.onStatus});
@@ -311,7 +375,9 @@ function modes(env){
   return {
     local: has("DawnLocal") && has("DawnSparring"),
     dummy: has("DawnLocal") && has("DawnSparring") && !!env.DUMMY_DECK && !!env.DUMMY_GEAR,
-    server: has("DawnServerTable") && has("DawnLobby") && has("DawnNet") && !!(env.SERVER_TABLE && env.SERVER_TABLE.on === true),
+    /* the ?server= door, read the way index.html does: this phone's remembered choice beats the shipped switch */
+    server: has("DawnServerTable") && has("DawnLobby") && has("DawnNet") && !!env.SERVER_TABLE &&
+            env.DawnServerTable.doorOpen(env.DawnServerTable.doorChoice(pageStore(env), env.location && env.location.search), env.SERVER_TABLE.on),
     room: has("DawnRoom") && has("DawnLobby") && has("DawnNet")
   };
 }
@@ -320,6 +386,7 @@ function modes(env){
 function openLocal(opts, env){
   env = env || root;
   const pick = choose(opts && opts.query ? opts.query : parseQuery(env.location && env.location.search), env.HEROES, readLast());
+  if(opts && (opts.first === 0 || opts.first === 1)) pick.first = opts.first;
   const dealt = deal(pick, env);
   writeLast({hero: pick.hero, foe: pick.foe});
   const subs = new Set(), steps = new Set(), evs = new Set(), events = [];
@@ -340,7 +407,7 @@ function openLocal(opts, env){
     onEvent: e => { events.push(e); evs.forEach(fn => fn(e)); },
     onState: st => subs.forEach(fn => fn(st))
   });
-  return {
+  const surface = {
     seat, pick, dummy: pick.foe === DUMMY,
     names: dealt.names, heroKeys: dealt.heroKeys,
     state: () => local.state(),
@@ -356,11 +423,24 @@ function openLocal(opts, env){
     events: () => events.slice(),
     onEvent: fn => { evs.add(fn); return () => evs.delete(fn); },
     heroArt: i => dealt.art[i],
+    /* REMATCH: the same heroes, a fresh seed, the first turn by the coin and the winner's call (the AI winner always goes first) */
+    rematch(o2){
+      o2 = o2 || {};
+      const seed = o2.seed != null ? String(o2.seed) : String(Math.floor(Math.random() * 1e9));
+      const call = coinCall(seed, env, o2.choice || "first");
+      const base = opts && opts.query ? opts.query : parseQuery(env.location && env.location.search);
+      const first = o2.first === 0 || o2.first === 1 ? o2.first : call.first;
+      surface.dispose();
+      const next = openLocal({query: {...base, hero: pick.hero, foe: pick.foe, seed}, first}, env);
+      next.seating = call;
+      return next;
+    },
     start: () => { if(brain) brain.request(local.state(), 1 - seat); local.start(); },
     dispose: () => { if(brain) brain.dispose(); local.dispose(); },
     local
   };
+  return surface;
 }
 
-return {openLocal, openNetworked, modes, DUMMY, makeBrain, choose, parseQuery, deal, aiPace, LAST_KEY};
+return {openLocal, openNetworked, modes, coinCall, pageStore, DUMMY, makeBrain, choose, parseQuery, deal, aiPace, LAST_KEY};
 });

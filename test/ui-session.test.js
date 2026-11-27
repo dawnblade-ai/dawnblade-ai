@@ -14,7 +14,7 @@ const {dealLikeThePage} = require("./helpers/pagedeal.js");
 const W = loadData();
 const E = {};
 for(const [k, f] of Object.entries({DawnCards: "cards", DawnGame: "game", DawnBuild: "build", DawnJudge: "judge", DawnSparring: "sparring", DawnLocal: "local",
-  DawnView: "view", DawnLobby: "lobby", DawnNet: "net", DawnWire: "wire", DawnInvariants: "invariants", DawnServerTable: "servertable", DawnRoom: "room"})) E[k] = require("../engine/" + f + ".js");
+  DawnView: "view", DawnLobby: "lobby", DawnNet: "net", DawnWire: "wire", DawnInvariants: "invariants", DawnServerTable: "servertable", DawnRoom: "room", DawnRNG: "rng", DawnRPS: "rps"})) E[k] = require("../engine/" + f + ".js");
 const env = {...W, ...E, DAWN_POOL: require("../data/pool.js")};
 const BUILD = "ui-session-drill";
 const H = ["iyslander", "viserai"].filter(k => W.HEROES.some(h => h.k === k));
@@ -156,5 +156,125 @@ test("two phones: a room host and guest negotiate the lobby, deal, play 60 actio
   assert.ok(acts >= 30, "played " + acts);
   for(const i of [0, 1]) assert.strictEqual(A.view().sides[i].hp, B.view().sides[i].hp);
   assert.deepStrictEqual(A.events().concat(B.events()).filter(e => e.t === "refused" || e.t === "fault"), []);
+  A.dispose(); B.dispose();
+});
+
+/* ---- the coin, rematch, the door ---- */
+test("seating(): the coin off the seed, the winner chooses, the AI winner always goes first", () => {
+  let p = null, a = null;
+  for(let n = 0; n < 40 && !(p && a); n++){ const c = S.coinCall("coin" + n, env); if(c.winner === 0) p = p || "coin" + n; else a = a || "coin" + n; }
+  assert.ok(p && a, "both coin sides occur");
+  assert.deepStrictEqual(S.coinCall(p, env), {winner: 0, first: null, needsChoice: true});
+  assert.strictEqual(S.coinCall(p, env, "first").first, 0);
+  assert.strictEqual(S.coinCall(p, env, "second").first, 1);
+  assert.deepStrictEqual(S.coinCall(a, env), {winner: 1, first: 1, needsChoice: false});
+  assert.deepStrictEqual(S.coinCall(a, env, "second"), {winner: 1, first: 1, needsChoice: false}, "the AI's call is a rule, not the person's choice");
+  assert.deepStrictEqual(S.coinCall(p, env), S.coinCall(p, env), "reproducible from the seed");
+  /* openLocal takes the call */
+  assert.strictEqual(S.openLocal({query: {hero: H[0], foe: H[1], seed: "f1", pace: "0"}, first: 1}, env).state().turnPlayer, 1);
+});
+
+for(const foe of ["hero", "dummy"]){
+  test("local rematch (" + foe + "): same heroes, a fresh seed, the coin's first turn; the old table is disposed", () => {
+    const s = S.openLocal({query: {hero: H[0], foe: foe === "dummy" ? "dummy" : H[1], seed: "r1", pace: "0"}}, env);
+    const r = s.rematch({seed: "r2", choice: "second"});
+    assert.strictEqual(r.pick.seed, "r2"); assert.notStrictEqual(r.pick.seed, s.pick.seed);
+    assert.strictEqual(r.pick.hero, s.pick.hero); assert.strictEqual(r.pick.foe, s.pick.foe);
+    assert.strictEqual(r.dummy, foe === "dummy");
+    const want = S.coinCall("r2", env, "second");
+    assert.deepStrictEqual(r.seating, want);
+    assert.strictEqual(r.state().turnPlayer, want.first);
+    assert.notDeepStrictEqual(r.state().sides[0].hand.map(c => c.uid + c.name), s.state().sides[0].hand.map(c => c.uid + c.name), "a fresh deal");
+    r.start();
+    assert.strictEqual(r.rematch({seed: "r3", first: 1}).state().turnPlayer, 1, "an explicit first beats the coin");
+    r.dispose();
+  });
+}
+
+test("modes(): the ?server= door, read the way index.html does", () => {
+  const mem = new Map(); const ls = {getItem: k => mem.has(k) ? mem.get(k) : null, setItem: (k, v) => mem.set(k, v)};
+  const at = (search, on) => S.modes({...env, SERVER_TABLE: {on}, localStorage: ls, location: {search}}).server;
+  assert.strictEqual(at("", false), false);
+  assert.strictEqual(at("", true), true);
+  assert.strictEqual(at("?server=1", false), true, "the tester's door opens it");
+  assert.strictEqual(at("", false), true, "and is remembered");
+  assert.strictEqual(at("?server=0", true), false, "?server=0 closes it and forgets");
+  assert.strictEqual(at("", true), false);
+  assert.strictEqual(S.modes({...env, SERVER_TABLE: {on: true}, localStorage: {getItem(){ throw new Error("blocked"); }, setItem(){ throw new Error("blocked"); }}, location: {search: ""}}).server, true, "blocked storage never throws");
+});
+
+/* ---- the lobby's coin, driven by the flow; and a server rematch ---- */
+async function seatServer(world, mk, A, B){
+  await A.start(); await B.start();
+  await settle(world, [A, B]);
+}
+test("a server table: the throw and the seating call wait for the person (manual), then the game plays; the coin reads out", async () => {
+  const world = makeWorld({seedKey: "ui-manual", build: BUILD, deal: spec => dealLikeThePage(spec)});
+  const mk = (name, hero, how, code, pick, extra) => S.openNetworked({how, code, hero, build: BUILD, transport: world.transport(name), keep: memKeep(), sleep: FAST.sleep, tune: FAST.tune,
+    rand: T.seeded("ui-manual|" + name), throwPick: () => pick, ...(extra || {})}, env);
+  const A = mk("A", H[0], "server-create", undefined, "rock", {manual: {throw: true, seat: true}});
+  await A.start();
+  const B = mk("B", H[1], "server-join", A.code(), "scissors");
+  await B.start();
+  const seenAwait = []; A.onAwait(x => seenAwait.push(x));
+  for(let i = 0; i < 20 && A.awaiting() !== "throw"; i++) await settle(world, [A, B]);
+  assert.strictEqual(A.awaiting(), "throw", "paused at its own throw: " + A.phase());
+  assert.strictEqual(B.phase(), "lobby", "the other seat waits on it");
+  assert.ok(A.throwNow("lizard"), "a bad throw is refused");
+  assert.strictEqual(A.throwNow("rock"), null);
+  assert.ok(A.throwNow("rock"), "a second throw is refused");
+  for(let i = 0; i < 20 && A.awaiting() !== "seat"; i++) await settle(world, [A, B]);
+  assert.strictEqual(A.awaiting(), "seat", "rock beats scissors: A calls the seating");
+  assert.strictEqual(A.coin().winner, A.seat);
+  assert.strictEqual(A.coin().first, null);
+  assert.ok(A.callSeating("sideways"));
+  assert.strictEqual(A.callSeating("second"), null);
+  for(let i = 0; i < 20 && !(A.phase() === "playing" && B.phase() === "playing"); i++) await settle(world, [A, B]);
+  assert.strictEqual(A.phase(), "playing", JSON.stringify(A.events()));
+  assert.strictEqual(A.coin().first, B.seat, "second means the other seat goes first");
+  assert.strictEqual(A.state().turnPlayer, B.seat);
+  assert.deepStrictEqual(seenAwait.filter(Boolean), ["throw", "seat"]);
+  assert.strictEqual(A.awaiting(), null);
+  A.dispose(); B.dispose();
+});
+
+test("a server table: a rematch needs both to ask, then again() sits both at the new table", async () => {
+  const world = makeWorld({seedKey: "ui-rematch", build: BUILD, deal: spec => dealLikeThePage(spec)});
+  const mk = (name, hero, how, code, pick) => S.openNetworked({how, code, hero, build: BUILD, transport: world.transport(name), keep: memKeep(), sleep: FAST.sleep, tune: FAST.tune,
+    rand: T.seeded("ui-rematch|" + name), throwPick: () => pick}, env);
+  const A = mk("A", H[0], "server-create", undefined, "rock"); await A.start();
+  const B = mk("B", H[1], "server-join", A.code(), "scissors"); await B.start();
+  for(let i = 0; i < 20 && !(A.phase() === "playing" && B.phase() === "playing"); i++) await settle(world, [A, B]);
+  assert.strictEqual(A.phase(), "playing");
+  await assert.rejects(A.askRematch(), e => e.why === "rematch-playing", "not while the game is on");
+  await assert.rejects(A.again(), e => e.why === "no-rematch");
+  const heard = []; B.onRematch(r => heard.push(r));
+  assert.strictEqual(B.submit({t: "concede"}), null);
+  await settle(world, [A, B]);
+  assert.strictEqual(A.phase(), "ended");
+  assert.strictEqual((await A.askRematch()).state, "waiting");
+  await settle(world, [A, B]);
+  assert.ok(B.rematch().theirs && heard.length, "the other seat hears the ask");
+  const old = A.code();
+  assert.strictEqual((await B.askRematch()).state, "ready");
+  await settle(world, [A, B]);
+  const [A2, B2] = await Promise.all([A.again(), B.again()]);
+  assert.notStrictEqual(A2.code(), old);
+  assert.strictEqual(A2.code(), B2.code());
+  assert.strictEqual(A.phase(), "closed");
+  for(let i = 0; i < 30 && !(A2.phase() === "playing" && B2.phase() === "playing"); i++) await settle(world, [A2, B2]);
+  assert.strictEqual(A2.phase(), "playing", JSON.stringify(A2.events()));
+  assert.strictEqual(B2.phase(), "playing");
+  A2.dispose(); B2.dispose();
+});
+
+test("two phones: a room has no rematch protocol, and says so", async () => {
+  const Peer = fakePeerLib();
+  const mk = (how, hero, pick) => S.openNetworked({how, code: "WXYZ", hero, build: BUILD, Peer, rand: T.seeded("rm|" + how), throwPick: () => pick}, env);
+  const A = mk("room-host", H[0], "rock"), B = mk("room-guest", H[1], "scissors");
+  await Promise.all([A.start(), B.start()]);
+  assert.strictEqual(A.rematch(), null);
+  await assert.rejects(A.askRematch(), e => e.why === "no-rematch");
+  await assert.rejects(A.again(), e => e.why === "no-rematch");
   A.dispose(); B.dispose();
 });
