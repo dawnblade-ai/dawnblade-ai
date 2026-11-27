@@ -70,8 +70,8 @@
 /* the step marker / the question the table asks: one line, top-left of the stage */
 .pill{position:absolute;left:var(--gut);top:5px;height:18px;display:flex;align-items:center;padding:0 8px;border-radius:9px;background:rgba(0,0,0,.45);box-shadow:inset 0 0 0 1px rgba(255,255,255,.09);font:var(--t-label);letter-spacing:var(--track-caps);text-transform:uppercase;color:var(--ink-1);white-space:nowrap}
 .pill.hot{color:var(--brass-hi);box-shadow:inset 0 0 0 1px rgba(242,198,110,.45)}
-.ask{position:absolute;left:var(--gut);top:2px;font:800 20px/22px var(--f-display);letter-spacing:.04em;text-transform:uppercase;color:var(--ink-0);text-shadow:0 2px 0 rgba(0,0,0,.6);white-space:nowrap}
-.ask small{display:block;font:var(--t-small);letter-spacing:0;text-transform:none;color:var(--ink-1);text-shadow:none;margin-top:1px}
+.centre .ask{position:absolute;left:var(--gut);top:2px;font:800 20px/22px var(--f-display);letter-spacing:.04em;text-transform:uppercase;color:var(--ink-0);text-shadow:0 2px 0 rgba(0,0,0,.6);white-space:nowrap}
+.centre .ask small{display:block;font:var(--t-small);letter-spacing:0;text-transform:none;color:var(--ink-1);text-shadow:none;margin-top:1px}
 /* the chain */
 .atk{position:absolute;left:var(--atk-x);top:var(--atk-top)}
 .atk .cd{transform:rotate(1.5deg)}
@@ -85,15 +85,15 @@
 .stackrail .lab{margin-bottom:5px;display:block;white-space:nowrap}
 .stackrail .cd{box-shadow:var(--e2),0 0 0 2px var(--brass)}
 .stackrail .who{margin-top:7px;white-space:nowrap;line-height:13px;font:var(--t-label);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-1)}
-.hit{position:absolute;right:var(--gut);width:82px;top:var(--atk-top);height:var(--ch-chain);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
-.hit .n{font:900 30px/40px var(--f-display);color:var(--damage);text-shadow:0 2px 0 #000;margin:1px 0 6px}   /* CEO 2026-11-27: HIT FOR < the life numerals (34), BRIEF 2 */
-.hit .n.zero{color:var(--prevent)}
-.hit .eq{display:flex;align-items:center;gap:5px;font:var(--t-stamp);color:var(--ink-1)}
-.hit .eq .p{min-width:20px;height:20px;border-radius:5px;background:var(--ink-0);color:var(--ink-inv);display:grid;place-items:center;padding:0 3px}
-.hit .eq .d{width:20px;height:20px;background:var(--prevent);color:var(--ink-inv);display:grid;place-items:center;padding-bottom:3px;clip-path:polygon(0 0,100% 0,100% 62%,50% 100%,0 62%)}
-.hit .cost-coins{display:flex;gap:3px;margin:4px 0 6px}
-.hit .paid{font:var(--t-label);letter-spacing:var(--track-caps);text-transform:uppercase;color:var(--gain)}
-.hit .paid.short{color:var(--refused)}
+.centre .hit{position:absolute;right:var(--gut);width:82px;top:var(--atk-top);height:var(--ch-chain);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.centre .hit .n{font:900 30px/40px var(--f-display);color:var(--damage);text-shadow:0 2px 0 #000;margin:1px 0 6px}   /* CEO 2026-11-27: HIT FOR < the life numerals (34), BRIEF 2 */
+.centre .hit .n.zero{color:var(--prevent)}
+.centre .hit .eq{display:flex;align-items:center;gap:5px;font:var(--t-stamp);color:var(--ink-1)}
+.centre .hit .eq .p{min-width:20px;height:20px;border-radius:5px;background:var(--ink-0);color:var(--ink-inv);display:grid;place-items:center;padding:0 3px}
+.centre .hit .eq .d{width:20px;height:20px;background:var(--prevent);color:var(--ink-inv);display:grid;place-items:center;padding-bottom:3px;clip-path:polygon(0 0,100% 0,100% 62%,50% 100%,0 62%)}
+.centre .hit .cost-coins{display:flex;gap:3px;margin:4px 0 6px}
+.centre .hit .paid{font:var(--t-label);letter-spacing:var(--track-caps);text-transform:uppercase;color:var(--gain)}
+.centre .hit .paid.short{color:var(--refused)}
 .goagain{position:absolute;color:var(--goagain)}
 .costring{position:absolute;z-index:6;left:-8px;top:-8px;width:34px;height:34px;border-radius:50%;background:var(--mat-0);box-shadow:0 0 0 2.5px var(--brass),0 2px 6px rgba(0,0,0,.7);display:grid;place-items:center;font:900 20px/20px var(--f-display);color:var(--ink-0)}
 .atk .cd.staged{box-shadow:var(--e3),0 0 0 2px var(--brass)}
@@ -138,9 +138,9 @@
 html[data-band="compact"] .centre{--atk-x:calc(var(--gut) + var(--cw-link) + 36px + 26px)}
 /* [DEV-5] at 548 the attack card leaves 22 px of free height, so the step marker moves to the top-right corner there */
 html[data-band="compact"] .pill{top:3px;left:auto;right:var(--gut)}
-html[data-band="compact"] .ask{font-size:18px;line-height:20px}
-html[data-band="compact"] .hit .n{font-size:26px;line-height:34px}
-html[data-band="compact"] .hit{width:70px}
+html[data-band="compact"] .centre .ask{font-size:18px;line-height:20px}
+html[data-band="compact"] .centre .hit .n{font-size:26px;line-height:34px}
+html[data-band="compact"] .centre .hit{width:70px}
 html[data-band="compact"] .slab{height:48px;padding-top:5px}
 html[data-band="compact"] .slab .say{font-size:26px;line-height:28px;margin-top:2px}
 
@@ -182,7 +182,7 @@ html[data-band="compact"] .slab .say{font-size:26px;line-height:28px;margin-top:
 .perm .cd{position:relative}
 .perm .xn2{position:absolute;right:-4px;bottom:-4px;min-width:14px;height:14px;padding:0 3px;border-radius:7px;background:var(--brass);color:var(--ink-inv);font:800 11px/14px var(--f-display);text-align:center}
 
-@media (min-width:414px){.hit .n{font-size:34px;line-height:40px}}
+@media (min-width:414px){.centre .hit .n{font-size:34px;line-height:40px}}
 a.opt{text-decoration:none;justify-content:center}
 /* a permanent's mini card sits in a 44 x 44 hit box at every band (a tap floor never scales down); the lane above it wins an overlap */
 .permhit{position:relative;min-width:44px;height:44px;display:grid;place-items:center;cursor:pointer}
@@ -202,3 +202,6 @@ html[data-band="compact"] .an-slab{height:48px}
 .stage .sh-btn.sec{min-height:var(--btn-sec-h)}
 .stage .sh-btn.sh-step{min-height:44px}
 .stage .sh-sheet{padding-bottom:14px}
+html[data-band="compact"] .stage .sh-sheet{padding-bottom:10px}
+/* the result (DAWNBREAK, who won) is the flow's (ui/flow.js, on the director's ko beat): the table's announcer layer draws none */
+.stage[data-state] .an-result{display:none}

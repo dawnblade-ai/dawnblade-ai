@@ -358,9 +358,10 @@ function Live(p){
   }
   const RT = ref.current;
   useEffect(() => { const b = RT.buffer.splice(0); b.forEach(RT.hear); return () => { if(RT.sub) RT.sub(); RT.sub = null; if(RT.own && RT.dir && RT.dir.dispose) RT.dir.dispose(); }; }, [s]);
-  useEffect(() => { /* where the hand cards are, remembered for a flight from a card that has already left the row */
-    const st0 = root.document.querySelector(".stage"); if(st0 && root.DawnUILayout) root.DawnUILayout.remember(st0, RT.rects);
-  });
+  /* where the hand cards are, remembered for a flight from a card that has already left the row: read only when the hand
+     changed (not on every render), once, after it was laid out */
+  const handSig = state.sides[me].hand.map(c => c.uid).join(",") + "/" + ui.sl;
+  useEffect(() => { const st0 = root.document.querySelector(".stage"); if(st0 && root.DawnUILayout) root.DawnUILayout.remember(st0, RT.rects); }, [handSig]);
   useEffect(() => { if(!ui.ref) return; const t = setTimeout(() => setUi(u => u.ref === ui.ref ? {...u, ref: null} : u), 2400); return () => clearTimeout(t); }, [ui.ref]);
   const game = root.DawnGame;
   const L = a => J.legal(state, a, me);

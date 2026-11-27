@@ -50,7 +50,7 @@ function choose(q, heroes, last){
   const seed = q.seed != null && q.seed !== "" ? String(q.seed) : String(Math.floor(Math.random() * 1e9));
   const first = q.first === "1" ? 1 : 0;
   const pace = q.pace != null && q.pace !== "" && !isNaN(+q.pace) ? Math.max(0, +q.pace) : -1;   /* -1: the human pace; 0: unpaced; N: N ms a tick */
-  return {hero, foe, seed, first, pace};
+  return {hero, foe, seed, first, pace, search: q.search !== "0"};   /* ?search=0: the Steady rule policy (a drive's way to tell the AI's own thinking from the shell's) */
 }
 
 /* the card pool as the page's own loader builds it (mapDbCard -> buildMaps), registered with the judge */
@@ -96,7 +96,7 @@ function openLocal(opts, env){
     state: dealt.state,
     reduce: env.DawnJudge.reduce,
     legal: env.DawnJudge.legal,
-    policy: (st, i) => env.DawnSparring.act(st, i, {search: true}),
+    policy: (st, i) => env.DawnSparring.act(st, i, {search: pick.search}),
     ...(pick.pace < 0 ? {pace: aiPace} : pick.pace > 0 ? {pace: pick.pace} : {}),
     onStep: e => steps.forEach(fn => fn(e)),
     onEvent: e => { events.push(e); evs.forEach(fn => fn(e)); },
