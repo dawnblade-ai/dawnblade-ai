@@ -4640,7 +4640,8 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
   const winCheck = s => {
     let n = s;
     if(opp(n).hp<=15 && opp(n).hp>0 && !n.flags.d15) n = L({...n, flags:{...n.flags, d15:true}}, `${foe(n).name} is wobbling — you can smell the sawdust.`);
-    if(opp(n).hp<=0 && !n.over) n = L({...n, over:{win:true, score:n.turn+you(n).wasted}}, `${foe(n).name} down on turn ${n.turn}. Score ${n.turn+you(n).wasted} (turns + wasted).`);
+    /* CR 2.5.3e: a life total is never negative, it is considered zero — judge.winCheck floors it the same way (v7.24) */
+    if(opp(n).hp<=0 && !n.over){ n = {...n}; if(opp(n).hp<0) oppMut(n).hp = 0; n = L({...n, over:{win:true, score:n.turn+you(n).wasted}}, `${foe(n).name} down on turn ${n.turn}. Score ${n.turn+you(n).wasted} (turns + wasted).`); }
     return n;
   };
 
@@ -6390,7 +6391,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     /* ONE OF THEM CAN END THE GAME (v6.38): blood debt is life loss at the
        beginning of the end phase, and the table asks the same question at
        the same beat (`judge.doEndTurn`). */
-    if(you(n).hp<=0){ n.over={win:false}; return L(n,`You hit the boards. ${opp(n).name} remains standing.`); }
+    if(you(n).hp<=0){ if(you(n).hp<0) youMut(n).hp = 0; n.over={win:false}; return L(n,`You hit the boards. ${opp(n).name} remains standing.`); }
 
     /* A TRIGGER THAT ASKS HOLDS THE END PHASE (v5.71) — Bloodrot Pox's "…
        unless you pay {r}{r}{r}" queues the shared pay sheet, and this
@@ -6993,7 +6994,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       ...act(s).blockG.map(i=>act(s).gear[i] && act(s).gear[i].uid).filter(u=>u!=null)];
     n = L(n, `Blocked ${dh+dg+drx}, took ${through}.${drNames.length?` (${drNames.join(", ")} as defense reaction${drNames.length>1?"s":""}.)`:""}`);
     if(act(n).hp<=5 && act(n).hp>0 && !n.flags.p5) n = L({...n, flags:{...n.flags, p5:true}}, "On the ropes — every block counts now.");
-    if(act(n).hp<=0){ n.over={win:false}; return L(n,`You hit the boards. ${foe(n).name} remains standing.`); }
+    if(act(n).hp<=0){ if(act(n).hp<0) actMut(n).hp = 0; n.over={win:false}; return L(n,`You hit the boards. ${foe(n).name} remains standing.`); }
     /* the wall is released above, so a piece it wore to nothing is filed
        now rather than at the end phase (v4.79) */
     n = _EFX.fileDestroyedGear(n);

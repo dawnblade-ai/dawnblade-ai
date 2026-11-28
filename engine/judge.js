@@ -3633,11 +3633,20 @@ function closeChain(g){
   return {...n, pend: null, stack: [], chainCards: []};
 }
 
+/* A LIFE TOTAL IS NEVER NEGATIVE (v7.24). CR 2.5.3e, verbatim: "A living-card cannot have a negative life total. If
+   the life total is calculated to be less than zero, instead it is considered zero." The damage sites subtract freely
+   (`hp -= total`), so a hero hit for 4 on 3 life was left at -1 and both phones showed "-1" on the bout and the pad
+   (REVIEW-2 #3). The floor is applied HERE, where the game-state action of CR 2.5.3f / 4.5.3a ends the game, so the
+   state a phone keeps reads 0; while the game runs, a total at or below zero never outlives this check.
+   OPEN (QUEUE.md, "a simultaneous KO"): seat 0 is still checked first here; the rules call that a draw, and a draw
+   that is not a stalemate is refused by the referee, the server's result_record and the clients' validators alike. */
 const winCheck = (g, by) => {
   for(let i = 0; i < 2; i++){
-    if(at(g, i).hp <= 0)
-      return say({...g, over: {winner: P.other(i), how: "life"}, priority: null},
+    if(at(g, i).hp <= 0){
+      const down = at(g, i).hp < 0 ? put(g, i, s => ({...s, hp: 0})) : g;
+      return say({...down, over: {winner: P.other(i), how: "life"}, priority: null},
         at(g, i).name + " is down. " + at(g, P.other(i)).name + " takes it.");
+    }
   }
   return g;
 };

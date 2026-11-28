@@ -124,12 +124,15 @@ test("crindex — the verdict counts are pinned", () => {
   /* 122 -> 125 and 112 -> 115 guarded AT v7.18 (Table Talk): CR 5.1.1 and 5.1.2 (a play is announced) and CR 3.14.1 (the
      pitch zone is public), cited where the announcer is built (engine/announce.js) and driven over whole games from
      both seats (test/announce.test.js names them). */
-  assert.equal(rs.length, 125, "the number of distinct CR rules this project cites moved");
+  /* 125 -> 127 and 115 -> 118 guarded, prose 2 -> 1, AT v7.24: CR 2.5.3e and 2.5.3f, a life total is never
+     negative, and the life-loss rule left prose for the engine: judge.winCheck floors the downed hero at 0
+     (test/lifefloor.test.js, REVIEW-2 #3). */
+  assert.equal(rs.length, 127, "the number of distinct CR rules this project cites moved");
   /* 50 -> 51 guarded and 6 -> 5 drill-only AT v4.66: CR 7.1.2, built. */
-  assert.equal(by(rs, "guarded").length,  115, "guarded count moved");
+  assert.equal(by(rs, "guarded").length,  118, "guarded count moved");
   assert.equal(by(rs, "UNGUARDED").length,  3, "UNGUARDED count moved");
   assert.equal(by(rs, "drill-only").length, 5, "drill-only count moved");
-  assert.equal(by(rs, "prose").length,      2, "prose count moved");
+  assert.equal(by(rs, "prose").length,      1, "prose count moved");
 });
 
 /* A COUNT IS NOT A SET. Two rules swapping buckets keeps every number
@@ -147,7 +150,7 @@ test("crindex — the UNGUARDED set is the three section pointers, by name", () 
 
 test("crindex — the prose-only set is pinned, and it is where the unbuilt rules live", () => {
   const rs = idx();
-  assert.deepEqual(by(rs, "prose"), ["4.5.3a", "7.5.2"],
+  assert.deepEqual(by(rs, "prose"), ["7.5.2"],
     "the set of rules cited ONLY in documentation moved. A rule leaving this set " +
     "has been encoded (good — check it gained a drill too); a rule arriving has " +
     "been written about and not built, and belongs in tools/approx.js.");
