@@ -297,7 +297,7 @@ function Sheet(props){
       <div class="sh-ask">
         ${srcCard || m.source.name ? html`<div class="sh-src" data-b="source"><${Thumb} card=${srcCard} name=${m.source.name}/></div>` : null}
         <div class="sh-asktx">
-          ${m.source.name ? html`<div class="sh-by"><span>ASKED BY</span><b class=${"sh-chip" + (m.tag === "reveal" ? " look" : m.waiting ? " wait" : "")}>${m.chip}</b></div>` : html`<div class="sh-by"><b class="sh-chip wait">${m.chip}</b></div>`}
+          ${m.source.name ? html`<div class="sh-by"><span>ASKED BY</span><i class="sh-who">${m.source.name}</i><b class=${"sh-chip" + (m.tag === "reveal" ? " look" : m.waiting ? " wait" : "")}>${m.chip}</b></div>` : html`<div class="sh-by"><b class="sh-chip wait">${m.chip}</b></div>`}
           <h2 class="sh-title">${m.title}</h2>
           ${m.hint ? html`<p class="sh-hint"><${Glyphs} s=${m.hint}/></p>` : null}
         </div>

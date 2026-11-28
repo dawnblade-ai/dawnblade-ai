@@ -73,3 +73,5 @@
 .sh-sheet.waiting{padding-bottom:14px}
 .gl-r,.gl-p,.gl-d{display:inline-block;width:14px;height:14px;border-radius:50%;vertical-align:-2px;margin:0 1px}
 .gl-r{background:var(--brass)}.gl-p{background:var(--pitch-yellow)}.gl-d{background:var(--prevent);border-radius:3px}
+
+.sh-who{font-style:normal;color:var(--ink-0);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

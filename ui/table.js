@@ -342,13 +342,16 @@ function Live(p){
   const bump = (st2 => () => st2[1](n => n + 1))(useState(0));
   const ref = useRef(null);
   if(!ref.current){
-    const r = ref.current = {sl: 0, memo: null, holds: [[], []], rects: new Map(), api: {current: null}, buffer: [], hear: null, dir: null, layout: null, sub: null};
+    const r = ref.current = {sl: 0, memo: null, medalKey: null, medalTimer: null, restMedal: null, holds: [[], []], rects: new Map(), api: {current: null}, buffer: [], hear: null, dir: null, layout: null, sub: null};
     /* ONE director for the whole app when the router has made one (its speed setting then reaches the table's beats) */
     r.dir = p.director || (root.DawnUIApp && root.DawnUIApp.director && root.DawnUIApp.director()) || null;
     if(!r.dir && root.DawnUIDirector){ r.dir = root.DawnUIDirector.create({root: root.document}); r.own = true; }
     if(root.DawnUIAudio && root.DawnUIAudio.init) root.DawnUIAudio.init();
     if(root.DawnUILayout) r.layout = root.DawnUILayout.create(() => root.document.querySelector(".stage"), me, r.rects);
     const names = s.names.map(firstName);
+    /* the medallion at rest: the pose and the face the state says (yours at 0/360, theirs at 180), whichever beat just ended */
+    r.restMedal = () => { const md = root.document.querySelector('[data-b="medal"]'); if(!md || md.getAnimations().length) return;
+      md.style.transform = r.medalMine ? "" : "rotateY(180deg)"; md.setAttribute("data-rest", r.medalMine ? "you" : "opp"); };
     r.hear = step => {
       const AV = root.DawnUIAnnounce; if(!AV || !r.api.current) return;
       const ds = AV.beatsFor(step, me, {names});
@@ -360,7 +363,7 @@ function Live(p){
     r.sub = s.onStep(step => { if(r.api.current) r.hear(step); else r.buffer.push(step); });
   }
   const RT = ref.current;
-  useEffect(() => { const b = RT.buffer.splice(0); b.forEach(RT.hear); return () => { if(RT.sub) RT.sub(); RT.sub = null; if(RT.own && RT.dir && RT.dir.dispose) RT.dir.dispose(); }; }, [s]);
+  useEffect(() => { RT.restMedal(); const b = RT.buffer.splice(0); b.forEach(RT.hear); return () => { if(RT.sub) RT.sub(); RT.sub = null; if(RT.own && RT.dir && RT.dir.dispose) RT.dir.dispose(); }; }, [s]);
   /* where the hand cards are, remembered for a flight from a card that has already left the row: read only when the hand
      changed (not on every render), once, after it was laid out */
   const handSig = state.sides[me].hand.map(c => c.uid).join(",");
@@ -395,6 +398,9 @@ function Live(p){
   /* the pre-hit hold is laid over a copy (the memoized model is shared) */
   const m = {...RT.memo.m, bout: RT.memo.m.bout.map(b => b)};
   RT.medalMine = m.medal.mine;
+  { const mk = m.medal.n + "/" + m.medal.mine;   /* a new turn: both faces are drawn while it flips; it settles when the beat lands, or after 1.6 s if none comes */
+    if(RT.medalKey !== mk){ const first = RT.medalKey == null; RT.medalKey = mk; clearTimeout(RT.medalTimer);
+      if(!first){ const md = root.document.querySelector('[data-b="medal"]'); if(md) md.removeAttribute("data-rest"); RT.medalTimer = setTimeout(RT.restMedal, 1600); } } }
   [0, 1].forEach(si => { const h = RT.holds[si][0]; if(h){ const idx = si === me ? 0 : 1, max = v.sides[si].maxHp, frac = Math.max(0, Math.min(1, h.from)); m.bout[idx] = {...m.bout[idx], frac, life: Math.round(frac * max), low: frac <= 0.25}; } });
 
   const refuse = (text, at) => setUi(u => ({...u, ref: {text, at: at || {k: "stage"}}, sel: null}));
@@ -464,8 +470,7 @@ function Live(p){
       if(d.kind === "lifegain" || d.kind === "hit" || d.kind === "ko") release(d);
       /* a turn beat that lands late (the queue was behind) must not leave the medallion on the PREVIOUS turn's pose: it rests where the
          current state says (yours at 0/360, theirs at 180), whichever beat just ended */
-      if(d.kind === "turn"){ const rest = () => { const md = dom.querySelector('[data-b="medal"]'); if(md && !md.getAnimations().length) md.style.transform = RT.medalMine ? "" : "rotateY(180deg)"; };
-        setTimeout(rest, 0); setTimeout(rest, 80); }   /* after the director's own end-pose write, which can follow the commit */
+      if(d.kind === "turn"){ setTimeout(RT.restMedal, 0); setTimeout(RT.restMedal, 80); }   /* after the director's own end-pose write, which can follow the commit */
     }
   } : null;
   /* every engine prompt is a real sheet (ui/sheets.js); it sends each engine action through the session, in order */

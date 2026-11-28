@@ -307,9 +307,9 @@ const MEDAL_READS = () => {
   const m = document.querySelector('[data-b="medal"]'); if(!m) return { err: "no medal" };
   const acc = e => { let M = new DOMMatrix(); for(let p = e; p && p.nodeType === 1; p = p.parentElement){ const t = getComputedStyle(p).transform; M = new DOMMatrix(t === "none" ? undefined : t).multiply(M); } return M; };
   const readable = [], mid = [];
-  m.querySelectorAll("b").forEach(b => { const k = acc(b).m11, face = b.parentElement, cs = getComputedStyle(face), hidden = cs.backfaceVisibility === "hidden" && k < 0;
-    if(Math.abs(k) > 0.02 && Math.abs(k) < 0.98) mid.push(k); else if(k > 0) readable.push(face.classList.contains("opp") ? "opp" : face.classList.contains("you") ? "you" : "single:" + (m.classList.contains("o") ? "opp" : "you")); else if(!hidden) readable.push("MIRRORED"); });
-  return { readable, mid: mid.length > 0 };
+  m.querySelectorAll("b").forEach(b => { const k = acc(b).m11, face = b.parentElement, cs = getComputedStyle(face), hidden = (cs.backfaceVisibility === "hidden" && k < 0) || cs.visibility === "hidden";
+    if(cs.visibility === "hidden") return; if(Math.abs(k) > 0.02 && Math.abs(k) < 0.98) mid.push(k); else if(k > 0) readable.push(face.classList.contains("opp") ? "opp" : face.classList.contains("you") ? "you" : "single:" + (m.classList.contains("o") ? "opp" : "you")); else if(!hidden) readable.push("MIRRORED"); });
+  return { readable, mid: mid.length > 0 || m.getAnimations().length > 0 };   /* a flip in flight is not a rest pose */
 };
 async function checkMedal(P, owner){
   let r;

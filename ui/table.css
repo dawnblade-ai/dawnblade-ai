@@ -33,7 +33,8 @@
 .medal{width:var(--bout-medal-w);height:var(--bout-medal-h);flex:none;margin:0 2px;position:relative;transform-style:preserve-3d}
 /* TWO FACES (MOTION 3.16): yours (jade) and theirs (orchid); the director flips the medallion about Y and it rests at 0/360 (yours) or 180 (theirs),
    the back face pre-rotated so it reads true. Each face carries the turn numeral; the other is hidden (backface-visibility). */
-.mface{position:absolute;inset:0;display:grid;place-items:center;--c:var(--you);-webkit-backface-visibility:hidden;backface-visibility:hidden;filter:drop-shadow(0 2px 4px rgba(0,0,0,.7))}
+.mface{position:absolute;inset:0;display:grid;place-items:center;--c:var(--you);-webkit-backface-visibility:hidden;backface-visibility:hidden}   /* no filter here: WebKit ignores backface-visibility on a filtered face */
+.medal::before{content:"";position:absolute;inset:0;background:rgba(0,0,0,.7);filter:blur(3px);transform:translate3d(0,2px,-1px);clip-path:polygon(28% 0,72% 0,100% 26%,100% 74%,72% 100%,28% 100%,0 74%,0 26%)}
 .mface.opp{--c:var(--opp);transform:rotateY(180deg)}
 .mface::before{content:"";position:absolute;inset:0;background:var(--c);clip-path:polygon(28% 0,72% 0,100% 26%,100% 74%,72% 100%,28% 100%,0 74%,0 26%)}
 .mface::after{content:"";position:absolute;inset:3px;background:linear-gradient(to bottom,#1d272c,#0c1114);clip-path:polygon(28% 0,72% 0,100% 26%,100% 74%,72% 100%,28% 100%,0 74%,0 26%)}
@@ -42,7 +43,7 @@
 .mface span{font:600 11px/10px var(--f-mono);letter-spacing:.06em;color:var(--ink-1);position:absolute;bottom:8px;left:0;right:0}
 .mface em{position:absolute;z-index:3;top:50%;width:0;height:0;border:5px solid transparent;font-style:normal;left:-9px;transform:translateY(-50%)}
 .mface.you em{border-right-color:var(--you)}
-.mface.opp em{border-right-color:var(--opp)}   /* on the back face "left" is the viewer's right once it has turned */
+.mface.opp em{left:auto;right:-9px;border-right-color:transparent;border-left-color:var(--opp)}   /* medal at 180 + face at 180 = upright: the pointer is on its right, toward them */
 
 /* =============================== THE HALVES =============================== */
 .half{height:var(--h-half);flex:none;position:relative;display:flex;flex-direction:column}
@@ -228,3 +229,9 @@ html:has(.an-scrim.live) [data-b="thinking"]{visibility:hidden}
 .insp-wrap .insp-card .cd{height:100%;width:auto;aspect-ratio:.716}
 .insp-wrap .insp-card .cd>img{width:100%;height:100%}
 .insp-wrap .sheet{position:relative;left:auto;right:auto;margin:0 var(--gut);flex:none;max-height:60%;overflow:auto}
+
+/* WebKit leaks a hidden face's children through backface-visibility: hide the face's contents too (the mirrored TURN under the numeral) */
+.mface *{-webkit-backface-visibility:hidden;backface-visibility:hidden}
+/* at rest only the face that is up is drawn at all (a renderer without backface-visibility, such as the Linux WebKit build, would show both);
+   while a flip is in flight (no data-rest) both are there and the back one is hidden by backface-visibility */
+.medal[data-rest=you] .mface.opp,.medal[data-rest=opp] .mface.you{visibility:hidden}
