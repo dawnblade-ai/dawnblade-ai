@@ -43,6 +43,11 @@ test("the coin: the winner chooses; the AI winner always goes first; the Dummy h
   const ai = F.seatingLocal(S.coinCall(a, env), "Viserai", false);
   assert.equal(ai.text, "Viserai goes first"); assert.equal(ai.ready, true); assert.equal(ai.choices, null);
   assert.equal(F.seatingLocal(S.coinCall(a, env, "second"), "Viserai", false).first, 1, "the AI's call is a rule, not the person's choice");
+  /* Flesh and Blood rolls a die; a networked table throws rock, paper, scissors: the words follow the table */
+  assert.deepEqual([won.label, won.die], ["The roll", true]); assert.equal(won.text, "You won the roll");
+  assert.deepEqual([ai.label, ai.die], ["The roll", true]);
+  assert.deepEqual([F.seatingNet(fake({phase: "lobby", awaiting: "throw"}), "x").label, F.seatingNet(fake({phase: "lobby", awaiting: "throw"}), "x").die], ["The throw", undefined]);
+  assert.equal(F.seatingNet(fake({phase: "lobby", awaiting: "seat"}), "x").text, "You won the throw");
   const d = F.seatingLocal(null, "x", true);
   assert.deepEqual([d.coin, d.text, d.first, d.ready], [false, "You go first", 0, true]);
 });

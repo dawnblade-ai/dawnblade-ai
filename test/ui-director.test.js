@@ -472,6 +472,21 @@ test("keep: the end pose is the item's own last keyframe, EXACTLY, whatever the 
   assert.ok(r2.calls.some(a => a.committed));
 });
 
+test("the turn medallion rests at identity after every turn, whichever way it was thrown (a 180deg rest read as a mirror image)", () => {
+  const rest = b => { const k = D.plan(Object.assign({ kind: "turn", els: {} }, b))[0].items.find(i => i.role === "medal").kf; return k[k.length - 1].transform; };
+  const mirrored = tr => ((+/rotateY\((-?\d+)deg\)/.exec(tr)[1]) % 360 + 360) % 360 !== 0;
+  for(const flip of [undefined, [0, 180], [180, 360], [90, 270]]) assert.ok(!mirrored(rest({ flip })), "single-faced medal, flip " + JSON.stringify(flip) + " rests at " + rest({ flip }));
+  assert.ok(/scale\(1\)$/.test(rest({})), "and at scale 1");
+  assert.ok(mirrored(rest({ faces: true, flip: [0, 180] })), "a two-faced disc keeps its flip: it rests on the other face");
+  /* reduced motion: a cut to the same rest */
+  const rm = D.plan({ kind: "turn", els: {} }, { rm: true })[0].items.find(i => i.role === "medal").kf;
+  assert.ok(!mirrored(rm[rm.length - 1].transform));
+  /* and written for real: the element's inline transform after the beat */
+  const el = { style: {} }, r = rig({ resolve: role => role === "medal" ? el : null });
+  r.d.enqueue({ kind: "turn", els: {} }); r.clock.advance(900);
+  assert.ok(!mirrored(el.style.transform), "inline: " + el.style.transform);
+});
+
 test("dispose cancels everything and resolves idle", async () => {
   const r = rig(); r.d.enqueue(sample("announce")); r.clock.advance(100);
   const p = r.d.idle(); r.d.dispose(); await p;

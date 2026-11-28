@@ -484,9 +484,13 @@ KINDS.gearBreak = { lane: "q", hooks: ["commit"], phases: [function (b, c) {
 
 /* §3.16 the turn passing: the medallion tosses and flips, a banner sweeps, the new side lights. 900 ms. */
 KINDS.turn = { lane: "q", hooks: ["commit"], phases: [function (b, c) {
-  var T = c.T, E = c.E, items = [], a = (b.flip || [0, 180]), mid = (a[0] + a[1]) / 2, hump = b.hump == null ? 1.9 : b.hump;
-  items.push(it("medal", 0, c.d(T.emph + 120), c.rm ? [{ transform: "rotateY(" + a[1] + "deg) scale(1)" }, { transform: "rotateY(" + a[1] + "deg) scale(1)" }] :
-    [{ transform: "rotateY(" + a[0] + "deg) scale(1)" }, { transform: "rotateY(" + mid + "deg) scale(" + hump + ")", offset: .5 }, { transform: "rotateY(" + a[1] + "deg) scale(1)" }], E.inout, { keep: true }));
+  /* A SINGLE-FACED medallion (the table's: the turn number on one face) tosses a FULL turn and rests at identity — a flip that rests at
+     180deg reads as a mirror image ("S", "NЯUT") every other turn. `faces: true` is the mockup's two-faced disc (YOU / the opponent's hero):
+     it flips `flip` = [from, to] degrees and rests on the face shown. */
+  var T = c.T, E = c.E, items = [], a = b.faces ? (b.flip || [0, 180]) : [0, 360], mid = (a[0] + a[1]) / 2, hump = b.hump == null ? 1.9 : b.hump;
+  var rest = "rotateY(" + a[1] + "deg) scale(1)";
+  items.push(it("medal", 0, c.d(T.emph + 120), c.rm ? [{ transform: rest }, { transform: rest }] :
+    [{ transform: "rotateY(" + a[0] + "deg) scale(1)" }, { transform: "rotateY(" + mid + "deg) scale(" + hump + ")", offset: .5 }, { transform: rest }], E.inout, { keep: true }));
   var s = slabSide(b);
   items.push(it("banner", 0, 900, c.rm ? [{ opacity: 0 }, { opacity: 1, offset: .38 }, { opacity: 1, offset: .7 }, { opacity: 0 }] :
     [{ transform: "translate3d(" + (100 * s) + "%,0,0)", opacity: 1, offset: 0 }, { transform: "translate3d(0,0,0)", opacity: 1, offset: .38 },

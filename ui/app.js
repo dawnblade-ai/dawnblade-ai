@@ -135,7 +135,7 @@ function TableScreen(p){
   };
   return html`<div class="tablewrap" style="display:contents">
     <${root.DawnUITable.Live} session=${s} director=${dir()} onMenu=${openMenu} onPad=${openPad}/>
-    <div class="stage fl ov" data-b="overlay">
+    <div class="stage fl ov" data-b="overlay"><${K.Sprite}/>
       ${over.menu && !live.over ? html`<${K.Menu} session=${s} director=${dir()} log=${log.current} onClose=${shut} onConcede=${concede}/>` : null}
       ${over.pad && !live.over ? html`<${Pad.PadSheet} pad=${pad.current} names=${names} first=${first} turn=${turn} onClose=${shut}/>` : null}
       ${live.think && !live.over && !over.menu && !over.pad ? html`<${K.Thinking} name=${names[1]}/>` : null}
@@ -231,7 +231,7 @@ function App(){
       }
       body = html`<${K.SitDown} key=${s.hero + foeKey + (s.seed || "") + (seating.text || "") + (seating.choices ? "c" : "")} hero=${s.hero} foe=${foeKey} seating=${seating} net=${!!s.net} director=${D}
         onBack=${() => { dropPre(); dropNet(); go("f1", {pre: null, net: null}); }} onHero=${() => go("f3", {mode: "hero"})} onFoe=${() => go("f3", {mode: "foe"})}
-        onChoose=${choose} onShuffle=${shuffle}/>`;
+        onChoose=${choose} onShuffle=${shuffle} onDeck=${() => go("f3", {mode: "hero", peek: s.hero})}/>`;
       break;
     }
     case "f9": {

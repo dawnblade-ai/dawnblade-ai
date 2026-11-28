@@ -42,7 +42,8 @@ const SCREENS = [
   { id: "F4 sit down", mock: "flow-4-sitdown.html", app: "?screen=f4&hero=iyslander&foe=viserai&first=0", root: ".f4", settle: 2800,
     sel: S(".hit", ".ib", ".nameo", ".swap", ".coin", ".slab", ".namey", ".hub .btn") },
   { id: "F9 phone", mock: "flow-9-waiting.html?v=phone", app: "?screen=f9&v=phone", root: ".f9", sel: S(".ib", ".sunrise", ".h h1", ".h p", ".codes b", ".btns .btn") },
-  { id: "F9 server", mock: "flow-9-waiting.html?v=server", app: "?screen=f9&v=server", root: ".f9", sel: S(".ib", ".sunrise", ".h h1", ".btns .btn") },
+  { id: "F9 server", mock: "flow-9-waiting.html?v=server", app: "?screen=f9&v=server", root: ".f9", sel: S(".ib", ".sunrise", ".h h1", ".h p", ".btns .btn"),
+    skip: { ".h h1": "the stack's width follows its sentence: the mockup says \"The usual wait is about 20 seconds.\", a number only the server may give; with none the page says \"Looking for another player.\"", ".h p": "same sentence" } },
   { id: "F9 quiet", mock: "flow-9-waiting.html?v=quiet", app: "?screen=f9&v=quiet", root: ".f9", sel: S(".scrim", ".panel", ".panel h2", ".panel p", ".panel .btn") },
   { id: "F9 fail", mock: "flow-9-waiting.html?v=fail", app: "?screen=f9&v=fail", root: ".f9", sel: S(".ib", ".sunrise", ".h h1", ".btns .btn") },
   /* over the live table: the app is driven to the screen */
@@ -325,7 +326,9 @@ async function rematchJourney(pw, browser, engine, vp, o){
     if(label !== "Rematch") bad.push(`a local game offers "${label}"`);
     await tapB(page, "rematch"); await need(".f4", "REMATCH goes to the sit-down");
     const t = await page.evaluate(() => document.querySelector('[data-b="slab"] b').textContent);
-    if(!/goes first|go first/i.test(t)) bad.push('the rematch coin says "' + t + '"'); else steps.push('the coin: "' + t + '"');
+    if(!/goes first|go first/i.test(t)) bad.push('the rematch roll says "' + t + '"'); else steps.push('the roll: "' + t + '"');
+    const lab = await page.evaluate(() => ({ l: document.querySelector('[data-b="slab"] .lab').textContent, die: !!document.querySelector('[data-b="coin"].die') }));
+    if(!/^the roll$/i.test(lab.l) || !lab.die) bad.push("a local table decides first with THE ROLL and a die: " + JSON.stringify(lab));
     await page.waitForFunction(() => { const b = document.querySelector('[data-b="shuffle"]'); return b && !b.disabled; }, null, { timeout: 4000 }).catch(() => bad.push("SHUFFLE UP is not lit after a rematch"));
     await tapB(page, "shuffle"); await need('[data-b="bout"]', "a fresh table");
     const fresh = await page.evaluate(() => { const s = window.DawnUIApp.session(); return { other: s !== window.__first, over: !!s.state().over, seed: s.pick.seed }; });
@@ -405,6 +408,15 @@ async function main(){
           console.log(`${r.bad.length ? "FAIL" : "PASS"}  ${engine.padEnd(8)} ${name.padEnd(14)} 393x660  ${r.steps.length} steps${verbose ? ": " + r.steps.join(" > ") : ""}`);
           r.bad.slice(0, 12).forEach(b => console.log("        " + b));
         }
+      }
+      if(!only || only === "modes"){
+        /* HONESTY: F9 server shows a number only when the server gave one */
+        const e2 = [], pg = await openPage(pw, browser, engine, [393, 660], PLAY + "?screen=f9&v=server", e2); await settle(pg.page, 300);
+        const t = await pg.page.evaluate(() => (document.querySelector(".f9 .h p") || {}).textContent);
+        await pg.context.close();
+        const okp = t === "Looking for another player." && !e2.length;
+        if(!okp) failed = true;
+        console.log(`${okp ? "PASS" : "FAIL"}  ${engine.padEnd(8)} ${"F9 honesty".padEnd(14)} 393x660  the server wait says "${t}"${e2.length ? " " + e2[0] : ""}`);
       }
       if(!only || only === "journey") for(const vp of VIEWPORTS){
         const r = await journey(pw, browser, engine, vp, o);

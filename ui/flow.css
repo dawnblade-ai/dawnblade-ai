@@ -430,3 +430,10 @@ html[data-band=compact] .stage.fl .f1 .tag{display:none}
 .stage.fl .f4 .half.dummy svg{width:150px;height:150px;color:var(--ink-2);opacity:.55;margin-top:-30px}
 .stage.fl .f4 .seatpick{position:absolute;left:var(--gut);top:calc(50% + 120px);display:flex;gap:8px;z-index:6}
 .stage.fl .f4 .seatpick .btn{min-width:104px}
+
+/* the roll: a die in the coin's disc (same 84x84 box) */
+.stage.fl .f4 .coin.die{display:grid;place-items:center;background:none;box-shadow:0 6px 16px rgba(0,0,0,.55)}
+.stage.fl .f4 .coin.die::before{display:none}
+.stage.fl .f4 .coin.die svg{width:84px;height:84px}
+/* the KO frame covers the table's own hub (its disabled "GAME OVER" pill must not show through "Tap to continue") */
+.stage.fl .f7 .hubcover{position:absolute;left:0;right:0;bottom:0;height:var(--h-hub,68px);background:#05080a;z-index:71}
