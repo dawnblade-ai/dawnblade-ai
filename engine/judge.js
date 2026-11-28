@@ -731,6 +731,28 @@ function autoAnswer(g, o){
    an accessor, a stamp or an adapter. */
 function effectsFor(g){
   const cell = {n: g.tokSeq || 0};
+  return {fx: E.makeEffects(buildCtx(() => cell)), cell};
+}
+/* THE CONTEXT, BUILT ONCE PER DATABASE (engine perf). `makeEffects` closes
+   ~9,000 lines of card semantics, and building it on every call was the
+   biggest steady cost of the AI's search and the UI's readers. Nothing in the
+   context depends on the state except the uid counter, so the shared `fx`
+   reads the CURRENT cell through `_curCell`, and `withFx` is the one place
+   that points it at a fresh cell and puts the previous one back (try/finally),
+   so a nested call can never leak its counter into the outer call. */
+let _curCell = null, _fxMemo = null;
+function sharedFx(){
+  const db = getDb();
+  if(!_fxMemo || _fxMemo.db !== db) _fxMemo = {db, fx: E.makeEffects(buildCtx(() => _curCell))};
+  return _fxMemo.fx;
+}
+function withFx(g, body){
+  const fx = sharedFx(), prev = _curCell, cell = {n: g.tokSeq || 0};
+  _curCell = cell;
+  try { return body(fx, cell); }
+  finally { _curCell = prev; }
+}
+function buildCtx(cellOf){
   /* THE SECOND DEAD READER (v3.82). This is the `gy` the card semantics
      are handed, and it carried its own copy of the same reminder-text
      regex — so BOTH of judge's graveyard paths dropped nothing. Three
@@ -758,26 +780,27 @@ function effectsFor(g){
       if(!(count > 0)) return g2;
       const tok = runeCard();
       if(!tok) return say(g2, "Runechant: the token is not in the card database — none created.");
-      let n = GM.addRunechants(g2, actorOf(g2), count, tok, () => ++cell.n);
+      let n = GM.addRunechants(g2, actorOf(g2), count, tok, () => ++cellOf().n);
       const h = mutAt(n, actorOf(n));
       /* "played or CREATED an aura this turn" reads both of these. */
       h.hist = {...h.hist, made: (h.hist.made || 0) + count, aura: (h.hist.aura || 0) + count};
       return n;
     },
     openPrompt,
-    tokSeq: () => ++cell.n,
+    tokSeq: () => ++cellOf().n,
     typeAbbr: GM.typeAbbr,
     winCheck: g2 => winCheck(g2)
   };
-  return {fx: E.makeEffects(ctx), cell};
+  return ctx;
 }
 
 /* Run a body of card semantics and put the uid counter back on the state.
    Every call into effects.js goes through here, so the counter cannot be
    dropped by one caller and kept by another. */
 function withEffects(g, body){
-  const {fx, cell} = effectsFor(g);
-  const out = body(fx, {...g});
+  return withFx(g, (fx, cell) => settleOut(g, cell, body(fx, {...g})));
+}
+function settleOut(g, cell, out){
   if(out == null) return g;
   const back = s => s.tokSeq === cell.n ? s : {...s, tokSeq: cell.n};
   /* Some pieces report a number alongside the state (`linkPumps` returns
@@ -2413,7 +2436,7 @@ const condGaNow = (g, seat, uid, from) => {
   const c = from === "arsenal" ? (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null)
           : from === "hand" ? (sd.hand || []).find(x => x && x.uid === uid) : null;
   if(!c) return false;
-  return effectsFor(g).fx.gatesMetNow(g, seat, c, from).some(x => x[1] === "ga");
+  return withFx(g, fx => fx.gatesMetNow(g, seat, c, from)).some(x => x[1] === "ga");
 };
 /* ---- WHICH ATTACKS COULD TAKE THIS GRANT NOW? (v5.38, QUEUE v4 H4) ----
 
@@ -2949,7 +2972,7 @@ const effPowerNow = (g, seat, uid, from, opts) => {
           : from === "arsenal" ? (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null)
           : from === "hand" ? (sd.hand || []).find(x => x && x.uid === uid) : null;
   if(!c || !c.name) return null;
-  return effectsFor(g).fx.effPowerNow(g, seat, c, from, opts);
+  return withFx(g, fx => fx.effPowerNow(g, seat, c, from, opts));
 };
 /* ---- A LIFE GAIN THAT IS BIGGER LATER (SPXPOLARITY) ----
    For `sparring.js`, which reads no card text: `effects.lifeNow` for a card in
@@ -2960,7 +2983,7 @@ const lifeGainOf = (g, seat, uid, from) => {
   const c = from === "arsenal" ? (sd.arsenal && sd.arsenal.uid === uid ? sd.arsenal : null)
           : from === "hand" ? (sd.hand || []).find(x => x && x.uid === uid) : null;
   if(!c || !c.name) return null;
-  return effectsFor(g).fx.lifeNow(g, seat, c, from);
+  return withFx(g, fx => fx.lifeNow(g, seat, c, from));
 };
 /* ---- ANOTHER CHARGE, AND WHAT IT BUYS AND LEAVES (v5.67, QUEUE v4 H24) ----
    V of the Vanguard prints "you may charge your soul ANY NUMBER OF TIMES" and
@@ -3706,7 +3729,18 @@ const winCheck = (g, by) => {
 const STALEMATE_TURNS = 20;
 const LOOP_RING = 8;
 const STILL_ZONES = ["deck", "hand", "pitch", "grave", "banish", "soul", "board", "gear"];
-const _uidList = z => (z || []).map(e => (e && e.uid != null) ? e.uid : (e && e.card ? e.card.uid : "?")).join(".");
+const _uidListRaw = z => (z || []).map(e => (e && e.uid != null) ? e.uid : (e && e.card ? e.card.uid : "?")).join(".");
+/* A ZONE ARRAY IS NEVER MUTATED IN PLACE once it sits in a committed state (the
+   state is shallow-copied and zones are rebuilt), and most zones are the SAME
+   array from one state to the next, so the signature is memoized on the array
+   itself (engine perf: this ran over every zone on every committed state). */
+const _uidMemo = new WeakMap();
+const _uidList = z => {
+  if(!z) return "";
+  let v = _uidMemo.get(z);
+  if(v === undefined){ v = _uidListRaw(z); _uidMemo.set(z, v); }
+  return v;
+};
 function stillSig(g){
   return (g.sides || []).map(sd =>
     sd.hp + "|" + STILL_ZONES.map(z => _uidList(sd[z])).join("/") + "|"
