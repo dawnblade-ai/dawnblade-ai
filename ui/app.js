@@ -124,7 +124,7 @@ function TableScreen(p){
 
   const heroName = k => K.catalog.byKey(k) ? K.firstName(K.catalog.byKey(k).n) : null;
   const names = ["You", heroName(s.heroKeys[1]) || s.names[1] || "They"];
-  const first = s.state().first != null ? s.state().first : s.pick ? s.pick.first : 0;
+  const first = s.state().firstPlayer != null ? s.state().firstPlayer : s.pick ? s.pick.first : 0;   /* the engine's field (makeGame) */
   const turn = s.state().turn | 0;
   const shut = () => setOver({menu: false, pad: false});
   const openMenu = () => { if(!live.over) setOver({menu: true, pad: false}); };

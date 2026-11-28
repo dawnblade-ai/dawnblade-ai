@@ -1,3 +1,24 @@
+## v7.22 — THE CIRCUIT: your record, the road, the daily challenge, the ladder (play.html)
+
+- **Your record (C1–C3).** Every finished game on `play.html` is recorded once, on the phone (`ui/circuit.js`, one
+  versioned store that survives file:// and says so when it cannot save): the ranked rating and its recent moves, W–L–D
+  at each kind of table, personal bests, a book of the heroes with a MASTERY rank each (UNTRIED, SPARRED, BLOODED, then
+  by how many of the roster's heroes you have beaten with it), and every recent game told from your side.
+- **The road (C6–C7).** A career through every AI hero, grouped by chapter into tiers ending at THE SUMMIT; a rung
+  clears on your first win over that hero against the full-strength AI. Open road, no gates.
+- **Today's challenge (C8).** One deal per UTC day, the same for every player: the heroes, the seed and the first
+  player come from the date alone, through the engine's own seeded RNG. Your first finished game of the day is the
+  official one; later plays are practice. A streak counts the days you showed up (a loss counts).
+- **The ladder (C4) and the ranked result (C5).** The public standings, readable signed out, with your own row; a
+  ranked game's plate shows the rating move (a sign and a word, never colour alone) once the server has recorded it.
+  The result plate after any game says what that game did: a rank, a rung, a best, the daily.
+- Honest numbers only: marks come only from finished games against the full-strength AI or the server's own rows; no
+  bonus, decay, currency or random element. Opens from F1's "Your record" and a fifth card on F2, "The Circuit".
+- **Engine, faster, same games:** the effects context is built once per card database instead of on every call, and
+  the still-signature's zone lists are memoized. Self-play (816 games) gives identical results before and after.
+- The pad now reads who went first from the engine's own field. `tools/ui-drive.js` waits for running animations
+  before it measures. New drive: `tools/ui-circuit-drive.js` (both engines); drills `test/ui-circuit.test.js`.
+
 ## v7.21 — CRESCENDO: the release UI arrives (play.html)
 
 - **A new table, built from scratch, at `play.html`.** Preact + htm (no Babel, no build step), designed screen by
