@@ -79,6 +79,89 @@ var bg = function(url, extra){ return url ? "background-image:url(" + url + ")" 
 function Switch(p){ return html`<i class=${"sw" + (p.on ? " on" : "")}></i>`; }
 
 /* ============================================================
+   THE FLOW'S LOGIC, PURE (test/ui-flow.test.js drills it headless): which modes light, what the coin says, where a networked
+   surface is in its life, what a rematch means here, and the hunt for an opponent. DawnUISession is the adapter; nothing here
+   judges a rule.
+   ============================================================ */
+/* F2's four modes, in the mockup's order, each enabled EXACTLY when DawnUISession.modes() says this page can run it */
+function modeRows(m){
+  m = m || {};
+  return [
+    {id: "dummy", enabled: !!m.dummy, lead: true, title: "Train on the Dummy", text: "Learn your deck against an iron-armored dummy.", tag: "Start here · Coach's call on"},
+    {id: "ai", enabled: !!m.local, title: "Play an AI hero", text: "A real precon, piloted by the computer.", tag: "Practice · Hero's call on"},
+    {id: "phones", enabled: !!m.room, title: "Two phones, one table", text: "Share a four-letter code and play a friend.", tag: "Friendly"},
+    {id: "online", enabled: !!m.server, title: "Find an opponent", text: "Sit at the server table and climb the ladder.", tag: "Friendly or ranked"}
+  ];
+}
+
+/* THE COIN, as F4 says it. A descriptor {label, text, first, choices|null, ready, coin}:
+     choices  what the person may press now ({id, label}); ready: SHUFFLE UP may be pressed; coin: draw the coin (not at the Dummy). */
+var SEAT_CHOICES = [{id: "first", label: "Go first"}, {id: "second", label: "Go second"}];
+var THROW_CHOICES = [{id: "rock", label: "Rock"}, {id: "paper", label: "Paper"}, {id: "scissors", label: "Scissors"}];
+function seatingLocal(call, foeName, dummy, chosen){
+  if(dummy) return {label: "", text: "You go first", first: 0, choices: null, ready: true, coin: false};
+  if(call.winner === 0 && call.needsChoice) return {label: "The coin", text: "You won the coin", first: null, choices: SEAT_CHOICES, ready: false, coin: true, won: true};
+  var f = call.first;
+  return {label: "The coin", text: f === 0 ? "You go first" : (foeName || "They") + " goes first", first: f, choices: null, ready: true, coin: true, won: call.winner === 0, chosen: chosen || null};
+}
+function seatingNet(s, foeName){
+  var w = s.awaiting ? s.awaiting() : null, c = s.coin ? s.coin() : null, me = s.seat;
+  if(w === "throw") return {label: "The coin", text: "Throw", first: null, choices: THROW_CHOICES, ready: false, coin: true};
+  if(w === "seat") return {label: "The coin", text: "You won the throw", first: null, choices: SEAT_CHOICES, ready: false, coin: true, won: true};
+  if(c && c.first != null) return {label: "The coin", text: c.first === me ? "You go first" : (foeName || "They") + " goes first", first: c.first === me ? 0 : 1, choices: null, ready: s.phase && s.phase() === "playing", coin: true};
+  return {label: "The coin", text: "Throwing…", first: null, choices: null, ready: false, coin: true};
+}
+/* where a networked surface is: wait (the friend or the server has not arrived) | sit (both heroes known: the coin) | play | end | drop (the
+   other phone went quiet mid-game) | fail (it never came up) */
+function netStage(s, err){
+  if(err) return "fail";
+  if(!s) return "wait";
+  var ph = s.phase(), st = s.state && s.state();
+  /* a room's channel closing is reported by the channel's own status (the app sets `dropped` from openNetworked's onStatus); the referee session's phase does not move */
+  if(s.dropped && st && !st.over) return "drop";
+  if(ph === "fault" || ph === "closed") return st ? (st.over ? "end" : "drop") : "fail";
+  if(ph === "connecting") return "wait";
+  if(ph === "ended") return "end";
+  if(ph === "playing") return "play";
+  var lob = s.lobby && s.lobby();
+  return lob && lob.heroes[0] != null && lob.heroes[1] != null ? "sit" : "wait";
+}
+/* what Rematch means: local (the session deals a fresh game) | server (both ask; the referee opens a table) | none (a two-phone room has no
+   rematch protocol: the honest button is "New table") */
+function rematchKind(s){ return !s ? "none" : !s.networked ? "local" : s.server ? "server" : "none"; }
+/* FIND AN OPPONENT (F9 server): ask the queue, sit at the table it names, and while it waits ask again every beat; the server decides every
+   match. deps: {seek(q), open(table) -> Promise<surface>, setTimer, clearTimer}; hooks: {onSurface(surface, info), onFail(err)}. */
+function findOpponent(deps, hooks){
+  var stopped = false, timer = null, table = null, surface = null;
+  function loop(beat){
+    timer = deps.setTimer(function(){
+      timer = null;
+      if(stopped) return;
+      deps.seek({table: table}).then(function(r){ if(!stopped && (r.state === "waiting" || r.state === "taken")) loop(r.beat); }, function(e){ if(!stopped) hooks.onFail(e); });
+    }, beat);
+  }
+  deps.seek({}).then(function(r){
+    if(stopped) return null;
+    table = r.table;
+    return deps.open(r.table).then(function(sf){
+      surface = sf;
+      if(stopped){ try { sf.dispose(); } catch(e){} return; }
+      hooks.onSurface(sf, {matched: r.state === "matched", typical: r.typical || null, table: r.table});
+      if(r.state !== "matched") loop(r.beat);
+    });
+  }).then(null, function(e){ if(!stopped) hooks.onFail(e); });
+  return {
+    /* STOP LOOKING / PLAY THE AI: the seek is cancelled (its table closes) and the surface is let go */
+    cancel: function(){
+      stopped = true; if(timer != null) deps.clearTimer(timer);
+      try { deps.seek({cancel: true}).then(null, function(){}); } catch(e){}
+      if(surface){ try { surface.dispose(); } catch(e){} }
+    },
+    table: function(){ return table; }
+  };
+}
+
+/* ============================================================
    F1 Title
    ============================================================ */
 function Title(p){
@@ -112,20 +195,18 @@ function Title(p){
    ============================================================ */
 function Ways(p){
   var key = (readLast() || {}).foe, foe = catalog.byKey(key) || catalog.list()[2];
-  var soon = function(lab){ return html`<span class="tg"><span class="lab">${lab}</span></span>`; };
+  var rows = modeRows(p.modes), on = {dummy: p.onDummy, ai: p.onAI, phones: p.onPhones, online: p.onServer};
+  var icon = {dummy: "m-dummy", phones: "m-phones", online: "m-online"};
   return html`<div class="scr f2" data-b="ways"><div class="frame">
     <div class="hdr" style="height:76px"><${Back} onClick=${p.onBack}/><h1><span class="sub">Step 1 of 3</span>How do you want to play?</h1></div>
     <div class="modes">
-      <button class="mode lead" data-tap data-b="mode-ai" onClick=${p.onAI}>
-        <span class="pic art hero" style=${"background-size:300%;background-position:50% 17%;box-shadow:0 0 0 2px var(--opp);" + bg(foe && catalog.art(foe.k))}></span>
-        <span style="flex:1;min-width:0"><h3>Play an AI hero</h3><p>A real precon, piloted by the computer.</p><span class="tg"><span class="lab" style="color:var(--brass)">Start here · Hero's call on</span></span></span>
-        <${Ico} n="next"/></button>
-      <button class="mode" disabled aria-disabled="true" style="opacity:.5" data-b="mode-dummy"><span class="pic"><svg><use href="#fl-m-dummy"/></svg></span>
-        <span style="flex:1;min-width:0"><h3>Train on the Dummy</h3><p>Learn your deck against an iron-armored dummy.</p>${soon("Not at this table yet")}</span></button>
-      <button class="mode" disabled aria-disabled="true" style="opacity:.5" data-b="mode-phones"><span class="pic"><svg><use href="#fl-m-phones"/></svg></span>
-        <span style="flex:1;min-width:0"><h3>Two phones, one table</h3><p>Share a four-letter code and play a friend.</p>${soon("Not at this table yet")}</span></button>
-      <button class="mode" disabled aria-disabled="true" style="opacity:.5" data-b="mode-online"><span class="pic"><svg><use href="#fl-m-online"/></svg></span>
-        <span style="flex:1;min-width:0"><h3>Find an opponent</h3><p>Sit at the server table and climb the ladder.</p>${soon("Not at this table yet")}</span></button>
+      ${rows.map(function(r){
+        var pic = r.id === "ai" ? html`<span class="pic art hero" style=${"background-size:300%;background-position:50% 17%;box-shadow:0 0 0 2px var(--opp);" + bg(foe && catalog.art(foe.k))}></span>`
+          : html`<span class="pic"><svg><use href=${"#fl-" + icon[r.id]}/></svg></span>`;
+        return html`<button class=${"mode" + (r.lead ? " lead" : "")} disabled=${!r.enabled} aria-disabled=${r.enabled ? "false" : "true"} style=${r.enabled ? "" : "opacity:.5"} data-tap=${r.enabled ? "" : undefined} data-b=${"mode-" + r.id} onClick=${r.enabled ? on[r.id] : null}>
+          ${pic}<span style="flex:1;min-width:0"><h3>${r.title}</h3><p>${r.text}</p><span class="tg"><span class="lab" style=${r.lead && r.enabled ? "color:var(--brass)" : ""}>${r.enabled ? r.tag : "Not at this table yet"}</span></span></span>
+          ${r.enabled ? html`<${Ico} n="next"/>` : null}</button>`;
+      })}
     </div>
     <div class="foot"><button class="link" data-tap data-b="rules" onClick=${p.onRules}><${Ico} n="book" style="width:20px;height:20px;margin-right:8px"/>New here? Learn the rules in two minutes</button></div>
   </div></div>`;
@@ -177,29 +258,31 @@ function Heroes(p){
    F4 Sit down: you below, them above, the coin on the seam
    ============================================================ */
 function SitDown(p){
-  var me = catalog.info(p.hero), them = catalog.info(p.foe), first = p.first;
+  var dummy = p.foe === "dummy", me = catalog.info(p.hero), them = dummy ? null : catalog.info(p.foe), sg = p.seating || {label: "The coin", text: "You go first", first: 0, choices: null, ready: true, coin: true};
   var coin = useRef(null), win = useRef(null);
   useEffect(function(){
-    var d = p.director; if(!d) return;
+    var d = p.director; if(!d || !sg.coin || sg.first == null) return;
     d.enqueue({kind: "start", els: {coin: coin.current, win: win.current}, pose: {coin: {x: 0, y: 0, s: 1}}});
-  }, [p.first, p.hero, p.foe]);
-  var who = first === 0 ? "You go first" : firstName(them.hero.n) + " goes first";
+  }, [p.hero, p.foe, sg.first, sg.coin]);
   var role = function(i){ return String(i.type) + " · life " + (i.life == null ? "" : i.life); };
+  var foeName = dummy ? "The Dummy" : firstName(them.hero.n);
+  var coinArt = sg.first === 0 ? catalog.art(p.hero) : (!dummy && sg.first === 1 ? catalog.art(p.foe) : null);
   return html`<div class="scr f4" data-b="sitdown">
-    <div class="bg"><div class="half o hero" style=${bg(catalog.art(p.foe))}></div><div class="half y hero" style=${bg(catalog.art(p.hero))}></div><div class="tint o"></div><div class="tint y"></div>
+    <div class="bg">${dummy ? html`<div class="half o dummy"><svg viewBox="0 0 24 24"><use href="#fl-m-dummy"/></svg></div>` : html`<div class="half o hero" style=${bg(catalog.art(p.foe))}></div>`}<div class="half y hero" style=${bg(catalog.art(p.hero))}></div><div class="tint o"></div><div class="tint y"></div>
       <svg class="seam" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><line x1="0" y1="54" x2="100" y2="46" stroke="#F2C66E" stroke-width="2.4" vector-effect="non-scaling-stroke"/></svg></div>
     <div class="frame">
       <button class="hit" aria-label="Change your opponent" data-tap data-b="hit-opp" style="top:52px;height:calc(46% - 52px)" onClick=${p.onFoe}></button>
       <button class="hit" aria-label="Change your hero" data-tap data-b="hit-you" style="top:54%;height:calc(46% - 76px)" onClick=${p.onHero}></button>
       <button class="ib dk" aria-label="Back" data-tap data-b="back" style="position:absolute;left:var(--gut);top:8px;z-index:6" onClick=${p.onBack}><${Ico} n="back"/></button>
-      <div class="nameo" style="pointer-events:none"><span class="lab">Them · drawn by fate</span><b>${firstName(them.hero.n)}</b><i class="bar3"></i><span class="lab">${role(them)}</span></div>
-      <span class="swap" style="right:var(--gut);top:calc(46% - 56px)">Tap to swap ›</span>
-      <div class="coin" ref=${coin} data-b="coin"><div class="face hero" style=${bg(catalog.art(first === 0 ? p.hero : p.foe))}></div></div>
-      <div class="slab" ref=${win} data-b="slab"><span class="lab">The coin</span><b>${who}</b></div>
+      <div class="nameo" style="pointer-events:none"><span class="lab">${dummy ? "Them · iron-armored" : "Them · " + (p.net ? "your opponent" : "drawn by fate")}</span><b>${foeName}</b><i class="bar3"></i><span class="lab">${dummy ? "Training dummy" : role(them)}</span></div>
+      ${p.net ? null : html`<span class="swap" style="right:var(--gut);top:calc(46% - 56px)">Tap to swap ›</span>`}
+      ${sg.coin ? html`<div class="coin" ref=${coin} data-b="coin"><div class="face hero" style=${bg(coinArt)}>${coinArt ? "" : "?"}</div></div>` : null}
+      <div class="slab" ref=${win} data-b="slab"><span class="lab">${sg.label || "Ready"}</span><b>${sg.text}</b></div>
+      ${sg.choices ? html`<div class="seatpick" data-b="seatpick">${sg.choices.map(function(c){ return html`<button class="btn sec" data-tap data-b=${"pick-" + c.id} onClick=${function(){ p.onChoose(c.id); }}>${c.label}</button>`; })}</div>` : null}
       <div class="namey" style="pointer-events:none"><span class="lab">You</span><b>${firstName(me.hero.n)}</b><i class="bar3"></i><span class="lab">${role(me)}</span></div>
       <span class="swap" style="right:var(--gut);bottom:84px">Tap to change ›</span>
       <div class="hub"><button class="btn sec dis" disabled aria-disabled="true" aria-label="Change gear, coming soon" data-b="gear"><${Ico} n="gear"/>Soon</button>
-        <button class="btn" data-tap data-b="shuffle" onClick=${p.onShuffle}>Shuffle up</button></div>
+        <button class=${"btn" + (sg.ready ? "" : " dis")} disabled=${!sg.ready} data-tap=${sg.ready ? "" : undefined} data-b="shuffle" onClick=${sg.ready ? p.onShuffle : null}>Shuffle up</button></div>
     </div></div>`;
 }
 
@@ -287,7 +370,7 @@ function Result(p){
     return html`<div class="scr f7" data-b="result-pad"><div class="frame">
       <${PAD().Paper} pad=${p.pad} names=${p.names} first=${p.first} turn=${p.turn} result=${true} winner=${p.winner} style="top:66px;height:470px"/>
       <div class="acts2"><div class="row"><button class="btn sec" data-tap data-b="new" onClick=${p.onNew}>New opponent</button><button class="btn sec dng" data-tap data-b="leave" onClick=${p.onLeave}>Leave</button></div>
-        <button class="btn" data-tap data-b="rematch" onClick=${p.onRematch}>Rematch</button></div></div></div>`;
+        <button class=${"btn" + (p.rematchBusy ? " dis" : "")} disabled=${!!p.rematchBusy} data-tap=${p.rematchBusy ? undefined : ""} data-b="rematch" onClick=${p.onRematch}>${p.rematchLabel || "Rematch"}</button></div></div></div>`;
   return html`<div class="scr f7" data-b="result-ko"><div class="frame">
     ${phase === "ko" ? html`<div class="veil" ref=${dim} style="background:#000;opacity:0"></div>` : html`<div class="veil" ref=${veil}></div>`}
     <div class="word" ref=${word} data-b="word" style=${phase === "ko" && p.director ? "opacity:0" : ""}><b>Dawn</b><b>break</b><span>${wname}</span><i class=${me ? "" : "o"}></i></div>
@@ -329,7 +412,7 @@ function Waiting(p){
   if(v === "phone") body = html`<div class="wr" data-b="waiting-phone">${back}<div class="stack">${sun()}<div class="h"><h1>Waiting for your friend</h1><p>Tell them this code, or send it from your phone.</p></div>
       <div class="codes">${code.split("").map(function(c){ return html`<b>${c}</b>`; })}</div>${seats("Waiting")}</div>
       <div class="btns"><button class="btn" data-tap data-b="share" onClick=${function(){ var t = "Join my Dawnblade table: " + code; try { if(root.navigator.share) root.navigator.share({text: t}); else root.navigator.clipboard.writeText(t); } catch(e){} }}><${Ico} n="share" style="width:22px;height:22px"/>Share the code</button></div></div>`;
-  else if(v === "server") body = html`<div class="wr" style="--btnh:138px" data-b="waiting-server">${back}<div class="stack">${sun()}<div class="h"><h1>Finding you a table</h1><p>The usual wait is about 20 seconds.</p></div>${seats("Looking")}</div>
+  else if(v === "server") body = html`<div class="wr" style="--btnh:138px" data-b="waiting-server">${back}<div class="stack">${sun()}<div class="h"><h1>Finding you a table</h1><p>${p.typical ? "The usual wait is about " + p.typical + " seconds." : "Looking for somebody at the server table."}</p></div>${seats("Looking")}</div>
       <div class="btns"><button class="btn" data-tap data-b="play-ai" onClick=${p.onPlayAI}>Play the AI while you wait</button><button class="btn sec" data-tap data-b="stop" onClick=${p.onBack}>Stop looking</button></div></div>`;
   else if(v === "fail") body = html`<div class="wr" style="--btnh:138px" data-b="waiting-fail">${back}<div class="stack">${sun(true)}<div class="h"><h1>We could not reach the server</h1><p>Check your connection. Nothing is lost, and the AI is always at the table.</p></div></div>
       <div class="btns"><button class="btn" data-tap data-b="again" onClick=${p.onAgain}>Try again</button><button class="btn sec" data-tap data-b="play-ai" onClick=${p.onPlayAI}>Play the AI instead</button></div></div>`;
@@ -338,6 +421,6 @@ function Waiting(p){
   return html`<div class="scr f9" data-b="waiting">${v === "quiet" ? body : html`<div class="bg" style="position:absolute;inset:0;background:var(--mat-bg)"></div><div class="frame">${body}</div>`}</div>`;
 }
 
-return {Sprite: Sprite, Title: Title, Ways: Ways, Heroes: Heroes, SitDown: SitDown, Menu: Menu, Result: Result, Rules: Rules, Waiting: Waiting, Thinking: Thinking,
+return {Sprite: Sprite, Title: Title, Ways: Ways, Heroes: Heroes, SitDown: SitDown, Menu: Menu, Result: Result, Rules: Rules, Waiting: Waiting, Thinking: Thinking, modeRows: modeRows, seatingLocal: seatingLocal, seatingNet: seatingNet, netStage: netStage, rematchKind: rematchKind, findOpponent: findOpponent,
         catalog: catalog, store: store, readLast: readLast, firstName: firstName, K_SPEED: K_SPEED, K_COACH: K_COACH};
 });

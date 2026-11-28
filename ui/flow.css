@@ -424,3 +424,9 @@ html[data-band=compact] .stage.fl .f1 .tag{display:none}
 .stage.fl .rl i{font:var(--t-label);font-style:normal;letter-spacing:var(--track-caps);color:var(--brass-hi)}
 .stage.fl .rl p{margin-top:4px;font:var(--t-small);color:var(--ink-0)}
 .stage.fl button:disabled{cursor:default}
+
+/* F4 against the Dummy: the iron dummy fills the top half (no portrait), and the person's coin call sits under the slab */
+.stage.fl .f4 .half.dummy{background:#12171a;display:grid;place-items:center}
+.stage.fl .f4 .half.dummy svg{width:150px;height:150px;color:var(--ink-2);opacity:.55;margin-top:-30px}
+.stage.fl .f4 .seatpick{position:absolute;left:var(--gut);top:calc(50% + 120px);display:flex;gap:8px;z-index:6}
+.stage.fl .f4 .seatpick .btn{min-width:104px}

@@ -34,7 +34,7 @@ const SCREENS = [
     sel: S(".top .lab", ".top .ib", ".mark .w1", ".mark .blade", ".mark .w2", ".tag", ".band .artband", ".band .who", ".band .chip", ".cta .btn", ".cta small", ".row3 .link", ".foot") },
   { id: "F2 ways", mock: "flow-2-ways.html", app: "?screen=f2", root: ".f2",
     sel: S(".hdr .ib", ".hdr h1", ".modes .mode", ".foot .link"),
-    skip: { ".modes .mode": "the Dummy, two phones and the server table are not at this table yet: drawn at the mockup's boxes, dimmed" } },
+},
   { id: "F3 heroes", mock: "flow-3-hero.html", app: "?screen=f3", root: ".f3", sel: S(".hdr .ib", ".hdr h1", ".grid", ".tile") },
   { id: "F3 peek", mock: "flow-3-hero.html?v=peek", app: "?screen=f3&peek=iyslander", root: ".f3",
     sel: S(".scrim", ".sheet.pk", ".ban", ".ban .ib", ".ban .bn", ".bl", ".stats", ".dk-l", ".dstrip", ".sitbar .btn"),
@@ -43,6 +43,7 @@ const SCREENS = [
     sel: S(".hit", ".ib", ".nameo", ".swap", ".coin", ".slab", ".namey", ".hub .btn") },
   { id: "F9 phone", mock: "flow-9-waiting.html?v=phone", app: "?screen=f9&v=phone", root: ".f9", sel: S(".ib", ".sunrise", ".h h1", ".h p", ".codes b", ".btns .btn") },
   { id: "F9 server", mock: "flow-9-waiting.html?v=server", app: "?screen=f9&v=server", root: ".f9", sel: S(".ib", ".sunrise", ".h h1", ".btns .btn") },
+  { id: "F9 quiet", mock: "flow-9-waiting.html?v=quiet", app: "?screen=f9&v=quiet", root: ".f9", sel: S(".scrim", ".panel", ".panel h2", ".panel p", ".panel .btn") },
   { id: "F9 fail", mock: "flow-9-waiting.html?v=fail", app: "?screen=f9&v=fail", root: ".f9", sel: S(".ib", ".sunrise", ".h h1", ".btns .btn") },
   /* over the live table: the app is driven to the screen */
   { id: "F8 menu", mock: "flow-8-menu.html", app: TABLE, root: ".f8", steps: ["menu"], sel: S(".sheet.mn", ".mh h2", ".mh .chip", ".mh .ib", ".mb .mrow"), skip: { ".mb .mrow": "the app's Classic board row is a link, not a button: same box" } },
