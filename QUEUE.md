@@ -4,33 +4,38 @@
 answered NEEDS-A-RULING notes are in `QUEUE-ARCHIVE.md` on this branch (grep it, don't read it). History lives in
 CHANGELOG.md (v6.30 on; older in `docs/archive/CHANGELOG-to-v6.29.md`) and LESSONS.md on main.
 
-## HANDOFF — START HERE (CEO session_013xG9x84b3jca3ZpKGRmHXL, 2026-11-28, at v7.20)
+## HANDOFF — START HERE (CEO session_013xG9xA6vFW9WwQ3FBuhVEU, 2026-11-28, at v7.23)
 
-**THE USER'S DIRECTION (2026-11-27): CRESCENDO — the release UI, "the last hurrah".** "Never settle, always look to
-make the game better and better and stick to the spirit of the source material." Its own handoff is
-**`docs/crescendo/README.md` on the branch `claude/vigilant-gates-qz10xn`** (NOT yet on main): START THERE.
+**THE USER'S DIRECTION (2026-11-27/28): CRESCENDO — the release UI**, and this thread: "establish the framework that
+will elevate this to a timeless addicting competitive game". "Out with the old, in with the new — push push push."
+Its own handoff is **`docs/crescendo/README.md` on main**: START THERE.
 
-**SHIPPED THIS CEO (on the branch, no release; live stays v7.20):** the new shell `play.html` + `ui/` (Preact + htm,
-no Babel), README steps 0–9: every table state and flow screen box-matches its mockup in Chromium AND WebKit at four
-phone viewports; the AI's search runs in a Worker; the session seats the local AI, the Dummy, the server table and two
-phones, with rematch; chaos (random taps through whole games, every hero) is clean. WebKit drives work (the two
-Playwright hosts were allowed; the environment's setup script installs WebKit). Engine touched twice:
-`prompts.js` refuses a selection index the sheet does not hold; `sparring.js` exports `wallNow`.
+**SHIPPED THIS CEO (three releases, all live, livecheck ALL PASS):** **v7.21** the CRESCENDO build lands on main
+(`play.html` beside the classic page, which is still the default). **v7.22** THE CIRCUIT (`ui/circuit*.js`,
+SCREENS-CIRCUIT.md C1–C9): Your record, hero mastery, the Road through every AI hero, Today's challenge (one deal per
+UTC day for everyone), the ladder, the result plate; plus the engine's effects context built once per db
+(`judge.withFx`; self-play byte-identical). **v7.23** ranked from play.html (FRIENDLY | RANKED on F3, no coach at a
+table with a person, the rating plate on both phones).
 
-**State:** live = **v7.20** on `main`. **WIRE_V 50**, DATA_VER sage-v19, 17 heroes. **WORKERS: NONE.** SQL unchanged.
+**State:** live = **v7.23** on `main`; function v7.23 stamped. **WIRE_V 50**, DATA_VER sage-v19, 17 heroes. SQL
+unchanged. **WORKERS: NONE.**
 
-**NEXT:** README "Next": (1) release v7.21 from the branch (merge to main is the user's go: this session could push only
-its branch; engine files changed, so `supabase-deploy` + DEPLOYED.json), (2) the real iPhone on `play.html`,
-(3) then ask the user to make play.html the default.
+**NEXT:** (1) **`docs/crescendo/REVIEW-2.md`** — the second design review with real art, 25 findings, NONE fixed: the
+table is ~45% empty while gear/arena read as ~30 px thumbnails, HIT FOR is tiny, life shows -1 at the end (check the
+CR before clamping), the result pad has no "one more" hook, C2's portraits are washed out. A design pass then a build.
+(2) **The real iPhone** on `play.html` (the user), then (3) **ask to make play.html the default** (the user leans yes).
 
-**NEW ITEMS:** **S** engine perf: at 4x CPU the UI's long tasks are the engine's own (`judge.js effectsFor` rebuilt
-on every call, then `executeInner`/`runOps`; worst 124 ms on an AI tick). **H** the coach (Sharp) loses slow
-attrition games to the Dummy (Iyslander 4/12 seeds, Fai 2/12, Kayo 0/12; turns 36-37; engine clean).
+**NEW ITEMS:** **S** WebKit T1 box-match flakes under CPU load (the world 4.2 px low; passes on a quiet machine; the
+settle now waits for animations; still open). **S** the AI tick's worst is ~400 ms at 4x (on the Sharp bound; the
+profile is flat: `legal`/`settle`/`stalemateCheck` inside search). **H** (standing) the coach loses slow attrition games
+to the Dummy. The Worker still parses `data/pool.js` a second time. **S** Playwright's Chromium on file:// loses the
+stored Ranked choice across a reload on ~4 of 15 runs (the page reads it back; a second page never sees it; no page code
+removes the key); `tools/ui-flow-drive.js` is strict on WebKit and NOTES it on Chromium: prove it over http (or on a
+real Android phone) and make Chromium strict again.
 
-**NEEDS A RULING (defaults standing):** README Q1–Q14 (Q13 the roll/the throw, Q14 a Deck button for the
-undesigned loadout are new). Add to Home Screen stays decision C.
+**NEEDS A RULING (defaults standing):** README Q1–Q14, SCREENS-CIRCUIT.md Q1–Q20 (LSS event names for the road's
+tiers; UTC day; streak on, informational) and the ranked builder's: coach absent at friendly AND ranked (F8, applied).
 
-**How to run the shop:** as before (QUEUE-ARCHIVE.md, top), plus: three builders with disjoint file sets ran at once
-(table · flow · session); the CEO checkpointed their in-progress files as labelled ungated WIP commits (the stop hook
-asks for commits, the container is ephemeral) and committed each gated round on its report. The account's 5-hour
-usage limit stopped workers twice: resume them with SendMessage after the reset.
+**How to run the shop:** as before (QUEUE-ARCHIVE.md, top). This thread: Sonnet workers with disjoint file sets, the
+CEO checkpointing their WIP on the stop hook; release gates run in a CLEAN `git worktree` of the release commit
+(a worker editing `ui/` makes a shared-tree drive meaningless); `npm run play` compared byte-for-byte across releases.
