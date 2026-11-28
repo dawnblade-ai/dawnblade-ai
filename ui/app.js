@@ -64,12 +64,19 @@ const MANUAL = {throw: true, seat: true};
 /* the hunt for an opponent at the server table (flow.js findOpponent over the session's networked door) */
 let finder = null;
 function stopFinder(){ if(finder){ try { finder.cancel(); } catch(e){} finder = null; } }
-function startFinder(hero, hooks){
-  const ST = root.DawnServerTable, S = root.DawnUISession;
-  const transport = ST.defaultTransport(root.SERVER_TABLE), identity = ST.defaultIdentity(root.SERVER_TABLE, S.pageStore(root));
+/* THE SERVER'S DOOR, once: the same transport and sign-in the classic page's srvWire / srvWho are (a drive's __dawnServerTransport wins) */
+const serverDoor = () => { const ST = root.DawnServerTable; return {transport: ST.defaultTransport(root.SERVER_TABLE, root), identity: ST.defaultIdentity(root.SERVER_TABLE, root.DawnUISession.pageStore(root), root)}; };
+/* the last FRIENDLY | RANKED choice, per device */
+const RANKED_KEY = "crescendo.ranked";
+const readRanked = () => { try { return root.DawnUISession.pageStore(root).get(RANKED_KEY, false) === true; } catch(e){ return false; } };
+const saveRanked = v => { try { root.DawnUISession.pageStore(root).set(RANKED_KEY, !!v); } catch(e){} };
+function startFinder(hero, ranked, hooks){
+  const ST = root.DawnServerTable, S = root.DawnUISession, door = serverDoor();
   finder = root.DawnUIFlow.findOpponent({
-    seek: q => ST.seek({transport, identity}, q),
-    open: table => S.openNetworked({how: "server-join", code: table, hero, manual: MANUAL}, root).start(),
+    /* engine/servertable.js's seek, as the classic page's seekAsk asks it: `ranked` rides on every ask (and the table it opened is ranked) */
+    seek: q => ST.seek(door, {...q, ranked}),
+    /* the table the queue names: a match sits as a joiner; the one this seek opened is sat at as its creator (the classic's role: "creator") */
+    open: (table, matched) => S.openNetworked({how: "server-join", code: table, hero, manual: MANUAL, ...door, ...(matched ? {} : {role: "creator"}), tune: {pollMs: 20000, fallbackMs: 2000}}, root).start(),
     setTimer: (f, ms) => setTimeout(f, ms), clearTimer: h => clearTimeout(h)
   }, hooks);
 }
@@ -166,7 +173,7 @@ function TableScreen(p){
 function App(){
   const P = root.htmPreact, html = P.html, useState = P.useState, useEffect = P.useEffect;
   const K = root.DawnUIFlow, cat = K.catalog, D = dir(), S = root.DawnUISession;
-  const st = useState(() => fromQuery(root.location && root.location.search)), s = st[0], setS = st[1];
+  const st = useState(() => ({...fromQuery(root.location && root.location.search), ranked: readRanked()})), s = st[0], setS = st[1];
   const tk = useState(0), bump = () => tk[1](n => n + 1);
   const nav = patch => setS(x => ({...x, ...patch}));
   /* a plain move clears what the daily and the road fixed; the Circuit's own screens remember where they were opened from */
@@ -219,17 +226,29 @@ function App(){
       nav({screen: "f9", kind: "phones", v: "phone", net, netErr: null, hero, roomCode: code});
     } catch(e){ nav({screen: "f9", kind: "phones", v: "fail", netErr: e}); }
   };
-  const openServer = hero => {
-    nav({screen: "f9", kind: "online", v: "server", net: null, netErr: null, hero, typical: null});
-    try { startFinder(hero, {onSurface: (net, info) => nav({net, typical: info.typical}), onFail: e => nav({netErr: e || new Error("the server could not be reached")})}); }
+  const openServer = (hero, ranked) => {
+    nav({screen: "f9", kind: "online", v: "server", net: null, netErr: null, hero, typical: null, nameAsk: null});
+    try {
+      startFinder(hero, !!ranked, {onSurface: (net, info) => nav({net, typical: info.typical}),
+        /* the queue says this player has no name (a ranked table needs one): back to the hero step with the name sheet, not a dead end */
+        onFail: e => { if(e && e.why === "ranked-name"){ stopFinder(); nav({screen: "f3", mode: "hero", kind: "online", netErr: null, nameAsk: hero}); } else nav({netErr: e || new Error("the server could not be reached")}); }});
+    }
     catch(e){ nav({netErr: e}); }
   };
+  /* FRIENDLY | RANKED chosen at F3: a ranked seek needs a player name first (the classic's "ranked-name"); the referee knows it, `whoAmI` asks */
+  const startOnline = hero => {
+    if(!s.ranked) return openServer(hero, false);
+    const ST = root.DawnServerTable;
+    ST.whoAmI(serverDoor()).then(w => w && w.name ? openServer(hero, true) : nav({nameAsk: hero}), () => openServer(hero, true));
+  };
+  const saveName = name => root.DawnServerTable.setName(serverDoor(), name).then(() => openServer(s.nameAsk, true));
+  const chooseRanked = v => { saveRanked(v); nav({ranked: v}); };
   /* a hero picked in F3: the next step depends on what was chosen at F2 */
   const picked = k => {
     if(s.mode === "foe") return sit({foe: k, kind: "ai", peek: null});
     if(s.fixedFoe) return sit({hero: k, foe: s.fixedFoe, kind: "ai", peek: null});
     if(s.kind === "phones") return openRoom(k, "room-host");
-    if(s.kind === "online") return openServer(k);
+    if(s.kind === "online") return startOnline(k);
     sit({hero: k, foe: s.kind === "dummy" ? "dummy" : s.foe === k || s.foe === "dummy" ? cat.draw(k) : s.foe, peek: null});
   };
 
@@ -246,6 +265,7 @@ function App(){
         onDummy=${() => go("f3", {mode: "hero", kind: "dummy"})} onAI=${() => go("f3", {mode: "hero", kind: "ai"})}
         onPhones=${() => go("f3", {mode: "hero", kind: "phones"})} onServer=${() => go("f3", {mode: "hero", kind: "online"})}/>`; break;
     case "f3": body = html`<${K.Heroes} key=${s.mode + (s.peek || "") + (s.fixedFoe || "")} fixedFoe=${s.fixedFoe} mode=${s.mode} current=${s.mode === "foe" ? s.foe : s.hero} peek=${s.peek}
+        online=${s.kind === "online" && s.mode !== "foe" && !s.fixedFoe} ranked=${!!s.ranked} onRanked=${chooseRanked}
         onBack=${() => go(s.mode === "foe" || s.fixedFoe ? (s.mode === "foe" ? "f4" : "c7") : "f2")} onPick=${picked}/>`; break;
     case "f4": {
       const dummy = s.foe === "dummy" && !s.net;
@@ -279,9 +299,9 @@ function App(){
     case "f9": {
       const v = stage === "fail" ? "fail" : s.kind === "online" || s.v === "server" ? "server" : s.v === "quiet" || s.v === "fail" ? s.v : "phone";
       const code = s.roomCode ? String(s.roomCode).toUpperCase() : s.join ? String(s.join).toUpperCase() : "K7QM";
-      body = html`<${K.Waiting} v=${v} hero=${s.hero} code=${code} typical=${s.typical}
+      body = html`<${K.Waiting} v=${v} hero=${s.hero} code=${code} typical=${s.typical} ranked=${!!s.ranked}
         onBack=${() => { dropNet(); go("f2", {net: null, netErr: null}); }}
-        onAgain=${() => { if(s.kind === "online"){ dropNet(); openServer(s.hero); } else if(s.kind === "phones"){ dropNet(); openRoom(s.hero, "room-host"); } else nav({v: "server", netErr: null}); }}
+        onAgain=${() => { if(s.kind === "online"){ dropNet(); openServer(s.hero, s.ranked); } else if(s.kind === "phones"){ dropNet(); openRoom(s.hero, "room-host"); } else nav({v: "server", netErr: null}); }}
         onLeave=${() => { dropNet(); go("f1", {net: null}); }}
         onPlayAI=${() => { dropNet(); sit({foe: cat.draw(s.hero), kind: "ai", net: null}); }}/>`;
       break;
@@ -292,6 +312,7 @@ function App(){
   if(s.screen === "table") return body;
   return html`<div class="stage fl" data-screen=${s.screen}><${K.Sprite}/>${body}
     ${s.rules ? html`<${K.Rules} onClose=${() => nav({rules: false})}/>` : null}
+    ${s.nameAsk ? html`<${K.NameAsk} onSave=${saveName} onCancel=${() => nav({nameAsk: null})}/>` : null}
     ${s.menu ? html`<${K.Menu} variant="title" director=${D} onClose=${() => nav({menu: false})}/>` : null}</div>`;
 }
 

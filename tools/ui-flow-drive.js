@@ -282,6 +282,136 @@ async function phonesJourney(pw, browser, engine, vp, o, ending){
   return { bad, steps };
 }
 
+
+/* ---------- FIND AN OPPONENT, FRIENDLY AND RANKED: play.html over the FAKE referee (server/referee.js over the in-memory store, test/helpers/servertransport.js) ----------
+   The page's transport is window.__dawnServerTransport, forwarded to a world in THIS process; the real server and the live ladder are never touched. The other player is a
+   scripted phone that seeks through the same queue. Nothing here is the page's own code: the page calls engine/servertable.js's seek / sitAt / whoAmI / setName. */
+const SRV_SHIM = () => {
+  try { if(!localStorage.getItem("dawnblade.crescendo.last")) localStorage.setItem("dawnblade.crescendo.last", JSON.stringify({ hero: "iyslander", foe: "viserai" })); } catch(e){}
+  window.__sent = [];
+  window.__dawnServerTransport = {
+    post: env => { try { window.__sent.push(JSON.parse(JSON.stringify(env))); } catch(e){} return window.__srvPost("PAGE", JSON.stringify(env)).then(t => JSON.parse(t)); },
+    subscribe: (topic, fn, onState) => { window.__srvSubs = window.__srvSubs || {}; window.__srvN = (window.__srvN || 0) + 1; const id = window.__srvN; window.__srvSubs[id] = { fn, onState }; window.__srvSub("PAGE", topic, id);
+      return () => { delete window.__srvSubs[id]; window.__srvUnsub(id); }; } };
+  window.__srvDeliver = (id, p) => { const x = (window.__srvSubs || {})[id]; if(x) x.fn(p); };
+  window.__srvState = (id, st) => { const x = (window.__srvSubs || {})[id]; if(x && x.onState) x.onState(st); };
+  window.__dawnServerIdentity = { token: () => Promise.resolve(window.__srvTok || null) };
+};
+async function serverWorld(page, engine){
+  const { makeWorld } = require("../test/helpers/servertransport.js"), F = require("../test/helpers/serverfakes.js"), PHx = require("../test/helpers/serverphone.js"), T = require("../test/helpers/judgetable.js");
+  const { dealLikeThePage, matchCatalog } = require("../test/helpers/pagedeal.js"), ST = require("../engine/servertable.js");
+  const build = await page.evaluate(() => DawnLobby.buildId(window.APP_VER, window.DATA_VER));
+  const wd = makeWorld({ seedKey: "ui-ranked-" + engine, build, deal: dealLikeThePage });
+  const unsubs = new Map();
+  await page.exposeFunction("__srvPost", async (name, text) => JSON.stringify(await wd.transport(name).post(JSON.parse(text))));
+  await page.exposeFunction("__srvSub", (name, topic, id) => {
+    unsubs.set(id, wd.transport(name).subscribe(topic, p => page.evaluate(([i, q]) => window.__srvDeliver(i, q), [id, p]).catch(() => {}), st => page.evaluate(([i, q]) => window.__srvState(i, q), [id, st]).catch(() => {})));
+  });
+  await page.exposeFunction("__srvUnsub", id => { const u = unsubs.get(id); if(u) u(); unsubs.delete(id); });
+  const idp = F.memIdentity(), rat = F.withRatings(), sk = F.withSeek(), lad = F.withLadder(rat, idp);
+  wd.deps.identify = t => idp.identify(t); wd.deps.rename = (pl, n, f) => idp.rename(pl, n, f); Object.assign(wd.deps, rat.deps(), sk.deps(), lad.deps());
+  const tokMe = idp.issue("P-ui-me"), tokFoe = idp.issue("P-ui-foe");
+  idp.rename("P-ui-foe", "Rival One", wd.server.nameFold("Rival One"));
+  await page.evaluate(t => { window.__srvTok = t; }, tokMe);
+  const foe = { token: async () => tokFoe };
+  const Bp = PHx.makePhone(wd, "B", { hero: "dorinthea", rand: T.seeded("ui-ranked-b-" + engine), build, matchCatalog, throws: [["rock", "rock"], ["paper", "rock"]], identity: foe });
+  return { wd, idp, rat, sk, Bp, ST, foe, tokMe };
+}
+
+async function serverJourney(pw, browser, engine, vp, o, kind){
+  const errors = [], bad = [], steps = [], ranked = kind === "ranked";
+  const a = await D.openPage(pw, browser, engine, vp, PLAY + "?screen=f2&pace=0", errors, false, SRV_SHIM), page = a.page;
+  const need = async (q, what, ms) => { try { await page.waitForSelector(q, { timeout: ms || 9000, state: "attached" }); steps.push(what); } catch(e){
+    const here = await page.evaluate(() => { const st = document.querySelector(".stage"); return (st && st.getAttribute("data-screen")) + " | " + [...document.querySelectorAll("h1")].map(h => h.textContent).join(" / "); }).catch(() => "?");
+    bad.push(`${what}: ${q} never appeared (page: ${here})`); throw new Error("stop"); } };
+  const want = (ok, what) => { if(ok) steps.push(what); else bad.push(what); };
+  const txt = q => page.evaluate(q => { const e = document.querySelector(q); return e ? e.textContent.replace(/\s+/g, " ").trim() : null; }, q);
+  const box = q => page.evaluate(q => { const e = document.querySelector(q); if(!e) return null; const r = e.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }, q);
+  let W_ = null;
+  try {
+    await settle(page, 300);
+    W_ = await serverWorld(page, engine);
+    const { wd, rat, sk, Bp, ST, foe } = W_;
+    /* the choice: Friendly is the default; Ranked is remembered on this device */
+    await tapB(page, "mode-online"); await need('[data-b="fr"]', "Find an opponent opens F3 with the FRIENDLY | RANKED choice");
+    const seg = await page.evaluate(() => [...document.querySelectorAll('[data-b="fr"] [role=radio]')].map(b => b.textContent.trim() + ":" + b.getAttribute("aria-checked") + ":" + Math.round(b.getBoundingClientRect().height)));
+    want(seg.join() === "Friendly:true:44,Ranked:false:44", "the choice starts on Friendly, two 44-tall buttons: " + seg.join());
+    const gridTop = await page.evaluate(() => { const g = document.querySelector('[data-b="grid"]').getBoundingClientRect(), f = document.querySelector('[data-b="fr"]').getBoundingClientRect(); return [g.top, f.bottom]; });
+    want(gridTop[0] >= gridTop[1], "the grid sits below the choice (" + gridTop.map(Math.round) + ")");
+    if(ranked){
+      await tapB(page, "seg-ranked");
+      want((await txt('[data-b="fr-note"]')).includes("Needs a player name") && await page.evaluate(() => document.querySelector('[data-b="seg-ranked"]').getAttribute("aria-checked")) === "true", "Ranked is chosen and says what it needs");
+      want(await page.evaluate(() => localStorage.getItem("dawnblade.crescendo.ranked")) === "true", "the choice is remembered on this device");
+      await page.goto(PLAY + "?screen=f2&pace=0"); await settle(page, 300);   /* a reload: the store is kept (so the choice must be), the exposed fake world stays */
+      await tapB(page, "mode-online"); await need('[data-b="fr"]', "after a reload the choice is still Ranked");
+      want(await page.evaluate(() => document.querySelector('[data-b="seg-ranked"]').getAttribute("aria-checked")) === "true", "Ranked is still on after the reload");
+    }
+    await page.evaluate(t => { window.__srvTok = t; }, W_.tokMe);
+    await tapB(page, "tile-iyslander"); await tapB(page, "sit");
+    if(ranked){
+      /* no player name yet: the sheet asks, the referee validates */
+      await need('[data-b="name-sheet"]', "Ranked with no name: the sheet asks for a player name");
+      await page.evaluate(() => { const i = document.querySelector('[data-b="name-input"]'); const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set; set.call(i, "ab"); i.dispatchEvent(new Event("input", { bubbles: true })); });
+      await tapB(page, "name-save"); await page.waitForFunction(() => /at least 3/.test((document.querySelector('[data-b="name-msg"]') || {}).textContent || ""), null, { timeout: 6000 }).then(() => steps.push("the referee's words for a short name"), () => bad.push("no message for a short name"));
+      want(!(await page.evaluate(() => (window.__sent || []).some(e => e.op === "seek"))), "nothing was sought before there was a name");
+      await page.evaluate(() => { const i = document.querySelector('[data-b="name-input"]'); const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set; set.call(i, "Dawn Smith"); i.dispatchEvent(new Event("input", { bubbles: true })); });
+      await tapB(page, "name-save");
+    }
+    await need('[data-b="waiting-server"]', "F9 server waits for an opponent");
+    if(ranked) want((await txt(".f9 .h h1")) === "Finding you a ranked table", "the wait says it is a ranked table");
+    await page.waitForFunction(() => (window.__sent || []).some(e => e.op === "seek"), null, { timeout: 8000 }).catch(() => {});
+    const sent = await page.evaluate(() => window.__sent.filter(e => e.op === "seek").map(e => !!e.ranked));
+    want(sent.length > 0 && sent.every(x => x === ranked), `every seek the page sent is ${ranked ? "ranked:true" : "friendly (no ranked flag)"} (${sent.length} sent)`);
+    const q0 = () => [...sk.q.values()][0];
+    for(let i = 0; i < 40 && !q0(); i++) await page.waitForTimeout(100);
+    const aTable = q0() && q0().table;
+    want(!!q0() && q0().ranked === ranked && sk.q.size === 1, `the queue holds one ${ranked ? "ranked" : "friendly"} seek`);
+    /* the other player seeks the same kind and is matched to the page's table */
+    const m = await ST.seek({ transport: wd.transport("B"), identity: foe }, { ranked });
+    want(m.state === "matched" && m.table === aTable, "the other player is matched with the page's table") ;
+    await Bp.connect("join", m.table);
+    await need(".f4", "both heroes known: the coin (F4)", 14000);
+    await need('[data-b="pick-rock"]', "the throw is asked for"); await tapB(page, "pick-rock");
+    const t0 = Date.now(); let thrown = false;
+    for(let i = 0; i < 100; i++){
+      if(await page.evaluate(() => !!document.querySelector('[data-b="pick-first"]'))){ await tapB(page, "pick-first"); steps.push("the throw was won and the seating called"); break; }
+      if(!thrown && Date.now() - t0 > 1500 && await page.evaluate(() => !!document.querySelector('[data-b="pick-paper"]'))){ await tapB(page, "pick-paper"); thrown = true; }
+      await page.waitForTimeout(150);
+    }
+    await page.waitForFunction(() => { const b = document.querySelector('[data-b="shuffle"]'); return b && !b.disabled; }, null, { timeout: 15000 }).then(() => steps.push("SHUFFLE UP lights"), () => bad.push("SHUFFLE UP never lit"));
+    await tapB(page, "shuffle"); await need('[data-b="bout"]', "the server table mounts");
+    /* THE MANNERS (F8) */
+    await tapB(page, "hub-left"); await need('[data-b="menu-sheet"]', "the menu opens");
+    const mn = await page.evaluate(() => ({ chip: (document.querySelector('[data-b="manners"]') || {}).textContent, log: !!document.querySelector('[data-b="row-log"]'), coach: !!document.querySelector('[data-b="row-coach"]'), sound: !!document.querySelector('[data-b="row-sound"]'), report: !!document.querySelector('[data-b="row-report"]') }));
+    want(mn.chip === (ranked ? "Ranked table" : "Friendly table"), `the manners chip reads "${mn.chip}"`);
+    if(ranked) want(!mn.log && !mn.coach && mn.sound && mn.report, "a ranked menu has no Game log and no Coach's call (sound and the judge are there): " + JSON.stringify(mn));
+    else want(mn.log && mn.sound, "a friendly menu keeps its rows");
+    const sheet = await box('[data-b="menu-sheet"]');
+    want(sheet && sheet[0] >= 0 && sheet[0] + sheet[2] <= vp[0] + 0.5 && sheet[1] >= 0 && sheet[1] + sheet[3] <= vp[1] + 0.5, "the menu sheet is inside the screen " + JSON.stringify(sheet && sheet.map(Math.round)));
+    want(await page.evaluate(() => { const s = window.DawnUIApp.session(); return s.networked && s.server && (s.suggest() === null) === (document.querySelector('[data-b="manners"]').textContent === "Ranked table"); }), "a ranked seat has no coach behind the scenes (suggest() answers nothing there)");
+    await page.evaluate(() => document.querySelector('[data-b="menu-close"]').click()); await page.waitForTimeout(200);
+    if(!ranked){ errors.forEach(e => bad.push(e)); await a.context.close(); return { bad, steps }; }
+    /* the result: the other player concedes; the page's seat wins and the server's numbers arrive */
+    Bp.sess.submit({ t: "concede" }); await wd.settle([Bp.ch]);
+    await need('[data-b="word"]', "the other player concedes: the result frame", 15000); await settle(page, 900);
+    await tapB(page, "continue"); await need('[data-b="result-pad"]', "the result pad");
+    await page.waitForFunction(() => document.querySelector('[data-b="plate"]'), null, { timeout: 15000 }).then(() => steps.push("the ranked plate arrives"), () => bad.push("the ranked plate never arrived"));
+    const plate = await page.evaluate(() => { const p = document.querySelector('[data-b="plate"]'); if(!p) return null; const r = p.getBoundingClientRect(); return { t: p.textContent.replace(/\s+/g, " ").trim(), old: (p.querySelector(".old") || {}).textContent, now: (p.querySelector(".new") || {}).textContent, box: [r.left, r.top, r.width, r.height] }; });
+    const mine = rat.rating("P-ui-me"), foeR = rat.rating("P-ui-foe");
+    want(!!plate && /Rated game|first rated games/i.test(plate.t) && plate.old === "1200" && plate.now === String(mine.rating) && mine.rating > 1200 && foeR.rating < 1200, `the plate shows the server's move 1200 -> ${plate && plate.now} (the server has ${mine.rating}; the foe ${foeR.rating})`);
+    want(!!plate && plate.box[0] >= 0 && plate.box[0] + plate.box[2] <= vp[0] + 0.5 && plate.box[1] + plate.box[3] <= vp[1] + 0.5, "the plate is inside the screen " + JSON.stringify(plate && plate.box.map(Math.round)));
+    want(rat.records === 1, "exactly one result was recorded by the server (" + rat.records + ")");
+    const rec = await page.evaluate(() => { try { const st = JSON.parse(localStorage.getItem("dawnblade.circuit")); return (st.games || []).filter(g => g.kind === "ranked").map(g => ({ me: g.me, foe: g.foe, result: g.result, rating: g.rating })); } catch(e){ return String(e); } });
+    want(Array.isArray(rec) && rec.length === 1 && rec[0].result === "w" && rec[0].rating && rec[0].rating.from === 1200 && rec[0].rating.to === mine.rating, "the Circuit store holds ONE ranked receipt with the server's pair: " + JSON.stringify(rec));
+    const acts = await page.evaluate(() => [...document.querySelectorAll(".acts2 button")].map(b => b.textContent.trim()));
+    want(acts.join("|") === "New opponent|Leave|Rematch", "ranked buttons: " + acts.join("|"));
+  } catch(e){ if(e.message !== "stop") bad.push("server: " + e.message.split("\n")[0]); }
+  if(W_ && W_.wd.errors.length) bad.push("the fake server logged: " + W_.wd.errors.join(" | ").slice(0, 200));
+  errors.filter(e => !/404|Failed to load resource/.test(e)).forEach(e => bad.push(e));
+  await a.context.close();
+  return { bad, steps };
+}
+
 /* the Dummy, end to end (F2 -> F3 -> F4 with the iron dummy and no coin -> a table -> the coach plays it out -> the result -> REMATCH -> a fresh game) */
 async function dummyJourney(pw, browser, engine, vp, o){
   const errors = [], bad = [], steps = [];
@@ -402,7 +532,7 @@ async function main(){
         r.bad.slice(0, 12).forEach(b => console.log("        " + b));
       }
       if(!only || only === "modes"){
-        for(const [name, fn] of [["dummy", dummyJourney], ["rematch", rematchJourney], ["two phones (drop)", (...a) => phonesJourney(...a, "drop")], ["two phones (end)", (...a) => phonesJourney(...a, "end")]]){
+        for(const [name, fn] of [["dummy", dummyJourney], ["rematch", rematchJourney], ["two phones (drop)", (...a) => phonesJourney(...a, "drop")], ["two phones (end)", (...a) => phonesJourney(...a, "end")], ["server friendly", (...a) => serverJourney(...a, "friendly")], ["server ranked", (...a) => serverJourney(...a, "ranked")]]){
           const vp = [393, 660], r = await fn(pw, browser, engine, vp, o);
           if(r.bad.length) failed = true;
           console.log(`${r.bad.length ? "FAIL" : "PASS"}  ${engine.padEnd(8)} ${name.padEnd(14)} 393x660  ${r.steps.length} steps${verbose ? ": " + r.steps.join(" > ") : ""}`);

@@ -437,3 +437,8 @@ html[data-band=compact] .stage.fl .f1 .tag{display:none}
 .stage.fl .f4 .coin.die svg{width:84px;height:84px}
 /* the KO frame covers the table's own hub (its disabled "GAME OVER" pill must not show through "Tap to continue") */
 .stage.fl .f7 .hubcover{position:absolute;left:0;right:0;bottom:0;height:var(--h-hub,68px);background:#05080a;z-index:71}
+
+/* F3 online: FRIENDLY | RANKED (README ranked builder). A two-up of the F8 speed segmented control, one caption under it; the grid steps down to make room. */
+.stage.fl .seg.two{grid-template-columns:repeat(2,1fr)}
+.stage.fl .f3 .fr{position:absolute;left:0;right:0;top:60px;padding:0 var(--gut);display:flex;flex-direction:column;gap:6px;z-index:2}
+.stage.fl .f3 .fr .lab{display:block;padding:0 4px;text-transform:none;letter-spacing:.01em;font:var(--t-small);color:var(--ink-1)}

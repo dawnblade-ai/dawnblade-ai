@@ -98,6 +98,9 @@ function finish(s, over, ctx, o){
   var was = V().readCache(), model = {kind: "ranked", game: g, events: [], store: V().store(), ranked: {state: "wait", was: was && was.you && was.you.rank != null && Date.now() - was.at < 7 * 86400000 ? was.you.rank : null}};
   var seat = s.seat, t0 = Date.now(), wait = o.wait == null ? 12000 : o.wait, stop = false, timer = null;
   var rank = function(){ try { return s.channel().rank(); } catch(e){ return null; } };
+  /* the seat that did not make the move that ended the game is never TOLD the result: the channel's own `result()` asks the function for it (a few tries, a second apart;
+     the classic page's RankChange does the same). `rank()` fills as it hears; the poll below reads it. */
+  try { var ch0 = s.channel(); if(ch0 && typeof ch0.result === "function") ch0.result(Math.max(1, Math.round(wait / 1000)), 1000).then(null, function(){}); } catch(e){}
   var poll = function(){
     if(stop) return;
     var rk = rank(), res = rk && rk.result, ch = res && res.change && res.change[seat];

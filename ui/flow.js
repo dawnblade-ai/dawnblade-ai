@@ -138,13 +138,26 @@ function findOpponent(deps, hooks){
     timer = deps.setTimer(function(){
       timer = null;
       if(stopped) return;
-      deps.seek({table: table}).then(function(r){ if(!stopped && (r.state === "waiting" || r.state === "taken")) loop(r.beat); }, function(e){ if(!stopped) hooks.onFail(e); });
+      deps.seek({table: table}).then(function(r){
+        if(stopped) return null;
+        if(r.state === "waiting" || r.state === "taken") return loop(r.beat);
+        /* somebody else's table opened to us while we waited at our own (the referee closed ours): let ours go and sit at theirs */
+        if(r.state === "matched" && r.table !== table){
+          var old = surface; surface = null; table = r.table;
+          if(old){ try { old.dispose(); } catch(e){} }
+          return deps.open(r.table, true).then(function(sf){
+            surface = sf;
+            if(stopped){ try { sf.dispose(); } catch(e){} return; }
+            hooks.onSurface(sf, {matched: true, typical: null, table: r.table});
+          });
+        }
+      }).then(null, function(e){ if(!stopped) hooks.onFail(e); });
     }, beat);
   }
   deps.seek({}).then(function(r){
     if(stopped) return null;
     table = r.table;
-    return deps.open(r.table).then(function(sf){
+    return deps.open(r.table, r.state === "matched").then(function(sf){
       surface = sf;
       if(stopped){ try { sf.dispose(); } catch(e){} return; }
       hooks.onSurface(sf, {matched: r.state === "matched", typical: r.typical || null, table: r.table});
@@ -226,7 +239,11 @@ function Heroes(p){
   var title = p.mode === "foe" ? "Choose your opponent" : "Choose your hero";
   return html`<div class="scr f3" data-b="heroes"><div class="frame">
     <div class="hdr"><${Back} onClick=${p.onBack}/><h1><span class="sub">${p.mode === "foe" ? "Step 3 of 3" : "Step 2 of 3"}</span>${title}</h1>${p.fixedFoe && catalog.byKey(p.fixedFoe) ? html`<span class="chip br" data-b="foe-chip" style="position:absolute;left:253px;top:20px;width:130px;height:28px;justify-content:center">Foe \u00b7 ${firstName(catalog.byKey(p.fixedFoe).n)}</span>` : null}</div>
-    <div class=${"grid sc"} style=${peek ? "pointer-events:none" : ""} data-b="grid">
+    ${p.online ? html`<div class="fr" data-b="fr"><div class="seg two" role="radiogroup" aria-label="Kind of table">${[["friendly", "Friendly"], ["ranked", "Ranked"]].map(function(x){
+        var on = (p.ranked ? "ranked" : "friendly") === x[0];
+        return html`<button class=${on ? "on" : ""} role="radio" aria-checked=${on ? "true" : "false"} data-tap data-b=${"seg-" + x[0]} onClick=${function(){ p.onRanked(x[0] === "ranked"); }}>${x[1]}</button>`; })}</div>
+      <span class="lab" data-b="fr-note">${p.ranked ? "Counts toward both ratings. Needs a player name." : "Just for fun. Nothing is recorded."}</span></div>` : null}
+    <div class=${"grid sc"} style=${(peek ? "pointer-events:none;" : "") + (p.online ? "top:150px" : "")} data-b="grid">
       ${heroes.map(function(h){
         var label = h.k === "viserai_bw" || /Between Worlds/.test(h.n) ? "Viserai BW" : firstName(h.n);
         return html`<button class=${"tile hero" + (h.k === cur ? " last" : "")} aria-label=${h.n} data-tap data-b=${"tile-" + h.k} style=${bg(catalog.art(h.k))} onClick=${function(){ setPeek(h.k); }}>
@@ -304,6 +321,9 @@ function Menu(p){
   var note = useState(""), text = note[0], setText = note[1];
   var said = useState(""), msg = said[0], setMsg = said[1];
   var table = p.variant !== "title";
+  /* THE MANNERS CHIP (F8): a practice table, a friendly table (two phones, a server table) or a ranked one; a ranked table has no Coach's call and no Game log */
+  var net = !!(p.session && p.session.networked), ranked = !!(net && p.session.ranked && p.session.ranked());
+  var manners = ranked ? "Ranked table" : net ? "Friendly table" : "Practice table";
   var toggleSound = function(){ var on = !sound; if(aud){ aud.setMuted(!on); if(on){ aud.unlock(); aud.cue("tap"); } } setSound(on); };
   var pickSpeed = function(v){ store(K_SPEED, v); setSpeed(v); if(p.director) p.director.speed(v); };
   var toggleCoach = function(){ var on = !coach; store(K_COACH, on ? "1" : "0"); setCoach(on); };
@@ -322,14 +342,14 @@ function Menu(p){
   return html`<div class="scr f8" data-b="menu"><div class="frame">
     <div class="scrim" onClick=${view === "menu" ? p.onClose : null}></div>
     ${view === "menu" ? html`<div class="sheet mn" data-b="menu-sheet">
-      <div class="mh"><h2>Menu</h2><span class="chip">${p.daily ? "Today\u2019s challenge" : table ? "Practice table" : "Settings"}</span>${close}</div>
+      <div class="mh"><h2>Menu</h2><span class="chip" data-b="manners">${p.daily ? "Today\u2019s challenge" : table ? manners : "Settings"}</span>${close}</div>
       <div class="mb">
         <button class="mrow" data-tap data-b="row-sound" onClick=${toggleSound}><${Ico} n="sound"/><span class="t">Sound</span><${Switch} on=${sound}/></button>
         <div class="mrow sp"><div class="lh"><${Ico} n="gear"/><span class="t">Speed<small>Both players, the same speed</small></span></div>
           <div class="seg">${["standard", "quick", "instant"].map(function(v){ return html`<button class=${speed === v ? "on" : ""} data-tap data-b=${"speed-" + v} onClick=${function(){ pickSpeed(v); }}>${v[0].toUpperCase() + v.slice(1)}</button>`; })}</div></div>
         ${table ? html`
-          <button class="mrow" data-tap data-b="row-log" onClick=${function(){ setView("log"); }}><${Ico} n="log"/><span class="t">Game log<small>Practice tables only</small></span><${Ico} n="next" /></button>
-          ${p.daily ? null : html`<button class="mrow" data-tap data-b="row-coach" onClick=${toggleCoach}><${Ico} n="coach"/><span class="t">Coach's call<small>Says the play it would make, and why</small></span><${Switch} on=${coach}/></button>`}
+          ${ranked ? null : html`<button class="mrow" data-tap data-b="row-log" onClick=${function(){ setView("log"); }}><${Ico} n="log"/><span class="t">Game log<small>Practice tables only</small></span><${Ico} n="next" /></button>`}
+          ${p.daily || ranked ? null : html`<button class="mrow" data-tap data-b="row-coach" onClick=${toggleCoach}><${Ico} n="coach"/><span class="t">Coach's call<small>Says the play it would make, and why</small></span><${Switch} on=${coach}/></button>`}
           <a class="mrow" data-tap data-b="row-classic" href="index.html" style="text-decoration:none;color:inherit"><${Ico} n="board"/><span class="t">Classic board<small>The older layout, from the next game</small></span><${Ico} n="next"/></a>
           <button class="mrow jd" data-tap data-b="row-report" onClick=${function(){ setView("report"); }}><${Ico} n="judge"/><span class="t">JUDGE!! Report a problem</span><${Ico} n="next"/></button>
           <button class="mrow dg" data-tap data-b="row-concede" onClick=${function(){ setView("concede"); }}><${Ico} n="flag"/><span class="t">Concede and leave</span></button>` : null}
@@ -349,6 +369,37 @@ function Menu(p){
       <div class="mh"><h2>Game log</h2><button class="ib dk" aria-label="Back" data-tap data-b="menu-back" onClick=${function(){ setView("menu"); }}><${Ico} n="back"/></button></div>
       <div class="rp" style="max-height:340px;overflow-y:auto;touch-action:pan-y">${(p.log || []).slice().reverse().map(function(l){ return html`<p style="margin:0 0 6px;font:var(--t-small)"><b>${l.head}</b> ${l.sub}</p>`; })}${(p.log || []).length ? null : html`<p>Nothing has happened yet.</p>`}</div></div>` : null}
   </div></div>`;
+}
+
+/* A RANKED TABLE NEEDS A PLAYER NAME (the classic page's rule: "ranked-name"). CRESCENDO has no "Playing as" sheet, so the one place that asks is here, a sheet over F3
+   when Ranked is chosen and this phone has no name. The referee is the validator (ST.setName rejects `.why` name|name-taken|identity|unavailable); the words are the classic's. */
+var NAME_WHY = {short: "A name needs at least 3 characters.", long: "A name can be at most 16 characters.", chars: "Use letters, numbers and single spaces \u2014 no symbols or emoji.",
+  space: "No space at the start or the end, and one space at most between words.", reserved: "That name is set aside \u2014 pick another.", type: "Type a name first."};
+function nameWords(e){
+  if(!e) return "The name could not be saved just now. Try again.";
+  if(e.why === "name") return NAME_WHY[e.reason] || NAME_WHY.chars;
+  if(e.why === "name-taken") return "Another player already has that name \u2014 pick another.";
+  if(e.why === "identity") return "The server did not accept this phone\u2019s sign-in just now. Try again in a moment.";
+  return "The server is not answering right now. Check your connection and try again.";
+}
+function NameAsk(p){
+  var d = useState(""), draft = d[0], setDraft = d[1], er = useState(""), err = er[0], setErr = er[1], bz = useState(false), busy = bz[0], setBusy = bz[1];
+  var save = function(){
+    if(busy) return;
+    var t = draft.trim().replace(/ +/g, " ");
+    if(!t){ setErr(NAME_WHY.type); return; }
+    setErr(""); setBusy(true);
+    p.onSave(t).then(null, function(e){ setBusy(false); setErr(nameWords(e)); });
+  };
+  return html`<div class="scr f8" data-b="name-ask"><div class="frame">
+    <div class="scrim" onClick=${p.onCancel}></div>
+    <div class="sheet mn" data-b="name-sheet">
+      <div class="mh"><h2>Player name</h2><span class="chip br">Ranked</span></div>
+      <div class="rp"><p>A ranked table needs a name for both players. It stands on the ladder, and everyone starts at 1200.</p>
+        <input class="ta" data-b="name-input" style="height:52px;font-size:16px" maxlength="16" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Choose a player name" value=${draft} onInput=${function(e){ setDraft(e.target.value); }}/>
+        <div class="meta"><span class="lab" data-b="name-msg" style=${err ? "color:var(--refused)" : ""}>${err || "3 to 16 letters and numbers"}</span></div></div>
+      <div class="foot" style="display:flex;gap:10px;padding:14px 10px 14px"><button class="btn sec" data-tap data-b="name-cancel" onClick=${p.onCancel}>Not now</button><button class=${"btn" + (busy ? " dis" : "")} style="flex:1" disabled=${busy} data-tap data-b="name-save" onClick=${save}>Save and find a match</button></div>
+    </div></div></div>`;
 }
 
 /* ============================================================
@@ -424,7 +475,7 @@ function Waiting(p){
   if(v === "phone") body = html`<div class="wr" data-b="waiting-phone">${back}<div class="stack">${sun()}<div class="h"><h1>Waiting for your friend</h1><p>Tell them this code, or send it from your phone.</p></div>
       <div class="codes">${code.split("").map(function(c){ return html`<b>${c}</b>`; })}</div>${seats("Waiting")}</div>
       <div class="btns"><button class="btn" data-tap data-b="share" onClick=${function(){ var t = "Join my Dawnblade table: " + code; try { if(root.navigator.share) root.navigator.share({text: t}); else root.navigator.clipboard.writeText(t); } catch(e){} }}><${Ico} n="share" style="width:22px;height:22px"/>Share the code</button></div></div>`;
-  else if(v === "server") body = html`<div class="wr" style="--btnh:138px" data-b="waiting-server">${back}<div class="stack">${sun()}<div class="h"><h1>Finding you a table</h1><p>${p.typical ? "The usual wait is about " + p.typical + " seconds." : "Looking for another player."}</p></div>${seats("Looking")}</div>
+  else if(v === "server") body = html`<div class="wr" style="--btnh:138px" data-b="waiting-server">${back}<div class="stack">${sun()}<div class="h"><h1>${p.ranked ? "Finding you a ranked table" : "Finding you a table"}</h1><p>${p.typical ? "The usual wait is about " + p.typical + " seconds." : "Looking for another player."}</p></div>${seats("Looking")}</div>
       <div class="btns"><button class="btn" data-tap data-b="play-ai" onClick=${p.onPlayAI}>Play the AI while you wait</button><button class="btn sec" data-tap data-b="stop" onClick=${p.onBack}>Stop looking</button></div></div>`;
   else if(v === "fail") body = html`<div class="wr" style="--btnh:138px" data-b="waiting-fail">${back}<div class="stack">${sun(true)}<div class="h"><h1>We could not reach the server</h1><p>Check your connection. Nothing is lost, and the AI is always at the table.</p></div></div>
       <div class="btns"><button class="btn" data-tap data-b="again" onClick=${p.onAgain}>Try again</button><button class="btn sec" data-tap data-b="play-ai" onClick=${p.onPlayAI}>Play the AI instead</button></div></div>`;
@@ -433,6 +484,6 @@ function Waiting(p){
   return html`<div class="scr f9" data-b="waiting">${v === "quiet" ? body : html`<div class="bg" style="position:absolute;inset:0;background:var(--mat-bg)"></div><div class="frame">${body}</div>`}</div>`;
 }
 
-return {Sprite: Sprite, Title: Title, Ways: Ways, Heroes: Heroes, SitDown: SitDown, Menu: Menu, Result: Result, Rules: Rules, Waiting: Waiting, Thinking: Thinking, modeRows: modeRows, seatingLocal: seatingLocal, seatingNet: seatingNet, netStage: netStage, rematchKind: rematchKind, findOpponent: findOpponent,
+return {Sprite: Sprite, Title: Title, Ways: Ways, Heroes: Heroes, SitDown: SitDown, Menu: Menu, Result: Result, Rules: Rules, Waiting: Waiting, NameAsk: NameAsk, Thinking: Thinking, modeRows: modeRows, seatingLocal: seatingLocal, seatingNet: seatingNet, netStage: netStage, rematchKind: rematchKind, findOpponent: findOpponent,
         catalog: catalog, store: store, readLast: readLast, firstName: firstName, K_SPEED: K_SPEED, K_COACH: K_COACH};
 });
