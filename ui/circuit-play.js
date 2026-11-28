@@ -73,7 +73,7 @@ function gameOf(s, over, ctx, now){
   var code = net ? String((s.code && s.code()) || "table") : null;
   var g = {id: net ? code + "." + me + "." + foe + "." + at.toString(36) : (seed || "x") + "." + me + "." + foe + "." + at.toString(36), at: at, kind: kind, me: me, foe: foe,
     level: net || s.dummy ? null : (s.pick && s.pick.search ? "sharp" : "steady"), result: o, how: over.how || (o === "d" ? "stalemate" : "life"),
-    turns: st.turn | 0, life: [st.sides[seat].hp | 0, st.sides[1 - seat].hp | 0], first: st.first === seat ? 1 : 0, seed: seed, rating: null, dv: root.DATA_VER || ""};
+    turns: st.turn | 0, life: [st.sides[seat].hp | 0, st.sides[1 - seat].hp | 0], first: st.firstPlayer === seat ? 1 : 0, seed: seed, rating: null, dv: root.DATA_VER || ""};
   if(kind === "daily"){ g.day = ctx.day || today(); g.official = false; }
   return g;
 }

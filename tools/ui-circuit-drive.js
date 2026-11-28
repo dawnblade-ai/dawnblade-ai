@@ -53,7 +53,7 @@ const mineRows = [14, -12, 16, 13, -15, 15, -9, 14, -13, 17].map((c, i) => ({ he
 const sum = mineRows.reduce((a, x) => a + x.change, 0);
 const YOU = { name: "Kestrel", rating: 1248, games: 21, wins: 7, losses: 4, draws: 0, listed: true, rank: 12, toGo: 0 };
 const CACHE = JSON.stringify({ v: 1, at: NOW, you: YOU, mine: mineRows });
-const rowsL = [["Marrowgate", 1411, 14, 3, 0], ["Wren Ashby", 1388, 22, 11, 1], ["Quillon", 1371, 9, 2, 0], ["Halloran", 1342, 17, 9, 0], ["Tamsin Vale", 1330, 12, 8, 2], ["Brannock", 1311, 10, 7, 0], ["Ysolde", 1296, 8, 4, 0], ["Orrin K.", 1281, 15, 12, 1], ["Dunmore", 1275, 6, 3, 0], ["Ketterick", 1262, 11, 9, 0], ["Pell", 1255, 5, 3, 0], ["Kestrel", 1248, 7, 4, 0], ["Fenwick", 1239, 6, 6, 0], ["Sorrel", 1226, 4, 3, 0]]
+const rowsL = [["Marrowgate", 1411, 14, 3, 0], ["Wren Ashby", 1388, 22, 11, 1], ["Quillon", 1371, 9, 2, 0], ["Halloran", 1342, 17, 9, 0], ["Tamsin Vale", 1330, 12, 8, 2], ["Brannock", 1311, 10, 7, 0], ["Ysolde", 1296, 8, 4, 0], ["Orrin K.", 1281, 15, 12, 1], ["Dunmore", 1275, 6, 3, 0], ["Ketterick", 1262, 11, 9, 0], ["Pell", 1255, 5, 3, 0], ["Kestrel", 1248, 7, 4, 0], ["Fenwick", 1239, 6, 6, 0], ["Sorrel", 1226, 4, 3, 0], ["Aldous Reed", 1214, 5, 5, 0], ["Maren", 1201, 3, 4, 0]]
   .map((r, i) => ({ rank: i + 1, name: r[0], rating: r[1], games: r[2] + r[3] + r[4], wins: r[2], losses: r[3], draws: r[4] }));
 const recent = [[["Orrin K.", "Kestrel"], ["blaze", "iyslander"], 0, "life", 3], [["Marrowgate", "Halloran"], ["viserai", "dash"], 0, "life", 11], [["Pell", "Sorrel"], ["kayo", "fai"], null, "stalemate", 40],
   [["Wren Ashby", "Tamsin Vale"], ["enigma", "bravo"], 0, "concession", 60], [["Quillon", "Fenwick"], ["dorinthea", "gravy"], 0, "life", 120]].map(r => ({ names: r[0], heroes: r[1], winner: r[2], how: r[3], at: NOW - r[4] * 60e3 }));
@@ -81,9 +81,9 @@ const S = (...a) => a;
 const FULL = { store: fixtureStore(), cache: CACHE };
 const TOP = S(".hdr .ib", ".hdr h1", ".cx-seg", ".cx-seg button");
 const SCREENS = [
-  { id: "C1 you", mock: "circuit-1-record.html?v=you", app: "?screen=c1", root: ".c1", fx: FULL, sel: S(...TOP, ".cx-card", ".nn", ".mv.big", ".rowl", ".tile2", ".gm", ".link2", ".btn.sec.sm") },
+  { id: "C1 you", mock: "circuit-1-record.html?v=you", app: "?screen=c1", root: ".c1", fx: FULL, sel: S(...TOP, ".cx-card", ".scin > .cx-card:first-child .nn", ".mv.big", ".rowl", ".tile2", ".gm", ".link2", ".btn.sec.sm") },
   { id: "C1 new", mock: "circuit-1-record.html?v=new", app: "?screen=c1", root: ".c1", fx: {}, sel: S(...TOP, ".cx-card", ".empty", ".hub .btn") },
-  { id: "C1 signedout", mock: "circuit-1-record.html?v=signedout", app: "?screen=c1", root: ".c1", fx: { store: FULL.store }, sel: S(...TOP, ".cx-card", ".nn", ".btn.sec.sm", ".rowl", ".gm") },
+  { id: "C1 signedout", mock: "circuit-1-record.html?v=signedout", app: "?screen=c1", root: ".c1", fx: { store: FULL.store }, sel: S(...TOP, ".scin > .cx-card:first-child", ".scin > .cx-card:first-child .nn", ".scin > .cx-card:first-child .btn.sec.sm") },
   { id: "C1 manage", mock: "circuit-1-record.html?v=manage", app: "?screen=c1", root: ".c1", fx: FULL, steps: [["save"]], sel: S(".scrimf", ".sheet.cs", ".sheet .ttl2", ".sheet .btn") },
   { id: "C1 erase", mock: "circuit-1-record.html?v=erase", app: "?screen=c1", root: ".c1", fx: FULL, steps: [["erase"]], sel: S(".scrimf", ".sheet.cs", ".sheet .ttl2", ".sheet .btn") },
   { id: "C2 list", mock: "circuit-2-heroes.html?v=list", app: "?screen=c2", root: ".c2", fx: FULL, sel: S(...TOP, ".hrow", ".pips", ".dayh") },
@@ -164,7 +164,7 @@ async function flows(pw, browser, engine, vp){
     if (!/goes first|You go first/.test(f4.slab || "")) bad.push("F4 slab is " + JSON.stringify(f4.slab));
     await page.waitForTimeout(2600);
     await tapB(page, "shuffle"); await need('[data-b="bout"]', "F4 -> the table", 15000);
-    const heroes = await page.evaluate(() => { const s = window.DawnUIApp.session(); return { me: s.heroKeys[0], foe: s.heroKeys[1], seed: s.pick.seed, first: s.state().first, search: s.pick.search }; });
+    const heroes = await page.evaluate(() => { const s = window.DawnUIApp.session(); return { me: s.heroKeys[0], foe: s.heroKeys[1], seed: s.pick.seed, first: s.state().firstPlayer, search: s.pick.search }; });
     if (heroes.me !== daily.me || heroes.foe !== daily.foe || heroes.seed !== daily.seed || heroes.first !== daily.first || !heroes.search) bad.push("the table is not the deal: " + JSON.stringify({ heroes, daily }));
     else ok("the table is today's deal (" + daily.me + " vs " + daily.foe + ", seed, first, Sharp)");
     await tapB(page, "hub-left"); await need('[data-b="row-concede"]', "menu opens");
@@ -185,8 +185,7 @@ async function flows(pw, browser, engine, vp){
     await tapB(page, "tab-c3"); await need('[data-b="c3"]', "C1 -> Games (C3)");
     await tapB(page, "game"); await need('[data-b="detail-sheet"]', "C3 -> the game's detail");
     await tapB(page, "replay"); await need('[data-b="sitdown"]', "PLAY THIS DEAL AGAIN -> F4");
-    /* erase */
-    await tapB(page, "back"); await need('[data-b="c1"]', "back");
+    await tapB(page, "back"); await need('[data-b="c8"]', "F4 back -> C8 (the daily's own door)");
   } catch (e) { if (e.message !== "stop") bad.push(String(e.message).split("\n")[0]); }
   errors.forEach(e => bad.push(e));
   await a.context.close();
@@ -204,7 +203,7 @@ async function road(pw, browser, engine, vp){
     await tapB(page, "tile-iyslander"); await tapB(page, "sit"); await need('[data-b="sitdown"]', "F3 -> F4");
     const f4 = await page.evaluate(() => ({ label: (document.querySelector('[data-b="sit-label"]') || {}).textContent, hits: document.querySelectorAll(".f4 .hit").length }));
     if (!/rung 9 of 17/i.test(f4.label || "")) bad.push("F4 road label " + JSON.stringify(f4.label));
-    await page.waitForTimeout(2600); await tapB(page, "shuffle"); await need('[data-b="bout"]', "F4 -> table", 15000);
+    await page.waitForTimeout(2600); if (await page.evaluate(() => !!document.querySelector('[data-b="pick-first"]'))) { await tapB(page, "pick-first"); await page.waitForTimeout(1500); } await tapB(page, "shuffle"); await need('[data-b="bout"]', "F4 -> table", 15000);
     const t = await page.evaluate(() => { const s = window.DawnUIApp.session(); return [s.heroKeys[0], s.heroKeys[1]]; });
     if (t[1] !== "enigma") bad.push("the road table's foe is " + t[1]);
     await tapB(page, "hub-left"); await need('[data-b="row-concede"]', "menu"); await page.evaluate(() => document.querySelector('[data-b="row-concede"]').click());
@@ -253,9 +252,10 @@ async function plates(pw, browser, engine, vp, diffsSeen){
         const host = document.createElement("div"); host.className = "stage fl"; host.style.cssText = "position:fixed;inset:0;z-index:999";
         document.body.appendChild(host);
         P.render(html`<${K.Sprite}/><${K.Result} director=${null} conceded=${true} pad=${Pad.empty([20, 20])} names=${["You", "Viserai"]} first=${0} turn=${9} winner=${0} extra=${kit} onNew=${() => {}} onLeave=${() => {}} onRematch=${() => {}}/>`, host);
-        await new Promise(r => setTimeout(r, 900));
-        const b = host.querySelector('[data-b="continue"]'); if (b) b.click();
-        await new Promise(r => setTimeout(r, 500));
+        const until = async (q, ms) => { for (let t = 0; t < ms; t += 50) { const e = host.querySelector(q); if (e) return e; await new Promise(r => setTimeout(r, 50)); } return null; };
+        const b = await until('[data-b="continue"]', 6000); if (b) b.click();
+        await until(".paper.res", 3000);
+        await new Promise(r => setTimeout(r, 400));
         const R = host.querySelector(".f7"); R.classList.add("c5");
         const out = {};
         const sels = sel;

@@ -200,7 +200,7 @@ function Ways(p){
   var icon = {dummy: "m-dummy", phones: "m-phones", online: "m-online", circuit: "m-circuit"};
   var cards = rows.slice(), cp = CP();
   if(cp && root.DawnCircuit) cards.splice(2, 0, Object.assign({enabled: true}, cp.WAYS_CARD));
-  return html`<div class="scr f2" data-b="ways"><div class="frame">
+  return html`<div class=${"scr f2" + (cards.length > rows.length ? " cx" : "")} data-b="ways"><div class="frame">
     <div class="hdr" style="height:76px"><${Back} onClick=${p.onBack}/><h1><span class="sub">Step 1 of 3</span>How do you want to play?</h1></div>
     <div class="modes">
       ${cards.map(function(r){
@@ -373,7 +373,7 @@ function Result(p){
     return function(){ clearTimeout(t); };
   }, [phase]);
   var wname = me ? "You win" : firstName(p.names[p.winner]) + " wins";
-  if(phase === "pad")
+  if(phase === "pad"){
     var ex = p.extra || null, ac = (ex && ex.acts) || {}, A = ac.a || {label: "New opponent", onClick: p.onNew}, B = ac.b || {label: "Leave", onClick: p.onLeave, dng: true};
     var C = ac.c || {label: p.rematchLabel || "Rematch", onClick: p.onRematch, busy: p.rematchBusy};
     return html`<div class=${"scr f7" + (ex ? " " + ex.cls : "")} data-b="result-pad"><div class="frame">
@@ -381,6 +381,7 @@ function Result(p){
       ${ex && ex.plate}${ex && ex.cap ? html`<div class="cap" data-b="cap">${ex.cap}</div>` : null}
       <div class="acts2"><div class="row"><button class="btn sec" data-tap data-b="new" onClick=${A.onClick}>${A.label}</button><button class=${"btn sec" + (B.dng ? " dng" : "")} data-tap data-b="leave" onClick=${B.onClick}>${B.label}</button></div>
         <button class=${"btn" + (C.busy ? " dis" : "")} disabled=${!!C.busy} data-tap=${C.busy ? undefined : ""} data-b="rematch" onClick=${C.onClick}>${C.label}</button></div></div></div>`;
+  }
   return html`<div class="scr f7" data-b="result-ko"><div class="frame">
     <div class="hubcover" aria-hidden="true"></div>
     ${phase === "ko" ? html`<div class="veil" ref=${dim} style="background:#000;opacity:0"></div>` : html`<div class="veil" ref=${veil}></div>`}

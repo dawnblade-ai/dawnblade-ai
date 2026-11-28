@@ -234,3 +234,6 @@ html[data-band=compact] .stage.fl .f2 .modes{top:76px;bottom:56px;gap:6px}
 .stage.fl .c6 .pill.l{color:var(--damage);box-shadow:inset 0 0 0 1px currentColor}
 .stage.fl .c6 .pill.d{color:var(--ink-1);box-shadow:inset 0 0 0 1px currentColor}
 .stage.fl .cx .hub{height:auto;background:none;padding:0;justify-content:flex-start;align-items:stretch}
+.stage.fl .c6 .pill{position:static;left:auto;top:auto}
+.stage.fl .c8 .rl{border-top:0}
+.stage.fl .c8 .rl b{font:inherit;font-weight:600;letter-spacing:inherit;text-transform:none;margin:0;color:var(--ink-0)}
