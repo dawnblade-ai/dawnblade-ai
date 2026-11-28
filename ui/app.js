@@ -48,9 +48,9 @@ function fromQuery(search){
   const foe = q.get("foe") === "dummy" ? "dummy" : has(q.get("foe")) && q.get("foe") !== hero ? q.get("foe") : has(last.foe) && last.foe !== hero ? last.foe : cat.draw(hero);
   const urlFirst = q.get("first") === "1" ? 1 : q.get("first") === "0" ? 0 : null;
   const base = {screen: "f1", hero, foe, kind: foe === "dummy" ? "dummy" : "ai", seed: newSeed(), choice: null, urlFirst, mode: "hero", game: 0, v: q.get("v") || "phone",
-    peek: q.get("peek") || null, query: null, menu: false, rules: false, session: null, pre: null, net: null, netErr: null, typical: null, roomCode: null, pace: q.get("pace"), join: q.get("join") || null};
+    peek: q.get("peek") || null, ctx: null, fixedFoe: null, from: null, sheet: q.get("sheet") || null, query: null, menu: false, rules: false, session: null, pre: null, net: null, netErr: null, typical: null, roomCode: null, pace: q.get("pace"), join: q.get("join") || null};
   const sc = q.get("screen");
-  if(/^f[1-4]$|^f9$/.test(sc || "")) return {...base, screen: sc};
+  if(/^f[1-4]$|^f9$|^c[1-8]$/.test(sc || "")) return {...base, screen: sc};
   if(base.join) return {...base, screen: "f9", kind: "phones"};
   if(q.has("hero") || q.has("foe") || q.has("seed") || sc === "table")
     return {...base, screen: "table", query: Object.fromEntries(q.entries()), game: 1};
@@ -86,6 +86,8 @@ function TableScreen(p){
   const st = useState({over: null, think: false}), live = st[0], setLive = st[1];
   const dr = useState(false), dropped = dr[0], setDropped = dr[1];
   const ask = useState(null), asking = ask[0], setAsking = ask[1];
+  const rk = useState(null), rec = rk[0], setRec = rk[1], recorded = useRef(false), cancelRec = useRef(null);
+  const ctx = p.ctx || null, CP = root.DawnUICircuitPlay;
   const timer = useRef(null);
   if(s && !pad.current){ const g = s.state(); pad.current = Pad.empty([g.sides[0].hp, g.sides[1].hp]); }
   useEffect(() => {
@@ -99,7 +101,15 @@ function TableScreen(p){
     const off2 = s.subscribe(state => {
       clearTimeout(timer.current);
       if(!state) return;
-      if(state.over){ setLive({over: state.over, think: false}); return; }
+      if(state.over){
+        setLive({over: state.over, think: false});
+        /* THE ONE RECORD: a finished game enters the Circuit's store once, here (ranked: a receipt, when the server's numbers arrive) */
+        if(!recorded.current && CP && root.DawnCircuit){
+          recorded.current = true;
+          try { const m = CP.finish(s, state.over, ctx, {update: setRec}); cancelRec.current = m.cancel || null; setRec(m); } catch(e){}
+        }
+        return;
+      }
       setLive(x => x.think || x.over ? {over: null, think: false} : x);
       /* a beat of silence while the other seat holds the move: the quiet chip (F9 ai) */
       timer.current = setTimeout(() => { if(!s.state().over && s.holder() === 1 - s.seat) setLive(x => ({...x, think: true})); }, 600);
@@ -108,7 +118,7 @@ function TableScreen(p){
     const off3 = s.onPhase ? s.onPhase(ph => setDropped(K.netStage(s) === "drop")) : null;
     const poll = s.networked ? setInterval(() => setDropped(K.netStage(s) === "drop"), 500) : null;
     if(!s.networked) s.start();
-    return () => { off1(); off2(); if(off3) off3(); if(poll) clearInterval(poll); clearTimeout(timer.current); s.dispose(); if(current === s) current = null; };
+    return () => { off1(); off2(); if(off3) off3(); if(poll) clearInterval(poll); clearTimeout(timer.current); if(cancelRec.current) cancelRec.current(); s.dispose(); if(current === s) current = null; };
   }, []);
   if(!s) return html`<${Failed} why=${String(made.err && made.err.message || made.err)}/>`;
 
@@ -121,10 +131,11 @@ function TableScreen(p){
   const openPad = () => { if(!live.over) setOver({menu: false, pad: true}); };
   const concede = () => { conceded.current = true; shut(); s.submit({t: "concede"}); };
   const exit = to => { p.onExit(to); };
+  const road = ctx && ctx.kind === "road" ? ctx : null;
   /* REMATCH (F7): local — the session deals a fresh game and F4 seats it; server — both ask, the referee opens a table; a room has none */
   const kind = K.rematchKind(s);
   const rematch = () => {
-    if(kind === "local"){ try { const next = s.rematch(); exit({screen: "f4", pre: next, kind: s.dummy ? "dummy" : "ai", hero: s.pick.hero, foe: s.pick.foe}); } catch(e){ exit({screen: "f2"}); } return; }
+    if(kind === "local"){ try { const next = s.rematch(); exit({screen: "f4", pre: next, kind: s.dummy ? "dummy" : "ai", hero: s.pick.hero, foe: s.pick.foe, ctx: road, fixedFoe: road ? s.pick.foe : null}); } catch(e){ exit({screen: "f2"}); } return; }
     if(kind === "none") return exit({screen: "f2"});
     setAsking(true);
     const go = () => s.again().then(next => exit({screen: "f4", net: next, kind: "online", hero: s.pick.hero}), () => setAsking(false));
@@ -136,13 +147,19 @@ function TableScreen(p){
   return html`<div class="tablewrap" style="display:contents">
     <${root.DawnUITable.Live} session=${s} director=${dir()} onMenu=${openMenu} onPad=${openPad}/>
     <div class="stage fl ov" data-b="overlay"><${K.Sprite}/>
-      ${over.menu && !live.over ? html`<${K.Menu} session=${s} director=${dir()} log=${log.current} onClose=${shut} onConcede=${concede}/>` : null}
+      ${over.menu && !live.over ? html`<${K.Menu} session=${s} director=${dir()} daily=${!!(ctx && ctx.kind === "daily")} log=${log.current} onClose=${shut} onConcede=${concede}/>` : null}
       ${over.pad && !live.over ? html`<${Pad.PadSheet} pad=${pad.current} names=${names} first=${first} turn=${turn} onClose=${shut}/>` : null}
       ${live.think && !live.over && !over.menu && !over.pad ? html`<${K.Thinking} name=${names[1]}/>` : null}
       ${dropped && !live.over ? html`<${K.Waiting} v="quiet" name=${names[1]} onLeave=${() => exit({screen: "f1"})}/>` : null}
       ${live.over ? html`<${K.Result} key="result" director=${dir()} pad=${pad.current} names=${names} first=${first} turn=${turn} winner=${live.over.winner} conceded=${conceded.current}
         rematchLabel=${kind === "none" ? "New table" : asking ? "Asking " + names[1] + "…" : "Rematch"} rematchBusy=${!!asking}
-        onRematch=${rematch} onNew=${() => exit({screen: "f3", mode: "foe"})} onLeave=${() => exit({screen: "f1"})}/>` : null}
+        extra=${rec && CP ? CP.resultKit({...rec, hooks: {
+          onLadder: () => exit({screen: "c4", from: "f1", ctx: null}), onCircuit: () => exit({screen: "c6", ctx: null}),
+          onPractice: () => exit({screen: "f4", mode: "hero", seed: ctx.seed, urlFirst: ctx.first, hero: s.heroKeys[0], foe: s.heroKeys[1], kind: "ai", ctx, pre: null}),
+          onShare: t => { try { root.navigator.clipboard.writeText(t); } catch(e){} },
+          onNext: foe => exit({screen: "f4", mode: "hero", hero: s.heroKeys[0], foe, kind: "ai", ctx: {kind: "road"}, fixedFoe: foe, pre: null, seed: newSeed(), choice: null, urlFirst: null}),
+          onRematch: rematch, onLeave: () => exit({screen: "f1"})}}) : null}
+        onRematch=${rematch} onNew=${() => exit({screen: "f3", mode: "foe", ctx: null, fixedFoe: null})} onLeave=${() => exit({screen: "f1"})}/>` : null}
     </div></div>`;
 }
 
@@ -152,13 +169,32 @@ function App(){
   const st = useState(() => fromQuery(root.location && root.location.search)), s = st[0], setS = st[1];
   const tk = useState(0), bump = () => tk[1](n => n + 1);
   const nav = patch => setS(x => ({...x, ...patch}));
-  const go = (screen, patch) => nav({screen, ...(patch || {})});
+  /* a plain move clears what the daily and the road fixed; the Circuit's own screens remember where they were opened from */
+  const go = (screen, patch) => nav({screen, from: s.screen === "table" ? "f1" : s.screen, ...(/^(f3|f4)$/.test(screen) ? {} : {ctx: null, fixedFoe: null}), ...(patch || {})});
   const modes = S.modes(root);
   const dropPre = () => { if(s.pre){ try { s.pre.dispose(); } catch(e){} } };
   const dropNet = () => { stopFinder(); if(s.net){ try { s.net.dispose(); } catch(e){} } };
   /* F4: a fresh seed, a fresh coin */
   const sit = patch => nav({screen: "f4", mode: "hero", seed: newSeed(), choice: null, pre: null, net: null, netErr: null, ...(patch || {})});
   const fail = why => nav({screen: "fail", why});
+  /* THE CIRCUIT's doors (ui/circuit-play.js, circuit-view.js): every one starts a real game through the same F3 / F4 / session path */
+  const CCx = root.DawnCircuit, heroKeys = () => K.catalog.list().map(h => h.k);
+  const circ = {
+    go: id => go(id), back: () => go(s.from && /^(c\d|f\d)$/.test(s.from) && s.from !== "c4" ? s.from : "c6"),
+    toTitle: () => go("f1"), toWays: () => go("f2"),
+    findOpponent: () => go("f3", {mode: "hero", kind: "online"}),
+    sitAs: (hero, foe) => sit({hero, foe: foe || cat.draw(hero), kind: "ai", ctx: null, fixedFoe: null, peek: null}),
+    replay: g => {
+      const dailyNow = g.kind === "daily" && g.day === CCx.dayOf();
+      sit({hero: g.me, foe: g.foe, seed: g.seed, urlFirst: g.first ? 0 : 1, kind: g.foe === "dummy" ? "dummy" : "ai", peek: null, fixedFoe: null,
+        ctx: dailyNow ? {kind: "daily", day: g.day, seed: g.seed, first: g.first ? 0 : 1} : null});
+    },
+    daily: () => {
+      const d = CCx.dailyDeal(CCx.dayOf(), cat.list());
+      sit({hero: d.me, foe: d.foe, seed: d.seed, urlFirst: d.first, kind: "ai", peek: null, fixedFoe: null, ctx: {kind: "daily", day: d.day, seed: d.seed, first: d.first}});
+    },
+    road: foe => go("f3", {mode: "hero", kind: "ai", fixedFoe: foe, ctx: {kind: "road"}, peek: null})
+  };
 
   /* a networked surface in play: re-render on its phases and awaits, and every beat while it waits (the lobby has no event for "the friend arrived") */
   useEffect(() => {
@@ -191,6 +227,7 @@ function App(){
   /* a hero picked in F3: the next step depends on what was chosen at F2 */
   const picked = k => {
     if(s.mode === "foe") return sit({foe: k, kind: "ai", peek: null});
+    if(s.fixedFoe) return sit({hero: k, foe: s.fixedFoe, kind: "ai", peek: null});
     if(s.kind === "phones") return openRoom(k, "room-host");
     if(s.kind === "online") return openServer(k);
     sit({hero: k, foe: s.kind === "dummy" ? "dummy" : s.foe === k || s.foe === "dummy" ? cat.draw(k) : s.foe, peek: null});
@@ -199,13 +236,17 @@ function App(){
   let body;
   switch(s.screen){
     case "table": body = html`<${TableScreen} key=${s.game} query=${s.query} session=${s.session}
-      onExit=${to => nav({session: null, query: null, menu: false, net: null, ...to})}/>`; break;
+      ctx=${s.ctx} onExit=${to => nav({session: null, query: null, menu: false, net: null, ctx: null, fixedFoe: null, ...to})}/>`; break;
     case "fail": body = html`<div class="scr"><div class="frame"><div class="failbox"><b>The table could not be dealt.</b><p>${s.why}</p><button class="btn" data-tap data-b="back" onClick=${() => go("f1")}>Back to the title</button></div></div></div>`; break;
-    case "f2": body = html`<${K.Ways} modes=${modes} onBack=${() => go("f1")} onRules=${() => nav({rules: true})}
+    case "c1": case "c2": case "c3": case "c4": case "c6": case "c7": case "c8": {
+      const CV = root.DawnUICircuitView, CP = root.DawnUICircuitPlay, C = {c1: CV.C1, c2: CV.C2, c3: CV.C3, c4: CV.C4, c6: CP.C6, c7: CP.C7, c8: CP.C8}[s.screen];
+      body = html`<${C} key=${s.screen} nav=${circ} sheet=${s.sheet} tab=${s.v === "latest" ? "latest" : null}/>`; break;
+    }
+    case "f2": body = html`<${K.Ways} modes=${modes} onCircuit=${() => go("c6")} onBack=${() => go("f1")} onRules=${() => nav({rules: true})}
         onDummy=${() => go("f3", {mode: "hero", kind: "dummy"})} onAI=${() => go("f3", {mode: "hero", kind: "ai"})}
         onPhones=${() => go("f3", {mode: "hero", kind: "phones"})} onServer=${() => go("f3", {mode: "hero", kind: "online"})}/>`; break;
-    case "f3": body = html`<${K.Heroes} key=${s.mode + (s.peek || "")} mode=${s.mode} current=${s.mode === "foe" ? s.foe : s.hero} peek=${s.peek}
-        onBack=${() => go(s.mode === "foe" ? "f4" : "f2")} onPick=${picked}/>`; break;
+    case "f3": body = html`<${K.Heroes} key=${s.mode + (s.peek || "") + (s.fixedFoe || "")} fixedFoe=${s.fixedFoe} mode=${s.mode} current=${s.mode === "foe" ? s.foe : s.hero} peek=${s.peek}
+        onBack=${() => go(s.mode === "foe" || s.fixedFoe ? (s.mode === "foe" ? "f4" : "c7") : "f2")} onPick=${picked}/>`; break;
     case "f4": {
       const dummy = s.foe === "dummy" && !s.net;
       let seating, shuffle, choose = () => {}, foeKey = s.foe;
@@ -219,8 +260,9 @@ function App(){
         seating = K.seatingLocal(s.pre.seating || {winner: 0, first: 0, needsChoice: false}, K.firstName((cat.byKey(s.foe) || {}).n), dummy);
         shuffle = () => nav({screen: "table", session: s.pre, pre: null, game: s.game + 1});
       } else {
+        const dcall = s.ctx && s.ctx.kind === "daily" && root.DawnUICircuitPlay ? root.DawnUICircuitPlay.dailySeating(s.urlFirst, K.firstName((cat.byKey(s.foe) || {}).n)) : null;
         const call = s.urlFirst != null ? {winner: s.urlFirst === 0 ? 0 : 1, first: s.urlFirst, needsChoice: false} : S.coinCall(s.seed, root, s.choice);
-        seating = K.seatingLocal(call, K.firstName((cat.byKey(s.foe) || {}).n), dummy, s.choice);
+        seating = dcall || K.seatingLocal(call, K.firstName((cat.byKey(s.foe) || {}).n), dummy, s.choice);
         choose = id => nav({choice: id});
         shuffle = () => {
           try {
@@ -229,8 +271,8 @@ function App(){
           } catch(e){ fail(String(e && e.message || e)); }
         };
       }
-      body = html`<${K.SitDown} key=${s.hero + foeKey + (s.seed || "") + (seating.text || "") + (seating.choices ? "c" : "")} hero=${s.hero} foe=${foeKey} seating=${seating} net=${!!s.net} director=${D}
-        onBack=${() => { dropPre(); dropNet(); go("f1", {pre: null, net: null}); }} onHero=${() => go("f3", {mode: "hero"})} onFoe=${() => go("f3", {mode: "foe"})}
+      body = html`<${K.SitDown} ctx=${s.ctx} key=${s.hero + foeKey + (s.seed || "") + (seating.text || "") + (seating.choices ? "c" : "")} hero=${s.hero} foe=${foeKey} seating=${seating} net=${!!s.net} director=${D}
+        onBack=${() => { dropPre(); dropNet(); go(s.ctx ? (s.ctx.kind === "daily" ? "c8" : "c7") : "f1", {pre: null, net: null}); }} onHero=${() => go("f3", {mode: "hero"})} onFoe=${() => go("f3", {mode: "foe"})}
         onChoose=${choose} onShuffle=${shuffle} onDeck=${() => go("f3", {mode: "hero", peek: s.hero})}/>`;
       break;
     }
@@ -244,7 +286,7 @@ function App(){
         onPlayAI=${() => { dropNet(); sit({foe: cat.draw(s.hero), kind: "ai", net: null}); }}/>`;
       break;
     }
-    default: body = html`<${K.Title} onPlay=${() => sit({foe: cat.draw(s.hero), kind: "ai"})} onHero=${() => go("f3", {mode: "hero"})} onWays=${() => go("f2")} onRules=${() => nav({rules: true})}
+    default: body = html`<${K.Title} onRecord=${() => go("c1")} onPlay=${() => sit({foe: cat.draw(s.hero), kind: "ai"})} onHero=${() => go("f3", {mode: "hero"})} onWays=${() => go("f2")} onRules=${() => nav({rules: true})}
         onGear=${() => nav({menu: true})}/>`;
   }
   if(s.screen === "table") return body;

@@ -32,7 +32,7 @@ const S = (...a) => a;
 const SCREENS = [
   { id: "F1 title", mock: "flow-1-title.html", app: "?screen=f1", root: ".f1",
     sel: S(".top .lab", ".top .ib", ".mark .w1", ".mark .blade", ".mark .w2", ".tag", ".band .artband", ".band .who", ".band .chip", ".cta .btn", ".cta small", ".row3 .link", ".foot") },
-  { id: "F2 ways", mock: "flow-2-ways.html", app: "?screen=f2", root: ".f2",
+  { id: "F2 ways", mock: "circuit-9-ways.html", app: "?screen=f2", root: ".f2",
     sel: S(".hdr .ib", ".hdr h1", ".modes .mode", ".foot .link"),
 },
   { id: "F3 heroes", mock: "flow-3-hero.html", app: "?screen=f3", root: ".f3", sel: S(".hdr .ib", ".hdr h1", ".grid", ".tile") },
@@ -56,7 +56,7 @@ const SCREENS = [
   /* the player WINS: seat 0 plays the coach's move every step against the Steady foe (?search=0) until a seed lets it win */
   { id: "F7 KO win", mock: "flow-7-result.html?v=ko", app: "?hero=iyslander&foe=viserai&first=0&pace=0&search=0", root: ".f7", coachwin: true, settle: 400,
     sel: S(".veil", ".word", ".word b", ".word span", ".word i", ".tapon", ".tapfull"), skip: { ".blade": "" } },
-  { id: "F7 result pad", mock: "flow-7-result.html?v=pad", app: TABLE, root: ".f7", steps: ["menu", "concede", "continue"], settle: 700, sel: S(".paper.res", ".paper .ph h3", ".gg", ".acts2 .btn") }
+  { id: "F7 result pad", mock: "circuit-5-result.html?v=plain", app: TABLE, root: ".f7", steps: ["menu", "concede", "continue"], settle: 700, sel: S(".paper.res", ".paper .ph h3", ".gg", ".cap", ".acts2 .btn") }
 ];
 
 /* ---------- the browsers: tools/ui-drive.js's own launch and openPage (one setup for every CRESCENDO drive) ---------- */
@@ -251,7 +251,7 @@ async function phonesJourney(pw, browser, engine, vp, o, ending){
   try {
     await settle(page, 300);
     const enabled = await page.evaluate(() => [...document.querySelectorAll('[data-b^="mode-"]')].map(b => b.getAttribute("data-b") + (b.disabled ? "-" : "+")).join(" "));
-    if(enabled !== "mode-dummy+ mode-ai+ mode-phones+ mode-online+") bad.push("F2 modes: " + enabled);
+    if(enabled !== "mode-dummy+ mode-ai+ mode-circuit+ mode-phones+ mode-online+") bad.push("F2 modes: " + enabled);
     await tapB(page, "mode-phones"); await need('[data-b^="tile-"]', "two phones asks for a hero");
     await tapB(page, "tile-iyslander"); await tapB(page, "sit"); await need('[data-b="waiting-phone"]', "F9 phone waits for the friend");
     const code = await page.evaluate(() => [...document.querySelectorAll(".f9 .codes b")].map(b => b.textContent).join(""));
@@ -431,4 +431,4 @@ async function main(){
 }
 
 if(require.main === module) main().catch(e => { console.error(e); process.exit(1); });
-module.exports = { SCREENS, VIEWPORTS, TOL };
+module.exports = { SCREENS, VIEWPORTS, TOL, MEASURE, PHONE, settle, openPage, tapB, boxesFor, INIT, PLAY, MOCK };
