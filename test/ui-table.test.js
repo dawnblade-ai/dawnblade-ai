@@ -94,7 +94,7 @@ test("T6: HIT FOR is the engine's current figure (not the printed power), and bl
   const blocker = m.hand.find(h => h.state === "ready");
   assert.ok(blocker, "a card that can block");
   st = step(st, { t: "defend", uid: blocker.card.uid });
-  assert.strictEqual(modelOf(st).primary.label, "Resolving…", "a declaration hands priority to the turn player: the primary waits");
+  assert.match(modelOf(st).primary.label, /^Waiting for /, "a declaration hands priority to the turn player: the primary says who we wait for");
   st = step(st, { t: "pass" }, 1);                  /* the AI seat passes it back */
   m = modelOf(st);
   assert.strictEqual(m.hit.eq.d, blocker.card.def);

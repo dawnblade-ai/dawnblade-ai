@@ -230,7 +230,7 @@ html[data-band="tall"]{--ap:24px;--coin:26px;--hbw:28px;--hbh:39px;--hbstep:13px
 /* =============================== COMPACT (375 x 548) — what changes is in SCREENS-TABLE.md §14 =============================== */
 html[data-band="compact"] .centre{--atk-x:calc(var(--gut) + var(--cw-link) + 36px + 26px)}
 /* [DEV-5] at 548 the attack card leaves 22 px of free height, so the step marker moves to the top-right corner there */
-html[data-band="compact"] .pill{top:3px;left:auto;right:var(--gut)}
+html[data-band="compact"] .centre:has(.atk) .pill{top:3px;left:auto;right:var(--gut)}   /* only when a card stands in the stage: at rest the marker keeps its place on the left, clear of the deck count (review 2026-11-28) */
 html[data-band="compact"] .ask{font-size:18px;line-height:20px}
 html[data-band="compact"] .hit .n{font-size:38px;line-height:34px}
 html[data-band="compact"] .hit{width:70px}

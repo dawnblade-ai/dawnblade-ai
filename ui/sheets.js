@@ -209,7 +209,7 @@ function Glyphs(p){
   var parts = String(p.s == null ? "" : p.s).split(/\{([a-z])\}/i);
   return parts.map(function(t, i){
     return i % 2 === 0 ? t : t === "r" ? html`<span class="gl-r" aria-label="resource"></span>` : t === "p" ? html`<span class="gl-p" aria-label="pitch"></span>`
-      : t === "d" ? html`<span class="gl-d" aria-label="defence"></span>` : t.toUpperCase();
+      : t === "d" ? html`<span class="gl-d" aria-label="defense"></span>` : t.toUpperCase();
   });
 }
 
@@ -289,13 +289,13 @@ function Sheet(props){
   var send = function(actions){ (actions || []).forEach(function(a){ if(props.onAnswer) props.onAnswer(a); }); };
   var go = function(b){ send(b.actions); };
   var tap = function(it){ if(it.local) setUi(function(u){ return Object.assign({}, u, it.local); }); else send(it.actions); };
-  var srcCard = view.cardOf && m.source.name ? view.cardOf(m.source.name) : null;
+  var srcCard = view.cardOf && m.source.name ? view.cardOf(m.source.name) : null;     /* no card found: the name alone is shown on a plain face, never a placeholder */
   var cn = m.layout === "waiting" ? "sh-sheet waiting" : "sh-sheet " + m.layout;
   return html`<div class="sh-wrap" data-b="prompt" ref=${wrap}>
     <div class="sh-scrim" ref=${scrimEl}></div>
     <div class=${cn} data-b="sheet" role="dialog" aria-label=${m.title} ref=${sheetEl}>
       <div class="sh-ask">
-        ${srcCard ? html`<div class="sh-src" data-b="source"><${Thumb} card=${srcCard} name=${m.source.name}/></div>` : null}
+        ${srcCard || m.source.name ? html`<div class="sh-src" data-b="source"><${Thumb} card=${srcCard} name=${m.source.name}/></div>` : null}
         <div class="sh-asktx">
           ${m.source.name ? html`<div class="sh-by"><span>ASKED BY</span><b class=${"sh-chip" + (m.tag === "reveal" ? " look" : m.waiting ? " wait" : "")}>${m.chip}</b></div>` : html`<div class="sh-by"><b class="sh-chip wait">${m.chip}</b></div>`}
           <h2 class="sh-title">${m.title}</h2>

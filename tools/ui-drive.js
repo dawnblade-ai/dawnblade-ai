@@ -302,6 +302,22 @@ const FRESH = {   /* a fresh deal has not had two turns: no graveyard, no arsena
   "opp-arsenal": "a fresh deal has no arsenal yet", "you-arsenal": "a fresh deal has no arsenal yet"
 };
 const KNOWN = new Set();
+/* which turn-medallion numerals READ (un-mirrored: the accumulated transform of the element has m11 > 0), and for whom */
+const MEDAL_READS = () => {
+  const m = document.querySelector('[data-b="medal"]'); if(!m) return { err: "no medal" };
+  const acc = e => { let M = new DOMMatrix(); for(let p = e; p && p.nodeType === 1; p = p.parentElement){ const t = getComputedStyle(p).transform; M = new DOMMatrix(t === "none" ? undefined : t).multiply(M); } return M; };
+  const readable = [], mid = [];
+  m.querySelectorAll("b").forEach(b => { const k = acc(b).m11, face = b.parentElement, cs = getComputedStyle(face), hidden = cs.backfaceVisibility === "hidden" && k < 0;
+    if(Math.abs(k) > 0.02 && Math.abs(k) < 0.98) mid.push(k); else if(k > 0) readable.push(face.classList.contains("opp") ? "opp" : face.classList.contains("you") ? "you" : "single:" + (m.classList.contains("o") ? "opp" : "you")); else if(!hidden) readable.push("MIRRORED"); });
+  return { readable, mid: mid.length > 0 };
+};
+async function checkMedal(P, owner){
+  let r;
+  for(let k = 0; k < 8; k++){ r = await P.evaluate(MEDAL_READS); if(!r.mid) break; await P.waitForTimeout(500); }
+  if(r.err) return r.err;
+  if(r.readable.length !== 1 || r.readable[0] !== owner) return `the medallion reads ${JSON.stringify(r.readable)}, expected one un-mirrored face for ${owner}`;
+  return null;
+}
 const argvHas = f => process.argv.includes(f);
 const SECOND = ms => new Promise(r => setTimeout(r, ms));
 const handOf = page => page.evaluate(() => { const s = DawnUIApp.session(), v = DawnView.view(s.state(), 0);
@@ -371,7 +387,10 @@ async function runStates(pw, browser, engine, vp, opts){
       const t = await P.locator(".inspect .sheet h2").innerText().catch(() => null);
       ask(t && t.toLowerCase() === hand[0].name.toLowerCase(), "T10: holding a card did not open it (" + t + ")");
       ask(/^close$/i.test(await primaryText(P)), "T10: the primary is not Close");
-      await cmp("T10", "table-10-inspect.html", { only: ["veil", "inspect-card", "sheet", "primary", "hub", "bout"], part: { sheet: "xw" }, skip: {} });
+      /* CEO 2026-11-28: the inspect veil never dims the bout, so it starts at the bout's bottom edge and the card sits below it (smaller than the mockup's) */
+      const clear = await P.evaluate(() => { const v = document.querySelector('.inspect [data-b="veil"]').getBoundingClientRect(), b = document.querySelector('[data-b="bout"]').getBoundingClientRect(), c = document.querySelector('[data-b="inspect-card"]').getBoundingClientRect(), sh = document.querySelector('.inspect [data-b="sheet"]').getBoundingClientRect(); return v.top >= b.bottom - 0.5 && c.top >= b.bottom - 0.5 && c.bottom <= sh.top + 0.5; });
+      ask(clear, "T10: the veil or the card covers the bout (or the card runs into the sheet)");
+      await cmp("T10", "table-10-inspect.html", { only: ["veil", "inspect-card", "sheet", "primary", "hub", "bout"], part: { sheet: "xw", veil: "xw", "inspect-card": "c" }, skip: {} });
       await P.locator('.hub [data-b="primary"]').click(); await P.waitForTimeout(100);
       ask(await P.locator(".inspect").count() === 0, "T10: Close did not close it");
     }
@@ -492,7 +511,7 @@ async function runStates2(pw, browser, engine, vp, opts){
       await P.waitForTimeout(150);
       ask(await P.locator(".stage .ask").count() === 1 && /any blocks/i.test(await P.locator(".stage .ask").innerText()), "T6: no 'Any blocks?' question");
       ask(/^no block$/i.test(await primaryText(P)), "T6: the primary should read No block (" + await primaryText(P) + ")");
-      const hit0 = await P.evaluate(() => { const s = DawnUIApp.session(), v = DawnView.view(s.state(), 0); return { total: v.pend && v.pend.total, printed: v.pend && v.pend.card.power, shown: +(document.querySelector(".hit .n") || {}).textContent }; });
+      const hit0 = await P.evaluate(() => { const s = DawnUIApp.session(), v = DawnView.view(s.state(), 0); return { total: v.pend && v.pend.total, printed: v.pend && v.pend.card.power, shown: (+((document.querySelector(".hit .n") || {}).textContent) || 0) }; });
       ask(hit0.shown === hit0.total, `T6: HIT FOR shows ${hit0.shown}, the engine's figure is ${hit0.total} (printed ${hit0.printed})`);
       const rh = P.locator(".handrow .cd.ready").first(), rg = P.locator(".lane .cd.mat.ready").last();
       if(await rh.count()) await rh.click(); await P.waitForTimeout(80);
@@ -503,8 +522,11 @@ async function runStates2(pw, browser, engine, vp, opts){
       ask(/^block with \d+$/i.test(await primaryText(P)), "T6: the primary should read Block with N (" + await primaryText(P) + ")");
       ask(await P.locator(".hit .eq").count() === 1, "T6: no incoming-vs-defence ledger");
       const wallEq = await P.evaluate(() => { const s = DawnUIApp.session(), v = DawnView.view(s.state(), 0), me = v.sides[0];
-        return { shown: +(document.querySelector(".hit .n") || {}).textContent, want: Math.max(0, v.pend.total - DawnSparring.wallOf(me)) }; });
+        return { shown: (+((document.querySelector(".hit .n") || {}).textContent) || 0), want: Math.max(0, v.pend.total - DawnSparring.wallOf(me)) }; });
       ask(wallEq.shown === wallEq.want, `T6: HIT FOR ${wallEq.shown} != power - wall ${wallEq.want}`);
+      /* a fully blocked attack is not a hit (CR 7.5.5): the column says NO HIT, never "HIT FOR 0" */
+      const zeroTxt = await P.evaluate(() => { const h = document.querySelector(".centre .hit"), n = h && h.querySelector(".n"), l = h && h.querySelector(".lab"); return h && { n: n && n.textContent.trim(), lab: l && getComputedStyle(l).visibility }; });
+      ask(wallEq.want > 0 ? /^\d+$/.test(zeroTxt.n) : (/^no hit$/i.test(zeroTxt.n) && zeroTxt.lab === "hidden"), `T6: at ${wallEq.want} the column reads "${zeroTxt && zeroTxt.n}" (want ${wallEq.want > 0 ? "a number" : "NO HIT"})`);
       await cmp("T6", "table-6-defend.html", { only: [...BASE, "ask", "attack", "hit", "eq", "ap", "you-weapon", "you-head", "you-chest", "you-arms", "you-legs", "hand-#0", "hand-#1", "hand-#2", "hand-#3"],
         alias: { ap: "opp-ap" }, skip: { "you-arsenal": "" } });
     }
@@ -518,7 +540,7 @@ async function runStates2(pw, browser, engine, vp, opts){
         ask(/reaction step/i.test(await P.locator('[data-b="pill"]').innerText()), "T7: the pill does not say Reaction step");
         ask(await P.locator(".wall .cd").count() >= 1, "T7: their blocker is not in the wall");
         ask(/^pass$/i.test(await primaryText(P)), "T7: the primary should read Pass (" + await primaryText(P) + ")");
-        const eq = await P.evaluate(() => { const s = DawnUIApp.session(), v = DawnView.view(s.state(), 0); return { shown: +(document.querySelector(".hit .n") || {}).textContent,
+        const eq = await P.evaluate(() => { const s = DawnUIApp.session(), v = DawnView.view(s.state(), 0); return { shown: (+((document.querySelector(".hit .n") || {}).textContent) || 0),
           want: Math.max(0, v.pend.total + DawnEffects.rxPumpTotal(v) - (DawnSparring.wallOf(v.sides[1]) + (v.sides[1].blockRx || []).reduce((t, l) => t + ((l && l.def) || 0), 0))) }; });
         ask(eq.shown === eq.want, `T7: HIT FOR ${eq.shown} != ${eq.want}`);
         await cmp("T7", "table-7-reaction.html", { only: [...BASE, "pill", "attack", "wall", "blocker", "hit", "eq", "hand-#0", "hand-#1", "hand-#2", "hand-#3"],
@@ -741,7 +763,7 @@ async function runPlay(pw, browser, engine, opts){
     if(opts.throttle){ const cdp = await a.context.newCDPSession(P); await cdp.send("Emulation.setCPUThrottlingRate", { rate: opts.throttle }); }
     await P.waitForSelector(".stage[data-state] .bout", { timeout: 15000 }); await P.evaluate(() => { window.__fr.on = true; try { DawnUIApp.session().onStep(e => window.__fr.marks.push([Math.round(performance.now()), "step s" + e.seat + " " + e.action.t])); new MutationObserver(m => window.__fr.marks.push([Math.round(performance.now()), "dom " + m.map(x => [...x.addedNodes].map(n => n.className).join("|")).join(",").slice(0, 60)])).observe(document.querySelector(".stage[data-state]"), { childList: true }); } catch(e){} });
     await P.waitForSelector(".stage .bout", { timeout: 15000 });
-    const lives = [], did = { defended: 0, arsenal: 0, reaction: 0, sheets: 0 }; const trace = []; let refusals = 0, taps = 0, lastTurn = 0, idle = 0, same = 0, lastSeq = -1, started = Date.now();
+    const lives = [], did = { defended: 0, arsenal: 0, reaction: 0, sheets: 0 }; let medalTurn = 0, medalAt = 0; const medalBad = new Set(); const trace = []; let refusals = 0, taps = 0, lastTurn = 0, idle = 0, same = 0, lastSeq = -1, started = Date.now();
     const snap = () => P.evaluate(() => { const s = DawnUIApp.session(), st = s.state(); return { turn: st.turn, step: st.step, phase: st.phase, over: !!st.over, hp: [st.sides[0].hp, st.sides[1].hp], busy: s.local.busy(), tp: st.turnPlayer, seq: s.local.seq() }; });
     const click = async loc => { try { await loc.click({ timeout: 1500 }); taps++; return true; } catch(e){ return false; } };
     let s0 = await snap(); lives.push(s0.hp);
@@ -750,6 +772,8 @@ async function runPlay(pw, browser, engine, opts){
       if(s.hp[0] !== lives[lives.length - 1][0] || s.hp[1] !== lives[lives.length - 1][1]) lives.push(s.hp);
       lastTurn = s.turn;
       if(s.over || s.turn > turns * 2) break;
+      if(s.turn !== medalTurn){ medalTurn = s.turn; medalAt = Date.now(); did.medalDue = s.turn; }
+      if(did.medalDue && Date.now() - medalAt > 3500){ const t = did.medalDue; did.medalDue = 0; const sn = await snap(); const why = sn.turn === t ? await checkMedal(P, sn.tp === 0 ? "you" : "opp") : null; if(sn.turn === t) did.medal = (did.medal || 0) + 1; if(why && !medalBad.has(why)){ medalBad.add(why); res.bad.push(`play: turn ${t}: ${why}`); } }
       same = s.seq === lastSeq && !s.busy ? same + 1 : 0; lastSeq = s.seq;
       if(same > 250 || Date.now() - started > 420000){
         const why = await P.evaluate(() => { const ss = DawnUIApp.session(), st = ss.state(), J = DawnJudge; return JSON.stringify({ turn: st.turn, step: st.step, phase: st.phase, holder: J.waitingOn(st), prompt: !!st.prompt && st.prompt.tag, pending: st.pending && st.pending.kind, busy: ss.local.busy(),
@@ -818,7 +842,7 @@ async function runPlay(pw, browser, engine, opts){
       if(!did.arsenal && !did.reaction) res.bad.push("play: you never set an arsenal card or played a reaction");
       if(opts.reactions && !did.reaction) res.bad.push("play: no reaction was played in this pairing");
     }
-    res.notes.push(`defended ${did.defended}, arsenal ${did.arsenal}, reactions ${did.reaction}, sheets ${did.sheets}`);
+    res.notes.push(`medal checked ${did.medal || 0}×, defended ${did.defended}, arsenal ${did.arsenal}, reactions ${did.reaction}, sheets ${did.sheets}`);
     res.notes.push(`turn ${fin.turn}, ${taps} taps, ${refusals} refused taps, life ${lives.map(l => l.join("/")).join(" > ")}`);
     if(opts.shots) await P.screenshot({ path: path.join(opts.shots, `play-${engine}.png`) });
     await a.context.close();

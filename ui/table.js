@@ -128,7 +128,8 @@ function model(v, ctx){
   };
 
   /* the stage: the card being paid for, or the link on the chain (with its wall, the stack rail and earlier links), or the top of the stack */
-  const feat = v.featured && v.featured.card ? v.featured : null;
+  /* the link in flight only: `featured` can outlive a closed chain, and the resting table's stage is bare */
+  const feat = v.featured && v.featured.card && v.pend ? v.featured : null;
   const stackE = (v.stack || []).length ? (v.stack[v.stack.length - 1] || {}) : null, stackTop = stackE && stackE.card;
   let staged = null, chain = null, hit = null, wall = [], rail = null, links = [];
   const have = pay ? (you.res || 0) + ctx.paySum(you) : 0;
@@ -158,7 +159,7 @@ function model(v, ctx){
   /* the one primary */
   let primary;
   const nm = sel ? sel.name || (sel.from === "gear" ? own(you.gear, sel.uid) : sel.from === "arsenal" ? you.arsenal : own(you.hand, sel.uid)).name : "";
-  if(v.over) primary = {label: "Game over", disabled: true};
+  if(v.over) primary = {label: "", disabled: true};   /* the result belongs to the flow's overlay ("tap to continue"); the hub says nothing under it */
   else if(ui.insp || ui.menu) primary = {label: "Close", close: true};
   else if(asked) primary = {label: "Your call", disabled: true};
   else if(pay){
@@ -167,7 +168,7 @@ function model(v, ctx){
   } else if(arsStep) primary = selArs ? {label: "Set in arsenal", act: {t: "arsenal", uid: selArs.uid}} : {label: "No arsenal", act: {t: "arsenal", uid: null}};
   else if(defending){
     const n = blockH.size + blockG.size;
-    primary = L({t: "pass"}) == null ? {label: n ? "Block with " + n : "No block", act: {t: "pass"}} : {label: "Resolving…", disabled: true};
+    primary = L({t: "pass"}) == null ? {label: n ? "Block with " + n : "No block", act: {t: "pass"}} : {label: "Waiting for " + foe, disabled: true};   /* a declaration hands priority to them */
   } else if(mine){
     if(sel) primary = {label: (sel.from === "gear" ? "Attack with " : "Play ") + nm, play: sel};
     else if(L({t: "endTurn"}) == null) primary = {label: "End turn", act: {t: "endTurn"}};
@@ -223,7 +224,9 @@ function Bout(p){
     </div>`;
   return html`<header class="bout" data-b="bout" data-tap role="button" aria-label="Open the pad" onClick=${p.onPad}>
     ${side(a, "you")}
-    <div class=${"medal" + (medal.mine ? "" : " o")} data-b="medal"><em class=${medal.mine ? "l" : "r"}></em><b>${medal.n}</b><span>TURN</span></div>
+    <div class="medal" data-b="medal" style=${medal.mine ? "" : "transform:rotateY(180deg)"}>
+      <div class="mface you"><em></em><b>${medal.n}</b><span>TURN</span></div>
+      <div class="mface opp"><em></em><b>${medal.n}</b><span>TURN</span></div></div>
     ${side(b, "opp")}
   </header>`;
 }
@@ -246,7 +249,7 @@ function Lane(p){
     ${h.gy
       ? html`<div data-b=${who + "-slot-gy"} data-tap><div class="pile s"><${F} card=${h.gy.card} cls="mat" place="mat" b=${who + "-gy"} w=${W_MAT[0]} h=${W_MAT[1]} on=${on.gy(who, h.gy.card)}><span class="count">${h.gy.n}</span><//></div></div>`
       : html`<div data-b=${who + "-slot-gy"}></div>`}
-    <div data-b=${who + "-slot-deck"}>${h.deckN ? html`<div class="pile s"><${B} cls="mat" b=${who + "-deck"} label="Deck"><span class="count">${h.deckN}</span><//></div>` : null}
+    <div data-b=${who + "-slot-deck"}>${h.deckN ? html`<div class="pile s"><${B} cls="mat" b=${who + "-deck"} label="Deck"/><span class="count">${h.deckN}</span></div>` : null}
       ${h.fan.map((f, i) => html`<${F} key=${f.card.uid} card=${f.card} cls=${"mat pf" + (f.tap ? " tapfan" : "")} place="mat" b=${who + "-pitch-" + i} w=${W_MAT[0]} h=${W_MAT[1]}
         tap=${f.tap} on=${f.tap ? on.unpitch(f.card) : null} style=${"transform:translateY(" + ((you ? 1 : -1) * (16 + 8 * i)) + "px)"}/>`)}</div>
     <div data-b=${who + "-slot-arsenal"} data-tap=${you && (h.arsenal || p.slot) ? "" : undefined}>${p.slot && !h.arsenal ? html`<div class="cd mat slot-arsenal" style="background:rgba(216,162,62,.08);box-shadow:none" data-b="you-arsenal-slot" aria-label="Set arsenal" ...${on.slot}><svg class="ico"><use href="#i-plus"/></svg></div>` : null}${h.arsenal
@@ -261,8 +264,8 @@ function Lane(p){
 function Marks(p){
   const h = p.h;
   return html`${h.ap || h.coins ? html`<div class="mk">
-    ${h.ap ? html`<div class="ap" data-b=${p.b}>${Array.from({length: h.ap}, () => html`<svg class="ico"><use href="#i-ap"/></svg>`)}</div>` : null}
-    ${h.coins ? html`<div class="coins" data-b=${p.cb}>${Array.from({length: h.coins}, () => html`<span class="coin">1</span>`)}</div>` : null}
+    ${h.ap ? html`<div class="ap" data-b=${p.b} role="img" aria-label=${h.ap + (h.ap > 1 ? " action points" : " action point")}>${Array.from({length: h.ap}, () => html`<svg class="ico"><use href="#i-ap"/></svg>`)}</div>` : null}
+    ${h.coins ? html`<div class="coins" data-b=${p.cb} role="img" aria-label=${h.coins + (h.coins > 1 ? " resources" : " resource")}>${Array.from({length: h.coins}, () => html`<span class="coin">1</span>`)}</div>` : null}
   </div>` : null}
   ${h.perms.length ? html`<div class="perm" data-b=${p.pb}>${h.perms.map(x => html`<div class="permhit" data-tap data-b=${p.pb + "-" + x.card.name} aria-label=${x.card.name} ...${p.on.perm(x.card)}><${K.Face} card=${x.card} cls="hb" place="perm">${x.n > 1 ? html`<span class="xn2">×${x.n}</span>` : null}<//></div>`)}</div>` : null}`;
 }
@@ -282,7 +285,7 @@ function Stage(p){
     ${m.hit && m.hit.kind === "cost" ? html`<div class="hit" data-b="hit"><div class="lab">Cost</div>
       <div class="cost-coins">${Array.from({length: m.hit.need}, (_, i) => i < m.hit.have ? html`<span class="coin">1</span>` : html`<span class="coin off"></span>`)}</div>
       <div class=${"paid" + (m.hit.have < m.hit.need ? " short" : "")}>Paid ${Math.min(m.hit.have, m.hit.need)}/${m.hit.need}</div></div>` : null}
-    ${m.hit && m.hit.kind === "hit" ? html`<div class="hit" data-b="hit"><div class="lab">Hit for</div><div class=${"n" + (m.hit.n === 0 ? " zero" : "")}>${m.hit.n}</div>
+    ${m.hit && m.hit.kind === "hit" ? html`<div class="hit" data-b="hit"><div class="lab" style=${m.hit.n === 0 ? "visibility:hidden" : undefined}>Hit for</div>${m.hit.n === 0 ? html`<div class="n zero nohit">No hit</div>` : html`<div class="n">${m.hit.n}</div>`}
       ${m.hit.eq ? html`<div class="eq" data-b="eq"><span class="p">${m.hit.eq.p}</span>−<span class="d">${m.hit.eq.d}</span></div>` : null}</div>` : null}
   </section>`;
 }
@@ -451,7 +454,13 @@ function Live(p){
   } : null;
   /* every engine prompt is a real sheet (ui/sheets.js); it sends each engine action through the session, in order */
   const pr = v.prompt && ((v.prompt.side || 0) === me || v.prompt.tag === "reveal") ? v.prompt : null;
-  const cardNamed = name => { const nm = SH.named(v, me); for(const c of nm.values()) if(c.name === name) return c; return null; };
+  /* the card that asks: anywhere the view shows it (either seat's public zones, the stack, the link in flight) */
+  const cardNamed = name => {
+    const nm = SH.named(v, me); for(const c of nm.values()) if(c.name === name) return c;
+    const pool = [].concat(v.sides[1 - me].grave || [], v.sides[1 - me].banish || [], (v.sides[1 - me].board || []).map(b => b && (b.card || b)), v.sides[1 - me].gear || [],
+      (v.stack || []).map(e => e && e.card), v.pend ? [v.pend.card] : [], v.featured ? [v.featured.card] : []);
+    return pool.find(c => c && c.name === name && !c.hidden) || null;
+  };
   on.prompt = pr ? {p: pr, key: [pr.src, pr.tag, pr.title].join("|"), view: {seat: me, names: s.names.map(firstName), cardOf: cardNamed}} : null;
   on.answer = a => submit(a);
   return html`<${Table} m=${m} on=${on}/>`;

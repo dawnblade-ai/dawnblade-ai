@@ -22,10 +22,10 @@ function Glyphs(p){
   return parts.map((t, i) => i % 2 === 0 ? t
     : t === "r" ? html`<span class="gl-r" aria-label="resource"></span>`
     : t === "p" ? html`<span class="gl-p" aria-label="pitch"></span>`
-    : t === "d" ? html`<svg class="gl-d" viewBox="0 0 24 24" aria-label="defence"><use href="#i-shield"/></svg>`
+    : t === "d" ? html`<svg class="gl-d" viewBox="0 0 24 24" aria-label="defense"><use href="#i-shield"/></svg>`
     : t.toUpperCase());
 }
-const plain = s => String(s == null ? "" : s).replace(/\{r\}/g, "resource").replace(/\{p\}/g, "pitch").replace(/\{d\}/g, "defence").replace(/\{([a-z])\}/gi, "$1");
+const plain = s => String(s == null ? "" : s).replace(/\{r\}/g, "resource").replace(/\{p\}/g, "pitch").replace(/\{d\}/g, "defense").replace(/\{([a-z])\}/gi, "$1");
 
 /* the card as printed: paragraphs from the pool's own text, "Go again" with its glyph */
 function Inspect(p){
@@ -34,15 +34,17 @@ function Inspect(p){
   const chip = (lab, n, cls) => n != null && n !== "" && !isNaN(+n) ? html`<span class=${"chip" + (cls ? " " + cls : "")}><small>${lab}</small>${n}</span>` : null;
   return html`<div class="inspect">
     <div class="veil" data-b="veil" data-tap onClick=${p.onClose}></div>
-    <div class="insp-card" data-b="inspect-card" data-tap onClick=${p.onClose} style="left:50%;transform:translateX(-50%);top:12px"><div class="cd" style="--w:min(250px, calc((var(--vh) - var(--h-hub) - 252px) / 1.3966));border-radius:12px;box-shadow:var(--e4)">${c.img ? html`<img alt=${c.name} src=${c.img} decoding="async"/>` : html`<span class="cname" style="display:grid">${c.name}</span>`}</div></div>
-    <div class="sheet" data-b="sheet" style="bottom:calc(var(--h-hub) + 10px)">
+    <div class="insp-wrap">
+      <div class="insp-card" data-b="inspect-card" data-tap onClick=${p.onClose}><div class="cd" style="border-radius:12px;box-shadow:var(--e4)">${c.img ? html`<img alt=${c.name} src=${c.img} decoding="async"/>` : html`<span class="cname">${c.name}</span>`}</div></div>
+      <div class="sheet" data-b="sheet">
       <div class="grab"></div>
       <h2>${c.name}</h2>
       <div class="ty">${(c.ty || []).join(" · ")}</div>
       ${tx.length ? html`<div class="tx">${tx.map(l => /^go again$/i.test(l.trim())
         ? html`<p><svg class="gaico" viewBox="0 0 24 24"><use href="#i-go"/></svg>Go again</p>` : html`<p><${Glyphs} s=${l}/></p>`)}</div>` : null}
-      <div class="rn">${chip("Cost", c.cost)}${chip("Pitch", +c.pitch > 0 ? c.pitch : null, pitch)}${chip("Power", c.power)}${chip("Defence", c.def)}</div>
+      <div class="rn">${chip("Cost", c.cost)}${chip("Pitch", +c.pitch > 0 ? c.pitch : null, pitch)}${chip("Power", c.power)}${chip("Defense", c.def)}</div>
       ${p.where ? html`<div class="src">${p.where}</div>` : null}
+      </div>
     </div>
   </div>`;
 }

@@ -30,16 +30,19 @@
 .life.low{color:var(--damage)}
 .bar.low{box-shadow:inset 0 1px 3px rgba(0,0,0,.9),0 0 0 1px var(--damage),0 0 10px rgba(255,79,109,.5)}
 .pop{position:absolute;z-index:9;left:50%;top:40px;transform:translateX(-50%) scale(1.34);transform-origin:50% 0;font:800 26px/26px var(--f-display);color:var(--damage);text-shadow:0 2px 0 #000,0 0 12px rgba(255,79,109,.8);white-space:nowrap;pointer-events:none}
-.medal{width:var(--bout-medal-w);height:var(--bout-medal-h);flex:none;margin:0 2px;position:relative;display:grid;place-items:center;--c:var(--you);filter:drop-shadow(0 2px 4px rgba(0,0,0,.7))}
-.medal.o{--c:var(--opp)}
-.medal::before{content:"";position:absolute;inset:0;background:var(--c);clip-path:polygon(28% 0,72% 0,100% 26%,100% 74%,72% 100%,28% 100%,0 74%,0 26%)}
-.medal::after{content:"";position:absolute;inset:3px;background:linear-gradient(to bottom,#1d272c,#0c1114);clip-path:polygon(28% 0,72% 0,100% 26%,100% 74%,72% 100%,28% 100%,0 74%,0 26%)}
-.medal b,.medal span{position:relative;z-index:2;text-align:center}
-.medal b{font:900 24px/22px var(--f-display);margin-top:-12px;display:block}
-.medal span{font:600 11px/10px var(--f-mono);letter-spacing:.06em;color:var(--ink-1);position:absolute;bottom:8px;left:0;right:0}
-.medal em{position:absolute;z-index:3;top:50%;width:0;height:0;border:5px solid transparent;font-style:normal}
-.medal em.l{left:-9px;border-right-color:var(--you);transform:translateY(-50%)}
-.medal em.r{right:-9px;border-left-color:var(--opp);transform:translateY(-50%)}
+.medal{width:var(--bout-medal-w);height:var(--bout-medal-h);flex:none;margin:0 2px;position:relative;transform-style:preserve-3d}
+/* TWO FACES (MOTION 3.16): yours (jade) and theirs (orchid); the director flips the medallion about Y and it rests at 0/360 (yours) or 180 (theirs),
+   the back face pre-rotated so it reads true. Each face carries the turn numeral; the other is hidden (backface-visibility). */
+.mface{position:absolute;inset:0;display:grid;place-items:center;--c:var(--you);-webkit-backface-visibility:hidden;backface-visibility:hidden;filter:drop-shadow(0 2px 4px rgba(0,0,0,.7))}
+.mface.opp{--c:var(--opp);transform:rotateY(180deg)}
+.mface::before{content:"";position:absolute;inset:0;background:var(--c);clip-path:polygon(28% 0,72% 0,100% 26%,100% 74%,72% 100%,28% 100%,0 74%,0 26%)}
+.mface::after{content:"";position:absolute;inset:3px;background:linear-gradient(to bottom,#1d272c,#0c1114);clip-path:polygon(28% 0,72% 0,100% 26%,100% 74%,72% 100%,28% 100%,0 74%,0 26%)}
+.mface b,.mface span{position:relative;z-index:2;text-align:center}
+.mface b{font:900 24px/22px var(--f-display);margin-top:-12px;display:block}
+.mface span{font:600 11px/10px var(--f-mono);letter-spacing:.06em;color:var(--ink-1);position:absolute;bottom:8px;left:0;right:0}
+.mface em{position:absolute;z-index:3;top:50%;width:0;height:0;border:5px solid transparent;font-style:normal;left:-9px;transform:translateY(-50%)}
+.mface.you em{border-right-color:var(--you)}
+.mface.opp em{border-right-color:var(--opp)}   /* on the back face "left" is the viewer's right once it has turned */
 
 /* =============================== THE HALVES =============================== */
 .half{height:var(--h-half);flex:none;position:relative;display:flex;flex-direction:column}
@@ -88,6 +91,7 @@
 .centre .hit{position:absolute;right:var(--gut);width:82px;top:var(--atk-top);height:var(--ch-chain);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
 .centre .hit .n{font:900 30px/40px var(--f-display);color:var(--damage);text-shadow:0 2px 0 #000;margin:1px 0 6px}   /* CEO 2026-11-27: HIT FOR < the life numerals (34), BRIEF 2 */
 .centre .hit .n.zero{color:var(--prevent)}
+.centre .hit .n.nohit{font-size:22px;letter-spacing:.04em;text-transform:uppercase;line-height:40px}   /* a blocked attack is not a hit (CR 7.5.5) */
 .centre .hit .eq{display:flex;align-items:center;gap:5px;font:var(--t-stamp);color:var(--ink-1)}
 .centre .hit .eq .p{min-width:20px;height:20px;border-radius:5px;background:var(--ink-0);color:var(--ink-inv);display:grid;place-items:center;padding:0 3px}
 .centre .hit .eq .d{width:20px;height:20px;background:var(--prevent);color:var(--ink-inv);display:grid;place-items:center;padding-bottom:3px;clip-path:polygon(0 0,100% 0,100% 62%,50% 100%,0 62%)}
@@ -118,7 +122,7 @@
 .gl .tagchip.red{background:var(--pitch-red)} .gl .tagchip.yellow{background:var(--pitch-yellow);color:var(--ink-inv)} .gl .tagchip.blue{background:var(--pitch-blue)}
 
 /* =============================== INSPECT SHEET (T10) =============================== */
-.veil{position:absolute;left:0;right:0;top:0;bottom:var(--h-hub);background:rgba(5,8,10,.82);z-index:80}
+.veil{position:absolute;left:0;right:0;top:var(--h-bout);bottom:var(--h-hub)   /* the bout is never dimmed: the life totals are the duel's heartbeat (CEO 2026-11-28) */;background:rgba(5,8,10,.82);z-index:80}
 .insp-card{position:absolute;z-index:81}
 .sheet{position:absolute;z-index:82;left:var(--gut);right:var(--gut);border-radius:var(--r-sheet);background:var(--mat-3);box-shadow:var(--e4),inset 0 1px 0 rgba(255,255,255,.08);padding:14px 16px 14px}
 .sheet .grab{position:absolute;left:50%;top:6px;width:36px;height:4px;border-radius:2px;background:var(--rail);transform:translateX(-50%)}
@@ -137,7 +141,7 @@
 /* =============================== COMPACT (375 x 548) — what changes is in SCREENS-TABLE.md §14 =============================== */
 html[data-band="compact"] .centre{--atk-x:calc(var(--gut) + var(--cw-link) + 36px + 26px)}
 /* [DEV-5] at 548 the attack card leaves 22 px of free height, so the step marker moves to the top-right corner there */
-html[data-band="compact"] .pill{top:3px;left:auto;right:var(--gut)}
+html[data-band="compact"] .centre:has(.atk:not(.anchor)) .pill{top:3px;left:auto;right:var(--gut)}   /* only when a card stands in the stage: at rest the marker keeps its place on the left, clear of the deck count (review 2026-11-28) */
 html[data-band="compact"] .centre .ask{font-size:18px;line-height:20px}
 html[data-band="compact"] .centre .hit .n{font-size:26px;line-height:34px}
 html[data-band="compact"] .centre .hit{width:70px}
@@ -146,8 +150,16 @@ html[data-band="compact"] .slab .say{font-size:26px;line-height:28px;margin-top:
 
 /* =============================== CRESCENDO additions (not in the mockups) =============================== */
 /* a card whose art failed shows its real name on the same box (PHONE rule 14) */
-.cd .cname{display:none}
-.cd.noimg .cname{display:grid;place-items:center;position:absolute;inset:0;padding:3px;text-align:center;font:var(--t-label);letter-spacing:0;text-transform:none;color:var(--ink-1);background:var(--mat-2);border-radius:inherit}
+/* a card whose art has not arrived (or never will) is a proper face: its real name on its own colour, never a black box.
+   The name is always laid under the art; the loaded image covers it. */
+.cd:not(.back){background:var(--mat-2)}
+.cd.red:not(.back){background:#4a1a17}.cd.yellow:not(.back){background:#4d4012}.cd.blue:not(.back){background:#16304f}
+.cd .cname{display:grid;place-items:center;position:absolute;inset:0;padding:3px;text-align:center;font:var(--t-label);letter-spacing:0;text-transform:none;color:var(--ink-1);border-radius:inherit;overflow:hidden;z-index:0}
+.cd>img{position:relative;z-index:1}
+.cd.hb .cname,.cd.link .cname{display:none}
+.cd.noimg>img{display:none}
+/* the deck count stays on top of the pitch fan (the fan is payment, not an occluder) */
+.lane .count{z-index:9}
 /* a card under a finger: raised a little, the frame it is pressed (transform only) */
 .cd.hand.pressed{transform:translateY(-9px) scale(1.03)}
 .cd.mat.pressed{transform:scale(.96)}
@@ -208,3 +220,11 @@ html[data-band="compact"] .stage .sh-sheet{padding-bottom:10px}
 
 /* while an announcement holds (the scrim is live) nothing may sit above it: the "is thinking" chip (the flow's overlay) steps aside */
 html:has(.an-scrim.live) [data-b="thinking"]{visibility:hidden}
+
+/* inspect: the card takes whatever height the sheet leaves, below the bout (never dimmed), above the hub; the sheet is as tall as its text */
+.insp-wrap{position:absolute;left:0;right:0;top:var(--h-bout);bottom:calc(var(--h-hub) + 10px);z-index:81;display:flex;flex-direction:column;gap:8px;padding-top:6px;pointer-events:none}
+.insp-wrap>*{pointer-events:auto}
+.insp-wrap .insp-card{position:relative;z-index:1;flex:1 1 0;min-height:0;display:flex;justify-content:center}
+.insp-wrap .insp-card .cd{height:100%;width:auto;aspect-ratio:.716}
+.insp-wrap .insp-card .cd>img{width:100%;height:100%}
+.insp-wrap .sheet{position:relative;left:auto;right:auto;margin:0 var(--gut);flex:none;max-height:60%;overflow:auto}
