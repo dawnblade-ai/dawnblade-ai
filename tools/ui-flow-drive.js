@@ -345,7 +345,8 @@ async function serverJourney(pw, browser, engine, vp, o, kind){
       await page.waitForTimeout(500);   /* let the store commit before the page goes */
       await page.goto(PLAY + "?screen=f2&pace=0"); await settle(page, 300);   /* a reload: the store is kept (so the choice must be), the exposed fake world stays */
       await tapB(page, "mode-online"); await need('[data-b="fr"]', "after a reload the choice is still Ranked");
-      want(await page.evaluate(() => document.querySelector('[data-b="seg-ranked"]').getAttribute("aria-checked")) === "true", "Ranked is still on after the reload");
+      const rk = await page.evaluate(() => [document.querySelector('[data-b="seg-ranked"]').getAttribute("aria-checked"), localStorage.getItem("dawnblade.crescendo.ranked"), location.href]);
+      want(rk[0] === "true", "Ranked is still on after the reload " + JSON.stringify(rk));
     }
     await page.evaluate(t => { window.__srvTok = t; }, W_.tokMe);
     await tapB(page, "tile-iyslander"); await tapB(page, "sit");
