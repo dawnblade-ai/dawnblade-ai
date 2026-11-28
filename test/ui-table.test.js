@@ -21,7 +21,7 @@ const modelOf = (st, ui) => {
     defending: env.DawnPriority.canDeclareDefenders(st, me), game: { slotOf: env.DawnGame.slotOf, gearDef: env.DawnGame.gearDef },
     paySum: J.paySum, art: [null, null], name: i => i === me ? "You" : "Foe",
     hitOf: vw => vw.pend && vw.pend.total != null ? vw.pend.total + env.DawnEffects.rxPumpTotal(vw) : null,
-    wallOf: sd => env.DawnSparring.wallOf(sd) + (sd.blockRx || []).reduce((t, l) => t + ((l && l.def) || 0), 0)
+    wallOf: sd => env.DawnSparring.wallNow(sd)
   });
 };
 const step = (st, a, seat) => { const o = J.reduce(st, a, seat || 0); assert.strictEqual(o.error, null, JSON.stringify(a) + ": " + o.error); return o.state; };

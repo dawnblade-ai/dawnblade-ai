@@ -371,10 +371,10 @@ function Live(p){
     game: {slotOf: game.slotOf, gearDef: game.gearDef}, paySum: J.paySum, art: [s.heroArt(0), s.heroArt(1)],
     /* HIT FOR is the engine's figure for the link in flight: what the AI itself reads as incoming (`pend.total`, which
        holds the printed power AS THE PLAY CHANGED IT) plus the reaction pumps (`effects.rxPumpTotal`, the one reader).
-       The wall is the AI's own reader, `sparring.wallOf` (declared defenders), plus the defence reactions the engine
-       has recorded on `blockRx` (sparring's `wallNow`, which is not exported; an export would replace this line). */
+       The wall is the AI's own reader, `sparring.wallNow`: declared defenders plus the defence reactions the engine
+       has recorded on `blockRx`. */
     hitOf: vw => vw.pend && vw.pend.total != null ? vw.pend.total + root.DawnEffects.rxPumpTotal(vw) : null,
-    wallOf: sd => root.DawnSparring.wallOf(sd) + (sd.blockRx || []).reduce((t, l) => t + ((l && l.def) || 0), 0),
+    wallOf: sd => root.DawnSparring.wallNow(sd),
     name: i => i === me ? "You" : firstName(s.names[i])
   };
   const v = root.DawnView.view(state, me);

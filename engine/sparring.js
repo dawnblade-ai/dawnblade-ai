@@ -2271,5 +2271,5 @@ function explainNow(g, seat, o){
   return {action: a, key, why: key ? (CALL_WHY[key] ? (key === "chargeColour" || key === "gateColour" ? CALL_WHY[key].replace(/COLOUR/g, ["", "red", "yellow", "blue"][key === "gateColour" ? J.gateColourWanted(g, seat) : J.chargePitchWanted(g)] || "matching") : CALL_WHY[key]) : null) : null, line: key !== "laTake" ? lineOf(g, seat, a) : (wallOf(g.sides[seat]) > 0 ? "Don't block any more" : "Don't block")};
 }
 
-return {DEFAULTS, act, actBase, LA, laMask, laCands, laEval, boardVal, explain, CALL_WHY, run, pitchPick, nextBlocker, offence, wallOf, affordableWithin};
+return {DEFAULTS, act, actBase, LA, laMask, laCands, laEval, boardVal, explain, CALL_WHY, run, pitchPick, nextBlocker, offence, wallOf, wallNow, affordableWithin};
 });
