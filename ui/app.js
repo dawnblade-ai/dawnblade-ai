@@ -48,7 +48,7 @@ function fromQuery(search){
   const foe = q.get("foe") === "dummy" ? "dummy" : has(q.get("foe")) && q.get("foe") !== hero ? q.get("foe") : has(last.foe) && last.foe !== hero ? last.foe : cat.draw(hero);
   const urlFirst = q.get("first") === "1" ? 1 : q.get("first") === "0" ? 0 : null;
   const base = {screen: "f1", hero, foe, kind: foe === "dummy" ? "dummy" : "ai", seed: newSeed(), choice: null, urlFirst, mode: "hero", game: 0, v: q.get("v") || "phone",
-    peek: q.get("peek") || null, query: null, menu: false, rules: false, session: null, pre: null, net: null, netErr: null, typical: null, roomCode: null, join: q.get("join") || null};
+    peek: q.get("peek") || null, query: null, menu: false, rules: false, session: null, pre: null, net: null, netErr: null, typical: null, roomCode: null, pace: q.get("pace"), join: q.get("join") || null};
   const sc = q.get("screen");
   if(/^f[1-4]$|^f9$/.test(sc || "")) return {...base, screen: sc};
   if(base.join) return {...base, screen: "f9", kind: "phones"};
@@ -224,7 +224,7 @@ function App(){
         choose = id => nav({choice: id});
         shuffle = () => {
           try {
-            const sess = S.openLocal({query: {hero: s.hero, foe: s.foe, seed: s.seed}, first: dummy ? 0 : call.first}, root);
+            const sess = S.openLocal({query: {hero: s.hero, foe: s.foe, seed: s.seed, ...(s.pace != null ? {pace: s.pace} : {})}, first: dummy ? 0 : call.first}, root);
             nav({screen: "table", session: sess, game: s.game + 1});
           } catch(e){ fail(String(e && e.message || e)); }
         };

@@ -9,7 +9,7 @@
    JOURNEY title -> (PLAY) sit down -> (SHUFFLE UP) a table mounts -> the menu -> concede -> the result frame -> the result pad ->
            LEAVE -> title -> the gear menu -> close: zero page errors, zero policy refusals.
 
-   RUN     node tools/ui-flow-drive.js [--chromium-only] [--verbose] [--only boxes|journey] [--shots <dir>]
+   RUN     node tools/ui-flow-drive.js [--chromium-only] [--verbose] [--only boxes|journey|modes|dead] [--shots <dir>]
    DEPS    outside the repo (zero deps in it): PAGE_DEPS names the scratch dir tools/page.js answers the CDN and fonts from:
              npm install --prefix "$PAGE_DEPS" --save-exact htm@3.1.1 @fontsource/big-shoulders-display \
                @fontsource/spline-sans @fontsource/spline-sans-mono @fontsource/caveat
@@ -169,7 +169,9 @@ async function boxesFor(pw, browser, engine, vp, S_, o){
 
 
 /* the coach plays seat 0 to the end, in the page, against the Steady foe; the first seed that WINS is kept (the page stays on it) */
-const COACH_LOOP = () => { const s = window.DawnUIApp.session(); for(let i = 0; i < 4000; i++){ const st = s.state(); if(st.over) return st.over; const a = s.suggest(); if(!a) return { stuck: "no action" }; const why = s.submit(a); if(why) return { stuck: "refused: " + why }; } return { stuck: "cap" }; };
+const COACH_LOOP = async () => { const s = window.DawnUIApp.session(); let idle = 0; for(let i = 0; i < 4000; i++){ const st = s.state(); if(st.over) return st.over; const a = s.suggest();
+  if(!a){ if(++idle > 300) return { stuck: "no action" }; await new Promise(r => setTimeout(r, 100)); continue; }   /* a paced table: the other seat has the move */
+  idle = 0; const why = s.submit(a); if(why) return { stuck: "refused: " + why }; } return { stuck: "cap" }; };
 async function coachWin(page, app, bad, diffs, seeds){
   const tried = [];
   for(const seed of seeds || [1, 2, 3, 4, 5, 6, 7, 8]){
@@ -210,6 +212,127 @@ async function deadTaps(pw, browser, engine, vp){
   }
   errors.forEach(e => bad.push(e));
   return { bad, n };
+}
+
+
+/* ---------- the networked flows, in ONE page: a fake PeerJS (window.__dawnPeer, the seam app.js reads) joins the host's UI to an automatic guest ---------- */
+const INIT_PHONES = () => {
+  try { if(!localStorage.getItem("dawnblade.crescendo.last")) localStorage.setItem("dawnblade.crescendo.last", JSON.stringify({ hero: "iyslander", foe: "viserai" })); } catch(e){}
+  const registry = new Map();
+  const mkConn = () => { const h = {}; const c = { open: false, closed: false, other: null, on(ev, fn){ (h[ev] = h[ev] || []).push(fn); return c; }, fire(ev, d){ (h[ev] || []).forEach(fn => fn(d)); },
+    send(m){ if(c.open && c.other) setTimeout(() => c.other.fire("data", JSON.parse(JSON.stringify(m))), 0); },
+    close(){ if(c.closed) return; c.closed = true; c.open = false; c.fire("close"); if(c.other && !c.other.closed) c.other.close(); } }; return c; };
+  function Peer(id){
+    const self = this, h = {}; this.id = id || "rnd-" + Math.random().toString(36).slice(2);
+    this.on = (ev, fn) => { (h[ev] = h[ev] || []).push(fn); return self; };
+    this.fire = (ev, d) => (h[ev] || []).forEach(fn => fn(d));
+    this.destroy = () => { registry.delete(self.id); };
+    this.connect = target => {
+      const host = registry.get(target), mine = mkConn(), theirs = mkConn(); mine.other = theirs; theirs.other = mine;
+      if(!host){ setTimeout(() => self.fire("error", { type: "peer-unavailable" }), 0); return mine; }
+      setTimeout(() => { host.fire("connection", theirs); mine.open = theirs.open = true; mine.fire("open"); theirs.fire("open"); }, 0);
+      return mine;
+    };
+    registry.set(this.id, this);
+    setTimeout(() => self.fire("open", this.id), 0);
+  }
+  window.__dawnPeer = Peer;
+};
+const openPhonePage = (pw, browser, engine, vp, url, errors) => D.openPage(pw, browser, engine, vp, url, errors, false, INIT_PHONES);
+
+async function phonesJourney(pw, browser, engine, vp, o, ending){
+  const errors = [], bad = [], steps = [];
+  const a = await openPhonePage(pw, browser, engine, vp, PLAY + "?screen=f2", errors), page = a.page;
+  const need = async (q, what, ms) => { try { await page.waitForSelector(q, { timeout: ms || 9000, state: "attached" }); steps.push(what); } catch(e){
+    const here = await page.evaluate(() => { const st = document.querySelector(".stage"); return (st && st.getAttribute("data-screen")) + " | " + [...document.querySelectorAll("h1")].map(h => h.textContent).join(" / "); }).catch(() => "?");
+    bad.push(`${what}: ${q} never appeared (page: ${here})`); throw new Error("stop"); } };
+  try {
+    await settle(page, 300);
+    const enabled = await page.evaluate(() => [...document.querySelectorAll('[data-b^="mode-"]')].map(b => b.getAttribute("data-b") + (b.disabled ? "-" : "+")).join(" "));
+    if(enabled !== "mode-dummy+ mode-ai+ mode-phones+ mode-online+") bad.push("F2 modes: " + enabled);
+    await tapB(page, "mode-phones"); await need('[data-b^="tile-"]', "two phones asks for a hero");
+    await tapB(page, "tile-iyslander"); await tapB(page, "sit"); await need('[data-b="waiting-phone"]', "F9 phone waits for the friend");
+    const code = await page.evaluate(() => [...document.querySelectorAll(".f9 .codes b")].map(b => b.textContent).join(""));
+    if(!/^[A-Z0-9]{4}$/.test(code)) bad.push("the room code reads " + JSON.stringify(code));
+    await page.evaluate(code => { const S = window.DawnUISession; window.__guest = S.openNetworked({ how: "room-guest", code, hero: "viserai", throwPick: () => "scissors", ...{ Peer: window.__dawnPeer } }, window); return window.__guest.start(); }, code);
+    steps.push("a friend joined by the code");
+    await need(".f4", "both heroes known: the coin (F4)");
+    await need('[data-b="pick-rock"]', "the throw is asked for"); await tapB(page, "pick-rock");
+    await need('[data-b="pick-first"]', "the winner is asked to call the seating"); await tapB(page, "pick-first");
+    await page.waitForFunction(() => { const b = document.querySelector('[data-b="shuffle"]'); return b && !b.disabled; }, null, { timeout: 12000 }).then(() => steps.push("SHUFFLE UP lights once the table has dealt"), () => bad.push("SHUFFLE UP never lit"));
+    await tapB(page, "shuffle"); await need('[data-b="bout"]', "the networked table mounts");
+    if(ending === "drop"){
+      await page.evaluate(() => window.__guest.dispose());
+      await need('[data-b="waiting-quiet"]', "the friend leaves: F9 quiet", 12000);
+      await tapB(page, "leave"); await need(".f1", "Leave returns to the title");
+    } else {
+      await tapB(page, "hub-left"); await need('[data-b="menu-sheet"]', "the menu opens");
+      await page.evaluate(() => document.querySelector('[data-b="row-concede"]').click()); await tapB(page, "concede");
+      await need('[data-b="word"]', "conceding shows the result frame"); await settle(page, 900); await tapB(page, "continue"); await need('[data-b="result-pad"]', "the result pad");
+      const label = await page.evaluate(() => document.querySelector('[data-b="rematch"]').textContent.trim());
+      if(label !== "New table") bad.push(`a two-phone room offers "${label}", not "New table"`);
+      else steps.push('a room offers "New table", not a rematch');
+      await tapB(page, "rematch"); await need(".f2", "New table returns to the ways to play");
+    }
+  } catch(e){ if(e.message !== "stop") bad.push("phones: " + e.message.split("\n")[0]); }
+  errors.forEach(e => bad.push(e));
+  await a.context.close();
+  return { bad, steps };
+}
+
+/* the Dummy, end to end (F2 -> F3 -> F4 with the iron dummy and no coin -> a table -> the coach plays it out -> the result -> REMATCH -> a fresh game) */
+async function dummyJourney(pw, browser, engine, vp, o){
+  const errors = [], bad = [], steps = [];
+  const a = await openPage(pw, browser, engine, vp, PLAY + "?screen=f2&pace=0", errors), page = a.page;
+  const need = async (q, what, ms) => { try { await page.waitForSelector(q, { timeout: ms || 9000, state: "attached" }); steps.push(what); } catch(e){ bad.push(`${what}: ${q} never appeared`); throw new Error("stop"); } };
+  try {
+    await settle(page, 300);
+    await tapB(page, "mode-dummy"); await need('[data-b="tile-iyslander"]', "the Dummy asks for your hero");
+    await tapB(page, "tile-iyslander"); await tapB(page, "sit"); await need(".f4 .half.dummy", "F4 draws the iron dummy on top");
+    if(await page.evaluate(() => !!document.querySelector('[data-b="coin"]'))) bad.push("the coin is drawn against the Dummy");
+    const slab = await page.evaluate(() => document.querySelector('[data-b="slab"] b').textContent);
+    if(!/^you go first$/i.test(slab)) bad.push('the Dummy slab says "' + slab + '"');
+    await settle(page, 2600); await tapB(page, "shuffle"); await need('[data-b="bout"]', "a table mounts against the Dummy");
+    await page.waitForFunction(() => window.DawnUIApp.session(), null, { timeout: 8000 });
+    if(!(await page.evaluate(() => window.DawnUIApp.session().dummy))) bad.push("the session is not the Dummy's");
+    await page.evaluate(() => { window.__first = window.DawnUIApp.session(); });
+    const over = await page.evaluate(COACH_LOOP);
+    if(!over.winner && over.winner !== 0 && over.winner !== null) bad.push("the Dummy game did not end: " + JSON.stringify(over));
+    await need('[data-b="word"]', "the game ends in a result frame (" + (over.winner === 0 ? "you win" : "the Dummy wins") + ")");
+    await settle(page, 1200); await tapB(page, "continue"); await need('[data-b="result-pad"]', "the result pad");
+    await tapB(page, "rematch"); await need(".f4 .half.dummy", "REMATCH seats the same Dummy table (F4)");
+    await tapB(page, "shuffle"); await need('[data-b="bout"]', "a fresh game starts");
+    const fresh = await page.evaluate(() => { const s = window.DawnUIApp.session(), st = s.state(); return { other: s !== window.__first, turn: st.turn, over: !!st.over, same: st.sides[0].hp }; });
+    if(!fresh.other || fresh.over) bad.push("the rematch is not a fresh game " + JSON.stringify(fresh)); else steps.push("a new session, turn " + fresh.turn);
+  } catch(e){ if(e.message !== "stop") bad.push("dummy: " + e.message.split("\n")[0]); }
+  errors.forEach(e => bad.push(e));
+  await a.context.close();
+  return { bad, steps };
+}
+
+/* rematch from the result of a LOCAL game against an AI hero: the coin is asked again, a fresh game begins */
+async function rematchJourney(pw, browser, engine, vp, o){
+  const errors = [], bad = [], steps = [];
+  const a = await openPage(pw, browser, engine, vp, PLAY + TABLE, errors), page = a.page;
+  const need = async (q, what, ms) => { try { await page.waitForSelector(q, { timeout: ms || 9000, state: "attached" }); steps.push(what); } catch(e){ bad.push(`${what}: ${q} never appeared`); throw new Error("stop"); } };
+  try {
+    await settle(page, 400);
+    await page.waitForFunction(() => window.DawnUIApp.session(), null, { timeout: 8000 });
+    await page.evaluate(() => { window.__first = window.DawnUIApp.session(); });
+    await drive(page, ["menu", "concede", "continue"]); await need('[data-b="result-pad"]', "the result pad");
+    const label = await page.evaluate(() => document.querySelector('[data-b="rematch"]').textContent.trim());
+    if(label !== "Rematch") bad.push(`a local game offers "${label}"`);
+    await tapB(page, "rematch"); await need(".f4", "REMATCH goes to the sit-down");
+    const t = await page.evaluate(() => document.querySelector('[data-b="slab"] b').textContent);
+    if(!/goes first|go first/i.test(t)) bad.push('the rematch coin says "' + t + '"'); else steps.push('the coin: "' + t + '"');
+    await page.waitForFunction(() => { const b = document.querySelector('[data-b="shuffle"]'); return b && !b.disabled; }, null, { timeout: 4000 }).catch(() => bad.push("SHUFFLE UP is not lit after a rematch"));
+    await tapB(page, "shuffle"); await need('[data-b="bout"]', "a fresh table");
+    const fresh = await page.evaluate(() => { const s = window.DawnUIApp.session(); return { other: s !== window.__first, over: !!s.state().over, seed: s.pick.seed }; });
+    if(!fresh.other || fresh.over) bad.push("the rematch is not a fresh game " + JSON.stringify(fresh)); else steps.push("a new session (seed " + fresh.seed + ")");
+  } catch(e){ if(e.message !== "stop") bad.push("rematch: " + e.message.split("\n")[0]); }
+  errors.forEach(e => bad.push(e));
+  await a.context.close();
+  return { bad, steps };
 }
 
 /* ---------- the journey: title -> table -> result -> title, on one page ---------- */
@@ -272,6 +395,14 @@ async function main(){
         if(r.bad.length) failed = true;
         console.log(`${r.bad.length ? "FAIL" : "PASS"}  ${engine.padEnd(8)} ${"dead taps".padEnd(14)} 393x660  ${r.n} controls tapped, each one does something`);
         r.bad.slice(0, 12).forEach(b => console.log("        " + b));
+      }
+      if(!only || only === "modes"){
+        for(const [name, fn] of [["dummy", dummyJourney], ["rematch", rematchJourney], ["two phones (drop)", (...a) => phonesJourney(...a, "drop")], ["two phones (end)", (...a) => phonesJourney(...a, "end")]]){
+          const vp = [393, 660], r = await fn(pw, browser, engine, vp, o);
+          if(r.bad.length) failed = true;
+          console.log(`${r.bad.length ? "FAIL" : "PASS"}  ${engine.padEnd(8)} ${name.padEnd(14)} 393x660  ${r.steps.length} steps${verbose ? ": " + r.steps.join(" > ") : ""}`);
+          r.bad.slice(0, 12).forEach(b => console.log("        " + b));
+        }
       }
       if(!only || only === "journey") for(const vp of VIEWPORTS){
         const r = await journey(pw, browser, engine, vp, o);

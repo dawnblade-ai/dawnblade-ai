@@ -200,6 +200,8 @@ async function main(){
     const list = plan(keys, { seed: arg("--seed"), hero: arg("--hero"), foe: arg("--foe"), games: +arg("--games") || 1 });
     const pickN = engine === "webkit" && !arg("--hero") && !arg("--engine") ? list.filter((_, i) => i % Math.ceil(list.length / 3) === 0) : list;
     pickN.forEach(g => jobs.push({ engine, game: g }));
+    /* a Dummy sample: two heroes against the iron dummy (the vanilla pile, the rule policy), unless a hero or foe was named */
+    if(!arg("--hero") && !arg("--foe")) [keys[0], keys[Math.floor(keys.length / 2)]].forEach((hero, i) => jobs.push({ engine, game: { hero, foe: "dummy", seed: 4000 + i, first: 0, rseed: 9100 + i } }));
   }
   if(!engines.includes("webkit") === false && !D.webkitBinary() && !arg("--engine")){ console.log("\n######## WEBKIT DID NOT RUN ######## (no pw_run.sh under /opt/pw-webkit; PW_WEBKIT names one)\n"); finds++; }
   const browsers = {};
