@@ -45,7 +45,7 @@ Why the phone fights back (evidence in FRAMEWORK.md §1): every drive ran Chromi
 3. **Motion:** one director (`ui/director.js`) owns every Web Animation; transform/opacity only; MOTION.md's tokens.
 4. Libraries from CDN at an exact version (today's rule) UNLESS the user rules to vendor (Q below).
 
-## Built (session 2, 2026-11-27/28) — `play.html` + `ui/`, steps 0–9 done, behind `?ui=crescendo`
+## Built (sessions 2–3) — `play.html` + `ui/`, LIVE since v7.21 beside the classic page (still the default)
 
 | file | job |
 |---|---|
@@ -53,29 +53,30 @@ Why the phone fights back (evidence in FRAMEWORK.md §1): every drive ran Chromi
 | `ui/session.js` · `ui/worker/ai.js` | ONE adapter `{state, legal, submit, onStep}`: local AI, the Dummy (`?foe=dummy`), server table, two phones (`openNetworked`), rematch, the roll/throw seam, `modes()` · Sharp's search in a Worker (main-thread fallback wherever one is refused, e.g. Chrome file://) |
 | `ui/table.*` `layout.js` `card.js` `pad.js` | the table T1–T10 (two-faced medallion, HIT FOR / NO HIT from the engine's `pend.total` + `rxPumpTotal` − `sparring.wallNow`) |
 | `ui/director.js` `audio.js` · `sheets.*` `panels.js` · `announce-view.*` | every animation (MOTION beats, exact end poses) and WebAudio · prompt sheets (F5), inspect, menu · the announcer's slab + glimpse |
+| `ui/circuit.js` · `circuit-view.js` `circuit-play.js` `circuit.css` | THE CIRCUIT (v7.22, `SCREENS-CIRCUIT.md`): the local store and rules P1–P10 (`test/ui-circuit.test.js`) · C1–C4 record/heroes/games/ladder · C5 plate, C6 home, C7 road, C8 daily |
 | `ui/flow.*` `app.js` | F1–F9 and the router: every table the session can seat is lit; THE ROLL (die) locally, THE THROW networked; Learn the rules (CR keyword rows from `data/crkw.js`) |
 
 **Drives** (deps: `PAGE_DEPS=<scratch>/pagedeps NODE_PATH=/opt/node-tools/node_modules`, see each header; WebKit at
 `/opt/pw-webkit`, installed by the environment's setup script): `tools/ui-drive.js` (table box-match vs the mockups,
 both engines × 4 viewports, play drives, 4x-CPU frames; `--art --shots DIR`), `tools/ui-flow-drive.js`,
-`tools/ui-chaos.js` (random taps through whole games, every hero; `--coach 1` makes the player win). Drills: `test/ui-*.test.js`.
+`tools/ui-circuit-drive.js` (C1–C9 and the daily/road flows, both engines), `tools/ui-chaos.js` (random taps through whole games, every hero; `--coach 1` makes the player win). Drills: `test/ui-*.test.js`.
 The design review with real art (20 items, most fixed) was a scratch file; its open items are below.
 
 ## Next (in order)
 
-1. **Release v7.21** (APP_VER + CHANGELOG): full CLAUDE.md gates, push `main`, `node tools/livecheck.js`,
-   `node tools/supabase-deploy.js` (engine/prompts.js and engine/sparring.js changed on this branch), commit
-   DEPLOYED.json. This session could push only `claude/vigilant-gates-qz10xn`: merging it to main is the user's go.
-2. **The real iPhone** (after the release): `…/play.html` — frame time, safe areas, fonts, sound, the Worker, file://.
-   Headless WebKit frame numbers are software-rendering noise; only the phone settles them.
-3. **Engine perf (S-item):** at 4x CPU the long tasks left are the engine's own (`judge.js effectsFor` rebuilt on every
-   call, then `executeInner`/`runOps`; worst 124 ms, an AI tick) — not UI. The Worker parses `data/pool.js` a second time.
-4. **AI (H-item):** the coach (Sharp) loses slow attrition games to the Dummy (Iyslander 4/12 seeds, Fai 2/12, turns 36–37).
-5. **Open UI:** Your record (needs a history store) · the gear loadout (F4 shows a live "Deck" button meanwhile) ·
-   a two-phone room has no rematch protocol ("New table") · the server flow is drilled headless only · lobby
-   board choice · a second design review with real art on the flow screens (the first had no flow art routed).
-6. Then **ask the user to make play.html the default.**
-Use Sonnet workers per the user (one team designs or reviews, one builds); give each the files it owns, a ≤250-word report.
+1. **`REVIEW-2.md`** — the second design review with real art (25 findings, none fixed). Biggest: the table is ~45%
+   empty while gear/arena read as ~30 px thumbnails (revisit Q9's 44×61 with the design team), HIT FOR / ANY BLOCKS? are
+   tiny, life shows -1 at the end (check the CR before clamping), the result pad lacks a "one more" hook, C2's portraits
+   are washed out, F2's Circuit icon is empty and "Step 1 of 3" is wrong, F4's die collides with its pill. A design
+   pass (one Sonnet team) then a build (another), files split table · flow · circuit.
+2. **The real iPhone** on `…/play.html` (the user): frame time, safe areas, fonts, sound, the Worker, file://.
+3. **Ask the user to make play.html the default** (they lean yes: "out with the old, in with the new").
+4. Engine perf: the AI tick's worst is ~400 ms at 4x, on the Sharp bound; the profile is flat (search spends it in
+   `legal`, `settle`, `stalemateCheck`); the Worker parses `data/pool.js` a second time.
+5. Open UI: a two-phone rematch protocol · the gear loadout (F4's live "Deck" button meanwhile) · WebKit T1's
+   box-match flakes under CPU load (passes quiet) · the AI (H): the coach loses slow attrition games to the Dummy.
+Use Sonnet workers per the user (one team designs or reviews, one builds); give each the files it owns, a ≤250-word
+report. Run release gates in a clean `git worktree` of the release commit.
 
 ## Questions for the user (defaults standing until answered)
 
@@ -94,6 +95,11 @@ default straight.
 Q13 (session 2) F4's first player: "THE ROLL" with a die locally (FaB rolls a die; engine/rps.js), "THE THROW" at networked
 tables (the lobby's protocol) — default as built. Q14 F4's GEAR (loadout, undesigned) shows a live "Deck" button until a
 loadout is designed — default yes.
+Q15 (session 3) SCREENS-CIRCUIT.md Q1–Q20 stand at their defaults (the name "The Circuit"; the road's tiers ARMORY /
+SKIRMISH / THE CALLING / THE SUMMIT adapt LSS event names; the daily's day is UTC; a streak, informational only; an open
+road; only wins over the full-strength AI count). Q16 The coach is absent at friendly AND ranked tables (F8) — applied.
+
+
 
 ## Session log
 
@@ -115,3 +121,11 @@ the token); a fully blocked attack reads NO HIT (CR 7.5.5); "Defense" as FaB pri
 give. Engine: `prompts.js` refuses a selection index the sheet does not hold (a wire hole, drilled); `sparring.js`
 exports `wallNow` (the UI no longer re-derives the wall). Chaos found and fixed a KO beat that never played after an
 unpaced game; the review found a mirrored turn medallion (fixed: two faces). Live stays v7.20 until the release.
+
+### 2026-11-28 — CEO thread, the framework (session_013xG9xA6vFW9WwQ3FBuhVEU)
+Shipped v7.21 (the build lands on main), v7.22 (THE CIRCUIT: a design worker wrote SCREENS-CIRCUIT.md + 9 mockups;
+builder A the pure store/rules with every rule sabotaged; builder B the screens and hooks; engine effects context
+built once, self-play identical) and v7.23 (ranked from play.html). A design reviewer with real art wrote REVIEW-2.md.
+Lessons: a shared-tree drive while a worker edits `ui/` tests nothing — gate in a clean worktree; WebKit box checks
+flake under CPU load; worktree isolation branches from main, not the session branch.
+
