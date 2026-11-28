@@ -389,7 +389,7 @@ async function serverJourney(pw, browser, engine, vp, o, kind){
     else want(mn.log && mn.sound, "a friendly menu keeps its rows");
     const sheet = await box('[data-b="menu-sheet"]');
     want(sheet && sheet[0] >= 0 && sheet[0] + sheet[2] <= vp[0] + 0.5 && sheet[1] >= 0 && sheet[1] + sheet[3] <= vp[1] + 0.5, "the menu sheet is inside the screen " + JSON.stringify(sheet && sheet.map(Math.round)));
-    want(await page.evaluate(() => { const s = window.DawnUIApp.session(); return s.networked && s.server && (s.suggest() === null) === (document.querySelector('[data-b="manners"]').textContent === "Ranked table"); }), "a ranked seat has no coach behind the scenes (suggest() answers nothing there)");
+    want(await page.evaluate(() => { const s = window.DawnUIApp.session(); return s.networked && s.server && s.suggest() === null; }), "a friendly or ranked seat has no coach behind the scenes (F8: suggest() answers nothing there)");
     await page.evaluate(() => document.querySelector('[data-b="menu-close"]').click()); await page.waitForTimeout(200);
     if(!ranked){ errors.forEach(e => bad.push(e)); await a.context.close(); return { bad, steps }; }
     /* the result: the other player concedes; the page's seat wins and the server's numbers arrive */
