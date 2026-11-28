@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dawnblade — C1 Your record</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800;900&family=Spline+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500;600&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="flow.css">
+<style>
+.cx .vw{position:absolute;inset:0}
+.cx .sc{position:absolute;left:0;right:0}
+.cx .scin{padding:0 var(--gut) 24px;display:flex;flex-direction:column;gap:10px}
+.cx .hdr h1{font:var(--t-title);line-height:22px}
+.cx .hdr h1 .sub{margin-bottom:3px}
+.cx-seg{position:absolute;left:var(--gut);right:var(--gut);top:64px;height:44px;display:flex;border-radius:22px;background:var(--mat-0);box-shadow:inset 0 1px 3px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.08);overflow:hidden}
+.cx-seg button{flex:1;height:44px;font:800 15px/44px var(--f-display);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-1);text-align:center;padding:0;position:relative}
+.cx-seg button.on{background:var(--mat-3);color:var(--ink-0);box-shadow:0 1px 0 rgba(255,255,255,.10) inset,0 -3px 0 var(--brass) inset;border-radius:22px}
+.cx-card{position:relative;background:var(--mat-2);border-radius:16px;box-shadow:0 1px 0 rgba(255,255,255,.07) inset,0 0 0 1px rgba(255,255,255,.05),var(--e1);padding:14px}
+.cx-card.lead{box-shadow:0 1px 0 rgba(255,255,255,.07) inset,var(--e1),inset 0 0 0 1.5px rgba(216,162,62,.7)}
+.cx-card.btnlike{text-align:left;display:block}
+.cx-card.btnlike:active{top:2px}
+.cx h2.ct{font:var(--t-label);letter-spacing:var(--track-caps);text-transform:uppercase;color:var(--ink-2)}
+.cx h2.ct.br{color:var(--brass-hi)}
+.nn{font:900 64px/58px var(--f-display);letter-spacing:.01em;font-variant-numeric:tabular-nums;color:var(--ink-0);text-shadow:0 2px 0 rgba(0,0,0,.55)}
+.nn.m{font-size:44px;line-height:42px}.nn.s{font-size:34px;line-height:34px}
+.cx .t13{font:var(--t-small);color:var(--ink-1)}
+.cx .t13 b{color:var(--ink-0);font-weight:600}
+.cx .ttl2{font:800 22px/24px var(--f-display);letter-spacing:.04em;text-transform:uppercase;color:var(--ink-0)}
+.cx .ttl3{font:800 20px/22px var(--f-display);letter-spacing:.03em;text-transform:uppercase;color:var(--ink-0)}
+.cx .mono{font:var(--t-label);letter-spacing:var(--track-caps);text-transform:uppercase;color:var(--ink-2)}
+.cx .mono.i1{color:var(--ink-1)}.cx .mono.br{color:var(--brass-hi)}
+.cx .row{display:flex;align-items:center}
+.cx .sp{flex:1;min-width:0}
+.cx .chev{color:var(--ink-2);flex:none}
+.pt{width:var(--s);height:var(--s);border-radius:50%;flex:none;display:inline-block;position:relative;background-color:#0b0d10;background-repeat:no-repeat;background-size:310%;box-shadow:0 0 0 2px var(--rail),0 0 0 3.5px var(--mat-0),var(--e1)}
+.pt.br{box-shadow:0 0 0 2px var(--brass),0 0 0 3.5px var(--mat-0),0 0 12px rgba(216,162,62,.5)}
+.pt.you{box-shadow:0 0 0 2px var(--you),0 0 0 3.5px var(--mat-0),var(--e1)}.pt.opp{box-shadow:0 0 0 2px var(--opp),0 0 0 3.5px var(--mat-0),var(--e1)}
+.pt.dim{filter:var(--card-dim)}
+.pt .ck{position:absolute;right:-5px;bottom:-5px;width:20px;height:20px;border-radius:50%;background:var(--gain);color:var(--ink-inv);display:grid;place-items:center;box-shadow:0 0 0 2px var(--mat-1)}
+.pt .ck svg{width:13px;height:13px}
+.pips{display:inline-flex;align-items:center}
+.pip{fill:none;stroke:var(--ink-2);stroke-width:2;stroke-linejoin:round}
+.pip.on{fill:var(--brass);stroke:var(--brass-hi)}
+.mv{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 11px 0 9px;border-radius:15px;background:var(--mat-0);box-shadow:inset 0 0 0 1.5px currentColor;font:800 19px/1 var(--f-display);letter-spacing:.02em;font-variant-numeric:tabular-nums}
+.mv.big{height:40px;border-radius:20px;padding:0 14px 0 11px;font-size:28px}
+.mv.up{color:var(--gain)}.mv.dn{color:var(--damage)}.mv.lv{color:var(--ink-1)}
+.rs{width:46px;height:36px;border-radius:8px;flex:none;display:grid;place-items:center;background:var(--mat-0);font:800 15px/1 var(--f-display);letter-spacing:.06em;box-shadow:inset 0 0 0 1.5px currentColor}
+.rs.w{color:var(--gain)}.rs.l{color:var(--damage)}.rs.d{color:var(--ink-1)}
+.gm{display:flex;align-items:center;gap:10px;min-height:64px;padding:0 var(--gut);position:relative;text-align:left;width:100%}
+.gm+.gm{box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.gm .tt{font:800 18px/20px var(--f-display);letter-spacing:.03em;text-transform:uppercase;color:var(--ink-0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gm .tt i{font-style:normal;color:var(--ink-2);font-weight:700;margin:0 4px}
+.gm .ss{font:var(--t-label);letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2);margin-top:3px;padding:0 0 3px}
+.gm .tag{height:20px;padding:0 7px;border-radius:10px;font:var(--t-label);letter-spacing:.06em;text-transform:uppercase;display:inline-grid;place-items:center;background:var(--mat-0);color:var(--ink-1);box-shadow:inset 0 0 0 1px var(--rail);flex:none}
+.gm .tag.br{color:var(--brass-hi);box-shadow:inset 0 0 0 1px rgba(216,162,62,.6)}
+.dayh{height:30px;display:flex;align-items:flex-end;padding:0 var(--gut) 5px;font:var(--t-label);letter-spacing:var(--track-caps);text-transform:uppercase;color:var(--ink-2)}
+.lst{background:var(--mat-2);border-radius:16px;box-shadow:0 0 0 1px rgba(255,255,255,.05),var(--e1);overflow:hidden}
+.lst.flat{background:transparent;box-shadow:none;border-radius:0}
+.rowl{display:flex;align-items:center;justify-content:space-between;min-height:44px;padding:0 14px;gap:10px}
+.rowl+.rowl{box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.rowl .k{font:var(--t-body);color:var(--ink-1)}
+.rowl .v{font:800 22px/24px var(--f-display);letter-spacing:.03em;color:var(--ink-0);font-variant-numeric:tabular-nums;white-space:nowrap}
+.rowl .v small{font:var(--t-label);letter-spacing:.06em;color:var(--ink-2);margin-left:6px;text-transform:uppercase}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tile2{background:var(--mat-2);border-radius:14px;padding:11px 12px 10px;min-height:76px;box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 0 0 1px rgba(255,255,255,.04)}
+.tile2 b{display:block;font:900 30px/30px var(--f-display);letter-spacing:.01em;color:var(--ink-0);margin-top:4px;font-variant-numeric:tabular-nums}
+.tile2 b small{font:800 14px/1 var(--f-display);letter-spacing:.06em;color:var(--ink-1);margin-left:4px}
+.tile2 p{font:var(--t-small);color:var(--ink-2);margin-top:2px}
+.cx .hint{font:var(--t-small);color:var(--ink-2)}
+.cx .link2{font:600 14px/18px var(--f-text);color:var(--ink-1);min-height:44px;display:inline-flex;align-items:center;gap:6px}
+.cx .btn.sec.sm{height:44px}
+.cx .hub{position:absolute;left:var(--gut);right:var(--gut);bottom:14px;display:flex;gap:10px;z-index:var(--z-hub)}
+.cx .hub.two{bottom:72px}
+.cx .hub .btn{flex:1;min-width:0;padding:0 14px}
+.empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:22px 14px 8px}
+.empty .sunm{width:140px;height:64px;position:relative;margin-bottom:6px}
+.empty .sunm i{position:absolute;left:30px;top:6px;width:80px;height:80px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#FFE7A8,#F2C66E 45%,#D8A23E 80%);box-shadow:0 0 36px rgba(242,198,110,.4);-webkit-mask-image:linear-gradient(to bottom,#000 0 58px,transparent 58px);mask-image:linear-gradient(to bottom,#000 0 58px,transparent 58px)}
+.empty .sunm b{position:absolute;left:0;right:0;top:58px;height:3px;border-radius:2px;background:linear-gradient(to right,transparent,var(--brass-hi) 30%,var(--brass-hi) 70%,transparent)}
+.scrimf{position:absolute;inset:0;background:rgba(4,6,8,.66);z-index:var(--z-scrim)}
+.sheet.cs{z-index:var(--z-sheet)}
+.cx .note{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:14px;background:var(--mat-2);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
+.cx .note svg{margin-top:1px;color:var(--ink-1)}
+.cx .note.warn{box-shadow:inset 0 0 0 1.5px rgba(255,138,153,.55)}
+.cx .note.warn svg{color:var(--refused)}
+.cx .dots{display:inline-flex;gap:5px;vertical-align:middle;margin-left:8px}
+.cx .dots i{width:6px;height:6px;border-radius:50%;background:var(--brass-hi);opacity:.5}
+.cx .dots i:nth-child(2){opacity:.75}.cx .dots i:nth-child(3){opacity:1}
+.cx .skel{height:14px;border-radius:7px;background:rgba(255,255,255,.07)}
+.cx .btn.sec.dng{color:var(--damage)}
+</style>
+<script src="stage.js"></script>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-up3" viewBox="0 0 24 24"><path d="M12 5l8 13H4z" fill="currentColor"/></symbol>
+<symbol id="i-dn3" viewBox="0 0 24 24"><path d="M12 19L4 6h16z" fill="currentColor"/></symbol>
+<symbol id="i-eq3" viewBox="0 0 24 24"><path d="M5 9h14M5 15h14" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></symbol>
+<symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="11" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 15V6a2 2 0 012-2h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M5 7h14M10 7V4.5h4V7M7 7l1 13h8l1-13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-road" viewBox="0 0 24 24"><path d="M9 3L5 21M15 3l4 18M12 5v3M12 11v3M12 17v3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="14" r="5" fill="currentColor"/><path d="M12 3v3M4.5 7l2 2M19.5 7l-2 2M2 18h20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+<symbol id="i-cal" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+<symbol id="i-off" viewBox="0 0 24 24"><path d="M3 9a14 14 0 0118 0M6.5 12.5a9 9 0 0111 0M10 16a4 4 0 014 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="19" r="1.4" fill="currentColor"/><path d="M4 4l16 16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+<symbol id="i-ladder" viewBox="0 0 24 24"><path d="M7 3v18M17 3v18M7 7h10M7 12h10M7 17h10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+<symbol id="i-heroes" viewBox="0 0 24 24"><circle cx="12" cy="9" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4.5 20c.8-4 3.7-6 7.5-6s6.700 2 7.500 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+<symbol id="i-seal" viewBox="0 0 24 24"><path d="M12 2.5l2.4 1.7 3-.2.9 2.8 2.5 1.7-1 2.8 1 2.8-2.500 1.7-.9 2.800-3-.2L12 21.500l-2.400-1.700-3 .2-.9-2.800L3.200 15.500l1-2.800-1-2.800L5.700 8.200l.9-2.800 3 .2z" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linejoin="round"/><path d="M8.500 12.200l2.500 2.500 4.500-5" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</defs></svg>
+<!-- C1 Your record. ?v=you | signedout | offline | new | manage | erase  (default you).  SCREENS-CIRCUIT.md is the spec; the copy and the numbers on this page are sample data, every figure is read from the sources the spec names. -->
+<div class="stage cx c1" data-variants="you|signedout|offline|new|manage|erase" data-default="you">
+
+<div class="frame">
+<div class="hdr" style="height:60px"><button class="ib" aria-label="Back" data-href="flow-1-title.html"><svg class="ico"><use href="#i-back"/></svg></button><h1><span class="sub">Kept on this phone</span>Your record</h1></div><div class="cx-seg" role="tablist"><button role="tab" aria-selected="true" class="on" data-href="circuit-1-record.html">You</button><button role="tab" aria-selected="false" class="" data-href="circuit-2-heroes.html">Heroes</button><button role="tab" aria-selected="false" class="" data-href="circuit-3-games.html">Games</button></div>
+<div class="vw" data-vs="you"><div class="sc" style="top:116px;bottom:0"><div class="scin"><div class="cx-card"><div class="row"><h2 class="ct">Ranked</h2><span class="sp"></span><span class="mono i1">#12 on the ladder</span></div>
+<div class="row" style="margin-top:8px;align-items:flex-end"><span class="nn" aria-label="Rating 1248">1248</span><span class="sp"></span><span style="text-align:right"><span class="mv up big" role="img" aria-label="Rating up 32"><svg class="ico " style="width:20px;height:20px"><use href="#i-up3"/></svg><b>+32</b></span><div class="mono" style="margin-top:6px">over 10 games</div></span></div>
+<div style="margin-top:8px"><svg viewBox="0 0 353 64" width="100%" height="64" role="img" aria-label="Your rating went from 1216 to 1248 over your last 10 ranked games"><polyline points="6,56 40,32 74,53 108,35 142,55 177,32 211,55 245,35 279,11 313,29 347,8" fill="none" stroke="var(--brass-hi)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="6" cy="56" r="2.4" fill="var(--ink-2)"/><circle cx="40" cy="32" r="2.4" fill="var(--ink-2)"/><circle cx="74" cy="53" r="2.4" fill="var(--ink-2)"/><circle cx="108" cy="35" r="2.4" fill="var(--ink-2)"/><circle cx="142" cy="55" r="2.4" fill="var(--ink-2)"/><circle cx="177" cy="32" r="2.4" fill="var(--ink-2)"/><circle cx="211" cy="55" r="2.4" fill="var(--ink-2)"/><circle cx="245" cy="35" r="2.4" fill="var(--ink-2)"/><circle cx="279" cy="11" r="2.4" fill="var(--ink-2)"/><circle cx="313" cy="29" r="2.4" fill="var(--ink-2)"/><circle cx="347" cy="8" r="4.5" fill="var(--brass-hi)"/></svg></div>
+<div class="row" style="justify-content:space-between"><span class="mono">1216</span><span class="mono">1248</span></div>
+<div class="row" style="margin-top:8px"><span class="t13"><b>7</b> won · <b>4</b> lost · peak <b>1248</b> on this phone</span><span class="sp"></span><button class="btn sec sm" style="min-width:0;padding:0 16px" data-href="circuit-4-ladder.html">Ladder</button></div></div><div class="cx-card" style="padding:14px 0 4px"><div class="row" style="padding:0 14px 8px"><h2 class="ct">The record</h2><span class="sp"></span><span class="mono i1">62 games</span></div>
+<div class="row" style="padding:0 14px 10px;gap:18px"><span><span class="nn m">45</span><div class="mono">won</div></span><span><span class="nn m">16</span><div class="mono">lost</div></span><span><span class="nn m">1</span><div class="mono">drawn</div></span></div>
+<div class="rowl"><span class="k">Against the AI</span><span class="v">24–9–1</span></div>
+<div class="rowl"><span class="k">Against people</span><span class="v">3–2</span></div>
+<div class="rowl"><span class="k">Ranked <span class="mono">from the server</span></span><span class="v">7–4</span></div>
+<div class="rowl"><span class="k">The Dummy</span><span class="v">11–1</span></div></div><div><div class="row" style="padding:2px 4px 8px"><h2 class="ct">Personal bests</h2></div><div class="tiles">
+<div class="tile2"><span class="mono">Fastest win</span><b>6<small>TURNS</small></b><p>Iyslander vs Kayo</p></div>
+<div class="tile2"><span class="mono">Closest win</span><b>1<small>LIFE LEFT</small></b><p>Viserai vs Dorinthea</p></div>
+<div class="tile2"><span class="mono">Longest winning run</span><b>7<small>GAMES</small></b><p>Against the AI</p></div>
+<div class="tile2"><span class="mono">Peak rating</span><b>1248</b><p>Seen on this phone</p></div>
+<div class="tile2"><span class="mono">Dummy, fastest clear</span><b>5<small>TURNS</small></b><p>Iyslander</p></div>
+<div class="tile2"><span class="mono">Daily, best run</span><b>4<small>DAYS</small></b><p>Two days running now</p></div></div></div>
+<div><div class="row" style="padding:2px 4px 0"><h2 class="ct">Recent games</h2><span class="sp"></span><button class="link2" data-href="circuit-3-games.html">All games <svg class="ico " style="width:18px;height:18px"><use href="#i-next"/></svg></button></div><div class="lst">
+<div class="gm"><span class="rs w">WON</span><span class="sp"><div class="tt">Gravy Bones<i>vs</i>Fai</div><div class="ss">Daily · turn 9 · just now</div></span><span class="tag br">Daily</span></div>
+<div class="gm"><span class="rs w">WON</span><span class="sp"><div class="tt">Iyslander<i>vs</i>Blaze</div><div class="ss">Ranked · turn 11 · 2 h ago</div></span><span class="mv up" role="img" aria-label="Rating up 14"><svg class="ico " style="width:14px;height:14px"><use href="#i-up3"/></svg><b>+14</b></span></div>
+<div class="gm"><span class="rs l">LOST</span><span class="sp"><div class="tt">Viserai<i>vs</i>Enigma</div><div class="ss">Sharp AI · turn 8 · yesterday</div></span><span class="tag br">Road</span></div>
+<div class="gm"><span class="rs w">WON</span><span class="sp"><div class="tt">Kayo<i>vs</i>Dash</div><div class="ss">Sharp AI · turn 12 · yesterday</div></span></div>
+<div class="gm"><span class="rs d">DREW</span><span class="sp"><div class="tt">Dorinthea<i>vs</i>Bravo</div><div class="ss">Dead position · turn 31 · 3 days ago</div></span></div>
+</div></div><div class="cx-card" style="padding:12px 14px"><div class="t13" style="margin-bottom:8px">Everything above is kept only on this phone. Ranked games are kept by the server.</div>
+<div class="row" style="gap:10px"><button class="btn sec sm sp" style="min-width:0" data-href="circuit-1-record.html?v=manage"><svg class="ico" style="width:20px;height:20px"><use href="#i-copy"/></svg>Save a copy</button><button class="btn sec sm dng sp" style="min-width:0" data-href="circuit-1-record.html?v=erase"><svg class="ico" style="width:20px;height:20px"><use href="#i-trash"/></svg>Erase</button></div></div></div></div></div>
+<div class="vw" data-vs="signedout"><div class="sc" style="top:116px;bottom:0"><div class="scin">
+<div class="cx-card"><div class="row"><h2 class="ct">Ranked</h2><span class="sp"></span><span class="mono i1">Not rated yet</span></div>
+<div class="row" style="margin-top:8px;align-items:flex-end"><span class="nn" style="color:var(--ink-2)">1200</span><span class="sp"></span><span class="mono" style="text-align:right">Where everyone starts</span></div>
+<p class="t13" style="margin-top:10px">Open a ranked table and pick a player name. Your rating, your place on the ladder and your last ten ranked games gather here. It is free, and always will be.</p>
+<div class="row" style="margin-top:10px;gap:10px"><button class="btn sec sm sp" style="min-width:0" data-href="flow-9-waiting.html?v=server">Find an opponent</button><button class="btn sec sm sp" style="min-width:0" data-href="circuit-4-ladder.html?v=signedout">See the ladder</button></div></div>
+<div class="cx-card" style="padding:14px 0 4px"><div class="row" style="padding:0 14px 8px"><h2 class="ct">The record</h2><span class="sp"></span><span class="mono i1">18 games</span></div>
+<div class="row" style="padding:0 14px 10px;gap:18px"><span><span class="nn m">12</span><div class="mono">won</div></span><span><span class="nn m">6</span><div class="mono">lost</div></span><span><span class="nn m">0</span><div class="mono">drawn</div></span></div>
+<div class="rowl"><span class="k">Against the AI</span><span class="v">9–5</span></div><div class="rowl"><span class="k">Against people</span><span class="v">0–0</span></div><div class="rowl"><span class="k">The Dummy</span><span class="v">3–1</span></div></div>
+<div><div class="row" style="padding:2px 4px 0"><h2 class="ct">Recent games</h2><span class="sp"></span><button class="link2" data-href="circuit-3-games.html">All games <svg class="ico " style="width:18px;height:18px"><use href="#i-next"/></svg></button></div><div class="lst">
+<div class="gm"><span class="rs w">WON</span><span class="sp"><div class="tt">Gravy Bones<i>vs</i>Fai</div><div class="ss">Daily · turn 9 · just now</div></span><span class="tag br">Daily</span></div>
+<div class="gm"><span class="rs l">LOST</span><span class="sp"><div class="tt">Viserai<i>vs</i>Enigma</div><div class="ss">Sharp AI · turn 8 · yesterday</div></span><span class="tag br">Road</span></div>
+<div class="gm"><span class="rs w">WON</span><span class="sp"><div class="tt">Kayo<i>vs</i>Dash</div><div class="ss">Sharp AI · turn 12 · yesterday</div></span></div>
+<div class="gm"><span class="rs w">WON</span><span class="sp"><div class="tt">Iyslander<i>vs</i>The Dummy</div><div class="ss">Training · turn 5 · 3 days ago</div></span></div>
+</div></div>
+<div class="cx-card" style="padding:12px 14px"><div class="t13" style="margin-bottom:8px">Everything above is kept only on this phone. Ranked games are kept by the server.</div>
+<div class="row" style="gap:10px"><button class="btn sec sm sp" style="min-width:0" data-href="circuit-1-record.html?v=manage"><svg class="ico" style="width:20px;height:20px"><use href="#i-copy"/></svg>Save a copy</button><button class="btn sec sm dng sp" style="min-width:0" data-href="circuit-1-record.html?v=erase"><svg class="ico" style="width:20px;height:20px"><use href="#i-trash"/></svg>Erase</button></div></div></div></div></div>
+<div class="vw" data-vs="offline"><div class="sc" style="top:116px;bottom:0"><div class="scin">
+<div class="note warn" role="status"><svg class="ico " style="width:22px;height:22px"><use href="#i-off"/></svg><div><div class="ttl3" style="font-size:16px;line-height:18px">Showing your ranked games as of 2 hours ago</div><div class="t13" style="margin-top:3px">The server is not answering right now. Everything else here is kept on this phone and is current.</div><button class="link2" style="margin-top:2px;padding:0">Try again</button></div></div>
+<div class="cx-card" style="opacity:.92"><div class="row"><h2 class="ct">Ranked <span style="color:var(--ink-2)">· as of 2 hours ago</span></h2></div>
+<div class="row" style="margin-top:8px;align-items:flex-end"><span class="nn">1234</span><span class="sp"></span><span style="text-align:right"><span class="mv up big" role="img" aria-label="Rating up 18"><svg class="ico " style="width:20px;height:20px"><use href="#i-up3"/></svg><b>+18</b></span><div class="mono" style="margin-top:6px">over 10 games</div></span></div>
+<div class="t13" style="margin-top:10px"><b>7</b> won · <b>4</b> lost · #14 on the ladder then</div></div>
+<div class="cx-card" style="padding:14px 0 4px"><div class="row" style="padding:0 14px 8px"><h2 class="ct">The record</h2><span class="sp"></span><span class="mono i1">62 games</span></div>
+<div class="rowl"><span class="k">Against the AI</span><span class="v">24–9–1</span></div><div class="rowl"><span class="k">Against people</span><span class="v">3–2</span></div><div class="rowl"><span class="k">The Dummy</span><span class="v">11–1</span></div></div>
+<div><div class="row" style="padding:2px 4px 8px"><h2 class="ct">Personal bests</h2></div><div class="tiles">
+<div class="tile2"><span class="mono">Fastest win</span><b>6<small>TURNS</small></b><p>Iyslander vs Kayo</p></div>
+<div class="tile2"><span class="mono">Closest win</span><b>1<small>LIFE LEFT</small></b><p>Viserai vs Dorinthea</p></div>
+<div class="tile2"><span class="mono">Longest winning run</span><b>7<small>GAMES</small></b><p>Against the AI</p></div>
+<div class="tile2"><span class="mono">Peak rating</span><b>1248</b><p>Seen on this phone</p></div>
+<div class="tile2"><span class="mono">Dummy, fastest clear</span><b>5<small>TURNS</small></b><p>Iyslander</p></div>
+<div class="tile2"><span class="mono">Daily, best run</span><b>4<small>DAYS</small></b><p>Two days running now</p></div></div></div></div></div></div>
+<div class="vw" data-vs="new"><div class="sc" style="top:116px;bottom:76px"><div class="scin">
+<div class="cx-card"><div class="empty"><div class="sunm"><i></i><b></b></div><div class="ttl2">Your record starts here</div><p class="t13" style="max-width:290px">Every game you finish is kept on this phone: who you played, who won, and how it went. Nothing is counted that you did not play.</p></div></div>
+<div class="cx-card"><div class="row"><h2 class="ct">Ranked</h2><span class="sp"></span><span class="mono i1">Not rated yet</span></div><p class="t13" style="margin-top:8px">Everyone starts at 1200. Play at a ranked table to be rated.</p></div></div></div>
+<div class="hub"><button class="btn" data-href="flow-1-title.html">Play a game</button></div></div>
+<div class="vw" data-vs="manage"><div class="vw" style="opacity:1"><div class="sc" style="top:116px;bottom:0"><div class="scin"><div class="cx-card"><div class="row"><h2 class="ct">Ranked</h2><span class="sp"></span><span class="mono i1">#12 on the ladder</span></div>
+<div class="row" style="margin-top:8px;align-items:flex-end"><span class="nn" aria-label="Rating 1248">1248</span><span class="sp"></span><span style="text-align:right"><span class="mv up big" role="img" aria-label="Rating up 32"><svg class="ico " style="width:20px;height:20px"><use href="#i-up3"/></svg><b>+32</b></span><div class="mono" style="margin-top:6px">over 10 games</div></span></div>
+<div style="margin-top:8px"><svg viewBox="0 0 353 64" width="100%" height="64" role="img" aria-label="Your rating went from 1216 to 1248 over your last 10 ranked games"><polyline points="6,56 40,32 74,53 108,35 142,55 177,32 211,55 245,35 279,11 313,29 347,8" fill="none" stroke="var(--brass-hi)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="6" cy="56" r="2.4" fill="var(--ink-2)"/><circle cx="40" cy="32" r="2.4" fill="var(--ink-2)"/><circle cx="74" cy="53" r="2.4" fill="var(--ink-2)"/><circle cx="108" cy="35" r="2.4" fill="var(--ink-2)"/><circle cx="142" cy="55" r="2.4" fill="var(--ink-2)"/><circle cx="177" cy="32" r="2.4" fill="var(--ink-2)"/><circle cx="211" cy="55" r="2.4" fill="var(--ink-2)"/><circle cx="245" cy="35" r="2.4" fill="var(--ink-2)"/><circle cx="279" cy="11" r="2.4" fill="var(--ink-2)"/><circle cx="313" cy="29" r="2.4" fill="var(--ink-2)"/><circle cx="347" cy="8" r="4.5" fill="var(--brass-hi)"/></svg></div>
+<div class="row" style="justify-content:space-between"><span class="mono">1216</span><span class="mono">1248</span></div>
+<div class="row" style="margin-top:8px"><span class="t13"><b>7</b> won · <b>4</b> lost · peak <b>1248</b> on this phone</span><span class="sp"></span><button class="btn sec sm" style="min-width:0;padding:0 16px" data-href="circuit-4-ladder.html">Ladder</button></div></div><div class="cx-card" style="padding:14px 0 4px"><div class="row" style="padding:0 14px 8px"><h2 class="ct">The record</h2><span class="sp"></span><span class="mono i1">62 games</span></div>
+<div class="row" style="padding:0 14px 10px;gap:18px"><span><span class="nn m">45</span><div class="mono">won</div></span><span><span class="nn m">16</span><div class="mono">lost</div></span><span><span class="nn m">1</span><div class="mono">drawn</div></span></div>
+<div class="rowl"><span class="k">Against the AI</span><span class="v">24–9–1</span></div>
+<div class="rowl"><span class="k">Against people</span><span class="v">3–2</span></div>
+<div class="rowl"><span class="k">Ranked <span class="mono">from the server</span></span><span class="v">7–4</span></div>
+<div class="rowl"><span class="k">The Dummy</span><span class="v">11–1</span></div></div><div><div class="row" style="padding:2px 4px 8px"><h2 class="ct">Personal bests</h2></div><div class="tiles">
+<div class="tile2"><span class="mono">Fastest win</span><b>6<small>TURNS</small></b><p>Iyslander vs Kayo</p></div>
+<div class="tile2"><span class="mono">Closest win</span><b>1<small>LIFE LEFT</small></b><p>Viserai vs Dorinthea</p></div>
+<div class="tile2"><span class="mono">Longest winning run</span><b>7<small>GAMES</small></b><p>Against the AI</p></div>
+<div class="tile2"><span class="mono">Peak rating</span><b>1248</b><p>Seen on this phone</p></div>
+<div class="tile2"><span class="mono">Dummy, fastest clear</span><b>5<small>TURNS</small></b><p>Iyslander</p></div>
+<div class="tile2"><span class="mono">Daily, best run</span><b>4<small>DAYS</small></b><p>Two days running now</p></div></div></div>
+<div><div class="row" style="padding:2px 4px 0"><h2 class="ct">Recent games</h2><span class="sp"></span><button class="link2" data-href="circuit-3-games.html">All games <svg class="ico " style="width:18px;height:18px"><use href="#i-next"/></svg></button></div><div class="lst">
+<div class="gm"><span class="rs w">WON</span><span class="sp"><div class="tt">Gravy Bones<i>vs</i>Fai</div><div class="ss">Daily · turn 9 · just now</div></span><span class="tag br">Daily</span></div>
+<div class="gm"><span class="rs w">WON</span><span class="sp"><div class="tt">Iyslander<i>vs</i>Blaze</div><div class="ss">Ranked · turn 11 · 2 h ago</div></span><span class="mv up" role="img" aria-label="Rating up 14"><svg class="ico " style="width:14px;height:14px"><use href="#i-up3"/></svg><b>+14</b></span></div>
+<div class="gm"><span class="rs l">LOST</span><span class="sp"><div class="tt">Viserai<i>vs</i>Enigma</div><div class="ss">Sharp AI · turn 8 · yesterday</div></span><span class="tag br">Road</span></div>
+<div class="gm"><span class="rs w">WON</span><span class="sp"><div class="tt">Kayo<i>vs</i>Dash</div><div class="ss">Sharp AI · turn 12 · yesterday</div></span></div>
+<div class="gm"><span class="rs d">DREW</span><span class="sp"><div class="tt">Dorinthea<i>vs</i>Bravo</div><div class="ss">Dead position · turn 31 · 3 days ago</div></span></div>
+</div></div><div class="cx-card" style="padding:12px 14px"><div class="t13" style="margin-bottom:8px">Everything above is kept only on this phone. Ranked games are kept by the server.</div>
+<div class="row" style="gap:10px"><button class="btn sec sm sp" style="min-width:0" data-href="circuit-1-record.html?v=manage"><svg class="ico" style="width:20px;height:20px"><use href="#i-copy"/></svg>Save a copy</button><button class="btn sec sm dng sp" style="min-width:0" data-href="circuit-1-record.html?v=erase"><svg class="ico" style="width:20px;height:20px"><use href="#i-trash"/></svg>Erase</button></div></div></div></div></div><div class="scrimf full"></div><div class="sheet cs" style="padding:18px 16px 16px;border-radius:16px 16px 0 0"><div class="ttl2">Save a copy</div>
+<p class="t13" style="margin-top:8px;color:var(--ink-1);font-size:15px;line-height:21px">Copies your whole record as plain text. Paste it into a note to keep it, or to move to another phone later. It holds heroes, results and dates, no names.</p>
+<button class="btn" style="width:100%;margin-top:16px">Copy my record</button><button class="btn sec" style="width:100%;margin-top:10px" data-href="circuit-1-record.html">Not now</button></div></div>
+<div class="vw" data-vs="erase"><div class="vw"><div class="sc" style="top:116px;bottom:0"><div class="scin"><div class="cx-card"><div class="row"><h2 class="ct">Ranked</h2><span class="sp"></span><span class="mono i1">#12 on the ladder</span></div>
+<div class="row" style="margin-top:8px;align-items:flex-end"><span class="nn" aria-label="Rating 1248">1248</span><span class="sp"></span><span style="text-align:right"><span class="mv up big" role="img" aria-label="Rating up 32"><svg class="ico " style="width:20px;height:20px"><use href="#i-up3"/></svg><b>+32</b></span><div class="mono" style="margin-top:6px">over 10 games</div></span></div>
+<div style="margin-top:8px"><svg viewBox="0 0 353 64" width="100%" height="64" role="img" aria-label="Your rating went from 1216 to 1248 over your last 10 ranked games"><polyline points="6,56 40,32 74,53 108,35 142,55 177,32 211,55 245,35 279,11 313,29 347,8" fill="none" stroke="var(--brass-hi)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="6" cy="56" r="2.4" fill="var(--ink-2)"/><circle cx="40" cy="32" r="2.4" fill="var(--ink-2)"/><circle cx="74" cy="53" r="2.4" fill="var(--ink-2)"/><circle cx="108" cy="35" r="2.4" fill="var(--ink-2)"/><circle cx="142" cy="55" r="2.4" fill="var(--ink-2)"/><circle cx="177" cy="32" r="2.4" fill="var(--ink-2)"/><circle cx="211" cy="55" r="2.4" fill="var(--ink-2)"/><circle cx="245" cy="35" r="2.4" fill="var(--ink-2)"/><circle cx="279" cy="11" r="2.4" fill="var(--ink-2)"/><circle cx="313" cy="29" r="2.4" fill="var(--ink-2)"/><circle cx="347" cy="8" r="4.5" fill="var(--brass-hi)"/></svg></div>
+<div class="row" style="justify-content:space-between"><span class="mono">1216</span><span class="mono">1248</span></div>
+<div class="row" style="margin-top:8px"><span class="t13"><b>7</b> won · <b>4</b> lost · peak <b>1248</b> on this phone</span><span class="sp"></span><button class="btn sec sm" style="min-width:0;padding:0 16px" data-href="circuit-4-ladder.html">Ladder</button></div></div><div class="cx-card" style="padding:14px 0 4px"><div class="row" style="padding:0 14px 8px"><h2 class="ct">The record</h2><span class="sp"></span><span class="mono i1">62 games</span></div>
+<div class="row" style="padding:0 14px 10px;gap:18px"><span><span class="nn m">45</span><div class="mono">won</div></span><span><span class="nn m">16</span><div class="mono">lost</div></span><span><span class="nn m">1</span><div class="mono">drawn</div></span></div>
+<div class="rowl"><span class="k">Against the AI</span><span class="v">24–9–1</span></div>
+<div class="rowl"><span class="k">Against people</span><span class="v">3–2</span></div>
+<div class="rowl"><span class="k">Ranked <span class="mono">from the server</span></span><span class="v">7–4</span></div>
+<div class="rowl"><span class="k">The Dummy</span><span class="v">11–1</span></div></div><div><div class="row" style="padding:2px 4px 8px"><h2 class="ct">Personal bests</h2></div><div class="tiles">
+<div class="tile2"><span class="mono">Fastest win</span><b>6<small>TURNS</small></b><p>Iyslander vs Kayo</p></div>
+<div class="tile2"><span class="mono">Closest win</span><b>1<small>LIFE LEFT</small></b><p>Viserai vs Dorinthea</p></div>
+<div class="tile2"><span class="mono">Longest winning run</span><b>7<small>GAMES</small></b><p>Against the AI</p></div>
+<div class="tile2"><span class="mono">Peak rating</span><b>1248</b><p>Seen on this phone</p></div>
+<div class="tile2"><span class="mono">Dummy, fastest clear</span><b>5<small>TURNS</small></b><p>Iyslander</p></div>
+<div class="tile2"><span class="mono">Daily, best run</span><b>4<small>DAYS</small></b><p>Two days running now</p></div></div></div>
+<div><div class="row" style="padding:2px 4px 0"><h2 class="ct">Recent games</h2><span class="sp"></span><button class="link2" data-href="circuit-3-games.html">All games <svg class="ico " style="width:18px;height:18px"><use href="#i-next"/></svg></button></div><div class="lst">
+<div class="gm"><span class="rs w">WON</span><span class="sp"><div class="tt">Gravy Bones<i>vs</i>Fai</div><div class="ss">Daily · turn 9 · just now</div></span><span class="tag br">Daily</span></div>
+<div class="gm"><span class="rs w">WON</span><span class="sp"><div class="tt">Iyslander<i>vs</i>Blaze</div><div class="ss">Ranked · turn 11 · 2 h ago</div></span><span class="mv up" role="img" aria-label="Rating up 14"><svg class="ico " style="width:14px;height:14px"><use href="#i-up3"/></svg><b>+14</b></span></div>
+<div class="gm"><span class="rs l">LOST</span><span class="sp"><div class="tt">Viserai<i>vs</i>Enigma</div><div class="ss">Sharp AI · turn 8 · yesterday</div></span><span class="tag br">Road</span></div>
+<div class="gm"><span class="rs w">WON</span><span class="sp"><div class="tt">Kayo<i>vs</i>Dash</div><div class="ss">Sharp AI · turn 12 · yesterday</div></span></div>
+<div class="gm"><span class="rs d">DREW</span><span class="sp"><div class="tt">Dorinthea<i>vs</i>Bravo</div><div class="ss">Dead position · turn 31 · 3 days ago</div></span></div>
+</div></div><div class="cx-card" style="padding:12px 14px"><div class="t13" style="margin-bottom:8px">Everything above is kept only on this phone. Ranked games are kept by the server.</div>
+<div class="row" style="gap:10px"><button class="btn sec sm sp" style="min-width:0" data-href="circuit-1-record.html?v=manage"><svg class="ico" style="width:20px;height:20px"><use href="#i-copy"/></svg>Save a copy</button><button class="btn sec sm dng sp" style="min-width:0" data-href="circuit-1-record.html?v=erase"><svg class="ico" style="width:20px;height:20px"><use href="#i-trash"/></svg>Erase</button></div></div></div></div></div><div class="scrimf full"></div><div class="sheet cs" style="padding:18px 16px 16px;border-radius:16px 16px 0 0"><div class="ttl2">Erase your record?</div>
+<p class="t13" style="margin-top:8px;color:var(--ink-1);font-size:15px;line-height:21px">This clears every game, mastery mark, road clear and daily result kept on this phone. Ranked games and your rating are kept by the server and stay. This cannot be undone.</p>
+<button class="btn" style="width:100%;margin-top:16px" data-href="circuit-1-record.html">Keep my record</button>
+<button class="btn sec dng" style="width:100%;margin-top:10px">Erase everything</button></div></div>
+</div>
+</div>
+<script src="flow.js"></script>
+</body>
+</html>

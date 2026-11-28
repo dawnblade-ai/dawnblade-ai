@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dawnblade — C5 The result, with progress</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800;900&family=Spline+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500;600&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="flow.css">
+<style>
+.cx .vw{position:absolute;inset:0}
+.cx .sc{position:absolute;left:0;right:0}
+.cx .scin{padding:0 var(--gut) 24px;display:flex;flex-direction:column;gap:10px}
+.cx .hdr h1{font:var(--t-title);line-height:22px}
+.cx .hdr h1 .sub{margin-bottom:3px}
+.cx-seg{position:absolute;left:var(--gut);right:var(--gut);top:64px;height:44px;display:flex;border-radius:22px;background:var(--mat-0);box-shadow:inset 0 1px 3px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.08);overflow:hidden}
+.cx-seg button{flex:1;height:44px;font:800 15px/44px var(--f-display);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-1);text-align:center;padding:0;position:relative}
+.cx-seg button.on{background:var(--mat-3);color:var(--ink-0);box-shadow:0 1px 0 rgba(255,255,255,.10) inset,0 -3px 0 var(--brass) inset;border-radius:22px}
+.cx-card{position:relative;background:var(--mat-2);border-radius:16px;box-shadow:0 1px 0 rgba(255,255,255,.07) inset,0 0 0 1px rgba(255,255,255,.05),var(--e1);padding:14px}
+.cx-card.lead{box-shadow:0 1px 0 rgba(255,255,255,.07) inset,var(--e1),inset 0 0 0 1.5px rgba(216,162,62,.7)}
+.cx-card.btnlike{text-align:left;display:block}
+.cx-card.btnlike:active{top:2px}
+.cx h2.ct{font:var(--t-label);letter-spacing:var(--track-caps);text-transform:uppercase;color:var(--ink-2)}
+.cx h2.ct.br{color:var(--brass-hi)}
+.nn{font:900 64px/58px var(--f-display);letter-spacing:.01em;font-variant-numeric:tabular-nums;color:var(--ink-0);text-shadow:0 2px 0 rgba(0,0,0,.55)}
+.nn.m{font-size:44px;line-height:42px}.nn.s{font-size:34px;line-height:34px}
+.cx .t13{font:var(--t-small);color:var(--ink-1)}
+.cx .t13 b{color:var(--ink-0);font-weight:600}
+.cx .ttl2{font:800 22px/24px var(--f-display);letter-spacing:.04em;text-transform:uppercase;color:var(--ink-0)}
+.cx .ttl3{font:800 20px/22px var(--f-display);letter-spacing:.03em;text-transform:uppercase;color:var(--ink-0)}
+.cx .mono{font:var(--t-label);letter-spacing:var(--track-caps);text-transform:uppercase;color:var(--ink-2)}
+.cx .mono.i1{color:var(--ink-1)}.cx .mono.br{color:var(--brass-hi)}
+.cx .row{display:flex;align-items:center}
+.cx .sp{flex:1;min-width:0}
+.cx .chev{color:var(--ink-2);flex:none}
+.pt{width:var(--s);height:var(--s);border-radius:50%;flex:none;display:inline-block;position:relative;background-color:#0b0d10;background-repeat:no-repeat;background-size:310%;box-shadow:0 0 0 2px var(--rail),0 0 0 3.5px var(--mat-0),var(--e1)}
+.pt.br{box-shadow:0 0 0 2px var(--brass),0 0 0 3.5px var(--mat-0),0 0 12px rgba(216,162,62,.5)}
+.pt.you{box-shadow:0 0 0 2px var(--you),0 0 0 3.5px var(--mat-0),var(--e1)}.pt.opp{box-shadow:0 0 0 2px var(--opp),0 0 0 3.5px var(--mat-0),var(--e1)}
+.pt.dim{filter:var(--card-dim)}
+.pt .ck{position:absolute;right:-5px;bottom:-5px;width:20px;height:20px;border-radius:50%;background:var(--gain);color:var(--ink-inv);display:grid;place-items:center;box-shadow:0 0 0 2px var(--mat-1)}
+.pt .ck svg{width:13px;height:13px}
+.pips{display:inline-flex;align-items:center}
+.pip{fill:none;stroke:var(--ink-2);stroke-width:2;stroke-linejoin:round}
+.pip.on{fill:var(--brass);stroke:var(--brass-hi)}
+.mv{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 11px 0 9px;border-radius:15px;background:var(--mat-0);box-shadow:inset 0 0 0 1.5px currentColor;font:800 19px/1 var(--f-display);letter-spacing:.02em;font-variant-numeric:tabular-nums}
+.mv.big{height:40px;border-radius:20px;padding:0 14px 0 11px;font-size:28px}
+.mv.up{color:var(--gain)}.mv.dn{color:var(--damage)}.mv.lv{color:var(--ink-1)}
+.rs{width:46px;height:36px;border-radius:8px;flex:none;display:grid;place-items:center;background:var(--mat-0);font:800 15px/1 var(--f-display);letter-spacing:.06em;box-shadow:inset 0 0 0 1.5px currentColor}
+.rs.w{color:var(--gain)}.rs.l{color:var(--damage)}.rs.d{color:var(--ink-1)}
+.gm{display:flex;align-items:center;gap:10px;min-height:64px;padding:0 var(--gut);position:relative;text-align:left;width:100%}
+.gm+.gm{box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.gm .tt{font:800 18px/20px var(--f-display);letter-spacing:.03em;text-transform:uppercase;color:var(--ink-0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gm .tt i{font-style:normal;color:var(--ink-2);font-weight:700;margin:0 4px}
+.gm .ss{font:var(--t-label);letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2);margin-top:3px;padding:0 0 3px}
+.gm .tag{height:20px;padding:0 7px;border-radius:10px;font:var(--t-label);letter-spacing:.06em;text-transform:uppercase;display:inline-grid;place-items:center;background:var(--mat-0);color:var(--ink-1);box-shadow:inset 0 0 0 1px var(--rail);flex:none}
+.gm .tag.br{color:var(--brass-hi);box-shadow:inset 0 0 0 1px rgba(216,162,62,.6)}
+.dayh{height:30px;display:flex;align-items:flex-end;padding:0 var(--gut) 5px;font:var(--t-label);letter-spacing:var(--track-caps);text-transform:uppercase;color:var(--ink-2)}
+.lst{background:var(--mat-2);border-radius:16px;box-shadow:0 0 0 1px rgba(255,255,255,.05),var(--e1);overflow:hidden}
+.lst.flat{background:transparent;box-shadow:none;border-radius:0}
+.rowl{display:flex;align-items:center;justify-content:space-between;min-height:44px;padding:0 14px;gap:10px}
+.rowl+.rowl{box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.rowl .k{font:var(--t-body);color:var(--ink-1)}
+.rowl .v{font:800 22px/24px var(--f-display);letter-spacing:.03em;color:var(--ink-0);font-variant-numeric:tabular-nums;white-space:nowrap}
+.rowl .v small{font:var(--t-label);letter-spacing:.06em;color:var(--ink-2);margin-left:6px;text-transform:uppercase}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tile2{background:var(--mat-2);border-radius:14px;padding:11px 12px 10px;min-height:76px;box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 0 0 1px rgba(255,255,255,.04)}
+.tile2 b{display:block;font:900 30px/30px var(--f-display);letter-spacing:.01em;color:var(--ink-0);margin-top:4px;font-variant-numeric:tabular-nums}
+.tile2 b small{font:800 14px/1 var(--f-display);letter-spacing:.06em;color:var(--ink-1);margin-left:4px}
+.tile2 p{font:var(--t-small);color:var(--ink-2);margin-top:2px}
+.cx .hint{font:var(--t-small);color:var(--ink-2)}
+.cx .link2{font:600 14px/18px var(--f-text);color:var(--ink-1);min-height:44px;display:inline-flex;align-items:center;gap:6px}
+.cx .btn.sec.sm{height:44px}
+.cx .hub{position:absolute;left:var(--gut);right:var(--gut);bottom:14px;display:flex;gap:10px;z-index:var(--z-hub)}
+.cx .hub.two{bottom:72px}
+.cx .hub .btn{flex:1;min-width:0;padding:0 14px}
+.empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:22px 14px 8px}
+.empty .sunm{width:140px;height:64px;position:relative;margin-bottom:6px}
+.empty .sunm i{position:absolute;left:30px;top:6px;width:80px;height:80px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#FFE7A8,#F2C66E 45%,#D8A23E 80%);box-shadow:0 0 36px rgba(242,198,110,.4);-webkit-mask-image:linear-gradient(to bottom,#000 0 58px,transparent 58px);mask-image:linear-gradient(to bottom,#000 0 58px,transparent 58px)}
+.empty .sunm b{position:absolute;left:0;right:0;top:58px;height:3px;border-radius:2px;background:linear-gradient(to right,transparent,var(--brass-hi) 30%,var(--brass-hi) 70%,transparent)}
+.scrimf{position:absolute;inset:0;background:rgba(4,6,8,.66);z-index:var(--z-scrim)}
+.sheet.cs{z-index:var(--z-sheet)}
+.cx .note{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:14px;background:var(--mat-2);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
+.cx .note svg{margin-top:1px;color:var(--ink-1)}
+.cx .note.warn{box-shadow:inset 0 0 0 1.5px rgba(255,138,153,.55)}
+.cx .note.warn svg{color:var(--refused)}
+.cx .dots{display:inline-flex;gap:5px;vertical-align:middle;margin-left:8px}
+.cx .dots i{width:6px;height:6px;border-radius:50%;background:var(--brass-hi);opacity:.5}
+.cx .dots i:nth-child(2){opacity:.75}.cx .dots i:nth-child(3){opacity:1}
+.cx .skel{height:14px;border-radius:7px;background:rgba(255,255,255,.07)}
+.cx .btn.sec.dng{color:var(--damage)}
+.c5 .paper.res{top:64px;height:316px}
+.c5 .plate{position:absolute;left:var(--gut);right:var(--gut);top:396px;height:132px;z-index:var(--z-sheet);border-radius:16px;background:linear-gradient(to bottom,#1d272c,#121a1e);box-shadow:var(--e3),0 1px 0 rgba(255,255,255,.08) inset,inset 0 0 0 1px rgba(255,255,255,.06);padding:12px 14px;text-align:left;display:block;color:var(--ink-0)}
+.c5 .plate:active{top:398px}
+.c5 .plate.beats{height:132px;padding:10px 14px}
+.c5 .plate.beats.one{height:108px;top:420px}
+.c5 .old{font:800 34px/36px var(--f-display);color:var(--ink-2);font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.c5 .new{font:900 60px/56px var(--f-display);color:var(--ink-0);font-variant-numeric:tabular-nums;text-shadow:0 2px 0 rgba(0,0,0,.55)}
+.c5 .stand{position:absolute;left:14px;right:14px;bottom:10px;display:flex;align-items:center;gap:8px;font:var(--t-small);color:var(--ink-1)}
+.c5 .stand b{color:var(--ink-0);font-weight:600}
+.c5 .beat{display:flex;align-items:center;gap:12px;min-height:48px}
+.c5 .beat+.beat{box-shadow:inset 0 1px 0 rgba(255,255,255,.07);margin-top:2px;padding-top:2px}
+.c5 .bi{width:40px;height:40px;border-radius:50%;flex:none;display:grid;place-items:center;background:var(--mat-0);color:var(--brass-hi);box-shadow:inset 0 0 0 1.5px rgba(216,162,62,.7)}
+.c5 .bi svg{width:22px;height:22px}
+.c5 .cap{position:absolute;left:0;right:0;top:404px;z-index:var(--z-sheet);text-align:center;font:var(--t-small);color:var(--ink-1)}
+.c5 .acts2 .btn.sec{min-width:0}
+html[data-band=compact] .c5 .paper.res{height:240px}
+html[data-band=compact] .c5 .plate{top:312px;height:106px;padding:9px 14px}
+html[data-band=compact] .c5 .plate:active{top:314px}
+html[data-band=compact] .c5 .new{font-size:46px;line-height:44px}
+html[data-band=compact] .c5 .old{font-size:28px;line-height:30px}
+html[data-band=compact] .c5 .stand{bottom:7px}
+html[data-band=compact] .c5 .plate.beats,html[data-band=compact] .c5 .plate.beats.one{top:312px;height:106px}
+html[data-band=compact] .c5 .plate.beats .beat+.beat{display:none}
+html[data-band=compact] .c5 .cap{top:320px}
+</style>
+<script src="stage.js"></script>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-up3" viewBox="0 0 24 24"><path d="M12 5l8 13H4z" fill="currentColor"/></symbol>
+<symbol id="i-dn3" viewBox="0 0 24 24"><path d="M12 19L4 6h16z" fill="currentColor"/></symbol>
+<symbol id="i-eq3" viewBox="0 0 24 24"><path d="M5 9h14M5 15h14" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></symbol>
+<symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="11" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 15V6a2 2 0 012-2h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M5 7h14M10 7V4.5h4V7M7 7l1 13h8l1-13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-road" viewBox="0 0 24 24"><path d="M9 3L5 21M15 3l4 18M12 5v3M12 11v3M12 17v3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="14" r="5" fill="currentColor"/><path d="M12 3v3M4.5 7l2 2M19.5 7l-2 2M2 18h20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+<symbol id="i-cal" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+<symbol id="i-off" viewBox="0 0 24 24"><path d="M3 9a14 14 0 0118 0M6.5 12.5a9 9 0 0111 0M10 16a4 4 0 014 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="19" r="1.4" fill="currentColor"/><path d="M4 4l16 16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+<symbol id="i-ladder" viewBox="0 0 24 24"><path d="M7 3v18M17 3v18M7 7h10M7 12h10M7 17h10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+<symbol id="i-heroes" viewBox="0 0 24 24"><circle cx="12" cy="9" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4.5 20c.8-4 3.7-6 7.5-6s6.700 2 7.500 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+<symbol id="i-seal" viewBox="0 0 24 24"><path d="M12 2.5l2.4 1.7 3-.2.9 2.8 2.5 1.7-1 2.8 1 2.8-2.500 1.7-.9 2.800-3-.2L12 21.500l-2.400-1.700-3 .2-.9-2.800L3.200 15.500l1-2.800-1-2.800L5.700 8.200l.9-2.800 3 .2z" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linejoin="round"/><path d="M8.500 12.200l2.500 2.500 4.500-5" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</defs></svg>
+<!-- C5 The result, with progress. ?v=ranked-win | ranked-loss | ranked-new | ranked-wait | solo-rung | solo-rank | daily-win | daily-loss | plain  (default ranked-win).  SCREENS-CIRCUIT.md is the spec; the copy and the numbers on this page are sample data, every figure is read from the sources the spec names. -->
+<div class="stage cx f7 c5" data-variants="ranked-win|ranked-loss|ranked-new|ranked-wait|solo-rung|solo-rank|daily-win|daily-loss|plain" data-default="ranked-win">
+<div class="bg"><div data-vs="ranked-win" data-tbl='{"yl":7,"ol":0,"ym":18,"om":20,"turn":9,"mine":false,"nohub":1}'></div><div data-vs="ranked-loss" data-tbl='{"yl":0,"ol":6,"ym":18,"om":20,"turn":10,"mine":false,"nohub":1}'></div><div data-vs="ranked-new" data-tbl='{"yl":7,"ol":0,"ym":18,"om":20,"turn":9,"mine":false,"nohub":1}'></div><div data-vs="ranked-wait" data-tbl='{"yl":7,"ol":0,"ym":18,"om":20,"turn":9,"mine":false,"nohub":1}'></div><div data-vs="solo-rung" data-tbl='{"yl":7,"ol":0,"ym":18,"om":20,"turn":9,"mine":false,"nohub":1}'></div><div data-vs="solo-rank" data-tbl='{"yl":7,"ol":0,"ym":18,"om":20,"turn":9,"mine":false,"nohub":1}'></div><div data-vs="daily-win" data-tbl='{"yl":7,"ol":0,"ym":18,"om":20,"turn":9,"mine":false,"nohub":1}'></div><div data-vs="daily-loss" data-tbl='{"yl":0,"ol":6,"ym":18,"om":20,"turn":10,"mine":false,"nohub":1}'></div><div data-vs="plain" data-tbl='{"yl":7,"ol":0,"ym":18,"om":20,"turn":9,"mine":false,"nohub":1}'></div></div>
+<div class="frame">
+<div class="veil"></div><div class="vw" data-vs="ranked-win"><div class="paper res"><i class="tape a"></i><i class="tape b"></i>
+<div class="ph"><h3>Iyslander vs Viserai</h3><p>You won · turn 9</p></div>
+<div class="cols"><div><h4>You</h4>
+<div class="r t x">18</div><div class="r a"><em>T3</em>Runerager Swarm<b>−3</b></div>
+<div class="r t x">15</div><div class="r a"><em>T6</em>Shrill of Skullform<b>−4</b></div>
+<div class="r t x">11</div><div class="r a"><em>T9</em>Hit the High Notes<b>−4</b></div>
+<div class="r t cur">7<svg class="ring" viewBox="0 0 70 62" style="left:-26px;top:-12px;width:74px;height:64px"><path d="M14 44C3 26 20 6 40 6c20 0 31 20 18 38-9 12-32 13-42-2" fill="none" stroke="#B3261E" stroke-width="3.2" stroke-linecap="round"/></svg></div></div><div><h4>Them</h4>
+<div class="r t x">20</div><div class="r a"><em>T2</em>Polar Cap<b>−4</b></div>
+<div class="r t x">16</div><div class="r a"><em>T5</em>Voltic Bolt<b>−5</b></div>
+<div class="r t x">11</div><div class="r a"><em>T8</em>Ice Bolt<b>−5</b></div>
+<div class="r t cur">0</div></div></div><span class="gg" style="top:26px;right:14px">GG</span></div><button class="plate" data-href="circuit-4-ladder.html" aria-label="Your rating, then the ladder">
+<div class="mono">Rated game · the server’s numbers</div>
+<div class="row" style="margin-top:4px;gap:10px;align-items:center"><span class="old" aria-label="Was 1236">1236</span><svg class="ico chev" style="width:22px;height:22px"><use href="#i-next"/></svg><span class="new" aria-label="Now 1248">1248</span><span class="sp"></span><span style="text-align:right"><span class="mv up big" role="img" aria-label="Rating up 12"><svg class="ico " style="width:20px;height:20px"><use href="#i-up3"/></svg><b>+12</b></span></span></div>
+<div class="stand"><span><b>#12</b> on the ladder · was #14 when you last looked</span><span class="sp"></span><svg class="ico chev" style="width:18px;height:18px"><use href="#i-next"/></svg></div></button><div class="acts2"><div class="row"><button class="btn sec" data-href="flow-3-hero.html">New opponent</button><button class="btn sec dng" data-href="flow-1-title.html">Leave</button></div><button class="btn" data-href="flow-4-sitdown.html">Rematch</button></div></div><div class="vw" data-vs="ranked-loss"><div class="paper res"><i class="tape a"></i><i class="tape b"></i>
+<div class="ph"><h3>Iyslander vs Viserai</h3><p>Viserai won · turn 10</p></div>
+<div class="cols"><div><h4>You</h4>
+<div class="r t x">18</div><div class="r a"><em>T3</em>Runerager Swarm<b>−3</b></div>
+<div class="r t x">8</div><div class="r a"><em>T6</em>Shrill of Skullform<b>−4</b></div>
+<div class="r t x">4</div><div class="r a"><em>T9</em>Hit the High Notes<b>−4</b></div>
+<div class="r t cur">0</div></div><div><h4>Them</h4>
+<div class="r t x">20</div><div class="r a"><em>T2</em>Polar Cap<b>−4</b></div>
+<div class="r t x">16</div><div class="r a"><em>T5</em>Voltic Bolt<b>−5</b></div>
+<div class="r t x">11</div><div class="r a"><em>T8</em>Ice Bolt<b>−5</b></div>
+<div class="r t cur">6<svg class="ring" viewBox="0 0 70 62" style="left:-26px;top:-12px;width:74px;height:64px"><path d="M14 44C3 26 20 6 40 6c20 0 31 20 18 38-9 12-32 13-42-2" fill="none" stroke="#B3261E" stroke-width="3.2" stroke-linecap="round"/></svg></div></div></div><span class="gg" style="top:26px;right:14px">GG</span></div><button class="plate" data-href="circuit-4-ladder.html" aria-label="Your rating, then the ladder">
+<div class="mono">Rated game · the server’s numbers</div>
+<div class="row" style="margin-top:4px;gap:10px;align-items:center"><span class="old" aria-label="Was 1248">1248</span><svg class="ico chev" style="width:22px;height:22px"><use href="#i-next"/></svg><span class="new" aria-label="Now 1233">1233</span><span class="sp"></span><span style="text-align:right"><span class="mv dn big" role="img" aria-label="Rating down 15"><svg class="ico " style="width:20px;height:20px"><use href="#i-dn3"/></svg><b>−15</b></span></span></div>
+<div class="stand"><span><b>#13</b> on the ladder · was #12</span><span class="sp"></span><svg class="ico chev" style="width:18px;height:18px"><use href="#i-next"/></svg></div></button><div class="acts2"><div class="row"><button class="btn sec" data-href="flow-3-hero.html">New opponent</button><button class="btn sec dng" data-href="flow-1-title.html">Leave</button></div><button class="btn" data-href="flow-4-sitdown.html">Rematch</button></div></div><div class="vw" data-vs="ranked-new"><div class="paper res"><i class="tape a"></i><i class="tape b"></i>
+<div class="ph"><h3>Iyslander vs Viserai</h3><p>You won · turn 9</p></div>
+<div class="cols"><div><h4>You</h4>
+<div class="r t x">18</div><div class="r a"><em>T3</em>Runerager Swarm<b>−3</b></div>
+<div class="r t x">15</div><div class="r a"><em>T6</em>Shrill of Skullform<b>−4</b></div>
+<div class="r t x">11</div><div class="r a"><em>T9</em>Hit the High Notes<b>−4</b></div>
+<div class="r t cur">7<svg class="ring" viewBox="0 0 70 62" style="left:-26px;top:-12px;width:74px;height:64px"><path d="M14 44C3 26 20 6 40 6c20 0 31 20 18 38-9 12-32 13-42-2" fill="none" stroke="#B3261E" stroke-width="3.2" stroke-linecap="round"/></svg></div></div><div><h4>Them</h4>
+<div class="r t x">20</div><div class="r a"><em>T2</em>Polar Cap<b>−4</b></div>
+<div class="r t x">16</div><div class="r a"><em>T5</em>Voltic Bolt<b>−5</b></div>
+<div class="r t x">11</div><div class="r a"><em>T8</em>Ice Bolt<b>−5</b></div>
+<div class="r t cur">0</div></div></div><span class="gg" style="top:26px;right:14px">GG</span></div><button class="plate" data-href="circuit-4-ladder.html" aria-label="Your rating, then the ladder">
+<div class="mono">Your first rated games</div>
+<div class="row" style="margin-top:4px;gap:10px;align-items:center"><span class="old" aria-label="Was 1200">1200</span><svg class="ico chev" style="width:22px;height:22px"><use href="#i-next"/></svg><span class="new" aria-label="Now 1216">1216</span><span class="sp"></span><span style="text-align:right"><span class="mv up big" role="img" aria-label="Rating up 16"><svg class="ico " style="width:20px;height:20px"><use href="#i-up3"/></svg><b>+16</b></span></span></div>
+<div class="stand"><span>Rated game <b>2 of 3</b>. One more and you are on the ladder.</span></div></button><div class="acts2"><div class="row"><button class="btn sec" data-href="flow-3-hero.html">New opponent</button><button class="btn sec dng" data-href="flow-1-title.html">Leave</button></div><button class="btn" data-href="flow-4-sitdown.html">Rematch</button></div></div><div class="vw" data-vs="ranked-wait"><div class="paper res"><i class="tape a"></i><i class="tape b"></i>
+<div class="ph"><h3>Iyslander vs Viserai</h3><p>You won · turn 9</p></div>
+<div class="cols"><div><h4>You</h4>
+<div class="r t x">18</div><div class="r a"><em>T3</em>Runerager Swarm<b>−3</b></div>
+<div class="r t x">15</div><div class="r a"><em>T6</em>Shrill of Skullform<b>−4</b></div>
+<div class="r t x">11</div><div class="r a"><em>T9</em>Hit the High Notes<b>−4</b></div>
+<div class="r t cur">7<svg class="ring" viewBox="0 0 70 62" style="left:-26px;top:-12px;width:74px;height:64px"><path d="M14 44C3 26 20 6 40 6c20 0 31 20 18 38-9 12-32 13-42-2" fill="none" stroke="#B3261E" stroke-width="3.2" stroke-linecap="round"/></svg></div></div><div><h4>Them</h4>
+<div class="r t x">20</div><div class="r a"><em>T2</em>Polar Cap<b>−4</b></div>
+<div class="r t x">16</div><div class="r a"><em>T5</em>Voltic Bolt<b>−5</b></div>
+<div class="r t x">11</div><div class="r a"><em>T8</em>Ice Bolt<b>−5</b></div>
+<div class="r t cur">0</div></div></div><span class="gg" style="top:26px;right:14px">GG</span></div><div class="plate" style="pointer-events:none"><div class="mono">Rated game · the server’s numbers</div><div class="row" style="margin-top:8px;gap:10px;align-items:center"><span class="skel" style="width:96px;height:34px;border-radius:10px"></span><span class="mono br">Recording the result<span class="dots"><i></i><i></i><i></i></span></span></div><div class="stand"><span>Your new rating appears the moment the server has it.</span></div></div><div class="acts2"><div class="row"><button class="btn sec" data-href="flow-3-hero.html">New opponent</button><button class="btn sec dng" data-href="flow-1-title.html">Leave</button></div><button class="btn" data-href="flow-4-sitdown.html">Rematch</button></div></div><div class="vw" data-vs="solo-rung"><div class="paper res"><i class="tape a"></i><i class="tape b"></i>
+<div class="ph"><h3>Iyslander vs Viserai</h3><p>You won · turn 9</p></div>
+<div class="cols"><div><h4>You</h4>
+<div class="r t x">18</div><div class="r a"><em>T3</em>Runerager Swarm<b>−3</b></div>
+<div class="r t x">15</div><div class="r a"><em>T6</em>Shrill of Skullform<b>−4</b></div>
+<div class="r t x">11</div><div class="r a"><em>T9</em>Hit the High Notes<b>−4</b></div>
+<div class="r t cur">7<svg class="ring" viewBox="0 0 70 62" style="left:-26px;top:-12px;width:74px;height:64px"><path d="M14 44C3 26 20 6 40 6c20 0 31 20 18 38-9 12-32 13-42-2" fill="none" stroke="#B3261E" stroke-width="3.2" stroke-linecap="round"/></svg></div></div><div><h4>Them</h4>
+<div class="r t x">20</div><div class="r a"><em>T2</em>Polar Cap<b>−4</b></div>
+<div class="r t x">16</div><div class="r a"><em>T5</em>Voltic Bolt<b>−5</b></div>
+<div class="r t x">11</div><div class="r a"><em>T8</em>Ice Bolt<b>−5</b></div>
+<div class="r t cur">0</div></div></div><span class="gg" style="top:26px;right:14px">GG</span></div><div class="plate beats"><div class="mono">What this game did</div><div class="beat"><span class="bi"><svg class="ico " style="width:24px;height:24px"><use href="#i-road"/></svg></span><span class="sp"><div class="ttl3" style="font-size:19px">Road: Enigma cleared</div><div class="t13" style="font-size:13px;line-height:16px">9 of 17 on the Road · Skirmish 4 of 5</div></span></div><div class="beat"><span class="bi"><svg class="ico " style="width:24px;height:24px"><use href="#i-seal"/></svg></span><span class="sp"><div class="ttl3" style="font-size:19px">Iyslander: 10 foes beaten</div><div class="t13" style="font-size:13px;line-height:16px">2 more for Master</div></span></div></div><div class="acts2"><div class="row"><button class="btn sec" data-href="flow-4-sitdown.html">Rematch</button><button class="btn sec dng" data-href="flow-1-title.html">Leave</button></div><button class="btn" data-href="flow-4-sitdown.html">Next: Arakni</button></div></div><div class="vw" data-vs="solo-rank"><div class="paper res"><i class="tape a"></i><i class="tape b"></i>
+<div class="ph"><h3>Iyslander vs Viserai</h3><p>You won · turn 9</p></div>
+<div class="cols"><div><h4>You</h4>
+<div class="r t x">18</div><div class="r a"><em>T3</em>Runerager Swarm<b>−3</b></div>
+<div class="r t x">15</div><div class="r a"><em>T6</em>Shrill of Skullform<b>−4</b></div>
+<div class="r t x">11</div><div class="r a"><em>T9</em>Hit the High Notes<b>−4</b></div>
+<div class="r t cur">7<svg class="ring" viewBox="0 0 70 62" style="left:-26px;top:-12px;width:74px;height:64px"><path d="M14 44C3 26 20 6 40 6c20 0 31 20 18 38-9 12-32 13-42-2" fill="none" stroke="#B3261E" stroke-width="3.2" stroke-linecap="round"/></svg></div></div><div><h4>Them</h4>
+<div class="r t x">20</div><div class="r a"><em>T2</em>Polar Cap<b>−4</b></div>
+<div class="r t x">16</div><div class="r a"><em>T5</em>Voltic Bolt<b>−5</b></div>
+<div class="r t x">11</div><div class="r a"><em>T8</em>Ice Bolt<b>−5</b></div>
+<div class="r t cur">0</div></div></div><span class="gg" style="top:26px;right:14px">GG</span></div><div class="plate beats"><div class="mono">What this game did</div><div class="beat"><span class="bi"><svg class="ico " style="width:24px;height:24px"><use href="#i-seal"/></svg></span><span class="sp"><div class="ttl3" style="font-size:19px">Iyslander is now Master</div><div class="t13" style="font-size:13px;line-height:16px">12 of 17 foes beaten with Iyslander · 5 more for the Dawnblade</div></span></div><div class="beat"><span class="bi"><svg class="ico " style="width:24px;height:24px"><use href="#i-sun"/></svg></span><span class="sp"><div class="ttl3" style="font-size:19px">Fastest win: 6 turns</div><div class="t13" style="font-size:13px;line-height:16px">Was 9 turns, with Viserai</div></span></div></div><div class="acts2"><div class="row"><button class="btn sec" data-href="flow-3-hero.html">New opponent</button><button class="btn sec dng" data-href="flow-1-title.html">Leave</button></div><button class="btn" data-href="flow-4-sitdown.html">Rematch</button></div></div><div class="vw" data-vs="daily-win"><div class="paper res"><i class="tape a"></i><i class="tape b"></i>
+<div class="ph"><h3>Iyslander vs Viserai</h3><p>You won · turn 9</p></div>
+<div class="cols"><div><h4>You</h4>
+<div class="r t x">18</div><div class="r a"><em>T3</em>Runerager Swarm<b>−3</b></div>
+<div class="r t x">15</div><div class="r a"><em>T6</em>Shrill of Skullform<b>−4</b></div>
+<div class="r t x">11</div><div class="r a"><em>T9</em>Hit the High Notes<b>−4</b></div>
+<div class="r t cur">7<svg class="ring" viewBox="0 0 70 62" style="left:-26px;top:-12px;width:74px;height:64px"><path d="M14 44C3 26 20 6 40 6c20 0 31 20 18 38-9 12-32 13-42-2" fill="none" stroke="#B3261E" stroke-width="3.2" stroke-linecap="round"/></svg></div></div><div><h4>Them</h4>
+<div class="r t x">20</div><div class="r a"><em>T2</em>Polar Cap<b>−4</b></div>
+<div class="r t x">16</div><div class="r a"><em>T5</em>Voltic Bolt<b>−5</b></div>
+<div class="r t x">11</div><div class="r a"><em>T8</em>Ice Bolt<b>−5</b></div>
+<div class="r t cur">0</div></div></div><span class="gg" style="top:26px;right:14px">GG</span></div><div class="plate beats"><div class="mono">Today’s challenge · your official try</div><div class="beat"><span class="bi"><svg class="ico " style="width:24px;height:24px"><use href="#i-cal"/></svg></span><span class="sp"><div class="ttl3" style="font-size:19px">Won in 9 turns</div><div class="t13" style="font-size:13px;line-height:16px">Three days running · your fastest daily win so far is 7</div></span></div><div class="beat"><span class="bi"><svg class="ico " style="width:24px;height:24px"><use href="#i-seal"/></svg></span><span class="sp"><div class="ttl3" style="font-size:19px">Gravy Bones: 1 foe beaten</div><div class="t13" style="font-size:13px;line-height:16px">Fai, for the first time</div></span></div></div><div class="acts2"><div class="row"><button class="btn sec" data-href="circuit-8-daily.html?v=won">Share</button><button class="btn sec dng" data-href="flow-1-title.html">Leave</button></div><button class="btn" data-href="circuit-6-home.html">Back to the Circuit</button></div></div><div class="vw" data-vs="daily-loss"><div class="paper res"><i class="tape a"></i><i class="tape b"></i>
+<div class="ph"><h3>Iyslander vs Viserai</h3><p>Viserai won · turn 10</p></div>
+<div class="cols"><div><h4>You</h4>
+<div class="r t x">18</div><div class="r a"><em>T3</em>Runerager Swarm<b>−3</b></div>
+<div class="r t x">8</div><div class="r a"><em>T6</em>Shrill of Skullform<b>−4</b></div>
+<div class="r t x">4</div><div class="r a"><em>T9</em>Hit the High Notes<b>−4</b></div>
+<div class="r t cur">0</div></div><div><h4>Them</h4>
+<div class="r t x">20</div><div class="r a"><em>T2</em>Polar Cap<b>−4</b></div>
+<div class="r t x">16</div><div class="r a"><em>T5</em>Voltic Bolt<b>−5</b></div>
+<div class="r t x">11</div><div class="r a"><em>T8</em>Ice Bolt<b>−5</b></div>
+<div class="r t cur">6<svg class="ring" viewBox="0 0 70 62" style="left:-26px;top:-12px;width:74px;height:64px"><path d="M14 44C3 26 20 6 40 6c20 0 31 20 18 38-9 12-32 13-42-2" fill="none" stroke="#B3261E" stroke-width="3.2" stroke-linecap="round"/></svg></div></div></div><span class="gg" style="top:26px;right:14px">GG</span></div><div class="plate beats one"><div class="mono">Today’s challenge · your official try</div><div class="beat"><span class="bi"><svg class="ico " style="width:24px;height:24px"><use href="#i-cal"/></svg></span><span class="sp"><div class="ttl3" style="font-size:19px">Lost on turn 10</div><div class="t13" style="font-size:13px;line-height:16px">That is today’s result. Play it again for practice: same deal, nothing changes.</div></span></div></div><div class="acts2"><div class="row"><button class="btn sec" data-href="circuit-8-daily.html?v=lost">Share</button><button class="btn sec dng" data-href="flow-1-title.html">Leave</button></div><button class="btn" data-href="flow-4-sitdown.html">Practice this deal</button></div></div><div class="vw" data-vs="plain"><div class="paper res"><i class="tape a"></i><i class="tape b"></i>
+<div class="ph"><h3>Iyslander vs Viserai</h3><p>You won · turn 9</p></div>
+<div class="cols"><div><h4>You</h4>
+<div class="r t x">18</div><div class="r a"><em>T3</em>Runerager Swarm<b>−3</b></div>
+<div class="r t x">15</div><div class="r a"><em>T6</em>Shrill of Skullform<b>−4</b></div>
+<div class="r t x">11</div><div class="r a"><em>T9</em>Hit the High Notes<b>−4</b></div>
+<div class="r t cur">7<svg class="ring" viewBox="0 0 70 62" style="left:-26px;top:-12px;width:74px;height:64px"><path d="M14 44C3 26 20 6 40 6c20 0 31 20 18 38-9 12-32 13-42-2" fill="none" stroke="#B3261E" stroke-width="3.2" stroke-linecap="round"/></svg></div></div><div><h4>Them</h4>
+<div class="r t x">20</div><div class="r a"><em>T2</em>Polar Cap<b>−4</b></div>
+<div class="r t x">16</div><div class="r a"><em>T5</em>Voltic Bolt<b>−5</b></div>
+<div class="r t x">11</div><div class="r a"><em>T8</em>Ice Bolt<b>−5</b></div>
+<div class="r t cur">0</div></div></div><span class="gg" style="top:26px;right:14px">GG</span></div><div class="cap">Saved to your record on this phone.</div><div class="acts2"><div class="row"><button class="btn sec" data-href="flow-3-hero.html">New opponent</button><button class="btn sec dng" data-href="flow-1-title.html">Leave</button></div><button class="btn" data-href="flow-4-sitdown.html">Rematch</button></div></div>
+</div>
+</div>
+<script src="flow.js"></script>
+<script>document.querySelectorAll(".cols").forEach(function(c){c.scrollTop=c.scrollHeight})</script>
+</body>
+</html>
