@@ -342,6 +342,7 @@ async function serverJourney(pw, browser, engine, vp, o, kind){
       await tapB(page, "seg-ranked");
       want((await txt('[data-b="fr-note"]')).includes("Needs a player name") && await page.evaluate(() => document.querySelector('[data-b="seg-ranked"]').getAttribute("aria-checked")) === "true", "Ranked is chosen and says what it needs");
       want(await page.evaluate(() => localStorage.getItem("dawnblade.crescendo.ranked")) === "true", "the choice is remembered on this device");
+      await page.waitForTimeout(500);   /* let the store commit before the page goes */
       await page.goto(PLAY + "?screen=f2&pace=0"); await settle(page, 300);   /* a reload: the store is kept (so the choice must be), the exposed fake world stays */
       await tapB(page, "mode-online"); await need('[data-b="fr"]', "after a reload the choice is still Ranked");
       want(await page.evaluate(() => document.querySelector('[data-b="seg-ranked"]').getAttribute("aria-checked")) === "true", "Ranked is still on after the reload");

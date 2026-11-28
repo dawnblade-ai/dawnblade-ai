@@ -99,7 +99,7 @@ function sheetOf(v, ctx){
   const pend = v.pending && v.pending.seat === me ? v.pending : null;
   if(pend && pend.kind !== "pay"){
     const items = candidates(pend.kind, v, me).map(a => item(a)).filter(x => !x.why);
-    return {title: "Your call", src: pend.card && pend.card.name, hint: "", items: items.concat([coach])};
+    return {title: "Your call", src: pend.card && pend.card.name, hint: "", items: ctx.coach === false ? items : items.concat([coach])};   /* no coach at a networked table (F8) */
   }
   return null;
 }
@@ -108,7 +108,7 @@ function sheetOf(v, ctx){
 function stuckSheet(v, ctx){
   const nm = named(v, ctx.seat), items = [];
   [...ctx.moves, {t: "pass"}, {t: "endTurn"}, {t: "payCancel"}].forEach(a => { if(ctx.legal(a) == null) items.push({label: labelOf(a, nm), act: a, why: null}); });
-  items.push({label: "Let the coach choose", act: {suggest: true}, why: null, coach: true});
+  if(ctx.coach !== false) items.push({label: "Let the coach choose", act: {suggest: true}, why: null, coach: true});
   return {title: "Your move", src: "", hint: "", items};
 }
 

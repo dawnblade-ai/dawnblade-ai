@@ -389,8 +389,9 @@ function Live(p){
   if(!RT.memo || RT.memo.key.some((x, i) => x !== key[i])){
     const v0 = root.DawnView.view(state, me), m0 = model(v0, {...ctx, ui: {...ui, sl: RT.sl}});
     /* what this seat was asked that the table cannot draw yet, or a holder with no drawable button: plain options */
-    const asked = SH.sheetOf(v0, {seat: me, legal: L});
-    m0.sheet = asked || (m0.primary.stuck ? SH.stuckSheet(v0, {seat: me, legal: L, moves: J.moves(state, me)}) : null);
+    const coach = !s.networked;   /* F8: no coach at a friendly or ranked table */
+    const asked = SH.sheetOf(v0, {seat: me, legal: L, coach});
+    m0.sheet = asked || (m0.primary.stuck ? SH.stuckSheet(v0, {seat: me, legal: L, coach, moves: J.moves(state, me)}) : null);
     if(m0.sheet) m0.primary = {...m0.primary, disabled: true};
     RT.memo = {key, v: v0, m: m0};
   }

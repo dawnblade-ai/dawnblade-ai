@@ -1,3 +1,17 @@
+## v7.23 — Ranked on play.html: climb the ladder from the new table
+
+- **FRIENDLY | RANKED** on the Find-an-opponent path (F3), remembered per device. Ranked asks for a player name first,
+  the classic page's rule, checked by the referee. The seek, the seat and the result go through the same server calls
+  the classic page uses (`engine/servertable.js`); the table's chip reads RANKED TABLE.
+- **No coach at a table with a person on the other side** (SCREENS-FLOW F8): at friendly and ranked tables the choice
+  sheets drop "Let the coach choose", the menu drops Coach's call and the game log is absent at ranked.
+- **The ranked plate arrives on both phones:** the seat that did not make the ending move now asks for the result, as
+  the classic page does, so the rating move (1200 → 1216, with a sign) and its receipt in Your record land for both.
+- Fixes: a networked seat now sits with its identity (a ranked seat cannot sit casually); a match that arrives while
+  the finder waits is taken; the title's hero tile no longer keeps a stale online mode.
+- Drive: `tools/ui-flow-drive.js` plays a whole ranked server game on both engines against an in-process fake referee
+  (never the live ladder). The second design review with real art is `docs/crescendo/REVIEW-2.md` (25 findings, open).
+
 ## v7.22 — THE CIRCUIT: your record, the road, the daily challenge, the ladder (play.html)
 
 - **Your record (C1–C3).** Every finished game on `play.html` is recorded once, on the phone (`ui/circuit.js`, one

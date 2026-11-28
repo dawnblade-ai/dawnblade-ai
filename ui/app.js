@@ -76,7 +76,7 @@ function startFinder(hero, ranked, hooks){
     /* engine/servertable.js's seek, as the classic page's seekAsk asks it: `ranked` rides on every ask (and the table it opened is ranked) */
     seek: q => ST.seek(door, {...q, ranked}),
     /* the table the queue names: a match sits as a joiner; the one this seek opened is sat at as its creator (the classic's role: "creator") */
-    open: (table, matched) => S.openNetworked({how: "server-join", code: table, hero, manual: MANUAL, ...door, ...(matched ? {} : {role: "creator"}), tune: {pollMs: 20000, fallbackMs: 2000}}, root).start(),
+    open: (table, matched) => S.openNetworked({how: "server-join", code: table, hero, manual: MANUAL, ...door, keep: S.pageStore(root), ...(matched ? {} : {role: "creator"}), tune: {pollMs: 20000, fallbackMs: 2000}}, root).start(),
     setTimer: (f, ms) => setTimeout(f, ms), clearTimer: h => clearTimeout(h)
   }, hooks);
 }
@@ -306,7 +306,7 @@ function App(){
         onPlayAI=${() => { dropNet(); sit({foe: cat.draw(s.hero), kind: "ai", net: null}); }}/>`;
       break;
     }
-    default: body = html`<${K.Title} onRecord=${() => go("c1")} onPlay=${() => sit({foe: cat.draw(s.hero), kind: "ai"})} onHero=${() => go("f3", {mode: "hero"})} onWays=${() => go("f2")} onRules=${() => nav({rules: true})}
+    default: body = html`<${K.Title} onRecord=${() => go("c1")} onPlay=${() => sit({foe: cat.draw(s.hero), kind: "ai"})} onHero=${() => go("f3", {mode: "hero", kind: "ai"})} onWays=${() => go("f2")} onRules=${() => nav({rules: true})}
         onGear=${() => nav({menu: true})}/>`;
   }
   if(s.screen === "table") return body;

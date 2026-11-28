@@ -316,9 +316,9 @@ function openNetworked(o, env){
     submit: a => sess ? sess.submit(a) : "the game has not begun",
     subscribe: fn => { subs.add(fn); return () => subs.delete(fn); },
     onStep: fn => { steps.add(fn); return () => steps.delete(fn); },
-    /* A RANKED TABLE has no coach (SCREENS-FLOW F8): the AI never answers for a person's seat there */
+    /* A FRIENDLY OR RANKED TABLE has no coach (SCREENS-FLOW F8): the AI never answers for a person's seat there */
     ranked: () => { try { return !!(ch && ch.rank && ch.rank().ranked); } catch(e){ return false; } },
-    suggest: () => sess && !(server && surface.ranked()) ? env.DawnSparring.act(sess.state(), seat, {search: true}) : null,
+    suggest: () => null,
     events: () => events.slice(), onEvent: fn => { evs.add(fn); return () => evs.delete(fn); },
     heroArt: i => null,
     awaiting: () => waiting, onAwait: fn => { awaits.add(fn); return () => awaits.delete(fn); },
@@ -353,11 +353,9 @@ function openNetworked(o, env){
         ...(o.sleep ? {sleep: o.sleep} : {}), ...(o.rand ? {rand: () => 0.5} : {}), ...(o.now ? {now: o.now} : {}), have: () => sess ? sess.seq() : undefined, code: o.code};
       if(server){
         const ST = env.DawnServerTable, f = o.how === "server-create" ? ST.startTable : o.how === "server-reclaim" ? ST.reclaim : ST.sitAt;
-        /* the table's own door, the classic page's call for call (index.html srvWire / srvWho / store): the page's transport (a drive's wins), the sign-in that
-           binds this seat to a PLAYER (a ranked table needs it, to sit at it), and the seat keys kept in the page's store; `role` "creator" = the seat a seek opened */
-        const keep = o.keep || pageStore(env);
-        ch = await f({...common, transport: o.transport || ST.defaultTransport(env.SERVER_TABLE, env), keep,
-          identity: o.identity || ST.defaultIdentity(env.SERVER_TABLE, keep, env), ...(o.role ? {role: o.role} : {})});
+        /* the page hands its door in (app.js: the transport, the sign-in that binds this seat to a PLAYER, the page's store for the seat keys): a ranked table needs the
+           sign-in to be sat at. Nothing here reaches for a default sign-in: a drill that passes none is casual and never asks an auth service. `role` "creator" = the seat a seek opened */
+        ch = await f({...common, ...(o.identity ? {identity: o.identity} : {}), ...(o.role ? {role: o.role} : {})});
         rmFns.splice(0).forEach(fn => ch.onRematch && ch.onRematch(fn));
         ch.listen(onFrame);
       } else {
