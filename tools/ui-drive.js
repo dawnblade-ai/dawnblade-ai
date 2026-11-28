@@ -165,6 +165,13 @@ async function openPage(pw, browser, engine, vp, url, errors, art, init){
 const settle = page => page.evaluate(async () => {
   await document.fonts.ready;
   await Promise.all([...document.images].map(i => i.complete ? 0 : new Promise(r => { i.onload = i.onerror = r; })));
+  /* A finite animation still running (an entrance, a slide) is not a rest pose: under CPU load WebKit's software
+     rendering measured the world mid-slide, 4.2 px low, on some runs and not others (2026-11-28). Infinite ones
+     (pulses) never finish, so they are not waited on. Capped at 3 s so a stuck animation fails on its boxes. */
+  const running = () => document.getAnimations().filter(a => a.playState === "running" && a.effect &&
+    isFinite(a.effect.getComputedTiming().endTime));
+  for(const t0 = performance.now(); running().length && performance.now() - t0 < 3000;)
+    await new Promise(r => setTimeout(r, 50));
   await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 });
 
