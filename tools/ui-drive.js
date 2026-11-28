@@ -315,7 +315,10 @@ async function checkMedal(P, owner){
   let r;
   for(let k = 0; k < 8; k++){ r = await P.evaluate(MEDAL_READS); if(!r.mid) break; await P.waitForTimeout(500); }
   if(r.err) return r.err;
-  if(r.readable.length !== 1 || r.readable[0] !== owner) return `the medallion reads ${JSON.stringify(r.readable)}, expected one un-mirrored face for ${owner}`;
+  if(r.readable.length !== 1 || r.readable[0] !== owner){
+    const d = await P.evaluate(() => { const m = document.querySelector('[data-b="medal"]'); return { inline: m.style.transform, comp: getComputedStyle(m).transform, anims: m.getAnimations().length, turn: DawnUIApp.session().state().turn, tp: DawnUIApp.session().state().turnPlayer }; });
+    return `the medallion reads ${JSON.stringify(r.readable)}, expected one un-mirrored face for ${owner} (${JSON.stringify(d)})`;
+  }
   return null;
 }
 const argvHas = f => process.argv.includes(f);
@@ -753,14 +756,23 @@ async function runStates4(pw, browser, engine, vp, opts){
 /* From the deal, play turns by tapping only what is on screen. One decision a loop; the AI seat answers paced (one action a tick).
    Pass when the board's turns reach `turns` of the player's own, or give up on a stall. */
 async function runPlay(pw, browser, engine, opts){
-  const vp = [393, 660], errors = [], res = { engine, vp, bad: [], notes: [], diffs: [] };
-  const turns = opts.turns || 3;
+  const vp = opts.vp || [393, 660], errors = [], res = { engine, vp, bad: [], notes: [], diffs: [] };
+  const turns = opts.turns || 3, took = {};
+  /* three moments a FaB player would judge, shot once each when they occur (with --shots): paying with a pitched card, your block declared, the hit */
+  const moment = async P => {
+    if(!opts.shots) return;
+    const f = (k) => path.join(opts.shots, `play-${engine}-${vp[0]}x${vp[1]}-${k}.png`);
+    if(!took.pay && await P.locator(".stage[data-state=t3] .pf").count()){ took.pay = 1; await P.waitForTimeout(250); await P.screenshot({ path: f("pay") }); }
+    if(!took.block && await P.locator(".stage .ask").count() && await P.locator(".handrow .cd.blk, [data-b=you-lane] .cd.blk").count()){ took.block = 1; await P.waitForTimeout(200); await P.screenshot({ path: f("block") }); }
+    if(!took.hit && await P.evaluate(() => { const e = document.querySelector('[data-b="bout-you"] .pop'); return e && +getComputedStyle(e).opacity > 0.35; })){ took.hit = 1; await P.screenshot({ path: f("hit") }); }
+  };
   try {
     /* announcements ON: the AI seat at its human pace (no ?pace), the director's beats, the slab and the glimpse */
     const frames = () => { window.__fr = { d: [], on: false, long: [], marks: [] }; let last = 0; requestAnimationFrame(function f(t){ if(window.__fr.on){ if(last){ window.__fr.d.push(t - last); if(t - last > 34) window.__fr.long.push([Math.round(t), Math.round(t - last)]); } last = t; } else last = 0; requestAnimationFrame(f); }); };
     const a = await openPage(pw, browser, engine, vp, pathToFileURL(PLAY).href + `?hero=${opts.hero || MATCH.hero}&foe=${opts.foe || MATCH.foe}&seed=${opts.seed || MATCH.seed}` + (opts.pace != null ? `&pace=${opts.pace}` : "") + (opts.search === "0" ? "&search=0" : ""), errors, opts.art, frames);
     const P = a.page;
     if(opts.throttle){ const cdp = await a.context.newCDPSession(P); await cdp.send("Emulation.setCPUThrottlingRate", { rate: opts.throttle }); }
+    if(opts.trace) await browser.startTracing(P, { path: opts.trace, categories: ["devtools.timeline", "disabled-by-default-devtools.timeline", "disabled-by-default-v8.cpu_profiler", "v8"] });
     await P.waitForSelector(".stage[data-state] .bout", { timeout: 15000 }); await P.evaluate(() => { window.__fr.on = true; try { DawnUIApp.session().onStep(e => window.__fr.marks.push([Math.round(performance.now()), "step s" + e.seat + " " + e.action.t])); new MutationObserver(m => window.__fr.marks.push([Math.round(performance.now()), "dom " + m.map(x => [...x.addedNodes].map(n => n.className).join("|")).join(",").slice(0, 60)])).observe(document.querySelector(".stage[data-state]"), { childList: true }); } catch(e){} });
     await P.waitForSelector(".stage .bout", { timeout: 15000 });
     const lives = [], did = { defended: 0, arsenal: 0, reaction: 0, sheets: 0 }; let medalTurn = 0, medalAt = 0; const medalBad = new Set(); const trace = []; let refusals = 0, taps = 0, lastTurn = 0, idle = 0, same = 0, lastSeq = -1, started = Date.now();
@@ -771,6 +783,7 @@ async function runPlay(pw, browser, engine, opts){
       const s = await snap();
       if(s.hp[0] !== lives[lives.length - 1][0] || s.hp[1] !== lives[lives.length - 1][1]) lives.push(s.hp);
       lastTurn = s.turn;
+      if(opts.shots && !(took.pay && took.block && took.hit)) await moment(P);
       if(s.over || s.turn > turns * 2) break;
       if(s.turn !== medalTurn){ medalTurn = s.turn; medalAt = Date.now(); did.medalDue = s.turn; }
       if(did.medalDue && Date.now() - medalAt > 3500){ const t = did.medalDue; did.medalDue = 0; const sn = await snap(); const why = sn.turn === t ? await checkMedal(P, sn.tp === 0 ? "you" : "opp") : null; if(sn.turn === t) did.medal = (did.medal || 0) + 1; if(why && !medalBad.has(why)){ medalBad.add(why); res.bad.push(`play: turn ${t}: ${why}`); } }
@@ -819,6 +832,7 @@ async function runPlay(pw, browser, engine, opts){
       if(await P.locator('.hub [data-b="primary"]').isEnabled()){ if(!(await click(P.locator('.hub [data-b="primary"]')))) await P.waitForTimeout(30); }
     }
     const frAll = await P.evaluate(() => { window.__fr.on = false; return window.__fr; }), fr = frAll.d;
+    if(opts.trace) await browser.stopTracing();
     if(opts.throttle && argvHas("--verbose")) frAll.long.forEach(([t, d]) => { const m = frAll.marks.filter(x => x[0] <= t).slice(-2).map(x => (t - x[0]) + "ms after " + x[1]).join("; "); console.log("        long frame " + d + " ms at " + t + " · " + m); });
     if(opts.throttle && fr.length){
       const so = fr.slice().sort((x, y) => x - y), p95 = so[Math.min(so.length - 1, Math.floor(.95 * so.length))], mx = so[so.length - 1], over = fr.filter(x => x > 34).length;
@@ -865,7 +879,7 @@ async function main(){
   if(arg("--foe")) MATCH.foe = arg("--foe");
   if(arg("--seed")) MATCH.seed = arg("--seed");
   const seed = MATCH.seed;
-  const engines = ["chromium"];
+  const engines = argv.includes("--webkit-only") ? [] : ["chromium"];
   let failed = false;
   if(!argv.includes("--chromium-only")){
     if(webkitBinary()) engines.push("webkit");
@@ -900,9 +914,9 @@ async function main(){
       if(want("states2")) for(const vp of VIEWPORTS) report(await runStates2(pw, browser, engine, vp, o), "states2");
       if(want("states4")) for(const vp of VIEWPORTS) report(await runStates4(pw, browser, engine, vp, o), "states4");
       if(want("states3")) for(const vp of VIEWPORTS) report(await runStates3(pw, browser, engine, vp, o), "states3");
-      if(want("play")) report(await runPlay(pw, browser, engine, { ...o, turns: +arg("--turns") || 5, needs: true, pace: arg("--pace") }), "play");
+      if(want("play")) report(await runPlay(pw, browser, engine, { ...o, turns: +arg("--turns") || 5, needs: true, pace: arg("--pace"), vp: arg("--vp") ? arg("--vp").split("x").map(Number) : null }), "play");
       if(want("play")) report(await runPlay(pw, browser, engine, { ...o, turns: 5, needs: true, hero: "dorinthea", foe: "kayo", seed: "2", reactions: true, pace: arg("--pace") }), "play+rx");
-      if(want("frames") && engine === "chromium") report(await runPlay(pw, browser, engine, { ...o, turns: +arg("--turns") || 5, needs: true, throttle: 4, pace: arg("--pace"), search: arg("--search") || "0" }), "frames");
+      if(want("frames") && engine === "chromium") report(await runPlay(pw, browser, engine, { ...o, turns: +arg("--turns") || 5, needs: true, throttle: 4, pace: arg("--pace"), search: arg("--search") || "0", trace: arg("--trace") }), "frames");
       if(want("frames") && engine === "chromium" && arg("--search") == null) report(await runPlay(pw, browser, engine, { ...o, turns: +arg("--turns") || 5, needs: true, throttle: 4, pace: arg("--pace"), informational: true }), "frames+AI");
     } finally { await browser.close(); }
   }

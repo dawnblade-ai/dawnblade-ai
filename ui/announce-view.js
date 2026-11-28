@@ -269,7 +269,7 @@ function createAnnouncer(o){
       case "goagain":
         return [{kind: "goagain", els: {chip: elOf("chip", d.seat), ring: elOf("ring", d.seat), pip: elOf("apPip", d.seat)}, pose: {}, commit: function(){ land(d); }}];
       case "turn":
-        return [{kind: "turn", side: d.seat === viewer ? "right" : "left", flip: d.seat === viewer ? [180, 360] : [0, 180], els: {medal: elOf("medal"), banner: q("banner"), glow: elOf("glow", d.seat)},
+        return [{kind: "turn", faces: true, side: d.seat === viewer ? "right" : "left", flip: d.seat === viewer ? [180, 360] : [0, 180], els: {medal: elOf("medal"), banner: q("banner"), glow: elOf("glow", d.seat)},
           begin: function(){ var b = q("banner"); if(b){ var t = b.querySelector("b"); if(t) t.textContent = d.slab.line; b.classList.toggle("you", d.seat === viewer); } }, commit: function(){ land(d); }}];
       case "draw": {
         var n = Math.max(0, d.n | 0), cl = [], i2;

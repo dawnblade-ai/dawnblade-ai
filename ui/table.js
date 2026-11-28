@@ -342,7 +342,7 @@ function Live(p){
   const bump = (st2 => () => st2[1](n => n + 1))(useState(0));
   const ref = useRef(null);
   if(!ref.current){
-    const r = ref.current = {holds: [[], []], rects: new Map(), api: {current: null}, buffer: [], hear: null, dir: null, layout: null, sub: null};
+    const r = ref.current = {sl: 0, memo: null, holds: [[], []], rects: new Map(), api: {current: null}, buffer: [], hear: null, dir: null, layout: null, sub: null};
     /* ONE director for the whole app when the router has made one (its speed setting then reaches the table's beats) */
     r.dir = p.director || (root.DawnUIApp && root.DawnUIApp.director && root.DawnUIApp.director()) || null;
     if(!r.dir && root.DawnUIDirector){ r.dir = root.DawnUIDirector.create({root: root.document}); r.own = true; }
@@ -363,7 +363,7 @@ function Live(p){
   useEffect(() => { const b = RT.buffer.splice(0); b.forEach(RT.hear); return () => { if(RT.sub) RT.sub(); RT.sub = null; if(RT.own && RT.dir && RT.dir.dispose) RT.dir.dispose(); }; }, [s]);
   /* where the hand cards are, remembered for a flight from a card that has already left the row: read only when the hand
      changed (not on every render), once, after it was laid out */
-  const handSig = state.sides[me].hand.map(c => c.uid).join(",") + "/" + ui.sl;
+  const handSig = state.sides[me].hand.map(c => c.uid).join(",");
   useEffect(() => { const st0 = root.document.querySelector(".stage"); if(st0 && root.DawnUILayout) root.DawnUILayout.remember(st0, RT.rects); }, [handSig]);
   useEffect(() => { if(!ui.ref) return; const t = setTimeout(() => setUi(u => u.ref === ui.ref ? {...u, ref: null} : u), 2400); return () => clearTimeout(t); }, [ui.ref]);
   const game = root.DawnGame;
@@ -380,13 +380,22 @@ function Live(p){
     wallOf: sd => root.DawnSparring.wallNow(sd),
     name: i => i === me ? "You" : firstName(s.names[i])
   };
-  const v = root.DawnView.view(state, me);
-  const m = model(v, ctx);
-  [0, 1].forEach(si => { const h = RT.holds[si][0]; if(h){ const b = m.bout[si === me ? 0 : 1], max = v.sides[si].maxHp; b.frac = Math.max(0, Math.min(1, h.from)); b.life = Math.round(b.frac * max); b.low = b.frac <= 0.25; } });
-  /* what this seat was asked that the table cannot draw yet, or a holder with no drawable button: plain options */
-  const asked = SH.sheetOf(v, {seat: me, legal: L});
-  m.sheet = asked || (m.primary.stuck ? SH.stuckSheet(v, {seat: me, legal: L, moves: J.moves(state, me)}) : null);
-  if(m.sheet) m.primary = {...m.primary, disabled: true};
+  /* THE VIEW AND THE MODEL ARE A FUNCTION OF (state, what the player has selected / opened / been refused, the hand's scroll):
+     computed once per such change, not once per render (a hit's hold release, a scroll tick or a refusal timeout re-render without them) */
+  const key = [state, ui.sel, ui.insp, ui.ref, ui.menu, RT.sl];
+  if(!RT.memo || RT.memo.key.some((x, i) => x !== key[i])){
+    const v0 = root.DawnView.view(state, me), m0 = model(v0, {...ctx, ui: {...ui, sl: RT.sl}});
+    /* what this seat was asked that the table cannot draw yet, or a holder with no drawable button: plain options */
+    const asked = SH.sheetOf(v0, {seat: me, legal: L});
+    m0.sheet = asked || (m0.primary.stuck ? SH.stuckSheet(v0, {seat: me, legal: L, moves: J.moves(state, me)}) : null);
+    if(m0.sheet) m0.primary = {...m0.primary, disabled: true};
+    RT.memo = {key, v: v0, m: m0};
+  }
+  const v = RT.memo.v;
+  /* the pre-hit hold is laid over a copy (the memoized model is shared) */
+  const m = {...RT.memo.m, bout: RT.memo.m.bout.map(b => b)};
+  RT.medalMine = m.medal.mine;
+  [0, 1].forEach(si => { const h = RT.holds[si][0]; if(h){ const idx = si === me ? 0 : 1, max = v.sides[si].maxHp, frac = Math.max(0, Math.min(1, h.from)); m.bout[idx] = {...m.bout[idx], frac, life: Math.round(frac * max), low: frac <= 0.25}; } });
 
   const refuse = (text, at) => setUi(u => ({...u, ref: {text, at: at || {k: "stage"}}, sel: null}));
   const submit = (a, at) => { if(RT.dir && RT.dir.skip) RT.dir.skip(); const why = a.suggest ? (() => { const x = s.suggest(); return x ? s.submit(x) : "nothing to suggest"; })() : s.submit(a);
@@ -400,7 +409,8 @@ function Live(p){
   };
 
   const on = {
-    scroll: e => { const x = e.currentTarget.scrollLeft; setUi(u => Math.abs(u.sl - x) < 1 ? u : {...u, sl: x}); },
+    /* the scroll offset only places the name-plate: it is kept in a ref, and re-renders only while a plate or a refusal chip needs it */
+    scroll: e => { const x = e.currentTarget.scrollLeft; if(Math.abs(RT.sl - x) < 1) return; RT.sl = x; if(m.selUid != null || ui.ref) bump(); },
     hand: (card, i) => press(() => {
       if(m.pay) return submit({t: "paySel", uid: card.uid}, {k: "hand", i});
       if(m.arsStep){ const a = {t: "arsenal", uid: card.uid}; const why = L(a);
@@ -450,7 +460,13 @@ function Live(p){
     director: RT.dir, viewer: me, view: {names: s.names.map(firstName)}, layout: RT.layout, api: RT.api, size: {w: 393, h: 660},
     onHide: (uid, hide) => { const st0 = dom.querySelector(".stage"), e = st0 && st0.querySelector('[data-uid="' + uid + '"]'); if(e) e.style.visibility = hide ? "hidden" : ""; },
     onContact: d => { if(d.kind === "hit" || d.kind === "ko") release(d); },
-    onLand: d => { if(d.kind === "lifegain" || d.kind === "hit" || d.kind === "ko") release(d); }
+    onLand: d => {
+      if(d.kind === "lifegain" || d.kind === "hit" || d.kind === "ko") release(d);
+      /* a turn beat that lands late (the queue was behind) must not leave the medallion on the PREVIOUS turn's pose: it rests where the
+         current state says (yours at 0/360, theirs at 180), whichever beat just ended */
+      if(d.kind === "turn"){ const rest = () => { const md = dom.querySelector('[data-b="medal"]'); if(md && !md.getAnimations().length) md.style.transform = RT.medalMine ? "" : "rotateY(180deg)"; };
+        setTimeout(rest, 0); setTimeout(rest, 80); }   /* after the director's own end-pose write, which can follow the commit */
+    }
   } : null;
   /* every engine prompt is a real sheet (ui/sheets.js); it sends each engine action through the session, in order */
   const pr = v.prompt && ((v.prompt.side || 0) === me || v.prompt.tag === "reveal") ? v.prompt : null;
