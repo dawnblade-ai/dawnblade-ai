@@ -45,19 +45,37 @@ Why the phone fights back (evidence in FRAMEWORK.md §1): every drive ran Chromi
 3. **Motion:** one director (`ui/director.js`) owns every Web Animation; transform/opacity only; MOTION.md's tokens.
 4. Libraries from CDN at an exact version (today's rule) UNLESS the user rules to vendor (Q below).
 
-## Next — the development team (in order; each step ships behind the switch with the CLAUDE.md gates)
+## Built (session 2, 2026-11-27/28) — `play.html` + `ui/`, steps 0–9 done, behind `?ui=crescendo`
 
-0. **WebKit for drives:** the proxy refused `cdn.playwright.dev` and `playwright.download.prss.microsoft.com`.
-   At the next session's start (user present), propose adding exactly those two hosts (get_environment →
-   update_environment), then install webkit into a scratch `PLAYWRIGHT_BROWSERS_PATH` (never /opt/pw-browsers).
-1. **Skeleton:** `play.html` + `ui/boot.js` (the stage/`--vh`/bands from `mockups/stage.js`, tokens.css → `ui/`),
-   `ui/session.js` (one adapter: local game, trainer, server table → `{state, legal, submit, onStep}`),
-   `test/ui-sync.test.js`, `tools/ui-drive.js` (Chromium + WebKit at 375×548 / 393×660 / 430×932 / standalone).
-2. **T1 for real:** the resting table from a live local game, matched box-for-box to `mockups/table-1-*.html`.
-3. The card object + hand row (T2, T3 pay) · the bout · the hub · 4. the director + glimpse + announcements
-   (T5, T8) · 5. defend / reaction / arsenal (T6, T7, T9) · 6. prompt sheets (F5) · 7. flow screens (F1–F9) ·
-   8. server tables · 9. parity drills (talk.js-class drive, chaos on the new shell) → ask the user to make it default.
-Use Sonnet workers per the user (one team designs or reviews, one builds); give each a file it owns, a ≤250-word report.
+| file | job |
+|---|---|
+| `ui/boot.js` · `ui/data.js` | the stage, `--vh`, bands · GENERATED from index.html's data block (`node tools/ui-data.js --check`) |
+| `ui/session.js` · `ui/worker/ai.js` | ONE adapter `{state, legal, submit, onStep}`: local AI, the Dummy (`?foe=dummy`), server table, two phones (`openNetworked`), rematch, the roll/throw seam, `modes()` · Sharp's search in a Worker (main-thread fallback wherever one is refused, e.g. Chrome file://) |
+| `ui/table.*` `layout.js` `card.js` `pad.js` | the table T1–T10 (two-faced medallion, HIT FOR / NO HIT from the engine's `pend.total` + `rxPumpTotal` − `sparring.wallNow`) |
+| `ui/director.js` `audio.js` · `sheets.*` `panels.js` · `announce-view.*` | every animation (MOTION beats, exact end poses) and WebAudio · prompt sheets (F5), inspect, menu · the announcer's slab + glimpse |
+| `ui/flow.*` `app.js` | F1–F9 and the router: every table the session can seat is lit; THE ROLL (die) locally, THE THROW networked; Learn the rules (CR keyword rows from `data/crkw.js`) |
+
+**Drives** (deps: `PAGE_DEPS=<scratch>/pagedeps NODE_PATH=/opt/node-tools/node_modules`, see each header; WebKit at
+`/opt/pw-webkit`, installed by the environment's setup script): `tools/ui-drive.js` (table box-match vs the mockups,
+both engines × 4 viewports, play drives, 4x-CPU frames; `--art --shots DIR`), `tools/ui-flow-drive.js`,
+`tools/ui-chaos.js` (random taps through whole games, every hero; `--coach 1` makes the player win). Drills: `test/ui-*.test.js`.
+The design review with real art (20 items, most fixed) was a scratch file; its open items are below.
+
+## Next (in order)
+
+1. **Release v7.21** (APP_VER + CHANGELOG): full CLAUDE.md gates, push `main`, `node tools/livecheck.js`,
+   `node tools/supabase-deploy.js` (engine/prompts.js and engine/sparring.js changed on this branch), commit
+   DEPLOYED.json. This session could push only `claude/vigilant-gates-qz10xn`: merging it to main is the user's go.
+2. **The real iPhone** (after the release): `…/play.html` — frame time, safe areas, fonts, sound, the Worker, file://.
+   Headless WebKit frame numbers are software-rendering noise; only the phone settles them.
+3. **Engine perf (S-item):** at 4x CPU the long tasks left are the engine's own (`judge.js effectsFor` rebuilt on every
+   call, then `executeInner`/`runOps`; worst 124 ms, an AI tick) — not UI. The Worker parses `data/pool.js` a second time.
+4. **AI (H-item):** the coach (Sharp) loses slow attrition games to the Dummy (Iyslander 4/12 seeds, Fai 2/12, turns 36–37).
+5. **Open UI:** Your record (needs a history store) · the gear loadout (F4 shows a live "Deck" button meanwhile) ·
+   a two-phone room has no rematch protocol ("New table") · the server flow is drilled headless only · lobby
+   board choice · a second design review with real art on the flow screens (the first had no flow art routed).
+6. Then **ask the user to make play.html the default.**
+Use Sonnet workers per the user (one team designs or reviews, one builds); give each the files it owns, a ≤250-word report.
 
 ## Questions for the user (defaults standing until answered)
 
@@ -73,6 +91,9 @@ cannot fit 8 zones), or drop weapon/equipment as full-lane cards — default 44�
 Q11 The KO word split DAWN / BREAK by the blade of dawn (flow designer; MOTION.md has it on one line) — default the
 split. Q12 PLAY on the title goes straight to sit-down with the last choices (not always through "how to play") —
 default straight.
+Q13 (session 2) F4's first player: "THE ROLL" with a die locally (FaB rolls a die; engine/rps.js), "THE THROW" at networked
+tables (the lobby's protocol) — default as built. Q14 F4's GEAR (loadout, undesigned) shows a live "Deck" button until a
+loadout is designed — default yes.
 
 ## Session log
 
@@ -83,3 +104,14 @@ builders: the pad needs paper/pencil tokens (flow-6 has them locally); earlier c
 specced, not mocked; mat cards are 44×61 (SCREENS-TABLE.md overrides DESIGN-SYSTEM.md's 56×78 — Q9); the two
 screen designers paused at the account's 5-hour usage limit and were resumed with SendMessage after the reset.
 The CEO wrote BRIEF.md, stage.js, merged the motion tokens, reviewed the style tile. No code shipped; live stays v7.20.
+
+### 2026-11-27/28 — CEO thread, the build (session_013xG9x84b3jca3ZpKGRmHXL)
+Q7 answered by approval: the two Playwright hosts were added and WebKit installed (setup script on the environment).
+Three Sonnet builders (table, flow, session) and one design reviewer built steps 0–9: skeleton → T1–T10 → director +
+sound → sheets + announcer → flow F1–F9 → server tables / Dummy / two phones → chaos on the new shell. Every table
+state and flow screen box-matches its mockup (0.00 px) in Chromium AND WebKit at 375×548 / 393×660 / 430×932 / 393×852.
+CEO rulings: HIT FOR numerals always under the life numerals; the compact glimpse is 190×265 (SCREENS-TABLE §14 over
+the token); a fully blocked attack reads NO HIT (CR 7.5.5); "Defense" as FaB prints it; no number the server did not
+give. Engine: `prompts.js` refuses a selection index the sheet does not hold (a wire hole, drilled); `sparring.js`
+exports `wallNow` (the UI no longer re-derives the wall). Chaos found and fixed a KO beat that never played after an
+unpaced game; the review found a mirrored turn medallion (fixed: two faces). Live stays v7.20 until the release.
