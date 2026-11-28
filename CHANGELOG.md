@@ -1,3 +1,20 @@
+## v7.21 — CRESCENDO: the release UI arrives (play.html)
+
+- **A new table, built from scratch, at `play.html`.** Preact + htm (no Babel, no build step), designed screen by
+  screen first (`docs/crescendo/`: BRIEF, DESIGN-SYSTEM, MOTION, SCREENS-FLOW, SCREENS-TABLE, mockups), then built to
+  match: every table state and every flow screen box-matches its mockup in Chromium AND WebKit at four phone
+  viewports. The classic page (`index.html`) stays the default and is unchanged.
+- **Every table the game can seat:** the AI heroes (Sharp's search runs in a Web Worker, falling back to the main
+  thread wherever a Worker is refused), the training Dummy, the server table (friendly or ranked) and two phones, with
+  rematch. The first player is decided by THE ROLL (a die) at a local table and THE THROW at a networked one.
+- **The table:** the two-faced turn medallion, HIT FOR / NO HIT read from the engine's own totals, the announcer's
+  slab and glimpse, prompt sheets for every choice the engine asks, inspect by holding a card, every animation landing
+  on an exact end pose, and WebAudio sound (on at half volume). Learn the rules opens the CR keyword rows.
+- **Engine:** a prompt answer naming a selection the sheet does not hold is refused (`prompts.js`); `sparring.js`
+  exports `wallNow` for the HIT FOR read. The server function is redeployed to match.
+- Drives: `tools/ui-drive.js`, `tools/ui-flow-drive.js`, `tools/ui-chaos.js` (random taps through whole games, every
+  hero: clean); drills `test/ui-*.test.js`.
+
 ## v7.20 — Table Talk: the little details
 
 - **Gear lies on the mat as cards ("cards over chips").** Each side's equipment and weapon are small real cards in slot
