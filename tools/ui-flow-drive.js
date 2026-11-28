@@ -201,6 +201,7 @@ async function deadTaps(pw, browser, engine, vp){
       if(name === "share") continue;   /* shares through the OS: nothing on the page changes */
       const a = await openPage(pw, browser, engine, vp, PLAY + q, errors); await settle(a.page, 300);
       const idx = (await a.page.evaluate(CONTROLS)).indexOf(name);
+      if(idx < 0){ await a.context.close(); continue; }   /* the sit-down's coin is random: a control that this load did not draw */
       const before = await a.page.evaluate(SIG);
       await a.page.evaluate(i => { const all = [...document.querySelectorAll("button, a[href], [data-tap]")].filter(e => !e.disabled && e.getAttribute("aria-disabled") !== "true" && !e.closest(".fl-sprite") && e.getClientRects().length && getComputedStyle(e).pointerEvents !== "none"); all[i].click(); }, idx);
       await a.page.waitForTimeout(250);
@@ -350,6 +351,7 @@ async function journey(pw, browser, engine, vp, o){
     if(!(await page.evaluate(() => document.querySelectorAll(".rl").length > 10))) bad.push("the rules sheet lists too few keywords");
     await tapB(page, "rules-close");
     await tapB(page, "play"); await need(".f4", "PLAY goes to the sit-down (Q12)"); await settle(page, 2600); await sh("2-sitdown");
+    if(await has('[data-b="pick-first"]')){ await tapB(page, "pick-first"); steps.push("the coin was won: the call is made"); }
     await tapB(page, "shuffle"); await need('[data-b="bout"]', "SHUFFLE UP mounts a table"); await settle(page, 600); await sh("3-table");
     await tapB(page, "hub-right"); await need('[data-b="pad"]', "the pad button opens the pad"); await tapB(page, "pad-close");
     await tapB(page, "hub-left"); await need('[data-b="menu-sheet"]', "the hub dots open the menu");

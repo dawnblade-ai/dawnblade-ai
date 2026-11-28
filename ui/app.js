@@ -239,7 +239,7 @@ function App(){
       const code = s.roomCode ? String(s.roomCode).toUpperCase() : s.join ? String(s.join).toUpperCase() : "K7QM";
       body = html`<${K.Waiting} v=${v} hero=${s.hero} code=${code} typical=${s.typical}
         onBack=${() => { dropNet(); go("f2", {net: null, netErr: null}); }}
-        onAgain=${() => { dropNet(); if(s.kind === "online") openServer(s.hero); else openRoom(s.hero, "room-host"); }}
+        onAgain=${() => { if(s.kind === "online"){ dropNet(); openServer(s.hero); } else if(s.kind === "phones"){ dropNet(); openRoom(s.hero, "room-host"); } else nav({v: "server", netErr: null}); }}
         onLeave=${() => { dropNet(); go("f1", {net: null}); }}
         onPlayAI=${() => { dropNet(); sit({foe: cat.draw(s.hero), kind: "ai", net: null}); }}/>`;
       break;

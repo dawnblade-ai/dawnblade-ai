@@ -23,7 +23,7 @@
    USE   (deps as tools/page.js's header: PAGE_DEPS; `playwright` must resolve)
      node tools/ui-chaos.js                       every hero as "you" once (foe rotated), Chromium, then 3 games on WebKit
      node tools/ui-chaos.js --hero fai --foe dash --seed 7 [--games 2]     one hero
-     node tools/ui-chaos.js --engine chromium|webkit  --coach 1 [--tries 4] --hold 0.05  --budget 600 (seconds, default 600)  --taps 1200  --stall 60  --pause 12
+     node tools/ui-chaos.js --engine chromium|webkit  --coach 1 [--tries 4] --hold 0.05  --budget 900 (seconds, default 900)  --taps 2000  --stall 60  --pause 12
      node tools/ui-chaos.js --replay "<url>" --rseed N                    play one game again with its chaos seed
    Exit 0 = clean. Not part of `npm test` (it needs a browser). Pure helpers (rng, candidate filter, plan, replay) are exported.
    ============================================================ */
@@ -186,8 +186,8 @@ async function main(){
   let pw;
   try { pw = require("playwright"); } catch(e){ console.error("tools/ui-chaos.js needs `playwright` (set NODE_PATH)"); return process.exit(2); }
   const D = require("./ui-drive.js");
-  const t0 = Date.now(), budget = (+arg("--budget") || 600) * 1000;
-  const o = { coach: arg("--coach") === "1", tries: +arg("--tries") || 4, hold: arg("--hold") != null ? +arg("--hold") : 0.05, taps: +arg("--taps") || 1200, stall: +arg("--stall") || 60, pause: arg("--pause") != null ? +arg("--pause") : 12 };
+  const t0 = Date.now(), budget = (+arg("--budget") || 900) * 1000;
+  const o = { coach: arg("--coach") === "1", tries: +arg("--tries") || 4, hold: arg("--hold") != null ? +arg("--hold") : 0.05, taps: +arg("--taps") || 2000, stall: +arg("--stall") || 60, pause: arg("--pause") != null ? +arg("--pause") : 12 };
   const engines = arg("--engine") ? [arg("--engine")] : ["chromium", "webkit"];
   /* the hero keys come from the page's own data, so the list is never a copy */
   const keys = require("../test/helpers/extract").loadData().HEROES.map(h => h.k);
